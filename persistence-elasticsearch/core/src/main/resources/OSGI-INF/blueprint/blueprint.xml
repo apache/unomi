@@ -66,6 +66,7 @@
 
     <reference id="metricsService" interface="org.apache.unomi.metrics.MetricsService" />
     <reference id="hazelcastInstance" interface="com.hazelcast.core.HazelcastInstance" />
+    <reference id="scriptExecutor" interface="org.apache.unomi.scripting.ScriptExecutor" />
 
     <service id="elasticSearchPersistenceService" ref="elasticSearchPersistenceServiceImpl">
         <interfaces>
@@ -76,11 +77,13 @@
 
     <bean id="conditionESQueryBuilderDispatcher"
           class="org.apache.unomi.persistence.elasticsearch.conditions.ConditionESQueryBuilderDispatcher">
+        <property name="scriptExecutor" ref="scriptExecutor" />
     </bean>
 
     <bean id="conditionEvaluatorDispatcherImpl"
           class="org.apache.unomi.persistence.elasticsearch.conditions.ConditionEvaluatorDispatcher">
         <property name="metricsService" ref="metricsService" />
+        <property name="scriptExecutor" ref="scriptExecutor" />
     </bean>
 
     <bean id="elasticSearchPersistenceServiceImpl"

@@ -23,7 +23,10 @@ import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.unomi.api.*;
 import org.apache.unomi.api.conditions.Condition;
-import org.apache.unomi.common.SecureFilteringClassLoader;
+import org.apache.unomi.api.rules.Rule;
+import org.apache.unomi.scripting.ExpressionFilter;
+import org.apache.unomi.scripting.ExpressionFilterFactory;
+import org.apache.unomi.scripting.SecureFilteringClassLoader;
 import org.apache.unomi.persistence.elasticsearch.conditions.ConditionContextHelper;
 import org.apache.unomi.persistence.elasticsearch.conditions.ConditionEvaluator;
 import org.apache.unomi.persistence.elasticsearch.conditions.ConditionEvaluatorDispatcher;
@@ -53,9 +56,17 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
 
     private Map<String, Map<String, ExpressionAccessor>> expressionCache = new HashMap<>(64);
     private boolean usePropertyConditionOptimizations = true;
+    private static ClassLoader secureFilteringClassLoader = new SecureFilteringClassLoader(PropertyConditionEvaluator.class.getClassLoader());
+    private ExpressionFilterFactory expressionFilterFactory;
+
+    private boolean useOGNLScripting = Boolean.parseBoolean(System.getProperty("org.apache.unomi.security.properties.useOGNLScripting", "false"));
 
     public void setUsePropertyConditionOptimizations(boolean usePropertyConditionOptimizations) {
         this.usePropertyConditionOptimizations = usePropertyConditionOptimizations;
+    }
+
+    public void setExpressionFilterFactory(ExpressionFilterFactory expressionFilterFactory) {
+        this.expressionFilterFactory = expressionFilterFactory;
     }
 
     private int compare(Object actualValue, String expectedValue, Object expectedValueDate, Object expectedValueInteger, Object expectedValueDateExpr) {
@@ -280,7 +291,12 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
                 return result;
             }
         }
-        return getOGNLPropertyValue(item, expression);
+        if (useOGNLScripting) {
+            return getOGNLPropertyValue(item, expression);
+        } else {
+            logger.warn("OGNL Off. Expression not evaluated : {}", expression);
+            return null;
+        }
     }
 
     protected Object getHardcodedPropertyValue(Item item, String expression) {
@@ -295,10 +311,16 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
                 return event.getTarget().getItemId();
             }
             if (expression.startsWith("target.properties.")) {
-                if (event.getTarget() instanceof CustomItem) {
-                    CustomItem customItem = (CustomItem) event.getTarget();
-                    String expressionPart = expression.substring("target.properties.".length());
-                    return getNestedPropertyValue(expressionPart, customItem.getProperties());
+                String expressionPart = expression.substring("target.properties.".length());
+                Item targetItem = event.getTarget();
+                if (targetItem instanceof CustomItem) {
+                    return getNestedPropertyValue(expressionPart, ((CustomItem) targetItem).getProperties());
+                } else if (targetItem instanceof Session) {
+                    return getNestedPropertyValue(expressionPart, ((Session) targetItem).getProperties());
+                } else if (targetItem instanceof Rule) {
+                    return null;
+                } else if (targetItem instanceof Profile) {
+                    return getNestedPropertyValue(expressionPart, ((Profile) targetItem).getProperties());
                 }
             }
             if ("target.scope".equals(expression)) {
@@ -307,8 +329,41 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
             if ("scope".equals(expression)) {
                 return event.getScope();
             }
+            if ("eventType".equals(expression)) {
+                return event.getEventType();
+            }
+            if ("profile".equals(expression)) {
+                return event.getProfile();
+            }
+            if ("profileId".equals(expression)) {
+                return event.getProfileId();
+            }
+            if ("session".equals(expression)) {
+                return event.getSession();
+            }
+            if ("sessionId".equals(expression)) {
+                return event.getSessionId();
+            }
+            if ("source".equals(expression)) {
+                return event.getSource();
+            }
+            if ("target".equals(expression)) {
+                return event.getTarget();
+            }
+            if ("timeStamp".equals(expression)) {
+                return event.getTimeStamp();
+            }
+            if ("itemId".equals(expression)) {
+                return event.getItemId();
+            }
+            if ("itemType".equals(expression)) {
+                return event.getItemType();
+            }
         } else if (item instanceof Session) {
             Session session = (Session) item;
+            if ("scope".equals(expression)) {
+                return session.getScope();
+            }
             if ("timeStamp".equals(expression)) {
                 return session.getTimeStamp();
             }
@@ -318,11 +373,26 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
             if ("size".equals(expression)) {
                 return session.getSize();
             }
+            if ("lastEventDate".equals(expression)) {
+                return session.getLastEventDate();
+            }
             if (expression.startsWith("properties.")) {
                 return getNestedPropertyValue(expression.substring("properties.".length()), session.getProperties());
             }
             if (expression.startsWith("systemProperties.")) {
                 return getNestedPropertyValue(expression.substring("systemProperties.".length()), session.getSystemProperties());
+            }
+            if ("itemId".equals(expression)) {
+                return session.getItemId();
+            }
+            if ("itemType".equals(expression)) {
+                return session.getItemType();
+            }
+            if ("profile".equals(expression)) {
+                return session.getProfile();
+            }
+            if ("profileId".equals(expression)) {
+                return session.getProfileId();
             }
         } else if (item instanceof Profile) {
             Profile profile = (Profile) item;
@@ -341,17 +411,38 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
             if (expression.startsWith("systemProperties.")) {
                 return getNestedPropertyValue(expression.substring("systemProperties.".length()), profile.getSystemProperties());
             }
+            if ("itemId".equals(expression)) {
+                return profile.getItemId();
+            }
+            if ("itemType".equals(expression)) {
+                return profile.getItemType();
+            }
+            if ("mergedWith".equals(expression)) {
+                return profile.getMergedWith();
+            }
         } else if (item instanceof CustomItem) {
             CustomItem customItem = (CustomItem) item;
             if (expression.startsWith("properties.")) {
                 return getNestedPropertyValue(expression.substring("properties.".length()), customItem.getProperties());
+            }
+            if ("itemId".equals(expression)) {
+                return customItem.getItemId();
+            }
+            if ("itemType".equals(expression)) {
+                return customItem.getItemType();
+            }
+            if ("scope".equals(expression)) {
+                return customItem.getScope();
             }
         }
         return NOT_OPTIMIZED_MARKER;
     }
 
     protected Object getOGNLPropertyValue(Item item, String expression) throws Exception {
-        ClassLoader secureFilteringClassLoader = new SecureFilteringClassLoader(PropertyConditionEvaluator.class.getClassLoader());
+        if (expressionFilterFactory.getExpressionFilter("ognl").filter(expression) == null) {
+            logger.warn("Expression {} is not allowed !", expression);
+            return null;
+        }
         OgnlContext ognlContext = getOgnlContext(secureFilteringClassLoader);
         ExpressionAccessor accessor = getPropertyAccessor(item, expression, ognlContext, secureFilteringClassLoader);
         return accessor != null ? accessor.get(ognlContext, item) : null;
@@ -399,8 +490,15 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
                     @Override
                     public boolean isAccessible(Map context, Object target, Member member, String propertyName) {
                         int modifiers = member.getModifiers();
-                        boolean result = Modifier.isPublic(modifiers);
-                        return result;
+                        if (target instanceof Item) {
+                            if ("getClass".equals(member.getName())) {
+                                logger.warn("Target {} and member {} for property {} are not allowed by OGNL security filter", target, member, propertyName);
+                                return false;
+                            }
+                            return Modifier.isPublic(modifiers);
+                        }
+                        logger.warn("Target {} and member {} for property {} are not allowed by OGNL security filter", target, member, propertyName);
+                        return false;
                     }
                 }, new ClassLoaderClassResolver(classLoader),
                 null);

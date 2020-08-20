@@ -44,6 +44,7 @@
     <reference id="segmentService" interface="org.apache.unomi.api.services.SegmentService"/>
     <reference id="eventService" interface="org.apache.unomi.api.services.EventService"/>
     <reference id="configSharingService" interface="org.apache.unomi.api.services.ConfigSharingService" />
+    <reference id="scriptExecutor" interface="org.apache.unomi.scripting.ScriptExecutor"/>
 
     <service
             interface="org.apache.unomi.persistence.elasticsearch.conditions.ConditionESQueryBuilder">
@@ -102,6 +103,7 @@
             <property name="definitionsService" ref="definitionsService"/>
             <property name="persistenceService" ref="persistenceService"/>
             <property name="segmentService" ref="segmentService"/>
+            <property name="scriptExecutor" ref="scriptExecutor" />
             <property name="maximumIdsQueryCount" value="${es.maximumIdsQueryCount}"/>
             <property name="aggregateQueryBucketSize" value="${es.aggregateQueryBucketSize}"/>
         </bean>
@@ -163,6 +165,7 @@
         <bean class="org.apache.unomi.plugins.baseplugin.conditions.PastEventConditionEvaluator">
             <property name="definitionsService" ref="definitionsService"/>
             <property name="persistenceService" ref="persistenceService"/>
+            <property name="scriptExecutor" ref="scriptExecutor" />
         </bean>
     </service>
 
