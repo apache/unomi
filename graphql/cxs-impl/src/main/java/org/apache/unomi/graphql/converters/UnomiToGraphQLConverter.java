@@ -62,6 +62,7 @@ public interface UnomiToGraphQLConverter {
                 graphQLType = Scalars.GraphQLFloat;
                 break;
             case "set":
+            case "json":
                 graphQLType = JSONFunction.JSON_SCALAR;
                 break;
             case "geopoint":

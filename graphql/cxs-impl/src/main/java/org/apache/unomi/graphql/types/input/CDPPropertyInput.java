@@ -25,6 +25,7 @@ import org.apache.unomi.graphql.types.input.property.CDPFloatPropertyInput;
 import org.apache.unomi.graphql.types.input.property.CDPGeoPointPropertyInput;
 import org.apache.unomi.graphql.types.input.property.CDPIdentifierPropertyInput;
 import org.apache.unomi.graphql.types.input.property.CDPIntPropertyInput;
+import org.apache.unomi.graphql.types.input.property.CDPJsonPropertyInput;
 import org.apache.unomi.graphql.types.input.property.CDPLongPropertyInput;
 import org.apache.unomi.graphql.types.input.property.CDPSetPropertyInput;
 import org.apache.unomi.graphql.types.input.property.CDPStringPropertyInput;
@@ -72,6 +73,10 @@ public class CDPPropertyInput {
     @GraphQLName("set")
     private CDPSetPropertyInput setPropertyTypeInput;
 
+    @GraphQLField
+    @GraphQLName("json")
+    private CDPJsonPropertyInput jsonPropertyTypeInput;
+
     public CDPPropertyInput(
             final @GraphQLName("identifier") CDPIdentifierPropertyInput identifierPropertyTypeInput,
             final @GraphQLName("string") CDPStringPropertyInput stringPropertyTypeInput,
@@ -81,7 +86,8 @@ public class CDPPropertyInput {
             final @GraphQLName("date") CDPDatePropertyInput datePropertyTypeInput,
             final @GraphQLName("boolean") CDPBooleanPropertyInput booleanPropertyTypeInput,
             final @GraphQLName("geopoint") CDPGeoPointPropertyInput geoPointPropertyTypeInput,
-            final @GraphQLName("set") CDPSetPropertyInput setPropertyTypeInput) {
+            final @GraphQLName("set") CDPSetPropertyInput setPropertyTypeInput,
+            final @GraphQLName("json") CDPJsonPropertyInput jsonPropertyTypeInput) {
         this.identifierPropertyTypeInput = identifierPropertyTypeInput;
         this.stringPropertyTypeInput = stringPropertyTypeInput;
         this.integerPropertyTypeInput = integerPropertyTypeInput;
@@ -91,6 +97,7 @@ public class CDPPropertyInput {
         this.booleanPropertyTypeInput = booleanPropertyTypeInput;
         this.geoPointPropertyTypeInput = geoPointPropertyTypeInput;
         this.setPropertyTypeInput = setPropertyTypeInput;
+        this.jsonPropertyTypeInput = jsonPropertyTypeInput;
     }
 
     public CDPIdentifierPropertyInput getIdentifierPropertyTypeInput() {
@@ -129,6 +136,10 @@ public class CDPPropertyInput {
         return setPropertyTypeInput;
     }
 
+    public CDPJsonPropertyInput getJsonPropertyTypeInput() {
+        return jsonPropertyTypeInput;
+    }
+
     public BaseCDPPropertyInput getProperty() {
         final List<BaseCDPPropertyInput> properties = Arrays.asList(
                 identifierPropertyTypeInput,
@@ -139,7 +150,8 @@ public class CDPPropertyInput {
                 datePropertyTypeInput,
                 booleanPropertyTypeInput,
                 geoPointPropertyTypeInput,
-                setPropertyTypeInput);
+                setPropertyTypeInput,
+                jsonPropertyTypeInput);
 
         return properties.stream().filter(Objects::nonNull).findFirst().orElse(null);
     }

@@ -405,11 +405,11 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 org.elasticsearch.Version clusterVersion = org.elasticsearch.Version.fromString(version.getNumber());
                 org.elasticsearch.Version minimalVersion = org.elasticsearch.Version.fromString(minimalElasticSearchVersion);
                 org.elasticsearch.Version maximalVersion = org.elasticsearch.Version.fromString(maximalElasticSearchVersion);
-                    if (clusterVersion.before(minimalVersion) ||
-                            clusterVersion.equals(maximalVersion) ||
-                            clusterVersion.after(maximalVersion)) {
-                        throw new Exception("ElasticSearch version is not within [" + minimalVersion + "," + maximalVersion + "), aborting startup !");
-                    }
+                if (clusterVersion.before(minimalVersion) ||
+                        clusterVersion.equals(maximalVersion) ||
+                        clusterVersion.after(maximalVersion)) {
+                    throw new Exception("ElasticSearch version is not within [" + minimalVersion + "," + maximalVersion + "), aborting startup !");
+                }
 
                 loadPredefinedMappings(bundleContext, false);
 
@@ -684,15 +684,19 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Override
     public <T extends Item> PartialList<T> getAllItems(final Class<T> clazz, int offset, int size, String sortBy) {
+        return getAllItems(clazz, offset, size, sortBy, null);
+    }
+
+    @Override
+    public <T extends Item> PartialList<T> getAllItems(final Class<T> clazz, int offset, int size, String sortBy, String scrollTimeValidity) {
         long startTime = System.currentTimeMillis();
         try {
-            return query(QueryBuilders.matchAllQuery(), sortBy, clazz, offset, size, null, null);
+            return query(QueryBuilders.matchAllQuery(), sortBy, clazz, offset, size, null, scrollTimeValidity);
         } finally {
             if (metricsService != null && metricsService.isActivated()) {
                 metricsService.updateTimer(this.getClass().getName() + ".getAllItems", startTime);
             }
         }
-
     }
 
     @Override
@@ -760,7 +764,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Override
     public boolean save(final Item item, final boolean useBatching) {
-        Boolean result =  new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".saveItem") {
+        Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".saveItem") {
             protected Boolean execute(Object... args) throws Exception {
                 try {
                     String source = ESCustomObjectMapper.getObjectMapper().writeValueAsString(item);
@@ -1040,7 +1044,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             protected Boolean execute(Object... args) throws IOException {
                 boolean executedSuccessfully = true;
                 for (String itemName : itemsMonthlyIndexed) {
-                    PutIndexTemplateRequest putIndexTemplateRequest = new PutIndexTemplateRequest("context-"+itemName+"-date-template")
+                    PutIndexTemplateRequest putIndexTemplateRequest = new PutIndexTemplateRequest("context-" + itemName + "-date-template")
                             .patterns(Collections.singletonList(getMonthlyIndexForQuery(itemName)))
                             .order(1)
                             .settings("{\n" +
@@ -1120,22 +1124,22 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     private void internalCreateIndex(String indexName, String mappingSource) throws IOException {
         CreateIndexRequest createIndexRequest = new CreateIndexRequest(indexName);
         createIndexRequest.settings("{\n" +
-                        "    \"index\" : {\n" +
-                        "        \"number_of_shards\" : " + numberOfShards + ",\n" +
-                        "        \"number_of_replicas\" : " + numberOfReplicas + ",\n" +
-                        "        \"mapping.total_fields.limit\" : " + indexMappingTotalFieldsLimit + ",\n" +
-                        "        \"max_docvalue_fields_search\" : " + indexMaxDocValueFieldsSearch + "\n" +
-                        "    },\n" +
-                        "    \"analysis\": {\n" +
-                        "      \"analyzer\": {\n" +
-                        "        \"folding\": {\n" +
-                        "          \"type\":\"custom\",\n" +
-                        "          \"tokenizer\": \"keyword\",\n" +
-                        "          \"filter\":  [ \"lowercase\", \"asciifolding\" ]\n" +
-                        "        }\n" +
-                        "      }\n" +
-                        "    }\n" +
-                        "}\n", XContentType.JSON);
+                "    \"index\" : {\n" +
+                "        \"number_of_shards\" : " + numberOfShards + ",\n" +
+                "        \"number_of_replicas\" : " + numberOfReplicas + ",\n" +
+                "        \"mapping.total_fields.limit\" : " + indexMappingTotalFieldsLimit + ",\n" +
+                "        \"max_docvalue_fields_search\" : " + indexMaxDocValueFieldsSearch + "\n" +
+                "    },\n" +
+                "    \"analysis\": {\n" +
+                "      \"analyzer\": {\n" +
+                "        \"folding\": {\n" +
+                "          \"type\":\"custom\",\n" +
+                "          \"tokenizer\": \"keyword\",\n" +
+                "          \"filter\":  [ \"lowercase\", \"asciifolding\" ]\n" +
+                "        }\n" +
+                "      }\n" +
+                "    }\n" +
+                "}\n", XContentType.JSON);
 
         createIndexRequest.mapping(mappingSource, XContentType.JSON);
         CreateIndexResponse createIndexResponse = client.indices().create(createIndexRequest, RequestOptions.DEFAULT);
@@ -1162,12 +1166,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     }
 
     public void setPropertyMapping(final PropertyType property, final String itemType) {
-        final String esType = convertValueTypeToESType(property.getValueTypeId());
-        if (esType == null) {
-            logger.warn("No predefined type found for property[" + property.getValueTypeId() + "], letting ES decide");
-            // we don't have a fixed type for that property so let ES decide it
-            return;
-        }
         try {
             Map<String, Map<String, Object>> mappings = getPropertiesMapping(itemType);
             if (mappings == null) {
@@ -1175,7 +1173,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             }
             Map<String, Object> subMappings = mappings.computeIfAbsent("properties", k -> new HashMap<>());
             Map<String, Object> subSubMappings = (Map<String, Object>) subMappings.computeIfAbsent("properties", k -> new HashMap<>());
-            mergePropertiesMapping(subSubMappings, createPropertyMapping(property.getItemId(), esType));
+            mergePropertiesMapping(subSubMappings, createPropertyMapping(property));
 
             Map<String, Object> mappingsWrapper = new HashMap<>();
             mappingsWrapper.put("properties", mappings);
@@ -1187,27 +1185,41 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         }
     }
 
-    private Map<String, Object> createPropertyMapping(final String fieldName, final String fieldType) {
+    private Map<String, Object> createPropertyMapping(final PropertyType property) {
+        final String esType = convertValueTypeToESType(property.getValueTypeId());
         final HashMap<String, Object> definition = new HashMap<>();
-        definition.put("type", fieldType);
-        if ("text".equals(fieldType)) {
-            definition.put("analyzer", "folding");
-            final Map<String, Object> fields = new HashMap<>();
-            final Map<String, Object> keywordField = new HashMap<>();
-            keywordField.put("type", "keyword");
-            keywordField.put("ignore_above", 256);
-            fields.put("keyword", keywordField);
-            definition.put("fields", fields);
+
+        if (esType == null) {
+            logger.warn("No predefined type found for property[" + property.getValueTypeId() + "], letting ES decide");
+            // we don't have a fixed type for that property so let ES decide it
+        } else {
+            definition.put("type", esType);
+            if ("text".equals(esType)) {
+                definition.put("analyzer", "folding");
+                final Map<String, Object> fields = new HashMap<>();
+                final Map<String, Object> keywordField = new HashMap<>();
+                keywordField.put("type", "keyword");
+                keywordField.put("ignore_above", 256);
+                fields.put("keyword", keywordField);
+                definition.put("fields", fields);
+            }
         }
 
-        final HashMap<String, Object> map = new HashMap<>();
-        map.put(fieldName, definition);
-        return map;
+        if ("set".equals(property.getValueTypeId())) {
+            Map<String, Object> childProperties = new HashMap<>();
+            property.getChildPropertyTypes().forEach(childType -> {
+                mergePropertiesMapping(childProperties, createPropertyMapping(childType));
+            });
+            definition.put("properties", childProperties);
+        }
+
+        return Collections.singletonMap(property.getItemId(), definition);
     }
 
     private String convertValueTypeToESType(String valueTypeId) {
         switch (valueTypeId) {
             case "set":
+            case "json":
                 return "object";
             case "boolean":
                 return "boolean";
@@ -1215,7 +1227,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 return "geo_point";
             case "integer":
                 return "integer";
-            case "long" :
+            case "long":
                 return "long";
             case "float":
                 return "float";
@@ -1260,8 +1272,8 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
                                     for (Map.Entry<String, Object> subentry : entry.getValue().entrySet()) {
                                         if (subResult.containsKey(subentry.getKey())
-                                            && subResult.get(subentry.getKey()) instanceof Map
-                                            && subentry.getValue() instanceof Map) {
+                                                && subResult.get(subentry.getKey()) instanceof Map
+                                                && subentry.getValue() instanceof Map) {
                                             mergePropertiesMapping((Map) subResult.get(subentry.getKey()), (Map) subentry.getValue());
                                         } else {
                                             subResult.put(subentry.getKey(), subentry.getValue());
@@ -1274,7 +1286,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         }
                     }
                 } catch (Throwable t) {
-                    throw new Exception("Cannot get mapping for itemType="+ itemType, t);
+                    throw new Exception("Cannot get mapping for itemType=" + itemType, t);
                 }
                 return result;
             }
@@ -1282,6 +1294,9 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     }
 
     private void mergePropertiesMapping(Map<String, Object> result, Map<String, Object> entry) {
+        if (entry == null || entry.isEmpty()) {
+            return;
+        }
         for (Map.Entry<String, Object> subentry : entry.entrySet()) {
             if (result.containsKey(subentry.getKey())
                     && result.get(subentry.getKey()) instanceof Map
@@ -1417,6 +1432,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             }
         }
     }
+
 
     @Override
     public <T extends Item> List<T> query(final Condition query, String sortBy, final Class<T> clazz) {
@@ -1686,7 +1702,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     }
 
     private Map<String, Long> aggregateQuery(final Condition filter, final BaseAggregate aggregate, final String itemType,
-            final boolean optimizedQuery) {
+                                             final boolean optimizedQuery) {
         return new InClassLoaderExecute<Map<String, Long>>(metricsService, this.getClass().getName() + ".aggregateQuery") {
 
             @Override
@@ -1864,7 +1880,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     }
 
     @Override
-    public <T extends Item> void refreshIndex(Class<T> clazz, Date dateHint){
+    public <T extends Item> void refreshIndex(Class<T> clazz, Date dateHint) {
         new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".refreshIndex") {
             protected Boolean execute(Object... args) {
                 try {
@@ -1878,7 +1894,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             }
         }.catchingExecuteInClassLoader(true);
     }
-
 
 
     @Override
@@ -2028,7 +2043,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     }
 
 
-
     private String getConfig(Map<String, String> settings, String key,
                              String defaultValue) {
         if (settings != null && settings.get(key) != null) {
@@ -2091,7 +2105,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         if (!isCacheActiveForClass(className)) {
             return null;
         }
-        Map<String,T> itemCache = hazelcastInstance.getMap(className);
+        Map<String, T> itemCache = hazelcastInstance.getMap(className);
         return itemCache.get(itemId);
     }
 
@@ -2100,7 +2114,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         if (!isCacheActiveForClass(className)) {
             return null;
         }
-        Map<String,T> itemCache = hazelcastInstance.getMap(className);
+        Map<String, T> itemCache = hazelcastInstance.getMap(className);
         return itemCache.put(itemId, item);
     }
 
@@ -2109,7 +2123,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         if (!isCacheActiveForClass(className)) {
             return null;
         }
-        Map<String,T> itemCache = hazelcastInstance.getMap(className);
+        Map<String, T> itemCache = hazelcastInstance.getMap(className);
         return itemCache.remove(itemId);
     }
 

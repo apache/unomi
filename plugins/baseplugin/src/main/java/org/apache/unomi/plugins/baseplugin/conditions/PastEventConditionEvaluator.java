@@ -26,6 +26,7 @@ import org.apache.unomi.persistence.elasticsearch.conditions.ConditionContextHel
 import org.apache.unomi.persistence.elasticsearch.conditions.ConditionEvaluator;
 import org.apache.unomi.persistence.elasticsearch.conditions.ConditionEvaluatorDispatcher;
 import org.apache.unomi.persistence.spi.PersistenceService;
+import org.apache.unomi.scripting.ScriptExecutor;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -37,12 +38,18 @@ public class PastEventConditionEvaluator implements ConditionEvaluator {
 
     private DefinitionsService definitionsService;
 
+    private ScriptExecutor scriptExecutor;
+
     public void setPersistenceService(PersistenceService persistenceService) {
         this.persistenceService = persistenceService;
     }
 
     public void setDefinitionsService(DefinitionsService definitionsService) {
         this.definitionsService = definitionsService;
+    }
+
+    public void setScriptExecutor(ScriptExecutor scriptExecutor) {
+        this.scriptExecutor = scriptExecutor;
     }
 
     @Override
@@ -76,7 +83,7 @@ public class PastEventConditionEvaluator implements ConditionEvaluator {
             andCondition.setParameter("operator", "and");
             andCondition.setParameter("subConditions", l);
 
-            l.add(ConditionContextHelper.getContextualCondition(eventCondition, context));
+            l.add(ConditionContextHelper.getContextualCondition(eventCondition, context, scriptExecutor));
 
             Condition profileCondition = new Condition();
             profileCondition.setConditionType(definitionsService.getConditionType("sessionPropertyCondition"));

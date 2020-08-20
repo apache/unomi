@@ -348,7 +348,13 @@ public class EventServiceImpl implements EventService {
 
     public boolean hasEventAlreadyBeenRaised(Event event) {
         Event pastEvent = this.persistenceService.load(event.getItemId(), Event.class);
-        return pastEvent != null && pastEvent.getVersion() >= 1 && pastEvent.getSessionId().equals(event.getSessionId());
+        if (pastEvent != null && pastEvent.getVersion() >= 1) {
+            if ((pastEvent.getSessionId() != null && pastEvent.getSessionId().equals(event.getSessionId())) ||
+                    (pastEvent.getProfileId() != null && pastEvent.getProfileId().equals(event.getProfileId())))  {
+                return true;
+            }
+        }
+        return false;
     }
 
     public boolean hasEventAlreadyBeenRaised(Event event, boolean session) {
