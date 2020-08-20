@@ -17,9 +17,17 @@
 package org.apache.unomi.itests;
 
 import org.apache.unomi.api.Profile;
+import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.services.ProfileService;
+import org.apache.unomi.persistence.spi.PersistenceService;
+import org.apache.unomi.api.services.DefinitionsService;
+import org.apache.unomi.api.PartialList;
+
+import static org.junit.Assert.assertEquals;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.junit.Before;
+
 import org.ops4j.pax.exam.junit.PaxExam;
 import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
 import org.ops4j.pax.exam.spi.reactors.PerSuite;
@@ -42,6 +50,19 @@ public class ProfileServiceIT extends BaseIT {
     @Inject @Filter(timeout = 600000)
     protected ProfileService profileService;
 
+    @Inject
+    @Filter(timeout = 600000)
+    protected PersistenceService persistenceService;
+
+    @Inject
+    @Filter(timeout = 600000)
+    protected DefinitionsService definitionsService;
+
+    @Before
+    public void setUp() {
+        TestUtils.removeAllProfiles(definitionsService, persistenceService);
+    }
+
     @Test
     public void testProfileDelete() {
         Profile profile = new Profile();
@@ -50,6 +71,45 @@ public class ProfileServiceIT extends BaseIT {
         LOGGER.info("Profile saved, now testing profile delete...");
         profileService.delete(TEST_PROFILE_ID, false);
         LOGGER.info("Profile deleted successfully.");
+    }
+
+    @Test
+    public void testGetProfileWithScrolling() throws InterruptedException {
+        final String profileIdOne = "test-profile-id-one";
+        final String profileIdTwo = "test-profile-id-two";
+        final String profileIdThree = "test-profile-id-three";
+
+        Profile profileOne = new Profile();
+        Profile profileTwo = new Profile();
+        Profile profileThree = new Profile();
+
+        profileOne.setItemId(profileIdOne);
+        profileTwo.setItemId(profileIdTwo);
+        profileThree.setItemId(profileIdThree);
+
+        profileService.save(profileOne);
+        profileService.save(profileTwo);
+        profileService.save(profileThree);
+
+        Thread.sleep(4000); // Make sure Elastic is updated
+
+        Query query = new Query();
+        query.setLimit(2);
+        query.setScrollTimeValidity("10m");
+
+        PartialList<Profile> profiles = profileService.search(query, Profile.class);
+        assertEquals(2, profiles.getList().size());
+
+        Query queryCont = new Query();
+        queryCont.setScrollTimeValidity("10m");
+        queryCont.setScrollIdentifier(profiles.getScrollIdentifier());
+
+        profiles = profileService.search(queryCont, Profile.class);
+        assertEquals(1, profiles.getList().size());
+
+        queryCont.setScrollIdentifier(profiles.getScrollIdentifier());
+        profiles = profileService.search(queryCont, Profile.class);
+        assertEquals(0, profiles.getList().size());
     }
 
 }
