@@ -75,11 +75,6 @@
         </dependency>
 
         <dependency>
-            <groupId>org.mvel</groupId>
-            <artifactId>mvel2</artifactId>
-        </dependency>
-
-        <dependency>
             <groupId>com.github.fge</groupId>
             <artifactId>json-patch</artifactId>
             <version>1.9</version>
@@ -158,6 +153,13 @@
             <artifactId>slf4j-simple</artifactId>
             <version>1.6.6</version>
             <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.unomi</groupId>
+            <artifactId>unomi-scripting</artifactId>
+            <version>${project.version}</version>
+            <scope>provided</scope>
         </dependency>
 
     </dependencies>

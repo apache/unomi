@@ -31,6 +31,7 @@
                 <value>org.apache.unomi.lifecycle-watcher</value>
                 <value>org.apache.unomi.api</value>
                 <value>org.apache.unomi.common</value>
+                <value>org.apache.unomi.scripting</value>
                 <value>org.apache.unomi.metrics</value>
                 <value>org.apache.unomi.persistence-spi</value>
                 <value>org.apache.unomi.persistence-elasticsearch-core</value>

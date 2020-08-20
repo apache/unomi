@@ -56,6 +56,7 @@
         <bundle start-level="70" start="false">mvn:org.apache.unomi/unomi-lifecycle-watcher/${project.version}</bundle>
         <bundle start-level="75" start="false">mvn:org.apache.unomi/unomi-api/${project.version}</bundle>
         <bundle start-level="75" start="false">mvn:org.apache.unomi/unomi-common/${project.version}</bundle>
+        <bundle start-level="75" start="false">mvn:org.apache.unomi/unomi-scripting/${project.version}</bundle>
         <bundle start-level="75" start="false">mvn:org.apache.unomi/unomi-metrics/${project.version}</bundle>
         <bundle start-level="75" start="false">mvn:org.apache.unomi/unomi-persistence-spi/${project.version}</bundle>
         <bundle start-level="76" start="false">mvn:org.apache.unomi/unomi-persistence-elasticsearch-core/${project.version}</bundle>

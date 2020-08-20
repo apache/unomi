@@ -17,6 +17,13 @@
 
 package org.apache.unomi.itests;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.commons.io.IOUtils;
+import org.apache.unomi.api.Item;
+import org.apache.unomi.api.conditions.Condition;
+import org.apache.unomi.api.services.DefinitionsService;
+import org.apache.unomi.persistence.spi.CustomObjectMapper;
+import org.apache.unomi.persistence.spi.PersistenceService;
 import org.junit.Assert;
 import org.ops4j.pax.exam.Configuration;
 import org.ops4j.pax.exam.CoreOptions;
@@ -24,8 +31,14 @@ import org.ops4j.pax.exam.Option;
 import org.ops4j.pax.exam.karaf.options.LogLevelOption.LogLevel;
 import org.ops4j.pax.exam.options.MavenArtifactUrlReference;
 import org.ops4j.pax.exam.options.MavenUrlReference;
+import org.osgi.framework.BundleContext;
 
 import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
@@ -44,6 +57,30 @@ public abstract class BaseIT {
     protected static final String URL = "http://localhost:" + HTTP_PORT;
     protected static final String KARAF_DIR = "target/exam";
     protected static final String UNOMI_KEY = "670c26d1cc413346c3b2fd9ce65dab41";
+
+    @Inject
+    @Filter(timeout = 600000)
+    protected PersistenceService persistenceService;
+
+    @Inject
+    @Filter(timeout = 600000)
+    protected DefinitionsService definitionsService;
+
+    @Inject
+    protected BundleContext bundleContext;
+
+    protected void removeItems(final Class<? extends Item> ...classes) throws InterruptedException {
+        Condition condition = new Condition(definitionsService.getConditionType("matchAllCondition"));
+        for (Class<? extends Item> aClass : classes) {
+            persistenceService.removeByQuery(condition, aClass);
+        }
+        refreshPersistence();
+    }
+
+    protected void refreshPersistence() throws InterruptedException {
+        persistenceService.refresh();
+        Thread.sleep(1000);
+    }
 
     @Configuration
     public Option[] config() throws InterruptedException {
@@ -121,4 +158,25 @@ public abstract class BaseIT {
         }
         return value;
     }
+
+    protected String bundleResourceAsString(final String resourcePath) throws IOException {
+        final java.net.URL url = bundleContext.getBundle().getResource(resourcePath);
+        if (url != null) {
+            return IOUtils.toString(url);
+        } else {
+            return null;
+        }
+    }
+
+    protected String getValidatedBundleJSON(final String resourcePath, Map<String,String> parameters) throws IOException {
+        String jsonString = bundleResourceAsString(resourcePath);
+        if (parameters != null && parameters.size() > 0) {
+            for (Map.Entry<String,String> parameterEntry : parameters.entrySet()) {
+                jsonString = jsonString.replace("###" + parameterEntry.getKey() + "###", parameterEntry.getValue());
+            }
+        }
+        ObjectMapper objectMapper = CustomObjectMapper.getObjectMapper();
+        return objectMapper.writeValueAsString(objectMapper.readTree(jsonString));
+    }
+
 }

@@ -27,6 +27,7 @@ import org.apache.unomi.persistence.elasticsearch.conditions.ConditionESQueryBui
 import org.apache.unomi.persistence.elasticsearch.conditions.ConditionESQueryBuilderDispatcher;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.aggregate.TermsAggregate;
+import org.apache.unomi.scripting.ScriptExecutor;
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.index.query.RangeQueryBuilder;
@@ -38,6 +39,7 @@ public class PastEventConditionESQueryBuilder implements ConditionESQueryBuilder
     private DefinitionsService definitionsService;
     private PersistenceService persistenceService;
     private SegmentService segmentService;
+    private ScriptExecutor scriptExecutor;
 
     private int maximumIdsQueryCount = 5000;
     private int aggregateQueryBucketSize = 5000;
@@ -48,6 +50,10 @@ public class PastEventConditionESQueryBuilder implements ConditionESQueryBuilder
 
     public void setPersistenceService(PersistenceService persistenceService) {
         this.persistenceService = persistenceService;
+    }
+
+    public void setScriptExecutor(ScriptExecutor scriptExecutor) {
+        this.scriptExecutor = scriptExecutor;
     }
 
     public void setMaximumIdsQueryCount(int maximumIdsQueryCount) {
@@ -175,7 +181,7 @@ public class PastEventConditionESQueryBuilder implements ConditionESQueryBuilder
         andCondition.setParameter("operator", "and");
         andCondition.setParameter("subConditions", l);
 
-        l.add(ConditionContextHelper.getContextualCondition(eventCondition, context));
+        l.add(ConditionContextHelper.getContextualCondition(eventCondition, context, scriptExecutor));
 
         Integer numberOfDays = (Integer) condition.getParameter("numberOfDays");
         if (numberOfDays != null) {

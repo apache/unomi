@@ -22,37 +22,24 @@
     <parent>
         <groupId>org.apache.unomi</groupId>
         <artifactId>unomi-root</artifactId>
-        <version>1.4.1-SNAPSHOT</version>
+        <version>2.0.0-SNAPSHOT</version>
     </parent>
 
-    <artifactId>unomi-common</artifactId>
-    <name>Apache Unomi :: Common Classes</name>
-    <description>Common Classes used in the Apache Unomi Context server</description>
+    <artifactId>unomi-scripting</artifactId>
+    <name>Apache Unomi :: Scripting Services</name>
+    <description>Scripting services used in the Apache Unomi Context server</description>
     <packaging>bundle</packaging>
 
     <dependencies>
-        <dependency>
-            <groupId>org.apache.commons</groupId>
-            <artifactId>commons-csv</artifactId>
-            <version>1.5</version>
-        </dependency>
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
             <scope>test</scope>
         </dependency>
-        <dependency>
-            <groupId>org.apache.karaf.shell</groupId>
-            <artifactId>org.apache.karaf.shell.console</artifactId>
-            <version>${version.karaf}</version>
-            <scope>provided</scope>
-        </dependency>
 
         <dependency>
-            <groupId>org.apache.karaf.shell</groupId>
-            <artifactId>org.apache.karaf.shell.table</artifactId>
-            <version>${version.karaf}</version>
-            <scope>provided</scope>
+            <groupId>org.mvel</groupId>
+            <artifactId>mvel2</artifactId>
         </dependency>
 
         <dependency>
@@ -67,6 +54,18 @@
             <artifactId>slf4j-simple</artifactId>
             <version>1.6.6</version>
             <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.osgi</groupId>
+            <artifactId>osgi.core</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <scope>provided</scope>
         </dependency>
 
     </dependencies>

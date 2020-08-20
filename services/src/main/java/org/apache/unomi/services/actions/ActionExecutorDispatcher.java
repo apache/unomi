@@ -23,16 +23,14 @@ import org.apache.unomi.api.Event;
 import org.apache.unomi.api.actions.Action;
 import org.apache.unomi.api.actions.ActionExecutor;
 import org.apache.unomi.api.services.EventService;
-import org.apache.unomi.common.SecureFilteringClassLoader;
+import org.apache.unomi.scripting.ScriptExecutor;
 import org.apache.unomi.metrics.MetricAdapter;
 import org.apache.unomi.metrics.MetricsService;
-import org.mvel2.MVEL;
-import org.mvel2.ParserConfiguration;
-import org.mvel2.ParserContext;
+import org.osgi.framework.BundleContext;
+import org.osgi.framework.ServiceReference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.Serializable;
 import java.lang.reflect.InvocationTargetException;
 import java.util.HashMap;
 import java.util.Map;
@@ -41,13 +39,22 @@ import java.util.concurrent.ConcurrentHashMap;
 public class ActionExecutorDispatcher {
     private static final Logger logger = LoggerFactory.getLogger(ActionExecutorDispatcher.class.getName());
     private static final String VALUE_NAME_SEPARATOR = "::";
-    private final Map<String, Serializable> mvelExpressions = new ConcurrentHashMap<>();
     private final Map<String, ValueExtractor> valueExtractors = new HashMap<>(11);
     private Map<String, ActionExecutor> executors = new ConcurrentHashMap<>();
     private MetricsService metricsService;
+    private BundleContext bundleContext;
+    private ScriptExecutor scriptExecutor;
 
     public void setMetricsService(MetricsService metricsService) {
         this.metricsService = metricsService;
+    }
+
+    public void setBundleContext(BundleContext bundleContext) {
+        this.bundleContext = bundleContext;
+    }
+
+    public void setScriptExecutor(ScriptExecutor scriptExecutor) {
+        this.scriptExecutor = scriptExecutor;
     }
 
     public ActionExecutorDispatcher() {
@@ -189,24 +196,12 @@ public class ActionExecutorDispatcher {
         Object extract(String valueAsString, Event event) throws IllegalAccessException, NoSuchMethodException, InvocationTargetException;
     }
 
-    protected Object executeScript(String valueAsString, Event event) {
-        final ClassLoader tccl = Thread.currentThread().getContextClassLoader();
-        try {
-            ClassLoader secureFilteringClassLoader = new SecureFilteringClassLoader(getClass().getClassLoader());
-            Thread.currentThread().setContextClassLoader(secureFilteringClassLoader);
-            if (!mvelExpressions.containsKey(valueAsString)) {
-                ParserConfiguration parserConfiguration = new ParserConfiguration();
-                parserConfiguration.setClassLoader(secureFilteringClassLoader);
-                mvelExpressions.put(valueAsString, MVEL.compileExpression(valueAsString, new ParserContext(parserConfiguration)));
-            }
-            Map<String, Object> ctx = new HashMap<>();
-            ctx.put("event", event);
-            ctx.put("session", event.getSession());
-            ctx.put("profile", event.getProfile());
-            return MVEL.executeExpression(mvelExpressions.get(valueAsString), ctx);
-        } finally {
-            Thread.currentThread().setContextClassLoader(tccl);
-        }
+    protected Object executeScript(String script, Event event) {
+        Map<String, Object> context = new HashMap<>();
+        context.put("event", event);
+        context.put("session", event.getSession());
+        context.put("profile", event.getProfile());
+        return scriptExecutor.execute(script, context);
     }
 
 }
