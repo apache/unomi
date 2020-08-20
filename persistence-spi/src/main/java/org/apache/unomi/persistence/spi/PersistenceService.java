@@ -60,6 +60,26 @@ public interface PersistenceService {
     <T extends Item> PartialList<T> getAllItems(Class<T> clazz, int offset, int size, String sortBy);
 
     /**
+     * Retrieves all known items of the specified class, ordered according to the specified {@code sortBy} String and and paged: only {@code size} of them are retrieved,
+     * starting with the {@code offset}-th one.
+     *
+     * TODO: use a Query object instead of distinct parameters?
+     *
+     * @param <T>    the type of the {@link Item}s we want to retrieve
+     * @param clazz  the {@link Item} subclass of entities we want to retrieve
+     * @param offset zero or a positive integer specifying the position of the first item in the total ordered collection of matching items
+     * @param size   a positive integer specifying how many matching items should be retrieved or {@code -1} if all of them should be retrieved
+     * @param sortBy an optional ({@code null} if no sorting is required) String of comma ({@code ,}) separated property names on which ordering should be performed, ordering
+     *               elements according to the property order in the
+     *               String, considering each in turn and moving on to the next one in case of equality of all preceding ones. Each property name is optionally followed by
+     *               a column ({@code :}) and an order specifier: {@code asc} or {@code desc}.
+     * @param scrollTimeValidity  the time the scrolling query should stay valid. This must contain a time unit value such as the ones supported by ElasticSearch, such as
+     *      *                     the ones declared here : https://www.elastic.co/guide/en/elasticsearch/reference/current/common-options.html#time-units
+     * @return a {@link PartialList} of pages items with the given type
+     */
+    <T extends Item> PartialList<T> getAllItems(final Class<T> clazz, int offset, int size, String sortBy, String scrollTimeValidity);
+
+    /**
      * Persists the specified Item in the context server.
      *
      * @param item the item to persist
