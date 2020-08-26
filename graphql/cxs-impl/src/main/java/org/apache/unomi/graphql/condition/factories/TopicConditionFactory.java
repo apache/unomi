@@ -48,15 +48,15 @@ public class TopicConditionFactory extends ConditionFactory {
 
         final List<Condition> rootSubConditions = new ArrayList<>();
 
-        if (filterInputAsMap.get("id_equals") != null) {
+        if (filterInput.getId_equals() != null) {
             rootSubConditions.add(propertyCondition("itemId", filterInput.getId_equals()));
         }
 
-        if (filterInputAsMap.get("name_equals") != null) {
+        if (filterInput.getName_equals() != null) {
             rootSubConditions.add(propertyCondition("name", filterInput.getName_equals()));
         }
 
-        if (filterInputAsMap.get("view_equals") != null) {
+        if (filterInput.getView_equals() != null) {
             rootSubConditions.add(propertyCondition("scope", filterInput.getView_equals()));
         }
 
