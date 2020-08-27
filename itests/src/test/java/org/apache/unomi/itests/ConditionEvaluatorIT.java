@@ -155,8 +155,8 @@ public class ConditionEvaluatorIT extends BaseIT {
         assertTrue(eval(doubleProperty.equalTo(0.15).build()));
         assertTrue(eval(builder.not(doubleProperty.equalTo(2.5)).build()));
         assertTrue(eval(doubleProperty.notEqualTo(2.5).build()));
-        assertTrue(eval(doubleProperty.lessThan(0.13).build()));
-        assertTrue(eval(doubleProperty.greaterThan(0.17).build()));
+        assertTrue(eval(doubleProperty.greaterThan(0.13).build()));
+        assertTrue(eval(doubleProperty.lessThan(0.17).build()));
         assertTrue(eval(doubleProperty.greaterThanOrEqualTo(0.15).build()));
         assertTrue(eval(doubleProperty.in(0.15).build()));
         assertTrue(eval(doubleProperty.in(0.18, 0.15).build()));
