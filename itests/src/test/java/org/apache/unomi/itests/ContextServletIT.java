@@ -124,7 +124,7 @@ public class ContextServletIT extends BaseIT {
 	@Test
 	public void testUpdateEventFromContextAuthorizedThirdParty_Success() throws IOException, InterruptedException {
 		//Arrange
-		String eventId = "test-event-id1";
+		String eventId = "test-event-id-" + System.currentTimeMillis();
 		String profileId = "test-profile-id";
 		String sessionId = "test-session-id";
 		String scope = "test-scope";
@@ -159,7 +159,7 @@ public class ContextServletIT extends BaseIT {
 	@Test
 	public void testUpdateEventFromContextUnAuthorizedThirdParty_Fail() throws IOException, InterruptedException {
 		//Arrange
-		String eventId = "test-event-id2";
+		String eventId = "test-event-id-" + System.currentTimeMillis();
 		String profileId = "test-profile-id";
 		String sessionId = "test-session-id";
 		String scope = "test-scope";
@@ -194,7 +194,7 @@ public class ContextServletIT extends BaseIT {
 	@Test
 	public void testUpdateEventFromContextAuthorizedThirdPartyNoItemID_Fail() throws IOException, InterruptedException {
 		//Arrange
-		String eventId = "test-event-id3";
+		String eventId = "test-event-id-" + System.currentTimeMillis();
 		String sessionId = "test-session-id";
 		String scope = "test-scope";
 		String eventTypeOriginal = "test-event-type-original";
@@ -320,7 +320,7 @@ public class ContextServletIT extends BaseIT {
 	@Test
 	public void testCreateEventWithProfileId_Success() throws IOException, InterruptedException {
 		//Arrange
-		String eventId = "test-event-id4";
+		String eventId = "test-event-id-" + System.currentTimeMillis();
 		String profileId = "test-profile-id";
 		String eventType = "test-event-type";
 		Event event = new Event();

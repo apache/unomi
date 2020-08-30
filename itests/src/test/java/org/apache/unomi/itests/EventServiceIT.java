@@ -52,7 +52,7 @@ public class EventServiceIT extends BaseIT {
 
     @Test
     public void test_EventExistenceWithProfileId() throws InterruptedException{
-        String eventId = "test-event-id2";
+        String eventId = "test-event-id-" + System.currentTimeMillis();;
         String profileId = "test-profile-id";
         String eventType = "test-type";
         Profile profile = new Profile(profileId);

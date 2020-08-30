@@ -37,7 +37,7 @@ import static org.junit.Assert.*;
 
 /**
  * Integration tests for various condition types.
- * 
+ *
  * @author Sergiy Shyrkov
  */
 @RunWith(PaxExam.class)
@@ -69,6 +69,7 @@ public class ConditionEvaluatorIT extends BaseIT {
         profile.setProperty("age", Integer.valueOf(30));
         profile.setProperty("gender", "female");
         profile.setProperty("lastVisit", lastVisit);
+        profile.setProperty("randomStats", 0.15);
         profile.setSegments(new HashSet<String>(Arrays.asList("s1", "s2", "s3")));
         this.item = profile;
         builder = new ConditionBuilder(definitionsService);
@@ -145,6 +146,21 @@ public class ConditionEvaluatorIT extends BaseIT {
                 .build()));
         //assertFalse(eval(builder.profileProperty("properties.age").notIn(Integer.valueOf(25), Integer.valueOf(30))
         //        .build()));
+    }
+
+    @Test
+    public void testDouble() {
+        ConditionBuilder.PropertyCondition doubleProperty = builder.profileProperty("properties.randomStats");
+
+        assertTrue(eval(doubleProperty.equalTo(0.15).build()));
+        assertTrue(eval(builder.not(doubleProperty.equalTo(2.5)).build()));
+        assertTrue(eval(doubleProperty.notEqualTo(2.5).build()));
+        assertTrue(eval(doubleProperty.greaterThan(0.13).build()));
+        assertTrue(eval(doubleProperty.lessThan(0.17).build()));
+        assertTrue(eval(doubleProperty.greaterThanOrEqualTo(0.15).build()));
+        assertTrue(eval(doubleProperty.in(0.15).build()));
+        assertTrue(eval(doubleProperty.in(0.18, 0.15).build()));
+        assertTrue(eval(doubleProperty.notIn(2.8, 1.6).build()));
     }
 
     @Test
