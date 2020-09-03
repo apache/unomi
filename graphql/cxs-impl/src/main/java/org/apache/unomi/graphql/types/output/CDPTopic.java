@@ -16,7 +16,11 @@
  */
 package org.apache.unomi.graphql.types.output;
 
-import graphql.annotations.annotationTypes.*;
+import graphql.annotations.annotationTypes.GraphQLDescription;
+import graphql.annotations.annotationTypes.GraphQLField;
+import graphql.annotations.annotationTypes.GraphQLID;
+import graphql.annotations.annotationTypes.GraphQLName;
+import graphql.annotations.annotationTypes.GraphQLNonNull;
 import graphql.schema.DataFetchingEnvironment;
 import org.apache.unomi.api.Topic;
 

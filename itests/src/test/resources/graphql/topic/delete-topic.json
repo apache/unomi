@@ -1,0 +1,7 @@
+{
+  "operationName": "deleteTopic",
+  "variables": {
+    "topicId": "testTopic"
+  },
+  "query": "mutation deleteTopic($topicId: ID!) {\n  cdp {\n    deleteTopic(topicID: $topicId)\n  }\n}\n"
+}

@@ -19,7 +19,6 @@ package org.apache.unomi.services.impl.topics;
 import org.apache.unomi.api.PartialList;
 import org.apache.unomi.api.Topic;
 import org.apache.unomi.api.query.Query;
-import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.TopicService;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.osgi.framework.BundleContext;
@@ -30,16 +29,10 @@ public class TopicServiceImpl implements TopicService, SynchronousBundleListener
 
     private PersistenceService persistenceService;
 
-    private DefinitionsService definitionsService;
-
     private BundleContext bundleContext;
 
     public void setPersistenceService(PersistenceService persistenceService) {
         this.persistenceService = persistenceService;
-    }
-
-    public void setDefinitionsService(DefinitionsService definitionsService) {
-        this.definitionsService = definitionsService;
     }
 
     public void setBundleContext(BundleContext bundleContext) {
@@ -65,6 +58,11 @@ public class TopicServiceImpl implements TopicService, SynchronousBundleListener
     @Override
     public PartialList<Topic> search(final Query query) {
         return persistenceService.query(query.getCondition(), query.getSortby(), Topic.class, query.getOffset(), query.getLimit());
+    }
+
+    @Override
+    public boolean delete(String topicId) {
+        return persistenceService.remove(topicId, Topic.class);
     }
 
     @Override

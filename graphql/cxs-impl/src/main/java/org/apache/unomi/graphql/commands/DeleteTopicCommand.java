@@ -16,6 +16,8 @@
  */
 package org.apache.unomi.graphql.commands;
 
+import org.apache.unomi.api.services.TopicService;
+
 import java.util.Objects;
 
 public class DeleteTopicCommand extends BaseCommand<Boolean> {
@@ -30,8 +32,9 @@ public class DeleteTopicCommand extends BaseCommand<Boolean> {
 
     @Override
     public Boolean execute() {
-        // Unomi doesn't have an API for that yet, so return a stub
-        return false;
+        final TopicService topicService = serviceManager.getService(TopicService.class);
+
+        return topicService.delete(topicId);
     }
 
     public static Builder create(final String topicId) {

@@ -263,7 +263,6 @@
     <bean id="topicServiceImpl" class="org.apache.unomi.services.impl.topics.TopicServiceImpl"
           init-method="postConstruct" destroy-method="preDestroy">
         <property name="persistenceService" ref="persistenceService"/>
-        <property name="definitionsService" ref="definitionsServiceImpl"/>
         <property name="bundleContext" ref="blueprintBundleContext"/>
     </bean>
     <service id="topicService" ref="topicServiceImpl">
