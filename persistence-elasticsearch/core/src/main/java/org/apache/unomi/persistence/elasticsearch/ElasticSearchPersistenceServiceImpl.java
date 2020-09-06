@@ -129,6 +129,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     public static final String BULK_PROCESSOR_CONCURRENT_REQUESTS = "bulkProcessor.concurrentRequests";
     public static final String BULK_PROCESSOR_BULK_ACTIONS = "bulkProcessor.bulkActions";
     public static final String BULK_PROCESSOR_BULK_SIZE = "bulkProcessor.bulkSize";
+    public static final String MONTHLY_INDEX_ITEMS_MONTHLY_INDEXED = "monthlyIndex.itemsMonthlyIndexedOverride";
     public static final String BULK_PROCESSOR_FLUSH_INTERVAL = "bulkProcessor.flushInterval";
     public static final String BULK_PROCESSOR_BACKOFF_POLICY = "bulkProcessor.backoffPolicy";
     public static final String INDEX_DATE_PREFIX = "date-";
@@ -157,6 +158,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     private Integer defaultQueryLimit = 10;
 
+    private String itemsMonthlyIndexedOverride = "event,session";
     private String bulkProcessorConcurrentRequests = "1";
     private String bulkProcessorBulkActions = "1000";
     private String bulkProcessorBulkSize = "5MB";
@@ -241,8 +243,8 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         this.defaultQueryLimit = defaultQueryLimit;
     }
 
-    public void setItemsMonthlyIndexed(List<String> itemsMonthlyIndexed) {
-        this.itemsMonthlyIndexed = itemsMonthlyIndexed;
+    public void setItemsMonthlyIndexedOverride(String itemsMonthlyIndexedOverride) {
+        this.itemsMonthlyIndexedOverride = itemsMonthlyIndexedOverride;
     }
 
     public void setRoutingByType(Map<String, String> routingByType) {
@@ -346,7 +348,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 bulkProcessorBulkSize = System.getProperty(BULK_PROCESSOR_BULK_SIZE, bulkProcessorBulkSize);
                 bulkProcessorFlushInterval = System.getProperty(BULK_PROCESSOR_FLUSH_INTERVAL, bulkProcessorFlushInterval);
                 bulkProcessorBackoffPolicy = System.getProperty(BULK_PROCESSOR_BACKOFF_POLICY, bulkProcessorBackoffPolicy);
-
+                itemsMonthlyIndexed = itemsMonthlyIndexedOverride.equals("none") ? Collections.emptyList() : Arrays.asList(System.getProperty(MONTHLY_INDEX_ITEMS_MONTHLY_INDEXED, itemsMonthlyIndexedOverride).split(",").clone());
                 // this property is used for integration tests, to make sure we don't conflict with an already running ElasticSearch instance.
                 if (System.getProperty("org.apache.unomi.itests.elasticsearch.http.port") != null) {
                     elasticSearchAddressList.clear();
