@@ -83,7 +83,7 @@ public class UserAgent {
     }
 
     public void setDeviceName(String deviceName) {
-        this.deviceCategory = deviceName;
+        this.deviceName = deviceName;
     }
 
     public String getUserAgentNameAndVersion() {
