@@ -96,7 +96,7 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
             } else {
                 // Create a new profile
                 profile = new Profile(UUID.randomUUID().toString());
-                profile.setProperty("firstVisit", currentSession.getTimeStamp());
+                profile.setProperty("firstVisit", event.getTimeStamp());
                 profile.getSystemProperties().put(mergeProfilePropertyName, mergeProfilePropertyValue);
             }
 
@@ -109,9 +109,10 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
             event.setProfileId(profile.getItemId());
             event.setProfile(profile);
 
-            currentSession.setProfile(profile);
-
-            eventService.send(new Event("sessionReassigned", currentSession, profile, event.getScope(), event, currentSession, event.getTimeStamp()));
+            if (currentSession != null) {
+                currentSession.setProfile(profile);
+                eventService.send(new Event("sessionReassigned", currentSession, profile, event.getScope(), event, currentSession, event.getTimeStamp()));
+            }
 
             return EventService.PROFILE_UPDATED + EventService.SESSION_UPDATED;
         } else {
@@ -139,7 +140,7 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
                 HttpServletResponse httpServletResponse = (HttpServletResponse) event.getAttributes().get(Event.HTTP_RESPONSE_ATTRIBUTE);
                 // we still send back the current profile cookie. It will be changed on the next request to the ContextServlet.
                 // The current profile will be deleted only then because we cannot delete it right now (too soon)
-                sendProfileCookie(currentSession.getProfile(), httpServletResponse,
+                sendProfileCookie(profile, httpServletResponse,
                         profileIdCookieName, profileIdCookieDomain, profileIdCookieMaxAgeInSeconds);
 
                 final String masterProfileId = masterProfile.getItemId();
@@ -147,16 +148,19 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
                 event.setProfileId(masterProfileId);
                 event.setProfile(masterProfile);
 
-                currentSession.setProfile(masterProfile);
-                if (privacyService.isRequireAnonymousBrowsing(profile)) {
-                    privacyService.setRequireAnonymousBrowsing(masterProfileId, true, event.getScope());
-                }
-
                 final Boolean anonymousBrowsing = privacyService.isRequireAnonymousBrowsing(masterProfileId);
-                if (anonymousBrowsing) {
-                    currentSession.setProfile(privacyService.getAnonymousProfile(masterProfile));
-                    event.setProfileId(null);
-                    persistenceService.save(event);
+
+                if (currentSession != null){
+                    currentSession.setProfile(masterProfile);
+                    if (privacyService.isRequireAnonymousBrowsing(profile)) {
+                        privacyService.setRequireAnonymousBrowsing(masterProfileId, true, event.getScope());
+                    }
+
+                    if (anonymousBrowsing) {
+                        currentSession.setProfile(privacyService.getAnonymousProfile(masterProfile));
+                        event.setProfileId(null);
+                        persistenceService.save(event);
+                    }
                 }
 
                 event.getActionPostExecutors().add(new ActionPostExecutor() {
@@ -167,9 +171,12 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
                                 String profileId = profile.getItemId();
                                 if (!StringUtils.equals(profileId, masterProfileId)) {
                                     List<Session> sessions = persistenceService.query("profileId", profileId, null, Session.class);
-                                    if (masterProfileId.equals(profileId) && !sessions.contains(currentSession)) {
-                                        sessions.add(currentSession);
+                                    if (currentSession != null){
+                                        if (masterProfileId.equals(profileId) && !sessions.contains(currentSession)) {
+                                            sessions.add(currentSession);
+                                        }
                                     }
+
                                     for (Session session : sessions) {
                                         persistenceService.update(session, session.getTimeStamp(), Session.class, "profileId", anonymousBrowsing ? null : masterProfileId);
                                     }
