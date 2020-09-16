@@ -131,6 +131,10 @@ public class EventServiceImpl implements EventService {
         return true;
     }
 
+    public boolean isEventValid(Event event) {
+        return this.eventTypeRegistry.isValid(event);
+    }
+
     public String authenticateThirdPartyServer(String key, String ip) {
         logger.debug("Authenticating third party server with key: " + key + " and IP: " + ip);
         if (key != null) {
@@ -205,6 +209,10 @@ public class EventServiceImpl implements EventService {
     @Override
     public EventType getEventType(String typeName) {
         return eventTypeRegistry.get(typeName);
+    }
+
+    public void registerEventType(final EventType eventType) {
+        eventTypeRegistry.register(eventType);
     }
 
     @Override

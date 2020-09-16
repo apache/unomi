@@ -17,8 +17,11 @@
 
 package org.apache.unomi.services.impl.events;
 
+import org.apache.unomi.api.Event;
 import org.apache.unomi.api.EventType;
+import org.apache.unomi.api.GeoPoint;
 import org.apache.unomi.api.PluginType;
+import org.apache.unomi.api.PropertyType;
 import org.apache.unomi.api.services.EventTypeRegistry;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.osgi.framework.Bundle;
@@ -31,11 +34,13 @@ import org.slf4j.LoggerFactory;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Date;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class EventTypeRegistryImpl implements EventTypeRegistry, SynchronousBundleListener {
 
@@ -87,6 +92,78 @@ public class EventTypeRegistryImpl implements EventTypeRegistry, SynchronousBund
 
     public void register(EventType eventType) {
         eventTypes.put(eventType.getType(), eventType);
+    }
+
+    @Override
+    public boolean isValid(Event event) {
+        if (event == null) {
+            return false;
+        }
+        final EventType eventType = this.get(event.getEventType());
+        if (eventType == null) {
+            return false;
+        }
+
+        return areAllPropertiesValid(event.getProperties(), eventType.getPropertyTypes());
+    }
+
+    /**
+     * Checks that all properties from map are defined in the property type set.
+     * Does not require all defined properties to be present in map.
+     *
+     * @param props map of properties to validate
+     * @param types set of a predefined event type properties
+     * @return boolean result of validation
+     */
+    private boolean areAllPropertiesValid(Map<String, Object> props, Set<PropertyType> types) {
+        if (props == null || props.isEmpty() || types == null || types.isEmpty()) {
+            return true;
+        }
+        return props.entrySet().stream().allMatch(entry -> {
+            return types.stream().anyMatch(type -> {
+                if (!type.getItemId().equals(entry.getKey())) {
+                    return false;
+                }
+                final Set<PropertyType> childTypes = type.getChildPropertyTypes();
+                if (childTypes.size() > 0 && entry.getValue() != null) {
+                    try {
+                        final Map<String, Object> childProps = (Map<String, Object>) entry.getValue();
+                        return areAllPropertiesValid(childProps, childTypes);
+                    } catch (ClassCastException e) {
+                        logger.error("Event property '{}' value is invalid: {}", entry.getKey(), e.getCause());
+                        return false;
+                    }
+                } else {
+                    return testValueType(entry.getValue(), type.getValueTypeId());
+                }
+            });
+        });
+    }
+
+    private boolean testValueType(final Object value, final String valueTypeId) {
+        switch (valueTypeId) {
+            case "integer":
+                return value instanceof Integer;
+            case "long":
+                return value instanceof Long;
+            case "float":
+                return value instanceof Double;
+            case "set":
+            case "json":
+                return value instanceof Map;
+            case "geopoint":
+                return value instanceof GeoPoint;
+            case "date":
+                return value instanceof Date;
+            case "boolean":
+                return value instanceof Boolean;
+            case "id":
+            case "string":
+                return value instanceof String;
+            default:
+                // return true if type is unknown cuz it may be custom
+                return true;
+        }
     }
 
     public Collection<EventType> getAll() {
