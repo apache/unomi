@@ -354,7 +354,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
                 sourceMap.put("segments", profileToRemove.getSegments());
                 profileToRemove.setSystemProperty("lastUpdated", new Date());
                 sourceMap.put("systemProperties", profileToRemove.getSystemProperties());
-                persistenceService.update(profileToRemove.getItemId(), null, Profile.class, sourceMap);
+                persistenceService.update(profileToRemove, null, Profile.class, sourceMap);
                 updatedProfileCount++;
             }
             logger.info("Removed segment from {} profiles in {} ms", updatedProfileCount, System.currentTimeMillis() - profileRemovalStartTime);
@@ -713,7 +713,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
                 // todo remove profile properties ?
                 persistenceService.remove(previousRule.getItemId(), Rule.class);
             } else {
-                persistenceService.update(previousRule.getItemId(), null, Rule.class, "linkedItems", previousRule.getLinkedItems());
+                persistenceService.update(previousRule, null, Rule.class, "linkedItems", previousRule.getLinkedItems());
             }
         }
     }
@@ -795,7 +795,9 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
                     systemProperties.put("pastEvents", pastEventCounts);
                     try {
                         systemProperties.put("lastUpdated", new Date());
-                        persistenceService.update(profileId, null, Profile.class, "systemProperties", systemProperties);
+                        Profile profile = new Profile();
+                        profile.setItemId(profileId);
+                        persistenceService.update(profile, null, Profile.class, "systemProperties", systemProperties);
                     } catch (Exception e) {
                         logger.error("Error updating profile {} past event system properties", profileId, e);
                     }
@@ -878,7 +880,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
                     sourceMap.put("segments", profileToAdd.getSegments());
                     profileToAdd.setSystemProperty("lastUpdated", new Date());
                     sourceMap.put("systemProperties", profileToAdd.getSystemProperties());
-                    persistenceService.update(profileToAdd.getItemId(), null, Profile.class, sourceMap);
+                    persistenceService.update(profileToAdd, null, Profile.class, sourceMap);
                     Event profileUpdated = new Event("profileUpdated", null, profileToAdd, null, null, profileToAdd, new Date());
                     profileUpdated.setPersistent(false);
                     eventService.send(profileUpdated);
@@ -898,7 +900,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
                     sourceMap.put("segments", profileToRemove.getSegments());
                     profileToRemove.setSystemProperty("lastUpdated", new Date());
                     sourceMap.put("systemProperties", profileToRemove.getSystemProperties());
-                    persistenceService.update(profileToRemove.getItemId(), null, Profile.class, sourceMap);
+                    persistenceService.update(profileToRemove, null, Profile.class, sourceMap);
                     Event profileUpdated = new Event("profileUpdated", null, profileToRemove, null, null, profileToRemove, new Date());
                     profileUpdated.setPersistent(false);
                     eventService.send(profileUpdated);
@@ -921,7 +923,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
                     sourceMap.put("segments", profileToRemove.getSegments());
                     profileToRemove.setSystemProperty("lastUpdated", new Date());
                     sourceMap.put("systemProperties", profileToRemove.getSystemProperties());
-                    persistenceService.update(profileToRemove.getItemId(), null, Profile.class, sourceMap);
+                    persistenceService.update(profileToRemove, null, Profile.class, sourceMap);
                     Event profileUpdated = new Event("profileUpdated", null, profileToRemove, null, null, profileToRemove, new Date());
                     profileUpdated.setPersistent(false);
                     eventService.send(profileUpdated);

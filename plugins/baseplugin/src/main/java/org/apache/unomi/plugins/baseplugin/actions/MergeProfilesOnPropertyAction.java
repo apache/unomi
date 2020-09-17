@@ -171,12 +171,12 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
                                         sessions.add(currentSession);
                                     }
                                     for (Session session : sessions) {
-                                        persistenceService.update(session.getItemId(), session.getTimeStamp(), Session.class, "profileId", anonymousBrowsing ? null : masterProfileId);
+                                        persistenceService.update(session, session.getTimeStamp(), Session.class, "profileId", anonymousBrowsing ? null : masterProfileId);
                                     }
 
                                     List<Event> events = persistenceService.query("profileId", profileId, null, Event.class);
                                     for (Event event : events) {
-                                        persistenceService.update(event.getItemId(), event.getTimeStamp(), Event.class, "profileId", anonymousBrowsing ? null : masterProfileId);
+                                        persistenceService.update(event, event.getTimeStamp(), Event.class, "profileId", anonymousBrowsing ? null : masterProfileId);
                                     }
                                     // we must mark all the profiles that we merged into the master as merged with the master, and they will
                                     // be deleted upon next load
@@ -185,7 +185,7 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
                                     sourceMap.put("mergedWith", masterProfileId);
                                     profile.setSystemProperty("lastUpdated", new Date());
                                     sourceMap.put("systemProperties", profile.getSystemProperties());
-                                    persistenceService.update(profile.getItemId(), null, Profile.class, sourceMap);
+                                    persistenceService.update(profile, null, Profile.class, sourceMap);
                                 }
                             }
                         } catch (Exception e) {
