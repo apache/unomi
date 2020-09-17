@@ -86,6 +86,6 @@
 
     <feature name="unomi-documentation" description="Documentation of Unomi in HTML" version="${project.version}">
         <feature>war</feature>
-        <bundle>mvn:org.apache.unomi/manual/${project.version}</bundle>
+        <bundle>mvn:org.apache.unomi/unomi-manual/${project.version}</bundle>
     </feature>
 </features>
