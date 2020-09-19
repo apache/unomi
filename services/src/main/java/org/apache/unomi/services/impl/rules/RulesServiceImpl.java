@@ -475,7 +475,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
             }
             allRuleStatistics.put(ruleStatistics.getItemId(), ruleStatistics);
             if (mustPersist) {
-                persistenceService.save(ruleStatistics, false, true);
+                persistenceService.save(ruleStatistics, null, true);
             }
         }
         // now let's iterate over the rules coming from the persistence service, as we may have new ones.

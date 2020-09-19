@@ -230,7 +230,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     private String itemClassesToCache;
     private boolean useBatchingForSave = false;
     private boolean alwaysOverwrite = true;
-    private static boolean throwExceptions = false;
 
     private Map<String, Map<String, Map<String, Object>>> knownMappings = new HashMap<>();
 
@@ -378,10 +377,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     public void setSslTrustAllCertificates(boolean sslTrustAllCertificates) {
         this.sslTrustAllCertificates = sslTrustAllCertificates;
-    }
-
-    public void setThrowExceptions(boolean throwExceptions) {
-        this.throwExceptions = throwExceptions;
     }
 
     public void setAlwaysOverwrite(boolean alwaysOverwrite) {
@@ -785,7 +780,10 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     }
 
     @Override
-    public boolean save(final Item item, final boolean useBatching, final boolean alwaysOverwrite) {
+    public boolean save(final Item item, final Boolean useBatchingOption, final Boolean alwaysOverwriteOption) {
+        final boolean useBatching = useBatchingOption == null ? this.useBatchingForSave : useBatchingOption;
+        final boolean alwaysOverwrite = alwaysOverwriteOption == null ? this.alwaysOverwrite : alwaysOverwriteOption;
+
         Boolean result =  new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".saveItem") {
             protected Boolean execute(Object... args) throws Exception {
                 try {

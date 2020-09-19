@@ -61,7 +61,6 @@
             <cm:property name="password" value="" />
             <cm:property name="sslEnable" value="false" />
             <cm:property name="sslTrustAllCertificates" value="false" />
-            <cm:property name="throwExceptions" value="false" />
             <cm:property name="alwaysOverwrite" value="true" />
 
         </cm:default-properties>
@@ -138,7 +137,6 @@
         <property name="password" value="${es.password}" />
         <property name="sslEnable" value="${es.sslEnable}" />
         <property name="sslTrustAllCertificates" value="${es.sslTrustAllCertificates}" />
-        <property name="throwExceptions" value="${es.throwExceptions}" />
         <property name="alwaysOverwrite" value="${es.alwaysOverwrite}" />
     </bean>
 
