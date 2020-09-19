@@ -152,6 +152,13 @@ public class EventServiceImpl implements EventService {
 
         boolean saveSucceeded = true;
         if (event.isPersistent()) {
+            if (event.getItemId() != null) {
+                Event pastEvent = persistenceService.load(event.getItemId(), Event.class);
+                if (pastEvent != null) {
+                    pastEvent.getProperties().putAll(event.getProperties());
+                    event = pastEvent;
+                }
+            }
             saveSucceeded = persistenceService.save(event);
         }
 
