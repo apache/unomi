@@ -741,7 +741,10 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     }
 
     @Override
-    public boolean save(final Item item, final boolean useBatching, final boolean alwaysOverwrite) {
+    public boolean save(final Item item, final Boolean useBatchingOption, final Boolean alwaysOverwriteOption) {
+        final boolean useBatching = useBatchingOption == null ? this.useBatchingForSave : useBatchingOption;
+        final boolean alwaysOverwrite = alwaysOverwriteOption == null ? this.alwaysOverwrite : alwaysOverwriteOption;
+
         Boolean result =  new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".saveItem") {
             protected Boolean execute(Object... args) throws Exception {
                 try {

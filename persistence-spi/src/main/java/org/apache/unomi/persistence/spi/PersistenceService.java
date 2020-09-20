@@ -108,7 +108,7 @@ public interface PersistenceService {
      *
      * @return {@code true} if the item was properly persisted, {@code false} otherwise
      */
-    boolean save(Item item, boolean useBatching, boolean alwaysOverwrite);
+    boolean save(Item item, Boolean useBatching, Boolean alwaysOverwrite);
 
     /**
      * Updates the item of the specified class and identified by the specified identifier with new property values provided as name - value pairs in the specified Map.
