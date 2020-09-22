@@ -19,11 +19,11 @@ package org.apache.unomi.graphql.schema;
 public class PropertyNameTranslator {
 
     public static String translateFromUnomiToGraphQL(final String propertyName) {
-        return propertyName.replaceAll(":", "__COLON__");
+        return propertyName.replaceAll(":", "__COLON__").replaceAll("-", "__DASH__");
     }
 
     public static String translateFromGraphQLToUnomi(final String propertyName) {
-        return propertyName.replaceAll("__COLON__", ":");
+        return propertyName.replaceAll("__DASH__", "-").replaceAll("__COLON__", ":");
     }
 
 }
