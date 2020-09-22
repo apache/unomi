@@ -1,0 +1,7 @@
+{
+  "operationName": "getTopic",
+  "variables": {
+    "topicId": "testTopic"
+  },
+  "query": "query getTopic($topicId: ID!) {\n  cdp {\n    getTopic(topicID: $topicId) {\n      id\n      name\n      view {\n        name\n      }\n    }\n  }\n}\n"
+}

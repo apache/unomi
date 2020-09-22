@@ -1,0 +1,25 @@
+{
+  "operationName": "findTopics",
+  "variables": {
+    "filterInput": {
+      "or": [
+        {
+          "id_equals": "testTopic"
+        },
+        {
+          "id_equals": "testTopic2"
+        },
+        {
+          "id_equals": "testTopic3"
+        },
+        {
+          "id_equals": "testTopic4"
+        },
+        {
+          "id_equals": "testTopic5"
+        }
+      ]
+    }
+  },
+  "query": "query findTopics($filterInput: CDP_TopicFilterInput) {\n  cdp {\n    findTopics(filter: $filterInput) {\n      totalCount\n      edges {\n        node {\n          id\n        }\n      }\n    }\n  }\n}\n"
+}
