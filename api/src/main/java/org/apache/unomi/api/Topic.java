@@ -14,34 +14,38 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql.types.output;
+package org.apache.unomi.api;
 
-import graphql.annotations.annotationTypes.GraphQLField;
-import graphql.annotations.annotationTypes.GraphQLName;
-import graphql.schema.DataFetchingEnvironment;
-import org.apache.unomi.api.Topic;
+public class Topic extends Item {
 
-import static org.apache.unomi.graphql.types.output.CDPTopicEdge.TYPE_NAME;
+    public static final String ITEM_TYPE = "topic";
 
-@GraphQLName(TYPE_NAME)
-public class CDPTopicEdge {
+    private String topicId;
 
-    public static final String TYPE_NAME = "CDP_TopicEdge";
+    private String name;
 
-    private final Topic topic;
-
-    public CDPTopicEdge(final Topic topic) {
-        this.topic = topic;
+    public String getTopicId() {
+        return topicId;
     }
 
-    @GraphQLField
-    public CDPTopic node(final DataFetchingEnvironment environment) {
-        return new CDPTopic(topic);
+    public void setTopicId(String topicId) {
+        this.topicId = topicId;
     }
 
-    @GraphQLField
-    public String cursor(final DataFetchingEnvironment environment) {
-        return topic.getTopicId();
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    @Override
+    public String toString() {
+        return "Topic{" +
+                "topicId='" + topicId + '\'' +
+                ", name='" + name + '\'' +
+                '}';
     }
 
 }

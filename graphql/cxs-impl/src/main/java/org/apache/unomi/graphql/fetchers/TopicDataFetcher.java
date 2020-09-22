@@ -18,6 +18,9 @@ package org.apache.unomi.graphql.fetchers;
 
 import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
+import org.apache.unomi.api.Topic;
+import org.apache.unomi.api.services.TopicService;
+import org.apache.unomi.graphql.services.ServiceManager;
 import org.apache.unomi.graphql.types.output.CDPTopic;
 
 public class TopicDataFetcher implements DataFetcher<CDPTopic> {
@@ -30,7 +33,16 @@ public class TopicDataFetcher implements DataFetcher<CDPTopic> {
 
     @Override
     public CDPTopic get(DataFetchingEnvironment environment) throws Exception {
-        // Unomi doesn't have an API for that yet, so return a stub
+        final ServiceManager serviceManager = environment.getContext();
+
+        final TopicService topicService = serviceManager.getService(TopicService.class);
+
+        final Topic topic = topicService.load(topicId);
+
+        if (topic != null) {
+            return new CDPTopic(topic);
+        }
+
         return null;
     }
 

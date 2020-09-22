@@ -1,0 +1,31 @@
+{
+  "metadata": {
+    "id": "topicPropertyCondition",
+    "name": "topicPropertyCondition",
+    "description": "",
+    "systemTags": [
+      "condition",
+      "topicCondition"
+    ],
+    "readOnly": true
+  },
+  "conditionEvaluator": "propertyConditionEvaluator",
+  "queryBuilder": "propertyConditionESQueryBuilder",
+  "parameters": [
+    {
+      "id": "propertyName",
+      "type": "string",
+      "multivalued": false
+    },
+    {
+      "id": "comparisonOperator",
+      "type": "comparisonOperator",
+      "multivalued": false
+    },
+    {
+      "id": "propertyValue",
+      "type": "string",
+      "multivalued": false
+    }
+  ]
+}
