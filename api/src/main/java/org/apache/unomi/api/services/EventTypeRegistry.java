@@ -17,6 +17,7 @@
 
 package org.apache.unomi.api.services;
 
+import org.apache.unomi.api.Event;
 import org.apache.unomi.api.EventType;
 
 import java.util.Collection;
@@ -28,6 +29,7 @@ public interface EventTypeRegistry {
 
     /**
      * Retrieve event type definition
+     *
      * @param typeName name of the event type
      * @return {@link EventType} definition
      */
@@ -35,12 +37,22 @@ public interface EventTypeRegistry {
 
     /**
      * Adds event type definition to registry
+     *
      * @param eventType {@link EventType} definition
      */
     void register(EventType eventType);
 
     /**
+     * Checks if event complies with {@link EventType} definition
+     *
+     * @param event the event to validate
+     * @return result of validation
+     */
+    boolean isValid(Event event);
+
+    /**
      * List all known event types
+     *
      * @return Lists all known {@link EventType}s
      */
     Collection<EventType> getAll();
