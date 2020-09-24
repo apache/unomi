@@ -1,0 +1,20 @@
+{
+  "metadata": {
+    "id": "incrementInterest",
+    "name": "Update profile interests",
+    "description": "Update profile interests",
+    "readOnly": true
+  },
+  "condition": {
+    "type": "incrementInterestEventCondition",
+    "parameterValues": {
+    }
+  },
+  "actions": [
+    {
+      "type": "incrementInterestAction",
+      "parameterValues": {
+      }
+    }
+  ]
+}

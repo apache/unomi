@@ -24,8 +24,8 @@
     <cm:property-placeholder persistent-id="org.apache.unomi.plugins.base"
                              update-strategy="reload" placeholder-prefix="${base.">
         <cm:default-properties>
-            <cm:property name="useEventToUpdateProfile" value="false" />
-            <cm:property name="usePropertyConditionOptimizations" value="true" />
+            <cm:property name="useEventToUpdateProfile" value="false"/>
+            <cm:property name="usePropertyConditionOptimizations" value="true"/>
         </cm:default-properties>
     </cm:property-placeholder>
 
@@ -37,14 +37,23 @@
         </cm:default-properties>
     </cm:property-placeholder>
 
+    <cm:property-placeholder persistent-id="org.apache.unomi.interests" update-strategy="reload">
+        <cm:default-properties>
+            <cm:property name="min_value" value="0.0"/>
+            <cm:property name="max_value" value="150.0"/>
+            <cm:property name="divider_value" value="100.0"/>
+        </cm:default-properties>
+    </cm:property-placeholder>
+
     <reference id="definitionsService" interface="org.apache.unomi.api.services.DefinitionsService"/>
     <reference id="persistenceService" interface="org.apache.unomi.persistence.spi.PersistenceService"/>
     <reference id="profileService" interface="org.apache.unomi.api.services.ProfileService"/>
     <reference id="privacyService" interface="org.apache.unomi.api.services.PrivacyService"/>
     <reference id="segmentService" interface="org.apache.unomi.api.services.SegmentService"/>
     <reference id="eventService" interface="org.apache.unomi.api.services.EventService"/>
-    <reference id="configSharingService" interface="org.apache.unomi.api.services.ConfigSharingService" />
+    <reference id="configSharingService" interface="org.apache.unomi.api.services.ConfigSharingService"/>
     <reference id="scriptExecutor" interface="org.apache.unomi.scripting.ScriptExecutor"/>
+    <reference id="topicService" interface="org.apache.unomi.api.services.TopicService"/>
 
     <service
             interface="org.apache.unomi.persistence.elasticsearch.conditions.ConditionESQueryBuilder">
@@ -103,7 +112,7 @@
             <property name="definitionsService" ref="definitionsService"/>
             <property name="persistenceService" ref="persistenceService"/>
             <property name="segmentService" ref="segmentService"/>
-            <property name="scriptExecutor" ref="scriptExecutor" />
+            <property name="scriptExecutor" ref="scriptExecutor"/>
             <property name="maximumIdsQueryCount" value="${es.maximumIdsQueryCount}"/>
             <property name="aggregateQueryBucketSize" value="${es.aggregateQueryBucketSize}"/>
         </bean>
@@ -130,7 +139,7 @@
             <entry key="conditionEvaluatorId" value="propertyConditionEvaluator"/>
         </service-properties>
         <bean class="org.apache.unomi.plugins.baseplugin.conditions.PropertyConditionEvaluator">
-            <property name="usePropertyConditionOptimizations" value="${base.usePropertyConditionOptimizations}" />
+            <property name="usePropertyConditionOptimizations" value="${base.usePropertyConditionOptimizations}"/>
         </bean>
     </service>
 
@@ -165,7 +174,7 @@
         <bean class="org.apache.unomi.plugins.baseplugin.conditions.PastEventConditionEvaluator">
             <property name="definitionsService" ref="definitionsService"/>
             <property name="persistenceService" ref="persistenceService"/>
-            <property name="scriptExecutor" ref="scriptExecutor" />
+            <property name="scriptExecutor" ref="scriptExecutor"/>
         </bean>
     </service>
 
@@ -193,7 +202,7 @@
         </service-properties>
         <bean class="org.apache.unomi.plugins.baseplugin.actions.SetPropertyAction">
             <property name="eventService" ref="eventService"/>
-            <property name="useEventToUpdateProfile" value="${base.useEventToUpdateProfile}" />
+            <property name="useEventToUpdateProfile" value="${base.useEventToUpdateProfile}"/>
         </bean>
     </service>
 
@@ -260,7 +269,20 @@
             <property name="persistenceService" ref="persistenceService"/>
             <property name="definitionsService" ref="definitionsService"/>
             <property name="privacyService" ref="privacyService"/>
-            <property name="configSharingService" ref="configSharingService" />
+            <property name="configSharingService" ref="configSharingService"/>
+        </bean>
+    </service>
+
+    <service interface="org.apache.unomi.api.actions.ActionExecutor">
+        <service-properties>
+            <entry key="actionExecutorId" value="incrementInterest"/>
+        </service-properties>
+        <bean class="org.apache.unomi.plugins.baseplugin.actions.IncrementInterestAction">
+            <property name="eventService" ref="eventService"/>
+            <property name="topicService" ref="topicService"/>
+            <property name="interestsMinValue" value="${min_value}"/>
+            <property name="interestsMaxValue" value="${max_value}"/>
+            <property name="interestsDividerValue" value="${divider_value}"/>
         </bean>
     </service>
 
