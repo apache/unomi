@@ -67,26 +67,30 @@ public class ClientServlet extends HttpServlet {
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
-        String[] pathInfo = req.getPathInfo().substring(1).split("\\.");
-        if (pathInfo != null && pathInfo.length > 0) {
-            String operation = pathInfo[0];
-            String param = pathInfo[1];
-            switch (operation) {
-                case "myprofile":
-                    if (allowedProfileDownloadFormats.contains(param)) {
-                        donwloadCurrentProfile(req, resp, param);
-                    } else {
-                        resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-                    }
-                    break;
-                default:
-                    resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
+        try {
+            String[] pathInfo = req.getPathInfo().substring(1).split("\\.");
+            if (pathInfo != null && pathInfo.length > 0) {
+                String operation = pathInfo[0];
+                String param = pathInfo[1];
+                switch (operation) {
+                    case "myprofile":
+                        if (allowedProfileDownloadFormats.contains(param)) {
+                            donwloadCurrentProfile(req, resp, param);
+                        } else {
+                            resp.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                        }
+                        break;
+                    default:
+                        resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
 
+                }
+            } else {
+                resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
             }
-        } else {
-            resp.setStatus(HttpServletResponse.SC_NOT_FOUND);
+        } catch (Throwable t) { // Here in order to return generic message instead of the whole stack trace in case of not caught exception
+            logger.error("ClientServlet failed to execute get", t);
+            resp.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Internal server error");
         }
-
     }
 
     @Override
