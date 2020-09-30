@@ -86,6 +86,9 @@ public class PastEventConditionEvaluator implements ConditionEvaluator {
             l.add(profileCondition);
 
             Integer numberOfDays = (Integer) condition.getParameter("numberOfDays");
+            String fromDate = (String) condition.getParameter("fromDate");
+            String toDate = (String) condition.getParameter("toDate");
+
             if (numberOfDays != null) {
                 Condition numberOfDaysCondition = new Condition();
                 numberOfDaysCondition.setConditionType(definitionsService.getConditionType("sessionPropertyCondition"));
@@ -93,6 +96,22 @@ public class PastEventConditionEvaluator implements ConditionEvaluator {
                 numberOfDaysCondition.setParameter("comparisonOperator", "greaterThan");
                 numberOfDaysCondition.setParameter("propertyValueDateExpr", "now-" + numberOfDays + "d");
                 l.add(numberOfDaysCondition);
+            }
+            if (fromDate != null)  {
+                Condition startDateCondition = new Condition();
+                startDateCondition.setConditionType(definitionsService.getConditionType("sessionPropertyCondition"));
+                startDateCondition.setParameter("propertyName", "timeStamp");
+                startDateCondition.setParameter("comparisonOperator", "greaterThanOrEqualTo");
+                startDateCondition.setParameter("propertyValueDate", fromDate);
+                l.add(startDateCondition);
+            }
+            if (toDate != null)  {
+                Condition endDateCondition = new Condition();
+                endDateCondition.setConditionType(definitionsService.getConditionType("sessionPropertyCondition"));
+                endDateCondition.setParameter("propertyName", "timeStamp");
+                endDateCondition.setParameter("comparisonOperator", "lessThanOrEqualTo");
+                endDateCondition.setParameter("propertyValueDate", toDate);
+                l.add(endDateCondition);
             }
             count = persistenceService.queryCount(andCondition, Event.ITEM_TYPE);
         }
