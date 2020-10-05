@@ -49,6 +49,7 @@ import org.elasticsearch.action.delete.DeleteRequest;
 import org.elasticsearch.action.get.GetRequest;
 import org.elasticsearch.action.get.GetResponse;
 import org.elasticsearch.action.index.IndexRequest;
+import org.elasticsearch.action.index.IndexResponse;
 import org.elasticsearch.action.search.ClearScrollRequest;
 import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.action.search.SearchResponse;
@@ -56,6 +57,7 @@ import org.elasticsearch.action.search.SearchScrollRequest;
 import org.elasticsearch.action.support.WriteRequest;
 import org.elasticsearch.action.support.master.AcknowledgedResponse;
 import org.elasticsearch.action.update.UpdateRequest;
+import org.elasticsearch.action.update.UpdateResponse;
 import org.elasticsearch.client.*;
 import org.elasticsearch.client.core.CountRequest;
 import org.elasticsearch.client.core.CountResponse;
@@ -709,10 +711,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         if (response.isExists()) {
                             String sourceAsString = response.getSourceAsString();
                             final T value = ESCustomObjectMapper.getObjectMapper().readValue(sourceAsString, clazz);
-                            value.setItemId(response.getId());
-                            value.setVersion(response.getVersion());
-                            value.setMetadata(SEQ_NO, response.getSeqNo());
-                            value.setMetadata(PRIMARY_TERM, response.getPrimaryTerm());
+                            setMetadata(value, response.getId(), response.getVersion(), response.getSeqNo(), response.getPrimaryTerm());
                             putInCache(itemId, value);
                             return value;
                         } else {
@@ -734,6 +733,13 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             }
         }.catchingExecuteInClassLoader(true);
 
+    }
+
+    private void setMetadata(Item item, String id, long version, long seqNo, long primaryTerm) {
+        item.setItemId(id);
+        item.setVersion(version);
+        item.setMetadata(SEQ_NO, seqNo);
+        item.setMetadata(PRIMARY_TERM, primaryTerm);
     }
 
     @Override
@@ -782,7 +788,8 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
                     try {
                         if (bulkProcessor == null || !useBatching) {
-                            client.index(indexRequest, RequestOptions.DEFAULT);
+                            IndexResponse response = client.index(indexRequest, RequestOptions.DEFAULT);
+                            setMetadata(item, response.getId(), response.getVersion(), response.getSeqNo(), response.getPrimaryTerm());
                         } else {
                             bulkProcessor.add(indexRequest);
                         }
@@ -834,7 +841,8 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     }
 
                     if (bulkProcessor == null) {
-                        client.update(updateRequest, RequestOptions.DEFAULT);
+                        UpdateResponse response = client.update(updateRequest, RequestOptions.DEFAULT);
+                        setMetadata(item, response.getId(), response.getVersion(), response.getSeqNo(), response.getPrimaryTerm());
                     } else {
                         bulkProcessor.add(updateRequest);
                     }
@@ -930,7 +938,8 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     }
                     updateRequest.script(actualScript);
                     if (bulkProcessor == null) {
-                        client.update(updateRequest, RequestOptions.DEFAULT);
+                        UpdateResponse response = client.update(updateRequest, RequestOptions.DEFAULT);
+                        setMetadata(item, response.getId(), response.getVersion(), response.getSeqNo(), response.getPrimaryTerm());
                     } else {
                         bulkProcessor.add(updateRequest);
                     }
@@ -1538,10 +1547,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                                 // add hit to results
                                 String sourceAsString = searchHit.getSourceAsString();
                                 final T value = ESCustomObjectMapper.getObjectMapper().readValue(sourceAsString, clazz);
-                                value.setItemId(searchHit.getId());
-                                value.setVersion(searchHit.getVersion());
-                                value.setMetadata(SEQ_NO, searchHit.getSeqNo());
-                                value.setMetadata(PRIMARY_TERM, searchHit.getPrimaryTerm());
+                                setMetadata(value, searchHit.getId(), searchHit.getVersion(), searchHit.getSeqNo(), searchHit.getPrimaryTerm());
                                 results.add(value);
                             }
 
@@ -1571,10 +1577,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         for (SearchHit searchHit : searchHits) {
                             String sourceAsString = searchHit.getSourceAsString();
                             final T value = ESCustomObjectMapper.getObjectMapper().readValue(sourceAsString, clazz);
-                            value.setItemId(searchHit.getId());
-                            value.setVersion(searchHit.getVersion());
-                            value.setMetadata(SEQ_NO, searchHit.getSeqNo());
-                            value.setMetadata(PRIMARY_TERM, searchHit.getPrimaryTerm());
+                            setMetadata(value, searchHit.getId(), searchHit.getVersion(), searchHit.getSeqNo(), searchHit.getPrimaryTerm());
                             results.add(value);
                         }
                     }
@@ -1620,10 +1623,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                             // add hit to results
                             String sourceAsString = searchHit.getSourceAsString();
                             final T value = ESCustomObjectMapper.getObjectMapper().readValue(sourceAsString, clazz);
-                            value.setItemId(searchHit.getId());
-                            value.setVersion(searchHit.getVersion());
-                            value.setMetadata(SEQ_NO, searchHit.getSeqNo());
-                            value.setMetadata(PRIMARY_TERM, searchHit.getPrimaryTerm());
+                            setMetadata(value, searchHit.getId(), searchHit.getVersion(), searchHit.getSeqNo(), searchHit.getPrimaryTerm());
                             results.add(value);
                         }
                     }
