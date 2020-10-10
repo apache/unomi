@@ -33,6 +33,7 @@ import org.elasticsearch.index.query.QueryBuilders;
 import org.elasticsearch.index.query.RangeQueryBuilder;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class PastEventConditionESQueryBuilder implements ConditionESQueryBuilder {
 
@@ -43,6 +44,7 @@ public class PastEventConditionESQueryBuilder implements ConditionESQueryBuilder
 
     private int maximumIdsQueryCount = 5000;
     private int aggregateQueryBucketSize = 5000;
+    private boolean pastEventsDisablePartitions = false;
 
     public void setDefinitionsService(DefinitionsService definitionsService) {
         this.definitionsService = definitionsService;
@@ -62,6 +64,10 @@ public class PastEventConditionESQueryBuilder implements ConditionESQueryBuilder
 
     public void setAggregateQueryBucketSize(int aggregateQueryBucketSize) {
         this.aggregateQueryBucketSize = aggregateQueryBucketSize;
+    }
+
+    public void setPastEventsDisablePartitions(boolean pastEventsDisablePartitions) {
+        this.pastEventsDisablePartitions = pastEventsDisablePartitions;
     }
 
     public void setSegmentService(SegmentService segmentService) {
@@ -95,25 +101,34 @@ public class PastEventConditionESQueryBuilder implements ConditionESQueryBuilder
 
             Set<String> ids = new HashSet<>();
 
-            // Get full cardinality to partition the terms aggreggation
-            Map<String, Double> m = persistenceService.getSingleValuesMetrics(eventCondition, new String[]{"card"}, "profileId.keyword", Event.ITEM_TYPE);
-            long card = m.get("_card").longValue();
+            if (pastEventsDisablePartitions) {
+                Map<String, Long> eventCountByProfile = persistenceService.aggregateWithOptimizedQuery(eventCondition, new TermsAggregate("profileId"), Event.ITEM_TYPE, maximumIdsQueryCount);
+                ids = eventCountByProfile.entrySet().stream()
+                        .filter(x -> !x.getKey().equals("_filtered"))
+                        .filter(x -> x.getValue() >= minimumEventCount && x.getValue() <= maximumEventCount)
+                        .map(Map.Entry::getKey)
+                        .collect(Collectors.toSet());
+            } else {
+                // Get full cardinality to partition the terms aggreggation
+                Map<String, Double> m = persistenceService.getSingleValuesMetrics(eventCondition, new String[]{"card"}, "profileId.keyword", Event.ITEM_TYPE);
+                long card = m.get("_card").longValue();
 
-            int numParts = (int) (card / aggregateQueryBucketSize) + 2;
-            for (int i = 0; i < numParts; i++) {
-                Map<String, Long> eventCountByProfile = persistenceService.aggregateWithOptimizedQuery(eventCondition, new TermsAggregate("profileId", i, numParts), Event.ITEM_TYPE);
-                if (eventCountByProfile != null) {
-                    eventCountByProfile.remove("_filtered");
-                    for (Map.Entry<String, Long> entry : eventCountByProfile.entrySet()) {
-                        if (entry.getValue() < minimumEventCount) {
-                            // No more interesting buckets in this partition
-                            break;
-                        } else if (entry.getValue() <= maximumEventCount) {
-                            ids.add(entry.getKey());
+                int numParts = (int) (card / aggregateQueryBucketSize) + 2;
+                for (int i = 0; i < numParts; i++) {
+                    Map<String, Long> eventCountByProfile = persistenceService.aggregateWithOptimizedQuery(eventCondition, new TermsAggregate("profileId", i, numParts), Event.ITEM_TYPE);
+                    if (eventCountByProfile != null) {
+                        eventCountByProfile.remove("_filtered");
+                        for (Map.Entry<String, Long> entry : eventCountByProfile.entrySet()) {
+                            if (entry.getValue() < minimumEventCount) {
+                                // No more interesting buckets in this partition
+                                break;
+                            } else if (entry.getValue() <= maximumEventCount) {
+                                ids.add(entry.getKey());
 
-                            if (ids.size() > maximumIdsQueryCount) {
-                                // Avoid building too big ids query - throw exception instead
-                                throw new UnsupportedOperationException("Too many profiles");
+                                if (ids.size() > maximumIdsQueryCount) {
+                                    // Avoid building too big ids query - throw exception instead
+                                    throw new UnsupportedOperationException("Too many profiles");
+                                }
                             }
                         }
                     }
@@ -126,16 +141,28 @@ public class PastEventConditionESQueryBuilder implements ConditionESQueryBuilder
 
     public long count(Condition condition, Map<String, Object> context, ConditionESQueryBuilderDispatcher dispatcher) {
         Condition eventCondition = getEventCondition(condition, context);
+        Map<String, Double> aggResult = null;
 
         Integer minimumEventCount = condition.getParameter("minimumEventCount") == null ? 1 : (Integer) condition.getParameter("minimumEventCount");
         Integer maximumEventCount = condition.getParameter("maximumEventCount") == null ? Integer.MAX_VALUE : (Integer) condition.getParameter("maximumEventCount");
 
-        // Get full cardinality to partition the terms aggreggation
-        Map<String, Double> m = persistenceService.getSingleValuesMetrics(eventCondition, new String[]{"card"}, "profileId.keyword", Event.ITEM_TYPE);
-        long card = m.get("_card").longValue();
+        // No count filter - simply get the full number of distinct profiles
+        if (minimumEventCount == 1 && maximumEventCount == Integer.MAX_VALUE) {
+            aggResult = persistenceService.getSingleValuesMetrics(eventCondition, new String[]{"card"}, "profileId.keyword", Event.ITEM_TYPE);
+            return aggResult.get("_card").longValue();
+        }
 
-        if (minimumEventCount != 1 || maximumEventCount != Integer.MAX_VALUE) {
-            // Event count specified, must check occurences count for each profile
+        if (pastEventsDisablePartitions) {
+            Map<String, Long> eventCountByProfile = persistenceService.aggregateWithOptimizedQuery(eventCondition, new TermsAggregate("profileId"), Event.ITEM_TYPE, maximumIdsQueryCount);
+            return eventCountByProfile.entrySet().stream()
+                    .filter(x -> x.getKey().equals("_filtered"))
+                    .filter(x -> x.getValue() >= minimumEventCount && x.getValue() <= maximumEventCount)
+                    .count();
+        } else {
+            // Get full cardinality to partition the terms aggreggation
+            aggResult = persistenceService.getSingleValuesMetrics(eventCondition, new String[]{"card"}, "profileId.keyword", Event.ITEM_TYPE);
+            long card = aggResult.get("_card").longValue();
+             // Event count specified, must check occurences count for each profile
             int result = 0;
             int numParts = (int) (card / aggregateQueryBucketSize) + 2;
             for (int i = 0; i < numParts; i++) {
@@ -159,9 +186,6 @@ public class PastEventConditionESQueryBuilder implements ConditionESQueryBuilder
                 }
             }
             return result;
-        } else {
-            // Simply get the full number of distinct profiles
-            return card;
         }
     }
 
