@@ -66,6 +66,9 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
     private long segmentRefreshInterval = 1000;
     private int aggregateQueryBucketSize = 5000;
 
+    private int maximumIdsQueryCount = 5000;
+    private boolean pastEventsDisablePartitions = false;
+
     public SegmentServiceImpl() {
         logger.info("Initializing segment service...");
     }
@@ -92,6 +95,14 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
 
     public void setAggregateQueryBucketSize(int aggregateQueryBucketSize) {
         this.aggregateQueryBucketSize = aggregateQueryBucketSize;
+    }
+
+    public void setMaximumIdsQueryCount(int maximumIdsQueryCount) {
+        this.maximumIdsQueryCount = maximumIdsQueryCount;
+    }
+
+    public void setPastEventsDisablePartitions(boolean pastEventsDisablePartitions) {
+        this.pastEventsDisablePartitions = pastEventsDisablePartitions;
     }
 
     public void setSegmentRefreshInterval(long segmentRefreshInterval) {
@@ -797,30 +808,19 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
             endDateCondition.setParameter("propertyValueDate", toDate);
             l.add(endDateCondition);
         }
+
         String propertyKey = (String) parentCondition.getParameter("generatedPropertyKey");
 
-        Map<String, Double> m = persistenceService.getSingleValuesMetrics(andCondition, new String[]{"card"}, "profileId.keyword", Event.ITEM_TYPE);
-        long card = m.get("_card").longValue();
-
-        int numParts = (int) (card / aggregateQueryBucketSize) + 2;
-        for (int i = 0; i < numParts; i++) {
-            Map<String, Long> eventCountByProfile = persistenceService.aggregateWithOptimizedQuery(andCondition, new TermsAggregate("profileId", i, numParts), Event.ITEM_TYPE);
-            for (Map.Entry<String, Long> entry : eventCountByProfile.entrySet()) {
-                String profileId = entry.getKey();
-                if (!profileId.startsWith("_")) {
-                    Map<String, Long> pastEventCounts = new HashMap<>();
-                    pastEventCounts.put(propertyKey, entry.getValue());
-                    Map<String, Object> systemProperties = new HashMap<>();
-                    systemProperties.put("pastEvents", pastEventCounts);
-                    try {
-                        systemProperties.put("lastUpdated", new Date());
-                        Profile profile = new Profile();
-                        profile.setItemId(profileId);
-                        persistenceService.update(profile, null, Profile.class, "systemProperties", systemProperties);
-                    } catch (Exception e) {
-                        logger.error("Error updating profile {} past event system properties", profileId, e);
-                    }
-                }
+        if(pastEventsDisablePartitions) {
+            Map<String, Long> eventCountByProfile = persistenceService.aggregateWithOptimizedQuery(eventCondition, new TermsAggregate("profileId"), Event.ITEM_TYPE, maximumIdsQueryCount);
+            updateProfilesWithPastEventProperty(eventCountByProfile, propertyKey);
+        } else {
+            Map<String, Double> m = persistenceService.getSingleValuesMetrics(andCondition, new String[]{"card"}, "profileId.keyword", Event.ITEM_TYPE);
+            long card = m.get("_card").longValue();
+            int numParts = (int) (card / aggregateQueryBucketSize) + 2;
+            for (int i = 0; i < numParts; i++) {
+                Map<String, Long> eventCountByProfile = persistenceService.aggregateWithOptimizedQuery(andCondition, new TermsAggregate("profileId", i, numParts), Event.ITEM_TYPE);
+                updateProfilesWithPastEventProperty(eventCountByProfile, propertyKey);
             }
         }
 
@@ -848,6 +848,27 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
             logger.error("Cannot generate key",e);
             return null;
         }
+    }
+
+    private void updateProfilesWithPastEventProperty(Map<String, Long> eventCountByProfile, String propertyKey) {
+            for (Map.Entry<String, Long> entry : eventCountByProfile.entrySet()) {
+                String profileId = entry.getKey();
+                if (!profileId.startsWith("_")) {
+                    Map<String, Long> pastEventCounts = new HashMap<>();
+                    pastEventCounts.put(propertyKey, entry.getValue());
+                    Map<String, Object> systemProperties = new HashMap<>();
+                    systemProperties.put("pastEvents", pastEventCounts);
+                    try {
+                        systemProperties.put("lastUpdated", new Date());
+                        Profile profile = new Profile();
+                        profile.setItemId(profileId);
+                        persistenceService.update(profile, null, Profile.class, "systemProperties", systemProperties);
+                    } catch (Exception e) {
+                        logger.error("Error updating profile {} past event system properties", profileId, e);
+                    }
+                }
+            }
+
     }
 
     private String getMD5(String md5) {

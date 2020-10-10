@@ -170,6 +170,9 @@
         <property name="schedulerService" ref="schedulerServiceImpl"/>
         <property name="segmentRefreshInterval" value="${services.segment.refresh.interval}"/>
         <property name="aggregateQueryBucketSize" value="${es.aggregateQueryBucketSize}" />
+        <property name="pastEventsDisablePartitions" value="${es.pastEventsDisablePartitions}" />
+        <property name="maximumIdsQueryCount" value="${es.maximumIdsQueryCount}" />
+
     </bean>
     <service id="segmentService" ref="segmentServiceImpl">
         <interfaces>

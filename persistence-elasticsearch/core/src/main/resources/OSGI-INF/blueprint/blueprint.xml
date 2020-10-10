@@ -53,7 +53,9 @@
             <cm:property name="maximalElasticSearchVersion" value="8.0.0" />
 
             <cm:property name="aggregateQueryBucketSize" value="5000" />
-
+            <cm:property name="clientSocketTimeout" value="" />
+            <cm:property name="aggQueryMaxResponseSizeHttp" value="" />
+            <cm:property name="aggQueryThrowOnMissingDocs" value="false" />
             <cm:property name="itemClassesToCache" value="" />
             <cm:property name="useBatchingForSave" value="false" />
 
@@ -122,6 +124,9 @@
         <property name="maximalElasticSearchVersion" value="${es.maximalElasticSearchVersion}" />
 
         <property name="aggregateQueryBucketSize" value="${es.aggregateQueryBucketSize}" />
+        <property name="aggQueryMaxResponseSizeHttp" value="${es.aggQueryMaxResponseSizeHttp}" />
+        <property name="aggQueryThrowOnMissingDocs" value="${es.aggQueryThrowOnMissingDocs}" />
+        <property name="clientSocketTimeout" value="${es.clientSocketTimeout}" />
 
         <property name="metricsService" ref="metricsService" />
         <property name="hazelcastInstance" ref="hazelcastInstance" />
