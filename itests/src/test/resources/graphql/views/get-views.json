@@ -1,0 +1,5 @@
+{
+  "operationName": "getViews",
+  "variables": {},
+  "query": "query getViews {\n  cdp {\n    getViews {\n      name\n    }\n  }\n}\n"
+}
