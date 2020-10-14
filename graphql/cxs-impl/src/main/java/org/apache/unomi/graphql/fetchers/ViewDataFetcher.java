@@ -16,19 +16,47 @@
  */
 package org.apache.unomi.graphql.fetchers;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
+
+import org.apache.unomi.api.Topic;
+import org.apache.unomi.api.lists.UserList;
+import org.apache.unomi.api.segments.Segment;
+import org.apache.unomi.graphql.services.ServiceManager;
+import org.apache.unomi.graphql.types.output.CDPView;
+import org.apache.unomi.persistence.spi.PersistenceService;
+import org.apache.unomi.persistence.spi.aggregate.TermsAggregate;
+
 import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
-import org.apache.unomi.graphql.types.output.CDPView;
 
-import java.util.Collections;
-import java.util.List;
-
-public class ViewDataFetcher implements DataFetcher<List<CDPView>> {
+public class ViewDataFetcher
+    implements DataFetcher<List<CDPView>>
+{
 
     @Override
-    public List<CDPView> get(final DataFetchingEnvironment environment) throws Exception {
-        // Unomi doesn't have an API for that yet, so return a stub
-        return Collections.emptyList();
+    public List<CDPView> get( final DataFetchingEnvironment environment )
+        throws Exception
+    {
+        final ServiceManager serviceManager = environment.getContext();
+
+        final PersistenceService persistenceService = serviceManager.getService( PersistenceService.class );
+
+        final List<Map<String, Long>> scopes = new ArrayList<>();
+
+        scopes.add( persistenceService.aggregateWithOptimizedQuery( null, new TermsAggregate( "scope" ), Topic.ITEM_TYPE ) );
+        scopes.add( persistenceService.aggregateWithOptimizedQuery( null, new TermsAggregate( "metadata.scope" ), Segment.ITEM_TYPE ) );
+        scopes.add( persistenceService.aggregateWithOptimizedQuery( null, new TermsAggregate( "metadata.scope" ), UserList.ITEM_TYPE ) );
+
+        return scopes.stream().
+            filter( Objects::nonNull ).
+            map( Map::keySet ).
+            flatMap( scopeAsKeys -> scopeAsKeys.stream().
+                filter( scope -> !"_filtered".equals( scope ) && !"_missing".equals( scope ) && !"_all".equals( scope ) ).
+                map( CDPView::new ) ).collect( Collectors.toList() );
     }
 
 }
