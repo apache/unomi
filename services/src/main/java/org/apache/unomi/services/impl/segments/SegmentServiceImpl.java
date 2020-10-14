@@ -770,6 +770,9 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
         l.add(eventCondition);
 
         Integer numberOfDays = (Integer) parentCondition.getParameter("numberOfDays");
+        String fromDate = (String) parentCondition.getParameter("fromDate");
+        String toDate = (String) parentCondition.getParameter("toDate");
+
         if (numberOfDays != null) {
             Condition numberOfDaysCondition = new Condition();
             numberOfDaysCondition.setConditionType(definitionsService.getConditionType("sessionPropertyCondition"));
@@ -777,6 +780,22 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
             numberOfDaysCondition.setParameter("comparisonOperator", "greaterThan");
             numberOfDaysCondition.setParameter("propertyValue", "now-" + numberOfDays + "d");
             l.add(numberOfDaysCondition);
+        }
+        if (fromDate != null)  {
+            Condition startDateCondition = new Condition();
+            startDateCondition.setConditionType(definitionsService.getConditionType("sessionPropertyCondition"));
+            startDateCondition.setParameter("propertyName", "timeStamp");
+            startDateCondition.setParameter("comparisonOperator", "greaterThanOrEqualTo");
+            startDateCondition.setParameter("propertyValueDate", fromDate);
+            l.add(startDateCondition);
+        }
+        if (toDate != null)  {
+            Condition endDateCondition = new Condition();
+            endDateCondition.setConditionType(definitionsService.getConditionType("sessionPropertyCondition"));
+            endDateCondition.setParameter("propertyName", "timeStamp");
+            endDateCondition.setParameter("comparisonOperator", "lessThanOrEqualTo");
+            endDateCondition.setParameter("propertyValueDate", toDate);
+            l.add(endDateCondition);
         }
         String propertyKey = (String) parentCondition.getParameter("generatedPropertyKey");
 
@@ -811,6 +830,16 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
             Map<String, Object> m = new HashMap<>();
             m.put("condition", condition);
             m.put("numberOfDays", parentCondition.getParameter("numberOfDays"));
+            // Put fromDate and toDate only if exist - for backward compatibility
+            Object fromDate = parentCondition.getParameter("fromDate");
+            if (fromDate != null) {
+                m.put("fromDate", parentCondition.getParameter("fromDate"));
+            }
+            Object toDate = parentCondition.getParameter("toDate");
+            if (toDate != null) {
+                m.put("fromDate", parentCondition.getParameter("toDate"));
+            }
+
             String key = CustomObjectMapper.getObjectMapper().writeValueAsString(m);
             return "eventTriggered" + getMD5(key);
         } catch (JsonProcessingException e) {
