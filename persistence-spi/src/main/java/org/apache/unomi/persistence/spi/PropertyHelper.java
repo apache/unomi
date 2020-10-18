@@ -25,10 +25,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.InvocationTargetException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
+import java.util.*;
 
 /**
  * Helper method for properties
@@ -85,7 +82,23 @@ public class PropertyHelper {
                     BeanUtils.setProperty(target, propertyName, values);
                     return true;
                 }
-            } else if (propertyValue != null && !compareValues(propertyValue, BeanUtils.getProperty(target, propertyName))) {
+            }
+            if (setPropertyStrategy != null && setPropertyStrategy.equals("addValues")) {
+                Object newValues = propertyValue;
+                List<Object> newValuesList = convertToList(newValues);
+
+                Object previousValue = PropertyUtils.getProperty(target, propertyName);
+                List<Object> previousValueList = convertToList(previousValue);
+
+                newValuesList.addAll(previousValueList);
+                Set<Object> propertiesSet = new HashSet<>(newValuesList);
+                List<Object> propertiesList = Arrays.asList(propertiesSet.toArray());
+
+                BeanUtils.setProperty(target, propertyName, propertiesList);
+                return true;
+
+            }
+            else if (propertyValue != null && !compareValues(propertyValue, BeanUtils.getProperty(target, propertyName))) {
                 if (setPropertyStrategy == null ||
                         setPropertyStrategy.equals("alwaysSet") ||
                         (setPropertyStrategy.equals("setIfMissing") && BeanUtils.getProperty(target, propertyName) == null)) {
@@ -97,6 +110,16 @@ public class PropertyHelper {
             logger.error("Cannot set property", e);
         }
         return false;
+    }
+
+    public static List<Object> convertToList(Object value) {
+        List<Object> convertedList = new ArrayList<>();
+        if (value != null && value instanceof List) {
+            convertedList.addAll((List) value);
+        } else if (value != null) {
+            convertedList.add(value);
+        }
+        return convertedList;
     }
 
     public static Integer getInteger(Object value) {
