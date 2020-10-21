@@ -14,16 +14,38 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.graphql.schema;
+package org.apache.unomi.api;
 
-public class PropertyNameTranslator {
+public class Topic extends Item {
 
-    public static String translateFromUnomiToGraphQL(final String propertyName) {
-        return propertyName.replaceAll(":", "__COLON__").replaceAll("-", "__DASH__");
+    public static final String ITEM_TYPE = "topic";
+
+    private String topicId;
+
+    private String name;
+
+    public String getTopicId() {
+        return topicId;
     }
 
-    public static String translateFromGraphQLToUnomi(final String propertyName) {
-        return propertyName.replaceAll("__DASH__", "-").replaceAll("__COLON__", ":");
+    public void setTopicId(String topicId) {
+        this.topicId = topicId;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    @Override
+    public String toString() {
+        return "Topic{" +
+                "topicId='" + topicId + '\'' +
+                ", name='" + name + '\'' +
+                '}';
     }
 
 }

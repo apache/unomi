@@ -104,6 +104,7 @@
         <property name="indexMappingTotalFieldsLimit" value="${es.indexMappingTotalFieldsLimit}"/>
         <property name="indexMaxDocValueFieldsSearch" value="${es.indexMaxDocValueFieldsSearch}"/>
         <property name="elasticSearchAddresses" value="${es.elasticSearchAddresses}"/>
+        <property name="fatalIllegalStateErrors" value="${es.fatalIllegalStateErrors}"/>
         <property name="defaultQueryLimit" value="${es.defaultQueryLimit}"/>
         <property name="itemsMonthlyIndexedOverride" value="${es.monthlyIndex.itemsMonthlyIndexedOverride}" />
         <property name="routingByType">

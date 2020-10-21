@@ -262,6 +262,18 @@
         </interfaces>
     </service>
 
+    <bean id="topicServiceImpl" class="org.apache.unomi.services.impl.topics.TopicServiceImpl"
+          init-method="postConstruct" destroy-method="preDestroy">
+        <property name="persistenceService" ref="persistenceService"/>
+        <property name="bundleContext" ref="blueprintBundleContext"/>
+    </bean>
+    <service id="topicService" ref="topicServiceImpl">
+        <interfaces>
+            <value>org.apache.unomi.api.services.TopicService</value>
+            <value>org.osgi.framework.SynchronousBundleListener</value>
+        </interfaces>
+    </service>
+
 
     <!-- We use a listener here because using the list directly for listening to proxies coming from the same bundle didn't seem to work -->
     <reference-list id="eventListenerServices"

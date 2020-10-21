@@ -70,6 +70,15 @@ public interface EventService {
      */
     boolean isEventAllowed(Event event, String thirdPartyId);
 
+
+    /**
+     * Check if event fields complies with corresponding {@link EventType} definition
+     *
+     * @param event        event to test
+     * @return true if the event is valid
+     */
+    boolean isEventValid(Event event);
+
     /**
      * Get the third party server name, if the request is originated from a known peer
      *
@@ -93,6 +102,12 @@ public interface EventService {
      * @return the EventType object corresponding to the name, or null if not found.
      */
     EventType getEventType(String typeName);
+
+    /**
+     * Registers event type
+     * @param eventType event type to register
+     */
+    void registerEventType(EventType eventType);
 
     /**
      * Retrieves the set of known event type identifiers.
