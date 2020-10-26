@@ -59,7 +59,10 @@
              is usually preferred -->
         <!--property name="redirectURI" value="/login.jsp"/-->
     </bean>
-    <bean id="runtimeExceptionMapper" class="org.apache.unomi.rest.RuntimeExceptionMapper"/>
+
+    <bean id="runtimeExceptionMapper" class="org.apache.unomi.rest.exceptionMappers.RuntimeExceptionMapper"/>
+
+    <bean id="unsupportedOperationExceptionMapper" class="org.apache.unomi.rest.exceptionMappers.UnsupportedOperationExceptionMapper"/>
 
     <jaxrs:server address="/segments" id="restSegmentService">
         <jaxrs:providers>
@@ -67,6 +70,7 @@
             <ref component-id="cors-filter"/>
             <ref component-id="jaas-filter"/>
             <ref component-id="runtimeExceptionMapper"/>
+            <ref component-id="unsupportedOperationExceptionMapper"/>
         </jaxrs:providers>
 
         <jaxrs:serviceBeans>
@@ -80,6 +84,7 @@
             <ref component-id="cors-filter"/>
             <ref component-id="jaas-filter"/>
             <ref component-id="runtimeExceptionMapper"/>
+            <ref component-id="unsupportedOperationExceptionMapper"/>
         </jaxrs:providers>
 
         <jaxrs:serviceBeans>
@@ -93,6 +98,7 @@
             <ref component-id="cors-filter"/>
             <ref component-id="jaas-filter"/>
             <ref component-id="runtimeExceptionMapper"/>
+            <ref component-id="unsupportedOperationExceptionMapper"/>
         </jaxrs:providers>
 
         <jaxrs:serviceBeans>
@@ -106,6 +112,7 @@
             <ref component-id="cors-filter"/>
             <ref component-id="jaas-filter"/>
             <ref component-id="runtimeExceptionMapper"/>
+            <ref component-id="unsupportedOperationExceptionMapper"/>
         </jaxrs:providers>
 
         <jaxrs:serviceBeans>
@@ -119,6 +126,7 @@
             <ref component-id="cors-filter"/>
             <ref component-id="jaas-filter"/>
             <ref component-id="runtimeExceptionMapper"/>
+            <ref component-id="unsupportedOperationExceptionMapper"/>
         </jaxrs:providers>
 
         <jaxrs:serviceBeans>
@@ -132,6 +140,7 @@
             <ref component-id="cors-filter"/>
             <ref component-id="jaas-filter"/>
             <ref component-id="runtimeExceptionMapper"/>
+            <ref component-id="unsupportedOperationExceptionMapper"/>
         </jaxrs:providers>
 
         <jaxrs:serviceBeans>
@@ -145,6 +154,7 @@
             <ref component-id="cors-filter"/>
             <ref component-id="jaas-filter"/>
             <ref component-id="runtimeExceptionMapper"/>
+            <ref component-id="unsupportedOperationExceptionMapper"/>
         </jaxrs:providers>
 
         <jaxrs:serviceBeans>
@@ -158,6 +168,7 @@
             <ref component-id="cors-filter"/>
             <ref component-id="jaas-filter"/>
             <ref component-id="runtimeExceptionMapper"/>
+            <ref component-id="unsupportedOperationExceptionMapper"/>
         </jaxrs:providers>
 
         <jaxrs:serviceBeans>
@@ -171,6 +182,7 @@
             <ref component-id="cors-filter"/>
             <ref component-id="jaas-filter"/>
             <ref component-id="runtimeExceptionMapper"/>
+            <ref component-id="unsupportedOperationExceptionMapper"/>
         </jaxrs:providers>
 
         <jaxrs:serviceBeans>
@@ -184,6 +196,7 @@
             <ref component-id="cors-filter"/>
             <ref component-id="jaas-filter"/>
             <ref component-id="runtimeExceptionMapper"/>
+            <ref component-id="unsupportedOperationExceptionMapper"/>
         </jaxrs:providers>
 
         <jaxrs:serviceBeans>
@@ -197,6 +210,7 @@
             <ref component-id="cors-filter"/>
             <ref component-id="jaas-filter"/>
             <ref component-id="runtimeExceptionMapper"/>
+            <ref component-id="unsupportedOperationExceptionMapper"/>
         </jaxrs:providers>
 
         <jaxrs:serviceBeans>
@@ -210,6 +224,7 @@
             <ref component-id="cors-filter"/>
             <ref component-id="jaas-filter"/>
             <ref component-id="runtimeExceptionMapper"/>
+            <ref component-id="unsupportedOperationExceptionMapper"/>
         </jaxrs:providers>
 
         <jaxrs:serviceBeans>

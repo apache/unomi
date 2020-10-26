@@ -37,7 +37,6 @@ import org.apache.unomi.api.services.RulesService;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.aggregate.*;
-import org.apache.unomi.services.impl.ParserHelper;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleEvent;
@@ -219,8 +218,8 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
     public Goal getGoal(String goalId) {
         Goal goal = persistenceService.load(goalId, Goal.class);
         if (goal != null) {
-            ParserHelper.resolveConditionType(definitionsService, goal.getStartEvent());
-            ParserHelper.resolveConditionType(definitionsService, goal.getTargetEvent());
+            definitionsService.resolveConditionType(goal.getStartEvent());
+            definitionsService.resolveConditionType(goal.getTargetEvent());
         }
         return goal;
     }
@@ -234,8 +233,8 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
 
     @Override
     public void setGoal(Goal goal) {
-        ParserHelper.resolveConditionType(definitionsService, goal.getStartEvent());
-        ParserHelper.resolveConditionType(definitionsService, goal.getTargetEvent());
+        definitionsService.resolveConditionType(goal.getStartEvent());
+        definitionsService.resolveConditionType(goal.getTargetEvent());
 
         if (goal.getMetadata().isEnabled()) {
             if (goal.getStartEvent() != null) {
@@ -407,7 +406,7 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
     public Campaign getCampaign(String id) {
         Campaign campaign = persistenceService.load(id, Campaign.class);
         if (campaign != null) {
-            ParserHelper.resolveConditionType(definitionsService, campaign.getEntryCondition());
+            definitionsService.resolveConditionType(campaign.getEntryCondition());
         }
         return campaign;
     }
@@ -421,7 +420,7 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
     }
 
     public void setCampaign(Campaign campaign) {
-        ParserHelper.resolveConditionType(definitionsService, campaign.getEntryCondition());
+        definitionsService.resolveConditionType(campaign.getEntryCondition());
 
         if(rulesService.getRule(campaign.getMetadata().getId() + "EntryEvent") != null) {
             rulesService.removeRule(campaign.getMetadata().getId() + "EntryEvent");
@@ -466,7 +465,7 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
         }
 
         if (query != null && query.getCondition() != null) {
-            ParserHelper.resolveConditionType(definitionsService, query.getCondition());
+            definitionsService.resolveConditionType(query.getCondition());
             list.add(query.getCondition());
         }
 

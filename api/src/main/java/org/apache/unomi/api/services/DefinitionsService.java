@@ -20,6 +20,7 @@ package org.apache.unomi.api.services;
 import org.apache.unomi.api.PluginType;
 import org.apache.unomi.api.PropertyMergeStrategyType;
 import org.apache.unomi.api.ValueType;
+import org.apache.unomi.api.actions.Action;
 import org.apache.unomi.api.actions.ActionType;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.conditions.ConditionType;
@@ -205,6 +206,21 @@ public interface DefinitionsService {
      */
     boolean resolveConditionType(Condition rootCondition);
 
+    /**
+     * Resolves (if possible) the {@link ActionType} for the specified action
+     *
+     * @param action the action for which we want to resolve type
+     * @return {@code true}
+     */
+    boolean resolveActionType(Action action);
+
+    /**
+     * Resolves (if possible) the {@link ActionType}s for the specified action
+     *
+     * @param actions the actions for which we want to resolve type
+     * @return {@code true}
+     */
+    boolean resolveActionTypes(List<Action> actions);
     /**
      * Forces a refresh of the definitions from the persistence service. Warning: this may seriously impact performance
      * so it is recommended to use this in specific cases such as for example in integration tests.

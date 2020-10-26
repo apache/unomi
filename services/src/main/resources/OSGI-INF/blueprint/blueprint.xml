@@ -83,6 +83,7 @@
         <property name="persistenceService" ref="persistenceService"/>
         <property name="bundleContext" ref="blueprintBundleContext"/>
         <property name="schedulerService" ref="schedulerServiceImpl"/>
+        <property name="parserHelper" ref="parserHelper"/>
         <property name="definitionsRefreshInterval" value="${services.definitions.refresh.interval}"/>
     </bean>
     <service id="definitionsService" ref="definitionsServiceImpl">
@@ -259,6 +260,9 @@
         </interfaces>
     </service>
 
+    <bean id="parserHelper" class="org.apache.unomi.services.impl.ParserHelper">
+        <property name="bundleContext" ref="blueprintBundleContext"/>
+    </bean>
 
     <!-- We use a listener here because using the list directly for listening to proxies coming from the same bundle didn't seem to work -->
     <reference-list id="eventListenerServices"
@@ -266,6 +270,11 @@
                     availability="optional">
         <reference-listener
                 bind-method="bind" unbind-method="unbind" ref="eventServiceImpl"/>
+    </reference-list>
+
+    <reference-list id="conditionHookFactories"
+                    interface="org.apache.unomi.api.conditions.ConditionHookFactory"
+                    availability="optional">
     </reference-list>
 
     <!-- We use a listener here because using the list directly for listening to proxies coming from the same bundle didn't seem to work -->

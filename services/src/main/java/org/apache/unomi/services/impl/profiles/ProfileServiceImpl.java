@@ -32,7 +32,6 @@ import org.apache.unomi.api.services.SegmentService;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.PropertyHelper;
-import org.apache.unomi.services.impl.ParserHelper;
 import org.osgi.framework.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -764,7 +763,7 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
 
     @Override
     public boolean matchCondition(Condition condition, Profile profile, Session session) {
-        ParserHelper.resolveConditionType(definitionsService, condition);
+        definitionsService.resolveConditionType(condition);
 
         if (condition.getConditionTypeId().equals("booleanCondition")) {
             List<Condition> subConditions = (List<Condition>) condition.getParameter("subConditions");
@@ -789,7 +788,7 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
     }
 
     public void batchProfilesUpdate(BatchUpdate update) {
-        ParserHelper.resolveConditionType(definitionsService, update.getCondition());
+        definitionsService.resolveConditionType(update.getCondition());
         List<Profile> profiles = persistenceService.query(update.getCondition(), null, Profile.class);
 
         for (Profile profile : profiles) {

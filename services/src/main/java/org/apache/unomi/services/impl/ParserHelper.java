@@ -22,8 +22,12 @@ import org.apache.unomi.api.ValueType;
 import org.apache.unomi.api.actions.Action;
 import org.apache.unomi.api.actions.ActionType;
 import org.apache.unomi.api.conditions.Condition;
+import org.apache.unomi.api.conditions.ConditionHookFactory;
 import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.api.services.DefinitionsService;
+import org.apache.unomi.api.conditions.ConditionHook;
+import org.osgi.framework.BundleContext;
+import org.osgi.framework.ServiceReference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,12 +42,19 @@ public class ParserHelper {
 
     private static final Set<String> unresolvedActionTypes = new HashSet<>();
     private static final Set<String> unresolvedConditionTypes = new HashSet<>();
+    private BundleContext bundleContext;
 
-    public static boolean resolveConditionType(final DefinitionsService definitionsService, Condition rootCondition) {
+    public void setBundleContext(BundleContext bundleContext) {
+        this.bundleContext = bundleContext;
+    }
+
+    public boolean resolveConditionType(DefinitionsService definitionsService, Condition rootCondition) {
         if (rootCondition == null) {
             return false;
         }
         final List<String> result = new ArrayList<String>();
+        List<ConditionHook> conditionHooks = getConditionHooks();
+
         visitConditions(rootCondition, new ConditionVisitor() {
             @Override
             public void visit(Condition condition) {
@@ -60,12 +71,13 @@ public class ParserHelper {
                         }
                     }
                 }
+                hookCondition(conditionHooks, condition);
             }
         });
         return result.isEmpty();
     }
 
-    public static List<String> getConditionTypeIds(Condition rootCondition) {
+    public  List<String> getConditionTypeIds(Condition rootCondition) {
         final List<String> result = new ArrayList<String>();
         visitConditions(rootCondition, new ConditionVisitor() {
             @Override
@@ -76,7 +88,7 @@ public class ParserHelper {
         return result;
     }
 
-    private static void visitConditions(Condition rootCondition, ConditionVisitor visitor) {
+    private void visitConditions(Condition rootCondition, ConditionVisitor visitor) {
         visitor.visit(rootCondition);
         // recursive call for sub-conditions as parameters
         for (Object parameterValue : rootCondition.getParameterValues().values()) {
@@ -96,15 +108,15 @@ public class ParserHelper {
         }
     }
 
-    public static boolean resolveActionTypes(DefinitionsService definitionsService, List<Action> actions) {
+    public boolean resolveActionTypes(DefinitionsService definitionsService, List<Action> actions) {
         boolean result = true;
         for (Action action : actions) {
-            result &= ParserHelper.resolveActionType(definitionsService, action);
+            result &= resolveActionType(definitionsService, action);
         }
         return result;
     }
 
-    public static boolean resolveActionType(DefinitionsService definitionsService, Action action) {
+    public boolean resolveActionType(DefinitionsService definitionsService, Action action) {
         if (action.getActionType() == null) {
             ActionType actionType = definitionsService.getActionType(action.getActionTypeId());
             if (actionType != null) {
@@ -121,13 +133,36 @@ public class ParserHelper {
         return true;
     }
 
-    public static void resolveValueType(DefinitionsService definitionsService, PropertyType propertyType) {
+    public void resolveValueType(DefinitionsService definitionsService, PropertyType propertyType) {
         if (propertyType.getValueType() == null) {
             ValueType valueType = definitionsService.getValueType(propertyType.getValueTypeId());
             if (valueType != null) {
                 propertyType.setValueType(valueType);
             }
         }
+    }
+
+    private void hookCondition(List<ConditionHook> conditionHooks, Condition condition) {
+        for (ConditionHook conditionHook: conditionHooks) {
+            conditionHook.executeHook(condition);
+        }
+    }
+
+    private List<ConditionHook> getConditionHooks() {
+        List<ConditionHook> conditionHooks = new LinkedList<>();
+        try {
+            ServiceReference<ConditionHookFactory>[] serviceReferences = (ServiceReference<ConditionHookFactory>[]) bundleContext
+                    .getAllServiceReferences(ConditionHookFactory.class.getName(), null);
+            if (serviceReferences != null) {
+                for (ServiceReference<ConditionHookFactory> serviceReference : serviceReferences) {
+                    ConditionHookFactory conditionHookFactory = bundleContext.getService(serviceReference);
+                    conditionHooks.add(conditionHookFactory.createConditionHook());
+                }
+            }
+        } catch(Exception e) {
+            throw new RuntimeException(e);
+        }
+        return conditionHooks;
     }
 
     interface ConditionVisitor {

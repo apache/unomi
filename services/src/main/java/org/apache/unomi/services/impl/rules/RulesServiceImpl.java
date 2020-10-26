@@ -30,7 +30,6 @@ import org.apache.unomi.api.services.*;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.services.actions.ActionExecutorDispatcher;
-import org.apache.unomi.services.impl.ParserHelper;
 import org.osgi.framework.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -248,8 +247,8 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
     private List<Rule> getAllRules() {
         List<Rule> allItems = persistenceService.getAllItems(Rule.class, 0, -1, "priority").getList();
         for (Rule rule : allItems) {
-            ParserHelper.resolveConditionType(definitionsService, rule.getCondition());
-            ParserHelper.resolveActionTypes(definitionsService, rule.getActions());
+            definitionsService.resolveConditionType(rule.getCondition());
+            definitionsService.resolveActionTypes(rule.getActions());
         }
         return allItems;
     }
@@ -340,10 +339,10 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
         Rule rule = persistenceService.load(ruleId, Rule.class);
         if (rule != null) {
             if (rule.getCondition() != null) {
-                ParserHelper.resolveConditionType(definitionsService, rule.getCondition());
+                definitionsService.resolveConditionType(rule.getCondition());
             }
             if (rule.getActions() != null) {
-                ParserHelper.resolveActionTypes(definitionsService, rule.getActions());
+                definitionsService.resolveActionTypes(rule.getActions());
             }
         }
         return rule;
@@ -356,7 +355,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
         Condition condition = rule.getCondition();
         if (condition != null) {
             if (rule.getMetadata().isEnabled() && !rule.getMetadata().isMissingPlugins()) {
-                ParserHelper.resolveConditionType(definitionsService, condition);
+                definitionsService.resolveConditionType(condition);
                 definitionsService.extractConditionBySystemTag(condition, "eventCondition");
             }
         }
@@ -373,7 +372,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
             if(trackedCondition != null){
                 Condition sourceEventPropertyCondition = definitionsService.extractConditionBySystemTag(r.getCondition(), "sourceEventCondition");
                 if(source != null && sourceEventPropertyCondition != null) {
-                    ParserHelper.resolveConditionType(definitionsService, sourceEventPropertyCondition);
+                    definitionsService.resolveConditionType(sourceEventPropertyCondition);
                     if(persistenceService.testMatch(sourceEventPropertyCondition, source)){
                         trackedConditions.add(trackedCondition);
                     }
