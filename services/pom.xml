@@ -80,6 +80,12 @@
         </dependency>
 
         <dependency>
+            <groupId>net.jodah</groupId>
+            <artifactId>failsafe</artifactId>
+            <version>2.4.0</version>
+        </dependency>
+
+        <dependency>
             <groupId>com.github.fge</groupId>
             <artifactId>json-patch</artifactId>
             <version>1.9</version>

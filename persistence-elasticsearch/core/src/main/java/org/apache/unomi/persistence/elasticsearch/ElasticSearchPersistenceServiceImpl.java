@@ -187,6 +187,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     private Set<String> itemClassesToCacheSet = new HashSet<>();
     private String itemClassesToCache;
     private boolean useBatchingForSave = false;
+    private boolean useBatchingForUpdate = true;
     private boolean alwaysOverwrite = true;
     private static boolean throwExceptions = false;
     private boolean refreshBeforeQuery = false;
@@ -342,6 +343,10 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     public void setUseBatchingForSave(boolean useBatchingForSave) {
         this.useBatchingForSave = useBatchingForSave;
+    }
+
+    public void setUseBatchingForUpdate(boolean useBatchingForUpdate) {
+        this.useBatchingForUpdate = useBatchingForUpdate;
     }
 
     public void setUsername(String username) {
@@ -870,7 +875,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         }
                     }
 
-                    if (bulkProcessor == null) {
+                    if (bulkProcessor == null || !useBatchingForUpdate) {
                         UpdateResponse response = client.update(updateRequest, RequestOptions.DEFAULT);
                         setMetadata(item, response.getId(), response.getVersion(), response.getSeqNo(), response.getPrimaryTerm());
                     } else {

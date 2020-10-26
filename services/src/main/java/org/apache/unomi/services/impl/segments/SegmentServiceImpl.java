@@ -18,6 +18,8 @@
 package org.apache.unomi.services.impl.segments;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import net.jodah.failsafe.Failsafe;
+import net.jodah.failsafe.RetryPolicy;
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.Metadata;
 import org.apache.unomi.api.PartialList;
@@ -46,6 +48,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.net.URL;
 import java.security.MessageDigest;
+import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
@@ -65,6 +68,8 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
     private int segmentUpdateBatchSize = 1000;
     private long segmentRefreshInterval = 1000;
     private int aggregateQueryBucketSize = 5000;
+    private int maxRetriesForUpdateProfileSegment = 5;
+    private long secondsDelayForRetryUpdateProfileSegment = 1;
 
     private int maximumIdsQueryCount = 5000;
     private boolean pastEventsDisablePartitions = false;
@@ -107,6 +112,14 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
 
     public void setSegmentRefreshInterval(long segmentRefreshInterval) {
         this.segmentRefreshInterval = segmentRefreshInterval;
+    }
+
+    public void setMaxRetriesForUpdateProfileSegment(int maxRetriesForUpdateProfileSegment) {
+        this.maxRetriesForUpdateProfileSegment = maxRetriesForUpdateProfileSegment;
+    }
+
+    public void setSecondsDelayForRetryUpdateProfileSegment(long secondsDelayForRetryUpdateProfileSegment) {
+        this.secondsDelayForRetryUpdateProfileSegment = secondsDelayForRetryUpdateProfileSegment;
     }
 
     public void postConstruct() {
@@ -925,12 +938,25 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
             while (profilesToAdd.getList().size() > 0) {
                 long profilesToAddStartTime = System.currentTimeMillis();
                 for (Profile profileToAdd : profilesToAdd.getList()) {
-                    profileToAdd.getSegments().add(segment.getItemId());
-                    Map<String,Object> sourceMap = new HashMap<>();
-                    sourceMap.put("segments", profileToAdd.getSegments());
-                    profileToAdd.setSystemProperty("lastUpdated", new Date());
-                    sourceMap.put("systemProperties", profileToAdd.getSystemProperties());
-                    persistenceService.update(profileToAdd, null, Profile.class, sourceMap);
+                    //update Profile Segment with retry
+                    RetryPolicy retryPolicy = new RetryPolicy()
+                            .withDelay(Duration.ofSeconds(secondsDelayForRetryUpdateProfileSegment))
+                            .onRetry(executionAttemptedEvent -> {
+                                logger.info("retry updating profile segment {}, profile {}, time {}", segment.getItemId(),profileToAdd.getItemId(), new Date());
+                            })
+                            .withMaxRetries(maxRetriesForUpdateProfileSegment);
+
+                    Failsafe.with(retryPolicy)
+                            .run(executionContext -> {
+                                if (executionContext.isRetry()){
+                                    Profile profileToAddUpdated = persistenceService.load(profileToAdd.getItemId(), Profile.class);
+                                    updateProfileSegment(profileToAddUpdated, segment.getItemId());
+                                }
+                                else {
+                                    updateProfileSegment(profileToAdd, segment.getItemId());
+                                }
+                            });
+
                     Event profileUpdated = new Event("profileUpdated", null, profileToAdd, null, null, profileToAdd, new Date());
                     profileUpdated.setPersistent(false);
                     eventService.send(profileUpdated);
@@ -987,6 +1013,16 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
             }
         }
         logger.info("{} profiles updated in {}ms", updatedProfileCount, System.currentTimeMillis() - updateProfilesForSegmentStartTime);
+    }
+
+
+    private void updateProfileSegment(Profile profile, String segmentId) {
+        profile.getSegments().add(segmentId);
+        Map<String, Object> sourceMap = new HashMap<>();
+        sourceMap.put("segments", profile.getSegments());
+        profile.setSystemProperty("lastUpdated", new Date());
+        sourceMap.put("systemProperties", profile.getSystemProperties());
+        persistenceService.update(profile, null, Profile.class, sourceMap);
     }
 
     private void updateExistingProfilesForScoring(Scoring scoring) {
