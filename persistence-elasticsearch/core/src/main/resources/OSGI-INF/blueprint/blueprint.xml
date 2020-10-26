@@ -33,6 +33,7 @@
             <cm:property name="cluster.name" value="contextElasticSearch"/>
             <cm:property name="elasticSearchAddresses" value="localhost:9200"/>
             <cm:property name="index.prefix" value="context"/>
+            <cm:property name="mappingOverride" value="false"/>
             <cm:property name="numberOfShards" value="5"/>
             <cm:property name="numberOfReplicas" value="0"/>
             <cm:property name="indexMappingTotalFieldsLimit" value="1000"/>
@@ -99,6 +100,7 @@
         <property name="conditionESQueryBuilderDispatcher" ref="conditionESQueryBuilderDispatcher"/>
         <property name="clusterName" value="${es.cluster.name}"/>
         <property name="indexPrefix" value="${es.index.prefix}"/>
+        <property name="mappingOverride" value="${es.mappingOverride}"/>
         <property name="monthlyIndexNumberOfShards" value="${es.monthlyIndex.numberOfShards}"/>
         <property name="monthlyIndexNumberOfReplicas" value="${es.monthlyIndex.numberOfReplicas}"/>
         <property name="monthlyIndexMappingTotalFieldsLimit" value="${es.monthlyIndex.indexMappingTotalFieldsLimit}"/>

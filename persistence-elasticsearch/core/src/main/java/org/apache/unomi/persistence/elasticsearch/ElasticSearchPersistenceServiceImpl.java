@@ -146,6 +146,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     private String[] fatalIllegalStateErrors;
     private String clusterName;
     private String indexPrefix;
+    private boolean mappingOverride = false;
     private String monthlyIndexNumberOfShards;
     private String monthlyIndexNumberOfReplicas;
     private String monthlyIndexMappingTotalFieldsLimit;
@@ -228,6 +229,10 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     public void setIndexPrefix(String indexPrefix) {
         this.indexPrefix = indexPrefix;
+    }
+
+    public void setMappingOverride(boolean mappingOverride) {
+        this.mappingOverride = mappingOverride;
     }
 
     public void setMonthlyIndexNumberOfShards(String monthlyIndexNumberOfShards) {
@@ -418,12 +423,12 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         throw new Exception("ElasticSearch version is not within [" + minimalVersion + "," + maximalVersion + "), aborting startup !");
                     }
 
-                loadPredefinedMappings(bundleContext, false);
+                loadPredefinedMappings(bundleContext, mappingOverride);
 
                 // load predefined mappings and condition dispatchers of any bundles that were started before this one.
                 for (Bundle existingBundle : bundleContext.getBundles()) {
                     if (existingBundle.getBundleContext() != null) {
-                        loadPredefinedMappings(existingBundle.getBundleContext(), false);
+                        loadPredefinedMappings(existingBundle.getBundleContext(), mappingOverride);
                     }
                 }
 
