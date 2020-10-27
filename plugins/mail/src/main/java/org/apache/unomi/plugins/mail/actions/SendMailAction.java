@@ -116,7 +116,7 @@ public class SendMailAction implements ActionExecutor {
         event.getProfile().setSystemProperty("notificationAck", profileNotif);
         event.getProfile().setSystemProperty("lastUpdated", new Date());
 
-        persistenceService.update(event.getProfile().getItemId(), null, Profile.class, "systemProperties", event.getProfile().getSystemProperties());
+        persistenceService.update(event.getProfile(), null, Profile.class, "systemProperties", event.getProfile().getSystemProperties());
 
         ST stringTemplate = new ST(template, '$', '$');
         stringTemplate.add("profile", event.getProfile());

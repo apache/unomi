@@ -21,6 +21,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.Serializable;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -63,6 +64,7 @@ public abstract class Item implements Serializable {
     protected String itemType;
     protected String scope;
     protected Long version;
+    protected Map<String, Object> metadata = new HashMap<>();
 
     public Item() {
         this.itemType = getItemType(this.getClass());
@@ -139,5 +141,13 @@ public abstract class Item implements Serializable {
 
     public void setVersion(Long version) {
         this.version = version;
+    }
+
+    public Object getMetadata(String key) {
+        return metadata.get(key);
+    }
+
+    public void setMetadata(String key, Object value) {
+        metadata.put(key, value);
     }
 }
