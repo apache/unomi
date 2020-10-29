@@ -26,7 +26,7 @@ import java.util.Date;
 
 /**
  * Utility class for building conditions
- * 
+ *
  * @author Sergiy Shyrkov
  */
 public class ConditionBuilder {
@@ -101,6 +101,10 @@ public class ConditionBuilder {
             return op("equals").integerValue(value);
         }
 
+        public ComparisonCondition equalTo(Double value) {
+            return op("equals").doubleValue(value);
+        }
+
         public ComparisonCondition exists() {
             return op("exists");
         }
@@ -113,12 +117,20 @@ public class ConditionBuilder {
             return op("greaterThan").integerValue(value);
         }
 
+        public ComparisonCondition greaterThan(Double value) {
+            return op("greaterThan").doubleValue(value);
+        }
+
         public ComparisonCondition greaterThanOrEqualTo(Date value) {
             return op("greaterThanOrEqualTo").dateValue(value);
         }
 
         public ComparisonCondition greaterThanOrEqualTo(Integer value) {
             return op("greaterThanOrEqualTo").integerValue(value);
+        }
+
+        public ComparisonCondition greaterThanOrEqualTo(Double value) {
+            return op("greaterThanOrEqualTo").doubleValue(value);
         }
 
         public ComparisonCondition in(String... values) {
@@ -141,12 +153,20 @@ public class ConditionBuilder {
             return op("in").integerValues(values);
         }
 
+        public ComparisonCondition in(Double... values) {
+            return op("in").doubleValues(values);
+        }
+
         public ComparisonCondition lessThan(Date value) {
             return op("lessThan").dateValue(value);
         }
 
         public ComparisonCondition lessThan(Integer value) {
             return op("lessThan").integerValue(value);
+        }
+
+        public ComparisonCondition lessThan(Double value) {
+            return op("lessThan").doubleValue(value);
         }
 
         public ComparisonCondition lessThanOrEqualTo(Date value) {
@@ -185,6 +205,10 @@ public class ConditionBuilder {
             return op("notEquals").integerValue(value);
         }
 
+        public ComparisonCondition notEqualTo(Double value) {
+            return op("notEquals").doubleValue(value);
+        }
+
         public ComparisonCondition notIn(String... values) {
             return op("notIn").stringValues(values);
         }
@@ -195,6 +219,10 @@ public class ConditionBuilder {
 
         public ComparisonCondition notIn(Integer... values) {
             return op("notIn").integerValues(values);
+        }
+
+        public ComparisonCondition notIn(Double... values) {
+            return op("notIn").doubleValues(values);
         }
 
         private ComparisonCondition op(String op) {
@@ -222,6 +250,10 @@ public class ConditionBuilder {
             return parameter("propertyValueInteger", value);
         }
 
+        private ComparisonCondition doubleValue(Double value) {
+            return parameter("propertyValueDouble", value);
+        }
+
         private ComparisonCondition dateValue(Date value) {
             return parameter("propertyValueDate", value);
         }
@@ -232,6 +264,10 @@ public class ConditionBuilder {
 
         private ComparisonCondition integerValues(Integer... values) {
             return parameter("propertyValuesInteger", values != null ? Arrays.asList(values) : null);
+        }
+
+        private ComparisonCondition doubleValues(Double... values) {
+            return parameter("propertyValuesDouble", values != null ? Arrays.asList(values) : null);
         }
 
         private ComparisonCondition dateValues(Date... values) {

@@ -135,6 +135,19 @@ public class PropertyHelper {
         return null;
     }
 
+    public static Double getDouble(Object value) {
+        if (value instanceof Number) {
+            return ((Number) value).doubleValue();
+        } else {
+            try {
+                return Double.parseDouble(value.toString());
+            } catch (NumberFormatException e) {
+                // Not a number
+            }
+        }
+        return null;
+    }
+
     public static Boolean getBooleanValue(Object setPropertyValueBoolean) {
 
         if (setPropertyValueBoolean instanceof Boolean) {

@@ -57,7 +57,7 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
         this.usePropertyConditionOptimizations = usePropertyConditionOptimizations;
     }
 
-    private int compare(Object actualValue, String expectedValue, Object expectedValueDate, Object expectedValueInteger, Object expectedValueDateExpr) {
+    private int compare(Object actualValue, String expectedValue, Object expectedValueDate, Object expectedValueInteger, Object expectedValueDateExpr, Object expectedValueDouble) {
         if (expectedValue == null && expectedValueDate == null && expectedValueInteger == null && getDate(expectedValueDateExpr) == null) {
             return actualValue == null ? 0 : 1;
         } else if (actualValue == null) {
@@ -66,6 +66,8 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
 
         if (expectedValueInteger != null) {
             return PropertyHelper.getInteger(actualValue).compareTo(PropertyHelper.getInteger(expectedValueInteger));
+        } else if (expectedValueDouble != null) {
+            return PropertyHelper.getDouble(actualValue).compareTo(PropertyHelper.getDouble(expectedValueDouble));
         } else if (expectedValueDate != null) {
             return getDate(actualValue).compareTo(getDate(expectedValueDate));
         } else if (expectedValueDateExpr != null) {
@@ -149,6 +151,7 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
 
         String expectedValue = ConditionContextHelper.foldToASCII((String) condition.getParameter("propertyValue"));
         Object expectedValueInteger = condition.getParameter("propertyValueInteger");
+        Object expectedValueDouble = condition.getParameter("propertyValueDouble");
         Object expectedValueDate = condition.getParameter("propertyValueDate");
         Object expectedValueDateExpr = condition.getParameter("propertyValueDateExpr");
 
@@ -192,36 +195,39 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
                     if (o instanceof String) {
                         o = ConditionContextHelper.foldToASCII((String) o);
                     }
-                    if (compare(o, expectedValue, expectedValueDate, expectedValueInteger, expectedValueDateExpr) == 0) {
+                    if (compare(o, expectedValue, expectedValueDate, expectedValueInteger, expectedValueDateExpr, expectedValueDouble) == 0) {
                         return true;
                     }
                 }
                 return false;
             }
-            return compare(actualValue, expectedValue, expectedValueDate, expectedValueInteger, expectedValueDateExpr) == 0;
+            return compare(actualValue, expectedValue, expectedValueDate, expectedValueInteger, expectedValueDateExpr, expectedValueDouble) == 0;
         } else if (op.equals("notEquals")) {
-            return compare(actualValue, expectedValue, expectedValueDate, expectedValueInteger, expectedValueDateExpr) != 0;
+            return compare(actualValue, expectedValue, expectedValueDate, expectedValueInteger, expectedValueDateExpr, expectedValueDouble) != 0;
         } else if (op.equals("greaterThan")) {
-            return compare(actualValue, expectedValue, expectedValueDate, expectedValueInteger, expectedValueDateExpr) > 0;
+            return compare(actualValue, expectedValue, expectedValueDate, expectedValueInteger, expectedValueDateExpr, expectedValueDouble) > 0;
         } else if (op.equals("greaterThanOrEqualTo")) {
-            return compare(actualValue, expectedValue, expectedValueDate, expectedValueInteger, expectedValueDateExpr) >= 0;
+            return compare(actualValue, expectedValue, expectedValueDate, expectedValueInteger, expectedValueDateExpr, expectedValueDouble) >= 0;
         } else if (op.equals("lessThan")) {
-            return compare(actualValue, expectedValue, expectedValueDate, expectedValueInteger, expectedValueDateExpr) < 0;
+            return compare(actualValue, expectedValue, expectedValueDate, expectedValueInteger, expectedValueDateExpr, expectedValueDouble) < 0;
         } else if (op.equals("lessThanOrEqualTo")) {
-            return compare(actualValue, expectedValue, expectedValueDate, expectedValueInteger, expectedValueDateExpr) <= 0;
+            return compare(actualValue, expectedValue, expectedValueDate, expectedValueInteger, expectedValueDateExpr, expectedValueDouble) <= 0;
         } else if (op.equals("between")) {
             List<?> expectedValuesInteger = (List<?>) condition.getParameter("propertyValuesInteger");
+            List<?> expectedValuesDouble = (List<?>) condition.getParameter("propertyValuesDouble");
             List<?> expectedValuesDate = (List<?>) condition.getParameter("propertyValuesDate");
             List<?> expectedValuesDateExpr = (List<?>) condition.getParameter("propertyValuesDateExpr");
             return compare(actualValue, null,
                     (expectedValuesDate != null && expectedValuesDate.size() >= 1) ? getDate(expectedValuesDate.get(0)) : null,
                     (expectedValuesInteger != null && expectedValuesInteger.size() >= 1) ? (Integer) expectedValuesInteger.get(0) : null,
-                    (expectedValuesDateExpr != null && expectedValuesDateExpr.size() >= 1) ? (String) expectedValuesDateExpr.get(0) : null) >= 0
+                    (expectedValuesDateExpr != null && expectedValuesDateExpr.size() >= 1) ? (String) expectedValuesDateExpr.get(0) : null,
+                    (expectedValuesDouble != null && expectedValuesDouble.size() >= 1) ? (String) expectedValuesDouble.get(0) : null) >= 0
                     &&
                     compare(actualValue, null,
                             (expectedValuesDate != null && expectedValuesDate.size() >= 2) ? getDate(expectedValuesDate.get(1)) : null,
                             (expectedValuesInteger != null && expectedValuesInteger.size() >= 2) ? (Integer) expectedValuesInteger.get(1) : null,
-                            (expectedValuesDateExpr != null && expectedValuesDateExpr.size() >= 2) ? (String) expectedValuesDateExpr.get(1) : null) <= 0;
+                            (expectedValuesDateExpr != null && expectedValuesDateExpr.size() >= 2) ? (String) expectedValuesDateExpr.get(1) : null,
+                            (expectedValuesDouble != null && expectedValuesDouble.size() >= 2) ? (String) expectedValuesDouble.get(1) : null) <= 0;
         } else if (op.equals("contains")) {
             return actualValue.toString().contains(expectedValue);
         } else if (op.equals("notContains")) {
