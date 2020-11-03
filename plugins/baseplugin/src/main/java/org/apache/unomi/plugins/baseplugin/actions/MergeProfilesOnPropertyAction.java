@@ -204,13 +204,12 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
         if (response instanceof HttpServletResponse) {
             HttpServletResponse httpServletResponse = (HttpServletResponse) response;
             if (!(profile instanceof Persona)) {
-                Cookie profileIdCookie = new Cookie(profileIdCookieName, profile.getItemId());
-                profileIdCookie.setPath("/");
-                if (profileIdCookieDomain != null && !profileIdCookieDomain.equals("")) {
-                    profileIdCookie.setDomain(profileIdCookieDomain);
-                }
-                profileIdCookie.setMaxAge(cookieAgeInSeconds);
-                httpServletResponse.addCookie(profileIdCookie);
+                httpServletResponse.addHeader("Set-Cookie",
+                        profileIdCookieName + "=" + profile.getItemId() +
+                                "; Path=/" +
+                                "; Max-Age=" + cookieAgeInSeconds +
+                                (StringUtils.isNotBlank(profileIdCookieDomain) ? ("; Domain=" + profileIdCookieDomain) : "")  +
+                                "; SameSite=Lax");
             }
         }
     }
