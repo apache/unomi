@@ -21,6 +21,16 @@
       "multivalued": false
     },
     {
+      "id": "fromDate",
+      "type": "date",
+      "multivalued": false
+    },
+    {
+      "id": "toDate",
+      "type": "date",
+      "multivalued": false
+    },
+    {
       "id": "minimumEventCount",
       "type": "integer",
       "multivalued": false

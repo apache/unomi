@@ -17,6 +17,7 @@
 
 package org.apache.unomi.web;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.unomi.api.Persona;
 import org.apache.unomi.api.Profile;
 
@@ -117,13 +118,12 @@ public class HttpUtils {
         if (response instanceof HttpServletResponse) {
             HttpServletResponse httpServletResponse = (HttpServletResponse) response;
             if (!(profile instanceof Persona)) {
-                Cookie profileIdCookie = new Cookie(profileIdCookieName, profile.getItemId());
-                profileIdCookie.setPath("/");
-                if (profileIdCookieDomain != null && !profileIdCookieDomain.equals("")) {
-                    profileIdCookie.setDomain(profileIdCookieDomain);
-                }
-                profileIdCookie.setMaxAge(profileIdCookieMaxAgeInSeconds);
-                httpServletResponse.addCookie(profileIdCookie);
+                httpServletResponse.addHeader("Set-Cookie",
+                        profileIdCookieName + "=" + profile.getItemId() +
+                                "; Path=/" +
+                                "; Max-Age=" + profileIdCookieMaxAgeInSeconds +
+                                (StringUtils.isNotBlank(profileIdCookieDomain) ? ("; Domain=" + profileIdCookieDomain) : "")  +
+                                "; SameSite=Lax");
             }
         }
     }
