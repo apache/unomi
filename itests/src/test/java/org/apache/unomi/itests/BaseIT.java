@@ -31,8 +31,10 @@ import org.ops4j.pax.exam.Option;
 import org.ops4j.pax.exam.karaf.options.LogLevelOption.LogLevel;
 import org.ops4j.pax.exam.options.MavenArtifactUrlReference;
 import org.ops4j.pax.exam.options.MavenUrlReference;
+import org.ops4j.pax.exam.util.Filter;
 import org.osgi.framework.BundleContext;
 
+import javax.inject.Inject;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;

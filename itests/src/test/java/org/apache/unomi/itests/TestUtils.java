@@ -18,6 +18,7 @@
 package org.apache.unomi.itests;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPost;
@@ -25,13 +26,22 @@ import org.apache.http.entity.ContentType;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.util.EntityUtils;
 import org.apache.unomi.api.ContextResponse;
+import org.apache.unomi.api.Event;
+import org.apache.unomi.api.Profile;
+import org.apache.unomi.api.Session;
+import org.apache.unomi.api.conditions.Condition;
+import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
+import org.apache.unomi.persistence.spi.PersistenceService;
 import org.junit.Assert;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 
 public class TestUtils {
 	private static final String JSON_MYME_TYPE = "application/json";
+	private final static Logger LOGGER = LoggerFactory.getLogger(TestUtils.class);
 
 	public static <T> T retrieveResourceFromResponse(HttpResponse response, Class<T> clazz) throws IOException {
 		if (response == null) {
@@ -47,30 +57,68 @@ public class TestUtils {
 			T value = mapper.readValue(jsonFromResponse, clazz);
 			return value;
 		} catch (Throwable t) {
+			LOGGER.error("Error parsing response JSON", t);
 			t.printStackTrace();
 		}
 		return null;
 	}
 
-	public RequestResponse executeContextJSONRequest(HttpPost request, String sessionId) throws IOException {
+	public static RequestResponse executeContextJSONRequest(HttpPost request, String sessionId) throws IOException {
 		try (CloseableHttpResponse response = HttpClientBuilder.create().build().execute(request)) {
 			// validate mimeType
-			String mimeType = ContentType.getOrDefault(response.getEntity()).getMimeType();
+			HttpEntity entity = response.getEntity();
+			String mimeType = ContentType.getOrDefault(entity).getMimeType();
+			if (!JSON_MYME_TYPE.equals(mimeType)) {
+				String entityContent = EntityUtils.toString(entity);
+				LOGGER.warn("Invalid response: " + entityContent);
+			}
 			Assert.assertEquals("Response content type should be " + JSON_MYME_TYPE, JSON_MYME_TYPE, mimeType);
 
 			// validate context
 			ContextResponse context = TestUtils.retrieveResourceFromResponse(response, ContextResponse.class);
 			Assert.assertNotNull("Context should not be null", context);
 			Assert.assertNotNull("Context profileId should not be null", context.getProfileId());
-			Assert.assertEquals("Context sessionId should be the same as the sessionId used to request the context", sessionId,
-				context.getSessionId());
-
+			if (sessionId != null) {
+				Assert.assertEquals("Context sessionId should be the same as the sessionId used to request the context", sessionId,
+						context.getSessionId());
+			}
 			String cookieHeader = null;
 			if (response.containsHeader("Set-Cookie")) {
 				cookieHeader = response.getHeaders("Set-Cookie")[0].toString().substring(12);
 			}
 			return new RequestResponse(context, cookieHeader);
 		}
+	}
+
+	public static RequestResponse executeContextJSONRequest(HttpPost request) throws IOException {
+		return executeContextJSONRequest(request, null);
+	}
+
+	public static boolean removeAllProfiles(DefinitionsService definitionsService, PersistenceService persistenceService) {
+		Condition condition = new Condition(definitionsService.getConditionType("profilePropertyCondition"));
+		condition.setParameter("propertyName","itemType");
+		condition.setParameter("comparisonOperator","equals");
+		condition.setParameter("propertyValue","profile");
+
+		return persistenceService.removeByQuery(condition, Profile.class);
+	}
+
+	public static boolean removeAllEvents(DefinitionsService definitionsService, PersistenceService persistenceService) {
+		Condition condition = new Condition(definitionsService.getConditionType("eventPropertyCondition"));
+		condition.setParameter("propertyName","itemType");
+		condition.setParameter("comparisonOperator","equals");
+		condition.setParameter("propertyValue","event");
+
+		return persistenceService.removeByQuery(condition, Event.class);
+	}
+
+	public static boolean removeAllSessions(DefinitionsService definitionsService, PersistenceService persistenceService) {
+		Condition condition = new Condition(definitionsService.getConditionType("sessionPropertyCondition"));
+		condition.setParameter("propertyName","itemType");
+		condition.setParameter("comparisonOperator","equals");
+		condition.setParameter("propertyValue","session");
+
+		return persistenceService.removeByQuery(condition, Session.class);
 	}
 
 	public static class RequestResponse {

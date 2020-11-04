@@ -161,9 +161,9 @@ public class PropertyConditionEvaluatorTest {
             // we ignore these exceptions as they are expected.
         }
         vulnFile = new File("target/vuln-file.txt");
-        assertFalse("Vulnerability successfully executed ! File created at " + vulnFileCanonicalPath, vulnFile.exists());
+        assertFalse("Vulnerability successfully executed ! File created at " + vulnFile.getCanonicalPath(), vulnFile.exists());
         try {
-            propertyConditionEvaluator.getOGNLPropertyValue(mockEvent, "(#runtimeclass = #this.getClass().forName(\"java.lang.Runtime\")).(#getruntimemethod = #runtimeclass.getDeclaredMethods().{^ #this.name.equals(\"getRuntime\")}[0]).(#rtobj = #getruntimemethod.invoke(null,null)).(#execmethod = #runtimeclass.getDeclaredMethods().{? #this.name.equals(\"exec\")}.{? #this.getParameters()[0].getType().getName().equals(\"java.lang.String\")}.{? #this.getParameters().length < 2}[0]).(#execmethod.invoke(#rtobj,\" touch "+vulnFileCanonicalPath+"\"))");
+            propertyConditionEvaluator.getOGNLPropertyValue(mockEvent, "(#runtimeclass = #this.getClass().forName(\"java.lang.Runtime\")).(#getruntimemethod = #runtimeclass.getDeclaredMethods().{^ #this.name.equals(\"getRuntime\")}[0]).(#rtobj = #getruntimemethod.invoke(null,null)).(#execmethod = #runtimeclass.getDeclaredMethods().{? #this.name.equals(\"exec\")}.{? #this.getParameters()[0].getType().getName().equals(\"java.lang.String\")}.{? #this.getParameters().length < 2}[0]).(#execmethod.invoke(#rtobj,\" touch "+vulnFile.getCanonicalPath()+"\"))");
         } catch (RuntimeException | MethodFailedException re) {
             // we ignore these exceptions as they are expected.
         }
