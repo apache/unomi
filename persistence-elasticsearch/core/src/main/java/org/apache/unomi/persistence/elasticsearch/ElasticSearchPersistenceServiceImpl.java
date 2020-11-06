@@ -191,7 +191,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     private boolean useBatchingForUpdate = true;
     private boolean alwaysOverwrite = true;
     private static boolean throwExceptions = false;
-    private boolean refreshBeforeQuery = false;
     private boolean aggQueryThrowOnMissingDocs = false;
     private Integer aggQueryMaxResponseSizeHttp = null;
     private Integer clientSocketTimeout = null;
@@ -378,9 +377,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         this.alwaysOverwrite = alwaysOverwrite;
     }
 
-    public void setRefreshBeforeQuery(boolean refreshBeforeQuery) {
-        this.refreshBeforeQuery = refreshBeforeQuery;
-    }
 
     public void setAggQueryThrowOnMissingDocs(boolean aggQueryThrowOnMissingDocs) {
         this.aggQueryThrowOnMissingDocs = aggQueryThrowOnMissingDocs;
@@ -1036,10 +1032,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                             .size(100);
                     searchRequest.source(searchSourceBuilder);
 
-                    if (refreshBeforeQuery) {
-                        refreshIndices(searchRequest.indices());
-                    }
-
                     SearchResponse response = client.search(searchRequest, RequestOptions.DEFAULT);
 
                     // Scroll until no more hits are returned
@@ -1513,10 +1505,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
                 searchSourceBuilder.query(filter);
                 countRequest.source(searchSourceBuilder);
-                if (refreshBeforeQuery) {
-                    refreshIndices(countRequest.indices());
-                }
-
                 CountResponse response = client.count(countRequest, RequestOptions.DEFAULT);
                 return response.getCount();
             }
@@ -1586,11 +1574,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     }
                     searchSourceBuilder.version(true);
                     searchRequest.source(searchSourceBuilder);
-
-                    if (refreshBeforeQuery) {
-                        refreshIndices(searchRequest.indices());
-                    }
-
                     SearchResponse response = client.search(searchRequest, RequestOptions.DEFAULT);
 
                     if (size == -1) {
@@ -1826,10 +1809,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
                 searchRequest.source(searchSourceBuilder);
 
-                if (refreshBeforeQuery) {
-                    refreshIndices(searchRequest.indices());
-                }
-
                 RequestOptions.Builder builder = RequestOptions.DEFAULT.toBuilder();
 
                 if (aggQueryMaxResponseSizeHttp != null) {
@@ -1904,17 +1883,13 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Override
     public void refresh() {
-        refreshIndices();
-    }
-
-    private void refreshIndices(String... indices) {
         new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".refresh", this.bundleContext, this.fatalIllegalStateErrors) {
             protected Boolean execute(Object... args) {
                 if (bulkProcessor != null) {
                     bulkProcessor.flush();
                 }
                 try {
-                    client.indices().refresh(Requests.refreshRequest(indices), RequestOptions.DEFAULT);
+                    client.indices().refresh(Requests.refreshRequest(), RequestOptions.DEFAULT);
                 } catch (IOException e) {
                     e.printStackTrace();//TODO manage ES7
                 }
@@ -1976,10 +1951,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         .query(query)
                         .size(100);
                 searchRequest.source(searchSourceBuilder);
-
-                if (refreshBeforeQuery) {
-                    refreshIndices(searchRequest.indices());
-                }
                 SearchResponse response = client.search(searchRequest, RequestOptions.DEFAULT);
 
                 // Scroll until no more hits are returned
@@ -2057,10 +2028,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 }
                 searchSourceBuilder.aggregation(filterAggregation);
                 searchRequest.source(searchSourceBuilder);
-
-                if (refreshBeforeQuery) {
-                    refreshIndices(searchRequest.indices());
-                }
                 SearchResponse response = client.search(searchRequest, RequestOptions.DEFAULT);
 
                 Aggregations aggregations = response.getAggregations();
@@ -2216,11 +2183,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     private String getMonthlyIndexPart(Date date) {
         String d = new SimpleDateFormat("yyyy-MM").format(date);
         return INDEX_DATE_PREFIX + d;
-    }
-
-    @Override
-    public boolean isEventuallyConsistent() {
-        return !refreshBeforeQuery;
     }
 
 }

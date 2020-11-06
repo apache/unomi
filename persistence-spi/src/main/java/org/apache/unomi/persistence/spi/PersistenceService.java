@@ -563,10 +563,4 @@ public interface PersistenceService {
      */
     void purge(final String scope);
 
-    /**
-     * Returns persistence layer eventual consistency status
-     *
-     * @return {@code true} if the underlying persistence is eventually consistent, {@code false} if strongly consistent
-     */
-    boolean isEventuallyConsistent();
 }
