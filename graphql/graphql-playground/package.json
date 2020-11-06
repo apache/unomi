@@ -15,8 +15,10 @@
   },
   "dependencies": {
     "graphql": "^15.2.0",
-    "graphql-playground-react": "^1.7.23",
-    "react": "^16.13.1"
+    "graphql-playground-react": "^1.7.27",
+    "react": "^16.13.1",
+    "react-dom": "^16.13.1",
+    "react-redux": "^7.2.2"
   },
   "devDependencies": {
     "@babel/core": "^7.10.4",
