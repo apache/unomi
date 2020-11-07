@@ -104,12 +104,18 @@ public class SetEventOccurenceCountAction implements ActionExecutor {
             event.getProfile().getSystemProperties().put("pastEvents", pastEvents);
         }
 
-        Calendar fromDateCalendar = DatatypeConverter.parseDateTime(fromDate);
-        Calendar toDateCalendar = DatatypeConverter.parseDateTime(toDate);
+        LocalDateTime fromDateTime = null;
+        if (fromDate != null) {
+            Calendar fromDateCalendar = DatatypeConverter.parseDateTime(fromDate);
+            fromDateTime = LocalDateTime.ofInstant(fromDateCalendar.toInstant(), ZoneId.of("UTC"));
+        }
+        LocalDateTime toDateTime = null;
+        if (toDate != null) {
+            Calendar toDateCalendar = DatatypeConverter.parseDateTime(toDate);
+            toDateTime = LocalDateTime.ofInstant(toDateCalendar.toInstant(), ZoneId.of("UTC"));
+        }
 
-        LocalDateTime eventTime = LocalDateTime.ofInstant(event.getTimeStamp().toInstant(), ZoneId.of("UTC"));
-        LocalDateTime fromDateTime = LocalDateTime.ofInstant(fromDateCalendar.toInstant(), ZoneId.of("UTC"));
-        LocalDateTime toDateTime = LocalDateTime.ofInstant(toDateCalendar.toInstant(), ZoneId.of("UTC"));
+        LocalDateTime eventTime = LocalDateTime.ofInstant(event.getTimeStamp().toInstant(),ZoneId.of("UTC"));
 
         if (inTimeRange(eventTime, numberOfDays, fromDateTime, toDateTime)) {
             count++;
