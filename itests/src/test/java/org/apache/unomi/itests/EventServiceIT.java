@@ -25,6 +25,7 @@ import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.PartialList;
 
 
+import org.junit.After;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.Assert;
@@ -60,6 +61,13 @@ public class EventServiceIT extends BaseIT {
     @Inject
     @Filter(timeout = 600000)
     protected ProfileService profileService;
+
+    @After
+    public void tearDown() {
+        TestUtils.removeAllEvents(definitionsService, persistenceService);
+        TestUtils.removeAllSessions(definitionsService, persistenceService);
+        TestUtils.removeAllProfiles(definitionsService, persistenceService);
+    }
 
     @Test
     public void test_EventExistenceWithProfileId() throws InterruptedException{
