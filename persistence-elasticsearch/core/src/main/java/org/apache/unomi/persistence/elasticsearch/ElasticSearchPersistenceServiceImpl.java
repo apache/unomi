@@ -23,6 +23,7 @@ import org.apache.http.HttpHost;
 import org.apache.http.auth.AuthScope;
 import org.apache.http.auth.UsernamePasswordCredentials;
 import org.apache.http.client.CredentialsProvider;
+import org.apache.http.client.config.RequestConfig;
 import org.apache.http.conn.ssl.NoopHostnameVerifier;
 import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.lucene.search.TotalHits;
@@ -55,7 +56,13 @@ import org.elasticsearch.action.search.SearchScrollRequest;
 import org.elasticsearch.action.support.WriteRequest;
 import org.elasticsearch.action.support.master.AcknowledgedResponse;
 import org.elasticsearch.action.update.UpdateRequest;
-import org.elasticsearch.client.*;
+import org.elasticsearch.client.Node;
+import org.elasticsearch.client.RequestOptions;
+import org.elasticsearch.client.Requests;
+import org.elasticsearch.client.HttpAsyncResponseConsumerFactory;
+import org.elasticsearch.client.RestClient;
+import org.elasticsearch.client.RestClientBuilder;
+import org.elasticsearch.client.RestHighLevelClient;
 import org.elasticsearch.client.core.CountRequest;
 import org.elasticsearch.client.core.CountResponse;
 import org.elasticsearch.client.core.MainResponse;
@@ -67,10 +74,7 @@ import org.elasticsearch.common.unit.DistanceUnit;
 import org.elasticsearch.common.unit.TimeValue;
 import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.index.IndexNotFoundException;
-import org.elasticsearch.index.query.IdsQueryBuilder;
-import org.elasticsearch.index.query.QueryBuilder;
-import org.elasticsearch.index.query.QueryBuilders;
-import org.elasticsearch.index.query.RangeQueryBuilder;
+import org.elasticsearch.index.query.*;
 import org.elasticsearch.index.reindex.BulkByScrollResponse;
 import org.elasticsearch.index.reindex.UpdateByQueryRequest;
 import org.elasticsearch.rest.RestStatus;
@@ -91,6 +95,7 @@ import org.elasticsearch.search.aggregations.bucket.range.DateRangeAggregationBu
 import org.elasticsearch.search.aggregations.bucket.range.IpRangeAggregationBuilder;
 import org.elasticsearch.search.aggregations.bucket.range.RangeAggregationBuilder;
 import org.elasticsearch.search.aggregations.bucket.terms.IncludeExclude;
+import org.elasticsearch.search.aggregations.bucket.terms.Terms;
 import org.elasticsearch.search.aggregations.bucket.terms.TermsAggregationBuilder;
 import org.elasticsearch.search.aggregations.metrics.NumericMetricsAggregation;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
@@ -182,6 +187,10 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     private Set<String> itemClassesToCacheSet = new HashSet<>();
     private String itemClassesToCache;
     private boolean useBatchingForSave = false;
+    private boolean aggQueryThrowOnMissingDocs = false;
+    private Integer aggQueryMaxResponseSizeHttp = null;
+    private Integer clientSocketTimeout = null;
+
 
     private Map<String, Map<String, Map<String, Object>>> knownMappings = new HashMap<>();
 
@@ -205,6 +214,12 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     public void setFatalIllegalStateErrors(String fatalIllegalStateErrors) {
         this.fatalIllegalStateErrors = Arrays.stream(fatalIllegalStateErrors.split(","))
                 .map(i -> i.trim()).filter(i -> !i.isEmpty()).toArray(String[]::new);
+    }
+
+    public void setAggQueryMaxResponseSizeHttp(String aggQueryMaxResponseSizeHttp) {
+        if (StringUtils.isNumeric(aggQueryMaxResponseSizeHttp)) {
+            this.aggQueryMaxResponseSizeHttp = Integer.parseInt(aggQueryMaxResponseSizeHttp);
+        }
     }
 
     public void setIndexPrefix(String indexPrefix) {
@@ -295,6 +310,12 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         this.aggregateQueryBucketSize = aggregateQueryBucketSize;
     }
 
+    public void setClientSocketTimeout(String clientSocketTimeout) {
+        if (StringUtils.isNumeric(clientSocketTimeout)) {
+            this.clientSocketTimeout = Integer.parseInt(clientSocketTimeout);
+        }
+    }
+
     public void setMetricsService(MetricsService metricsService) {
         this.metricsService = metricsService;
     }
@@ -336,6 +357,10 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         this.sslTrustAllCertificates = sslTrustAllCertificates;
     }
 
+
+    public void setAggQueryThrowOnMissingDocs(boolean aggQueryThrowOnMissingDocs) {
+        this.aggQueryThrowOnMissingDocs = aggQueryThrowOnMissingDocs;
+    }
     public void start() throws Exception {
 
         // on startup
@@ -415,6 +440,13 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         }
 
         RestClientBuilder clientBuilder = RestClient.builder(nodeList.toArray(new Node[nodeList.size()]));
+
+        if (clientSocketTimeout != null) {
+            clientBuilder.setRequestConfigCallback(requestConfigBuilder -> {
+                requestConfigBuilder.setSocketTimeout(clientSocketTimeout);
+                return requestConfigBuilder;
+            });
+        }
 
         clientBuilder.setHttpClientConfigCallback(httpClientBuilder -> {
             if (sslTrustAllCertificates) {
@@ -1466,6 +1498,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     searchSourceBuilder.version(true);
                     searchRequest.source(searchSourceBuilder);
                     SearchResponse response = client.search(searchRequest, RequestOptions.DEFAULT);
+
                     if (size == -1) {
                         // Scroll until no more hits are returned
                         while (true) {
@@ -1576,16 +1609,21 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     @Deprecated
     @Override
     public Map<String, Long> aggregateQuery(Condition filter, BaseAggregate aggregate, String itemType) {
-        return aggregateQuery(filter, aggregate, itemType, false);
+        return aggregateQuery(filter, aggregate, itemType, false, aggregateQueryBucketSize);
     }
 
     @Override
     public Map<String, Long> aggregateWithOptimizedQuery(Condition filter, BaseAggregate aggregate, String itemType) {
-        return aggregateQuery(filter, aggregate, itemType, true);
+        return aggregateQuery(filter, aggregate, itemType, true, aggregateQueryBucketSize);
+    }
+
+    @Override
+    public Map<String, Long> aggregateWithOptimizedQuery(Condition filter, BaseAggregate aggregate, String itemType, int size) {
+        return aggregateQuery(filter, aggregate, itemType, true, size);
     }
 
     private Map<String, Long> aggregateQuery(final Condition filter, final BaseAggregate aggregate, final String itemType,
-            final boolean optimizedQuery) {
+            final boolean optimizedQuery, int queryBucketSize) {
         return new InClassLoaderExecute<Map<String, Long>>(metricsService, this.getClass().getName() + ".aggregateQuery", this.bundleContext, this.fatalIllegalStateErrors) {
 
             @Override
@@ -1647,7 +1685,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         fieldName = getPropertyNameWithData(fieldName, itemType);
                         //default
                         if (fieldName != null) {
-                            bucketsAggregation = AggregationBuilders.terms("buckets").field(fieldName).size(aggregateQueryBucketSize);
+                            bucketsAggregation = AggregationBuilders.terms("buckets").field(fieldName).size(queryBucketSize);
                             if (aggregate instanceof TermsAggregate) {
                                 TermsAggregate termsAggregate = (TermsAggregate) aggregate;
                                 if (termsAggregate.getPartition() > -1 && termsAggregate.getNumPartitions() > -1) {
@@ -1696,9 +1734,21 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 }
 
                 searchRequest.source(searchSourceBuilder);
-                SearchResponse response = client.search(searchRequest, RequestOptions.DEFAULT);
+
+                RequestOptions.Builder builder = RequestOptions.DEFAULT.toBuilder();
+
+                if (aggQueryMaxResponseSizeHttp != null) {
+                    builder.setHttpAsyncResponseConsumerFactory(
+                            new HttpAsyncResponseConsumerFactory
+                                    .HeapBufferedResponseConsumerFactory(aggQueryMaxResponseSizeHttp));
+                }
+
+                SearchResponse response = client.search(searchRequest, builder.build());
                 Aggregations aggregations = response.getAggregations();
+
+
                 if (aggregations != null) {
+
                     if (optimizedQuery) {
                         if (response.getHits() != null) {
                             results.put("_filtered", response.getHits().getTotalHits().value);
@@ -1715,6 +1765,17 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         }
                     }
                     if (aggregations.get("buckets") != null) {
+
+                        if (aggQueryThrowOnMissingDocs) {
+                            if (aggregations.get("buckets") instanceof Terms) {
+                                Terms terms = aggregations.get("buckets");
+                                if (terms.getDocCountError() > 0 || terms.getSumOfOtherDocCounts() > 0) {
+                                    throw new UnsupportedOperationException("Some docs are missing in aggregation query. docCountError is:" +
+                                            terms.getDocCountError() + " sumOfOtherDocCounts:" + terms.getSumOfOtherDocCounts());
+                                }
+                            }
+                        }
+
                         long totalDocCount = 0;
                         MultiBucketsAggregation terms = aggregations.get("buckets");
                         for (MultiBucketsAggregation.Bucket bucket : terms.getBuckets()) {
