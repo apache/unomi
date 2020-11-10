@@ -54,6 +54,11 @@
       "id": "distance",
       "type": "string",
       "multivalued": false
+    },
+    {
+      "id": "name",
+      "type": "string",
+      "multivalued": false
     }
   ]
 }
