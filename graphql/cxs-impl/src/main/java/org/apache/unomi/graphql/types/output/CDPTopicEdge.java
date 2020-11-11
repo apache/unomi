@@ -19,6 +19,7 @@ package org.apache.unomi.graphql.types.output;
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.schema.DataFetchingEnvironment;
+import org.apache.unomi.api.Topic;
 
 import static org.apache.unomi.graphql.types.output.CDPTopicEdge.TYPE_NAME;
 
@@ -27,14 +28,20 @@ public class CDPTopicEdge {
 
     public static final String TYPE_NAME = "CDP_TopicEdge";
 
+    private final Topic topic;
+
+    public CDPTopicEdge(final Topic topic) {
+        this.topic = topic;
+    }
+
     @GraphQLField
     public CDPTopic node(final DataFetchingEnvironment environment) {
-        return null;
+        return new CDPTopic(topic);
     }
 
     @GraphQLField
     public String cursor(final DataFetchingEnvironment environment) {
-        return null;
+        return topic.getTopicId();
     }
 
 }

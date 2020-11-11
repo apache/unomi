@@ -466,6 +466,18 @@ public interface PersistenceService {
     Map<String, Long> aggregateWithOptimizedQuery(Condition filter, BaseAggregate aggregate, String itemType);
 
     /**
+     * Retrieves the number of items with the specified type as defined by the Item subclass public field {@code ITEM_TYPE} matching the optional specified condition and
+     * aggregated according to the specified {@link BaseAggregate}.
+     *
+     * @param filter    the condition the items must match or {@code null} if no filtering is needed
+     * @param aggregate an aggregate specifying how matching items must be bundled
+     * @param itemType  the String representation of the item type we want to retrieve the count of, as defined by its class' {@code ITEM_TYPE} field
+     * @param size      size of returned buckets in the response
+     * @return a Map associating aggregation dimension name as key and cardinality for that dimension as value
+     */
+    Map<String, Long> aggregateWithOptimizedQuery(Condition filter, BaseAggregate aggregate, String itemType, int size);
+
+    /**
      * Updates the persistence's engine indices if needed.
      */
     void refresh();

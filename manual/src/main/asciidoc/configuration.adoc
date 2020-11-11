@@ -195,21 +195,190 @@ Changing the default Karaf password can be done by modifying the `org.apache.uno
 
 === Scripting security
 
-By default, scripting (using in conditions, segments and rules) is controlled by a custom classloader that is quite
-restrictive and using a white-list/black list system. It is controlled through the following property in the
-`unomi.custom.system.properties` file:
+==== Multi-layer scripting filtering system
+
+The scripting security system is multi-layered.
+
+For requests coming in through the /context.json endpoint, the following flow is used to secure incoming requests:
+
+image::expression-filtering-layers.png[Expression filtering layers]
+
+Conditions submitted through the context.json public endpoint are first sanitized, meaning that any scripting directly
+injected is removed. However, as conditions can use sub conditions that include scripting, only the first directly
+injected layer of scripts are removed.
+
+The second layer is the expression filtering system, that uses an allow-listing mechanism to only accept pre-vetted
+expressions (through configuration and deployment on the server side). Any unrecognized expression will not be accepted.
+
+Finally, once the script starts executing in the scripting engine, a filtering class loader will only let the script
+access classes that have been allowed.
+
+This multi-layered approach makes it possible to retain a high level of security even if one layer is poorly
+configured or abused.
+
+For requests coming in through the secure APIs such as rules, only the condition sanitizing step is skipped,
+otherwise the rest of the filtering system is the same.
+
+==== Scripts and expressions
+
+Apache Unomi allows using different types of expressions in the following subsystems:
+
+- context.json filters and personalization queries
+- rule conditions and actions parameters
+
+Apache Unomi uses two integrated scripting languages to provide this functionality: OGNL and MVEL
+OGNL is deprecated and is now disabled by default in 1.5.2 as it is little used (and replaced by better performing
+hardcoded property lookups). MVEL is more commonly used in rule actions as in the following example:
+
+From https://github.com/apache/unomi/blob/unomi-1.5.x/plugins/baseplugin/src/main/resources/META-INF/cxs/rules/sessionAssigned.json[https://github.com/apache/unomi/blob/unomi-1.5.x/plugins/baseplugin/src/main/resources/META-INF/cxs/rules/sessionAssigned.json]:
+
+[source,json]
+----
+{
+  "metadata": {
+    "id": "_ajhg9u2s5_sessionAssigned",
+    "name": "Session assigned to a profile",
+    "description": "Update profile visit information",
+    "readOnly":true
+  },
+
+  "condition": {
+    "type": "booleanCondition",
+    "parameterValues": {
+      "subConditions":[
+        {
+          "type": "eventTypeCondition",
+          "parameterValues": {
+            "eventTypeId": "sessionCreated"
+          }
+        },
+        {
+          "type": "eventTypeCondition",
+          "parameterValues": {
+            "eventTypeId": "sessionReassigned"
+          }
+        }
+
+        ],
+      "operator":"or"
+
+    }
+  },
+
+  "actions": [
+    {
+      "parameterValues": {
+        "setPropertyName": "properties.previousVisit",
+        "setPropertyValue": "profileProperty::lastVisit",
+        "storeInSession": false
+      },
+      "type": "setPropertyAction"
+    },
+    {
+      "parameterValues": {
+        "setPropertyName": "properties.lastVisit",
+        "setPropertyValue": "now",
+        "storeInSession": false
+      },
+      "type": "setPropertyAction"
+    },
+    {
+      "parameterValues": {
+        "setPropertyName": "properties.nbOfVisits",
+        "setPropertyValue": "script::profile.properties.?nbOfVisits != null ? (profile.properties.nbOfVisits + 1) : 1",
+        "storeInSession": false
+      },
+      "type": "setPropertyAction"
+    }
+  ]
+
+}
+----
+
+As we see in the above example, we use an MVEL script with the setPropertyAction to set a property value.
+Starting with version 1.5.2, any expression use in rules MUST be allow-listed.
+
+OGNL was previously used wherever a parameter could be used, but MVEL could only be used with a “script::” prefix.
+Starting with version 1.5.2 OGNL will no longer be allowed and is replaced by a compatible “hardcoded” property
+lookup system, while MVEL requires allow-listing the scripts that are to be used.
+
+By default, Apache Unomi comes with some built-in allowed expressions that cover all the internal uses cases.
+
+Default allowed MVEL expressions (from https://github.com/apache/unomi/blob/unomi-1.5.x/plugins/baseplugin/src/main/resources/META-INF/cxs/expressions/mvel.json[https://github.com/apache/unomi/blob/unomi-1.5.x/plugins/baseplugin/src/main/resources/META-INF/cxs/expressions/mvel.json]) :
+
+[source,json]
+----
+[
+  "\\Q'systemProperties.goals.'+goalId+'TargetReached'\\E",
+  "\\Q'now-'+since+'d'\\E",
+  "\\Q'scores.'+scoringPlanId\\E",
+  "\\QminimumDuration*1000\\E",
+  "\\QmaximumDuration*1000\\E",
+  "\\Qprofile.properties.?nbOfVisits != null ? (profile.properties.nbOfVisits + 1) : 1\\E",
+  "\\Qsession != null ? session.size + 1 : 0\\E",
+  "\\Q'properties.optimizationTest_'+event.target.itemId\\E",
+  "\\Qevent.target.properties.variantId\\E",
+  "\\Qprofile.properties.?systemProperties.goals.\\E[\\w\\_]*\\QReached != null ? (profile.properties.systemProperties.goals.\\E[\\w\\_]*\\QReached) : 'now'\\E",
+  "\\Qprofile.properties.?systemProperties.campaigns.\\E[\\w\\_]*\\QEngaged != null ? (profile.properties.systemProperties.campaigns.\\E[\\w\\_]*\\QEngaged) : 'now'\\E"
+]
+----
+
+If you require or are already using custom expressions, you should add a plugin to  Apache Unomi to allow for this.
+The choice of a plugin was to make sure only system administrators and solution developers could provide such a
+list, avoiding the possibility to provide it through an API call or another security sensitive deployment mechanism.
+
+There is another way of allow-listing expressions through configuration, see the “scripting configuration parameters” section below.
+
+Procedure to add allowed expressions:
+
+1. Create a new Apache Unomi plugin project.
+2. Create a JSON file in src/main/resources/META-INF/cxs/expressions/mvel.json with an array of regular expressions that will contain the allowed expressions.
+3. Build the project and deploy it to Apache Unomi
+
+Warning: Do not make regular expressions too general. They should actually be as specific as possible to avoid potential injection of malicious code.
+
+==== Scripting expression filtering configuration parameters
+
+Alongside with the allow-listing technology, there are new configuration parameters to control the security of the scripting engines:
 
 [source]
 ----
-org.apache.unomi.scripting.allow=${env:UNOMI_ALLOW_SCRIPTING_CLASSES:-org.apache.unomi.api.Event,org.apache.unomi.api.Profile,org.apache.unomi.api.Session,org.apache.unomi.api.Item,org.apache.unomi.api.CustomItem,ognl.*,java.lang.Object,java.util.Map,java.lang.Integer,org.mvel2.*}
+# These parameters control the list of classes that are allowed or forbidden when executing expressions.
+org.apache.unomi.scripting.allow=${env:UNOMI_ALLOW_SCRIPTING_CLASSES:-org.apache.unomi.api.Event,org.apache.unomi.api.Profile,org.apache.unomi.api.Session,org.apache.unomi.api.Item,org.apache.unomi.api.CustomItem,ognl.*,java.lang.Object,java.util.Map,java.util.HashMap,java.lang.Integer,org.mvel2.*}
 org.apache.unomi.scripting.forbid=${env:UNOMI_FORBID_SCRIPTING_CLASSES:-}
+
+# This parameter controls the whole expression filtering system. It is not recommended to turn it off. The main reason to turn it off would be to check if it is interfering with something, but it should always be active in production.
+org.apache.unomi.scripting.filter.activated=${env:UNOMI_SCRIPTING_FILTER_ACTIVATED:-true}
+
+# The following parameters control the filtering using regular expressions for each scripting sub-system.
+# The "collections" parameter tells the expression filtering system which configurations to expect. By default only MVEL and/or OGNL are accepted values, but in the future these might be replaced by new scripting sub-systems.
+org.apache.unomi.scripting.filter.collections=${env:UNOMI_SCRIPTING_FILTER_COLLECTIONS:-mvel,ognl}
+# For each scripting sub-system, there is an allow and a forbid value. It is NOT recommended to change the built-in "forbid" value unless you are having issues with its value.
+# It is however fully expected to add new expressions to the "allow" value, although it is better to add them inside any plugins you may be adding. This configuration is only designed to compensate for the cases where something was not properly designed or to deal with compatibility issues. Just be VERY careful to make your patterns AS SPECIFIC AS POSSIBLE in order to avoid introducing a way to abuse the expression filtering.
+org.apache.unomi.scripting.filter.collections=${env:UNOMI_SCRIPTING_FILTER_COLLECTIONS:-mvel,ognl}
+org.apache.unomi.scripting.filter.mvel.allow=${env:UNOMI_SCRIPTING_FILTER_MVEL_ALLOW:-}
+# org.apache.unomi.scripting.filter.mvel.forbid=${env:UNOMI_SCRIPTING_FILTER_MVEL_FORBID:-.*Runtime.*,.*ProcessBuilder.*,.*exec.*,.*invoke.*,.*getClass.*,.*Class.*,.*ClassLoader.*,.*System.*,.*Method.*,.*method.*,.*Compiler.*,.*Thread.*,.*FileWriter.*,.*forName.*,.*Socket.*,.*DriverManager.*,eval}
+org.apache.unomi.scripting.filter.ognl.allow=${env:UNOMI_SCRIPTING_FILTER_OGNL_ALLOW:-}
+# org.apache.unomi.scripting.filter.ognl.forbid=${env:UNOMI_SCRIPTING_FILTER_OGNL_FORBID:-.*Runtime.*,.*ProcessBuilder.*,.*exec.*,.*invoke.*,.*getClass.*,.*Class.*,.*ClassLoader.*,.*System.*,.*Method.*,.*method.*,.*Compiler.*,.*Thread.*,.*FileWriter.*,.*forName.*,.*Socket.*,.*DriverManager.*,eval}
+
+# This parameter controls whether OGNL scripting is allowed in expressions. Because of security reasons it is deactivated by default. If you run into compatibility issues you could reactivate it but it is at your own risk.
+org.apache.unomi.security.properties.useOGNLScripting=${env:UNOMI_SCRIPTING_USE_OGNL:-false}
+
+# This parameter controls the condition sanitizing done on the ContextServlet (/context.json). If will remove any expressions that start with "script::". It is not recommended to change this value, unless you run into compatibility issues.
+org.apache.unomi.security.personalization.sanitizeConditions=${env:UNOMI_SECURITY_SANITIZEPERSONALIZATIONCONDITIONS:-true}
 ----
 
-If you encounter any errors while trying to access a class in a condition or an action it might be due to this
-restrictive configuration.
+==== Scripting roadmap
 
-If you need, for example when adding a custom item type, to adjust these, please be careful as scripts may be called
-directly from the context.json personalization conditions and therefore should be kept minimal.
+Scripting will probably undergo major changes in future versions of Apache Unomi, possibly replacing MVEL with a
+more secure implementation of a scripting language, or possibly even removed completely (see Groovy actions below).
+
+It is recommended that scripting be avoided as in most cases it could be replaced by custom action implementations,
+which are also possible using the Groovy Scripting language. The main difference is in the deployment mechanism,
+Groovy actions or Java actions must be deployed as plugins, which require system administrator access and permissions.
+
+These changes will not happen on maintenance versions of Apache Unomi, only in the next major version. Maintenance
+versions will of course maintain compatibility with existing scripting solutions.
 
 === Automatic profile merging
 

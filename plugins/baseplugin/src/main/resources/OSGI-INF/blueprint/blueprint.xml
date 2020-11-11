@@ -34,6 +34,7 @@
         <cm:default-properties>
             <cm:property name="maximumIdsQueryCount" value="5000"/>
             <cm:property name="aggregateQueryBucketSize" value="5000"/>
+            <cm:property name="pastEventsDisablePartitions" value="false"/>
         </cm:default-properties>
     </cm:property-placeholder>
 
@@ -105,6 +106,7 @@
             <property name="segmentService" ref="segmentService"/>
             <property name="scriptExecutor" ref="scriptExecutor" />
             <property name="maximumIdsQueryCount" value="${es.maximumIdsQueryCount}"/>
+            <property name="pastEventsDisablePartitions" value="${es.pastEventsDisablePartitions}"/>
             <property name="aggregateQueryBucketSize" value="${es.aggregateQueryBucketSize}"/>
         </bean>
     </service>

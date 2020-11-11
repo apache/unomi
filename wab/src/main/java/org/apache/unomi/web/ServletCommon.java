@@ -55,8 +55,8 @@ public class ServletCommon {
     }
 
     public static Changes handleEvents(List<Event> events, Session session, Profile profile,
-                                    ServletRequest request, ServletResponse response, Date timestamp,
-                                    PrivacyService privacyService, EventService eventService) {
+                                       ServletRequest request, ServletResponse response, Date timestamp,
+                                       PrivacyService privacyService, EventService eventService) {
         List<String> filteredEventTypes = privacyService.getFilteredEventTypes(profile);
 
         String thirdPartyId = eventService.authenticateThirdPartyServer(((HttpServletRequest) request).getHeader("X-Unomi-Peer"),
@@ -69,6 +69,11 @@ public class ServletCommon {
             for (Event event : events) {
                 processedEventsCnt++;
                 if (event.getEventType() != null) {
+                    if (!eventService.isEventValid(event)) {
+                        logger.warn("Event is not valid : {}", event.getEventType());
+                        continue;
+                    }
+
                     Event eventToSend = new Event(event.getEventType(), session, profile, event.getScope(), event.getSource(),
                             event.getTarget(), event.getProperties(), timestamp, event.isPersistent());
                     if (!eventService.isEventAllowed(event, thirdPartyId)) {
@@ -90,7 +95,7 @@ public class ServletCommon {
                     eventToSend.getAttributes().put(Event.HTTP_REQUEST_ATTRIBUTE, request);
                     eventToSend.getAttributes().put(Event.HTTP_RESPONSE_ATTRIBUTE, response);
                     logger.debug("Received event " + event.getEventType() + " for profile=" + profile.getItemId() + " session="
-                            + (session!= null?session.getItemId():null) + " target=" + event.getTarget() + " timestamp=" + timestamp);
+                            + (session != null ? session.getItemId() : null) + " target=" + event.getTarget() + " timestamp=" + timestamp);
                     changes = eventService.send(eventToSend);
                     // If the event execution changes the profile we need to update it so the next event use the right profile
                     if ((changes & EventService.PROFILE_UPDATED) == EventService.PROFILE_UPDATED) {
@@ -99,7 +104,7 @@ public class ServletCommon {
                     if ((changes & EventService.ERROR) == EventService.ERROR) {
                         //Don't count the event that failed
                         processedEventsCnt--;
-                        logger.error("Error processing events. Total number of processed events: {}/{}", processedEventsCnt,events.size());
+                        logger.error("Error processing events. Total number of processed events: {}/{}", processedEventsCnt, events.size());
                         break;
                     }
                 }

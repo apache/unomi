@@ -178,6 +178,9 @@
         <property name="schedulerService" ref="schedulerServiceImpl"/>
         <property name="segmentRefreshInterval" value="${services.segment.refresh.interval}"/>
         <property name="aggregateQueryBucketSize" value="${es.aggregateQueryBucketSize}"/>
+        <property name="pastEventsDisablePartitions" value="${es.pastEventsDisablePartitions}"/>
+        <property name="maximumIdsQueryCount" value="${es.maximumIdsQueryCount}"/>
+
     </bean>
     <service id="segmentService" ref="segmentServiceImpl">
         <interfaces>
@@ -259,6 +262,18 @@
     <service id="patchService" ref="patchServiceImpl">
         <interfaces>
             <value>org.apache.unomi.api.services.PatchService</value>
+        </interfaces>
+    </service>
+
+    <bean id="topicServiceImpl" class="org.apache.unomi.services.impl.topics.TopicServiceImpl"
+          init-method="postConstruct" destroy-method="preDestroy">
+        <property name="persistenceService" ref="persistenceService"/>
+        <property name="bundleContext" ref="blueprintBundleContext"/>
+    </bean>
+    <service id="topicService" ref="topicServiceImpl">
+        <interfaces>
+            <value>org.apache.unomi.api.services.TopicService</value>
+            <value>org.osgi.framework.SynchronousBundleListener</value>
         </interfaces>
     </service>
 
