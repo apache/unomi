@@ -22,7 +22,7 @@
     <parent>
         <groupId>org.apache.unomi</groupId>
         <artifactId>unomi-plugins</artifactId>
-        <version>1.5.3-SNAPSHOT</version>
+        <version>1.5.3</version>
     </parent>
 
     <artifactId>unomi-plugins-request</artifactId>
