@@ -20,7 +20,7 @@
     <parent>
         <groupId>org.apache.unomi</groupId>
         <artifactId>cxs-geonames</artifactId>
-        <version>1.5.3</version>
+        <version>1.5.4-SNAPSHOT</version>
     </parent>
 
     <modelVersion>4.0.0</modelVersion>
