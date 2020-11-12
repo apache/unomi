@@ -68,7 +68,7 @@ public class IncrementInterestsIT
         interestsAsMap.put( topic.getTopicId(), 50.0 );
         interestsAsMap.put( "unknown", 10.0 );
 
-        final Event event = createEvent( profile, interestsAsMap, false );
+        final Event event = createEvent( profile, interestsAsMap );
 
         try
         {
@@ -93,57 +93,12 @@ public class IncrementInterestsIT
         }
     }
 
-    @Test
-    @SuppressWarnings("unchecked")
-    public void testUsingTarget()
-        throws InterruptedException
-    {
-        final Topic topic = createTopic( "topicId_FromTarget" );
-        final Profile profile = createProfile();
-
-        final Map<String, Double> interestsAsMap = new HashMap<>();
-        interestsAsMap.put( topic.getTopicId(), 50.0 );
-        interestsAsMap.put( "unknown", 10.0 );
-
-        final Event event = createEvent( profile, interestsAsMap, true );
-
-        try
-        {
-            int eventCode = eventService.send( event );
-
-            if ( eventCode == EventService.PROFILE_UPDATED )
-            {
-                Profile updatedProfile = profileService.save( event.getProfile() );
-
-                refreshPersistence();
-
-                Map<String, Double> interests = (Map<String, Double>) updatedProfile.getProperty( "interests" );
-
-                Assert.assertEquals( 1.0, interests.get( topic.getTopicId() ), 0.0 );
-                Assert.assertTrue( interests.containsKey( "unknown" ) );
-            }
-        }
-        finally
-        {
-            topicService.delete( topic.getItemId() );
-            profileService.delete( profile.getItemId(), false );
-        }
-    }
-
-    private Event createEvent( Profile profile, Map<String, Double> interestsAsMap, boolean useTarget )
+    private Event createEvent( Profile profile, Map<String, Double> interestsAsMap )
     {
         final Event event = new Event( "incrementInterest", null, profile, null, null, profile, new Date() );
 
         event.setPersistent( false );
-        if ( useTarget )
-        {
-            profile.setProperty( "interests", interestsAsMap );
-            event.setTarget( profile );
-        }
-        else
-        {
-            event.setProperty( "interests", interestsAsMap );
-        }
+        event.setProperty( "interests", interestsAsMap );
 
         return event;
     }

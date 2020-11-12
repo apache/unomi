@@ -10,5 +10,10 @@
   },
   "actionExecutor": "incrementInterest",
   "parameters": [
+    {
+      "id": "eventInterestProperty",
+      "type": "properties",
+      "multivalued": false
+    }
   ]
 }

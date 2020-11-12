@@ -16,6 +16,10 @@
  */
 package org.apache.unomi.plugins.baseplugin.actions;
 
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
+
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.actions.Action;
@@ -25,15 +29,13 @@ import org.apache.unomi.api.services.TopicService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
-
 public class IncrementInterestAction implements ActionExecutor {
 
     private static final Logger LOG = LoggerFactory.getLogger(IncrementInterestAction.class.getName());
 
-    private static final String INTERESTS_PROPERTY = "interests";
+    private static final String EVENT_INTERESTS_PROPERTY = "interests";
+
+    private static final String ACTION_INTERESTS_PROPERTY = "eventInterestProperty";
 
     private TopicService topicService;
 
@@ -48,20 +50,22 @@ public class IncrementInterestAction implements ActionExecutor {
     @Override
     @SuppressWarnings("unchecked")
     public int execute(final Action action, final Event event) {
-        Map<String, Double> interestsAsMap = (Map<String, Double>) event.getProperty(INTERESTS_PROPERTY);
+        Map<String, Double> interestsAsMap = (Map<String, Double>) action.getParameterValues().get( ACTION_INTERESTS_PROPERTY );
 
-        if (interestsAsMap == null && event.getTarget() instanceof Profile) {
-            interestsAsMap = (Map<String, Double>) ((Profile) event.getTarget()).getProperty(INTERESTS_PROPERTY);
-        } else {
-            return EventService.NO_CHANGE;
+        if ( interestsAsMap == null ) {
+            interestsAsMap = (Map<String, Double>) event.getProperty( EVENT_INTERESTS_PROPERTY );
+
+            if (interestsAsMap == null) {
+                return EventService.NO_CHANGE;
+            }
         }
 
         final Profile profile = event.getProfile();
 
         final Map<String, Double> profileInterestsMap = new HashMap<>();
 
-        if (profile.getProperty(INTERESTS_PROPERTY) != null) {
-            profileInterestsMap.putAll((Map<String, Double>) profile.getProperty(INTERESTS_PROPERTY));
+        if (profile.getProperty( EVENT_INTERESTS_PROPERTY ) != null) {
+            profileInterestsMap.putAll((Map<String, Double>) profile.getProperty( EVENT_INTERESTS_PROPERTY ));
         }
 
         interestsAsMap.forEach((topicId, incrementScoreBy) -> {
