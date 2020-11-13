@@ -71,7 +71,7 @@ public class MvelScriptExecutor implements ScriptExecutor {
             if (mvelExpressions.containsKey(script) && mvelExpressions.get(script) != INVALID_SCRIPT_MARKER) {
                 return MVEL.executeExpression(mvelExpressions.get(script), context);
             } else {
-                return script;
+                return null;
             }
         } finally {
             Thread.currentThread().setContextClassLoader(tccl);
