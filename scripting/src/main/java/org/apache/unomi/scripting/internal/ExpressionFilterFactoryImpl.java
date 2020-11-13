@@ -61,7 +61,7 @@ public class ExpressionFilterFactoryImpl implements ExpressionFilterFactory,Bund
                 String systemAllowedPatterns = System.getProperty("org.apache.unomi.scripting.filter."+initialFilterCollection+".allow", null);
                 if (systemAllowedPatterns != null) {
                     Set<Pattern> collectionAllowedExpressionPatterns = new HashSet<>();
-                    if (!"all".equals(systemAllowedPatterns.trim())) {
+                    if ("all".equals(systemAllowedPatterns.trim())) {
                         collectionAllowedExpressionPatterns = null;
                     } else {
                         if (systemAllowedPatterns.trim().length() > 0) {
