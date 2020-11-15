@@ -919,7 +919,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
             PartialList<Profile> profilesToRemove = persistenceService.query(profilesToRemoveCondition, null, Profile.class, 0, segmentUpdateBatchSize, "10m");
             PartialList<Profile> profilesToAdd = persistenceService.query(profilesToAddCondition, null, Profile.class, 0, segmentUpdateBatchSize, "10m");
 
-            updatedProfileCount += prepareProfilesForSegmentUpdate(segment, profilesToRemove, true);
+            updatedProfileCount += prepareProfilesForSegmentUpdate(segment, profilesToAdd, true);
             updatedProfileCount += prepareProfilesForSegmentUpdate(segment, profilesToRemove, false);
 
         } else {
