@@ -44,12 +44,13 @@ public class MvelScriptExecutor implements ScriptExecutor {
 
         final ClassLoader tccl = Thread.currentThread().getContextClassLoader();
         try {
+            Thread.currentThread().setContextClassLoader(secureFilteringClassLoader);
+
             if (!mvelExpressions.containsKey(script)) {
 
                 if (expressionFilterFactory.getExpressionFilter("mvel").filter(script) == null) {
                     mvelExpressions.put(script, INVALID_SCRIPT_MARKER);
                 } else {
-                    Thread.currentThread().setContextClassLoader(secureFilteringClassLoader);
                     ParserConfiguration parserConfiguration = new ParserConfiguration();
                     parserConfiguration.setClassLoader(secureFilteringClassLoader);
                     ParserContext parserContext = new ParserContext(parserConfiguration);
