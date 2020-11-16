@@ -18,6 +18,7 @@ package org.apache.unomi.scripting.internal;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.unomi.scripting.ExpressionFilter;
 import org.apache.unomi.scripting.ExpressionFilterFactory;
 import org.osgi.framework.Bundle;
@@ -27,6 +28,7 @@ import org.osgi.framework.BundleListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.URL;
 import java.util.*;
@@ -58,37 +60,8 @@ public class ExpressionFilterFactoryImpl implements ExpressionFilterFactory,Bund
         String[] initialFilterCollectionParts = initialFilterCollections.split(",");
         if (initialFilterCollectionParts != null) {
             for (String initialFilterCollection : initialFilterCollectionParts) {
-                String systemAllowedPatterns = System.getProperty("org.apache.unomi.scripting.filter."+initialFilterCollection+".allow", null);
-                if (systemAllowedPatterns != null) {
-                    Set<Pattern> collectionAllowedExpressionPatterns = new HashSet<>();
-                    if ("all".equals(systemAllowedPatterns.trim())) {
-                        collectionAllowedExpressionPatterns = null;
-                    } else {
-                        if (systemAllowedPatterns.trim().length() > 0) {
-                            String[] systemAllowedPatternParts = systemAllowedPatterns.split(",");
-                            collectionAllowedExpressionPatterns = new HashSet<>();
-                            for (String systemAllowedPatternPart : systemAllowedPatternParts) {
-                                collectionAllowedExpressionPatterns.add(Pattern.compile(systemAllowedPatternPart));
-                            }
-                        }
-                    }
-                    allowedExpressionPatternsByCollection.put(initialFilterCollection, collectionAllowedExpressionPatterns);
-                }
-
-                String systemForbiddenPatterns = System.getProperty("org.apache.unomi.scripting.filter."+initialFilterCollection+".forbid", ".*Runtime.*,.*ProcessBuilder.*,.*exec.*,.*invoke.*,.*getClass.*,.*Class.*,.*ClassLoader.*,.*System.*,.*Method.*,.*method.*,.*Compiler.*,.*Thread.*,.*FileWriter.*,.*forName.*,.*Socket.*,.*DriverManager.*,eval");
-                if (systemForbiddenPatterns != null) {
-                    Set<Pattern> collectionForbiddenExpressionPatterns = new HashSet<>();
-                    if (systemForbiddenPatterns.trim().length() > 0) {
-                        String[] systemForbiddenPatternParts = systemForbiddenPatterns.split(",");
-                        collectionForbiddenExpressionPatterns = new HashSet<>();
-                        for (String systemForbiddenPatternPart : systemForbiddenPatternParts) {
-                            collectionForbiddenExpressionPatterns.add(Pattern.compile(systemForbiddenPatternPart));
-                        }
-                    } else {
-                        collectionForbiddenExpressionPatterns = null;
-                    }
-                    forbiddenExpressionPatternsByCollection.put(initialFilterCollection, collectionForbiddenExpressionPatterns);
-                }
+                allowedExpressionPatternsByCollection.put(initialFilterCollection, loadPatternsFromConfig("org.apache.unomi.scripting.filter."+initialFilterCollection+".allow"));
+                forbiddenExpressionPatternsByCollection.put(initialFilterCollection, loadPatternsFromConfig("org.apache.unomi.scripting.filter."+initialFilterCollection+".forbid"));
             }
         }
 
@@ -102,7 +75,23 @@ public class ExpressionFilterFactoryImpl implements ExpressionFilterFactory,Bund
 
             bundleContext.addBundleListener(this);
         }
+    }
 
+    private Set<Pattern> loadPatternsFromConfig(String propertyKey) {
+        String patternsFile = System.getProperty(propertyKey, null);
+        if (StringUtils.isNotEmpty(patternsFile)) {
+            Set<Pattern> patterns = new HashSet<>();
+            try {
+                JsonNode jsonPatterns = objectMapper.readTree(new File(patternsFile));
+                for (JsonNode jsonPattern : jsonPatterns) {
+                    patterns.add(Pattern.compile(jsonPattern.asText()));
+                }
+            } catch (IOException e) {
+                logger.error("Error while loading expressions definition from " + propertyKey, e);
+            }
+            return patterns;
+        }
+        return null;
     }
 
     public void destroy() {
