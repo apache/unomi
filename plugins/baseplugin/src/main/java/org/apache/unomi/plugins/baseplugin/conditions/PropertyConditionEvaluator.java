@@ -464,7 +464,7 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
             if ("target".equals(expression)) {
                 return event.getTarget();
             } else {
-                return getItemProperty(event.getSource(), expression.substring("target".length()+1));
+                return getItemProperty(event.getTarget(), expression.substring("target".length()+1));
             }
         }
         if ("timeStamp".equals(expression)) {

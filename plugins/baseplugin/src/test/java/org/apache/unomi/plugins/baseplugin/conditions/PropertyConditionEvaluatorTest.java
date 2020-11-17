@@ -40,8 +40,10 @@ public class PropertyConditionEvaluatorTest {
 
     public static final String MOCK_ITEM_ID = "mockItemId";
     public static final String DIGITALL_SCOPE = "digitall";
-    public static final String PAGE_PATH_VALUE = "/site/en/home/aboutus.html";
-    public static final String PAGE_URL_VALUE = "http://localhost:8080/site/en/home/aboutus.html";
+    public static final String SOURCE_PAGE_PATH_VALUE = "/site/en/home.html";
+    public static final String SOURCE_PAGE_URL_VALUE = "http://localhost:8080/site/en/home.html";
+    public static final String TARGET_PAGE_PATH_VALUE = "/site/en/home/aboutus.html";
+    public static final String TARGET_PAGE_URL_VALUE = "http://localhost:8080/site/en/home/aboutus.html";
     public static final Date SESSION_LAST_EVENT_DATE = new Date();
     public static final int THREAD_POOL_SIZE = 300;
     public static final int WORKER_COUNT = 500000;
@@ -80,11 +82,11 @@ public class PropertyConditionEvaluatorTest {
         Event mockEvent = generateMockEvent(mockProfile, mockSession);
         assertEquals("Target itemId value is not correct", MOCK_ITEM_ID, propertyConditionEvaluator.getHardcodedPropertyValue(mockEvent, "target.itemId"));
         assertEquals("Target scope is not correct", DIGITALL_SCOPE, propertyConditionEvaluator.getHardcodedPropertyValue(mockEvent, "target.scope"));
-        assertEquals("Target page path value is not correct", PAGE_PATH_VALUE, propertyConditionEvaluator.getHardcodedPropertyValue(mockEvent, "target.properties.pageInfo.pagePath"));
-        assertEquals("Target page url value is not correct", PAGE_URL_VALUE, propertyConditionEvaluator.getHardcodedPropertyValue(mockEvent, "target.properties.pageInfo.pageURL"));
+        assertEquals("Target page path value is not correct", TARGET_PAGE_PATH_VALUE, propertyConditionEvaluator.getHardcodedPropertyValue(mockEvent, "target.properties.pageInfo.pagePath"));
+        assertEquals("Target page url value is not correct", TARGET_PAGE_URL_VALUE, propertyConditionEvaluator.getHardcodedPropertyValue(mockEvent, "target.properties.pageInfo.pageURL"));
         assertEquals("Session size should be 10", SESSION_SIZE, propertyConditionEvaluator.getHardcodedPropertyValue(mockSession, "size"));
         assertEquals("Session profile previous visit is not valid", PROFILE_PREVIOUS_VISIT, propertyConditionEvaluator.getHardcodedPropertyValue(mockSession,"profile.properties.previousVisit"));
-        assertEquals("Page page couldn't be resolved on Event property", PAGE_PATH_VALUE, propertyConditionEvaluator.getHardcodedPropertyValue(mockEvent, "source.properties.pageInfo.pagePath"));
+        assertEquals("Page page couldn't be resolved on Event property", SOURCE_PAGE_PATH_VALUE, propertyConditionEvaluator.getHardcodedPropertyValue(mockEvent, "source.properties.pageInfo.pagePath"));
         assertEquals("Tracking consent should be granted", ConsentStatus.GRANTED, propertyConditionEvaluator.getHardcodedPropertyValue(mockEvent, "profile.consents.digitall/trackingConsentId.status"));
         assertEquals("Tracking consent should be granted", ConsentStatus.GRANTED, propertyConditionEvaluator.getHardcodedPropertyValue(mockEvent, "profile.consents[\"digitall/trackingConsentId\"].status"));
 
@@ -101,8 +103,8 @@ public class PropertyConditionEvaluatorTest {
         Event mockEvent = generateMockEvent(mockProfile, mockSession);
         assertEquals("Target itemId value is not correct", MOCK_ITEM_ID, propertyConditionEvaluator.getOGNLPropertyValue(mockEvent, "target.itemId"));
         assertEquals("Target scope is not correct", DIGITALL_SCOPE, propertyConditionEvaluator.getOGNLPropertyValue(mockEvent, "target.scope"));
-        assertEquals("Target page path value is not correct", PAGE_PATH_VALUE, propertyConditionEvaluator.getOGNLPropertyValue(mockEvent, "target.properties.pageInfo.pagePath"));
-        assertEquals("Target page url value is not correct", PAGE_URL_VALUE, propertyConditionEvaluator.getOGNLPropertyValue(mockEvent, "target.properties.pageInfo.pageURL"));
+        assertEquals("Target page path value is not correct", TARGET_PAGE_PATH_VALUE, propertyConditionEvaluator.getOGNLPropertyValue(mockEvent, "target.properties.pageInfo.pagePath"));
+        assertEquals("Target page url value is not correct", TARGET_PAGE_URL_VALUE, propertyConditionEvaluator.getOGNLPropertyValue(mockEvent, "target.properties.pageInfo.pageURL"));
         assertEquals("Session size should be 10", SESSION_SIZE, propertyConditionEvaluator.getOGNLPropertyValue(mockSession, "size"));
         assertEquals("Should have received the proper last even date", SESSION_LAST_EVENT_DATE, propertyConditionEvaluator.getOGNLPropertyValue(mockSession, "lastEventDate"));
 
@@ -131,7 +133,7 @@ public class PropertyConditionEvaluatorTest {
         Event mockEvent = generateMockEvent(mockProfile, mockSession);
         assertEquals("Target itemId value is not correct", MOCK_ITEM_ID, propertyConditionEvaluator.getPropertyValue(mockEvent, "target.itemId"));
         assertEquals("Target scope is not correct", DIGITALL_SCOPE, propertyConditionEvaluator.getPropertyValue(mockEvent, "target.scope"));
-        assertEquals("Target page path value is not correct", PAGE_PATH_VALUE, propertyConditionEvaluator.getPropertyValue(mockEvent, "target.properties.pageInfo.pagePath"));
+        assertEquals("Target page path value is not correct", TARGET_PAGE_PATH_VALUE, propertyConditionEvaluator.getPropertyValue(mockEvent, "target.properties.pageInfo.pagePath"));
 
         assertNull("Unexisting property should be null", propertyConditionEvaluator.getPropertyValue(mockSession, "systemProperties.goals._csk6r4cgeStartReached"));
         assertNull("Unexisting property should be null", propertyConditionEvaluator.getPropertyValue(mockProfile, "properties.email"));
@@ -207,15 +209,18 @@ public class PropertyConditionEvaluatorTest {
         CustomItem sourceItem = new CustomItem();
         sourceItem.setItemId(MOCK_ITEM_ID);
         sourceItem.setScope(DIGITALL_SCOPE);
-        Map<String, Object> pageInfoMap = new HashMap<>();
-        pageInfoMap.put("pagePath", PAGE_PATH_VALUE);
-        pageInfoMap.put("pageURL", PAGE_URL_VALUE);
-        sourceItem.getProperties().put("pageInfo", pageInfoMap);
+        Map<String, Object> sourcePageInfoMap = new HashMap<>();
+        sourcePageInfoMap.put("pagePath", SOURCE_PAGE_PATH_VALUE);
+        sourcePageInfoMap.put("pageURL", SOURCE_PAGE_URL_VALUE);
+        sourceItem.getProperties().put("pageInfo", sourcePageInfoMap);
         mockEvent.setSource(sourceItem);
         CustomItem targetItem = new CustomItem();
         targetItem.setItemId(MOCK_ITEM_ID);
         targetItem.setScope(DIGITALL_SCOPE);
-        targetItem.getProperties().put("pageInfo", pageInfoMap);
+        Map<String, Object> targetPageInfoMap = new HashMap<>();
+        targetPageInfoMap.put("pagePath", TARGET_PAGE_PATH_VALUE);
+        targetPageInfoMap.put("pageURL", TARGET_PAGE_URL_VALUE);
+        targetItem.getProperties().put("pageInfo", targetPageInfoMap);
         mockEvent.setTarget(targetItem);
         return mockEvent;
     }
