@@ -17,10 +17,7 @@
 package org.apache.unomi.plugins.baseplugin.conditions;
 
 import ognl.MethodFailedException;
-import org.apache.unomi.api.CustomItem;
-import org.apache.unomi.api.Event;
-import org.apache.unomi.api.Profile;
-import org.apache.unomi.api.Session;
+import org.apache.unomi.api.*;
 import org.apache.unomi.scripting.ExpressionFilter;
 import org.apache.unomi.scripting.ExpressionFilterFactory;
 import org.junit.Before;
@@ -48,10 +45,14 @@ public class PropertyConditionEvaluatorTest {
     public static final Date SESSION_LAST_EVENT_DATE = new Date();
     public static final int THREAD_POOL_SIZE = 300;
     public static final int WORKER_COUNT = 500000;
-    private static final PropertyConditionEvaluator propertyConditionEvaluator = new PropertyConditionEvaluator();
-    private static final Event mockEvent = generateMockEvent();
-    private static final Profile mockProfile = generateMockProfile();
-    private static final Session mockSession = generateMockSession();
+    public static final int SESSION_SIZE = 10;
+    public static final Date PROFILE_PREVIOUS_VISIT = new Date();
+    public static final String NEWSLETTER_CONSENT_ID = "newsLetterConsentId";
+    public static final String TRACKING_CONSENT_ID = "trackingConsentId";
+    private static PropertyConditionEvaluator propertyConditionEvaluator = new PropertyConditionEvaluator();
+    private static Profile mockProfile = generateMockProfile();
+    private static Session mockSession = generateMockSession(mockProfile);
+    private static Event mockEvent = generateMockEvent(mockProfile, mockSession);
 
     @Before
     public void setup() {
@@ -76,33 +77,37 @@ public class PropertyConditionEvaluatorTest {
 
     @Test
     public void testHardcodedEvaluator() {
-        Event mockEvent = generateMockEvent();
+        Event mockEvent = generateMockEvent(mockProfile, mockSession);
         assertEquals("Target itemId value is not correct", MOCK_ITEM_ID, propertyConditionEvaluator.getHardcodedPropertyValue(mockEvent, "target.itemId"));
         assertEquals("Target scope is not correct", DIGITALL_SCOPE, propertyConditionEvaluator.getHardcodedPropertyValue(mockEvent, "target.scope"));
         assertEquals("Target page path value is not correct", PAGE_PATH_VALUE, propertyConditionEvaluator.getHardcodedPropertyValue(mockEvent, "target.properties.pageInfo.pagePath"));
         assertEquals("Target page url value is not correct", PAGE_URL_VALUE, propertyConditionEvaluator.getHardcodedPropertyValue(mockEvent, "target.properties.pageInfo.pageURL"));
-        assertEquals("Session size should be 10", 10, propertyConditionEvaluator.getHardcodedPropertyValue(mockSession, "size"));
+        assertEquals("Session size should be 10", SESSION_SIZE, propertyConditionEvaluator.getHardcodedPropertyValue(mockSession, "size"));
+        assertEquals("Session profile previous visit is not valid", PROFILE_PREVIOUS_VISIT, propertyConditionEvaluator.getHardcodedPropertyValue(mockSession,"profile.properties.previousVisit"));
+        assertEquals("Page page couldn't be resolved on Event property", PAGE_PATH_VALUE, propertyConditionEvaluator.getHardcodedPropertyValue(mockEvent, "source.properties.pageInfo.pagePath"));
+        assertEquals("Tracking consent should be granted", ConsentStatus.GRANTED, propertyConditionEvaluator.getHardcodedPropertyValue(mockEvent, "profile.consents.digitall/trackingConsentId.status"));
+        assertEquals("Tracking consent should be granted", ConsentStatus.GRANTED, propertyConditionEvaluator.getHardcodedPropertyValue(mockEvent, "profile.consents[\"digitall/trackingConsentId\"].status"));
 
-        assertNull("Unexisting property should be null", propertyConditionEvaluator.getHardcodedPropertyValue(mockSession, "systemProperties.goals._csk6r4cgeStartReached"));
-        assertNull("Unexisting property should be null", propertyConditionEvaluator.getHardcodedPropertyValue(mockProfile, "properties.email"));
+        assertEquals("Unexisting property should be null", null, propertyConditionEvaluator.getHardcodedPropertyValue(mockSession, "systemProperties.goals._csk6r4cgeStartReached"));
+        assertEquals("Unexisting property should be null", null, propertyConditionEvaluator.getHardcodedPropertyValue(mockProfile, "properties.email"));
 
         // here let's make sure our reporting of non optimized expressions works.
-        assertEquals("Should have received the non-optimized marker string", NOT_OPTIMIZED_MARKER, propertyConditionEvaluator.getHardcodedPropertyValue(mockSession, "profile.itemId"));
+        assertEquals("Should have received the non-optimized marker string", NOT_OPTIMIZED_MARKER, propertyConditionEvaluator.getHardcodedPropertyValue(mockSession, "profile.non-existing-field"));
 
     }
 
     @Test
     public void testOGNLEvaluator() throws Exception {
-        Event mockEvent = generateMockEvent();
+        Event mockEvent = generateMockEvent(mockProfile, mockSession);
         assertEquals("Target itemId value is not correct", MOCK_ITEM_ID, propertyConditionEvaluator.getOGNLPropertyValue(mockEvent, "target.itemId"));
         assertEquals("Target scope is not correct", DIGITALL_SCOPE, propertyConditionEvaluator.getOGNLPropertyValue(mockEvent, "target.scope"));
         assertEquals("Target page path value is not correct", PAGE_PATH_VALUE, propertyConditionEvaluator.getOGNLPropertyValue(mockEvent, "target.properties.pageInfo.pagePath"));
         assertEquals("Target page url value is not correct", PAGE_URL_VALUE, propertyConditionEvaluator.getOGNLPropertyValue(mockEvent, "target.properties.pageInfo.pageURL"));
-        assertEquals("Session size should be 10", 10, propertyConditionEvaluator.getOGNLPropertyValue(mockSession, "size"));
+        assertEquals("Session size should be 10", SESSION_SIZE, propertyConditionEvaluator.getOGNLPropertyValue(mockSession, "size"));
         assertEquals("Should have received the proper last even date", SESSION_LAST_EVENT_DATE, propertyConditionEvaluator.getOGNLPropertyValue(mockSession, "lastEventDate"));
 
-        assertNull("Unexisting property should be null", propertyConditionEvaluator.getHardcodedPropertyValue(mockSession, "systemProperties.goals._csk6r4cgeStartReached"));
-        assertNull("Unexisting property should be null", propertyConditionEvaluator.getHardcodedPropertyValue(mockProfile, "properties.email"));
+        assertNull("Unexisting property should be null", propertyConditionEvaluator.getOGNLPropertyValue(mockSession, "systemProperties.goals._csk6r4cgeStartReached"));
+        assertNull("Unexisting property should be null", propertyConditionEvaluator.getOGNLPropertyValue(mockProfile, "properties.email"));
     }
 
     @Test
@@ -123,7 +128,7 @@ public class PropertyConditionEvaluatorTest {
 
     @Test
     public void testPropertyEvaluator() throws Exception {
-        Event mockEvent = generateMockEvent();
+        Event mockEvent = generateMockEvent(mockProfile, mockSession);
         assertEquals("Target itemId value is not correct", MOCK_ITEM_ID, propertyConditionEvaluator.getPropertyValue(mockEvent, "target.itemId"));
         assertEquals("Target scope is not correct", DIGITALL_SCOPE, propertyConditionEvaluator.getPropertyValue(mockEvent, "target.scope"));
         assertEquals("Target page path value is not correct", PAGE_PATH_VALUE, propertyConditionEvaluator.getPropertyValue(mockEvent, "target.properties.pageInfo.pagePath"));
@@ -131,13 +136,13 @@ public class PropertyConditionEvaluatorTest {
         assertNull("Unexisting property should be null", propertyConditionEvaluator.getPropertyValue(mockSession, "systemProperties.goals._csk6r4cgeStartReached"));
         assertNull("Unexisting property should be null", propertyConditionEvaluator.getPropertyValue(mockProfile, "properties.email"));
 
-        assertEquals("Session size should be 10", 10, propertyConditionEvaluator.getPropertyValue(mockSession, "size"));
+        assertEquals("Session size should be 10", SESSION_SIZE, propertyConditionEvaluator.getPropertyValue(mockSession, "size"));
         assertEquals("Session last event date is not right", SESSION_LAST_EVENT_DATE, propertyConditionEvaluator.getPropertyValue(mockSession, "lastEventDate"));
     }
 
     @Test
     public void testOGNLSecurity() throws Exception {
-        Event mockEvent = generateMockEvent();
+        Event mockEvent = generateMockEvent(mockProfile, mockSession);
         File vulnFile = new File("target/vuln-file.txt");
         if (vulnFile.exists()) {
             vulnFile.delete();
@@ -195,16 +200,23 @@ public class PropertyConditionEvaluatorTest {
         System.out.println("OGNL workers completed execution in " + totalTime + "ms");
     }
 
-    private static Event generateMockEvent() {
+    private static Event generateMockEvent(Profile mockProfile, Session mockSession) {
         Event mockEvent = new Event();
-        CustomItem targetItem = new CustomItem();
-        targetItem.setItemId(MOCK_ITEM_ID);
-        targetItem.setScope(DIGITALL_SCOPE);
-        mockEvent.setTarget(targetItem);
+        mockEvent.setProfile(mockProfile);
+        mockEvent.setSession(mockSession);
+        CustomItem sourceItem = new CustomItem();
+        sourceItem.setItemId(MOCK_ITEM_ID);
+        sourceItem.setScope(DIGITALL_SCOPE);
         Map<String, Object> pageInfoMap = new HashMap<>();
         pageInfoMap.put("pagePath", PAGE_PATH_VALUE);
         pageInfoMap.put("pageURL", PAGE_URL_VALUE);
+        sourceItem.getProperties().put("pageInfo", pageInfoMap);
+        mockEvent.setSource(sourceItem);
+        CustomItem targetItem = new CustomItem();
+        targetItem.setItemId(MOCK_ITEM_ID);
+        targetItem.setScope(DIGITALL_SCOPE);
         targetItem.getProperties().put("pageInfo", pageInfoMap);
+        mockEvent.setTarget(targetItem);
         return mockEvent;
     }
 
@@ -214,12 +226,20 @@ public class PropertyConditionEvaluatorTest {
         mockProfile.getSegments().add("segment1");
         mockProfile.getSegments().add("segment2");
         mockProfile.getSegments().add("segment3");
+        mockProfile.getProperties().put("previousVisit", PROFILE_PREVIOUS_VISIT);
+
+        Consent newsLetterConsent = new Consent(DIGITALL_SCOPE, NEWSLETTER_CONSENT_ID, ConsentStatus.DENIED, new Date(), new Date());
+        mockProfile.setConsent(newsLetterConsent);
+        Consent trackingConsent = new Consent(DIGITALL_SCOPE, TRACKING_CONSENT_ID, ConsentStatus.GRANTED, new Date(), new Date());
+        mockProfile.setConsent(trackingConsent);
+
         return mockProfile;
     }
 
-    public static Session generateMockSession() {
+    public static Session generateMockSession(Profile mockProfile) {
         Session mockSession = new Session("mockSessionId", generateMockProfile(), new Date(), "digitall");
-        mockSession.setSize(10);
+        mockSession.setProfile(mockProfile);
+        mockSession.setSize(SESSION_SIZE);
         mockSession.setLastEventDate(SESSION_LAST_EVENT_DATE);
         return mockSession;
     }
