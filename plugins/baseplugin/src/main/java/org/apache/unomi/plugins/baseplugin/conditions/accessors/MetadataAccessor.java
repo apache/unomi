@@ -17,15 +17,16 @@
 package org.apache.unomi.plugins.baseplugin.conditions.accessors;
 
 import org.apache.unomi.api.Metadata;
+import org.apache.unomi.plugins.baseplugin.conditions.HardcodedPropertyAccessorRegistry;
 
-public class MetadataHardcodedPropertyAccessor extends HardcodedPropertyAccessor<Metadata> {
+public class MetadataAccessor extends HardcodedPropertyAccessor<Metadata> {
 
-    public MetadataHardcodedPropertyAccessor(HardcodedPropertyAccessorRegistry registry) {
+    public MetadataAccessor(HardcodedPropertyAccessorRegistry registry) {
         super(registry);
     }
 
     @Override
-    Object getProperty(Metadata object, String propertyName, String leftoverExpression) {
+    public Object getProperty(Metadata object, String propertyName, String leftoverExpression) {
         if ("id".equals(propertyName)) {
             return object.getId();
         } else if ("name".equals(propertyName)) {

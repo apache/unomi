@@ -16,27 +16,19 @@
  */
 package org.apache.unomi.plugins.baseplugin.conditions.accessors;
 
-import org.apache.unomi.api.campaigns.Campaign;
+import org.apache.unomi.api.goals.Goal;
+import org.apache.unomi.plugins.baseplugin.conditions.HardcodedPropertyAccessorRegistry;
 
-public class CampaignHardcodedPropertyAccessor extends HardcodedPropertyAccessor<Campaign> {
-    public CampaignHardcodedPropertyAccessor(HardcodedPropertyAccessorRegistry registry) {
+public class GoalAccessor extends HardcodedPropertyAccessor<Goal> {
+
+    public GoalAccessor(HardcodedPropertyAccessorRegistry registry) {
         super(registry);
     }
 
     @Override
-    Object getProperty(Campaign object, String propertyName, String leftoverExpression) {
-        if ("startDate".equals(propertyName)) {
-            return object.getStartDate();
-        } else if ("endDate".equals(propertyName)) {
-            return object.getEndDate();
-        } else if ("cost".equals(propertyName)) {
-            return object.getCost();
-        } else if ("currency".equals(propertyName)) {
-            return object.getCurrency();
-        } else if ("primaryGoal".equals(propertyName)) {
-            return object.getPrimaryGoal();
-        } else if ("timezone".equals(propertyName)) {
-            return object.getTimezone();
+    public Object getProperty(Goal object, String propertyName, String leftoverExpression) {
+        if ("campaignId".equals(propertyName)) {
+            return object.getCampaignId();
         }
         return PROPERTY_NOT_FOUND_MARKER;
     }

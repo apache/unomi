@@ -16,28 +16,19 @@
  */
 package org.apache.unomi.plugins.baseplugin.conditions.accessors;
 
-import org.apache.unomi.api.Item;
+import org.apache.unomi.api.MetadataItem;
+import org.apache.unomi.plugins.baseplugin.conditions.HardcodedPropertyAccessorRegistry;
 
-public class ItemHardcodedPropertyAccessor extends HardcodedPropertyAccessor<Item> {
-
-    public ItemHardcodedPropertyAccessor(HardcodedPropertyAccessorRegistry registry) {
+public class MetadataItemAccessor extends HardcodedPropertyAccessor<MetadataItem> {
+    public MetadataItemAccessor(HardcodedPropertyAccessorRegistry registry) {
         super(registry);
     }
 
     @Override
-    Object getProperty(Item object, String propertyName, String leftoverExpression) {
-        if ("itemId".equals(propertyName)) {
-            return object.getItemId();
+    public Object getProperty(MetadataItem object, String propertyName, String leftoverExpression) {
+        if ("metadata".equals(propertyName)) {
+            registry.getProperty(object.getMetadata(), leftoverExpression);
         }
-        if ("itemType".equals(propertyName)) {
-            return object.getItemType();
-        }
-        if ("scope".equals(propertyName)) {
-            return object.getScope();
-        }
-        if ("version".equals(propertyName)) {
-            return object.getVersion();
-        }
-        return PROPERTY_NOT_FOUND_MARKER;
+        return null;
     }
 }

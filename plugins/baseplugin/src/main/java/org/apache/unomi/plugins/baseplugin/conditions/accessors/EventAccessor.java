@@ -16,36 +16,40 @@
  */
 package org.apache.unomi.plugins.baseplugin.conditions.accessors;
 
-import org.apache.unomi.api.Session;
+import org.apache.unomi.api.Event;
+import org.apache.unomi.plugins.baseplugin.conditions.HardcodedPropertyAccessorRegistry;
 
-public class SessionHardcodedPropertyAccessor extends HardcodedPropertyAccessor<Session> {
+public class EventAccessor extends HardcodedPropertyAccessor<Event> {
 
-    public SessionHardcodedPropertyAccessor(HardcodedPropertyAccessorRegistry registry) {
+    public EventAccessor(HardcodedPropertyAccessorRegistry registry) {
         super(registry);
     }
 
     @Override
-    Object getProperty(Session object, String propertyName, String leftoverExpression) {
-        if ("duration".equals(propertyName)) {
-            return object.getDuration();
-        }
-        if ("size".equals(propertyName)) {
-            return object.getSize();
-        }
-        if ("lastEventDate".equals(propertyName)) {
-            return object.getLastEventDate();
-        }
+    public Object getProperty(Event object, String propertyName, String leftoverExpression) {
         if ("properties".equals(propertyName)) {
             return registry.getProperty(object.getProperties(), leftoverExpression);
         }
-        if ("systemProperties".equals(propertyName)) {
-            return registry.getProperty(object.getSystemProperties(), leftoverExpression);
+        if ("eventType".equals(propertyName)) {
+            return object.getEventType();
         }
         if ("profile".equals(propertyName)) {
             return registry.getProperty(object.getProfile(), leftoverExpression);
         }
         if ("profileId".equals(propertyName)) {
             return object.getProfileId();
+        }
+        if ("session".equals(propertyName)) {
+            return registry.getProperty(object.getSession(), leftoverExpression);
+        }
+        if ("sessionId".equals(propertyName)) {
+            return object.getSessionId();
+        }
+        if ("source".equals(propertyName)) {
+            return registry.getProperty(object.getSource(), leftoverExpression);
+        }
+        if ("target".equals(propertyName)) {
+            return registry.getProperty(object.getTarget(), leftoverExpression);
         }
         return PROPERTY_NOT_FOUND_MARKER;
     }

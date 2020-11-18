@@ -16,6 +16,8 @@
  */
 package org.apache.unomi.plugins.baseplugin.conditions.accessors;
 
+import org.apache.unomi.plugins.baseplugin.conditions.HardcodedPropertyAccessorRegistry;
+
 /**
  * Hardcoded property accessors serve two purpose:
  * - control access to object fields, only expose the ones that are "safe" to use
@@ -31,6 +33,6 @@ public abstract class HardcodedPropertyAccessor<T> {
         this.registry = registry;
     }
 
-    abstract Object getProperty(T object, String propertyName, String leftoverExpression);
+    public abstract Object getProperty(T object, String propertyName, String leftoverExpression);
 
 }

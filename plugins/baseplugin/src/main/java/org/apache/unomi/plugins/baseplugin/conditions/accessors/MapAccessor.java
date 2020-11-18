@@ -16,19 +16,25 @@
  */
 package org.apache.unomi.plugins.baseplugin.conditions.accessors;
 
-import org.apache.unomi.api.TimestampedItem;
+import org.apache.unomi.plugins.baseplugin.conditions.HardcodedPropertyAccessorRegistry;
 
-public class TimestampedItemHardcodedPropertyAccessor extends HardcodedPropertyAccessor<TimestampedItem> {
+import java.util.Map;
 
-    public TimestampedItemHardcodedPropertyAccessor(HardcodedPropertyAccessorRegistry registry) {
+public class MapAccessor extends HardcodedPropertyAccessor<Map> {
+    public MapAccessor(HardcodedPropertyAccessorRegistry registry) {
         super(registry);
     }
 
     @Override
-    Object getProperty(TimestampedItem object, String propertyName, String leftoverExpression) {
-        if ("timeStamp".equals(propertyName)) {
-            return object.getTimeStamp();
+    public Object getProperty(Map object, String propertyName, String leftoverExpression) {
+        Object mapValue = object.get(propertyName);
+        if (mapValue == null) {
+            return null;
         }
-        return PROPERTY_NOT_FOUND_MARKER;
+        if (leftoverExpression != null) {
+            return registry.getProperty(mapValue, leftoverExpression);
+        } else {
+            return mapValue;
+        }
     }
 }

@@ -16,18 +16,34 @@
  */
 package org.apache.unomi.plugins.baseplugin.conditions.accessors;
 
-import org.apache.unomi.api.CustomItem;
+import org.apache.unomi.api.Profile;
+import org.apache.unomi.plugins.baseplugin.conditions.HardcodedPropertyAccessorRegistry;
 
-public class CustomItemHardcodedPropertyAccessor extends HardcodedPropertyAccessor<CustomItem> {
+public class ProfileAccessor extends HardcodedPropertyAccessor<Profile> {
 
-    public CustomItemHardcodedPropertyAccessor(HardcodedPropertyAccessorRegistry registry) {
+    public ProfileAccessor(HardcodedPropertyAccessorRegistry registry) {
         super(registry);
     }
 
     @Override
-    Object getProperty(CustomItem object, String propertyName, String leftoverExpression) {
+    public Object getProperty(Profile object, String propertyName, String leftoverExpression) {
+        if ("segments".equals(propertyName)) {
+            return object.getSegments();
+        }
+        if ("consents".equals(propertyName)) {
+            return registry.getProperty(object.getConsents(), leftoverExpression);
+        }
+        if ("scores".equals(propertyName)) {
+            return registry.getProperty(object.getScores(), leftoverExpression);
+        }
         if ("properties".equals(propertyName)) {
             return registry.getProperty(object.getProperties(), leftoverExpression);
+        }
+        if ("systemProperties".equals(propertyName)) {
+            return registry.getProperty(object.getSystemProperties(), leftoverExpression);
+        }
+        if ("mergedWith".equals(propertyName)) {
+            return object.getMergedWith();
         }
         return PROPERTY_NOT_FOUND_MARKER;
     }

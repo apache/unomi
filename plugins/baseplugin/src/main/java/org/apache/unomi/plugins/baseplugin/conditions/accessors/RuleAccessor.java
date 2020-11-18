@@ -16,23 +16,23 @@
  */
 package org.apache.unomi.plugins.baseplugin.conditions.accessors;
 
-import java.util.Map;
+import org.apache.unomi.api.rules.Rule;
+import org.apache.unomi.plugins.baseplugin.conditions.HardcodedPropertyAccessorRegistry;
 
-public class MapHardcodedPropertyAccessor extends HardcodedPropertyAccessor<Map> {
-    public MapHardcodedPropertyAccessor(HardcodedPropertyAccessorRegistry registry) {
+public class RuleAccessor extends HardcodedPropertyAccessor<Rule> {
+
+    public RuleAccessor(HardcodedPropertyAccessorRegistry registry) {
         super(registry);
     }
 
     @Override
-    Object getProperty(Map object, String propertyName, String leftoverExpression) {
-        Object mapValue = object.get(propertyName);
-        if (mapValue == null) {
-            return null;
+    public Object getProperty(Rule object, String propertyName, String leftoverExpression) {
+        if ("linkedItems".equals(propertyName)) {
+            return object.getLinkedItems();
+        } else if ("priority".equals(propertyName)) {
+            return object.getPriority();
         }
-        if (leftoverExpression != null) {
-            return registry.getProperty(mapValue, leftoverExpression);
-        } else {
-            return mapValue;
-        }
+        return PROPERTY_NOT_FOUND_MARKER;
     }
+
 }

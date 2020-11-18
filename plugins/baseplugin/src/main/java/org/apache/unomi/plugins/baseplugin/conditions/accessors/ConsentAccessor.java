@@ -16,22 +16,29 @@
  */
 package org.apache.unomi.plugins.baseplugin.conditions.accessors;
 
-import org.apache.unomi.api.rules.Rule;
+import org.apache.unomi.api.Consent;
+import org.apache.unomi.plugins.baseplugin.conditions.HardcodedPropertyAccessorRegistry;
 
-public class RuleHardcodedPropertyAccessor extends HardcodedPropertyAccessor<Rule> {
+public class ConsentAccessor extends HardcodedPropertyAccessor<Consent> {
 
-    public RuleHardcodedPropertyAccessor(HardcodedPropertyAccessorRegistry registry) {
+    public ConsentAccessor(HardcodedPropertyAccessorRegistry registry) {
         super(registry);
     }
 
     @Override
-    Object getProperty(Rule object, String propertyName, String leftoverExpression) {
-        if ("linkedItems".equals(propertyName)) {
-            return object.getLinkedItems();
-        } else if ("priority".equals(propertyName)) {
-            return object.getPriority();
+    public Object getProperty(Consent object, String propertyName, String leftoverExpression) {
+        if ("typeIdentifier".equals(propertyName)) {
+            return object.getTypeIdentifier();
+        } else if ("scope".equals(propertyName)) {
+            return object.getScope();
+        } else if ("status".equals(propertyName)) {
+            return object.getStatus();
+        } else if ("statusDate".equals(propertyName)) {
+            return object.getStatusDate();
+        } else if ("revokeDate".equals(propertyName)) {
+            return object.getRevokeDate();
+        } else {
+            return PROPERTY_NOT_FOUND_MARKER;
         }
-        return PROPERTY_NOT_FOUND_MARKER;
     }
-
 }
