@@ -18,6 +18,7 @@ package org.apache.unomi.plugins.baseplugin.conditions;
 
 import ognl.MethodFailedException;
 import org.apache.unomi.api.*;
+import org.apache.unomi.plugins.baseplugin.conditions.accessors.HardcodedPropertyAccessor;
 import org.apache.unomi.scripting.ExpressionFilter;
 import org.apache.unomi.scripting.ExpressionFilterFactory;
 import org.junit.Before;
@@ -33,7 +34,6 @@ import java.util.regex.Pattern;
 
 import static junit.framework.TestCase.assertEquals;
 import static junit.framework.TestCase.assertNull;
-import static org.apache.unomi.plugins.baseplugin.conditions.PropertyConditionEvaluator.NOT_OPTIMIZED_MARKER;
 import static org.junit.Assert.assertFalse;
 
 public class PropertyConditionEvaluatorTest {
@@ -94,7 +94,7 @@ public class PropertyConditionEvaluatorTest {
         assertEquals("Unexisting property should be null", null, propertyConditionEvaluator.getHardcodedPropertyValue(mockProfile, "properties.email"));
 
         // here let's make sure our reporting of non optimized expressions works.
-        assertEquals("Should have received the non-optimized marker string", NOT_OPTIMIZED_MARKER, propertyConditionEvaluator.getHardcodedPropertyValue(mockSession, "profile.non-existing-field"));
+        assertEquals("Should have received the non-optimized marker string", HardcodedPropertyAccessor.PROPERTY_NOT_FOUND_MARKER, propertyConditionEvaluator.getHardcodedPropertyValue(mockSession, "profile.non-existing-field"));
 
     }
 
