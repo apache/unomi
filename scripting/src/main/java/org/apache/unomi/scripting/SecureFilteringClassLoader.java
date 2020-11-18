@@ -34,7 +34,7 @@ public class SecureFilteringClassLoader extends ClassLoader {
 
     static {
         String systemAllowedClasses = System.getProperty("org.apache.unomi.scripting.allow",
-                "org.apache.unomi.api.Event,org.apache.unomi.api.Profile,org.apache.unomi.api.Session,org.apache.unomi.api.Item,org.apache.unomi.api.CustomItem,ognl.*,java.lang.Object,java.util.Map,java.util.HashMap,java.lang.Integer,org.mvel2.*");
+                "org.apache.unomi.api.Event,org.apache.unomi.api.Profile,org.apache.unomi.api.Session,org.apache.unomi.api.Item,org.apache.unomi.api.CustomItem,ognl.*,java.lang.Object,java.util.Map,java.util.HashMap,java.lang.Integer,org.mvel2.*,java.lang.String");
         if (systemAllowedClasses != null) {
             if ("all".equals(systemAllowedClasses.trim())) {
                 defaultAllowedClasses = null;
