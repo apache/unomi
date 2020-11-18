@@ -23,8 +23,7 @@ import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.unomi.api.*;
 import org.apache.unomi.api.conditions.Condition;
-import org.apache.unomi.api.rules.Rule;
-import org.apache.unomi.scripting.ExpressionFilter;
+import org.apache.unomi.plugins.baseplugin.conditions.accessors.HardcodedPropertyAccessor;
 import org.apache.unomi.scripting.ExpressionFilterFactory;
 import org.apache.unomi.scripting.SecureFilteringClassLoader;
 import org.apache.unomi.persistence.elasticsearch.conditions.ConditionContextHelper;
@@ -51,14 +50,14 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
     private static final Logger logger = LoggerFactory.getLogger(PropertyConditionEvaluator.class.getName());
 
     private static final SimpleDateFormat yearMonthDayDateFormat = new SimpleDateFormat("yyyyMMdd");
-    public static final String NOT_OPTIMIZED_MARKER = "$$$###NOT_OPTIMIZED###$$$";
 
-    private Map<String, Map<String, ExpressionAccessor>> expressionCache = new HashMap<>(64);
+    private final Map<String, Map<String, ExpressionAccessor>> expressionCache = new HashMap<>(64);
     private boolean usePropertyConditionOptimizations = true;
-    private static ClassLoader secureFilteringClassLoader = new SecureFilteringClassLoader(PropertyConditionEvaluator.class.getClassLoader());
+    private static final ClassLoader secureFilteringClassLoader = new SecureFilteringClassLoader(PropertyConditionEvaluator.class.getClassLoader());
+    private static final HardcodedPropertyAccessorRegistry hardcodedPropertyAccessorRegistry = new HardcodedPropertyAccessorRegistry();
     private ExpressionFilterFactory expressionFilterFactory;
 
-    private boolean useOGNLScripting = Boolean.parseBoolean(System.getProperty("org.apache.unomi.security.properties.useOGNLScripting", "false"));
+    private final boolean useOGNLScripting = Boolean.parseBoolean(System.getProperty("org.apache.unomi.security.properties.useOGNLScripting", "false"));
 
     public void setUsePropertyConditionOptimizations(boolean usePropertyConditionOptimizations) {
         this.usePropertyConditionOptimizations = usePropertyConditionOptimizations;
@@ -268,7 +267,7 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
     protected Object getPropertyValue(Item item, String expression) throws Exception {
         if (usePropertyConditionOptimizations) {
             Object result = getHardcodedPropertyValue(item, expression);
-            if (!NOT_OPTIMIZED_MARKER.equals(result)) {
+            if (!HardcodedPropertyAccessor.PROPERTY_NOT_FOUND_MARKER.equals(result)) {
                 return result;
             }
         }
@@ -283,7 +282,7 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
     protected Object getHardcodedPropertyValue(Item item, String expression) {
         // the following are optimizations to avoid using the expressions that are slower. The main objective here is
         // to avoid the most used expression that may also trigger calls to the Java Reflection API.
-        return getItemProperty(item, expression);
+        return hardcodedPropertyAccessorRegistry.getProperty(item, expression);
     }
 
     protected Object getOGNLPropertyValue(Item item, String expression) throws Exception {
@@ -302,21 +301,6 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
             }
         }
         return null;
-    }
-
-    private Object getNestedPropertyValue(String expressionPart, Map<String, Object> properties) {
-        int nextDotPos = expressionPart.indexOf(".");
-        if (nextDotPos > -1) {
-            String mapKey = expressionPart.substring(0, nextDotPos);
-            Object mapValue = properties.get(mapKey);
-            if (mapValue == null) {
-                return null;
-            }
-            String nextExpression = expressionPart.substring(nextDotPos + 1);
-            return getNestedPropertyValue(nextExpression, (Map<String, Object>) mapValue);
-        } else {
-            return properties.get(expressionPart);
-        }
     }
 
     private class ClassLoaderClassResolver extends DefaultClassResolver {
@@ -423,230 +407,4 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
         }
     }
 
-    private Object getEventProperty(Event event, String expression) {
-        if (expression.startsWith("properties.")) {
-            return getNestedPropertyValue(expression.substring("properties.".length()), event.getProperties());
-        }
-        if ("scope".equals(expression)) {
-            return event.getScope();
-        }
-        if ("eventType".equals(expression)) {
-            return event.getEventType();
-        }
-        if (expression.startsWith("profile")) {
-            if ("profile".equals(expression)) {
-                return event.getProfile();
-            } else {
-                return getProfileProperty(event.getProfile(), expression.substring("profile".length()+1));
-            }
-        }
-        if ("profileId".equals(expression)) {
-            return event.getProfileId();
-        }
-        if (expression.startsWith("session")) {
-            if ("session".equals(expression)) {
-                return event.getSession();
-            } else {
-                return getSessionProperty(event.getSession(), expression.substring("session".length()+1));
-            }
-        }
-        if ("sessionId".equals(expression)) {
-            return event.getSessionId();
-        }
-        if (expression.startsWith("source")) {
-            if ("source".equals(expression)) {
-                return event.getSource();
-            } else {
-                return getItemProperty(event.getSource(), expression.substring("source".length()+1));
-            }
-        }
-        if (expression.startsWith("target")) {
-            if ("target".equals(expression)) {
-                return event.getTarget();
-            } else {
-                return getItemProperty(event.getTarget(), expression.substring("target".length()+1));
-            }
-        }
-        if ("timeStamp".equals(expression)) {
-            return event.getTimeStamp();
-        }
-        if ("itemId".equals(expression)) {
-            return event.getItemId();
-        }
-        if ("itemType".equals(expression)) {
-            return event.getItemType();
-        }
-        logger.warn("Requested unimplemented property {} on Event object", expression);
-        return NOT_OPTIMIZED_MARKER;
-    }
-
-    private Object getSessionProperty(Session session, String expression) {
-        if ("scope".equals(expression)) {
-            return session.getScope();
-        }
-        if ("timeStamp".equals(expression)) {
-            return session.getTimeStamp();
-        }
-        if ("duration".equals(expression)) {
-            return session.getDuration();
-        }
-        if ("size".equals(expression)) {
-            return session.getSize();
-        }
-        if ("lastEventDate".equals(expression)) {
-            return session.getLastEventDate();
-        }
-        if (expression.startsWith("properties.")) {
-            return getNestedPropertyValue(expression.substring("properties.".length()), session.getProperties());
-        }
-        if (expression.startsWith("systemProperties.")) {
-            return getNestedPropertyValue(expression.substring("systemProperties.".length()), session.getSystemProperties());
-        }
-        if ("itemId".equals(expression)) {
-            return session.getItemId();
-        }
-        if ("itemType".equals(expression)) {
-            return session.getItemType();
-        }
-        if (expression.startsWith("profile")) {
-            if ("profile".equals(expression)) {
-                return session.getProfile();
-            } else {
-                return getProfileProperty((Profile) session.getProfile(), expression.substring("profile".length()+1));
-            }
-        }
-        if ("profileId".equals(expression)) {
-            return session.getProfileId();
-        }
-        logger.warn("Requested unimplemented property {} on Session object", expression);
-        return NOT_OPTIMIZED_MARKER;
-    }
-
-    private Object getProfileProperty(Profile profile, String expression) {
-        if ("segments".equals(expression)) {
-            return profile.getSegments();
-        }
-        if (expression.startsWith("consents")) {
-            if ("consents".equals(expression)) {
-                return profile.getConsents();
-            } else {
-                String consentLookupName = null;
-                String leftoverExpression = expression;
-                if (expression.startsWith("consents[\"")) {
-                    int lookupNameBeginPos = "consents[\"".length();
-                    int lookupNameEndPos = expression.indexOf("\"].", lookupNameBeginPos);
-                    if (lookupNameEndPos > lookupNameBeginPos) {
-                        consentLookupName = expression.substring(lookupNameBeginPos, lookupNameEndPos);
-                        leftoverExpression = expression.substring(lookupNameEndPos+3);
-                    } else {
-                        consentLookupName = expression.substring(lookupNameBeginPos);
-                        leftoverExpression = null;
-                    }
-                } else if (expression.startsWith("consents.")) {
-                    int lookupNameBeginPos = "consents.".length();
-                    int lookupNameEndPos = expression.indexOf(".", lookupNameBeginPos);
-                    if (lookupNameEndPos > lookupNameBeginPos) {
-                        consentLookupName = expression.substring(lookupNameBeginPos, lookupNameEndPos);
-                        leftoverExpression = expression.substring(lookupNameEndPos+1);
-                    } else {
-                        consentLookupName = expression.substring(lookupNameBeginPos);
-                        leftoverExpression = expression.substring(lookupNameEndPos);
-                    }
-                }
-                Consent consent = profile.getConsents().get(consentLookupName);
-                if (consent == null) {
-                    return null;
-                }
-                if (leftoverExpression == null) {
-                    return consent;
-                }
-                return getConsentProperty(consent, leftoverExpression);
-            }
-        }
-        if (expression.startsWith("scores.")) {
-            return profile.getScores().get(expression.substring("scores.".length()));
-        }
-        if (expression.startsWith("properties.")) {
-            return getNestedPropertyValue(expression.substring("properties.".length()), profile.getProperties());
-        }
-        if (expression.startsWith("systemProperties.")) {
-            return getNestedPropertyValue(expression.substring("systemProperties.".length()), profile.getSystemProperties());
-        }
-        if ("itemId".equals(expression)) {
-            return profile.getItemId();
-        }
-        if ("itemType".equals(expression)) {
-            return profile.getItemType();
-        }
-        if ("mergedWith".equals(expression)) {
-            return profile.getMergedWith();
-        }
-        logger.warn("Requested unimplemented property {} on Profile object", expression);
-        return NOT_OPTIMIZED_MARKER;
-    }
-
-    private Object getCustomItemProperty(CustomItem customItem, String expression) {
-        if (expression.startsWith("properties.")) {
-            return getNestedPropertyValue(expression.substring("properties.".length()), customItem.getProperties());
-        }
-        if ("itemId".equals(expression)) {
-            return customItem.getItemId();
-        }
-        if ("itemType".equals(expression)) {
-            return customItem.getItemType();
-        }
-        if ("scope".equals(expression)) {
-            return customItem.getScope();
-        }
-        logger.warn("Requested unimplemented property {} on CustomItem object", expression);
-        return NOT_OPTIMIZED_MARKER;
-    }
-
-    private Object getRuleProperty(Rule rule, String expression) {
-        if ("itemId".equals(expression)) {
-            return rule.getItemId();
-        }
-        if ("itemType".equals(expression)) {
-            return rule.getItemType();
-        }
-        if ("scope".equals(expression)) {
-            return rule.getScope();
-        }
-        logger.warn("Requested unimplemented property {} on Rule object", expression);
-        return NOT_OPTIMIZED_MARKER;
-    }
-
-    private Object getItemProperty(Item item, String expression) {
-        if (item instanceof Profile) {
-            return getProfileProperty((Profile) item, expression);
-        } else if (item instanceof Session) {
-            return getSessionProperty((Session) item, expression);
-        } else if (item instanceof Rule) {
-            return getRuleProperty((Rule) item, expression);
-        } else if (item instanceof Event) {
-            return getEventProperty((Event) item, expression);
-        } else if (item instanceof CustomItem) {
-            return getCustomItemProperty((CustomItem) item, expression);
-        } else {
-            logger.warn("Requested unrecognized property {} on {} class", expression, item.getClass().getName());
-            return NOT_OPTIMIZED_MARKER;
-        }
-    }
-
-    private Object getConsentProperty(Consent consent, String expression) {
-        if ("typeIdentifier".equals(expression)) {
-            return consent.getTypeIdentifier();
-        } else if ("scope".equals(expression)) {
-            return consent.getScope();
-        } else if ("status".equals(expression)) {
-            return consent.getStatus();
-        } else if ("statusDate".equals(expression)) {
-            return consent.getStatusDate();
-        } else if ("revokeDate".equals(expression)) {
-            return consent.getRevokeDate();
-        } else {
-            logger.warn("Requested unrecognized property {} on Consent object {}", expression, consent);
-            return NOT_OPTIMIZED_MARKER;
-        }
-    }
 }
