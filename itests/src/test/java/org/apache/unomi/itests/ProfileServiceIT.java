@@ -22,6 +22,7 @@ import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.PartialList;
+import org.apache.unomi.persistence.elasticsearch.*;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
