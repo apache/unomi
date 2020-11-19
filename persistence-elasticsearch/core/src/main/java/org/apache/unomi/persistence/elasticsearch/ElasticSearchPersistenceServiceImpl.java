@@ -180,6 +180,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     public static final String BULK_PROCESSOR_BACKOFF_POLICY = "bulkProcessor.backoffPolicy";
     public static final String INDEX_DATE_PREFIX = "date-";
     private static final Logger logger = LoggerFactory.getLogger(ElasticSearchPersistenceServiceImpl.class.getName());
+    private static boolean throwExceptions = false;
     private RestHighLevelClient client;
     private BulkProcessor bulkProcessor;
     private String elasticSearchAddresses;
@@ -401,6 +402,10 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     public void setAggQueryThrowOnMissingDocs(boolean aggQueryThrowOnMissingDocs) {
         this.aggQueryThrowOnMissingDocs = aggQueryThrowOnMissingDocs;
+    }
+
+    public void setThrowExceptions(boolean throwExceptions) {
+        this.throwExceptions = throwExceptions;
     }
     public void start() throws Exception {
 
@@ -2167,6 +2172,9 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         private void handleError(Throwable t, boolean logError) {
             if (logError) {
                 logger.error("Error while executing in class loader", t);
+            }
+            if (throwExceptions) {
+                throw new RuntimeException(t);
             }
         }
 
