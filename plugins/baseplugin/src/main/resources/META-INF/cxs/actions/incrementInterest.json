@@ -1,0 +1,19 @@
+{
+  "metadata": {
+    "id": "incrementInterestAction",
+    "name": "incrementInterestAction",
+    "description": "",
+    "systemTags": [
+      "profileTags"
+    ],
+    "readOnly": true
+  },
+  "actionExecutor": "incrementInterest",
+  "parameters": [
+    {
+      "id": "eventInterestProperty",
+      "type": "properties",
+      "multivalued": false
+    }
+  ]
+}
