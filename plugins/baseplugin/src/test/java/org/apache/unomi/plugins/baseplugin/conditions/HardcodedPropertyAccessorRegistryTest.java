@@ -16,9 +16,17 @@
  */
 package org.apache.unomi.plugins.baseplugin.conditions;
 
+import org.apache.unomi.api.Item;
+import org.apache.unomi.api.MetadataItem;
+import org.apache.unomi.api.rules.Rule;
 import org.junit.Test;
 
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public class HardcodedPropertyAccessorRegistryTest {
 
@@ -52,5 +60,17 @@ public class HardcodedPropertyAccessorRegistryTest {
         HardcodedPropertyAccessorRegistry.NextTokens nextTokens = registry.getNextTokens(expression);
         assertEquals("Property name value was wrong", expectedPropertyName, nextTokens.propertyName);
         assertEquals("Leftover expression value was wrong", expectedLeftoverExpression, nextTokens.leftoverExpression);
+    }
+
+    @Test
+    public void testCollectAncestors() {
+        List<Class<?>> classAncestors = registry.collectAncestors(HashMap.class, registry.propertyAccessors.keySet());
+        assertTrue("HashMap ancestors list size is not correct", classAncestors.size() == 1);
+        assertTrue("Expected Map as ancestor of HashMap but wasn't found", classAncestors.stream().anyMatch(ancestor -> ancestor.equals(Map.class)));
+
+        classAncestors = registry.collectAncestors(Rule.class, registry.propertyAccessors.keySet());
+        assertTrue("Rule ancestors list size is not correct", classAncestors.size() == 2);
+        assertTrue("Expected MetadataItem as ancestor of Rule but wasn't found", classAncestors.stream().anyMatch(ancestor -> ancestor.equals(MetadataItem.class)));
+        assertTrue("Expected Item as ancestor of Ruole but wasn't found", classAncestors.stream().anyMatch(ancestor -> ancestor.equals(Item.class)));
     }
 }

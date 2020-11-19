@@ -29,6 +29,6 @@ public class MetadataItemAccessor extends HardcodedPropertyAccessor<MetadataItem
         if ("metadata".equals(propertyName)) {
             registry.getProperty(object.getMetadata(), leftoverExpression);
         }
-        return null;
+        return PROPERTY_NOT_FOUND_MARKER;
     }
 }
