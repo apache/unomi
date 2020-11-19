@@ -18,6 +18,7 @@ package org.apache.unomi.plugins.baseplugin.conditions;
 
 import ognl.MethodFailedException;
 import org.apache.unomi.api.*;
+import org.apache.unomi.api.rules.Rule;
 import org.apache.unomi.plugins.baseplugin.conditions.accessors.HardcodedPropertyAccessor;
 import org.apache.unomi.scripting.ExpressionFilter;
 import org.apache.unomi.scripting.ExpressionFilterFactory;
@@ -51,6 +52,7 @@ public class PropertyConditionEvaluatorTest {
     public static final Date PROFILE_PREVIOUS_VISIT = new Date();
     public static final String NEWSLETTER_CONSENT_ID = "newsLetterConsentId";
     public static final String TRACKING_CONSENT_ID = "trackingConsentId";
+    public static final String RULE_ITEM_ID = "mockRuleItemId";
     private static PropertyConditionEvaluator propertyConditionEvaluator = new PropertyConditionEvaluator();
     private static Profile mockProfile = generateMockProfile();
     private static Session mockSession = generateMockSession(mockProfile);
@@ -95,6 +97,9 @@ public class PropertyConditionEvaluatorTest {
 
         // here let's make sure our reporting of non optimized expressions works.
         assertEquals("Should have received the non-optimized marker string", HardcodedPropertyAccessor.PROPERTY_NOT_FOUND_MARKER, propertyConditionEvaluator.getHardcodedPropertyValue(mockSession, "profile.non-existing-field"));
+
+        Event mockRuleEvent = generateMockRuleFiredEvent(mockProfile, mockSession);
+        assertEquals("Target itemId value is not correct", RULE_ITEM_ID, propertyConditionEvaluator.getHardcodedPropertyValue(mockRuleEvent, "target.itemId"));
 
     }
 
@@ -201,9 +206,6 @@ public class PropertyConditionEvaluatorTest {
     }
 
     private static Event generateMockEvent(Profile mockProfile, Session mockSession) {
-        Event mockEvent = new Event();
-        mockEvent.setProfile(mockProfile);
-        mockEvent.setSession(mockSession);
         CustomItem sourceItem = new CustomItem();
         sourceItem.setItemId(MOCK_ITEM_ID);
         sourceItem.setScope(DIGITALL_SCOPE);
@@ -211,7 +213,6 @@ public class PropertyConditionEvaluatorTest {
         sourcePageInfoMap.put("pagePath", SOURCE_PAGE_PATH_VALUE);
         sourcePageInfoMap.put("pageURL", SOURCE_PAGE_URL_VALUE);
         sourceItem.getProperties().put("pageInfo", sourcePageInfoMap);
-        mockEvent.setSource(sourceItem);
         CustomItem targetItem = new CustomItem();
         targetItem.setItemId(MOCK_ITEM_ID);
         targetItem.setScope(DIGITALL_SCOPE);
@@ -219,8 +220,24 @@ public class PropertyConditionEvaluatorTest {
         targetPageInfoMap.put("pagePath", TARGET_PAGE_PATH_VALUE);
         targetPageInfoMap.put("pageURL", TARGET_PAGE_URL_VALUE);
         targetItem.getProperties().put("pageInfo", targetPageInfoMap);
-        mockEvent.setTarget(targetItem);
-        return mockEvent;
+        return new Event("view", mockSession, mockProfile, DIGITALL_SCOPE, sourceItem, targetItem, new HashMap<>(), new Date(), true);
+    }
+
+    private static Event generateMockRuleFiredEvent(Profile mockProfile, Session mockSession) {
+        CustomItem sourceItem = new CustomItem();
+        sourceItem.setItemId(MOCK_ITEM_ID);
+        sourceItem.setScope(DIGITALL_SCOPE);
+        Map<String, Object> sourcePageInfoMap = new HashMap<>();
+        sourcePageInfoMap.put("pagePath", SOURCE_PAGE_PATH_VALUE);
+        sourcePageInfoMap.put("pageURL", SOURCE_PAGE_URL_VALUE);
+        sourceItem.getProperties().put("pageInfo", sourcePageInfoMap);
+        Metadata metadata = new Metadata();
+        metadata.setId(RULE_ITEM_ID);
+        metadata.setScope(DIGITALL_SCOPE);
+        metadata.setEnabled(true);
+        Rule rule = new Rule(metadata);
+        rule.setScope(DIGITALL_SCOPE);
+        return new Event("ruleFired", mockSession, mockProfile, DIGITALL_SCOPE, sourceItem, rule, new HashMap<>(), new Date(), true);
     }
 
     public static Profile generateMockProfile() {
