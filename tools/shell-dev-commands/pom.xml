@@ -21,7 +21,7 @@
     <parent>
         <artifactId>unomi-tools</artifactId>
         <groupId>org.apache.unomi</groupId>
-        <version>1.5.4-SNAPSHOT</version>
+        <version>1.5.4</version>
     </parent>
 
     <artifactId>shell-dev-commands</artifactId>
