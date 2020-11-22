@@ -57,6 +57,7 @@
             <cm:property name="clientSocketTimeout" value="" />
             <cm:property name="aggQueryMaxResponseSizeHttp" value="" />
             <cm:property name="aggQueryThrowOnMissingDocs" value="false" />
+            <cm:property name="itemTypeToRefreshPolicy" value="" />
             <cm:property name="itemClassesToCache" value="" />
             <cm:property name="useBatchingForSave" value="false" />
             <cm:property name="useBatchingForUpdate" value="true" />
@@ -128,6 +129,8 @@
         <property name="aggregateQueryBucketSize" value="${es.aggregateQueryBucketSize}" />
         <property name="aggQueryMaxResponseSizeHttp" value="${es.aggQueryMaxResponseSizeHttp}" />
         <property name="aggQueryThrowOnMissingDocs" value="${es.aggQueryThrowOnMissingDocs}" />
+        <property name="itemTypeToRefreshPolicy" value="${es.itemTypeToRefreshPolicy}" />
+
         <property name="clientSocketTimeout" value="${es.clientSocketTimeout}" />
 
         <property name="metricsService" ref="metricsService" />

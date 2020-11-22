@@ -80,6 +80,14 @@ public interface PersistenceService {
     <T extends Item> PartialList<T> getAllItems(final Class<T> clazz, int offset, int size, String sortBy, String scrollTimeValidity);
 
     /**
+     * Return true if the item which is saved in the persistence service is consistent
+     *
+     * @param item the item to the check if consistent
+     * @return {@code true} if the item is consistent, false otherwise
+     */
+    boolean isConsistent(Item item);
+
+    /**
      * Persists the specified Item in the context server.
      *
      * @param item the item to persist
