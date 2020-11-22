@@ -17,13 +17,14 @@
 
 package org.apache.unomi.persistence.elasticsearch;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hazelcast.core.HazelcastInstance;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpHost;
 import org.apache.http.auth.AuthScope;
 import org.apache.http.auth.UsernamePasswordCredentials;
 import org.apache.http.client.CredentialsProvider;
-import org.apache.http.client.config.RequestConfig;
 import org.apache.http.conn.ssl.NoopHostnameVerifier;
 import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.lucene.search.TotalHits;
@@ -167,6 +168,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import static org.elasticsearch.index.query.QueryBuilders.termQuery;
 
@@ -242,6 +244,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     private boolean aggQueryThrowOnMissingDocs = false;
     private Integer aggQueryMaxResponseSizeHttp = null;
     private Integer clientSocketTimeout = null;
+    private Map<String, WriteRequest.RefreshPolicy> itemTypeToRefreshPolicy = new HashMap<>();
 
     private Map<String, Map<String, Map<String, Object>>> knownMappings = new HashMap<>();
 
@@ -259,6 +262,13 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         elasticSearchAddressList.clear();
         for (String elasticSearchAddress : elasticSearchAddressesArray) {
             elasticSearchAddressList.add(elasticSearchAddress.trim());
+        }
+    }
+
+    public void setItemTypeToRefreshPolicy(String itemTypeToRefreshPolicy) throws IOException {
+        if (!itemTypeToRefreshPolicy.isEmpty()) {
+            this.itemTypeToRefreshPolicy = new ObjectMapper().readValue(itemTypeToRefreshPolicy,
+                        new TypeReference<HashMap<String, WriteRequest.RefreshPolicy>>() {});
         }
     }
 
@@ -842,6 +852,11 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     }
 
     @Override
+    public boolean isConsistent(Item item) {
+        return getRefreshPolicy(item.getItemType()) != WriteRequest.RefreshPolicy.NONE;
+    }
+
+    @Override
     public boolean save(final Item item) {
         return save(item, useBatchingForSave, alwaysOverwrite);
     }
@@ -887,6 +902,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
                     try {
                         if (bulkProcessor == null || !useBatching) {
+                            indexRequest.setRefreshPolicy(getRefreshPolicy(item.getItemType()));
                             IndexResponse response = client.index(indexRequest, RequestOptions.DEFAULT);
                             setMetadata(item, response.getId(), response.getVersion(), response.getSeqNo(), response.getPrimaryTerm());
                         } else {
@@ -2401,6 +2417,13 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     private String getMonthlyIndexPart(Date date) {
         String d = new SimpleDateFormat("yyyy-MM").format(date);
         return INDEX_DATE_PREFIX + d;
+    }
+
+    private WriteRequest.RefreshPolicy getRefreshPolicy(String itemType) {
+        if (itemTypeToRefreshPolicy.containsKey(itemType)) {
+            return itemTypeToRefreshPolicy.get(itemType);
+        }
+        return WriteRequest.RefreshPolicy.NONE;
     }
 
 }
