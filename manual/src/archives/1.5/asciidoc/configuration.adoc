@@ -226,8 +226,8 @@ Apache Unomi allows using different types of expressions in the following subsys
 - context.json filters and personalization queries
 - rule conditions and actions parameters
 
-Apache Unomi uses two integrated scripting languages to provide this functionality: OGNL and MVEL
-OGNL is deprecated and is now disabled by default in 1.5.2 as it is little used (and replaced by better performing
+Apache Unomi uses two integrated scripting languages to provide this functionality: OGNL and MVEL.
+OGNL is deprecated and is now disabled by default since 1.5.2 as it is little used (and replaced by better performing
 hardcoded property lookups). MVEL is more commonly used in rule actions as in the following example:
 
 From https://github.com/apache/unomi/blob/unomi-1.5.x/plugins/baseplugin/src/main/resources/META-INF/cxs/rules/sessionAssigned.json[https://github.com/apache/unomi/blob/unomi-1.5.x/plugins/baseplugin/src/main/resources/META-INF/cxs/rules/sessionAssigned.json]:
