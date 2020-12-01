@@ -25,6 +25,7 @@ import org.apache.http.HttpHost;
 import org.apache.http.auth.AuthScope;
 import org.apache.http.auth.UsernamePasswordCredentials;
 import org.apache.http.client.CredentialsProvider;
+import org.apache.http.client.config.RequestConfig;
 import org.apache.http.conn.ssl.NoopHostnameVerifier;
 import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.lucene.search.TotalHits;
@@ -877,19 +878,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".updateItem",  this.bundleContext, this.fatalIllegalStateErrors) {
             protected Boolean execute(Object... args) throws Exception {
                 try {
-                    String itemType = Item.getItemType(clazz);
-                    UpdateRequest updateRequest = new UpdateRequest(getIndex(itemType, dateHint), item.getItemId());
-                    updateRequest.doc(source);
-
-                    if (!alwaysOverwrite) {
-                        Long seqNo = (Long)item.getMetadata(SEQ_NO);
-                        Long primaryTerm = (Long)item.getMetadata(PRIMARY_TERM);
-
-                        if (seqNo != null && primaryTerm != null) {
-                            updateRequest.setIfSeqNo(seqNo);
-                            updateRequest.setIfPrimaryTerm(primaryTerm);
-                        }
-                    }
+                    UpdateRequest updateRequest = createUpdateRequest(clazz, dateHint, item, source, alwaysOverwrite);
 
                     if (bulkProcessor == null || !useBatchingForUpdate) {
                         UpdateResponse response = client.update(updateRequest, RequestOptions.DEFAULT);
@@ -909,6 +898,54 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             return result;
         }
     }
+
+    private UpdateRequest createUpdateRequest(Class clazz, Date dateHint, Item item, Map source, boolean alwaysOverwrite) {
+        String itemType = Item.getItemType(clazz);
+        UpdateRequest updateRequest = new UpdateRequest(getIndex(itemType, dateHint), item.getItemId());
+        updateRequest.doc(source);
+
+        if (!alwaysOverwrite) {
+            Long seqNo = (Long) item.getMetadata(SEQ_NO);
+            Long primaryTerm = (Long) item.getMetadata(PRIMARY_TERM);
+
+            if (seqNo != null && primaryTerm != null) {
+                updateRequest.setIfSeqNo(seqNo);
+                updateRequest.setIfPrimaryTerm(primaryTerm);
+            }
+        }
+        return updateRequest;
+    }
+
+    @Override
+    public List<String> update(final Map<Item, Map> items, final Date dateHint, final Class clazz) {
+        List<String> result = new InClassLoaderExecute<List<String>>(metricsService, this.getClass().getName() + ".updateItems",  this.bundleContext, this.fatalIllegalStateErrors) {
+            protected List<String> execute(Object... args) throws Exception {
+                long batchRequestStartTime = System.currentTimeMillis();
+
+                BulkRequest bulkRequest = new BulkRequest();
+                items.forEach((item, source) -> {
+                    UpdateRequest updateRequest = createUpdateRequest(clazz, dateHint, item, source, alwaysOverwrite);
+                    bulkRequest.add(updateRequest);
+                });
+
+                BulkResponse bulkResponse = client.bulk(bulkRequest, RequestOptions.DEFAULT);
+                logger.debug("{} profiles updated with bulk segment in {}ms", bulkRequest.numberOfActions(), System.currentTimeMillis() - batchRequestStartTime);
+
+                List<String> failedItemsIds = new ArrayList<>();
+
+                if (bulkResponse.hasFailures()){
+                    Iterator<BulkItemResponse> iterator = bulkResponse.iterator();
+                    iterator.forEachRemaining(bulkItemResponse -> {
+                        failedItemsIds.add(bulkItemResponse.getId());
+                    });
+                }
+                return failedItemsIds;
+            }
+        }.catchingExecuteInClassLoader(true);
+
+        return result;
+    }
+
 
     @Override
     public boolean updateWithQueryAndScript(final Date dateHint, final Class<?> clazz, final String[] scripts, final Map<String, Object>[] scriptParams, final Condition[] conditions) {
