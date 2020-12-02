@@ -117,7 +117,7 @@ public class ProfileServiceWithoutOverwriteIT extends BaseIT {
 
         Profile updatedProfile = profileService.load(profileId);
         updatedProfile.setProperty("country", "test2-country");
-        updatedProfile.setMetadata("seq_no", 1L);
+        updatedProfile.setSystemMetadata("seq_no", 1L);
         profileService.save(updatedProfile);
     }
 }
