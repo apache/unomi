@@ -25,7 +25,6 @@ import org.apache.http.HttpHost;
 import org.apache.http.auth.AuthScope;
 import org.apache.http.auth.UsernamePasswordCredentials;
 import org.apache.http.client.CredentialsProvider;
-import org.apache.http.client.config.RequestConfig;
 import org.apache.http.conn.ssl.NoopHostnameVerifier;
 import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.lucene.search.TotalHits;
@@ -120,7 +119,6 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 import static org.elasticsearch.index.query.QueryBuilders.termQuery;
 
@@ -784,8 +782,8 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     private void setMetadata(Item item, String id, long version, long seqNo, long primaryTerm) {
         item.setItemId(id);
         item.setVersion(version);
-        item.setMetadata(SEQ_NO, seqNo);
-        item.setMetadata(PRIMARY_TERM, primaryTerm);
+        item.setSystemMetadata(SEQ_NO, seqNo);
+        item.setSystemMetadata(PRIMARY_TERM, primaryTerm);
     }
 
     @Override
@@ -821,8 +819,8 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     indexRequest.source(source, XContentType.JSON);
 
                     if (!alwaysOverwrite) {
-                        Long seqNo = (Long)item.getMetadata(SEQ_NO);
-                        Long primaryTerm = (Long)item.getMetadata(PRIMARY_TERM);
+                        Long seqNo = (Long)item.getSystemMetadataMetadata(SEQ_NO);
+                        Long primaryTerm = (Long)item.getSystemMetadataMetadata(PRIMARY_TERM);
 
                         if (seqNo != null && primaryTerm != null) {
                             indexRequest.setIfSeqNo(seqNo);
@@ -905,8 +903,8 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         updateRequest.doc(source);
 
         if (!alwaysOverwrite) {
-            Long seqNo = (Long) item.getMetadata(SEQ_NO);
-            Long primaryTerm = (Long) item.getMetadata(PRIMARY_TERM);
+            Long seqNo = (Long) item.getSystemMetadataMetadata(SEQ_NO);
+            Long primaryTerm = (Long) item.getSystemMetadataMetadata(PRIMARY_TERM);
 
             if (seqNo != null && primaryTerm != null) {
                 updateRequest.setIfSeqNo(seqNo);
@@ -1017,8 +1015,8 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
                     UpdateRequest updateRequest = new UpdateRequest(index, item.getItemId());
 
-                    Long seqNo = (Long)item.getMetadata(SEQ_NO);
-                    Long primaryTerm = (Long)item.getMetadata(PRIMARY_TERM);
+                    Long seqNo = (Long)item.getSystemMetadataMetadata(SEQ_NO);
+                    Long primaryTerm = (Long)item.getSystemMetadataMetadata(PRIMARY_TERM);
 
                     if (seqNo != null && primaryTerm != null) {
                         updateRequest.setIfSeqNo(seqNo);
