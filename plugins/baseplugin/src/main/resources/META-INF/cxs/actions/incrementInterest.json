@@ -12,7 +12,7 @@
   "parameters": [
     {
       "id": "eventInterestProperty",
-      "type": "properties",
+      "type": "string",
       "multivalued": false
     }
   ]
