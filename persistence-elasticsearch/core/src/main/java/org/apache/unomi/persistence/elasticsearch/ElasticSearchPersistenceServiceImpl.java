@@ -112,6 +112,7 @@ import javax.net.ssl.X509TrustManager;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.lang.reflect.Field;
 import java.net.URL;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
@@ -692,6 +693,26 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             }
         }
     }
+
+    @Override
+    public void setSettings(Map<String, Object> settings) throws NoSuchFieldException, IllegalAccessException {
+        for (Map.Entry<String, Object> setting : settings.entrySet())
+            setSetting(setting.getKey(), setting.getValue());
+    }
+
+    @Override
+    public void setSetting(String fieldName, Object value) throws NoSuchFieldException, IllegalAccessException {
+        Field field = this.getClass().getDeclaredField(fieldName);
+        field.set(getClass(), value);
+    }
+
+    @Override
+    public Object getSetting(String fieldName) throws NoSuchFieldException, IllegalAccessException {
+        Field field = this.getClass().getDeclaredField(fieldName);
+        return field.get(getClass());
+    }
+
+
 
     @Override
     public <T extends Item> T load(final String itemId, final Class<T> clazz) {

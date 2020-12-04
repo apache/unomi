@@ -24,6 +24,8 @@ import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.PartialList;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
+
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.Before;
@@ -111,5 +113,28 @@ public class ProfileServiceIT extends BaseIT {
         profiles = profileService.search(queryCont, Profile.class);
         assertEquals(0, profiles.getList().size());
     }
+
+    // Relevant only when throwExceptions system property is true
+    @Test
+    public void testGetProfileWithWrongScrollerIdThrowException() throws InterruptedException, NoSuchFieldException, IllegalAccessException {
+        boolean throwExceptionCurrent = (boolean) persistenceService.getSetting("throwExceptions");
+        persistenceService.setSetting("throwExceptions", true);
+
+        Query query = new Query();
+        query.setLimit(2);
+        query.setScrollTimeValidity("10m");
+        query.setScrollIdentifier("dummyScrollId");
+
+        try {
+            profileService.search(query, Profile.class);
+            fail("search method didn't throw when expected");
+        } catch (RuntimeException ex) {
+            // Should get here since this scenario should throw exception
+        }
+        finally {
+            persistenceService.setSetting("throwExceptions", throwExceptionCurrent);
+        }
+    }
+
 
 }
