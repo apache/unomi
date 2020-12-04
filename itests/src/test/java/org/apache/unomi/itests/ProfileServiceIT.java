@@ -116,9 +116,9 @@ public class ProfileServiceIT extends BaseIT {
 
     // Relevant only when throwExceptions system property is true
     @Test
-    public void testGetProfileWithWrongScrollerIdThrowException() throws InterruptedException {
-        ElasticSearchPersistenceServiceImpl esPersistenceService = (ElasticSearchPersistenceServiceImpl)persistenceService;
-        esPersistenceService.setThrowExceptions(true);
+    public void testGetProfileWithWrongScrollerIdThrowException() throws InterruptedException, NoSuchFieldException, IllegalAccessException {
+        boolean throwExceptionCurrent = (boolean) persistenceService.getSetting("throwExceptions");
+        persistenceService.setSetting("throwExceptions", true);
 
         Query query = new Query();
         query.setLimit(2);
@@ -129,9 +129,10 @@ public class ProfileServiceIT extends BaseIT {
             profileService.search(query, Profile.class);
             fail("search method didn't throw when expected");
         } catch (RuntimeException ex) {
+            // Should get here since this scenario should throw exception
         }
         finally {
-            esPersistenceService.setThrowExceptions(false);
+            persistenceService.setSetting("throwExceptions", throwExceptionCurrent);
         }
     }
 
