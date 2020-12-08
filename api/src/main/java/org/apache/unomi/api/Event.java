@@ -17,6 +17,7 @@
 
 package org.apache.unomi.api;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.unomi.api.actions.ActionPostExecutor;
 
 import javax.xml.bind.annotation.XmlTransient;
@@ -321,6 +322,26 @@ public class Event extends Item implements TimestampedItem {
      */
     public Object getProperty(String name) {
         return properties.get(name);
+    }
+
+    /**
+     * Retrieves the value of the nested property identified by the specified name.
+     *
+     * @param name the name of the property to be retrieved, splited in the nested properties with "."
+     * @return the value of the property identified by the specified name
+     */
+    public Object getNestedProperty(String name) {
+        Map properties = this.properties;
+        String[] propertyPath = StringUtils.substringBeforeLast(name, ".").split("\\.");
+        String propertyName = StringUtils.substringAfterLast(name, ".");
+
+        for (String property: propertyPath) {
+            properties = (Map) properties.get(property);
+            if (properties == null) {
+                return null;
+            }
+        }
+        return properties.get(propertyName);
     }
 
     /**
