@@ -481,6 +481,8 @@
                                 <exclude>**/NOTICE-generated</exclude>
                                 <exclude>**/DEPENDENCIES</exclude>
                                 <exclude>**/target/**/*</exclude>
+                                <!-- Github configuration files -->
+                                <exclude>**/.github/**/*</exclude>
                                 <!-- GIT files -->
                                 <exclude>**/.git/**/*</exclude>
                                 <!-- IDEA files -->
