@@ -120,7 +120,7 @@ public class SetRemoteHostInfoAction implements ActionExecutor {
         }
         String remoteAddrParameter = httpServletRequest.getParameter("remoteAddr");
         if (logger.isDebugEnabled()) {
-            logger.debug("Remote address param is " + remoteAddr);
+            logger.debug("Remote address param is " + remoteAddrParameter);
         }
         String xff = httpServletRequest.getHeader("X-Forwarded-For");
         if (logger.isDebugEnabled()) {
