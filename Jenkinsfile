@@ -116,7 +116,7 @@ pipeline {
             }
             steps {
                 echo 'Deploying'
-                sh 'mvn deploy'
+                sh 'mvn deploy -DskipTests'
             }
         }
     }
