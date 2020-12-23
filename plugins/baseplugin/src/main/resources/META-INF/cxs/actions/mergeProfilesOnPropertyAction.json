@@ -15,6 +15,11 @@
       "id": "mergeProfilePropertyName",
       "type": "string",
       "multivalued": false
+    },
+    {
+      "id": "forceEventProfileAsMaster",
+      "type": "boolean",
+      "multivalued": false
     }
   ]
 }

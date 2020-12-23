@@ -132,11 +132,18 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
                 return StringUtils.isEmpty(mergeProfilePreviousPropertyValue) ? EventService.PROFILE_UPDATED : EventService.NO_CHANGE;
             }
 
-            // Use oldest profile for master profile
-            final Profile masterProfile = profileService.mergeProfiles(profiles.get(0), profiles);
+            Profile markedMasterProfile;
+            boolean forceEventProfileAsMaster = action.getParameterValues().containsKey("forceEventProfileAsMaster") ?
+                    (boolean) action.getParameterValues().get("forceEventProfileAsMaster") : false;
+            if (forceEventProfileAsMaster)
+                markedMasterProfile = event.getProfile();
+            else
+                markedMasterProfile = profiles.get(0);// Use oldest profile for master profile
+
+            final Profile masterProfile = profileService.mergeProfiles(markedMasterProfile, profiles);
 
             // Profile has changed
-            if (!masterProfile.getItemId().equals(profileId)) {
+            if (forceEventProfileAsMaster || !masterProfile.getItemId().equals(profileId)) {
                 HttpServletResponse httpServletResponse = (HttpServletResponse) event.getAttributes().get(Event.HTTP_RESPONSE_ATTRIBUTE);
                 // we still send back the current profile cookie. It will be changed on the next request to the ContextServlet.
                 // The current profile will be deleted only then because we cannot delete it right now (too soon)
@@ -144,6 +151,7 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
                         profileIdCookieName, profileIdCookieDomain, profileIdCookieMaxAgeInSeconds);
 
                 final String masterProfileId = masterProfile.getItemId();
+
                 // At the end of the merge, we must set the merged profile as profile event to process other Actions
                 event.setProfileId(masterProfileId);
                 event.setProfile(masterProfile);
@@ -192,7 +200,14 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
                                     sourceMap.put("mergedWith", masterProfileId);
                                     profile.setSystemProperty("lastUpdated", new Date());
                                     sourceMap.put("systemProperties", profile.getSystemProperties());
-                                    persistenceService.update(profile, null, Profile.class, sourceMap);
+
+                                    boolean isExist  = persistenceService.load(profile.getItemId(), Profile.class) != null;
+
+                                    if (isExist == false) //save the original event profile is it has been changed
+                                        persistenceService.save(profile);
+                                    else
+                                      persistenceService.update(profile, null, Profile.class, sourceMap,true);
+
                                 }
                             }
                         } catch (Exception e) {
