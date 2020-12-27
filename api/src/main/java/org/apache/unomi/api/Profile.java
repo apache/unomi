@@ -102,6 +102,10 @@ public class Profile extends Item {
      * @return the value of the property identified by the specified name
      */
     public Object getNestedProperty(String name) {
+        if (!name.contains(".")) {
+            return getProperty(name);
+        }
+
         Map properties = this.properties;
         String[] propertyPath = StringUtils.substringBeforeLast(name, ".").split("\\.");
         String propertyName = StringUtils.substringAfterLast(name, ".");
