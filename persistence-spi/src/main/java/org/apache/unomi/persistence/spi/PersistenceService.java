@@ -128,41 +128,65 @@ public interface PersistenceService {
     boolean save(Item item, boolean useBatching);
 
     /**
+     * Persists the specified Item in the context server.
+     *
+     * @param item the item to persist
+     * @param useBatching whether to use batching or not for saving the item. If activating there may be a delay between
+     *                 the call to this method and the actual saving in the persistence backend
+     * @param alwaysOverwrite whether to overwrite a document even if we are holding an old item when saving
+     *
+     * @return {@code true} if the item was properly persisted, {@code false} otherwise
+     */
+    boolean save(Item item, Boolean useBatching, Boolean alwaysOverwrite);
+
+    /**
      * Updates the item of the specified class and identified by the specified identifier with new property values provided as name - value pairs in the specified Map.
      *
-     * @param itemId   the identifier of the item we want to update
+     * @param item     the item we want to update
      * @param dateHint a Date helping in identifying where the item is located
      * @param clazz    the Item subclass of the item to update
      * @param source   a Map with entries specifying as key the property name to update and as value its new value
      * @return {@code true} if the update was successful, {@code false} otherwise
      */
-    boolean update(String itemId, Date dateHint, Class<?> clazz, Map<?, ?> source);
+    boolean update(Item item, Date dateHint, Class<?> clazz, Map<?, ?> source);
 
     /**
      * Updates the item of the specified class and identified by the specified identifier with a new property value for the specified property name. Same as
      * {@code update(itemId, dateHint, clazz, Collections.singletonMap(propertyName, propertyValue))}
      *
-     * @param itemId        the identifier of the item we want to update
+     * @param item          the item we want to update
      * @param dateHint      a Date helping in identifying where the item is located
      * @param clazz         the Item subclass of the item to update
      * @param propertyName  the name of the property to update
      * @param propertyValue the new value of the property
      * @return {@code true} if the update was successful, {@code false} otherwise
      */
-    boolean update(String itemId, Date dateHint, Class<?> clazz, String propertyName, Object propertyValue);
+    boolean update(Item item, Date dateHint, Class<?> clazz, String propertyName, Object propertyValue);
+
+    /**
+     * Updates the item of the specified class and identified by the specified identifier with new property values provided as name - value pairs in the specified Map.
+     *
+     * @param item     the item we want to update
+     * @param dateHint a Date helping in identifying where the item is located
+     * @param clazz    the Item subclass of the item to update
+     * @param source   a Map with entries specifying as key the property name to update and as value its new value
+     * @param alwaysOverwrite whether to overwrite a document even if we are holding an old item when saving
+     * @return {@code true} if the update was successful, {@code false} otherwise
+     */
+    boolean update(Item item, Date dateHint, Class<?> clazz, Map<?, ?> source, final boolean alwaysOverwrite);
 
     /**
      * Updates the item of the specified class and identified by the specified identifier with a new property value for the specified property name. Same as
      * {@code update(itemId, dateHint, clazz, Collections.singletonMap(propertyName, propertyValue))}
      *
-     * @param itemId        the identifier of the item we want to update
+     * @param item          the item we want to update
      * @param dateHint      a Date helping in identifying where the item is located
      * @param clazz         the Item subclass of the item to update
      * @param script        inline script
      * @param scriptParams  script params
      * @return {@code true} if the update was successful, {@code false} otherwise
      */
-    boolean updateWithScript(String itemId, Date dateHint, Class<?> clazz, String script, Map<String, Object> scriptParams);
+    boolean updateWithScript(Item item, Date dateHint, Class<?> clazz, String script, Map<String, Object> scriptParams);
 
     /**
      * Updates the items of the specified class by a query with a new property value for the specified property name

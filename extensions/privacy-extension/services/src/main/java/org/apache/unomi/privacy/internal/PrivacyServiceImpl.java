@@ -137,7 +137,7 @@ public class PrivacyServiceImpl implements PrivacyService {
             persistenceService.save(session);
             List<Event> events = eventService.searchEvents(session.getItemId(), new String[0], null, 0, -1, null).getList();
             for (Event event : events) {
-                persistenceService.update(event.getItemId(), event.getTimeStamp(), Event.class, "profileId", newProfile.getItemId());
+                persistenceService.update(event, event.getTimeStamp(), Event.class, "profileId", newProfile.getItemId());
             }
         }
 
