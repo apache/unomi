@@ -61,7 +61,10 @@ public class GeoLocationByPointSessionConditionEvaluator implements ConditionEva
                 }
             }
         } catch (Exception e) {
-            logger.warn("Cannot evaluate condition, properties 'properties.location.lat' or 'properties.location.lon' not found");
+            logger.warn("Cannot evaluate condition, properties 'properties.location.lat' or 'properties.location.lon' not found, enable debug log level to see full stacktrace");
+            if (logger.isDebugEnabled()) {
+                logger.debug("Cannot evaluate condition", e);
+            }
         }
         return false;
     }
