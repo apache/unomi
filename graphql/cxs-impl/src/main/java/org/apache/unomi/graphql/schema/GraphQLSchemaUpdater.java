@@ -26,6 +26,7 @@ import org.apache.unomi.graphql.fetchers.event.UnomiEventPublisher;
 import org.apache.unomi.graphql.providers.GraphQLAdditionalTypesProvider;
 import org.apache.unomi.graphql.providers.GraphQLCodeRegistryProvider;
 import org.apache.unomi.graphql.providers.GraphQLExtensionsProvider;
+import org.apache.unomi.graphql.providers.GraphQLFieldVisibilityProvider;
 import org.apache.unomi.graphql.providers.GraphQLMutationProvider;
 import org.apache.unomi.graphql.providers.GraphQLProvider;
 import org.apache.unomi.graphql.providers.GraphQLQueryProvider;
@@ -71,6 +72,8 @@ public class GraphQLSchemaUpdater {
     private final List<GraphQLAdditionalTypesProvider> additionalTypesProviders = new CopyOnWriteArrayList<>();
 
     private final List<GraphQLTypeFunctionProvider> typeFunctionProviders = new CopyOnWriteArrayList<>();
+
+    private GraphQLFieldVisibilityProvider fieldVisibilityProvider;
 
     private GraphQLCodeRegistryProvider codeRegistryProvider;
 
@@ -161,6 +164,9 @@ public class GraphQLSchemaUpdater {
         if (provider instanceof GraphQLAdditionalTypesProvider) {
             additionalTypesProviders.add((GraphQLAdditionalTypesProvider) provider);
         }
+        if (provider instanceof GraphQLFieldVisibilityProvider) {
+            fieldVisibilityProvider = (GraphQLFieldVisibilityProvider) provider;
+        }
         if (provider instanceof GraphQLCodeRegistryProvider) {
             codeRegistryProvider = (GraphQLCodeRegistryProvider) provider;
         }
@@ -177,11 +183,11 @@ public class GraphQLSchemaUpdater {
         if (provider instanceof GraphQLSubscriptionProvider) {
             subscriptionProviders.remove(provider);
         }
-        if (provider instanceof GraphQLSubscriptionProvider) {
-            subscriptionProviders.add((GraphQLSubscriptionProvider) provider);
-        }
         if (provider instanceof GraphQLAdditionalTypesProvider) {
-            additionalTypesProviders.add((GraphQLAdditionalTypesProvider) provider);
+            additionalTypesProviders.remove(provider);
+        }
+        if (provider instanceof GraphQLFieldVisibilityProvider) {
+            fieldVisibilityProvider = null;
         }
         if (provider instanceof GraphQLCodeRegistryProvider) {
             codeRegistryProvider = GraphQLCodeRegistry::newCodeRegistry;
@@ -224,6 +230,20 @@ public class GraphQLSchemaUpdater {
 
     public void unbindSubscriptionProvider(GraphQLSubscriptionProvider provider) {
         subscriptionProviders.remove(provider);
+
+        updateSchema();
+    }
+
+
+    @Reference(cardinality = ReferenceCardinality.MULTIPLE, policy = ReferencePolicy.DYNAMIC)
+    public void bindFieldVisibilityProvider(GraphQLFieldVisibilityProvider provider) {
+        fieldVisibilityProvider = provider;
+
+        updateSchema();
+    }
+
+    public void unbindFieldVisibilityProvider(GraphQLFieldVisibilityProvider provider) {
+        fieldVisibilityProvider = null;
 
         updateSchema();
     }
@@ -319,6 +339,7 @@ public class GraphQLSchemaUpdater {
                 .subscriptionProviders(subscriptionProviders)
                 .eventPublisher(eventPublisher)
                 .codeRegistryProvider(codeRegistryProvider)
+                .fieldVisibilityProvider(fieldVisibilityProvider)
                 .build();
 
         final GraphQLSchema schema = schemaProvider.createSchema();

@@ -23,9 +23,12 @@ import graphql.schema.FieldCoordinates;
 import graphql.schema.GraphQLArgument;
 import graphql.schema.GraphQLCodeRegistry;
 import graphql.schema.GraphQLFieldDefinition;
+import graphql.schema.visibility.BlockedFields;
+import graphql.schema.visibility.GraphqlFieldVisibility;
 import org.apache.unomi.graphql.providers.GraphQLAdditionalTypesProvider;
 import org.apache.unomi.graphql.providers.GraphQLCodeRegistryProvider;
 import org.apache.unomi.graphql.providers.GraphQLExtensionsProvider;
+import org.apache.unomi.graphql.providers.GraphQLFieldVisibilityProvider;
 import org.apache.unomi.graphql.providers.GraphQLMutationProvider;
 import org.apache.unomi.graphql.providers.GraphQLProvider;
 import org.apache.unomi.graphql.providers.GraphQLQueryProvider;
@@ -43,7 +46,7 @@ import java.util.Set;
 
 @Component(immediate = true, service = GraphQLProvider.class)
 public class CDPProviderSample
-        implements GraphQLExtensionsProvider, GraphQLMutationProvider, GraphQLQueryProvider, GraphQLCodeRegistryProvider, GraphQLAdditionalTypesProvider {
+        implements GraphQLExtensionsProvider, GraphQLMutationProvider, GraphQLQueryProvider, GraphQLCodeRegistryProvider, GraphQLAdditionalTypesProvider, GraphQLFieldVisibilityProvider {
 
     private boolean isActivated;
 
@@ -137,4 +140,12 @@ public class CDPProviderSample
         return types;
     }
 
+    @Override
+    public GraphqlFieldVisibility getGraphQLFieldVisibility() {
+        // Blocks fields based on patterns
+        return BlockedFields.newBlock()
+                .addPattern("CDP_SegmentInput.name")
+                .addPattern(".*\\.delete.*") // regular expressions allowed
+                .build();
+    }
 }

@@ -46,6 +46,7 @@ import org.apache.unomi.graphql.fetchers.event.UnomiEventPublisher;
 import org.apache.unomi.graphql.providers.GraphQLAdditionalTypesProvider;
 import org.apache.unomi.graphql.providers.GraphQLCodeRegistryProvider;
 import org.apache.unomi.graphql.providers.GraphQLExtensionsProvider;
+import org.apache.unomi.graphql.providers.GraphQLFieldVisibilityProvider;
 import org.apache.unomi.graphql.providers.GraphQLMutationProvider;
 import org.apache.unomi.graphql.providers.GraphQLQueryProvider;
 import org.apache.unomi.graphql.providers.GraphQLSubscriptionProvider;
@@ -99,6 +100,8 @@ public class GraphQLSchemaProvider {
 
     private final List<GraphQLSubscriptionProvider> subscriptionProviders;
 
+    private final GraphQLFieldVisibilityProvider fieldVisibilityProvider;
+
     private final GraphQLCodeRegistryProvider codeRegistryProvider;
 
     private final UnomiEventPublisher eventPublisher;
@@ -118,6 +121,7 @@ public class GraphQLSchemaProvider {
         this.mutationProviders = builder.mutationProviders;
         this.subscriptionProviders = builder.subscriptionProviders;
         this.codeRegistryProvider = builder.codeRegistryProvider;
+        this.fieldVisibilityProvider = builder.fieldVisibilityProvider;
     }
 
     public GraphQLSchema createSchema() {
@@ -138,6 +142,8 @@ public class GraphQLSchemaProvider {
         transformQuery();
 
         transformMutations();
+
+        configureFieldVisibility();
 
         configureCodeRegister();
 
@@ -672,6 +678,13 @@ public class GraphQLSchemaProvider {
         }
     }
 
+    private void configureFieldVisibility() {
+        if (fieldVisibilityProvider != null) {
+            graphQLAnnotations.getContainer().getCodeRegistryBuilder()
+                    .fieldVisibility(fieldVisibilityProvider.getGraphQLFieldVisibility());
+        }
+    }
+
     public GraphQLInputObjectType getInputObjectType(final Class<?> annotatedClass) {
         return (GraphQLInputObjectType) graphQLAnnotations.getObjectHandler().getTypeRetriever()
                 .getGraphQLType(annotatedClass, graphQLAnnotations.getContainer(), true);
@@ -703,6 +716,8 @@ public class GraphQLSchemaProvider {
         List<GraphQLMutationProvider> mutationProviders;
 
         List<GraphQLSubscriptionProvider> subscriptionProviders;
+
+        GraphQLFieldVisibilityProvider fieldVisibilityProvider;
 
         GraphQLCodeRegistryProvider codeRegistryProvider;
 
@@ -750,6 +765,11 @@ public class GraphQLSchemaProvider {
 
         public Builder eventPublisher(UnomiEventPublisher eventPublisher) {
             this.eventPublisher = eventPublisher;
+            return this;
+        }
+
+        public Builder fieldVisibilityProvider(GraphQLFieldVisibilityProvider fieldVisibilityProvider) {
+            this.fieldVisibilityProvider = fieldVisibilityProvider;
             return this;
         }
 
