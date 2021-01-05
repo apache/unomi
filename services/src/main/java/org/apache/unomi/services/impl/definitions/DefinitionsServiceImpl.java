@@ -268,7 +268,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
                         valueTypeByTag.put(tag, valueTypes);
                     } else {
                         // we found a tag that is not defined, we will define it automatically
-                        logger.debug("Unknown tag " + tag + " used in property type definition " + predefinedPropertyURL);
+                        logger.warn("Unknown tag " + tag + " used in property type definition " + predefinedPropertyURL);
                     }
                 }
             } catch (Exception e) {

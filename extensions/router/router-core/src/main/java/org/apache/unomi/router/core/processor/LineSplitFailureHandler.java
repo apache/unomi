@@ -32,7 +32,7 @@ public class LineSplitFailureHandler implements Processor {
     private static final Logger logger = LoggerFactory.getLogger(LineSplitFailureHandler.class.getName());
 
     public void process(Exchange exchange) throws Exception {
-        logger.debug("Route: {}, Error: {}", exchange.getProperty(Exchange.FAILURE_ROUTE_ID), exchange.getProperty(Exchange.EXCEPTION_CAUGHT));
+        logger.error("Route: {}, Error: {}", exchange.getProperty(Exchange.FAILURE_ROUTE_ID), exchange.getProperty(Exchange.EXCEPTION_CAUGHT));
         ImportLineError importLineError = new ImportLineError();
         if (exchange.getProperty(Exchange.EXCEPTION_CAUGHT) instanceof BadProfileDataFormatException) {
             importLineError.setErrorCode(((BadProfileDataFormatException) exchange.getProperty(Exchange.EXCEPTION_CAUGHT)).getCause().getMessage());

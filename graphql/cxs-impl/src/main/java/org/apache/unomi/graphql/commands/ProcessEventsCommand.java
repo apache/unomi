@@ -104,7 +104,7 @@ public class ProcessEventsCommand extends BaseCommand<Integer> {
                         }
 
                     } catch (Exception e) {
-                        LOG.debug("Process field {} is failed", eventProcessor.getFieldName(), e);
+                        LOG.warn("Process field " + eventProcessor.getFieldName() + " is failed", e);
                     }
                 });
     }
@@ -115,7 +115,7 @@ public class ProcessEventsCommand extends BaseCommand<Integer> {
                 try {
                     processField(fieldDefinition, eventInputAsMap);
                 } catch (Exception e) {
-                    LOG.debug("Process field {} is failed", fieldDefinition, e);
+                    LOG.warn("Process field " + fieldDefinition + " is failed", e);
                 }
             }
         });

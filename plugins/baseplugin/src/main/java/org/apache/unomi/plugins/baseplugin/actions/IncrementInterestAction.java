@@ -82,7 +82,7 @@ public class IncrementInterestAction implements ActionExecutor {
 
                 profileInterestsMap.put(topicId, value);
             } else {
-                LOG.debug("The interest with key \"{}\" was not recalculated for profile with itemId \"{}\" ", topicId, profile.getItemId());
+                LOG.warn("The interest with key \"{}\" was not recalculated for profile with itemId \"{}\" ", topicId, profile.getItemId());
             }
         });
 

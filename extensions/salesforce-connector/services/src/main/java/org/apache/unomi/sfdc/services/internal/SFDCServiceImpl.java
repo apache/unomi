@@ -370,7 +370,7 @@ public class SFDCServiceImpl implements SFDCService {
                             sfdcLeadFields.put(consentSfdcId, consentValue);
                             logger.debug("Consent {} with value {} was mapped with {}", consentUnomiId, consentValue, consentSfdcId);
                         } else {
-                            logger.debug("Consent {} not found in current profile or not answered yet", consentUnomiId);
+                            logger.warn("Consent {} not found in current profile or not answered yet", consentUnomiId);
                         }
                     }
                 }
