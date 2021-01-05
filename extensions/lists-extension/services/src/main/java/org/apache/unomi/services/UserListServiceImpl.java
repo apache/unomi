@@ -94,7 +94,7 @@ public class UserListServiceImpl implements UserListService {
                 if(index != -1){
                     ((List) profileSystemProperties.get("lists")).remove(index);
                     profileSystemProperties.put("lastUpdated", new Date());
-                    persistenceService.update(p.getItemId(), null, Profile.class, "systemProperties", profileSystemProperties);
+                    persistenceService.update(p, null, Profile.class, "systemProperties", profileSystemProperties);
                 }
             }
         }
