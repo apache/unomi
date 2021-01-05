@@ -96,16 +96,17 @@ public class ProfileServiceWithoutOverwriteIT extends BaseIT {
     public void testSaveProfileWithoutOverwriteSavesAfterReload() throws InterruptedException {
         Profile profile = setupWithoutOverwriteTests();
         String profileId = profile.getItemId();
-        Thread.sleep(4000);
+
+        profileService.refresh();
 
         Profile updatedProfile = profileService.load(profileId);
         updatedProfile.setProperty("country", "test2-country");
         profileService.save(updatedProfile);
 
-        Thread.sleep(4000);
+        profileService.refresh();
 
         Profile profileWithNewCountry = profileService.load(profileId);
-        assertEquals(profileWithNewCountry.getProperty("country"), "test2-country");
+        assertEquals("Country property doesn't have expected value", "test2-country", profileWithNewCountry.getProperty("country"));
     }
 
     @Test(expected = RuntimeException.class)
@@ -113,11 +114,11 @@ public class ProfileServiceWithoutOverwriteIT extends BaseIT {
         Profile profile = setupWithoutOverwriteTests();
         String profileId = profile.getItemId();
 
-        Thread.sleep(4000);
+        profileService.refresh();
 
         Profile updatedProfile = profileService.load(profileId);
         updatedProfile.setProperty("country", "test2-country");
-        updatedProfile.setMetadata("seq_no", 1L);
+        updatedProfile.setSystemMetadata("seq_no", 1L);
         profileService.save(updatedProfile);
     }
 }
