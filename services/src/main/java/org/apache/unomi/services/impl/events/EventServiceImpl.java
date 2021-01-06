@@ -135,7 +135,7 @@ public class EventServiceImpl implements EventService {
                     }
                 }
             }
-            logger.debug("Could not authenticate any third party servers");
+            logger.warn("Could not authenticate any third party servers for key: {}", key);
         }
         return null;
     }
