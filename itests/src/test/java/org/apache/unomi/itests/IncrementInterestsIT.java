@@ -16,11 +16,7 @@
  */
 package org.apache.unomi.itests;
 
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
-import java.util.UUID;
+import java.util.*;
 
 import javax.inject.Inject;
 
@@ -44,8 +40,6 @@ import org.ops4j.pax.exam.junit.PaxExam;
 import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
 import org.ops4j.pax.exam.spi.reactors.PerSuite;
 import org.ops4j.pax.exam.util.Filter;
-
-import com.sun.tools.javac.util.List;
 
 import static org.apache.unomi.itests.BasicIT.ITEM_TYPE_PAGE;
 
@@ -142,7 +136,9 @@ public class IncrementInterestsIT
         final Rule rule = new Rule();
 
         rule.setCondition( condition );
-        rule.setActions( List.of( incrementAction ) );
+        List<Action> actions = new ArrayList<>();
+        actions.add(incrementAction);
+        rule.setActions( actions );
         rule.setMetadata( metadata );
 
         rulesService.setRule( rule );
