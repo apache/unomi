@@ -301,10 +301,10 @@ public class MailChimpServiceImpl implements MailChimpService {
                             || StringUtils.isBlank(mergeFields.getJSONObject(mcTagName).get(CITY).toString())
                             || StringUtils.isBlank(mergeFields.getJSONObject(mcTagName).get(COUNTRY).toString()))) {
                         mergeFields.remove(mcTagName);
-                        logger.debug("Can't map the address property {}, one of the mandatory field is missing (addr1, zip, city, country)", mcTagName);
+                        logger.warn("Can't map the address property {}, one of the mandatory field is missing (addr1, zip, city, country)", mcTagName);
                     }
                 } else {
-                    logger.debug("Found property {} in MC list, if you need this property please update mapping or add the property to your MC list", mcTagName);
+                    logger.warn("Found property {} in MC list, if you need this property please update mapping or add the property to your MC list", mcTagName);
                 }
             }
         }

@@ -104,7 +104,10 @@ public class ProcessEventsCommand extends BaseCommand<Integer> {
                         }
 
                     } catch (Exception e) {
-                        LOG.debug("Process field {} is failed", eventProcessor.getFieldName(), e);
+                        LOG.warn("Process field {} is failed. enable debug log to see the full stack trace", eventProcessor.getFieldName());
+                        if (LOG.isDebugEnabled()) {
+                            LOG.debug("Process field failed", e);
+                        }
                     }
                 });
     }
@@ -115,7 +118,10 @@ public class ProcessEventsCommand extends BaseCommand<Integer> {
                 try {
                     processField(fieldDefinition, eventInputAsMap);
                 } catch (Exception e) {
-                    LOG.debug("Process field {} is failed", fieldDefinition, e);
+                    LOG.warn("Process field {} is failed. enable debug log to see the full stack trace", fieldDefinition);
+                    if (LOG.isDebugEnabled()) {
+                        LOG.debug("Process field failed", e);
+                    }
                 }
             }
         });
