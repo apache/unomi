@@ -299,9 +299,7 @@ public class ContextServlet extends HttpServlet {
             String masterProfileId = profile.getMergedWith();
             Profile masterProfile = profileService.load(masterProfileId);
             if (masterProfile != null) {
-                if (logger.isDebugEnabled()) {
-                    logger.debug("Current profile was merged with profile {}, replacing profile in session", masterProfileId);
-                }
+                logger.info("Current profile {} was merged with profile {}, replacing profile in session", currentProfile.getItemId(), masterProfileId);
                 profile = masterProfile;
                 if (session != null) {
                     session.setProfile(profile);

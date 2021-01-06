@@ -58,7 +58,7 @@ public class ProfileImportToUnomiRouteBuilder extends RouterAbstractRouteBuilder
                 .unmarshal(jacksonDataFormat)
                 .process(unomiStorageProcessor)
                 .otherwise()
-                .log(LoggingLevel.DEBUG, "Failed message, skip processing!")
+                .log(LoggingLevel.WARN, "Failed message, skip processing!")
                 .end()
                 .aggregate(constant(true), new ArrayListAggregationStrategy())
                 .completionPredicate(exchangeProperty("CamelSplitComplete").isEqualTo("true"))

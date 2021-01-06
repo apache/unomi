@@ -914,7 +914,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         final BulkResponse deleteResponse = deleteByScope.get();
                         if (deleteResponse.hasFailures()) {
                             // do something
-                            logger.debug("Couldn't remove by query " + query + ":\n{}", deleteResponse.buildFailureMessage());
+                            logger.warn("Couldn't remove by query " + query + ":\n{}", deleteResponse.buildFailureMessage());
                         }
                     }
 
