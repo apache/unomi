@@ -47,7 +47,7 @@ cp target/tweet-button-plugin-1.0.0-incubating-SNAPSHOT.jar ../../package/target
 
 ===== Testing the samples
 
-You can now go to http://localhost:8181/index.html[http://localhost:8181/index.html] to test the samples code. The page is very simple, you will see a Twitter button, which, once clicked, will open a new window to tweet about the current page. The original page should be updated with the new values of the properties coming from Unomi. Additionnally, the raw JSON response is displayed.
+You can now go to http://localhost:8181/twitter/index.html[http://localhost:8181/twitter/index.html] to test the samples code. The page is very simple, you will see a Twitter button, which, once clicked, will open a new window to tweet about the current page. The original page should be updated with the new values of the properties coming from Unomi. Additionnally, the raw JSON response is displayed.
 
 We will now explain in greater details some concepts and see how the example works.
 
