@@ -51,7 +51,7 @@ public class ScorePersonalizationStrategy implements PersonalizationStrategy {
             if (interestList != null) {
                 Map<String,Integer> interestValues = (Map<String, Integer>) profile.getProperties().get("interests");
                 for (String interest : interestList.split(" ")) {
-                    if (interestValues.get(interest) != null) {
+                    if (interestValues != null && interestValues.get(interest) != null) {
                         score += interestValues.get(interest);
                     }
                 }
