@@ -1191,6 +1191,10 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                                     "      }\n" +
                                     "    }\n" +
                                     "}\n", XContentType.JSON);
+                    if (mappings.get(itemName) == null) {
+                        logger.warn("Couldn't find mapping for item {}, won't create monthly index template", itemName);
+                        return false;
+                    }
                     putIndexTemplateRequest.mapping(mappings.get(itemName), XContentType.JSON);
                     AcknowledgedResponse putIndexTemplateResponse = client.indices().putTemplate(putIndexTemplateRequest, RequestOptions.DEFAULT);
                     executedSuccessfully &= putIndexTemplateResponse.isAcknowledged();

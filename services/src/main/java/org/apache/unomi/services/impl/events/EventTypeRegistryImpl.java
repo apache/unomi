@@ -17,11 +17,8 @@
 
 package org.apache.unomi.services.impl.events;
 
-import org.apache.unomi.api.Event;
-import org.apache.unomi.api.EventType;
-import org.apache.unomi.api.GeoPoint;
-import org.apache.unomi.api.PluginType;
-import org.apache.unomi.api.PropertyType;
+import org.apache.commons.beanutils.PropertyUtils;
+import org.apache.unomi.api.*;
 import org.apache.unomi.api.services.EventTypeRegistry;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.osgi.framework.Bundle;
@@ -31,16 +28,10 @@ import org.osgi.framework.SynchronousBundleListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.beans.PropertyDescriptor;
+import java.lang.reflect.InvocationTargetException;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Date;
-import java.util.Enumeration;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 public class EventTypeRegistryImpl implements EventTypeRegistry, SynchronousBundleListener {
 
@@ -104,7 +95,13 @@ public class EventTypeRegistryImpl implements EventTypeRegistry, SynchronousBund
             return false;
         }
 
-        return areAllPropertiesValid(event.getProperties(), eventType.getPropertyTypes());
+        Set<PropertyType> propertiesPropertyTypes = findChildPropertyTypesById("properties", eventType.getPropertyTypes());
+        Set<PropertyType> sourcePropertyTypes = findChildPropertyTypesById("source", eventType.getPropertyTypes());
+        Set<PropertyType> targetPropertyTypes = findChildPropertyTypesById("target", eventType.getPropertyTypes());
+
+        return areObjectPropertiesValid(event.getProperties(), propertiesPropertyTypes) &&
+                areObjectPropertiesValid(event.getSource(), sourcePropertyTypes) &&
+                areObjectPropertiesValid(event.getTarget(), targetPropertyTypes);
     }
 
     /**
@@ -115,29 +112,79 @@ public class EventTypeRegistryImpl implements EventTypeRegistry, SynchronousBund
      * @param types set of a predefined event type properties
      * @return boolean result of validation
      */
-    private boolean areAllPropertiesValid(Map<String, Object> props, Set<PropertyType> types) {
+    private boolean areMapPropertiesValid(Map<Object, Object> props, Set<PropertyType> types) {
         if (props == null || props.isEmpty() || types == null || types.isEmpty()) {
             return true;
         }
         return props.entrySet().stream().allMatch(entry -> {
             return types.stream().anyMatch(type -> {
-                if (!type.getItemId().equals(entry.getKey())) {
+                if (!type.getItemId().equals(entry.getKey().toString())) {
+                    logger.warn("Event type validation error: map property {} is not allowed", entry.getKey().toString());
                     return false;
                 }
                 final Set<PropertyType> childTypes = type.getChildPropertyTypes();
                 if (childTypes.size() > 0 && entry.getValue() != null) {
                     try {
-                        final Map<String, Object> childProps = (Map<String, Object>) entry.getValue();
-                        return areAllPropertiesValid(childProps, childTypes);
+                        return areObjectPropertiesValid(entry.getValue(), childTypes);
                     } catch (ClassCastException e) {
                         logger.error("Event property '{}' value is invalid: {}", entry.getKey(), e.getCause());
                         return false;
                     }
                 } else {
-                    return testValueType(entry.getValue(), type.getValueTypeId());
+                    boolean valueTypeValid = testValueType(entry.getValue(), type.getValueTypeId());
+                    if (!valueTypeValid) {
+                        logger.warn("Event type validation error: value type for property {} is not valid", entry.getKey().toString());
+                    }
+                    return valueTypeValid;
                 }
             });
         });
+    }
+
+    private boolean areObjectPropertiesValid(Object object, Set<PropertyType> types) {
+        if (object == null) {
+            return true;
+        }
+        if (object instanceof Map) {
+            return areMapPropertiesValid((Map<Object,Object>) object, types);
+        }
+        PropertyDescriptor[] propertyDescriptors = PropertyUtils.getPropertyDescriptors(object);
+        return Arrays.stream(propertyDescriptors).allMatch(propertyDescriptor -> {
+            PropertyType propertyType = findPropertyTypeById(propertyDescriptor.getName(), types);
+            if (propertyType == null) {
+                logger.warn("Event type validation error: couldn't find property type for property {}", propertyDescriptor.getName());
+                return false;
+            }
+            if ("set".equals(propertyType.getValueTypeId())) {
+                boolean setPropertiesValid = false;
+                try {
+                    setPropertiesValid = areObjectPropertiesValid(PropertyUtils.getProperty(object, propertyDescriptor.getName()), propertyType.getChildPropertyTypes());
+                } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
+                    logger.error("Error accessing property {} on object {}: {}", propertyDescriptor.getName(), object.toString(), e);
+                    return false;
+                }
+                if (!setPropertiesValid) {
+                    logger.warn("Event type validation error: set property for property {} are not valid", propertyDescriptor.getName());
+                    return false;
+                }
+            }
+            return true;
+        });
+    }
+
+    private Set<PropertyType> findChildPropertyTypesById(String id, Set<PropertyType> types) {
+        PropertyType propertyType = findPropertyTypeById(id, types);
+        if (propertyType == null) {
+            return new HashSet<>();
+        } else {
+            return propertyType.getChildPropertyTypes();
+        }
+    }
+
+    private PropertyType findPropertyTypeById(String id, Set<PropertyType> types) {
+        Optional<PropertyType> optionalPropertyType = types.stream().filter(propertyType -> propertyType.getItemId().equals(id)).findFirst();
+        return optionalPropertyType.orElse(null);
+
     }
 
     private boolean testValueType(final Object value, final String valueTypeId) {
