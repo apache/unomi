@@ -3,6 +3,32 @@
   "propertyTypes" : [
     {
       "itemId": "properties",
+      "type": "set",
+      "childPropertyTypes" : [
+        {
+          "itemId" : "targetId",
+          "type" : "string"
+        },
+        {
+          "itemId" : "targetType",
+          "type" : "string"
+        },
+        {
+          "itemId" : "add",
+          "type" : "set"
+        },
+        {
+          "itemId" : "update",
+          "type" : "set"
+        },
+        {
+          "itemId" : "delete",
+          "type" : "set"
+        }
+      ]
+    },
+    {
+      "itemId": "target",
       "type": "set"
     }
   ]

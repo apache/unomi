@@ -1,0 +1,23 @@
+{
+  "type" : "anonymizeProfile",
+  "propertyTypes" : [
+    {
+      "itemId": "target",
+      "type": "set",
+      "childPropertyTypes": [
+        {
+          "itemId": "itemId",
+          "type": "string"
+        },
+        {
+          "itemId": "properties",
+          "type": "set"
+        },
+        {
+          "itemId": "systemProperties",
+          "type": "set"
+        }
+      ]
+    }
+  ]
+}

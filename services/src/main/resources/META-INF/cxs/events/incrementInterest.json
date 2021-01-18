@@ -1,0 +1,33 @@
+{
+  "type" : "incrementInterest",
+  "propertyTypes" : [
+    {
+      "itemId": "properties",
+      "type": "set",
+      "childPropertyTypes": [
+        {
+          "itemId" : "interests",
+          "type" : "set"
+        }
+      ]
+    },
+    {
+      "itemId": "target",
+      "type": "set",
+      "childPropertyTypes": [
+        {
+          "itemId": "itemId",
+          "type": "string"
+        },
+        {
+          "itemId": "properties",
+          "type": "set"
+        },
+        {
+          "itemId": "systemProperties",
+          "type": "set"
+        }
+      ]
+    }
+  ]
+}

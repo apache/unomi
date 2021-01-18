@@ -10,22 +10,24 @@
           "type": "string"
         },
         {
+          "itemId": "itemType",
+          "type": "string"
+        },
+        {
+          "itemId": "scope",
+          "type": "string"
+        },
+        {
           "itemId": "properties",
-          "type": "set",
-          "childPropertyTypes": [
-            {
-              "itemId": "preferredLanguage",
-              "type": "string"
-            },
-            {
-              "itemId": "j:gender",
-              "type": "string"
-            },
-            {
-              "itemId": "j:firstName",
-              "type": "string"
-            }
-          ]
+          "type": "set"
+        },
+        {
+          "itemId": "version",
+          "type": "long"
+        },
+        {
+          "itemId": "systemMetadata",
+          "type": "set"
         }
       ]
     }

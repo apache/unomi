@@ -1,0 +1,69 @@
+{
+  "type": "identify",
+  "propertyTypes": [
+    {
+      "itemId": "properties",
+      "type": "set"
+    },
+    {
+      "itemId" : "source",
+      "type": "set",
+      "childPropertyTypes" : [
+        {
+          "itemId" : "itemId",
+          "type" : "string"
+        },
+        {
+          "itemId" : "itemType",
+          "type" : "string"
+        },
+        {
+          "itemId" : "scope",
+          "type" : "string"
+        },
+        {
+          "itemId" : "properties",
+          "type" : "set"
+        },
+        {
+          "itemId": "version",
+          "type": "long"
+        },
+        {
+          "itemId": "systemMetadata",
+          "type": "set"
+        }
+      ]
+    },
+    {
+      "itemId" : "target",
+      "type": "set",
+      "childPropertyTypes" : [
+        {
+          "itemId" : "itemId",
+          "type" : "string"
+        },
+        {
+          "itemId" : "itemType",
+          "type" : "string"
+        },
+        {
+          "itemId" : "scope",
+          "type" : "string"
+        },
+        {
+          "itemId" : "properties",
+          "type" : "set"
+        },
+        {
+          "itemId": "version",
+          "type": "long"
+        },
+        {
+          "itemId": "systemMetadata",
+          "type": "set"
+        }
+      ]
+    }
+  ]
+}

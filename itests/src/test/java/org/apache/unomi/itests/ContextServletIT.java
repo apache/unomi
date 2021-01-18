@@ -137,11 +137,33 @@ public class ContextServletIT extends BaseIT {
 
     private void registerEventType(final String type) {
         final Set<PropertyType> props = new HashSet<>();
-        registerEventType(type, props);
+        registerEventType(type, props, null, null);
     }
 
-    private void registerEventType(final String type, final Set<PropertyType> props) {
-        final EventType eventType = new EventType(type, props, 1);
+    private void registerEventType(final String type, final Set<PropertyType> properties, final Set<PropertyType> source, final Set<PropertyType> target) {
+        final Set<PropertyType> typeProps = new HashSet<>();
+        if (properties != null) {
+            PropertyType propertiesPropType = new PropertyType();
+            propertiesPropType.setItemId("properties");
+            propertiesPropType.setValueTypeId("set");
+            propertiesPropType.setChildPropertyTypes(properties);
+            typeProps.add(propertiesPropType);
+        }
+        if (source != null) {
+            PropertyType sourcePropType = new PropertyType();
+            sourcePropType.setItemId("source");
+            sourcePropType.setValueTypeId("set");
+            sourcePropType.setChildPropertyTypes(source);
+            typeProps.add(sourcePropType);
+        }
+        if (target != null) {
+            PropertyType targetPropType = new PropertyType();
+            targetPropType.setItemId("target");
+            targetPropType.setValueTypeId("set");
+            targetPropType.setChildPropertyTypes(target);
+            typeProps.add(targetPropType);
+        }
+        final EventType eventType = new EventType(type, typeProps, 1);
         eventService.registerEventType(eventType);
     }
 
@@ -393,12 +415,12 @@ public class ContextServletIT extends BaseIT {
         contextRequest.setProfileId(profileId);
         contextRequest.setEvents(Arrays.asList(event));
 
-        final Set<PropertyType> typeProps = new HashSet<>();
+        final Set<PropertyType> propertiesPropTypes = new HashSet<>();
         PropertyType floatProp = new PropertyType();
         floatProp.setItemId("floatProperty");
         floatProp.setValueTypeId("float");
-        typeProps.add(floatProp);
-        this.registerEventType(eventType, typeProps);
+        propertiesPropTypes.add(floatProp);
+        this.registerEventType(eventType, propertiesPropTypes, null, null);
 
         //Act
         HttpPost request = new HttpPost(URL + CONTEXT_URL);
@@ -431,12 +453,12 @@ public class ContextServletIT extends BaseIT {
         contextRequest.setProfileId(profileId);
         contextRequest.setEvents(Arrays.asList(event));
 
-        final Set<PropertyType> typeProps = new HashSet<>();
+        final Set<PropertyType> propertiesPropTypes = new HashSet<>();
         PropertyType floatProp = new PropertyType();
         floatProp.setItemId("floatProperty");
         floatProp.setValueTypeId("float");
-        typeProps.add(floatProp);
-        this.registerEventType(eventType, typeProps);
+        propertiesPropTypes.add(floatProp);
+        this.registerEventType(eventType, propertiesPropTypes, null, null);
 
         //Act
         HttpPost request = new HttpPost(URL + CONTEXT_URL);
@@ -461,22 +483,23 @@ public class ContextServletIT extends BaseIT {
         event.setEventType(eventType);
         event.setItemId(eventId);
         Map<String, Object> props = new HashMap<>();
-        props.put("floatProperty", 3.14159);
+        props.put("ffloatProperty", 3.14159);
         event.setProperties(props);
 
         ContextRequest contextRequest = new ContextRequest();
         contextRequest.setProfileId(profileId);
         contextRequest.setEvents(Arrays.asList(event));
 
-        final Set<PropertyType> typeProps = new HashSet<>();
+        final Set<PropertyType> propertiesPropTypes = new HashSet<>();
         PropertyType floatProp = new PropertyType();
         floatProp.setItemId("floatProperty");
         floatProp.setValueTypeId("float");
+        propertiesPropTypes.add(floatProp);
         PropertyType geopointProp = new PropertyType();
         geopointProp.setItemId("geopointProperty");
         geopointProp.setValueTypeId("geopoint");
-        typeProps.add(geopointProp);
-        this.registerEventType(eventType, typeProps);
+        propertiesPropTypes.add(geopointProp);
+        this.registerEventType(eventType, propertiesPropTypes, null, null);
 
         //Act
         HttpPost request = new HttpPost(URL + CONTEXT_URL);

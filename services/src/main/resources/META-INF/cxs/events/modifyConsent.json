@@ -1,0 +1,77 @@
+{
+  "type" : "modifyConsent",
+  "propertyTypes" : [
+    {
+      "itemId" : "source",
+      "type": "set",
+      "childPropertyTypes" : [
+        {
+          "itemId" : "itemId",
+          "type" : "string"
+        },
+        {
+          "itemId" : "itemType",
+          "type" : "string"
+        },
+        {
+          "itemId" : "scope",
+          "type" : "string"
+        },
+        {
+          "itemId" : "properties",
+          "type" : "set"
+        }
+      ]
+    },
+    {
+      "itemId" : "target",
+      "type" : "set",
+      "childPropertyTypes" : [
+        {
+          "itemId" : "itemId",
+          "type" : "string"
+        },
+        {
+          "itemId" : "itemType",
+          "type" : "string"
+        },
+        {
+          "itemId" : "scope",
+          "type" : "string"
+        }
+      ]
+    },
+    {
+      "itemId" : "properties",
+      "type" : "set",
+      "childPropertyTypes" : [
+        {
+          "itemId" : "consent",
+          "type" : "set",
+          "childPropertyTypes" : [
+            {
+              "itemId" : "scope",
+              "type" : "string"
+            },
+            {
+              "itemId" : "typeIdentifier",
+              "type" : "string"
+            },
+            {
+              "itemId" : "status",
+              "type" : "string"
+            },
+            {
+              "itemId" : "statusDate",
+              "type" : "date"
+            },
+            {
+              "itemId" : "revokeDate",
+              "type" : "date"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

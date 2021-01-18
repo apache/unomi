@@ -1,0 +1,55 @@
+{
+  "type" : "sessionReassigned",
+  "propertyTypes" : [
+    {
+      "itemId" : "source",
+      "type": "set"
+    },
+    {
+      "itemId" : "target",
+      "type": "set",
+      "childPropertyTypes" : [
+        {
+          "itemId" : "itemId",
+          "type" : "string"
+        },
+        {
+          "itemId" : "itemType",
+          "type" : "string"
+        },
+        {
+          "itemId" : "scope",
+          "type" : "string"
+        },
+        {
+          "itemId" : "profileId",
+          "type" : "string"
+        },
+        {
+          "itemId" : "profile",
+          "type" : "set"
+        },
+        {
+          "itemId" : "properties",
+          "type" : "set"
+        },
+        {
+          "itemId" : "systemProperties",
+          "type" : "set"
+        },
+        {
+          "itemId" : "lastEventDate",
+          "type" : "date"
+        },
+        {
+          "itemId" : "size",
+          "type" : "long"
+        },
+        {
+          "itemId" : "duration",
+          "type" : "long"
+        }
+      ]
+    }
+  ]
+}
