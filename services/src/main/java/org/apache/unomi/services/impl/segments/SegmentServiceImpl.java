@@ -381,7 +381,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
             List<Profile> previousProfiles = persistenceService.query(segmentCondition, null, Profile.class);
             long updatedProfileCount = 0;
             long profileRemovalStartTime = System.currentTimeMillis();
-            if (batchSegmentProfileUpdate) {
+            if (batchSegmentProfileUpdate && previousProfiles.size() > 0) {
                 batchUpdateProfilesSegment(segmentId, previousProfiles, false);
             }
             else {
