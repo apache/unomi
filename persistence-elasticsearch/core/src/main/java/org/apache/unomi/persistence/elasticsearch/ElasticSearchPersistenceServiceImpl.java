@@ -1537,6 +1537,14 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     }
 
     @Override
+    public void validateCondition(Condition query, Item item) {
+        conditionEvaluatorDispatcher.eval(query, item);
+        QueryBuilder builder = QueryBuilders.boolQuery()
+                .must(QueryBuilders.idsQuery().addIds(item.getItemId()))
+                .must(conditionESQueryBuilderDispatcher.buildFilter(query));
+    }
+
+    @Override
     public boolean testMatch(Condition query, Item item) {
         long startTime = System.currentTimeMillis();
         try {

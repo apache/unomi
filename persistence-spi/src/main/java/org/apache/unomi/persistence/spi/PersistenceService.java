@@ -306,6 +306,14 @@ public interface PersistenceService {
     boolean testMatch(Condition query, Item item);
 
     /**
+     * validates if a condition throws exception at query build.
+     *
+     * @param query the condition we're testing the specified item against
+     * @param item  the item we're checking against the specified condition
+     * @return {@code true} if the item satisfies the condition, {@code false} otherwise
+     */
+    void validateCondition(Condition query, Item item);
+    /**
      * Same as {@code query(fieldName, fieldValue, sortBy, clazz, 0, -1).getList()}
      *
      * @see #query(Condition, String, Class, int, int)
