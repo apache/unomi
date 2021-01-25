@@ -194,6 +194,12 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
             actualValue = ConditionContextHelper.foldToASCII((String) actualValue);
         }
 
+        return isMatch(op, actualValue, expectedValue, expectedValueInteger, expectedValueDouble, expectedValueDate,
+                expectedValueDateExpr, condition);
+    }
+
+    protected boolean isMatch(String op, Object actualValue, String expectedValue, Object expectedValueInteger, Object expectedValueDouble,
+                            Object expectedValueDate, Object expectedValueDateExpr, Condition condition) {
         if (op == null) {
             return false;
         } else if (actualValue == null) {
