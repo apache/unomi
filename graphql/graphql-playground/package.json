@@ -11,7 +11,8 @@
   "author": "Apache Software Foundation",
   "license": "Apache-2.0",
   "scripts": {
-    "build": "webpack"
+    "build": "yarn webpack",
+    "build:production": "yarn webpack --mode=production"
   },
   "dependencies": {
     "graphql": "^15.2.0",
