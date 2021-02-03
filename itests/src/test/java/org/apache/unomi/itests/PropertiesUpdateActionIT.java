@@ -35,9 +35,7 @@ import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
 import java.io.IOException;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Created by amidani on 12/10/2017.
@@ -57,7 +55,7 @@ public class PropertiesUpdateActionIT extends BaseIT {
     protected EventService eventService;
 
     @Before
-    public void setUp() throws IOException {
+    public void setUp() throws IOException, InterruptedException {
         Profile profile = new Profile();
         profile.setItemId(PROFILE_TEST_ID);
         profileService.save(profile);
@@ -67,6 +65,8 @@ public class PropertiesUpdateActionIT extends BaseIT {
         profileTarget.setItemId(PROFILE_TARGET_TEST_ID);
         profileService.save(profileTarget);
         LOGGER.info("Profile saved with ID [{}].", profileTarget.getItemId());
+
+        refreshPersistence();
     }
 
     @Test
@@ -81,16 +81,19 @@ public class PropertiesUpdateActionIT extends BaseIT {
         propertyToUpdate.put("properties.firstName", "UPDATED FIRST NAME CURRENT PROFILE");
 
         updateProperties.setProperty(UpdatePropertiesAction.PROPS_TO_UPDATE, propertyToUpdate);
+        updateProperties.setProperty(UpdatePropertiesAction.TARGET_ID_KEY, PROFILE_TARGET_TEST_ID);
+        updateProperties.setProperty(UpdatePropertiesAction.TARGET_TYPE_KEY, "profile");
+
         int changes = eventService.send(updateProperties);
 
         LOGGER.info("Changes of the event : {}", changes);
 
         Assert.assertTrue(changes > 0);
+        Assert.assertEquals("UPDATED FIRST NAME CURRENT PROFILE", profile.getProperty("firstName"));
     }
 
     @Test
     public void testUpdateProperties_NotCurrentProfile() {
-
         Profile profile = profileService.load(PROFILE_TARGET_TEST_ID);
         Profile profileToUpdate = profileService.load(PROFILE_TEST_ID);
         Assert.assertNull(profileToUpdate.getProperty("firstName"));
@@ -104,12 +107,125 @@ public class PropertiesUpdateActionIT extends BaseIT {
         updateProperties.setProperty(UpdatePropertiesAction.PROPS_TO_UPDATE, propertyToUpdate);
         updateProperties.setProperty(UpdatePropertiesAction.TARGET_ID_KEY, PROFILE_TEST_ID);
         updateProperties.setProperty(UpdatePropertiesAction.TARGET_TYPE_KEY, "profile");
-        int changes = eventService.send(updateProperties);
-
-        LOGGER.info("Changes of the event : {}", changes);
+        eventService.send(updateProperties);
 
         profileToUpdate = profileService.load(PROFILE_TEST_ID);
         Assert.assertEquals("UPDATED FIRST NAME", profileToUpdate.getProperty("firstName"));
+    }
 
+    @Test
+    public void testUpdateProperties_CurrentProfile_PROPS_TO_ADD() throws InterruptedException {
+        Profile profile = profileService.load(PROFILE_TEST_ID);
+
+        Event updateProperties = new Event("updateProperties", null, profile, null, null, profile, new Date());
+        updateProperties.setPersistent(false);
+
+        Map<String, Object> propertyToAdd = new HashMap<>();
+        propertyToAdd.put("properties.prop1", "New property 1");
+        propertyToAdd.put("properties.prop2", "New property 2");
+        propertyToAdd.put("properties.prop3", "New property 3");
+
+        updateProperties.setProperty(UpdatePropertiesAction.PROPS_TO_ADD, propertyToAdd);
+        updateProperties.setProperty(UpdatePropertiesAction.TARGET_ID_KEY, PROFILE_TEST_ID);
+        updateProperties.setProperty(UpdatePropertiesAction.TARGET_TYPE_KEY, "profile");
+        eventService.send(updateProperties);
+        profileService.save(profile);
+        refreshPersistence();
+
+        profile = profileService.load(PROFILE_TEST_ID);
+        Assert.assertEquals("New property 1", profile.getProperty("prop1"));
+        Assert.assertEquals("New property 2", profile.getProperty("prop2"));
+        Assert.assertEquals("New property 3", profile.getProperty("prop3"));
+    }
+
+    @Test
+    public void testUpdateProperties_CurrentProfile_PROPS_TO_ADD_TO_SET() throws InterruptedException {
+        Profile profile = profileService.load(PROFILE_TEST_ID);
+        Event updateProperties = new Event("updateProperties", null, profile, null, null, profile, new Date());
+        updateProperties.setPersistent(false);
+
+        Map<String, Object> propertyToAddToSet = new HashMap<>();
+        propertyToAddToSet.put("properties.prop1", "New property 1");
+        propertyToAddToSet.put("properties.prop2", "New property 2");
+        propertyToAddToSet.put("properties.prop3", "New property 3");
+
+        updateProperties.setProperty(UpdatePropertiesAction.PROPS_TO_ADD, propertyToAddToSet);
+        updateProperties.setProperty(UpdatePropertiesAction.TARGET_ID_KEY, PROFILE_TEST_ID);
+        updateProperties.setProperty(UpdatePropertiesAction.TARGET_TYPE_KEY, "profile");
+        eventService.send(updateProperties);
+        profileService.save(profile);
+        refreshPersistence();
+
+        profile = profileService.load(PROFILE_TEST_ID);
+        Assert.assertEquals("New property 1", profile.getProperty("prop1"));
+        Assert.assertEquals("New property 2", profile.getProperty("prop2"));
+        Assert.assertEquals("New property 3", profile.getProperty("prop3"));
+
+        // Add set and check
+        propertyToAddToSet = new HashMap<>();
+        propertyToAddToSet.put("properties.prop1", "New property 1 bis");
+        propertyToAddToSet.put("properties.prop3", "New property 3 bis");
+
+        updateProperties = new Event("updateProperties", null, profile, null, null, profile, new Date());
+        updateProperties.setPersistent(false);
+        updateProperties.setProperty(UpdatePropertiesAction.PROPS_TO_ADD_TO_SET, propertyToAddToSet);
+        updateProperties.setProperty(UpdatePropertiesAction.TARGET_ID_KEY, PROFILE_TEST_ID);
+        updateProperties.setProperty(UpdatePropertiesAction.TARGET_TYPE_KEY, "profile");
+        eventService.send(updateProperties);
+        profileService.save(profile);
+        refreshPersistence();
+
+        profile = profileService.load(PROFILE_TEST_ID);
+        Assert.assertEquals(2, ((List<String>) profile.getProperty("prop1")).size());
+        Assert.assertEquals(2, ((List<String>) profile.getProperty("prop3")).size());
+        Assert.assertEquals("New property 1", ((List<String>) profile.getProperty("prop1")).get(1));
+        Assert.assertEquals("New property 2", profile.getProperty("prop2"));
+        Assert.assertEquals("New property 3 bis", ((List<String>) profile.getProperty("prop3")).get(0));
+    }
+
+    @Test
+    public void testUpdateProperties_CurrentProfile_PROPS_TO_DELETE() throws InterruptedException {
+        Profile profile = profileService.load(PROFILE_TEST_ID);
+        Event updateProperties = new Event("updateProperties", null, profile, null, null, profile, new Date());
+        updateProperties.setPersistent(false);
+
+        Map<String, Object> propertyToAdd = new HashMap<>();
+        propertyToAdd.put("properties.prop1", "New property 1");
+        propertyToAdd.put("properties.prop1bis", "New property 1 bis");
+        propertyToAdd.put("properties.prop2", "New property 2");
+        propertyToAdd.put("properties.prop3", "New property 3");
+
+        updateProperties.setProperty(UpdatePropertiesAction.PROPS_TO_ADD, propertyToAdd);
+        updateProperties.setProperty(UpdatePropertiesAction.TARGET_ID_KEY, PROFILE_TEST_ID);
+        updateProperties.setProperty(UpdatePropertiesAction.TARGET_TYPE_KEY, "profile");
+        eventService.send(updateProperties);
+        profileService.save(profile);
+        refreshPersistence();
+
+        profile = profileService.load(PROFILE_TEST_ID);
+        Assert.assertEquals("New property 1", profile.getProperty("prop1"));
+        Assert.assertEquals("New property 1 bis", profile.getProperty("prop1bis"));
+        Assert.assertEquals("New property 2", profile.getProperty("prop2"));
+        Assert.assertEquals("New property 3", profile.getProperty("prop3"));
+
+        // Delete property and check
+        List<String> propertyToDelete = new ArrayList<>();
+        propertyToDelete.add("properties.prop1bis");
+
+        updateProperties = new Event("updateProperties", null, profile, null, null, profile, new Date());
+        updateProperties.setPersistent(false);
+        updateProperties.setProperty(UpdatePropertiesAction.PROPS_TO_DELETE, propertyToDelete);
+        updateProperties.setProperty(UpdatePropertiesAction.TARGET_ID_KEY, PROFILE_TEST_ID);
+        updateProperties.setProperty(UpdatePropertiesAction.TARGET_TYPE_KEY, "profile");
+
+        eventService.send(updateProperties);
+        profileService.save(profile);
+        refreshPersistence();
+
+        profile = profileService.load(PROFILE_TEST_ID);
+        Assert.assertNull(profile.getProperty("prop1bis"));
+        Assert.assertEquals("New property 1", profile.getProperty("prop1"));
+        Assert.assertEquals("New property 2", profile.getProperty("prop2"));
+        Assert.assertEquals("New property 3", profile.getProperty("prop3"));
     }
 }
