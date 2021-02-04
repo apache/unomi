@@ -76,6 +76,15 @@ pipeline {
             }
         }
 
+        stage('Integration tests') {
+            steps {
+                echo 'Running integration tests'
+                dir('itests') {
+                    sh 'mvn clean install -Pintegration-tests'
+                }
+            }
+        }
+
         stage('Tests') {
             steps {
                 echo 'Running tests'
@@ -86,13 +95,6 @@ pipeline {
                     junit(testResults: '**/surefire-reports/*.xml', allowEmptyResults: true)
                     junit(testResults: '**/failsafe-reports/*.xml', allowEmptyResults: true)
                 }
-            }
-        }
-
-        stage('Integration tests') {
-            steps {
-                echo 'Running integration tests'
-                sh 'mvn -pl itests clean install -Pintegration-tests'
             }
         }
 
