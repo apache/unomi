@@ -43,7 +43,6 @@ import static org.junit.Assert.*;
 @RunWith(PaxExam.class)
 @ExamReactorStrategy(PerSuite.class)
 public class ConditionEvaluatorIT extends BaseIT {
-
     protected ConditionBuilder builder;
     protected Item item;
     protected Date lastVisit;
@@ -61,8 +60,9 @@ public class ConditionEvaluatorIT extends BaseIT {
     public void setUp() {
         assertNotNull("Definition service should be available", definitionsService);
         assertNotNull("Persistence service should be available", persistenceService);
+        builder = new ConditionBuilder(definitionsService);
 
-        lastVisit = new GregorianCalendar(2015,1,1,20,30,0).getTime();
+        lastVisit = new GregorianCalendar(2015, Calendar.FEBRUARY,1,20,30,0).getTime();
 
         Profile profile = new Profile("profile-" + UUID.randomUUID().toString());
         profile.setProperty("firstVisit", lastVisit);
@@ -70,37 +70,34 @@ public class ConditionEvaluatorIT extends BaseIT {
         profile.setProperty("gender", "female");
         profile.setProperty("lastVisit", lastVisit);
         profile.setProperty("randomStats", 0.15);
-        profile.setSegments(new HashSet<String>(Arrays.asList("s1", "s2", "s3")));
-        this.item = profile;
-        builder = new ConditionBuilder(definitionsService);
-
+        profile.setSegments(new HashSet<>(Arrays.asList("s1", "s2", "s3")));
+        item = profile;
     }
 
     @Test
     public void testCompound() {
         // test AND
         assertTrue(eval(builder.and(builder.profileProperty("properties.gender").equalTo("female"),
-                builder.profileProperty("properties.age").equalTo(Integer.valueOf(30))).build()));
-        //assertFalse(eval(builder.and(builder.profileProperty("properties.gender").equalTo("male"),
-        //        builder.profileProperty("properties.age").equalTo(Integer.valueOf(30))).build()));
-        //assertFalse(eval(builder.and(builder.profileProperty("properties.gender").equalTo("female"),
-        //        builder.profileProperty("properties.age").equalTo(Integer.valueOf(40))).build()));
+                builder.profileProperty("properties.age").equalTo(30)).build()));
+        assertFalse(eval(builder.and(builder.profileProperty("properties.gender").equalTo("male"),
+                builder.profileProperty("properties.age").equalTo(30)).build()));
+        assertFalse(eval(builder.and(builder.profileProperty("properties.gender").equalTo("female"),
+                builder.profileProperty("properties.age").equalTo(40)).build()));
 
         // test OR
         assertTrue(eval(builder.or(builder.profileProperty("properties.gender").equalTo("female"),
-                builder.profileProperty("properties.age").equalTo(Integer.valueOf(40))).build()));
+                builder.profileProperty("properties.age").equalTo(40)).build()));
         assertTrue(eval(builder.or(builder.profileProperty("properties.gender").equalTo("male"),
-                builder.profileProperty("properties.age").equalTo(Integer.valueOf(30))).build()));
-        //assertFalse(eval(builder.or(builder.profileProperty("properties.gender").equalTo("male"),
-        //        builder.profileProperty("properties.age").equalTo(Integer.valueOf(40))).build()));
+                builder.profileProperty("properties.age").equalTo(30)).build()));
+        assertFalse(eval(builder.or(builder.profileProperty("properties.gender").equalTo("male"),
+                builder.profileProperty("properties.age").equalTo(40)).build()));
 
         // test NOT
         assertTrue(eval(builder.not(builder.profileProperty("properties.gender").equalTo("male")).build()));
-        //assertFalse(eval(builder.not(builder.profileProperty("properties.age").equalTo(Integer.valueOf(30))).build()));
-
+        assertFalse(eval(builder.not(builder.profileProperty("properties.age").equalTo(30)).build()));
     }
 
-    //@Test
+    @Test
     public void testDate() {
         assertTrue(eval(builder.profileProperty("properties.lastVisit").equalTo(lastVisit).build()));
         assertTrue(eval(builder.profileProperty("properties.lastVisit")
@@ -118,34 +115,31 @@ public class ConditionEvaluatorIT extends BaseIT {
                 .all(new Date(lastVisit.getTime() + 10000), lastVisit).build()));
 
         assertTrue(eval(builder.profileProperty("properties.lastVisit").isDay(lastVisit).build()));
-        assertTrue(eval(builder.profileProperty("properties.lastVisit").isNotDay(new Date(lastVisit.getTime() + 10000)).build()));
+        assertTrue(eval(builder.profileProperty("properties.lastVisit").isNotDay(new Date(lastVisit.getTime() + (24*60*60*1000))).build()));
     }
 
     @Test
     public void testExistence() {
-        /*assertTrue("Gender property does not exist",
-                eval(builder.profileProperty("properties.gender").exists().build()));
+        assertTrue("Gender property does not exist", eval(builder.profileProperty("properties.gender").exists().build()));
         assertFalse("Gender property missing", eval(builder.profileProperty("properties.gender").missing().build()));
         assertTrue("Strange property exists", eval(builder.profileProperty("properties.unknown").missing().build()));
-        assertFalse("Strange property exists", eval(builder.profileProperty("properties.unknown").exists().build()));*/
+        assertFalse("Strange property exists", eval(builder.profileProperty("properties.unknown").exists().build()));
     }
 
     @Test
     public void testInteger() {
-        assertTrue(eval(builder.profileProperty("properties.age").equalTo(Integer.valueOf(30)).build()));
-        assertTrue(eval(builder.not(builder.profileProperty("properties.age").equalTo(Integer.valueOf(40))).build()));
-        assertTrue(eval(builder.profileProperty("properties.age").notEqualTo(Integer.valueOf(40)).build()));
-        assertTrue(eval(builder.profileProperty("properties.age").lessThan(Integer.valueOf(40)).build()));
-        assertTrue(eval(builder.profileProperty("properties.age").greaterThan(Integer.valueOf(20)).build()));
-        assertTrue(eval(builder.profileProperty("properties.age").greaterThanOrEqualTo(Integer.valueOf(30)).build()));
-        //assertFalse(eval(builder.profileProperty("properties.age").greaterThanOrEqualTo(Integer.valueOf(31)).build()));
+        assertTrue(eval(builder.profileProperty("properties.age").equalTo(30).build()));
+        assertTrue(eval(builder.not(builder.profileProperty("properties.age").equalTo(40)).build()));
+        assertTrue(eval(builder.profileProperty("properties.age").notEqualTo(40).build()));
+        assertTrue(eval(builder.profileProperty("properties.age").lessThan(40).build()));
+        assertTrue(eval(builder.profileProperty("properties.age").greaterThan(20).build()));
+        assertTrue(eval(builder.profileProperty("properties.age").greaterThanOrEqualTo(30).build()));
+        assertFalse(eval(builder.profileProperty("properties.age").greaterThanOrEqualTo(31).build()));
 
-        assertTrue(eval(builder.profileProperty("properties.age").in(Integer.valueOf(30)).build()));
-        assertTrue(eval(builder.profileProperty("properties.age").in(Integer.valueOf(31), Integer.valueOf(30)).build()));
-        assertTrue(eval(builder.profileProperty("properties.age").notIn(Integer.valueOf(25), Integer.valueOf(26))
-                .build()));
-        //assertFalse(eval(builder.profileProperty("properties.age").notIn(Integer.valueOf(25), Integer.valueOf(30))
-        //        .build()));
+        assertTrue(eval(builder.profileProperty("properties.age").in(30).build()));
+        assertTrue(eval(builder.profileProperty("properties.age").in(31, 30).build()));
+        assertTrue(eval(builder.profileProperty("properties.age").notIn(25, 26).build()));
+        assertFalse(eval(builder.profileProperty("properties.age").notIn(25, 30).build()));
     }
 
     @Test
@@ -167,34 +161,51 @@ public class ConditionEvaluatorIT extends BaseIT {
     public void testMultiValue() {
         assertTrue(eval(builder.property("profileSegmentCondition", "segments").parameter("matchType", "in")
                 .parameter("segments", "s10", "s20", "s2").build()));
-        //assertFalse(eval(builder.property("profileSegmentCondition", "segments").parameter("matchType", "in")
-        //        .parameter("segments", "s10", "s20", "s30").build()));
+        assertFalse(eval(builder.property("profileSegmentCondition", "segments").parameter("matchType", "in")
+                .parameter("segments", "s10", "s20", "s30").build()));
         assertTrue(eval(builder.property("profileSegmentCondition", "segments").parameter("matchType", "notIn")
                 .parameter("segments", "s10", "s20", "s30").build()));
-        //assertFalse(eval(builder.property("profileSegmentCondition", "segments").parameter("matchType", "notIn")
-        //        .parameter("segments", "s10", "s20", "s2").build()));
+        assertFalse(eval(builder.property("profileSegmentCondition", "segments").parameter("matchType", "notIn")
+                .parameter("segments", "s10", "s20", "s2").build()));
         assertTrue(eval(builder.property("profileSegmentCondition", "segments").parameter("matchType", "all")
                 .parameter("segments", "s1", "s2").build()));
-        //assertFalse(eval(builder.property("profileSegmentCondition", "segments").parameter("matchType", "all")
-        //        .parameter("segments", "s1", "s5").build()));
+        assertFalse(eval(builder.property("profileSegmentCondition", "segments").parameter("matchType", "all")
+                .parameter("segments", "s1", "s5").build()));
     }
 
     @Test
     public void testString() {
         assertTrue(eval(builder.profileProperty("properties.gender").equalTo("female").build()));
-        //assertFalse(eval(builder.not(builder.profileProperty("properties.gender").equalTo("female")).build()));
+        assertFalse(eval(builder.not(builder.profileProperty("properties.gender").equalTo("female")).build()));
         assertTrue(eval(builder.profileProperty("properties.gender").notEqualTo("male").build()));
-        //assertFalse(eval(builder.not(builder.profileProperty("properties.gender").notEqualTo("male")).build()));
+        assertFalse(eval(builder.not(builder.profileProperty("properties.gender").notEqualTo("male")).build()));
         assertTrue(eval(builder.profileProperty("properties.gender").startsWith("fe").build()));
         assertTrue(eval(builder.profileProperty("properties.gender").endsWith("le").build()));
         assertTrue(eval(builder.profileProperty("properties.gender").contains("fem").build()));
-        //assertFalse(eval(builder.profileProperty("properties.gender").contains("mu").build()));
+        assertFalse(eval(builder.profileProperty("properties.gender").contains("mu").build()));
         assertTrue(eval(builder.profileProperty("properties.gender").matchesRegex(".*ale").build()));
 
         assertTrue(eval(builder.profileProperty("properties.gender").in("male", "female").build()));
         assertTrue(eval(builder.profileProperty("properties.gender").notIn("one", "two").build()));
-        //assertFalse(eval(builder.profileProperty("properties.gender").notIn("one", "two", "female").build()));
+        assertFalse(eval(builder.profileProperty("properties.gender").notIn("one", "two", "female").build()));
         assertTrue(eval(builder.profileProperty("properties.gender").all("female").build()));
-        //assertFalse(eval(builder.profileProperty("properties.gender").all("male", "female").build()));
+        assertFalse(eval(builder.profileProperty("properties.gender").all("male", "female").build()));
+    }
+
+    @Test
+    public void testRange() {
+        // test AND
+        Condition condition = builder.and(
+                builder.profileProperty("properties.gender").equalTo("female"),
+                builder.profileProperty("properties.age").greaterThanOrEqualTo(40)
+        ).build();
+        assertFalse(eval(condition));
+
+        // test OR
+        condition = builder.or(
+                builder.profileProperty("properties.gender").equalTo("female"),
+                builder.profileProperty("properties.age").greaterThanOrEqualTo(40)
+        ).build();
+        assertTrue(eval(condition));
     }
 }
