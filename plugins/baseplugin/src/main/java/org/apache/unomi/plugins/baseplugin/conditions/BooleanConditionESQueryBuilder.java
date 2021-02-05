@@ -65,11 +65,7 @@ public class BooleanConditionESQueryBuilder implements ConditionESQueryBuilder {
             } else {
                 QueryBuilder orFilter = dispatcher.buildFilter(conditions.get(i), context);
                 if (orFilter != null) {
-                    if (orFilter.getName().equals("range")) {
-                        boolQueryBuilder.filter(orFilter);
-                    } else {
-                        boolQueryBuilder.should(orFilter);
-                    }
+                    boolQueryBuilder.should(orFilter);
                 } else {
                     logger.warn("Null filter for boolean OR sub condition " + conditions.get(i));
                 }
