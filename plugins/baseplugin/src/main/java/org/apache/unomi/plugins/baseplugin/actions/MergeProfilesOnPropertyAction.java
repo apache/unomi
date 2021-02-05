@@ -70,6 +70,9 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
 
         final Session currentSession = event.getSession();
 
+        boolean forceEventProfileAsMaster = action.getParameterValues().containsKey("forceEventProfileAsMaster") ?
+                (boolean) action.getParameterValues().get("forceEventProfileAsMaster") : false;
+
         // store the profile id in case the merge change it to a previous one
         String profileId = profile.getItemId();
 
@@ -95,8 +98,12 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
                 profile = profiles.get(0);
             } else {
                 // Create a new profile
-                profile = new Profile(UUID.randomUUID().toString());
-                profile.setProperty("firstVisit", event.getTimeStamp());
+                if (forceEventProfileAsMaster)
+                    profile = event.getProfile();
+                else {
+                    profile = new Profile(UUID.randomUUID().toString());
+                    profile.setProperty("firstVisit", event.getTimeStamp());
+                }
                 profile.getSystemProperties().put(mergeProfilePropertyName, mergeProfilePropertyValue);
             }
 
@@ -133,8 +140,6 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
             }
 
             Profile markedMasterProfile;
-            boolean forceEventProfileAsMaster = action.getParameterValues().containsKey("forceEventProfileAsMaster") ?
-                    (boolean) action.getParameterValues().get("forceEventProfileAsMaster") : false;
             if (forceEventProfileAsMaster)
                 markedMasterProfile = event.getProfile();
             else
