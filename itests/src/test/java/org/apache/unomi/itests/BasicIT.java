@@ -116,7 +116,6 @@ public class BasicIT extends BaseIT {
         // by the connection manager.
         String responseContent;
         try (CloseableHttpResponse response = HttpClientBuilder.create().build().execute(request)) {
-            System.out.println(response.getStatusLine());
             HttpEntity entity = response.getEntity();
             // do something useful with the response body
             // and ensure it is fully consumed
