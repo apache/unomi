@@ -21,11 +21,9 @@ import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.unomi.api.Consent;
 import org.apache.unomi.api.ConsentStatus;
 import org.apache.unomi.api.Profile;
-import org.apache.unomi.api.PropertyType;
 import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.graphql.utils.DateUtils;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 import org.ops4j.pax.exam.util.Filter;
 import org.slf4j.Logger;
@@ -46,13 +44,6 @@ public class GraphQLProfilePropertiesIT extends BaseGraphQLIT {
     protected ProfileService profileService;
 
     private final static Logger LOGGER = LoggerFactory.getLogger(GraphQLProfilePropertiesIT.class);
-
-    @Override
-    @Before
-    public void setUp() throws InterruptedException {
-        super.setUp();
-        recreateIndex(PropertyType.ITEM_TYPE);
-    }
 
     @Test
     public void testCreateAndDeleteProfileProperty() throws Exception {
@@ -125,7 +116,7 @@ public class GraphQLProfilePropertiesIT extends BaseGraphQLIT {
         try (CloseableHttpResponse response = post("graphql/profile/get-profile-fields.json")) {
             final ResponseContext context = ResponseContext.parse(response.getEntity());
 
-            System.out.println(context.getResponseAsMap());
+            LOGGER.info(StringUtils.join(context.getResponseAsMap()));
 
             // assert consent
             Assert.assertEquals("GRANTED", context.getValue("data.cdp.getProfile.cdp_consents[0].status"));
