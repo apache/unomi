@@ -38,12 +38,15 @@ import org.ops4j.pax.exam.util.Filter;
 
 import javax.inject.Inject;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 
 import java.text.SimpleDateFormat;
 import java.text.ParseException;
 
 
 import org.junit.Assert;
+
 
 
 /**
@@ -148,6 +151,22 @@ public class EventServiceIT extends BaseIT {
 
         PartialList<Profile> profiles = profileService.search(query, Profile.class);
         Assert.assertEquals(0, profiles.getList().size());
+    }
+
+    @Test
+    public void test_EventGetNestedProperty() {
+        String nestedProperty = "outerProperty.innerProperty";
+        String testValue = "test-value";
+        String eventId = "test-event-id-" + System.currentTimeMillis();
+        String profileId = "test-profile-id";
+        String eventType = "test-type";
+        Profile profile = new Profile(profileId);
+        Event event = new Event(eventId, eventType, null, profile, null, null, null, new Date());
+        final Map<String, String> innerProperty = new HashMap<>();
+        innerProperty.put("innerProperty", testValue);
+        event.setProperty("outerProperty", innerProperty);
+        String value = (String) event.getNestedProperty(nestedProperty);
+        Assert.assertEquals(testValue, value);
     }
 
 }
