@@ -108,6 +108,7 @@ public class GraphQLListIT extends BaseGraphQLIT {
         profile.setProperty("firstName", "TestFirstName");
         profile.setProperty("lastName", "TestLastName");
         profileService.save(profile);
+        refreshPersistence();
 
         keepTrying("Failed waiting for the creation of the profile",
                 () -> profileService.load(profile.getItemId()), Objects::nonNull, 1000, 100);
@@ -139,7 +140,7 @@ public class GraphQLListIT extends BaseGraphQLIT {
         }
     }
 
-    private UserList createList(final String id, final String name, final String scope) {
+    private UserList createList(final String id, final String name, final String scope) throws InterruptedException {
         final Metadata metadata = new Metadata();
 
         metadata.setId(id);
@@ -152,6 +153,7 @@ public class GraphQLListIT extends BaseGraphQLIT {
         userList.setMetadata(metadata);
 
         userListService.save(userList);
+        refreshPersistence();
 
         return userList;
     }
