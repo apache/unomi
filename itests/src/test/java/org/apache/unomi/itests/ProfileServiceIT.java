@@ -37,6 +37,9 @@ import org.ops4j.pax.exam.util.Filter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import javax.inject.Inject;
 
 /**
@@ -134,6 +137,19 @@ public class ProfileServiceIT extends BaseIT {
         finally {
             persistenceService.setSetting("throwExceptions", throwExceptionCurrent);
         }
+    }
+
+    @Test
+    public void test_EventGetNestedProperty() {
+        String nestedProperty = "outerProperty.innerProperty";
+        String testValue = "test-value";
+        String profileId = "test-profile-id";
+        Profile profile = new Profile(profileId);
+        final Map<String, String> innerProperty = new HashMap<>();
+        innerProperty.put("innerProperty", testValue);
+        profile.setProperty("outerProperty", innerProperty);
+        String value = (String) profile.getNestedProperty(nestedProperty);
+        assertEquals(testValue, value);
     }
 
 
