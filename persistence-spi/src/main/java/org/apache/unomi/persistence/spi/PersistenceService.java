@@ -312,7 +312,7 @@ public interface PersistenceService {
      * @param item  the item we're checking against the specified condition
      * @return {@code true} if the item satisfies the condition, {@code false} otherwise
      */
-    void validateCondition(Condition query, Item item);
+    boolean isValidCondition(Condition query, Item item);
     /**
      * Same as {@code query(fieldName, fieldValue, sortBy, clazz, 0, -1).getList()}
      *
