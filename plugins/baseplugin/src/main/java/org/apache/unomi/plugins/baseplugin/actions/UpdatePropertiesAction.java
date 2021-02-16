@@ -125,7 +125,7 @@ public class UpdatePropertiesAction implements ActionExecutor {
                 }
             }
             if (propType != null) {
-                isProfileOrPersonaUpdated |= PropertyHelper.setProperty(target, prop, PropertyHelper.getValueByTypeId(propsMap.get(prop), propType.getValueTypeId()), "alwaysSet");
+                isProfileOrPersonaUpdated |= PropertyHelper.setProperty(target, prop, PropertyHelper.getValueByTypeId(propsMap.get(prop), propType.getValueTypeId()), strategy);
             } else {
                 isProfileOrPersonaUpdated |= PropertyHelper.setProperty(target, prop, propsMap.get(prop), strategy);
             }
