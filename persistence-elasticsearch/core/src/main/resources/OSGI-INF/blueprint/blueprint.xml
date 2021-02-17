@@ -58,6 +58,7 @@
             <cm:property name="aggQueryThrowOnMissingDocs" value="false" />
             <cm:property name="itemClassesToCache" value="" />
             <cm:property name="useBatchingForSave" value="false" />
+            <cm:property name="useBatchingForUpdate" value="true" />
 
             <cm:property name="username" value="" />
             <cm:property name="password" value="" />
@@ -134,6 +135,7 @@
         <property name="hazelcastInstance" ref="hazelcastInstance" />
         <property name="itemClassesToCache" value="${es.itemClassesToCache}" />
         <property name="useBatchingForSave" value="${es.useBatchingForSave}" />
+        <property name="useBatchingForUpdate" value="${es.useBatchingForUpdate}" />
 
         <property name="username" value="${es.username}" />
         <property name="password" value="${es.password}" />
