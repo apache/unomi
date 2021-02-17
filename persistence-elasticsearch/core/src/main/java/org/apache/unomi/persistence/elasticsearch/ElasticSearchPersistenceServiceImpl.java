@@ -1537,6 +1537,20 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     }
 
     @Override
+    public boolean isValidCondition(Condition query, Item item) {
+        try {
+            conditionEvaluatorDispatcher.eval(query, item);
+            QueryBuilder builder = QueryBuilders.boolQuery()
+                    .must(QueryBuilders.idsQuery().addIds(item.getItemId()))
+                    .must(conditionESQueryBuilderDispatcher.buildFilter(query));
+        } catch (Exception e) {
+            logger.error("failed at setSegmentDefinition, condition={}", query.toString(), e);
+            return false;
+        }
+        return true;
+    }
+
+    @Override
     public boolean testMatch(Condition query, Item item) {
         long startTime = System.currentTimeMillis();
         try {
