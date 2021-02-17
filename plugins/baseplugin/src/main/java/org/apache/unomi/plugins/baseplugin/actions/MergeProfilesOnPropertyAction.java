@@ -93,19 +93,21 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
 
         // Check if the user switched to another profile
         if (StringUtils.isNotEmpty(mergeProfilePreviousPropertyValue) && !mergeProfilePreviousPropertyValue.equals(mergeProfilePropertyValue)) {
-            if (profiles.size() > 0) {
-                // Take existing profile
-                profile = profiles.get(0);
-            } else {
-                // Create a new profile
-                if (forceEventProfileAsMaster)
-                    profile = event.getProfile();
-                else {
+            if (forceEventProfileAsMaster == false) {
+                if (profiles.size() > 0) {
+                    // Take existing profile
+                    profile = profiles.get(0);
+                } else {
+                    // Create a new profile
                     profile = new Profile(UUID.randomUUID().toString());
                     profile.setProperty("firstVisit", event.getTimeStamp());
+                    profile.getSystemProperties().put(mergeProfilePropertyName, mergeProfilePropertyValue);
                 }
+            } else {
                 profile.getSystemProperties().put(mergeProfilePropertyName, mergeProfilePropertyValue);
             }
+
+
 
             logger.info("Different users, switch to " + profile.getItemId());
 
