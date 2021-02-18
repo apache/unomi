@@ -1,7 +1,7 @@
 {
   "operationName": "getList",
   "variables": {
-    "listID": "myListId"
+    "listID": "testListId"
   },
   "query": "query getList($listID: ID) {\n  cdp {\n    getList(listID: $listID) {\n      id\n      view {\n        name\n      }\n      name\n    }\n  }\n}\n"
 }

@@ -1,0 +1,10 @@
+{
+  "operationName": "updateSource",
+  "variables": {
+    "source": {
+      "id": "testSourceId",
+      "thirdParty": true
+    }
+  },
+  "query": "mutation updateSource($source: CDP_SourceInput) {\n  cdp {\n    createOrUpdateSource(source: $source) {\n      id\n      thirdParty\n    }\n  }\n}\n"
+}

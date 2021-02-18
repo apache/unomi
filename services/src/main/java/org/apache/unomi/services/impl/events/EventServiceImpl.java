@@ -35,6 +35,7 @@ import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.EventListenerService;
 import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.api.services.EventTypeRegistry;
+import org.apache.unomi.api.services.SourceService;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.aggregate.TermsAggregate;
 import org.apache.unomi.services.impl.ParserHelper;
@@ -63,6 +64,8 @@ public class EventServiceImpl implements EventService {
 
     private DefinitionsService definitionsService;
 
+    private SourceService sourceService;
+
     private BundleContext bundleContext;
 
     private EventTypeRegistry eventTypeRegistry;
@@ -73,7 +76,9 @@ public class EventServiceImpl implements EventService {
 
     private Map<String, ThirdPartyServer> thirdPartyServers = new HashMap<>();
 
-    public void setThirdPartyConfiguration(Map<String,String> thirdPartyConfiguration) {
+    private Boolean shouldBeCheckedEventSourceId;
+
+    public void setThirdPartyConfiguration(Map<String, String> thirdPartyConfiguration) {
         this.thirdPartyServers = new HashMap<>();
         for (Map.Entry<String, String> entry : thirdPartyConfiguration.entrySet()) {
             String[] keys = StringUtils.split(entry.getKey(),'.');
@@ -108,6 +113,10 @@ public class EventServiceImpl implements EventService {
         this.restrictedEventTypeIds = restrictedEventTypeIds;
     }
 
+    public void setShouldBeCheckedEventSourceId(boolean shouldBeCheckedEventSourceId) {
+        this.shouldBeCheckedEventSourceId = shouldBeCheckedEventSourceId;
+    }
+
     public void setEventTypeRegistry(EventTypeRegistry eventTypeRegistry) {
         this.eventTypeRegistry = eventTypeRegistry;
     }
@@ -118,6 +127,10 @@ public class EventServiceImpl implements EventService {
 
     public void setDefinitionsService(DefinitionsService definitionsService) {
         this.definitionsService = definitionsService;
+    }
+
+    public void setSourceService(SourceService sourceService) {
+        this.sourceService = sourceService;
     }
 
     public void setBundleContext(BundleContext bundleContext) {
@@ -159,6 +172,11 @@ public class EventServiceImpl implements EventService {
     }
 
     private int send(Event event, int depth) {
+        if (shouldBeCheckedEventSourceId == Boolean.TRUE && sourceService.load(event.getSourceId()) == null) {
+            logger.warn("Event sending was rejected, because source with sourceId=\"{}\" does not registered in the system.", event.getSourceId());
+            return NO_CHANGE;
+        }
+
         if (depth > MAX_RECURSION_DEPTH) {
             logger.warn("Max recursion depth reached");
             return NO_CHANGE;
@@ -190,7 +208,7 @@ public class EventServiceImpl implements EventService {
                 }
 
                 if ((changes & PROFILE_UPDATED) == PROFILE_UPDATED) {
-                    Event profileUpdated = new Event("profileUpdated", session, event.getProfile(), event.getScope(), event.getSource(), event.getProfile(), event.getTimeStamp());
+                    Event profileUpdated = new Event("profileUpdated", session, event.getProfile(), event.getSourceId(), event.getSource(), event.getProfile(), event.getTimeStamp());
                     profileUpdated.setPersistent(false);
                     profileUpdated.getAttributes().putAll(event.getAttributes());
                     changes |= send(profileUpdated, depth + 1);

@@ -2,8 +2,8 @@
   "operationName": "createOrUpdateList",
   "variables": {
     "list": {
-      "id": "listIdToUpdate",
-      "name": "listNameUpdated",
+      "id": "testListId",
+      "name": "testListNameUpdated",
       "view": "testSiteUpdated"
     }
   },

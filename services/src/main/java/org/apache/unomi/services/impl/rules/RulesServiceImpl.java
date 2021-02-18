@@ -171,7 +171,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
             RuleStatistics ruleStatistics = getLocalRuleStatistics(rule);
             long ruleConditionStartTime = System.currentTimeMillis();
             String scope = rule.getMetadata().getScope();
-            if (scope.equals(Metadata.SYSTEM_SCOPE) || scope.equals(event.getScope())) {
+            if (scope.equals(Metadata.SYSTEM_SCOPE) || scope.equals(event.getSourceId())) {
                 Condition eventCondition = definitionsService.extractConditionBySystemTag(rule.getCondition(), "eventCondition");
 
                 if (eventCondition == null) {
@@ -272,7 +272,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
                 changes |= actionExecutorDispatcher.execute(action, event);
             }
             long totalActionsTime = System.currentTimeMillis() - actionsStartTime;
-            Event ruleFired = new Event("ruleFired", event.getSession(), event.getProfile(), event.getScope(), event, rule, event.getTimeStamp());
+            Event ruleFired = new Event("ruleFired", event.getSession(), event.getProfile(), event.getSourceId(), event, rule, event.getTimeStamp());
             ruleFired.getAttributes().putAll(event.getAttributes());
             ruleFired.setPersistent(false);
             changes |= eventService.send(ruleFired);

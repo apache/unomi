@@ -84,7 +84,7 @@ public class EventTail extends TailCommandSupport  {
             eventInfo.add(event.getSessionId());
             eventInfo.add(event.getProfileId());
             eventInfo.add(event.getTimeStamp().toString());
-            eventInfo.add(event.getScope());
+            eventInfo.add(event.getSourceId());
             eventInfo.add(Boolean.toString(event.isPersistent()));
             outputLine(out, eventInfo);
             return EventService.NO_CHANGE;

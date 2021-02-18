@@ -65,7 +65,7 @@ public class AddToListsAction implements ActionExecutor {
 
         if (listsChanged) {
             profile.getSystemProperties().put("lists", existingListIdentifiers);
-            Event profileUpdated = new Event("profileUpdated", null, profile, event.getScope(), null, profile, new Date());
+            Event profileUpdated = new Event("profileUpdated", null, profile, event.getSourceId(), null, profile, new Date());
             profileUpdated.setPersistent(false);
             eventService.send(profileUpdated);
             return EventService.PROFILE_UPDATED;

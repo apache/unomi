@@ -48,7 +48,7 @@ public class GraphQLSegmentIT extends BaseGraphQLIT {
     }
 
     @Test
-    public void testCreateThenGetAndDeleteSegment() throws IOException {
+    public void testCreateThenGetAndDeleteSegment() throws IOException, InterruptedException {
         try (CloseableHttpResponse response = post("graphql/segment/create-or-update-segment.json")) {
             final ResponseContext context = ResponseContext.parse(response.getEntity());
 
@@ -56,6 +56,8 @@ public class GraphQLSegmentIT extends BaseGraphQLIT {
             Assert.assertEquals("testSegment", context.getValue("data.cdp.createOrUpdateSegment.name"));
             Assert.assertEquals("http://www.domain.com", context.getValue("data.cdp.createOrUpdateSegment.view.name"));
         }
+
+        refreshPersistence();
 
         try (CloseableHttpResponse response = post("graphql/segment/get-segment.json")) {
             final ResponseContext context = ResponseContext.parse(response.getEntity());
@@ -82,6 +84,7 @@ public class GraphQLSegmentIT extends BaseGraphQLIT {
         keepTrying("Failed waiting for the creation of the profile for the \"testCreateSegmentAndApplyToProfile\" test",
                 () -> profileService.load(profile.getItemId()), Objects::nonNull, 1000, 100);
 
+        refreshPersistence();
 
         try (CloseableHttpResponse response = post("graphql/segment/create-segment-with-properties-filter.json")) {
             final ResponseContext context = ResponseContext.parse(response.getEntity());

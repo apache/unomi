@@ -16,6 +16,8 @@
  */
 package org.apache.unomi.graphql.commands;
 
+import org.apache.unomi.api.SourceItem;
+import org.apache.unomi.api.services.SourceService;
 import org.apache.unomi.graphql.types.input.CDPSourceInput;
 import org.apache.unomi.graphql.types.output.CDPSource;
 
@@ -33,8 +35,22 @@ public class CreateOrUpdateSourceCommand extends BaseCommand<CDPSource> {
 
     @Override
     public CDPSource execute() {
-        // Unomi doesn't have an API for that yet, so return a stub
-        return new CDPSource(sourceInput.getId(), sourceInput.getThirdParty());
+        SourceService sourceService = serviceManager.getService(SourceService.class);
+
+        SourceItem source = sourceService.load(sourceInput.getId());
+
+        if (source == null) {
+            source = new SourceItem();
+
+            source.setItemId(sourceInput.getId());
+            source.setSourceId(sourceInput.getId());
+        }
+
+        source.setThirdParty(sourceInput.getThirdParty());
+
+        SourceItem persistedSource = sourceService.save(source);
+
+        return new CDPSource(persistedSource.getSourceId(), persistedSource.getThirdParty());
     }
 
     public static Builder create(final CDPSourceInput topicInput) {

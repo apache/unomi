@@ -32,12 +32,14 @@ public class GraphQLTopicIT extends BaseGraphQLIT {
     protected TopicService topicService;
 
     @Test
-    public void testCRUD() throws IOException {
+    public void testCRUD() throws IOException, InterruptedException {
         try (CloseableHttpResponse response = post("graphql/topic/create-topic.json")) {
             final ResponseContext context = ResponseContext.parse(response.getEntity());
 
             Assert.assertEquals("testTopic", context.getValue("data.cdp.createOrUpdateTopic.id"));
         }
+
+        refreshPersistence();
 
         try (CloseableHttpResponse response = post("graphql/topic/update-topic.json")) {
             final ResponseContext context = ResponseContext.parse(response.getEntity());
@@ -46,6 +48,8 @@ public class GraphQLTopicIT extends BaseGraphQLIT {
             Assert.assertEquals("testTopicName Updated", context.getValue("data.cdp.createOrUpdateTopic.name"));
             Assert.assertEquals("testTopicView", context.getValue("data.cdp.createOrUpdateTopic.view.name"));
         }
+
+        refreshPersistence();
 
         try (CloseableHttpResponse response = post("graphql/topic/get-topic.json")) {
             final ResponseContext context = ResponseContext.parse(response.getEntity());
@@ -67,6 +71,8 @@ public class GraphQLTopicIT extends BaseGraphQLIT {
 
             Assert.assertTrue(context.getValue("data.cdp.deleteTopic"));
         }
+
+        refreshPersistence();
 
         try (CloseableHttpResponse response = post("graphql/topic/get-topic.json")) {
             final ResponseContext context = ResponseContext.parse(response.getEntity());
