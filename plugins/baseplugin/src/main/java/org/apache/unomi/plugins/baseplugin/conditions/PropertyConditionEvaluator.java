@@ -281,6 +281,9 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
             if (expression.startsWith("properties.")) {
                 return getNestedPropertyValue(expression.substring("properties.".length()), event.getProperties());
             }
+            if (expression.equals("persistent")) {
+                return event.isPersistent();
+            }
             if ("target.itemId".equals(expression)) {
                 return event.getTarget().getItemId();
             }
