@@ -23,15 +23,9 @@ module.exports = (env, argv) => {
         output: {
             path: path.resolve(__dirname, 'target/javascript'),
             filename: 'unomi-graphql-playground.js',
-            chunkFilename: '[name].[chunkhash:6].js'
         },
         resolve: {
             extensions: ['*', '.js', '.jsx']
-        },
-        optimization: {
-            splitChunks: {
-                maxSize: 400000
-            }
         },
         module: {
             rules: [

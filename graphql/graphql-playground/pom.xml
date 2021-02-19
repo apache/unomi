@@ -30,7 +30,7 @@
     <packaging>bundle</packaging>
 
     <properties>
-        <yarn.arguments>build:production</yarn.arguments>
+        <yarn.arguments>build</yarn.arguments>
     </properties>
 
     <dependencies>
