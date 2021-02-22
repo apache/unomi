@@ -121,7 +121,7 @@ public class GraphQLListIT extends BaseGraphQLIT {
             Assert.assertEquals(userList.getMetadata().getScope(), context.getValue("data.cdp.addProfileToList.view.name"));
         }
 
-        Thread.sleep(5000);
+        refreshPersistence();
 
         try (CloseableHttpResponse response = post("graphql/list/find-lists.json")) {
             final ResponseContext context = ResponseContext.parse(response.getEntity());
