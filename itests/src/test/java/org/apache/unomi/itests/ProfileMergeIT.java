@@ -65,7 +65,8 @@ public class ProfileMergeIT extends BaseIT {
 
     @Test
     public void testProfileMergeOnPropertyAction_dont_forceEventProfileAsMaster() throws InterruptedException {
-        createMergeOnPropertyRule(false);
+        rulesService.setRule(createMergeOnPropertyRule(false));
+        Thread.sleep(2000); // sleep for rule to be loaded by the Task
 
         // A new profile should be created.
         Assert.assertNotEquals(sendEvent().getProfile().getItemId(), TEST_PROFILE_ID);
@@ -73,7 +74,8 @@ public class ProfileMergeIT extends BaseIT {
 
     @Test
     public void testProfileMergeOnPropertyAction_forceEventProfileAsMaster() throws InterruptedException {
-        createMergeOnPropertyRule(true);
+        rulesService.setRule(createMergeOnPropertyRule(true));
+        Thread.sleep(2000); // sleep for rule to be loaded by the Task
 
         // No new profile should be created, instead the profile of the event should be used.
         Assert.assertEquals(sendEvent().getProfile().getItemId(), TEST_PROFILE_ID);
@@ -90,7 +92,7 @@ public class ProfileMergeIT extends BaseIT {
         return testEvent;
     }
 
-    private void createMergeOnPropertyRule(boolean forceEventProfileAsMaster) throws InterruptedException {
+    private Rule createMergeOnPropertyRule(boolean forceEventProfileAsMaster) throws InterruptedException {
         Rule mergeOnPropertyTestRule = new Rule();
         mergeOnPropertyTestRule.setMetadata(new Metadata(null, TEST_RULE_ID, TEST_RULE_ID, "Test rule for testing MergeProfilesOnPropertyAction"));
 
@@ -104,7 +106,6 @@ public class ProfileMergeIT extends BaseIT {
         mergeProfilesOnPropertyAction.setParameter("forceEventProfileAsMaster", forceEventProfileAsMaster);
         mergeOnPropertyTestRule.setActions(Collections.singletonList(mergeProfilesOnPropertyAction));
 
-        rulesService.setRule(mergeOnPropertyTestRule);
-        Thread.sleep(2000); // sleep for rule to be loaded by the Task
+        return mergeOnPropertyTestRule;
     }
 }
