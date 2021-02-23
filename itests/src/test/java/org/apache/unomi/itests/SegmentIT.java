@@ -82,6 +82,20 @@ public class SegmentIT extends BaseIT {
         segmentService.setSegmentDefinition(segment);
     }
 
+    @Test(expected = BadSegmentConditionException.class)
+    public void testSegmentWithInvalidConditionParameterTypes() {
+        Metadata segmentMetadata = new Metadata(SEGMENT_ID);
+        Segment segment = new Segment(segmentMetadata);
+        Condition segmentCondition = new Condition(definitionsService.getConditionType("pastEventCondition"));
+        segmentCondition.setParameter("minimumEventCount", "2");
+        segmentCondition.setParameter("numberOfDays", "10");
+        Condition pastEventEventCondition = new Condition(definitionsService.getConditionType("eventTypeCondition"));
+        pastEventEventCondition.setParameter("eventTypeId", "test-event-type");
+        segmentCondition.setParameter("eventCondition", pastEventEventCondition);
+        segment.setCondition(segmentCondition);
+        segmentService.setSegmentDefinition(segment);
+    }
+
     @Test
     public void testSegmentWithValidCondition() {
         Metadata segmentMetadata = new Metadata(SEGMENT_ID);
