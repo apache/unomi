@@ -1,0 +1,284 @@
+{
+  "source": {
+    "itemId": "CMSServer",
+    "itemType": "custom",
+    "scope": "acme",
+    "version": null,
+    "properties": {}
+  },
+  "requireSegments": true,
+  "requiredProfileProperties": [
+    "interests"
+  ],
+  "requiredSessionProperties": [
+    "*"
+  ],
+  "events": null,
+  "filters": null,
+  "personalizations": [
+    {
+      "id": "recommendations-by-interest",
+      "strategy": "score-sorted",
+      "strategyOptions": {
+        "threshold": -1
+      },
+      "contents": [
+        {
+          "id": "ac02dbe3-2445-4727-acea-50cfed001996",
+          "filters": [
+            {
+              "appliesOn": null,
+              "condition": {
+                "parameterValues": {
+                  "minimumEventCount": 1,
+                  "eventCondition": {
+                    "type": "pageViewEventCondition",
+                    "parameterValues": {
+                      "pageID": "ac02dbe3-2445-4727-acea-50cfed001996"
+                    }
+                  },
+                  "numberOfDays": 30
+                },
+                "type": "pastEventCondition"
+              },
+              "properties": {
+                "score": -1000
+              }
+            }
+          ],
+          "properties": {
+            "interests": "health food"
+          }
+        },
+        {
+          "id": "62194fdd-2a1c-46ce-8f9b-19dc168f3454",
+          "filters": [
+            {
+              "appliesOn": null,
+              "condition": {
+                "parameterValues": {
+                  "minimumEventCount": 1,
+                  "eventCondition": {
+                    "type": "pageViewEventCondition",
+                    "parameterValues": {
+                      "pageID": "62194fdd-2a1c-46ce-8f9b-19dc168f3454"
+                    }
+                  },
+                  "numberOfDays": 30
+                },
+                "type": "pastEventCondition"
+              },
+              "properties": {
+                "score": -1000
+              }
+            }
+          ],
+          "properties": null
+        },
+        {
+          "id": "dbb3a797-d24e-4701-97ad-dc0a708fa06f",
+          "filters": [
+            {
+              "appliesOn": null,
+              "condition": {
+                "parameterValues": {
+                  "minimumEventCount": 1,
+                  "eventCondition": {
+                    "type": "pageViewEventCondition",
+                    "parameterValues": {
+                      "pageID": "dbb3a797-d24e-4701-97ad-dc0a708fa06f"
+                    }
+                  },
+                  "numberOfDays": 30
+                },
+                "type": "pastEventCondition"
+              },
+              "properties": {
+                "score": -1000
+              }
+            }
+          ],
+          "properties": null
+        },
+        {
+          "id": "90664d1d-6558-4239-a024-8212f2652673",
+          "filters": [
+            {
+              "appliesOn": null,
+              "condition": {
+                "parameterValues": {
+                  "minimumEventCount": 1,
+                  "eventCondition": {
+                    "type": "pageViewEventCondition",
+                    "parameterValues": {
+                      "pageID": "90664d1d-6558-4239-a024-8212f2652673"
+                    }
+                  },
+                  "numberOfDays": 30
+                },
+                "type": "pastEventCondition"
+              },
+              "properties": {
+                "score": -1000
+              }
+            }
+          ],
+          "properties": null
+        },
+        {
+          "id": "f13af275-2002-4200-bd58-96847c74dafb",
+          "filters": [
+            {
+              "appliesOn": null,
+              "condition": {
+                "parameterValues": {
+                  "minimumEventCount": 1,
+                  "eventCondition": {
+                    "type": "pageViewEventCondition",
+                    "parameterValues": {
+                      "pageID": "f13af275-2002-4200-bd58-96847c74dafb"
+                    }
+                  },
+                  "numberOfDays": 30
+                },
+                "type": "pastEventCondition"
+              },
+              "properties": {
+                "score": -1000
+              }
+            }
+          ],
+          "properties": null
+        },
+        {
+          "id": "2305ab1a-f6b1-47c1-bc46-a8c69c553d87",
+          "filters": [
+            {
+              "appliesOn": null,
+              "condition": {
+                "parameterValues": {
+                  "minimumEventCount": 1,
+                  "eventCondition": {
+                    "type": "pageViewEventCondition",
+                    "parameterValues": {
+                      "pageID": "2305ab1a-f6b1-47c1-bc46-a8c69c553d87"
+                    }
+                  },
+                  "numberOfDays": 30
+                },
+                "type": "pastEventCondition"
+              },
+              "properties": {
+                "score": -1000
+              }
+            }
+          ],
+          "properties": null
+        },
+        {
+          "id": "50c4064c-ef6e-4afe-adcf-f876111f50bc",
+          "filters": [
+            {
+              "appliesOn": null,
+              "condition": {
+                "parameterValues": {
+                  "minimumEventCount": 1,
+                  "eventCondition": {
+                    "type": "pageViewEventCondition",
+                    "parameterValues": {
+                      "pageID": "50c4064c-ef6e-4afe-adcf-f876111f50bc"
+                    }
+                  },
+                  "numberOfDays": 30
+                },
+                "type": "pastEventCondition"
+              },
+              "properties": {
+                "score": -1000
+              }
+            }
+          ],
+          "properties": null
+        },
+        {
+          "id": "55371bb0-c516-4038-ab6d-0acab57b4790",
+          "filters": [
+            {
+              "appliesOn": null,
+              "condition": {
+                "parameterValues": {
+                  "minimumEventCount": 1,
+                  "eventCondition": {
+                    "type": "pageViewEventCondition",
+                    "parameterValues": {
+                      "pageID": "55371bb0-c516-4038-ab6d-0acab57b4790"
+                    }
+                  },
+                  "numberOfDays": 30
+                },
+                "type": "pastEventCondition"
+              },
+              "properties": {
+                "score": -1000
+              }
+            }
+          ],
+          "properties": null
+        },
+        {
+          "id": "eaaa15eb-e2c2-49cf-bb99-20ea90bd3fdb",
+          "filters": [
+            {
+              "appliesOn": null,
+              "condition": {
+                "parameterValues": {
+                  "minimumEventCount": 1,
+                  "eventCondition": {
+                    "type": "pageViewEventCondition",
+                    "parameterValues": {
+                      "pageID": "eaaa15eb-e2c2-49cf-bb99-20ea90bd3fdb"
+                    }
+                  },
+                  "numberOfDays": 30
+                },
+                "type": "pastEventCondition"
+              },
+              "properties": {
+                "score": -1000
+              }
+            }
+          ],
+          "properties": null
+        },
+        {
+          "id": "15cdd5dd-909d-4d91-8f79-62226b96843a",
+          "filters": [
+            {
+              "appliesOn": null,
+              "condition": {
+                "parameterValues": {
+                  "minimumEventCount": 1,
+                  "eventCondition": {
+                    "type": "pageViewEventCondition",
+                    "parameterValues": {
+                      "pageID": "15cdd5dd-909d-4d91-8f79-62226b96843a"
+                    }
+                  },
+                  "numberOfDays": 30
+                },
+                "type": "pastEventCondition"
+              },
+              "properties": {
+                "score": -1000
+              }
+            }
+          ],
+          "properties": null
+        }
+      ]
+    }
+  ],
+  "profileOverrides": null,
+  "sessionPropertiesOverrides": null,
+  "sessionId": "21bf6d3d-ba5d-4b8c-98bb-af4dcf506c03"
+}
