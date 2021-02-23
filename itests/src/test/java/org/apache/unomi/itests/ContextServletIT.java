@@ -557,4 +557,17 @@ public class ContextServletIT extends BaseIT {
         assertFalse("Vulnerability successfully executed ! File created at " + vulnFileCanonicalPath, vulnFile.exists());
 
     }
+
+	@Test
+	public void testPersonalization() throws IOException, InterruptedException {
+
+		Map<String,String> parameters = new HashMap<>();
+		HttpPost request = new HttpPost(URL + CONTEXT_URL);
+		request.setEntity(new StringEntity(getValidatedBundleJSON("personalization.json", parameters), ContentType.create("application/json")));
+		TestUtils.RequestResponse response = TestUtils.executeContextJSONRequest(request);
+		assertEquals("Invalid response code", 200, response.getStatusCode());
+		refreshPersistence();
+		Thread.sleep(2000); //Making sure event is updated in DB
+
+	}
 }

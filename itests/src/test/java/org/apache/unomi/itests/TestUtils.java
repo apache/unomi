@@ -86,7 +86,7 @@ public class TestUtils {
 			if (response.containsHeader("Set-Cookie")) {
 				cookieHeader = response.getHeaders("Set-Cookie")[0].toString().substring(12);
 			}
-			return new RequestResponse(context, cookieHeader);
+			return new RequestResponse(response.getStatusLine().getStatusCode(), context, cookieHeader);
 		}
 	}
 
@@ -124,10 +124,12 @@ public class TestUtils {
 	public static class RequestResponse {
 		private ContextResponse contextResponse;
 		private String cookieHeaderValue;
+		int statusCode;
 
-		public RequestResponse(ContextResponse contextResponse, String cookieHeaderValue) {
+		public RequestResponse(int statusCode, ContextResponse contextResponse, String cookieHeaderValue) {
 			this.contextResponse = contextResponse;
 			this.cookieHeaderValue = cookieHeaderValue;
+			this.statusCode = statusCode;
 		}
 
 		public ContextResponse getContextResponse() {
@@ -136,6 +138,10 @@ public class TestUtils {
 
 		public String getCookieHeaderValue() {
 			return cookieHeaderValue;
+		}
+
+		public int getStatusCode() {
+			return statusCode;
 		}
 	}
 }
