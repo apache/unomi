@@ -58,6 +58,9 @@ public class PropertiesUpdateActionIT extends BaseIT {
     public void setUp() throws IOException, InterruptedException {
         Profile profile = new Profile();
         profile.setItemId(PROFILE_TEST_ID);
+        profile.setProperties(new HashMap<>());
+        profile.setProperty("lastName", "Jose"); // property that have a propertyType registered in the system
+        profile.setProperty("prop4", "New property 4"); // property that do not have a propertyType registered in the system
         profileService.save(profile);
         LOGGER.info("Profile saved with ID [{}].", profile.getItemId());
 
@@ -124,6 +127,8 @@ public class PropertiesUpdateActionIT extends BaseIT {
         propertyToAdd.put("properties.prop1", "New property 1");
         propertyToAdd.put("properties.prop2", "New property 2");
         propertyToAdd.put("properties.prop3", "New property 3");
+        propertyToAdd.put("properties.prop4", "Updated property 4");
+        propertyToAdd.put("properties.lastName", "Michel");
 
         updateProperties.setProperty(UpdatePropertiesAction.PROPS_TO_ADD, propertyToAdd);
         updateProperties.setProperty(UpdatePropertiesAction.TARGET_ID_KEY, PROFILE_TEST_ID);
@@ -133,9 +138,11 @@ public class PropertiesUpdateActionIT extends BaseIT {
         refreshPersistence();
 
         profile = profileService.load(PROFILE_TEST_ID);
-        Assert.assertEquals("New property 1", profile.getProperty("prop1"));
-        Assert.assertEquals("New property 2", profile.getProperty("prop2"));
-        Assert.assertEquals("New property 3", profile.getProperty("prop3"));
+        Assert.assertEquals("Props_to_add should set the prop if it's missing", "New property 1", profile.getProperty("prop1"));
+        Assert.assertEquals("Props_to_add should set the prop if it's missing", "New property 2", profile.getProperty("prop2"));
+        Assert.assertEquals("Props_to_add should set the prop if it's missing", "New property 3", profile.getProperty("prop3"));
+        Assert.assertEquals("Props_to_add should not override existing prop", "New property 4", profile.getProperty("prop4"));
+        Assert.assertEquals("Props_to_add should not override existing prop", "Jose", profile.getProperty("lastName"));
     }
 
     @Test
