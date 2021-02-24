@@ -49,22 +49,12 @@ import static org.junit.Assert.assertFalse;
 @ExamReactorStrategy(PerSuite.class)
 public class SecurityIT extends BaseIT {
 
-    private final static Logger LOGGER = LoggerFactory.getLogger(SecurityIT.class);
-
     private static final String SESSION_ID = "vuln-session-id";
 
     private ObjectMapper objectMapper;
 
-    @Inject
-    @Filter(timeout = 600000)
-    protected BundleWatcher bundleWatcher;
-
     @Before
     public void setUp() throws InterruptedException {
-        while (!bundleWatcher.isStartupComplete()) {
-            LOGGER.info("Waiting for startup to complete...");
-            Thread.sleep(1000);
-        }
         objectMapper = CustomObjectMapper.getObjectMapper();
     }
 

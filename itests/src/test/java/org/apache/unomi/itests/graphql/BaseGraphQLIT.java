@@ -53,17 +53,6 @@ public abstract class BaseGraphQLIT extends BaseIT {
     @Inject
     protected BundleContext bundleContext;
 
-    @Inject
-    @Filter(timeout = 600000)
-    protected BundleWatcher bundleWatcher;
-
-    @Before
-    public void setUp() throws InterruptedException {
-        while (!bundleWatcher.isStartupComplete()) {
-            Thread.sleep(1000);
-        }
-    }
-
     protected CloseableHttpResponse post(final String resource) throws IOException {
         final String resourceAsString = resourceAsString(resource);
 
