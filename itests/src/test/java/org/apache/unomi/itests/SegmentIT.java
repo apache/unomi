@@ -18,7 +18,10 @@
 package org.apache.unomi.itests;
 
 import org.apache.unomi.api.Metadata;
+import org.apache.unomi.api.conditions.Condition;
+import org.apache.unomi.api.segments.Segment;
 import org.apache.unomi.api.services.SegmentService;
+import org.apache.unomi.api.exceptions.BadSegmentConditionException;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -36,8 +39,10 @@ import java.util.List;
 @ExamReactorStrategy(PerSuite.class)
 public class SegmentIT extends BaseIT {
     private final static Logger LOGGER = LoggerFactory.getLogger(SegmentIT.class);
+    private final static String SEGMENT_ID = "test-segment-id-2";
 
-    @Inject @Filter(timeout = 600000)
+    @Inject
+    @Filter(timeout = 600000)
     protected SegmentService segmentService;
 
     @Test
@@ -46,5 +51,58 @@ public class SegmentIT extends BaseIT {
         List<Metadata> segmentMetadatas = segmentService.getSegmentMetadatas(0, 50, null).getList();
         Assert.assertEquals("Segment metadata list should be empty", 0, segmentMetadatas.size());
         LOGGER.info("Retrieved " + segmentMetadatas.size() + " segment metadata entries");
+    }
+
+    @Test(expected = BadSegmentConditionException.class)
+    public void testSegmentWithNullCondition() {
+        Metadata segmentMetadata = new Metadata(SEGMENT_ID);
+        Segment segment = new Segment();
+        segment.setMetadata(segmentMetadata);
+        segment.setCondition(null);
+
+        segmentService.setSegmentDefinition(segment);
+    }
+
+    @Test(expected = BadSegmentConditionException.class)
+    public void testSegmentWithInValidCondition() {
+        Metadata segmentMetadata = new Metadata(SEGMENT_ID);
+        Segment segment = new Segment();
+        segment.setMetadata(segmentMetadata);
+        Condition condition = new Condition();
+        condition.setParameter("param", "param value");
+        condition.setConditionTypeId("fakeConditionId");
+        segment.setCondition(condition);
+
+        segmentService.setSegmentDefinition(segment);
+    }
+
+    @Test(expected = BadSegmentConditionException.class)
+    public void testSegmentWithInvalidConditionParameterTypes() {
+        Metadata segmentMetadata = new Metadata(SEGMENT_ID);
+        Segment segment = new Segment(segmentMetadata);
+        Condition segmentCondition = new Condition(definitionsService.getConditionType("pastEventCondition"));
+        segmentCondition.setParameter("minimumEventCount", "2");
+        segmentCondition.setParameter("numberOfDays", "10");
+        Condition pastEventEventCondition = new Condition(definitionsService.getConditionType("eventTypeCondition"));
+        pastEventEventCondition.setParameter("eventTypeId", "test-event-type");
+        segmentCondition.setParameter("eventCondition", pastEventEventCondition);
+        segment.setCondition(segmentCondition);
+        segmentService.setSegmentDefinition(segment);
+    }
+
+    @Test
+    public void testSegmentWithValidCondition() {
+        Metadata segmentMetadata = new Metadata(SEGMENT_ID);
+        Segment segment = new Segment(segmentMetadata);
+        Condition segmentCondition = new Condition(definitionsService.getConditionType("pastEventCondition"));
+        segmentCondition.setParameter("minimumEventCount", 2);
+        segmentCondition.setParameter("numberOfDays", 10);
+        Condition pastEventEventCondition = new Condition(definitionsService.getConditionType("eventTypeCondition"));
+        pastEventEventCondition.setParameter("eventTypeId", "test-event-type");
+        segmentCondition.setParameter("eventCondition", pastEventEventCondition);
+        segment.setCondition(segmentCondition);
+        segmentService.setSegmentDefinition(segment);
+
+        segmentService.removeSegmentDefinition(SEGMENT_ID, false);
     }
 }

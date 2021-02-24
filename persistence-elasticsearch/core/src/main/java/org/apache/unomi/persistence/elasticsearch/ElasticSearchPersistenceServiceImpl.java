@@ -1456,14 +1456,14 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     }
 
     @Override
-    public boolean isValidCondition(Condition query, Item item) {
+    public boolean isValidCondition(Condition condition, Item item) {
         try {
-            conditionEvaluatorDispatcher.eval(query, item);
-            QueryBuilder builder = QueryBuilders.boolQuery()
+            conditionEvaluatorDispatcher.eval(condition, item);
+            QueryBuilders.boolQuery()
                     .must(QueryBuilders.idsQuery().addIds(item.getItemId()))
-                    .must(conditionESQueryBuilderDispatcher.buildFilter(query));
+                    .must(conditionESQueryBuilderDispatcher.buildFilter(condition));
         } catch (Exception e) {
-            logger.error("failed at setSegmentDefinition, condition={}", query.toString(), e);
+            logger.error("Failed to validate condition, condition={}", condition, e);
             return false;
         }
         return true;
