@@ -22,7 +22,9 @@ import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.segments.Segment;
 import org.apache.unomi.api.services.SegmentService;
 import org.apache.unomi.api.exceptions.BadSegmentConditionException;
+import org.apache.unomi.lifecycle.BundleWatcher;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.ops4j.pax.exam.junit.PaxExam;
@@ -44,6 +46,19 @@ public class SegmentIT extends BaseIT {
     @Inject
     @Filter(timeout = 600000)
     protected SegmentService segmentService;
+
+
+    @Inject @Filter(timeout = 600000)
+    protected BundleWatcher bundleWatcher;
+
+    @Before
+    public void setUp() throws InterruptedException {
+        while (!bundleWatcher.isStartupComplete()) {
+            LOGGER.info("Waiting for startup to complete...");
+            Thread.sleep(1000);
+        }
+        removeItems(Segment.class);
+    }
 
     @Test
     public void testSegments() {
