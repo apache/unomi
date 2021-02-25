@@ -22,18 +22,26 @@ import org.apache.commons.io.IOUtils;
 import org.apache.unomi.api.Item;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.services.DefinitionsService;
+import org.apache.unomi.lifecycle.BundleWatcher;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.junit.Assert;
+import org.junit.Before;
+import org.junit.runner.RunWith;
 import org.ops4j.pax.exam.Configuration;
 import org.ops4j.pax.exam.CoreOptions;
 import org.ops4j.pax.exam.Option;
+import org.ops4j.pax.exam.junit.PaxExam;
 import org.ops4j.pax.exam.karaf.container.internal.JavaVersionUtil;
 import org.ops4j.pax.exam.karaf.options.LogLevelOption.LogLevel;
 import org.ops4j.pax.exam.options.MavenArtifactUrlReference;
 import org.ops4j.pax.exam.options.extra.VMOption;
+import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
+import org.ops4j.pax.exam.spi.reactors.PerSuite;
 import org.ops4j.pax.exam.util.Filter;
 import org.osgi.framework.BundleContext;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
 import java.io.File;
@@ -54,7 +62,11 @@ import static org.ops4j.pax.exam.karaf.options.KarafDistributionOption.*;
  * 
  * @author kevan
  */
+@RunWith(PaxExam.class)
+@ExamReactorStrategy(PerSuite.class)
 public abstract class BaseIT {
+
+    private final static Logger LOGGER = LoggerFactory.getLogger(BaseIT.class);
     
     protected static final String HTTP_PORT = "8181";
     protected static final String URL = "http://localhost:" + HTTP_PORT;
@@ -71,6 +83,17 @@ public abstract class BaseIT {
 
     @Inject
     protected BundleContext bundleContext;
+
+    @Inject @Filter(timeout = 600000)
+    protected BundleWatcher bundleWatcher;
+
+    @Before
+    public void waitForStartup() throws InterruptedException {
+        while (!bundleWatcher.isStartupComplete()) {
+            LOGGER.info("Waiting for startup to complete...");
+            Thread.sleep(1000);
+        }
+    }
 
     protected void removeItems(final Class<? extends Item> ...classes) throws InterruptedException {
         Condition condition = new Condition(definitionsService.getConditionType("matchAllCondition"));
