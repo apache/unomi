@@ -185,7 +185,9 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
                             Event currentEvent = event;
                             // Update current event explicitly, as it might not return from search query if there wasn't a refresh in ES
                             if (!StringUtils.equals(profileId, masterProfileId)) {
-                                persistenceService.update(currentEvent, currentEvent.getTimeStamp(), Event.class, "profileId", anonymousBrowsing ? null : masterProfileId);
+                                if (currentEvent.isPersistent()) {
+                                    persistenceService.update(currentEvent, currentEvent.getTimeStamp(), Event.class, "profileId", anonymousBrowsing ? null : masterProfileId);
+                                }
                             }
 
                             for (Profile profile : profiles) {
