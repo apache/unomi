@@ -32,6 +32,7 @@ import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 
 /**
  * @author dgaillard
@@ -56,7 +57,7 @@ public class ServletCommon {
 
     public static Changes handleEvents(List<Event> events, Session session, Profile profile,
                                     ServletRequest request, ServletResponse response, Date timestamp,
-                                    PrivacyService privacyService, EventService eventService) {
+                                    PrivacyService privacyService, EventService eventService, Map eventsAttributes) {
         List<String> filteredEventTypes = privacyService.getFilteredEventTypes(profile);
 
         String thirdPartyId = eventService.authenticateThirdPartyServer(((HttpServletRequest) request).getHeader("X-Unomi-Peer"),
@@ -77,6 +78,7 @@ public class ServletCommon {
                     }
                     if (thirdPartyId != null && event.getItemId() != null) {
                         eventToSend = new Event(event.getItemId(), event.getEventType(), session, profile, event.getScope(), event.getSource(), event.getTarget(), event.getProperties(), timestamp, event.isPersistent());
+                        eventToSend.setAttributes(eventsAttributes);
                     }
                     if (filteredEventTypes != null && filteredEventTypes.contains(event.getEventType())) {
                         logger.debug("Profile is filtering event type {}", event.getEventType());

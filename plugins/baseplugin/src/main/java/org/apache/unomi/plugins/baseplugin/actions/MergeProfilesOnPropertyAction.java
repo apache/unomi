@@ -47,6 +47,9 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
     private ConfigSharingService configSharingService;
 
     public int execute(Action action, Event event) {
+        if (event.getAttributes().get("alreadyMerged") != null && (boolean) event.getAttributes().get("alreadyMerged")  == true) {
+            return EventService.NO_CHANGE;
+        }
         String profileIdCookieName = (String) configSharingService.getProperty("profileIdCookieName");
         String profileIdCookieDomain = (String) configSharingService.getProperty("profileIdCookieDomain");
         Integer profileIdCookieMaxAgeInSeconds = (Integer) configSharingService.getProperty("profileIdCookieMaxAgeInSeconds");

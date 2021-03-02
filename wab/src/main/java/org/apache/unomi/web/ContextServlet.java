@@ -146,6 +146,8 @@ public class ContextServlet extends HttpServlet {
             }
 
             int changes = EventService.NO_CHANGE;
+            Map eventsAttributes = new HashMap();
+
             if (profile == null) {
                 // Not a persona, resolve profile now
                 boolean profileCreated = false;
@@ -166,6 +168,9 @@ public class ContextServlet extends HttpServlet {
                     } else {
                         Changes changesObject = checkMergedProfile(response, profile, session);
                         changes |= changesObject.getChangeType();
+                        if (!profile.getItemId().equals(changesObject.getProfile().getItemId())) {
+                            eventsAttributes.put("alreadyMerged", true);
+                        }
                         profile = changesObject.getProfile();
                     }
                 }
@@ -259,7 +264,7 @@ public class ContextServlet extends HttpServlet {
             }
 
             if (contextRequest != null) {
-                Changes changesObject = handleRequest(contextRequest, session, profile, contextResponse, request, response, timestamp);
+                Changes changesObject = handleRequest(contextRequest, session, profile, contextResponse, request, response, timestamp, eventsAttributes);
                 changes |= changesObject.getChangeType();
                 profile = changesObject.getProfile();
             }
@@ -303,7 +308,7 @@ public class ContextServlet extends HttpServlet {
 
     private Changes checkMergedProfile(ServletResponse response, Profile profile, Session session) {
         int changes = EventService.NO_CHANGE;
-        if (profile.getMergedWith() != null && !privacyService.isRequireAnonymousBrowsing(profile) && !profile.isAnonymousProfile()) {
+        while (profile.getMergedWith() != null && !privacyService.isRequireAnonymousBrowsing(profile) && !profile.isAnonymousProfile()) {
             Profile currentProfile = profile;
             String masterProfileId = profile.getMergedWith();
             Profile masterProfile = profileService.load(masterProfileId);
@@ -329,9 +334,9 @@ public class ContextServlet extends HttpServlet {
     }
 
     private Changes handleRequest(ContextRequest contextRequest, Session session, Profile profile, ContextResponse data,
-                                  ServletRequest request, ServletResponse response, Date timestamp) {
+                                  ServletRequest request, ServletResponse response, Date timestamp, Map eventsAttributes) {
         Changes changes = ServletCommon.handleEvents(contextRequest.getEvents(), session, profile, request, response, timestamp,
-                privacyService, eventService);
+                privacyService, eventService, eventsAttributes);
         data.setProcessedEvents(changes.getProcessedItems());
 
         profile = changes.getProfile();

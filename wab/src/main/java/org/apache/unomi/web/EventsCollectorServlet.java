@@ -36,6 +36,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.UUID;
 
 public class EventsCollectorServlet extends HttpServlet {
@@ -185,7 +186,7 @@ public class EventsCollectorServlet extends HttpServlet {
         }
 
         Changes changesObject = ServletCommon.handleEvents(eventsCollectorRequest.getEvents(), session, profile, request, response,
-                timestamp, privacyService, eventService);
+                timestamp, privacyService, eventService, new HashMap());
         int changes = changesObject.getChangeType();
         profile = changesObject.getProfile();
 
