@@ -92,16 +92,6 @@ public class BasicIT extends BaseIT {
     protected ProfileService profileService;
     @Inject @Filter(timeout = 600000)
     protected DefinitionsService definitionsService;
-    @Inject @Filter(timeout = 600000)
-    protected BundleWatcher bundleWatcher;
-
-    @Before
-    public void setUp() throws InterruptedException {
-        while (!bundleWatcher.isStartupComplete()) {
-            LOGGER.info("Waiting for startup to complete...");
-            Thread.sleep(1000);
-        }
-    }
 
     @Test
     public void testContextJS() throws IOException {

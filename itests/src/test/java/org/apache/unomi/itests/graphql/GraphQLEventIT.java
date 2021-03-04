@@ -53,7 +53,6 @@ public class GraphQLEventIT extends BaseGraphQLIT {
 
     @Before
     public void setUp() throws InterruptedException {
-        super.setUp();
         profile = new Profile(profileID);
         persistenceService.save(profile);
 
