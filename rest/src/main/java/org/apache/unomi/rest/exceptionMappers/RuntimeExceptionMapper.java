@@ -16,8 +16,6 @@
  */
 package org.apache.unomi.rest.exceptionMappers;
 
-import org.apache.commons.lang3.exception.ExceptionUtils;
-
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.ext.ExceptionMapper;
@@ -25,16 +23,11 @@ import javax.ws.rs.ext.ExceptionMapper;
 import java.util.HashMap;
 
 public class RuntimeExceptionMapper implements ExceptionMapper<RuntimeException> {
-    private boolean returnFullErrorMessage = false;
-
-    public void setReturnFullErrorMessage(boolean returnFullErrorMessage) {
-        this.returnFullErrorMessage = returnFullErrorMessage;
-    }
 
     @Override
     public Response toResponse(RuntimeException exception) {
         HashMap<String, Object> body = new HashMap<>();
-        body.put("errorMessage", returnFullErrorMessage ? ExceptionUtils.getRootCauseMessage(exception) : "internalServerError");
+        body.put("errorMessage", "internalServerError");
         return Response.status(Response.Status.INTERNAL_SERVER_ERROR).header("Content-Type", MediaType.APPLICATION_JSON).entity(body).build();
     }
 }

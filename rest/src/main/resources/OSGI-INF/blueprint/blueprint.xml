@@ -29,13 +29,6 @@
                              update-strategy="reload">
     </cm:property-placeholder>
 
-    <cm:property-placeholder persistent-id="org.apache.unomi.rest"
-                             update-strategy="reload" placeholder-prefix="${rest.">
-        <cm:default-properties>
-            <cm:property name="returnFullErrorMessage" value="false"/>
-        </cm:default-properties>
-    </cm:property-placeholder>
-
     <cxf:bus>
         <cxf:features>
             <cxf:logging/>
@@ -67,15 +60,8 @@
         <!--property name="redirectURI" value="/login.jsp"/-->
     </bean>
 
-    <bean id="runtimeExceptionMapper" class="org.apache.unomi.rest.exceptionMappers.RuntimeExceptionMapper">
-        <property name="returnFullErrorMessage" value="${rest.returnFullErrorMessage}" />
-    </bean>
-    <bean id="mainExceptionMapper" class="org.apache.unomi.rest.exceptionMappers.MainExceptionMapper">
-        <property name="returnFullErrorMessage" value="${rest.returnFullErrorMessage}" />
-    </bean>
-    <bean id="jsonProcessingExceptionMapper" class="org.apache.unomi.rest.exceptionMappers.JsonProcessingExceptionMapper">
-        <property name="returnFullErrorMessage" value="${rest.returnFullErrorMessage}" />
-    </bean>
+    <bean id="runtimeExceptionMapper" class="org.apache.unomi.rest.exceptionMappers.RuntimeExceptionMapper"/>
+
     <bean id="unsupportedOperationExceptionMapper" class="org.apache.unomi.rest.exceptionMappers.UnsupportedOperationExceptionMapper"/>
 
     <jaxrs:server address="/segments" id="restSegmentService">
@@ -85,8 +71,6 @@
             <ref component-id="jaas-filter"/>
             <ref component-id="runtimeExceptionMapper"/>
             <ref component-id="unsupportedOperationExceptionMapper"/>
-            <ref component-id="jsonProcessingExceptionMapper"/>
-            <ref component-id="mainExceptionMapper"/>
         </jaxrs:providers>
 
         <jaxrs:serviceBeans>
@@ -101,8 +85,6 @@
             <ref component-id="jaas-filter"/>
             <ref component-id="runtimeExceptionMapper"/>
             <ref component-id="unsupportedOperationExceptionMapper"/>
-            <ref component-id="jsonProcessingExceptionMapper"/>
-            <ref component-id="mainExceptionMapper"/>
         </jaxrs:providers>
 
         <jaxrs:serviceBeans>
@@ -117,8 +99,6 @@
             <ref component-id="jaas-filter"/>
             <ref component-id="runtimeExceptionMapper"/>
             <ref component-id="unsupportedOperationExceptionMapper"/>
-            <ref component-id="jsonProcessingExceptionMapper"/>
-            <ref component-id="mainExceptionMapper"/>
         </jaxrs:providers>
 
         <jaxrs:serviceBeans>
@@ -133,8 +113,6 @@
             <ref component-id="jaas-filter"/>
             <ref component-id="runtimeExceptionMapper"/>
             <ref component-id="unsupportedOperationExceptionMapper"/>
-            <ref component-id="jsonProcessingExceptionMapper"/>
-            <ref component-id="mainExceptionMapper"/>
         </jaxrs:providers>
 
         <jaxrs:serviceBeans>
@@ -149,8 +127,6 @@
             <ref component-id="jaas-filter"/>
             <ref component-id="runtimeExceptionMapper"/>
             <ref component-id="unsupportedOperationExceptionMapper"/>
-            <ref component-id="jsonProcessingExceptionMapper"/>
-            <ref component-id="mainExceptionMapper"/>
         </jaxrs:providers>
 
         <jaxrs:serviceBeans>
@@ -165,8 +141,6 @@
             <ref component-id="jaas-filter"/>
             <ref component-id="runtimeExceptionMapper"/>
             <ref component-id="unsupportedOperationExceptionMapper"/>
-            <ref component-id="jsonProcessingExceptionMapper"/>
-            <ref component-id="mainExceptionMapper"/>
         </jaxrs:providers>
 
         <jaxrs:serviceBeans>
@@ -181,8 +155,6 @@
             <ref component-id="jaas-filter"/>
             <ref component-id="runtimeExceptionMapper"/>
             <ref component-id="unsupportedOperationExceptionMapper"/>
-            <ref component-id="jsonProcessingExceptionMapper"/>
-            <ref component-id="mainExceptionMapper"/>
         </jaxrs:providers>
 
         <jaxrs:serviceBeans>
@@ -197,8 +169,6 @@
             <ref component-id="jaas-filter"/>
             <ref component-id="runtimeExceptionMapper"/>
             <ref component-id="unsupportedOperationExceptionMapper"/>
-            <ref component-id="jsonProcessingExceptionMapper"/>
-            <ref component-id="mainExceptionMapper"/>
         </jaxrs:providers>
 
         <jaxrs:serviceBeans>
@@ -213,8 +183,6 @@
             <ref component-id="jaas-filter"/>
             <ref component-id="runtimeExceptionMapper"/>
             <ref component-id="unsupportedOperationExceptionMapper"/>
-            <ref component-id="jsonProcessingExceptionMapper"/>
-            <ref component-id="mainExceptionMapper"/>
         </jaxrs:providers>
 
         <jaxrs:serviceBeans>
@@ -229,8 +197,6 @@
             <ref component-id="jaas-filter"/>
             <ref component-id="runtimeExceptionMapper"/>
             <ref component-id="unsupportedOperationExceptionMapper"/>
-            <ref component-id="jsonProcessingExceptionMapper"/>
-            <ref component-id="mainExceptionMapper"/>
         </jaxrs:providers>
 
         <jaxrs:serviceBeans>
@@ -245,8 +211,6 @@
             <ref component-id="jaas-filter"/>
             <ref component-id="runtimeExceptionMapper"/>
             <ref component-id="unsupportedOperationExceptionMapper"/>
-            <ref component-id="jsonProcessingExceptionMapper"/>
-            <ref component-id="mainExceptionMapper"/>
         </jaxrs:providers>
 
         <jaxrs:serviceBeans>
@@ -261,8 +225,6 @@
             <ref component-id="jaas-filter"/>
             <ref component-id="runtimeExceptionMapper"/>
             <ref component-id="unsupportedOperationExceptionMapper"/>
-            <ref component-id="jsonProcessingExceptionMapper"/>
-            <ref component-id="mainExceptionMapper"/>
         </jaxrs:providers>
 
         <jaxrs:serviceBeans>
