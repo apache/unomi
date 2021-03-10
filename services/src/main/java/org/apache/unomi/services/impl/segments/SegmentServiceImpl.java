@@ -776,7 +776,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
                     rule.setLinkedItems(Arrays.asList(metadata.getId()));
                     rules.add(rule);
 
-                    updateExistingProfilesForPastEventCondition(condition, parentCondition);
+                    updateExistingProfilesForPastEventCondition(condition, parentCondition, true);
                 } else {
                     rule.getLinkedItems().add(metadata.getId());
                     rules.add(rule);
@@ -798,7 +798,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
         }
     }
 
-    private void updateExistingProfilesForPastEventCondition(Condition eventCondition, Condition parentCondition) {
+    private void updateExistingProfilesForPastEventCondition(Condition eventCondition, Condition parentCondition, boolean forceRefresh) {
         long t = System.currentTimeMillis();
         List<Condition> l = new ArrayList<Condition>();
         Condition andCondition = new Condition();
@@ -839,20 +839,25 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
 
         String propertyKey = (String) parentCondition.getParameter("generatedPropertyKey");
 
+        int updatedProfileCount = 0;
         if(pastEventsDisablePartitions) {
             Map<String, Long> eventCountByProfile = persistenceService.aggregateWithOptimizedQuery(eventCondition, new TermsAggregate("profileId"), Event.ITEM_TYPE, maximumIdsQueryCount);
-            updateProfilesWithPastEventProperty(eventCountByProfile, propertyKey);
+            updatedProfileCount = updateProfilesWithPastEventProperty(eventCountByProfile, propertyKey);
         } else {
             Map<String, Double> m = persistenceService.getSingleValuesMetrics(andCondition, new String[]{"card"}, "profileId.keyword", Event.ITEM_TYPE);
             long card = m.get("_card").longValue();
             int numParts = (int) (card / aggregateQueryBucketSize) + 2;
             for (int i = 0; i < numParts; i++) {
                 Map<String, Long> eventCountByProfile = persistenceService.aggregateWithOptimizedQuery(andCondition, new TermsAggregate("profileId", i, numParts), Event.ITEM_TYPE);
-                updateProfilesWithPastEventProperty(eventCountByProfile, propertyKey);
+                updatedProfileCount += updateProfilesWithPastEventProperty(eventCountByProfile, propertyKey);
             }
         }
 
-        logger.info("Profiles past condition updated in {}ms", System.currentTimeMillis() - t);
+        if (forceRefresh && updatedProfileCount > 0) {
+            persistenceService.refreshIndex(Profile.class, null);
+        }
+
+        logger.info("{} profiles updated for past event condition in {}ms", updatedProfileCount, System.currentTimeMillis() - t);
     }
 
     public String getGeneratedPropertyKey(Condition condition, Condition parentCondition) {
@@ -878,25 +883,37 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
         }
     }
 
-    private void updateProfilesWithPastEventProperty(Map<String, Long> eventCountByProfile, String propertyKey) {
-            for (Map.Entry<String, Long> entry : eventCountByProfile.entrySet()) {
-                String profileId = entry.getKey();
-                if (!profileId.startsWith("_")) {
-                    Map<String, Long> pastEventCounts = new HashMap<>();
-                    pastEventCounts.put(propertyKey, entry.getValue());
-                    Map<String, Object> systemProperties = new HashMap<>();
-                    systemProperties.put("pastEvents", pastEventCounts);
-                    try {
-                        systemProperties.put("lastUpdated", new Date());
-                        Profile profile = new Profile();
-                        profile.setItemId(profileId);
-                        persistenceService.update(profile, null, Profile.class, "systemProperties", systemProperties);
-                    } catch (Exception e) {
-                        logger.error("Error updating profile {} past event system properties", profileId, e);
-                    }
-                }
+    private int updateProfilesWithPastEventProperty(Map<String, Long> eventCountByProfile, String propertyKey) {
+        int profileUpdatedCount = 0;
+        Map<Item, Map> batch = new HashMap<>();
+        Iterator<Map.Entry<String, Long>> entryIterator = eventCountByProfile.entrySet().iterator();
+        while (entryIterator.hasNext()){
+            Map.Entry<String, Long> entry = entryIterator.next();
+            String profileId = entry.getKey();
+            if (!profileId.startsWith("_")) {
+                Map<String, Long> pastEventCounts = new HashMap<>();
+                pastEventCounts.put(propertyKey, entry.getValue());
+                Map<String, Object> systemProperties = new HashMap<>();
+                systemProperties.put("pastEvents", pastEventCounts);
+                systemProperties.put("lastUpdated", new Date());
+
+                Profile profile = new Profile();
+                profile.setItemId(profileId);
+                batch.put(profile, Collections.singletonMap("systemProperties", systemProperties));
             }
 
+            if (batch.size() == segmentUpdateBatchSize || (!entryIterator.hasNext() && batch.size() > 0)) {
+                try {
+                    persistenceService.update(batch, null, Profile.class);
+                    profileUpdatedCount += batch.size();
+                } catch (Exception e) {
+                    logger.error("Error updating {} profiles for past event system properties", batch.size(), e);
+                } finally {
+                    batch.clear();
+                }
+            }
+        }
+        return profileUpdatedCount;
     }
 
     private String getMD5(String md5) {
@@ -1115,7 +1132,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
                             if (action.getActionTypeId().equals("setEventOccurenceCountAction")) {
                                 Condition pastEventCondition = (Condition) action.getParameterValues().get("pastEventCondition");
                                 if (pastEventCondition.containsParameter("numberOfDays")) {
-                                    updateExistingProfilesForPastEventCondition(rule.getCondition(), pastEventCondition);
+                                    updateExistingProfilesForPastEventCondition(rule.getCondition(), pastEventCondition, false);
                                 }
                             }
                         }

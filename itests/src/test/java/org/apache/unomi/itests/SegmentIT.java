@@ -17,11 +17,17 @@
 
 package org.apache.unomi.itests;
 
+import org.apache.unomi.api.Event;
 import org.apache.unomi.api.Metadata;
+import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.segments.Segment;
+import org.apache.unomi.api.services.EventService;
+import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.api.services.SegmentService;
 import org.apache.unomi.api.exceptions.BadSegmentConditionException;
+import org.apache.unomi.persistence.spi.PersistenceService;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -34,6 +40,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.util.Date;
 import java.util.List;
 
 @RunWith(PaxExam.class)
@@ -42,13 +51,28 @@ public class SegmentIT extends BaseIT {
     private final static Logger LOGGER = LoggerFactory.getLogger(SegmentIT.class);
     private final static String SEGMENT_ID = "test-segment-id-2";
 
-    @Inject
-    @Filter(timeout = 600000)
+    @Inject @Filter(timeout = 600000)
     protected SegmentService segmentService;
+
+    @Inject @Filter(timeout = 600000)
+    protected ProfileService profileService;
+
+    @Inject @Filter(timeout = 600000)
+    protected EventService eventService;
+
+    @Inject @Filter(timeout = 600000)
+    protected PersistenceService persistenceService;
 
     @Before
     public void setUp() throws InterruptedException {
         removeItems(Segment.class);
+    }
+
+    @After
+    public void tearDown() throws InterruptedException {
+        removeItems(Segment.class);
+        removeItems(Profile.class);
+        removeItems(Event.class);
     }
 
     @Test
@@ -110,5 +134,38 @@ public class SegmentIT extends BaseIT {
         segmentService.setSegmentDefinition(segment);
 
         segmentService.removeSegmentDefinition(SEGMENT_ID, false);
+    }
+
+    @Test
+    public void testSegmentWithPastEventCondition() throws InterruptedException {
+        // create Profile
+        Profile profile = new Profile();
+        profile.setItemId("test_profile_id");
+        profileService.save(profile);
+        persistenceService.refreshIndex(Profile.class, null); // wait for profile to be full persisted and index
+
+        // send event for profile from a previous date (today -3 days)
+        ZoneId defaultZoneId = ZoneId.systemDefault();
+        LocalDate localDate = LocalDate.now().minusDays(3);
+        Event testEvent = new Event("test-event-type", null, profile, null, null, profile, Date.from(localDate.atStartOfDay(defaultZoneId).toInstant()));
+        testEvent.setPersistent(true);
+        eventService.send(testEvent);
+        persistenceService.refreshIndex(Event.class, null); // wait for event to be fully persisted and indexed
+
+        // create the segment
+        Metadata segmentMetadata = new Metadata("past-event-segment-test");
+        Segment segment = new Segment(segmentMetadata);
+        Condition segmentCondition = new Condition(definitionsService.getConditionType("pastEventCondition"));
+        segmentCondition.setParameter("numberOfDays", 10);
+        Condition pastEventEventCondition = new Condition(definitionsService.getConditionType("eventTypeCondition"));
+        pastEventEventCondition.setParameter("eventTypeId", "test-event-type");
+        segmentCondition.setParameter("eventCondition", pastEventEventCondition);
+        segment.setCondition(segmentCondition);
+        segmentService.setSegmentDefinition(segment);
+
+        // insure the profile that did the past event condition is correctly engaged in the segment.
+        Thread.sleep(5000);
+        profile = profileService.load("test_profile_id");
+        Assert.assertTrue("Profile should be engaged in the segment", profile.getSegments().contains("past-event-segment-test"));
     }
 }
