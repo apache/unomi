@@ -1,7 +1,7 @@
 {
   "operationName": "removeProfileFromList",
   "variables": {
-    "listID": "addedToProfileTestListId",
+    "listID": "testListId",
     "profileID": {
       "id": "test_profile_id",
       "client": {

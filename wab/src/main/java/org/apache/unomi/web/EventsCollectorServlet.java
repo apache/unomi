@@ -138,8 +138,8 @@ public class EventsCollectorServlet extends HttpServlet {
             // Get the first available scope that is not equal to systemscope to create the session otherwise systemscope will be used
             for (Event event : eventsCollectorRequest.getEvents()) {
                 if (StringUtils.isNotBlank(event.getEventType())) {
-                    if (StringUtils.isNotBlank(event.getScope()) && !event.getScope().equals("systemscope")) {
-                        scope = event.getScope();
+                    if (StringUtils.isNotBlank(event.getSourceId()) && !event.getSourceId().equals("systemscope")) {
+                        scope = event.getSourceId();
                         break;
                     } else if (event.getSource() != null && StringUtils.isNotBlank(event.getSource().getScope()) && !event.getSource().getScope().equals("systemscope")) {
                         scope = event.getSource().getScope();

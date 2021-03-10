@@ -101,7 +101,7 @@ public class RuleWatch extends TailCommandSupport {
             ruleExecutionInfo.add(event.getSessionId());
             ruleExecutionInfo.add(event.getProfileId());
             ruleExecutionInfo.add(event.getTimeStamp().toString());
-            ruleExecutionInfo.add(event.getScope());
+            ruleExecutionInfo.add(event.getSourceId());
             outputLine(out, ruleExecutionInfo);
         }
 
