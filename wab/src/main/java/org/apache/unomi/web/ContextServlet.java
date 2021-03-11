@@ -308,9 +308,16 @@ public class ContextServlet extends HttpServlet {
 
     private Changes checkMergedProfile(ServletResponse response, Profile profile, Session session) {
         int changes = EventService.NO_CHANGE;
+
+        Set<String> mergedWithProfileIds = new HashSet<>();
+
         while (profile.getMergedWith() != null && !privacyService.isRequireAnonymousBrowsing(profile) && !profile.isAnonymousProfile()) {
             Profile currentProfile = profile;
             String masterProfileId = profile.getMergedWith();
+            if (!mergedWithProfileIds.add(masterProfileId)) { // Return false if the value is already exist
+                throw new RuntimeException("Profiles are merged in a loop" + mergedWithProfileIds.toString());
+            }
+
             Profile masterProfile = profileService.load(masterProfileId);
             if (masterProfile != null) {
                 if (logger.isDebugEnabled()) {
