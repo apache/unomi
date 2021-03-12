@@ -11,5 +11,15 @@
   },
   "actionExecutor": "allEventToProfileProperties",
   "parameters": [
+    {
+      "id": "rootProperty",
+      "type": "string",
+      "multivalued": false
+    },
+    {
+      "id": "mandatoryPropTypeSystemTag",
+      "type": "string",
+      "multivalued": true
+    }
   ]
 }
