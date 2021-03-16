@@ -28,10 +28,7 @@ import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.servlet.ServletConfig;
-import javax.servlet.ServletException;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
+import javax.servlet.*;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -72,6 +69,17 @@ public class ContextServlet extends HttpServlet {
 
     @Override
     public void service(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        if (true) {
+            RequestDispatcher dispatcher = getServletContext().getContext("/cxs")
+                    .getRequestDispatcher("/cxs/context.json");
+            try {
+                dispatcher.forward(request, response);
+                return;
+            } catch (ServletException e) {
+               logger.error(e.getMessage());
+            }
+        }
+
         try {
             final Date timestamp = new Date();
             if (request.getParameter("timestamp") != null) {
