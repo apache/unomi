@@ -40,6 +40,8 @@ import java.util.concurrent.ConcurrentHashMap;
 public class ActionExecutorDispatcher {
     private static final Logger logger = LoggerFactory.getLogger(ActionExecutorDispatcher.class.getName());
     private static final String VALUE_NAME_SEPARATOR = "::";
+    private static final String PLACEHOLDER_PREFIX = "${";
+    private static final String PLACEHOLDER_SUFFIX = "}";
     private final Map<String, ValueExtractor> valueExtractors = new HashMap<>(11);
     private Map<String, ActionExecutor> executors = new ConcurrentHashMap<>();
     private MetricsService metricsService;
@@ -124,13 +126,21 @@ public class ActionExecutorDispatcher {
             if (value instanceof String) {
                 String s = (String) value;
                 try {
-                    // check if we have special values
-                    if (s.contains(VALUE_NAME_SEPARATOR)) {
-                        final String valueType = StringUtils.substringBefore(s, VALUE_NAME_SEPARATOR);
-                        final String valueAsString = StringUtils.substringAfter(s, VALUE_NAME_SEPARATOR);
-                        final ValueExtractor extractor = valueExtractors.get(valueType);
-                        if (extractor != null) {
-                            value = extractor.extract(valueAsString, event);
+                    if (s.contains(PLACEHOLDER_PREFIX)) {
+                        while (s.contains(PLACEHOLDER_PREFIX)) {
+                            String substring = s.substring(s.indexOf(PLACEHOLDER_PREFIX) + 2, s.indexOf(PLACEHOLDER_SUFFIX));
+                            Object v = extractValue(substring, event);
+                            if (v != null) {
+                                s = s.replace(PLACEHOLDER_PREFIX + substring + PLACEHOLDER_SUFFIX, v.toString());
+                            } else {
+                                break;
+                            }
+                        }
+                        value = s;
+                    } else {
+                        // check if we have special values
+                        if (s.contains(VALUE_NAME_SEPARATOR)) {
+                            value = extractValue(s, event);
                         }
                     }
                 } catch (UnsupportedOperationException e) {
@@ -144,6 +154,19 @@ public class ActionExecutorDispatcher {
             values.put(entry.getKey(), value);
         }
         return values;
+    }
+
+    private Object extractValue(String s, Event event) throws IllegalAccessException, NoSuchMethodException, InvocationTargetException {
+        Object value = null;
+
+        String valueType = StringUtils.substringBefore(s, VALUE_NAME_SEPARATOR);
+        String valueAsString = StringUtils.substringAfter(s, VALUE_NAME_SEPARATOR);
+        ValueExtractor extractor = valueExtractors.get(valueType);
+        if (extractor != null) {
+            value = extractor.extract(valueAsString, event);
+        }
+
+        return value;
     }
 
     @SuppressWarnings("unchecked")

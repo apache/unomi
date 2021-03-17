@@ -298,4 +298,12 @@
         </bean>
     </service>
 
+    <service interface="org.apache.unomi.api.actions.ActionExecutor">
+        <service-properties>
+            <entry key="actionExecutorId" value="incrementProperty"/>
+        </service-properties>
+        <bean class="org.apache.unomi.plugins.baseplugin.actions.IncrementPropertyAction">
+            <property name="eventService" ref="eventService"/>
+        </bean>
+    </service>
 </blueprint>

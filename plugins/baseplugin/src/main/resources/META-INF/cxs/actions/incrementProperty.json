@@ -1,0 +1,29 @@
+{
+  "metadata": {
+    "id": "incrementPropertyAction",
+    "name": "incrementPropertyAction",
+    "description": "",
+    "systemTags": [
+      "profileTags"
+    ],
+    "readOnly": true
+  },
+  "actionExecutor": "incrementProperty",
+  "parameters": [
+    {
+      "id": "propertyName",
+      "type": "string",
+      "multivalued": false
+    },
+    {
+      "id": "propertyTarget",
+      "type": "string",
+      "multivalued": false
+    },
+    {
+      "id": "storeInSession",
+      "type": "boolean",
+      "multivalued": false
+    }
+  ]
+}
