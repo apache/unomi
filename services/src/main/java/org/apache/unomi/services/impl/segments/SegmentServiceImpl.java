@@ -182,13 +182,8 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
                 if (segment.getMetadata().getScope() == null) {
                     segment.getMetadata().setScope("systemscope");
                 }
-                // Register only if segment does not exist yet
-                if (getSegmentDefinition(segment.getMetadata().getId()) == null) {
-                    setSegmentDefinition(segment);
-                    logger.info("Predefined segment with id {} registered", segment.getMetadata().getId());
-                } else {
-                    logger.info("The predefined segment with id {} is already registered, this segment will be skipped", segment.getMetadata().getId());
-                }
+                setSegmentDefinition(segment);
+                logger.info("Predefined segment with id {} registered", segment.getMetadata().getId());
             } catch (IOException e) {
                 logger.error("Error while loading segment definition " + predefinedSegmentURL, e);
             }
@@ -210,13 +205,8 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
                 if (scoring.getMetadata().getScope() == null) {
                     scoring.getMetadata().setScope("systemscope");
                 }
-                // Register only if scoring plan does not exist yet
-                if (getScoringDefinition(scoring.getMetadata().getId()) == null) {
-                    setScoringDefinition(scoring);
-                    logger.info("Predefined scoring with id {} registered", scoring.getMetadata().getId());
-                } else {
-                    logger.info("The predefined scoring with id {} is already registered, this scoring will be skipped", scoring.getMetadata().getId());
-                }
+                setScoringDefinition(scoring);
+                logger.info("Predefined scoring with id {} registered", scoring.getMetadata().getId());
             } catch (IOException e) {
                 logger.error("Error while loading segment definition " + predefinedScoringURL, e);
             }
