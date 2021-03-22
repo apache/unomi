@@ -41,15 +41,7 @@
 
 
     <bean id="contextServlet" class="org.apache.unomi.web.ContextServlet">
-        <property name="profileService" ref="profileService"/>
-        <property name="eventService" ref="eventService"/>
-        <property name="rulesService" ref="rulesService"/>
-        <property name="privacyService" ref="privacyService" />
-        <property name="personalizationService" ref="personalizationService"/>
-        <property name="configSharingService" ref="configSharingService"/>
-        <property name="profileIdCookieDomain" value="${web.contextserver.domain}" />
-        <property name="profileIdCookieName" value="${web.contextserver.profileIdCookieName}"/>
-        <property name="profileIdCookieMaxAgeInSeconds" value="${web.contextserver.profileIdCookieMaxAgeInSeconds}"/>
+
     </bean>
 
     <service id="contextServletService" ref="contextServlet">
