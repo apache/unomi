@@ -52,7 +52,10 @@ public class ModifyConsentAction implements ActionExecutor {
                     consent = new Consent(consentMap, dateFormat);
                     isProfileUpdated = profile.setConsent(consent);
                 } catch (ParseException e) {
-                    logger.error("Error parsing date format", e);
+                    logger.error("Error parsing consent dates (statusDate or revokeDate). See debug log level to have more information");
+                    if (logger.isDebugEnabled()) {
+                        logger.debug("Error parsing consent dates (statusDate or revokeDate).", e);
+                    }
                 }
             } else {
                 logger.warn("Event properties for modifyConsent is missing typeIdentifier and grant properties. We will ignore this event.");
