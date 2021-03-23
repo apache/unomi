@@ -96,7 +96,13 @@ public class EventsCollectorServlet extends HttpServlet {
     private void doEvent(HttpServletRequest request, HttpServletResponse response) throws IOException {
         Date timestamp = new Date();
         if (request.getParameter("timestamp") != null) {
-            timestamp.setTime(Long.parseLong(request.getParameter("timestamp")));
+            try {
+                timestamp.setTime(Long.parseLong(request.getParameter("timestamp")));
+            } catch (NumberFormatException e) {
+                // catch to avoid logging the error with the timestamp value to avoid potential log injection
+                logger.error("Invalid timestamp parameter");
+                return;
+            }
         }
 
         HttpUtils.setupCORSHeaders(request, response);
@@ -115,7 +121,10 @@ public class EventsCollectorServlet extends HttpServlet {
             eventsCollectorRequest = mapper.readValue(factory.createParser(payload), EventsCollectorRequest.class);
         } catch (Exception e) {
             response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Check logs for more details");
-            logger.error("Cannot read payload " + payload, e);
+            logger.error("Cannot read payload. See debug level for more information");
+            if (logger.isDebugEnabled()) {
+                logger.debug("Cannot read payload: {}", payload, e);
+            }
             return;
         }
         if (eventsCollectorRequest == null || eventsCollectorRequest.getEvents() == null) {

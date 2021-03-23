@@ -86,7 +86,11 @@ public class ConditionESQueryBuilderDispatcher {
         }
 
         // if no matching
-        logger.warn("No matching query builder for condition {} and context {}", condition, context);
+        logger.warn("No matching query builder. See debug log level for more information");
+        if (logger.isDebugEnabled()) {
+            logger.debug("No matching query builder for condition {} and context {}", condition, context);
+        }
+
         return QueryBuilders.matchAllQuery();
     }
 
@@ -118,7 +122,10 @@ public class ConditionESQueryBuilderDispatcher {
         }
 
         // if no matching
-        logger.warn("No matching query builder for condition {} and context {}", condition, context);
+        logger.warn("No matching query builder. See debug log level for more information");
+        if (logger.isDebugEnabled()) {
+            logger.debug("No matching query builder for condition {} and context {}", condition, context);
+        }
         throw new UnsupportedOperationException();
     }
 }

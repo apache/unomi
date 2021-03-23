@@ -77,8 +77,8 @@ public class SetPropertyAction implements ActionExecutor {
             Date date = new Date();
             Date firstVisit = new Date();
 
+            Object propertyFirstVisit = event.getProfile().getProperties().get("firstVisit");
             try {
-                Object propertyFirstVisit = event.getProfile().getProperties().get("firstVisit");
                 if (propertyFirstVisit != null) {
                     if (propertyFirstVisit instanceof String) {
                         firstVisit = format.parse((String) propertyFirstVisit);
@@ -93,7 +93,10 @@ public class SetPropertyAction implements ActionExecutor {
                     date = event.getTimeStamp();
                 }
             } catch (ParseException e) {
-                logger.error("Error to parse date", e);
+                logger.error("Error parsing firstVisit date property. See debug log level for more information");
+                if (logger.isDebugEnabled()) {
+                    logger.debug("Error parsing date: {}", propertyFirstVisit, e);
+                }
             }
 
             propertyValue = format.format(date);
