@@ -74,7 +74,13 @@ public class ContextServlet extends HttpServlet {
     public void service(ServletRequest request, ServletResponse response) throws IOException {
         final Date timestamp = new Date();
         if (request.getParameter("timestamp") != null) {
-            timestamp.setTime(Long.parseLong(request.getParameter("timestamp")));
+            try {
+                timestamp.setTime(Long.parseLong(request.getParameter("timestamp")));
+            } catch (NumberFormatException e) {
+                // catch to avoid logging the error with the timestamp value to avoid potential log injection
+                logger.error("Invalid timestamp parameter");
+                return;
+            }
         }
 
         HttpServletRequest httpServletRequest = (HttpServletRequest) request;
@@ -99,7 +105,7 @@ public class ContextServlet extends HttpServlet {
         if (personaId != null) {
             PersonaWithSessions personaWithSessions = profileService.loadPersonaWithSessions(personaId);
             if (personaWithSessions == null) {
-                logger.error("Couldn't find persona with id=" + personaId);
+                logger.error("Couldn't find persona, please check your personaId parameter");
                 profile = null;
             } else {
                 profile = personaWithSessions.getPersona();
@@ -119,7 +125,10 @@ public class ContextServlet extends HttpServlet {
                 contextRequest = mapper.readValue(factory.createParser(stringPayload), ContextRequest.class);
             } catch (Exception e) {
                 ((HttpServletResponse)response).sendError(HttpServletResponse.SC_BAD_REQUEST, "Check logs for more details");
-                logger.error("Cannot read payload " + stringPayload, e);
+                logger.error("Cannot deserialize the context request payload. See debug level for more information");
+                if (logger.isDebugEnabled()) {
+                    logger.debug("Cannot deserialize the context request payload: {}", stringPayload, e);
+                }
                 return;
             }
             if (contextRequest.getSource() != null) {
@@ -512,7 +521,10 @@ public class ContextServlet extends HttpServlet {
         if (value instanceof String) {
             String stringValue = (String) value;
             if (stringValue.startsWith("script::") || stringValue.startsWith("parameter::")) {
-                logger.warn("Scripting detected in context request with value {}, filtering out...", value);
+                logger.warn("Scripting detected in context request, filtering out. See debug level for more information");
+                if (logger.isDebugEnabled()) {
+                    logger.debug("Scripting detected in context request with value {}, filtering out...", value);
+                }
                 return null;
             } else {
                 return stringValue;
