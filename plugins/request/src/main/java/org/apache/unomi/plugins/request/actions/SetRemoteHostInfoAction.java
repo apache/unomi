@@ -232,9 +232,9 @@ public class SetRemoteHostInfoAction implements ActionExecutor {
             }
             return true;
         } catch (IOException | GeoIp2Exception e) {
-            logger.warn("Cannot resolve IP {}, enable debug log level for complete stacktrace", remoteAddr);
+            logger.warn("Cannot resolve IP, enable debug log level for complete stacktrace");
             if (logger.isDebugEnabled()) {
-                logger.debug("Cannot resolve IP", e);
+                logger.debug("Cannot resolve IP: {}", remoteAddr, e);
             }
         }
         return false;
@@ -246,9 +246,9 @@ public class SetRemoteHostInfoAction implements ActionExecutor {
             try {
                 addr = InetAddress.getByName(remoteAddr);
             } catch (UnknownHostException e) {
-                logger.warn("Cannot resolve IP {}, enable debug log level for complete stacktrace", remoteAddr);
+                logger.warn("Cannot resolve IP, enable debug log level for complete stacktrace");
                 if (logger.isDebugEnabled()) {
-                    logger.debug("Cannot resolve IP", e);
+                    logger.debug("Cannot resolve IP: {}", remoteAddr, e);
                 }
                 return false;
             }

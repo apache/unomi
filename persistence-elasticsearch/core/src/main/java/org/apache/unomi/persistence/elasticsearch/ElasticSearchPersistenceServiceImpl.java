@@ -1463,7 +1463,11 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     .must(QueryBuilders.idsQuery().addIds(item.getItemId()))
                     .must(conditionESQueryBuilderDispatcher.buildFilter(condition));
         } catch (Exception e) {
-            logger.error("Failed to validate condition, condition={}", condition, e);
+            logger.error("Failed to validate condition. See debug log level for more information");
+            if (logger.isDebugEnabled()) {
+                logger.debug("Failed to validate condition, condition={}", condition, e);
+            }
+
             return false;
         }
         return true;
