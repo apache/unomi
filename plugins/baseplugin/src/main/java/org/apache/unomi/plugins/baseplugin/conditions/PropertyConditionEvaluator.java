@@ -185,9 +185,9 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
                 if (!(e instanceof OgnlException)
                         || (!StringUtils.startsWith(e.getMessage(),
                         "source is null for getProperty(null"))) {
-                    logger.warn("Error evaluating value for " + item.getClass().getName() + " " + name + ". See debug level for more information");
+                    logger.warn("Error evaluating value for {} {}. See debug level for more information", item.getClass().getName(), name);
                     if (logger.isDebugEnabled()) {
-                        logger.debug("Error evaluating value for " + item.getClass().getName() + " " + name, e);
+                        logger.debug("Error evaluating value for {} {}", item.getClass().getName(), name, e);
                     }
                 }
                 actualValue = null;
@@ -440,7 +440,7 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
             } catch (ElasticsearchParseException e) {
                 logger.warn("unable to parse date. See debug log level for full stacktrace");
                 if (logger.isDebugEnabled()) {
-                    logger.debug("unable to parse date " + value.toString(), e);
+                    logger.debug("unable to parse date {}", value.toString(), e);
                 }
             }
         }

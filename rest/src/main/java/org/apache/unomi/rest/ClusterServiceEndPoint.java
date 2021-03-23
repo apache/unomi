@@ -93,7 +93,7 @@ public class ClusterServiceEndPoint {
         } catch (ParseException e) {
             logger.error("Cannot parse date, expected format is: yyyy-MM-dd. See debug log level for more information");
             if (logger.isDebugEnabled()) {
-                logger.debug("Cannot parse date " + date, e);
+                logger.debug("Cannot parse date: {}", date, e);
             }
         }
     }

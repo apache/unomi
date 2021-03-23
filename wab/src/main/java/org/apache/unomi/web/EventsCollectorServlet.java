@@ -123,7 +123,7 @@ public class EventsCollectorServlet extends HttpServlet {
             response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Check logs for more details");
             logger.error("Cannot read payload. See debug level for more information");
             if (logger.isDebugEnabled()) {
-                logger.debug("Cannot read payload: " + payload, e);
+                logger.debug("Cannot read payload: {}", payload, e);
             }
             return;
         }

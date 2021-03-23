@@ -95,7 +95,7 @@ public class SetPropertyAction implements ActionExecutor {
             } catch (ParseException e) {
                 logger.error("Error parsing firstVisit date property. See debug log level for more information");
                 if (logger.isDebugEnabled()) {
-                    logger.debug("Error parsing date: " + propertyFirstVisit, e);
+                    logger.debug("Error parsing date: {}", propertyFirstVisit, e);
                 }
             }
 

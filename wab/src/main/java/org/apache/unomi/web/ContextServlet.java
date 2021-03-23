@@ -127,7 +127,7 @@ public class ContextServlet extends HttpServlet {
                     ((HttpServletResponse)response).sendError(HttpServletResponse.SC_BAD_REQUEST, "Check logs for more details");
                     logger.error("Cannot deserialize the context request payload. See debug level for more information");
                     if (logger.isDebugEnabled()) {
-                        logger.debug("Cannot deserialize the context request payload: " + stringPayload, e);
+                        logger.debug("Cannot deserialize the context request payload: {}", stringPayload, e);
                     }
                     return;
                 }
