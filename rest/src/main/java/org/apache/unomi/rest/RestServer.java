@@ -21,10 +21,13 @@ import org.apache.cxf.Bus;
 import org.apache.cxf.BusFactory;
 import org.apache.cxf.endpoint.Server;
 import org.apache.cxf.feature.LoggingFeature;
+import org.apache.cxf.interceptor.security.SecureAnnotationsInterceptor;
+import org.apache.cxf.interceptor.security.SimpleAuthorizingInterceptor;
 import org.apache.cxf.jaxrs.JAXRSServerFactoryBean;
 import org.apache.cxf.jaxrs.openapi.OpenApiCustomizer;
 import org.apache.cxf.jaxrs.openapi.OpenApiFeature;
 import org.apache.cxf.jaxrs.security.JAASAuthenticationFilter;
+import org.apache.cxf.jaxrs.security.SimpleAuthorizingFilter;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.Filter;
 import org.osgi.framework.ServiceReference;
@@ -161,16 +164,27 @@ public class RestServer {
                         new org.apache.unomi.persistence.spi.CustomObjectMapper(),
                         JacksonJaxbJsonProvider.DEFAULT_ANNOTATIONS));
         jaxrsServerFactoryBean.setProvider(new org.apache.cxf.rs.security.cors.CrossOriginResourceSharingFilter());
-        JAASAuthenticationFilter jaasFilter = new org.apache.cxf.jaxrs.security.JAASAuthenticationFilter();
-        jaasFilter.setContextName("karaf");
-        jaasFilter.setRoleClassifier("ROLE_");
-        jaasFilter.setRealmName("cxs");
-        jaxrsServerFactoryBean.setProvider(jaasFilter);
+        AuthenticationFilter authenticationFilter = new AuthenticationFilter();
+        authenticationFilter.setContextName("karaf");
+        authenticationFilter.setRoleClassifier("ROLE_UNOMI_");
+        authenticationFilter.setRealmName("cxs");
+        Set<String> publicPaths = new HashSet<>();
+        publicPaths.add("GET context.json");
+        authenticationFilter.setPublicPaths(publicPaths);
+        jaxrsServerFactoryBean.setProvider(authenticationFilter);
         for (ExceptionMapper exceptionMapper : exceptionMappers) {
             jaxrsServerFactoryBean.setProvider(exceptionMapper);
         }
         jaxrsServerFactoryBean.setServiceBeans(serviceBeans);
         jaxrsServerFactoryBean.getFeatures().add(openApiFeature);
+        SimpleAuthorizingInterceptor simpleAuthorizingInterceptor = new SimpleAuthorizingInterceptor();
+        Map<String,String> rolesMap = new HashMap<>();
+        rolesMap.put("getContextJSON", "ROLE_UNOMI_PUBLIC");
+        simpleAuthorizingInterceptor.setMethodRolesMap(rolesMap);
+        simpleAuthorizingInterceptor.setGlobalRoles("ROLE_UNOMI_ADMIN");
+        SimpleAuthorizingFilter simpleAuthorizingFilter = new SimpleAuthorizingFilter();
+        simpleAuthorizingFilter.setInterceptor(simpleAuthorizingInterceptor);
+        jaxrsServerFactoryBean.setProvider(simpleAuthorizingFilter);
         if (serviceBeans.size() > 0) {
             logger.info("Starting JAX RS Endpoint...");
             server = jaxrsServerFactoryBean.create();

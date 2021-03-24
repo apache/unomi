@@ -70,7 +70,7 @@ public class ContextJsonEndpoint {
 
     @POST
     @Path("/context.json")
-    public ContextResponse getContext(String contextRequestAsString, @CookieParam("context-profile-id") String cookieProfileId) {
+    public ContextResponse getContextJSON(String contextRequestAsString, @CookieParam("context-profile-id") String cookieProfileId) {
         try {
             ObjectMapper mapper = CustomObjectMapper.getObjectMapper();
             JsonFactory factory = mapper.getFactory();
