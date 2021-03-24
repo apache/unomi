@@ -1,0 +1,23 @@
+{
+  "metadata" : {
+    "id": "copyProperties",
+    "name": "Copy properties to profile",
+    "description" : "Copy properties to profile",
+    "readOnly":true
+  },
+  "condition": {
+    "type": "eventTypeCondition",
+    "parameterValues": {
+      "eventTypeId" : "copyProperties"
+    }
+  },
+  "actions" : [
+    {
+      "type": "copyPropertiesAction",
+      "parameterValues": {
+        "rootProperty": "properties.urlParameters"
+      }
+    }
+  ]
+
+}

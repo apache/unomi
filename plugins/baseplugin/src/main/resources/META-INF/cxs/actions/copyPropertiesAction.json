@@ -1,0 +1,30 @@
+{
+  "metadata": {
+    "id": "copyPropertiesAction",
+    "name": "copyPropertiesAction",
+    "description": "",
+    "systemTags": [
+      "profileTags",
+      "event"
+    ],
+    "readOnly": true
+  },
+  "actionExecutor": "copyProperties",
+  "parameters": [
+    {
+      "id": "setPropertyStrategy",
+      "type": "string",
+      "multivalued": false
+    },
+    {
+      "id": "rootProperty",
+      "type": "string",
+      "multivalued": false
+    },
+    {
+      "id": "mandatoryPropTypeSystemTag",
+      "type": "string",
+      "multivalued": true
+    }
+  ]
+}

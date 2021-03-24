@@ -180,6 +180,7 @@
         </bean>
     </service>
 
+
     <!-- Action executors -->
 
     <service interface="org.apache.unomi.api.actions.ActionExecutor">
@@ -187,6 +188,15 @@
             <entry key="actionExecutorId" value="allEventToProfileProperties"/>
         </service-properties>
         <bean class="org.apache.unomi.plugins.baseplugin.actions.AllEventToProfilePropertiesAction">
+            <property name="profileService" ref="profileService"/>
+        </bean>
+    </service>
+
+    <service interface="org.apache.unomi.api.actions.ActionExecutor">
+        <service-properties>
+            <entry key="actionExecutorId" value="copyProperties"/>
+        </service-properties>
+        <bean class="org.apache.unomi.plugins.baseplugin.actions.CopyPropertiesAction">
             <property name="profileService" ref="profileService"/>
         </bean>
     </service>
