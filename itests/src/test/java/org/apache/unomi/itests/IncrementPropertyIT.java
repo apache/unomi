@@ -45,6 +45,7 @@ import static org.apache.unomi.itests.BasicIT.ITEM_TYPE_PAGE;
 public class IncrementPropertyIT extends BaseIT {
     private Profile profile;
     private Rule rule;
+    private Event event;
 
     @Inject
     @Filter(timeout = 600000)
@@ -75,20 +76,8 @@ public class IncrementPropertyIT extends BaseIT {
     }
 
     @Test
-    public void testIncrementNotExistingPropertyByAction() throws InterruptedException {
-        Action incrementPropertyAction = new Action(definitionsService.getActionType("incrementPropertyAction"));
-        incrementPropertyAction.setParameter("propertyName", "pageView.acme");
-
-        createRule(incrementPropertyAction);
-
-        CustomItem target = new CustomItem("ITEM_ID_PAGE", ITEM_TYPE_PAGE);
-        target.setScope("acme-space");
-
-        Event event = new Event("view", null, profile, null, null, target, new Date());
-        event.setPersistent(false);
-
-        int eventCode = eventService.send(event);
-        refreshPersistence();
+    public void testIncrementNotExistingProperty() throws InterruptedException {
+        int eventCode = buildAction("pageView.acme", null, null, null);
 
         if (eventCode == EventService.PROFILE_UPDATED) {
             Profile updatedProfile = profileService.save(event.getProfile());
@@ -102,26 +91,13 @@ public class IncrementPropertyIT extends BaseIT {
     }
 
     @Test
-    public void testIncrementExistingPropertyByAction() throws InterruptedException {
-        Action incrementPropertyAction = new Action(definitionsService.getActionType("incrementPropertyAction"));
-        incrementPropertyAction.setParameter("propertyName", "pageView.acme");
-
-        createRule(incrementPropertyAction);
-
+    public void testIncrementExistingProperty() throws InterruptedException {
         Map<String, Object> properties = new HashMap<>();
         Map<String, Integer> propertyValue = new HashMap<>();
         propertyValue.put("acme", 49);
         properties.put("pageView", propertyValue);
-        profile.setProperties(properties);
 
-        CustomItem target = new CustomItem("ITEM_ID_PAGE", ITEM_TYPE_PAGE);
-        target.setScope("acme-space");
-
-        Event event = new Event("view", null, profile, null, null, target, new Date());
-        event.setPersistent(false);
-
-        int eventCode = eventService.send(event);
-        refreshPersistence();
+        int eventCode = buildAction("pageView.acme", null, properties, null);
 
         if (eventCode == EventService.PROFILE_UPDATED) {
             Profile updatedProfile = profileService.save(event.getProfile());
@@ -136,32 +112,18 @@ public class IncrementPropertyIT extends BaseIT {
     }
 
     @Test
-    public void testIncrementExistingPropertyWithExistingEventPropertyByAction() throws InterruptedException {
-        Action incrementPropertyAction = new Action(definitionsService.getActionType("incrementPropertyAction"));
-        incrementPropertyAction.setParameter("propertyName", "pageView.acme");
-        incrementPropertyAction.setParameter("propertyTarget", "project.nasa");
-
-        createRule(incrementPropertyAction);
-
+    public void testIncrementExistingPropertyWithExistingEventProperty() throws InterruptedException {
         Map<String, Object> properties = new HashMap<>();
         Map<String, Integer> propertyValue = new HashMap<>();
         propertyValue.put("acme", 49);
         properties.put("pageView", propertyValue);
-        profile.setProperties(properties);
 
-        CustomItem target = new CustomItem("ITEM_ID_PAGE", ITEM_TYPE_PAGE);
-        target.setScope("acme-space");
-        properties = new HashMap<>();
+        Map<String, Object> targetProperties = new HashMap<>();
         propertyValue = new HashMap<>();
         propertyValue.put("nasa", 19);
-        properties.put("project", propertyValue);
-        target.setProperties(properties);
+        targetProperties.put("project", propertyValue);
 
-        Event event = new Event("view", null, profile, null, null, target, new Date());
-        event.setPersistent(false);
-
-        int eventCode = eventService.send(event);
-        refreshPersistence();
+        int eventCode = buildAction("pageView.acme", "project.nasa", properties, targetProperties);
 
         if (eventCode == EventService.PROFILE_UPDATED) {
             Profile updatedProfile = profileService.save(event.getProfile());
@@ -176,28 +138,15 @@ public class IncrementPropertyIT extends BaseIT {
     }
 
     @Test
-    public void testIncrementNotExistingObjectPropertyWithExistingEventObjectPropertyByAction() throws InterruptedException {
-        Action incrementPropertyAction = new Action(definitionsService.getActionType("incrementPropertyAction"));
-        incrementPropertyAction.setParameter("propertyName", "pageView");
-        incrementPropertyAction.setParameter("propertyTarget", "pageView");
-
-        createRule(incrementPropertyAction);
-
-        CustomItem target = new CustomItem("ITEM_ID_PAGE", ITEM_TYPE_PAGE);
-        target.setScope("acme-space");
-        Map<String, Object> properties = new HashMap<>();
+    public void testIncrementNotExistingObjectPropertyWithExistingEventObjectProperty() throws InterruptedException {
+        Map<String, Object> targetProperties = new HashMap<>();
         Map<String, Integer> propertyValue = new HashMap<>();
         propertyValue.put("acme", 49);
         propertyValue.put("health", 18);
         propertyValue.put("sport", 99);
-        properties.put("pageView", propertyValue);
-        target.setProperties(properties);
+        targetProperties.put("pageView", propertyValue);
 
-        Event event = new Event("view", null, profile, null, null, target, new Date());
-        event.setPersistent(false);
-
-        int eventCode = eventService.send(event);
-        refreshPersistence();
+        int eventCode = buildAction("pageView", "pageView", null, targetProperties);
 
         if (eventCode == EventService.PROFILE_UPDATED) {
             Profile updatedProfile = profileService.save(event.getProfile());
@@ -214,27 +163,14 @@ public class IncrementPropertyIT extends BaseIT {
     }
 
     @Test
-    public void testIncrementExistingObjectPropertyByAction() throws InterruptedException {
-        Action incrementPropertyAction = new Action(definitionsService.getActionType("incrementPropertyAction"));
-        incrementPropertyAction.setParameter("propertyName", "pageView");
-
-        createRule(incrementPropertyAction);
-
+    public void testIncrementExistingObjectProperty() throws InterruptedException {
         Map<String, Object> properties = new HashMap<>();
         Map<String, Integer> propertyValue = new HashMap<>();
         propertyValue.put("acme", 49);
         propertyValue.put("nasa", 5);
         properties.put("pageView", propertyValue);
-        profile.setProperties(properties);
 
-        CustomItem target = new CustomItem("ITEM_ID_PAGE", ITEM_TYPE_PAGE);
-        target.setScope("acme-space");
-
-        Event event = new Event("view", null, profile, null, null, target, new Date());
-        event.setPersistent(false);
-
-        int eventCode = eventService.send(event);
-        refreshPersistence();
+        int eventCode = buildAction("pageView", null, properties, null);
 
         if (eventCode == EventService.PROFILE_UPDATED) {
             Profile updatedProfile = profileService.save(event.getProfile());
@@ -250,34 +186,20 @@ public class IncrementPropertyIT extends BaseIT {
     }
 
     @Test
-    public void testIncrementExistingObjectPropertyWithExistingEventObjectPropertyByAction() throws InterruptedException {
-        Action incrementPropertyAction = new Action(definitionsService.getActionType("incrementPropertyAction"));
-        incrementPropertyAction.setParameter("propertyName", "pageView");
-        incrementPropertyAction.setParameter("propertyTarget", "pageView");
-
-        createRule(incrementPropertyAction);
-
+    public void testIncrementExistingObjectPropertyWithExistingEventObjectProperty() throws InterruptedException {
         Map<String, Object> properties = new HashMap<>();
         Map<String, Integer> propertyValue = new HashMap<>();
         propertyValue.put("acme", 49);
         properties.put("pageView", propertyValue);
-        profile.setProperties(properties);
 
-        CustomItem target = new CustomItem("ITEM_ID_PAGE", ITEM_TYPE_PAGE);
-        target.setScope("acme-space");
-        properties = new HashMap<>();
-        propertyValue = new HashMap<>();
-        propertyValue.put("acme", 49);
-        propertyValue.put("health", 88);
-        propertyValue.put("sport", 9);
-        properties.put("pageView", propertyValue);
-        target.setProperties(properties);
+        Map<String, Object> targetProperties = new HashMap<>();
+        Map<String, Integer> propertyValue1 = new HashMap<>();
+        propertyValue1.put("acme", 31);
+        propertyValue1.put("health", 88);
+        propertyValue1.put("sport", 9);
+        targetProperties.put("pageView", propertyValue1);
 
-        Event event = new Event("view", null, profile, null, null, target, new Date());
-        event.setPersistent(false);
-
-        int eventCode = eventService.send(event);
-        refreshPersistence();
+        int eventCode = buildAction("pageView", "pageView", properties, targetProperties);
 
         if (eventCode == EventService.PROFILE_UPDATED) {
             Profile updatedProfile = profileService.save(event.getProfile());
@@ -285,9 +207,141 @@ public class IncrementPropertyIT extends BaseIT {
             refreshPersistence();
 
             Map<String, Integer> property = ((Map<String, Integer>) updatedProfile.getProperty("pageView"));
-            Assert.assertEquals(98, property.get("acme"), 0.0);
+            Assert.assertEquals(80, property.get("acme"), 0.0);
             Assert.assertEquals(88, property.get("health"), 0.0);
             Assert.assertEquals(9, property.get("sport"), 0.0);
+        } else {
+            throw new IllegalStateException("Profile was not updated");
+        }
+    }
+
+    @Test
+    public void testIncrementExistingPropertyNested() throws InterruptedException {
+        Map<String, Object> properties = new HashMap<>();
+        Map<String, Object> properties1 = new HashMap<>();
+        Map<String, Object> properties2 = new HashMap<>();
+        Map<String, Integer> propertyValue = new HashMap<>();
+        propertyValue.put("city", 13);
+        properties2.put("state", propertyValue);
+        properties1.put("country", properties2);
+        properties.put("continent", properties1);
+
+        int eventCode = buildAction("continent.country.state.city", null, properties, null);
+
+        if (eventCode == EventService.PROFILE_UPDATED) {
+            Profile updatedProfile = profileService.save(event.getProfile());
+
+            refreshPersistence();
+
+            Map<String, Integer> property = (Map<String, Integer>) ((Map<String, Object>) ((Map<String, Object>) updatedProfile.getProperty("continent")).get("country")).get("state");
+            Assert.assertEquals(14, property.get("city"), 0.0);
+        } else {
+            throw new IllegalStateException("Profile was not updated");
+        }
+    }
+
+    @Test
+    public void testIncrementNotExistingPropertyNested() throws InterruptedException {
+        int eventCode = buildAction("continent.country.state.city", null, null, null);
+
+        if (eventCode == EventService.PROFILE_UPDATED) {
+            Profile updatedProfile = profileService.save(event.getProfile());
+
+            refreshPersistence();
+
+            Map<String, Integer> property = (Map<String, Integer>) ((Map<String, Object>) ((Map<String, Object>) updatedProfile.getProperty("continent")).get("country")).get("state");
+            Assert.assertEquals(1, property.get("city"), 0.0);
+        } else {
+            throw new IllegalStateException("Profile was not updated");
+        }
+    }
+
+    @Test
+    public void testIncrementExistingPropertyNestedWithExistingEventProperty() throws InterruptedException {
+        Map<String, Object> properties = new HashMap<>();
+        Map<String, Object> properties1 = new HashMap<>();
+        Map<String, Object> properties2 = new HashMap<>();
+        Map<String, Integer> propertyValue = new HashMap<>();
+        propertyValue.put("city", 13);
+        properties2.put("state", propertyValue);
+        properties1.put("country", properties2);
+        properties.put("continent", properties1);
+
+        Map<String, Object> targetProperties = new HashMap<>();
+        Map<String, Object> properties3 = new HashMap<>();
+        Map<String, Object> propertyValue1 = new HashMap<>();
+        propertyValue1.put("zone", 107);
+        properties3.put("mars", propertyValue1);
+        targetProperties.put("planet", properties3);
+
+        int eventCode = buildAction("continent.country.state.city", "planet.mars.zone", properties, targetProperties);
+
+        if (eventCode == EventService.PROFILE_UPDATED) {
+            Profile updatedProfile = profileService.save(event.getProfile());
+
+            refreshPersistence();
+
+            Map<String, Integer> property = (Map<String, Integer>) ((Map<String, Object>) ((Map<String, Object>) updatedProfile.getProperty("continent")).get("country")).get("state");
+            Assert.assertEquals(120, property.get("city"), 0.0);
+        } else {
+            throw new IllegalStateException("Profile was not updated");
+        }
+    }
+
+    @Test
+    public void testIncrementObjectPropertyContainsStringValue() throws InterruptedException {
+        Map<String, Object> properties = new HashMap<>();
+        Map<String, Object> propertyValue = new HashMap<>();
+        propertyValue.put("books", 59);
+        propertyValue.put("chapters", 1001);
+        propertyValue.put("featured", "The forty rules");
+        properties.put("library", propertyValue);
+
+        int eventCode = buildAction("library", null, properties, null);
+
+        if (eventCode == EventService.PROFILE_UPDATED) {
+            Profile updatedProfile = profileService.save(event.getProfile());
+
+            refreshPersistence();
+
+            Map<String, Object> property = ((Map<String, Object>) updatedProfile.getProperty("library"));
+            Assert.assertEquals(60, (int) property.get("books"), 0.0);
+            Assert.assertEquals(1002, (int) property.get("chapters"), 0.0);
+            Assert.assertEquals("The forty rules", property.get("featured"));
+        } else {
+            throw new IllegalStateException("Profile was not updated");
+        }
+    }
+
+    @Test
+    public void testIncrementObjectPropertyContainsStringValueWithExistingEventProperty() throws InterruptedException {
+        Map<String, Object> properties = new HashMap<>();
+        Map<String, Object> propertyValue = new HashMap<>();
+        propertyValue.put("books", 59);
+        propertyValue.put("chapters", 1001);
+        propertyValue.put("featured", "The forty rules");
+        properties.put("library", propertyValue);
+
+        Map<String, Object> targetProperties = new HashMap<>();
+        Map<String, Object> properties1 = new HashMap<>();
+        Map<String, Object> propertyValue1 = new HashMap<>();
+        propertyValue1.put("books", 222);
+        propertyValue1.put("chapters", 2048);
+        propertyValue1.put("featured", "Bible");
+        properties1.put("library", propertyValue1);
+        targetProperties.put("main", properties1);
+
+        int eventCode = buildAction("library", "main.library", properties, targetProperties);
+
+        if (eventCode == EventService.PROFILE_UPDATED) {
+            Profile updatedProfile = profileService.save(event.getProfile());
+
+            refreshPersistence();
+
+            Map<String, Object> property = ((Map<String, Object>) updatedProfile.getProperty("library"));
+            Assert.assertEquals(281, (int) property.get("books"), 0.0);
+            Assert.assertEquals(3049, (int) property.get("chapters"), 0.0);
+            Assert.assertEquals("The forty rules", property.get("featured"));
         } else {
             throw new IllegalStateException("Profile was not updated");
         }
@@ -305,6 +359,28 @@ public class IncrementPropertyIT extends BaseIT {
         rule.setMetadata(metadata);
         rulesService.setRule(rule);
         refreshPersistence();
+    }
+
+    private int buildAction(String propertyName, String propertyTargetName, Map<String, Object> properties, Map<String, Object> targetProperties) throws InterruptedException {
+        Action incrementPropertyAction = new Action(definitionsService.getActionType("incrementPropertyAction"));
+        incrementPropertyAction.setParameter("propertyName", propertyName);
+        if (propertyTargetName != null) incrementPropertyAction.setParameter("propertyTarget", propertyTargetName);
+
+        createRule(incrementPropertyAction);
+
+        if (properties != null) profile.setProperties(properties);
+
+        CustomItem target = new CustomItem("ITEM_ID_PAGE", ITEM_TYPE_PAGE);
+        target.setScope("acme-space");
+        if (targetProperties != null) target.setProperties(targetProperties);
+
+        event = new Event("view", null, profile, null, null, target, new Date());
+        event.setPersistent(false);
+
+        int eventCode = eventService.send(event);
+        refreshPersistence();
+
+        return eventCode;
     }
 
     private Metadata createMetadata() {

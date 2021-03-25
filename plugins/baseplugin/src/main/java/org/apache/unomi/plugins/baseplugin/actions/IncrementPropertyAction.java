@@ -18,9 +18,7 @@ package org.apache.unomi.plugins.baseplugin.actions;
 
 import org.apache.commons.beanutils.PropertyUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.unomi.api.CustomItem;
-import org.apache.unomi.api.Event;
-import org.apache.unomi.api.Profile;
+import org.apache.unomi.api.*;
 import org.apache.unomi.api.actions.Action;
 import org.apache.unomi.api.actions.ActionExecutor;
 import org.apache.unomi.api.services.EventService;
@@ -29,13 +27,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.InvocationTargetException;
-import java.util.Date;
-import java.util.HashMap;
 import java.util.Map;
 
 public class IncrementPropertyAction implements ActionExecutor {
     private static final Logger logger = LoggerFactory.getLogger(IncrementPropertyAction.class.getName());
-    private EventService eventService;
 
     @Override
     public int execute(final Action action, final Event event) {
@@ -44,70 +39,76 @@ public class IncrementPropertyAction implements ActionExecutor {
             return EventService.NO_CHANGE;
         }
 
-        Profile profile = event.getProfile();
         String propertyName = (String) action.getParameterValues().get("propertyName");
-        String propertyTarget = (String) action.getParameterValues().get("propertyTarget");
-        String rootPropertyName = propertyName.split("\\.")[0];
-        Object value = null;
-        Object propertyValue = 1;
+        Profile profile = event.getProfile();
+        Session session = event.getSession();
 
         try {
-            if (StringUtils.isNotEmpty(propertyTarget)) {
-                value = PropertyUtils.getNestedProperty(((CustomItem) event.getTarget()).getProperties(), propertyTarget);
-            }
+            Map<String, Object> properties = storeInSession ? session.getProperties() : profile.getProperties();
+            Object propertyValue = getPropertyValue(action, event, propertyName, properties);
 
-            if (value != null) {
-                if (value instanceof Integer) {
-                    if (profile.getProperty(rootPropertyName) != null) {
-                        propertyValue = (int) value + (int) PropertyUtils.getNestedProperty(profile.getProperties(), propertyName);
-                    } else {
-                        propertyValue = value;
-                    }
-                } else if (value instanceof Map) {
-                    if (profile.getProperty(rootPropertyName) != null) {
-                        Map<String, Integer> p = (Map<String, Integer>) PropertyUtils.getNestedProperty(profile.getProperties(), propertyName);
-                        ((Map<String, Integer>) value).forEach((k, v) -> p.put(k, p.containsKey(k) ? p.get(k) + v : v));
-
-                        propertyValue = p;
-                    } else {
-                        propertyValue = value;
-                    }
-                }
-            } else {
-                if (profile.getProperty(rootPropertyName) != null) {
-                    Object p = PropertyUtils.getNestedProperty(profile.getProperties(), propertyName);
-                    if (p instanceof Integer) {
-                        propertyValue = (int) p + 1;
-                    } else if (p instanceof Map) {
-                        ((Map<String, Integer>) p).forEach((k, v) -> ((Map<String, Integer>) p).merge(k, 1, Integer::sum));
-                        propertyValue = p;
-                    }
-                }
-            }
-
-            PropertyHelper.setProperty(profile.getProperties(), propertyName, propertyValue, "alwaysSet");
-
-            Object rootPropertyValue = PropertyUtils.getNestedProperty(profile.getProperties(), rootPropertyName);
-            if (storeInSession) {
-                if (PropertyHelper.setProperty(event.getSession(), rootPropertyName, rootPropertyValue, "alwaysSet")) {
-                    return EventService.SESSION_UPDATED;
-                }
-            } else {
-                Event updatePropertiesEvent = new Event("updateProperties", event.getSession(), profile, event.getSourceId(), null, event.getTarget(), new Date());
-                Map<String, Object> propertyToUpdate = new HashMap<>();
-                propertyToUpdate.put("properties." + rootPropertyName, rootPropertyValue);
-                updatePropertiesEvent.setProperty(UpdatePropertiesAction.PROPS_TO_UPDATE, propertyToUpdate);
-
-                return eventService.send(updatePropertiesEvent);
+            if (PropertyHelper.setProperty(properties, propertyName, propertyValue, "alwaysSet")) {
+                return storeInSession ? EventService.SESSION_UPDATED : EventService.PROFILE_UPDATED;
             }
         } catch (IllegalAccessException | NoSuchMethodException | InvocationTargetException e) {
-            logger.error("Error resolving nested property of profile: {}", profile, e);
+            logger.warn("Error resolving nested property of object. See debug log level for more information");
+            if (logger.isDebugEnabled()) {
+                logger.error("Error resolving nested property of item: {}", storeInSession ? session : profile, e);
+            }
         }
 
         return EventService.NO_CHANGE;
     }
 
-    public void setEventService(EventService eventService) {
-        this.eventService = eventService;
+    private Object getPropertyValue(Action action, Event event, String propertyName, Map<String, Object> properties)
+            throws IllegalAccessException, InvocationTargetException, NoSuchMethodException {
+        String propertyTarget = (String) action.getParameterValues().get("propertyTarget");
+        String rootPropertyName = propertyName.split("\\.")[0];
+        Object propertyValue = 1;
+
+        Object propertyTargetValue = null;
+
+        if (StringUtils.isNotEmpty(propertyTarget)) {
+            propertyTargetValue = PropertyUtils.getNestedProperty(((CustomItem) event.getTarget()).getProperties(), propertyTarget);
+        }
+
+        if (propertyTargetValue != null) {
+            if (propertyTargetValue instanceof Integer) {
+                if (properties.containsKey(rootPropertyName)) {
+                    propertyValue = (int) propertyTargetValue + (int) PropertyUtils.getNestedProperty(properties, propertyName);
+                } else {
+                    propertyValue = propertyTargetValue;
+                }
+            } else if (propertyTargetValue instanceof Map) {
+                if (properties.containsKey(rootPropertyName)) {
+                    Map<String, Object> nestedProperty = (Map<String, Object>) PropertyUtils.getNestedProperty(properties, propertyName);
+                    ((Map<String, Object>) propertyTargetValue).forEach((k, v) -> {
+                        if ((v instanceof Integer && (nestedProperty.containsKey(k) && nestedProperty.get(k) instanceof Integer)) ||
+                                (v instanceof Integer && !nestedProperty.containsKey(k))) {
+                            nestedProperty.put(k, nestedProperty.containsKey(k) ? (int) nestedProperty.get(k) + (int) v : v);
+                        }
+                    });
+                    propertyValue = nestedProperty;
+                } else {
+                    propertyValue = propertyTargetValue;
+                }
+            }
+        } else {
+            if (properties.containsKey(rootPropertyName)) {
+                Object nestedProperty = PropertyUtils.getNestedProperty(properties, propertyName);
+                if (nestedProperty instanceof Integer) {
+                    propertyValue = (int) nestedProperty + 1;
+                } else if (nestedProperty instanceof Map) {
+                    ((Map<String, Object>) nestedProperty).forEach((k, v) -> {
+                        if (v instanceof Integer) {
+                            ((Map<String, Integer>) nestedProperty).merge(k, 1, Integer::sum);
+                        }
+                    });
+                    propertyValue = nestedProperty;
+                }
+            }
+        }
+
+        return propertyValue;
     }
 }
