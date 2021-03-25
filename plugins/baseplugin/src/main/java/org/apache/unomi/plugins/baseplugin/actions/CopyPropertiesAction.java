@@ -44,7 +44,7 @@ public class CopyPropertiesAction implements ActionExecutor {
 
     @SuppressWarnings({ "unchecked", "rawtypes" })
     public int execute(Action action, Event event) {
-        boolean changed = false;
+        boolean atLeastOnechanged = false;
         List<String> mandatoryPropTypeSystemTags = (List<String>) action.getParameterValues().get("mandatoryPropTypeSystemTag");
         String singleValueStrategy = (String) action.getParameterValues().get("singleValueStrategy");
         for (Map.Entry<String, Object> entry : getEventPropsToCopy(action, event).entrySet()) {
@@ -58,31 +58,29 @@ public class CopyPropertiesAction implements ActionExecutor {
                 }
             }
             String propertyName = "properties." + entry.getKey();
-
+            boolean changed = false;
             if (previousValue == null && propertyType == null) {
-                changed = changed || PropertyHelper.setProperty(event.getProfile(), propertyName, entry.getValue(), "alwaysSet");
-            } else if (previousValue != null) {
-                if (previousValue instanceof List) {
-                    changed = changed || PropertyHelper.setProperty(event.getProfile(), propertyName, entry.getValue(), "addValues");
-                } else if (entry.getValue() instanceof List) {
-                    logger.error("A single property named {} is already set on the profile. Impossible to replace with a list",
-                            entry.getKey());
-                } else {
-                    changed =
-                            changed || PropertyHelper.setProperty(event.getProfile(), propertyName, entry.getValue(), singleValueStrategy);
-                }
+                changed = PropertyHelper.setProperty(event.getProfile(), propertyName, entry.getValue(), "alwaysSet");
             } else {
-                if (propertyType.isMultivalued()) {
-                    changed = changed || PropertyHelper.setProperty(event.getProfile(), propertyName, entry.getValue(), "addValues");
+                boolean propertyTypeIsMultiValued =
+                        propertyType != null && propertyType.isMultivalued() != null && propertyType.isMultivalued();
+                boolean multipleIsExpected = previousValue != null ? previousValue instanceof List : propertyTypeIsMultiValued;
+
+                if (multipleIsExpected) {
+                    changed = PropertyHelper.setProperty(event.getProfile(), propertyName, entry.getValue(), "addValues");
                 } else if (entry.getValue() instanceof List) {
-                    logger.error("The property {} should contains a single value as declared in the property types", entry.getKey());
+                    logger.error(
+                            "Impossible to copy the property of type List to the profile, either a single value already exist on the profile or the property type is declared as a single value property. Enable debug log level for more information");
+                    if (logger.isDebugEnabled()) {
+                        logger.debug("cannot copy property {}, because it's a List", entry.getKey());
+                    }
                 } else {
-                    changed =
-                            changed || PropertyHelper.setProperty(event.getProfile(), propertyName, entry.getValue(), singleValueStrategy);
+                    changed = PropertyHelper.setProperty(event.getProfile(), propertyName, entry.getValue(), singleValueStrategy);
                 }
             }
+            atLeastOnechanged = atLeastOnechanged || changed;
         }
-        return changed ? EventService.PROFILE_UPDATED : EventService.NO_CHANGE;
+        return atLeastOnechanged ? EventService.PROFILE_UPDATED : EventService.NO_CHANGE;
     }
 
     private Map<String, Object> getEventPropsToCopy(Action action, Event event) {
@@ -108,7 +106,8 @@ public class CopyPropertiesAction implements ActionExecutor {
                 propsToCopy.putAll((Map) targetProperties);
             }
         } catch (Exception e) {
-            // Ignore
+            logger.error("Unable to extract properties to be copied from the event to the profile using root property: {}", rootProperty,
+                    e);
         }
 
         return propsToCopy;

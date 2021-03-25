@@ -59,6 +59,8 @@ public class CopyPropertiesActionIT extends BaseIT {
 
     private final static String EMPTY_PROFILE = "empty-profile";
     private final static String PROFILE_WITH_PROPERTIES = "profile-with-properties";
+    private final static String ARRAY_PARAM_NAME = "arrayParam";
+    public static final String SINGLE_PARAM_NAME = "singleParam";
 
     @Inject
     @Filter(timeout = 600000)
@@ -77,7 +79,7 @@ public class CopyPropertiesActionIT extends BaseIT {
         profile.setProperties(new HashMap<>());
         profile.setProperty("lastName", "Jose"); // property that have a propertyType registered in the system
         profile.setProperty("singleValue", "A single value");
-        profile.setProperty("existingArray", Arrays.asList("element1","element2"));
+        profile.setProperty("existingArray", Arrays.asList("element1", "element2"));
         profileService.save(profile);
         LOGGER.info("Profile saved with ID [{}].", profile.getItemId());
 
@@ -93,17 +95,19 @@ public class CopyPropertiesActionIT extends BaseIT {
     public void cleanUp() throws IOException, InterruptedException {
         profileService.delete(PROFILE_WITH_PROPERTIES, false);
         profileService.delete(EMPTY_PROFILE, false);
+        profileService.deletePropertyType(ARRAY_PARAM_NAME);
+        profileService.deletePropertyType(SINGLE_PARAM_NAME);
         refreshPersistence();
     }
 
     private void initializePropertyType() {
         Metadata metadata = new Metadata();
         metadata.setSystemTags(new HashSet<>(Arrays.asList("urlParameters")));
-        metadata.setId("arrayParam");
+        metadata.setId(ARRAY_PARAM_NAME);
         metadata.setName("Array parameter");
 
         PropertyType propertyType1 = new PropertyType();
-        propertyType1.setItemId("arrayParam");
+        propertyType1.setItemId(ARRAY_PARAM_NAME);
         propertyType1.setMetadata(metadata);
         propertyType1.setTarget("profiles");
         propertyType1.setValueTypeId("string");
@@ -111,11 +115,11 @@ public class CopyPropertiesActionIT extends BaseIT {
 
         Metadata metadata2 = new Metadata();
         metadata2.setSystemTags(new HashSet<>(Arrays.asList("urlParameters")));
-        metadata2.setId("singleParam");
+        metadata2.setId(SINGLE_PARAM_NAME);
         metadata2.setName("Single parameters");
 
         PropertyType propertyType2 = new PropertyType();
-        propertyType2.setItemId("singleParam");
+        propertyType2.setItemId(SINGLE_PARAM_NAME);
         propertyType2.setMetadata(metadata2);
         propertyType2.setTarget("profiles");
         propertyType2.setValueTypeId("string");
@@ -128,11 +132,11 @@ public class CopyPropertiesActionIT extends BaseIT {
     private void initializePropertyTypeWithDifferentSystemTag() {
         Metadata metadata = new Metadata();
         metadata.setSystemTags(new HashSet<>(Arrays.asList("shouldBeAbsent")));
-        metadata.setId("arrayParam");
+        metadata.setId(ARRAY_PARAM_NAME);
         metadata.setName("Array parameter");
 
         PropertyType propertyType1 = new PropertyType();
-        propertyType1.setItemId("arrayParam");
+        propertyType1.setItemId(ARRAY_PARAM_NAME);
         propertyType1.setMetadata(metadata);
         propertyType1.setTarget("profiles");
         propertyType1.setValueTypeId("string");
@@ -141,112 +145,71 @@ public class CopyPropertiesActionIT extends BaseIT {
         profileService.setPropertyType(propertyType1);
     }
 
-    @Test
-    public void testCopyProperties_copyMultipleValueWithoutExistingPropertyTypeAndWithoutExistingValue()
-            throws IOException, InterruptedException {
-        Rule rule = CustomObjectMapper.getObjectMapper()
-                .readValue(new File("data/tmp/testCopyPropertiesWithoutSystemTags.json").toURI().toURL(), Rule.class);
+    private void createRule(String filename) throws IOException, InterruptedException {
+        Rule rule = CustomObjectMapper.getObjectMapper().readValue(new File(filename).toURI().toURL(), Rule.class);
         rulesService.setRule(rule);
         Thread.sleep(2000);
+    }
 
-        Profile profile = profileService.load(EMPTY_PROFILE);
-        Assert.assertNull(profile.getProperty("lastname"));
+    private Event sendCopyPropertyEvent(Map<String, Object> properties, String profileType) {
+        Profile profile = profileService.load(profileType);
 
         Event event = new Event("copyProperties", null, profile, null, null, profile, new Date());
         event.setPersistent(false);
-
-        Map<String, Object> properties = new HashMap<>();
-        properties.put("arrayParam", Arrays.asList("valueA", "valueB"));
 
         event.setProperty("urlParameters", properties);
 
-        int changes = eventService.send(event);
-
-        LOGGER.info("Changes of the event : {}", changes);
-
-        Assert.assertTrue(changes > 0);
-        Assert.assertTrue(((List<String>) event.getProfile().getProperty("arrayParam")).contains("valueA"));
-        Assert.assertTrue(((List<String>) event.getProfile().getProperty("arrayParam")).contains("valueB"));
+        eventService.send(event);
+        return event;
     }
 
     @Test
-    public void testCopyProperties_tryCopyArrayOnExistingSingleValue()
+    public void testCopyProperties_copyMultipleValueWithoutExistingPropertyTypeAndWithoutExistingValue()
             throws IOException, InterruptedException {
-        Rule rule = CustomObjectMapper.getObjectMapper()
-                .readValue(new File("data/tmp/testCopyPropertiesWithoutSystemTags.json").toURI().toURL(), Rule.class);
-        rulesService.setRule(rule);
-        Thread.sleep(2000);
+        createRule("data/tmp/testCopyPropertiesWithoutSystemTags.json");
 
-        Profile profile = profileService.load(PROFILE_WITH_PROPERTIES);
-        Assert.assertNull(profile.getProperty("lastname"));
+        Map<String, Object> properties = new HashMap<>();
+        properties.put(ARRAY_PARAM_NAME, Arrays.asList("valueA", "valueB"));
 
-        Event event = new Event("copyProperties", null, profile, null, null, profile, new Date());
-        event.setPersistent(false);
+        Event event = sendCopyPropertyEvent(properties, EMPTY_PROFILE);
+
+        Assert.assertTrue(((List<String>) event.getProfile().getProperty(ARRAY_PARAM_NAME)).contains("valueA"));
+        Assert.assertTrue(((List<String>) event.getProfile().getProperty(ARRAY_PARAM_NAME)).contains("valueB"));
+    }
+
+    @Test
+    public void testCopyProperties_tryCopyArrayOnExistingSingleValue() throws IOException, InterruptedException {
+        createRule("data/tmp/testCopyPropertiesWithoutSystemTags.json");
 
         Map<String, Object> properties = new HashMap<>();
         properties.put("singleValue", Arrays.asList("valueA", "valueB"));
 
-        event.setProperty("urlParameters", properties);
+        Event event = sendCopyPropertyEvent(properties, PROFILE_WITH_PROPERTIES);
 
-        int changes = eventService.send(event);
-
-        LOGGER.info("Changes of the event : {}", changes);
-
-        Assert.assertTrue(changes == 0);
         Assert.assertTrue(((String) event.getProfile().getProperty("singleValue")).equals("A single value"));
     }
 
     @Test
-    public void testCopyProperties_replaceSingleValue()
-            throws IOException, InterruptedException {
-        Rule rule = CustomObjectMapper.getObjectMapper()
-                .readValue(new File("data/tmp/testCopyPropertiesWithoutSystemTags.json").toURI().toURL(), Rule.class);
-        rulesService.setRule(rule);
-        Thread.sleep(2000);
-
-        Profile profile = profileService.load(PROFILE_WITH_PROPERTIES);
-        Assert.assertNull(profile.getProperty("lastname"));
-
-        Event event = new Event("copyProperties", null, profile, null, null, profile, new Date());
-        event.setPersistent(false);
+    public void testCopyProperties_replaceSingleValue() throws IOException, InterruptedException {
+        createRule("data/tmp/testCopyPropertiesWithoutSystemTags.json");
 
         Map<String, Object> properties = new HashMap<>();
         properties.put("singleValue", "New value");
 
-        event.setProperty("urlParameters", properties);
+        Event event = sendCopyPropertyEvent(properties, PROFILE_WITH_PROPERTIES);
 
-        int changes = eventService.send(event);
-
-        LOGGER.info("Changes of the event : {}", changes);
-
-        Assert.assertTrue(changes > 0);
         Assert.assertTrue(((String) event.getProfile().getProperty("singleValue")).equals("New value"));
     }
 
     @Test
-    public void testCopyProperties_copyArrayIntoExistingArray()
-            throws IOException, InterruptedException {
-        Rule rule = CustomObjectMapper.getObjectMapper()
-                .readValue(new File("data/tmp/testCopyPropertiesWithoutSystemTags.json").toURI().toURL(), Rule.class);
-        rulesService.setRule(rule);
-        Thread.sleep(2000);
-
-        Profile profile = profileService.load(PROFILE_WITH_PROPERTIES);
-        Assert.assertNull(profile.getProperty("lastname"));
-
-        Event event = new Event("copyProperties", null, profile, null, null, profile, new Date());
-        event.setPersistent(false);
+    public void testCopyProperties_copyArrayIntoExistingArray() throws IOException, InterruptedException {
+        createRule("data/tmp/testCopyPropertiesWithoutSystemTags.json");
 
         Map<String, Object> properties = new HashMap<>();
         properties.put("existingArray", Arrays.asList("valueA", "valueB"));
 
-        event.setProperty("urlParameters", properties);
+        Event event = sendCopyPropertyEvent(properties, PROFILE_WITH_PROPERTIES);
 
-        int changes = eventService.send(event);
-
-        LOGGER.info("Changes of the event : {}", changes);
-
-        Assert.assertTrue(changes > 0);
         Assert.assertTrue(((List<String>) event.getProfile().getProperty("existingArray")).contains("element1"));
         Assert.assertTrue(((List<String>) event.getProfile().getProperty("existingArray")).contains("element2"));
         Assert.assertTrue(((List<String>) event.getProfile().getProperty("existingArray")).contains("valueA"));
@@ -254,113 +217,59 @@ public class CopyPropertiesActionIT extends BaseIT {
     }
 
     @Test
-    public void testCopyProperties_copyArrayWithPropertyType()
-            throws IOException, InterruptedException {
-        Rule rule = CustomObjectMapper.getObjectMapper()
-                .readValue(new File("data/tmp/testCopyPropertiesWithoutSystemTags.json").toURI().toURL(), Rule.class);
-        rulesService.setRule(rule);
-        Thread.sleep(2000);
+    public void testCopyProperties_copyArrayWithPropertyType() throws IOException, InterruptedException {
+        createRule("data/tmp/testCopyPropertiesWithoutSystemTags.json");
 
         initializePropertyType();
-        Profile profile = profileService.load(EMPTY_PROFILE);
-        Assert.assertNull(profile.getProperty("lastname"));
-
-        Event event = new Event("copyProperties", null, profile, null, null, profile, new Date());
-        event.setPersistent(false);
 
         Map<String, Object> properties = new HashMap<>();
-        properties.put("arrayParam", Arrays.asList("valueA", "valueB"));
+        properties.put(ARRAY_PARAM_NAME, Arrays.asList("valueA", "valueB"));
 
-        event.setProperty("urlParameters", properties);
+        Event event = sendCopyPropertyEvent(properties, EMPTY_PROFILE);
 
-        int changes = eventService.send(event);
-
-        LOGGER.info("Changes of the event : {}", changes);
-
-        Assert.assertTrue(changes > 0);
-        Assert.assertTrue(((List<String>) event.getProfile().getProperty("arrayParam")).contains("valueA"));
-        Assert.assertTrue(((List<String>) event.getProfile().getProperty("arrayParam")).contains("valueB"));
+        Assert.assertTrue(((List<String>) event.getProfile().getProperty(ARRAY_PARAM_NAME)).contains("valueA"));
+        Assert.assertTrue(((List<String>) event.getProfile().getProperty(ARRAY_PARAM_NAME)).contains("valueB"));
     }
 
     @Test
-    public void testCopyProperties_tryCopyArrayWithPropertyTypeIntoSingleValue()
-            throws IOException, InterruptedException {
-        Rule rule = CustomObjectMapper.getObjectMapper()
-                .readValue(new File("data/tmp/testCopyProperties.json").toURI().toURL(), Rule.class);
-        rulesService.setRule(rule);
-        Thread.sleep(2000);
+    public void testCopyProperties_tryCopyArrayWithPropertyTypeIntoSingleValue() throws IOException, InterruptedException {
+        createRule("data/tmp/testCopyProperties.json");
 
         initializePropertyType();
-        Profile profile = profileService.load(EMPTY_PROFILE);
-        Assert.assertNull(profile.getProperty("lastname"));
-
-        Event event = new Event("copyProperties", null, profile, null, null, profile, new Date());
-        event.setPersistent(false);
 
         Map<String, Object> properties = new HashMap<>();
-        properties.put("singleParam", Arrays.asList("valueA", "valueB"));
+        properties.put(SINGLE_PARAM_NAME, Arrays.asList("valueA", "valueB"));
 
-        event.setProperty("urlParameters", properties);
+        Event event = sendCopyPropertyEvent(properties, EMPTY_PROFILE);
 
-        int changes = eventService.send(event);
-
-        LOGGER.info("Changes of the event : {}", changes);
-
-        Assert.assertTrue(changes == 0);
+        Assert.assertNull(event.getProfile().getProperty(SINGLE_PARAM_NAME));
     }
 
     @Test
-    public void testCopyProperties_replaceSingleValueWithPropertyType()
-            throws IOException, InterruptedException {
-        Rule rule = CustomObjectMapper.getObjectMapper()
-                .readValue(new File("data/tmp/testCopyProperties.json").toURI().toURL(), Rule.class);
-        rulesService.setRule(rule);
-        Thread.sleep(2000);
+    public void testCopyProperties_replaceSingleValueWithPropertyType() throws IOException, InterruptedException {
+        createRule("data/tmp/testCopyProperties.json");
 
         initializePropertyType();
-        Profile profile = profileService.load(EMPTY_PROFILE);
-        Assert.assertNull(profile.getProperty("lastname"));
-
-        Event event = new Event("copyProperties", null, profile, null, null, profile, new Date());
-        event.setPersistent(false);
 
         Map<String, Object> properties = new HashMap<>();
-        properties.put("singleParam", "New value");
+        properties.put(SINGLE_PARAM_NAME, "New value");
 
-        event.setProperty("urlParameters", properties);
+        Event event = sendCopyPropertyEvent(properties, EMPTY_PROFILE);
 
-        int changes = eventService.send(event);
-
-        LOGGER.info("Changes of the event : {}", changes);
-
-        Assert.assertTrue(changes > 0);
-        Assert.assertTrue(((String) event.getProfile().getProperty("singleParam")).equals("New value"));
+        Assert.assertTrue(((String) event.getProfile().getProperty(SINGLE_PARAM_NAME)).equals("New value"));
     }
 
     @Test
-    public void testCopyProperties_mandatorySystemTagsNotPresent()
-            throws IOException, InterruptedException {
-        Rule rule = CustomObjectMapper.getObjectMapper()
-                .readValue(new File("data/tmp/testCopyProperties.json").toURI().toURL(), Rule.class);
-        rulesService.setRule(rule);
-        Thread.sleep(2000);
+    public void testCopyProperties_mandatorySystemTagsNotPresent() throws IOException, InterruptedException {
+        createRule("data/tmp/testCopyProperties.json");
 
         initializePropertyTypeWithDifferentSystemTag();
-        Profile profile = profileService.load(EMPTY_PROFILE);
-        Assert.assertNull(profile.getProperty("lastname"));
-
-        Event event = new Event("copyProperties", null, profile, null, null, profile, new Date());
-        event.setPersistent(false);
 
         Map<String, Object> properties = new HashMap<>();
-        properties.put("arrayParam", Arrays.asList("New value"));
+        properties.put(ARRAY_PARAM_NAME, Arrays.asList("New value"));
 
-        event.setProperty("urlParameters", properties);
+        Event event = sendCopyPropertyEvent(properties, EMPTY_PROFILE);
 
-        int changes = eventService.send(event);
-
-        LOGGER.info("Changes of the event : {}", changes);
-
-        Assert.assertTrue(changes == 0);
+        Assert.assertTrue(event.getProfile().getProperty(ARRAY_PARAM_NAME) == null);
     }
 }
