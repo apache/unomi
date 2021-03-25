@@ -16,9 +16,6 @@
       "type": "copyPropertiesAction",
       "parameterValues": {
         "rootProperty": "properties.urlParameters",
-        "mandatoryPropTypeSystemTag": [
-          "urlParameters"
-        ],
         "singleValueStrategy": "alwaysSet"
       }
     }

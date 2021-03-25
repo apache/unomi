@@ -148,6 +148,8 @@ public abstract class BaseIT {
                         "src/test/resources/testLogin.json")),
                 replaceConfigurationFile("data/tmp/testCopyProperties.json", new File(
                         "src/test/resources/testCopyProperties.json")),
+                replaceConfigurationFile("data/tmp/testCopyPropertiesWithoutSystemTags.json", new File(
+                        "src/test/resources/testCopyPropertiesWithoutSystemTags.json")),
                 replaceConfigurationFile("data/tmp/testLoginEventCondition.json", new File(
                         "src/test/resources/testLoginEventCondition.json")),
                 keepRuntimeFolder(),

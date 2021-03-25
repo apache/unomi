@@ -45,33 +45,40 @@ public class CopyPropertiesAction implements ActionExecutor {
     @SuppressWarnings({ "unchecked", "rawtypes" })
     public int execute(Action action, Event event) {
         boolean changed = false;
-
+        List<String> mandatoryPropTypeSystemTags = (List<String>) action.getParameterValues().get("mandatoryPropTypeSystemTag");
+        String singleValueStrategy = (String) action.getParameterValues().get("singleValueStrategy");
         for (Map.Entry<String, Object> entry : getEventPropsToCopy(action, event).entrySet()) {
             // propType Check
             PropertyType propertyType = profileService.getPropertyType(entry.getKey());
+            Object previousValue = event.getProfile().getProperty(entry.getKey());
+            if (mandatoryPropTypeSystemTags != null && mandatoryPropTypeSystemTags.size() > 0) {
+                if (propertyType == null || propertyType.getMetadata() == null || propertyType.getMetadata().getSystemTags() == null
+                        || !propertyType.getMetadata().getSystemTags().containsAll(mandatoryPropTypeSystemTags)) {
+                    continue;
+                }
+            }
             String propertyName = "properties." + entry.getKey();
-            if (propertyType != null && propertyType.isMultivalued()) {
-                changed = changed || PropertyHelper.setProperty(event.getProfile(), propertyName, entry.getValue(), "addValue");
-            } else {
-                Object profileProperty = event.getProfile().getProperty(entry.getKey());
-                if (profileProperty == null) {
-                    if (entry.getValue() instanceof List) {
-                        changed = changed || PropertyHelper.setProperty(event.getProfile(), propertyName, entry.getValue(), "addValues");
-                    } else {
-                        changed = changed || PropertyHelper.setProperty(event.getProfile(), propertyName, entry.getValue(), "alwaysSet");
-                    }
-                } else if (profileProperty instanceof List) {
-                    if (entry.getValue() instanceof List) {
-                        changed = changed || PropertyHelper.setProperty(event.getProfile(), propertyName, entry.getValue(), "addValues");
-                    } else {
-                        changed = changed || PropertyHelper.setProperty(event.getProfile(), propertyName, entry.getValue(), "addValue");
-                    }
+
+            if (previousValue == null && propertyType == null) {
+                changed = changed || PropertyHelper.setProperty(event.getProfile(), propertyName, entry.getValue(), "alwaysSet");
+            } else if (previousValue != null) {
+                if (previousValue instanceof List) {
+                    changed = changed || PropertyHelper.setProperty(event.getProfile(), propertyName, entry.getValue(), "addValues");
+                } else if (entry.getValue() instanceof List) {
+                    logger.error("A single property named {} is already set on the profile. Impossible to replace with a list",
+                            entry.getKey());
                 } else {
-                    if (entry.getValue() instanceof List) {
-                        logger.warn("A single property named {} is already set on the profile.", entry.getKey());
-                    } else {
-                        changed = changed || PropertyHelper.setProperty(event.getProfile(), propertyName, entry.getValue(), "alwaysSet");
-                    }
+                    changed =
+                            changed || PropertyHelper.setProperty(event.getProfile(), propertyName, entry.getValue(), singleValueStrategy);
+                }
+            } else {
+                if (propertyType.isMultivalued()) {
+                    changed = changed || PropertyHelper.setProperty(event.getProfile(), propertyName, entry.getValue(), "addValues");
+                } else if (entry.getValue() instanceof List) {
+                    logger.error("The property {} should contains a single value as declared in the property types", entry.getKey());
+                } else {
+                    changed =
+                            changed || PropertyHelper.setProperty(event.getProfile(), propertyName, entry.getValue(), singleValueStrategy);
                 }
             }
         }
