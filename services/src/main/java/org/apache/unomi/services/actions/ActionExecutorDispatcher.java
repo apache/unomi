@@ -175,7 +175,9 @@ public class ActionExecutorDispatcher {
             Object value = entry.getValue();
             if (value instanceof String) {
                 String s = (String) value;
-                if (s.contains(VALUE_NAME_SEPARATOR) && valueExtractors.containsKey(StringUtils.substringBefore(s, VALUE_NAME_SEPARATOR))) {
+                String str = s.contains(PLACEHOLDER_PREFIX) ? s.substring(s.indexOf(PLACEHOLDER_PREFIX) + 2, s.indexOf(PLACEHOLDER_SUFFIX)) : s;
+
+                if (str.contains(VALUE_NAME_SEPARATOR) && valueExtractors.containsKey(StringUtils.substringBefore(str, VALUE_NAME_SEPARATOR))) {
                     return true;
                 }
             } else if (value instanceof Map) {
@@ -196,7 +198,7 @@ public class ActionExecutorDispatcher {
         int colonPos = actionKey.indexOf(":");
         if (colonPos > 0) {
             String actionPrefix = actionKey.substring(0, colonPos);
-            String actionName = actionKey.substring(colonPos+1);
+            String actionName = actionKey.substring(colonPos + 1);
             ActionDispatcher actionDispatcher = actionDispatchers.get(actionPrefix);
             if (actionDispatcher == null) {
                 logger.warn("Couldn't find any action dispatcher for prefix '{}', action {} won't execute !", actionPrefix, actionKey);

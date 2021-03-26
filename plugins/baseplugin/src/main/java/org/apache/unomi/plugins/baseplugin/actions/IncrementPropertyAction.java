@@ -46,14 +46,18 @@ public class IncrementPropertyAction implements ActionExecutor {
         try {
             Map<String, Object> properties = storeInSession ? session.getProperties() : profile.getProperties();
             Object propertyValue = getPropertyValue(action, event, propertyName, properties);
-
             if (PropertyHelper.setProperty(properties, propertyName, propertyValue, "alwaysSet")) {
                 return storeInSession ? EventService.SESSION_UPDATED : EventService.PROFILE_UPDATED;
             }
         } catch (IllegalAccessException | NoSuchMethodException | InvocationTargetException e) {
             logger.warn("Error resolving nested property of object. See debug log level for more information");
             if (logger.isDebugEnabled()) {
-                logger.error("Error resolving nested property of item: {}", storeInSession ? session : profile, e);
+                logger.debug("Error resolving nested property of item: {}", storeInSession ? session : profile, e);
+            }
+        } catch (IllegalStateException ee) {
+            logger.warn("Error increment existing property, because existing property doesn't have expected type. See debug log level for more information");
+            if (logger.isDebugEnabled()) {
+                logger.debug(ee.getMessage(), ee);
             }
         }
 
@@ -76,25 +80,33 @@ public class IncrementPropertyAction implements ActionExecutor {
             if (propertyTargetValue instanceof Integer) {
                 if (properties.containsKey(rootPropertyName)) {
                     Object nestedProperty = PropertyUtils.getNestedProperty(properties, propertyName);
-                    if (nestedProperty instanceof Integer) {
+                    if (nestedProperty == null) {
+                        propertyValue = propertyTargetValue;
+                    } else if (nestedProperty instanceof Integer) {
                         propertyValue = (int) propertyTargetValue + (int) nestedProperty;
+                    } else {
+                        throw new IllegalStateException("Property: " + propertyName + " already exist, can not increment the property because the exiting property is not integer");
                     }
                 } else {
                     propertyValue = propertyTargetValue;
                 }
             } else if (propertyTargetValue instanceof Map) {
                 if (properties.containsKey(rootPropertyName)) {
-                    Map<String, Object> nestedProperty = (Map<String, Object>) PropertyUtils.getNestedProperty(properties, propertyName);
-                    if (nestedProperty != null) {
-                        ((Map<String, Object>) propertyTargetValue).forEach((k, v) -> {
-                            if ((v instanceof Integer && (nestedProperty.containsKey(k) && nestedProperty.get(k) instanceof Integer)) ||
-                                    (v instanceof Integer && !nestedProperty.containsKey(k))) {
-                                nestedProperty.put(k, nestedProperty.containsKey(k) ? (int) nestedProperty.get(k) + (int) v : v);
+                    Object nestedPropertyValue = PropertyUtils.getNestedProperty(properties, propertyName);
+                    if (nestedPropertyValue == null) {
+                        propertyValue = propertyTargetValue;
+                    } else if (nestedPropertyValue instanceof Map) {
+                        Map<String, Object> nestedProperty = (Map<String, Object>) nestedPropertyValue;
+
+                        ((Map<String, Object>) propertyTargetValue).forEach((key, targetValue) -> {
+                            if ((targetValue instanceof Integer && (nestedProperty.containsKey(key) && nestedProperty.get(key) instanceof Integer)) ||
+                                    (targetValue instanceof Integer && !nestedProperty.containsKey(key))) {
+                                nestedProperty.put(key, nestedProperty.containsKey(key) ? (int) nestedProperty.get(key) + (int) targetValue : targetValue);
                             }
                         });
                         propertyValue = nestedProperty;
                     } else {
-                        propertyValue = propertyTargetValue;
+                        throw new IllegalStateException("Property: " + propertyName + " already exist, can not increment the properties from the map because the exiting property is not map");
                     }
                 } else {
                     propertyValue = propertyTargetValue;
@@ -103,15 +115,19 @@ public class IncrementPropertyAction implements ActionExecutor {
         } else {
             if (properties.containsKey(rootPropertyName)) {
                 Object nestedProperty = PropertyUtils.getNestedProperty(properties, propertyName);
-                if (nestedProperty instanceof Integer) {
+                if (nestedProperty == null) {
+                    propertyValue = 1;
+                } else if (nestedProperty instanceof Integer) {
                     propertyValue = (int) nestedProperty + 1;
                 } else if (nestedProperty instanceof Map) {
-                    ((Map<String, Object>) nestedProperty).forEach((k, v) -> {
-                        if (v instanceof Integer) {
-                            ((Map<String, Integer>) nestedProperty).merge(k, 1, Integer::sum);
+                    ((Map<String, Object>) nestedProperty).forEach((key, propValue) -> {
+                        if (propValue instanceof Integer) {
+                            ((Map<String, Integer>) nestedProperty).merge(key, 1, Integer::sum);
                         }
                     });
                     propertyValue = nestedProperty;
+                } else {
+                    throw new IllegalStateException("Property: " + propertyName + " already exist, can not increment the property because the exiting property is not integer or map");
                 }
             }
         }

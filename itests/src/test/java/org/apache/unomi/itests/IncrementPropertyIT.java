@@ -76,6 +76,40 @@ public class IncrementPropertyIT extends BaseIT {
     }
 
     @Test
+    public void testIncrementNotExistingPropertyWithDynamicName() throws InterruptedException {
+        int eventCode = buildActionAndSendEvent("pageView.${eventProperty::target.scope}", null, null, null);
+
+        if (eventCode == EventService.PROFILE_UPDATED) {
+            Profile updatedProfile = profileService.save(event.getProfile());
+            refreshPersistence();
+
+            int value = ((Map<String, Integer>) updatedProfile.getProperty("pageView")).get("acme-space");
+            Assert.assertEquals(1, value, 0.0);
+        } else {
+            Assert.fail("Profile was not updated");
+        }
+    }
+
+    @Test
+    public void testIncrementExistingPropertyWithDynamicName() throws InterruptedException {
+        Map<String, Object> properties = new HashMap<>();
+        Map<String, Integer> propertyValue = new HashMap<>();
+        propertyValue.put("acme-space", 24);
+        properties.put("pageView", propertyValue);
+
+        int eventCode = buildActionAndSendEvent("pageView.${eventProperty::target.scope}", null, properties, null);
+
+        if (eventCode == EventService.PROFILE_UPDATED) {
+            Profile updatedProfile = profileService.save(event.getProfile());
+
+            int value = ((Map<String, Integer>) updatedProfile.getProperty("pageView")).get("acme-space");
+            Assert.assertEquals(25, value, 0.0);
+        } else {
+            Assert.fail("Profile was not updated");
+        }
+    }
+
+    @Test
     public void testIncrementNotExistingProperty() throws InterruptedException {
         int eventCode = buildActionAndSendEvent("pageView.acme", null, null, null);
 
