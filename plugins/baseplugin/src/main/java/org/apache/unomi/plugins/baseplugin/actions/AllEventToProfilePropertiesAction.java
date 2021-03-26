@@ -27,6 +27,10 @@ import org.apache.unomi.api.services.ProfileService;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Use instead {@link CopyPropertiesAction}
+ */
+@Deprecated
 public class AllEventToProfilePropertiesAction implements ActionExecutor {
 
     private ProfileService profileService;
