@@ -77,16 +77,15 @@ public class IncrementPropertyIT extends BaseIT {
 
     @Test
     public void testIncrementNotExistingProperty() throws InterruptedException {
-        int eventCode = buildAction("pageView.acme", null, null, null);
+        int eventCode = buildActionAndSendEvent("pageView.acme", null, null, null);
 
         if (eventCode == EventService.PROFILE_UPDATED) {
             Profile updatedProfile = profileService.save(event.getProfile());
-            refreshPersistence();
 
             int value = ((Map<String, Integer>) updatedProfile.getProperty("pageView")).get("acme");
             Assert.assertEquals(1, value, 0.0);
         } else {
-            throw new IllegalStateException("Profile was not updated");
+            Assert.fail("Profile was not updated");
         }
     }
 
@@ -97,17 +96,15 @@ public class IncrementPropertyIT extends BaseIT {
         propertyValue.put("acme", 49);
         properties.put("pageView", propertyValue);
 
-        int eventCode = buildAction("pageView.acme", null, properties, null);
+        int eventCode = buildActionAndSendEvent("pageView.acme", null, properties, null);
 
         if (eventCode == EventService.PROFILE_UPDATED) {
             Profile updatedProfile = profileService.save(event.getProfile());
 
-            refreshPersistence();
-
             int value = ((Map<String, Integer>) updatedProfile.getProperty("pageView")).get("acme");
             Assert.assertEquals(50, value, 0.0);
         } else {
-            throw new IllegalStateException("Profile was not updated");
+            Assert.fail("Profile was not updated");
         }
     }
 
@@ -123,17 +120,15 @@ public class IncrementPropertyIT extends BaseIT {
         propertyValue.put("nasa", 19);
         targetProperties.put("project", propertyValue);
 
-        int eventCode = buildAction("pageView.acme", "project.nasa", properties, targetProperties);
+        int eventCode = buildActionAndSendEvent("pageView.acme", "project.nasa", properties, targetProperties);
 
         if (eventCode == EventService.PROFILE_UPDATED) {
             Profile updatedProfile = profileService.save(event.getProfile());
 
-            refreshPersistence();
-
             int value = ((Map<String, Integer>) updatedProfile.getProperty("pageView")).get("acme");
             Assert.assertEquals(68, value, 0.0);
         } else {
-            throw new IllegalStateException("Profile was not updated");
+            Assert.fail("Profile was not updated");
         }
     }
 
@@ -146,19 +141,17 @@ public class IncrementPropertyIT extends BaseIT {
         propertyValue.put("sport", 99);
         targetProperties.put("pageView", propertyValue);
 
-        int eventCode = buildAction("pageView", "pageView", null, targetProperties);
+        int eventCode = buildActionAndSendEvent("pageView", "pageView", null, targetProperties);
 
         if (eventCode == EventService.PROFILE_UPDATED) {
             Profile updatedProfile = profileService.save(event.getProfile());
-
-            refreshPersistence();
 
             Map<String, Integer> property = ((Map<String, Integer>) updatedProfile.getProperty("pageView"));
             Assert.assertEquals(49, property.get("acme"), 0.0);
             Assert.assertEquals(18, property.get("health"), 0.0);
             Assert.assertEquals(99, property.get("sport"), 0.0);
         } else {
-            throw new IllegalStateException("Profile was not updated");
+            Assert.fail("Profile was not updated");
         }
     }
 
@@ -170,18 +163,16 @@ public class IncrementPropertyIT extends BaseIT {
         propertyValue.put("nasa", 5);
         properties.put("pageView", propertyValue);
 
-        int eventCode = buildAction("pageView", null, properties, null);
+        int eventCode = buildActionAndSendEvent("pageView", null, properties, null);
 
         if (eventCode == EventService.PROFILE_UPDATED) {
             Profile updatedProfile = profileService.save(event.getProfile());
-
-            refreshPersistence();
 
             Map<String, Integer> property = ((Map<String, Integer>) updatedProfile.getProperty("pageView"));
             Assert.assertEquals(50, property.get("acme"), 0.0);
             Assert.assertEquals(6, property.get("nasa"), 0.0);
         } else {
-            throw new IllegalStateException("Profile was not updated");
+            Assert.fail("Profile was not updated");
         }
     }
 
@@ -199,19 +190,17 @@ public class IncrementPropertyIT extends BaseIT {
         propertyValue1.put("sport", 9);
         targetProperties.put("pageView", propertyValue1);
 
-        int eventCode = buildAction("pageView", "pageView", properties, targetProperties);
+        int eventCode = buildActionAndSendEvent("pageView", "pageView", properties, targetProperties);
 
         if (eventCode == EventService.PROFILE_UPDATED) {
             Profile updatedProfile = profileService.save(event.getProfile());
-
-            refreshPersistence();
 
             Map<String, Integer> property = ((Map<String, Integer>) updatedProfile.getProperty("pageView"));
             Assert.assertEquals(80, property.get("acme"), 0.0);
             Assert.assertEquals(88, property.get("health"), 0.0);
             Assert.assertEquals(9, property.get("sport"), 0.0);
         } else {
-            throw new IllegalStateException("Profile was not updated");
+            Assert.fail("Profile was not updated");
         }
     }
 
@@ -226,33 +215,29 @@ public class IncrementPropertyIT extends BaseIT {
         properties1.put("country", properties2);
         properties.put("continent", properties1);
 
-        int eventCode = buildAction("continent.country.state.city", null, properties, null);
+        int eventCode = buildActionAndSendEvent("continent.country.state.city", null, properties, null);
 
         if (eventCode == EventService.PROFILE_UPDATED) {
             Profile updatedProfile = profileService.save(event.getProfile());
 
-            refreshPersistence();
-
             Map<String, Integer> property = (Map<String, Integer>) ((Map<String, Object>) ((Map<String, Object>) updatedProfile.getProperty("continent")).get("country")).get("state");
             Assert.assertEquals(14, property.get("city"), 0.0);
         } else {
-            throw new IllegalStateException("Profile was not updated");
+            Assert.fail("Profile was not updated");
         }
     }
 
     @Test
     public void testIncrementNotExistingPropertyNested() throws InterruptedException {
-        int eventCode = buildAction("continent.country.state.city", null, null, null);
+        int eventCode = buildActionAndSendEvent("continent.country.state.city", null, null, null);
 
         if (eventCode == EventService.PROFILE_UPDATED) {
             Profile updatedProfile = profileService.save(event.getProfile());
 
-            refreshPersistence();
-
             Map<String, Integer> property = (Map<String, Integer>) ((Map<String, Object>) ((Map<String, Object>) updatedProfile.getProperty("continent")).get("country")).get("state");
             Assert.assertEquals(1, property.get("city"), 0.0);
         } else {
-            throw new IllegalStateException("Profile was not updated");
+            Assert.fail("Profile was not updated");
         }
     }
 
@@ -274,17 +259,15 @@ public class IncrementPropertyIT extends BaseIT {
         properties3.put("mars", propertyValue1);
         targetProperties.put("planet", properties3);
 
-        int eventCode = buildAction("continent.country.state.city", "planet.mars.zone", properties, targetProperties);
+        int eventCode = buildActionAndSendEvent("continent.country.state.city", "planet.mars.zone", properties, targetProperties);
 
         if (eventCode == EventService.PROFILE_UPDATED) {
             Profile updatedProfile = profileService.save(event.getProfile());
 
-            refreshPersistence();
-
             Map<String, Integer> property = (Map<String, Integer>) ((Map<String, Object>) ((Map<String, Object>) updatedProfile.getProperty("continent")).get("country")).get("state");
             Assert.assertEquals(120, property.get("city"), 0.0);
         } else {
-            throw new IllegalStateException("Profile was not updated");
+            Assert.fail("Profile was not updated");
         }
     }
 
@@ -297,19 +280,17 @@ public class IncrementPropertyIT extends BaseIT {
         propertyValue.put("featured", "The forty rules");
         properties.put("library", propertyValue);
 
-        int eventCode = buildAction("library", null, properties, null);
+        int eventCode = buildActionAndSendEvent("library", null, properties, null);
 
         if (eventCode == EventService.PROFILE_UPDATED) {
             Profile updatedProfile = profileService.save(event.getProfile());
-
-            refreshPersistence();
 
             Map<String, Object> property = ((Map<String, Object>) updatedProfile.getProperty("library"));
             Assert.assertEquals(60, (int) property.get("books"), 0.0);
             Assert.assertEquals(1002, (int) property.get("chapters"), 0.0);
             Assert.assertEquals("The forty rules", property.get("featured"));
         } else {
-            throw new IllegalStateException("Profile was not updated");
+            Assert.fail("Profile was not updated");
         }
     }
 
@@ -331,19 +312,17 @@ public class IncrementPropertyIT extends BaseIT {
         properties1.put("library", propertyValue1);
         targetProperties.put("main", properties1);
 
-        int eventCode = buildAction("library", "main.library", properties, targetProperties);
+        int eventCode = buildActionAndSendEvent("library", "main.library", properties, targetProperties);
 
         if (eventCode == EventService.PROFILE_UPDATED) {
             Profile updatedProfile = profileService.save(event.getProfile());
-
-            refreshPersistence();
 
             Map<String, Object> property = ((Map<String, Object>) updatedProfile.getProperty("library"));
             Assert.assertEquals(281, (int) property.get("books"), 0.0);
             Assert.assertEquals(3049, (int) property.get("chapters"), 0.0);
             Assert.assertEquals("The forty rules", property.get("featured"));
         } else {
-            throw new IllegalStateException("Profile was not updated");
+            Assert.fail("Profile was not updated");
         }
     }
 
@@ -361,7 +340,7 @@ public class IncrementPropertyIT extends BaseIT {
         refreshPersistence();
     }
 
-    private int buildAction(String propertyName, String propertyTargetName, Map<String, Object> properties, Map<String, Object> targetProperties) throws InterruptedException {
+    private int buildActionAndSendEvent(String propertyName, String propertyTargetName, Map<String, Object> properties, Map<String, Object> targetProperties) throws InterruptedException {
         Action incrementPropertyAction = new Action(definitionsService.getActionType("incrementPropertyAction"));
         incrementPropertyAction.setParameter("propertyName", propertyName);
         if (propertyTargetName != null) incrementPropertyAction.setParameter("propertyTarget", propertyTargetName);

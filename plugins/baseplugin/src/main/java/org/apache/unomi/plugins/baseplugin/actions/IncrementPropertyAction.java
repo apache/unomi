@@ -75,20 +75,27 @@ public class IncrementPropertyAction implements ActionExecutor {
         if (propertyTargetValue != null) {
             if (propertyTargetValue instanceof Integer) {
                 if (properties.containsKey(rootPropertyName)) {
-                    propertyValue = (int) propertyTargetValue + (int) PropertyUtils.getNestedProperty(properties, propertyName);
+                    Object nestedProperty = PropertyUtils.getNestedProperty(properties, propertyName);
+                    if (nestedProperty instanceof Integer) {
+                        propertyValue = (int) propertyTargetValue + (int) nestedProperty;
+                    }
                 } else {
                     propertyValue = propertyTargetValue;
                 }
             } else if (propertyTargetValue instanceof Map) {
                 if (properties.containsKey(rootPropertyName)) {
                     Map<String, Object> nestedProperty = (Map<String, Object>) PropertyUtils.getNestedProperty(properties, propertyName);
-                    ((Map<String, Object>) propertyTargetValue).forEach((k, v) -> {
-                        if ((v instanceof Integer && (nestedProperty.containsKey(k) && nestedProperty.get(k) instanceof Integer)) ||
-                                (v instanceof Integer && !nestedProperty.containsKey(k))) {
-                            nestedProperty.put(k, nestedProperty.containsKey(k) ? (int) nestedProperty.get(k) + (int) v : v);
-                        }
-                    });
-                    propertyValue = nestedProperty;
+                    if (nestedProperty != null) {
+                        ((Map<String, Object>) propertyTargetValue).forEach((k, v) -> {
+                            if ((v instanceof Integer && (nestedProperty.containsKey(k) && nestedProperty.get(k) instanceof Integer)) ||
+                                    (v instanceof Integer && !nestedProperty.containsKey(k))) {
+                                nestedProperty.put(k, nestedProperty.containsKey(k) ? (int) nestedProperty.get(k) + (int) v : v);
+                            }
+                        });
+                        propertyValue = nestedProperty;
+                    } else {
+                        propertyValue = propertyTargetValue;
+                    }
                 } else {
                     propertyValue = propertyTargetValue;
                 }
