@@ -95,39 +95,4 @@ public class HttpUtils {
             }
         }
     }
-
-    public static void clearCookie(ServletResponse response, String cookieName) {
-        if (response instanceof HttpServletResponse) {
-            HttpServletResponse httpServletResponse = (HttpServletResponse) response;
-            Cookie cookie = new Cookie(cookieName, "");
-            cookie.setPath("/");
-            cookie.setMaxAge(0);
-            httpServletResponse.addCookie(cookie);
-        }
-    }
-
-    public static Map<String, Cookie> getCookieMap(Cookie[] cookieArray) {
-        Map<String, Cookie> cookieMap = new LinkedHashMap<String, Cookie>();
-        for (Cookie cookie : cookieArray) {
-            cookieMap.put(cookie.getName(), cookie);
-        }
-        return cookieMap;
-    }
-
-    public static String getPayload(HttpServletRequest request) throws IOException {
-        if ("post".equals(request.getMethod().toLowerCase())) {
-            StringBuilder buffer = new StringBuilder();
-            String line;
-            BufferedReader reader = request.getReader();
-            while ((line = reader.readLine()) != null) {
-                buffer.append(line);
-            }
-            if (buffer.length() > 0) {
-                return buffer.toString();
-            }
-        } else if ("get".equals(request.getMethod().toLowerCase()) && request.getParameter("payload") != null) {
-            return request.getParameter("payload");
-        }
-        return null;
-    }
 }
