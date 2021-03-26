@@ -18,9 +18,7 @@ package org.apache.unomi.rest;
 
 import com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider;
 import org.apache.cxf.Bus;
-import org.apache.cxf.BusFactory;
 import org.apache.cxf.endpoint.Server;
-import org.apache.cxf.feature.LoggingFeature;
 import org.apache.cxf.jaxrs.JAXRSServerFactoryBean;
 import org.apache.cxf.jaxrs.openapi.OpenApiCustomizer;
 import org.apache.cxf.jaxrs.openapi.OpenApiFeature;
@@ -29,16 +27,14 @@ import org.osgi.framework.BundleContext;
 import org.osgi.framework.Filter;
 import org.osgi.framework.ServiceReference;
 import org.osgi.service.component.ComponentContext;
-import org.osgi.service.component.annotations.Activate;
-import org.osgi.service.component.annotations.Component;
-import org.osgi.service.component.annotations.Deactivate;
-import org.osgi.service.component.annotations.Reference;
+import org.osgi.service.component.annotations.*;
 import org.osgi.util.tracker.ServiceTracker;
 import org.osgi.util.tracker.ServiceTrackerCustomizer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.ws.rs.ext.ExceptionMapper;
+import javax.xml.namespace.QName;
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -50,12 +46,20 @@ public class RestServer {
     private Server server;
     private BundleContext bundleContext;
     private ServiceTracker jaxRSServiceTracker;
+    private Bus serverBus;
     private List<ExceptionMapper> exceptionMappers = new ArrayList<>();
     private long timeOfLastUpdate = System.currentTimeMillis();
     private Timer refreshTimer = null;
     private long startupDelay = 1000L;
 
     final List<Object> serviceBeans = new CopyOnWriteArrayList<>();
+
+    private static final QName UNOMI_REST_SERVER_END_POINT_NAME = new QName("http://rest.unomi.apache.org/", "UnomiRestServerEndPoint");
+
+    @Reference(cardinality = ReferenceCardinality.MANDATORY)
+    public void setServerBus(Bus serverBus) {
+        this.serverBus = serverBus;
+    }
 
     @Reference
     public void addExceptionMapper(ExceptionMapper exceptionMapper) {
@@ -151,11 +155,7 @@ public class RestServer {
 
         JAXRSServerFactoryBean jaxrsServerFactoryBean = new JAXRSServerFactoryBean();
         jaxrsServerFactoryBean.setAddress("/");
-        Bus bus = BusFactory.getDefaultBus();
-        // bus.getFeatures().add(new LoggingFeature());
-        bus.getFeatures().add(new LoggingFeature());
-        bus.getFeatures().add(new org.apache.cxf.metrics.MetricsFeature());
-        jaxrsServerFactoryBean.setBus(bus);
+        jaxrsServerFactoryBean.setBus(serverBus);
         jaxrsServerFactoryBean.setProvider(
                 new JacksonJaxbJsonProvider(
                         new org.apache.unomi.persistence.spi.CustomObjectMapper(),
@@ -171,10 +171,11 @@ public class RestServer {
         }
         jaxrsServerFactoryBean.setServiceBeans(serviceBeans);
         jaxrsServerFactoryBean.getFeatures().add(openApiFeature);
+
         if (serviceBeans.size() > 0) {
             logger.info("Starting JAX RS Endpoint...");
             server = jaxrsServerFactoryBean.create();
+            server.getEndpoint().getEndpointInfo().setName(UNOMI_REST_SERVER_END_POINT_NAME);
         }
     }
-
 }
