@@ -28,7 +28,10 @@
     {
       "parameterValues": {
       },
-      "type": "allEventToProfilePropertiesAction"
+      "type": "copyPropertiesAction",
+      "parameterValues": {
+        "singleValueStrategy": "alwaysSet"
+      }
     }
   ]
 }

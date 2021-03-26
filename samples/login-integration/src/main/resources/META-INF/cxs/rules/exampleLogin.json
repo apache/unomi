@@ -29,7 +29,7 @@
     {
       "parameterValues": {
       },
-      "type": "allEventToProfilePropertiesAction"
+      "type": "copyPropertiesAction"
     }
   ]
 }
