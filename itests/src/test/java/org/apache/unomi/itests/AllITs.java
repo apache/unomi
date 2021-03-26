@@ -42,6 +42,7 @@ import org.junit.runners.Suite.SuiteClasses;
         ProfileMergeIT.class,
         EventServiceIT.class,
         PropertiesUpdateActionIT.class,
+        CopyPropertiesActionIT.class,
         ModifyConsentIT.class,
         PatchIT.class,
         ContextServletIT.class,
