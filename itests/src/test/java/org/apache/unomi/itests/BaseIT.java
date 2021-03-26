@@ -59,7 +59,7 @@ import static org.ops4j.pax.exam.karaf.options.KarafDistributionOption.*;
 
 /**
  * Base class for integration tests.
- * 
+ *
  * @author kevan
  */
 @RunWith(PaxExam.class)
@@ -67,7 +67,7 @@ import static org.ops4j.pax.exam.karaf.options.KarafDistributionOption.*;
 public abstract class BaseIT {
 
     private final static Logger LOGGER = LoggerFactory.getLogger(BaseIT.class);
-    
+
     protected static final String HTTP_PORT = "8181";
     protected static final String URL = "http://localhost:" + HTTP_PORT;
     protected static final String KARAF_DIR = "target/exam";
@@ -140,6 +140,10 @@ public abstract class BaseIT {
                         "src/test/resources/6-actors-test.csv")),
                 replaceConfigurationFile("data/tmp/testLogin.json", new File(
                         "src/test/resources/testLogin.json")),
+                replaceConfigurationFile("data/tmp/testCopyProperties.json", new File(
+                        "src/test/resources/testCopyProperties.json")),
+                replaceConfigurationFile("data/tmp/testCopyPropertiesWithoutSystemTags.json", new File(
+                        "src/test/resources/testCopyPropertiesWithoutSystemTags.json")),
                 replaceConfigurationFile("data/tmp/testLoginEventCondition.json", new File(
                         "src/test/resources/testLoginEventCondition.json")),
                 keepRuntimeFolder(),
