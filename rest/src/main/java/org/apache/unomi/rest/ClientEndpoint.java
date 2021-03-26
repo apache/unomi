@@ -66,9 +66,8 @@ public class ClientEndpoint {
 
     @Reference
     private ProfileService profileService;
-
-    private String profileIdCookieName = "context-profile-id";
-    private String allowedProfileDownloadFormats;
+    @Reference
+    private ConfigSharingService configSharingService;
 
     private final String FILE_NAME_WO_EXT = "my-profile";
 
@@ -76,15 +75,13 @@ public class ClientEndpoint {
     HttpServletRequest request;
     @Context
     HttpServletResponse response;
-    @Reference
-    private ConfigSharingService configSharingService;
 
     @GET
     @Path("/client/{operation}/{param}")
     public Response getClient(@PathParam("operation") String operation, @PathParam("param") String param) throws JsonProcessingException {
         switch (operation) {
             case "myprofile":
-                if (allowedProfileDownloadFormats.contains(param)) {
+                if (((String) configSharingService.getProperty("allowedProfileDownloadFormats")).contains(param)) {
                     return donwloadCurrentProfile(param);
                 } else {
                     throw new InternalServerErrorException(String.format("%s is not an allowed param", param));
@@ -98,7 +95,7 @@ public class ClientEndpoint {
         Cookie[] cookies = request.getCookies();
         if (cookies != null) {
             for (Cookie cookie : cookies) {
-                if (profileIdCookieName.equals(cookie.getName())) {
+                if (configSharingService.getProperty("profileIdCookieName").equals(cookie.getName())) {
                     cookieProfileId = cookie.getValue();
                 }
             }
@@ -161,12 +158,5 @@ public class ClientEndpoint {
         ObjectMapper mapper = new ObjectMapper(yf);
         String yamlContent = mapper.writeValueAsString(currentProfile.getProperties());
         return Response.ok(yamlContent).build();
-    }
-
-    @Activate
-    public void init() {
-        // TODO DMF-4436 read values from the configuration file: org.apache.unomi.web.cfg
-        profileIdCookieName = "context-profile-id";
-        allowedProfileDownloadFormats = "csv,yaml,json,text";
     }
 }

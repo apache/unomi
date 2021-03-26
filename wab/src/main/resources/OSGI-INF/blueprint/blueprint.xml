@@ -88,6 +88,7 @@
 
     <bean id="clientServlet" class="org.apache.unomi.web.ClientServlet">
         <property name="profileService" ref="profileService"/>
+        <property name="configSharingService" ref="configSharingService"/>
         <property name="allowedProfileDownloadFormats" value="${web.allowed.profile.download.formats}" />
         <property name="profileIdCookieName" value="${web.contextserver.profileIdCookieName}"/>
     </bean>

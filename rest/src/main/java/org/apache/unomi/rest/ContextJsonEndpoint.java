@@ -65,10 +65,6 @@ public class ContextJsonEndpoint {
 
     private static final int MAX_COOKIE_AGE_IN_SECONDS = 60 * 60 * 24 * 365; // 1 year
 
-    private String profileIdCookieName = "context-profile-id";
-    private String profileIdCookieDomain;
-    private int profileIdCookieMaxAgeInSeconds = MAX_COOKIE_AGE_IN_SECONDS;
-
     private boolean sanitizeConditions = Boolean.parseBoolean(System.getProperty("org.apache.unomi.security.personalization.sanitizeConditions", "true"));
 
 
@@ -143,7 +139,7 @@ public class ContextJsonEndpoint {
 
         if (profileId == null) {
             // Get profile id from the cookie
-            profileId = (String) sanitizeValue(ServletCommon.getProfileIdCookieValue(request, profileIdCookieName));
+            profileId = (String) sanitizeValue(ServletCommon.getProfileIdCookieValue(request, (String) configSharingService.getProperty("profileIdCookieName")));
         }
 
         if (profileId == null && sessionId == null && personaId == null) {
@@ -194,7 +190,7 @@ public class ContextJsonEndpoint {
                         // #personalIdentifier
                         profile = profileService.load(sessionProfile.getItemId());
                         if (profile != null) {
-                            HttpUtils.sendProfileCookie(profile, response, profileIdCookieName, profileIdCookieDomain, profileIdCookieMaxAgeInSeconds);
+                            HttpUtils.sendProfileCookie(profile, response, (String) configSharingService.getProperty("profileIdCookieName"), (String) configSharingService.getProperty("profileIdCookieDomain"), (Integer) configSharingService.getProperty("profileIdCookieMaxAgeInSeconds"));
                         } else {
                             logger.warn("Couldn't load profile {} referenced in session {}", sessionProfile.getItemId(), session.getItemId());
                         }
@@ -292,15 +288,6 @@ public class ContextJsonEndpoint {
         return contextResponse;
     }
 
-
-    @Activate
-    public void init() {
-        // TODO DMF-4436 read values from the configuration file: org.apache.unomi.web.cfg
-        profileIdCookieName = "context-profile-id";
-        profileIdCookieDomain = null;
-        profileIdCookieMaxAgeInSeconds = 31536000;
-    }
-
     private Changes checkMergedProfile(ServletResponse response, Profile profile, Session session) {
         int changes = EventService.NO_CHANGE;
         if (profile.getMergedWith() != null && !privacyService.isRequireAnonymousBrowsing(profile) && !profile.isAnonymousProfile()) {
@@ -314,7 +301,7 @@ public class ContextJsonEndpoint {
                     session.setProfile(profile);
                     changes = EventService.SESSION_UPDATED;
                 }
-                HttpUtils.sendProfileCookie(profile, response, profileIdCookieName, profileIdCookieDomain, profileIdCookieMaxAgeInSeconds);
+                HttpUtils.sendProfileCookie(profile, response, (String) configSharingService.getProperty("profileIdCookieName"), (String) configSharingService.getProperty("profileIdCookieDomain"), (Integer) configSharingService.getProperty("profileIdCookieMaxAgeInSeconds"));
             } else {
                 logger.warn("Couldn't find merged profile {}, falling back to profile {}", masterProfileId, currentProfile.getItemId());
                 profile = currentProfile;
@@ -426,7 +413,7 @@ public class ContextJsonEndpoint {
         }
         profile = new Profile(profileId);
         profile.setProperty("firstVisit", timestamp);
-        HttpUtils.sendProfileCookie(profile, response, profileIdCookieName, profileIdCookieDomain, profileIdCookieMaxAgeInSeconds);
+        HttpUtils.sendProfileCookie(profile, response, (String) configSharingService.getProperty("profileIdCookieName"), (String) configSharingService.getProperty("profileIdCookieDomain"), (Integer) configSharingService.getProperty("profileIdCookieMaxAgeInSeconds"));
         return profile;
     }
 

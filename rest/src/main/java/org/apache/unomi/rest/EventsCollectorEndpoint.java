@@ -26,6 +26,7 @@ import org.apache.unomi.api.EventsCollectorRequest;
 import org.apache.unomi.api.Persona;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.Session;
+import org.apache.unomi.api.services.ConfigSharingService;
 import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.api.services.PrivacyService;
 import org.apache.unomi.api.services.ProfileService;
@@ -62,14 +63,14 @@ import java.util.UUID;
 public class EventsCollectorEndpoint {
     private static final Logger logger = LoggerFactory.getLogger(EventsCollectorEndpoint.class.getName());
 
-    private String profileIdCookieName;
-
     @Reference
     private EventService eventService;
     @Reference
     private ProfileService profileService;
     @Reference
     private PrivacyService privacyService;
+    @Reference
+    private ConfigSharingService configSharingService;
 
     @Context
     HttpServletRequest request;
@@ -133,7 +134,7 @@ public class EventsCollectorEndpoint {
                     }
                 }
             }
-            String cookieProfileId = ServletCommon.getProfileIdCookieValue(request, profileIdCookieName);
+            String cookieProfileId = ServletCommon.getProfileIdCookieValue(request, (String) configSharingService.getProperty("profileIdCookieName"));
             if (StringUtils.isNotBlank(cookieProfileId)) {
                 profile = profileService.load(cookieProfileId);
             }
@@ -161,7 +162,7 @@ public class EventsCollectorEndpoint {
                 }
             } else {
                 // Session uses anonymous profile, try to find profile from cookie
-                String cookieProfileId = ServletCommon.getProfileIdCookieValue(request, profileIdCookieName);
+                String cookieProfileId = ServletCommon.getProfileIdCookieValue(request, (String) configSharingService.getProperty("profileIdCookieName"));
                 if (StringUtils.isNotBlank(cookieProfileId)) {
                     profile = profileService.load(cookieProfileId);
                 }
@@ -189,11 +190,5 @@ public class EventsCollectorEndpoint {
         }
 
         return new EventCollectorResponse(changes);
-    }
-
-    @Activate
-    public void init() {
-        // TODO DMF-4436 read values from the configuration file: org.apache.unomi.web.cfg
-        profileIdCookieName = "context-profile-id";
     }
 }

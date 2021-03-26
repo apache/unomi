@@ -21,6 +21,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.opencsv.CSVWriter;
 import org.apache.unomi.api.Profile;
+import org.apache.unomi.api.services.ConfigSharingService;
 import org.apache.unomi.api.services.ProfileService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -51,17 +52,21 @@ public class ClientServlet extends HttpServlet {
     private String profileIdCookieName = "context-profile-id";
     private String allowedProfileDownloadFormats;
 
+    private ConfigSharingService configSharingService;
+
     private final String FILE_NAME_WO_EXT = "my-profile";
 
     @Override
     public void init(ServletConfig config) throws ServletException {
         super.init(config);
+        configSharingService.setProperty("allowedProfileDownloadFormats", allowedProfileDownloadFormats);
         logger.info("ClientServlet initialized.");
     }
 
     @Override
     public void destroy() {
         super.destroy();
+
         logger.info("Client servlet shutdown.");
     }
 
@@ -204,6 +209,10 @@ public class ClientServlet extends HttpServlet {
 
     public void setProfileIdCookieName(String profileIdCookieName) {
         this.profileIdCookieName = profileIdCookieName;
+    }
+
+    public void setConfigSharingService(ConfigSharingService configSharingService) {
+        this.configSharingService = configSharingService;
     }
 
 }
