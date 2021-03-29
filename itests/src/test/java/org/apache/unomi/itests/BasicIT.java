@@ -72,8 +72,8 @@ public class BasicIT extends BaseIT {
     private static final String ITEM_TYPE_SITE = "site";
     private static final String ITEM_ID_SITE = "/test/site";
     private static final String ITEM_TYPE_VISITOR = "VISITOR";
-    private static final String ITEM_ID_PAGE_1 = "/test/site/page1";
-    private static final String ITEM_TYPE_PAGE = "page";
+    protected static final String ITEM_ID_PAGE_1 = "/test/site/page1";
+    protected static final String ITEM_TYPE_PAGE = "page";
 
     private static final String FIRST_NAME = "firstName";
     private static final String LAST_NAME = "lastName";
