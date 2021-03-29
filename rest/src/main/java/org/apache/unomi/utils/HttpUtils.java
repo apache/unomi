@@ -18,24 +18,26 @@
 package org.apache.unomi.utils;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.unomi.api.Persona;
 import org.apache.unomi.api.Profile;
+import org.apache.unomi.api.services.ConfigSharingService;
 
-import javax.servlet.ServletResponse;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import java.io.BufferedReader;
-import java.io.IOException;
 import java.util.Enumeration;
-import java.util.LinkedHashMap;
-import java.util.Map;
+
 
 /**
  * This is duplicate of the class from the wab bundle, the original file will be removed once endpoints forwarded
  */
 public class HttpUtils {
 
+    private static final int MAX_COOKIE_AGE_IN_SECONDS = 60 * 60 * 24 * 365; // 1 year
+
+    /**
+     * Utility to dump request info for a given http request.
+     * @param httpServletRequest request to dump
+     * @return the info as a String
+     */
     public static String dumpRequestInfo(HttpServletRequest httpServletRequest) {
         StringBuilder stringBuilder = new StringBuilder();
         stringBuilder.append("\n");
@@ -82,17 +84,21 @@ public class HttpUtils {
         return stringBuilder.toString();
     }
 
-    public static void sendProfileCookie(Profile profile, ServletResponse response, String profileIdCookieName, String profileIdCookieDomain, int profileIdCookieMaxAgeInSeconds) {
-        if (response instanceof HttpServletResponse) {
-            HttpServletResponse httpServletResponse = (HttpServletResponse) response;
-            if (!(profile instanceof Persona)) {
-                httpServletResponse.addHeader("Set-Cookie",
-                        profileIdCookieName + "=" + profile.getItemId() +
-                                "; Path=/" +
-                                "; Max-Age=" + profileIdCookieMaxAgeInSeconds +
-                                (StringUtils.isNotBlank(profileIdCookieDomain) ? ("; Domain=" + profileIdCookieDomain) : "")  +
-                                "; SameSite=Lax");
-            }
-        }
+    /**
+     * Return the cookie string for the given profile
+     * We can't use the build in NewCookie jax-rs object as it does not support the SameSite value.
+     * @param profile to parse
+     * @param configSharingService shared config location.
+     * @return the cookie string to set in the header.
+     */
+    public static String getProfileCookieString(Profile profile, ConfigSharingService configSharingService) {
+        final String profileIdCookieDomain = (String) configSharingService.getProperty("profileIdCookieDomain");
+        final String profileIdCookieName = (String) configSharingService.getProperty("profileIdCookieName");
+        final Integer profileIdCookieMaxAgeInSeconds = (Integer) configSharingService.getProperty("profileIdCookieMaxAgeInSeconds") ;
+        return profileIdCookieName + "=" + profile.getItemId() +
+                "; Path=/" +
+                "; Max-Age=" + profileIdCookieMaxAgeInSeconds +
+                (StringUtils.isNotBlank(profileIdCookieDomain) ? ("; Domain=" + profileIdCookieDomain) : "")  +
+                "; SameSite=Lax";
     }
 }

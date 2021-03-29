@@ -50,6 +50,8 @@ public class ServletCommon {
             for (Cookie cookie : cookies) {
                 if (profileIdCookieName.equals(cookie.getName())) {
                     cookieProfileId = cookie.getValue();
+                    // TODO : Replace this header protection by a more global one while working on input validation
+                    cookieProfileId = cookieProfileId.replaceAll("\\n\\r","");
                 }
             }
         }
@@ -77,7 +79,7 @@ public class ServletCommon {
                         continue;
                     }
 
-                    Event eventToSend = new Event(event.getEventType(), session, profile, event.getScope(), event.getSource(),
+                    Event eventToSend = new Event(event.getEventType(), session, profile, event.getSourceId(), event.getSource(),
                             event.getTarget(), event.getProperties(), timestamp, event.isPersistent());
                     if (!eventService.isEventAllowed(event, thirdPartyId)) {
                         logger.warn("Event is not allowed : {}", event.getEventType());

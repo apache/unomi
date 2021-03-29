@@ -29,27 +29,22 @@ import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.utils.Changes;
 import org.apache.unomi.utils.HttpUtils;
 import org.apache.unomi.utils.ServletCommon;
-import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.jws.WebService;
-import javax.servlet.*;
+import javax.servlet.ServletContext;
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.*;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import javax.ws.rs.core.Response;
+import java.util.*;
 
 @WebService
 @Produces(MediaType.APPLICATION_JSON + ";charset=UTF-8")
@@ -63,7 +58,6 @@ import java.util.UUID;
 public class ContextJsonEndpoint {
     private static final Logger logger = LoggerFactory.getLogger(ContextJsonEndpoint.class.getName());
 
-    private static final int MAX_COOKIE_AGE_IN_SECONDS = 60 * 60 * 24 * 365; // 1 year
 
     private boolean sanitizeConditions = Boolean.parseBoolean(System.getProperty("org.apache.unomi.security.personalization.sanitizeConditions", "true"));
 
@@ -139,7 +133,7 @@ public class ContextJsonEndpoint {
 
         if (profileId == null) {
             // Get profile id from the cookie
-            profileId = (String) sanitizeValue(ServletCommon.getProfileIdCookieValue(request, (String) configSharingService.getProperty("profileIdCookieName")));
+            profileId = ServletCommon.getProfileIdCookieValue(request, (String) configSharingService.getProperty("profileIdCookieName"));
         }
 
         if (profileId == null && sessionId == null && personaId == null) {
@@ -169,7 +163,7 @@ public class ContextJsonEndpoint {
                     profile = createNewProfile(profileId, response, timestamp);
                     profileCreated = true;
                 } else {
-                    Changes changesObject = checkMergedProfile(response, profile, session);
+                    Changes changesObject = checkMergedProfile(profile, session);
                     changes |= changesObject.getChangeType();
                     profile = changesObject.getProfile();
                 }
@@ -189,11 +183,6 @@ public class ContextJsonEndpoint {
                         // We must reload the profile with the session ID as some properties could be missing from the session profile
                         // #personalIdentifier
                         profile = profileService.load(sessionProfile.getItemId());
-                        if (profile != null) {
-                            HttpUtils.sendProfileCookie(profile, response, (String) configSharingService.getProperty("profileIdCookieName"), (String) configSharingService.getProperty("profileIdCookieDomain"), (Integer) configSharingService.getProperty("profileIdCookieMaxAgeInSeconds"));
-                        } else {
-                            logger.warn("Couldn't load profile {} referenced in session {}", sessionProfile.getItemId(), session.getItemId());
-                        }
                     }
 
                     // Handle anonymous situation
@@ -285,10 +274,14 @@ public class ContextJsonEndpoint {
         if ((changes & EventService.ERROR) == EventService.ERROR) {
             response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
         }
+        // Set profile cookie
+        if (!(profile instanceof Persona)) {
+            response.setHeader("Set-Cookie", HttpUtils.getProfileCookieString(profile, configSharingService));
+        }
         return contextResponse;
     }
 
-    private Changes checkMergedProfile(ServletResponse response, Profile profile, Session session) {
+    private Changes checkMergedProfile(Profile profile, Session session) {
         int changes = EventService.NO_CHANGE;
         if (profile.getMergedWith() != null && !privacyService.isRequireAnonymousBrowsing(profile) && !profile.isAnonymousProfile()) {
             Profile currentProfile = profile;
@@ -301,7 +294,6 @@ public class ContextJsonEndpoint {
                     session.setProfile(profile);
                     changes = EventService.SESSION_UPDATED;
                 }
-                HttpUtils.sendProfileCookie(profile, response, (String) configSharingService.getProperty("profileIdCookieName"), (String) configSharingService.getProperty("profileIdCookieDomain"), (Integer) configSharingService.getProperty("profileIdCookieMaxAgeInSeconds"));
             } else {
                 logger.warn("Couldn't find merged profile {}, falling back to profile {}", masterProfileId, currentProfile.getItemId());
                 profile = currentProfile;
@@ -413,7 +405,6 @@ public class ContextJsonEndpoint {
         }
         profile = new Profile(profileId);
         profile.setProperty("firstVisit", timestamp);
-        HttpUtils.sendProfileCookie(profile, response, (String) configSharingService.getProperty("profileIdCookieName"), (String) configSharingService.getProperty("profileIdCookieDomain"), (Integer) configSharingService.getProperty("profileIdCookieMaxAgeInSeconds"));
         return profile;
     }
 
