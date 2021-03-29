@@ -43,6 +43,8 @@ import org.junit.runners.Suite.SuiteClasses;
         EventServiceIT.class,
         PropertiesUpdateActionIT.class,
         CopyPropertiesActionIT.class,
+        IncrementPropertyIT.class,
+        IncrementInterestsIT.class,
         ModifyConsentIT.class,
         PatchIT.class,
         ContextServletIT.class,
