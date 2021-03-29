@@ -48,12 +48,10 @@
     },
     {
       "parameterValues": {
-        "setPropertyName": "properties.nbOfVisits",
-        "setPropertyValue": "script::profile.properties.?nbOfVisits != null ? (profile.properties.nbOfVisits + 1) : 1",
+        "propertyName": "nbOfVisits",
         "storeInSession": false
       },
-      "type": "setPropertyAction"
+      "type": "incrementPropertyAction"
     }
   ]
-
 }
