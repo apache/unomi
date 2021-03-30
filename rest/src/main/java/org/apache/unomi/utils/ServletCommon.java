@@ -74,19 +74,14 @@ public class ServletCommon {
             for (Event event : events) {
                 processedEventsCnt++;
                 if (event.getEventType() != null) {
-                    if (!eventService.isEventValid(event)) {
-                        logger.warn("Event is not valid : {}", event.getEventType());
-                        continue;
-                    }
-
-                    Event eventToSend = new Event(event.getEventType(), session, profile, event.getSourceId(), event.getSource(),
+                    Event eventToSend = new Event(event.getEventType(), session, profile, event.getScope(), event.getSource(),
                             event.getTarget(), event.getProperties(), timestamp, event.isPersistent());
                     if (!eventService.isEventAllowed(event, thirdPartyId)) {
                         logger.warn("Event is not allowed : {}", event.getEventType());
                         continue;
                     }
                     if (thirdPartyId != null && event.getItemId() != null) {
-                        eventToSend = new Event(event.getItemId(), event.getEventType(), session, profile, event.getSourceId(), event.getSource(), event.getTarget(), event.getProperties(), timestamp, event.isPersistent());
+                        eventToSend = new Event(event.getItemId(), event.getEventType(), session, profile, event.getScope(), event.getSource(), event.getTarget(), event.getProperties(), timestamp, event.isPersistent());
                     }
                     if (filteredEventTypes != null && filteredEventTypes.contains(event.getEventType())) {
                         logger.debug("Profile is filtering event type {}", event.getEventType());
@@ -109,7 +104,7 @@ public class ServletCommon {
                     if ((changes & EventService.ERROR) == EventService.ERROR) {
                         //Don't count the event that failed
                         processedEventsCnt--;
-                        logger.error("Error processing events. Total number of processed events: {}/{}", processedEventsCnt, events.size());
+                        logger.error("Error processing events. Total number of processed events: {}/{}", processedEventsCnt,events.size());
                         break;
                     }
                 }
