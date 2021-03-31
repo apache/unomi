@@ -84,7 +84,7 @@ public class GraphQLListIT extends BaseGraphQLIT {
 
             refreshPersistence();
 
-            Thread.sleep(3000);
+            Thread.sleep(6000);
 
             try (CloseableHttpResponse response = post("graphql/list/find-lists.json")) {
                 final ResponseContext context = ResponseContext.parse(response.getEntity());
