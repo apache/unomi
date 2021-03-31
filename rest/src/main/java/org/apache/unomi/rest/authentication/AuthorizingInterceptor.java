@@ -22,9 +22,7 @@ import java.lang.reflect.Method;
 import java.util.List;
 
 /**
- * Override of the SimpleAuthorizingInterceptor
- * In charge of testing role on method access
- * The override allow to define roles mapping based on Class.method instead of only method names.
+ * Authorizing interceptor is in charge of testing that current authenticate user have the expected role during method access
  */
 public class AuthorizingInterceptor extends SimpleAuthorizingInterceptor {
 
@@ -34,6 +32,15 @@ public class AuthorizingInterceptor extends SimpleAuthorizingInterceptor {
         setMethodRolesMap(restAuthenticationConfig.getMethodRolesMap());
     }
 
+    /**
+     * Returns a list of expected roles for a given method.
+     *
+     * This override provide an additional lookup to the default implementation
+     * It's now possible resolve role mapping using this syntax: CLASS_NAME.METHOD_NAME
+     *
+     * @param method Method
+     * @return list, empty if no roles are available
+     */
     @Override
     protected List<String> getExpectedRoles(Method method) {
         // let super class calculate the roles to see if he is able to find something

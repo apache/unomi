@@ -24,14 +24,15 @@ import java.util.regex.Pattern;
  * This interface provide rest authentication configuration for the rest server.
  */
 public interface RestAuthenticationConfig {
-    
+
     /**
-     * The patterns will be tested against this format: "HTTP_METHOD HTTP_PATH"
+     * This provide the patterns to identify public endpoints
+     * The patterns will be tested against this format: "HTTP_METHOD HTTP_PATH_WITHOUT_CXS_PREFIX", like: "GET context.json"
      *
-     * sample pattern for allowing GET, POST and OPTIONS on context.json request would be:
+     * sample pattern for identify GET, POST and OPTIONS on "/cxs/context.json" as public requests would be:
      * "(GET|POST|OPTIONS) context\\.json"
      *
-     * sample pattern for allowing GET only on all paths starting by "client/":
+     * sample pattern for identify GET only on all paths starting by "/cxs/client/" as public requests would be:
      * "GET client/.*"
      *
      * @return the list of public paths patterns
