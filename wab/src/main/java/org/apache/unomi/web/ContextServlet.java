@@ -54,13 +54,7 @@ public class ContextServlet extends HttpServlet {
 
     @Override
     public void service(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-        if ("options".equalsIgnoreCase(request.getMethod())) {
-            HttpUtils.setupCORSHeaders(request, response);
-            response.flushBuffer();
-            logger.debug("OPTIONS request received. No context will be returned.");
-            return;
-        }
-        HttpServletRequestForwardWrapper.forward(request, response);
+        HttpServletRequestForwardWrapper.forward(request, response, "/context.json");
     }
 
     @Override

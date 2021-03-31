@@ -92,7 +92,7 @@ public class EventsCollectorEndpoint {
         }
 
         if (eventsCollectorRequest == null || eventsCollectorRequest.getEvents() == null) {
-            throw new InternalServerErrorException("No events found");
+            throw new BadRequestException("No events found");
         }
 
         String sessionId = eventsCollectorRequest.getSessionId();
@@ -145,7 +145,7 @@ public class EventsCollectorEndpoint {
                 profile = profileService.load(sessionProfile.getItemId());
                 if (profile == null || profile instanceof Persona) {
                     logger.error(errorMessage);
-                    throw new InternalServerErrorException(errorMessage);
+                    throw new BadRequestException(errorMessage);
                 }
             } else {
                 // Session uses anonymous profile, try to find profile from cookie
@@ -156,7 +156,7 @@ public class EventsCollectorEndpoint {
 
                 if (profile == null) {
                     logger.error(errorMessage);
-                    throw new InternalServerErrorException(errorMessage);
+                    throw new BadRequestException(errorMessage);
                 }
             }
         }
@@ -174,7 +174,7 @@ public class EventsCollectorEndpoint {
         }
         if ((changes & EventService.ERROR) == EventService.ERROR) {
             String errorMessage = "Error processing events. Total number of processed events: " + changesObject.getProcessedItems() + "/" + eventsCollectorRequest.getEvents().size();
-            throw new InternalServerErrorException(errorMessage);
+            throw new BadRequestException(errorMessage);
         }
 
         return new EventCollectorResponse(changes);

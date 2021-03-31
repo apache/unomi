@@ -84,9 +84,20 @@ public class ContextJsonEndpoint {
         return Response.status(Response.Status.NO_CONTENT).header("Access-Control-Allow-Origin", "*").build();
     }
 
+    @GET
+    @Path("/context.json")
+    public ContextResponse contextJSONAsGet(ContextRequest contextRequest,
+                                            @QueryParam("personaId") String personaId,
+                                            @QueryParam("sessionId") String sessionId,
+                                            @QueryParam("timestamp") Long timestampAsLong,
+                                            @QueryParam("invalidateProfile") boolean invalidateProfile,
+                                            @QueryParam("invalidateSession") boolean invalidateSession) {
+        return contextJSONAsPost(contextRequest, personaId, sessionId, timestampAsLong, invalidateProfile, invalidateSession);
+    }
+
     @POST
     @Path("/context.json")
-    public ContextResponse getContextJSON(
+    public ContextResponse contextJSONAsPost(
             ContextRequest contextRequest,
             @QueryParam("personaId") String personaId,
             @QueryParam("sessionId") String sessionId,
@@ -102,6 +113,7 @@ public class ContextJsonEndpoint {
         // Handle persona
         Profile profile = null;
         Session session = null;
+        String profileId = null;
         if (personaId != null) {
             PersonaWithSessions personaWithSessions = profileService.loadPersonaWithSessions(personaId);
             if (personaWithSessions == null) {
@@ -114,15 +126,17 @@ public class ContextJsonEndpoint {
         }
 
         String scope = null;
-        if (contextRequest.getSource() != null) {
-            scope = contextRequest.getSource().getScope();
-        }
+        if (contextRequest != null) {
+            if (contextRequest.getSource() != null) {
+                scope = contextRequest.getSource().getScope();
+            }
 
-        if (contextRequest.getSessionId() != null) {
-            sessionId = contextRequest.getSessionId();
-        }
+            if (contextRequest.getSessionId() != null) {
+                sessionId = contextRequest.getSessionId();
+            }
 
-        String profileId = contextRequest.getProfileId();
+            profileId = contextRequest.getProfileId();
+        }
         if (profileId == null) {
             // Get profile id from the cookie
             profileId = ServletCommon.getProfileIdCookieValue(request, (String) configSharingService.getProperty("profileIdCookieName"));
@@ -133,7 +147,7 @@ public class ContextJsonEndpoint {
             if (logger.isDebugEnabled()) {
                 logger.debug("Request dump: {}", HttpUtils.dumpRequestInfo(request));
             }
-            throw new InternalServerErrorException("Couldn't find profileId, sessionId or personaId in incoming request!");
+            throw new BadRequestException("Couldn't find profileId, sessionId or personaId in incoming request!");
         }
 
         int changes = EventService.NO_CHANGE;
@@ -244,9 +258,11 @@ public class ContextJsonEndpoint {
             contextResponse.setSessionId(sessionId);
         }
 
-        Changes changesObject = handleRequest(contextRequest, session, profile, contextResponse, request, response, timestamp);
-        changes |= changesObject.getChangeType();
-        profile = changesObject.getProfile();
+        if (contextRequest != null) {
+            Changes changesObject = handleRequest(contextRequest, session, profile, contextResponse, request, response, timestamp);
+            changes |= changesObject.getChangeType();
+            profile = changesObject.getProfile();
+        }
 
         if ((changes & EventService.PROFILE_UPDATED) == EventService.PROFILE_UPDATED) {
             profileService.save(profile);

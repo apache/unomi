@@ -44,23 +44,7 @@ public class EventsCollectorServlet extends HttpServlet {
     }
 
     @Override
-    protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-        HttpServletRequestForwardWrapper.forward(request, response);
-    }
-
-    @Override
-    protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-        HttpServletRequestForwardWrapper.forward(request, response);
-    }
-
-    @Override
-    protected void doOptions(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-        try {
-            HttpUtils.setupCORSHeaders(request, response);
-            response.flushBuffer();
-        } catch (Throwable t) { // Here in order to return generic message instead of the whole stack trace in case of not caught exception
-            logger.error("EventsCollectorServlet failed to execute doOptions request", t);
-            response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Internal server error");
-        }
+    protected void service(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        HttpServletRequestForwardWrapper.forward(request, response, null);
     }
 }

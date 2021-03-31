@@ -26,6 +26,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.Enumeration;
+import java.util.Optional;
 
 /**
  * Http wrapper that force the content type to be "application/json"
@@ -42,20 +43,20 @@ class HttpServletRequestForwardWrapper extends HttpServletRequestWrapper {
     /**
      * Forward servlet request to jax-rs endpoints. For a given path, forward to /cxs + path.
      *
-     * @param request  initial request
-     * @param response initial response
+     * @param request    initial request
+     * @param response   initial response
+     * @param forwardURI custom foward URI if the one from the request is not valid
      */
-    public static void forward(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+    public static void forward(HttpServletRequest request, HttpServletResponse response, String forwardURI) throws ServletException, IOException {
         try {
             HttpServletRequest requestWrapper = new HttpServletRequestForwardWrapper(request);
-            requestWrapper.getServletContext().getContext("/cxs").getRequestDispatcher("/cxs" + request.getRequestURI()).forward(requestWrapper, response);
-        } catch (Exception t) { // Here in order to return generic message instead of the whole stack trace in case of not caught exception
-            logger.error("EventsCollectorServlet failed to execute request", t);
-            try {
-                response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Internal server error");
-            } catch (IOException e) {
-                logger.error("error while sending error message", e);
-            }
+            requestWrapper.getServletContext()
+                    .getContext("/cxs")
+                    .getRequestDispatcher("/cxs" + Optional.ofNullable(forwardURI).orElse(request.getRequestURI()))
+                    .forward(requestWrapper, response);
+        } catch (Throwable t) { // Here in order to return generic message instead of the whole stack trace in case of not caught exception
+            logger.error("HttpServletRequestForwardWrapper failed to forward the request", t);
+            response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Internal server error");
         }
     }
 

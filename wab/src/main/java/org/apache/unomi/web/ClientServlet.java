@@ -55,8 +55,8 @@ public class ClientServlet extends HttpServlet {
     }
 
     @Override
-    protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-        HttpServletRequestForwardWrapper.forward(request, response);
+    protected void service(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        HttpServletRequestForwardWrapper.forward(request, response, null);
     }
 
     public void setConfigSharingService(ConfigSharingService configSharingService) {
