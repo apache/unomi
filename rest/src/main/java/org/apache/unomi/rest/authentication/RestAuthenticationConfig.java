@@ -24,9 +24,17 @@ import java.util.regex.Pattern;
  * This interface provide rest authentication configuration for the rest server.
  */
 public interface RestAuthenticationConfig {
+    
     /**
+     * The patterns will be tested against this format: "HTTP_METHOD HTTP_PATH"
      *
-     * @return the list of public paths (expected format is: "HTTP_METHOD HTTP_PATH", like: "GET context.json")
+     * sample pattern for allowing GET, POST and OPTIONS on context.json request would be:
+     * "(GET|POST|OPTIONS) context\\.json"
+     *
+     * sample pattern for allowing GET only on all paths starting by "client/":
+     * "GET client/.*"
+     *
+     * @return the list of public paths patterns
      */
     List<Pattern> getPublicPathPatterns();
 
