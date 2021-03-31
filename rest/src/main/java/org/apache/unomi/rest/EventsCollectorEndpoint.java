@@ -17,43 +17,33 @@
 
 package org.apache.unomi.rest;
 
-import com.fasterxml.jackson.core.JsonFactory;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
-import org.apache.unomi.api.Event;
-import org.apache.unomi.api.EventsCollectorRequest;
-import org.apache.unomi.api.Persona;
-import org.apache.unomi.api.Profile;
-import org.apache.unomi.api.Session;
+import org.apache.unomi.api.*;
 import org.apache.unomi.api.services.ConfigSharingService;
 import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.api.services.PrivacyService;
 import org.apache.unomi.api.services.ProfileService;
-import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.utils.Changes;
 import org.apache.unomi.utils.ServletCommon;
-import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.jws.WebService;
-import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.*;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
-import java.io.IOException;
-import java.rmi.RemoteException;
+import javax.ws.rs.core.Response;
 import java.util.Date;
 import java.util.UUID;
 
 @WebService
 @Produces(MediaType.APPLICATION_JSON + ";charset=UTF-8")
-@Consumes(MediaType.TEXT_PLAIN)
+@Consumes(MediaType.APPLICATION_JSON)
 @CrossOriginResourceSharing(
         allowAllOrigins = true,
         allowCredentials = true
@@ -77,36 +67,30 @@ public class EventsCollectorEndpoint {
     @Context
     HttpServletResponse response;
 
+    @OPTIONS
+    @Path("/eventcollector")
+    public Response options() {
+        return Response.status(Response.Status.NO_CONTENT).build();
+    }
+
     @GET
     @Path("/eventcollector")
-    public EventCollectorResponse get(String eventsCollectorRequestAsString, @QueryParam("timestamp") Long timestampAsString) throws IOException {
-        return doEvent(eventsCollectorRequestAsString, timestampAsString);
+    public EventCollectorResponse collectAsGet(EventsCollectorRequest eventsCollectorRequest, @QueryParam("timestamp") Long timestampAsString) {
+        return doEvent(eventsCollectorRequest, timestampAsString);
     }
 
     @POST
     @Path("/eventcollector")
-    public EventCollectorResponse post(String eventsCollectorRequestAsString, @QueryParam("timestamp") Long timestampAsLong) throws IOException {
-        return doEvent(eventsCollectorRequestAsString, timestampAsLong);
+    public EventCollectorResponse collectAsPost(EventsCollectorRequest eventsCollectorRequest, @QueryParam("timestamp") Long timestampAsLong) {
+        return doEvent(eventsCollectorRequest, timestampAsLong);
     }
 
-    private EventCollectorResponse doEvent(String eventsCollectorRequestAsString, Long timestampAsLong) throws IOException {
+    private EventCollectorResponse doEvent(EventsCollectorRequest eventsCollectorRequest, Long timestampAsLong) {
         Date timestamp = new Date();
         if (timestampAsLong != null) {
             timestamp = new Date(timestampAsLong);
         }
 
-
-        ObjectMapper mapper = CustomObjectMapper.getObjectMapper();
-        JsonFactory factory = mapper.getFactory();
-        EventsCollectorRequest eventsCollectorRequest;
-        try {
-            eventsCollectorRequest = mapper.readValue(factory.createParser(eventsCollectorRequestAsString), EventsCollectorRequest.class);
-        } catch (Exception e) {
-            if (logger.isDebugEnabled()) {
-                logger.debug("Cannot parse eventsCollectorRequest: {}", eventsCollectorRequestAsString, e);
-            }
-            throw new RemoteException("Cannot read payload. See debug level for more information");
-        }
         if (eventsCollectorRequest == null || eventsCollectorRequest.getEvents() == null) {
             throw new InternalServerErrorException("No events found");
         }
@@ -125,8 +109,8 @@ public class EventsCollectorEndpoint {
             // Get the first available scope that is not equal to systemscope to create the session otherwise systemscope will be used
             for (Event event : eventsCollectorRequest.getEvents()) {
                 if (StringUtils.isNotBlank(event.getEventType())) {
-                    if (StringUtils.isNotBlank(event.getScope()) && !event.getScope().equals("systemscope")) {
-                        scope = event.getScope();
+                    if (StringUtils.isNotBlank(event.getSourceId()) && !event.getSourceId().equals("systemscope")) {
+                        scope = event.getSourceId();
                         break;
                     } else if (event.getSource() != null && StringUtils.isNotBlank(event.getSource().getScope()) && !event.getSource().getScope().equals("systemscope")) {
                         scope = event.getSource().getScope();
@@ -134,6 +118,7 @@ public class EventsCollectorEndpoint {
                     }
                 }
             }
+            logger.debug("scope is now {}", scope);
             String cookieProfileId = ServletCommon.getProfileIdCookieValue(request, (String) configSharingService.getProperty("profileIdCookieName"));
             if (StringUtils.isNotBlank(cookieProfileId)) {
                 profile = profileService.load(cookieProfileId);
@@ -154,11 +139,13 @@ public class EventsCollectorEndpoint {
             */
         } else {
             Profile sessionProfile = session.getProfile();
+            final String errorMessage = String.format("No valid profile found or persona found for profileId=%s, aborting request !", session.getProfileId());
             if (sessionProfile.getItemId() != null) {
                 // Reload up-to-date profile
                 profile = profileService.load(sessionProfile.getItemId());
                 if (profile == null || profile instanceof Persona) {
-                    throw new InternalServerErrorException(String.format("No valid profile found or persona found for profileId=%s, aborting request !", session.getProfileId()));
+                    logger.error(errorMessage);
+                    throw new InternalServerErrorException(errorMessage);
                 }
             } else {
                 // Session uses anonymous profile, try to find profile from cookie
@@ -168,7 +155,8 @@ public class EventsCollectorEndpoint {
                 }
 
                 if (profile == null) {
-                    throw new InternalServerErrorException(String.format("No valid profile found or persona found for profileId=%s, aborting request !", session.getProfileId()));
+                    logger.error(errorMessage);
+                    throw new InternalServerErrorException(errorMessage);
                 }
             }
         }

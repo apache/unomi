@@ -17,15 +17,11 @@
 
 package org.apache.unomi.rest;
 
-import com.fasterxml.jackson.core.JsonFactory;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.cxf.jaxrs.utils.ExceptionUtils;
 import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
 import org.apache.unomi.api.*;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.services.*;
-import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.utils.Changes;
 import org.apache.unomi.utils.HttpUtils;
 import org.apache.unomi.utils.ServletCommon;
@@ -48,7 +44,7 @@ import java.util.*;
 
 @WebService
 @Produces(MediaType.APPLICATION_JSON + ";charset=UTF-8")
-@Consumes(MediaType.TEXT_PLAIN)
+@Consumes(MediaType.APPLICATION_JSON)
 @CrossOriginResourceSharing(
         allowAllOrigins = true,
         allowCredentials = true
@@ -82,9 +78,22 @@ public class ContextJsonEndpoint {
     @Reference
     private ConfigSharingService configSharingService;
 
+    @OPTIONS
+    @Path("/context.json")
+    public Response options() {
+        return Response.status(Response.Status.NO_CONTENT).header("Access-Control-Allow-Origin", "*").build();
+    }
+
     @POST
     @Path("/context.json")
-    public ContextResponse getContextJSON(String contextRequestAsString, @QueryParam("timestamp") Long timestampAsLong, @CookieParam("context-profile-id") String cookieProfileId) {
+    public ContextResponse getContextJSON(
+            ContextRequest contextRequest,
+            @QueryParam("personaId") String personaId,
+            @QueryParam("sessionId") String sessionId,
+            @QueryParam("timestamp") Long timestampAsLong,
+            @QueryParam("invalidateProfile") boolean invalidateProfile,
+            @QueryParam("invalidateSession") boolean invalidateSession
+    ) {
         Date timestamp = new Date();
         if (timestampAsLong != null) {
             timestamp = new Date(timestampAsLong);
@@ -93,7 +102,6 @@ public class ContextJsonEndpoint {
         // Handle persona
         Profile profile = null;
         Session session = null;
-        String personaId = request.getParameter("personaId");
         if (personaId != null) {
             PersonaWithSessions personaWithSessions = profileService.loadPersonaWithSessions(personaId);
             if (personaWithSessions == null) {
@@ -105,32 +113,16 @@ public class ContextJsonEndpoint {
             }
         }
 
-        // Extract payload
-        ContextRequest contextRequest = null;
         String scope = null;
-        String sessionId = null;
-        String profileId = null;
-        ObjectMapper mapper = CustomObjectMapper.getObjectMapper();
-        JsonFactory factory = mapper.getFactory();
-        try {
-            contextRequest = mapper.readValue(factory.createParser(contextRequestAsString), ContextRequest.class);
-        } catch (Exception e) {
-            logger.error("Cannot deserialize the context request payload. See debug level for more information");
-            if (logger.isDebugEnabled()) {
-                logger.debug("Cannot deserialize the context request payload because of {}", e.getMessage(), e);
-            }
-            throw ExceptionUtils.toHttpException(e, null);
-        }
         if (contextRequest.getSource() != null) {
             scope = contextRequest.getSource().getScope();
         }
-        sessionId = contextRequest.getSessionId();
-        profileId = contextRequest.getProfileId();
 
-        if (sessionId == null) {
-            sessionId = request.getParameter("sessionId");
+        if (contextRequest.getSessionId() != null) {
+            sessionId = contextRequest.getSessionId();
         }
 
+        String profileId = contextRequest.getProfileId();
         if (profileId == null) {
             // Get profile id from the cookie
             profileId = ServletCommon.getProfileIdCookieValue(request, (String) configSharingService.getProperty("profileIdCookieName"));
@@ -149,18 +141,16 @@ public class ContextJsonEndpoint {
             // Not a persona, resolve profile now
             boolean profileCreated = false;
 
-            boolean invalidateProfile = request.getParameter("invalidateProfile") != null ?
-                    new Boolean(request.getParameter("invalidateProfile")) : false;
             if (profileId == null || invalidateProfile) {
                 // no profileId cookie was found or the profile has to be invalidated, we generate a new one and create the profile in the profile service
-                profile = createNewProfile(null, response, timestamp);
+                profile = createNewProfile(null, timestamp);
                 profileCreated = true;
             } else {
                 profile = profileService.load(profileId);
                 if (profile == null) {
                     // this can happen if we have an old cookie but have reset the server,
                     // or if we merged the profiles and somehow this cookie didn't get updated.
-                    profile = createNewProfile(profileId, response, timestamp);
+                    profile = createNewProfile(profileId, timestamp);
                     profileCreated = true;
                 } else {
                     Changes changesObject = checkMergedProfile(profile, session);
@@ -170,8 +160,6 @@ public class ContextJsonEndpoint {
             }
 
             Profile sessionProfile;
-            boolean invalidateSession = request.getParameter("invalidateSession") != null ?
-                    new Boolean(request.getParameter("invalidateSession")) : false;
             if (StringUtils.isNotBlank(sessionId) && !invalidateSession) {
                 session = profileService.loadSession(sessionId, timestamp);
                 if (session != null) {
@@ -256,11 +244,9 @@ public class ContextJsonEndpoint {
             contextResponse.setSessionId(sessionId);
         }
 
-        if (contextRequest != null) {
-            Changes changesObject = handleRequest(contextRequest, session, profile, contextResponse, request, response, timestamp);
-            changes |= changesObject.getChangeType();
-            profile = changesObject.getProfile();
-        }
+        Changes changesObject = handleRequest(contextRequest, session, profile, contextResponse, request, response, timestamp);
+        changes |= changesObject.getChangeType();
+        profile = changesObject.getProfile();
 
         if ((changes & EventService.PROFILE_UPDATED) == EventService.PROFILE_UPDATED) {
             profileService.save(profile);
@@ -296,7 +282,6 @@ public class ContextJsonEndpoint {
                 }
             } else {
                 logger.warn("Couldn't find merged profile {}, falling back to profile {}", masterProfileId, currentProfile.getItemId());
-                profile = currentProfile;
                 profile.setMergedWith(null);
                 changes = EventService.PROFILE_UPDATED;
             }
@@ -379,25 +364,23 @@ public class ContextJsonEndpoint {
      * @param session
      */
     private void processOverrides(ContextRequest contextRequest, Profile profile, Session session) {
-        if (profile instanceof Persona) {
-            if (contextRequest.getProfileOverrides() != null) {
-                if (contextRequest.getProfileOverrides().getScores() != null) {
-                    profile.setScores(contextRequest.getProfileOverrides().getScores());
-                }
-                if (contextRequest.getProfileOverrides().getSegments() != null) {
-                    profile.setSegments(contextRequest.getProfileOverrides().getSegments());
-                }
-                if (contextRequest.getProfileOverrides().getProperties() != null) {
-                    profile.setProperties(contextRequest.getProfileOverrides().getProperties());
-                }
-                if (contextRequest.getSessionPropertiesOverrides() != null && session != null) {
-                    session.setProperties(contextRequest.getSessionPropertiesOverrides());
-                }
+        if (profile instanceof Persona && contextRequest.getProfileOverrides() != null) {
+            if (contextRequest.getProfileOverrides().getScores() != null) {
+                profile.setScores(contextRequest.getProfileOverrides().getScores());
+            }
+            if (contextRequest.getProfileOverrides().getSegments() != null) {
+                profile.setSegments(contextRequest.getProfileOverrides().getSegments());
+            }
+            if (contextRequest.getProfileOverrides().getProperties() != null) {
+                profile.setProperties(contextRequest.getProfileOverrides().getProperties());
+            }
+            if (contextRequest.getSessionPropertiesOverrides() != null && session != null) {
+                session.setProperties(contextRequest.getSessionPropertiesOverrides());
             }
         }
     }
 
-    private Profile createNewProfile(String existingProfileId, ServletResponse response, Date timestamp) {
+    private Profile createNewProfile(String existingProfileId, Date timestamp) {
         Profile profile;
         String profileId = existingProfileId;
         if (profileId == null) {
@@ -443,7 +426,7 @@ public class ContextJsonEndpoint {
         List<PersonalizationService.PersonalizationRequest> result = new ArrayList<>();
         for (PersonalizationService.PersonalizationRequest personalizationRequest : personalizations) {
             List<PersonalizationService.PersonalizedContent> personalizedContents = sanitizePersonalizedContentObjects(personalizationRequest.getContents());
-            if (personalizedContents != null && personalizedContents.size() > 0) {
+            if (personalizedContents != null && !personalizedContents.isEmpty()) {
                 result.add(personalizationRequest);
             }
         }
