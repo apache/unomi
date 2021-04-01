@@ -19,10 +19,15 @@ package org.apache.unomi.rest;
 import com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider;
 import org.apache.cxf.Bus;
 import org.apache.cxf.endpoint.Server;
+import org.apache.cxf.interceptor.security.SimpleAuthorizingInterceptor;
 import org.apache.cxf.jaxrs.JAXRSServerFactoryBean;
 import org.apache.cxf.jaxrs.openapi.OpenApiCustomizer;
 import org.apache.cxf.jaxrs.openapi.OpenApiFeature;
 import org.apache.cxf.jaxrs.security.JAASAuthenticationFilter;
+import org.apache.cxf.jaxrs.security.SimpleAuthorizingFilter;
+import org.apache.unomi.rest.authentication.AuthenticationFilter;
+import org.apache.unomi.rest.authentication.AuthorizingInterceptor;
+import org.apache.unomi.rest.authentication.RestAuthenticationConfig;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.Filter;
 import org.osgi.framework.ServiceReference;
@@ -47,6 +52,7 @@ public class RestServer {
     private BundleContext bundleContext;
     private ServiceTracker jaxRSServiceTracker;
     private Bus serverBus;
+    private RestAuthenticationConfig restAuthenticationConfig;
     private List<ExceptionMapper> exceptionMappers = new ArrayList<>();
     private long timeOfLastUpdate = System.currentTimeMillis();
     private Timer refreshTimer = null;
@@ -59,6 +65,11 @@ public class RestServer {
     @Reference(cardinality = ReferenceCardinality.MANDATORY)
     public void setServerBus(Bus serverBus) {
         this.serverBus = serverBus;
+    }
+
+    @Reference(cardinality = ReferenceCardinality.MANDATORY)
+    public void setRestAuthenticationConfig(RestAuthenticationConfig restAuthenticationConfig) {
+        this.restAuthenticationConfig = restAuthenticationConfig;
     }
 
     @Reference
@@ -161,11 +172,16 @@ public class RestServer {
                         new org.apache.unomi.persistence.spi.CustomObjectMapper(),
                         JacksonJaxbJsonProvider.DEFAULT_ANNOTATIONS));
         jaxrsServerFactoryBean.setProvider(new org.apache.cxf.rs.security.cors.CrossOriginResourceSharingFilter());
-        JAASAuthenticationFilter jaasFilter = new org.apache.cxf.jaxrs.security.JAASAuthenticationFilter();
-        jaasFilter.setContextName("karaf");
-        jaasFilter.setRoleClassifier("ROLE_");
-        jaasFilter.setRealmName("cxs");
-        jaxrsServerFactoryBean.setProvider(jaasFilter);
+
+        // Authentication filter (used for authenticating user from request)
+        jaxrsServerFactoryBean.setProvider(new AuthenticationFilter(restAuthenticationConfig));
+
+        // Authorization interceptor (used for checking roles at methods access directly)
+        SimpleAuthorizingFilter simpleAuthorizingFilter = new SimpleAuthorizingFilter();
+        simpleAuthorizingFilter.setInterceptor(new AuthorizingInterceptor(restAuthenticationConfig));
+        jaxrsServerFactoryBean.setProvider(simpleAuthorizingFilter);
+
+        // Exception mappers
         for (ExceptionMapper exceptionMapper : exceptionMappers) {
             jaxrsServerFactoryBean.setProvider(exceptionMapper);
         }
