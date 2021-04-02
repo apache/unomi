@@ -17,10 +17,10 @@
 
 package org.apache.unomi.itests.tools.httpclient;
 
+import org.apache.http.HttpStatus;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.impl.client.HttpClientBuilder;
-import org.eclipse.jetty.http.HttpStatus;
 
 import java.io.IOException;
 
@@ -34,10 +34,10 @@ public class HttpClientThatWaitsForUnomi {
         while (true) {
             CloseableHttpResponse response = HttpClientBuilder.create().build().execute(request);
             final int statusCode = response.getStatusLine().getStatusCode();
-            if (statusCode < HttpStatus.BAD_REQUEST_400) {
+            if (statusCode < HttpStatus.SC_BAD_REQUEST) {
                 return response;
             }
-            if (count++ > MAX_TRIES || statusCode > HttpStatus.INTERNAL_SERVER_ERROR_500) {
+            if (count++ > MAX_TRIES || statusCode >= HttpStatus.SC_INTERNAL_SERVER_ERROR) {
                 throw new RuntimeException(String.format("connecting to the server failed %s times with status %s %s", MAX_TRIES, statusCode, response.getStatusLine().getReasonPhrase()));
             }
             try {
