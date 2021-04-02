@@ -25,7 +25,6 @@ import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.services.ConfigSharingService;
 import org.apache.unomi.api.services.ProfileService;
-import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 import org.slf4j.Logger;
@@ -37,9 +36,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.*;
 import javax.ws.rs.core.Context;
-import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import java.io.OutputStream;
 import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.List;
@@ -51,8 +48,6 @@ import java.util.Set;
  * A servlet filter to serve a context-specific Javascript containing the current request context object.
  */
 @WebService
-@Produces
-@Consumes(MediaType.TEXT_PLAIN)
 @CrossOriginResourceSharing(
         allowAllOrigins = true,
         allowCredentials = true
@@ -62,30 +57,40 @@ import java.util.Set;
 public class ClientEndpoint {
 
     private static final Logger logger = LoggerFactory.getLogger(ClientEndpoint.class.getName());
-    private static final long serialVersionUID = 2928875960103325238L;
+    private static final String CONTENT_DISPOSITION_HEADER_KEY = "Content-Disposition";
+
+    private static final String FILE_NAME_WO_EXT = "my-profile";
+
+    private static String getContentDispostionHeader(String extension) {
+        return String.format("attachment; filename=\"%s.%s\"", FILE_NAME_WO_EXT, extension);
+    }
 
     @Reference
     private ProfileService profileService;
     @Reference
     private ConfigSharingService configSharingService;
 
-    private final String FILE_NAME_WO_EXT = "my-profile";
 
     @Context
     HttpServletRequest request;
     @Context
     HttpServletResponse response;
 
+    @OPTIONS
+    @Path("/client/{operation}/{param}")
+    public Response options() {
+        return Response.status(Response.Status.NO_CONTENT).build();
+    }
+
     @GET
     @Path("/client/{operation}/{param}")
     public Response getClient(@PathParam("operation") String operation, @PathParam("param") String param) throws JsonProcessingException {
-        switch (operation) {
-            case "myprofile":
-                if (((String) configSharingService.getProperty("allowedProfileDownloadFormats")).contains(param)) {
-                    return donwloadCurrentProfile(param);
-                } else {
-                    throw new InternalServerErrorException(String.format("%s is not an allowed param", param));
-                }
+        if ("myprofile".equals(operation)) {
+            if (((String) configSharingService.getProperty("allowedProfileDownloadFormats")).contains(param)) {
+                return donwloadCurrentProfile(param);
+            } else {
+                throw new InternalServerErrorException(String.format("%s is not an allowed param", param));
+            }
         }
         throw new NotFoundException();
     }
@@ -112,8 +117,9 @@ public class ClientEndpoint {
                         return prepareCsvFileToDownload(currentProfile, request.getParameter("vertical") != null);
                     case "text":
                         return prepareYamlFileToDownload(currentProfile, true);
+                    default:
+                        throw new NotFoundException();
                 }
-
             }
         }
         throw new NotFoundException();
@@ -121,7 +127,8 @@ public class ClientEndpoint {
 
     private Response prepareCsvFileToDownload(Profile currentProfile, boolean vertical) {
         response.setContentType("text/csv");
-        response.setHeader("Content-Disposition", "attachment; filename=\"" + FILE_NAME_WO_EXT + ".csv\"");
+
+        response.setHeader(CONTENT_DISPOSITION_HEADER_KEY, getContentDispostionHeader("csv"));
         StringWriter writer = new StringWriter();
         //using custom delimiter and quote character
         CSVWriter csvWriter = new CSVWriter(writer);
@@ -132,12 +139,12 @@ public class ClientEndpoint {
             }
         } else {
             Set<String> keySet = currentProfile.getProperties().keySet();
-            List<String> values = new ArrayList();
+            List<String> values = new ArrayList<>();
             for (Object value : currentProfile.getProperties().values()) {
                 values.add(value.toString().trim().replace("\n", ""));
             }
-            csvWriter.writeNext(keySet.toArray(new String[keySet.size()]));
-            csvWriter.writeNext(values.toArray(new String[values.size()]));
+            csvWriter.writeNext(keySet.toArray(new String[0]));
+            csvWriter.writeNext(values.toArray(new String[0]));
         }
         Response.ResponseBuilder responseBuilder = Response.ok(writer.toString());
         return responseBuilder.build();
@@ -145,7 +152,8 @@ public class ClientEndpoint {
 
     private Response prepareJsonFileToDownload(Profile currentProfile) throws JsonProcessingException {
         response.setContentType("text/json");
-        response.setHeader("Content-Disposition", "attachment; filename=\"" + FILE_NAME_WO_EXT + ".json\"");
+        response.setHeader(CONTENT_DISPOSITION_HEADER_KEY, getContentDispostionHeader("json"));
+
         ObjectMapper mapper = new ObjectMapper();
         String jsonContent = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(currentProfile.getProperties());
         return Response.ok(jsonContent).build();
@@ -153,7 +161,7 @@ public class ClientEndpoint {
 
     private Response prepareYamlFileToDownload(Profile currentProfile, boolean asTextFile) throws JsonProcessingException {
         response.setContentType("text/" + (asTextFile ? "plain" : "yaml"));
-        response.setHeader("Content-Disposition", "attachment; filename=\"" + FILE_NAME_WO_EXT + (asTextFile ? ".txt" : ".yml") + "\"");
+        response.setHeader(CONTENT_DISPOSITION_HEADER_KEY, getContentDispostionHeader((asTextFile ? "txt" : "yml")));
         YAMLFactory yf = new YAMLFactory();
         ObjectMapper mapper = new ObjectMapper(yf);
         String yamlContent = mapper.writeValueAsString(currentProfile.getProperties());
