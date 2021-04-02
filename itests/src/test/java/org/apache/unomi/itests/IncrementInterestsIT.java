@@ -82,6 +82,7 @@ public class IncrementInterestsIT extends BaseIT {
     @After
     public void tearDown() {
         rulesService.removeRule(rule.getItemId());
+        topicService.delete(topic.getItemId());
         profileService.delete(profile.getItemId(), false);
     }
 
