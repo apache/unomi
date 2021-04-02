@@ -41,11 +41,6 @@
 
 
     <bean id="contextServlet" class="org.apache.unomi.web.ContextServlet">
-        <property name="profileService" ref="profileService"/>
-        <property name="eventService" ref="eventService"/>
-        <property name="rulesService" ref="rulesService"/>
-        <property name="privacyService" ref="privacyService" />
-        <property name="personalizationService" ref="personalizationService"/>
         <property name="configSharingService" ref="configSharingService"/>
         <property name="profileIdCookieDomain" value="${web.contextserver.domain}" />
         <property name="profileIdCookieName" value="${web.contextserver.profileIdCookieName}"/>
@@ -68,12 +63,7 @@
         </service-properties>
     </service>
 
-    <bean id="eventsCollectorServlet" class="org.apache.unomi.web.EventsCollectorServlet">
-        <property name="profileService" ref="profileService"/>
-        <property name="eventService" ref="eventService"/>
-        <property name="privacyService" ref="privacyService" />
-        <property name="profileIdCookieName" value="${web.contextserver.profileIdCookieName}"/>
-    </bean>
+    <bean id="eventsCollectorServlet" class="org.apache.unomi.web.EventsCollectorServlet"/>
 
     <service id="eventsCollectorServletService" ref="eventsCollectorServlet">
         <interfaces>
@@ -87,10 +77,8 @@
     </service>
 
     <bean id="clientServlet" class="org.apache.unomi.web.ClientServlet">
-        <property name="profileService" ref="profileService"/>
         <property name="configSharingService" ref="configSharingService"/>
         <property name="allowedProfileDownloadFormats" value="${web.allowed.profile.download.formats}" />
-        <property name="profileIdCookieName" value="${web.contextserver.profileIdCookieName}"/>
     </bean>
 
     <service id="clientServletService" ref="clientServlet">

@@ -23,7 +23,6 @@ import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.ContentType;
-import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.util.EntityUtils;
 import org.apache.unomi.api.ContextResponse;
 import org.apache.unomi.api.Event;
@@ -31,6 +30,7 @@ import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.Session;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.services.DefinitionsService;
+import org.apache.unomi.itests.tools.httpclient.HttpClientThatWaitsForUnomi;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.junit.Assert;
@@ -64,7 +64,7 @@ public class TestUtils {
 	}
 
 	public static RequestResponse executeContextJSONRequest(HttpPost request, String sessionId) throws IOException {
-		try (CloseableHttpResponse response = HttpClientBuilder.create().build().execute(request)) {
+		try (CloseableHttpResponse response = HttpClientThatWaitsForUnomi.doPost(request)) {
 			// validate mimeType
 			HttpEntity entity = response.getEntity();
 			String mimeType = ContentType.getOrDefault(entity).getMimeType();
