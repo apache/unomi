@@ -54,7 +54,7 @@ public class ContextServlet extends HttpServlet {
 
     @Override
     public void service(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-        HttpServletRequestForwardWrapper.forward(request, response, "/context.json");
+        HttpServletRequestForwardWrapper.forward(request, response);
     }
 
     @Override

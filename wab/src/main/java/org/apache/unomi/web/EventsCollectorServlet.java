@@ -45,6 +45,6 @@ public class EventsCollectorServlet extends HttpServlet {
 
     @Override
     protected void service(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-        HttpServletRequestForwardWrapper.forward(request, response, null);
+        HttpServletRequestForwardWrapper.forward(request, response);
     }
 }

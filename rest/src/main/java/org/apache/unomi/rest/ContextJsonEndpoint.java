@@ -17,11 +17,13 @@
 
 package org.apache.unomi.rest;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
 import org.apache.unomi.api.*;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.services.*;
+import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.utils.Changes;
 import org.apache.unomi.utils.HttpUtils;
 import org.apache.unomi.utils.ServletCommon;
@@ -43,7 +45,6 @@ import javax.ws.rs.core.Response;
 import java.util.*;
 
 @WebService
-@Produces(MediaType.APPLICATION_JSON + ";charset=UTF-8")
 @Consumes(MediaType.APPLICATION_JSON)
 @CrossOriginResourceSharing(
         allowAllOrigins = true,
@@ -84,7 +85,41 @@ public class ContextJsonEndpoint {
         return Response.status(Response.Status.NO_CONTENT).header("Access-Control-Allow-Origin", "*").build();
     }
 
+    @POST
+    @Produces(MediaType.TEXT_PLAIN)
+    @Path("/context.js")
+    public Response contextJSAsPost(ContextRequest contextRequest,
+                                    @QueryParam("personaId") String personaId,
+                                    @QueryParam("sessionId") String sessionId,
+                                    @QueryParam("timestamp") Long timestampAsLong,
+                                    @QueryParam("invalidateProfile") boolean invalidateProfile,
+                                    @QueryParam("invalidateSession") boolean invalidateSession) throws JsonProcessingException {
+        return contextJSAsGet(contextRequest, personaId, sessionId, timestampAsLong, invalidateProfile, invalidateSession);
+    }
+
+
     @GET
+    @Produces(MediaType.TEXT_PLAIN)
+    @Path("/context.js")
+    public Response contextJSAsGet(ContextRequest contextRequest,
+                                   @QueryParam("personaId") String personaId,
+                                   @QueryParam("sessionId") String sessionId,
+                                   @QueryParam("timestamp") Long timestampAsLong,
+                                   @QueryParam("invalidateProfile") boolean invalidateProfile,
+                                   @QueryParam("invalidateSession") boolean invalidateSession) throws JsonProcessingException {
+        ContextResponse contextResponse = contextJSONAsPost(contextRequest, personaId, sessionId, timestampAsLong, invalidateProfile, invalidateSession);
+        String contextAsJSONString = CustomObjectMapper.getObjectMapper().writeValueAsString(contextResponse);
+        StringBuilder responseAsString = new StringBuilder();
+        responseAsString.append("window.digitalData = window.digitalData || {};\n")
+                .append("var cxs = ")
+                .append(contextAsJSONString)
+                .append(";\n");
+        return Response.ok(responseAsString.toString()).build();
+
+    }
+
+    @GET
+    @Produces(MediaType.APPLICATION_JSON + ";charset=UTF-8")
     @Path("/context.json")
     public ContextResponse contextJSONAsGet(ContextRequest contextRequest,
                                             @QueryParam("personaId") String personaId,
@@ -96,6 +131,7 @@ public class ContextJsonEndpoint {
     }
 
     @POST
+    @Produces(MediaType.APPLICATION_JSON + ";charset=UTF-8")
     @Path("/context.json")
     public ContextResponse contextJSONAsPost(
             ContextRequest contextRequest,
