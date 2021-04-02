@@ -17,10 +17,8 @@
 
 package org.apache.unomi.rest;
 
-import com.fasterxml.jackson.core.JsonFactory;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.cxf.jaxrs.utils.ExceptionUtils;
 import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
 import org.apache.unomi.api.*;
 import org.apache.unomi.api.conditions.Condition;
@@ -47,8 +45,7 @@ import javax.ws.rs.core.Response;
 import java.util.*;
 
 @WebService
-@Produces(MediaType.APPLICATION_JSON + ";charset=UTF-8")
-@Consumes(MediaType.TEXT_PLAIN)
+@Consumes(MediaType.APPLICATION_JSON)
 @CrossOriginResourceSharing(
         allowAllOrigins = true,
         allowCredentials = true
@@ -82,9 +79,68 @@ public class ContextJsonEndpoint {
     @Reference
     private ConfigSharingService configSharingService;
 
-    @POST
+    @OPTIONS
     @Path("/context.json")
-    public ContextResponse getContextJSON(String contextRequestAsString, @QueryParam("timestamp") Long timestampAsLong, @CookieParam("context-profile-id") String cookieProfileId) {
+    public Response options() {
+        return Response.status(Response.Status.NO_CONTENT).header("Access-Control-Allow-Origin", "*").build();
+    }
+
+    @POST
+    @Produces(MediaType.TEXT_PLAIN)
+    @Path("/context.js")
+    public Response contextJSAsPost(ContextRequest contextRequest,
+                                    @QueryParam("personaId") String personaId,
+                                    @QueryParam("sessionId") String sessionId,
+                                    @QueryParam("timestamp") Long timestampAsLong,
+                                    @QueryParam("invalidateProfile") boolean invalidateProfile,
+                                    @QueryParam("invalidateSession") boolean invalidateSession) throws JsonProcessingException {
+        return contextJSAsGet(contextRequest, personaId, sessionId, timestampAsLong, invalidateProfile, invalidateSession);
+    }
+
+
+    @GET
+    @Produces(MediaType.TEXT_PLAIN)
+    @Path("/context.js")
+    public Response contextJSAsGet(ContextRequest contextRequest,
+                                   @QueryParam("personaId") String personaId,
+                                   @QueryParam("sessionId") String sessionId,
+                                   @QueryParam("timestamp") Long timestampAsLong,
+                                   @QueryParam("invalidateProfile") boolean invalidateProfile,
+                                   @QueryParam("invalidateSession") boolean invalidateSession) throws JsonProcessingException {
+        ContextResponse contextResponse = contextJSONAsPost(contextRequest, personaId, sessionId, timestampAsLong, invalidateProfile, invalidateSession);
+        String contextAsJSONString = CustomObjectMapper.getObjectMapper().writeValueAsString(contextResponse);
+        StringBuilder responseAsString = new StringBuilder();
+        responseAsString.append("window.digitalData = window.digitalData || {};\n")
+                .append("var cxs = ")
+                .append(contextAsJSONString)
+                .append(";\n");
+        return Response.ok(responseAsString.toString()).build();
+
+    }
+
+    @GET
+    @Produces(MediaType.APPLICATION_JSON + ";charset=UTF-8")
+    @Path("/context.json")
+    public ContextResponse contextJSONAsGet(ContextRequest contextRequest,
+                                            @QueryParam("personaId") String personaId,
+                                            @QueryParam("sessionId") String sessionId,
+                                            @QueryParam("timestamp") Long timestampAsLong,
+                                            @QueryParam("invalidateProfile") boolean invalidateProfile,
+                                            @QueryParam("invalidateSession") boolean invalidateSession) {
+        return contextJSONAsPost(contextRequest, personaId, sessionId, timestampAsLong, invalidateProfile, invalidateSession);
+    }
+
+    @POST
+    @Produces(MediaType.APPLICATION_JSON + ";charset=UTF-8")
+    @Path("/context.json")
+    public ContextResponse contextJSONAsPost(
+            ContextRequest contextRequest,
+            @QueryParam("personaId") String personaId,
+            @QueryParam("sessionId") String sessionId,
+            @QueryParam("timestamp") Long timestampAsLong,
+            @QueryParam("invalidateProfile") boolean invalidateProfile,
+            @QueryParam("invalidateSession") boolean invalidateSession
+    ) {
         Date timestamp = new Date();
         if (timestampAsLong != null) {
             timestamp = new Date(timestampAsLong);
@@ -93,7 +149,7 @@ public class ContextJsonEndpoint {
         // Handle persona
         Profile profile = null;
         Session session = null;
-        String personaId = request.getParameter("personaId");
+        String profileId = null;
         if (personaId != null) {
             PersonaWithSessions personaWithSessions = profileService.loadPersonaWithSessions(personaId);
             if (personaWithSessions == null) {
@@ -105,32 +161,18 @@ public class ContextJsonEndpoint {
             }
         }
 
-        // Extract payload
-        ContextRequest contextRequest = null;
         String scope = null;
-        String sessionId = null;
-        String profileId = null;
-        ObjectMapper mapper = CustomObjectMapper.getObjectMapper();
-        JsonFactory factory = mapper.getFactory();
-        try {
-            contextRequest = mapper.readValue(factory.createParser(contextRequestAsString), ContextRequest.class);
-        } catch (Exception e) {
-            logger.error("Cannot deserialize the context request payload. See debug level for more information");
-            if (logger.isDebugEnabled()) {
-                logger.debug("Cannot deserialize the context request payload because of {}", e.getMessage(), e);
+        if (contextRequest != null) {
+            if (contextRequest.getSource() != null) {
+                scope = contextRequest.getSource().getScope();
             }
-            throw ExceptionUtils.toHttpException(e, null);
-        }
-        if (contextRequest.getSource() != null) {
-            scope = contextRequest.getSource().getScope();
-        }
-        sessionId = contextRequest.getSessionId();
-        profileId = contextRequest.getProfileId();
 
-        if (sessionId == null) {
-            sessionId = request.getParameter("sessionId");
-        }
+            if (contextRequest.getSessionId() != null) {
+                sessionId = contextRequest.getSessionId();
+            }
 
+            profileId = contextRequest.getProfileId();
+        }
         if (profileId == null) {
             // Get profile id from the cookie
             profileId = ServletCommon.getProfileIdCookieValue(request, (String) configSharingService.getProperty("profileIdCookieName"));
@@ -141,7 +183,7 @@ public class ContextJsonEndpoint {
             if (logger.isDebugEnabled()) {
                 logger.debug("Request dump: {}", HttpUtils.dumpRequestInfo(request));
             }
-            throw new InternalServerErrorException("Couldn't find profileId, sessionId or personaId in incoming request!");
+            throw new BadRequestException("Couldn't find profileId, sessionId or personaId in incoming request!");
         }
 
         int changes = EventService.NO_CHANGE;
@@ -149,18 +191,16 @@ public class ContextJsonEndpoint {
             // Not a persona, resolve profile now
             boolean profileCreated = false;
 
-            boolean invalidateProfile = request.getParameter("invalidateProfile") != null ?
-                    new Boolean(request.getParameter("invalidateProfile")) : false;
             if (profileId == null || invalidateProfile) {
                 // no profileId cookie was found or the profile has to be invalidated, we generate a new one and create the profile in the profile service
-                profile = createNewProfile(null, response, timestamp);
+                profile = createNewProfile(null, timestamp);
                 profileCreated = true;
             } else {
                 profile = profileService.load(profileId);
                 if (profile == null) {
                     // this can happen if we have an old cookie but have reset the server,
                     // or if we merged the profiles and somehow this cookie didn't get updated.
-                    profile = createNewProfile(profileId, response, timestamp);
+                    profile = createNewProfile(profileId, timestamp);
                     profileCreated = true;
                 } else {
                     Changes changesObject = checkMergedProfile(profile, session);
@@ -170,8 +210,6 @@ public class ContextJsonEndpoint {
             }
 
             Profile sessionProfile;
-            boolean invalidateSession = request.getParameter("invalidateSession") != null ?
-                    new Boolean(request.getParameter("invalidateSession")) : false;
             if (StringUtils.isNotBlank(sessionId) && !invalidateSession) {
                 session = profileService.loadSession(sessionId, timestamp);
                 if (session != null) {
@@ -296,7 +334,6 @@ public class ContextJsonEndpoint {
                 }
             } else {
                 logger.warn("Couldn't find merged profile {}, falling back to profile {}", masterProfileId, currentProfile.getItemId());
-                profile = currentProfile;
                 profile.setMergedWith(null);
                 changes = EventService.PROFILE_UPDATED;
             }
@@ -379,25 +416,23 @@ public class ContextJsonEndpoint {
      * @param session
      */
     private void processOverrides(ContextRequest contextRequest, Profile profile, Session session) {
-        if (profile instanceof Persona) {
-            if (contextRequest.getProfileOverrides() != null) {
-                if (contextRequest.getProfileOverrides().getScores() != null) {
-                    profile.setScores(contextRequest.getProfileOverrides().getScores());
-                }
-                if (contextRequest.getProfileOverrides().getSegments() != null) {
-                    profile.setSegments(contextRequest.getProfileOverrides().getSegments());
-                }
-                if (contextRequest.getProfileOverrides().getProperties() != null) {
-                    profile.setProperties(contextRequest.getProfileOverrides().getProperties());
-                }
-                if (contextRequest.getSessionPropertiesOverrides() != null && session != null) {
-                    session.setProperties(contextRequest.getSessionPropertiesOverrides());
-                }
+        if (profile instanceof Persona && contextRequest.getProfileOverrides() != null) {
+            if (contextRequest.getProfileOverrides().getScores() != null) {
+                profile.setScores(contextRequest.getProfileOverrides().getScores());
+            }
+            if (contextRequest.getProfileOverrides().getSegments() != null) {
+                profile.setSegments(contextRequest.getProfileOverrides().getSegments());
+            }
+            if (contextRequest.getProfileOverrides().getProperties() != null) {
+                profile.setProperties(contextRequest.getProfileOverrides().getProperties());
+            }
+            if (contextRequest.getSessionPropertiesOverrides() != null && session != null) {
+                session.setProperties(contextRequest.getSessionPropertiesOverrides());
             }
         }
     }
 
-    private Profile createNewProfile(String existingProfileId, ServletResponse response, Date timestamp) {
+    private Profile createNewProfile(String existingProfileId, Date timestamp) {
         Profile profile;
         String profileId = existingProfileId;
         if (profileId == null) {
@@ -443,7 +478,7 @@ public class ContextJsonEndpoint {
         List<PersonalizationService.PersonalizationRequest> result = new ArrayList<>();
         for (PersonalizationService.PersonalizationRequest personalizationRequest : personalizations) {
             List<PersonalizationService.PersonalizedContent> personalizedContents = sanitizePersonalizedContentObjects(personalizationRequest.getContents());
-            if (personalizedContents != null && personalizedContents.size() > 0) {
+            if (personalizedContents != null && !personalizedContents.isEmpty()) {
                 result.add(personalizationRequest);
             }
         }
