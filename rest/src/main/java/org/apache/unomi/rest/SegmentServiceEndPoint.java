@@ -145,6 +145,16 @@ public class SegmentServiceEndPoint {
         segmentService.setSegmentDefinition(segment);
     }
 
+    @POST
+    @Path("/rx")
+    public void setSegmentDefinitionRx(Segment segment) {
+        segmentService.setSegmentDefinitionRx(segment)
+                .doOnSuccess(v -> logger.info("Done setting segment"))
+                .doOnError(th -> logger.error("Failed to set segment def", th))
+                .doOnNext(v -> logger.info("On next"))
+                .subscribe();
+    }
+
     /**
      * Retrieves the metadata for segments matching the specified {@link Query}.
      *

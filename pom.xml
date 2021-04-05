@@ -96,6 +96,8 @@
 
         <release.arguments>-Papache-release,integration-tests</release.arguments>
 
+        <reactor.version>3.4.4</reactor.version>
+
     </properties>
 
     <mailingLists>

@@ -27,6 +27,7 @@ import org.apache.unomi.api.segments.DependentMetadata;
 import org.apache.unomi.api.segments.Scoring;
 import org.apache.unomi.api.segments.Segment;
 import org.apache.unomi.api.segments.SegmentsAndScores;
+import reactor.core.publisher.Mono;
 
 import java.util.List;
 
@@ -85,6 +86,13 @@ public interface SegmentService {
      * @param segment the segment to be persisted
      */
     void setSegmentDefinition(Segment segment);
+
+    /**
+     * @see SegmentService#setSegmentDefinition(org.apache.unomi.api.segments.Segment)
+     * @param segment
+     * @return
+     */
+    Mono<Void> setSegmentDefinitionRx(Segment segment);
 
     /**
      * Removes the segment definition identified by the specified identifier. We can specify that we want the operation to be validated beforehand so that we can
