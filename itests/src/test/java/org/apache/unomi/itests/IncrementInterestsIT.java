@@ -33,7 +33,9 @@ import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.api.services.RulesService;
 import org.apache.unomi.api.services.TopicService;
+import org.junit.After;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.ops4j.pax.exam.junit.PaxExam;
@@ -45,10 +47,7 @@ import static org.apache.unomi.itests.BasicIT.ITEM_TYPE_PAGE;
 
 @RunWith(PaxExam.class)
 @ExamReactorStrategy(PerSuite.class)
-public class IncrementInterestsIT
-    extends BaseIT
-{
-
+public class IncrementInterestsIT extends BaseIT {
     @Inject
     @Filter(timeout = 600000)
     protected ProfileService profileService;
@@ -69,168 +68,132 @@ public class IncrementInterestsIT
     @Filter(timeout = 600000)
     protected DefinitionsService definitionsService;
 
+    private Profile profile;
+    private Rule rule;
+    private Topic topic;
+
+    @Before
+    public void setup() throws Exception {
+        topic = createTopic("topicId");
+        profile = createProfile();
+        rule = new Rule();
+    }
+
+    @After
+    public void tearDown() {
+        rulesService.removeRule(rule.getItemId());
+        topicService.delete(topic.getItemId());
+        profileService.delete(profile.getItemId(), false);
+    }
+
     @Test
-    @SuppressWarnings("unchecked")
-    public void test()
-        throws InterruptedException
-    {
-        final Topic topic = createTopic( "topicId" );
-        final Profile profile = createProfile();
+    public void test() throws InterruptedException {
+        Map<String, Double> interestsAsMap = new HashMap<>();
+        interestsAsMap.put(topic.getTopicId(), 50.0);
+        interestsAsMap.put("unknown", 10.0);
 
-        final Map<String, Double> interestsAsMap = new HashMap<>();
-        interestsAsMap.put( topic.getTopicId(), 50.0 );
-        interestsAsMap.put( "unknown", 10.0 );
+        Event event = createEvent(profile, interestsAsMap);
 
-        final Event event = createEvent( profile, interestsAsMap );
+        int eventCode = eventService.send(event);
 
-        try
-        {
-            int eventCode = eventService.send( event );
+        if (eventCode == EventService.PROFILE_UPDATED) {
+            Profile updatedProfile = profileService.save(event.getProfile());
 
-            if ( eventCode == EventService.PROFILE_UPDATED )
-            {
-                Profile updatedProfile = profileService.save( event.getProfile() );
+            Map<String, Double> interests = (Map<String, Double>) updatedProfile.getProperty("interests");
 
-                refreshPersistence();
-
-                Map<String, Double> interests = (Map<String, Double>) updatedProfile.getProperty( "interests" );
-
-                Assert.assertEquals( 0.5, interests.get( topic.getTopicId() ), 0.0 );
-                Assert.assertFalse( interests.containsKey( "unknown" ) );
-            }
-            else
-            {
-                throw new IllegalStateException( "Profile was not updated" );
-            }
-        }
-        finally
-        {
-            topicService.delete( topic.getItemId() );
-            profileService.delete( profile.getItemId(), false );
+            Assert.assertEquals(0.5, interests.get(topic.getTopicId()), 0.0);
+            Assert.assertFalse(interests.containsKey("unknown"));
+        } else {
+            Assert.fail("Profile was not updated");
         }
     }
 
     @Test
-    @SuppressWarnings("unchecked")
-    public void testAction()
-        throws InterruptedException
-    {
-        final Topic topic = createTopic( "topicId" );
-        final Profile profile = createProfile();
+    public void testAction() throws InterruptedException {
+        Action incrementAction = new Action(definitionsService.getActionType("incrementInterestAction"));
+        incrementAction.setParameter("eventInterestProperty", "eventProperty::target.properties.interests");
 
-        final Action incrementAction = new Action( definitionsService.getActionType( "incrementInterestAction" ) );
-        incrementAction.setParameter( "eventInterestProperty", "eventProperty::target.properties.interests" );
+        Condition condition = new Condition(definitionsService.getConditionType("eventTypeCondition"));
+        condition.setParameter("eventTypeId", "view");
 
-        final Condition condition = new Condition( definitionsService.getConditionType( "eventTypeCondition" ) );
-        condition.setParameter( "eventTypeId", "view" );
+        String itemId = UUID.randomUUID().toString();
 
-        final String itemId = UUID.randomUUID().toString();
+        Metadata metadata = new Metadata();
+        metadata.setId(itemId);
+        metadata.setName(itemId);
+        metadata.setDescription(itemId);
+        metadata.setEnabled(true);
+        metadata.setScope("systemscope");
 
-        final Metadata metadata = new Metadata();
-        metadata.setId( itemId );
-        metadata.setName( itemId );
-        metadata.setDescription( itemId );
-        metadata.setEnabled( true );
-        metadata.setScope( "systemscope" );
-
-        final Rule rule = new Rule();
-
-        rule.setCondition( condition );
+        rule.setCondition(condition);
         List<Action> actions = new ArrayList<>();
         actions.add(incrementAction);
-        rule.setActions( actions );
-        rule.setMetadata( metadata );
+        rule.setActions(actions);
+        rule.setMetadata(metadata);
 
-        rulesService.setRule( rule );
+        rulesService.setRule(rule);
+        refreshPersistence();
 
-        keepTrying( "Failed waiting for the creation of the rule for the IncrementInterestsIT test",
-                    () -> rulesService.getRule( rule.getItemId() ), Objects::nonNull, 1000, 100 );
+        Map<String, Double> interestsAsMap = new HashMap<>();
+        interestsAsMap.put(topic.getTopicId(), 50.0);
+        interestsAsMap.put("unknown", 10.0);
 
-        final Map<String, Double> interestsAsMap = new HashMap<>();
-        interestsAsMap.put( topic.getTopicId(), 50.0 );
-        interestsAsMap.put( "unknown", 10.0 );
+        Map<String, Object> properties = new HashMap<>();
 
-        final Map<String, Object> properties = new HashMap<>();
+        properties.put("interests", interestsAsMap);
 
-        properties.put( "interests", interestsAsMap );
+        CustomItem item = new CustomItem("page", ITEM_TYPE_PAGE);
+        item.setProperties(properties);
 
-        final CustomItem item = new CustomItem( "page", ITEM_TYPE_PAGE );
-        item.setProperties( properties );
+        Event event = new Event("view", null, profile, null, null, item, new Date());
+        event.setPersistent(false);
 
-        final Event event = new Event( "view", null, profile, null, null, item, new Date() );
-        event.setPersistent( false );
+        int eventCode = eventService.send(event);
 
-        try
-        {
-            int eventCode = eventService.send( event );
+        if (eventCode == EventService.PROFILE_UPDATED) {
+            Profile updatedProfile = profileService.save(event.getProfile());
 
-            if ( eventCode == EventService.PROFILE_UPDATED )
-            {
-                Profile updatedProfile = profileService.save( event.getProfile() );
+            Map<String, Double> interests = (Map<String, Double>) updatedProfile.getProperty("interests");
 
-                refreshPersistence();
-
-                Map<String, Double> interests = (Map<String, Double>) updatedProfile.getProperty( "interests" );
-
-                Assert.assertEquals( 0.5, interests.get( topic.getTopicId() ), 0.0 );
-                Assert.assertFalse( interests.containsKey( "unknown" ) );
-            }
-            else
-            {
-                throw new IllegalStateException( "Profile was not updated" );
-            }
-        }
-        finally
-        {
-            rulesService.removeRule( rule.getItemId() );
-
-            topicService.delete( topic.getItemId() );
-            profileService.delete( profile.getItemId(), false );
+            Assert.assertEquals(0.5, interests.get(topic.getTopicId()), 0.0);
+            Assert.assertFalse(interests.containsKey("unknown"));
+        } else {
+            throw new IllegalStateException("Profile was not updated");
         }
     }
 
-    private Event createEvent( Profile profile, Map<String, Double> interestsAsMap )
-    {
-        final Event event = new Event( "incrementInterest", null, profile, null, null, profile, new Date() );
+    private Event createEvent(Profile profile, Map<String, Double> interestsAsMap) {
+        Event event = new Event("incrementInterest", null, profile, null, null, profile, new Date());
 
-        event.setPersistent( false );
-        event.setProperty( "interests", interestsAsMap );
+        event.setPersistent(false);
+        event.setProperty("interests", interestsAsMap);
 
         return event;
     }
 
-    private Topic createTopic( final String topicId )
-        throws InterruptedException
-    {
-        final Topic topic = new Topic();
+    private Topic createTopic(final String topicId) throws InterruptedException {
+        Topic topic = new Topic();
 
-        topic.setTopicId( topicId );
-        topic.setItemId( topicId );
-        topic.setName( "topicName" );
-        topic.setScope( "scope" );
+        topic.setTopicId(topicId);
+        topic.setItemId(topicId);
+        topic.setName("topicName");
+        topic.setScope("scope");
 
-        topicService.save( topic );
-
-        keepTrying( "Failed waiting for the creation of the topic for the IncrementInterestsIT test",
-                    () -> topicService.load( topic.getItemId() ), Objects::nonNull, 1000, 100 );
+        topicService.save(topic);
+        refreshPersistence();
 
         return topic;
     }
 
-    private Profile createProfile()
-        throws InterruptedException
-    {
-        final Profile profile = new Profile( UUID.randomUUID().toString() );
+    private Profile createProfile() throws InterruptedException {
+        Profile profile = new Profile(UUID.randomUUID().toString());
 
-        profile.setProperty( "firstName", "FirstName" );
-        profile.setProperty( "lastName", "LastName" );
+        profile.setProperty("firstName", "FirstName");
+        profile.setProperty("lastName", "LastName");
 
-        profileService.save( profile );
-
-        keepTrying( "Failed waiting for the creation of the profile for the IncrementInterestsIT test",
-                    () -> profileService.load( profile.getItemId() ), Objects::nonNull, 1000, 100 );
+        profileService.save(profile);
+        refreshPersistence();
 
         return profile;
     }
-
 }
