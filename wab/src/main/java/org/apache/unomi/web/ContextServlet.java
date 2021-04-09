@@ -29,8 +29,10 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 
 /**
+ * @deprecated please use the rest endpoint {@link org.apache.unomi.rest.ContextJsonEndpoint} instead of this servlet
  * A servlet filter to serve a context-specific Javascript containing the current request context object.
  */
+@Deprecated
 public class ContextServlet extends HttpServlet {
     private static final long serialVersionUID = 2928875830103325238L;
     private static final Logger logger = LoggerFactory.getLogger(ContextServlet.class.getName());
