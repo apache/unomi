@@ -27,6 +27,10 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 
+/**
+ * @deprecated please use the rest endpoint {@link org.apache.unomi.rest.EventsCollectorEndpoint} instead of this servlet
+ */
+@Deprecated
 public class EventsCollectorServlet extends HttpServlet {
     private static final long serialVersionUID = 2008054804885122957L;
     private static final Logger logger = LoggerFactory.getLogger(EventsCollectorServlet.class.getName());
