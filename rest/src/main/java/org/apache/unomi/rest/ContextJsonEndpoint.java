@@ -111,8 +111,8 @@ public class ContextJsonEndpoint {
     @Produces(MediaType.TEXT_PLAIN)
     @Path("/context.js")
     public Response contextJSAsPost(ContextRequest contextRequest,
-            @QueryParam("personaId") @Pattern(regexp = "^[0-9a-fA-F]{8}\\-[0-9a-fA-F]{4}\\-[0-9a-fA-F]{4}\\-[0-9a-fA-F]{4}\\-[0-9a-fA-F]{12}$") String personaId,
-            @QueryParam("sessionId") @Pattern(regexp = "^[0-9a-fA-F]{8}\\-[0-9a-fA-F]{4}\\-[0-9a-fA-F]{4}\\-[0-9a-fA-F]{4}\\-[0-9a-fA-F]{12}$") String sessionId,
+            @QueryParam("personaId") String personaId,
+            @QueryParam("sessionId") String sessionId,
             @QueryParam("timestamp") Long timestampAsLong, @QueryParam("invalidateProfile") boolean invalidateProfile,
             @QueryParam("invalidateSession") boolean invalidateSession) throws JsonProcessingException {
         return contextJSAsGet(contextRequest, personaId, sessionId, timestampAsLong, invalidateProfile, invalidateSession);

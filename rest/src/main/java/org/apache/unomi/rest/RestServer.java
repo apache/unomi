@@ -28,6 +28,7 @@ import org.apache.cxf.jaxrs.validation.JAXRSBeanValidationOutInterceptor;
 import org.apache.cxf.jaxrs.validation.ValidationExceptionMapper;
 import org.apache.cxf.validation.BeanValidationProvider;
 import org.apache.unomi.rest.validation.HibernateValidationProviderResolver;
+import org.apache.unomi.rest.validation.JAXRSBeanValidationInInterceptorOverride;
 import org.apache.unomi.rest.authentication.AuthenticationFilter;
 import org.apache.unomi.rest.authentication.AuthorizingInterceptor;
 import org.apache.unomi.rest.authentication.RestAuthenticationConfig;
@@ -205,7 +206,7 @@ public class RestServer {
 
         jaxrsServerFactoryBean.setProvider(new ValidationExceptionMapper());
 
-        JAXRSBeanValidationInInterceptor inInterceptor = new JAXRSBeanValidationInInterceptor();
+        JAXRSBeanValidationInInterceptor inInterceptor = new JAXRSBeanValidationInInterceptorOverride();
         inInterceptor.setProvider(beanValidationProvider);
         jaxrsServerFactoryBean.setInInterceptors(Collections.singletonList(inInterceptor));
 

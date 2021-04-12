@@ -83,7 +83,7 @@ public class EventsCollectorEndpoint {
 
     @POST
     @Path("/eventcollector")
-    public EventCollectorResponse collectAsPost(EventsCollectorRequest eventsCollectorRequest,
+    public EventCollectorResponse collectAsPost(@NotNull EventsCollectorRequest eventsCollectorRequest,
             @QueryParam("timestamp") Long timestampAsLong) {
         return doEvent(eventsCollectorRequest, timestampAsLong);
     }
@@ -92,10 +92,6 @@ public class EventsCollectorEndpoint {
         Date timestamp = new Date();
         if (timestampAsLong != null) {
             timestamp = new Date(timestampAsLong);
-        }
-
-        if (eventsCollectorRequest == null || eventsCollectorRequest.getEvents() == null) {
-            throw new BadRequestException("No events found");
         }
 
         String sessionId = eventsCollectorRequest.getSessionId();
