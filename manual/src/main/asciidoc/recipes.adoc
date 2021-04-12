@@ -20,14 +20,14 @@ Apache Unomi.
 
 ==== How to read a profile
 
-The simplest way to retrieve profile data for the current profile is to simply send a request to the /context.json
+The simplest way to retrieve profile data for the current profile is to simply send a request to the /cxs/context.json
 endpoint. However you will need to send a body along with that request. Here's an example:
 
 Here is an example that will retrieve all the session and profile properties.
 
 [source]
 ----
-curl -X POST http://localhost:8181/context.json?sessionId=1234 \
+curl -X POST http://localhost:8181/cxs/context.json?sessionId=1234 \
 -H "Content-Type: application/json" \
 -d @- <<'EOF'
 {
@@ -49,7 +49,7 @@ properties. The structure of the JSON object that you should send is a JSON-seri
 Java class.
 
 Note that it is also possible to access a profile's data through the /cxs/profiles/ endpoint but that really should be
-reserved to administrative purposes. All public accesses should always use the /context.json endpoint for consistency
+reserved to administrative purposes. All public accesses should always use the /cxs/context.json endpoint for consistency
 and security.
 
 ==== How to update a profile from the public internet
@@ -149,7 +149,7 @@ You could then simply send the `contactInfoSubmitted` event using a request simi
 
 [source]
 ----
-curl -X POST http://localhost:8181/eventcollector \
+curl -X POST http://localhost:8181/cxs/eventcollector \
 -H "Content-Type: application/json" \
 -d @- <<'EOF'
 {

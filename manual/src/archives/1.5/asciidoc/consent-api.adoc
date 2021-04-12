@@ -33,7 +33,7 @@ you can simply retrieve a profile with the following request:
 
 [source]
 ----
-curl -X POST http://localhost:8181/context.json?sessionId=1234 \
+curl -X POST http://localhost:8181/cxs/context.json?sessionId=1234 \
 -H "Content-Type: application/json" \
 -d @- <<'EOF'
 {
@@ -77,7 +77,7 @@ It is of course possible to have multiple consents defined for a single visitor 
 ==== Consent type definitions
 
 Apache Unomi does not manage consent definitions, it leaves that to an external system (for example a CMS) so that it
-can handle user-facing UIs to create, update, internationalize and present consent definitions to end users. 
+can handle user-facing UIs to create, update, internationalize and present consent definitions to end users.
 
 The only thing that is import to Apache Unomi to manage visitor consents is a globally unique key, that is called the
 consent type.
@@ -124,7 +124,7 @@ You could send it using the following curl request:
 
 [source]
 ----
-curl -X POST http://localhost:8181/context.json?sessionId=1234 \
+curl -X POST http://localhost:8181/cxs/context.json?sessionId=1234 \
 -H "Content-Type: application/json" \
 -d @- <<'EOF'
 {

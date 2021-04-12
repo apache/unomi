@@ -96,23 +96,23 @@ object UserScenario {
 
   // Browsing requests and scenario
 
-  val loadContext = feed(requestsFeed).feed(urllistFeed).exec(http("LoadContext ${requestTemplate} ${flag}").post("/context.js?sessionId=${sessionId}&timestamp=${timestamp}&remoteAddr=${ip}")
+  val loadContext = feed(requestsFeed).feed(urllistFeed).exec(http("LoadContext ${requestTemplate} ${flag}").post("/cxs/context.js?sessionId=${sessionId}&timestamp=${timestamp}&remoteAddr=${ip}")
     .headers(headers)
     .body(ELFileBody("ContextLoad_request_${requestTemplate}.json")))
     .exec(updatePreviousURL)
     .exec(pauseAndUpdateTimestamp)
 
-  val userLogin = feed(requestsFeed).exec(http("UserLogin").post("/eventcollector?sessionId=${sessionId}&timestamp=${timestamp}&remoteAddr=${ip}")
+  val userLogin = feed(requestsFeed).exec(http("UserLogin").post("/cxs/eventcollector?sessionId=${sessionId}&timestamp=${timestamp}&remoteAddr=${ip}")
     .headers(headers)
     .body(ELFileBody("UserLogin_request.json")))
     .exec(pauseAndUpdateTimestamp)
 
-  val formEvent = feed(requestsFeed).exec(http("Form").post("/eventcollector?sessionId=${sessionId}&timestamp=${timestamp}&remoteAddr=${ip}")
+  val formEvent = feed(requestsFeed).exec(http("Form").post("/cxs/eventcollector?sessionId=${sessionId}&timestamp=${timestamp}&remoteAddr=${ip}")
     .headers(headers)
     .body(ELFileBody("Form_request.json")))
     .exec(pauseAndUpdateTimestamp)
 
-  val searchEvent = feed(requestsFeed).feed(wordsFeed).exec(http("Search").post("/eventcollector?sessionId=${sessionId}&timestamp=${timestamp}&remoteAddr=${ip}")
+  val searchEvent = feed(requestsFeed).feed(wordsFeed).exec(http("Search").post("/cxs/eventcollector?sessionId=${sessionId}&timestamp=${timestamp}&remoteAddr=${ip}")
     .headers(headers)
     .body(ELFileBody("Search_request.json")))
     .exec(pauseAndUpdateTimestamp)
@@ -135,7 +135,7 @@ object UserScenario {
         .exec(flushSessionCookies)
     }
       .exec(flushCookieJar);
-  
+
   val scn = scenario("User").during(Parameters.totalTime) {
     scnRun
   }

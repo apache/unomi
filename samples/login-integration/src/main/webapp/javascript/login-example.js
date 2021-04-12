@@ -116,7 +116,7 @@
             // now let's perform the actual call to Apache Unomi, asking it to process the events and give us back the updated (or created) profile.
             // as we have a rule listening to a login event, it will be executed and its actions will be processed.
             $.ajax({
-                url: "http://localhost:8181/context.json?sessionId=" + unomiSessionId,
+                url: "http://localhost:8181/cxs/context.json?sessionId=" + unomiSessionId,
                 type: 'POST',
                 data: JSON.stringify(contextRequest), // make sure you sent JSON and not form-encoded, otherwise Unomi will generate an error
                 contentType: 'application/json; charset=utf-8',

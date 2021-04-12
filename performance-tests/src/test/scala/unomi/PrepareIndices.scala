@@ -57,7 +57,7 @@ class PrepareIndices extends Simulation {
     )
   }
 
-  val loadContext = feed(seqSessionsFeed).feed(urllistFeed).exec(http("LoadContext").post("/context.js?sessionId=${sessionId}&timestamp=${timestamp}")
+  val loadContext = feed(seqSessionsFeed).feed(urllistFeed).exec(http("LoadContext").post("/cxs/context.js?sessionId=${sessionId}&timestamp=${timestamp}")
     .headers(headers)
     .body(ELFileBody("ContextLoad_request_0.json")))
 

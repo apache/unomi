@@ -64,7 +64,7 @@ public class TestUtils {
 	}
 
 	public static RequestResponse executeContextJSONRequest(HttpPost request, String sessionId) throws IOException {
-		try (CloseableHttpResponse response = HttpClientThatWaitsForUnomi.doPost(request)) {
+		try (CloseableHttpResponse response = HttpClientThatWaitsForUnomi.doRequest(request)) {
 			// validate mimeType
 			HttpEntity entity = response.getEntity();
 			String mimeType = ContentType.getOrDefault(entity).getMimeType();

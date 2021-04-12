@@ -82,7 +82,7 @@ bin\elasticsearch.bat (Windows)
 
 Check that the ElasticSearch is up and running by accessing the following URL :
 
-http://localhost:9200[http://localhost:9200] 
+http://localhost:9200[http://localhost:9200]
 
 ==== Deploying the generated binary package
 
@@ -90,14 +90,14 @@ The "package" sub-project generates a pre-configured Apache Karaf installation t
 Simply uncompress the package/target/unomi-VERSION.tar.gz (for Linux or Mac OS X) or
  package/target/unomi-VERSION.zip (for Windows) archive into the directory of your choice.
 
-You can then start the server simply by using the command on UNIX/Linux/MacOS X : 
+You can then start the server simply by using the command on UNIX/Linux/MacOS X :
 
 [source]
 ----
-./bin/karaf    
+./bin/karaf
 ----
 
-or on Windows shell : 
+or on Windows shell :
 
 [source]
 ----
@@ -109,7 +109,7 @@ shell command:
 
 [source]
 ----
-unomi:start        
+unomi:start
 ----
 
 ==== Deploying into an existing Karaf server
@@ -155,14 +155,14 @@ If all went smoothly, you should be able to access the context script here : htt
 ==== JDK Selection on Mac OS X
 
 You might need to select the JDK to run the tests in the itests subproject. In order to do so you can list the
-installed JDKs with the following command : 
+installed JDKs with the following command :
 
 [source]
 ----
 /usr/libexec/java_home -V
 ----
 
-which will output something like this : 
+which will output something like this :
 
 [source]
 ----
@@ -174,21 +174,21 @@ Matching Java Virtual Machines (3):
 /Library/Java/JavaVirtualMachines/openjdk-11.jdk/Contents/Home
 ----
 
-You can then select the one you want using : 
+You can then select the one you want using :
 
 [source]
 ----
 export JAVA_HOME=`/usr/libexec/java_home -v 1.8.0_181`
 ----
 
-and then check that it was correctly referenced using: 
+and then check that it was correctly referenced using:
 
 [source]
 ----
 java -version
 ----
 
-which should give you a result such as this: 
+which should give you a result such as this:
 
 [source]
 ----
@@ -202,11 +202,11 @@ OpenJDK 64-Bit Server VM (build 11.0.5+10, mixed mode)
 The integration tests are not executed by default to make build time minimal, but it is recommended to run the
 integration tests at least once before using the server to make sure that everything is ok in the build. Another way
 to use these tests is to run them from a continuous integration server such as Jenkins, Apache Gump, Atlassian Bamboo or
- others. 
+ others.
 
 Note : the integration tests require a JDK 8 or more recent !
 
-To run the tests simply activate the following profile : 
+To run the tests simply activate the following profile :
 
 [source]
 ----
@@ -240,6 +240,6 @@ A default test page is provided at the following URL:
    http://localhost:8181/index.html
 ----
 
-This test page will trigger the loading of the /context.js script, which will try to retrieving the user context
+This test page will trigger the loading of the /cxs/context.js script, which will try to retrieving the user context
 or create a new one if it doesn't exist yet. It also contains an experimental integration with Facebook Login, but it
 doesn't yet save the context back to the context server.

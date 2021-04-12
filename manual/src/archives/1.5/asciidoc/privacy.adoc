@@ -55,7 +55,7 @@ IDs.
 
 [source]
 ----
-curl -X GET http://localhost:8181/client/myprofile.[json,csv,yaml,text] \
+curl -X GET http://localhost:8181/cxs/client/myprofile.[json,csv,yaml,text] \
 --cookie "context-profile-id=PROFILE-ID"
 ----
 

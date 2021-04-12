@@ -52,7 +52,7 @@ It is of course possible to have multiple consents defined for a single visitor 
 ==== Consent type definitions
 
 Apache Unomi does not manage consent definitions, it leaves that to an external system (for example a CMS) so that it
-can handle user-facing UIs to create, update, internationalize and present consent definitions to end users. 
+can handle user-facing UIs to create, update, internationalize and present consent definitions to end users.
 
 The only thing that is import to Apache Unomi to manage visitor consents is a globally unique key, that is called the
 consent type.
@@ -99,7 +99,7 @@ You could send it using the following curl request:
 
 [source]
 ----
-curl -H "Content-Type: application/json" -X POST -d '{"source":{"itemId":"homepage","itemType":"page","scope":"example"},"events":[{"scope":"example","eventType":"modifyConsent","source":{"itemType":"page","scope":"example","itemId":"anItemId"},"target":{"itemType":"anyType","scope":"example","itemId":"anyItemId"},"properties":{"consent":{"typeIdentifier":"newsletter","scope":"example","status":"GRANTED","statusDate":"2018-05-22T09:27:09.473Z","revokeDate":"2020-05-21T09:27:09.473Z"}}}]}' http://localhost:8181/context.json?sessionId=1234
+curl -H "Content-Type: application/json" -X POST -d '{"source":{"itemId":"homepage","itemType":"page","scope":"example"},"events":[{"scope":"example","eventType":"modifyConsent","source":{"itemType":"page","scope":"example","itemId":"anItemId"},"target":{"itemType":"anyType","scope":"example","itemId":"anyItemId"},"properties":{"consent":{"typeIdentifier":"newsletter","scope":"example","status":"GRANTED","statusDate":"2018-05-22T09:27:09.473Z","revokeDate":"2020-05-21T09:27:09.473Z"}}}]}' http://localhost:8181/cxs/context.json?sessionId=1234
 ----
 
 ==== How it works (internally)
