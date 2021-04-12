@@ -110,3 +110,20 @@ so that you could host multiple Apache Unomi instances on the same ElasticSearch
 
 Important note: only the data that Apache Unomi manages will be migrate. If you have any other data (for example Kibana
 or ElasticSearch monitoring indices) they will not be migrated by this migration tool.
+
+=== Important changes in public servlets since version 1.5.5
+What used to be dedicated servlets are now part of the REST endpoints.
+Prior to version 1.5.5 the following servlets were used:
+
+* /context.js /context.json
+* /eventcollector
+* /client
+
+In version 1.5.5 and later you have to use the new `cxs` REST endpoints:
+
+* /cxs/context.js /cxs/context.json
+* /cxs/eventcollector
+* /cxs/client
+
+The old servlets have been deprecated and will be removed in a future major version, so make sure
+to update your client applications.
