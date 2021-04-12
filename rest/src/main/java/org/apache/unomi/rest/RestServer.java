@@ -19,20 +19,28 @@ package org.apache.unomi.rest;
 import com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider;
 import org.apache.cxf.Bus;
 import org.apache.cxf.endpoint.Server;
-import org.apache.cxf.interceptor.security.SimpleAuthorizingInterceptor;
 import org.apache.cxf.jaxrs.JAXRSServerFactoryBean;
 import org.apache.cxf.jaxrs.openapi.OpenApiCustomizer;
 import org.apache.cxf.jaxrs.openapi.OpenApiFeature;
-import org.apache.cxf.jaxrs.security.JAASAuthenticationFilter;
 import org.apache.cxf.jaxrs.security.SimpleAuthorizingFilter;
+import org.apache.cxf.jaxrs.validation.JAXRSBeanValidationInInterceptor;
+import org.apache.cxf.jaxrs.validation.JAXRSBeanValidationOutInterceptor;
+import org.apache.cxf.jaxrs.validation.ValidationExceptionMapper;
+import org.apache.cxf.validation.BeanValidationProvider;
+import org.apache.unomi.rest.validation.HibernateValidationProviderResolver;
 import org.apache.unomi.rest.authentication.AuthenticationFilter;
 import org.apache.unomi.rest.authentication.AuthorizingInterceptor;
 import org.apache.unomi.rest.authentication.RestAuthenticationConfig;
+import org.hibernate.validator.HibernateValidator;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.Filter;
 import org.osgi.framework.ServiceReference;
 import org.osgi.service.component.ComponentContext;
-import org.osgi.service.component.annotations.*;
+import org.osgi.service.component.annotations.Activate;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Deactivate;
+import org.osgi.service.component.annotations.Reference;
+import org.osgi.service.component.annotations.ReferenceCardinality;
 import org.osgi.util.tracker.ServiceTracker;
 import org.osgi.util.tracker.ServiceTrackerCustomizer;
 import org.slf4j.Logger;
@@ -40,7 +48,12 @@ import org.slf4j.LoggerFactory;
 
 import javax.ws.rs.ext.ExceptionMapper;
 import javax.xml.namespace.QName;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Date;
+import java.util.List;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 @Component
@@ -57,6 +70,7 @@ public class RestServer {
     private long timeOfLastUpdate = System.currentTimeMillis();
     private Timer refreshTimer = null;
     private long startupDelay = 1000L;
+    private BeanValidationProvider beanValidationProvider;
 
     final List<Object> serviceBeans = new CopyOnWriteArrayList<>();
 
@@ -88,6 +102,8 @@ public class RestServer {
     @Activate
     public void activate(ComponentContext componentContext) throws Exception {
         this.bundleContext = componentContext.getBundleContext();
+        HibernateValidationProviderResolver validationProviderResolver = new HibernateValidationProviderResolver();
+        this.beanValidationProvider = new BeanValidationProvider(validationProviderResolver, HibernateValidator.class);
 
         Filter filter = bundleContext.createFilter("(osgi.jaxrs.resource=true)");
         jaxRSServiceTracker = new ServiceTracker(bundleContext, filter, new ServiceTrackerCustomizer() {
@@ -139,8 +155,8 @@ public class RestServer {
                 public void run() {
                     refreshTimer = null;
                     refreshServer();
-                    logger.info("Refreshed server task performed on: " + new Date() +
-                            " Thread's name: " + Thread.currentThread().getName());
+                    logger.info(
+                            "Refreshed server task performed on: " + new Date() + " Thread's name: " + Thread.currentThread().getName());
                 }
             };
             refreshTimer = new Timer("Timer-Refresh-REST-API");
@@ -159,7 +175,8 @@ public class RestServer {
         openApiFeature.setLicense("Apache 2.0 License");
         openApiFeature.setLicenseUrl("http://www.apache.org/licenses/LICENSE-2.0.html");
         openApiFeature.setScan(false);
-        openApiFeature.setUseContextBasedConfig(true);        //Set<String> resourceClasses = serviceBeans.stream().map(service -> service.getClass().getName()).collect(toSet());
+        openApiFeature.setUseContextBasedConfig(
+                true);        //Set<String> resourceClasses = serviceBeans.stream().map(service -> service.getClass().getName()).collect(toSet());
         OpenApiCustomizer customizer = new OpenApiCustomizer();
         customizer.setDynamicBasePath(true);
         openApiFeature.setCustomizer(customizer);
@@ -167,10 +184,8 @@ public class RestServer {
         JAXRSServerFactoryBean jaxrsServerFactoryBean = new JAXRSServerFactoryBean();
         jaxrsServerFactoryBean.setAddress("/");
         jaxrsServerFactoryBean.setBus(serverBus);
-        jaxrsServerFactoryBean.setProvider(
-                new JacksonJaxbJsonProvider(
-                        new org.apache.unomi.persistence.spi.CustomObjectMapper(),
-                        JacksonJaxbJsonProvider.DEFAULT_ANNOTATIONS));
+        jaxrsServerFactoryBean.setProvider(new JacksonJaxbJsonProvider(new org.apache.unomi.persistence.spi.CustomObjectMapper(),
+                JacksonJaxbJsonProvider.DEFAULT_ANNOTATIONS));
         jaxrsServerFactoryBean.setProvider(new org.apache.cxf.rs.security.cors.CrossOriginResourceSharingFilter());
 
         // Authentication filter (used for authenticating user from request)
@@ -187,6 +202,16 @@ public class RestServer {
         }
         jaxrsServerFactoryBean.setServiceBeans(serviceBeans);
         jaxrsServerFactoryBean.getFeatures().add(openApiFeature);
+
+        jaxrsServerFactoryBean.setProvider(new ValidationExceptionMapper());
+
+        JAXRSBeanValidationInInterceptor inInterceptor = new JAXRSBeanValidationInInterceptor();
+        inInterceptor.setProvider(beanValidationProvider);
+        jaxrsServerFactoryBean.setInInterceptors(Collections.singletonList(inInterceptor));
+
+        JAXRSBeanValidationOutInterceptor outInterceptor = new JAXRSBeanValidationOutInterceptor();
+        outInterceptor.setProvider(beanValidationProvider);
+        jaxrsServerFactoryBean.setOutInterceptors(Collections.singletonList(outInterceptor));
 
         if (serviceBeans.size() > 0) {
             logger.info("Starting JAX RS Endpoint...");
