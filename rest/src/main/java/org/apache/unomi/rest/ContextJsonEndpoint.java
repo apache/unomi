@@ -20,9 +20,20 @@ package org.apache.unomi.rest;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
-import org.apache.unomi.api.*;
+import org.apache.unomi.api.ContextRequest;
+import org.apache.unomi.api.ContextResponse;
+import org.apache.unomi.api.Event;
+import org.apache.unomi.api.Persona;
+import org.apache.unomi.api.PersonaWithSessions;
+import org.apache.unomi.api.Profile;
+import org.apache.unomi.api.Session;
 import org.apache.unomi.api.conditions.Condition;
-import org.apache.unomi.api.services.*;
+import org.apache.unomi.api.services.ConfigSharingService;
+import org.apache.unomi.api.services.EventService;
+import org.apache.unomi.api.services.PersonalizationService;
+import org.apache.unomi.api.services.PrivacyService;
+import org.apache.unomi.api.services.ProfileService;
+import org.apache.unomi.api.services.RulesService;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.utils.Changes;
 import org.apache.unomi.utils.HttpUtils;
@@ -38,26 +49,37 @@ import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.ws.rs.*;
+import javax.validation.constraints.Pattern;
+import javax.ws.rs.BadRequestException;
+import javax.ws.rs.Consumes;
+import javax.ws.rs.GET;
+import javax.ws.rs.OPTIONS;
+import javax.ws.rs.POST;
+import javax.ws.rs.Path;
+import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 @WebService
 @Consumes(MediaType.APPLICATION_JSON)
-@CrossOriginResourceSharing(
-        allowAllOrigins = true,
-        allowCredentials = true
-)
+@CrossOriginResourceSharing(allowAllOrigins = true, allowCredentials = true)
 @Path("/")
 @Component(service = ContextJsonEndpoint.class, property = "osgi.jaxrs.resource=true")
 public class ContextJsonEndpoint {
     private static final Logger logger = LoggerFactory.getLogger(ContextJsonEndpoint.class.getName());
 
-
-    private boolean sanitizeConditions = Boolean.parseBoolean(System.getProperty("org.apache.unomi.security.personalization.sanitizeConditions", "true"));
-
+    private boolean sanitizeConditions = Boolean
+            .parseBoolean(System.getProperty("org.apache.unomi.security.personalization.sanitizeConditions", "true"));
 
     @Context
     ServletContext context;
@@ -89,30 +111,25 @@ public class ContextJsonEndpoint {
     @Produces(MediaType.TEXT_PLAIN)
     @Path("/context.js")
     public Response contextJSAsPost(ContextRequest contextRequest,
-                                    @QueryParam("personaId") String personaId,
-                                    @QueryParam("sessionId") String sessionId,
-                                    @QueryParam("timestamp") Long timestampAsLong,
-                                    @QueryParam("invalidateProfile") boolean invalidateProfile,
-                                    @QueryParam("invalidateSession") boolean invalidateSession) throws JsonProcessingException {
+            @QueryParam("personaId") @Pattern(regexp = "^[0-9a-fA-F]{8}\\-[0-9a-fA-F]{4}\\-[0-9a-fA-F]{4}\\-[0-9a-fA-F]{4}\\-[0-9a-fA-F]{12}$") String personaId,
+            @QueryParam("sessionId") @Pattern(regexp = "^[0-9a-fA-F]{8}\\-[0-9a-fA-F]{4}\\-[0-9a-fA-F]{4}\\-[0-9a-fA-F]{4}\\-[0-9a-fA-F]{12}$") String sessionId,
+            @QueryParam("timestamp") Long timestampAsLong, @QueryParam("invalidateProfile") boolean invalidateProfile,
+            @QueryParam("invalidateSession") boolean invalidateSession) throws JsonProcessingException {
         return contextJSAsGet(contextRequest, personaId, sessionId, timestampAsLong, invalidateProfile, invalidateSession);
     }
-
 
     @GET
     @Produces(MediaType.TEXT_PLAIN)
     @Path("/context.js")
-    public Response contextJSAsGet(ContextRequest contextRequest,
-                                   @QueryParam("personaId") String personaId,
-                                   @QueryParam("sessionId") String sessionId,
-                                   @QueryParam("timestamp") Long timestampAsLong,
-                                   @QueryParam("invalidateProfile") boolean invalidateProfile,
-                                   @QueryParam("invalidateSession") boolean invalidateSession) throws JsonProcessingException {
-        ContextResponse contextResponse = contextJSONAsPost(contextRequest, personaId, sessionId, timestampAsLong, invalidateProfile, invalidateSession);
+    public Response contextJSAsGet(ContextRequest contextRequest, @QueryParam("personaId") String personaId,
+            @QueryParam("sessionId") String sessionId, @QueryParam("timestamp") Long timestampAsLong,
+            @QueryParam("invalidateProfile") boolean invalidateProfile, @QueryParam("invalidateSession") boolean invalidateSession)
+            throws JsonProcessingException {
+        ContextResponse contextResponse = contextJSONAsPost(contextRequest, personaId, sessionId, timestampAsLong, invalidateProfile,
+                invalidateSession);
         String contextAsJSONString = CustomObjectMapper.getObjectMapper().writeValueAsString(contextResponse);
         StringBuilder responseAsString = new StringBuilder();
-        responseAsString.append("window.digitalData = window.digitalData || {};\n")
-                .append("var cxs = ")
-                .append(contextAsJSONString)
+        responseAsString.append("window.digitalData = window.digitalData || {};\n").append("var cxs = ").append(contextAsJSONString)
                 .append(";\n");
         return Response.ok(responseAsString.toString()).build();
 
@@ -121,26 +138,18 @@ public class ContextJsonEndpoint {
     @GET
     @Produces(MediaType.APPLICATION_JSON + ";charset=UTF-8")
     @Path("/context.json")
-    public ContextResponse contextJSONAsGet(ContextRequest contextRequest,
-                                            @QueryParam("personaId") String personaId,
-                                            @QueryParam("sessionId") String sessionId,
-                                            @QueryParam("timestamp") Long timestampAsLong,
-                                            @QueryParam("invalidateProfile") boolean invalidateProfile,
-                                            @QueryParam("invalidateSession") boolean invalidateSession) {
+    public ContextResponse contextJSONAsGet(ContextRequest contextRequest, @QueryParam("personaId") String personaId,
+            @QueryParam("sessionId") String sessionId, @QueryParam("timestamp") Long timestampAsLong,
+            @QueryParam("invalidateProfile") boolean invalidateProfile, @QueryParam("invalidateSession") boolean invalidateSession) {
         return contextJSONAsPost(contextRequest, personaId, sessionId, timestampAsLong, invalidateProfile, invalidateSession);
     }
 
     @POST
     @Produces(MediaType.APPLICATION_JSON + ";charset=UTF-8")
     @Path("/context.json")
-    public ContextResponse contextJSONAsPost(
-            ContextRequest contextRequest,
-            @QueryParam("personaId") String personaId,
-            @QueryParam("sessionId") String sessionId,
-            @QueryParam("timestamp") Long timestampAsLong,
-            @QueryParam("invalidateProfile") boolean invalidateProfile,
-            @QueryParam("invalidateSession") boolean invalidateSession
-    ) {
+    public ContextResponse contextJSONAsPost(ContextRequest contextRequest, @QueryParam("personaId") String personaId,
+            @QueryParam("sessionId") String sessionId, @QueryParam("timestamp") Long timestampAsLong,
+            @QueryParam("invalidateProfile") boolean invalidateProfile, @QueryParam("invalidateSession") boolean invalidateSession) {
         Date timestamp = new Date();
         if (timestampAsLong != null) {
             timestamp = new Date(timestampAsLong);
@@ -179,7 +188,8 @@ public class ContextJsonEndpoint {
         }
 
         if (profileId == null && sessionId == null && personaId == null) {
-            logger.error("Couldn't find profileId, sessionId or personaId in incoming request! Stopped processing request. See debug level for more information");
+            logger.error(
+                    "Couldn't find profileId, sessionId or personaId in incoming request! Stopped processing request. See debug level for more information");
             if (logger.isDebugEnabled()) {
                 logger.debug("Request dump: {}", HttpUtils.dumpRequestInfo(request));
             }
@@ -216,7 +226,8 @@ public class ContextJsonEndpoint {
                     sessionProfile = session.getProfile();
 
                     boolean anonymousSessionProfile = sessionProfile.isAnonymousProfile();
-                    if (!profile.isAnonymousProfile() && !anonymousSessionProfile && !profile.getItemId().equals(sessionProfile.getItemId())) {
+                    if (!profile.isAnonymousProfile() && !anonymousSessionProfile && !profile.getItemId()
+                            .equals(sessionProfile.getItemId())) {
                         // Session user has been switched, profile id in cookie is not up to date
                         // We must reload the profile with the session ID as some properties could be missing from the session profile
                         // #personalIdentifier
@@ -263,8 +274,8 @@ public class ContextJsonEndpoint {
                     event.getAttributes().put(Event.HTTP_REQUEST_ATTRIBUTE, request);
                     event.getAttributes().put(Event.HTTP_RESPONSE_ATTRIBUTE, response);
                     if (logger.isDebugEnabled()) {
-                        logger.debug("Received event {} for profile={} session={} target={} timestamp={}",
-                                event.getEventType(), profile.getItemId(), session.getItemId(), event.getTarget(), timestamp);
+                        logger.debug("Received event {} for profile={} session={} target={} timestamp={}", event.getEventType(),
+                                profile.getItemId(), session.getItemId(), event.getTarget(), timestamp);
                     }
                     changes |= eventService.send(event);
                 }
@@ -279,8 +290,9 @@ public class ContextJsonEndpoint {
                 profileUpdated.getAttributes().put(Event.HTTP_RESPONSE_ATTRIBUTE, response);
 
                 if (logger.isDebugEnabled()) {
-                    logger.debug("Received event {} for profile={} {} target={} timestamp={}", profileUpdated.getEventType(), profile.getItemId(),
-                            " session=" + (session != null ? session.getItemId() : null), profileUpdated.getTarget(), timestamp);
+                    logger.debug("Received event {} for profile={} {} target={} timestamp={}", profileUpdated.getEventType(),
+                            profile.getItemId(), " session=" + (session != null ? session.getItemId() : null), profileUpdated.getTarget(),
+                            timestamp);
                 }
                 changes |= eventService.send(profileUpdated);
             }
@@ -326,7 +338,8 @@ public class ContextJsonEndpoint {
             String masterProfileId = profile.getMergedWith();
             Profile masterProfile = profileService.load(masterProfileId);
             if (masterProfile != null) {
-                logger.info("Current profile {} was merged with profile {}, replacing profile in session", currentProfile.getItemId(), masterProfileId);
+                logger.info("Current profile {} was merged with profile {}, replacing profile in session", currentProfile.getItemId(),
+                        masterProfileId);
                 profile = masterProfile;
                 if (session != null) {
                     session.setProfile(profile);
@@ -343,9 +356,9 @@ public class ContextJsonEndpoint {
     }
 
     private Changes handleRequest(ContextRequest contextRequest, Session session, Profile profile, ContextResponse data,
-                                  ServletRequest request, ServletResponse response, Date timestamp) {
-        Changes changes = ServletCommon.handleEvents(contextRequest.getEvents(), session, profile, request, response, timestamp,
-                privacyService, eventService);
+            ServletRequest request, ServletResponse response, Date timestamp) {
+        Changes changes = ServletCommon
+                .handleEvents(contextRequest.getEvents(), session, profile, request, response, timestamp, privacyService, eventService);
         data.setProcessedEvents(changes.getProcessedItems());
 
         profile = changes.getProfile();
@@ -379,8 +392,8 @@ public class ContextJsonEndpoint {
         if (filterNodes != null) {
             data.setFilteringResults(new HashMap<>());
             for (PersonalizationService.PersonalizedContent personalizedContent : sanitizePersonalizedContentObjects(filterNodes)) {
-                data.getFilteringResults().put(personalizedContent.getId(), personalizationService.filter(profile,
-                        session, personalizedContent));
+                data.getFilteringResults()
+                        .put(personalizedContent.getId(), personalizationService.filter(profile, session, personalizedContent));
             }
         }
 
@@ -388,8 +401,8 @@ public class ContextJsonEndpoint {
         if (personalizations != null) {
             data.setPersonalizations(new HashMap<>());
             for (PersonalizationService.PersonalizationRequest personalization : sanitizePersonalizations(personalizations)) {
-                data.getPersonalizations().put(personalization.getId(), personalizationService.personalizeList(profile,
-                        session, personalization));
+                data.getPersonalizations()
+                        .put(personalization.getId(), personalizationService.personalizeList(profile, session, personalization));
             }
         }
 
@@ -443,12 +456,12 @@ public class ContextJsonEndpoint {
         return profile;
     }
 
-
     public void destroy() {
         logger.info("Context servlet shutdown.");
     }
 
-    private List<PersonalizationService.PersonalizedContent> sanitizePersonalizedContentObjects(List<PersonalizationService.PersonalizedContent> personalizedContentObjects) {
+    private List<PersonalizationService.PersonalizedContent> sanitizePersonalizedContentObjects(
+            List<PersonalizationService.PersonalizedContent> personalizedContentObjects) {
         if (!sanitizeConditions) {
             return personalizedContentObjects;
         }
@@ -471,13 +484,15 @@ public class ContextJsonEndpoint {
         return result;
     }
 
-    private List<PersonalizationService.PersonalizationRequest> sanitizePersonalizations(List<PersonalizationService.PersonalizationRequest> personalizations) {
+    private List<PersonalizationService.PersonalizationRequest> sanitizePersonalizations(
+            List<PersonalizationService.PersonalizationRequest> personalizations) {
         if (!sanitizeConditions) {
             return personalizations;
         }
         List<PersonalizationService.PersonalizationRequest> result = new ArrayList<>();
         for (PersonalizationService.PersonalizationRequest personalizationRequest : personalizations) {
-            List<PersonalizationService.PersonalizedContent> personalizedContents = sanitizePersonalizedContentObjects(personalizationRequest.getContents());
+            List<PersonalizationService.PersonalizedContent> personalizedContents = sanitizePersonalizedContentObjects(
+                    personalizationRequest.getContents());
             if (personalizedContents != null && !personalizedContents.isEmpty()) {
                 result.add(personalizationRequest);
             }
