@@ -25,7 +25,7 @@ The Maven build process will generate both a standalone package you can use dire
 (see "Deploying the generated package") or a KAR file that you can then deploy using a manual deployment process into
 an already installed Apache Karaf server (see "Deploying into an existing Karaf server")
 
-If you want to build and run the integration tests, you should instead use : 
+If you want to build and run the integration tests, you should instead use :
 
 [source]
 ----
@@ -38,14 +38,14 @@ The "package" sub-project generates a pre-configured Apache Karaf installation t
 Simply uncompress the `package/target/unomi-VERSION.tar.gz` (for Linux or Mac OS X) or
  `package/target/unomi-VERSION.zip` (for Windows) archive into the directory of your choice.
 
-You can then start the server simply by using the command on UNIX/Linux/MacOS X : 
+You can then start the server simply by using the command on UNIX/Linux/MacOS X :
 
 [source]
 ----
 ./bin/karaf
 ----
 
-or on Windows shell : 
+or on Windows shell :
 
 [source]
 ----
@@ -61,7 +61,7 @@ Additional requirements:
  - Apache Karaf 3.0.2+, http://karaf.apache.org[http://karaf.apache.org]
  - Local copy of the Elasticsearch ZIP package, available here : http://www.elasticsearch.org[http://www.elasticsearch.org]
 
-. 
+.
 
 Before deploying, make sure that you have Apache Karaf properly installed. You will also have to increase the
 default maximum memory size and perm gen size by adjusting the following environment values in the bin/setenv(.bat)
@@ -76,14 +76,14 @@ files (at the end of the file):
    export JAVA_MAX_PERM_MEM=384M
 ----
 
-. 
+.
 
 You will also need to have the Hyperic Sigar native libraries in your Karaf installation, so in order to this
 go to the Elasticsearch website (http://www.elasticsearch.org[http://www.elasticsearch.org]) and download the ZIP package. Decompress it somewhere
 on your disk and copy all the files from the lib/sigar directory into Karaf's lib/sigar directory
 (must be created first) EXCEPT THE SIGAR.JAR file.
 
-. 
+.
 
 Install the WAR support, CXF into Karaf by doing the following in the Karaf command line:
 
@@ -94,7 +94,7 @@ Install the WAR support, CXF into Karaf by doing the following in the Karaf comm
    feature:install -v cxf/2.7.11
 ----
 
-. 
+.
 
 Create a new $MY_KARAF_HOME/etc/org.apache.cxf.osgi.cfg file and put the following property inside :
 
@@ -103,7 +103,7 @@ Create a new $MY_KARAF_HOME/etc/org.apache.cxf.osgi.cfg file and put the followi
    org.apache.cxf.servlet.context=/cxs
 ----
 
-. 
+.
 
 Copy the following KAR to the Karaf deploy directory, as in this example line:
 
@@ -112,7 +112,7 @@ Copy the following KAR to the Karaf deploy directory, as in this example line:
   cp kar/target/unomi-kar-1.0.0-SNAPSHOT.kar ~/java/deployments/unomi/apache-karaf-3.0.1/deploy/
 ----
 
-. 
+.
 
 If all went smoothly, you should be able to access the context script here : http://localhost:8181/cxs/cluster[http://localhost:8181/cxs/cluster] .
  You should be able to login with karaf / karaf and see basic server information. If not something went wrong during the install.
@@ -120,14 +120,14 @@ If all went smoothly, you should be able to access the context script here : htt
 ==== JDK Selection on Mac OS X
 
 You might need to select the JDK to run the tests in the itests subproject. In order to do so you can list the
-installed JDKs with the following command : 
+installed JDKs with the following command :
 
 [source]
 ----
 /usr/libexec/java_home -V
 ----
 
-which will output something like this : 
+which will output something like this :
 
 [source]
 ----
@@ -141,21 +141,21 @@ Matching Java Virtual Machines (7):
     1.6.0_65-b14-462, i386: "Java SE 6" /System/Library/Java/JavaVirtualMachines/1.6.0.jdk/Contents/Home
 ----
 
-You can then select the one you want using : 
+You can then select the one you want using :
 
 [source]
 ----
 export JAVA_HOME=`/usr/libexec/java_home -v 1.7.0_51`
 ----
 
-and then check that it was correctly referenced using: 
+and then check that it was correctly referenced using:
 
 [source]
 ----
 java -version
 ----
 
-which should give you a result such as this: 
+which should give you a result such as this:
 
 [source]
 ----
@@ -169,11 +169,11 @@ Java HotSpot(TM) 64-Bit Server VM (build 24.51-b03, mixed mode)
 The integration tests are not executed by default to make build time minimal, but it is recommended to run the
 integration tests at least once before using the server to make sure that everything is ok in the build. Another way
 to use these tests is to run them from a continuous integration server such as Jenkins, Apache Gump, Atlassian Bamboo or
- others. 
+ others.
 
 Note : the integration tests require a JDK 7 or more recent !
 
-To run the tests simply activate the following profile : 
+To run the tests simply activate the following profile :
 
 [source]
 ----
@@ -207,7 +207,7 @@ A default test page is provided at the following URL:
    http://localhost:8181/index.html
 ----
 
-This test page will trigger the loading of the /context.js script, which will try to retrieving the user context
+This test page will trigger the loading of the /cxs/context.js script, which will try to retrieving the user context
 or create a new one if it doesn't exist yet. It also contains an experimental integration with Facebook Login, but it
 doesn't yet save the context back to the context server.
 

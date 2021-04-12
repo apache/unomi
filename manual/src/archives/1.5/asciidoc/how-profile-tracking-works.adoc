@@ -19,7 +19,7 @@ In this section you will learn how Apache Unomi keeps track of visitors.
 
 1. A visitor comes to a website
 2. The web server resolves a previous request session ID if it exists, or if it doesn't it create a new sessionID
-3. A request to Apache Unomi's /context.json servlet is made passing the web server session ID as a query parameter
+3. A request to Apache Unomi's /cxs/context.json servlet is made passing the web server session ID as a query parameter
 4. Unomi uses the sessionID and tries to load an existing session, if none is found a new session is created with the
 ID passed by the web server
 5. If a session was found, the profile ID is extracted from the session and if it not found, Unomi looks for a cookie

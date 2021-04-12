@@ -28,7 +28,7 @@ Here is an example of a request contains the `itemdId`
 
 [source]
 ----
-curl -X POST http://localhost:8181/context.json \
+curl -X POST http://localhost:8181/cxs/context.json \
 -H "Content-Type: application/json" \
 -d @- <<'EOF'
 {
@@ -54,7 +54,7 @@ this can be achieved by adding `"raiseEventOnlyOnce": false` to the rule definit
 
 [source]
 ----
-curl -X POST http://localhost:8181/context.json \
+curl -X POST http://localhost:8181/cxs/context.json \
 -H "Content-Type: application/json" \
 -d @- <<'EOF'
 {

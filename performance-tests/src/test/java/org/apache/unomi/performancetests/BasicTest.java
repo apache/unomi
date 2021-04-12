@@ -156,7 +156,7 @@ public class BasicTest {
     public void testContext() throws IOException {
 
         CloseableHttpClient httpclient = HttpClients.createDefault();
-        HttpGet httpGet = new HttpGet("http://localhost:8181/context.js");
+        HttpGet httpGet = new HttpGet("http://localhost:8181/cxs/context.js");
         CloseableHttpResponse response = httpclient.execute(httpGet);
         // The underlying HTTP connection is still held by the response object
         // to allow the response content to be streamed directly from the network socket.

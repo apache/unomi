@@ -43,7 +43,7 @@
             if (document.getElementById(id)) return;
             js = document.createElement(elementToCreate);
             js.id = id;
-            js.src = "http://localhost:8181/context.js";
+            js.src = "http://localhost:8181/cxs/context.js";
             fjs.parentNode.insertBefore(js, fjs);
         }(document, 'script', 'context'));
 
@@ -79,7 +79,7 @@
                         sessionId = generateUUID();
                     }
 
-                    var url = 'http://localhost:8181/context.json?sessionId=' + sessionId;
+                    var url = 'http://localhost:8181/cxs/context.json?sessionId=' + sessionId;
                     var xhr = new XMLHttpRequest();
                     var isGet = data.length < 100;
                     if (isGet) {

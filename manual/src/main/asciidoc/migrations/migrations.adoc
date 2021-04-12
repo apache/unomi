@@ -18,3 +18,20 @@ This section contains information and steps to migrate between major Unomi versi
 === From version 1.4 to 1.5
 
 include::migrate-1.4-to-1.5.adoc[]
+
+=== Important changes in public servlets since version 1.5.5 and 2.0.0
+What used to be dedicated servlets are now part of the REST endpoints.
+Prior to version 1.5.5 the following servlets were used:
+
+* /context.js /context.json
+* /eventcollector
+* /client
+
+In version 2.0.0 and 1.5.5 and later you have to use the new `cxs` REST endpoints:
+
+* /cxs/context.js /cxs/context.json
+* /cxs/eventcollector
+* /cxs/client
+
+The old servlets have been deprecated and will be removed in a future major version, so make sure
+to update your client applications.

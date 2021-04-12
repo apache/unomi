@@ -23,7 +23,6 @@ import org.apache.http.entity.StringEntity;
 import org.apache.unomi.api.ContextRequest;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.services.PersonalizationService;
-import org.apache.unomi.lifecycle.BundleWatcher;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.junit.Before;
 import org.junit.Test;
@@ -31,11 +30,7 @@ import org.junit.runner.RunWith;
 import org.ops4j.pax.exam.junit.PaxExam;
 import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
 import org.ops4j.pax.exam.spi.reactors.PerSuite;
-import org.ops4j.pax.exam.util.Filter;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-import javax.inject.Inject;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -95,7 +90,7 @@ public class SecurityIT extends BaseIT {
         contextRequest.setPersonalizations(personalizations);
 
         contextRequest.setSessionId(SESSION_ID);
-        HttpPost request = new HttpPost(URL + "/context.json");
+        HttpPost request = new HttpPost(URL + "/cxs/context.json");
         request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.create("application/json")));
 
         TestUtils.RequestResponse response = executeContextJSONRequest(request, SESSION_ID);

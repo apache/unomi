@@ -32,7 +32,7 @@ JAVA_HOME variable https://docs.oracle.com/cd/E19182-01/820-7851/inst_cli_jdk_ja
 
 9) Try accessing https://localhost:9443/cxs/cluster with username/password: `karaf/karaf` . You might get a certificate warning in your browser, just accept it despite the warning it is safe.
 
-10) Request your first context by simply accessing : http://localhost:8181/context.js?sessionId=1234
+10) Request your first context by simply accessing : http://localhost:8181/cxs/context.js?sessionId=1234
 
 11) If something goes wrong, you should check the logs in `./data/log/karaf.log`. If you get errors on ElasticSearch,
 make sure you are using the proper version.

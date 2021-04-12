@@ -31,7 +31,7 @@ If you need to specify an Elasticsearch cluster name, or a host and port that ar
 it is recommended to do this BEFORE you start the server for the first time, or you will loose all the data
 you have stored previously.
 
-To change these settings, you will need to modify a file called 
+To change these settings, you will need to modify a file called
 
 [source]
 ----
@@ -70,7 +70,7 @@ thirdparty.provider1.allowedEvents=login,download
 ----
 
 The events set in allowedEvents will be secured and will only be accepted if the call comes from the specified IP
-address, and if the secret-key is passed in the X-Unomi-Peer header. 
+address, and if the secret-key is passed in the X-Unomi-Peer header.
 
 ==== Installing the MaxMind GeoIPLite2 IP lookup database
 
@@ -100,13 +100,13 @@ By default, the login/password for the REST API full administrative access is "k
 
 The generated package is also configured with a default SSL certificate. You can change it by following these steps :
 
-. 
+.
 
 Replace the existing keystore in $MY_KARAF_HOME/etc/keystore by your own certificate :
 
 http://wiki.eclipse.org/Jetty/Howto/Configure_SSL[http://wiki.eclipse.org/Jetty/Howto/Configure_SSL]
 
-. 
+.
 
 Update the keystore and certificate password in $MY_KARAF_HOME/etc/custom.properties file :
 
@@ -121,13 +121,13 @@ Update the keystore and certificate password in $MY_KARAF_HOME/etc/custom.proper
 
 You should now have SSL setup on Karaf with your certificate, and you can test it by trying to access it on port 9443.
 
-. 
+.
 
 Changing the default Karaf password can be done by modifying the etc/users.properties file
 
-. 
+.
 
-You will also need to change the user/password information in the org.apache.unomi.cluster.cfg file : 
+You will also need to change the user/password information in the org.apache.unomi.cluster.cfg file :
 
 [source]
 ----
@@ -155,24 +155,24 @@ Upon sending one of the events, all matching profiles will be merged.
 ==== Securing a production environment
 
 Before going live with a project, you should _absolutely_ read the following section that will help you setup a proper
-secure environment for running your context server. 
+secure environment for running your context server.
 
-Step 1: Install and configure a firewall 
+Step 1: Install and configure a firewall
 
 You should setup a firewall around your cluster of context servers and/or Elasticsearch nodes. If you have an
-application-level firewall you should only allow the following connections open to the whole world : 
+application-level firewall you should only allow the following connections open to the whole world :
 
-* http://localhost:8181/context.js[http://localhost:8181/context.js]
-* http://localhost:8181/eventcollector[http://localhost:8181/eventcollector]
+* http://localhost:8181/cxs/context.js[http://localhost:8181/cxs/context.js]
+* http://localhost:8181/cxs/eventcollector[http://localhost:8181/cxs/eventcollector]
 
 All other ports should not be accessible to the world.
 
 For your Context Server client applications (such as the Jahia CMS), you will need to make the following ports
-accessible : 
+accessible :
 
 [source]
 ----
-8181 (Context Server HTTP port) 
+8181 (Context Server HTTP port)
 9443 (Context Server HTTPS port)
 ----
 
@@ -180,11 +180,11 @@ The context server actually requires HTTP Basic Auth for access to the Context S
 highly recommended that you design your client applications to use the HTTPS port for accessing the REST API.
 
 The user accounts to access the REST API are actually routed through Karaf's JAAS support, which you may find the
-documentation for here : 
+documentation for here :
 
 * http://karaf.apache.org/manual/latest/users-guide/security.html[http://karaf.apache.org/manual/latest/users-guide/security.html]
 
-The default username/password is 
+The default username/password is
 
 [source]
 ----
@@ -192,7 +192,7 @@ karaf/karaf
 ----
 
 You should really change this default username/password as soon as possible. To do so, simply modify the following
-file : 
+file :
 
 [source]
 ----
@@ -206,7 +206,7 @@ Of course any ports listed here are the default ports configured in each server,
 
 Step 2 : Follow industry recommended best practices for securing Elasticsearch
 
-You may find more valuable recommendations here : 
+You may find more valuable recommendations here :
 
 * https://www.elastic.co/blog/found-elasticsearch-security[https://www.elastic.co/blog/found-elasticsearch-security]
 * https://www.elastic.co/blog/scripting-security[https://www.elastic.co/blog/scripting-security]
@@ -308,7 +308,7 @@ ProxyPassReverse / http://localhost:8181/
 ==== Changing the default tracking location
 
 When performing localhost requests to Apache Unomi, a default location will be used to insert values into the session
-to make the location-based personalization still work. You can find the default location settings in the file : 
+to make the location-based personalization still work. You can find the default location settings in the file :
 
 [source]
 ----

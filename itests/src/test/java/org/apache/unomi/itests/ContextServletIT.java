@@ -21,14 +21,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
-import org.apache.unomi.api.ContextRequest;
-import org.apache.unomi.api.ContextResponse;
-import org.apache.unomi.api.Event;
-import org.apache.unomi.api.EventType;
-import org.apache.unomi.api.Metadata;
-import org.apache.unomi.api.Profile;
-import org.apache.unomi.api.PropertyType;
-import org.apache.unomi.api.Session;
+import org.apache.unomi.api.*;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.segments.Segment;
 import org.apache.unomi.api.services.DefinitionsService;
@@ -52,18 +45,10 @@ import java.net.URI;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 import static org.hamcrest.core.IsCollectionContaining.hasItem;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThat;
+import static org.junit.Assert.*;
 
 
 /**
@@ -73,7 +58,7 @@ import static org.junit.Assert.assertThat;
 @RunWith(PaxExam.class)
 @ExamReactorStrategy(PerSuite.class)
 public class ContextServletIT extends BaseIT {
-    private final static String CONTEXT_URL = "/context.json";
+    private final static String CONTEXT_URL = "/cxs/context.json";
     private final static String THIRD_PARTY_HEADER_NAME = "X-Unomi-Peer";
     private final static String SEGMENT_EVENT_TYPE = "test-event-type";
     private final static String SEGMENT_ID = "test-segment-id";

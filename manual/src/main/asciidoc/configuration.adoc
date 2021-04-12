@@ -199,7 +199,7 @@ Changing the default Karaf password can be done by modifying the `org.apache.uno
 
 The scripting security system is multi-layered.
 
-For requests coming in through the /context.json endpoint, the following flow is used to secure incoming requests:
+For requests coming in through the /cxs/context.json endpoint, the following flow is used to secure incoming requests:
 
 image::expression-filtering-layers.png[Expression filtering layers]
 
@@ -372,7 +372,7 @@ org.apache.unomi.scripting.filter.ognl.forbid=${env:UNOMI_SCRIPTING_FILTER_OGNL_
 # This parameter controls whether OGNL scripting is allowed in expressions. Because of security reasons it is deactivated by default. If you run into compatibility issues you could reactivate it but it is at your own risk.
 org.apache.unomi.security.properties.useOGNLScripting=${env:UNOMI_SCRIPTING_USE_OGNL:-false}
 
-# This parameter controls the condition sanitizing done on the ContextServlet (/context.json). If will remove any expressions that start with "script::". It is not recommended to change this value, unless you run into compatibility issues.
+# This parameter controls the condition sanitizing done on the ContextServlet (/cxs/context.json). If will remove any expressions that start with "script::". It is not recommended to change this value, unless you run into compatibility issues.
 org.apache.unomi.security.personalization.sanitizeConditions=${env:UNOMI_SECURITY_SANITIZEPERSONALIZATIONCONDITIONS:-true}
 ----
 
@@ -406,24 +406,24 @@ Upon sending one of the events, all matching profiles will be merged.
 === Securing a production environment
 
 Before going live with a project, you should _absolutely_ read the following section that will help you setup a proper
-secure environment for running your context server. 
+secure environment for running your context server.
 
-Step 1: Install and configure a firewall 
+Step 1: Install and configure a firewall
 
 You should setup a firewall around your cluster of context servers and/or Elasticsearch nodes. If you have an
-application-level firewall you should only allow the following connections open to the whole world : 
+application-level firewall you should only allow the following connections open to the whole world :
 
-* http://localhost:8181/context.js[http://localhost:8181/context.js]
-* http://localhost:8181/eventcollector[http://localhost:8181/eventcollector]
+* http://localhost:8181/cxs/context.js[http://localhost:8181/cxs/context.js]
+* http://localhost:8181/cxs/eventcollector[http://localhost:8181/cxs/eventcollector]
 
 All other ports should not be accessible to the world.
 
 For your Apache Unomi client applications (such as the Jahia CMS), you will need to make the following ports
-accessible : 
+accessible :
 
 [source]
 ----
-8181 (Context Server HTTP port) 
+8181 (Context Server HTTP port)
 9443 (Context Server HTTPS port)
 ----
 
@@ -431,11 +431,11 @@ The Apache Unomi actually requires HTTP Basic Auth for access to the Context Ser
 highly recommended that you design your client applications to use the HTTPS port for accessing the REST API.
 
 The user accounts to access the REST API are actually routed through Karaf's JAAS support, which you may find the
-documentation for here : 
+documentation for here :
 
 * http://karaf.apache.org/manual/latest/users-guide/security.html[http://karaf.apache.org/manual/latest/users-guide/security.html]
 
-The default username/password is 
+The default username/password is
 
 [source]
 ----
@@ -460,7 +460,7 @@ Of course any ports listed here are the default ports configured in each server,
 
 Step 2 : Follow industry recommended best practices for securing Elasticsearch
 
-You may find more valuable recommendations here : 
+You may find more valuable recommendations here :
 
 * https://www.elastic.co/blog/found-elasticsearch-security[https://www.elastic.co/blog/found-elasticsearch-security]
 * https://www.elastic.co/blog/scripting-security[https://www.elastic.co/blog/scripting-security]

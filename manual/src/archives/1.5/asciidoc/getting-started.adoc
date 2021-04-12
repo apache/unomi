@@ -61,7 +61,7 @@ Initializing cluster service endpoint...
 ----
 
 This indicates that all the Unomi services are started and ready to react to requests. You can then open a browser and go to `http://localhost:8181/cxs` to see the list of
-available RESTful services or retrieve an initial context at `http://localhost:8181/context.json` (which isn't very useful at this point).
+available RESTful services or retrieve an initial context at `http://localhost:8181/cxs/context.json` (which isn't very useful at this point).
 
 You can now find an introduction page at the following location: http://localhost:8181
 
