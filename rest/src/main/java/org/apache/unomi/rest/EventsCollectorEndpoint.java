@@ -34,6 +34,7 @@ import org.slf4j.LoggerFactory;
 import javax.jws.WebService;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.validation.constraints.NotNull;
 import javax.ws.rs.*;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
@@ -75,13 +76,15 @@ public class EventsCollectorEndpoint {
 
     @GET
     @Path("/eventcollector")
-    public EventCollectorResponse collectAsGet(EventsCollectorRequest eventsCollectorRequest, @QueryParam("timestamp") Long timestampAsString) {
+    public EventCollectorResponse collectAsGet(@NotNull EventsCollectorRequest eventsCollectorRequest,
+            @QueryParam("timestamp") Long timestampAsString) {
         return doEvent(eventsCollectorRequest, timestampAsString);
     }
 
     @POST
     @Path("/eventcollector")
-    public EventCollectorResponse collectAsPost(EventsCollectorRequest eventsCollectorRequest, @QueryParam("timestamp") Long timestampAsLong) {
+    public EventCollectorResponse collectAsPost(@NotNull EventsCollectorRequest eventsCollectorRequest,
+            @QueryParam("timestamp") Long timestampAsLong) {
         return doEvent(eventsCollectorRequest, timestampAsLong);
     }
 
@@ -89,10 +92,6 @@ public class EventsCollectorEndpoint {
         Date timestamp = new Date();
         if (timestampAsLong != null) {
             timestamp = new Date(timestampAsLong);
-        }
-
-        if (eventsCollectorRequest == null || eventsCollectorRequest.getEvents() == null) {
-            throw new BadRequestException("No events found");
         }
 
         String sessionId = eventsCollectorRequest.getSessionId();
