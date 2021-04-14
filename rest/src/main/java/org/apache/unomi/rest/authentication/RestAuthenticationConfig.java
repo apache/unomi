@@ -49,7 +49,7 @@ public interface RestAuthenticationConfig {
      * - Class name + method name:      org.apache.unomi.rest.ContextJsonEndpoint.getContextJSON
      * - Method name only:              getContextJSON
      *
-     * @return the list of role mappings <methodKey, roles separated by single white spaces>, like: <"getContextJSON", "ROLE1 ROLE2 ROLE3">
+     * @return the list of role mappings &lt;methodKey, roles separated by single white spaces&gt;, like: &lt;"getContextJSON", "ROLE1 ROLE2 ROLE3"&gt;
      */
     Map<String, String> getMethodRolesMap();
 

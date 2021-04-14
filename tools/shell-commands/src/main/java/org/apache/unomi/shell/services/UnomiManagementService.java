@@ -26,13 +26,13 @@ public interface UnomiManagementService {
 
     /**
      * This method will start Apache Unomi
-     * @throws BundleException
+     * @throws BundleException if there was an error starting Unomi's bundles
      */
     void startUnomi() throws BundleException;
 
     /**
      * This method will stop Apache Unomi
-     * @throws BundleException
+     * @throws BundleException if there was an error stopping Unomi's bundles
      */
     void stopUnomi() throws BundleException;
 }

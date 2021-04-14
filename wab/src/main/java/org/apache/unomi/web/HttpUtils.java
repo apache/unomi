@@ -26,9 +26,9 @@ public class HttpUtils {
 
     /**
      * Setup CORS headers as soon as possible so that errors are not misconstrued on the client for CORS errors
-     * @param httpServletRequest
-     * @param response
-     * @throws IOException
+     * @param httpServletRequest the http servlet request object to use
+     * @param response the http servlet response object to use
+     * @throws IOException raised if there was a problem reading from the request or writing to the response
      */
     public static void setupCORSHeaders(HttpServletRequest httpServletRequest, ServletResponse response) throws IOException {
         if (response instanceof HttpServletResponse) {

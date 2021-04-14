@@ -93,6 +93,7 @@ public class EventServiceEndpoint {
 
     /**
      * Returns the list of event properties
+     * @param typeName the type name identifier
      * @return a List of EventProperty objects that make up the properties that the server has seen.
      */
     @GET

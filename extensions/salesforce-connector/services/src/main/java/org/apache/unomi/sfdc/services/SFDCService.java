@@ -38,7 +38,7 @@ public interface SFDCService {
     /**
      * Save a Salesforce configuration into the persistence service
      * @param sfdcConfiguration the configuration to persist
-     * @return
+     * @return a boolean indicating if the save was successful or not
      */
     boolean saveConfiguration(SFDCConfiguration sfdcConfiguration);
 
@@ -46,8 +46,8 @@ public interface SFDCService {
      * Login into Salesforce using the configuration passed in the methods arguments.
      * @param sfdcConfiguration the configuration to use for the login
      * @return true if the login was successful, false otherwise
-     * @throws HttpException
-     * @throws IOException
+     * @throws HttpException thrown if there was an error communicating with the Salesforce server
+     * @throws IOException thrown if there was an error communicating with the Salesforce server
      */
     boolean login(SFDCConfiguration sfdcConfiguration) throws HttpException, IOException;
 
@@ -57,14 +57,14 @@ public interface SFDCService {
 
     /**
      * Create or update a lead based on a Unomi profile.
-     * @param profile
+     * @param profile the Unomi profile to use to update leads
      * @return a String containing the identifier of the corresponding SFDC lead
      */
     String createOrUpdateLead(Profile profile);
 
     /**
      * Updates a Unomi profile from a Salesforce lead
-     * @param profile
+     * @param profile the profile to update with the data coming from the lead
      * @return true if the profile was updated, false otherwise.
      */
     boolean updateProfileFromLead(Profile profile);
