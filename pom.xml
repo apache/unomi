@@ -1092,6 +1092,20 @@
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-javadoc-plugin</artifactId>
                     <version>3.2.0</version>
+                    <configuration>
+                        <additionalDependencies>
+                            <additionalDependency>
+                                <groupId>org.eclipse.jetty</groupId>
+                                <artifactId>jetty-client</artifactId>
+                                <version>7.4.4.v20110707</version>
+                            </additionalDependency>
+                            <additionalDependency>
+                                <groupId>org.eclipse.jetty</groupId>
+                                <artifactId>jetty-util</artifactId>
+                                <version>7.4.4.v20110707</version>
+                            </additionalDependency>
+                        </additionalDependencies>
+                    </configuration>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.servicemix.tooling</groupId>

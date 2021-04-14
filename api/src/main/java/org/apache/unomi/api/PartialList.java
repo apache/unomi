@@ -67,6 +67,7 @@ public class PartialList<T> implements Serializable {
      * @param offset    the offset of the first element in the view
      * @param pageSize  the number of elements this PartialList contains
      * @param totalSize the total size of elements in the original List
+     * @param totalSizeRelation the relation to the total size (equals or greater than)
      */
     public PartialList(List<T> list, long offset, long pageSize, long totalSize, Relation totalSizeRelation) {
         this.list = list;

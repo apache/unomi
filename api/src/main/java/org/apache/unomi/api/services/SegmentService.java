@@ -223,7 +223,7 @@ public interface SegmentService {
      * Get generated property key for past event condition
      * @param condition The event condition
      * @param parentCondition The past event condition
-     * @return
+     * @return a String representing the condition and parent condition uniquelly
      */
     String getGeneratedPropertyKey(Condition condition, Condition parentCondition);
 }

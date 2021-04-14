@@ -112,6 +112,7 @@ public class Event extends Item implements TimestampedItem {
      * @param scope     the scope from which the event is issued
      * @param source    the source of the event
      * @param target    the target of the event if any
+     * @param properties the properties for this event if any
      * @param timestamp the timestamp associated with the event if provided
      * @param persistent specifies if the event needs to be persisted
      */

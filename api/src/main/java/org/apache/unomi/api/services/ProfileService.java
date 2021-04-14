@@ -322,8 +322,9 @@ public interface ProfileService {
     /**
      * This function will try to set the target on the property type if not set already, based on the file URL
      *
-     * @param predefinedPropertyTypeURL
-     * @param propertyType
+     * @param predefinedPropertyTypeURL the URL to extract the target from if the target is not yet. By default it will
+     *                                  use the 5's part after a "/" character
+     * @param propertyType the property type to register
      */
     void setPropertyTypeTarget(URL predefinedPropertyTypeURL, PropertyType propertyType);
 

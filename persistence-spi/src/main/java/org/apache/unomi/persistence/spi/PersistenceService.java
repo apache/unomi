@@ -100,9 +100,10 @@ public interface PersistenceService {
     void setSetting(String fieldName, Object value) throws NoSuchFieldException, IllegalAccessException;
 
     /**
-     * Set settings of the persistence service
+     * Get settings of the persistence service
      *
      * @param fieldName name of the field to get
+     * @return an object corresponding to the field that was accessed
      * @throws NoSuchFieldException if the field does not exist
      * @throws IllegalAccessException field is not accessible to be changed
      */
