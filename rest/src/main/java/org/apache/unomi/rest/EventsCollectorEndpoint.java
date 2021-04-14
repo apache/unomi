@@ -19,7 +19,11 @@ package org.apache.unomi.rest;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
-import org.apache.unomi.api.*;
+import org.apache.unomi.api.Event;
+import org.apache.unomi.api.EventsCollectorRequest;
+import org.apache.unomi.api.Persona;
+import org.apache.unomi.api.Profile;
+import org.apache.unomi.api.Session;
 import org.apache.unomi.api.services.ConfigSharingService;
 import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.api.services.PrivacyService;
@@ -34,8 +38,16 @@ import org.slf4j.LoggerFactory;
 import javax.jws.WebService;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.validation.Valid;
 import javax.validation.constraints.NotNull;
-import javax.ws.rs.*;
+import javax.ws.rs.BadRequestException;
+import javax.ws.rs.Consumes;
+import javax.ws.rs.GET;
+import javax.ws.rs.OPTIONS;
+import javax.ws.rs.POST;
+import javax.ws.rs.Path;
+import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
@@ -45,10 +57,7 @@ import java.util.UUID;
 @WebService
 @Produces(MediaType.APPLICATION_JSON + ";charset=UTF-8")
 @Consumes(MediaType.APPLICATION_JSON)
-@CrossOriginResourceSharing(
-        allowAllOrigins = true,
-        allowCredentials = true
-)
+@CrossOriginResourceSharing(allowAllOrigins = true, allowCredentials = true)
 @Path("/")
 @Component(service = EventsCollectorEndpoint.class, property = "osgi.jaxrs.resource=true")
 public class EventsCollectorEndpoint {
@@ -76,14 +85,14 @@ public class EventsCollectorEndpoint {
 
     @GET
     @Path("/eventcollector")
-    public EventCollectorResponse collectAsGet(@NotNull EventsCollectorRequest eventsCollectorRequest,
+    public EventCollectorResponse collectAsGet(@NotNull @Valid EventsCollectorRequest eventsCollectorRequest,
             @QueryParam("timestamp") Long timestampAsString) {
         return doEvent(eventsCollectorRequest, timestampAsString);
     }
 
     @POST
     @Path("/eventcollector")
-    public EventCollectorResponse collectAsPost(@NotNull EventsCollectorRequest eventsCollectorRequest,
+    public EventCollectorResponse collectAsPost(@NotNull @Valid EventsCollectorRequest eventsCollectorRequest,
             @QueryParam("timestamp") Long timestampAsLong) {
         return doEvent(eventsCollectorRequest, timestampAsLong);
     }
@@ -111,14 +120,16 @@ public class EventsCollectorEndpoint {
                     if (StringUtils.isNotBlank(event.getSourceId()) && !event.getSourceId().equals("systemscope")) {
                         scope = event.getSourceId();
                         break;
-                    } else if (event.getSource() != null && StringUtils.isNotBlank(event.getSource().getScope()) && !event.getSource().getScope().equals("systemscope")) {
+                    } else if (event.getSource() != null && StringUtils.isNotBlank(event.getSource().getScope()) && !event.getSource()
+                            .getScope().equals("systemscope")) {
                         scope = event.getSource().getScope();
                         break;
                     }
                 }
             }
             logger.debug("scope is now {}", scope);
-            String cookieProfileId = ServletCommon.getProfileIdCookieValue(request, (String) configSharingService.getProperty("profileIdCookieName"));
+            String cookieProfileId = ServletCommon
+                    .getProfileIdCookieValue(request, (String) configSharingService.getProperty("profileIdCookieName"));
             if (StringUtils.isNotBlank(cookieProfileId)) {
                 profile = profileService.load(cookieProfileId);
             }
@@ -138,7 +149,8 @@ public class EventsCollectorEndpoint {
             */
         } else {
             Profile sessionProfile = session.getProfile();
-            final String errorMessage = String.format("No valid profile found or persona found for profileId=%s, aborting request !", session.getProfileId());
+            final String errorMessage = String
+                    .format("No valid profile found or persona found for profileId=%s, aborting request !", session.getProfileId());
             if (sessionProfile.getItemId() != null) {
                 // Reload up-to-date profile
                 profile = profileService.load(sessionProfile.getItemId());
@@ -148,7 +160,8 @@ public class EventsCollectorEndpoint {
                 }
             } else {
                 // Session uses anonymous profile, try to find profile from cookie
-                String cookieProfileId = ServletCommon.getProfileIdCookieValue(request, (String) configSharingService.getProperty("profileIdCookieName"));
+                String cookieProfileId = ServletCommon
+                        .getProfileIdCookieValue(request, (String) configSharingService.getProperty("profileIdCookieName"));
                 if (StringUtils.isNotBlank(cookieProfileId)) {
                     profile = profileService.load(cookieProfileId);
                 }
@@ -160,8 +173,9 @@ public class EventsCollectorEndpoint {
             }
         }
 
-        Changes changesObject = ServletCommon.handleEvents(eventsCollectorRequest.getEvents(), session, profile, request, response,
-                timestamp, privacyService, eventService);
+        Changes changesObject = ServletCommon
+                .handleEvents(eventsCollectorRequest.getEvents(), session, profile, request, response, timestamp, privacyService,
+                        eventService);
         int changes = changesObject.getChangeType();
         profile = changesObject.getProfile();
 
@@ -169,10 +183,11 @@ public class EventsCollectorEndpoint {
             profileService.save(profile);
         }
         if ((changes & EventService.SESSION_UPDATED) == EventService.SESSION_UPDATED && session != null) {
-                profileService.saveSession(session);
+            profileService.saveSession(session);
         }
         if ((changes & EventService.ERROR) == EventService.ERROR) {
-            String errorMessage = "Error processing events. Total number of processed events: " + changesObject.getProcessedItems() + "/" + eventsCollectorRequest.getEvents().size();
+            String errorMessage = "Error processing events. Total number of processed events: " + changesObject.getProcessedItems() + "/"
+                    + eventsCollectorRequest.getEvents().size();
             throw new BadRequestException(errorMessage);
         }
 
