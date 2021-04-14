@@ -62,7 +62,7 @@ public interface ImportExportConfigurationService<T> {
     /**
      * Set the router camel context to share
      *
-     * @param routerCamelContext
+     * @param routerCamelContext the router Camel context to use for all operations
      */
     void setRouterCamelContext(IRouterCamelContext routerCamelContext);
 

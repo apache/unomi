@@ -48,6 +48,7 @@ public class Parameter implements Serializable {
     }
 
     /**
+     * @param choiceListInitializerFilter a reference to a choicelist
      * @deprecated As of version 1.1.0-incubating
      */
     @Deprecated

@@ -458,7 +458,9 @@ public class ProfileServiceEndPoint {
      * @param isSystemTag   if we should look in system tags instead of tags
      * @param itemType      the String representation of the item type we want to retrieve the count of, as defined by its class' {@code ITEM_TYPE} field
      * @param language      the value of the {@code Accept-Language} header to specify in which locale the properties description should be returned TODO unused
+     * @param response      the http response object
      * @return all property types defined for the specified item type and with the specified tag
+     * @throws IOException if there was an error sending the response
      */
     @GET
     @Path("/existingProperties")

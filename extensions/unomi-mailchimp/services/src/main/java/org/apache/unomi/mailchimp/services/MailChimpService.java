@@ -37,8 +37,8 @@ public interface MailChimpService {
     /**
      * This function will add the current visitor to a MailChimp list.
      *
-     * @param profile @see org.apache.unomi.api.Profile
-     * @param action  @see org.apache.unomi.api.actions.Action
+     * @param profile the Unomi profile to add to the list @see org.apache.unomi.api.Profile
+     * @param action the action used to call this method, to retrieve parameters @see org.apache.unomi.api.actions.Action
      * @return true if the visitor is successfully added to a MailChimp list.
      */
     MailChimpResult addToMCList(Profile profile, Action action);
@@ -46,8 +46,8 @@ public interface MailChimpService {
     /**
      * This function will remove the current visitor from a MailChimp list.
      *
-     * @param profile @see org.apache.unomi.api.Profile
-     * @param action  @see org.apache.unomi.api.actions.Action
+     * @param profile the Unomi profile to remove from the list @see org.apache.unomi.api.Profile
+     * @param action the action used to call this method, to retrieve parameters @see org.apache.unomi.api.actions.Action
      * @return true if the visitor is successfully removed to a MailChimp list.
      */
     MailChimpResult removeFromMCList(Profile profile, Action action);
@@ -55,8 +55,8 @@ public interface MailChimpService {
     /**
      * This function will unsbscribe the current visitor to a MailChimp list.
      *
-     * @param profile @see org.apache.unomi.api.Profile
-     * @param action  @see org.apache.unomi.api.actions.Action
+     * @param profile the Unomi profile to unsubscribe from the list @see org.apache.unomi.api.Profile
+     * @param action the action used to call this method, to retrieve parameters @see org.apache.unomi.api.actions.Action
      * @return true if the visitor is successfully unsbscribed to a MailChimp list.
      */
     MailChimpResult unsubscribeFromMCList(Profile profile, Action action);
@@ -64,7 +64,8 @@ public interface MailChimpService {
     /**
      * This function will update merge properties of MailChimp list.
      *
-     * @param action @see org.apache.unomi.api.actions.Action
+     * @param profile the Unomi profile to unsubscribe from the list @see org.apache.unomi.api.Profile
+     * @param action the action used to call this method, to retrieve parameters @see org.apache.unomi.api.actions.Action
      * @return true if the visitor is successfully unsbscribed to a MailChimp list.
      */
     MailChimpResult updateMCProfileProperties(Profile profile, Action action);

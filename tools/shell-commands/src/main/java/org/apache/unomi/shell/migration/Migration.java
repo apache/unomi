@@ -51,7 +51,9 @@ public interface Migration {
      * This method is called to execute the migration
      * @param session       the shell's session
      * @param httpClient    CloseableHttpClient
-     * @throws IOException
+     * @param esAddress     the fully qualified address at which the ElasticSearch is reachable (ie http://localhost:9200)
+     * @param bundleContext the bundle context object
+     * @throws IOException if there was an error while executing the migration
      */
     void execute(Session session, CloseableHttpClient httpClient, String esAddress, BundleContext bundleContext) throws IOException;
 }

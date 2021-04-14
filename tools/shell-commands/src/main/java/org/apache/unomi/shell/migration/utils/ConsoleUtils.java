@@ -38,8 +38,8 @@ public class ConsoleUtils {
      * @param session           the shell's session
      * @param msg               String message to ask
      * @param defaultAnswer     String default answer
-     * @return the user answer
-     * @throws IOException
+     * @return the user's answer
+     * @throws IOException if there was a problem reading input from the console
      */
     public static String askUserWithDefaultAnswer(Session session, String msg, String defaultAnswer) throws IOException {
         String answer = promptMessageToUser(session, msg);
@@ -57,7 +57,7 @@ public class ConsoleUtils {
      * @param msg               String message to ask
      * @param authorizedAnswer  Array of possible answer, all answer must be in lower case
      * @return the user answer
-     * @throws IOException
+     * @throws IOException if there was an error retrieving an answer from the user on the console
      */
     public static String askUserWithAuthorizedAnswer(Session session, String msg, List<String> authorizedAnswer) throws IOException {
         String answer;
@@ -74,7 +74,7 @@ public class ConsoleUtils {
      * @param session   the shell's session
      * @param msg       String message to prompt
      * @return the user answer
-     * @throws IOException
+     * @throws IOException if there was an error retrieving an answer from the user on the console
      */
     public static String promptMessageToUser(Session session, String msg) throws IOException {
         LineReader reader = (LineReader) session.get(".jline.reader");
