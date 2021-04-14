@@ -383,7 +383,9 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
             segmentCondition.setParameter("comparisonOperator", "equals");
             segmentCondition.setParameter("propertyValue", segmentId);
 
+            long queryTime = System.currentTimeMillis();
             List<Profile> previousProfiles = persistenceService.query(segmentCondition, null, Profile.class);
+            logger.info("removeSegmentDefinition, updateProfilesSegment {} profiles queryTime of segment {} in {}ms", previousProfiles.size(), segmentId, System.currentTimeMillis() - queryTime);
             long updatedProfileCount = 0;
             long profileRemovalStartTime = System.currentTimeMillis();
             if (batchSegmentProfileUpdate && previousProfiles.size() > 0) {
@@ -957,7 +959,9 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
 
     private long updateProfilesSegment(Condition profilesToUpdateCondition, String segmentId, boolean isAdd){
         long updatedProfileCount= 0;
+        long queryTime = System.currentTimeMillis();
         PartialList<Profile> profiles = persistenceService.query(profilesToUpdateCondition, null, Profile.class, 0, segmentUpdateBatchSize, "10m");
+        logger.info("updateProfilesSegment {} batch profiles queryTime of segment {} in {}ms", profiles.size(), segmentId, System.currentTimeMillis() - queryTime);
         while (profiles != null && profiles.getList().size() > 0) {
             long startTime = System.currentTimeMillis();
             if (batchSegmentProfileUpdate) {
@@ -973,9 +977,11 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
                 sendProfileUpdatedEvent(profiles.getList());
 
             updatedProfileCount += profiles.size();
-            logger.info("{} profiles {} to segment {} in {}ms", profiles.size(), isAdd ? "added" : "removed", segmentId, System.currentTimeMillis() - startTime);
+            logger.info("updateProfilesSegment {} profiles {} to segment {} in {}ms", profiles.size(), isAdd ? "added" : "removed", segmentId, System.currentTimeMillis() - startTime);
 
+            long scrollTime = System.currentTimeMillis();
             profiles = persistenceService.continueScrollQuery(Profile.class, profiles.getScrollIdentifier(), profiles.getScrollTimeValidity());
+            logger.info("updateProfilesSegment {} profiles scrollTime of segment {} in {}ms", profiles.size(),segmentId, System.currentTimeMillis() - scrollTime);
         }
 
         return updatedProfileCount;
