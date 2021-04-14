@@ -18,5 +18,5 @@ package org.apache.unomi.api.utils;
 
 public class ValidationPattern {
 
-    public static final String PATTERN = "^(\\w|[-_@]){0,50}$";
+    public static final String TEXT_VALID_CHARACTERS_PATTERN = "^(\\w|[-_@]){0,50}$";
 }

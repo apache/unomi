@@ -29,7 +29,7 @@ public class EventsCollectorRequest {
     private List<Event> events;
 
 
-    @Pattern(regexp = ValidationPattern.PATTERN)
+    @Pattern(regexp = ValidationPattern.TEXT_VALID_CHARACTERS_PATTERN)
     private String sessionId;
 
     /**

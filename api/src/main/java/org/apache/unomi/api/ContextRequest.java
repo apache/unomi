@@ -67,10 +67,10 @@ public class ContextRequest {
     private Profile profileOverrides;
     private Map<String, Object> sessionPropertiesOverrides;
 
-    @Pattern(regexp = ValidationPattern.PATTERN)
+    @Pattern(regexp = ValidationPattern.TEXT_VALID_CHARACTERS_PATTERN)
     private String sessionId;
 
-    @Pattern(regexp = ValidationPattern.PATTERN)
+    @Pattern(regexp = ValidationPattern.TEXT_VALID_CHARACTERS_PATTERN)
     private String profileId;
 
     /**
