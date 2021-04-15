@@ -20,6 +20,7 @@ import static java.util.Collections.singletonList;
 import org.hibernate.validator.HibernateValidator;
 
 import javax.validation.ValidationProviderResolver;
+import javax.validation.spi.ValidationProvider;
 import java.util.List;
 
 /**
@@ -30,7 +31,7 @@ import java.util.List;
 public class HibernateValidationProviderResolver implements ValidationProviderResolver {
 
     @Override
-    public List getValidationProviders() {
+    public List<ValidationProvider<?>> getValidationProviders() {
         return singletonList(new HibernateValidator());
     }
 }
