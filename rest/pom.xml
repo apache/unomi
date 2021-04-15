@@ -208,6 +208,7 @@
                             org.apache.unomi.api.query;resolution:=optional,
                             org.apache.unomi.api.rules;resolution:=optional,
                             org.apache.unomi.api.services;resolution:=optional,
+                            org.apache.unomi.api.utils;resolution:=optional,
                             org.apache.unomi.persistence.spi,
                             org.jsoup;resolution:=optional,
                             org.jsoup.safety;resolution:=optional,

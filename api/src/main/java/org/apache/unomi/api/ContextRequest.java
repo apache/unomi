@@ -24,7 +24,9 @@ import org.apache.unomi.api.services.EventListenerService;
 import org.apache.unomi.api.services.PersonalizationService;
 import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.api.services.RulesService;
+import org.apache.unomi.api.utils.ValidationPattern;
 
+import javax.validation.constraints.Pattern;
 import java.util.List;
 import java.util.Map;
 
@@ -65,8 +67,10 @@ public class ContextRequest {
     private Profile profileOverrides;
     private Map<String, Object> sessionPropertiesOverrides;
 
+    @Pattern(regexp = ValidationPattern.TEXT_VALID_CHARACTERS_PATTERN)
     private String sessionId;
 
+    @Pattern(regexp = ValidationPattern.TEXT_VALID_CHARACTERS_PATTERN)
     private String profileId;
 
     /**

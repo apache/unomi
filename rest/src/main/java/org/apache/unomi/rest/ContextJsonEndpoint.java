@@ -34,6 +34,7 @@ import org.apache.unomi.api.services.PersonalizationService;
 import org.apache.unomi.api.services.PrivacyService;
 import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.api.services.RulesService;
+import org.apache.unomi.api.utils.ValidationPattern;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.utils.Changes;
 import org.apache.unomi.utils.HttpUtils;
@@ -49,6 +50,7 @@ import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.validation.Valid;
 import javax.validation.constraints.Pattern;
 import javax.ws.rs.BadRequestException;
 import javax.ws.rs.Consumes;
@@ -110,21 +112,23 @@ public class ContextJsonEndpoint {
     @POST
     @Produces(MediaType.TEXT_PLAIN)
     @Path("/context.js")
-    public Response contextJSAsPost(ContextRequest contextRequest,
-            @QueryParam("personaId") String personaId,
-            @QueryParam("sessionId") String sessionId,
-            @QueryParam("timestamp") Long timestampAsLong, @QueryParam("invalidateProfile") boolean invalidateProfile,
-            @QueryParam("invalidateSession") boolean invalidateSession) throws JsonProcessingException {
+    public Response contextJSAsPost(@Valid ContextRequest contextRequest,
+            @QueryParam("personaId") @Pattern(regexp = ValidationPattern.TEXT_VALID_CHARACTERS_PATTERN) String personaId,
+            @QueryParam("sessionId") @Pattern(regexp = ValidationPattern.TEXT_VALID_CHARACTERS_PATTERN) String sessionId,
+            @QueryParam("timestamp") Long timestampAsLong,
+            @QueryParam("invalidateProfile") boolean invalidateProfile, @QueryParam("invalidateSession") boolean invalidateSession)
+            throws JsonProcessingException {
         return contextJSAsGet(contextRequest, personaId, sessionId, timestampAsLong, invalidateProfile, invalidateSession);
     }
 
     @GET
     @Produces(MediaType.TEXT_PLAIN)
     @Path("/context.js")
-    public Response contextJSAsGet(ContextRequest contextRequest, @QueryParam("personaId") String personaId,
-            @QueryParam("sessionId") String sessionId, @QueryParam("timestamp") Long timestampAsLong,
-            @QueryParam("invalidateProfile") boolean invalidateProfile, @QueryParam("invalidateSession") boolean invalidateSession)
-            throws JsonProcessingException {
+    public Response contextJSAsGet(@Valid ContextRequest contextRequest,
+            @QueryParam("personaId") @Pattern(regexp = ValidationPattern.TEXT_VALID_CHARACTERS_PATTERN) String personaId,
+            @QueryParam("sessionId") @Pattern(regexp = ValidationPattern.TEXT_VALID_CHARACTERS_PATTERN) String sessionId,
+            @QueryParam("timestamp") Long timestampAsLong, @QueryParam("invalidateProfile") boolean invalidateProfile,
+            @QueryParam("invalidateSession") boolean invalidateSession) throws JsonProcessingException {
         ContextResponse contextResponse = contextJSONAsPost(contextRequest, personaId, sessionId, timestampAsLong, invalidateProfile,
                 invalidateSession);
         String contextAsJSONString = CustomObjectMapper.getObjectMapper().writeValueAsString(contextResponse);
@@ -132,14 +136,15 @@ public class ContextJsonEndpoint {
         responseAsString.append("window.digitalData = window.digitalData || {};\n").append("var cxs = ").append(contextAsJSONString)
                 .append(";\n");
         return Response.ok(responseAsString.toString()).build();
-
     }
 
     @GET
     @Produces(MediaType.APPLICATION_JSON + ";charset=UTF-8")
     @Path("/context.json")
-    public ContextResponse contextJSONAsGet(ContextRequest contextRequest, @QueryParam("personaId") String personaId,
-            @QueryParam("sessionId") String sessionId, @QueryParam("timestamp") Long timestampAsLong,
+    public ContextResponse contextJSONAsGet(@Valid ContextRequest contextRequest,
+            @QueryParam("personaId") @Pattern(regexp = ValidationPattern.TEXT_VALID_CHARACTERS_PATTERN) String personaId,
+            @QueryParam("sessionId") @Pattern(regexp = ValidationPattern.TEXT_VALID_CHARACTERS_PATTERN) String sessionId,
+            @QueryParam("timestamp") Long timestampAsLong,
             @QueryParam("invalidateProfile") boolean invalidateProfile, @QueryParam("invalidateSession") boolean invalidateSession) {
         return contextJSONAsPost(contextRequest, personaId, sessionId, timestampAsLong, invalidateProfile, invalidateSession);
     }
@@ -147,8 +152,10 @@ public class ContextJsonEndpoint {
     @POST
     @Produces(MediaType.APPLICATION_JSON + ";charset=UTF-8")
     @Path("/context.json")
-    public ContextResponse contextJSONAsPost(ContextRequest contextRequest, @QueryParam("personaId") String personaId,
-            @QueryParam("sessionId") String sessionId, @QueryParam("timestamp") Long timestampAsLong,
+    public ContextResponse contextJSONAsPost(@Valid ContextRequest contextRequest,
+            @QueryParam("personaId") @Pattern(regexp = ValidationPattern.TEXT_VALID_CHARACTERS_PATTERN) String personaId,
+            @QueryParam("sessionId") @Pattern(regexp = ValidationPattern.TEXT_VALID_CHARACTERS_PATTERN) String sessionId,
+            @QueryParam("timestamp") Long timestampAsLong,
             @QueryParam("invalidateProfile") boolean invalidateProfile, @QueryParam("invalidateSession") boolean invalidateSession) {
         Date timestamp = new Date();
         if (timestampAsLong != null) {
