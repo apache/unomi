@@ -157,70 +157,10 @@
         <dependency>
             <groupId>javax.validation</groupId>
             <artifactId>validation-api</artifactId>
-            <version>1.1.0.Final</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>javax.el</groupId>
-            <artifactId>javax.el-api</artifactId>
-            <version>3.0.0</version>
-        </dependency>
-        <dependency>
-            <groupId>org.glassfish</groupId>
-            <artifactId>javax.el</artifactId>
-            <version>3.0.0</version>
         </dependency>
         <dependency>
             <groupId>org.hibernate</groupId>
             <artifactId>hibernate-validator</artifactId>
-            <version>5.0.2.Final</version>
-        </dependency>
-        <dependency>
-            <groupId>com.fasterxml</groupId>
-            <artifactId>classmate</artifactId>
-            <version>1.5.1</version>
         </dependency>
     </dependencies>
-    <build>
-        <plugins>
-            <plugin>
-                <groupId>org.apache.felix</groupId>
-                <artifactId>maven-bundle-plugin</artifactId>
-                <extensions>true</extensions>
-                <configuration>
-                    <instructions>
-                        <Import-Package>
-                            !javax.xml.bind.annotation,
-                            javax.persistence;resolution:=optional,
-                            com.fasterxml.jackson.annotation;resolution:=optional,
-                            com.fasterxml.jackson.databind;resolution:=optional,
-                            com.fasterxml.jackson.databind.cfg;resolution:=optional,
-                            com.fasterxml.jackson.databind.introspect;resolution:=optional,
-                            com.fasterxml.jackson.databind.util;resolution:=optional,
-                            com.fasterxml.jackson.module.jaxb;resolution:=optional,
-                            org.apache.unomi.api;resolution:=optional,
-                            org.apache.unomi.api.actions;resolution:=optional,
-                            org.apache.unomi.api.campaigns;resolution:=optional,
-                            org.apache.unomi.api.campaigns.events;resolution:=optional,
-                            org.apache.unomi.api.conditions;resolution:=optional,
-                            org.apache.unomi.api.goals;resolution:=optional,
-                            org.apache.unomi.api.segments;resolution:=optional,
-                            org.apache.unomi.api.query;resolution:=optional,
-                            org.apache.unomi.api.rules;resolution:=optional,
-                            org.apache.unomi.api.services;resolution:=optional,
-                            org.apache.unomi.api.utils;resolution:=optional,
-                            org.apache.unomi.persistence.spi,
-                            org.jsoup;resolution:=optional,
-                            org.jsoup.safety;resolution:=optional,
-                            com.fasterxml.classmate;resolution:=optional,
-                            com.fasterxml.classmate.members;resolution:=optional,
-                            org.hibernate.validator;resolution:=optional,
-                            *
-                        </Import-Package>
-                        <Embed-Dependency>*;scope=compile|runtime</Embed-Dependency>
-                    </instructions>
-                </configuration>
-            </plugin>
-        </plugins>
-    </build>
 </project>
