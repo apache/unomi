@@ -103,8 +103,17 @@ public class RestServer {
     @Activate
     public void activate(ComponentContext componentContext) throws Exception {
         this.bundleContext = componentContext.getBundleContext();
-        HibernateValidationProviderResolver validationProviderResolver = new HibernateValidationProviderResolver();
-        this.beanValidationProvider = new BeanValidationProvider(validationProviderResolver, HibernateValidator.class);
+
+        // This is a TCCL (Thread context class loader) hack to for the javax.el.FactoryFinder to use Class.forName(className)
+        // instead of tccl.loadClass(className) to load the class "com.sun.el.ExpressionFactoryImpl".
+        ClassLoader currentContextClassLoader = Thread.currentThread().getContextClassLoader();
+        try {
+            Thread.currentThread().setContextClassLoader(null);
+            HibernateValidationProviderResolver validationProviderResolver = new HibernateValidationProviderResolver();
+            this.beanValidationProvider = new BeanValidationProvider(validationProviderResolver, HibernateValidator.class);
+        } finally {
+            Thread.currentThread().setContextClassLoader(currentContextClassLoader);
+        }
 
         Filter filter = bundleContext.createFilter("(osgi.jaxrs.resource=true)");
         jaxRSServiceTracker = new ServiceTracker(bundleContext, filter, new ServiceTrackerCustomizer() {
@@ -167,21 +176,18 @@ public class RestServer {
         }
 
         if (server != null) {
-            logger.info("Shutting down JAX RS Endpoint... ");
+            logger.info("JAX RS Server: Shutting down server...");
             server.destroy();
         }
 
-        final OpenApiFeature openApiFeature = new OpenApiFeature();
-        openApiFeature.setContactEmail("dev@unomi.apache.org");
-        openApiFeature.setLicense("Apache 2.0 License");
-        openApiFeature.setLicenseUrl("http://www.apache.org/licenses/LICENSE-2.0.html");
-        openApiFeature.setScan(false);
-        openApiFeature.setUseContextBasedConfig(
-                true);        //Set<String> resourceClasses = serviceBeans.stream().map(service -> service.getClass().getName()).collect(toSet());
-        OpenApiCustomizer customizer = new OpenApiCustomizer();
-        customizer.setDynamicBasePath(true);
-        openApiFeature.setCustomizer(customizer);
+        if (serviceBeans.isEmpty()) {
+            logger.info("JAX RS Server: Server not started because no JAX RS EndPoint registered yet");
+            return;
+        }
 
+        logger.info("JAX RS Server: Configuring server...");
+
+        // Build the server
         JAXRSServerFactoryBean jaxrsServerFactoryBean = new JAXRSServerFactoryBean();
         jaxrsServerFactoryBean.setAddress("/");
         jaxrsServerFactoryBean.setBus(serverBus);
@@ -201,23 +207,34 @@ public class RestServer {
         for (ExceptionMapper exceptionMapper : exceptionMappers) {
             jaxrsServerFactoryBean.setProvider(exceptionMapper);
         }
-        jaxrsServerFactoryBean.setServiceBeans(serviceBeans);
+
+        // Open API config
+        final OpenApiFeature openApiFeature = new OpenApiFeature();
+        openApiFeature.setContactEmail("dev@unomi.apache.org");
+        openApiFeature.setLicense("Apache 2.0 License");
+        openApiFeature.setLicenseUrl("http://www.apache.org/licenses/LICENSE-2.0.html");
+        openApiFeature.setScan(false);
+        openApiFeature.setUseContextBasedConfig(
+                true);        //Set<String> resourceClasses = serviceBeans.stream().map(service -> service.getClass().getName()).collect(toSet());
+        OpenApiCustomizer customizer = new OpenApiCustomizer();
+        customizer.setDynamicBasePath(true);
+        openApiFeature.setCustomizer(customizer);
         jaxrsServerFactoryBean.getFeatures().add(openApiFeature);
 
+        // Hibernate validator config
         jaxrsServerFactoryBean.setProvider(new ValidationExceptionMapper());
-
         JAXRSBeanValidationInInterceptor inInterceptor = new JAXRSBeanValidationInInterceptorOverride();
         inInterceptor.setProvider(beanValidationProvider);
         jaxrsServerFactoryBean.setInInterceptors(Collections.singletonList(inInterceptor));
-
         JAXRSBeanValidationOutInterceptor outInterceptor = new JAXRSBeanValidationOutInterceptor();
         outInterceptor.setProvider(beanValidationProvider);
         jaxrsServerFactoryBean.setOutInterceptors(Collections.singletonList(outInterceptor));
 
-        if (serviceBeans.size() > 0) {
-            logger.info("Starting JAX RS Endpoint...");
-            server = jaxrsServerFactoryBean.create();
-            server.getEndpoint().getEndpointInfo().setName(UNOMI_REST_SERVER_END_POINT_NAME);
-        }
+        // Register service beans (end points)
+        jaxrsServerFactoryBean.setServiceBeans(serviceBeans);
+
+        logger.info("JAX RS Server: Starting server with {} JAX RS EndPoints registered", serviceBeans.size());
+        server = jaxrsServerFactoryBean.create();
+        server.getEndpoint().getEndpointInfo().setName(UNOMI_REST_SERVER_END_POINT_NAME);
     }
 }
