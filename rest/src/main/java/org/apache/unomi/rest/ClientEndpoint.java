@@ -22,9 +22,15 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.opencsv.CSVWriter;
 import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
+import org.apache.cxf.validation.BeanValidationProvider;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.services.ConfigSharingService;
 import org.apache.unomi.api.services.ProfileService;
+import org.apache.unomi.rest.validation.HibernateValidationProviderResolver;
+import org.apache.unomi.rest.validation.JAXRSBeanValidationInInterceptorOverride;
+import org.apache.unomi.rest.validation.cookies.CookieUtils;
+import org.apache.unomi.rest.validation.cookies.CookieWrapper;
+import org.hibernate.validator.HibernateValidator;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 import org.slf4j.Logger;
@@ -34,7 +40,12 @@ import javax.jws.WebService;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.ws.rs.*;
+import javax.ws.rs.GET;
+import javax.ws.rs.InternalServerErrorException;
+import javax.ws.rs.NotFoundException;
+import javax.ws.rs.OPTIONS;
+import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
 import java.io.StringWriter;
@@ -43,15 +54,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-
 /**
  * A servlet filter to serve a context-specific Javascript containing the current request context object.
  */
 @WebService
-@CrossOriginResourceSharing(
-        allowAllOrigins = true,
-        allowCredentials = true
-)
+@CrossOriginResourceSharing(allowAllOrigins = true, allowCredentials = true)
 @Path("/")
 @Component(service = ClientEndpoint.class, property = "osgi.jaxrs.resource=true")
 public class ClientEndpoint {
@@ -70,7 +77,6 @@ public class ClientEndpoint {
     @Reference
     private ConfigSharingService configSharingService;
 
-
     @Context
     HttpServletRequest request;
     @Context
@@ -85,6 +91,7 @@ public class ClientEndpoint {
     @GET
     @Path("/client/{operation}/{param}")
     public Response getClient(@PathParam("operation") String operation, @PathParam("param") String param) throws JsonProcessingException {
+        CookieUtils.validate(request.getCookies());
         if ("myprofile".equals(operation)) {
             if (((String) configSharingService.getProperty("allowedProfileDownloadFormats")).contains(param)) {
                 return donwloadCurrentProfile(param);
@@ -97,6 +104,7 @@ public class ClientEndpoint {
 
     private Response donwloadCurrentProfile(String downloadFileType) throws JsonProcessingException {
         String cookieProfileId = null;
+
         Cookie[] cookies = request.getCookies();
         if (cookies != null) {
             for (Cookie cookie : cookies) {
@@ -133,9 +141,9 @@ public class ClientEndpoint {
         //using custom delimiter and quote character
         CSVWriter csvWriter = new CSVWriter(writer);
         if (vertical) {
-            csvWriter.writeNext(new String[]{"name", "value"});
+            csvWriter.writeNext(new String[] { "name", "value" });
             for (Map.Entry<String, Object> entry : currentProfile.getProperties().entrySet()) {
-                csvWriter.writeNext(new String[]{entry.getKey(), entry.getValue().toString().trim().replace("\n", "")});
+                csvWriter.writeNext(new String[] { entry.getKey(), entry.getValue().toString().trim().replace("\n", "") });
             }
         } else {
             Set<String> keySet = currentProfile.getProperties().keySet();

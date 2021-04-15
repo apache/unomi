@@ -23,6 +23,7 @@ import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.Session;
 import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.api.services.PrivacyService;
+import org.apache.unomi.rest.validation.cookies.CookieUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,16 +47,14 @@ public class ServletCommon {
         String cookieProfileId = null;
 
         Cookie[] cookies = httpServletRequest.getCookies();
+        CookieUtils.validate(cookies);
         if (cookies != null) {
             for (Cookie cookie : cookies) {
                 if (profileIdCookieName.equals(cookie.getName())) {
                     cookieProfileId = cookie.getValue();
-                    // TODO : Replace this header protection by a more global one while working on input validation
-                    cookieProfileId = cookieProfileId.replaceAll("\\n\\r","");
                 }
             }
         }
-
         return cookieProfileId;
     }
 
