@@ -54,49 +54,43 @@ public class InputValidationIT extends BaseIT {
     @Test
     public void test_param_EventsNotEmpty() throws IOException {
         doPOSTRequestTest(URL + EVENT_COLLECTOR_URL, null, "/validation/eventcollector_emptyEvents.json", 400);
-        // TODO uncomment after fix: https://issues.apache.org/jira/browse/UNOMI-467
-        // doGETRequestTest(URL + EVENT_COLLECTOR_URL, null, "/validation/eventcollector_emptyEvents.json", 400);
+        doGETRequestTest(URL + EVENT_COLLECTOR_URL, null, "/validation/eventcollector_emptyEvents.json", 400);
     }
 
     @Test
     public void test_param_SessionIDPattern() throws IOException {
         doPOSTRequestTest(URL + EVENT_COLLECTOR_URL, null, "/validation/eventcollector_invalidSessionId.json", 400);
-        // TODO uncomment after fix: https://issues.apache.org/jira/browse/UNOMI-467
-        // doGETRequestTest(URL + EVENT_COLLECTOR_URL, null, "/validation/eventcollector_invalidSessionId.json", 400);
+        doGETRequestTest(URL + EVENT_COLLECTOR_URL, null, "/validation/eventcollector_invalidSessionId.json", 400);
     }
 
     @Test
     public void test_eventCollector_valid() throws IOException {
         doPOSTRequestTest(URL + EVENT_COLLECTOR_URL, null, "/validation/eventcollector_valid.json", 200);
-        // TODO uncomment after fix: https://issues.apache.org/jira/browse/UNOMI-467
-        // doGETRequestTest(URL + EVENT_COLLECTOR_URL, null, "/validation/eventcollector_valid.json", 200);
+        doGETRequestTest(URL + EVENT_COLLECTOR_URL, null, "/validation/eventcollector_valid.json", 200);
     }
 
     @Test
     public void test_contextRequest_SessionIDPattern() throws IOException {
         doPOSTRequestTest(URL + CONTEXT_JSON_URL, null, "/validation/contextRequest_invalidSessionId.json", 400);
         doPOSTRequestTest(URL + CONTEXT_JS_URL, null, "/validation/contextRequest_invalidSessionId.json", 400);
-        // TODO uncomment after fix: https://issues.apache.org/jira/browse/UNOMI-467
-        // doGETRequestTest(URL + CONTEXT_JSON_URL, null, "/validation/contextRequest_invalidSessionId.json", 400);
-        // doGETRequestTest(URL + CONTEXT_JS_URL, null, "/validation/contextRequest_invalidSessionId.json", 400);
+        doGETRequestTest(URL + CONTEXT_JSON_URL, null, "/validation/contextRequest_invalidSessionId.json", 400);
+        doGETRequestTest(URL + CONTEXT_JS_URL, null, "/validation/contextRequest_invalidSessionId.json", 400);
     }
 
     @Test
     public void test_contextRequest_ProfileIDPattern() throws IOException {
         doPOSTRequestTest(URL + CONTEXT_JSON_URL, null, "/validation/contextRequest_invalidProfileId.json", 400);
         doPOSTRequestTest(URL + CONTEXT_JS_URL, null, "/validation/contextRequest_invalidProfileId.json", 400);
-        // TODO uncomment after fix: https://issues.apache.org/jira/browse/UNOMI-467
-        // doGETRequestTest(URL + CONTEXT_JSON_URL, null, "/validation/contextRequest_invalidProfileId.json", 400);
-        // doGETRequestTest(URL + CONTEXT_JS_URL, null, "/validation/contextRequest_invalidProfileId.json", 400);
+        doGETRequestTest(URL + CONTEXT_JSON_URL, null, "/validation/contextRequest_invalidProfileId.json", 400);
+        doGETRequestTest(URL + CONTEXT_JS_URL, null, "/validation/contextRequest_invalidProfileId.json", 400);
     }
 
     @Test
     public void test_contextRequest_valid() throws IOException {
         doPOSTRequestTest(URL + CONTEXT_JSON_URL, null, "/validation/contextRequest_valid.json", 200);
         doPOSTRequestTest(URL + CONTEXT_JS_URL, null, "/validation/contextRequest_valid.json", 200);
-        // TODO uncomment after fix: https://issues.apache.org/jira/browse/UNOMI-467
-        // doGETRequestTest(URL + CONTEXT_JSON_URL, null, "/validation/contextRequest_valid.json", 200);
-        // doGETRequestTest(URL + CONTEXT_JS_URL, null, "/validation/contextRequest_valid.json", 200);
+        doGETRequestTest(URL + CONTEXT_JSON_URL, null, "/validation/contextRequest_valid.json", 200);
+        doGETRequestTest(URL + CONTEXT_JS_URL, null, "/validation/contextRequest_valid.json", 200);
     }
 
     @Test

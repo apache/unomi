@@ -15,18 +15,24 @@
  * limitations under the License.
  */
 
-package org.apache.unomi.rest;
+package org.apache.unomi.rest.models;
 
-import org.apache.unomi.api.Parameter;
+import org.apache.unomi.api.ValueType;
+
+import java.util.Set;
 
 /**
- * A representation of a {@link Parameter} better suited for definitions.
+ * A representation of a {@link ValueType} better suited for definitions.
  */
-public class RESTParameter {
+public class RESTValueType {
+
     private String id;
-    private String type;
-    private boolean multivalued = false;
-    private String defaultValue = null;
+    private String name;
+    private String description;
+    private Set<String> tags;
+
+    public RESTValueType() {
+    }
 
     public String getId() {
         return id;
@@ -36,28 +42,27 @@ public class RESTParameter {
         this.id = id;
     }
 
-    public String getType() {
-        return type;
+    public String getName() {
+        return name;
     }
 
-    public void setType(String type) {
-        this.type = type;
+    public void setName(String name) {
+        this.name = name;
     }
 
-    public boolean isMultivalued() {
-        return multivalued;
+    public String getDescription() {
+        return description;
     }
 
-    public void setMultivalued(boolean multivalued) {
-        this.multivalued = multivalued;
+    public void setDescription(String description) {
+        this.description = description;
     }
 
-    public String getDefaultValue() {
-        return defaultValue;
+    public Set<String> getTags() {
+        return tags;
     }
 
-    public void setDefaultValue(String defaultValue) {
-        this.defaultValue = defaultValue;
+    public void setTags(Set<String> tags) {
+        this.tags = tags;
     }
-
 }

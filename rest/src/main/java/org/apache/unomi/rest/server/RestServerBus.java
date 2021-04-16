@@ -14,19 +14,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.unomi.rest.server;
 
-package org.apache.unomi.rest;
+import org.apache.cxf.Bus;
+import org.apache.cxf.bus.extension.ExtensionManagerBus;
+import org.apache.cxf.feature.LoggingFeature;
+import org.osgi.service.component.annotations.Component;
 
-import java.io.Serializable;
-
-public class EventCollectorResponse implements Serializable {
-    private int updated;
-
-    public EventCollectorResponse(int updated) {
-        this.updated = updated;
-    }
-
-    public int getUpdated() {
-        return updated;
+/**
+ * Rest server bus
+ */
+@Component(service = Bus.class)
+public class RestServerBus extends ExtensionManagerBus implements Bus {
+    public RestServerBus() {
+        this.getFeatures().add(new LoggingFeature());
+        this.getFeatures().add(new org.apache.cxf.metrics.MetricsFeature());
     }
 }
