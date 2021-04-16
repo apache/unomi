@@ -25,7 +25,6 @@ import org.apache.cxf.jaxrs.openapi.OpenApiFeature;
 import org.apache.cxf.jaxrs.security.SimpleAuthorizingFilter;
 import org.apache.cxf.jaxrs.validation.JAXRSBeanValidationInInterceptor;
 import org.apache.cxf.jaxrs.validation.JAXRSBeanValidationOutInterceptor;
-import org.apache.cxf.jaxrs.validation.ValidationExceptionMapper;
 import org.apache.unomi.rest.authentication.AuthenticationFilter;
 import org.apache.unomi.rest.authentication.AuthorizingInterceptor;
 import org.apache.unomi.rest.authentication.RestAuthenticationConfig;
@@ -85,7 +84,7 @@ public class RestServer {
         this.restAuthenticationConfig = restAuthenticationConfig;
     }
 
-    @Reference
+    @Reference(cardinality = ReferenceCardinality.MULTIPLE)
     public void addExceptionMapper(ExceptionMapper exceptionMapper) {
         this.exceptionMappers.add(exceptionMapper);
         timeOfLastUpdate = System.currentTimeMillis();
@@ -214,7 +213,6 @@ public class RestServer {
         jaxrsServerFactoryBean.getFeatures().add(openApiFeature);
 
         // Hibernate validator config
-        jaxrsServerFactoryBean.setProvider(new ValidationExceptionMapper());
         JAXRSBeanValidationInInterceptor inInterceptor = new JAXRSBeanValidationInInterceptorOverride();
         inInterceptor.setProvider(localBeanValidationProvider.get());
         jaxrsServerFactoryBean.setInInterceptors(Collections.singletonList(inInterceptor));
