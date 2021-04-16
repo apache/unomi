@@ -14,15 +14,21 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.apache.unomi.utils;
+package org.apache.unomi.rest.service.impl;
 
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.Persona;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.Session;
+import org.apache.unomi.api.services.ConfigSharingService;
 import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.api.services.PrivacyService;
+import org.apache.unomi.rest.service.RestServiceUtils;
+import org.apache.unomi.rest.validation.LocalBeanValidationProvider;
+import org.apache.unomi.rest.validation.cookies.CookieWrapper;
+import org.apache.unomi.utils.Changes;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Reference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,39 +39,46 @@ import javax.servlet.http.HttpServletRequest;
 import java.util.Date;
 import java.util.List;
 
-/**
- * // This is duplicate of the class from the wab bundle, the original file will be removed once endpoints forwarded
- *
- * @author dgaillard
- */
-public class ServletCommon {
-    private static final Logger logger = LoggerFactory.getLogger(ServletCommon.class.getName());
+@Component(service = RestServiceUtils.class)
+public class RestServiceUtilsImpl implements RestServiceUtils {
 
+    private static final Logger logger = LoggerFactory.getLogger(RestServiceUtilsImpl.class.getName());
 
-    public static String getProfileIdCookieValue(HttpServletRequest httpServletRequest, String profileIdCookieName) {
+    @Reference
+    private ConfigSharingService configSharingService;
+
+    @Reference
+    private LocalBeanValidationProvider localBeanValidationProvider;
+
+    @Reference
+    private PrivacyService privacyService;
+
+    @Reference
+    private EventService eventService;
+
+    public String getProfileIdCookieValue(HttpServletRequest httpServletRequest) {
         String cookieProfileId = null;
 
         Cookie[] cookies = httpServletRequest.getCookies();
+
         if (cookies != null) {
             for (Cookie cookie : cookies) {
-                if (profileIdCookieName.equals(cookie.getName())) {
+                if (configSharingService.getProperty("profileIdCookieName").equals(cookie.getName())) {
+                    localBeanValidationProvider.get().validateBean(new CookieWrapper(cookie.getValue()));
                     cookieProfileId = cookie.getValue();
-                    // TODO : Replace this header protection by a more global one while working on input validation
-                    cookieProfileId = cookieProfileId.replaceAll("\\n\\r","");
                 }
             }
         }
-
         return cookieProfileId;
     }
 
-    public static Changes handleEvents(List<Event> events, Session session, Profile profile,
-                                       ServletRequest request, ServletResponse response, Date timestamp,
-                                       PrivacyService privacyService, EventService eventService) {
+    @Override
+    public Changes handleEvents(List<Event> events, Session session, Profile profile, ServletRequest request, ServletResponse response,
+            Date timestamp) {
         List<String> filteredEventTypes = privacyService.getFilteredEventTypes(profile);
 
-        String thirdPartyId = eventService.authenticateThirdPartyServer(((HttpServletRequest) request).getHeader("X-Unomi-Peer"),
-                request.getRemoteAddr());
+        String thirdPartyId = eventService
+                .authenticateThirdPartyServer(((HttpServletRequest) request).getHeader("X-Unomi-Peer"), request.getRemoteAddr());
 
         int changes = EventService.NO_CHANGE;
         // execute provided events if any
@@ -94,8 +107,8 @@ public class ServletCommon {
 
                     eventToSend.getAttributes().put(Event.HTTP_REQUEST_ATTRIBUTE, request);
                     eventToSend.getAttributes().put(Event.HTTP_RESPONSE_ATTRIBUTE, response);
-                    logger.debug("Received event " + event.getEventType() + " for profile=" + profile.getItemId() + " session="
-                            + (session != null ? session.getItemId() : null) + " target=" + event.getTarget() + " timestamp=" + timestamp);
+                    logger.debug("Received event " + event.getEventType() + " for profile=" + profile.getItemId() + " session=" + (
+                            session != null ? session.getItemId() : null) + " target=" + event.getTarget() + " timestamp=" + timestamp);
                     changes |= eventService.send(eventToSend);
                     // If the event execution changes the profile we need to update it so the next event use the right profile
                     if ((changes & EventService.PROFILE_UPDATED) == EventService.PROFILE_UPDATED) {
@@ -113,4 +126,3 @@ public class ServletCommon {
         return new Changes(changes, processedEventsCnt, profile);
     }
 }
-
