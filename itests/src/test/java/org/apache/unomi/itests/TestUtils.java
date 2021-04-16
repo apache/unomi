@@ -21,7 +21,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
+import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.entity.ContentType;
 import org.apache.http.util.EntityUtils;
 import org.apache.unomi.api.ContextResponse;
@@ -63,8 +65,8 @@ public class TestUtils {
 		return null;
 	}
 
-	public static RequestResponse executeContextJSONRequest(HttpPost request, String sessionId) throws IOException {
-		try (CloseableHttpResponse response = HttpClientThatWaitsForUnomi.doPost(request)) {
+	public static RequestResponse executeContextJSONRequest(HttpUriRequest request, String sessionId) throws IOException {
+		try (CloseableHttpResponse response = HttpClientThatWaitsForUnomi.doRequest(request)) {
 			// validate mimeType
 			HttpEntity entity = response.getEntity();
 			String mimeType = ContentType.getOrDefault(entity).getMimeType();

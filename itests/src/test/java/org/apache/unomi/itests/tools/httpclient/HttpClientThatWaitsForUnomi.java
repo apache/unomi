@@ -19,7 +19,7 @@ package org.apache.unomi.itests.tools.httpclient;
 
 import org.apache.http.HttpStatus;
 import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpPost;
+import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.impl.client.HttpClientBuilder;
 
 import java.io.IOException;
@@ -29,12 +29,17 @@ public class HttpClientThatWaitsForUnomi {
     private static final long TIMER = 1000L;
     private static final int MAX_TRIES = 10;
 
-    public static CloseableHttpResponse doPost(HttpPost request) throws IOException {
+    public static CloseableHttpResponse doRequest(HttpUriRequest request) throws IOException {
+        return doRequest(request, -1);
+    }
+
+    public static CloseableHttpResponse doRequest(HttpUriRequest request, int expectedStatusCode) throws IOException {
         int count = 0;
         while (true) {
             CloseableHttpResponse response = HttpClientBuilder.create().build().execute(request);
             final int statusCode = response.getStatusLine().getStatusCode();
-            if (statusCode < HttpStatus.SC_BAD_REQUEST) {
+
+            if ((expectedStatusCode > 0 && expectedStatusCode == statusCode) || statusCode < HttpStatus.SC_BAD_REQUEST) {
                 return response;
             }
             if (count++ > MAX_TRIES || statusCode >= HttpStatus.SC_INTERNAL_SERVER_ERROR) {
