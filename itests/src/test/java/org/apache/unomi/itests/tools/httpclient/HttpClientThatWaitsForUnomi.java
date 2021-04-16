@@ -30,11 +30,15 @@ public class HttpClientThatWaitsForUnomi {
     private static final int MAX_TRIES = 10;
 
     public static CloseableHttpResponse doRequest(HttpUriRequest request) throws IOException {
+        return doRequest(request, -1);
+    }
+
+    public static CloseableHttpResponse doRequest(HttpUriRequest request, int expectedStatusCode) throws IOException {
         int count = 0;
         while (true) {
             CloseableHttpResponse response = HttpClientBuilder.create().build().execute(request);
             final int statusCode = response.getStatusLine().getStatusCode();
-            if (statusCode < HttpStatus.BAD_REQUEST_400) {
+            if ((expectedStatusCode > 0 && expectedStatusCode == statusCode) || statusCode < HttpStatus.BAD_REQUEST_400) {
                 return response;
             }
             if (count++ > MAX_TRIES || statusCode >= HttpStatus.INTERNAL_SERVER_ERROR_500) {

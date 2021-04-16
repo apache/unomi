@@ -45,6 +45,7 @@ import org.junit.runners.Suite.SuiteClasses;
         CopyPropertiesActionIT.class,
         IncrementPropertyIT.class,
         IncrementInterestsIT.class,
+        InputValidationIT.class,
         ModifyConsentIT.class,
         PatchIT.class,
         ContextServletIT.class,
