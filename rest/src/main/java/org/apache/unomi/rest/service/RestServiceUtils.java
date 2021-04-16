@@ -14,23 +14,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.rest.validation.cookies;
 
-import org.apache.unomi.api.utils.ValidationPattern;
+package org.apache.unomi.rest.service;
 
-import javax.validation.constraints.Pattern;
+import org.apache.unomi.api.Event;
+import org.apache.unomi.api.Profile;
+import org.apache.unomi.api.Session;
+import org.apache.unomi.utils.Changes;
 
-/**
- * This class exists to allow to wrap a cookie value into an object and validate this object trough
- * the bean validation
- */
-public class CookieWrapper {
+import javax.servlet.ServletRequest;
+import javax.servlet.ServletResponse;
+import javax.servlet.http.HttpServletRequest;
+import java.util.Date;
+import java.util.List;
 
-    @Pattern(regexp = ValidationPattern.TEXT_VALID_CHARACTERS_PATTERN)
-    private String cookie;
+public interface RestServiceUtils {
+    String getProfileIdCookieValue(HttpServletRequest httpServletRequest);
 
-    public CookieWrapper(String cookie) {
-        this.cookie = cookie;
-    }
-
+    Changes handleEvents(List<Event> events, Session session, Profile profile, ServletRequest request, ServletResponse response,
+            Date timestamp);
 }

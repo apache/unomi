@@ -26,13 +26,11 @@ import org.apache.cxf.jaxrs.security.SimpleAuthorizingFilter;
 import org.apache.cxf.jaxrs.validation.JAXRSBeanValidationInInterceptor;
 import org.apache.cxf.jaxrs.validation.JAXRSBeanValidationOutInterceptor;
 import org.apache.cxf.jaxrs.validation.ValidationExceptionMapper;
-import org.apache.cxf.validation.BeanValidationProvider;
-import org.apache.unomi.rest.validation.HibernateValidationProviderResolver;
-import org.apache.unomi.rest.validation.JAXRSBeanValidationInInterceptorOverride;
 import org.apache.unomi.rest.authentication.AuthenticationFilter;
 import org.apache.unomi.rest.authentication.AuthorizingInterceptor;
 import org.apache.unomi.rest.authentication.RestAuthenticationConfig;
-import org.hibernate.validator.HibernateValidator;
+import org.apache.unomi.rest.validation.JAXRSBeanValidationInInterceptorOverride;
+import org.apache.unomi.rest.validation.LocalBeanValidationProvider;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.Filter;
 import org.osgi.framework.ServiceReference;
@@ -71,7 +69,7 @@ public class RestServer {
     private long timeOfLastUpdate = System.currentTimeMillis();
     private Timer refreshTimer = null;
     private long startupDelay = 1000L;
-    private BeanValidationProvider beanValidationProvider;
+    private LocalBeanValidationProvider localBeanValidationProvider;
 
     final List<Object> serviceBeans = new CopyOnWriteArrayList<>();
 
@@ -94,6 +92,11 @@ public class RestServer {
         refreshServer();
     }
 
+    @Reference(cardinality = ReferenceCardinality.MANDATORY)
+    public void setLocalBeanValidationProvider(LocalBeanValidationProvider localBeanValidationProvider) {
+        this.localBeanValidationProvider = localBeanValidationProvider;
+    }
+
     public void removeExceptionMapper(ExceptionMapper exceptionMapper) {
         this.exceptionMappers.remove(exceptionMapper);
         timeOfLastUpdate = System.currentTimeMillis();
@@ -103,17 +106,6 @@ public class RestServer {
     @Activate
     public void activate(ComponentContext componentContext) throws Exception {
         this.bundleContext = componentContext.getBundleContext();
-
-        // This is a TCCL (Thread context class loader) hack to for the javax.el.FactoryFinder to use Class.forName(className)
-        // instead of tccl.loadClass(className) to load the class "com.sun.el.ExpressionFactoryImpl".
-        ClassLoader currentContextClassLoader = Thread.currentThread().getContextClassLoader();
-        try {
-            Thread.currentThread().setContextClassLoader(null);
-            HibernateValidationProviderResolver validationProviderResolver = new HibernateValidationProviderResolver();
-            this.beanValidationProvider = new BeanValidationProvider(validationProviderResolver, HibernateValidator.class);
-        } finally {
-            Thread.currentThread().setContextClassLoader(currentContextClassLoader);
-        }
 
         Filter filter = bundleContext.createFilter("(osgi.jaxrs.resource=true)");
         jaxRSServiceTracker = new ServiceTracker(bundleContext, filter, new ServiceTrackerCustomizer() {
@@ -224,10 +216,10 @@ public class RestServer {
         // Hibernate validator config
         jaxrsServerFactoryBean.setProvider(new ValidationExceptionMapper());
         JAXRSBeanValidationInInterceptor inInterceptor = new JAXRSBeanValidationInInterceptorOverride();
-        inInterceptor.setProvider(beanValidationProvider);
+        inInterceptor.setProvider(localBeanValidationProvider.get());
         jaxrsServerFactoryBean.setInInterceptors(Collections.singletonList(inInterceptor));
         JAXRSBeanValidationOutInterceptor outInterceptor = new JAXRSBeanValidationOutInterceptor();
-        outInterceptor.setProvider(beanValidationProvider);
+        outInterceptor.setProvider(localBeanValidationProvider.get());
         jaxrsServerFactoryBean.setOutInterceptors(Collections.singletonList(outInterceptor));
 
         // Register service beans (end points)

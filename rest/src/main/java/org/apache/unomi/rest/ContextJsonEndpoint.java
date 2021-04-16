@@ -36,11 +36,9 @@ import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.api.services.RulesService;
 import org.apache.unomi.api.utils.ValidationPattern;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
-import org.apache.unomi.rest.validation.cookies.CookieWrapper;
+import org.apache.unomi.rest.service.RestServiceUtils;
 import org.apache.unomi.utils.Changes;
 import org.apache.unomi.utils.HttpUtils;
-import org.apache.unomi.utils.ServletCommon;
-import org.hibernate.validator.HibernateValidatorFactory;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 import org.slf4j.Logger;
@@ -50,13 +48,9 @@ import javax.jws.WebService;
 import javax.servlet.ServletContext;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
-import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.validation.ConstraintViolation;
 import javax.validation.Valid;
-import javax.validation.Validation;
-import javax.validation.Validator;
 import javax.validation.constraints.Pattern;
 import javax.ws.rs.BadRequestException;
 import javax.ws.rs.Consumes;
@@ -108,6 +102,8 @@ public class ContextJsonEndpoint {
     private PersonalizationService personalizationService;
     @Reference
     private ConfigSharingService configSharingService;
+    @Reference
+    private RestServiceUtils restServiceUtils;
 
     @OPTIONS
     @Path("/context.json")
@@ -121,9 +117,8 @@ public class ContextJsonEndpoint {
     public Response contextJSAsPost(@Valid ContextRequest contextRequest,
             @QueryParam("personaId") @Pattern(regexp = ValidationPattern.TEXT_VALID_CHARACTERS_PATTERN) String personaId,
             @QueryParam("sessionId") @Pattern(regexp = ValidationPattern.TEXT_VALID_CHARACTERS_PATTERN) String sessionId,
-            @QueryParam("timestamp") Long timestampAsLong,
-            @QueryParam("invalidateProfile") boolean invalidateProfile, @QueryParam("invalidateSession") boolean invalidateSession)
-            throws JsonProcessingException {
+            @QueryParam("timestamp") Long timestampAsLong, @QueryParam("invalidateProfile") boolean invalidateProfile,
+            @QueryParam("invalidateSession") boolean invalidateSession) throws JsonProcessingException {
         return contextJSAsGet(contextRequest, personaId, sessionId, timestampAsLong, invalidateProfile, invalidateSession);
     }
 
@@ -150,8 +145,8 @@ public class ContextJsonEndpoint {
     public ContextResponse contextJSONAsGet(@Valid ContextRequest contextRequest,
             @QueryParam("personaId") @Pattern(regexp = ValidationPattern.TEXT_VALID_CHARACTERS_PATTERN) String personaId,
             @QueryParam("sessionId") @Pattern(regexp = ValidationPattern.TEXT_VALID_CHARACTERS_PATTERN) String sessionId,
-            @QueryParam("timestamp") Long timestampAsLong,
-            @QueryParam("invalidateProfile") boolean invalidateProfile, @QueryParam("invalidateSession") boolean invalidateSession) {
+            @QueryParam("timestamp") Long timestampAsLong, @QueryParam("invalidateProfile") boolean invalidateProfile,
+            @QueryParam("invalidateSession") boolean invalidateSession) {
         return contextJSONAsPost(contextRequest, personaId, sessionId, timestampAsLong, invalidateProfile, invalidateSession);
     }
 
@@ -161,8 +156,8 @@ public class ContextJsonEndpoint {
     public ContextResponse contextJSONAsPost(@Valid ContextRequest contextRequest,
             @QueryParam("personaId") @Pattern(regexp = ValidationPattern.TEXT_VALID_CHARACTERS_PATTERN) String personaId,
             @QueryParam("sessionId") @Pattern(regexp = ValidationPattern.TEXT_VALID_CHARACTERS_PATTERN) String sessionId,
-            @QueryParam("timestamp") Long timestampAsLong,
-            @QueryParam("invalidateProfile") boolean invalidateProfile, @QueryParam("invalidateSession") boolean invalidateSession) {
+            @QueryParam("timestamp") Long timestampAsLong, @QueryParam("invalidateProfile") boolean invalidateProfile,
+            @QueryParam("invalidateSession") boolean invalidateSession) {
         Date timestamp = new Date();
         if (timestampAsLong != null) {
             timestamp = new Date(timestampAsLong);
@@ -197,7 +192,7 @@ public class ContextJsonEndpoint {
         }
         if (profileId == null) {
             // Get profile id from the cookie
-            profileId = ServletCommon.getProfileIdCookieValue(request, (String) configSharingService.getProperty("profileIdCookieName"));
+            profileId = restServiceUtils.getProfileIdCookieValue(request);
         }
 
         if (profileId == null && sessionId == null && personaId == null) {
@@ -370,8 +365,7 @@ public class ContextJsonEndpoint {
 
     private Changes handleRequest(ContextRequest contextRequest, Session session, Profile profile, ContextResponse data,
             ServletRequest request, ServletResponse response, Date timestamp) {
-        Changes changes = ServletCommon
-                .handleEvents(contextRequest.getEvents(), session, profile, request, response, timestamp, privacyService, eventService);
+        Changes changes = restServiceUtils.handleEvents(contextRequest.getEvents(), session, profile, request, response, timestamp);
         data.setProcessedEvents(changes.getProcessedItems());
 
         profile = changes.getProfile();

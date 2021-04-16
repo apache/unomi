@@ -22,22 +22,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.opencsv.CSVWriter;
 import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
-import org.apache.cxf.validation.BeanValidationProvider;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.services.ConfigSharingService;
 import org.apache.unomi.api.services.ProfileService;
-import org.apache.unomi.rest.validation.HibernateValidationProviderResolver;
-import org.apache.unomi.rest.validation.JAXRSBeanValidationInInterceptorOverride;
-import org.apache.unomi.rest.validation.cookies.CookieUtils;
-import org.apache.unomi.rest.validation.cookies.CookieWrapper;
-import org.hibernate.validator.HibernateValidator;
+import org.apache.unomi.rest.service.RestServiceUtils;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import javax.jws.WebService;
-import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.GET;
@@ -63,7 +55,6 @@ import java.util.Set;
 @Component(service = ClientEndpoint.class, property = "osgi.jaxrs.resource=true")
 public class ClientEndpoint {
 
-    private static final Logger logger = LoggerFactory.getLogger(ClientEndpoint.class.getName());
     private static final String CONTENT_DISPOSITION_HEADER_KEY = "Content-Disposition";
 
     private static final String FILE_NAME_WO_EXT = "my-profile";
@@ -76,6 +67,9 @@ public class ClientEndpoint {
     private ProfileService profileService;
     @Reference
     private ConfigSharingService configSharingService;
+
+    @Reference
+    private RestServiceUtils restServiceUtils;
 
     @Context
     HttpServletRequest request;
@@ -91,7 +85,6 @@ public class ClientEndpoint {
     @GET
     @Path("/client/{operation}/{param}")
     public Response getClient(@PathParam("operation") String operation, @PathParam("param") String param) throws JsonProcessingException {
-        CookieUtils.validate(request.getCookies());
         if ("myprofile".equals(operation)) {
             if (((String) configSharingService.getProperty("allowedProfileDownloadFormats")).contains(param)) {
                 return donwloadCurrentProfile(param);
@@ -103,16 +96,8 @@ public class ClientEndpoint {
     }
 
     private Response donwloadCurrentProfile(String downloadFileType) throws JsonProcessingException {
-        String cookieProfileId = null;
+        String cookieProfileId = restServiceUtils.getProfileIdCookieValue(request);
 
-        Cookie[] cookies = request.getCookies();
-        if (cookies != null) {
-            for (Cookie cookie : cookies) {
-                if (configSharingService.getProperty("profileIdCookieName").equals(cookie.getName())) {
-                    cookieProfileId = cookie.getValue();
-                }
-            }
-        }
         if (cookieProfileId != null) {
             Profile currentProfile = profileService.load(cookieProfileId);
             if (currentProfile != null) {

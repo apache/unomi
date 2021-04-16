@@ -14,23 +14,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.rest.validation.cookies;
 
-import org.apache.unomi.api.utils.ValidationPattern;
+package org.apache.unomi.rest.validation;
 
-import javax.validation.constraints.Pattern;
+import org.apache.cxf.validation.BeanValidationProvider;
 
-/**
- * This class exists to allow to wrap a cookie value into an object and validate this object trough
- * the bean validation
- */
-public class CookieWrapper {
+public interface LocalBeanValidationProvider {
 
-    @Pattern(regexp = ValidationPattern.TEXT_VALID_CHARACTERS_PATTERN)
-    private String cookie;
-
-    public CookieWrapper(String cookie) {
-        this.cookie = cookie;
-    }
-
+    BeanValidationProvider get();
 }

@@ -14,28 +14,33 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.rest.validation.cookies;
+
+package org.apache.unomi.rest.validation.impl;
 
 import org.apache.cxf.validation.BeanValidationProvider;
 import org.apache.unomi.rest.validation.HibernateValidationProviderResolver;
+import org.apache.unomi.rest.validation.LocalBeanValidationProvider;
 import org.hibernate.validator.HibernateValidator;
+import org.osgi.service.component.annotations.Component;
 
-import javax.servlet.http.Cookie;
+@Component(service = LocalBeanValidationProvider.class)
+public class LocalBeanValidationProviderImpl implements LocalBeanValidationProvider {
+    private BeanValidationProvider beanValidationProvider;
 
-public class CookieUtils {
-
-    public static void validate(Cookie[] cookies) {
-        CookieWrapper cookieWrapper = new CookieWrapper(cookies);
-        HibernateValidationProviderResolver validationProviderResolver = new HibernateValidationProviderResolver();
-
-        BeanValidationProvider beanValidationProvider = new BeanValidationProvider(validationProviderResolver, HibernateValidator.class);
-
+    public LocalBeanValidationProviderImpl() {
+        // This is a TCCL (Thread context class loader) hack to for the javax.el.FactoryFinder to use Class.forName(className)
+        // instead of tccl.loadClass(className) to load the class "com.sun.el.ExpressionFactoryImpl".
         ClassLoader currentContextClassLoader = Thread.currentThread().getContextClassLoader();
         try {
-            Thread.currentThread().setContextClassLoader(CookieUtils.class.getClassLoader());
-            beanValidationProvider.validateBean(cookieWrapper);
+            Thread.currentThread().setContextClassLoader(null);
+            HibernateValidationProviderResolver validationProviderResolver = new HibernateValidationProviderResolver();
+            this.beanValidationProvider = new BeanValidationProvider(validationProviderResolver, HibernateValidator.class);
         } finally {
             Thread.currentThread().setContextClassLoader(currentContextClassLoader);
         }
+    }
+
+    public BeanValidationProvider get() {
+        return beanValidationProvider;
     }
 }
