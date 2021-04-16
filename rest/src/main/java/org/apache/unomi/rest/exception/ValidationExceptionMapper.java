@@ -29,11 +29,14 @@ import javax.ws.rs.ext.Provider;
 @Provider
 @Component(service = ExceptionMapper.class)
 public class ValidationExceptionMapper implements ExceptionMapper<ConstraintViolationException> {
+    private static final Logger logger = LoggerFactory.getLogger(ValidationExceptionMapper.class.getName());
 
     @Override
     public Response toResponse(ConstraintViolationException exception) {
-        return Response.status(Response.Status.BAD_REQUEST).header("Content-Type", MediaType.TEXT_PLAIN)
-                .entity("Invalid received data").build();
+        exception.getConstraintViolations().forEach(constraintViolation -> logger
+                .error(constraintViolation.getPropertyPath().toString() + " " + constraintViolation.getMessage(), exception));
+        return Response.status(Response.Status.BAD_REQUEST).header("Content-Type", MediaType.TEXT_PLAIN).entity("Invalid received data")
+                .build();
     }
 
 }
