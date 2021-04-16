@@ -28,8 +28,8 @@ import org.apache.unomi.api.services.ConfigSharingService;
 import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.api.services.PrivacyService;
 import org.apache.unomi.api.services.ProfileService;
+import org.apache.unomi.rest.service.RestServiceUtils;
 import org.apache.unomi.utils.Changes;
-import org.apache.unomi.utils.ServletCommon;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 import org.slf4j.Logger;
@@ -71,6 +71,8 @@ public class EventsCollectorEndpoint {
     private PrivacyService privacyService;
     @Reference
     private ConfigSharingService configSharingService;
+    @Reference
+    private RestServiceUtils restServiceUtils;
 
     @Context
     HttpServletRequest request;
@@ -128,8 +130,7 @@ public class EventsCollectorEndpoint {
                 }
             }
             logger.debug("scope is now {}", scope);
-            String cookieProfileId = ServletCommon
-                    .getProfileIdCookieValue(request, (String) configSharingService.getProperty("profileIdCookieName"));
+            String cookieProfileId = restServiceUtils.getProfileIdCookieValue(request);
             if (StringUtils.isNotBlank(cookieProfileId)) {
                 profile = profileService.load(cookieProfileId);
             }
@@ -160,8 +161,7 @@ public class EventsCollectorEndpoint {
                 }
             } else {
                 // Session uses anonymous profile, try to find profile from cookie
-                String cookieProfileId = ServletCommon
-                        .getProfileIdCookieValue(request, (String) configSharingService.getProperty("profileIdCookieName"));
+                String cookieProfileId = restServiceUtils.getProfileIdCookieValue(request);
                 if (StringUtils.isNotBlank(cookieProfileId)) {
                     profile = profileService.load(cookieProfileId);
                 }
@@ -173,9 +173,8 @@ public class EventsCollectorEndpoint {
             }
         }
 
-        Changes changesObject = ServletCommon
-                .handleEvents(eventsCollectorRequest.getEvents(), session, profile, request, response, timestamp, privacyService,
-                        eventService);
+        Changes changesObject = restServiceUtils
+                .handleEvents(eventsCollectorRequest.getEvents(), session, profile, request, response, timestamp);
         int changes = changesObject.getChangeType();
         profile = changesObject.getProfile();
 
