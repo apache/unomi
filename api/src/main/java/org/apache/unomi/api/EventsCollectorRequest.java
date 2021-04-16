@@ -18,6 +18,7 @@
 package org.apache.unomi.api;
 
 import org.apache.unomi.api.utils.ValidationPattern;
+import org.hibernate.validator.constraints.NotEmpty;
 
 import javax.validation.constraints.Pattern;
 import java.util.List;
@@ -26,8 +27,9 @@ import java.util.List;
  * A request for events to be processed.
  */
 public class EventsCollectorRequest {
-    private List<Event> events;
 
+    @NotEmpty
+    private List<Event> events;
 
     @Pattern(regexp = ValidationPattern.TEXT_VALID_CHARACTERS_PATTERN)
     private String sessionId;
