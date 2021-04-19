@@ -119,7 +119,6 @@ public class EventTypeRegistryImpl implements EventTypeRegistry, SynchronousBund
         return props.entrySet().stream().allMatch(entry -> {
             return types.stream().anyMatch(type -> {
                 if (!type.getItemId().equals(entry.getKey().toString())) {
-                    logger.warn("Event type validation error: map property {} is not allowed", entry.getKey().toString());
                     return false;
                 }
                 final Set<PropertyType> childTypes = type.getChildPropertyTypes();

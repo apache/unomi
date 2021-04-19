@@ -6,15 +6,27 @@
       "type": "set",
       "childPropertyTypes": [
         {
-          "itemId": "itemId",
-          "type": "string"
+          "itemId" : "itemId",
+          "type" : "string"
         },
         {
-          "itemId": "properties",
-          "type": "set"
+          "itemId" : "itemType",
+          "type" : "string"
         },
         {
-          "itemId": "systemProperties",
+          "itemId" : "scope",
+          "type" : "string"
+        },
+        {
+          "itemId" : "properties",
+          "type" : "set"
+        },
+        {
+          "itemId": "version",
+          "type": "long"
+        },
+        {
+          "itemId": "systemMetadata",
           "type": "set"
         }
       ]
