@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.apache.unomi.rest;
+package org.apache.unomi.rest.endpoints;
 
 /**
  * Created by amidani on 24/03/2017.

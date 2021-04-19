@@ -15,24 +15,24 @@
  * limitations under the License.
  */
 
-package org.apache.unomi.rest;
+package org.apache.unomi.rest.models;
 
-import org.apache.unomi.api.ValueType;
+import org.apache.unomi.api.actions.ActionType;
 
+import java.util.List;
 import java.util.Set;
 
 /**
- * A representation of a {@link ValueType} better suited for definitions.
+ * A representation of an {@link ActionType} better suited for definitions.
  */
-public class RESTValueType {
-
+public class RESTActionType {
     private String id;
     private String name;
     private String description;
     private Set<String> tags;
-
-    public RESTValueType() {
-    }
+    private Set<String> systemTags;
+    private List<RESTParameter> parameters;
+    protected Long version;
 
     public String getId() {
         return id;
@@ -64,5 +64,29 @@ public class RESTValueType {
 
     public void setTags(Set<String> tags) {
         this.tags = tags;
+    }
+
+    public Set<String> getSystemTags() {
+        return systemTags;
+    }
+
+    public void setSystemTags(Set<String> systemTags) {
+        this.systemTags = systemTags;
+    }
+
+    public List<RESTParameter> getParameters() {
+        return parameters;
+    }
+
+    public void setParameters(List<RESTParameter> parameters) {
+        this.parameters = parameters;
+    }
+
+    public Long getVersion() {
+        return version;
+    }
+
+    public void setVersion(Long version) {
+        this.version = version;
     }
 }

@@ -42,16 +42,16 @@ public class DefaultRestAuthenticationConfig implements RestAuthenticationConfig
 
     static {
         Map<String, String> roles = new HashMap<>();
-        roles.put("org.apache.unomi.rest.ContextJsonEndpoint.contextJSAsGet", GUEST_ROLES);
-        roles.put("org.apache.unomi.rest.ContextJsonEndpoint.contextJSAsPost", GUEST_ROLES);
-        roles.put("org.apache.unomi.rest.ContextJsonEndpoint.contextJSONAsGet", GUEST_ROLES);
-        roles.put("org.apache.unomi.rest.ContextJsonEndpoint.contextJSONAsPost", GUEST_ROLES);
-        roles.put("org.apache.unomi.rest.ContextJsonEndpoint.options", GUEST_ROLES);
-        roles.put("org.apache.unomi.rest.EventsCollectorEndpoint.collectAsGet", GUEST_ROLES);
-        roles.put("org.apache.unomi.rest.EventsCollectorEndpoint.collectAsPost", GUEST_ROLES);
-        roles.put("org.apache.unomi.rest.EventsCollectorEndpoint.options", GUEST_ROLES);
-        roles.put("org.apache.unomi.rest.ClientEndpoint.getClient", GUEST_ROLES);
-        roles.put("org.apache.unomi.rest.ClientEndpoint.options", GUEST_ROLES);
+        roles.put("org.apache.unomi.rest.endpoints.ContextJsonEndpoint.contextJSAsGet", GUEST_ROLES);
+        roles.put("org.apache.unomi.rest.endpoints.ContextJsonEndpoint.contextJSAsPost", GUEST_ROLES);
+        roles.put("org.apache.unomi.rest.endpoints.ContextJsonEndpoint.contextJSONAsGet", GUEST_ROLES);
+        roles.put("org.apache.unomi.rest.endpoints.ContextJsonEndpoint.contextJSONAsPost", GUEST_ROLES);
+        roles.put("org.apache.unomi.rest.endpoints.ContextJsonEndpoint.options", GUEST_ROLES);
+        roles.put("org.apache.unomi.rest.endpoints.EventsCollectorEndpoint.collectAsGet", GUEST_ROLES);
+        roles.put("org.apache.unomi.rest.endpoints.EventsCollectorEndpoint.collectAsPost", GUEST_ROLES);
+        roles.put("org.apache.unomi.rest.endpoints.EventsCollectorEndpoint.options", GUEST_ROLES);
+        roles.put("org.apache.unomi.rest.endpoints.ClientEndpoint.getClient", GUEST_ROLES);
+        roles.put("org.apache.unomi.rest.endpoints.ClientEndpoint.options", GUEST_ROLES);
         ROLES_MAPPING = Collections.unmodifiableMap(roles);
     }
 

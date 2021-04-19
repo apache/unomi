@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.apache.unomi.rest;
+package org.apache.unomi.rest.service.impl;
 
 import org.apache.unomi.api.PluginType;
 import org.osgi.framework.Bundle;

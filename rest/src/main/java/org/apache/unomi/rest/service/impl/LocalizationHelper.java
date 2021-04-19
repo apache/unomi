@@ -15,12 +15,16 @@
  * limitations under the License.
  */
 
-package org.apache.unomi.rest;
+package org.apache.unomi.rest.service.impl;
 
 import org.apache.unomi.api.Parameter;
 import org.apache.unomi.api.ValueType;
 import org.apache.unomi.api.actions.ActionType;
 import org.apache.unomi.api.conditions.ConditionType;
+import org.apache.unomi.rest.models.RESTActionType;
+import org.apache.unomi.rest.models.RESTConditionType;
+import org.apache.unomi.rest.models.RESTParameter;
+import org.apache.unomi.rest.models.RESTValueType;
 import org.osgi.framework.BundleContext;
 import org.osgi.service.component.ComponentContext;
 import org.osgi.service.component.annotations.Activate;

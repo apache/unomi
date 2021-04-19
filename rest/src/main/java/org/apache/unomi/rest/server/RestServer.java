@@ -14,8 +14,9 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.rest;
+package org.apache.unomi.rest.server;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider;
 import org.apache.cxf.Bus;
 import org.apache.cxf.endpoint.Server;
@@ -28,6 +29,7 @@ import org.apache.cxf.jaxrs.validation.JAXRSBeanValidationOutInterceptor;
 import org.apache.unomi.rest.authentication.AuthenticationFilter;
 import org.apache.unomi.rest.authentication.AuthorizingInterceptor;
 import org.apache.unomi.rest.authentication.RestAuthenticationConfig;
+import org.apache.unomi.rest.server.provider.RetroCompatibilityParamConverterProvider;
 import org.apache.unomi.rest.validation.JAXRSBeanValidationInInterceptorOverride;
 import org.apache.unomi.rest.validation.LocalBeanValidationProvider;
 import org.osgi.framework.BundleContext;
@@ -179,12 +181,13 @@ public class RestServer {
         logger.info("JAX RS Server: Configuring server...");
 
         // Build the server
+        ObjectMapper objectMapper = new org.apache.unomi.persistence.spi.CustomObjectMapper();
         JAXRSServerFactoryBean jaxrsServerFactoryBean = new JAXRSServerFactoryBean();
         jaxrsServerFactoryBean.setAddress("/");
         jaxrsServerFactoryBean.setBus(serverBus);
-        jaxrsServerFactoryBean.setProvider(new JacksonJaxbJsonProvider(new org.apache.unomi.persistence.spi.CustomObjectMapper(),
-                JacksonJaxbJsonProvider.DEFAULT_ANNOTATIONS));
+        jaxrsServerFactoryBean.setProvider(new JacksonJaxbJsonProvider(objectMapper, JacksonJaxbJsonProvider.DEFAULT_ANNOTATIONS));
         jaxrsServerFactoryBean.setProvider(new org.apache.cxf.rs.security.cors.CrossOriginResourceSharingFilter());
+        jaxrsServerFactoryBean.setProvider(new RetroCompatibilityParamConverterProvider(objectMapper));
 
         // Authentication filter (used for authenticating user from request)
         jaxrsServerFactoryBean.setProvider(new AuthenticationFilter(restAuthenticationConfig));

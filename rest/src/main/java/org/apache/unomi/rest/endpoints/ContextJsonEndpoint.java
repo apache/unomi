@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.apache.unomi.rest;
+package org.apache.unomi.rest.endpoints;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import org.apache.commons.lang3.StringUtils;
@@ -52,14 +52,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.validation.Valid;
 import javax.validation.constraints.Pattern;
-import javax.ws.rs.BadRequestException;
-import javax.ws.rs.Consumes;
-import javax.ws.rs.GET;
-import javax.ws.rs.OPTIONS;
-import javax.ws.rs.POST;
-import javax.ws.rs.Path;
-import javax.ws.rs.Produces;
-import javax.ws.rs.QueryParam;
+import javax.ws.rs.*;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
@@ -106,9 +99,15 @@ public class ContextJsonEndpoint {
     private RestServiceUtils restServiceUtils;
 
     @OPTIONS
-    @Path("/context.json")
-    public Response options() {
+    @Path("/context.js")
+    public Response contextJSAsOptions() {
         return Response.status(Response.Status.NO_CONTENT).header("Access-Control-Allow-Origin", "*").build();
+    }
+
+    @OPTIONS
+    @Path("/context.json")
+    public Response contextJSONAsOptions() {
+        return contextJSAsOptions();
     }
 
     @POST
@@ -125,7 +124,7 @@ public class ContextJsonEndpoint {
     @GET
     @Produces(MediaType.TEXT_PLAIN)
     @Path("/context.js")
-    public Response contextJSAsGet(@Valid ContextRequest contextRequest,
+    public Response contextJSAsGet(@QueryParam("payload") @Valid ContextRequest contextRequest,
             @QueryParam("personaId") @Pattern(regexp = ValidationPattern.TEXT_VALID_CHARACTERS_PATTERN) String personaId,
             @QueryParam("sessionId") @Pattern(regexp = ValidationPattern.TEXT_VALID_CHARACTERS_PATTERN) String sessionId,
             @QueryParam("timestamp") Long timestampAsLong, @QueryParam("invalidateProfile") boolean invalidateProfile,
@@ -142,7 +141,7 @@ public class ContextJsonEndpoint {
     @GET
     @Produces(MediaType.APPLICATION_JSON + ";charset=UTF-8")
     @Path("/context.json")
-    public ContextResponse contextJSONAsGet(@Valid ContextRequest contextRequest,
+    public ContextResponse contextJSONAsGet(@QueryParam("payload") @Valid ContextRequest contextRequest,
             @QueryParam("personaId") @Pattern(regexp = ValidationPattern.TEXT_VALID_CHARACTERS_PATTERN) String personaId,
             @QueryParam("sessionId") @Pattern(regexp = ValidationPattern.TEXT_VALID_CHARACTERS_PATTERN) String sessionId,
             @QueryParam("timestamp") Long timestampAsLong, @QueryParam("invalidateProfile") boolean invalidateProfile,

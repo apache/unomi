@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.apache.unomi.rest;
+package org.apache.unomi.rest.endpoints;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
@@ -28,6 +28,7 @@ import org.apache.unomi.api.services.ConfigSharingService;
 import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.api.services.PrivacyService;
 import org.apache.unomi.api.services.ProfileService;
+import org.apache.unomi.rest.models.EventCollectorResponse;
 import org.apache.unomi.rest.service.RestServiceUtils;
 import org.apache.unomi.utils.Changes;
 import org.osgi.service.component.annotations.Component;
@@ -87,8 +88,8 @@ public class EventsCollectorEndpoint {
 
     @GET
     @Path("/eventcollector")
-    public EventCollectorResponse collectAsGet(@NotNull @Valid EventsCollectorRequest eventsCollectorRequest,
-            @QueryParam("timestamp") Long timestampAsString) {
+    public EventCollectorResponse collectAsGet(@QueryParam("payload") @NotNull @Valid EventsCollectorRequest eventsCollectorRequest,
+                                               @QueryParam("timestamp") Long timestampAsString) {
         return doEvent(eventsCollectorRequest, timestampAsString);
     }
 
