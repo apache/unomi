@@ -48,16 +48,18 @@ public class CopyPropertiesAction implements ActionExecutor {
         List<String> mandatoryPropTypeSystemTags = (List<String>) action.getParameterValues().get("mandatoryPropTypeSystemTag");
         String singleValueStrategy = (String) action.getParameterValues().get("singleValueStrategy");
         for (Map.Entry<String, Object> entry : getEventPropsToCopy(action, event).entrySet()) {
+            String mappedProperty = resolvePropertyName(entry.getKey());
+
             // propType Check
-            PropertyType propertyType = profileService.getPropertyType(entry.getKey());
-            Object previousValue = event.getProfile().getProperty(entry.getKey());
+            PropertyType propertyType = profileService.getPropertyType(mappedProperty);
+            Object previousValue = event.getProfile().getProperty(mappedProperty);
             if (mandatoryPropTypeSystemTags != null && mandatoryPropTypeSystemTags.size() > 0) {
                 if (propertyType == null || propertyType.getMetadata() == null || propertyType.getMetadata().getSystemTags() == null
                         || !propertyType.getMetadata().getSystemTags().containsAll(mandatoryPropTypeSystemTags)) {
                     continue;
                 }
             }
-            String propertyName = "properties." + entry.getKey();
+            String propertyName = "properties." + mappedProperty;
             boolean changed = false;
             if (previousValue == null && propertyType == null) {
                 changed = PropertyHelper.setProperty(event.getProfile(), propertyName, entry.getValue(), "alwaysSet");
@@ -72,7 +74,7 @@ public class CopyPropertiesAction implements ActionExecutor {
                     logger.error(
                             "Impossible to copy the property of type List to the profile, either a single value already exist on the profile or the property type is declared as a single value property. Enable debug log level for more information");
                     if (logger.isDebugEnabled()) {
-                        logger.debug("cannot copy property {}, because it's a List", entry.getKey());
+                        logger.debug("cannot copy property {}, because it's a List", mappedProperty);
                     }
                 } else {
                     changed = PropertyHelper.setProperty(event.getProfile(), propertyName, entry.getValue(), singleValueStrategy);
@@ -111,5 +113,10 @@ public class CopyPropertiesAction implements ActionExecutor {
         }
 
         return propsToCopy;
+    }
+
+    private String resolvePropertyName(String propertyName) {
+        String propertyMapping = profileService.getPropertyTypeMapping(propertyName);
+        return (propertyMapping != null) ? propertyMapping : propertyName;
     }
 }
