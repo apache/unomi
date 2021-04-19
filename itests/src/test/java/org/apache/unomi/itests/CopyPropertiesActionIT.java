@@ -61,6 +61,8 @@ public class CopyPropertiesActionIT extends BaseIT {
     private final static String PROFILE_WITH_PROPERTIES = "profile-with-properties";
     private final static String ARRAY_PARAM_NAME = "arrayParam";
     public static final String SINGLE_PARAM_NAME = "singleParam";
+    public static final String PROPERTY_TO_MAP = "PropertyToMap";
+    public static final String MAPPED_PROPERTY = "MappedProperty";
 
     @Inject
     @Filter(timeout = 600000)
@@ -129,6 +131,22 @@ public class CopyPropertiesActionIT extends BaseIT {
         profileService.setPropertyType(propertyType2);
     }
 
+    private void initializePropertyTypeWithMapping(){
+        Metadata metadata = new Metadata();
+        metadata.setId(MAPPED_PROPERTY);
+        metadata.setName("single parameter");
+
+        PropertyType propertyType1 = new PropertyType();
+        propertyType1.setItemId(MAPPED_PROPERTY);
+        propertyType1.setMetadata(metadata);
+        propertyType1.setTarget("profiles");
+        propertyType1.setValueTypeId("string");
+        propertyType1.setMultivalued(false);
+
+        propertyType1.setAutomaticMappingsFrom(new HashSet<>(Arrays.asList(PROPERTY_TO_MAP)));
+        profileService.setPropertyType(propertyType1);
+
+    }
     private void initializePropertyTypeWithDifferentSystemTag() {
         Metadata metadata = new Metadata();
         metadata.setSystemTags(new HashSet<>(Arrays.asList("shouldBeAbsent")));
@@ -257,6 +275,20 @@ public class CopyPropertiesActionIT extends BaseIT {
         Event event = sendCopyPropertyEvent(properties, EMPTY_PROFILE);
 
         Assert.assertTrue(((String) event.getProfile().getProperty(SINGLE_PARAM_NAME)).equals("New value"));
+    }
+
+    @Test
+    public void testCopyProperties_copyPropertyWithMapping() throws IOException, InterruptedException {
+        createRule("data/tmp/testCopyPropertiesWithoutSystemTags.json");
+
+        initializePropertyTypeWithMapping();
+
+        Map<String, Object> properties = new HashMap<>();
+        properties.put(PROPERTY_TO_MAP, "New value");
+
+        Event event = sendCopyPropertyEvent(properties, EMPTY_PROFILE);
+
+        Assert.assertTrue(((String) event.getProfile().getProperty(MAPPED_PROPERTY)).equals("New value"));
     }
 
     @Test
