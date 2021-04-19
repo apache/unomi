@@ -179,6 +179,26 @@ public interface PersistenceService {
     boolean updateWithScript(Item item, Date dateHint, Class<?> clazz, String script, Map<String, Object> scriptParams);
 
     /**
+     * Adds or removes an element from a list by a query.
+     * Based on provided scripts and script parameters.
+     *
+     * @param dateHint      a Date helping in identifying where the item is located
+     * @param clazz         the Item subclass of the item to update
+     * @param updateSystemLastUpdated       whether to update 'systemProperties.lastUpdated' or not
+     * @param scriptParams  script params array. (Must contain 'listPropName' entry which specifies the field to update).
+     * @param conditions    conditions array
+     * @param numberOfRetries how many retries on version-conflict
+     * @param secondsDelayForRetryUpdate how many seconds to wait between retries
+     * @param isAddToList   whether to add or remove item from list.
+     * @param batchSize     Size of batch to be processed.
+     * @return Updated profiles quantity, -1 if update failed.
+     */
+    Long updateListWithQuery(final Date dateHint, final Class<?> clazz,
+                             boolean updateSystemLastUpdated,
+                             final Map<String, Object>[] scriptParams, final Condition[] conditions,
+                             int numberOfRetries, long secondsDelayForRetryUpdate, boolean isAddToList, Integer batchSize);
+
+    /**
      * Updates the items of the specified class by a query with a new property value for the specified property name
      * based on provided scripts and script parameters
      *
@@ -200,13 +220,14 @@ public interface PersistenceService {
      * @param scripts       inline scripts array
      * @param scriptParams  script params array
      * @param conditions    conditions array
-     * @param numberOfVersionConflictsRetries how many retries on version-conflict
+     * @param numberOfRetries how many retries on version-conflict
      * @param secondsDelayForRetryUpdate how many seconds to wait between retries
+     * @param batchSize     Size of batch to be processed.
      * @return Updated profiles quantity, -1 if update failed.
      */
     Long updateWithQueryAndScript(final Date dateHint, final Class<?> clazz, final String[] scripts,
                                                    final Map<String, Object>[] scriptParams, final Condition[] conditions,
-                                                   int numberOfVersionConflictsRetries, long secondsDelayForRetryUpdate);
+                                                   int numberOfRetries, long secondsDelayForRetryUpdate, Integer batchSize);
 
     /**
      * Retrieves the item identified with the specified identifier and with the specified Item subclass if it exists.

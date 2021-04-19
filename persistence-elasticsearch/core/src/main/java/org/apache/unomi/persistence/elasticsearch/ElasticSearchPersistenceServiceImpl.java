@@ -156,6 +156,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     private String monthlyIndexNumberOfReplicas;
     private String monthlyIndexMappingTotalFieldsLimit;
     private String monthlyIndexMaxDocValueFieldsSearch;
+    private int updateSlices = 2;
     private String numberOfShards;
     private String numberOfReplicas;
     private String indexMappingTotalFieldsLimit;
@@ -210,6 +211,11 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     public void setClusterName(String clusterName) {
         this.clusterName = clusterName;
+    }
+
+    public void setUpdateSlices(int slices) {
+        logger.info("Slices size for 'update-by-query' to {}", slices);
+        this.updateSlices = slices;
     }
 
     public void setElasticSearchAddresses(String elasticSearchAddresses) {
@@ -979,15 +985,35 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     }
 
     @Override
+    public Long updateListWithQuery(final Date dateHint, final Class<?> clazz,
+                                    boolean updateSystemLastUpdated,
+                                    final Map<String, Object>[] scriptParams, final Condition[] conditions,
+                                    int numberOfRetries, long secondsDelayForRetryUpdate, boolean isAddToList,
+                                    Integer batchSize) {
+
+        String add = " ctx['_source'][params.listPropName].add(params.item); ";
+        String remove = " for (int i=0; i<ctx['_source'][params.listPropName].length; i++) { " +
+                "if (ctx['_source'][params.listPropName][i].equals(params.item)) ctx['_source'][params.listPropName].remove(i); } ";
+
+        String logic = isAddToList ? add : remove;
+        if (updateSystemLastUpdated) {
+            logic += "ctx._source.systemProperties.lastUpdated = new Date()";
+        }
+        String[] scripts = new String[] { logic };
+
+        return updateWithQueryAndScript(dateHint, clazz, scripts, scriptParams, conditions, numberOfRetries, secondsDelayForRetryUpdate, batchSize);
+    }
+
+    @Override
     public Boolean updateWithQueryAndScript(final Date dateHint, final Class<?> clazz, final String[] scripts,
                                                           final Map<String, Object>[] scriptParams, final Condition[] conditions) {
-        return updateWithQueryAndScript(dateHint, clazz, scripts, scriptParams, conditions, 0, 0) != -1;
+        return updateWithQueryAndScript(dateHint, clazz, scripts, scriptParams, conditions, 0, 0, null) != -1;
     }
 
     @Override
     public Long updateWithQueryAndScript(final Date dateHint, final Class<?> clazz, final String[] scripts,
                                                           final Map<String, Object>[] scriptParams, final Condition[] conditions,
-                                                          int numberOfRetries, long secondsDelayForRetryUpdate) {
+                                                          int numberOfRetries, long secondsDelayForRetryUpdate, Integer batchSize) {
 
         Long result = new InClassLoaderExecute<Long>(metricsService, this.getClass().getName() + ".updateWithQueryAndScript",  this.bundleContext, this.fatalIllegalStateErrors) {
             protected Long execute(Object... args) throws Exception {
@@ -1005,7 +1031,9 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         UpdateByQueryRequest updateByQueryRequest = new UpdateByQueryRequest(index);
                         updateByQueryRequest.setConflicts("proceed");
                         updateByQueryRequest.setMaxRetries(1000);
-                        updateByQueryRequest.setSlices(2);
+                        updateByQueryRequest.setSlices(updateSlices);
+                        Optional.ofNullable(batchSize)
+                                .ifPresent(updateByQueryRequest::setBatchSize);
                         updateByQueryRequest.setScript(actualScript);
                         updateByQueryRequest.setQuery(conditionESQueryBuilderDispatcher.buildFilter(conditions[i]));
 
