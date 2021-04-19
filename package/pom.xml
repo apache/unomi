@@ -238,6 +238,17 @@
                                 </artifactItem>
                                 <artifactItem>
                                     <groupId>org.apache.unomi</groupId>
+                                    <artifactId>unomi-plugins-base</artifactId>
+                                    <version>${project.version}</version>
+                                    <classifier>pluginsbasecfg</classifier>
+                                    <type>cfg</type>
+                                    <outputDirectory>
+                                        ${project.build.directory}/assembly/etc
+                                    </outputDirectory>
+                                    <destFileName>org.apache.unomi.plugins.base.cfg</destFileName>
+                                </artifactItem>
+                                <artifactItem>
+                                    <groupId>org.apache.unomi</groupId>
                                     <artifactId>unomi-plugins-mail</artifactId>
                                     <version>${project.version}</version>
                                     <classifier>mailcfg</classifier>
