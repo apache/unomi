@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.apache.unomi.rest;
+package org.apache.unomi.rest.endpoints;
 
 import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
 import org.apache.unomi.api.PluginType;
@@ -24,6 +24,10 @@ import org.apache.unomi.api.ValueType;
 import org.apache.unomi.api.actions.ActionType;
 import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.api.services.DefinitionsService;
+import org.apache.unomi.rest.models.RESTActionType;
+import org.apache.unomi.rest.models.RESTConditionType;
+import org.apache.unomi.rest.models.RESTValueType;
+import org.apache.unomi.rest.service.impl.LocalizationHelper;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 import org.slf4j.Logger;

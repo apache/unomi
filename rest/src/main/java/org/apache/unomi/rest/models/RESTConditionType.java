@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.apache.unomi.rest;
+package org.apache.unomi.rest.models;
 
 import org.apache.unomi.api.conditions.ConditionType;
 
