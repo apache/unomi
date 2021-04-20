@@ -14,23 +14,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.rest.validation.cookies;
-
-import org.apache.unomi.api.utils.ValidationPattern;
-
-import javax.validation.constraints.Pattern;
+package org.apache.unomi.rest.validation.request;
 
 /**
- * This class exists to allow to wrap a cookie value into an object and validate this object trough
- * the bean validation
+ * Exception throw when the request exceed the configured limit size
  */
-public class CookieWrapper {
+public class InvalidRequestException extends RuntimeException {
 
-    @Pattern(regexp = ValidationPattern.TEXT_VALID_CHARACTERS_PATTERN)
-    private String cookie;
+    /**
+     * This will be the message return to the client in the body request in case
+     */
+    private final String responseMessage;
 
-    public CookieWrapper(String cookie) {
-        this.cookie = cookie;
+    public InvalidRequestException(String message, String responseMessage) {
+        super(message);
+        this.responseMessage = responseMessage;
     }
 
+    public String getResponseMessage() {
+        return responseMessage;
+    }
 }

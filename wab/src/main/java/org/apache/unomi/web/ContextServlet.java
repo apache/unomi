@@ -42,6 +42,7 @@ public class ContextServlet extends HttpServlet {
     private String profileIdCookieName = "context-profile-id";
     private String profileIdCookieDomain;
     private int profileIdCookieMaxAgeInSeconds = MAX_COOKIE_AGE_IN_SECONDS;
+    private int publicPostRequestBytesLimit = 200000;
 
     private ConfigSharingService configSharingService;
 
@@ -51,6 +52,7 @@ public class ContextServlet extends HttpServlet {
         configSharingService.setProperty("profileIdCookieName", profileIdCookieName);
         configSharingService.setProperty("profileIdCookieDomain", profileIdCookieDomain);
         configSharingService.setProperty("profileIdCookieMaxAgeInSeconds", (Integer) profileIdCookieMaxAgeInSeconds);
+        configSharingService.setProperty("publicPostRequestBytesLimit", publicPostRequestBytesLimit);
         logger.info("ContextServlet initialized.");
     }
 
@@ -76,8 +78,11 @@ public class ContextServlet extends HttpServlet {
         this.profileIdCookieMaxAgeInSeconds = profileIdCookieMaxAgeInSeconds;
     }
 
+    public void setPublicPostRequestBytesLimit(int publicPostRequestBytesLimit) {
+        this.publicPostRequestBytesLimit = publicPostRequestBytesLimit;
+    }
+
     public void setConfigSharingService(ConfigSharingService configSharingService) {
         this.configSharingService = configSharingService;
     }
-
 }

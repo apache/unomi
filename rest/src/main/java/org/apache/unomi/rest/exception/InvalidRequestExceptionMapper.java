@@ -16,11 +16,11 @@
  */
 package org.apache.unomi.rest.exception;
 
+import org.apache.unomi.rest.validation.request.InvalidRequestException;
 import org.osgi.service.component.annotations.Component;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.validation.ConstraintViolationException;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.ext.ExceptionMapper;
@@ -28,22 +28,14 @@ import javax.ws.rs.ext.Provider;
 
 @Provider
 @Component(service = ExceptionMapper.class)
-public class ValidationExceptionMapper implements ExceptionMapper<ConstraintViolationException> {
-    private static final Logger logger = LoggerFactory.getLogger(ValidationExceptionMapper.class.getName());
+public class InvalidRequestExceptionMapper implements ExceptionMapper<InvalidRequestException> {
+    private static final Logger logger = LoggerFactory.getLogger(InvalidRequestExceptionMapper.class.getName());
 
     @Override
-    public Response toResponse(ConstraintViolationException exception) {
-        exception.getConstraintViolations().forEach(constraintViolation -> {
-            if (logger.isDebugEnabled()) {
-                logger.debug(String.format("value %s from %s %s", constraintViolation.getInvalidValue(),
-                        constraintViolation.getPropertyPath().toString(), constraintViolation.getMessage()));
-            }
-            logger.error(constraintViolation.getPropertyPath().toString() + " " + constraintViolation.getMessage() + ". Enable debug log "
-                    + "level for more informations about the invalid value received", exception);
-        });
+    public Response toResponse(InvalidRequestException exception) {
+        logger.error(exception.getMessage(), exception);
 
         return Response.status(Response.Status.BAD_REQUEST).header("Content-Type", MediaType.TEXT_PLAIN)
-                .entity("Request rejected by the server because: Invalid received data").build();
+                .entity("Request rejected by the server because: " + exception.getResponseMessage()).build();
     }
-
 }

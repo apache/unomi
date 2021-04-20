@@ -20,18 +20,22 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider;
 import org.apache.cxf.Bus;
 import org.apache.cxf.endpoint.Server;
+import org.apache.cxf.interceptor.Interceptor;
 import org.apache.cxf.jaxrs.JAXRSServerFactoryBean;
 import org.apache.cxf.jaxrs.openapi.OpenApiCustomizer;
 import org.apache.cxf.jaxrs.openapi.OpenApiFeature;
 import org.apache.cxf.jaxrs.security.SimpleAuthorizingFilter;
 import org.apache.cxf.jaxrs.validation.JAXRSBeanValidationInInterceptor;
 import org.apache.cxf.jaxrs.validation.JAXRSBeanValidationOutInterceptor;
+import org.apache.cxf.message.Message;
+import org.apache.unomi.api.services.ConfigSharingService;
 import org.apache.unomi.rest.authentication.AuthenticationFilter;
 import org.apache.unomi.rest.authentication.AuthorizingInterceptor;
 import org.apache.unomi.rest.authentication.RestAuthenticationConfig;
 import org.apache.unomi.rest.server.provider.RetroCompatibilityParamConverterProvider;
 import org.apache.unomi.rest.validation.JAXRSBeanValidationInInterceptorOverride;
-import org.apache.unomi.rest.validation.LocalBeanValidationProvider;
+import org.apache.unomi.rest.validation.BeanValidationService;
+import org.apache.unomi.rest.validation.request.RequestValidatorInterceptor;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.Filter;
 import org.osgi.framework.ServiceReference;
@@ -49,7 +53,6 @@ import org.slf4j.LoggerFactory;
 import javax.ws.rs.ext.ExceptionMapper;
 import javax.xml.namespace.QName;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Timer;
@@ -64,15 +67,19 @@ public class RestServer {
     private Server server;
     private BundleContext bundleContext;
     private ServiceTracker jaxRSServiceTracker;
+    final List<Object> serviceBeans = new CopyOnWriteArrayList<>();
+
+    // services
     private Bus serverBus;
     private RestAuthenticationConfig restAuthenticationConfig;
     private List<ExceptionMapper> exceptionMappers = new ArrayList<>();
+    private BeanValidationService beanValidationService;
+    private ConfigSharingService configSharingService;
+
+    // refresh
     private long timeOfLastUpdate = System.currentTimeMillis();
     private Timer refreshTimer = null;
     private long startupDelay = 1000L;
-    private LocalBeanValidationProvider localBeanValidationProvider;
-
-    final List<Object> serviceBeans = new CopyOnWriteArrayList<>();
 
     private static final QName UNOMI_REST_SERVER_END_POINT_NAME = new QName("http://rest.unomi.apache.org/", "UnomiRestServerEndPoint");
 
@@ -86,6 +93,11 @@ public class RestServer {
         this.restAuthenticationConfig = restAuthenticationConfig;
     }
 
+    @Reference(cardinality = ReferenceCardinality.MANDATORY)
+    public void setConfigSharingService(ConfigSharingService configSharingService) {
+        this.configSharingService = configSharingService;
+    }
+
     @Reference(cardinality = ReferenceCardinality.MULTIPLE)
     public void addExceptionMapper(ExceptionMapper exceptionMapper) {
         this.exceptionMappers.add(exceptionMapper);
@@ -94,8 +106,8 @@ public class RestServer {
     }
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY)
-    public void setLocalBeanValidationProvider(LocalBeanValidationProvider localBeanValidationProvider) {
-        this.localBeanValidationProvider = localBeanValidationProvider;
+    public void setBeanValidationService(BeanValidationService beanValidationService) {
+        this.beanValidationService = beanValidationService;
     }
 
     public void removeExceptionMapper(ExceptionMapper exceptionMapper) {
@@ -180,6 +192,9 @@ public class RestServer {
 
         logger.info("JAX RS Server: Configuring server...");
 
+        List<Interceptor<? extends Message>> inInterceptors = new ArrayList<>();
+        List<Interceptor<? extends Message>> outInterceptors = new ArrayList<>();
+
         // Build the server
         ObjectMapper objectMapper = new org.apache.unomi.persistence.spi.CustomObjectMapper();
         JAXRSServerFactoryBean jaxrsServerFactoryBean = new JAXRSServerFactoryBean();
@@ -216,14 +231,19 @@ public class RestServer {
         jaxrsServerFactoryBean.getFeatures().add(openApiFeature);
 
         // Hibernate validator config
-        JAXRSBeanValidationInInterceptor inInterceptor = new JAXRSBeanValidationInInterceptorOverride();
-        inInterceptor.setProvider(localBeanValidationProvider.get());
-        jaxrsServerFactoryBean.setInInterceptors(Collections.singletonList(inInterceptor));
-        JAXRSBeanValidationOutInterceptor outInterceptor = new JAXRSBeanValidationOutInterceptor();
-        outInterceptor.setProvider(localBeanValidationProvider.get());
-        jaxrsServerFactoryBean.setOutInterceptors(Collections.singletonList(outInterceptor));
+        JAXRSBeanValidationInInterceptor beanValidationInInterceptor = new JAXRSBeanValidationInInterceptorOverride();
+        JAXRSBeanValidationOutInterceptor beanValidationOutInterceptor = new JAXRSBeanValidationOutInterceptor();
+        beanValidationInInterceptor.setProvider(beanValidationService.getBeanValidationProvider());
+        beanValidationOutInterceptor.setProvider(beanValidationService.getBeanValidationProvider());
+        inInterceptors.add(beanValidationInInterceptor);
+        outInterceptors.add(beanValidationOutInterceptor);
 
-        // Register service beans (end points)
+        // Request validator
+        inInterceptors.add(new RequestValidatorInterceptor(configSharingService));
+
+        // Register service beans (end points) and interceptors
+        jaxrsServerFactoryBean.setInInterceptors(inInterceptors);
+        jaxrsServerFactoryBean.setOutInterceptors(outInterceptors);
         jaxrsServerFactoryBean.setServiceBeans(serviceBeans);
 
         logger.info("JAX RS Server: Starting server with {} JAX RS EndPoints registered", serviceBeans.size());
