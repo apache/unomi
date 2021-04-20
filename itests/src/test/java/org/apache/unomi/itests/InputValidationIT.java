@@ -43,104 +43,104 @@ import static org.junit.Assert.fail;
 @ExamReactorStrategy(PerSuite.class)
 public class InputValidationIT extends BaseIT {
     private final static String EVENT_COLLECTOR_URL = "/eventcollector";
-    private final static String CONTEXT_JS_URL = "/context.js"; //
-    private final static String CONTEXT_JSON_URL = "/context.json"; //Invalid received data
+    private final static String CONTEXT_JS_URL = "/context.js";
+    private final static String CONTEXT_JSON_URL = "/context.json";
 
     private final static String ERROR_MESSAGE_REQUEST_SIZE_LIMIT_EXCEEDED = "Request rejected by the server because: Request size exceed the limit";
     private final static String ERROR_MESSAGE_INVALID_DATA_RECEIVED = "Request rejected by the server because: Invalid received data";
 
     @Test
     public void test_param_EventsCollectorRequestNotNull() throws IOException {
-        doPOSTRequestTest(URL + EVENT_COLLECTOR_URL, null, null, 400, ERROR_MESSAGE_INVALID_DATA_RECEIVED);
-        doGETRequestTest(URL + EVENT_COLLECTOR_URL, null, null, 400, ERROR_MESSAGE_INVALID_DATA_RECEIVED);
+        doPOSTRequestTest(EVENT_COLLECTOR_URL, null, null, 400, ERROR_MESSAGE_INVALID_DATA_RECEIVED);
+        doGETRequestTest(EVENT_COLLECTOR_URL, null, null, 400, ERROR_MESSAGE_INVALID_DATA_RECEIVED);
     }
 
     @Test
     public void test_param_EventsNotEmpty() throws IOException {
-        doPOSTRequestTest(URL + EVENT_COLLECTOR_URL, null, "/validation/eventcollector_emptyEvents.json", 400, ERROR_MESSAGE_INVALID_DATA_RECEIVED);
-        doGETRequestTest(URL + EVENT_COLLECTOR_URL, null, "/validation/eventcollector_emptyEvents.json", 400, ERROR_MESSAGE_INVALID_DATA_RECEIVED);
+        doPOSTRequestTest(EVENT_COLLECTOR_URL, null, "/validation/eventcollector_emptyEvents.json", 400, ERROR_MESSAGE_INVALID_DATA_RECEIVED);
+        doGETRequestTest(EVENT_COLLECTOR_URL, null, "/validation/eventcollector_emptyEvents.json", 400, ERROR_MESSAGE_INVALID_DATA_RECEIVED);
     }
 
     @Test
     public void test_param_SessionIDPattern() throws IOException {
-        doPOSTRequestTest(URL + EVENT_COLLECTOR_URL, null, "/validation/eventcollector_invalidSessionId.json", 400, ERROR_MESSAGE_INVALID_DATA_RECEIVED);
-        doGETRequestTest(URL + EVENT_COLLECTOR_URL, null, "/validation/eventcollector_invalidSessionId.json", 400, ERROR_MESSAGE_INVALID_DATA_RECEIVED);
+        doPOSTRequestTest(EVENT_COLLECTOR_URL, null, "/validation/eventcollector_invalidSessionId.json", 400, ERROR_MESSAGE_INVALID_DATA_RECEIVED);
+        doGETRequestTest(EVENT_COLLECTOR_URL, null, "/validation/eventcollector_invalidSessionId.json", 400, ERROR_MESSAGE_INVALID_DATA_RECEIVED);
     }
 
     @Test
     public void test_eventCollector_valid() throws IOException {
-        doPOSTRequestTest(URL + EVENT_COLLECTOR_URL, null, "/validation/eventcollector_valid.json", 200, null);
-        doGETRequestTest(URL + EVENT_COLLECTOR_URL, null, "/validation/eventcollector_valid.json", 200, null);
+        doPOSTRequestTest(EVENT_COLLECTOR_URL, null, "/validation/eventcollector_valid.json", 200, null);
+        doGETRequestTest(EVENT_COLLECTOR_URL, null, "/validation/eventcollector_valid.json", 200, null);
     }
 
     @Test
     public void test_contextRequest_SessionIDPattern() throws IOException {
-        doPOSTRequestTest(URL + CONTEXT_JSON_URL, null, "/validation/contextRequest_invalidSessionId.json", 400, ERROR_MESSAGE_INVALID_DATA_RECEIVED);
-        doPOSTRequestTest(URL + CONTEXT_JS_URL, null, "/validation/contextRequest_invalidSessionId.json", 400, ERROR_MESSAGE_INVALID_DATA_RECEIVED);
-        doGETRequestTest(URL + CONTEXT_JSON_URL, null, "/validation/contextRequest_invalidSessionId.json", 400, ERROR_MESSAGE_INVALID_DATA_RECEIVED);
-        doGETRequestTest(URL + CONTEXT_JS_URL, null, "/validation/contextRequest_invalidSessionId.json", 400, ERROR_MESSAGE_INVALID_DATA_RECEIVED);
+        doPOSTRequestTest(CONTEXT_JSON_URL, null, "/validation/contextRequest_invalidSessionId.json", 400, ERROR_MESSAGE_INVALID_DATA_RECEIVED);
+        doPOSTRequestTest(CONTEXT_JS_URL, null, "/validation/contextRequest_invalidSessionId.json", 400, ERROR_MESSAGE_INVALID_DATA_RECEIVED);
+        doGETRequestTest(CONTEXT_JSON_URL, null, "/validation/contextRequest_invalidSessionId.json", 400, ERROR_MESSAGE_INVALID_DATA_RECEIVED);
+        doGETRequestTest(CONTEXT_JS_URL, null, "/validation/contextRequest_invalidSessionId.json", 400, ERROR_MESSAGE_INVALID_DATA_RECEIVED);
     }
 
     @Test
     public void test_contextRequest_ProfileIDPattern() throws IOException {
-        doPOSTRequestTest(URL + CONTEXT_JSON_URL, null, "/validation/contextRequest_invalidProfileId.json", 400, ERROR_MESSAGE_INVALID_DATA_RECEIVED);
-        doPOSTRequestTest(URL + CONTEXT_JS_URL, null, "/validation/contextRequest_invalidProfileId.json", 400, ERROR_MESSAGE_INVALID_DATA_RECEIVED);
-        doGETRequestTest(URL + CONTEXT_JSON_URL, null, "/validation/contextRequest_invalidProfileId.json", 400, ERROR_MESSAGE_INVALID_DATA_RECEIVED);
-        doGETRequestTest(URL + CONTEXT_JS_URL, null, "/validation/contextRequest_invalidProfileId.json", 400, ERROR_MESSAGE_INVALID_DATA_RECEIVED);
+        doPOSTRequestTest(CONTEXT_JSON_URL, null, "/validation/contextRequest_invalidProfileId.json", 400, ERROR_MESSAGE_INVALID_DATA_RECEIVED);
+        doPOSTRequestTest(CONTEXT_JS_URL, null, "/validation/contextRequest_invalidProfileId.json", 400, ERROR_MESSAGE_INVALID_DATA_RECEIVED);
+        doGETRequestTest(CONTEXT_JSON_URL, null, "/validation/contextRequest_invalidProfileId.json", 400, ERROR_MESSAGE_INVALID_DATA_RECEIVED);
+        doGETRequestTest(CONTEXT_JS_URL, null, "/validation/contextRequest_invalidProfileId.json", 400, ERROR_MESSAGE_INVALID_DATA_RECEIVED);
     }
 
     @Test
     public void test_contextRequest_valid() throws IOException {
-        doPOSTRequestTest(URL + CONTEXT_JSON_URL, null, "/validation/contextRequest_valid.json", 200, null);
-        doPOSTRequestTest(URL + CONTEXT_JS_URL, null, "/validation/contextRequest_valid.json", 200, null);
-        doGETRequestTest(URL + CONTEXT_JSON_URL, null, "/validation/contextRequest_valid.json", 200, null);
-        doGETRequestTest(URL + CONTEXT_JS_URL, null, "/validation/contextRequest_valid.json", 200, null);
+        doPOSTRequestTest(CONTEXT_JSON_URL, null, "/validation/contextRequest_valid.json", 200, null);
+        doPOSTRequestTest(CONTEXT_JS_URL, null, "/validation/contextRequest_valid.json", 200, null);
+        doGETRequestTest(CONTEXT_JSON_URL, null, "/validation/contextRequest_valid.json", 200, null);
+        doGETRequestTest(CONTEXT_JS_URL, null, "/validation/contextRequest_valid.json", 200, null);
     }
 
     @Test
     public void test_eventCollector_request_size_exceed_limit() throws IOException {
-        doPOSTRequestTest(URL + EVENT_COLLECTOR_URL, null, "/validation/eventcollector_request_size_invalid.json", 400, ERROR_MESSAGE_REQUEST_SIZE_LIMIT_EXCEEDED);
-        doPOSTRequestTest(URL + EVENT_COLLECTOR_URL, null, "/validation/eventcollector_request_size_valid.json", 200, null);
+        doPOSTRequestTest(EVENT_COLLECTOR_URL, null, "/validation/eventcollector_request_size_invalid.json", 400, ERROR_MESSAGE_REQUEST_SIZE_LIMIT_EXCEEDED);
+        doPOSTRequestTest(EVENT_COLLECTOR_URL, null, "/validation/eventcollector_request_size_valid.json", 200, null);
     }
 
     @Test
     public void test_contextJSON_SessionIDPattern() throws IOException {
-        String baseUrl = URL + CONTEXT_JS_URL;
+        String baseUrl = CONTEXT_JS_URL;
         String queryString = "?sessionId=" + URLEncoder.encode("<script>alert();</script>", StandardCharsets.UTF_8.toString());
         doPOSTRequestTest(baseUrl + queryString, null, null, 400, ERROR_MESSAGE_INVALID_DATA_RECEIVED);
         doGETRequestTest(baseUrl + queryString, null, null, 400, ERROR_MESSAGE_INVALID_DATA_RECEIVED);
 
-        baseUrl = URL + CONTEXT_JSON_URL;
+        baseUrl = CONTEXT_JSON_URL;
         doPOSTRequestTest(baseUrl + queryString, null, null, 400, ERROR_MESSAGE_INVALID_DATA_RECEIVED);
         doGETRequestTest(baseUrl + queryString, null, null, 400, ERROR_MESSAGE_INVALID_DATA_RECEIVED);
 
-        baseUrl = URL + CONTEXT_JS_URL;
+        baseUrl = CONTEXT_JS_URL;
         queryString = "?sessionId=" + URLEncoder.encode("dummy-session-id", StandardCharsets.UTF_8.toString());
         doPOSTRequestTest(baseUrl + queryString, null, null, 200, null);
         doGETRequestTest(baseUrl + queryString, null, null, 200, null);
 
-        baseUrl = URL + CONTEXT_JSON_URL;
+        baseUrl = CONTEXT_JSON_URL;
         doPOSTRequestTest(baseUrl + queryString, null, null, 200, null);
         doGETRequestTest(baseUrl + queryString, null, null, 200, null);
     }
 
     @Test
     public void test_contextJSON_PersonaIdPattern() throws IOException {
-        String baseUrl = URL + CONTEXT_JS_URL;
+        String baseUrl = CONTEXT_JS_URL;
         String queryString = "?personaId=" + URLEncoder.encode("<script>alert();</script>", StandardCharsets.UTF_8.toString());
         doPOSTRequestTest(baseUrl + queryString, null, null, 400, ERROR_MESSAGE_INVALID_DATA_RECEIVED);
         doGETRequestTest(baseUrl + queryString, null, null, 400, ERROR_MESSAGE_INVALID_DATA_RECEIVED);
 
-        baseUrl = URL + CONTEXT_JSON_URL;
+        baseUrl = CONTEXT_JSON_URL;
         doPOSTRequestTest(baseUrl + queryString, null, null, 400, ERROR_MESSAGE_INVALID_DATA_RECEIVED);
         doGETRequestTest(baseUrl + queryString, null, null, 400, ERROR_MESSAGE_INVALID_DATA_RECEIVED);
 
-        baseUrl = URL + CONTEXT_JS_URL;
+        baseUrl = CONTEXT_JS_URL;
         queryString = "?personaId=" + URLEncoder.encode("dummy-persona-id", StandardCharsets.UTF_8.toString());
         doPOSTRequestTest(baseUrl + queryString, null, null, 200, null);
         doGETRequestTest(baseUrl + queryString, null, null, 200, null);
 
-        baseUrl = URL + CONTEXT_JSON_URL;
+        baseUrl = CONTEXT_JSON_URL;
         doPOSTRequestTest(baseUrl + queryString, null,null, 200, null);
         doGETRequestTest(baseUrl + queryString, null, null, 200, null);
     }
@@ -149,19 +149,26 @@ public class InputValidationIT extends BaseIT {
     public void test_cookie_profileIdPattern() throws IOException, InterruptedException {
         Map<String, String> headers = new HashMap<>();
         headers.put("Cookie", "context-profile-id=<script>alert();</script>");
-        doPOSTRequestTest(URL + CONTEXT_JSON_URL, headers, null, 400, ERROR_MESSAGE_INVALID_DATA_RECEIVED);
-        doPOSTRequestTest(URL + CONTEXT_JS_URL, headers, null, 400, ERROR_MESSAGE_INVALID_DATA_RECEIVED);
-        doGETRequestTest(URL + CONTEXT_JSON_URL, headers, null, 400, ERROR_MESSAGE_INVALID_DATA_RECEIVED);
-        doGETRequestTest(URL + CONTEXT_JS_URL, headers, null, 400, ERROR_MESSAGE_INVALID_DATA_RECEIVED);
+        doPOSTRequestTest(CONTEXT_JSON_URL, headers, null, 400, ERROR_MESSAGE_INVALID_DATA_RECEIVED);
+        doPOSTRequestTest(CONTEXT_JS_URL, headers, null, 400, ERROR_MESSAGE_INVALID_DATA_RECEIVED);
+        doGETRequestTest(CONTEXT_JSON_URL, headers, null, 400, ERROR_MESSAGE_INVALID_DATA_RECEIVED);
+        doGETRequestTest(CONTEXT_JS_URL, headers, null, 400, ERROR_MESSAGE_INVALID_DATA_RECEIVED);
 
         headers.put("Cookie", "context-profile-id=dummy-profile-id");
-        doPOSTRequestTest(URL + CONTEXT_JSON_URL, headers, null, 200, null);
-        doPOSTRequestTest(URL + CONTEXT_JS_URL, headers, null, 200, null);
-        doGETRequestTest(URL + CONTEXT_JSON_URL, headers, null, 200, null);
-        doGETRequestTest(URL + CONTEXT_JS_URL, headers, null, 200, null);
+        doPOSTRequestTest(CONTEXT_JSON_URL, headers, null, 200, null);
+        doPOSTRequestTest(CONTEXT_JS_URL, headers, null, 200, null);
+        doGETRequestTest(CONTEXT_JSON_URL, headers, null, 200, null);
+        doGETRequestTest(CONTEXT_JS_URL, headers, null, 200, null);
     }
 
-    private void doGETRequestTest(String url, Map<String, String> headers, String entityResourcePath, int expectedHTTPStatusCode, String expectedErrorMessage) throws IOException {
+    private void doGETRequestTest(String uri, Map<String, String> headers, String entityResourcePath, int expectedHTTPStatusCode, String expectedErrorMessage) throws IOException {
+        // test old servlets
+        performGETRequestTest(URL + uri, headers, entityResourcePath, expectedHTTPStatusCode, expectedErrorMessage);
+        // test directly CXS endpoints
+        performGETRequestTest(URL + "/cxs" + uri, headers, entityResourcePath, expectedHTTPStatusCode, expectedErrorMessage);
+    }
+
+    private void performGETRequestTest(String url, Map<String, String> headers, String entityResourcePath, int expectedHTTPStatusCode, String expectedErrorMessage) throws IOException {
         if (entityResourcePath != null) {
             String payload = getValidatedBundleJSON(entityResourcePath, new HashMap<>());
             url += (url.contains("?") ? "&" : "?") + "payload=" + URLEncoder.encode(payload, StandardCharsets.UTF_8.toString());
@@ -169,8 +176,19 @@ public class InputValidationIT extends BaseIT {
         performRequest(new HttpGet(url), headers, expectedHTTPStatusCode, expectedErrorMessage);
     }
 
-    private void doPOSTRequestTest(String url, Map<String, String> headers, String entityResourcePath, int expectedHTTPStatusCode, String expectedErrorMessage) throws IOException {
+    private void doPOSTRequestTest(String uri, Map<String, String> headers, String entityResourcePath, int expectedHTTPStatusCode, String expectedErrorMessage) throws IOException {
+        // test old servlets
+        performPOSTRequestTest(URL + uri, headers, entityResourcePath, expectedHTTPStatusCode, expectedErrorMessage);
+        // test directly CXS endpoints
+        performPOSTRequestTest(URL + "/cxs" + uri, headers, entityResourcePath, expectedHTTPStatusCode, expectedErrorMessage);
+    }
+
+    private void performPOSTRequestTest(String url, Map<String, String> headers, String entityResourcePath, int expectedHTTPStatusCode, String expectedErrorMessage) throws IOException {
         HttpPost request = new HttpPost(url);
+        if (headers == null) {
+            headers = new HashMap<>();
+        }
+        headers.put("Content-Type", "application/json");
         if (entityResourcePath != null) {
             request.setEntity(new StringEntity(getValidatedBundleJSON(entityResourcePath, new HashMap<>()), ContentType.create("application/json")));
         }
