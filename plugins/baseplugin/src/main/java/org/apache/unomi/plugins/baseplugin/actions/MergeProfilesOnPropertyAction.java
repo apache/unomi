@@ -180,6 +180,13 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
                     @Override
                     public boolean execute() {
                         try {
+                            Event currentEvent = event;
+                            // Update current event explicitly, as it might not return from search query if there wasn't a refresh in ES
+                            if (!StringUtils.equals(profileId, masterProfileId)) {
+                                if (currentEvent.isPersistent()) {
+                                    persistenceService.update(currentEvent, currentEvent.getTimeStamp(), Event.class, "profileId", anonymousBrowsing ? null : masterProfileId);
+                                }                            }
+
                             for (Profile profile : profiles) {
                                 String profileId = profile.getItemId();
                                 if (!StringUtils.equals(profileId, masterProfileId)) {
@@ -196,7 +203,9 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
 
                                     List<Event> events = persistenceService.query("profileId", profileId, null, Event.class);
                                     for (Event event : events) {
-                                        persistenceService.update(event, event.getTimeStamp(), Event.class, "profileId", anonymousBrowsing ? null : masterProfileId);
+                                        if (!event.getItemId().equals(currentEvent.getItemId())) {
+                                            persistenceService.update(event, event.getTimeStamp(), Event.class, "profileId", anonymousBrowsing ? null : masterProfileId);
+                                        }
                                     }
                                     // we must mark all the profiles that we merged into the master as merged with the master, and they will
                                     // be deleted upon next load
