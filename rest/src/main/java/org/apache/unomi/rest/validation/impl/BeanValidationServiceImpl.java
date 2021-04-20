@@ -19,15 +19,17 @@ package org.apache.unomi.rest.validation.impl;
 
 import org.apache.cxf.validation.BeanValidationProvider;
 import org.apache.unomi.rest.validation.HibernateValidationProviderResolver;
-import org.apache.unomi.rest.validation.LocalBeanValidationProvider;
+import org.apache.unomi.rest.validation.BeanValidationService;
 import org.hibernate.validator.HibernateValidator;
+import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 
-@Component(service = LocalBeanValidationProvider.class)
-public class LocalBeanValidationProviderImpl implements LocalBeanValidationProvider {
+@Component(service = BeanValidationService.class)
+public class BeanValidationServiceImpl implements BeanValidationService {
     private BeanValidationProvider beanValidationProvider;
 
-    public LocalBeanValidationProviderImpl() {
+    @Activate
+    public void activate() {
         // This is a TCCL (Thread context class loader) hack to for the javax.el.FactoryFinder to use Class.forName(className)
         // instead of tccl.loadClass(className) to load the class "com.sun.el.ExpressionFactoryImpl".
         ClassLoader currentContextClassLoader = Thread.currentThread().getContextClassLoader();
@@ -40,7 +42,7 @@ public class LocalBeanValidationProviderImpl implements LocalBeanValidationProvi
         }
     }
 
-    public BeanValidationProvider get() {
+    public BeanValidationProvider getBeanValidationProvider() {
         return beanValidationProvider;
     }
 }

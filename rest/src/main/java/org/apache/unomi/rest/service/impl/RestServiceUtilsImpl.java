@@ -24,8 +24,8 @@ import org.apache.unomi.api.services.ConfigSharingService;
 import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.api.services.PrivacyService;
 import org.apache.unomi.rest.service.RestServiceUtils;
-import org.apache.unomi.rest.validation.LocalBeanValidationProvider;
-import org.apache.unomi.rest.validation.cookies.CookieWrapper;
+import org.apache.unomi.rest.validation.BeanValidationService;
+import org.apache.unomi.rest.validation.wrapper.CookieWrapper;
 import org.apache.unomi.utils.Changes;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
@@ -48,7 +48,7 @@ public class RestServiceUtilsImpl implements RestServiceUtils {
     private ConfigSharingService configSharingService;
 
     @Reference
-    private LocalBeanValidationProvider localBeanValidationProvider;
+    private BeanValidationService localBeanValidationProvider;
 
     @Reference
     private PrivacyService privacyService;
@@ -64,7 +64,7 @@ public class RestServiceUtilsImpl implements RestServiceUtils {
         if (cookies != null) {
             for (Cookie cookie : cookies) {
                 if (configSharingService.getProperty("profileIdCookieName").equals(cookie.getName())) {
-                    localBeanValidationProvider.get().validateBean(new CookieWrapper(cookie.getValue()));
+                    localBeanValidationProvider.getBeanValidationProvider().validateBean(new CookieWrapper(cookie.getValue()));
                     cookieProfileId = cookie.getValue();
                 }
             }
