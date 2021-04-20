@@ -48,7 +48,7 @@ public class RestServiceUtilsImpl implements RestServiceUtils {
     private ConfigSharingService configSharingService;
 
     @Reference
-    private BeanValidationService localBeanValidationProvider;
+    private BeanValidationService beanValidationService;
 
     @Reference
     private PrivacyService privacyService;
@@ -64,7 +64,7 @@ public class RestServiceUtilsImpl implements RestServiceUtils {
         if (cookies != null) {
             for (Cookie cookie : cookies) {
                 if (configSharingService.getProperty("profileIdCookieName").equals(cookie.getName())) {
-                    localBeanValidationProvider.getBeanValidationProvider().validateBean(new CookieWrapper(cookie.getValue()));
+                    beanValidationService.getBeanValidationProvider().validateBean(new CookieWrapper(cookie.getValue()));
                     cookieProfileId = cookie.getValue();
                 }
             }

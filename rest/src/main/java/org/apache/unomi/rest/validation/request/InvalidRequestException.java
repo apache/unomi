@@ -20,6 +20,10 @@ package org.apache.unomi.rest.validation.request;
  * Exception throw when the request exceed the configured limit size
  */
 public class InvalidRequestException extends RuntimeException {
+
+    /**
+     * This will be the message return to the client in the body request in case
+     */
     private final String responseMessage;
 
     public InvalidRequestException(String message, String responseMessage) {
