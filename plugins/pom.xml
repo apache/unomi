@@ -39,6 +39,7 @@
         <module>past-event</module>
         <module>tracked-event</module>
         <module>kafka-injector</module>
+        <module>tracardi-plugins</module>
     </modules>
 
     <dependencies>

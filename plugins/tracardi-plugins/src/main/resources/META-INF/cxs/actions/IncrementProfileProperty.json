@@ -1,0 +1,26 @@
+{
+  "metadata": {
+    "id": "IncrementProfilePropertyAction",
+    "name": "IncrementProfilePropertyAction",
+    "description": "Increment value of profile property",
+    "systemTags": [
+      "availableToEndUser",
+      "profileTags",
+      "event"
+    ],
+    "readOnly": true
+  },
+  "actionExecutor": "IncrementProfilePropertyAction",
+  "parameters": [
+    {
+      "id": "propertyName",
+      "type": "string",
+      "multivalued": false
+    },
+    {
+      "id": "by",
+      "type": "integer",
+      "multivalued": false
+    }
+  ]
+}

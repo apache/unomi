@@ -1,0 +1,26 @@
+{
+  "metadata": {
+    "id": "DecrementProfilePropertyAction",
+    "name": "DecrementProfilePropertyAction",
+    "description": "Decrement value of profile property",
+    "systemTags": [
+      "availableToEndUser",
+      "profileTags",
+      "event"
+    ],
+    "readOnly": true
+  },
+  "actionExecutor": "DecrementProfilePropertyAction",
+  "parameters": [
+    {
+      "id": "propertyName",
+      "type": "string",
+      "multivalued": false
+    },
+    {
+      "id": "by",
+      "type": "integer",
+      "multivalued": false
+    }
+  ]
+}
