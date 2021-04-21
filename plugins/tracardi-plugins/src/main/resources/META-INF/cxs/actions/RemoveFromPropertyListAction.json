@@ -1,0 +1,31 @@
+{
+  "metadata": {
+    "id": "RemoveFromPropertyListAction",
+    "name": "RemoveFromPropertyListAction",
+    "description": "Remove value from profile property list",
+    "systemTags": [
+      "availableToEndUser",
+      "profileTags",
+      "event"
+    ],
+    "readOnly": true
+  },
+  "actionExecutor": "RemoveFromPropertyListAction",
+  "parameters": [
+    {
+      "id": "propertyName",
+      "type": "string",
+      "multivalued": false
+    },
+    {
+      "id": "propertyValue",
+      "type": "string",
+      "multivalued": false
+    },
+    {
+      "id": "propertyValueInteger",
+      "type": "integer",
+      "multivalued": false
+    }
+  ]
+}
