@@ -20,6 +20,7 @@ package org.apache.unomi.services.mergers;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.PropertyMergeStrategyExecutor;
 import org.apache.unomi.api.PropertyType;
+import org.apache.unomi.persistence.spi.PropertyHelper;
 
 import java.util.List;
 
@@ -27,9 +28,9 @@ public class DefaultPropertyMergeStrategyExecutor implements PropertyMergeStrate
     public boolean mergeProperty(String propertyName, PropertyType propertyType, List<Profile> profilesToMerge, Profile targetProfile) {
         boolean modified = false;
         for (Profile profileToMerge : profilesToMerge) {
-            if (profileToMerge.getProperty(propertyName) != null &&
-                    profileToMerge.getProperty(propertyName).toString().length() > 0) {
-                targetProfile.setProperty(propertyName, profileToMerge.getProperty(propertyName));
+            if (profileToMerge.getNestedProperty(propertyName) != null &&
+                    profileToMerge.getNestedProperty(propertyName).toString().length() > 0) {
+                PropertyHelper.setProperty(targetProfile, "properties." + propertyName, profileToMerge.getNestedProperty(propertyName), "alwaysSet");
                 modified = true;
             }
         }
