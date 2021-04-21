@@ -110,6 +110,14 @@ public interface PersistenceService {
     Object getSetting(String fieldName) throws NoSuchFieldException, IllegalAccessException;
 
     /**
+     * Return true if the item which is saved in the persistence service is consistent
+     *
+     * @param item the item to the check if consistent
+     * @return {@code true} if the item is consistent, false otherwise
+     */
+    boolean isConsistent(Item item);
+
+    /**
      * Persists the specified Item in the context server.
      *
      * @param item the item to persist
