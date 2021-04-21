@@ -1,0 +1,31 @@
+{
+  "metadata": {
+    "id": "AddToPropertyListAction",
+    "name": "AddToPropertyListAction",
+    "description": "Add value of profile property list",
+    "systemTags": [
+      "availableToEndUser",
+      "profileTags",
+      "event"
+    ],
+    "readOnly": true
+  },
+  "actionExecutor": "AddToPropertyListAction",
+  "parameters": [
+    {
+      "id": "propertyName",
+      "type": "string",
+      "multivalued": false
+    },
+    {
+      "id": "propertyValue",
+      "type": "string",
+      "multivalued": false
+    },
+    {
+      "id": "propertyValueInteger",
+      "type": "integer",
+      "multivalued": false
+    }
+  ]
+}
