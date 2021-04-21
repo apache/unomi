@@ -25,6 +25,22 @@
 
     <service interface="org.apache.unomi.api.actions.ActionExecutor">
         <service-properties>
+            <entry key="actionExecutorId" value="AddToPropertyListAction"/>
+        </service-properties>
+        <bean class="org.apache.unomi.plugins.tracardi.actions.lists.AddToPropertyListAction">
+        </bean>
+    </service>
+
+    <service interface="org.apache.unomi.api.actions.ActionExecutor">
+        <service-properties>
+            <entry key="actionExecutorId" value="RemoveFromPropertyListAction"/>
+        </service-properties>
+        <bean class="org.apache.unomi.plugins.tracardi.actions.lists.RemoveFromPropertyListAction">
+        </bean>
+    </service>
+
+    <service interface="org.apache.unomi.api.actions.ActionExecutor">
+        <service-properties>
             <entry key="actionExecutorId" value="IncrementProfilePropertyAction"/>
         </service-properties>
         <bean class="org.apache.unomi.plugins.tracardi.actions.numeric.IncrementProfilePropertyAction">
