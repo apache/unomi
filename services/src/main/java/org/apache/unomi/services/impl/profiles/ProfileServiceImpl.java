@@ -599,7 +599,8 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
 
         Set<String> allProfileProperties = new LinkedHashSet<>();
         for (Profile profile : profilesToMerge) {
-            allProfileProperties.addAll(profile.getProperties().keySet());
+            final Set<String> flatNestedPropertiesKeys = PropertyHelper.flatten(profile.getProperties()).keySet();
+            allProfileProperties.addAll(flatNestedPropertiesKeys);
         }
 
         Collection<PropertyType> profilePropertyTypes = getTargetPropertyTypes("profiles");
@@ -668,12 +669,12 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         // we now have to merge the profile's consents
         for (Profile profile : profilesToMerge) {
             if (profile.getConsents() != null && profile.getConsents().size() > 0) {
-                for(String consentId : profile.getConsents().keySet()) {
-                    if(masterProfile.getConsents().containsKey(consentId)) {
-                        if(masterProfile.getConsents().get(consentId).getRevokeDate().before(new Date())) {
+                for (String consentId : profile.getConsents().keySet()) {
+                    if (masterProfile.getConsents().containsKey(consentId)) {
+                        if (masterProfile.getConsents().get(consentId).getRevokeDate().before(new Date())) {
                             masterProfile.getConsents().remove(consentId);
                             masterProfileChanged = true;
-                        } else if(masterProfile.getConsents().get(consentId).getStatusDate().before(profile.getConsents().get(consentId).getStatusDate())) {
+                        } else if (masterProfile.getConsents().get(consentId).getStatusDate().before(profile.getConsents().get(consentId).getStatusDate())) {
                             masterProfile.getConsents().replace(consentId, profile.getConsents().get(consentId));
                             masterProfileChanged = true;
                         }
@@ -757,7 +758,7 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         profileCondition.setParameter("comparisonOperator", "equals");
         profileCondition.setParameter("propertyValue", profileId);
 
-        persistenceService.removeByQuery(profileCondition,Session.class);
+        persistenceService.removeByQuery(profileCondition, Session.class);
     }
 
     @Override
@@ -1038,8 +1039,8 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
                         changed = true;
                     }
                 } else if (newEntry.getValue().getClass().isEnum()) {
-	            	 target.put(newEntry.getKey(), newEntry.getValue());
-	                 changed = true;
+                    target.put(newEntry.getKey(), newEntry.getValue());
+                    changed = true;
                 } else {
                     if (target.get(newEntry.getKey()) != null) {
                         changed |= merge(target.get(newEntry.getKey()), newEntry.getValue());
