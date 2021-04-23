@@ -21,7 +21,7 @@
     <parent>
         <artifactId>samples</artifactId>
         <groupId>org.apache.unomi</groupId>
-        <version>1.5.5-SNAPSHOT</version>
+        <version>1.5.5</version>
     </parent>
 
     <artifactId>login-integration-sample</artifactId>
