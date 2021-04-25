@@ -64,7 +64,6 @@ public abstract class Item implements Serializable {
     protected String itemType;
     protected String scope;
     protected Long version;
-
     protected Map<String, Object> systemMetadata = new HashMap<>();
 
     public Item() {
@@ -150,9 +149,5 @@ public abstract class Item implements Serializable {
 
     public void setSystemMetadata(String key, Object value) {
         systemMetadata.put(key, value);
-    }
-
-    public Map<String, Object> getSystemMetadata() {
-        return systemMetadata;
     }
 }
