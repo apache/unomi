@@ -192,7 +192,7 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
         if (op == null) {
             return false;
         } else if (actualValue == null) {
-            return op.equals("missing");
+            return op.equals("missing") || op.equals("notIn");
         } else if (op.equals("exists")) {
             if (actualValue instanceof List) {
                 return ((List) actualValue).size() > 0;
