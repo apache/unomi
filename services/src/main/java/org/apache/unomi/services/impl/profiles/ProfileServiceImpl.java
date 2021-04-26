@@ -176,6 +176,8 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
 
     private boolean forceRefreshOnSave = false;
 
+    private String defaultMergeStrategy = "defaultMergeStrategy";
+
     public ProfileServiceImpl() {
         logger.info("Initializing profile service...");
     }
@@ -206,6 +208,10 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
 
     public void setPropertiesRefreshInterval(long propertiesRefreshInterval) {
         this.propertiesRefreshInterval = propertiesRefreshInterval;
+    }
+
+    public void setDefaultMergeStrategy(String defaultMergeStrategy) {
+        this.defaultMergeStrategy = defaultMergeStrategy;
     }
 
     public void postConstruct() {
@@ -621,7 +627,7 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
 
         for (String profileProperty : allProfileProperties) {
             PropertyType propertyType = profilePropertyTypeById.get(profileProperty);
-            String propertyMergeStrategyId = "defaultMergeStrategy";
+            String propertyMergeStrategyId = defaultMergeStrategy;
             if (propertyType != null) {
                 if (propertyType.getMergeStrategy() != null && propertyMergeStrategyId.length() > 0) {
                     propertyMergeStrategyId = propertyType.getMergeStrategy();
@@ -630,13 +636,13 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
             PropertyMergeStrategyType propertyMergeStrategyType = definitionsService.getPropertyMergeStrategyType(propertyMergeStrategyId);
             if (propertyMergeStrategyType == null) {
                 // we couldn't find the strategy
-                if (propertyMergeStrategyId.equals("defaultMergeStrategy")) {
+                if (propertyMergeStrategyId.equals(defaultMergeStrategy)) {
                     logger.warn("Couldn't resolve default strategy, ignoring property merge for property " + profileProperty);
                     continue;
                 } else {
                     // todo: improper algorithm… it is possible that the defaultMergeStrategy couldn't be resolved here
                     logger.warn("Couldn't resolve strategy " + propertyMergeStrategyId + " for property " + profileProperty + ", using default strategy instead");
-                    propertyMergeStrategyId = "defaultMergeStrategy";
+                    propertyMergeStrategyId = defaultMergeStrategy;
                     propertyMergeStrategyType = definitionsService.getPropertyMergeStrategyType(propertyMergeStrategyId);
                 }
             }
