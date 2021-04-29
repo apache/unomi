@@ -84,6 +84,8 @@
         <gatling.version>2.1.2</gatling.version>
         <scala-maven-plugin.version>4.3.0</scala-maven-plugin.version>
 
+        <fail-safe.version>2.4.0</fail-safe.version>
+
         <!-- Librairies for Karaf packaging -->
         <xerces.version>2.11.0_1</xerces.version>
         <servicemix.specs.version>2.9.0</servicemix.specs.version>
@@ -1045,6 +1047,11 @@
             <artifactId>slf4j-api</artifactId>
             <version>1.7.1</version>
             <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>net.jodah</groupId>
+            <artifactId>failsafe</artifactId>
+            <version>${fail-safe.version}</version>
         </dependency>
     </dependencies>
 

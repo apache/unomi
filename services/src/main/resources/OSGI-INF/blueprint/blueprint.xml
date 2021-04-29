@@ -39,6 +39,7 @@
             <cm:property name="segment.retry.update.segment.seconds.delay" value="1"/>
             <cm:property name="segment.recalculate.period" value="1"/>
             <cm:property name="segment.batch.update" value="false"/>
+            <cm:property name="segment.update.by-query" value="false"/>
             <cm:property name="segment.send.profile.update.event" value="true"/>
             <cm:property name="rules.refresh.interval" value="1000"/>
             <cm:property name="rules.statistics.refresh.interval" value="10000"/>
@@ -179,6 +180,7 @@
         <property name="maxRetriesForUpdateProfileSegment" value="${services.segment.max.retries.update.profile.segment}" />
         <property name="secondsDelayForRetryUpdateProfileSegment" value="${services.segment.retry.update.segment.seconds.delay}" />
         <property name="batchSegmentProfileUpdate" value="${services.segment.batch.update}" />
+        <property name="segmentProfileUpdateByQuery" value="${services.segment.update.by-query}" />
         <property name="sendProfileUpdateEventForSegmentUpdate" value="${services.segment.send.profile.update.event}" />
         <property name="pastEventsDisablePartitions" value="${es.pastEventsDisablePartitions}" />
         <property name="maximumIdsQueryCount" value="${es.maximumIdsQueryCount}" />
