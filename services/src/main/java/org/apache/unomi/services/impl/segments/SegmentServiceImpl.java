@@ -141,6 +141,10 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
         this.sendProfileUpdateEventForSegmentUpdate = sendProfileUpdateEventForSegmentUpdate;
     }
 
+    public void setDailyDateExprEvaluationHourUtc(int dailyDateExprEvaluationHourUtc) {
+        this.dailyDateExprEvaluationHourUtc = dailyDateExprEvaluationHourUtc;
+    }
+
     public void postConstruct() {
         logger.debug("postConstruct {" + bundleContext.getBundle() + "}");
         loadPredefinedSegments(bundleContext);
