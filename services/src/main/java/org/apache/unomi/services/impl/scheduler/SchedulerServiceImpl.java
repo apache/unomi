@@ -21,6 +21,8 @@ import org.apache.unomi.api.services.SchedulerService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.Duration;
+import java.time.ZonedDateTime;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
@@ -44,5 +46,15 @@ public class SchedulerServiceImpl implements SchedulerService {
     @Override
     public ScheduledExecutorService getScheduleExecutorService() {
         return scheduler;
+    }
+
+    public static long getTimeDiffInSeconds(int hourInUtc, ZonedDateTime now) {
+        ZonedDateTime nextRun = now.withHour(hourInUtc).withMinute(0).withSecond(0);
+        if(now.compareTo(nextRun) > 0)
+            nextRun = nextRun.plusDays(1);
+
+        Duration duration = Duration.between(now, nextRun);
+        long initialDelay = duration.getSeconds();
+        return initialDelay;
     }
 }
