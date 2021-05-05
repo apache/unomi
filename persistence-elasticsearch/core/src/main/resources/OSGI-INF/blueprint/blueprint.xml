@@ -41,6 +41,7 @@
             <cm:property name="monthlyIndex.numberOfReplicas" value="0"/>
             <cm:property name="monthlyIndex.indexMappingTotalFieldsLimit" value="1000"/>
             <cm:property name="monthlyIndex.indexMaxDocValueFieldsSearch" value="1000"/>
+            <cm:property name="monthlyIndex.itemsMonthlyIndexedOverride" value="event,session"/>
             <cm:property name="defaultQueryLimit" value="10"/>
 
             <cm:property name="bulkProcessor.concurrentRequests" value="1" />

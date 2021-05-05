@@ -150,7 +150,7 @@ public class SegmentIT extends BaseIT {
         Event testEvent = new Event("test-event-type", null, profile, null, null, profile, Date.from(localDate.atStartOfDay(defaultZoneId).toInstant()));
         testEvent.setPersistent(true);
         eventService.send(testEvent);
-        persistenceService.refreshIndex(Event.class, null); // wait for event to be fully persisted and indexed
+        persistenceService.refreshIndex(Event.class, new Date()); // wait for event to be fully persisted and indexed
 
         // create the segment
         Metadata segmentMetadata = new Metadata("past-event-segment-test");
