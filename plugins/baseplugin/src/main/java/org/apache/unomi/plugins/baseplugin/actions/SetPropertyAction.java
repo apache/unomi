@@ -72,6 +72,12 @@ public class SetPropertyAction implements ActionExecutor {
             propertyValue = format.format(event.getTimeStamp());
         }
 
+        if (propertyValue != null && propertyValue.equals("eventArrivalTime")) {
+            SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
+            format.setTimeZone(TimeZone.getTimeZone("UTC"));
+            propertyValue = format.format(new Date());
+        }
+
         if (storeInSession) {
             // in the case of session storage we directly update the session
             if (PropertyHelper.setProperty(event.getSession(), propertyName, propertyValue, (String) action.getParameterValues().get("setPropertyStrategy"))) {
