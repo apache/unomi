@@ -1835,8 +1835,9 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         }
                     }
                     PartialList<T> result = new PartialList<T>(results, 0, response.getHits().getHits().length, response.getHits().getTotalHits().value, getTotalHitsRelation(response.getHits().getTotalHits()));
-                    if (scrollIdentifier != null) {
-                        result.setScrollIdentifier(scrollIdentifier);
+                    String responseScrollIdentifier = response.getScrollId();
+                    if (responseScrollIdentifier != null) {
+                        result.setScrollIdentifier(responseScrollIdentifier);
                         result.setScrollTimeValidity(scrollTimeValidity);
                     }
                     return result;
