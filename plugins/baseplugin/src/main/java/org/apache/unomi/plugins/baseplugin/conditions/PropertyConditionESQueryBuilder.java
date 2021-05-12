@@ -149,7 +149,7 @@ public class PropertyConditionESQueryBuilder implements ConditionESQueryBuilder 
                 checkRequiredValue(value, name, comparisonOperator, false);
                 return QueryBuilders.boolQuery().mustNot(getIsSameDayRange(value, name));
         }
-        return null;
+        throw new IllegalArgumentException("Unknown comparisonOperator [" + comparisonOperator + "]");
     }
 
     private void checkRequiredValuesSize(List<?> values, String name, String operator, int expectedSize) {
