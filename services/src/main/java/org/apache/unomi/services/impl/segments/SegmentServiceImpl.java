@@ -38,6 +38,8 @@ import org.apache.unomi.api.services.SegmentService;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.persistence.spi.aggregate.TermsAggregate;
 import org.apache.unomi.services.impl.AbstractServiceImpl;
+import org.apache.unomi.services.impl.scheduler.SchedulerServiceImpl;
+import org.apache.unomi.services.impl.scheduler.SchedulerServiceImpl;
 import org.apache.unomi.services.impl.ParserHelper;
 import org.apache.unomi.api.exceptions.BadSegmentConditionException;
 import org.osgi.framework.Bundle;
@@ -51,8 +53,11 @@ import java.io.IOException;
 import java.net.URL;
 import java.security.MessageDigest;
 import java.time.Duration;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentService, SynchronousBundleListener {
 
@@ -76,6 +81,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
     private boolean sendProfileUpdateEventForSegmentUpdate = true;
     private int maximumIdsQueryCount = 5000;
     private boolean pastEventsDisablePartitions = false;
+    private int dailyDateExprEvaluationHourUtc = 5;
 
     public SegmentServiceImpl() {
         logger.info("Initializing segment service...");
@@ -131,6 +137,10 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
 
     public void setSendProfileUpdateEventForSegmentUpdate(boolean sendProfileUpdateEventForSegmentUpdate){
         this.sendProfileUpdateEventForSegmentUpdate = sendProfileUpdateEventForSegmentUpdate;
+    }
+
+    public void setDailyDateExprEvaluationHourUtc(int dailyDateExprEvaluationHourUtc) {
+        this.dailyDateExprEvaluationHourUtc = dailyDateExprEvaluationHourUtc;
     }
 
     public void postConstruct() {
@@ -1112,10 +1122,13 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
     }
 
     private void initializeTimer() {
+
         TimerTask task = new TimerTask() {
             @Override
             public void run() {
                 try {
+                    logger.info("running scheduled task to recalculate segments with pastEventCondition conditions");
+                    long pastEventsTaskStartTime = System.currentTimeMillis();
                     for (Metadata metadata : rulesService.getRuleMetadatas()) {
                         Rule rule = rulesService.getRule(metadata.getId());
                         for (Action action : rule.getActions()) {
@@ -1127,6 +1140,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
                             }
                         }
                     }
+                    logger.info("finished recalculate segments with pastEventCondition conditions in {}ms. ", System.currentTimeMillis() - pastEventsTaskStartTime);
                 } catch (Throwable t) {
                     logger.error("Error while updating profiles for past event conditions", t);
                 }
@@ -1146,6 +1160,26 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
             }
         };
         schedulerService.getScheduleExecutorService().scheduleAtFixedRate(task, 0, segmentRefreshInterval, TimeUnit.MILLISECONDS);
+
+        task = new TimerTask() {
+            @Override
+            public void run() {
+                try {
+                    long dateExprTaskStartTime = System.currentTimeMillis();
+                    List<Segment> dateExprSegments = allSegments.stream().filter(segment ->
+                            segment.getCondition().toString().contains("propertyValueDateExpr")).collect(Collectors.toList());
+                    logger.info("running scheduled task to recalculate segments with DateExpr condition, found {} segments", dateExprSegments.size());
+                    dateExprSegments.forEach(segment -> updateExistingProfilesForSegment(segment));
+                    logger.info("finished recalculate segments with DateExpr conditions in {}ms. ", System.currentTimeMillis() - dateExprTaskStartTime);
+                } catch (Throwable t) {
+                    logger.error("Error while updating profiles for DateExpr conditions", t);
+                }
+            }
+        };
+
+        long initialDelay = SchedulerServiceImpl.getTimeDiffInSeconds(dailyDateExprEvaluationHourUtc, ZonedDateTime.now(ZoneOffset.UTC));
+        logger.info("daily DateExpr segments will run at fixed rate, initialDelay={}, taskExecutionPeriod={}, ", initialDelay, TimeUnit.DAYS.toSeconds(1));
+        schedulerService.getScheduleExecutorService().scheduleAtFixedRate(task, initialDelay,  TimeUnit.DAYS.toSeconds(1), TimeUnit.SECONDS);
     }
 
     public void setTaskExecutionPeriod(long taskExecutionPeriod) {
