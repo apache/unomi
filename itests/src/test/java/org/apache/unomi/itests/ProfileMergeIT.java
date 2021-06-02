@@ -139,7 +139,7 @@ public class ProfileMergeIT extends BaseIT {
         Assert.assertFalse(aliases.isEmpty());
         Assert.assertEquals(masterProfile.getItemId(), aliases.get(0).getProfileID());
         Assert.assertEquals(eventProfile.getItemId(), aliases.get(0).getItemId());
-        Assert.assertEquals("defaultClientID", aliases.get(0).getClientID());
+        Assert.assertEquals("defaultClientId", aliases.get(0).getClientID());
     }
 
     private Event sendEvent() {

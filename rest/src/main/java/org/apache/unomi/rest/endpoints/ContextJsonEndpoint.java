@@ -52,7 +52,14 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.validation.Valid;
 import javax.validation.constraints.Pattern;
-import javax.ws.rs.*;
+import javax.ws.rs.BadRequestException;
+import javax.ws.rs.Consumes;
+import javax.ws.rs.GET;
+import javax.ws.rs.OPTIONS;
+import javax.ws.rs.POST;
+import javax.ws.rs.Path;
+import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
@@ -64,7 +71,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.Objects;
 
 @WebService
 @Consumes(MediaType.APPLICATION_JSON)
@@ -329,8 +335,8 @@ public class ContextJsonEndpoint {
             contextResponse.setProfileId(profile.getItemId());
 
             if (profileCreated) {
-                String clientId = Objects.requireNonNullElse(contextRequest.getClientId(), DEFAULT_CLIENT_ID);
-                String profileMasterId = Objects.requireNonNullElse(profile.getMergedWith(), profile.getItemId());
+                String clientId = StringUtils.isNotEmpty(contextRequest.getClientId()) ? contextRequest.getClientId() : DEFAULT_CLIENT_ID;
+                String profileMasterId = StringUtils.isNotEmpty(profile.getMergedWith()) ? profile.getMergedWith() : profile.getItemId();
                 profileService.addAliasToProfile(profileMasterId, profile.getItemId(), clientId );
             }
         }
