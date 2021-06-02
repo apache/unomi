@@ -32,9 +32,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.servlet.ServletResponse;
-import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletResponse;
-import java.util.*;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Objects;
+import java.util.UUID;
 
 public class MergeProfilesOnPropertyAction implements ActionExecutor {
     private static final Logger logger = LoggerFactory.getLogger(MergeProfilesOnPropertyAction.class.getName());
@@ -98,10 +100,10 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
                 // Take existing profile
                 profile = profiles.get(0);
             } else {
-                // Create a new profile
-                if (forceEventProfileAsMaster)
+                if (forceEventProfileAsMaster) {
                     profile = event.getProfile();
-                else {
+                } else {
+                    // Create a new profile
                     profile = new Profile(UUID.randomUUID().toString());
                     profile.setProperty("firstVisit", event.getTimeStamp());
                 }
@@ -163,7 +165,7 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
 
                 final Boolean anonymousBrowsing = privacyService.isRequireAnonymousBrowsing(masterProfileId);
 
-                if (currentSession != null){
+                if (currentSession != null) {
                     currentSession.setProfile(masterProfile);
                     if (privacyService.isRequireAnonymousBrowsing(profile)) {
                         privacyService.setRequireAnonymousBrowsing(masterProfileId, true, event.getSourceId());
@@ -185,13 +187,14 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
                             if (!StringUtils.equals(profileId, masterProfileId)) {
                                 if (currentEvent.isPersistent()) {
                                     persistenceService.update(currentEvent, currentEvent.getTimeStamp(), Event.class, "profileId", anonymousBrowsing ? null : masterProfileId);
-                                }                            }
+                                }
+                            }
 
                             for (Profile profile : profiles) {
                                 String profileId = profile.getItemId();
                                 if (!StringUtils.equals(profileId, masterProfileId)) {
                                     List<Session> sessions = persistenceService.query("profileId", profileId, null, Session.class);
-                                    if (currentSession != null){
+                                    if (currentSession != null) {
                                         if (masterProfileId.equals(profileId) && !sessions.contains(currentSession)) {
                                             sessions.add(currentSession);
                                         }
@@ -207,21 +210,14 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
                                             persistenceService.update(event, event.getTimeStamp(), Event.class, "profileId", anonymousBrowsing ? null : masterProfileId);
                                         }
                                     }
-                                    // we must mark all the profiles that we merged into the master as merged with the master, and they will
-                                    // be deleted upon next load
-                                    profile.setMergedWith(masterProfileId);
-                                    Map<String,Object> sourceMap = new HashMap<>();
-                                    sourceMap.put("mergedWith", masterProfileId);
-                                    profile.setSystemProperty("lastUpdated", new Date());
-                                    sourceMap.put("systemProperties", profile.getSystemProperties());
 
-                                    boolean isExist  = persistenceService.load(profile.getItemId(), Profile.class) != null;
+                                    String clientId = Objects.requireNonNullElse((String) event.getAttributes().get(Event.CLIENT_ID_ATTRIBUTE), "defaultClientID");
+                                    profileService.addAliasToProfile(masterProfileId, profile.getItemId(), clientId);
 
-                                    if (isExist == false) //save the original event profile is it has been changed
-                                        persistenceService.save(profile);
-                                    else
-                                      persistenceService.update(profile, null, Profile.class, sourceMap,true);
-
+                                    boolean isExist = profileService.load(profile.getItemId()) != null;
+                                    if (isExist) {
+                                        profileService.delete(profileId, false);
+                                    }
                                 }
                             }
                         } catch (Exception e) {
@@ -246,7 +242,7 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
                         profileIdCookieName + "=" + profile.getItemId() +
                                 "; Path=/" +
                                 "; Max-Age=" + cookieAgeInSeconds +
-                                (StringUtils.isNotBlank(profileIdCookieDomain) ? ("; Domain=" + profileIdCookieDomain) : "")  +
+                                (StringUtils.isNotBlank(profileIdCookieDomain) ? ("; Domain=" + profileIdCookieDomain) : "") +
                                 "; SameSite=Lax");
             }
         }

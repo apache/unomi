@@ -19,12 +19,15 @@ package org.apache.unomi.itests;
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.Metadata;
 import org.apache.unomi.api.Profile;
+import org.apache.unomi.api.ProfileAlias;
 import org.apache.unomi.api.actions.Action;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.rules.Rule;
 import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.EventService;
+import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.api.services.RulesService;
+import org.apache.unomi.persistence.spi.PersistenceService;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
@@ -38,6 +41,7 @@ import javax.inject.Inject;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 
 /**
  * Integration test for MergeProfilesOnPropertyAction
@@ -52,6 +56,10 @@ public class ProfileMergeIT extends BaseIT {
     protected RulesService rulesService;
     @Inject @Filter(timeout = 600000)
     protected DefinitionsService definitionsService;
+    @Inject @Filter(timeout = 600000)
+    protected ProfileService profileService;
+    @Inject @Filter(timeout = 600000)
+    protected PersistenceService persistenceService;
 
     private final static String TEST_EVENT_TYPE = "mergeProfileTestEventType";
     private final static String TEST_RULE_ID = "mergeOnPropertyTest";
@@ -79,6 +87,59 @@ public class ProfileMergeIT extends BaseIT {
 
         // No new profile should be created, instead the profile of the event should be used.
         Assert.assertEquals(sendEvent().getProfile().getItemId(), TEST_PROFILE_ID);
+    }
+
+    @Test
+    public void test() throws InterruptedException {
+        // create rule
+        Condition condition = new Condition(definitionsService.getConditionType("eventTypeCondition"));
+        condition.setParameter("eventTypeId", TEST_EVENT_TYPE);
+
+        final Action action = new Action( definitionsService.getActionType( "mergeProfilesOnPropertyAction"));
+        action.setParameter("mergeProfilePropertyValue", "eventProperty::target.properties(email)");
+        action.setParameter("mergeProfilePropertyName", "mergeIdentifier");
+        action.setParameter("forceEventProfileAsMaster", false);
+
+        Rule rule = new Rule();
+        rule.setMetadata(new Metadata(null, TEST_RULE_ID, TEST_RULE_ID, "Description"));
+        rule.setCondition(condition);
+        rule.setActions(Collections.singletonList(action));
+
+        rulesService.setRule(rule);
+        refreshPersistence();
+
+        // create master profile
+        Profile masterProfile = new Profile();
+        masterProfile.setItemId("masterProfileID");
+        masterProfile.setProperty("email", "username@domain.com");
+        masterProfile.setSystemProperty("mergeIdentifier", "username@domain.com");
+        profileService.save(masterProfile);
+
+        // create event profile
+        Profile eventProfile = new Profile();
+        eventProfile.setItemId("eventProfileID");
+        eventProfile.setProperty("email", "username@domain.com");
+        profileService.save(eventProfile);
+
+        refreshPersistence();
+
+        Event event = new Event(TEST_EVENT_TYPE, null, eventProfile, null, null, eventProfile, new Date());
+        eventService.send(event);
+
+        refreshPersistence();
+
+        Assert.assertNotNull(event.getProfile());
+
+        List<ProfileAlias> profileAliases = persistenceService.getAllItems(ProfileAlias.class);
+
+        Assert.assertFalse(profileAliases.isEmpty());
+
+        List<ProfileAlias> aliases = persistenceService.query("profileID", masterProfile.getItemId(), null, ProfileAlias.class);
+
+        Assert.assertFalse(aliases.isEmpty());
+        Assert.assertEquals(masterProfile.getItemId(), aliases.get(0).getProfileID());
+        Assert.assertEquals(eventProfile.getItemId(), aliases.get(0).getItemId());
+        Assert.assertEquals("defaultClientID", aliases.get(0).getClientID());
     }
 
     private Event sendEvent() {

@@ -46,6 +46,11 @@ public class Event extends Item implements TimestampedItem {
      * A constant for the name of the attribute that can be used to retrieve the current HTTP response.
      */
     public static final String HTTP_RESPONSE_ATTRIBUTE = "http_response";
+    /**
+     * A constant for the name of the attribute that can be used to retrieve the current clientID.
+     */
+    public static final String CLIENT_ID_ATTRIBUTE = "client_id";
+
     private static final long serialVersionUID = -1096874942838593575L;
     private String eventType;
     private String sessionId = null;
