@@ -18,10 +18,17 @@
 ################################################################################
 # Wait for heathy ElasticSearch
 # next wait for ES status to turn to Green
-health_check="$(curl -fsSL "$UNOMI_ELASTICSEARCH_ADDRESSES/_cat/health?h=status")"
+
+if [ -v UNOMI_ELASTICSEARCH_USERNAME ] && [ -v UNOMI_ELASTICSEARCH_PASSWORD ]; then
+  elasticsearch_addresses="$UNOMI_ELASTICSEARCH_USERNAME:$UNOMI_ELASTICSEARCH_PASSWORD@$UNOMI_ELASTICSEARCH_ADDRESSES/_cat/health?h=status"
+else
+  elasticsearch_addresses="$UNOMI_ELASTICSEARCH_ADDRESSES/_cat/health?h=status"
+fi
+
+health_check="$(curl -fsSL "$elasticsearch_addresses")"
 
 until ([ "$health_check" = 'yellow' ] || [ "$health_check" = 'green' ]); do
-    health_check="$(curl -fsSL "$UNOMI_ELASTICSEARCH_ADDRESSES/_cat/health?h=status")"
+    health_check="$(curl -fsSL $elasticsearch_addresses)"
     >&2 echo "Elastic Search is not yet available - waiting (health check=$health_check)..."
     sleep 1
 done
