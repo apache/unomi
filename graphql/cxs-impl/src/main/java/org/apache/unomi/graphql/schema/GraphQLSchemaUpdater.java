@@ -73,7 +73,7 @@ public class GraphQLSchemaUpdater {
 
     private final List<GraphQLTypeFunctionProvider> typeFunctionProviders = new CopyOnWriteArrayList<>();
 
-    private GraphQLFieldVisibilityProvider fieldVisibilityProvider;
+    private List<GraphQLFieldVisibilityProvider> fieldVisibilityProviders = new CopyOnWriteArrayList<>();
 
     private GraphQLCodeRegistryProvider codeRegistryProvider;
 
@@ -165,7 +165,7 @@ public class GraphQLSchemaUpdater {
             additionalTypesProviders.add((GraphQLAdditionalTypesProvider) provider);
         }
         if (provider instanceof GraphQLFieldVisibilityProvider) {
-            fieldVisibilityProvider = (GraphQLFieldVisibilityProvider) provider;
+            fieldVisibilityProviders.add((GraphQLFieldVisibilityProvider) provider);
         }
         if (provider instanceof GraphQLCodeRegistryProvider) {
             codeRegistryProvider = (GraphQLCodeRegistryProvider) provider;
@@ -187,7 +187,7 @@ public class GraphQLSchemaUpdater {
             additionalTypesProviders.remove(provider);
         }
         if (provider instanceof GraphQLFieldVisibilityProvider) {
-            fieldVisibilityProvider = null;
+            fieldVisibilityProviders.remove(provider);
         }
         if (provider instanceof GraphQLCodeRegistryProvider) {
             codeRegistryProvider = GraphQLCodeRegistry::newCodeRegistry;
@@ -237,13 +237,13 @@ public class GraphQLSchemaUpdater {
 
     @Reference(cardinality = ReferenceCardinality.MULTIPLE, policy = ReferencePolicy.DYNAMIC)
     public void bindFieldVisibilityProvider(GraphQLFieldVisibilityProvider provider) {
-        fieldVisibilityProvider = provider;
+        fieldVisibilityProviders.remove(provider);
 
         updateSchema();
     }
 
     public void unbindFieldVisibilityProvider(GraphQLFieldVisibilityProvider provider) {
-        fieldVisibilityProvider = null;
+        fieldVisibilityProviders = null;
 
         updateSchema();
     }
@@ -339,7 +339,7 @@ public class GraphQLSchemaUpdater {
                 .subscriptionProviders(subscriptionProviders)
                 .eventPublisher(eventPublisher)
                 .codeRegistryProvider(codeRegistryProvider)
-                .fieldVisibilityProvider(fieldVisibilityProvider)
+                .fieldVisibilityProviders(fieldVisibilityProviders)
                 .build();
 
         final GraphQLSchema schema = schemaProvider.createSchema();
