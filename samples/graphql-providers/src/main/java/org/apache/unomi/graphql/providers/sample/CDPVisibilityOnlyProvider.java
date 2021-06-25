@@ -25,6 +25,12 @@ import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Deactivate;
 
+/**
+ * Example graphql visibility provider
+ * It will block:
+ * - CDP_SegmentInput's view field as well as
+ * - .remove* fields at any depth level
+ */
 @Component(immediate = true, service = GraphQLProvider.class)
 public class CDPVisibilityOnlyProvider
         implements GraphQLFieldVisibilityProvider {

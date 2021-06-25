@@ -237,13 +237,13 @@ public class GraphQLSchemaUpdater {
 
     @Reference(cardinality = ReferenceCardinality.MULTIPLE, policy = ReferencePolicy.DYNAMIC)
     public void bindFieldVisibilityProvider(GraphQLFieldVisibilityProvider provider) {
-        fieldVisibilityProviders.remove(provider);
+        fieldVisibilityProviders.add(provider);
 
         updateSchema();
     }
 
     public void unbindFieldVisibilityProvider(GraphQLFieldVisibilityProvider provider) {
-        fieldVisibilityProviders = null;
+        fieldVisibilityProviders.remove(provider);
 
         updateSchema();
     }
