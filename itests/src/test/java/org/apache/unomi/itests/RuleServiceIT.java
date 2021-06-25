@@ -28,9 +28,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
-import java.util.Set;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 
 /**
  * Integration tests for the Unomi rule service.
@@ -61,8 +61,6 @@ public class RuleServiceIT extends BaseIT {
 
     @Test
     public void testRuleWithNullActions() throws InterruptedException {
-        Set<Metadata> ruleMetadatas = rulesService.getRuleMetadatas();
-        int initialRuleCount = ruleMetadatas.size();
         Metadata metadata = new Metadata(TEST_RULE_ID);
         metadata.setName(TEST_RULE_ID + "_name");
         metadata.setDescription(TEST_RULE_ID + "_description");
@@ -71,15 +69,10 @@ public class RuleServiceIT extends BaseIT {
         nullRule.setCondition(null);
         nullRule.setActions(null);
         rulesService.setRule(nullRule);
-        LOGGER.info("Waiting for rules to refresh from persistence...");
-        int loopCount = 0;
-        int lastRuleCount = initialRuleCount;
-        while (loopCount < 20 && lastRuleCount == initialRuleCount) {
-            Thread.sleep(1000);
-            ruleMetadatas = rulesService.getRuleMetadatas();
-            lastRuleCount = ruleMetadatas.size();
-            loopCount++;
-        }
-        assertEquals("Rule not properly saved", initialRuleCount + 1, lastRuleCount);
+        refreshPersistence();
+        nullRule = rulesService.getRule(TEST_RULE_ID);
+        assertNull("Expected rule actions to be null", nullRule.getActions());
+        assertNull("Expected rule condition to be null", nullRule.getCondition());
+        assertEquals("Invalid rule name", TEST_RULE_ID + "_name", nullRule.getMetadata().getName());
     }
 }
