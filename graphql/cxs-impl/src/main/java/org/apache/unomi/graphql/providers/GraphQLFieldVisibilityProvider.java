@@ -19,11 +19,12 @@ package org.apache.unomi.graphql.providers;
 import graphql.schema.visibility.GraphqlFieldVisibility;
 
 /**
- *  Provider of {@link GraphqlFieldVisibility} to limit graphql schema fields visibility
- *  More about it here https://www.graphql-java.com/documentation/v14/fieldvisibility/
+ * Provider of {@link GraphqlFieldVisibility} to limit graphql schema fields visibility
+ * More about it here https://www.graphql-java.com/documentation/v14/fieldvisibility/
  */
 public interface GraphQLFieldVisibilityProvider extends GraphQLProvider {
 
     GraphqlFieldVisibility getGraphQLFieldVisibility();
 
+    int getPriority();
 }

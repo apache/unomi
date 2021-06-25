@@ -32,6 +32,7 @@ import graphql.schema.GraphQLObjectType;
 import graphql.schema.GraphQLOutputType;
 import graphql.schema.GraphQLSchema;
 import graphql.schema.GraphQLType;
+import graphql.schema.visibility.GraphqlFieldVisibility;
 import org.apache.unomi.api.EventType;
 import org.apache.unomi.api.PropertyType;
 import org.apache.unomi.api.services.EventTypeRegistry;
@@ -43,6 +44,7 @@ import org.apache.unomi.graphql.fetchers.CustomerPropertyDataFetcher;
 import org.apache.unomi.graphql.fetchers.DynamicFieldDataFetcher;
 import org.apache.unomi.graphql.fetchers.event.EventListenerSubscriptionFetcher;
 import org.apache.unomi.graphql.fetchers.event.UnomiEventPublisher;
+import org.apache.unomi.graphql.providers.CompositeGraphQLFieldVisibility;
 import org.apache.unomi.graphql.providers.GraphQLAdditionalTypesProvider;
 import org.apache.unomi.graphql.providers.GraphQLCodeRegistryProvider;
 import org.apache.unomi.graphql.providers.GraphQLExtensionsProvider;
@@ -100,7 +102,7 @@ public class GraphQLSchemaProvider {
 
     private final List<GraphQLSubscriptionProvider> subscriptionProviders;
 
-    private final GraphQLFieldVisibilityProvider fieldVisibilityProvider;
+    private final List<GraphQLFieldVisibilityProvider> fieldVisibilityProviders;
 
     private final GraphQLCodeRegistryProvider codeRegistryProvider;
 
@@ -121,7 +123,7 @@ public class GraphQLSchemaProvider {
         this.mutationProviders = builder.mutationProviders;
         this.subscriptionProviders = builder.subscriptionProviders;
         this.codeRegistryProvider = builder.codeRegistryProvider;
-        this.fieldVisibilityProvider = builder.fieldVisibilityProvider;
+        this.fieldVisibilityProviders = builder.fieldVisibilityProviders;
     }
 
     public GraphQLSchema createSchema() {
@@ -711,10 +713,12 @@ public class GraphQLSchemaProvider {
     }
 
     private void configureFieldVisibility() {
-        if (fieldVisibilityProvider != null) {
-            graphQLAnnotations.getContainer().getCodeRegistryBuilder()
-                    .fieldVisibility(fieldVisibilityProvider.getGraphQLFieldVisibility());
+        if (fieldVisibilityProviders == null || fieldVisibilityProviders.isEmpty()) {
+            return;
         }
+        GraphqlFieldVisibility compositeVisibility = new CompositeGraphQLFieldVisibility(fieldVisibilityProviders);
+
+        graphQLAnnotations.getContainer().getCodeRegistryBuilder().fieldVisibility(compositeVisibility);
     }
 
     public GraphQLInputObjectType getInputObjectType(final Class<?> annotatedClass) {
@@ -749,7 +753,7 @@ public class GraphQLSchemaProvider {
 
         List<GraphQLSubscriptionProvider> subscriptionProviders;
 
-        GraphQLFieldVisibilityProvider fieldVisibilityProvider;
+        List<GraphQLFieldVisibilityProvider> fieldVisibilityProviders;
 
         GraphQLCodeRegistryProvider codeRegistryProvider;
 
@@ -800,8 +804,8 @@ public class GraphQLSchemaProvider {
             return this;
         }
 
-        public Builder fieldVisibilityProvider(GraphQLFieldVisibilityProvider fieldVisibilityProvider) {
-            this.fieldVisibilityProvider = fieldVisibilityProvider;
+        public Builder fieldVisibilityProviders(List<GraphQLFieldVisibilityProvider> fieldVisibilityProviders) {
+            this.fieldVisibilityProviders = fieldVisibilityProviders;
             return this;
         }
 
