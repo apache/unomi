@@ -148,4 +148,9 @@ public class CDPProviderSample
                 .addPattern(".*\\.delete.*") // regular expressions allowed
                 .build();
     }
+
+    @Override
+    public int getPriority() {
+        return 0;
+    }
 }
