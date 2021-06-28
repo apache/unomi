@@ -23,6 +23,7 @@ import org.apache.unomi.api.actions.Action;
 import org.apache.unomi.api.actions.ActionType;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.conditions.ConditionType;
+import org.apache.unomi.api.rules.Rule;
 import org.apache.unomi.api.services.DefinitionsService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,8 +40,9 @@ public class ParserHelper {
     private static final Set<String> unresolvedActionTypes = new HashSet<>();
     private static final Set<String> unresolvedConditionTypes = new HashSet<>();
 
-    public static boolean resolveConditionType(final DefinitionsService definitionsService, Condition rootCondition) {
+    public static boolean resolveConditionType(final DefinitionsService definitionsService, Condition rootCondition, String contextObjectName) {
         if (rootCondition == null) {
+            logger.warn("Couldn't resolve null condition for {}", contextObjectName);
             return false;
         }
         final List<String> result = new ArrayList<String>();
@@ -56,7 +58,7 @@ public class ParserHelper {
                         result.add(condition.getConditionTypeId());
                         if (!unresolvedConditionTypes.contains(condition.getConditionTypeId())) {
                             unresolvedConditionTypes.add(condition.getConditionTypeId());
-                            logger.warn("Couldn't resolve condition type: " + condition.getConditionTypeId());
+                            logger.warn("Couldn't resolve condition type: {} for {}", condition.getConditionTypeId(), contextObjectName);
                         }
                     }
                 }
@@ -96,15 +98,26 @@ public class ParserHelper {
         }
     }
 
-    public static boolean resolveActionTypes(DefinitionsService definitionsService, List<Action> actions) {
+    public static boolean resolveActionTypes(DefinitionsService definitionsService, Rule rule) {
         boolean result = true;
-        for (Action action : actions) {
+        if (rule.getActions() == null) {
+            logger.warn("Rule {}:{} has null actions", rule.getItemId(), rule.getMetadata().getName());
+            return false;
+        }
+        if (rule.getActions().isEmpty()) {
+            logger.warn("Rule {}:{} has empty actions", rule.getItemId(), rule.getMetadata().getName());
+            return result;
+        }
+        for (Action action : rule.getActions()) {
             result &= ParserHelper.resolveActionType(definitionsService, action);
         }
         return result;
     }
 
     public static boolean resolveActionType(DefinitionsService definitionsService, Action action) {
+        if (definitionsService == null) {
+            return false;
+        }
         if (action.getActionType() == null) {
             ActionType actionType = definitionsService.getActionType(action.getActionTypeId());
             if (actionType != null) {

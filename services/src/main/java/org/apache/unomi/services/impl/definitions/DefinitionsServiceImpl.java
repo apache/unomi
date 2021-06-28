@@ -276,7 +276,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
         Collection<ConditionType> all = persistenceService.getAllItems(ConditionType.class);
         for (ConditionType type : all) {
             if (type != null && type.getParentCondition() != null) {
-                ParserHelper.resolveConditionType(this, type.getParentCondition());
+                ParserHelper.resolveConditionType(this, type.getParentCondition(), "condition type " + type.getItemId());
             }
         }
         return all;
@@ -295,7 +295,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
         List<ConditionType> directConditionTypes = persistenceService.query(fieldName, fieldValue,null, ConditionType.class);
         for (ConditionType type : directConditionTypes) {
             if (type.getParentCondition() != null) {
-                ParserHelper.resolveConditionType(this, type.getParentCondition());
+                ParserHelper.resolveConditionType(this, type.getParentCondition(), "condition type " + type.getItemId());
             }
         }
         conditionTypes.addAll(directConditionTypes);
@@ -315,7 +315,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
             }
         }
         if (type != null && type.getParentCondition() != null) {
-            ParserHelper.resolveConditionType(this, type.getParentCondition());
+            ParserHelper.resolveConditionType(this, type.getParentCondition(), "condition type " + type.getItemId());
         }
         return type;
     }
@@ -515,7 +515,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
 
     @Override
     public boolean resolveConditionType(Condition rootCondition) {
-        return ParserHelper.resolveConditionType(this, rootCondition);
+        return ParserHelper.resolveConditionType(this, rootCondition, (rootCondition != null ? "condition type " + rootCondition.getConditionTypeId() : "unknown"));
     }
 
     @Override
