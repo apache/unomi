@@ -763,7 +763,7 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
 
     @Override
     public boolean matchCondition(Condition condition, Profile profile, Session session) {
-        ParserHelper.resolveConditionType(definitionsService, condition);
+        ParserHelper.resolveConditionType(definitionsService, condition, "profile " + profile.getItemId() + " matching");
 
         if (condition.getConditionTypeId().equals("booleanCondition")) {
             List<Condition> subConditions = (List<Condition>) condition.getParameter("subConditions");
@@ -788,7 +788,7 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
     }
 
     public void batchProfilesUpdate(BatchUpdate update) {
-        ParserHelper.resolveConditionType(definitionsService, update.getCondition());
+        ParserHelper.resolveConditionType(definitionsService, update.getCondition(), "batch update on property " + update.getPropertyName());
         List<Profile> profiles = persistenceService.query(update.getCondition(), null, Profile.class);
 
         for (Profile profile : profiles) {

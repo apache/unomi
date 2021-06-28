@@ -248,8 +248,8 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
     private List<Rule> getAllRules() {
         List<Rule> allItems = persistenceService.getAllItems(Rule.class, 0, -1, "priority").getList();
         for (Rule rule : allItems) {
-            ParserHelper.resolveConditionType(definitionsService, rule.getCondition());
-            ParserHelper.resolveActionTypes(definitionsService, rule.getActions());
+            ParserHelper.resolveConditionType(definitionsService, rule.getCondition(), "rule " + rule.getItemId());
+            ParserHelper.resolveActionTypes(definitionsService, rule);
         }
         return allItems;
     }
@@ -339,12 +339,8 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
     public Rule getRule(String ruleId) {
         Rule rule = persistenceService.load(ruleId, Rule.class);
         if (rule != null) {
-            if (rule.getCondition() != null) {
-                ParserHelper.resolveConditionType(definitionsService, rule.getCondition());
-            }
-            if (rule.getActions() != null) {
-                ParserHelper.resolveActionTypes(definitionsService, rule.getActions());
-            }
+            ParserHelper.resolveConditionType(definitionsService, rule.getCondition(), "rule " + rule.getItemId());
+            ParserHelper.resolveActionTypes(definitionsService, rule);
         }
         return rule;
     }
@@ -356,7 +352,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
         Condition condition = rule.getCondition();
         if (condition != null) {
             if (rule.getMetadata().isEnabled() && !rule.getMetadata().isMissingPlugins()) {
-                ParserHelper.resolveConditionType(definitionsService, condition);
+                ParserHelper.resolveConditionType(definitionsService, condition, "rule " + rule.getItemId());
                 definitionsService.extractConditionBySystemTag(condition, "eventCondition");
             }
         }
@@ -373,7 +369,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
             if(trackedCondition != null){
                 Condition sourceEventPropertyCondition = definitionsService.extractConditionBySystemTag(r.getCondition(), "sourceEventCondition");
                 if(source != null && sourceEventPropertyCondition != null) {
-                    ParserHelper.resolveConditionType(definitionsService, sourceEventPropertyCondition);
+                    ParserHelper.resolveConditionType(definitionsService, sourceEventPropertyCondition, "rule " + r.getItemId() + " source event condition");
                     if(persistenceService.testMatch(sourceEventPropertyCondition, source)){
                         trackedConditions.add(trackedCondition);
                     }

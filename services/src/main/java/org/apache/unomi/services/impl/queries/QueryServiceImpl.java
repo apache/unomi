@@ -74,7 +74,7 @@ public class QueryServiceImpl implements QueryService {
     @Override
     public Map<String, Double> getMetric(String type, String property, String slashConcatenatedMetrics, Condition condition) {
         if (condition.getConditionType() == null) {
-            ParserHelper.resolveConditionType(definitionsService, condition);
+            ParserHelper.resolveConditionType(definitionsService, condition, "metric " + type + " on property " + property);
         }
         return persistenceService.getSingleValuesMetrics(condition, slashConcatenatedMetrics.split("/"), property, type);
     }
@@ -82,7 +82,7 @@ public class QueryServiceImpl implements QueryService {
     @Override
     public long getQueryCount(String itemType, Condition condition) {
         if (condition.getConditionType() == null) {
-            ParserHelper.resolveConditionType(definitionsService, condition);
+            ParserHelper.resolveConditionType(definitionsService, condition, "query count on " +itemType);
         }
         return persistenceService.queryCount(condition, itemType);
     }
@@ -90,9 +90,7 @@ public class QueryServiceImpl implements QueryService {
     private Map<String, Long> getAggregate(String itemType, String property, AggregateQuery query, boolean optimizedQuery) {
         if (query != null) {
             // resolve condition
-            if (query.getCondition() != null) {
-                ParserHelper.resolveConditionType(definitionsService, query.getCondition());
-            }
+            ParserHelper.resolveConditionType(definitionsService, query.getCondition(), "aggregate on property " + property + " for type " + itemType);
 
             // resolve aggregate
             BaseAggregate baseAggregate = null;

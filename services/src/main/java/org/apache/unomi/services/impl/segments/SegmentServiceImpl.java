@@ -253,7 +253,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
     private List<Segment> getAllSegmentDefinitions() {
         List<Segment> allItems = persistenceService.getAllItems(Segment.class);
         for (Segment segment : allItems) {
-            ParserHelper.resolveConditionType(definitionsService, segment.getCondition());
+            ParserHelper.resolveConditionType(definitionsService, segment.getCondition(), "segment " + segment.getItemId());
         }
         return allItems;
     }
@@ -261,13 +261,13 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
     public Segment getSegmentDefinition(String segmentId) {
         Segment definition = persistenceService.load(segmentId, Segment.class);
         if (definition != null) {
-            ParserHelper.resolveConditionType(definitionsService, definition.getCondition());
+            ParserHelper.resolveConditionType(definitionsService, definition.getCondition(), "segment " + segmentId);
         }
         return definition;
     }
 
     public void setSegmentDefinition(Segment segment) {
-        ParserHelper.resolveConditionType(definitionsService, segment.getCondition());
+        ParserHelper.resolveConditionType(definitionsService, segment.getCondition(), "segment " + segment.getItemId());
         if (!persistenceService.isValidCondition(segment.getCondition(), new Profile())) {
             throw new BadSegmentConditionException();
         }
@@ -543,7 +543,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
         List<Scoring> allItems = persistenceService.getAllItems(Scoring.class);
         for (Scoring scoring : allItems) {
             for (ScoringElement element : scoring.getElements()) {
-                ParserHelper.resolveConditionType(definitionsService, element.getCondition());
+                ParserHelper.resolveConditionType(definitionsService, element.getCondition(), "scoring " + scoring.getItemId());
             }
         }
         return allItems;
@@ -553,7 +553,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
         Scoring definition = persistenceService.load(scoringId, Scoring.class);
         if (definition != null) {
             for (ScoringElement element : definition.getElements()) {
-                ParserHelper.resolveConditionType(definitionsService, element.getCondition());
+                ParserHelper.resolveConditionType(definitionsService, element.getCondition(), "scoring " + scoringId);
             }
         }
         return definition;
@@ -561,7 +561,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
 
     public void setScoringDefinition(Scoring scoring) {
         for (ScoringElement element : scoring.getElements()) {
-            ParserHelper.resolveConditionType(definitionsService, element.getCondition());
+            ParserHelper.resolveConditionType(definitionsService, element.getCondition(), "scoring " + scoring.getItemId() + " element ");
         }
         for (ScoringElement element : scoring.getElements()) {
             if (scoring.getMetadata().isEnabled() && !scoring.getMetadata().isMissingPlugins()) {
