@@ -76,7 +76,7 @@ public class IncrementInterestsIT extends BaseIT {
     public void setup() throws Exception {
         topic = createTopic("topicId");
         profile = createProfile();
-        rule = new Rule();
+        rule = new Rule(new Metadata(null, UUID.randomUUID().toString(), "IncrementInterestRule", "Test rule for IncrementInterestIT automated tests"));
     }
 
     @After
@@ -140,7 +140,16 @@ public class IncrementInterestsIT extends BaseIT {
 
         Map<String, Object> properties = new HashMap<>();
 
+        Map<String,Object> pageInfo = new HashMap<>();
+        pageInfo.put("language", "en");
+        pageInfo.put("destinationURL", "https://www.acme.com/test-page.html");
+        pageInfo.put("referringURL", "https://unomi.apache.org");
+        pageInfo.put("pageID", "ITEM_ID_PAGE");
+        pageInfo.put("pagePath", "/test-page.html");
+        pageInfo.put("pageName", "Test page");
+
         properties.put("interests", interestsAsMap);
+        properties.put("pageInfo", pageInfo);
 
         CustomItem item = new CustomItem("page", ITEM_TYPE_PAGE);
         item.setProperties(properties);
