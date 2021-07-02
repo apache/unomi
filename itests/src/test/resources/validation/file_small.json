@@ -1,0 +1,17 @@
+{
+  "sessionId": "dummy-session-id",
+  "events":[
+    {
+      "eventType":"dummy_event_type",
+      "scope":"dummy_scope",
+      "source":{
+        "itemType":"pageView",
+        "scope":"dummy_scope",
+        "itemId":"pageView",
+        "properties":{
+          "myProperty": "Well sized property"
+        }
+      }
+    }
+  ]
+}
