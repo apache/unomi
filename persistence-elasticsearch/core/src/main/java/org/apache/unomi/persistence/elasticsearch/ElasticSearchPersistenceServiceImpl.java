@@ -1232,7 +1232,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             protected Boolean execute(Object... args) throws IOException {
                 boolean executedSuccessfully = true;
                 for (String itemName : itemsMonthlyIndexed) {
-                    PutIndexTemplateRequest putIndexTemplateRequest = new PutIndexTemplateRequest("context-" + itemName + "-date-template")
+                    PutIndexTemplateRequest putIndexTemplateRequest = new PutIndexTemplateRequest(indexPrefix + "-" + itemName + "-date-template")
                             .patterns(Collections.singletonList(getMonthlyIndexForQuery(itemName)))
                             .order(1)
                             .settings("{\n" +
