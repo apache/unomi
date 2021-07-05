@@ -48,7 +48,7 @@ public class ParserHelper {
         final List<String> result = new ArrayList<String>();
         visitConditions(rootCondition, new ConditionVisitor() {
             @Override
-            public void visit(Condition condition) {
+            public void visit(Condition condition, Stack<String> conditionTypeStack) {
                 if (condition.getConditionType() == null) {
                     ConditionType conditionType = definitionsService.getConditionType(condition.getConditionTypeId());
                     if (conditionType != null) {
@@ -63,7 +63,7 @@ public class ParserHelper {
                     }
                 }
             }
-        });
+        }, new Stack<>());
         return result.isEmpty();
     }
 
@@ -71,31 +71,33 @@ public class ParserHelper {
         final List<String> result = new ArrayList<String>();
         visitConditions(rootCondition, new ConditionVisitor() {
             @Override
-            public void visit(Condition condition) {
+            public void visit(Condition condition, Stack<String> conditionTypeStack) {
                 result.add(condition.getConditionTypeId());
             }
-        });
+        }, new Stack<>());
         return result;
     }
 
-    private static void visitConditions(Condition rootCondition, ConditionVisitor visitor) {
-        visitor.visit(rootCondition);
+    private static void visitConditions(Condition rootCondition, ConditionVisitor visitor, Stack<String> conditionTypeStack) {
+        visitor.visit(rootCondition, conditionTypeStack);
+        conditionTypeStack.push(rootCondition.getConditionTypeId());
         // recursive call for sub-conditions as parameters
         for (Object parameterValue : rootCondition.getParameterValues().values()) {
             if (parameterValue instanceof Condition) {
                 Condition parameterValueCondition = (Condition) parameterValue;
-                visitConditions(parameterValueCondition, visitor);
+                visitConditions(parameterValueCondition, visitor, conditionTypeStack);
             } else if (parameterValue instanceof Collection) {
                 @SuppressWarnings("unchecked")
                 Collection<Object> valueList = (Collection<Object>) parameterValue;
                 for (Object value : valueList) {
                     if (value instanceof Condition) {
                         Condition valueCondition = (Condition) value;
-                        visitConditions(valueCondition, visitor);
+                        visitConditions(valueCondition, visitor, conditionTypeStack);
                     }
                 }
             }
         }
+        conditionTypeStack.pop();
     }
 
     public static boolean resolveActionTypes(DefinitionsService definitionsService, Rule rule) {
@@ -144,6 +146,43 @@ public class ParserHelper {
     }
 
     interface ConditionVisitor {
-        void visit(Condition condition);
+        void visit(Condition condition, Stack<String> conditionTypeStack);
+    }
+
+    public static Set<String> resolveConditionEventTypes(Condition rootCondition) {
+        if (rootCondition == null) {
+            return new HashSet<>();
+        }
+        EventTypeConditionVisitor eventTypeConditionVisitor = new EventTypeConditionVisitor();
+        visitConditions(rootCondition, eventTypeConditionVisitor, new Stack<>());
+        return eventTypeConditionVisitor.getEventTypeIds();
+    }
+
+    static class EventTypeConditionVisitor implements ConditionVisitor {
+
+        private Set<String> eventTypeIds = new HashSet<>();
+
+        public void visit(Condition condition, Stack<String> conditionTypeStack) {
+             if ("eventTypeCondition".equals(condition.getConditionTypeId())) {
+                String eventTypeId = (String) condition.getParameter("eventTypeId");
+                if (eventTypeId == null) {
+                    logger.warn("Null eventTypeId found!");
+                } else {
+                    // we must now check the stack to see how many notConditions we have in the parent stack
+                    if (conditionTypeStack.contains("notCondition")) {
+                        logger.warn("Found complex negative event type condition, will always evaluate rule");
+                        eventTypeIds.add("*");
+                    } else {
+                        eventTypeIds.add(eventTypeId);
+                    }
+                }
+            } else if (condition.getConditionType().getParentCondition() != null) {
+                visitConditions(condition.getConditionType().getParentCondition(), this, conditionTypeStack);
+            }
+        }
+
+        public Set<String> getEventTypeIds() {
+            return eventTypeIds;
+        }
     }
 }
