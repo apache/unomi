@@ -69,6 +69,8 @@ import org.apache.unomi.graphql.types.output.RootMutation;
 import org.apache.unomi.graphql.types.output.RootQuery;
 import org.apache.unomi.graphql.utils.ReflectionUtil;
 import org.apache.unomi.graphql.utils.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -85,6 +87,8 @@ import static graphql.schema.GraphQLFieldDefinition.newFieldDefinition;
 import static graphql.schema.GraphQLObjectType.newObject;
 
 public class GraphQLSchemaProvider {
+
+    private static final Logger logger = LoggerFactory.getLogger(GraphQLSchemaProvider.class.getName());
 
     private final ProfileService profileService;
 
@@ -577,10 +581,15 @@ public class GraphQLSchemaProvider {
         final Collection<EventType> unomiEventTypes = eventTypeRegistry.getAll();
         unomiEventTypes.forEach(eventType -> {
             final String typeName = UnomiToGraphQLConverter.convertEventType(eventType.getType());
+            final GraphQLInputType eventInputType = (GraphQLInputType) getFromTypeRegistry(typeName + "Input");
+            if (eventInputType == null) {
+                logger.warn("Couldn't find event input type {}", typeName + "Input, will not add it as a field.");
+                return;
+            }
 
             builder.field(GraphQLInputObjectField.newInputObjectField()
                     .name(StringUtils.decapitalize(typeName))
-                    .type((GraphQLInputType) getFromTypeRegistry(typeName + "Input"))
+                    .type(eventInputType)
                     .build());
         });
 
