@@ -63,6 +63,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
 
     private static final Logger logger = LoggerFactory.getLogger(SegmentServiceImpl.class.getName());
 
+    private static final String VALIDATION_PROFILE_ID = "validation-profile-id";
     private BundleContext bundleContext;
 
     private EventService eventService;
@@ -258,7 +259,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
 
     public void setSegmentDefinition(Segment segment) {
         ParserHelper.resolveConditionType(definitionsService, segment.getCondition(), "segment " + segment.getItemId());
-        if (!persistenceService.isValidCondition(segment.getCondition(), new Profile())) {
+        if (!persistenceService.isValidCondition(segment.getCondition(), new Profile(VALIDATION_PROFILE_ID))) {
             throw new BadSegmentConditionException();
         }
 
