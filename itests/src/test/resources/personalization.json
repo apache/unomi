@@ -32,9 +32,33 @@
                 "parameterValues": {
                   "minimumEventCount": 1,
                   "eventCondition": {
-                    "type": "pageViewEventCondition",
+                    "type": "booleanCondition",
                     "parameterValues": {
-                      "pageID": "ac02dbe3-2445-4727-acea-50cfed001996"
+                      "operator": "and",
+                      "subConditions" : [
+                        {
+                          "type": "eventTypeCondition",
+                          "parameterValues": {
+                            "eventTypeId": "view"
+                          }
+                        },
+                        {
+                          "type": "eventPropertyCondition",
+                          "parameterValues": {
+                            "propertyName": "target.properties.pageInfo.pagePath",
+                            "propertyValue": "/",
+                            "comparisonOperator": "equals"
+                          }
+                        },
+                        {
+                          "type": "eventPropertyCondition",
+                          "parameterValues": {
+                            "propertyName": "target.properties.pageInfo.language",
+                            "propertyValue": "en",
+                            "comparisonOperator": "equals"
+                          }
+                        }
+                      ]
                     }
                   },
                   "numberOfDays": 30
@@ -59,9 +83,33 @@
                 "parameterValues": {
                   "minimumEventCount": 1,
                   "eventCondition": {
-                    "type": "pageViewEventCondition",
+                    "type": "booleanCondition",
                     "parameterValues": {
-                      "pageID": "62194fdd-2a1c-46ce-8f9b-19dc168f3454"
+                      "operator": "and",
+                      "subConditions" : [
+                        {
+                          "type": "eventTypeCondition",
+                          "parameterValues": {
+                            "eventTypeId": "view"
+                          }
+                        },
+                        {
+                          "type": "eventPropertyCondition",
+                          "parameterValues": {
+                            "propertyName": "target.properties.pageInfo.pagePath",
+                            "propertyValue": "/contactus.html",
+                            "comparisonOperator": "equals"
+                          }
+                        },
+                        {
+                          "type": "eventPropertyCondition",
+                          "parameterValues": {
+                            "propertyName": "target.properties.pageInfo.language",
+                            "propertyValue": "en",
+                            "comparisonOperator": "equals"
+                          }
+                        }
+                      ]
                     }
                   },
                   "numberOfDays": 30
@@ -84,9 +132,33 @@
                 "parameterValues": {
                   "minimumEventCount": 1,
                   "eventCondition": {
-                    "type": "pageViewEventCondition",
+                    "type": "booleanCondition",
                     "parameterValues": {
-                      "pageID": "dbb3a797-d24e-4701-97ad-dc0a708fa06f"
+                      "operator": "and",
+                      "subConditions" : [
+                        {
+                          "type": "eventTypeCondition",
+                          "parameterValues": {
+                            "eventTypeId": "view"
+                          }
+                        },
+                        {
+                          "type": "eventPropertyCondition",
+                          "parameterValues": {
+                            "propertyName": "target.properties.pageInfo.pagePath",
+                            "propertyValue": "/documentation.html",
+                            "comparisonOperator": "equals"
+                          }
+                        },
+                        {
+                          "type": "eventPropertyCondition",
+                          "parameterValues": {
+                            "propertyName": "target.properties.pageInfo.language",
+                            "propertyValue": "en",
+                            "comparisonOperator": "equals"
+                          }
+                        }
+                      ]
                     }
                   },
                   "numberOfDays": 30
@@ -109,9 +181,33 @@
                 "parameterValues": {
                   "minimumEventCount": 1,
                   "eventCondition": {
-                    "type": "pageViewEventCondition",
+                    "type": "booleanCondition",
                     "parameterValues": {
-                      "pageID": "90664d1d-6558-4239-a024-8212f2652673"
+                      "operator": "and",
+                      "subConditions" : [
+                        {
+                          "type": "eventTypeCondition",
+                          "parameterValues": {
+                            "eventTypeId": "view"
+                          }
+                        },
+                        {
+                          "type": "eventPropertyCondition",
+                          "parameterValues": {
+                            "propertyName": "target.properties.pageInfo.pagePath",
+                            "propertyValue": "/aboutus.html",
+                            "comparisonOperator": "equals"
+                          }
+                        },
+                        {
+                          "type": "eventPropertyCondition",
+                          "parameterValues": {
+                            "propertyName": "target.properties.pageInfo.language",
+                            "propertyValue": "en",
+                            "comparisonOperator": "equals"
+                          }
+                        }
+                      ]
                     }
                   },
                   "numberOfDays": 30
@@ -134,9 +230,33 @@
                 "parameterValues": {
                   "minimumEventCount": 1,
                   "eventCondition": {
-                    "type": "pageViewEventCondition",
+                    "type": "booleanCondition",
                     "parameterValues": {
-                      "pageID": "f13af275-2002-4200-bd58-96847c74dafb"
+                      "operator": "and",
+                      "subConditions" : [
+                        {
+                          "type": "eventTypeCondition",
+                          "parameterValues": {
+                            "eventTypeId": "view"
+                          }
+                        },
+                        {
+                          "type": "eventPropertyCondition",
+                          "parameterValues": {
+                            "propertyName": "target.properties.pageInfo.pagePath",
+                            "propertyValue": "/products.html",
+                            "comparisonOperator": "equals"
+                          }
+                        },
+                        {
+                          "type": "eventPropertyCondition",
+                          "parameterValues": {
+                            "propertyName": "target.properties.pageInfo.language",
+                            "propertyValue": "en",
+                            "comparisonOperator": "equals"
+                          }
+                        }
+                      ]
                     }
                   },
                   "numberOfDays": 30
@@ -159,9 +279,33 @@
                 "parameterValues": {
                   "minimumEventCount": 1,
                   "eventCondition": {
-                    "type": "pageViewEventCondition",
+                    "type": "booleanCondition",
                     "parameterValues": {
-                      "pageID": "2305ab1a-f6b1-47c1-bc46-a8c69c553d87"
+                      "operator": "and",
+                      "subConditions" : [
+                        {
+                          "type": "eventTypeCondition",
+                          "parameterValues": {
+                            "eventTypeId": "view"
+                          }
+                        },
+                        {
+                          "type": "eventPropertyCondition",
+                          "parameterValues": {
+                            "propertyName": "target.properties.pageInfo.pagePath",
+                            "propertyValue": "/services.html",
+                            "comparisonOperator": "equals"
+                          }
+                        },
+                        {
+                          "type": "eventPropertyCondition",
+                          "parameterValues": {
+                            "propertyName": "target.properties.pageInfo.language",
+                            "propertyValue": "en",
+                            "comparisonOperator": "equals"
+                          }
+                        }
+                      ]
                     }
                   },
                   "numberOfDays": 30
@@ -184,9 +328,33 @@
                 "parameterValues": {
                   "minimumEventCount": 1,
                   "eventCondition": {
-                    "type": "pageViewEventCondition",
+                    "type": "booleanCondition",
                     "parameterValues": {
-                      "pageID": "50c4064c-ef6e-4afe-adcf-f876111f50bc"
+                      "operator": "and",
+                      "subConditions" : [
+                        {
+                          "type": "eventTypeCondition",
+                          "parameterValues": {
+                            "eventTypeId": "view"
+                          }
+                        },
+                        {
+                          "type": "eventPropertyCondition",
+                          "parameterValues": {
+                            "propertyName": "target.properties.pageInfo.pagePath",
+                            "propertyValue": "/community.html",
+                            "comparisonOperator": "equals"
+                          }
+                        },
+                        {
+                          "type": "eventPropertyCondition",
+                          "parameterValues": {
+                            "propertyName": "target.properties.pageInfo.language",
+                            "propertyValue": "en",
+                            "comparisonOperator": "equals"
+                          }
+                        }
+                      ]
                     }
                   },
                   "numberOfDays": 30
@@ -209,9 +377,33 @@
                 "parameterValues": {
                   "minimumEventCount": 1,
                   "eventCondition": {
-                    "type": "pageViewEventCondition",
+                    "type": "booleanCondition",
                     "parameterValues": {
-                      "pageID": "55371bb0-c516-4038-ab6d-0acab57b4790"
+                      "operator": "and",
+                      "subConditions" : [
+                        {
+                          "type": "eventTypeCondition",
+                          "parameterValues": {
+                            "eventTypeId": "view"
+                          }
+                        },
+                        {
+                          "type": "eventPropertyCondition",
+                          "parameterValues": {
+                            "propertyName": "target.properties.pageInfo.pagePath",
+                            "propertyValue": "/projects.html",
+                            "comparisonOperator": "equals"
+                          }
+                        },
+                        {
+                          "type": "eventPropertyCondition",
+                          "parameterValues": {
+                            "propertyName": "target.properties.pageInfo.language",
+                            "propertyValue": "en",
+                            "comparisonOperator": "equals"
+                          }
+                        }
+                      ]
                     }
                   },
                   "numberOfDays": 30
@@ -234,9 +426,33 @@
                 "parameterValues": {
                   "minimumEventCount": 1,
                   "eventCondition": {
-                    "type": "pageViewEventCondition",
+                    "type": "booleanCondition",
                     "parameterValues": {
-                      "pageID": "eaaa15eb-e2c2-49cf-bb99-20ea90bd3fdb"
+                      "operator": "and",
+                      "subConditions" : [
+                        {
+                          "type": "eventTypeCondition",
+                          "parameterValues": {
+                            "eventTypeId": "view"
+                          }
+                        },
+                        {
+                          "type": "eventPropertyCondition",
+                          "parameterValues": {
+                            "propertyName": "target.properties.pageInfo.pagePath",
+                            "propertyValue": "/home.html",
+                            "comparisonOperator": "equals"
+                          }
+                        },
+                        {
+                          "type": "eventPropertyCondition",
+                          "parameterValues": {
+                            "propertyName": "target.properties.pageInfo.language",
+                            "propertyValue": "en",
+                            "comparisonOperator": "equals"
+                          }
+                        }
+                      ]
                     }
                   },
                   "numberOfDays": 30
@@ -259,9 +475,33 @@
                 "parameterValues": {
                   "minimumEventCount": 1,
                   "eventCondition": {
-                    "type": "pageViewEventCondition",
+                    "type": "booleanCondition",
                     "parameterValues": {
-                      "pageID": "15cdd5dd-909d-4d91-8f79-62226b96843a"
+                      "operator": "and",
+                      "subConditions" : [
+                        {
+                          "type": "eventTypeCondition",
+                          "parameterValues": {
+                            "eventTypeId": "view"
+                          }
+                        },
+                        {
+                          "type": "eventPropertyCondition",
+                          "parameterValues": {
+                            "propertyName": "target.properties.pageInfo.pagePath",
+                            "propertyValue": "/theend.html",
+                            "comparisonOperator": "equals"
+                          }
+                        },
+                        {
+                          "type": "eventPropertyCondition",
+                          "parameterValues": {
+                            "propertyName": "target.properties.pageInfo.language",
+                            "propertyValue": "en",
+                            "comparisonOperator": "equals"
+                          }
+                        }
+                      ]
                     }
                   },
                   "numberOfDays": 30
