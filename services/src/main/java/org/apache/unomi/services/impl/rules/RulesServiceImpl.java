@@ -168,13 +168,16 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
         Set<Rule> eventTypeRules = new HashSet<>(allRules); // local copy to avoid concurrency issues
         if (optimizedRulesActivated) {
             eventTypeRules = rulesByEventType.get(event.getEventType());
-            if (eventTypeRules == null || eventTypeRules.isEmpty()) {
-                return matchedRules;
+            if (eventTypeRules == null) {
+                eventTypeRules = new HashSet<>();
             }
-            eventTypeRules = new HashSet<>(eventTypeRules);
+            eventTypeRules = new HashSet<>(eventTypeRules); // local copy to avoid concurrency issues
             Set<Rule> allEventRules = rulesByEventType.get("*");
             if (allEventRules != null && !allEventRules.isEmpty()) {
                 eventTypeRules.addAll(allEventRules); // retrieve rules that should always be evaluated.
+            }
+            if (eventTypeRules.isEmpty()) {
+                return matchedRules;
             }
         }
 
@@ -365,7 +368,6 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
         Rule rule = persistenceService.load(ruleId, Rule.class);
         if (rule != null) {
             ParserHelper.resolveConditionType(definitionsService, rule.getCondition(), "rule " + rule.getItemId());
-            updateRulesByEventType(rulesByEventType, rule);
             ParserHelper.resolveActionTypes(definitionsService, rule);
         }
         return rule;
@@ -379,7 +381,6 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
         if (condition != null) {
             if (rule.getMetadata().isEnabled() && !rule.getMetadata().isMissingPlugins()) {
                 ParserHelper.resolveConditionType(definitionsService, condition, "rule " + rule.getItemId());
-                updateRulesByEventType(rulesByEventType, rule);
                 definitionsService.extractConditionBySystemTag(condition, "eventCondition");
             }
         }
@@ -411,18 +412,6 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
 
     public void removeRule(String ruleId) {
         persistenceService.remove(ruleId, Rule.class);
-    }
-
-    @Override
-    public void setSetting(String fieldName, Object value) throws NoSuchFieldException, IllegalAccessException {
-        Field field = this.getClass().getDeclaredField(fieldName);
-        field.set(this, value);
-    }
-
-    @Override
-    public Object getSetting(String fieldName) throws NoSuchFieldException, IllegalAccessException {
-        Field field = this.getClass().getDeclaredField(fieldName);
-        return field.get(this);
     }
 
     private void initializeTimers() {

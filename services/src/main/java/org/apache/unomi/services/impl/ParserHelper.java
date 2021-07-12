@@ -48,7 +48,7 @@ public class ParserHelper {
         final List<String> result = new ArrayList<String>();
         visitConditions(rootCondition, new ConditionVisitor() {
             @Override
-            public void visit(Condition condition, Stack<String> conditionTypeStack) {
+            public void visit(Condition condition) {
                 if (condition.getConditionType() == null) {
                     ConditionType conditionType = definitionsService.getConditionType(condition.getConditionTypeId());
                     if (conditionType != null) {
@@ -63,7 +63,11 @@ public class ParserHelper {
                     }
                 }
             }
-        }, new Stack<>());
+
+            @Override
+            public void postVisit(Condition condition) {
+            }
+        });
         return result.isEmpty();
     }
 
@@ -71,33 +75,36 @@ public class ParserHelper {
         final List<String> result = new ArrayList<String>();
         visitConditions(rootCondition, new ConditionVisitor() {
             @Override
-            public void visit(Condition condition, Stack<String> conditionTypeStack) {
+            public void visit(Condition condition) {
                 result.add(condition.getConditionTypeId());
             }
-        }, new Stack<>());
+
+            @Override
+            public void postVisit(Condition condition) {
+
+            }
+        });
         return result;
     }
 
-    private static void visitConditions(Condition rootCondition, ConditionVisitor visitor, Stack<String> conditionTypeStack) {
-        visitor.visit(rootCondition, conditionTypeStack);
-        conditionTypeStack.push(rootCondition.getConditionTypeId());
+    private static void visitConditions(Condition rootCondition, ConditionVisitor visitor) {
+        visitor.visit(rootCondition);
         // recursive call for sub-conditions as parameters
         for (Object parameterValue : rootCondition.getParameterValues().values()) {
             if (parameterValue instanceof Condition) {
                 Condition parameterValueCondition = (Condition) parameterValue;
-                visitConditions(parameterValueCondition, visitor, conditionTypeStack);
+                visitConditions(parameterValueCondition, visitor);
             } else if (parameterValue instanceof Collection) {
                 @SuppressWarnings("unchecked")
                 Collection<Object> valueList = (Collection<Object>) parameterValue;
                 for (Object value : valueList) {
                     if (value instanceof Condition) {
                         Condition valueCondition = (Condition) value;
-                        visitConditions(valueCondition, visitor, conditionTypeStack);
+                        visitConditions(valueCondition, visitor);
                     }
                 }
             }
         }
-        conditionTypeStack.pop();
     }
 
     public static boolean resolveActionTypes(DefinitionsService definitionsService, Rule rule) {
@@ -146,7 +153,8 @@ public class ParserHelper {
     }
 
     interface ConditionVisitor {
-        void visit(Condition condition, Stack<String> conditionTypeStack);
+        void visit(Condition condition);
+        void postVisit(Condition condition);
     }
 
     public static Set<String> resolveConditionEventTypes(Condition rootCondition) {
@@ -154,15 +162,17 @@ public class ParserHelper {
             return new HashSet<>();
         }
         EventTypeConditionVisitor eventTypeConditionVisitor = new EventTypeConditionVisitor();
-        visitConditions(rootCondition, eventTypeConditionVisitor, new Stack<>());
+        visitConditions(rootCondition, eventTypeConditionVisitor);
         return eventTypeConditionVisitor.getEventTypeIds();
     }
 
     static class EventTypeConditionVisitor implements ConditionVisitor {
 
         private Set<String> eventTypeIds = new HashSet<>();
+        private Stack<String> conditionTypeStack = new Stack<>();
 
-        public void visit(Condition condition, Stack<String> conditionTypeStack) {
+        public void visit(Condition condition) {
+            conditionTypeStack.push(condition.getConditionTypeId());
              if ("eventTypeCondition".equals(condition.getConditionTypeId())) {
                 String eventTypeId = (String) condition.getParameter("eventTypeId");
                 if (eventTypeId == null) {
@@ -177,8 +187,12 @@ public class ParserHelper {
                     }
                 }
             } else if (condition.getConditionType().getParentCondition() != null) {
-                visitConditions(condition.getConditionType().getParentCondition(), this, conditionTypeStack);
+                visitConditions(condition.getConditionType().getParentCondition(), this);
             }
+        }
+
+        public void postVisit(Condition condition) {
+            conditionTypeStack.pop();
         }
 
         public Set<String> getEventTypeIds() {

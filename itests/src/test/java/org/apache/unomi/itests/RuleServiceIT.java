@@ -18,10 +18,8 @@ package org.apache.unomi.itests;
 
 import org.apache.unomi.api.*;
 import org.apache.unomi.api.rules.Rule;
-import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.api.services.RulesService;
-import org.apache.unomi.persistence.spi.PersistenceService;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -34,6 +32,7 @@ import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
 
+import java.io.IOException;
 import java.util.*;
 
 import static org.junit.Assert.*;
@@ -57,14 +56,6 @@ public class RuleServiceIT extends BaseIT {
     @Inject
     @Filter(timeout = 600000)
     protected EventService eventService;
-
-    @Inject
-    @Filter(timeout = 600000)
-    protected PersistenceService persistenceService;
-
-    @Inject
-    @Filter(timeout = 600000)
-    protected DefinitionsService definitionsService;
 
     @Before
     public void setUp() {
@@ -114,11 +105,16 @@ public class RuleServiceIT extends BaseIT {
 
         Profile profile = new Profile(UUID.randomUUID().toString());
         Session session = new Session(UUID.randomUUID().toString(), profile, new Date(), TEST_SCOPE);
-        Event viewEvent = new Event(UUID.randomUUID().toString(), "view", session, profile, TEST_SCOPE, null, null, new Date());
+        Event viewEvent = generateViewEvent(session, profile);
         Set<Rule> matchingRules = rulesService.getMatchingRules(viewEvent);
 
         assertTrue("Simple rule should be matched", matchingRules.contains(simpleEventTypeRule));
         assertFalse("Complex rule should NOT be matched", matchingRules.contains(complexEventTypeRule));
+
+        Event loginEvent = new Event(UUID.randomUUID().toString(), "login", session, profile, TEST_SCOPE, null, null, new Date());
+        matchingRules = rulesService.getMatchingRules(loginEvent);
+        assertTrue("Complex rule should be matched", matchingRules.contains(complexEventTypeRule));
+        assertFalse("Simple rule should NOT be matched", matchingRules.contains(simpleEventTypeRule));
 
         rulesService.removeRule(simpleEventTypeRule.getItemId());
         rulesService.removeRule(complexEventTypeRule.getItemId());
@@ -127,16 +123,16 @@ public class RuleServiceIT extends BaseIT {
     }
 
     @Test
-    public void testRuleOptimizationPerf() throws NoSuchFieldException, IllegalAccessException {
+    public void testRuleOptimizationPerf() throws NoSuchFieldException, IllegalAccessException, IOException, InterruptedException {
         Profile profile = new Profile(UUID.randomUUID().toString());
         Session session = new Session(UUID.randomUUID().toString(), profile, new Date(), TEST_SCOPE);
 
-        rulesService.setSetting("optimizedRulesActivated", false);
+        updateConfiguration(RulesService.class.getName(), "org.apache.unomi.services", "rules.optimizationActivated", "false");
 
         LOGGER.info("Running unoptimized rules performance test...");
         long unoptimizedRunTime = runEventTest(profile, session);
 
-        rulesService.setSetting("optimizedRulesActivated", true);
+        updateConfiguration(RulesService.class.getName(), "org.apache.unomi.services", "rules.optimizationActivated", "true");
 
         LOGGER.info("Running optimized rules performance test...");
         long optimizedRunTime = runEventTest(profile, session);
@@ -146,6 +142,7 @@ public class RuleServiceIT extends BaseIT {
     }
 
     private long runEventTest(Profile profile, Session session) {
+        LOGGER.info("eventService={}", eventService);
         Event viewEvent = generateViewEvent(session, profile);
         int loopCount = 0;
         long startTime = System.currentTimeMillis();
@@ -177,5 +174,12 @@ public class RuleServiceIT extends BaseIT {
 
         targetItem.setProperties(targetProperties);
         return new Event(UUID.randomUUID().toString(), "view", session, profile, TEST_SCOPE, sourceItem, targetItem, new Date());
+    }
+
+    @Override
+    public void updateServices() throws InterruptedException {
+        super.updateServices();
+        rulesService = getService(RulesService.class);
+        eventService = getService(EventService.class);
     }
 }
