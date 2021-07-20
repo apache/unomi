@@ -81,7 +81,6 @@ public class ParserHelper {
 
             @Override
             public void postVisit(Condition condition) {
-
             }
         });
         return result;
@@ -105,6 +104,7 @@ public class ParserHelper {
                 }
             }
         }
+        visitor.postVisit(rootCondition);
     }
 
     public static boolean resolveActionTypes(DefinitionsService definitionsService, Rule rule) {

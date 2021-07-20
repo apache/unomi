@@ -36,7 +36,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.lang.reflect.Field;
 import java.net.URL;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -264,24 +263,32 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
 
     public void refreshRules() {
         try {
-            allRules = getAllRules();
+            // we use local variables to make sure we quickly switch the collections since the refresh is called often
+            // we want to avoid concurrency issues with the shared collections
+            List<Rule> newAllRules = getAllRules();
+            this.rulesByEventType = getRulesByEventType(newAllRules);
+            this.allRules = newAllRules;
         } catch (Throwable t) {
             logger.error("Error loading rules from persistence back-end", t);
         }
     }
 
     private List<Rule> getAllRules() {
-        List<Rule> allItems = persistenceService.getAllItems(Rule.class, 0, -1, "priority").getList();
-        Map<String,Set<Rule>> newRulesByEventType = new HashMap<>();
-        for (Rule rule : allItems) {
+        List<Rule> rules = persistenceService.getAllItems(Rule.class, 0, -1, "priority").getList();
+        for (Rule rule : rules) {
             ParserHelper.resolveConditionType(definitionsService, rule.getCondition(), "rule " + rule.getItemId());
-            updateRulesByEventType(newRulesByEventType, rule);
             ParserHelper.resolveActionTypes(definitionsService, rule);
         }
-        this.rulesByEventType = newRulesByEventType;
-        return allItems;
+        return rules;
     }
 
+    private Map<String,Set<Rule>> getRulesByEventType(List<Rule> rules) {
+        Map<String,Set<Rule>> newRulesByEventType = new HashMap<>();
+        for (Rule rule : rules) {
+            updateRulesByEventType(newRulesByEventType, rule);
+        }
+        return newRulesByEventType;
+    }
 
     public boolean canHandle(Event event) {
         return true;
