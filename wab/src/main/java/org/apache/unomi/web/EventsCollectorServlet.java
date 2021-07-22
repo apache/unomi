@@ -28,7 +28,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 
 /**
- * @deprecated please use the rest endpoint {@link org.apache.unomi.rest.EventsCollectorEndpoint} instead of this servlet
+ * @deprecated this servlet is now deprecated, because it have been migrated to REST endpoint.
  */
 @Deprecated
 public class EventsCollectorServlet extends HttpServlet {
