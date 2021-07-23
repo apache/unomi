@@ -25,7 +25,6 @@ import org.apache.unomi.persistence.spi.PropertyHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
@@ -70,38 +69,19 @@ public class SetPropertyAction implements ActionExecutor {
                 propertyValue = PropertyHelper.getBooleanValue(setPropertyValueBoolean);
             }
         }
+        
         if (propertyValue != null && propertyValue.equals("now")) {
             SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
             format.setTimeZone(TimeZone.getTimeZone("UTC"));
-
-            Date date = new Date();
-            Date firstVisit = new Date();
-
-            Object propertyFirstVisit = event.getProfile().getProperties().get("firstVisit");
-            try {
-                if (propertyFirstVisit != null) {
-                    if (propertyFirstVisit instanceof String) {
-                        firstVisit = format.parse((String) propertyFirstVisit);
-                    } else if (propertyFirstVisit instanceof Date) {
-                        firstVisit = (Date) propertyFirstVisit;
-                    } else {
-                        firstVisit = format.parse(propertyFirstVisit.toString());
-                    }
-                }
-
-                if (event.getTimeStamp().after(firstVisit)) {
-                    date = event.getTimeStamp();
-                }
-            } catch (ParseException e) {
-                logger.error("Error parsing firstVisit date property. See debug log level for more information");
-                if (logger.isDebugEnabled()) {
-                    logger.debug("Error parsing date: {}", propertyFirstVisit, e);
-                }
-            }
-
-            propertyValue = format.format(date);
+            propertyValue = format.format(event.getTimeStamp());
         }
 
+        if (propertyValue != null && propertyValue.equals("currentTimestamp")) {
+            SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
+            format.setTimeZone(TimeZone.getTimeZone("UTC"));
+            propertyValue = format.format(new Date());
+        }
+        
         if (storeInSession) {
             // in the case of session storage we directly update the session
             if (PropertyHelper.setProperty(event.getSession(), propertyName, propertyValue, (String) action.getParameterValues().get("setPropertyStrategy"))) {

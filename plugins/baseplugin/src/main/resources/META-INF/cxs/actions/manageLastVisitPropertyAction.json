@@ -1,0 +1,27 @@
+{
+  "metadata": {
+    "id": "manageLastVisitPropertyAction",
+    "name": "manageLastVisitPropertyAction",
+    "description": "",
+    "systemTags": [],
+    "readOnly": true
+  },
+  "actionExecutor": "manageLastVisitPropertyAction",
+  "parameters": [
+    {
+      "id": "setPropertyName",
+      "type": "string",
+      "multivalued": false
+    },
+    {
+      "id": "setPropertyValue",
+      "type": "string",
+      "multivalued": false
+    },
+    {
+      "id": "storeInSession",
+      "type": "boolean",
+      "multivalued": false
+    }
+  ]
+}
