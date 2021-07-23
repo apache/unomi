@@ -22,7 +22,7 @@
     <parent>
         <groupId>org.apache.unomi</groupId>
         <artifactId>unomi-persistence-elasticsearch</artifactId>
-        <version>1.5.7</version>
+        <version>1.5.8-SNAPSHOT</version>
     </parent>
 
     <artifactId>unomi-persistence-elasticsearch-core</artifactId>
