@@ -125,6 +125,15 @@ public class RestServer {
             @Override
             public Object addingService(ServiceReference reference) {
                 Object serviceBean = bundleContext.getService(reference);
+                while (serviceBean == null) {
+                    logger.info("Waiting for service " + reference.getProperty("objectClass") + " to become available...");
+                    serviceBean = bundleContext.getService(reference);
+                    try {
+                        Thread.sleep(100);
+                    } catch (InterruptedException e) {
+                        logger.warn("Interrupted thread exception", e);
+                    }
+                }
                 logger.info("Registering JAX RS service " + serviceBean.getClass().getName());
                 serviceBeans.add(serviceBean);
                 timeOfLastUpdate = System.currentTimeMillis();
@@ -141,9 +150,8 @@ public class RestServer {
 
             @Override
             public void removedService(ServiceReference reference, Object service) {
-                Object serviceBean = bundleContext.getService(reference);
-                logger.info("Removing JAX RS service " + serviceBean.getClass().getName());
-                serviceBeans.remove(serviceBean);
+                logger.info("Removing JAX RS service " + service.getClass().getName());
+                serviceBeans.remove(service);
                 timeOfLastUpdate = System.currentTimeMillis();
                 refreshServer();
             }
