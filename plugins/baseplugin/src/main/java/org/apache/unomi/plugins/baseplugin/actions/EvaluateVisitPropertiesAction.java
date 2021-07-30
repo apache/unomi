@@ -45,27 +45,30 @@ public class EvaluateVisitPropertiesAction implements ActionExecutor {
 
         Date currentEventTimeStamp = event.getTimeStamp();
         Date currentProfileFirstVisit = extractDateFromProperty(event.getProfile(), "firstVisit", dateFormat);
+        Date currentProfilePreviousVisit = extractDateFromProperty(event.getProfile(), "previousVisit", dateFormat);
         Date currentProfileLastVisit = extractDateFromProperty(event.getProfile(), "lastVisit", dateFormat);
 
         int result = EventService.NO_CHANGE;
 
-        // check update firstVisit
         if (currentProfileFirstVisit == null || currentProfileFirstVisit.after(currentEventTimeStamp)) {
+            // event < firstVisit < previousVisit < lastVisit. we need to update firstVisit
             result = PropertyHelper.setProperty(event.getProfile(), "properties.firstVisit", dateFormat.format(currentEventTimeStamp), "alwaysSet") ?
                     EventService.PROFILE_UPDATED : result;
         }
 
-        // check update lastVisit and previousVisit
         if (currentProfileLastVisit == null || currentProfileLastVisit.before(currentEventTimeStamp)) {
-            // update lastVisit
+            // firstVisit < previousVisit < lastVisit < event. we need to update lastVisit and previousVisit
             if (PropertyHelper.setProperty(event.getProfile(), "properties.lastVisit", dateFormat.format(currentEventTimeStamp), "alwaysSet")) {
                 result = EventService.PROFILE_UPDATED;
 
-                // check update previousVisit
                 if (currentProfileLastVisit != null) {
                     PropertyHelper.setProperty(event.getProfile(), "properties.previousVisit", dateFormat.format(currentProfileLastVisit), "alwaysSet");
                 }
             }
+        } else if (currentProfilePreviousVisit != null && currentProfilePreviousVisit.before(currentEventTimeStamp)) {
+            // firstVisit < previousVisit < event < lastVisit. we need to update previousVisit
+            result = PropertyHelper.setProperty(event.getProfile(), "properties.previousVisit", dateFormat.format(currentEventTimeStamp), "alwaysSet") ?
+                    EventService.PROFILE_UPDATED : result;
         }
 
         return result;

@@ -297,6 +297,22 @@ public class PropertiesUpdateActionIT extends BaseIT {
         Assert.assertEquals("lastVisit should be updated", eventTimeStamp3, profile.getProperty("lastVisit"));
         Assert.assertEquals("firstVisit should not be updated", eventTimeStamp2, profile.getProperty("firstVisit"));
         Assert.assertEquals("previousVisit should be updated", eventTimeStamp1, profile.getProperty("previousVisit"));
+
+        // test event dated +5 hours: should update only previousVisit
+        eventTimeStamp = new Date();
+        ldt = LocalDateTime.ofInstant(eventTimeStamp.toInstant(), ZoneId.systemDefault());
+        ldt = ldt.plusHours(5);
+        eventTimeStamp = Date.from(ldt.atZone(ZoneId.systemDefault()).toInstant());
+        String eventTimeStamp4 = dateFormat.format(eventTimeStamp);
+        sessionReassigned = new Event("sessionReassigned", null, profile, null, null, profile, eventTimeStamp);
+        sessionReassigned.setPersistent(false);
+        eventService.send(sessionReassigned);
+        profileService.save(profile);
+        refreshPersistence();
+        profile = profileService.load(PROFILE_TEST_ID);
+        Assert.assertEquals("lastVisit should not be updated", eventTimeStamp3, profile.getProperty("lastVisit"));
+        Assert.assertEquals("firstVisit should not be updated", eventTimeStamp2, profile.getProperty("firstVisit"));
+        Assert.assertEquals("previousVisit should be updated", eventTimeStamp4, profile.getProperty("previousVisit"));
     }
 
     @Test

@@ -80,6 +80,9 @@ public class BasicIT extends BaseIT {
     private static final String FIRST_NAME = "firstName";
     private static final String LAST_NAME = "lastName";
     private static final String EMAIL = "email";
+    private static final String FIRST_VISIT = "firstVisit";
+    private static final String LAST_VISIT = "lastVisit";
+    private static final String PREVIOUS_VISIT = "previousVisit";
 
     private static final String FIRST_NAME_VISITOR_1 = "firstNameVisitor1";
     private static final String FIRST_NAME_VISITOR_2 = "firstNameVisitor2";
@@ -278,7 +281,7 @@ public class BasicIT extends BaseIT {
         contextRequest.setSource(sourceSite);
         contextRequest.setRequireSegments(false);
         contextRequest.setEvents(Collections.singletonList(loginEvent));
-        contextRequest.setRequiredProfileProperties(Arrays.asList(FIRST_NAME, LAST_NAME, EMAIL, "firstVisit", "lastVisit", "previousVisit"));
+        contextRequest.setRequiredProfileProperties(Arrays.asList(FIRST_NAME, LAST_NAME, EMAIL, FIRST_VISIT, LAST_VISIT, PREVIOUS_VISIT));
         contextRequest.setSessionId(sessionId);
         return contextRequest;
     }
@@ -303,7 +306,7 @@ public class BasicIT extends BaseIT {
         contextRequest.setSource(customPageItem);
         contextRequest.setRequireSegments(false);
         contextRequest.setEvents(Collections.singletonList(pageViewEvent));
-        contextRequest.setRequiredProfileProperties(Arrays.asList(FIRST_NAME, LAST_NAME, EMAIL, "firstVisit", "lastVisit", "previousVisit"));
+        contextRequest.setRequiredProfileProperties(Arrays.asList(FIRST_NAME, LAST_NAME, EMAIL, FIRST_VISIT, LAST_VISIT, PREVIOUS_VISIT));
         return contextRequest;
     }
 
