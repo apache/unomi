@@ -82,35 +82,6 @@ public interface PersistenceService {
     <T extends Item> PartialList<T> getAllItems(final Class<T> clazz, int offset, int size, String sortBy, String scrollTimeValidity);
 
     /**
-     * Set settings of the persistence service
-     *
-     * @param settings map of setting name and it's value
-     * @throws NoSuchFieldException if the field does not exist
-     * @throws IllegalAccessException field is not accessible to be changed
-     */
-    void setSettings(Map<String, Object> settings) throws NoSuchFieldException, IllegalAccessException;
-
-    /**
-     * Set settings of the persistence service
-     *
-     * @param fieldName name of the field to set
-     * @param value value of the field to set
-     * @throws NoSuchFieldException if the field does not exist
-     * @throws IllegalAccessException field is not accessible to be changed
-     */
-    void setSetting(String fieldName, Object value) throws NoSuchFieldException, IllegalAccessException;
-
-    /**
-     * Get settings of the persistence service
-     *
-     * @param fieldName name of the field to get
-     * @return an object corresponding to the field that was accessed
-     * @throws NoSuchFieldException if the field does not exist
-     * @throws IllegalAccessException field is not accessible to be changed
-     */
-    Object getSetting(String fieldName) throws NoSuchFieldException, IllegalAccessException;
-
-    /**
      * Return true if the item which is saved in the persistence service is consistent
      *
      * @param item the item to the check if consistent

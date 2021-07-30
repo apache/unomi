@@ -190,7 +190,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     public static final String PRIMARY_TERM = "primary_term";
 
     private static final Logger logger = LoggerFactory.getLogger(ElasticSearchPersistenceServiceImpl.class.getName());
-    private static boolean throwExceptions = false;
+    private boolean throwExceptions = false;
     private RestHighLevelClient client;
     private BulkProcessor bulkProcessor;
     private String elasticSearchAddresses;
@@ -438,7 +438,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     public void start() throws Exception {
 
         // on startup
-        new InClassLoaderExecute<Object>(null, null, this.bundleContext, this.fatalIllegalStateErrors) {
+        new InClassLoaderExecute<Object>(null, null, this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
             public Object execute(Object... args) throws Exception {
 
                 bulkProcessorConcurrentRequests = System.getProperty(BULK_PROCESSOR_CONCURRENT_REQUESTS, bulkProcessorConcurrentRequests);
@@ -644,7 +644,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     public void stop() {
 
-        new InClassLoaderExecute<Object>(null, null, this.bundleContext, this.fatalIllegalStateErrors) {
+        new InClassLoaderExecute<Object>(null, null, this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
             protected Object execute(Object... args) throws IOException {
                 logger.info("Closing ElasticSearch persistence backend...");
                 if (bulkProcessor != null) {
@@ -766,27 +766,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             }
         }
     }
-
-    @Override
-    public void setSettings(Map<String, Object> settings) throws NoSuchFieldException, IllegalAccessException {
-        for (Map.Entry<String, Object> setting : settings.entrySet())
-            setSetting(setting.getKey(), setting.getValue());
-    }
-
-    @Override
-    public void setSetting(String fieldName, Object value) throws NoSuchFieldException, IllegalAccessException {
-        Field field = this.getClass().getDeclaredField(fieldName);
-        field.set(getClass(), value);
-    }
-
-    @Override
-    public Object getSetting(String fieldName) throws NoSuchFieldException, IllegalAccessException {
-        Field field = this.getClass().getDeclaredField(fieldName);
-        return field.get(getClass());
-    }
-
-
-
+    
     @Override
     public <T extends Item> T load(final String itemId, final Class<T> clazz) {
         return load(itemId, null, clazz);
@@ -794,7 +774,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Override
     public <T extends Item> T load(final String itemId, final Date dateHint, final Class<T> clazz) {
-        return new InClassLoaderExecute<T>(metricsService, this.getClass().getName() + ".loadItem", this.bundleContext, this.fatalIllegalStateErrors) {
+        return new InClassLoaderExecute<T>(metricsService, this.getClass().getName() + ".loadItem", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
             protected T execute(Object... args) throws Exception {
                 try {
                     String itemType = Item.getItemType(clazz);
@@ -871,7 +851,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         final boolean useBatching = useBatchingOption == null ? this.useBatchingForSave : useBatchingOption;
         final boolean alwaysOverwrite = alwaysOverwriteOption == null ? this.alwaysOverwrite : alwaysOverwriteOption;
 
-        Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".saveItem", this.bundleContext, this.fatalIllegalStateErrors) {
+        Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".saveItem", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
             protected Boolean execute(Object... args) throws Exception {
                 try {
                     String source = ESCustomObjectMapper.getObjectMapper().writeValueAsString(item);
@@ -938,7 +918,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Override
     public boolean update(final Item item, final Date dateHint, final Class clazz, final Map source, final boolean alwaysOverwrite) {
-        Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".updateItem", this.bundleContext, this.fatalIllegalStateErrors) {
+        Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".updateItem", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
             protected Boolean execute(Object... args) throws Exception {
                 try {
                     UpdateRequest updateRequest = createUpdateRequest(clazz, dateHint, item, source, alwaysOverwrite);
@@ -984,7 +964,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         if (items.size() == 0)
             return new ArrayList<>();
 
-        List<String> result = new InClassLoaderExecute<List<String>>(metricsService, this.getClass().getName() + ".updateItems",  this.bundleContext, this.fatalIllegalStateErrors) {
+        List<String> result = new InClassLoaderExecute<List<String>>(metricsService, this.getClass().getName() + ".updateItems",  this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
             protected List<String> execute(Object... args) throws Exception {
                 long batchRequestStartTime = System.currentTimeMillis();
 
@@ -1015,7 +995,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Override
     public boolean updateWithQueryAndScript(final Date dateHint, final Class<?> clazz, final String[] scripts, final Map<String, Object>[] scriptParams, final Condition[] conditions) {
-        Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".updateWithQueryAndScript", this.bundleContext, this.fatalIllegalStateErrors) {
+        Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".updateWithQueryAndScript", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
             protected Boolean execute(Object... args) throws Exception {
                 try {
                     String itemType = Item.getItemType(clazz);
@@ -1072,7 +1052,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Override
     public boolean updateWithScript(final Item item, final Date dateHint, final Class<?> clazz, final String script, final Map<String, Object> scriptParams) {
-        Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".updateWithScript", this.bundleContext, this.fatalIllegalStateErrors) {
+        Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".updateWithScript", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
             protected Boolean execute(Object... args) throws Exception {
                 try {
                     String itemType = Item.getItemType(clazz);
@@ -1113,7 +1093,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Override
     public <T extends Item> boolean remove(final String itemId, final Class<T> clazz) {
-        Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".removeItem", this.bundleContext, this.fatalIllegalStateErrors) {
+        Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".removeItem", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
             protected Boolean execute(Object... args) throws Exception {
                 try {
                     String itemType = Item.getItemType(clazz);
@@ -1134,7 +1114,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     }
 
     public <T extends Item> boolean removeByQuery(final Condition query, final Class<T> clazz) {
-        Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".removeByQuery", this.bundleContext, this.fatalIllegalStateErrors) {
+        Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".removeByQuery", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
             protected Boolean execute(Object... args) throws Exception {
                 try {
                     String itemType = Item.getItemType(clazz);
@@ -1199,7 +1179,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
 
     public boolean indexTemplateExists(final String templateName) {
-        Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".indexTemplateExists", this.bundleContext, this.fatalIllegalStateErrors) {
+        Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".indexTemplateExists", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
             protected Boolean execute(Object... args) throws IOException {
                 IndexTemplatesExistRequest indexTemplatesExistRequest = new IndexTemplatesExistRequest(templateName);
                 return client.indices().existsTemplate(indexTemplatesExistRequest, RequestOptions.DEFAULT);
@@ -1213,7 +1193,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     }
 
     public boolean removeIndexTemplate(final String templateName) {
-        Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".removeIndexTemplate", this.bundleContext, this.fatalIllegalStateErrors) {
+        Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".removeIndexTemplate", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
             protected Boolean execute(Object... args) throws IOException {
                 DeleteIndexTemplateRequest deleteIndexTemplateRequest = new DeleteIndexTemplateRequest(templateName);
                 AcknowledgedResponse deleteIndexTemplateResponse = client.indices().deleteTemplate(deleteIndexTemplateRequest, RequestOptions.DEFAULT);
@@ -1228,7 +1208,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     }
 
     public boolean createMonthlyIndexTemplate() {
-        Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".createMonthlyIndexTemplate", this.bundleContext, this.fatalIllegalStateErrors) {
+        Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".createMonthlyIndexTemplate", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
             protected Boolean execute(Object... args) throws IOException {
                 boolean executedSuccessfully = true;
                 for (String itemName : itemsMonthlyIndexed) {
@@ -1273,7 +1253,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     public boolean createIndex(final String itemType) {
         String index = getIndex(itemType);
 
-        Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".createIndex", this.bundleContext, this.fatalIllegalStateErrors) {
+        Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".createIndex", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
             protected Boolean execute(Object... args) throws IOException {
                 GetIndexRequest getIndexRequest = new GetIndexRequest(index);
                 boolean indexExists = client.indices().exists(getIndexRequest, RequestOptions.DEFAULT);
@@ -1294,7 +1274,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     public boolean removeIndex(final String itemType) {
         String index = getIndex(itemType);
 
-        Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".removeIndex", this.bundleContext, this.fatalIllegalStateErrors) {
+        Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".removeIndex", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
             protected Boolean execute(Object... args) throws IOException {
                 GetIndexRequest getIndexRequest = new GetIndexRequest(index);
                 boolean indexExists = client.indices().exists(getIndexRequest, RequestOptions.DEFAULT);
@@ -1441,7 +1421,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Override
     public Map<String, Map<String, Object>> getPropertiesMapping(final String itemType) {
-        return new InClassLoaderExecute<Map<String, Map<String, Object>>>(metricsService, this.getClass().getName() + ".getPropertiesMapping", this.bundleContext, this.fatalIllegalStateErrors) {
+        return new InClassLoaderExecute<Map<String, Map<String, Object>>>(metricsService, this.getClass().getName() + ".getPropertiesMapping", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
             @SuppressWarnings("unchecked")
             protected Map<String, Map<String, Object>> execute(Object... args) throws Exception {
                 // Get all mapping for current itemType
@@ -1541,7 +1521,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     }
 
     public boolean saveQuery(final String queryName, final String query) {
-        Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".saveQuery", this.bundleContext, this.fatalIllegalStateErrors) {
+        Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".saveQuery", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
             protected Boolean execute(Object... args) throws Exception {
                 //Index the query = register it in the percolator
                 try {
@@ -1576,7 +1556,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Override
     public boolean removeQuery(final String queryName) {
-        Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".removeQuery", this.bundleContext, this.fatalIllegalStateErrors) {
+        Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".removeQuery", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
             protected Boolean execute(Object... args) throws Exception {
                 //Index the query = register it in the percolator
                 try {
@@ -1715,7 +1695,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     }
 
     private long queryCount(final QueryBuilder filter, final String itemType) {
-        return new InClassLoaderExecute<Long>(metricsService, this.getClass().getName() + ".queryCount", this.bundleContext, this.fatalIllegalStateErrors) {
+        return new InClassLoaderExecute<Long>(metricsService, this.getClass().getName() + ".queryCount", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
 
             @Override
             protected Long execute(Object... args) throws IOException {
@@ -1731,7 +1711,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     }
 
     private <T extends Item> PartialList<T> query(final QueryBuilder query, final String sortBy, final Class<T> clazz, final int offset, final int size, final String[] routing, final String scrollTimeValidity) {
-        return new InClassLoaderExecute<PartialList<T>>(metricsService, this.getClass().getName() + ".query", this.bundleContext, this.fatalIllegalStateErrors) {
+        return new InClassLoaderExecute<PartialList<T>>(metricsService, this.getClass().getName() + ".query", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
 
             @Override
             protected PartialList<T> execute(Object... args) throws Exception {
@@ -1857,8 +1837,8 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Override
     public <T extends Item> PartialList<T> continueScrollQuery(final Class<T> clazz, final String scrollIdentifier, final String scrollTimeValidity) {
-        return new InClassLoaderExecute<PartialList<T>>(metricsService, this.getClass().getName() + ".continueScrollQuery", this.bundleContext, this.fatalIllegalStateErrors) {
-
+        return new InClassLoaderExecute<PartialList<T>>(metricsService, this.getClass().getName() + ".continueScrollQuery", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
+            
             @Override
             protected PartialList<T> execute(Object... args) throws Exception {
                 List<T> results = new ArrayList<T>();
@@ -1917,7 +1897,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     private Map<String, Long> aggregateQuery(final Condition filter, final BaseAggregate aggregate, final String itemType,
             final boolean optimizedQuery, int queryBucketSize) {
-        return new InClassLoaderExecute<Map<String, Long>>(metricsService, this.getClass().getName() + ".aggregateQuery", this.bundleContext, this.fatalIllegalStateErrors) {
+        return new InClassLoaderExecute<Map<String, Long>>(metricsService, this.getClass().getName() + ".aggregateQuery", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
 
             @Override
             protected Map<String, Long> execute(Object... args) throws IOException {
@@ -2101,7 +2081,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Override
     public void refresh() {
-        new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".refresh", this.bundleContext, this.fatalIllegalStateErrors) {
+        new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".refresh", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
             protected Boolean execute(Object... args) {
                 if (bulkProcessor != null) {
                     bulkProcessor.flush();
@@ -2118,7 +2098,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Override
     public <T extends Item> void refreshIndex(Class<T> clazz, Date dateHint) {
-        new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".refreshIndex", this.bundleContext, this.fatalIllegalStateErrors) {
+        new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".refreshIndex", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
             protected Boolean execute(Object... args) {
                 try {
                     String itemType = Item.getItemType(clazz);
@@ -2135,7 +2115,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Override
     public void purge(final Date date) {
-        new InClassLoaderExecute<Object>(metricsService, this.getClass().getName() + ".purgeWithDate", this.bundleContext, this.fatalIllegalStateErrors) {
+        new InClassLoaderExecute<Object>(metricsService, this.getClass().getName() + ".purgeWithDate", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
             @Override
             protected Object execute(Object... args) throws Exception {
 
@@ -2171,7 +2151,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Override
     public void purge(final String scope) {
-        new InClassLoaderExecute<Void>(metricsService, this.getClass().getName() + ".purgeWithScope", this.bundleContext, this.fatalIllegalStateErrors) {
+        new InClassLoaderExecute<Void>(metricsService, this.getClass().getName() + ".purgeWithScope", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
             @Override
             protected Void execute(Object... args) throws IOException {
                 QueryBuilder query = termQuery("scope", scope);
@@ -2223,7 +2203,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Override
     public Map<String, Double> getSingleValuesMetrics(final Condition condition, final String[] metrics, final String field, final String itemType) {
-        return new InClassLoaderExecute<Map<String, Double>>(metricsService, this.getClass().getName() + ".getSingleValuesMetrics", this.bundleContext, this.fatalIllegalStateErrors) {
+        return new InClassLoaderExecute<Map<String, Double>>(metricsService, this.getClass().getName() + ".getSingleValuesMetrics", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
 
             @Override
             protected Map<String, Double> execute(Object... args) throws IOException {
@@ -2294,12 +2274,14 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         private MetricsService metricsService;
         private BundleContext bundleContext;
         private String[] fatalIllegalStateErrors; // Errors that if occur - stop the application
+        private boolean throwExceptions;
 
-        public InClassLoaderExecute(MetricsService metricsService, String timerName, BundleContext bundleContext, String[] fatalIllegalStateErrors) {
+        public InClassLoaderExecute(MetricsService metricsService, String timerName, BundleContext bundleContext, String[] fatalIllegalStateErrors, boolean throwExceptions) {
             this.timerName = timerName;
             this.metricsService = metricsService;
             this.bundleContext = bundleContext;
             this.fatalIllegalStateErrors = fatalIllegalStateErrors;
+            this.throwExceptions = throwExceptions;
         }
 
         protected abstract T execute(Object... args) throws Exception;
