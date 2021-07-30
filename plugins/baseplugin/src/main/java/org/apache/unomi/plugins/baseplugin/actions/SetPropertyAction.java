@@ -58,6 +58,11 @@ public class SetPropertyAction implements ActionExecutor {
         Object propertyValueInteger = action.getParameterValues().get("setPropertyValueInteger");
         Object setPropertyValueMultiple = action.getParameterValues().get("setPropertyValueMultiple");
         Object setPropertyValueBoolean = action.getParameterValues().get("setPropertyValueBoolean");
+        Object setPropertyValueCurrentEventTimestamp = action.getParameterValues().get("setPropertyValueCurrentEventTimestamp");
+        Object setPropertyValueCurrentDate = action.getParameterValues().get("setPropertyValueCurrentDate");
+
+        SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
+        format.setTimeZone(TimeZone.getTimeZone("UTC"));
 
         if (propertyValue == null) {
             if (propertyValueInteger != null) {
@@ -69,37 +74,18 @@ public class SetPropertyAction implements ActionExecutor {
             if (setPropertyValueBoolean != null) {
                 propertyValue = PropertyHelper.getBooleanValue(setPropertyValueBoolean);
             }
-        }
-        if (propertyValue != null && propertyValue.equals("now")) {
-            SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
-            format.setTimeZone(TimeZone.getTimeZone("UTC"));
-
-            Date date = new Date();
-            Date firstVisit = new Date();
-
-            Object propertyFirstVisit = event.getProfile().getProperties().get("firstVisit");
-            try {
-                if (propertyFirstVisit != null) {
-                    if (propertyFirstVisit instanceof String) {
-                        firstVisit = format.parse((String) propertyFirstVisit);
-                    } else if (propertyFirstVisit instanceof Date) {
-                        firstVisit = (Date) propertyFirstVisit;
-                    } else {
-                        firstVisit = format.parse(propertyFirstVisit.toString());
-                    }
-                }
-
-                if (event.getTimeStamp().after(firstVisit)) {
-                    date = event.getTimeStamp();
-                }
-            } catch (ParseException e) {
-                logger.error("Error parsing firstVisit date property. See debug log level for more information");
-                if (logger.isDebugEnabled()) {
-                    logger.debug("Error parsing date: {}", propertyFirstVisit, e);
-                }
+            if (setPropertyValueCurrentEventTimestamp != null && PropertyHelper.getBooleanValue(setPropertyValueCurrentEventTimestamp)) {
+                propertyValue = format.format(event.getTimeStamp());
             }
+            if (setPropertyValueCurrentDate != null && PropertyHelper.getBooleanValue(setPropertyValueCurrentDate)) {
+                propertyValue = format.format(new Date());
+            }
+        }
 
-            propertyValue = format.format(date);
+        if (propertyValue != null && propertyValue.equals("now")) {
+            logger.warn("SetPropertyAction with setPropertyValue: 'now' is deprecated, " +
+                    "please use 'setPropertyValueCurrentEventTimestamp' or 'setPropertyValueCurrentDate' instead of 'setPropertyValue'");
+            propertyValue = format.format(event.getTimeStamp());
         }
 
         if (storeInSession) {
