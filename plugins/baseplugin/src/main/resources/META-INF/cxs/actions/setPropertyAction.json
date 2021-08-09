@@ -39,6 +39,16 @@
       "multivalued": true
     },
     {
+      "id": "setPropertyValueCurrentEventTimestamp",
+      "type": "boolean",
+      "multivalued": false
+    },
+    {
+      "id": "setPropertyValueCurrentDate",
+      "type": "boolean",
+      "multivalued": false
+    },
+    {
       "id": "setPropertyStrategy",
       "type": "string",
       "multivalued": false

@@ -19,8 +19,11 @@ package org.apache.unomi.itests;
 
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.Profile;
+import org.apache.unomi.api.rules.Rule;
 import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.api.services.ProfileService;
+import org.apache.unomi.api.services.RulesService;
+import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.plugins.baseplugin.actions.UpdatePropertiesAction;
 import org.junit.Assert;
 import org.junit.Before;
@@ -34,7 +37,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
+import java.io.File;
 import java.io.IOException;
+import java.net.MalformedURLException;
+import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.*;
 
 /**
@@ -53,6 +61,8 @@ public class PropertiesUpdateActionIT extends BaseIT {
     protected ProfileService profileService;
     @Inject @Filter(timeout = 600000)
     protected EventService eventService;
+    @Inject @Filter(timeout = 600000)
+    protected RulesService rulesService;
 
     @Before
     public void setUp() throws IOException, InterruptedException {
@@ -234,5 +244,103 @@ public class PropertiesUpdateActionIT extends BaseIT {
         Assert.assertEquals("New property 1", profile.getProperty("prop1"));
         Assert.assertEquals("New property 2", profile.getProperty("prop2"));
         Assert.assertEquals("New property 3", profile.getProperty("prop3"));
+    }
+
+    @Test
+    public void testVisitsDatePropertiesUpdate() throws InterruptedException {
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
+        dateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
+
+        Profile profile = profileService.load(PROFILE_TEST_ID);
+
+        // Test init of lastVisit and firstVisit
+        Date eventTimeStamp = new Date();
+        String eventTimeStamp1 = dateFormat.format(eventTimeStamp);
+        Event sessionReassigned = new Event("sessionReassigned", null, profile, null, null, profile, eventTimeStamp);
+        sessionReassigned.setPersistent(false);
+        eventService.send(sessionReassigned);
+        profileService.save(profile);
+        refreshPersistence();
+        profile = profileService.load(PROFILE_TEST_ID);
+        Assert.assertEquals("lastVisit should be updated", eventTimeStamp1, profile.getProperty("lastVisit"));
+        Assert.assertEquals("firstVisit should be updated", eventTimeStamp1, profile.getProperty("firstVisit"));
+        Assert.assertNull("previousVisit should be null", profile.getProperty("previousVisit"));
+
+        // test event dated -1 day: should update only firstVisit
+        eventTimeStamp = new Date();
+        LocalDateTime ldt = LocalDateTime.ofInstant(eventTimeStamp.toInstant(), ZoneId.systemDefault());
+        ldt = ldt.minusDays(1);
+        eventTimeStamp = Date.from(ldt.atZone(ZoneId.systemDefault()).toInstant());
+        String eventTimeStamp2 = dateFormat.format(eventTimeStamp);
+        sessionReassigned = new Event("sessionReassigned", null, profile, null, null, profile, eventTimeStamp);
+        sessionReassigned.setPersistent(false);
+        eventService.send(sessionReassigned);
+        profileService.save(profile);
+        refreshPersistence();
+        profile = profileService.load(PROFILE_TEST_ID);
+        Assert.assertEquals("lastVisit should not be updated", eventTimeStamp1, profile.getProperty("lastVisit"));
+        Assert.assertEquals("firstVisit should be updated", eventTimeStamp2, profile.getProperty("firstVisit"));
+        Assert.assertNull("previousVisit should be null", profile.getProperty("previousVisit"));
+
+        // test event dated +1 day: should update only lastVisit and previousVisit
+        eventTimeStamp = new Date();
+        ldt = LocalDateTime.ofInstant(eventTimeStamp.toInstant(), ZoneId.systemDefault());
+        ldt = ldt.plusDays(1);
+        eventTimeStamp = Date.from(ldt.atZone(ZoneId.systemDefault()).toInstant());
+        String eventTimeStamp3 = dateFormat.format(eventTimeStamp);
+        sessionReassigned = new Event("sessionReassigned", null, profile, null, null, profile, eventTimeStamp);
+        sessionReassigned.setPersistent(false);
+        eventService.send(sessionReassigned);
+        profileService.save(profile);
+        refreshPersistence();
+        profile = profileService.load(PROFILE_TEST_ID);
+        Assert.assertEquals("lastVisit should be updated", eventTimeStamp3, profile.getProperty("lastVisit"));
+        Assert.assertEquals("firstVisit should not be updated", eventTimeStamp2, profile.getProperty("firstVisit"));
+        Assert.assertEquals("previousVisit should be updated", eventTimeStamp1, profile.getProperty("previousVisit"));
+
+        // test event dated +5 hours: should update only previousVisit
+        eventTimeStamp = new Date();
+        ldt = LocalDateTime.ofInstant(eventTimeStamp.toInstant(), ZoneId.systemDefault());
+        ldt = ldt.plusHours(5);
+        eventTimeStamp = Date.from(ldt.atZone(ZoneId.systemDefault()).toInstant());
+        String eventTimeStamp4 = dateFormat.format(eventTimeStamp);
+        sessionReassigned = new Event("sessionReassigned", null, profile, null, null, profile, eventTimeStamp);
+        sessionReassigned.setPersistent(false);
+        eventService.send(sessionReassigned);
+        profileService.save(profile);
+        refreshPersistence();
+        profile = profileService.load(PROFILE_TEST_ID);
+        Assert.assertEquals("lastVisit should not be updated", eventTimeStamp3, profile.getProperty("lastVisit"));
+        Assert.assertEquals("firstVisit should not be updated", eventTimeStamp2, profile.getProperty("firstVisit"));
+        Assert.assertEquals("previousVisit should be updated", eventTimeStamp4, profile.getProperty("previousVisit"));
+    }
+
+    @Test
+    public void testSetPropertyActionDates() throws InterruptedException, IOException {
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
+        dateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
+
+        // register test rule
+        Rule rule = CustomObjectMapper.getObjectMapper().readValue(getValidatedBundleJSON("testSetPropertyActionRule.json", new HashMap<>()), Rule.class);
+        rulesService.setRule(rule);
+        Thread.sleep(2000);
+
+        try {
+            Profile profile = profileService.load(PROFILE_TEST_ID);
+            Date eventTimeStamp = new Date();
+            String eventTimeStamp1 = dateFormat.format(eventTimeStamp);
+            Event sessionReassigned = new Event("sessionReassigned", null, profile, null, null, profile, eventTimeStamp);
+            sessionReassigned.setPersistent(false);
+            Thread.sleep(4000); // small sleep to create time dif between eventTimeStamp and current system date
+            eventService.send(sessionReassigned);
+            profileService.save(profile);
+            refreshPersistence();
+            profile = profileService.load(PROFILE_TEST_ID);
+            Assert.assertEquals("currentEventTimeStamp should be the exact date of the event timestamp", eventTimeStamp1, profile.getProperty("currentEventTimeStamp"));
+            Assert.assertNotEquals("currentDate should be the current system date", eventTimeStamp1, profile.getProperty("currentDate"));
+            Assert.assertNotNull("currentDate should be set", profile.getProperty("currentDate"));
+        } finally {
+            rulesService.removeRule(rule.getItemId());
+        }
     }
 }
