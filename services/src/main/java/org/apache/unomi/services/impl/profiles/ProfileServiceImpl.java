@@ -317,7 +317,7 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
 
                             if (purgeProfileInactiveTime > 0) {
                                 Condition inactiveTimeCondition = new Condition(profilePropertyConditionType);
-                                inactiveTimeCondition.setParameter("propertyName", "lastVisit");
+                                inactiveTimeCondition.setParameter("propertyName", "properties.lastVisit");
                                 inactiveTimeCondition.setParameter("comparisonOperator", "lessThanOrEqualTo");
                                 inactiveTimeCondition.setParameter("propertyValueDateExpr", "now-" + purgeProfileInactiveTime + "d");
                                 subConditions.add(inactiveTimeCondition);
@@ -325,7 +325,7 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
 
                             if (purgeProfileExistTime > 0) {
                                 Condition existTimeCondition = new Condition(profilePropertyConditionType);
-                                existTimeCondition.setParameter("propertyName", "firstVisit");
+                                existTimeCondition.setParameter("propertyName", "properties.firstVisit");
                                 existTimeCondition.setParameter("comparisonOperator", "lessThanOrEqualTo");
                                 existTimeCondition.setParameter("propertyValueDateExpr", "now-" + purgeProfileExistTime + "d");
                                 subConditions.add(existTimeCondition);
