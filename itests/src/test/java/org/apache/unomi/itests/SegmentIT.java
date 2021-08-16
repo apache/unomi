@@ -93,6 +93,18 @@ public class SegmentIT extends BaseIT {
         segmentService.setSegmentDefinition(segment);
     }
 
+    @Test
+    public void testSegmentWithNullConditionButDisabled() {
+        Metadata segmentMetadata = new Metadata(SEGMENT_ID);
+        segmentMetadata.setEnabled(false);
+        Segment segment = new Segment();
+        segment.setMetadata(segmentMetadata);
+        segment.setCondition(null);
+
+        segmentService.setSegmentDefinition(segment);
+        segmentService.removeSegmentDefinition(SEGMENT_ID, false);
+    }
+
     @Test(expected = BadSegmentConditionException.class)
     public void testSegmentWithInValidCondition() {
         Metadata segmentMetadata = new Metadata(SEGMENT_ID);
