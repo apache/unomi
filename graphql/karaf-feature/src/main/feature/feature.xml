@@ -38,20 +38,20 @@
         <bundle start-level="80">wrap:mvn:com.squareup.okhttp3/okhttp/3.2.0</bundle>
         <bundle start-level="80">wrap:mvn:com.squareup.okio/okio/1.6.0</bundle>
         <bundle start-level="80">mvn:io.reactivex.rxjava2/rxjava/2.2.19</bundle>
-        <bundle start-level="80">mvn:org.eclipse.jetty.websocket/websocket-server/9.4.28.v20200408</bundle>
-        <bundle start-level="80">mvn:org.eclipse.jetty.websocket/websocket-common/9.4.28.v20200408</bundle>
-        <bundle start-level="80">mvn:org.eclipse.jetty.websocket/websocket-api/9.4.28.v20200408</bundle>
-        <bundle start-level="80">mvn:org.eclipse.jetty/jetty-util/9.4.28.v20200408</bundle>
-        <bundle start-level="80">mvn:org.eclipse.jetty/jetty-io/9.4.28.v20200408</bundle>
-        <bundle start-level="80">mvn:org.eclipse.jetty.websocket/websocket-client/9.4.28.v20200408</bundle>
-        <bundle start-level="80">mvn:org.eclipse.jetty/jetty-client/9.4.28.v20200408</bundle>
-        <bundle start-level="80">mvn:org.eclipse.jetty/jetty-xml/9.4.28.v20200408</bundle>
-        <bundle start-level="80">mvn:org.eclipse.jetty.websocket/websocket-servlet/9.4.28.v20200408</bundle>
+        <bundle start-level="80">mvn:org.eclipse.jetty.websocket/websocket-server/${jetty.websocket.version}</bundle>
+        <bundle start-level="80">mvn:org.eclipse.jetty.websocket/websocket-common/${jetty.websocket.version}</bundle>
+        <bundle start-level="80">mvn:org.eclipse.jetty.websocket/websocket-api/${jetty.websocket.version}</bundle>
+        <bundle start-level="80">mvn:org.eclipse.jetty/jetty-util/${jetty.websocket.version}</bundle>
+        <bundle start-level="80">mvn:org.eclipse.jetty/jetty-io/${jetty.websocket.version}</bundle>
+        <bundle start-level="80">mvn:org.eclipse.jetty.websocket/websocket-client/${jetty.websocket.version}</bundle>
+        <bundle start-level="80">mvn:org.eclipse.jetty/jetty-client/${jetty.websocket.version}</bundle>
+        <bundle start-level="80">mvn:org.eclipse.jetty/jetty-xml/${jetty.websocket.version}</bundle>
+        <bundle start-level="80">mvn:org.eclipse.jetty.websocket/websocket-servlet/${jetty.websocket.version}</bundle>
         <bundle start-level="80">mvn:javax.servlet/javax.servlet-api/3.0.1</bundle>
-        <bundle start-level="80">mvn:org.eclipse.jetty/jetty-servlet/9.4.28.v20200408</bundle>
-        <bundle start-level="80">mvn:org.eclipse.jetty/jetty-security/9.4.28.v20200408</bundle>
-        <bundle start-level="80">mvn:org.eclipse.jetty/jetty-server/9.4.28.v20200408</bundle>
-        <bundle start-level="80">mvn:org.eclipse.jetty/jetty-http/9.4.28.v20200408</bundle>
+        <bundle start-level="80">mvn:org.eclipse.jetty/jetty-servlet/${jetty.websocket.version}</bundle>
+        <bundle start-level="80">mvn:org.eclipse.jetty/jetty-security/${jetty.websocket.version}</bundle>
+        <bundle start-level="80">mvn:org.eclipse.jetty/jetty-server/${jetty.websocket.version}</bundle>
+        <bundle start-level="80">mvn:org.eclipse.jetty/jetty-http/${jetty.websocket.version}</bundle>
         <bundle start-level="80" start="false">mvn:org.apache.unomi/cdp-graphql-api-impl/2.0.0-SNAPSHOT</bundle>
     </feature>
 </features>

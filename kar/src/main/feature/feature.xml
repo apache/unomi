@@ -20,7 +20,7 @@
 
     <repository>mvn:org.apache.cxf.karaf/apache-cxf/${cxf.version}/xml/features</repository>
     <repository>mvn:org.apache.karaf.cellar/apache-karaf-cellar/${version.karaf.cellar}/xml/features</repository>
-    <repository>mvn:org.hibernate/hibernate-validator-osgi-karaf-features/${hibernate.validator.version}/xml/features</repository>
+    <repository>mvn:org.hibernate.validator/hibernate-validator-osgi-karaf-features/${hibernate.validator.version}/xml/features</repository>
 
     <feature description="unomi-kar" version="${project.version}" name="unomi-kar"
              start-level="70">

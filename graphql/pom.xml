@@ -36,7 +36,8 @@
         <graphql.java.annotations.version>8.0</graphql.java.annotations.version>
         <graphql.java.extended.scalars.version>1.0</graphql.java.extended.scalars.version>
         <reactivex.version>2.2.19</reactivex.version>
-        <jetty.websocket.version>9.4.28.v20200408</jetty.websocket.version>
+        <!--jetty.websocket.version>9.4.28.v20200408</jetty.websocket.version-->
+        <jetty.websocket.version>9.4.22.v20191022</jetty.websocket.version>
     </properties>
 
     <modules>
