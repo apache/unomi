@@ -108,6 +108,8 @@ public interface ProfileService {
      */
     Profile save(Profile profile);
 
+    void addAliasToProfile(String profileID, String alias, String clientID);
+
     /**
      * Merge the specified profile properties in an existing profile,or save new profile if it does not exist yet
      *

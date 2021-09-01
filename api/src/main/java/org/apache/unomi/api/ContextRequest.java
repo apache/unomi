@@ -73,6 +73,8 @@ public class ContextRequest {
     @Pattern(regexp = ValidationPattern.TEXT_VALID_CHARACTERS_PATTERN)
     private String profileId;
 
+    private String clientId;
+
     /**
      * Retrieves the source of the context request.
      *
@@ -270,5 +272,13 @@ public class ContextRequest {
      */
     public void setProfileId(String profileId) {
         this.profileId = profileId;
+    }
+
+    public String getClientId() {
+        return clientId;
+    }
+
+    public void setClientId(String clientId) {
+        this.clientId = clientId;
     }
 }

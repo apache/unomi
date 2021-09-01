@@ -27,6 +27,7 @@ import org.apache.unomi.api.Persona;
 import org.apache.unomi.api.PersonaSession;
 import org.apache.unomi.api.PersonaWithSessions;
 import org.apache.unomi.api.Profile;
+import org.apache.unomi.api.ProfileAlias;
 import org.apache.unomi.api.PropertyMergeStrategyExecutor;
 import org.apache.unomi.api.PropertyMergeStrategyType;
 import org.apache.unomi.api.PropertyType;
@@ -68,6 +69,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.TimerTask;
 import java.util.TreeSet;
@@ -546,11 +548,37 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
     }
 
     public Profile load(String profileId) {
+        ProfileAlias profileAlias = persistenceService.load(profileId, ProfileAlias.class);
+        if (profileAlias != null) {
+            profileId = profileAlias.getProfileID();
+        }
         return persistenceService.load(profileId, Profile.class);
     }
 
     public Profile save(Profile profile) {
         return save(profile, forceRefreshOnSave);
+    }
+
+    @Override
+    public void addAliasToProfile(String profileID, String alias, String clientID) {
+        ProfileAlias profileAlias = persistenceService.load(alias, ProfileAlias.class);
+
+        if (profileAlias == null) {
+            profileAlias = new ProfileAlias();
+
+            profileAlias.setItemId(alias);
+            profileAlias.setItemType(ProfileAlias.ITEM_TYPE);
+            profileAlias.setProfileID(profileID);
+            profileAlias.setClientID(clientID);
+
+            Date creationTime = new Date();
+            profileAlias.setCreationTime(creationTime);
+            profileAlias.setModifiedTime(creationTime);
+
+            persistenceService.save(profileAlias);
+        } else if (!Objects.equals(profileAlias.getProfileID(), profileID)) {
+            throw new IllegalArgumentException("Alias \"" + alias + "\" already used by profile with ID = \"" + profileID + "\"");
+        }
     }
 
     private Profile save(Profile profile, boolean forceRefresh) {

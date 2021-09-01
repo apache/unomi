@@ -17,6 +17,7 @@
 package org.apache.unomi.itests;
 
 import org.apache.unomi.api.Profile;
+import org.apache.unomi.api.ProfileAlias;
 import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.persistence.spi.PersistenceService;
@@ -25,6 +26,7 @@ import org.apache.unomi.api.PartialList;
 import org.apache.unomi.persistence.elasticsearch.*;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.fail;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -41,6 +43,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.IntStream;
 
 import javax.inject.Inject;
 
@@ -159,5 +162,42 @@ public class ProfileServiceIT extends BaseIT {
         assertEquals(testValue, value);
     }
 
+    @Test
+    public void testLoadProfileByAlias() throws Exception {
+        String profileID = "profileID_testLoadProfileByAlias";
+        try {
+            Profile profile = new Profile();
+            profile.setItemId(profileID);
+            profileService.save(profile);
+
+            refreshPersistence();
+
+            IntStream.range(1, 3).forEach(index -> {
+                final String profileAlias = profileID + "_alias_" + index;
+                profileService.addAliasToProfile(profileID, profileAlias, "clientID");
+            });
+
+            refreshPersistence();
+
+            Profile storedProfile = profileService.load(profileID);
+            assertNotNull(storedProfile);
+            assertEquals(profileID, storedProfile.getItemId());
+
+            storedProfile = profileService.load(profileID + "_alias_1");
+            assertNotNull(storedProfile);
+            assertEquals(profileID, storedProfile.getItemId());
+
+            storedProfile = profileService.load(profileID + "_alias_2");
+            assertNotNull(storedProfile);
+            assertEquals(profileID, storedProfile.getItemId());
+        } finally {
+            profileService.delete(profileID, false);
+
+            IntStream.range(1, 3).forEach(index -> {
+                final String profileAlias = profileID + "_alias_" + index;
+                persistenceService.remove(profileAlias, ProfileAlias.class);
+            });
+        }
+    }
 
 }
