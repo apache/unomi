@@ -17,10 +17,10 @@
 
 package org.apache.unomi.api;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.unomi.api.actions.ActionPostExecutor;
 
-import javax.xml.bind.annotation.XmlTransient;
 import java.util.*;
 
 /**
@@ -238,7 +238,7 @@ public class Event extends Item implements TimestampedItem {
      *
      * @return the profile
      */
-    @XmlTransient
+    @JsonIgnore
     public Profile getProfile() {
         return profile;
     }
@@ -257,7 +257,7 @@ public class Event extends Item implements TimestampedItem {
      *
      * @return the session
      */
-    @XmlTransient
+    @JsonIgnore
     public Session getSession() {
         return session;
     }
@@ -295,7 +295,7 @@ public class Event extends Item implements TimestampedItem {
      *
      * @return the attributes
      */
-    @XmlTransient
+    @JsonIgnore
     public Map<String, Object> getAttributes() {
         return attributes;
     }
@@ -424,7 +424,7 @@ public class Event extends Item implements TimestampedItem {
      *
      * @return the action post executors
      */
-    @XmlTransient
+    @JsonIgnore
     public List<ActionPostExecutor> getActionPostExecutors() {
         return actionPostExecutors;
     }

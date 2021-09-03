@@ -17,7 +17,7 @@
 
 package org.apache.unomi.api;
 
-import javax.xml.bind.annotation.XmlTransient;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 /**
  * A unomi plugin that defines a new property merge strategy.
@@ -57,7 +57,7 @@ public class PropertyMergeStrategyType implements PluginType {
         this.filter = filter;
     }
 
-    @XmlTransient
+    @JsonIgnore
     public long getPluginId() {
         return pluginId;
     }

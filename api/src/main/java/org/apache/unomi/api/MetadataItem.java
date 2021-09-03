@@ -17,8 +17,8 @@
 
 package org.apache.unomi.api;
 
-import javax.xml.bind.annotation.XmlElement;
-import javax.xml.bind.annotation.XmlTransient;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  * A superclass for all {@link Item}s that bear {@link Metadata}.
@@ -40,7 +40,7 @@ public abstract class MetadataItem extends Item {
      *
      * @return the associated Metadata
      */
-    @XmlElement(name = "metadata")
+    @JsonProperty("metadata")
     public Metadata getMetadata() {
         return metadata;
     }
@@ -50,7 +50,7 @@ public abstract class MetadataItem extends Item {
         this.metadata = metadata;
     }
 
-    @XmlTransient
+    @JsonIgnore
     public String getScope() {
         return metadata.getScope();
     }

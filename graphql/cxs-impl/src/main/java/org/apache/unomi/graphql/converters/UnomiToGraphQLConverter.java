@@ -18,6 +18,7 @@
 package org.apache.unomi.graphql.converters;
 
 import graphql.Scalars;
+import graphql.scalars.ExtendedScalars;
 import graphql.schema.GraphQLList;
 import graphql.schema.GraphQLNonNull;
 import graphql.schema.GraphQLType;
@@ -56,7 +57,7 @@ public interface UnomiToGraphQLConverter {
                 graphQLType = Scalars.GraphQLInt;
                 break;
             case "long":
-                graphQLType = Scalars.GraphQLLong;
+                graphQLType = ExtendedScalars.GraphQLLong;
                 break;
             case "float":
                 graphQLType = Scalars.GraphQLFloat;

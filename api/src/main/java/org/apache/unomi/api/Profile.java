@@ -17,11 +17,11 @@
 
 package org.apache.unomi.api;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.unomi.api.segments.Scoring;
 import org.apache.unomi.api.segments.Segment;
 
-import javax.xml.bind.annotation.XmlTransient;
 import java.util.*;
 
 /**
@@ -175,7 +175,7 @@ public class Profile extends Item {
      *
      * Note that Profiles are always in the shared system scope ({@link Metadata#SYSTEM_SCOPE}).
      */
-    @XmlTransient
+    @JsonIgnore
     public String getScope() {
         return Metadata.SYSTEM_SCOPE;
     }
@@ -246,7 +246,7 @@ public class Profile extends Item {
      * Returns true if this profile is an anonymous profile.
      * @return true of the profile has been marked as an anonymous profile, false otherwise.
      */
-    @XmlTransient
+    @JsonIgnore
     public boolean isAnonymousProfile() {
         Boolean anonymous = (Boolean) getSystemProperties().get("isAnonymousProfile");
         return anonymous != null && anonymous;
@@ -259,7 +259,7 @@ public class Profile extends Item {
      * @return true if the operation was successful (inserted exception in the case of a revoked consent, in which case
      * it is successful if there was a consent to revoke).
      */
-    @XmlTransient
+    @JsonIgnore
     public boolean setConsent(Consent consent) {
         if (ConsentStatus.REVOKED.equals(consent.getStatus())) {
             if (consent.getScope() != null) {

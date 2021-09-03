@@ -17,12 +17,12 @@
 
 package org.apache.unomi.api;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.unomi.api.query.DateRange;
 import org.apache.unomi.api.query.IpRange;
 import org.apache.unomi.api.query.NumericRange;
 
-import javax.xml.bind.annotation.XmlElement;
-import javax.xml.bind.annotation.XmlTransient;
 import java.util.*;
 
 /**
@@ -94,7 +94,7 @@ public class PropertyType extends MetadataItem {
      * @return the value type identifier associated with values defined by this PropertyType
      * @see ValueType
      */
-    @XmlElement(name = "type")
+    @JsonProperty("type")
     public String getValueTypeId() {
         return valueTypeId;
     }
@@ -113,7 +113,7 @@ public class PropertyType extends MetadataItem {
      *
      * @return the value type associated with values defined for properties using this PropertyType
      */
-    @XmlTransient
+    @JsonIgnore
     public ValueType getValueType() {
         return valueType;
     }

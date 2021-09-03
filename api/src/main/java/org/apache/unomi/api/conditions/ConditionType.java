@@ -17,11 +17,11 @@
 
 package org.apache.unomi.api.conditions;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.unomi.api.Metadata;
 import org.apache.unomi.api.MetadataItem;
 import org.apache.unomi.api.Parameter;
 
-import javax.xml.bind.annotation.XmlElement;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -113,7 +113,7 @@ public class ConditionType extends MetadataItem  {
      *
      * @return a List of the defined {@link Parameter}s for this ConditionType
      */
-    @XmlElement(name = "parameters")
+    @JsonProperty("parameters")
     public List<Parameter> getParameters() {
         return parameters;
     }

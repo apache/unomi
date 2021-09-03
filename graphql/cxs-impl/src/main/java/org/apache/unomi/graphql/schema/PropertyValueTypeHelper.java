@@ -17,6 +17,7 @@
 package org.apache.unomi.graphql.schema;
 
 import graphql.Scalars;
+import graphql.scalars.ExtendedScalars;
 import graphql.schema.DataFetchingEnvironment;
 import graphql.schema.GraphQLInputObjectType;
 import graphql.schema.GraphQLInputType;
@@ -56,10 +57,10 @@ public class PropertyValueTypeHelper {
 
         if (Scalars.GraphQLFloat.getName().equals(scalarType.getName())
                 || Scalars.GraphQLInt.getName().equals(scalarType.getName())
-                || Scalars.GraphQLLong.getName().equals(scalarType.getName())
+                || ExtendedScalars.GraphQLLong.getName().equals(scalarType.getName())
                 || Scalars.GraphQLFloat.getName().equals(scalarType.getName())
-                || Scalars.GraphQLBigDecimal.getName().equals(scalarType.getName())
-                || Scalars.GraphQLBigInteger.getName().equals(scalarType.getName())) {
+                || ExtendedScalars.GraphQLBigDecimal.getName().equals(scalarType.getName())
+                || ExtendedScalars.GraphQLBigInteger.getName().equals(scalarType.getName())) {
             return "propertyValueInteger";
         } else if (DateTimeFunction.DATE_TIME_SCALAR.getName().equals(scalarType.getName())
                 || DateFunction.DATE_SCALAR.getName().equals(scalarType.getName())) {

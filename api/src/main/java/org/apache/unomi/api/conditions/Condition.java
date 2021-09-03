@@ -17,8 +17,9 @@
 
 package org.apache.unomi.api.conditions;
 
-import javax.xml.bind.annotation.XmlElement;
-import javax.xml.bind.annotation.XmlTransient;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
@@ -53,7 +54,7 @@ public class Condition implements Serializable {
      *
      * @return the condition type
      */
-    @XmlTransient
+    @JsonIgnore
     public ConditionType getConditionType() {
         return conditionType;
     }
@@ -73,7 +74,7 @@ public class Condition implements Serializable {
      *
      * @return the identifier of the associated condition type
      */
-    @XmlElement(name="type")
+    @JsonProperty("type")
     public String getConditionTypeId() {
         return conditionTypeId;
     }

@@ -27,7 +27,7 @@
         <feature>war</feature>
         <feature>cxf-jaxrs</feature>
         <feature>cxf-features-metrics</feature>
-        <feature>cxf-rs-description-openapi-v3</feature>
+        <!--feature>cxf-rs-description-openapi-v3</feature-->
         <feature>cellar</feature>
         <feature>eventadmin</feature>
         <feature>shell-compat</feature>

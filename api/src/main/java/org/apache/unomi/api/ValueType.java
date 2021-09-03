@@ -17,7 +17,8 @@
 
 package org.apache.unomi.api;
 
-import javax.xml.bind.annotation.XmlTransient;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import java.util.LinkedHashSet;
 import java.util.Set;
 
@@ -107,7 +108,7 @@ public class ValueType implements PluginType {
         this.descriptionKey = descriptionKey;
     }
 
-    @XmlTransient
+    @JsonIgnore
     public long getPluginId() {
         return pluginId;
     }
