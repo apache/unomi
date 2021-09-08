@@ -64,10 +64,10 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <cxf.version>3.4.4</cxf.version>
-        <version.jackson.core>2.11.1</version.jackson.core>
-        <version.jackson.databind>2.11.1</version.jackson.databind>
-        <version.jackson.jaxb>2.11.1</version.jackson.jaxb>
+        <cxf.version>3.3.11</cxf.version>
+        <version.jackson.core>2.10.5</version.jackson.core>
+        <version.jackson.databind>2.10.5</version.jackson.databind>
+        <version.jackson.jaxb>2.10.5</version.jackson.jaxb>
         <version.karaf>4.2.11</version.karaf>
         <version.karaf.cellar>4.2.1</version.karaf.cellar>
         <version.pax.exam>4.13.1</version.pax.exam>

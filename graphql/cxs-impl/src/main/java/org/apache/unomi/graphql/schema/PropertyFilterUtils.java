@@ -18,7 +18,6 @@ package org.apache.unomi.graphql.schema;
 
 import graphql.Scalars;
 import graphql.annotations.processor.GraphQLAnnotations;
-import graphql.scalars.ExtendedScalars;
 import graphql.schema.GraphQLInputObjectField;
 import graphql.schema.GraphQLInputObjectType;
 import graphql.schema.GraphQLInputType;
@@ -75,23 +74,23 @@ public class PropertyFilterUtils {
         } else if ("long".equals(propertyType.getValueTypeId())) {
             fieldDefinitions.add(GraphQLInputObjectField.newInputObjectField()
                     .name(propertyName + "_equals")
-                    .type(ExtendedScalars.GraphQLLong)
+                    .type(Scalars.GraphQLLong)
                     .build());
             fieldDefinitions.add(GraphQLInputObjectField.newInputObjectField()
                     .name(propertyName + "_lt")
-                    .type(ExtendedScalars.GraphQLLong)
+                    .type(Scalars.GraphQLLong)
                     .build());
             fieldDefinitions.add(GraphQLInputObjectField.newInputObjectField()
                     .name(propertyName + "_lte")
-                    .type(ExtendedScalars.GraphQLLong)
+                    .type(Scalars.GraphQLLong)
                     .build());
             fieldDefinitions.add(GraphQLInputObjectField.newInputObjectField()
                     .name(propertyName + "_gt")
-                    .type(ExtendedScalars.GraphQLLong)
+                    .type(Scalars.GraphQLLong)
                     .build());
             fieldDefinitions.add(GraphQLInputObjectField.newInputObjectField()
                     .name(propertyName + "_gte")
-                    .type(ExtendedScalars.GraphQLLong)
+                    .type(Scalars.GraphQLLong)
                     .build());
         } else if ("float".equals(propertyType.getValueTypeId())) {
 
@@ -118,7 +117,7 @@ public class PropertyFilterUtils {
         } else if ("date".equals(propertyType.getValueTypeId())) {
             fieldDefinitions.add(GraphQLInputObjectField.newInputObjectField()
                     .name(propertyName + "_equals")
-                    .type(ExtendedScalars.DateTime)
+                    .type(DateTimeFunction.DATE_TIME_SCALAR)
                     .build());
             fieldDefinitions.add(GraphQLInputObjectField.newInputObjectField()
                     .name(propertyName + "_lt")

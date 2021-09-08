@@ -18,9 +18,7 @@ package org.apache.unomi.graphql.scalars;
 
 import graphql.annotations.processor.ProcessingElementsContainer;
 import graphql.annotations.processor.typeFunctions.TypeFunction;
-import graphql.scalars.ExtendedScalars;
 import graphql.scalars.datetime.DateTimeScalar;
-import graphql.schema.GraphQLScalarType;
 import graphql.schema.GraphQLType;
 
 import java.lang.reflect.AnnotatedType;
@@ -28,11 +26,11 @@ import java.time.OffsetDateTime;
 
 public class DateTimeFunction implements TypeFunction {
 
-    public static final GraphQLScalarType DATE_TIME_SCALAR = ExtendedScalars.DateTime;
+    public static final DateTimeScalar DATE_TIME_SCALAR = new DateTimeScalar();
 
     @Override
     public String getTypeName(Class<?> aClass, AnnotatedType annotatedType) {
-        return ExtendedScalars.DateTime.getName();
+        return DATE_TIME_SCALAR.getName();
     }
 
     @Override
@@ -42,7 +40,7 @@ public class DateTimeFunction implements TypeFunction {
 
     @Override
     public GraphQLType buildType(boolean input, Class<?> aClass, AnnotatedType annotatedType, ProcessingElementsContainer container) {
-        return ExtendedScalars.DateTime;
+        return DATE_TIME_SCALAR;
     }
 
 }
