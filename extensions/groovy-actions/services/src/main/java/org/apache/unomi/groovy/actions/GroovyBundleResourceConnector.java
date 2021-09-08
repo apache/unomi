@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.services.actions.groovy;
+package org.apache.unomi.groovy.actions;
 
 import groovy.util.ResourceConnector;
 import groovy.util.ResourceException;
