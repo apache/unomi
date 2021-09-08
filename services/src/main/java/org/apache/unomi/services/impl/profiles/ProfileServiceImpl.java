@@ -637,6 +637,12 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
             mergeCondition.setParameter("propertyValue", profileId);
             persistenceService.removeByQuery(mergeCondition, Profile.class);
 
+            Condition removeAliasesCondition = new Condition(definitionsService.getConditionType("profileAliasesPropertyCondition"));
+            removeAliasesCondition.setParameter("propertyName", "profileID");
+            removeAliasesCondition.setParameter("comparisonOperator", "equals");
+            removeAliasesCondition.setParameter("propertyValue", profileId);
+            persistenceService.removeByQuery(removeAliasesCondition, ProfileAlias.class);
+
             persistenceService.remove(profileId, Profile.class);
         }
     }

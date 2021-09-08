@@ -27,6 +27,7 @@ import org.apache.unomi.persistence.elasticsearch.*;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -57,6 +58,8 @@ public class ProfileServiceIT extends BaseIT {
 
     private final static String TEST_PROFILE_ID = "test-profile-id";
 
+    private static final String TEST_PROFILE_ALIAS = "test-profile-alias";
+
     @Inject @Filter(timeout = 600000)
     protected ProfileService profileService;
 
@@ -74,12 +77,24 @@ public class ProfileServiceIT extends BaseIT {
     }
 
     @Test
-    public void testProfileDelete() {
+    public void testProfileDelete() throws Exception {
         Profile profile = new Profile();
         profile.setItemId(TEST_PROFILE_ID);
         profileService.save(profile);
+
+        refreshPersistence();
+
+        profileService.addAliasToProfile(profile.getItemId(), TEST_PROFILE_ALIAS, "defaultClientId");
+
+        refreshPersistence();
+
         LOGGER.info("Profile saved, now testing profile delete...");
         profileService.delete(TEST_PROFILE_ID, false);
+
+        refreshPersistence();
+
+        assertNull(profileService.load(TEST_PROFILE_ALIAS));
+
         LOGGER.info("Profile deleted successfully.");
     }
 
