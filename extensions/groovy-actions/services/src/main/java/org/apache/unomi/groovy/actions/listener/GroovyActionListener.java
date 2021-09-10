@@ -20,6 +20,7 @@ import groovy.util.GroovyScriptEngine;
 import org.apache.unomi.groovy.actions.GroovyAction;
 import org.apache.unomi.groovy.actions.GroovyBundleResourceConnector;
 import org.apache.unomi.groovy.actions.services.GroovyActionsService;
+import org.apache.unomi.groovy.actions.utils.Utils;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
@@ -29,12 +30,8 @@ import org.osgi.framework.wiring.BundleWiring;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.URL;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.Enumeration;
 
 /**
@@ -46,7 +43,6 @@ import java.util.Enumeration;
 public class GroovyActionListener implements SynchronousBundleListener {
 
     private static final Logger logger = LoggerFactory.getLogger(GroovyActionListener.class.getName());
-    public static final String TMP_SCRIPT_GROOVY = "/tmp/script.groovy";
     public static final String ENTRIES_LOCATION = "META-INF/cxs/actions";
     private PersistenceService persistenceService;
 
@@ -122,11 +118,7 @@ public class GroovyActionListener implements SynchronousBundleListener {
 
     private void addGroovyAction(URL groovyActionURL) {
         try {
-            java.nio.file.Path path = Paths.get(TMP_SCRIPT_GROOVY);
-            Files.deleteIfExists(path);
-            InputStream in = groovyActionURL.openStream();
-            Files.copy(in, path);
-            groovyActionsService.save(new File(TMP_SCRIPT_GROOVY));
+            groovyActionsService.save(Utils.convertInputStreamToString(groovyActionURL.openStream()));
         } catch (IOException e) {
             logger.error("Failed to load the groovy action {}", groovyActionURL.getPath(), e);
         }
@@ -137,12 +129,7 @@ public class GroovyActionListener implements SynchronousBundleListener {
         GroovyScriptEngine engine = new GroovyScriptEngine(bundleResourceConnector,
                 bundleContext.getBundle().adapt(BundleWiring.class).getClassLoader());
         try {
-            java.nio.file.Path path = Paths.get(TMP_SCRIPT_GROOVY);
-            Files.deleteIfExists(path);
-            InputStream in = groovyActionURL.openStream();
-            Files.copy(in, path);
-            Class classScript = engine.getGroovyClassLoader().parseClass(new File(TMP_SCRIPT_GROOVY));
-
+            Class classScript = engine.getGroovyClassLoader().parseClass(Utils.convertInputStreamToString(groovyActionURL.openStream()));
             groovyActionsService.remove(classScript.getName());
             logger.info("The script {} has been removed.", classScript);
         } catch (IOException e) {

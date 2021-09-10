@@ -16,5 +16,13 @@
         }
       }
     }
-  ]
+  ],
+  "properties": {
+    "name": {
+      "type": "text"
+    },
+    "script": {
+      "type": "text"
+    }
+  }
 }

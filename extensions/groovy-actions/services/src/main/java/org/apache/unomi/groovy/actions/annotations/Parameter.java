@@ -19,11 +19,25 @@ package org.apache.unomi.groovy.actions.annotations;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 
+/**
+ * Annotation designed to allow to add parameters to an action
+ * @return parameters
+ */
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Parameter {
+
+    /**
+     * @return Id of the parameter
+     */
     String id();
 
+    /**
+     * @return type of the parameter
+     */
     String type();
 
+    /**
+     * @return multivalued parameter
+     */
     boolean multivalued();
 }

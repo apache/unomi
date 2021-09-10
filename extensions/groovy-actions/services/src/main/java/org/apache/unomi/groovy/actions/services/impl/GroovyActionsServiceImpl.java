@@ -20,6 +20,7 @@ import groovy.util.GroovyScriptEngine;
 import org.apache.unomi.api.Metadata;
 import org.apache.unomi.api.actions.ActionType;
 import org.apache.unomi.api.services.DefinitionsService;
+import org.apache.unomi.api.services.SchedulerService;
 import org.apache.unomi.groovy.actions.GroovyAction;
 import org.apache.unomi.groovy.actions.GroovyBundleResourceConnector;
 import org.apache.unomi.groovy.actions.annotations.Action;
@@ -31,12 +32,11 @@ import org.osgi.service.component.annotations.Reference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.List;
+import java.util.TimerTask;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -59,6 +59,13 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
     @Reference
     private PersistenceService persistenceService;
 
+    @Reference
+    private SchedulerService schedulerService;
+
+    private List<GroovyAction> groovyActions;
+
+    private Integer groovyActionsRefreshInterval = 1000;
+
     public void setDefinitionsService(DefinitionsService definitionsService) {
         this.definitionsService = definitionsService;
     }
@@ -67,25 +74,36 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
         this.persistenceService = persistenceService;
     }
 
-    @Override
-    public void save(File file) {
-        handleFile(file);
+    public void setGroovyActionsRefreshInterval(Integer groovyActionsRefreshInterval) {
+        this.groovyActionsRefreshInterval = groovyActionsRefreshInterval;
     }
 
-    private void handleFile(File file) {
+    public void setSchedulerService(SchedulerService schedulerService) {
+        this.schedulerService = schedulerService;
+    }
+
+    public void postConstruct() {
+        logger.debug("postConstruct {" + bundleContext.getBundle() + "}");
+
+        initializeTimers();
+        logger.info("Groovy action service initialized.");
+    }
+
+    @Override
+    public void save(String groovyScript) {
+        handleFile(groovyScript);
+    }
+
+    private void handleFile(String groovyScript) {
         GroovyBundleResourceConnector bundleResourceConnector = new GroovyBundleResourceConnector(bundleContext);
         GroovyScriptEngine engine = new GroovyScriptEngine(bundleResourceConnector,
                 bundleContext.getBundle().adapt(BundleWiring.class).getClassLoader());
-        try {
-            Class classScript = engine.getGroovyClassLoader().parseClass(file);
-            saveActionType((Action) classScript.getAnnotation(Action.class));
+        Class classScript = engine.getGroovyClassLoader().parseClass(groovyScript);
+        saveActionType((Action) classScript.getAnnotation(Action.class));
 
-            String scriptName = classScript.getName();
-            saveScript(scriptName, new String(Files.readAllBytes(Paths.get("/tmp/" + file.getName()))));
-            logger.info("The script {} has been loaded.", scriptName);
-        } catch (IOException e) {
-            logger.error("Failed to parse groovy action file", e);
-        }
+        String scriptName = classScript.getName();
+        saveScript(scriptName, groovyScript);
+        logger.info("The script {} has been loaded.", scriptName);
     }
 
     private void saveActionType(Action action) {
@@ -102,13 +120,32 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
         definitionsService.setActionType(actionType);
     }
 
+    @Override
+    public void remove(String id) {
+        persistenceService.remove(id, GroovyAction.class);
+    }
+
+    @Override
+    public GroovyAction getGroovyAction(String id) {
+        return groovyActions.stream().filter(groovyAction -> groovyAction.getItemId().equals(id)).findFirst().get();
+    }
+
     private void saveScript(String name, String script) {
         GroovyAction groovyScript = new GroovyAction(name, script);
         persistenceService.save(groovyScript);
     }
 
-    @Override
-    public void remove(String id) {
-        persistenceService.remove(id, GroovyAction.class);
+    private void refreshGroovyActions() {
+        groovyActions = persistenceService.getAllItems(GroovyAction.class);
+    }
+
+    private void initializeTimers() {
+        TimerTask task = new TimerTask() {
+            @Override
+            public void run() {
+                refreshGroovyActions();
+            }
+        };
+        schedulerService.getScheduleExecutorService().scheduleWithFixedDelay(task, 0, groovyActionsRefreshInterval, TimeUnit.MILLISECONDS);
     }
 }

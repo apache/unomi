@@ -21,6 +21,7 @@ import org.apache.cxf.jaxrs.ext.multipart.Attachment;
 import org.apache.cxf.jaxrs.ext.multipart.Multipart;
 import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
 import org.apache.unomi.groovy.actions.services.GroovyActionsService;
+import org.apache.unomi.groovy.actions.utils.Utils;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 import org.slf4j.Logger;
@@ -36,11 +37,7 @@ import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 
 @WebService
 @Produces(MediaType.APPLICATION_JSON + ";charset=UTF-8")
@@ -75,19 +72,11 @@ public class GroovyActionsEndPoint {
     @Produces(MediaType.APPLICATION_JSON)
     public Response save(@Multipart(value = "file") Attachment file) {
         try {
-            String filename = file.getContentDisposition().getParameter("filename");
-
-            java.nio.file.Path path = Paths.get("/tmp/" + filename);
-            Files.deleteIfExists(path);
-            InputStream in = file.getDataHandler().getInputStream();
-            Files.copy(in, path);
-
-            groovyActionsService.save(new File("/tmp/" + filename));
+            groovyActionsService.save(Utils.convertInputStreamToString(file.getDataHandler().getInputStream()));
         } catch (IOException e) {
             logger.error("Error while processing groovy file", e);
             return Response.serverError().build();
-        }
-        return Response.ok().build();
+        } return Response.ok().build();
     }
 
     /**

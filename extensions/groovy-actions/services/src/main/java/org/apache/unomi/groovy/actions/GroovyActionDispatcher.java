@@ -21,16 +21,16 @@ import groovy.util.GroovyScriptEngine;
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.actions.Action;
 import org.apache.unomi.api.actions.ActionDispatcher;
+import org.apache.unomi.groovy.actions.services.GroovyActionsService;
 import org.apache.unomi.metrics.MetricAdapter;
 import org.apache.unomi.metrics.MetricsService;
-import org.apache.unomi.persistence.spi.PersistenceService;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.wiring.BundleWiring;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * An implementation of an ActionDispatcher for the Groovy language. This dispatcher will load the groovy action script matching to an 
+ * An implementation of an ActionDispatcher for the Groovy language. This dispatcher will load the groovy action script matching to an
  * actionName. If a script if found, it will be executed.
  */
 public class GroovyActionDispatcher implements ActionDispatcher {
@@ -40,15 +40,17 @@ public class GroovyActionDispatcher implements ActionDispatcher {
     private static final String GROOVY_PREFIX = "groovy";
 
     private MetricsService metricsService;
-    private PersistenceService persistenceService;
+
+    private GroovyActionsService groovyActionsService;
+
     private BundleContext bundleContext;
 
     public void setMetricsService(MetricsService metricsService) {
         this.metricsService = metricsService;
     }
 
-    public void setPersistenceService(PersistenceService persistenceService) {
-        this.persistenceService = persistenceService;
+    public void setGroovyActionsService(GroovyActionsService groovyActionsService) {
+        this.groovyActionsService = groovyActionsService;
     }
 
     public void setBundleContext(BundleContext bundleContext) {
@@ -60,8 +62,8 @@ public class GroovyActionDispatcher implements ActionDispatcher {
     }
 
     public Integer execute(Action action, Event event, String actionName) {
-        GroovyAction groovyScript = persistenceService.load(actionName, GroovyAction.class);
-        if (groovyScript == null) {
+        GroovyAction groovyAction = groovyActionsService.getGroovyAction(actionName);
+        if (groovyAction == null) {
             logger.warn("Couldn't find a Groovy action with name {}, action will not execute !", actionName);
         } else {
             try {
@@ -72,7 +74,7 @@ public class GroovyActionDispatcher implements ActionDispatcher {
                         GroovyScriptEngine engine = new GroovyScriptEngine(bundleResourceConnector,
                                 bundleContext.getBundle().adapt(BundleWiring.class).getClassLoader());
 
-                        Class clazzScript = engine.getGroovyClassLoader().parseClass(groovyScript.getScript());
+                        Class clazzScript = engine.getGroovyClassLoader().parseClass(groovyAction.getScript());
                         GroovyObject groovyObj = (GroovyObject) clazzScript.newInstance();
                         return Integer.valueOf((String) groovyObj.invokeMethod("execute", new Object[] { action, event }));
                     }

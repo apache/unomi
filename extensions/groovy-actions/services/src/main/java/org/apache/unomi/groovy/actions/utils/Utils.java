@@ -14,33 +14,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.groovy.actions.services;
+package org.apache.unomi.groovy.actions.utils;
 
-import org.apache.unomi.groovy.actions.GroovyAction;
-
-import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Reader;
+import java.nio.charset.StandardCharsets;
 
 /**
- * A service to load groovy files and manage {@link GroovyAction}
+ * Utility class
  */
-public interface GroovyActionsService {
+public class Utils {
 
-    /**
-     * Save a groovy action from a groovy file
-     * @param groovyScript script to save
-     */
-    void save(String groovyScript);
-
-    /**
-     * Remove a groovy action
-     * @param id of the action to remove
-     */
-    void remove(String id);
-
-    /**
-     * Get a groovy action by an id
-     * @param id of the action to get
-     * @return Groovy action
-     */
-    GroovyAction getGroovyAction(String id);
+    public static String convertInputStreamToString(InputStream inputStream) throws IOException {
+        int bufferSize = 1024;
+        char[] buffer = new char[bufferSize];
+        StringBuilder out = new StringBuilder();
+        Reader in = new InputStreamReader(inputStream, StandardCharsets.UTF_8);
+        for (int numRead; (numRead = in.read(buffer, 0, buffer.length)) > 0; ) {
+            out.append(buffer, 0, numRead);
+        }
+        return out.toString();
+    }
 }
