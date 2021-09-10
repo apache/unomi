@@ -73,8 +73,8 @@
         <version.pax.exam>4.13.1</version.pax.exam>
         <elasticsearch.version>7.4.2</elasticsearch.version>
         <groovy.version>3.0.3</groovy.version>
-        <bean.validation.version>2.0.2</bean.validation.version>
-        <hibernate.validator.version>6.2.0.Final</hibernate.validator.version>
+        <bean.validation.version>1.1.0.Final</bean.validation.version>
+        <hibernate.validator.version>5.4.1.Final</hibernate.validator.version>
 
         <java.version>1.8</java.version>
 
@@ -750,7 +750,7 @@
             <dependency>
                 <groupId>com.fasterxml.jackson.core</groupId>
                 <artifactId>jackson-databind</artifactId>
-                <version>${version.jackson.core}</version>
+                <version>${version.jackson.databind}</version>
                 <scope>provided</scope>
             </dependency>
             <dependency>
@@ -925,13 +925,13 @@
 
             <!-- dependencies for bean validation -->
             <dependency>
-                <groupId>jakarta.validation</groupId>
-                <artifactId>jakarta.validation-api</artifactId>
+                <groupId>javax.validation</groupId>
+                <artifactId>validation-api</artifactId>
                 <version>${bean.validation.version}</version>
                 <scope>provided</scope>
             </dependency>
             <dependency>
-                <groupId>org.hibernate.validator</groupId>
+                <groupId>org.hibernate</groupId>
                 <artifactId>hibernate-validator</artifactId>
                 <version>${hibernate.validator.version}</version>
                 <scope>provided</scope>
