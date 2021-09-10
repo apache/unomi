@@ -351,14 +351,12 @@
                         <feature>cellar</feature>
                         <feature>aries-blueprint</feature>
                         <feature>shell-compat</feature>
-                        <!--
                         <feature>unomi-kar</feature>
                         <feature>unomi-router-karaf-feature</feature>
                         <feature>unomi-web-tracker-karaf-kar</feature>
                         <feature>cdp-graphql-feature</feature>
                         <feature>unomi-rest-ui</feature>
                         <feature>unomi-graphql-ui</feature>
-                        -->
                     </bootFeatures>
                     <!--
                     <libraries>
