@@ -17,4 +17,4 @@
 #    limitations under the License.
 #
 ################################################################################
-mvn notice:generate -P integration-tests,performance-tests,generate-notice
+mvn notice:generate -P integration-tests,generate-notice
