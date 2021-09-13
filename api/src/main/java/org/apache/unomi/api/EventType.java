@@ -16,7 +16,6 @@
  */
 package org.apache.unomi.api;
 
-import javax.xml.bind.annotation.XmlRootElement;
 import java.util.Set;
 
 /**

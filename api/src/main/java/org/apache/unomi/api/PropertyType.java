@@ -22,14 +22,12 @@ import org.apache.unomi.api.query.IpRange;
 import org.apache.unomi.api.query.NumericRange;
 
 import javax.xml.bind.annotation.XmlElement;
-import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlTransient;
 import java.util.*;
 
 /**
  * A user-defined profile or session property, specifying how possible values are constrained, if the value is multi-valued (a vector of values as opposed to a scalar value).
  */
-@XmlRootElement
 public class PropertyType extends MetadataItem {
     /**
      * The PropertyType ITEM_TYPE.
