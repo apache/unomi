@@ -17,10 +17,10 @@
 
 package org.apache.unomi.api.actions;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.unomi.api.rules.Rule;
 
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlTransient;
 import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
@@ -54,7 +54,7 @@ public class Action implements Serializable {
      *
      * @return the action's type
      */
-    @JsonIgnore
+    @XmlTransient
     public ActionType getActionType() {
         return actionType;
     }
@@ -74,7 +74,7 @@ public class Action implements Serializable {
      *
      * @return the identifier of the associated action type
      */
-    @JsonProperty("type")
+    @XmlElement(name = "type")
     public String getActionTypeId() {
         return actionTypeId;
     }

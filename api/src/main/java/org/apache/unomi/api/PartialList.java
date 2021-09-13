@@ -17,8 +17,7 @@
 
 package org.apache.unomi.api;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-
+import javax.xml.bind.annotation.XmlTransient;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
@@ -140,7 +139,7 @@ public class PartialList<T> implements Serializable {
      *
      * @return the size of this PartialList
      */
-    @JsonIgnore
+    @XmlTransient
     public int size() {
         return list.size();
     }
@@ -151,7 +150,7 @@ public class PartialList<T> implements Serializable {
      * @param index the index of the element to retrieve
      * @return the element at the specified index
      */
-    @JsonIgnore
+    @XmlTransient
     public T get(int index) {
         return list.get(index);
     }

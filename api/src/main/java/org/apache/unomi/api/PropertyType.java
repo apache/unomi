@@ -17,17 +17,19 @@
 
 package org.apache.unomi.api;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.unomi.api.query.DateRange;
 import org.apache.unomi.api.query.IpRange;
 import org.apache.unomi.api.query.NumericRange;
 
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.XmlTransient;
 import java.util.*;
 
 /**
  * A user-defined profile or session property, specifying how possible values are constrained, if the value is multi-valued (a vector of values as opposed to a scalar value).
  */
+@XmlRootElement
 public class PropertyType extends MetadataItem {
     /**
      * The PropertyType ITEM_TYPE.
@@ -94,7 +96,7 @@ public class PropertyType extends MetadataItem {
      * @return the value type identifier associated with values defined by this PropertyType
      * @see ValueType
      */
-    @JsonProperty("type")
+    @XmlElement(name = "type")
     public String getValueTypeId() {
         return valueTypeId;
     }
@@ -113,7 +115,7 @@ public class PropertyType extends MetadataItem {
      *
      * @return the value type associated with values defined for properties using this PropertyType
      */
-    @JsonIgnore
+    @XmlTransient
     public ValueType getValueType() {
         return valueType;
     }

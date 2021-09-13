@@ -47,7 +47,7 @@ public class CustomObjectMapper extends ObjectMapper {
 
     public CustomObjectMapper() {
         super();
-        // super.registerModule(new JaxbAnnotationModule());
+        super.registerModule(new JaxbAnnotationModule());
         configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false);
         ISO8601DateFormat dateFormat = new ISO8601DateFormat();
         dateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));

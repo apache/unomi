@@ -17,8 +17,7 @@
 
 package org.apache.unomi.api;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-
+import javax.xml.bind.annotation.XmlTransient;
 import java.io.Serializable;
 import java.util.List;
 
@@ -54,7 +53,7 @@ public class PersonaWithSessions implements Serializable {
         this.sessions = sessions;
     }
 
-    @JsonIgnore
+    @XmlTransient
     public PersonaSession getLastSession() {
         return sessions.size()>0?sessions.get(0):null;
     }
