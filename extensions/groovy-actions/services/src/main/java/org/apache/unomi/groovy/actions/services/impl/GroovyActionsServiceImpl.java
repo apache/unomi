@@ -127,7 +127,7 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
 
     @Override
     public GroovyAction getGroovyAction(String id) {
-        return groovyActions.stream().filter(groovyAction -> groovyAction.getItemId().equals(id)).findFirst().get();
+        return groovyActions.stream().filter(groovyAction -> groovyAction.getItemId().equals(id)).findFirst().orElse(null);
     }
 
     private void saveScript(String name, String script) {
