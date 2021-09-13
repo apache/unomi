@@ -44,7 +44,7 @@ Building
    This will compile Apache Unomi and run all of the tests in the
    Apache Unomi source distribution. Alternatively, you can run
 
-         $> mvn -P \!integration-tests,\!performance-tests clean install
+         $> mvn -P \!integration-tests clean install
 
    This will compile Apache Unomi without running the tests and takes less
    time to build.

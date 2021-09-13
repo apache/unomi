@@ -357,16 +357,6 @@
         </profile>
 
         <profile>
-            <id>performance-tests</id>
-            <activation>
-                <activeByDefault>false</activeByDefault>
-            </activation>
-            <modules>
-                <module>performance-tests</module>
-            </modules>
-        </profile>
-
-        <profile>
             <id>checkstyle</id>
             <activation>
                 <activeByDefault>false</activeByDefault>
