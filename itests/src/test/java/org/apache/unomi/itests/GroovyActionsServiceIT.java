@@ -17,11 +17,11 @@
 
 package org.apache.unomi.itests;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.unomi.api.actions.ActionType;
 import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.groovy.actions.GroovyAction;
 import org.apache.unomi.groovy.actions.services.GroovyActionsService;
-import org.apache.unomi.groovy.actions.utils.Utils;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -60,7 +60,7 @@ public class GroovyActionsServiceIT extends BaseIT {
     }
 
     private String loadGroovyAction(String pathname) throws IOException {
-        return Utils.convertInputStreamToString(new FileInputStream(new File(pathname)));
+        return IOUtils.toString(new FileInputStream(new File(pathname)));
     }
 
     @Test

@@ -17,11 +17,11 @@
 
 package org.apache.unomi.groovy.actions.rest;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.cxf.jaxrs.ext.multipart.Attachment;
 import org.apache.cxf.jaxrs.ext.multipart.Multipart;
 import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
 import org.apache.unomi.groovy.actions.services.GroovyActionsService;
-import org.apache.unomi.groovy.actions.utils.Utils;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 import org.slf4j.Logger;
@@ -72,7 +72,7 @@ public class GroovyActionsEndPoint {
     @Produces(MediaType.APPLICATION_JSON)
     public Response save(@Multipart(value = "file") Attachment file) {
         try {
-            groovyActionsService.save(Utils.convertInputStreamToString(file.getDataHandler().getInputStream()));
+            groovyActionsService.save(IOUtils.toString(file.getDataHandler().getInputStream()));
         } catch (IOException e) {
             logger.error("Error while processing groovy file", e);
             return Response.serverError().build();

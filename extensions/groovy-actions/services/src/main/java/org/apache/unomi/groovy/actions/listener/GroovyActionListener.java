@@ -17,10 +17,10 @@
 package org.apache.unomi.groovy.actions.listener;
 
 import groovy.util.GroovyScriptEngine;
+import org.apache.commons.io.IOUtils;
 import org.apache.unomi.groovy.actions.GroovyAction;
 import org.apache.unomi.groovy.actions.GroovyBundleResourceConnector;
 import org.apache.unomi.groovy.actions.services.GroovyActionsService;
-import org.apache.unomi.groovy.actions.utils.Utils;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
@@ -118,7 +118,7 @@ public class GroovyActionListener implements SynchronousBundleListener {
 
     private void addGroovyAction(URL groovyActionURL) {
         try {
-            groovyActionsService.save(Utils.convertInputStreamToString(groovyActionURL.openStream()));
+            groovyActionsService.save(IOUtils.toString(groovyActionURL.openStream()));
         } catch (IOException e) {
             logger.error("Failed to load the groovy action {}", groovyActionURL.getPath(), e);
         }
@@ -129,7 +129,7 @@ public class GroovyActionListener implements SynchronousBundleListener {
         GroovyScriptEngine engine = new GroovyScriptEngine(bundleResourceConnector,
                 bundleContext.getBundle().adapt(BundleWiring.class).getClassLoader());
         try {
-            Class classScript = engine.getGroovyClassLoader().parseClass(Utils.convertInputStreamToString(groovyActionURL.openStream()));
+            Class classScript = engine.getGroovyClassLoader().parseClass(IOUtils.toString(groovyActionURL.openStream()));
             groovyActionsService.remove(classScript.getName());
             logger.info("The script {} has been removed.", classScript);
         } catch (IOException e) {

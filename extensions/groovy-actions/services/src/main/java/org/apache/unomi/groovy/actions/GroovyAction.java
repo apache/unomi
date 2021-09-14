@@ -20,7 +20,7 @@ import org.apache.unomi.api.Metadata;
 import org.apache.unomi.api.MetadataItem;
 
 /**
- * Object which represents a Groovy action
+ * Object which represents a Groovy action (including its script)
  */
 public class GroovyAction extends MetadataItem {
     public static final String ITEM_TYPE = "groovyAction";
