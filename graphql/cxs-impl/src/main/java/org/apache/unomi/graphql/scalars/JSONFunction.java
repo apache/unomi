@@ -18,16 +18,14 @@ package org.apache.unomi.graphql.scalars;
 
 import graphql.annotations.processor.ProcessingElementsContainer;
 import graphql.annotations.processor.typeFunctions.TypeFunction;
-import graphql.scalars.ExtendedScalars;
 import graphql.scalars.object.JsonScalar;
-import graphql.schema.GraphQLScalarType;
 import graphql.schema.GraphQLType;
 
 import java.lang.reflect.AnnotatedType;
 
 public class JSONFunction implements TypeFunction {
 
-    public static final GraphQLScalarType JSON_SCALAR = ExtendedScalars.Json;
+    public static final JsonScalar JSON_SCALAR = new JsonScalar();
 
     @Override
     public String getTypeName(Class<?> aClass, AnnotatedType annotatedType) {
