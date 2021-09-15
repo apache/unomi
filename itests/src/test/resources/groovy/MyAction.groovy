@@ -30,7 +30,7 @@ import java.util.logging.Logger
         parameters = [@Parameter(id = "param1", type = "string", multivalued = false), @Parameter(id = "param2", type = "string", multivalued =
                 false)])
 class MyAction {
-    Logger logger = Logger.getLogger("")
+    Logger logger = Logger.getdLogger("")
 
     String execute(action, event) {
         logger.info("Groovy action for event type: " + event.getEventType())

@@ -16,6 +16,7 @@
  */
 package org.apache.unomi.groovy.actions.services.impl;
 
+import groovy.lang.GroovyCodeSource;
 import groovy.util.GroovyScriptEngine;
 import org.apache.unomi.api.Metadata;
 import org.apache.unomi.api.actions.ActionType;
@@ -90,20 +91,21 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
     }
 
     @Override
-    public void save(String groovyScript) {
-        handleFile(groovyScript);
+    public void save(String actionName, String groovyScript) {
+        handleFile(actionName, groovyScript);
     }
 
-    private void handleFile(String groovyScript) {
+    private void handleFile(String actionName, String groovyScript) {
         GroovyBundleResourceConnector bundleResourceConnector = new GroovyBundleResourceConnector(bundleContext);
+
+        GroovyCodeSource groovyCodeSource = new GroovyCodeSource(groovyScript, actionName, "/groovy/script");
         GroovyScriptEngine engine = new GroovyScriptEngine(bundleResourceConnector,
                 bundleContext.getBundle().adapt(BundleWiring.class).getClassLoader());
-        Class classScript = engine.getGroovyClassLoader().parseClass(groovyScript);
+        Class classScript = engine.getGroovyClassLoader().parseClass(groovyCodeSource);
         saveActionType((Action) classScript.getAnnotation(Action.class));
 
-        String scriptName = classScript.getName();
-        saveScript(scriptName, groovyScript);
-        logger.info("The script {} has been loaded.", scriptName);
+        saveScript(actionName, groovyScript);
+        logger.info("The script {} has been loaded.", actionName);
     }
 
     private void saveActionType(Action action) {

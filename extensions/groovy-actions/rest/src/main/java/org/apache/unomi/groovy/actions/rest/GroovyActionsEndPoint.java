@@ -72,11 +72,13 @@ public class GroovyActionsEndPoint {
     @Produces(MediaType.APPLICATION_JSON)
     public Response save(@Multipart(value = "file") Attachment file) {
         try {
-            groovyActionsService.save(IOUtils.toString(file.getDataHandler().getInputStream()));
+            groovyActionsService
+                    .save(file.getContentDisposition().getFilename().replace(".groovy", ""), IOUtils.toString(file.getDataHandler().getInputStream()));
         } catch (IOException e) {
             logger.error("Error while processing groovy file", e);
             return Response.serverError().build();
-        } return Response.ok().build();
+        }
+        return Response.ok().build();
     }
 
     /**

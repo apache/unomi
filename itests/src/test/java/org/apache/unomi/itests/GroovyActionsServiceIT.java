@@ -65,7 +65,7 @@ public class GroovyActionsServiceIT extends BaseIT {
 
     @Test
     public void testGroovyActionsService_saveActionAndTestSavedValues() throws IOException, InterruptedException {
-        groovyActionsService.save(loadGroovyAction("data/tmp/groovy/script.groovy"));
+        groovyActionsService.save("MyAction", loadGroovyAction("data/tmp/groovy/MyAction.groovy"));
 
         Thread.sleep(2000);
 
@@ -89,7 +89,7 @@ public class GroovyActionsServiceIT extends BaseIT {
 
     @Test
     public void testGroovyActionsService_removeGroovyAction() throws IOException, InterruptedException {
-        groovyActionsService.save(loadGroovyAction("data/tmp/groovy/script.groovy"));
+        groovyActionsService.save("MyAction", loadGroovyAction("data/tmp/groovy/MyAction.groovy"));
 
         Thread.sleep(2000);
 

@@ -16,6 +16,7 @@
  */
 package org.apache.unomi.groovy.actions;
 
+import groovy.lang.GroovyCodeSource;
 import groovy.lang.GroovyObject;
 import groovy.util.GroovyScriptEngine;
 import org.apache.unomi.api.Event;
@@ -74,7 +75,7 @@ public class GroovyActionDispatcher implements ActionDispatcher {
                         GroovyScriptEngine engine = new GroovyScriptEngine(bundleResourceConnector,
                                 bundleContext.getBundle().adapt(BundleWiring.class).getClassLoader());
 
-                        Class clazzScript = engine.getGroovyClassLoader().parseClass(groovyAction.getScript());
+                        Class clazzScript = engine.getGroovyClassLoader().parseClass(new GroovyCodeSource(groovyAction.getScript(), actionName, "/groovy/script"));
                         GroovyObject groovyObj = (GroovyObject) clazzScript.newInstance();
                         return Integer.valueOf((String) groovyObj.invokeMethod("execute", new Object[] { action, event }));
                     }
