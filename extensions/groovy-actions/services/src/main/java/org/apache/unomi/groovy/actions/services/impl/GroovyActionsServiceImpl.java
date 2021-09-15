@@ -96,12 +96,7 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
     }
 
     private void handleFile(String actionName, String groovyScript) {
-        GroovyBundleResourceConnector bundleResourceConnector = new GroovyBundleResourceConnector(bundleContext);
-
-        GroovyCodeSource groovyCodeSource = new GroovyCodeSource(groovyScript, actionName, "/groovy/script");
-        GroovyScriptEngine engine = new GroovyScriptEngine(bundleResourceConnector,
-                bundleContext.getBundle().adapt(BundleWiring.class).getClassLoader());
-        Class classScript = engine.getGroovyClassLoader().parseClass(groovyCodeSource);
+        Class classScript = buildClassScript(groovyScript, actionName);
         saveActionType((Action) classScript.getAnnotation(Action.class));
 
         saveScript(actionName, groovyScript);
@@ -124,12 +119,29 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
 
     @Override
     public void remove(String id) {
+        removeActionType(id);
         persistenceService.remove(id, GroovyAction.class);
     }
 
     @Override
     public GroovyAction getGroovyAction(String id) {
         return groovyActions.stream().filter(groovyAction -> groovyAction.getItemId().equals(id)).findFirst().orElse(null);
+    }
+
+    private void removeActionType(String actionId) {
+
+        GroovyAction groovyAction = getGroovyAction(actionId);
+        Class classScript = buildClassScript(groovyAction.getScript(), groovyAction.getItemId());
+        definitionsService.removeActionType(((Action) classScript.getAnnotation(Action.class)).id());
+    }
+
+    private Class buildClassScript(String groovyScript, String actionName) {
+        GroovyBundleResourceConnector bundleResourceConnector = new GroovyBundleResourceConnector(bundleContext);
+
+        GroovyCodeSource groovyCodeSource = new GroovyCodeSource(groovyScript, actionName, "/groovy/script");
+        GroovyScriptEngine engine = new GroovyScriptEngine(bundleResourceConnector,
+                bundleContext.getBundle().adapt(BundleWiring.class).getClassLoader());
+        return engine.getGroovyClassLoader().parseClass(groovyCodeSource);
     }
 
     private void saveScript(String name, String script) {

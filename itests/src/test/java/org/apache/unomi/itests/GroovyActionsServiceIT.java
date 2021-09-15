@@ -101,8 +101,13 @@ public class GroovyActionsServiceIT extends BaseIT {
 
         Thread.sleep(2000);
 
-        groovyAction = groovyActionsService.getGroovyAction("scriptGroovyAction");
+        groovyAction = groovyActionsService.getGroovyAction("MyAction");
 
         Assert.assertNull(groovyAction);
+
+        ActionType actionType = definitionsService.getActionType("scriptGroovyAction");
+
+        Assert.assertNull(actionType);
+
     }
 }
