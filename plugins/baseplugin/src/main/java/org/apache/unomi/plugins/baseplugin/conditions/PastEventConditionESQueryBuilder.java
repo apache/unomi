@@ -77,23 +77,14 @@ public class PastEventConditionESQueryBuilder implements ConditionESQueryBuilder
     public QueryBuilder buildQuery(Condition condition, Map<String, Object> context, ConditionESQueryBuilderDispatcher dispatcher) {
         Integer minimumEventCount = condition.getParameter("minimumEventCount") == null ? 1 : (Integer) condition.getParameter("minimumEventCount");
         Integer maximumEventCount = condition.getParameter("maximumEventCount") == null ? Integer.MAX_VALUE : (Integer) condition.getParameter("maximumEventCount");
+        String generatedPropertyKey = (String) condition.getParameter("generatedPropertyKey");
 
-        if (condition.getParameter("generatedPropertyKey") != null && condition.getParameter("generatedPropertyKey").equals(segmentService.getGeneratedPropertyKey((Condition) condition.getParameter("eventCondition"), condition))) {
-            // A property is already set on profiles matching the past event condition, use it
-            if (minimumEventCount != 1 || maximumEventCount != Integer.MAX_VALUE) {
-                // Check the number of occurences
-                RangeQueryBuilder builder = QueryBuilders.rangeQuery("systemProperties.pastEvents." + condition.getParameter("generatedPropertyKey"));
-                if (minimumEventCount != 1) {
-                    builder.gte(minimumEventCount);
-                }
-                if (maximumEventCount != Integer.MAX_VALUE) {
-                    builder.lte(minimumEventCount);
-                }
-                return builder;
-            } else {
-                // Simply get profiles who have the property set
-                return QueryBuilders.existsQuery("systemProperties.pastEvents." + condition.getParameter("generatedPropertyKey"));
-            }
+        if (generatedPropertyKey != null && generatedPropertyKey.equals(segmentService.getGeneratedPropertyKey((Condition) condition.getParameter("eventCondition"), condition))) {
+            // A property is already set on profiles matching the past event condition, use it to check the numbers of occurrences
+            RangeQueryBuilder builder = QueryBuilders.rangeQuery("systemProperties.pastEvents." + generatedPropertyKey);
+            builder.gte(minimumEventCount);
+            builder.lte(minimumEventCount);
+            return builder;
         } else {
             // No property set - tries to build an idsQuery
             // Build past event condition
