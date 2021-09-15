@@ -26,7 +26,6 @@ import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.api.services.SegmentService;
 import org.apache.unomi.api.exceptions.BadSegmentConditionException;
-import org.apache.unomi.itests.tools.RetriableHelper;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.junit.After;
 import org.junit.Assert;
@@ -45,7 +44,6 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.Date;
 import java.util.List;
-import java.util.concurrent.Callable;
 
 @RunWith(PaxExam.class)
 @ExamReactorStrategy(PerSuite.class)
@@ -218,13 +216,10 @@ public class SegmentIT extends BaseIT {
         // now recalculate the past event conditions
         segmentService.recalculatePastEventConditions();
         persistenceService.refreshIndex(Profile.class, null);
-        new RetriableHelper<>("testSegmentPastEventRecalculation profile engaged", 20, 1000, () -> {
-            Profile updatedProfile = profileService.load("test_profile_id");
-            if (!updatedProfile.getSegments().contains("past-event-segment-test")) {
-                throw new RuntimeException("Profile should be engaged in the segment, will retry or fail if retry reach the limit");
-            }
-            return updatedProfile;
-        }).call();
+        keepTrying("Profile should be engaged in the segment",
+                () -> profileService.load("test_profile_id"),
+                updatedProfile -> updatedProfile.getSegments().contains("past-event-segment-test"),
+                1000, 20);
 
         // update the event to a date out of the past event condition
         removeItems(Event.class);
@@ -236,12 +231,9 @@ public class SegmentIT extends BaseIT {
         // now recalculate the past event conditions
         segmentService.recalculatePastEventConditions();
         persistenceService.refreshIndex(Profile.class, null);
-        new RetriableHelper<>("testSegmentPastEventRecalculation profile not engaged anymore", 20, 1000, () -> {
-            Profile updatedProfile = profileService.load("test_profile_id");
-            if (updatedProfile.getSegments().contains("past-event-segment-test")) {
-                throw new RuntimeException("Profile should not be engaged in the segment anymore, will retry or fail if retry reach the limit");
-            }
-            return updatedProfile;
-        }).call();
+        keepTrying("Profile should not be engaged in the segment anymore",
+                () -> profileService.load("test_profile_id"),
+                updatedProfile -> !updatedProfile.getSegments().contains("past-event-segment-test"),
+                1000, 20);
     }
 }
