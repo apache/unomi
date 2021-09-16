@@ -36,7 +36,9 @@
         <graphql.java.annotations.version>8.0</graphql.java.annotations.version>
         <graphql.java.extended.scalars.version>1.0</graphql.java.extended.scalars.version>
         <reactivex.version>2.2.19</reactivex.version>
-        <jetty.websocket.version>9.4.28.v20200408</jetty.websocket.version>
+        <antlr.runtime.version>4.7.1</antlr.runtime.version>
+        <java.dataloader.version>2.2.0</java.dataloader.version>
+        <jetty.websocket.version>9.4.38.v20210224</jetty.websocket.version>
     </properties>
 
     <modules>

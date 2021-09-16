@@ -22,6 +22,7 @@ import com.fasterxml.jackson.core.JsonTokenId;
 import com.fasterxml.jackson.core.ObjectCodec;
 import com.fasterxml.jackson.core.TreeNode;
 import com.fasterxml.jackson.databind.DeserializationContext;
+import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.deser.std.UntypedObjectDeserializer;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -37,7 +38,7 @@ import java.util.*;
  *            SimpleModule deserializerModule =
  *                  new SimpleModule("PropertyTypedObjectDeserializerModule",
  *                      new Version(1, 0, 0, null, "org.apache.unomi.rest", "deserializer"));
- *            PropertyTypedObjectDeserializer propertyTypedObjectDeserializer = new PropertyTypedObjectDeserializer();
+ *            PropertyTypedObjectDeserializer propertyTypedObjectDeserializer = new PropertyTypedObjectDeserializer(null, null);
  *            propertyTypedObjectDeserializer.registerMapping("type=.*Condition", Condition.class);
  *            deserializerModule.addDeserializer(Object.class, propertyTypedObjectDeserializer);
  *            objectMapper.registerModule(deserializerModule);
@@ -58,6 +59,10 @@ public class PropertyTypedObjectDeserializer extends UntypedObjectDeserializer {
 
     private Map<String,Set<String>> fieldValuesToMatch = new LinkedHashMap<String,Set<String>>();
 
+    public PropertyTypedObjectDeserializer(JavaType listType, JavaType mapType) {
+        super(listType, mapType);
+    }
+
     public void registerMapping(String matchExpression,
                                 Class<? extends Object> mappedClass) {
         registry.put(matchExpression, mappedClass);
@@ -74,7 +79,7 @@ public class PropertyTypedObjectDeserializer extends UntypedObjectDeserializer {
     public Object deserialize(
             JsonParser jp, DeserializationContext ctxt)
             throws IOException {
-        if (jp.getCurrentTokenId() != JsonTokenId.ID_START_OBJECT) {
+        if (jp.currentTokenId() != JsonTokenId.ID_START_OBJECT) {
             return super.deserialize(jp, ctxt);
         }
         ObjectCodec codec = jp.getCodec();
