@@ -56,7 +56,7 @@ public class CustomObjectMapper extends ObjectMapper {
                 new SimpleModule("PropertyTypedObjectDeserializerModule",
                         new Version(1, 0, 0, null, "org.apache.unomi.rest", "deserializer"));
 
-        PropertyTypedObjectDeserializer propertyTypedObjectDeserializer = new PropertyTypedObjectDeserializer();
+        PropertyTypedObjectDeserializer propertyTypedObjectDeserializer = new PropertyTypedObjectDeserializer(null, null);
         propertyTypedObjectDeserializer.registerMapping("type=.*Condition", Condition.class);
         deserializerModule.addDeserializer(Object.class, propertyTypedObjectDeserializer);
 

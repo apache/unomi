@@ -24,15 +24,16 @@
 
     <feature description="unomi-kar" version="${project.version}" name="unomi-kar"
              start-level="70">
-        <feature>war</feature>
+        <feature prerequisite="true">wrap</feature>
+        <feature prerequisite="true">aries-blueprint</feature>
+        <feature prerequisite="true">war</feature>
         <feature>cxf-jaxrs</feature>
         <feature>cxf-features-metrics</feature>
+        <feature>cxf-rs-security-cors</feature>
         <feature>cxf-rs-description-openapi-v3</feature>
         <feature>cellar</feature>
         <feature>eventadmin</feature>
         <feature>shell-compat</feature>
-        <feature prerequisite="true">wrap</feature>
-        <feature dependency="true">aries-blueprint</feature>
         <feature version="${hibernate.validator.version}">hibernate-validator</feature>
         <configfile finalname="/etc/org.apache.unomi.web.cfg">mvn:org.apache.unomi/unomi-wab/${project.version}/cfg/unomicfg</configfile>
         <configfile finalname="/etc/org.apache.unomi.persistence.elasticsearch.cfg">mvn:org.apache.unomi/unomi-persistence-elasticsearch-core/${project.version}/cfg/elasticsearchcfg</configfile>
@@ -50,11 +51,12 @@
         <bundle start-level="75">mvn:com.google.guava/guava/16.0.1</bundle>
         <bundle start-level="75">mvn:com.github.fge/jackson-coreutils/1.8</bundle>
         <bundle start-level="75">mvn:com.github.fge/json-patch/1.9</bundle>
-        <bundle start-level="75">mvn:com.fasterxml.jackson.core/jackson-databind/${version.jackson.core}</bundle>
+        <bundle start-level="75">mvn:com.fasterxml.jackson.core/jackson-databind/${version.jackson.databind}</bundle>
         <bundle start-level="75">mvn:com.fasterxml.jackson.core/jackson-annotations/${version.jackson.core}</bundle>
         <bundle start-level="75">mvn:com.fasterxml.jackson.jaxrs/jackson-jaxrs-base/${version.jackson.core}</bundle>
         <bundle start-level="75">mvn:com.fasterxml.jackson.module/jackson-module-jaxb-annotations/${version.jackson.jaxb}</bundle>
         <bundle start-level="75">mvn:com.fasterxml.jackson.jaxrs/jackson-jaxrs-json-provider/${version.jackson.core}</bundle>
+        <bundle start-level="75">mvn:com.fasterxml.jackson.dataformat/jackson-dataformat-yaml/${version.jackson.core}</bundle>
         <bundle start-level="75">mvn:org.apache.servicemix.bundles/org.apache.servicemix.bundles.jakarta-regexp/1.4_1</bundle>
         <bundle start-level="75">mvn:org.apache.servicemix.bundles/org.apache.servicemix.bundles.joda-time/2.3_1</bundle>
         <bundle start-level="75">mvn:org.apache.servicemix.specs/org.apache.servicemix.specs.jaxws-api-2.2/2.9.0</bundle>
