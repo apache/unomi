@@ -221,6 +221,13 @@
 
     <service interface="org.apache.unomi.api.actions.ActionExecutor">
         <service-properties>
+            <entry key="actionExecutorId" value="evaluateVisitProperties"/>
+        </service-properties>
+        <bean class="org.apache.unomi.plugins.baseplugin.actions.EvaluateVisitPropertiesAction"/>
+    </service>
+
+    <service interface="org.apache.unomi.api.actions.ActionExecutor">
+        <service-properties>
             <entry key="actionExecutorId" value="updateProperties"/>
         </service-properties>
         <bean class="org.apache.unomi.plugins.baseplugin.actions.UpdatePropertiesAction">

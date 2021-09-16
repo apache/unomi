@@ -50,6 +50,7 @@ import org.slf4j.LoggerFactory;
 import javax.inject.Inject;
 import java.io.File;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
 import java.util.*;
 
 
@@ -79,6 +80,9 @@ public class BasicIT extends BaseIT {
     private static final String FIRST_NAME = "firstName";
     private static final String LAST_NAME = "lastName";
     private static final String EMAIL = "email";
+    private static final String FIRST_VISIT = "firstVisit";
+    private static final String LAST_VISIT = "lastVisit";
+    private static final String PREVIOUS_VISIT = "previousVisit";
 
     private static final String FIRST_NAME_VISITOR_1 = "firstNameVisitor1";
     private static final String FIRST_NAME_VISITOR_2 = "firstNameVisitor2";
@@ -165,6 +169,8 @@ public class BasicIT extends BaseIT {
                 ContentType.create("application/json")));
         TestUtils.RequestResponse requestResponsePageView1 = executeContextJSONRequest(requestPageView1, SESSION_ID_3);
         String profileIdVisitor1 = requestResponsePageView1.getContextResponse().getProfileId();
+        String lastVisit = (String) requestResponsePageView1.getContextResponse().getProfileProperties().get("lastVisit");
+        Assert.assertNotNull("Context profile properties should contains a lastVisit property", lastVisit);
         Thread.sleep(1000);
 
         // Initialize VISITOR_1 properties
@@ -185,6 +191,8 @@ public class BasicIT extends BaseIT {
         Assert.assertEquals("Context profile id should be the same", profileIdVisitor1,
                 requestResponseLoginVisitor1.getContextResponse().getProfileId());
         checkVisitor1ResponseProperties(requestResponseLoginVisitor1.getContextResponse().getProfileProperties());
+        Assert.assertEquals("LastVisit property should not be updated as we are on the same session", lastVisit,
+                requestResponseLoginVisitor1.getContextResponse().getProfileProperties().get("lastVisit"));
         Thread.sleep(1000);
 
         // Lets add a page view with VISITOR_1 to simulate reloading the page after login and be able to check the profile properties
@@ -196,6 +204,8 @@ public class BasicIT extends BaseIT {
         Assert.assertEquals("Context profile id should be the same", profileIdVisitor1,
                 requestResponsePageView2.getContextResponse().getProfileId());
         checkVisitor1ResponseProperties(requestResponsePageView2.getContextResponse().getProfileProperties());
+        Assert.assertEquals("LastVisit property should not be updated as we are on the same session", lastVisit,
+                requestResponsePageView2.getContextResponse().getProfileProperties().get("lastVisit"));
         Thread.sleep(1000);
 
         // Lets simulate a logout by requesting the context with a new page view event and a new session id
@@ -209,6 +219,12 @@ public class BasicIT extends BaseIT {
         Assert.assertEquals("Context profile id should be the same", profileIdVisitor1,
                 requestResponsePageView3.getContextResponse().getProfileId());
         checkVisitor1ResponseProperties(requestResponsePageView3.getContextResponse().getProfileProperties());
+        Assert.assertEquals("previousVisit property should be updated as we are on a new session", lastVisit,
+                requestResponsePageView3.getContextResponse().getProfileProperties().get("previousVisit"));
+        Assert.assertNotEquals("lastVisit property should be updated as we are on a new session", lastVisit,
+                requestResponsePageView3.getContextResponse().getProfileProperties().get("lastVisit"));
+        lastVisit = (String) requestResponsePageView3.getContextResponse().getProfileProperties().get("lastVisit");
+        Assert.assertNotNull("Context profile properties should contains a lastVisit property", lastVisit);
         Thread.sleep(1000);
 
         // Initialize VISITOR_2 properties
@@ -265,7 +281,7 @@ public class BasicIT extends BaseIT {
         contextRequest.setSource(sourceSite);
         contextRequest.setRequireSegments(false);
         contextRequest.setEvents(Collections.singletonList(loginEvent));
-        contextRequest.setRequiredProfileProperties(Arrays.asList(FIRST_NAME, LAST_NAME, EMAIL));
+        contextRequest.setRequiredProfileProperties(Arrays.asList(FIRST_NAME, LAST_NAME, EMAIL, FIRST_VISIT, LAST_VISIT, PREVIOUS_VISIT));
         contextRequest.setSessionId(sessionId);
         return contextRequest;
     }
@@ -290,7 +306,7 @@ public class BasicIT extends BaseIT {
         contextRequest.setSource(customPageItem);
         contextRequest.setRequireSegments(false);
         contextRequest.setEvents(Collections.singletonList(pageViewEvent));
-        contextRequest.setRequiredProfileProperties(Arrays.asList(FIRST_NAME, LAST_NAME, EMAIL));
+        contextRequest.setRequiredProfileProperties(Arrays.asList(FIRST_NAME, LAST_NAME, EMAIL, FIRST_VISIT, LAST_VISIT, PREVIOUS_VISIT));
         return contextRequest;
     }
 

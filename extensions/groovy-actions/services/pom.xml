@@ -16,7 +16,8 @@
   ~ limitations under the License.
   -->
 
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <parent>
         <groupId>org.apache.unomi</groupId>
         <artifactId>unomi-groovy-actions-root</artifactId>
@@ -27,7 +28,9 @@
 
     <artifactId>unomi-groovy-actions-services</artifactId>
     <name>Apache Unomi :: Extensions :: Groovy Actions :: Service</name>
-    <description>Service implementation for the Apache Unomi Context Server extension that provides the possibility to implement actions in Groovy</description>
+    <description>Service implementation for the Apache Unomi Context Server extension that provides the possibility to implement actions in
+        Groovy
+    </description>
     <packaging>bundle</packaging>
 
     <dependencies>
@@ -54,12 +57,31 @@
             <version>${project.version}</version>
             <scope>provided</scope>
         </dependency>
-
+        <dependency>
+            <groupId>org.apache.unomi</groupId>
+            <artifactId>unomi-persistence-spi</artifactId>
+            <version>${project.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-core</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <scope>provided</scope>
+        </dependency>
         <dependency>
             <groupId>org.codehaus.groovy</groupId>
             <artifactId>groovy</artifactId>
             <version>${groovy.version}</version>
             <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>commons-io</groupId>
+            <artifactId>commons-io</artifactId>
         </dependency>
     </dependencies>
 
@@ -72,9 +94,8 @@
                 <configuration>
                     <instructions>
                         <Embed-Dependency>*;scope=compile|runtime</Embed-Dependency>
-                        <Import-Package>
-                            *
-                        </Import-Package>
+                        <Unomi-Source-Folders>${project.basedir}</Unomi-Source-Folders>
+                        <DynamicImport-Package>*</DynamicImport-Package>
                     </instructions>
                 </configuration>
             </plugin>

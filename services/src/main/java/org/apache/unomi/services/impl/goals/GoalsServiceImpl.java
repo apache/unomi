@@ -215,8 +215,8 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
     public Goal getGoal(String goalId) {
         Goal goal = persistenceService.load(goalId, Goal.class);
         if (goal != null) {
-            ParserHelper.resolveConditionType(definitionsService, goal.getStartEvent());
-            ParserHelper.resolveConditionType(definitionsService, goal.getTargetEvent());
+            ParserHelper.resolveConditionType(definitionsService, goal.getStartEvent(), "goal "+goalId+" start event");
+            ParserHelper.resolveConditionType(definitionsService, goal.getTargetEvent(), "goal "+goalId+" target event");
         }
         return goal;
     }
@@ -230,8 +230,12 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
 
     @Override
     public void setGoal(Goal goal) {
-        ParserHelper.resolveConditionType(definitionsService, goal.getStartEvent());
-        ParserHelper.resolveConditionType(definitionsService, goal.getTargetEvent());
+        if (goal == null) {
+            logger.warn("Trying to save null goal, aborting...");
+            return;
+        }
+        ParserHelper.resolveConditionType(definitionsService, goal.getStartEvent(), "goal "+goal.getItemId()+" start event");
+        ParserHelper.resolveConditionType(definitionsService, goal.getTargetEvent(), "goal "+goal.getItemId()+" start event");
 
         if (goal.getMetadata().isEnabled()) {
             if (goal.getStartEvent() != null) {
@@ -398,7 +402,7 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
     public Campaign getCampaign(String id) {
         Campaign campaign = persistenceService.load(id, Campaign.class);
         if (campaign != null) {
-            ParserHelper.resolveConditionType(definitionsService, campaign.getEntryCondition());
+            ParserHelper.resolveConditionType(definitionsService, campaign.getEntryCondition(), "campaign " + id);
         }
         return campaign;
     }
@@ -412,7 +416,7 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
     }
 
     public void setCampaign(Campaign campaign) {
-        ParserHelper.resolveConditionType(definitionsService, campaign.getEntryCondition());
+        ParserHelper.resolveConditionType(definitionsService, campaign.getEntryCondition(), "campaign " + campaign.getItemId());
 
         if(rulesService.getRule(campaign.getMetadata().getId() + "EntryEvent") != null) {
             rulesService.removeRule(campaign.getMetadata().getId() + "EntryEvent");
@@ -457,7 +461,7 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
         }
 
         if (query != null && query.getCondition() != null) {
-            ParserHelper.resolveConditionType(definitionsService, query.getCondition());
+            ParserHelper.resolveConditionType(definitionsService, query.getCondition(), "goal " + goalId + " report");
             list.add(query.getCondition());
         }
 

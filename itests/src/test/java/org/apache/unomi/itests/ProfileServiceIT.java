@@ -17,6 +17,7 @@
 package org.apache.unomi.itests;
 
 import org.apache.unomi.api.Profile;
+import org.apache.unomi.api.ProfileAlias;
 import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.persistence.spi.PersistenceService;
@@ -25,6 +26,8 @@ import org.apache.unomi.api.PartialList;
 import org.apache.unomi.persistence.elasticsearch.*;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.fail;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -34,11 +37,14 @@ import org.ops4j.pax.exam.junit.PaxExam;
 import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
 import org.ops4j.pax.exam.spi.reactors.PerSuite;
 import org.ops4j.pax.exam.util.Filter;
+import org.osgi.service.cm.Configuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.stream.IntStream;
 
 import javax.inject.Inject;
 
@@ -51,6 +57,8 @@ public class ProfileServiceIT extends BaseIT {
     private final static Logger LOGGER = LoggerFactory.getLogger(ProfileServiceIT.class);
 
     private final static String TEST_PROFILE_ID = "test-profile-id";
+
+    private static final String TEST_PROFILE_ALIAS = "test-profile-alias";
 
     @Inject @Filter(timeout = 600000)
     protected ProfileService profileService;
@@ -69,12 +77,24 @@ public class ProfileServiceIT extends BaseIT {
     }
 
     @Test
-    public void testProfileDelete() {
+    public void testProfileDelete() throws Exception {
         Profile profile = new Profile();
         profile.setItemId(TEST_PROFILE_ID);
         profileService.save(profile);
+
+        refreshPersistence();
+
+        profileService.addAliasToProfile(profile.getItemId(), TEST_PROFILE_ALIAS, "defaultClientId");
+
+        refreshPersistence();
+
         LOGGER.info("Profile saved, now testing profile delete...");
         profileService.delete(TEST_PROFILE_ID, false);
+
+        refreshPersistence();
+
+        assertNull(profileService.load(TEST_PROFILE_ALIAS));
+
         LOGGER.info("Profile deleted successfully.");
     }
 
@@ -119,9 +139,14 @@ public class ProfileServiceIT extends BaseIT {
 
     // Relevant only when throwExceptions system property is true
     @Test
-    public void testGetProfileWithWrongScrollerIdThrowException() throws InterruptedException, NoSuchFieldException, IllegalAccessException {
-        boolean throwExceptionCurrent = (boolean) persistenceService.getSetting("throwExceptions");
-        persistenceService.setSetting("throwExceptions", true);
+    public void testGetProfileWithWrongScrollerIdThrowException() throws InterruptedException, NoSuchFieldException, IllegalAccessException, IOException {
+        boolean throwExceptionCurrent = false;
+        Configuration elasticSearchConfiguration = configurationAdmin.getConfiguration("org.apache.unomi.persistence.elasticsearch");
+        if (elasticSearchConfiguration != null) {
+            throwExceptionCurrent = Boolean.getBoolean((String) elasticSearchConfiguration.getProperties().get("throwExceptions"));
+        }
+
+        updateConfiguration(PersistenceService.class.getName(), "org.apache.unomi.persistence.elasticsearch", "throwExceptions", true);
 
         Query query = new Query();
         query.setLimit(2);
@@ -135,7 +160,7 @@ public class ProfileServiceIT extends BaseIT {
             // Should get here since this scenario should throw exception
         }
         finally {
-            persistenceService.setSetting("throwExceptions", throwExceptionCurrent);
+            updateConfiguration(PersistenceService.class.getName(), "org.apache.unomi.persistence.elasticsearch", "throwExceptions", throwExceptionCurrent);
         }
     }
 
@@ -152,5 +177,42 @@ public class ProfileServiceIT extends BaseIT {
         assertEquals(testValue, value);
     }
 
+    @Test
+    public void testLoadProfileByAlias() throws Exception {
+        String profileID = "profileID_testLoadProfileByAlias";
+        try {
+            Profile profile = new Profile();
+            profile.setItemId(profileID);
+            profileService.save(profile);
+
+            refreshPersistence();
+
+            IntStream.range(1, 3).forEach(index -> {
+                final String profileAlias = profileID + "_alias_" + index;
+                profileService.addAliasToProfile(profileID, profileAlias, "clientID");
+            });
+
+            refreshPersistence();
+
+            Profile storedProfile = profileService.load(profileID);
+            assertNotNull(storedProfile);
+            assertEquals(profileID, storedProfile.getItemId());
+
+            storedProfile = profileService.load(profileID + "_alias_1");
+            assertNotNull(storedProfile);
+            assertEquals(profileID, storedProfile.getItemId());
+
+            storedProfile = profileService.load(profileID + "_alias_2");
+            assertNotNull(storedProfile);
+            assertEquals(profileID, storedProfile.getItemId());
+        } finally {
+            profileService.delete(profileID, false);
+
+            IntStream.range(1, 3).forEach(index -> {
+                final String profileAlias = profileID + "_alias_" + index;
+                persistenceService.remove(profileAlias, ProfileAlias.class);
+            });
+        }
+    }
 
 }

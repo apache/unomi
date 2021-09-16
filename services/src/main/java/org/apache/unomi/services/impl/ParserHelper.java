@@ -23,6 +23,7 @@ import org.apache.unomi.api.actions.Action;
 import org.apache.unomi.api.actions.ActionType;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.conditions.ConditionType;
+import org.apache.unomi.api.rules.Rule;
 import org.apache.unomi.api.services.DefinitionsService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,8 +40,9 @@ public class ParserHelper {
     private static final Set<String> unresolvedActionTypes = new HashSet<>();
     private static final Set<String> unresolvedConditionTypes = new HashSet<>();
 
-    public static boolean resolveConditionType(final DefinitionsService definitionsService, Condition rootCondition) {
+    public static boolean resolveConditionType(final DefinitionsService definitionsService, Condition rootCondition, String contextObjectName) {
         if (rootCondition == null) {
+            logger.warn("Couldn't resolve null condition for {}", contextObjectName);
             return false;
         }
         final List<String> result = new ArrayList<String>();
@@ -56,10 +58,14 @@ public class ParserHelper {
                         result.add(condition.getConditionTypeId());
                         if (!unresolvedConditionTypes.contains(condition.getConditionTypeId())) {
                             unresolvedConditionTypes.add(condition.getConditionTypeId());
-                            logger.warn("Couldn't resolve condition type: " + condition.getConditionTypeId());
+                            logger.warn("Couldn't resolve condition type: {} for {}", condition.getConditionTypeId(), contextObjectName);
                         }
                     }
                 }
+            }
+
+            @Override
+            public void postVisit(Condition condition) {
             }
         });
         return result.isEmpty();
@@ -71,6 +77,10 @@ public class ParserHelper {
             @Override
             public void visit(Condition condition) {
                 result.add(condition.getConditionTypeId());
+            }
+
+            @Override
+            public void postVisit(Condition condition) {
             }
         });
         return result;
@@ -94,17 +104,29 @@ public class ParserHelper {
                 }
             }
         }
+        visitor.postVisit(rootCondition);
     }
 
-    public static boolean resolveActionTypes(DefinitionsService definitionsService, List<Action> actions) {
+    public static boolean resolveActionTypes(DefinitionsService definitionsService, Rule rule) {
         boolean result = true;
-        for (Action action : actions) {
+        if (rule.getActions() == null) {
+            logger.warn("Rule {}:{} has null actions", rule.getItemId(), rule.getMetadata().getName());
+            return false;
+        }
+        if (rule.getActions().isEmpty()) {
+            logger.warn("Rule {}:{} has empty actions", rule.getItemId(), rule.getMetadata().getName());
+            return result;
+        }
+        for (Action action : rule.getActions()) {
             result &= ParserHelper.resolveActionType(definitionsService, action);
         }
         return result;
     }
 
     public static boolean resolveActionType(DefinitionsService definitionsService, Action action) {
+        if (definitionsService == null) {
+            return false;
+        }
         if (action.getActionType() == null) {
             ActionType actionType = definitionsService.getActionType(action.getActionTypeId());
             if (actionType != null) {
@@ -132,5 +154,49 @@ public class ParserHelper {
 
     interface ConditionVisitor {
         void visit(Condition condition);
+        void postVisit(Condition condition);
+    }
+
+    public static Set<String> resolveConditionEventTypes(Condition rootCondition) {
+        if (rootCondition == null) {
+            return new HashSet<>();
+        }
+        EventTypeConditionVisitor eventTypeConditionVisitor = new EventTypeConditionVisitor();
+        visitConditions(rootCondition, eventTypeConditionVisitor);
+        return eventTypeConditionVisitor.getEventTypeIds();
+    }
+
+    static class EventTypeConditionVisitor implements ConditionVisitor {
+
+        private Set<String> eventTypeIds = new HashSet<>();
+        private Stack<String> conditionTypeStack = new Stack<>();
+
+        public void visit(Condition condition) {
+            conditionTypeStack.push(condition.getConditionTypeId());
+             if ("eventTypeCondition".equals(condition.getConditionTypeId())) {
+                String eventTypeId = (String) condition.getParameter("eventTypeId");
+                if (eventTypeId == null) {
+                    logger.warn("Null eventTypeId found!");
+                } else {
+                    // we must now check the stack to see how many notConditions we have in the parent stack
+                    if (conditionTypeStack.contains("notCondition")) {
+                        logger.warn("Found complex negative event type condition, will always evaluate rule");
+                        eventTypeIds.add("*");
+                    } else {
+                        eventTypeIds.add(eventTypeId);
+                    }
+                }
+            } else if (condition.getConditionType().getParentCondition() != null) {
+                visitConditions(condition.getConditionType().getParentCondition(), this);
+            }
+        }
+
+        public void postVisit(Condition condition) {
+            conditionTypeStack.pop();
+        }
+
+        public Set<String> getEventTypeIds() {
+            return eventTypeIds;
+        }
     }
 }

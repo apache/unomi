@@ -1,8 +1,0 @@
-{
-  "type":"profilePropertyCondition",
-  "parameterValues":{
-    "propertyName":"segments",
-    "comparisonOperator":"equals",
-    "propertyValue":"${segmentId}"
-  }
-}

@@ -35,6 +35,12 @@ public class Parameter implements Serializable {
     public Parameter() {
     }
 
+    public Parameter(String id, String type, boolean multivalued) {
+        this.id = id;
+        this.type = type;
+        this.multivalued = multivalued;
+    }
+
     public String getId() {
         return id;
     }

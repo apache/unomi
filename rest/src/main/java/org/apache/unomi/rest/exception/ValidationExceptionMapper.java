@@ -36,10 +36,10 @@ public class ValidationExceptionMapper implements ExceptionMapper<ConstraintViol
         exception.getConstraintViolations().forEach(constraintViolation -> {
             if (logger.isDebugEnabled()) {
                 logger.debug(String.format("value %s from %s %s", constraintViolation.getInvalidValue(),
-                        constraintViolation.getPropertyPath().toString(), constraintViolation.getMessage()));
+                        constraintViolation.getPropertyPath().toString(), constraintViolation.getMessage()), exception);
             }
             logger.error(constraintViolation.getPropertyPath().toString() + " " + constraintViolation.getMessage() + ". Enable debug log "
-                    + "level for more informations about the invalid value received", exception);
+                    + "level for more informations about the invalid value received");
         });
 
         return Response.status(Response.Status.BAD_REQUEST).header("Content-Type", MediaType.TEXT_PLAIN)

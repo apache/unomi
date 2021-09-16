@@ -19,6 +19,7 @@
     <feature name="unomi-web-tracker-karaf-kar" version="${project.version}"
              description="Apache Unomi :: Extensions :: Web Tracker :: Apache Karaf Feature">
         <details>Apache Karaf feature for the Apache Unomi Context Server extension that provide the web tracker.</details>
+        <feature>unomi-kar</feature>
         <bundle start-level="85">mvn:org.apache.httpcomponents/httpcore-osgi/${httpcore-osgi.version}</bundle>
         <bundle start-level="85">mvn:org.apache.httpcomponents/httpclient-osgi/${httpclient-osgi.version}</bundle>
         <bundle start-level="85">mvn:org.apache.unomi/unomi-web-tracker-wab/${project.version}</bundle>

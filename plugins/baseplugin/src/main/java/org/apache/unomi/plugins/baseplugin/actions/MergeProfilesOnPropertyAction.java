@@ -32,9 +32,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.servlet.ServletResponse;
-import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletResponse;
-import java.util.*;
+import java.util.Arrays;
+import java.util.List;
+import java.util.UUID;
 
 public class MergeProfilesOnPropertyAction implements ActionExecutor {
     private static final Logger logger = LoggerFactory.getLogger(MergeProfilesOnPropertyAction.class.getName());
@@ -48,9 +49,9 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
     private int maxProfilesInOneMerge = -1;
 
     public int execute(Action action, Event event) {
-        String profileIdCookieName = (String) configSharingService.getProperty("profileIdCookieName");
-        String profileIdCookieDomain = (String) configSharingService.getProperty("profileIdCookieDomain");
-        Integer profileIdCookieMaxAgeInSeconds = (Integer) configSharingService.getProperty("profileIdCookieMaxAgeInSeconds");
+//        String profileIdCookieName = (String) configSharingService.getProperty("profileIdCookieName");
+//        String profileIdCookieDomain = (String) configSharingService.getProperty("profileIdCookieDomain");
+//        Integer profileIdCookieMaxAgeInSeconds = (Integer) configSharingService.getProperty("profileIdCookieMaxAgeInSeconds");
 
         Profile profile = event.getProfile();
         if (profile instanceof Persona || profile.isAnonymousProfile()) {
@@ -98,10 +99,10 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
                 // Take existing profile
                 profile = profiles.get(0);
             } else {
-                // Create a new profile
-                if (forceEventProfileAsMaster)
+                if (forceEventProfileAsMaster) {
                     profile = event.getProfile();
-                else {
+                } else {
+                    // Create a new profile
                     profile = new Profile(UUID.randomUUID().toString());
                     profile.setProperty("firstVisit", event.getTimeStamp());
                 }
@@ -110,8 +111,8 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
 
             logger.info("Different users, switch to " + profile.getItemId());
 
-            HttpServletResponse httpServletResponse = (HttpServletResponse) event.getAttributes().get(Event.HTTP_RESPONSE_ATTRIBUTE);
-            sendProfileCookie(profile, httpServletResponse, profileIdCookieName, profileIdCookieDomain, profileIdCookieMaxAgeInSeconds);
+//            HttpServletResponse httpServletResponse = (HttpServletResponse) event.getAttributes().get(Event.HTTP_RESPONSE_ATTRIBUTE);
+//            sendProfileCookie(profile, httpServletResponse, profileIdCookieName, profileIdCookieDomain, profileIdCookieMaxAgeInSeconds);
 
             // At the end of the merge, we must set the merged profile as profile event to process other Actions
             event.setProfileId(profile.getItemId());
@@ -153,8 +154,8 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
                 HttpServletResponse httpServletResponse = (HttpServletResponse) event.getAttributes().get(Event.HTTP_RESPONSE_ATTRIBUTE);
                 // we still send back the current profile cookie. It will be changed on the next request to the ContextServlet.
                 // The current profile will be deleted only then because we cannot delete it right now (too soon)
-                sendProfileCookie(profile, httpServletResponse,
-                        profileIdCookieName, profileIdCookieDomain, profileIdCookieMaxAgeInSeconds);
+//                sendProfileCookie(profile, httpServletResponse,
+//                        profileIdCookieName, profileIdCookieDomain, profileIdCookieMaxAgeInSeconds);
 
                 final String masterProfileId = masterProfile.getItemId();
                 // At the end of the merge, we must set the merged profile as profile event to process other Actions
@@ -163,7 +164,7 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
 
                 final Boolean anonymousBrowsing = privacyService.isRequireAnonymousBrowsing(masterProfileId);
 
-                if (currentSession != null){
+                if (currentSession != null) {
                     currentSession.setProfile(masterProfile);
                     if (privacyService.isRequireAnonymousBrowsing(profile)) {
                         privacyService.setRequireAnonymousBrowsing(masterProfileId, true, event.getSourceId());
@@ -185,13 +186,14 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
                             if (!StringUtils.equals(profileId, masterProfileId)) {
                                 if (currentEvent.isPersistent()) {
                                     persistenceService.update(currentEvent, currentEvent.getTimeStamp(), Event.class, "profileId", anonymousBrowsing ? null : masterProfileId);
-                                }                            }
+                                }
+                            }
 
                             for (Profile profile : profiles) {
                                 String profileId = profile.getItemId();
                                 if (!StringUtils.equals(profileId, masterProfileId)) {
                                     List<Session> sessions = persistenceService.query("profileId", profileId, null, Session.class);
-                                    if (currentSession != null){
+                                    if (currentSession != null) {
                                         if (masterProfileId.equals(profileId) && !sessions.contains(currentSession)) {
                                             sessions.add(currentSession);
                                         }
@@ -207,21 +209,15 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
                                             persistenceService.update(event, event.getTimeStamp(), Event.class, "profileId", anonymousBrowsing ? null : masterProfileId);
                                         }
                                     }
-                                    // we must mark all the profiles that we merged into the master as merged with the master, and they will
-                                    // be deleted upon next load
-                                    profile.setMergedWith(masterProfileId);
-                                    Map<String,Object> sourceMap = new HashMap<>();
-                                    sourceMap.put("mergedWith", masterProfileId);
-                                    profile.setSystemProperty("lastUpdated", new Date());
-                                    sourceMap.put("systemProperties", profile.getSystemProperties());
 
-                                    boolean isExist  = persistenceService.load(profile.getItemId(), Profile.class) != null;
+                                    final String clientIdFromEvent = (String) event.getAttributes().get(Event.CLIENT_ID_ATTRIBUTE);
+                                    String clientId = clientIdFromEvent != null ? clientIdFromEvent : "defaultClientId";
+                                    profileService.addAliasToProfile(masterProfileId, profile.getItemId(), clientId);
 
-                                    if (isExist == false) //save the original event profile is it has been changed
-                                        persistenceService.save(profile);
-                                    else
-                                      persistenceService.update(profile, null, Profile.class, sourceMap,true);
-
+                                    boolean isExist = profileService.load(profile.getItemId()) != null;
+                                    if (isExist) {
+                                        profileService.delete(profileId, false);
+                                    }
                                 }
                             }
                         } catch (Exception e) {
@@ -238,19 +234,19 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
         }
     }
 
-    private static void sendProfileCookie(Profile profile, ServletResponse response, String profileIdCookieName, String profileIdCookieDomain, int cookieAgeInSeconds) {
-        if (response instanceof HttpServletResponse) {
-            HttpServletResponse httpServletResponse = (HttpServletResponse) response;
-            if (!(profile instanceof Persona)) {
-                httpServletResponse.addHeader("Set-Cookie",
-                        profileIdCookieName + "=" + profile.getItemId() +
-                                "; Path=/" +
-                                "; Max-Age=" + cookieAgeInSeconds +
-                                (StringUtils.isNotBlank(profileIdCookieDomain) ? ("; Domain=" + profileIdCookieDomain) : "")  +
-                                "; SameSite=Lax");
-            }
-        }
-    }
+//    private static void sendProfileCookie(Profile profile, ServletResponse response, String profileIdCookieName, String profileIdCookieDomain, int cookieAgeInSeconds) {
+//        if (response instanceof HttpServletResponse) {
+//            HttpServletResponse httpServletResponse = (HttpServletResponse) response;
+//            if (!(profile instanceof Persona)) {
+//                httpServletResponse.addHeader("Set-Cookie",
+//                        profileIdCookieName + "=" + profile.getItemId() +
+//                                "; Path=/" +
+//                                "; Max-Age=" + cookieAgeInSeconds +
+//                                (StringUtils.isNotBlank(profileIdCookieDomain) ? ("; Domain=" + profileIdCookieDomain) : "") +
+//                                "; SameSite=Lax");
+//            }
+//        }
+//    }
 
     public void setProfileService(ProfileService profileService) {
         this.profileService = profileService;

@@ -117,8 +117,10 @@ public class SetEventOccurenceCountAction implements ActionExecutor {
 
         LocalDateTime eventTime = LocalDateTime.ofInstant(event.getTimeStamp().toInstant(),ZoneId.of("UTC"));
 
-        if (inTimeRange(eventTime, numberOfDays, fromDateTime, toDateTime)) {
-            count++;
+        if (!persistenceService.isConsistent(event)) {
+            if (inTimeRange(eventTime, numberOfDays, fromDateTime, toDateTime)) {
+                count++;
+            }
         }
 
         pastEvents.put((String) pastEventCondition.getParameter("generatedPropertyKey"), count);

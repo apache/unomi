@@ -6,6 +6,6 @@
     "version": null,
     "properties": {}
   },
-  "sessionId": "dummy-session-id",
-  "profileId": "dummy-profile-id"
+  "sessionId": "dummy-session.id",
+  "profileId": "dummy-profile.id"
 }

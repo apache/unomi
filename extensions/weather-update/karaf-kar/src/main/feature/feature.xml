@@ -20,6 +20,7 @@
              description="Apache Unomi :: Extensions :: Weather update :: Apache Karaf Feature">
         <details>Apache Karaf feature for the Apache Unomi Context Server extension that integrates Weather
             update</details>
+        <feature>unomi-kar</feature>
         <configfile finalname="/etc/org.apache.unomi.weatherUpdate.cfg">mvn:org.apache.unomi/unomi-weather-update-core/${project.version}/cfg/weatherupdatecfg</configfile>
         <bundle start-level="85">mvn:org.apache.httpcomponents/httpcore-osgi/${httpcore-osgi.version}</bundle>
         <bundle start-level="85">mvn:org.apache.httpcomponents/httpclient-osgi/${httpclient-osgi.version}</bundle>

@@ -64,6 +64,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.Objects;
 
 @WebService
 @Consumes(MediaType.APPLICATION_JSON)
@@ -72,6 +73,8 @@ import java.util.UUID;
 @Component(service = ContextJsonEndpoint.class, property = "osgi.jaxrs.resource=true")
 public class ContextJsonEndpoint {
     private static final Logger logger = LoggerFactory.getLogger(ContextJsonEndpoint.class.getName());
+
+    private static final String DEFAULT_CLIENT_ID = "defaultClientId";
 
     private boolean sanitizeConditions = Boolean
             .parseBoolean(System.getProperty("org.apache.unomi.security.personalization.sanitizeConditions", "true"));
@@ -204,10 +207,11 @@ public class ContextJsonEndpoint {
         }
 
         int changes = EventService.NO_CHANGE;
-        if (profile == null) {
-            // Not a persona, resolve profile now
-            boolean profileCreated = false;
 
+        // Not a persona, resolve profile now
+        boolean profileCreated = false;
+
+        if (profile == null) {
             if (profileId == null || invalidateProfile) {
                 // no profileId cookie was found or the profile has to be invalidated, we generate a new one and create the profile in the profile service
                 profile = createNewProfile(null, timestamp);
@@ -295,6 +299,7 @@ public class ContextJsonEndpoint {
                 profileUpdated.setPersistent(false);
                 profileUpdated.getAttributes().put(Event.HTTP_REQUEST_ATTRIBUTE, request);
                 profileUpdated.getAttributes().put(Event.HTTP_RESPONSE_ATTRIBUTE, response);
+                profileUpdated.getAttributes().put(Event.CLIENT_ID_ATTRIBUTE, DEFAULT_CLIENT_ID);
 
                 if (logger.isDebugEnabled()) {
                     logger.debug("Received event {} for profile={} {} target={} timestamp={}", profileUpdated.getEventType(),
@@ -322,6 +327,12 @@ public class ContextJsonEndpoint {
         if ((changes & EventService.PROFILE_UPDATED) == EventService.PROFILE_UPDATED) {
             profileService.save(profile);
             contextResponse.setProfileId(profile.getItemId());
+
+            if (profileCreated) {
+                String clientId = contextRequest != null && contextRequest.getClientId() != null ? contextRequest.getClientId() : DEFAULT_CLIENT_ID;
+                String profileMasterId = profile.getMergedWith() != null ? profile.getMergedWith() : profile.getItemId();
+                profileService.addAliasToProfile(profileMasterId, profile.getItemId(), clientId );
+            }
         }
         if ((changes & EventService.SESSION_UPDATED) == EventService.SESSION_UPDATED && session != null) {
             profileService.saveSession(session);

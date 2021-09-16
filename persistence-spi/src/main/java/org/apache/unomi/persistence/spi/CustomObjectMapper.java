@@ -56,7 +56,7 @@ public class CustomObjectMapper extends ObjectMapper {
                 new SimpleModule("PropertyTypedObjectDeserializerModule",
                         new Version(1, 0, 0, null, "org.apache.unomi.rest", "deserializer"));
 
-        PropertyTypedObjectDeserializer propertyTypedObjectDeserializer = new PropertyTypedObjectDeserializer();
+        PropertyTypedObjectDeserializer propertyTypedObjectDeserializer = new PropertyTypedObjectDeserializer(null, null);
         propertyTypedObjectDeserializer.registerMapping("type=.*Condition", Condition.class);
         deserializerModule.addDeserializer(Object.class, propertyTypedObjectDeserializer);
 
@@ -79,6 +79,7 @@ public class CustomObjectMapper extends ObjectMapper {
         classes.put(ActionType.ITEM_TYPE, ActionType.class);
         classes.put(Topic.ITEM_TYPE, Topic.class);
         classes.put(SourceItem.ITEM_TYPE, SourceItem.class);
+        classes.put(ProfileAlias.ITEM_TYPE, ProfileAlias.class);
         for (Map.Entry<String, Class<? extends Item>> entry : classes.entrySet()) {
             propertyTypedObjectDeserializer.registerMapping("itemType=" + entry.getKey(), entry.getValue());
             itemDeserializer.registerMapping(entry.getKey(), entry.getValue());

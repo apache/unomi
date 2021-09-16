@@ -29,7 +29,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 
 /**
- * @deprecated please use the rest endpoint {@link org.apache.unomi.rest.ContextJsonEndpoint} instead of this servlet
+ * @deprecated this servlet is now deprecated, because it have been migrated to REST endpoint.
  * A servlet filter to serve a context-specific Javascript containing the current request context object.
  */
 @Deprecated

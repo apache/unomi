@@ -17,4 +17,4 @@
 #    limitations under the License.
 #
 ################################################################################
-mvn clean install -P integration-tests,performance-tests,rat
+mvn clean install -P integration-tests,rat

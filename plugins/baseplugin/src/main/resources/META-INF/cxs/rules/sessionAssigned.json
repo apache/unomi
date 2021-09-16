@@ -31,20 +31,8 @@
 
   "actions": [
     {
-      "parameterValues": {
-        "setPropertyName": "properties.previousVisit",
-        "setPropertyValue": "profileProperty::lastVisit",
-        "storeInSession": false
-      },
-      "type": "setPropertyAction"
-    },
-    {
-      "parameterValues": {
-        "setPropertyName": "properties.lastVisit",
-        "setPropertyValue": "now",
-        "storeInSession": false
-      },
-      "type": "setPropertyAction"
+      "parameterValues": {},
+      "type": "evaluateVisitPropertiesAction"
     },
     {
       "parameterValues": {

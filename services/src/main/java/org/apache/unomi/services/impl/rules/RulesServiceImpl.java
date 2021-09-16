@@ -64,6 +64,9 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
 
     private List<RuleListenerService> ruleListeners = new CopyOnWriteArrayList<RuleListenerService>();
 
+    private Map<String,Set<Rule>> rulesByEventType = new HashMap<>();
+    private Boolean optimizedRulesActivated = true;
+
     public void setBundleContext(BundleContext bundleContext) {
         this.bundleContext = bundleContext;
     }
@@ -94,6 +97,10 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
 
     public void setRulesStatisticsRefreshInterval(Integer rulesStatisticsRefreshInterval) {
         this.rulesStatisticsRefreshInterval = rulesStatisticsRefreshInterval;
+    }
+
+    public void setOptimizedRulesActivated(Boolean optimizedRulesActivated) {
+        this.optimizedRulesActivated = optimizedRulesActivated;
     }
 
     public void postConstruct() {
@@ -157,9 +164,23 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
         Boolean hasEventAlreadyBeenRaisedForSession = null;
         Boolean hasEventAlreadyBeenRaisedForProfile = null;
 
-        List<Rule> allItems = allRules;
+        Set<Rule> eventTypeRules = new HashSet<>(allRules); // local copy to avoid concurrency issues
+        if (optimizedRulesActivated) {
+            eventTypeRules = rulesByEventType.get(event.getEventType());
+            if (eventTypeRules == null) {
+                eventTypeRules = new HashSet<>();
+            }
+            eventTypeRules = new HashSet<>(eventTypeRules); // local copy to avoid concurrency issues
+            Set<Rule> allEventRules = rulesByEventType.get("*");
+            if (allEventRules != null && !allEventRules.isEmpty()) {
+                eventTypeRules.addAll(allEventRules); // retrieve rules that should always be evaluated.
+            }
+            if (eventTypeRules.isEmpty()) {
+                return matchedRules;
+            }
+        }
 
-        for (Rule rule : allItems) {
+        for (Rule rule : eventTypeRules) {
             if (!rule.getMetadata().isEnabled()) {
                 continue;
             }
@@ -240,15 +261,34 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
         allRuleStatistics.put(ruleStatistics.getItemId(), ruleStatistics);
     }
 
-    private List<Rule> getAllRules() {
-        List<Rule> allItems = persistenceService.getAllItems(Rule.class, 0, -1, "priority").getList();
-        for (Rule rule : allItems) {
-            ParserHelper.resolveConditionType(definitionsService, rule.getCondition());
-            ParserHelper.resolveActionTypes(definitionsService, rule.getActions());
+    public void refreshRules() {
+        try {
+            // we use local variables to make sure we quickly switch the collections since the refresh is called often
+            // we want to avoid concurrency issues with the shared collections
+            List<Rule> newAllRules = getAllRules();
+            this.rulesByEventType = getRulesByEventType(newAllRules);
+            this.allRules = newAllRules;
+        } catch (Throwable t) {
+            logger.error("Error loading rules from persistence back-end", t);
         }
-        return allItems;
     }
 
+    private List<Rule> getAllRules() {
+        List<Rule> rules = persistenceService.getAllItems(Rule.class, 0, -1, "priority").getList();
+        for (Rule rule : rules) {
+            ParserHelper.resolveConditionType(definitionsService, rule.getCondition(), "rule " + rule.getItemId());
+            ParserHelper.resolveActionTypes(definitionsService, rule);
+        }
+        return rules;
+    }
+
+    private Map<String,Set<Rule>> getRulesByEventType(List<Rule> rules) {
+        Map<String,Set<Rule>> newRulesByEventType = new HashMap<>();
+        for (Rule rule : rules) {
+            updateRulesByEventType(newRulesByEventType, rule);
+        }
+        return newRulesByEventType;
+    }
 
     public boolean canHandle(Event event) {
         return true;
@@ -334,12 +374,8 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
     public Rule getRule(String ruleId) {
         Rule rule = persistenceService.load(ruleId, Rule.class);
         if (rule != null) {
-            if (rule.getCondition() != null) {
-                ParserHelper.resolveConditionType(definitionsService, rule.getCondition());
-            }
-            if (rule.getActions() != null) {
-                ParserHelper.resolveActionTypes(definitionsService, rule.getActions());
-            }
+            ParserHelper.resolveConditionType(definitionsService, rule.getCondition(), "rule " + rule.getItemId());
+            ParserHelper.resolveActionTypes(definitionsService, rule);
         }
         return rule;
     }
@@ -351,7 +387,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
         Condition condition = rule.getCondition();
         if (condition != null) {
             if (rule.getMetadata().isEnabled() && !rule.getMetadata().isMissingPlugins()) {
-                ParserHelper.resolveConditionType(definitionsService, condition);
+                ParserHelper.resolveConditionType(definitionsService, condition, "rule " + rule.getItemId());
                 definitionsService.extractConditionBySystemTag(condition, "eventCondition");
             }
         }
@@ -368,7 +404,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
             if(trackedCondition != null){
                 Condition sourceEventPropertyCondition = definitionsService.extractConditionBySystemTag(r.getCondition(), "sourceEventCondition");
                 if(source != null && sourceEventPropertyCondition != null) {
-                    ParserHelper.resolveConditionType(definitionsService, sourceEventPropertyCondition);
+                    ParserHelper.resolveConditionType(definitionsService, sourceEventPropertyCondition, "rule " + r.getItemId() + " source event condition");
                     if(persistenceService.testMatch(sourceEventPropertyCondition, source)){
                         trackedConditions.add(trackedCondition);
                     }
@@ -389,11 +425,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
         TimerTask task = new TimerTask() {
             @Override
             public void run() {
-                try {
-                    allRules = getAllRules();
-                } catch (Throwable t) {
-                    logger.error("Error loading rules from persistence back-end", t);
-                }
+                refreshRules();
             }
         };
         schedulerService.getScheduleExecutorService().scheduleWithFixedDelay(task, 0,rulesRefreshInterval, TimeUnit.MILLISECONDS);
@@ -508,6 +540,18 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
     public void fireExecuteActions(Rule rule, Event event) {
         for (RuleListenerService ruleListenerService : ruleListeners) {
             ruleListenerService.onExecuteActions(rule, event);
+        }
+    }
+
+    private void updateRulesByEventType(Map<String,Set<Rule>> rulesByEventType, Rule rule) {
+        Set<String> eventTypeIds = ParserHelper.resolveConditionEventTypes(rule.getCondition());
+        for (String eventTypeId : eventTypeIds) {
+            Set<Rule> rules = rulesByEventType.get(eventTypeId);
+            if (rules == null) {
+                rules = new HashSet<>();
+            }
+            rules.add(rule);
+            rulesByEventType.put(eventTypeId, rules);
         }
     }
 

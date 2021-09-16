@@ -39,9 +39,11 @@
             <cm:property name="segment.recalculate.period" value="1"/>
             <cm:property name="segment.batch.update" value="false"/>
             <cm:property name="segment.send.profile.update.event" value="true"/>
+            <cm:property name="segment.daily.dateexpr.evaluation.hourutc" value="5"/>
             <cm:property name="rules.refresh.interval" value="1000"/>
             <cm:property name="rules.statistics.refresh.interval" value="10000"/>
             <cm:property name="events.shouldBeCheckedEventSourceId" value="false"/>
+            <cm:property name="rules.optimizationActivated" value="true"/>
         </cm:default-properties>
     </cm:property-placeholder>
 
@@ -164,6 +166,7 @@
         <property name="schedulerService" ref="schedulerServiceImpl"/>
         <property name="rulesRefreshInterval" value="${services.rules.refresh.interval}"/>
         <property name="rulesStatisticsRefreshInterval" value="${services.rules.statistics.refresh.interval}"/>
+        <property name="optimizedRulesActivated" value="${services.rules.optimizationActivated}"/>
     </bean>
     <service id="rulesService" ref="rulesServiceImpl">
         <interfaces>
@@ -191,6 +194,7 @@
         <property name="secondsDelayForRetryUpdateProfileSegment" value="${services.segment.retry.update.segment.seconds.delay}" />
         <property name="batchSegmentProfileUpdate" value="${services.segment.batch.update}" />
         <property name="sendProfileUpdateEventForSegmentUpdate" value="${services.segment.send.profile.update.event}" />
+        <property name="dailyDateExprEvaluationHourUtc" value="${services.segment.daily.dateexpr.evaluation.hourutc}" />
 
     </bean>
     <service id="segmentService" ref="segmentServiceImpl">

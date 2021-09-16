@@ -27,6 +27,7 @@ import org.apache.unomi.api.Persona;
 import org.apache.unomi.api.PersonaSession;
 import org.apache.unomi.api.PersonaWithSessions;
 import org.apache.unomi.api.Profile;
+import org.apache.unomi.api.ProfileAlias;
 import org.apache.unomi.api.PropertyMergeStrategyExecutor;
 import org.apache.unomi.api.PropertyMergeStrategyType;
 import org.apache.unomi.api.PropertyType;
@@ -68,6 +69,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.TimerTask;
 import java.util.TreeSet;
@@ -349,7 +351,7 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
 
                             if (purgeProfileInactiveTime > 0) {
                                 Condition inactiveTimeCondition = new Condition(profilePropertyConditionType);
-                                inactiveTimeCondition.setParameter("propertyName", "lastVisit");
+                                inactiveTimeCondition.setParameter("propertyName", "properties.lastVisit");
                                 inactiveTimeCondition.setParameter("comparisonOperator", "lessThanOrEqualTo");
                                 inactiveTimeCondition.setParameter("propertyValueDateExpr", "now-" + purgeProfileInactiveTime + "d");
                                 subConditions.add(inactiveTimeCondition);
@@ -357,7 +359,7 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
 
                             if (purgeProfileExistTime > 0) {
                                 Condition existTimeCondition = new Condition(profilePropertyConditionType);
-                                existTimeCondition.setParameter("propertyName", "firstVisit");
+                                existTimeCondition.setParameter("propertyName", "properties.firstVisit");
                                 existTimeCondition.setParameter("comparisonOperator", "lessThanOrEqualTo");
                                 existTimeCondition.setParameter("propertyValueDateExpr", "now-" + purgeProfileExistTime + "d");
                                 subConditions.add(existTimeCondition);
@@ -546,11 +548,37 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
     }
 
     public Profile load(String profileId) {
+        ProfileAlias profileAlias = persistenceService.load(profileId, ProfileAlias.class);
+        if (profileAlias != null) {
+            profileId = profileAlias.getProfileID();
+        }
         return persistenceService.load(profileId, Profile.class);
     }
 
     public Profile save(Profile profile) {
         return save(profile, forceRefreshOnSave);
+    }
+
+    @Override
+    public void addAliasToProfile(String profileID, String alias, String clientID) {
+        ProfileAlias profileAlias = persistenceService.load(alias, ProfileAlias.class);
+
+        if (profileAlias == null) {
+            profileAlias = new ProfileAlias();
+
+            profileAlias.setItemId(alias);
+            profileAlias.setItemType(ProfileAlias.ITEM_TYPE);
+            profileAlias.setProfileID(profileID);
+            profileAlias.setClientID(clientID);
+
+            Date creationTime = new Date();
+            profileAlias.setCreationTime(creationTime);
+            profileAlias.setModifiedTime(creationTime);
+
+            persistenceService.save(profileAlias);
+        } else if (!Objects.equals(profileAlias.getProfileID(), profileID)) {
+            throw new IllegalArgumentException("Alias \"" + alias + "\" already used by profile with ID = \"" + profileID + "\"");
+        }
     }
 
     private Profile save(Profile profile, boolean forceRefresh) {
@@ -609,6 +637,12 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
             mergeCondition.setParameter("propertyValue", profileId);
             persistenceService.removeByQuery(mergeCondition, Profile.class);
 
+            Condition removeAliasesCondition = new Condition(definitionsService.getConditionType("profileAliasesPropertyCondition"));
+            removeAliasesCondition.setParameter("propertyName", "profileID");
+            removeAliasesCondition.setParameter("comparisonOperator", "equals");
+            removeAliasesCondition.setParameter("propertyValue", profileId);
+            persistenceService.removeByQuery(removeAliasesCondition, ProfileAlias.class);
+
             persistenceService.remove(profileId, Profile.class);
         }
     }
@@ -632,7 +666,8 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
 
         Set<String> allProfileProperties = new LinkedHashSet<>();
         for (Profile profile : profilesToMerge) {
-            allProfileProperties.addAll(profile.getProperties().keySet());
+            final Set<String> flatNestedPropertiesKeys = PropertyHelper.flatten(profile.getProperties()).keySet();
+            allProfileProperties.addAll(flatNestedPropertiesKeys);
         }
 
         Collection<PropertyType> profilePropertyTypes = getTargetPropertyTypes("profiles");
@@ -701,12 +736,12 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         // we now have to merge the profile's consents
         for (Profile profile : profilesToMerge) {
             if (profile.getConsents() != null && profile.getConsents().size() > 0) {
-                for(String consentId : profile.getConsents().keySet()) {
-                    if(masterProfile.getConsents().containsKey(consentId)) {
-                        if(masterProfile.getConsents().get(consentId).getRevokeDate().before(new Date())) {
+                for (String consentId : profile.getConsents().keySet()) {
+                    if (masterProfile.getConsents().containsKey(consentId)) {
+                        if (masterProfile.getConsents().get(consentId).getRevokeDate().before(new Date())) {
                             masterProfile.getConsents().remove(consentId);
                             masterProfileChanged = true;
-                        } else if(masterProfile.getConsents().get(consentId).getStatusDate().before(profile.getConsents().get(consentId).getStatusDate())) {
+                        } else if (masterProfile.getConsents().get(consentId).getStatusDate().before(profile.getConsents().get(consentId).getStatusDate())) {
                             masterProfile.getConsents().replace(consentId, profile.getConsents().get(consentId));
                             masterProfileChanged = true;
                         }
@@ -790,12 +825,12 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         profileCondition.setParameter("comparisonOperator", "equals");
         profileCondition.setParameter("propertyValue", profileId);
 
-        persistenceService.removeByQuery(profileCondition,Session.class);
+        persistenceService.removeByQuery(profileCondition, Session.class);
     }
 
     @Override
     public boolean matchCondition(Condition condition, Profile profile, Session session) {
-        ParserHelper.resolveConditionType(definitionsService, condition);
+        ParserHelper.resolveConditionType(definitionsService, condition, "profile " + profile.getItemId() + " matching");
 
         if (condition.getConditionTypeId().equals("booleanCondition")) {
             List<Condition> subConditions = (List<Condition>) condition.getParameter("subConditions");
@@ -820,7 +855,7 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
     }
 
     public void batchProfilesUpdate(BatchUpdate update) {
-        ParserHelper.resolveConditionType(definitionsService, update.getCondition());
+        ParserHelper.resolveConditionType(definitionsService, update.getCondition(), "batch update on property " + update.getPropertyName());
         List<Profile> profiles = persistenceService.query(update.getCondition(), null, Profile.class);
 
         for (Profile profile : profiles) {
@@ -1061,8 +1096,8 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
                         changed = true;
                     }
                 } else if (newEntry.getValue().getClass().isEnum()) {
-	            	 target.put(newEntry.getKey(), newEntry.getValue());
-	                 changed = true;
+                    target.put(newEntry.getKey(), newEntry.getValue());
+                    changed = true;
                 } else {
                     if (target.get(newEntry.getKey()) != null) {
                         changed |= merge(target.get(newEntry.getKey()), newEntry.getValue());

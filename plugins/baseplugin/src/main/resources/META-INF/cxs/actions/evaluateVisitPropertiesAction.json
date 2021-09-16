@@ -1,0 +1,13 @@
+{
+  "metadata": {
+    "id": "evaluateVisitPropertiesAction",
+    "name": "evaluateVisitPropertiesAction",
+    "description": "",
+    "systemTags": [
+      "profileTags"
+    ],
+    "readOnly": true
+  },
+  "actionExecutor": "evaluateVisitProperties",
+  "parameters": []
+}

@@ -16,7 +16,10 @@
  */
 package org.apache.unomi.rest.exception;
 
+import org.apache.commons.lang.ArrayUtils;
 import org.osgi.service.component.annotations.Component;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
@@ -28,11 +31,19 @@ import java.util.HashMap;
 @Provider
 @Component(service=ExceptionMapper.class)
 public class RuntimeExceptionMapper implements ExceptionMapper<RuntimeException> {
+    private static final Logger logger = LoggerFactory.getLogger(RuntimeExceptionMapper.class.getName());
 
     @Override
     public Response toResponse(RuntimeException exception) {
         HashMap<String, Object> body = new HashMap<>();
         body.put("errorMessage", "internalServerError");
+        logger.error(
+                "Internal server error {}: {} in {} (Set RuntimeExceptionMapper in debug to get the full stacktrace)",
+                exception.getMessage(),
+                exception,
+                ArrayUtils.isEmpty(exception.getStackTrace()) ? "Stack not available" : exception.getStackTrace()[0]
+        );
+        logger.debug("{}", exception.getMessage(), exception);
         return Response.status(Response.Status.INTERNAL_SERVER_ERROR).header("Content-Type", MediaType.APPLICATION_JSON).entity(body).build();
     }
 }

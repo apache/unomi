@@ -385,7 +385,18 @@ public class IncrementPropertyIT extends BaseIT {
 
         CustomItem target = new CustomItem("ITEM_ID_PAGE", ITEM_TYPE_PAGE);
         target.setScope("acme-space");
-        if (targetProperties != null) target.setProperties(targetProperties);
+        if (targetProperties == null) {
+            targetProperties = new HashMap<>();
+        }
+        Map<String, Object> pageInfo = new HashMap<>();
+        pageInfo.put("language", "en");
+        pageInfo.put("destinationURL", "https://www.acme.com/test-page.html");
+        pageInfo.put("referringURL", "https://unomi.apache.org");
+        pageInfo.put("pageID", "ITEM_ID_PAGE");
+        pageInfo.put("pagePath", "/test-page.html");
+        pageInfo.put("pageName", "Test page");
+        targetProperties.put("pageInfo", pageInfo);
+        target.setProperties(targetProperties);
 
         event = new Event("view", null, profile, null, null, target, new Date());
         event.setPersistent(false);
