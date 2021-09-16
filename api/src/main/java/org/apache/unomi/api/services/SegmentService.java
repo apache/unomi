@@ -226,4 +226,15 @@ public interface SegmentService {
      * @return a String representing the condition and parent condition uniquelly
      */
     String getGeneratedPropertyKey(Condition condition, Condition parentCondition);
+
+    /**
+     * This will recalculate the past event conditions from existing rules
+     * This operation can be heavy and take time, it will:
+     * - browse existing rules to extract the past event condition,
+     * - query the matching events for those conditions,
+     * - update the corresponding profiles
+     * - reevaluate segments linked to this rules to engaged/disengaged profiles after the occurrences have been updated
+     * So use it carefully or execute this method in a dedicated thread.
+     */
+    void recalculatePastEventConditions();
 }

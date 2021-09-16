@@ -793,7 +793,9 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
                     rule.setLinkedItems(Arrays.asList(metadata.getId()));
                     rules.add(rule);
 
-                    updateExistingProfilesForPastEventCondition(condition, parentCondition, true);
+                    // it's a new generated rules to keep track of the event count, we should update all the profile that match this past event
+                    // it will update the count of event occurrence on the profile directly
+                    recalculatePastEventOccurrencesOnProfiles(condition, parentCondition, true, false);
                 } else {
                     rule.getLinkedItems().add(metadata.getId());
                     rules.add(rule);
@@ -815,7 +817,18 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
         }
     }
 
-    private void updateExistingProfilesForPastEventCondition(Condition eventCondition, Condition parentCondition, boolean forceRefresh) {
+    /**
+     * This will recalculate the event counts on the profiles that match the given past event condition
+     * @param eventCondition the real condition
+     * @param parentCondition the past event condition
+     * @param forceRefresh will refresh the Profile index in case it's true
+     * @param resetExistingProfilesNotMatching if true, will reset existing profiles having a count to 0, in case they do not have events matching anymore
+     *                                         ("false" can be useful when you know that no existing profiles already exist because it's a new rule for example,
+     *                                         in that case setting this to "false" allow to skip profiles queries and speedup this process.
+     *                                         Otherwise use "true" here to be sure the count is reset to 0 on profiles that need to be reset)
+     */
+    private void recalculatePastEventOccurrencesOnProfiles(Condition eventCondition, Condition parentCondition,
+                                                             boolean forceRefresh, boolean resetExistingProfilesNotMatching) {
         long t = System.currentTimeMillis();
         List<Condition> l = new ArrayList<Condition>();
         Condition andCondition = new Condition();
@@ -855,19 +868,31 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
         }
 
         String propertyKey = (String) parentCondition.getParameter("generatedPropertyKey");
+        Set<String> existingProfilesWithCounts = resetExistingProfilesNotMatching ? getExistingProfilesWithPastEventOccurrenceCount(propertyKey) : Collections.emptySet();
 
         int updatedProfileCount = 0;
         if(pastEventsDisablePartitions) {
             Map<String, Long> eventCountByProfile = persistenceService.aggregateWithOptimizedQuery(eventCondition, new TermsAggregate("profileId"), Event.ITEM_TYPE, maximumIdsQueryCount);
-            updatedProfileCount = updateProfilesWithPastEventProperty(eventCountByProfile, propertyKey);
+            Set<String> updatedProfiles =  updatePastEventOccurrencesOnProfiles(eventCountByProfile, propertyKey);
+            existingProfilesWithCounts.removeAll(updatedProfiles);
+            updatedProfileCount = updatedProfiles.size();
         } else {
             Map<String, Double> m = persistenceService.getSingleValuesMetrics(andCondition, new String[]{"card"}, "profileId.keyword", Event.ITEM_TYPE);
             long card = m.get("_card").longValue();
             int numParts = (int) (card / aggregateQueryBucketSize) + 2;
             for (int i = 0; i < numParts; i++) {
                 Map<String, Long> eventCountByProfile = persistenceService.aggregateWithOptimizedQuery(andCondition, new TermsAggregate("profileId", i, numParts), Event.ITEM_TYPE);
-                updatedProfileCount += updateProfilesWithPastEventProperty(eventCountByProfile, propertyKey);
+                Set<String> updatedProfiles =  updatePastEventOccurrencesOnProfiles(eventCountByProfile, propertyKey);
+                existingProfilesWithCounts.removeAll(updatedProfiles);
+                updatedProfileCount += updatedProfiles.size();
             }
+        }
+
+        // remaining existing profiles with counts should be reset to 0 since they have not been updated it means
+        // that they do not have matching events anymore in the time based condition
+        if (!existingProfilesWithCounts.isEmpty()) {
+            updatedProfileCount += updatePastEventOccurrencesOnProfiles(
+                    existingProfilesWithCounts.stream().collect(Collectors.toMap(key -> key, value -> 0L)), propertyKey).size();
         }
 
         if (forceRefresh && updatedProfileCount > 0) {
@@ -875,6 +900,34 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
         }
 
         logger.info("{} profiles updated for past event condition in {}ms", updatedProfileCount, System.currentTimeMillis() - t);
+    }
+
+    /**
+     * Return the list of profile ids, for profiles that already have an event count matching the generated property key
+     * @param generatedPropertyKey the generated property key of the generated rule for the given past event condition.
+     * @return the list of profile ids.
+     */
+    private Set<String> getExistingProfilesWithPastEventOccurrenceCount(String generatedPropertyKey) {
+        Condition countExistsCondition = new Condition();
+        countExistsCondition.setConditionType(definitionsService.getConditionType("profilePropertyCondition"));
+        countExistsCondition.setParameter("propertyName", "systemProperties.pastEvents." + generatedPropertyKey);
+        countExistsCondition.setParameter("comparisonOperator", "greaterThan");
+        countExistsCondition.setParameter("propertyValueInteger", 0);
+
+        Set<String> profileIds = new HashSet<>();
+        if(pastEventsDisablePartitions) {
+            profileIds.addAll(persistenceService.aggregateWithOptimizedQuery(countExistsCondition, new TermsAggregate("itemId"),
+                    Profile.ITEM_TYPE, maximumIdsQueryCount).keySet());
+        } else {
+            Map<String, Double> m = persistenceService.getSingleValuesMetrics(countExistsCondition, new String[]{"card"}, "itemId.keyword", Profile.ITEM_TYPE);
+            long card = m.get("_card").longValue();
+            int numParts = (int) (card / aggregateQueryBucketSize) + 2;
+            for (int i = 0; i < numParts; i++) {
+                profileIds.addAll(persistenceService.aggregateWithOptimizedQuery(countExistsCondition, new TermsAggregate("itemId", i, numParts),
+                        Profile.ITEM_TYPE).keySet());
+            }
+        }
+        return profileIds;
     }
 
     public String getGeneratedPropertyKey(Condition condition, Condition parentCondition) {
@@ -900,8 +953,50 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
         }
     }
 
-    private int updateProfilesWithPastEventProperty(Map<String, Long> eventCountByProfile, String propertyKey) {
-        int profileUpdatedCount = 0;
+    @Override
+    public void recalculatePastEventConditions() {
+        logger.info("running scheduled task to recalculate segments with pastEventCondition conditions");
+        long pastEventsTaskStartTime = System.currentTimeMillis();
+        Set<String> linkedSegments = new HashSet<>();
+        for (Metadata metadata : rulesService.getRuleMetadatas()) {
+            // reevaluate auto generated rules used to store the event occurrence count on the profile
+            Rule rule = rulesService.getRule(metadata.getId());
+            for (Action action : rule.getActions()) {
+                if (action.getActionTypeId().equals("setEventOccurenceCountAction")) {
+                    Condition pastEventCondition = (Condition) action.getParameterValues().get("pastEventCondition");
+                    if (pastEventCondition.containsParameter("numberOfDays")) {
+                        recalculatePastEventOccurrencesOnProfiles(rule.getCondition(), pastEventCondition, false, true);
+                        logger.info("Event occurrence count on profiles updated for rule: {}", rule.getItemId());
+                        if (rule.getLinkedItems() != null && rule.getLinkedItems().size() > 0) {
+                            linkedSegments.addAll(rule.getLinkedItems());
+                        }
+                    }
+                }
+            }
+        }
+
+        // reevaluate segments linked to this rule, since we have updated the event occurrences count on the profiles.
+        if (linkedSegments.size() > 0) {
+            persistenceService.refreshIndex(Profile.class, null);
+            for (String linkedItem : linkedSegments) {
+                Segment linkedSegment = getSegmentDefinition(linkedItem);
+                if (linkedSegment != null) {
+                    updateExistingProfilesForSegment(linkedSegment);
+                }
+            }
+        }
+
+        logger.info("finished recalculate segments with pastEventCondition conditions in {}ms. ", System.currentTimeMillis() - pastEventsTaskStartTime);
+    }
+
+    /**
+     * This will update all the profiles in the given map with the according new count occurrence for the given propertyKey
+     * @param eventCountByProfile the events count per profileId map
+     * @param propertyKey the generate property key for this past event condition, to keep track of the count in the profile
+     * @return the list of profiles for witch the count of event occurrences have been updated.
+     */
+    private Set<String> updatePastEventOccurrencesOnProfiles(Map<String, Long> eventCountByProfile, String propertyKey) {
+        Set<String> profilesUpdated = new HashSet<>();
         Map<Item, Map> batch = new HashMap<>();
         Iterator<Map.Entry<String, Long>> entryIterator = eventCountByProfile.entrySet().iterator();
         while (entryIterator.hasNext()){
@@ -917,12 +1012,12 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
                 Profile profile = new Profile();
                 profile.setItemId(profileId);
                 batch.put(profile, Collections.singletonMap("systemProperties", systemProperties));
+                profilesUpdated.add(profileId);
             }
 
             if (batch.size() == segmentUpdateBatchSize || (!entryIterator.hasNext() && batch.size() > 0)) {
                 try {
                     persistenceService.update(batch, null, Profile.class);
-                    profileUpdatedCount += batch.size();
                 } catch (Exception e) {
                     logger.error("Error updating {} profiles for past event system properties", batch.size(), e);
                 } finally {
@@ -930,7 +1025,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
                 }
             }
         }
-        return profileUpdatedCount;
+        return profilesUpdated;
     }
 
     private String getMD5(String md5) {
@@ -1144,20 +1239,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
             @Override
             public void run() {
                 try {
-                    logger.info("running scheduled task to recalculate segments with pastEventCondition conditions");
-                    long pastEventsTaskStartTime = System.currentTimeMillis();
-                    for (Metadata metadata : rulesService.getRuleMetadatas()) {
-                        Rule rule = rulesService.getRule(metadata.getId());
-                        for (Action action : rule.getActions()) {
-                            if (action.getActionTypeId().equals("setEventOccurenceCountAction")) {
-                                Condition pastEventCondition = (Condition) action.getParameterValues().get("pastEventCondition");
-                                if (pastEventCondition.containsParameter("numberOfDays")) {
-                                    updateExistingProfilesForPastEventCondition(rule.getCondition(), pastEventCondition, false);
-                                }
-                            }
-                        }
-                    }
-                    logger.info("finished recalculate segments with pastEventCondition conditions in {}ms. ", System.currentTimeMillis() - pastEventsTaskStartTime);
+                    recalculatePastEventConditions();
                 } catch (Throwable t) {
                     logger.error("Error while updating profiles for past event conditions", t);
                 }
