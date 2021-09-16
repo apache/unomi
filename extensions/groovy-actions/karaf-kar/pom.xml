@@ -16,7 +16,8 @@
   ~ limitations under the License.
   -->
 
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <parent>
         <groupId>org.apache.unomi</groupId>
         <artifactId>unomi-groovy-actions-root</artifactId>
@@ -26,7 +27,9 @@
 
     <artifactId>unomi-groovy-actions</artifactId>
     <name>Apache Unomi :: Extensions :: Groovy Actions :: Apache Karaf Feature and KAR archive</name>
-    <description>Apache Karaf Feature and KAR archive for the Apache Unomi Context Server extension that provides the possibility to use Groovy for actions</description>
+    <description>Apache Karaf Feature and KAR archive for the Apache Unomi Context Server extension that provides the possibility to use
+        Groovy for actions
+    </description>
     <packaging>kar</packaging>
 
     <dependencies>
@@ -52,6 +55,11 @@
             <version>${project.version}</version>
         </dependency>
         <dependency>
+            <groupId>org.apache.unomi</groupId>
+            <artifactId>unomi-groovy-actions-rest</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
             <groupId>io.github.http-builder-ng</groupId>
             <artifactId>http-builder-ng-core</artifactId>
             <version>1.0.4</version>
@@ -61,7 +69,11 @@
             <artifactId>jsoup</artifactId>
             <version>1.13.1</version>
         </dependency>
-
+        <dependency>
+            <groupId>com.sun.activation</groupId>
+            <artifactId>javax.activation</artifactId>
+            <version>1.2.0</version>
+        </dependency>
     </dependencies>
 
     <build>
@@ -72,6 +84,11 @@
                     <artifactId>karaf-maven-plugin</artifactId>
                     <extensions>true</extensions>
                     <configuration>
+                        <dependencyFeatures>
+                            <dependencyFeature>
+                                unomi-kar
+                            </dependencyFeature>
+                        </dependencyFeatures>
                         <includeTransitiveDependency>false</includeTransitiveDependency>
                     </configuration>
                 </plugin>
