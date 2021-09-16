@@ -158,6 +158,8 @@ public abstract class BaseIT {
                         "src/test/resources/testCopyPropertiesWithoutSystemTags.json")),
                 replaceConfigurationFile("data/tmp/testLoginEventCondition.json", new File(
                         "src/test/resources/testLoginEventCondition.json")),
+                replaceConfigurationFile("data/tmp/groovy/MyAction.groovy", new File(
+                        "src/test/resources/groovy/MyAction.groovy")),
                 keepRuntimeFolder(),
                 // configureConsole().ignoreLocalConsole(),
                 logLevel(LogLevel.INFO),
