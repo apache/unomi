@@ -906,8 +906,8 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
 
         Set<String> profileIds = new HashSet<>();
         if(pastEventsDisablePartitions) {
-            profileIds.addAll(persistenceService.aggregateWithOptimizedQuery(countExistsCondition, new TermsAggregate("profileId"),
-                    Event.ITEM_TYPE, maximumIdsQueryCount).keySet());
+            profileIds.addAll(persistenceService.aggregateWithOptimizedQuery(countExistsCondition, new TermsAggregate("itemId"),
+                    Profile.ITEM_TYPE, maximumIdsQueryCount).keySet());
         } else {
             Map<String, Double> m = persistenceService.getSingleValuesMetrics(countExistsCondition, new String[]{"card"}, "itemId.keyword", Profile.ITEM_TYPE);
             long card = m.get("_card").longValue();
