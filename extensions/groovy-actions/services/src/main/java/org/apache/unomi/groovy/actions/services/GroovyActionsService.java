@@ -16,9 +16,9 @@
  */
 package org.apache.unomi.groovy.actions.services;
 
+import groovy.lang.GroovyObject;
+import groovy.util.GroovyScriptEngine;
 import org.apache.unomi.groovy.actions.GroovyAction;
-
-import java.io.File;
 
 /**
  * A service to load groovy files and manage {@link GroovyAction}
@@ -27,21 +27,31 @@ public interface GroovyActionsService {
 
     /**
      * Save a groovy action from a groovy file
-     * @param actionName actionName
+     *
+     * @param actionName   actionName
      * @param groovyScript script to save
      */
     void save(String actionName, String groovyScript);
 
     /**
      * Remove a groovy action
+     *
      * @param id of the action to remove
      */
     void remove(String id);
 
     /**
-     * Get a groovy action by an id
+     * Get a groovy object by an id
+     *
      * @param id of the action to get
-     * @return Groovy action
+     * @return Groovy object
      */
-    GroovyAction getGroovyAction(String id);
+    GroovyObject getGroovyObject(String id);
+
+    /**
+     * Get the groovy script engine to allow to execute groovy script
+     *
+     * @return GroovyScriptEngine
+     */
+    GroovyScriptEngine getGroovyScriptEngine();
 }

@@ -20,14 +20,12 @@ import groovy.util.GroovyScriptEngine;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.unomi.groovy.actions.GroovyAction;
-import org.apache.unomi.groovy.actions.GroovyBundleResourceConnector;
 import org.apache.unomi.groovy.actions.services.GroovyActionsService;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleEvent;
 import org.osgi.framework.SynchronousBundleListener;
-import org.osgi.framework.wiring.BundleWiring;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -119,16 +117,14 @@ public class GroovyActionListener implements SynchronousBundleListener {
 
     private void addGroovyAction(URL groovyActionURL) {
         try {
-            groovyActionsService.save(FilenameUtils.getName(groovyActionURL.getPath()),IOUtils.toString(groovyActionURL.openStream()));
+            groovyActionsService.save(FilenameUtils.getName(groovyActionURL.getPath()), IOUtils.toString(groovyActionURL.openStream()));
         } catch (IOException e) {
             logger.error("Failed to load the groovy action {}", groovyActionURL.getPath(), e);
         }
     }
 
-    private void removeGroovyActions(BundleContext bundleContext, URL groovyActionURL) {
-        GroovyBundleResourceConnector bundleResourceConnector = new GroovyBundleResourceConnector(bundleContext);
-        GroovyScriptEngine engine = new GroovyScriptEngine(bundleResourceConnector,
-                bundleContext.getBundle().adapt(BundleWiring.class).getClassLoader());
+    private void removeGroovyAction(URL groovyActionURL) {
+        GroovyScriptEngine engine = groovyActionsService.getGroovyScriptEngine();
         try {
             Class classScript = engine.getGroovyClassLoader().parseClass(IOUtils.toString(groovyActionURL.openStream()));
             groovyActionsService.remove(classScript.getName());
@@ -159,7 +155,7 @@ public class GroovyActionListener implements SynchronousBundleListener {
         while (bundleGroovyActions.hasMoreElements()) {
             URL groovyActionURL = bundleGroovyActions.nextElement();
             logger.debug("Found Groovy action at {}, loading... ", groovyActionURL.getPath());
-            removeGroovyActions(bundleContext, groovyActionURL);
+            removeGroovyAction(groovyActionURL);
         }
     }
 }

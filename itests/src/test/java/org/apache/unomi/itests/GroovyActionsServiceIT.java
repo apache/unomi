@@ -17,10 +17,10 @@
 
 package org.apache.unomi.itests;
 
+import groovy.lang.GroovyObject;
 import org.apache.commons.io.IOUtils;
 import org.apache.unomi.api.actions.ActionType;
 import org.apache.unomi.api.services.DefinitionsService;
-import org.apache.unomi.groovy.actions.GroovyAction;
 import org.apache.unomi.groovy.actions.services.GroovyActionsService;
 import org.junit.After;
 import org.junit.Assert;
@@ -69,13 +69,11 @@ public class GroovyActionsServiceIT extends BaseIT {
 
         Thread.sleep(2000);
 
-        GroovyAction groovyAction = groovyActionsService.getGroovyAction("MyAction");
+        GroovyObject groovyObject = groovyActionsService.getGroovyObject("MyAction");
 
         ActionType actionType = definitionsService.getActionType("scriptGroovyAction");
 
-        Assert.assertEquals("MyAction", groovyAction.getItemId());
-        Assert.assertEquals("MyAction", groovyAction.getName());
-        Assert.assertTrue(groovyAction.getScript().contains("A test Groovy"));
+        Assert.assertEquals("MyAction", groovyObject.getClass().getName());
 
         Assert.assertTrue(actionType.getMetadata().getId().contains("scriptGroovyAction"));
         Assert.assertEquals(2, actionType.getMetadata().getSystemTags().size());
@@ -93,17 +91,17 @@ public class GroovyActionsServiceIT extends BaseIT {
 
         Thread.sleep(2000);
 
-        GroovyAction groovyAction = groovyActionsService.getGroovyAction("MyAction");
+        GroovyObject groovyObject = groovyActionsService.getGroovyObject("MyAction");
 
-        Assert.assertNotNull(groovyAction);
+        Assert.assertNotNull(groovyObject);
 
         groovyActionsService.remove("MyAction");
 
         Thread.sleep(2000);
 
-        groovyAction = groovyActionsService.getGroovyAction("MyAction");
+        groovyObject = groovyActionsService.getGroovyObject("MyAction");
 
-        Assert.assertNull(groovyAction);
+        Assert.assertNull(groovyObject);
 
         ActionType actionType = definitionsService.getActionType("scriptGroovyAction");
 

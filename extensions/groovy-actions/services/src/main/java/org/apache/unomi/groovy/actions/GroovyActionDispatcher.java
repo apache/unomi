@@ -16,9 +16,7 @@
  */
 package org.apache.unomi.groovy.actions;
 
-import groovy.lang.GroovyCodeSource;
 import groovy.lang.GroovyObject;
-import groovy.util.GroovyScriptEngine;
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.actions.Action;
 import org.apache.unomi.api.actions.ActionDispatcher;
@@ -26,7 +24,6 @@ import org.apache.unomi.groovy.actions.services.GroovyActionsService;
 import org.apache.unomi.metrics.MetricAdapter;
 import org.apache.unomi.metrics.MetricsService;
 import org.osgi.framework.BundleContext;
-import org.osgi.framework.wiring.BundleWiring;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -63,21 +60,15 @@ public class GroovyActionDispatcher implements ActionDispatcher {
     }
 
     public Integer execute(Action action, Event event, String actionName) {
-        GroovyAction groovyAction = groovyActionsService.getGroovyAction(actionName);
-        if (groovyAction == null) {
+        GroovyObject groovyObject = groovyActionsService.getGroovyObject(actionName);
+        if (groovyObject == null) {
             logger.warn("Couldn't find a Groovy action with name {}, action will not execute !", actionName);
         } else {
             try {
                 return new MetricAdapter<Integer>(metricsService, this.getClass().getName() + ".action.groovy." + actionName) {
                     @Override
                     public Integer execute(Object... args) throws Exception {
-                        GroovyBundleResourceConnector bundleResourceConnector = new GroovyBundleResourceConnector(bundleContext);
-                        GroovyScriptEngine engine = new GroovyScriptEngine(bundleResourceConnector,
-                                bundleContext.getBundle().adapt(BundleWiring.class).getClassLoader());
-
-                        Class clazzScript = engine.getGroovyClassLoader().parseClass(new GroovyCodeSource(groovyAction.getScript(), actionName, "/groovy/script"));
-                        GroovyObject groovyObj = (GroovyObject) clazzScript.newInstance();
-                        return Integer.valueOf((String) groovyObj.invokeMethod("execute", new Object[] { action, event }));
+                        return Integer.valueOf((String) groovyObject.invokeMethod("execute", new Object[] { action, event }));
                     }
                 }.runWithTimer();
             } catch (Exception e) {

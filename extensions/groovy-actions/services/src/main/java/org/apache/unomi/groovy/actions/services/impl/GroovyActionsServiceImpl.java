@@ -17,6 +17,7 @@
 package org.apache.unomi.groovy.actions.services.impl;
 
 import groovy.lang.GroovyCodeSource;
+import groovy.lang.GroovyObject;
 import groovy.util.GroovyScriptEngine;
 import org.apache.unomi.api.Metadata;
 import org.apache.unomi.api.actions.ActionType;
@@ -34,8 +35,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
+import java.util.Map;
 import java.util.TimerTask;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -47,6 +49,8 @@ import java.util.stream.Stream;
 public class GroovyActionsServiceImpl implements GroovyActionsService {
 
     private BundleContext bundleContext;
+
+    private GroovyScriptEngine groovyScriptEngine;
 
     private static final Logger logger = LoggerFactory.getLogger(GroovyActionsServiceImpl.class.getName());
 
@@ -63,7 +67,7 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
     @Reference
     private SchedulerService schedulerService;
 
-    private List<GroovyAction> groovyActions;
+    private Map<String, GroovyObject> groovyObjects;
 
     private Integer groovyActionsRefreshInterval = 1000;
 
@@ -83,8 +87,17 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
         this.schedulerService = schedulerService;
     }
 
+    public GroovyScriptEngine getGroovyScriptEngine() {
+        return groovyScriptEngine;
+    }
+
     public void postConstruct() {
-        logger.debug("postConstruct {" + bundleContext.getBundle() + "}");
+        groovyObjects = new HashMap<>();
+        logger.debug("postConstruct {}", bundleContext.getBundle());
+        GroovyBundleResourceConnector bundleResourceConnector = new GroovyBundleResourceConnector(bundleContext);
+
+        groovyScriptEngine = new GroovyScriptEngine(bundleResourceConnector,
+                bundleContext.getBundle().adapt(BundleWiring.class).getClassLoader());
 
         initializeTimers();
         logger.info("Groovy action service initialized.");
@@ -124,24 +137,18 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
     }
 
     @Override
-    public GroovyAction getGroovyAction(String id) {
-        return groovyActions.stream().filter(groovyAction -> groovyAction.getItemId().equals(id)).findFirst().orElse(null);
+    public GroovyObject getGroovyObject(String id) {
+        return groovyObjects.get(id);
     }
 
     private void removeActionType(String actionId) {
-
-        GroovyAction groovyAction = getGroovyAction(actionId);
-        Class classScript = buildClassScript(groovyAction.getScript(), groovyAction.getItemId());
-        definitionsService.removeActionType(((Action) classScript.getAnnotation(Action.class)).id());
+        GroovyObject groovyObject = getGroovyObject(actionId);
+        definitionsService.removeActionType(groovyObject.getClass().getAnnotation(Action.class).id());
     }
 
     private Class buildClassScript(String groovyScript, String actionName) {
-        GroovyBundleResourceConnector bundleResourceConnector = new GroovyBundleResourceConnector(bundleContext);
-
         GroovyCodeSource groovyCodeSource = new GroovyCodeSource(groovyScript, actionName, "/groovy/script");
-        GroovyScriptEngine engine = new GroovyScriptEngine(bundleResourceConnector,
-                bundleContext.getBundle().adapt(BundleWiring.class).getClassLoader());
-        return engine.getGroovyClassLoader().parseClass(groovyCodeSource);
+        return groovyScriptEngine.getGroovyClassLoader().parseClass(groovyCodeSource);
     }
 
     private void saveScript(String name, String script) {
@@ -150,7 +157,14 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
     }
 
     private void refreshGroovyActions() {
-        groovyActions = persistenceService.getAllItems(GroovyAction.class);
+        persistenceService.getAllItems(GroovyAction.class).forEach(groovyAction -> {
+            try {
+                GroovyObject groovyObject = (GroovyObject) buildClassScript(groovyAction.getScript(), groovyAction.getName()).newInstance();
+                groovyObjects.put(groovyAction.getName(), groovyObject);
+            } catch (InstantiationException | IllegalAccessException e) {
+                logger.error("Failed to instantiate groovy action {}", groovyAction.getName(), e);
+            }
+        });
     }
 
     private void initializeTimers() {
