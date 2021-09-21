@@ -17,7 +17,9 @@
 
 package org.apache.unomi.itests;
 
-import groovy.lang.GroovyObject;
+import groovy.lang.GroovyCodeSource;
+import groovy.util.ResourceException;
+import groovy.util.ScriptException;
 import org.apache.commons.io.IOUtils;
 import org.apache.unomi.api.actions.ActionType;
 import org.apache.unomi.api.services.DefinitionsService;
@@ -41,6 +43,7 @@ import java.io.IOException;
 @ExamReactorStrategy(PerSuite.class)
 public class GroovyActionsServiceIT extends BaseIT {
 
+    public static final String SCRIPT_GROOVY_ACTION = "scriptGroovyAction";
     @Inject
     @Filter(timeout = 600000)
     protected GroovyActionsService groovyActionsService;
@@ -64,18 +67,18 @@ public class GroovyActionsServiceIT extends BaseIT {
     }
 
     @Test
-    public void testGroovyActionsService_saveActionAndTestSavedValues() throws IOException, InterruptedException {
+    public void testGroovyActionsService_saveActionAndTestSavedValues()
+            throws IOException, InterruptedException, ResourceException, ScriptException, ClassNotFoundException {
         groovyActionsService.save("MyAction", loadGroovyAction("data/tmp/groovy/MyAction.groovy"));
 
         Thread.sleep(2000);
 
-        GroovyObject groovyObject = groovyActionsService.getGroovyObject("MyAction");
+        ActionType actionType = definitionsService.getActionType(SCRIPT_GROOVY_ACTION);
 
-        ActionType actionType = definitionsService.getActionType("scriptGroovyAction");
+        Assert.assertEquals("MyAction",
+                groovyActionsService.getGroovyScriptEngine().getGroovyClassLoader().loadClass("MyAction").getName());
 
-        Assert.assertEquals("MyAction", groovyObject.getClass().getName());
-
-        Assert.assertTrue(actionType.getMetadata().getId().contains("scriptGroovyAction"));
+        Assert.assertTrue(actionType.getMetadata().getId().contains(SCRIPT_GROOVY_ACTION));
         Assert.assertEquals(2, actionType.getMetadata().getSystemTags().size());
         Assert.assertTrue(actionType.getMetadata().getSystemTags().contains("tag1"));
         Assert.assertEquals(2, actionType.getParameters().size());
@@ -91,19 +94,19 @@ public class GroovyActionsServiceIT extends BaseIT {
 
         Thread.sleep(2000);
 
-        GroovyObject groovyObject = groovyActionsService.getGroovyObject("MyAction");
+        GroovyCodeSource groovyCodeSource = groovyActionsService.getGroovyCodeSource("MyAction");
 
-        Assert.assertNotNull(groovyObject);
+        Assert.assertNotNull(groovyCodeSource);
 
         groovyActionsService.remove("MyAction");
 
-        Thread.sleep(2000);
+        Thread.sleep(5000);
 
-        groovyObject = groovyActionsService.getGroovyObject("MyAction");
+        groovyCodeSource = groovyActionsService.getGroovyCodeSource("MyAction");
 
-        Assert.assertNull(groovyObject);
+        Assert.assertNull(groovyCodeSource);
 
-        ActionType actionType = definitionsService.getActionType("scriptGroovyAction");
+        ActionType actionType = definitionsService.getActionType(SCRIPT_GROOVY_ACTION);
 
         Assert.assertNull(actionType);
 

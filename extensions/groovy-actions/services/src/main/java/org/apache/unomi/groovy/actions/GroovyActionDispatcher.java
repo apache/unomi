@@ -16,14 +16,15 @@
  */
 package org.apache.unomi.groovy.actions;
 
-import groovy.lang.GroovyObject;
+import groovy.lang.GroovyCodeSource;
+import groovy.lang.GroovyShell;
+import groovy.lang.Script;
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.actions.Action;
 import org.apache.unomi.api.actions.ActionDispatcher;
 import org.apache.unomi.groovy.actions.services.GroovyActionsService;
 import org.apache.unomi.metrics.MetricAdapter;
 import org.apache.unomi.metrics.MetricsService;
-import org.osgi.framework.BundleContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,8 +42,6 @@ public class GroovyActionDispatcher implements ActionDispatcher {
 
     private GroovyActionsService groovyActionsService;
 
-    private BundleContext bundleContext;
-
     public void setMetricsService(MetricsService metricsService) {
         this.metricsService = metricsService;
     }
@@ -51,24 +50,24 @@ public class GroovyActionDispatcher implements ActionDispatcher {
         this.groovyActionsService = groovyActionsService;
     }
 
-    public void setBundleContext(BundleContext bundleContext) {
-        this.bundleContext = bundleContext;
-    }
-
     public String getPrefix() {
         return GROOVY_PREFIX;
     }
 
     public Integer execute(Action action, Event event, String actionName) {
-        GroovyObject groovyObject = groovyActionsService.getGroovyObject(actionName);
-        if (groovyObject == null) {
+        GroovyCodeSource groovyCodeSource = groovyActionsService.getGroovyCodeSource(actionName);
+        if (groovyCodeSource == null) {
             logger.warn("Couldn't find a Groovy action with name {}, action will not execute !", actionName);
         } else {
+            GroovyShell groovyShell = groovyActionsService.getGroovyShell();
+            groovyShell.setVariable("action", action);
+            groovyShell.setVariable("event", event);
+            Script script = groovyShell.parse(groovyCodeSource);
             try {
                 return new MetricAdapter<Integer>(metricsService, this.getClass().getName() + ".action.groovy." + actionName) {
                     @Override
                     public Integer execute(Object... args) throws Exception {
-                        return Integer.valueOf((String) groovyObject.invokeMethod("execute", new Object[] { action, event }));
+                        return (Integer) script.invokeMethod("execute", null);
                     }
                 }.runWithTimer();
             } catch (Exception e) {
