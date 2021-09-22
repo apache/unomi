@@ -16,17 +16,20 @@
  */
 
 
+import org.apache.unomi.api.services.EventService
+
 import java.util.logging.Logger
 
-@Action(id = "scriptGroovyAction",
+@Action(id = "updateAddressGroovyAction",
         description = "A test Groovy Action",
-        actionExecutor = "groovy:MyAction",
+        actionExecutor = "groovy:UpdateAddressAction",
         hidden = false,
         systemTags = ["tag1", "tag2"],
         parameters = [@Parameter(id = "param1", type = "string", multivalued = false), @Parameter(id = "param2", type = "string", multivalued =
                 false)])
 def execute() {
     Logger logger = Logger.getLogger("")
-    logger.info("Groovy action for event type: " + event.getEventType())
-    EventService.NO_CHANGE
+    logger.info("Groovy action to update adress for event type: " + event.getEventType())
+    event.profile.properties.address = event.getProperty("address")
+    EventService.PROFILE_UPDATED
 }

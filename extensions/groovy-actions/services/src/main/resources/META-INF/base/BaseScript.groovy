@@ -21,7 +21,7 @@ import org.apache.unomi.api.actions.Action
 
 abstract class BaseScript extends Script {
 
-    String executeAction(String actionName, Action action, Event event) {
+    Integer executeAction(String actionName, Action action, Event event) {
         action.setActionType(definitionsService.getActionType(actionName))
         actionExecutorDispatcher.execute(action, event)
     }
