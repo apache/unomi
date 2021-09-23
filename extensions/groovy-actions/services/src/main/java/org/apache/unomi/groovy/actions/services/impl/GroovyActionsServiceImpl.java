@@ -32,6 +32,7 @@ import org.apache.unomi.groovy.actions.services.GroovyActionsService;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.services.actions.ActionExecutorDispatcher;
 import org.codehaus.groovy.control.CompilerConfiguration;
+import org.codehaus.groovy.control.customizers.ImportCustomizer;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.wiring.BundleWiring;
 import org.osgi.service.component.annotations.Reference;
@@ -40,7 +41,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.URL;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -48,6 +48,8 @@ import java.util.TimerTask;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
+import static java.util.Arrays.asList;
 
 /**
  * Implementation of the GroovyActionService. Allows to create a groovy action from a groovy file
@@ -63,10 +65,6 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
     private Map<String, GroovyCodeSource> groovyCodeSourceMap;
 
     private static final Logger logger = LoggerFactory.getLogger(GroovyActionsServiceImpl.class.getName());
-
-    private static final String NECESSARY_IMPORT =
-            "import org.apache.unomi.api.services.EventService\n" + "import org.apache.unomi.groovy.actions.annotations.Action\n"
-                    + "import org.apache.unomi.groovy.actions.annotations.Parameter\n";
 
     private static final String BASE_SCRIPT_NAME = "BaseScript";
 
@@ -108,10 +106,6 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
         this.actionExecutorDispatcher = actionExecutorDispatcher;
     }
 
-    public GroovyScriptEngine getGroovyScriptEngine() {
-        return groovyScriptEngine;
-    }
-
     public GroovyShell getGroovyShell() {
         return groovyShell;
     }
@@ -124,12 +118,12 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
         GroovyClassLoader groovyLoader = new GroovyClassLoader(bundleContext.getBundle().adapt(BundleWiring.class).getClassLoader());
         groovyScriptEngine = new GroovyScriptEngine(bundleResourceConnector, groovyLoader);
 
+        initializeGroovyShell();
         try {
             loadBaseScript();
         } catch (IOException e) {
             logger.error("Failed to load base script", e);
         }
-        initializeGroovyShell();
         initializeTimers();
         logger.info("Groovy action service initialized.");
     }
@@ -162,11 +156,21 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
      */
     private void initializeGroovyShell() {
         CompilerConfiguration compilerConfiguration = new CompilerConfiguration();
+        compilerConfiguration.addCompilationCustomizers(createImportCustomizer());
+
         compilerConfiguration.setScriptBaseClass(BASE_SCRIPT_NAME);
         groovyScriptEngine.setConfig(compilerConfiguration);
         groovyShell = new GroovyShell(groovyScriptEngine.getGroovyClassLoader(), compilerConfiguration);
         groovyShell.setVariable("actionExecutorDispatcher", actionExecutorDispatcher);
         groovyShell.setVariable("definitionsService", definitionsService);
+        groovyShell.setVariable("logger", LoggerFactory.getLogger("GroovyAction"));
+    }
+
+    private ImportCustomizer createImportCustomizer() {
+        ImportCustomizer importCustomizer = new ImportCustomizer();
+        importCustomizer.addImports("org.apache.unomi.api.services.EventService", "org.apache.unomi.groovy.actions.annotations.Action",
+                "org.apache.unomi.groovy.actions.annotations.Parameter");
+        return importCustomizer;
     }
 
     @Override
@@ -177,12 +181,11 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
     private void handleFile(String actionName, String groovyScript) {
         GroovyCodeSource groovyCodeSource = buildClassScript(groovyScript, actionName);
         try {
-            saveActionType(
-                    groovyScriptEngine.getGroovyClassLoader().loadClass(actionName).getMethod("execute").getAnnotation(Action.class));
+            saveActionType(groovyShell.parse(groovyCodeSource).getClass().getMethod("execute").getAnnotation(Action.class));
             saveScript(actionName, groovyScript);
             groovyCodeSourceMap.put(actionName, groovyCodeSource);
             logger.info("The script {} has been loaded.", actionName);
-        } catch (NoSuchMethodException | ClassNotFoundException e) {
+        } catch (NoSuchMethodException e) {
             logger.error("Failed to save the script {}", actionName, e);
         }
     }
@@ -196,7 +199,7 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
         Metadata metadata = new Metadata(null, action.id(), action.name().equals("") ? action.id() : action.name(), action.description());
         metadata.setHidden(action.hidden());
         metadata.setReadOnly(true);
-        metadata.setSystemTags(new HashSet<>(Arrays.asList(action.systemTags())));
+        metadata.setSystemTags(new HashSet<>(asList(action.systemTags())));
         ActionType actionType = new ActionType(metadata);
         actionType.setActionExecutor(action.actionExecutor());
 
@@ -208,7 +211,12 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
 
     @Override
     public void remove(String id) {
-        removeActionType(id);
+        try {
+            definitionsService.removeActionType(
+                    groovyShell.parse(groovyCodeSourceMap.get(id)).getClass().getMethod("execute").getAnnotation(Action.class).id());
+        } catch (NoSuchMethodException e) {
+            logger.error("Failed to delete the action type for the id {}", id, e);
+        }
         persistenceService.remove(id, GroovyAction.class);
         groovyCodeSourceMap.remove(id);
     }
@@ -216,15 +224,6 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
     @Override
     public GroovyCodeSource getGroovyCodeSource(String id) {
         return groovyCodeSourceMap.get(id);
-    }
-
-    private void removeActionType(String actionId) {
-        try {
-            definitionsService.removeActionType(
-                    groovyScriptEngine.getGroovyClassLoader().loadClass(actionId).getMethod("execute").getAnnotation(Action.class).id());
-        } catch (NoSuchMethodException | ClassNotFoundException e) {
-            logger.error("Failed to remove the groovy action {}", actionId, e);
-        }
     }
 
     /**
@@ -235,10 +234,7 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
      * @return Built GroovyCodeSource
      */
     private GroovyCodeSource buildClassScript(String groovyScript, String actionName) {
-        String script = NECESSARY_IMPORT + groovyScript;
-        GroovyCodeSource groovyCodeSource = new GroovyCodeSource(script, actionName, "/groovy/script");
-        groovyScriptEngine.getGroovyClassLoader().parseClass(groovyCodeSource, true);
-        return groovyCodeSource;
+        return new GroovyCodeSource(groovyScript, actionName, "/groovy/script");
     }
 
     private void saveScript(String name, String script) {
@@ -250,7 +246,6 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
         GroovyCodeSource baseScript = groovyCodeSourceMap.get(BASE_SCRIPT_NAME);
         groovyCodeSourceMap = new HashMap<>();
         groovyCodeSourceMap.put(BASE_SCRIPT_NAME, baseScript);
-        groovyScriptEngine.getGroovyClassLoader().parseClass(baseScript, true);
         persistenceService.getAllItems(GroovyAction.class).forEach(groovyAction -> groovyCodeSourceMap
                 .put(groovyAction.getName(), buildClassScript(groovyAction.getScript(), groovyAction.getName())));
     }

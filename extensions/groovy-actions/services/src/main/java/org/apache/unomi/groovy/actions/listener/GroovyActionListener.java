@@ -125,7 +125,6 @@ public class GroovyActionListener implements SynchronousBundleListener {
     }
 
     private void removeGroovyAction(URL groovyActionURL) {
-        GroovyScriptEngine engine = groovyActionsService.getGroovyScriptEngine();
         String actionName = FilenameUtils.getName(groovyActionURL.getPath()).replace(".groovy", "");
         groovyActionsService.remove(actionName);
         logger.info("The script {} has been removed.", actionName);

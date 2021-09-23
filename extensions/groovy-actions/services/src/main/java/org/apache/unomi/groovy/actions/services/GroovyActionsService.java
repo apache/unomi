@@ -50,13 +50,6 @@ public interface GroovyActionsService {
     GroovyCodeSource getGroovyCodeSource(String id);
 
     /**
-     * Get the groovy script engine to allow to execute groovy script
-     *
-     * @return GroovyScriptEngine
-     */
-    GroovyScriptEngine getGroovyScriptEngine();
-
-    /**
      * Get an instantiated groovy shell object
      *
      * @return GroovyShell

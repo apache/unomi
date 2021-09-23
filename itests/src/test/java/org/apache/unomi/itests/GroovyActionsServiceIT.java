@@ -140,8 +140,7 @@ public class GroovyActionsServiceIT extends BaseIT {
         ActionType actionType = keepTrying("Failed waiting for the creation of the GroovyAction for the save test",
                 () -> definitionsService.getActionType(UPDATE_ADDRESS_GROOVY_ACTION), Objects::nonNull, 1000, 100);
 
-        Assert.assertEquals(UPDATE_ADDRESS_ACTION,
-                groovyActionsService.getGroovyScriptEngine().getGroovyClassLoader().loadClass(UPDATE_ADDRESS_ACTION).getName());
+        Assert.assertEquals(UPDATE_ADDRESS_ACTION, groovyActionsService.getGroovyCodeSource(UPDATE_ADDRESS_ACTION).getName());
 
         Assert.assertTrue(actionType.getMetadata().getId().contains(UPDATE_ADDRESS_GROOVY_ACTION));
         Assert.assertEquals(2, actionType.getMetadata().getSystemTags().size());
