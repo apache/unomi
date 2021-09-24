@@ -141,11 +141,17 @@
     </service>
 
     <bean id="actionExecutorDispatcherImpl"
-          class="org.apache.unomi.services.actions.ActionExecutorDispatcher">
+        class="org.apache.unomi.services.actions.impl.ActionExecutorDispatcherImpl">
         <property name="metricsService" ref="metricsService" />
         <property name="scriptExecutor" ref="scriptExecutor"/>
         <property name="bundleContext" ref="blueprintBundleContext"/>
     </bean>
+
+    <service id="actionExecutorDispatcher" ref="actionExecutorDispatcherImpl">
+        <interfaces>
+            <value>org.apache.unomi.services.actions.ActionExecutorDispatcher</value>
+        </interfaces>
+    </service>
 
     <bean id="rulesServiceImpl" class="org.apache.unomi.services.impl.rules.RulesServiceImpl"
           init-method="postConstruct" destroy-method="preDestroy">

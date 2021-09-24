@@ -16,7 +16,8 @@
  */
 package org.apache.unomi.groovy.actions.services;
 
-import groovy.lang.GroovyObject;
+import groovy.lang.GroovyCodeSource;
+import groovy.lang.GroovyShell;
 import groovy.util.GroovyScriptEngine;
 import org.apache.unomi.groovy.actions.GroovyAction;
 
@@ -41,17 +42,17 @@ public interface GroovyActionsService {
     void remove(String id);
 
     /**
-     * Get a groovy object by an id
+     * Get a groovy code source object by an id
      *
      * @param id of the action to get
-     * @return Groovy object
+     * @return Groovy code source
      */
-    GroovyObject getGroovyObject(String id);
+    GroovyCodeSource getGroovyCodeSource(String id);
 
     /**
-     * Get the groovy script engine to allow to execute groovy script
+     * Get an instantiated groovy shell object
      *
-     * @return GroovyScriptEngine
+     * @return GroovyShell
      */
-    GroovyScriptEngine getGroovyScriptEngine();
+    GroovyShell getGroovyShell();
 }
