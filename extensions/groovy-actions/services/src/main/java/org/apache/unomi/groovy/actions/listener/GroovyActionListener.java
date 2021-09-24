@@ -117,21 +117,17 @@ public class GroovyActionListener implements SynchronousBundleListener {
 
     private void addGroovyAction(URL groovyActionURL) {
         try {
-            groovyActionsService.save(FilenameUtils.getName(groovyActionURL.getPath()), IOUtils.toString(groovyActionURL.openStream()));
+            groovyActionsService.save(FilenameUtils.getName(groovyActionURL.getPath()).replace(".groovy", ""),
+                    IOUtils.toString(groovyActionURL.openStream()));
         } catch (IOException e) {
             logger.error("Failed to load the groovy action {}", groovyActionURL.getPath(), e);
         }
     }
 
     private void removeGroovyAction(URL groovyActionURL) {
-        GroovyScriptEngine engine = groovyActionsService.getGroovyScriptEngine();
-        try {
-            Class classScript = engine.getGroovyClassLoader().parseClass(IOUtils.toString(groovyActionURL.openStream()));
-            groovyActionsService.remove(classScript.getName());
-            logger.info("The script {} has been removed.", classScript);
-        } catch (IOException e) {
-            logger.error("Failed to parse groovy action file", e);
-        }
+        String actionName = FilenameUtils.getName(groovyActionURL.getPath()).replace(".groovy", "");
+        groovyActionsService.remove(actionName);
+        logger.info("The script {} has been removed.", actionName);
     }
 
     private void loadGroovyActions(BundleContext bundleContext) {

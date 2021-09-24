@@ -16,24 +16,13 @@
  */
 
 
-import org.apache.unomi.api.services.EventService
-import org.apache.unomi.groovy.actions.annotations.Action
-import org.apache.unomi.groovy.actions.annotations.Parameter
+import org.apache.unomi.api.Event
+import org.apache.unomi.api.actions.Action
 
-import java.util.logging.Logger
+abstract class BaseScript extends Script {
 
-@Action(id = "scriptGroovyAction",
-        description = "A test Groovy Action",
-        actionExecutor = "groovy:MyAction",
-        hidden = false,
-        systemTags = ["tag1", "tag2"],
-        parameters = [@Parameter(id = "param1", type = "string", multivalued = false), @Parameter(id = "param2", type = "string", multivalued =
-                false)])
-class MyAction {
-    Logger logger = Logger.getLogger("")
-
-    String execute(action, event) {
-        logger.info("Groovy action for event type: " + event.getEventType())
-        EventService.NO_CHANGE
+    Integer executeAction(String actionName, Action action, Event event) {
+        action.setActionType(definitionsService.getActionType(actionName))
+        actionExecutorDispatcher.execute(action, event)
     }
 }

@@ -26,11 +26,12 @@
             <cm:property name="services.groovy.actions.refresh.interval" value="1000"/>
         </cm:default-properties>
     </cm:property-placeholder>
-    
+
     <reference id="metricsService" interface="org.apache.unomi.metrics.MetricsService"/>
     <reference id="definitionsService" interface="org.apache.unomi.api.services.DefinitionsService"/>
     <reference id="persistenceService" interface="org.apache.unomi.persistence.spi.PersistenceService"/>
     <reference id="schedulerService" interface="org.apache.unomi.api.services.SchedulerService"/>
+    <reference id="actionExecutorDispatcher" interface="org.apache.unomi.services.actions.ActionExecutorDispatcher"/>
 
     <bean id="groovyActionsServiceImpl" class="org.apache.unomi.groovy.actions.services.impl.GroovyActionsServiceImpl"
           init-method="postConstruct">
@@ -38,6 +39,7 @@
         <property name="definitionsService" ref="definitionsService"/>
         <property name="persistenceService" ref="persistenceService"/>
         <property name="schedulerService" ref="schedulerService"/>
+        <property name="actionExecutorDispatcher" ref="actionExecutorDispatcher"/>
         <property name="groovyActionsRefreshInterval" value="${services.groovy.actions.refresh.interval}"/>
     </bean>
     <service id="groovyActionsService" ref="groovyActionsServiceImpl"
@@ -46,7 +48,6 @@
     <bean id="groovyActionDispatcherImpl" class="org.apache.unomi.groovy.actions.GroovyActionDispatcher">
         <property name="metricsService" ref="metricsService"/>
         <property name="groovyActionsService" ref="groovyActionsServiceImpl"/>
-        <property name="bundleContext" ref="blueprintBundleContext"/>
     </bean>
     <service id="groovyActionDispatcher" ref="groovyActionDispatcherImpl">
         <interfaces>

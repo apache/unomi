@@ -16,14 +16,17 @@
  */
 package org.apache.unomi.groovy.actions.annotations;
 
+import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
 /**
  * This annotation is designed to describe the groovy actions which are created from groovy file, the informations added with this
  * annotation will be processed to create an action type entry in elastic search.
  */
 @Retention(RetentionPolicy.RUNTIME)
+@Target(ElementType.METHOD)
 public @interface Action {
 
     /**
