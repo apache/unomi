@@ -44,6 +44,7 @@
         <configfile finalname="/etc/org.apache.unomi.cluster.cfg">mvn:org.apache.unomi/unomi-services/${project.version}/cfg/clustercfg</configfile>
         <configfile finalname="/etc/hazelcast.xml">mvn:org.apache.unomi/unomi-services/${project.version}/xml/hazelcastconfig</configfile>
         <configfile finalname="/etc/org.apache.unomi.geonames.cfg">mvn:org.apache.unomi/cxs-geonames-services/${project.version}/cfg/geonamescfg</configfile>
+        <configfile finalname="/etc/org.apache.unomi.groovy.actions.cfg">mvn:org.apache.unomi/unomi-groovy-actions-services/${project.version}/cfg/groovyactionscfg</configfile>
         <bundle start-level="75">mvn:commons-io/commons-io/2.4</bundle>
         <bundle start-level="75">mvn:com.fasterxml.jackson.core/jackson-core/${version.jackson.core}</bundle>
         <bundle start-level="75">mvn:com.github.fge/btf/1.2</bundle>
@@ -77,6 +78,8 @@
         <bundle start-level="77" start="false">mvn:org.apache.unomi/cxs-geonames-rest/${project.version}</bundle>
         <bundle start-level="77" start="false">mvn:org.apache.unomi/cxs-privacy-extension-services/${project.version}</bundle>
         <bundle start-level="77" start="false">mvn:org.apache.unomi/cxs-privacy-extension-rest/${project.version}</bundle>
+        <bundle start-level="77" start="false">mvn:org.apache.unomi/unomi-groovy-actions-services/${project.version}</bundle>
+        <bundle start-level="77" start="false">mvn:org.apache.unomi/unomi-groovy-actions-rest/${project.version}</bundle>
         <bundle start-level="78" start="false">mvn:org.apache.unomi/unomi-rest/${project.version}</bundle>
         <bundle start-level="85" start="false">mvn:org.apache.unomi/unomi-wab/${project.version}</bundle>
         <bundle start-level="85" start="false">mvn:org.apache.unomi/unomi-plugins-base/${project.version}</bundle>
