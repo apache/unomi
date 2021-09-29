@@ -214,7 +214,7 @@ public class ActionExecutorDispatcherImpl implements ActionExecutorDispatcher {
             if (actionDispatcher == null) {
                 logger.warn("Couldn't find any action dispatcher for prefix '{}', action {} won't execute !", actionPrefix, actionKey);
             }
-            actionDispatcher.execute(action, event, actionName);
+            return actionDispatcher.execute(action, event, actionName);
         } else if (executors.containsKey(actionKey)) {
             ActionExecutor actionExecutor = executors.get(actionKey);
             try {
