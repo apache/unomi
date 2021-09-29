@@ -24,6 +24,7 @@ import org.apache.unomi.api.actions.Action;
 import org.apache.unomi.api.actions.ActionDispatcher;
 import org.apache.unomi.api.actions.ActionExecutor;
 import org.apache.unomi.api.services.EventService;
+import org.apache.unomi.api.utils.ParserHelper;
 import org.apache.unomi.metrics.MetricAdapter;
 import org.apache.unomi.metrics.MetricsService;
 import org.apache.unomi.scripting.ScriptExecutor;
@@ -40,10 +41,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class ActionExecutorDispatcherImpl implements ActionExecutorDispatcher {
     private static final Logger logger = LoggerFactory.getLogger(ActionExecutorDispatcherImpl.class.getName());
-    private static final String VALUE_NAME_SEPARATOR = "::";
-    private static final String PLACEHOLDER_PREFIX = "${";
-    private static final String PLACEHOLDER_SUFFIX = "}";
-    private final Map<String, ValueExtractor> valueExtractors = new HashMap<>(11);
+    private final Map<String, ParserHelper.ValueExtractor> valueExtractors = new HashMap<>(11);
     private Map<String, ActionExecutor> executors = new ConcurrentHashMap<>();
     private MetricsService metricsService;
     private Map<String, ActionDispatcher> actionDispatchers = new ConcurrentHashMap<>();
@@ -63,142 +61,27 @@ public class ActionExecutorDispatcherImpl implements ActionExecutorDispatcher {
     }
 
     public ActionExecutorDispatcherImpl() {
-        valueExtractors.put("profileProperty", new ValueExtractor() {
-            @Override
-            public Object extract(String valueAsString, Event event)
-                    throws IllegalAccessException, NoSuchMethodException, InvocationTargetException {
-                return PropertyUtils.getProperty(event.getProfile(), "properties." + valueAsString);
-            }
-        });
-        valueExtractors.put("simpleProfileProperty", new ValueExtractor() {
-            @Override
-            public Object extract(String valueAsString, Event event)
-                    throws IllegalAccessException, NoSuchMethodException, InvocationTargetException {
-                return event.getProfile().getProperty(valueAsString);
-            }
-        });
-        valueExtractors.put("sessionProperty", new ValueExtractor() {
-            @Override
-            public Object extract(String valueAsString, Event event)
-                    throws IllegalAccessException, NoSuchMethodException, InvocationTargetException {
-                return PropertyUtils.getProperty(event.getSession(), "properties." + valueAsString);
-            }
-        });
-        valueExtractors.put("simpleSessionProperty", new ValueExtractor() {
-            @Override
-            public Object extract(String valueAsString, Event event)
-                    throws IllegalAccessException, NoSuchMethodException, InvocationTargetException {
-                return event.getSession().getProperty(valueAsString);
-            }
-        });
-        valueExtractors.put("eventProperty", new ValueExtractor() {
-            @Override
-            public Object extract(String valueAsString, Event event)
-                    throws IllegalAccessException, NoSuchMethodException, InvocationTargetException {
-                return PropertyUtils.getProperty(event, valueAsString);
-            }
-        });
-        valueExtractors.put("simpleEventProperty", new ValueExtractor() {
-            @Override
-            public Object extract(String valueAsString, Event event)
-                    throws IllegalAccessException, NoSuchMethodException, InvocationTargetException {
-                return event.getProperty(valueAsString);
-            }
-        });
-        valueExtractors.put("script", new ValueExtractor() {
+        valueExtractors.putAll(ParserHelper.DEFAULT_VALUE_EXTRACTORS);
+        valueExtractors.put("script", new ParserHelper.ValueExtractor() {
             @Override
             public Object extract(String valueAsString, Event event)
                     throws IllegalAccessException, NoSuchMethodException, InvocationTargetException {
                 return executeScript(valueAsString, event);
             }
-
         });
     }
 
     public Action getContextualAction(Action action, Event event) {
-        if (!hasContextualParameter(action.getParameterValues())) {
+        if (!ParserHelper.hasContextualParameter(action.getParameterValues(), valueExtractors)) {
             return action;
         }
 
-        Map<String, Object> values = parseMap(event, action.getParameterValues());
+        Map<String, Object> values = ParserHelper.parseMap(event, action.getParameterValues(), valueExtractors);
         Action n = new Action(action.getActionType());
         n.setParameterValues(values);
         return n;
     }
 
-    @SuppressWarnings("unchecked")
-    private Map<String, Object> parseMap(Event event, Map<String, Object> map) {
-        Map<String, Object> values = new HashMap<>();
-        for (Map.Entry<String, Object> entry : map.entrySet()) {
-            Object value = entry.getValue();
-            if (value instanceof String) {
-                String s = (String) value;
-                try {
-                    if (s.contains(PLACEHOLDER_PREFIX)) {
-                        while (s.contains(PLACEHOLDER_PREFIX)) {
-                            String substring = s.substring(s.indexOf(PLACEHOLDER_PREFIX) + 2, s.indexOf(PLACEHOLDER_SUFFIX));
-                            Object v = extractValue(substring, event);
-                            if (v != null) {
-                                s = s.replace(PLACEHOLDER_PREFIX + substring + PLACEHOLDER_SUFFIX, v.toString());
-                            } else {
-                                break;
-                            }
-                        }
-                        value = s;
-                    } else {
-                        // check if we have special values
-                        if (s.contains(VALUE_NAME_SEPARATOR)) {
-                            value = extractValue(s, event);
-                        }
-                    }
-                } catch (UnsupportedOperationException e) {
-                    throw e;
-                } catch (Exception e) {
-                    throw new UnsupportedOperationException(e);
-                }
-            } else if (value instanceof Map) {
-                value = parseMap(event, (Map<String, Object>) value);
-            }
-            values.put(entry.getKey(), value);
-        }
-        return values;
-    }
-
-    private Object extractValue(String s, Event event) throws IllegalAccessException, NoSuchMethodException, InvocationTargetException {
-        Object value = null;
-
-        String valueType = StringUtils.substringBefore(s, VALUE_NAME_SEPARATOR);
-        String valueAsString = StringUtils.substringAfter(s, VALUE_NAME_SEPARATOR);
-        ValueExtractor extractor = valueExtractors.get(valueType);
-        if (extractor != null) {
-            value = extractor.extract(valueAsString, event);
-        }
-
-        return value;
-    }
-
-    @SuppressWarnings("unchecked")
-    private boolean hasContextualParameter(Map<String, Object> values) {
-        for (Map.Entry<String, Object> entry : values.entrySet()) {
-            Object value = entry.getValue();
-            if (value instanceof String) {
-                String s = (String) value;
-                String str = s.contains(PLACEHOLDER_PREFIX) ?
-                        s.substring(s.indexOf(PLACEHOLDER_PREFIX) + 2, s.indexOf(PLACEHOLDER_SUFFIX)) :
-                        s;
-
-                if (str.contains(VALUE_NAME_SEPARATOR) && valueExtractors
-                        .containsKey(StringUtils.substringBefore(str, VALUE_NAME_SEPARATOR))) {
-                    return true;
-                }
-            } else if (value instanceof Map) {
-                if (hasContextualParameter((Map<String, Object>) value)) {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
 
     public int execute(Action action, Event event) {
         String actionKey = action.getActionType().getActionExecutor();
@@ -214,7 +97,7 @@ public class ActionExecutorDispatcherImpl implements ActionExecutorDispatcher {
             if (actionDispatcher == null) {
                 logger.warn("Couldn't find any action dispatcher for prefix '{}', action {} won't execute !", actionPrefix, actionKey);
             }
-            actionDispatcher.execute(action, event, actionName);
+            return actionDispatcher.execute(action, event, actionName);
         } else if (executors.containsKey(actionKey)) {
             ActionExecutor actionExecutor = executors.get(actionKey);
             try {
@@ -229,10 +112,6 @@ public class ActionExecutorDispatcherImpl implements ActionExecutorDispatcher {
             }
         }
         return EventService.NO_CHANGE;
-    }
-
-    private interface ValueExtractor {
-        Object extract(String valueAsString, Event event) throws IllegalAccessException, NoSuchMethodException, InvocationTargetException;
     }
 
     public void bindExecutor(ServiceReference<ActionExecutor> actionExecutorServiceReference) {

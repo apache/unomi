@@ -152,12 +152,15 @@ public class BasicIT extends BaseIT {
         ConditionType conditionType = CustomObjectMapper.getObjectMapper().readValue(
                 new File("data/tmp/testLoginEventCondition.json").toURI().toURL(), ConditionType.class);
         definitionsService.setConditionType(conditionType);
+
+        refreshPersistence();
         Thread.sleep(2000);
         // Add login rule
         Rule rule = CustomObjectMapper.getObjectMapper().readValue(new File("data/tmp/testLogin.json").toURI().toURL(),
                 Rule.class);
         rulesService.setRule(rule);
         Thread.sleep(2000);
+        refreshPersistence();
 
         CustomItem sourceSite = new CustomItem(ITEM_ID_SITE, ITEM_TYPE_SITE);
         sourceSite.setScope(TEST_SCOPE);
@@ -259,6 +262,8 @@ public class BasicIT extends BaseIT {
                 requestResponsePageView4.getContextResponse().getProfileId());
         checkVisitor2ResponseProperties(requestResponsePageView4.getContextResponse().getProfileProperties());
         Thread.sleep(1000);
+
+        refreshPersistence();
 
         // Check both visitor profile at the end by loading them directly
         Profile profileVisitor1 = profileService.load(profileIdVisitor1);

@@ -28,10 +28,7 @@ import org.apache.http.client.CredentialsProvider;
 import org.apache.http.conn.ssl.NoopHostnameVerifier;
 import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.lucene.search.TotalHits;
-import org.apache.unomi.api.Item;
-import org.apache.unomi.api.PartialList;
-import org.apache.unomi.api.PropertyType;
-import org.apache.unomi.api.TimestampedItem;
+import org.apache.unomi.api.*;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.query.DateRange;
 import org.apache.unomi.api.query.IpRange;
@@ -774,22 +771,48 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Override
     public <T extends Item> T load(final String itemId, final Date dateHint, final Class<T> clazz) {
+        return load(itemId, dateHint, clazz, null);
+    }
+
+    @Override
+    public CustomItem loadCustomItem(final String itemId, final Date dateHint, String customItemType) {
+        return load(itemId, dateHint, CustomItem.class, customItemType);
+    }
+
+    private <T extends Item> T load(final String itemId, final Date dateHint, final Class<T> clazz, final String customItemType) {
         return new InClassLoaderExecute<T>(metricsService, this.getClass().getName() + ".loadItem", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
             protected T execute(Object... args) throws Exception {
                 try {
                     String itemType = Item.getItemType(clazz);
-                    T itemFromCache = getFromCache(itemId, clazz);
-                    if (itemFromCache != null) {
-                        return itemFromCache;
+                    String className = clazz.getName();
+                    if (customItemType == null) {
+                        T itemFromCache = getFromCache(itemId, clazz.getName());
+                        if (itemFromCache != null) {
+                            return itemFromCache;
+                        }
+                    } else {
+                        T itemFromCache = getFromCache(itemId, CustomItem.class.getName() + "." + customItemType);
+                        if (itemFromCache != null) {
+                            return itemFromCache;
+                        }
+                        className = CustomItem.class.getName() + "." + customItemType;
+                        itemType = customItemType;
                     }
 
                     if (itemsMonthlyIndexed.contains(itemType) && dateHint == null) {
                         return new MetricAdapter<T>(metricsService, ".loadItemWithQuery") {
                             @Override
                             public T execute(Object... args) throws Exception {
-                                PartialList<T> r = query(QueryBuilders.idsQuery().addIds(itemId), null, clazz, 0, 1, null, null);
-                                if (r.size() > 0) {
-                                    return r.get(0);
+                                if (customItemType == null) {
+                                    PartialList<T> r = query(QueryBuilders.idsQuery().addIds(itemId), null, clazz, 0, 1, null, null);
+                                    if (r.size() > 0) {
+                                        return r.get(0);
+                                    }
+                                } else {
+                                    PartialList<CustomItem> r = query(QueryBuilders.idsQuery().addIds(itemId), null, customItemType, 0, 1, null, null);
+                                    if (r.size() > 0) {
+                                        return (T) r.get(0);
+                                    }
                                 }
                                 return null;
                             }
@@ -801,7 +824,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                             String sourceAsString = response.getSourceAsString();
                             final T value = ESCustomObjectMapper.getObjectMapper().readValue(sourceAsString, clazz);
                             setMetadata(value, response.getId(), response.getVersion(), response.getSeqNo(), response.getPrimaryTerm());
-                            putInCache(itemId, value);
+                            putInCache(itemId, value, className);
                             return value;
                         } else {
                             return null;
@@ -812,12 +835,12 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         // this can happen if we are just testing the existence of the item, it is not always an error.
                         return null;
                     }
-                    throw new Exception("Error loading itemType=" + clazz.getName() + " itemId=" + itemId, ese);
+                    throw new Exception("Error loading itemType=" + clazz.getName() + " customItemType=" + customItemType + " itemId=" + itemId, ese);
                 } catch (IndexNotFoundException e) {
                     // this can happen if we are just testing the existence of the item, it is not always an error.
                     return null;
                 } catch (Exception ex) {
-                    throw new Exception("Error loading itemType=" + clazz.getName() + " itemId=" + itemId, ex);
+                    throw new Exception("Error loading itemType=" + clazz.getName() + " customItemType=" + customItemType+ " itemId=" + itemId, ex);
                 }
             }
         }.catchingExecuteInClassLoader(true);
@@ -856,8 +879,13 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 try {
                     String source = ESCustomObjectMapper.getObjectMapper().writeValueAsString(item);
                     String itemType = item.getItemType();
+                    String className = item.getClass().getName();
+                    if (item instanceof CustomItem) {
+                        itemType = ((CustomItem) item).getCustomItemType();
+                        className = CustomItem.class.getName() + "." + itemType;
+                    }
                     String itemId = item.getItemId();
-                    putInCache(itemId, item);
+                    putInCache(itemId, item, className);
                     String index = getIndex(itemType, itemsMonthlyIndexed.contains(itemType) ? ((TimestampedItem) item).getTimeStamp() : null);
                     IndexRequest indexRequest = new IndexRequest(index);
                     indexRequest.id(itemId);
@@ -882,7 +910,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
                     try {
                         if (bulkProcessor == null || !useBatching) {
-                            indexRequest.setRefreshPolicy(getRefreshPolicy(item.getItemType()));
+                            indexRequest.setRefreshPolicy(getRefreshPolicy(itemType));
                             IndexResponse response = client.index(indexRequest, RequestOptions.DEFAULT);
                             setMetadata(item, response.getId(), response.getVersion(), response.getSeqNo(), response.getPrimaryTerm());
                         } else {
@@ -1093,10 +1121,22 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Override
     public <T extends Item> boolean remove(final String itemId, final Class<T> clazz) {
+        return remove(itemId, clazz, null);
+    }
+
+    @Override
+    public boolean removeCustomItem(final String itemId, final String customItemType) {
+        return remove(itemId, CustomItem.class, customItemType);
+    }
+
+    private <T extends Item> boolean remove(final String itemId, final Class<T> clazz, String customItemType) {
         Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".removeItem", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
             protected Boolean execute(Object... args) throws Exception {
                 try {
                     String itemType = Item.getItemType(clazz);
+                    if (customItemType != null) {
+                        itemType = customItemType;
+                    }
 
                     DeleteRequest deleteRequest = new DeleteRequest(getIndexNameForQuery(itemType), itemId);
                     client.delete(deleteRequest, RequestOptions.DEFAULT);
@@ -1137,7 +1177,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
                         for (SearchHit hit : response.getHits().getHits()) {
                             // add hit to bulk delete
-                            deleteFromCache(hit.getId(), clazz);
+                            deleteFromCache(hit.getId(), clazz.getName());
                             deleteByScopeBulkRequest.add(Requests.deleteRequest(hit.getIndex()).type(hit.getType()).id(hit.getId()));
                         }
 
@@ -1313,7 +1353,9 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 "    }\n" +
                 "}\n", XContentType.JSON);
 
-        createIndexRequest.mapping(mappingSource, XContentType.JSON);
+        if (mappingSource != null) {
+            createIndexRequest.mapping(mappingSource, XContentType.JSON);
+        }
         CreateIndexResponse createIndexResponse = client.indices().create(createIndexRequest, RequestOptions.DEFAULT);
         logger.info("Index created: [{}], acknowledge: [{}], shards acknowledge: [{}]", createIndexResponse.index(),
                 createIndexResponse.isAcknowledged(), createIndexResponse.isShardsAcknowledged());
@@ -1640,6 +1682,11 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     }
 
     @Override
+    public PartialList<CustomItem> queryCustomItem(final Condition query, String sortBy, final String customItemType, final int offset, final int size, final String scrollTimeValidity) {
+        return query(conditionESQueryBuilderDispatcher.getQueryBuilder(query), sortBy, customItemType, offset, size, null, scrollTimeValidity);
+    }
+
+    @Override
     public <T extends Item> PartialList<T> queryFullText(final String fulltext, final Condition query, String sortBy, final Class<T> clazz, final int offset, final int size) {
         return query(QueryBuilders.boolQuery().must(QueryBuilders.queryStringQuery(fulltext)).must(conditionESQueryBuilderDispatcher.getQueryBuilder(query)), sortBy, clazz, offset, size, null, null);
     }
@@ -1711,6 +1758,14 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     }
 
     private <T extends Item> PartialList<T> query(final QueryBuilder query, final String sortBy, final Class<T> clazz, final int offset, final int size, final String[] routing, final String scrollTimeValidity) {
+        return query(query, sortBy, clazz, null, offset, size, routing, scrollTimeValidity);
+    }
+
+    private PartialList<CustomItem> query(final QueryBuilder query, final String sortBy, final String customItemType, final int offset, final int size, final String[] routing, final String scrollTimeValidity) {
+        return query(query, sortBy, CustomItem.class, customItemType, offset, size, routing, scrollTimeValidity);
+    }
+
+    private <T extends Item> PartialList<T> query(final QueryBuilder query, final String sortBy, final Class<T> clazz, final String customItemType, final int offset, final int size, final String[] routing, final String scrollTimeValidity) {
         return new InClassLoaderExecute<PartialList<T>>(metricsService, this.getClass().getName() + ".query", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
 
             @Override
@@ -1721,6 +1776,9 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 PartialList.Relation totalHitsRelation = PartialList.Relation.EQUAL;
                 try {
                     String itemType = Item.getItemType(clazz);
+                    if (customItemType != null) {
+                        itemType = customItemType;
+                    }
                     TimeValue keepAlive = TimeValue.timeValueHours(1);
                     SearchRequest searchRequest = new SearchRequest(getIndexNameForQuery(itemType));
                     SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder()
@@ -1871,6 +1929,47 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     return result;
                 } catch (Exception t) {
                     throw new Exception("Error continuing scrolling query for itemType=" + clazz.getName() + " scrollIdentifier=" + scrollIdentifier + " scrollTimeValidity=" + scrollTimeValidity, t);
+                }
+            }
+        }.catchingExecuteInClassLoader(true);
+    }
+
+    @Override
+    public PartialList<CustomItem> continueCustomItemScrollQuery(final String customItemType, final String scrollIdentifier, final String scrollTimeValidity) {
+        return new InClassLoaderExecute<PartialList<CustomItem>>(metricsService, this.getClass().getName() + ".continueScrollQuery", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
+
+            @Override
+            protected PartialList<CustomItem> execute(Object... args) throws Exception {
+                List<CustomItem> results = new ArrayList<CustomItem>();
+                long totalHits = 0;
+                try {
+                    TimeValue keepAlive = TimeValue.parseTimeValue(scrollTimeValidity, TimeValue.timeValueMinutes(10), "scrollTimeValidity");
+
+                    SearchScrollRequest searchScrollRequest = new SearchScrollRequest(scrollIdentifier);
+                    searchScrollRequest.scroll(keepAlive);
+                    SearchResponse response = client.scroll(searchScrollRequest, RequestOptions.DEFAULT);
+
+                    if (response.getHits().getHits().length == 0) {
+                        ClearScrollRequest clearScrollRequest = new ClearScrollRequest();
+                        clearScrollRequest.addScrollId(response.getScrollId());
+                        client.clearScroll(clearScrollRequest, RequestOptions.DEFAULT);
+                    } else {
+                        for (SearchHit searchHit : response.getHits().getHits()) {
+                            // add hit to results
+                            String sourceAsString = searchHit.getSourceAsString();
+                            final CustomItem value = ESCustomObjectMapper.getObjectMapper().readValue(sourceAsString, CustomItem.class);
+                            setMetadata(value, searchHit.getId(), searchHit.getVersion(), searchHit.getSeqNo(), searchHit.getPrimaryTerm());
+                            results.add(value);
+                        }
+                    }
+                    PartialList<CustomItem> result = new PartialList<CustomItem>(results, 0, response.getHits().getHits().length, response.getHits().getTotalHits().value, getTotalHitsRelation(response.getHits().getTotalHits()));
+                    if (scrollIdentifier != null) {
+                        result.setScrollIdentifier(scrollIdentifier);
+                        result.setScrollTimeValidity(scrollTimeValidity);
+                    }
+                    return result;
+                } catch (Exception t) {
+                    throw new Exception("Error continuing scrolling query for itemType=" + customItemType + " scrollIdentifier=" + scrollIdentifier + " scrollTimeValidity=" + scrollTimeValidity, t);
                 }
             }
         }.catchingExecuteInClassLoader(true);
@@ -2348,8 +2447,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         return false;
     }
 
-    private <T extends Item> T getFromCache(String itemId, Class<T> clazz) {
-        String className = clazz.getName();
+    private <T extends Item> T getFromCache(String itemId, String className) {
         if (!isCacheActiveForClass(className)) {
             return null;
         }
@@ -2357,8 +2455,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         return itemCache.get(itemId);
     }
 
-    private <T extends Item> T putInCache(String itemId, T item) {
-        String className = item.getClass().getName();
+    private <T extends Item> T putInCache(String itemId, T item, String className) {
         if (!isCacheActiveForClass(className)) {
             return null;
         }
@@ -2366,8 +2463,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         return itemCache.put(itemId, item);
     }
 
-    private <T extends Item> T deleteFromCache(String itemId, Class clazz) {
-        String className = clazz.getName();
+    private <T extends Item> T deleteFromCache(String itemId, String className) {
         if (!isCacheActiveForClass(className)) {
             return null;
         }
