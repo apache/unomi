@@ -20,6 +20,9 @@ package org.apache.unomi.services.impl.segments;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import net.jodah.failsafe.Failsafe;
 import net.jodah.failsafe.RetryPolicy;
+import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.CharEncoding;
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.Item;
 import org.apache.unomi.api.Metadata;
@@ -39,7 +42,6 @@ import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.persistence.spi.aggregate.TermsAggregate;
 import org.apache.unomi.services.impl.AbstractServiceImpl;
 import org.apache.unomi.services.impl.scheduler.SchedulerServiceImpl;
-import org.apache.unomi.services.impl.scheduler.SchedulerServiceImpl;
 import org.apache.unomi.services.impl.ParserHelper;
 import org.apache.unomi.api.exceptions.BadSegmentConditionException;
 import org.osgi.framework.Bundle;
@@ -50,7 +52,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.time.Duration;
 import java.time.ZoneOffset;
@@ -64,6 +68,9 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
     private static final Logger logger = LoggerFactory.getLogger(SegmentServiceImpl.class.getName());
 
     private static final String VALIDATION_PROFILE_ID = "validation-profile-id";
+    private static final String RESET_SCORING_SCRIPT = "resetScoringPlan";
+    private static final String EVALUATE_SCORING_ELEMENT_SCRIPT = "evaluateScoringPlanElement";
+
     private BundleContext bundleContext;
 
     private EventService eventService;
@@ -144,7 +151,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
         this.dailyDateExprEvaluationHourUtc = dailyDateExprEvaluationHourUtc;
     }
 
-    public void postConstruct() {
+    public void postConstruct() throws IOException {
         logger.debug("postConstruct {" + bundleContext.getBundle() + "}");
         loadPredefinedSegments(bundleContext);
         loadPredefinedScorings(bundleContext);
@@ -156,6 +163,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
         }
         bundleContext.addBundleListener(this);
         initializeTimer();
+        loadScripts();
         logger.info("Segment service initialized.");
     }
 
@@ -581,7 +589,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
                     "  }\n" +
                     "}", scoring.getItemId()));
 
-        updateExistingProfilesForScoring(scoring);
+        updateExistingProfilesForScoring(scoring.getItemId(), scoring.getElements(), scoring.getMetadata().isEnabled());
     }
 
     public void createScoringDefinition(String scope, String scoringId, String name, String description) {
@@ -692,7 +700,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
         Set<Scoring> impactedScorings = getScoringDependentScorings(scoringId);
         if (!validate || (impactedSegments.isEmpty() && impactedScorings.isEmpty())) {
             // update profiles
-            updateExistingProfilesForRemovedScoring(scoringId);
+            updateExistingProfilesForScoring(scoringId, Collections.emptyList(), false);
 
             // update impacted segments
             for (Segment segment : impactedSegments) {
@@ -947,7 +955,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
     public void recalculatePastEventConditions() {
         logger.info("running scheduled task to recalculate segments with pastEventCondition conditions");
         long pastEventsTaskStartTime = System.currentTimeMillis();
-        Set<String> linkedSegments = new HashSet<>();
+        Set<String> linkedItems = new HashSet<>();
         for (Metadata metadata : rulesService.getRuleMetadatas()) {
             // reevaluate auto generated rules used to store the event occurrence count on the profile
             Rule rule = rulesService.getRule(metadata.getId());
@@ -958,20 +966,26 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
                         recalculatePastEventOccurrencesOnProfiles(rule.getCondition(), pastEventCondition, false, true);
                         logger.info("Event occurrence count on profiles updated for rule: {}", rule.getItemId());
                         if (rule.getLinkedItems() != null && rule.getLinkedItems().size() > 0) {
-                            linkedSegments.addAll(rule.getLinkedItems());
+                            linkedItems.addAll(rule.getLinkedItems());
                         }
                     }
                 }
             }
         }
 
-        // reevaluate segments linked to this rule, since we have updated the event occurrences count on the profiles.
-        if (linkedSegments.size() > 0) {
+        // reevaluate segments and scoring linked to this rule, since we have updated the event occurrences count on the profiles.
+        if (linkedItems.size() > 0) {
             persistenceService.refreshIndex(Profile.class, null);
-            for (String linkedItem : linkedSegments) {
+            for (String linkedItem : linkedItems) {
                 Segment linkedSegment = getSegmentDefinition(linkedItem);
                 if (linkedSegment != null) {
                     updateExistingProfilesForSegment(linkedSegment);
+                    continue;
+                }
+
+                Scoring linkedScoring = getScoringDefinition(linkedItem);
+                if (linkedScoring != null) {
+                    updateExistingProfilesForScoring(linkedScoring.getItemId(), linkedScoring.getElements(), linkedScoring.getMetadata().isEnabled());
                 }
             }
         }
@@ -1155,61 +1169,36 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
         return sourceMap;
     }
 
-    private void updateExistingProfilesForScoring(Scoring scoring) {
+    private void updateExistingProfilesForScoring(String scoringId, List<ScoringElement> scoringElements, boolean isEnabled) {
         long startTime = System.currentTimeMillis();
-        Condition scoringCondition = new Condition();
-        scoringCondition.setConditionType(definitionsService.getConditionType("profilePropertyCondition"));
-        scoringCondition.setParameter("propertyName", "scores." + scoring.getItemId());
-        scoringCondition.setParameter("comparisonOperator", "exists");
 
-        String[] scripts = new String[scoring.getElements().size() + 1];
-        HashMap<String, Object>[] scriptParams = new HashMap[scoring.getElements().size() + 1];
-        Condition[] conditions = new Condition[scoring.getElements().size() + 1];
+        String[] scripts = new String[scoringElements.size() + 1];
+        Map<String, Object>[] scriptParams = new HashMap[scoringElements.size() + 1];
+        Condition[] conditions = new Condition[scoringElements.size() + 1];
 
-        String lastUpdatedScriptPart = " if (!ctx._source.containsKey(\"systemProperties\")) { ctx._source.put(\"systemProperties\", [:]) } ctx._source.systemProperties.put(\"lastUpdated\", ZonedDateTime.ofInstant(Instant.ofEpochMilli(System.currentTimeMillis()), ZoneId.of(\"Z\")))";
+        // reset Score
+        scriptParams[0] = new HashMap<>();
+        scriptParams[0].put("scoringId", scoringId);
+        scripts[0] = RESET_SCORING_SCRIPT;
+        conditions[0] = new Condition();
+        conditions[0].setConditionType(definitionsService.getConditionType("profilePropertyCondition"));
+        conditions[0].setParameter("propertyName", "scores." + scoringId);
+        conditions[0].setParameter("comparisonOperator", "exists");
 
-        scriptParams[0] = new HashMap<String, Object>();
-        scriptParams[0].put("scoringId", scoring.getItemId());
-        scripts[0] = "if (ctx._source.containsKey(\"systemProperties\") && ctx._source.systemProperties.containsKey(\"scoreModifiers\") && ctx._source.systemProperties.scoreModifiers.containsKey(params.scoringId) ) { ctx._source.scores.put(params.scoringId, ctx._source.systemProperties.scoreModifiers.get(params.scoringId)) } else { ctx._source.scores.remove(params.scoringId) } " +
-                lastUpdatedScriptPart;
-        conditions[0] = scoringCondition;
-
-        if (scoring.getMetadata().isEnabled()) {
-            String scriptToAdd = "if (!ctx._source.containsKey(\"scores\")) { ctx._source.put(\"scores\", [:])} if (ctx._source.scores.containsKey(params.scoringId) ) { ctx._source.scores.put(params.scoringId, ctx._source.scores.get(params.scoringId)+params.scoringValue) } else { ctx._source.scores.put(params.scoringId, params.scoringValue) } " +
-                    lastUpdatedScriptPart;
+        // evaluate each elements of the scoring
+        if (isEnabled) {
             int idx = 1;
-            for (ScoringElement element : scoring.getElements()) {
+            for (ScoringElement element : scoringElements) {
                 scriptParams[idx] = new HashMap<>();
-                scriptParams[idx].put("scoringId", scoring.getItemId());
+                scriptParams[idx].put("scoringId", scoringId);
                 scriptParams[idx].put("scoringValue", element.getValue());
-                scripts[idx] = scriptToAdd;
+                scripts[idx] = EVALUATE_SCORING_ELEMENT_SCRIPT;
                 conditions[idx] = element.getCondition();
                 idx++;
             }
         }
-        persistenceService.updateWithQueryAndScript(null, Profile.class, scripts, scriptParams, conditions);
+        persistenceService.updateWithQueryAndStoredScript(null, Profile.class, scripts, scriptParams, conditions);
         logger.info("Updated scoring for profiles in {}ms", System.currentTimeMillis() - startTime);
-    }
-
-    private void updateExistingProfilesForRemovedScoring(String scoringId) {
-        long startTime = System.currentTimeMillis();
-        Condition scoringCondition = new Condition();
-        scoringCondition.setConditionType(definitionsService.getConditionType("profilePropertyCondition"));
-        scoringCondition.setParameter("propertyName", "scores." + scoringId);
-        scoringCondition.setParameter("comparisonOperator", "exists");
-        Condition[] conditions = new Condition[1];
-        conditions[0] = scoringCondition;
-
-        HashMap<String, Object>[] scriptParams = new HashMap[1];
-        scriptParams[0] = new HashMap<String, Object>();
-        scriptParams[0].put("scoringId", scoringId);
-
-        String[] script = new String[1];
-        script[0] = "ctx._source.scores.remove(params.scoringId); if (!ctx._source.containsKey(\"systemProperties\")) { ctx._source.put(\"systemProperties\", [:]) } ctx._source.systemProperties.put(\"lastUpdated\", ZonedDateTime.ofInstant(Instant.ofEpochMilli(System.currentTimeMillis()), ZoneId.of(\"Z\")))";
-
-        persistenceService.updateWithQueryAndScript(null, Profile.class, script, scriptParams, conditions);
-
-        logger.info("Removed scoring from profiles in {}ms", System.currentTimeMillis() - startTime);
     }
 
     public void bundleChanged(BundleEvent event) {
@@ -1269,6 +1258,25 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
         long initialDelay = SchedulerServiceImpl.getTimeDiffInSeconds(dailyDateExprEvaluationHourUtc, ZonedDateTime.now(ZoneOffset.UTC));
         logger.info("daily DateExpr segments will run at fixed rate, initialDelay={}, taskExecutionPeriod={}, ", initialDelay, TimeUnit.DAYS.toSeconds(1));
         schedulerService.getScheduleExecutorService().scheduleAtFixedRate(task, initialDelay,  TimeUnit.DAYS.toSeconds(1), TimeUnit.SECONDS);
+    }
+
+    private void loadScripts() throws IOException {
+        Enumeration<URL> scriptsURL = bundleContext.getBundle().findEntries("META-INF/painless", "*.painless", true);
+        if (scriptsURL == null) {
+            return;
+        }
+
+        Map<String, String> scriptsById = new HashMap<>();
+        while (scriptsURL.hasMoreElements()) {
+            URL scriptURL = scriptsURL.nextElement();
+            logger.debug("Found painless script at " + scriptURL + ", loading... ");
+            try (InputStream in = scriptURL.openStream()) {
+                String script = IOUtils.toString(in, StandardCharsets.UTF_8);
+                String scriptId = FilenameUtils.getBaseName(scriptURL.getPath());
+                scriptsById.put(scriptId, script);
+            }
+        }
+        persistenceService.storeScripts(scriptsById);
     }
 
     public void setTaskExecutionPeriod(long taskExecutionPeriod) {
