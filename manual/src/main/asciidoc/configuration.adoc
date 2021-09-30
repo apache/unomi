@@ -427,7 +427,7 @@ Placed right before the function, the “@Action” annotation contains a set of
 
 |===
 
-The function contained within the Groovy Action must be called “execute()” and its last instruction must be an integer.
+The function contained within the Groovy Action must be called `execute()` and its last instruction must be an integer.
 
 This integer serves as an indication whether the values of the session and profile should be persisted. In general, the codes used are defined in the https://github.com/apache/unomi/blob/master/api/src/main/java/org/apache/unomi/api/services/EventService.java[EventService interface].
 
@@ -461,7 +461,7 @@ Note that when a groovy action is deleted by the API, the action type associated
 
 In this short example, we’re going to create a Groovy Action that will be adding “Hello world!” to the logs whenever a new view event is triggered.
 
-The first step consists in creating the groovy script on your filesystem, start by creating the file “`ello-world.groovy`:
+The first step consists in creating the groovy script on your filesystem, start by creating the file `hello-world.groovy`:
 
 [source,groovy]
 ----
