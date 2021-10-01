@@ -963,7 +963,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
                 if (action.getActionTypeId().equals("setEventOccurenceCountAction")) {
                     Condition pastEventCondition = (Condition) action.getParameterValues().get("pastEventCondition");
                     if (pastEventCondition.containsParameter("numberOfDays")) {
-                        recalculatePastEventOccurrencesOnProfiles(rule.getCondition(), pastEventCondition, false, true);
+                        recalculatePastEventOccurrencesOnProfiles(rule.getCondition(), pastEventCondition, true, true);
                         logger.info("Event occurrence count on profiles updated for rule: {}", rule.getItemId());
                         if (rule.getLinkedItems() != null && rule.getLinkedItems().size() > 0) {
                             linkedItems.addAll(rule.getLinkedItems());
@@ -1261,7 +1261,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
     }
 
     private void loadScripts() throws IOException {
-        Enumeration<URL> scriptsURL = bundleContext.getBundle().findEntries("META-INF/painless", "*.painless", true);
+        Enumeration<URL> scriptsURL = bundleContext.getBundle().findEntries("META-INF/cxs/painless", "*.painless", true);
         if (scriptsURL == null) {
             return;
         }

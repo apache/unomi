@@ -69,11 +69,13 @@ public class SegmentIT extends BaseIT {
     @Before
     public void setUp() throws InterruptedException {
         removeItems(Segment.class);
+        removeItems(Scoring.class);
     }
 
     @After
     public void tearDown() throws InterruptedException {
         removeItems(Segment.class);
+        removeItems(Scoring.class);
         removeItems(Profile.class);
         removeItems(Event.class);
     }
@@ -167,9 +169,9 @@ public class SegmentIT extends BaseIT {
         int changes = eventService.send(testEvent);
         if ((changes & EventService.PROFILE_UPDATED) == EventService.PROFILE_UPDATED) {
             profileService.save(profile);
-            persistenceService.refreshIndex(Profile.class, new Date());
+            persistenceService.refreshIndex(Profile.class, null);
         }
-        persistenceService.refreshIndex(Event.class, new Date()); // wait for event to be fully persisted and indexed
+        persistenceService.refreshIndex(Event.class, testEvent.getTimeStamp()); // wait for event to be fully persisted and indexed
 
         // create the segment
         Metadata segmentMetadata = new Metadata("past-event-segment-test");
@@ -215,7 +217,7 @@ public class SegmentIT extends BaseIT {
         Event testEvent = new Event("test-event-type", null, profile, null, null, profile, Date.from(localDate.atStartOfDay(defaultZoneId).toInstant()));
         testEvent.setPersistent(true);
         persistenceService.save(testEvent, null, true);
-        persistenceService.refreshIndex(Event.class, new Date()); // wait for event to be fully persisted and indexed
+        persistenceService.refreshIndex(Event.class, testEvent.getTimeStamp()); // wait for event to be fully persisted and indexed
 
         // insure the profile is not yet engaged since we directly saved the event in ES
         profile = profileService.load("test_profile_id");
@@ -234,7 +236,7 @@ public class SegmentIT extends BaseIT {
         localDate = LocalDate.now().minusDays(15);
         testEvent = new Event("test-event-type", null, profile, null, null, profile, Date.from(localDate.atStartOfDay(defaultZoneId).toInstant()));
         persistenceService.save(testEvent);
-        persistenceService.refreshIndex(Event.class, new Date()); // wait for event to be fully persisted and indexed
+        persistenceService.refreshIndex(Event.class, testEvent.getTimeStamp()); // wait for event to be fully persisted and indexed
 
         // now recalculate the past event conditions
         segmentService.recalculatePastEventConditions();
@@ -261,9 +263,9 @@ public class SegmentIT extends BaseIT {
         int changes = eventService.send(testEvent);
         if ((changes & EventService.PROFILE_UPDATED) == EventService.PROFILE_UPDATED) {
             profileService.save(profile);
-            persistenceService.refreshIndex(Profile.class, new Date());
+            persistenceService.refreshIndex(Profile.class, null);
         }
-        persistenceService.refreshIndex(Event.class, new Date()); // wait for event to be fully persisted and indexed
+        persistenceService.refreshIndex(Event.class, testEvent.getTimeStamp()); // wait for event to be fully persisted and indexed
 
         // create the past event condition
         Condition pastEventCondition = new Condition(definitionsService.getConditionType("pastEventCondition"));
@@ -325,7 +327,7 @@ public class SegmentIT extends BaseIT {
         Event testEvent = new Event("test-event-type", null, profile, null, null, profile, Date.from(localDate.atStartOfDay(defaultZoneId).toInstant()));
         testEvent.setPersistent(true);
         persistenceService.save(testEvent, null, true);
-        persistenceService.refreshIndex(Event.class, new Date()); // wait for event to be fully persisted and indexed
+        persistenceService.refreshIndex(Event.class, testEvent.getTimeStamp()); // wait for event to be fully persisted and indexed
 
         // insure the profile is not yet engaged since we directly saved the event in ES
         profile = profileService.load("test_profile_id");
@@ -346,7 +348,7 @@ public class SegmentIT extends BaseIT {
         localDate = LocalDate.now().minusDays(15);
         testEvent = new Event("test-event-type", null, profile, null, null, profile, Date.from(localDate.atStartOfDay(defaultZoneId).toInstant()));
         persistenceService.save(testEvent);
-        persistenceService.refreshIndex(Event.class, new Date()); // wait for event to be fully persisted and indexed
+        persistenceService.refreshIndex(Event.class, testEvent.getTimeStamp()); // wait for event to be fully persisted and indexed
 
         // now recalculate the past event conditions
         segmentService.recalculatePastEventConditions();
