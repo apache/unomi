@@ -53,6 +53,7 @@ import org.apache.unomi.persistence.spi.aggregate.TermsAggregate;
 import org.elasticsearch.ElasticsearchStatusException;
 import org.elasticsearch.action.DocWriteRequest;
 import org.elasticsearch.action.admin.cluster.health.ClusterHealthRequest;
+import org.elasticsearch.action.admin.cluster.storedscripts.PutStoredScriptRequest;
 import org.elasticsearch.action.admin.indices.delete.DeleteIndexRequest;
 import org.elasticsearch.action.admin.indices.refresh.RefreshRequest;
 import org.elasticsearch.action.admin.indices.template.delete.DeleteIndexTemplateRequest;
@@ -94,10 +95,13 @@ import org.elasticsearch.client.indices.IndexTemplatesExistRequest;
 import org.elasticsearch.client.indices.PutIndexTemplateRequest;
 import org.elasticsearch.client.indices.PutMappingRequest;
 import org.elasticsearch.cluster.metadata.MappingMetaData;
+import org.elasticsearch.common.bytes.BytesReference;
 import org.elasticsearch.common.unit.ByteSizeUnit;
 import org.elasticsearch.common.unit.ByteSizeValue;
 import org.elasticsearch.common.unit.DistanceUnit;
 import org.elasticsearch.common.unit.TimeValue;
+import org.elasticsearch.common.xcontent.XContentBuilder;
+import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.index.IndexNotFoundException;
 import org.elasticsearch.index.query.*;
@@ -995,6 +999,23 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Override
     public boolean updateWithQueryAndScript(final Date dateHint, final Class<?> clazz, final String[] scripts, final Map<String, Object>[] scriptParams, final Condition[] conditions) {
+        Script[] builtScripts = new Script[scripts.length];
+        for (int i = 0; i < scripts.length; i++) {
+            builtScripts[i] = new Script(ScriptType.INLINE, "painless", scripts[i], scriptParams[i]);
+        }
+        return updateWithQueryAndScript(dateHint, clazz, builtScripts, conditions);
+    }
+
+    @Override
+    public boolean updateWithQueryAndStoredScript(Date dateHint, Class<?> clazz, String[] scripts, Map<String, Object>[] scriptParams, Condition[] conditions) {
+        Script[] builtScripts = new Script[scripts.length];
+        for (int i = 0; i < scripts.length; i++) {
+            builtScripts[i] = new Script(ScriptType.STORED, null, scripts[i], scriptParams[i]);
+        }
+        return updateWithQueryAndScript(dateHint, clazz, builtScripts, conditions);
+    }
+
+    private boolean updateWithQueryAndScript(final Date dateHint, final Class<?> clazz, final Script[] scripts, final Condition[] conditions) {
         Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".updateWithQueryAndScript", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
             protected Boolean execute(Object... args) throws Exception {
                 try {
@@ -1003,8 +1024,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     String index = getIndex(itemType, dateHint);
 
                     for (int i = 0; i < scripts.length; i++) {
-                        Script actualScript = new Script(ScriptType.INLINE, "painless", scripts[i], scriptParams[i]);
-
                         RefreshRequest refreshRequest = new RefreshRequest(index);
                         client.indices().refresh(refreshRequest, RequestOptions.DEFAULT);
 
@@ -1012,7 +1031,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         updateByQueryRequest.setConflicts("proceed");
                         updateByQueryRequest.setMaxRetries(1000);
                         updateByQueryRequest.setSlices(2);
-                        updateByQueryRequest.setScript(actualScript);
+                        updateByQueryRequest.setScript(scripts[i]);
                         updateByQueryRequest.setQuery(conditionESQueryBuilderDispatcher.buildFilter(conditions[i]));
 
                         BulkByScrollResponse response = client.updateByQuery(updateByQueryRequest, RequestOptions.DEFAULT);
@@ -1041,6 +1060,44 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     logger.error("Error in the update script : {}\n{}\n{}", e.getScript(), e.getDetailedMessage(), e.getScriptStack());
                     throw new Exception("Error in the update script");
                 }
+            }
+        }.catchingExecuteInClassLoader(true);
+        if (result == null) {
+            return false;
+        } else {
+            return result;
+        }
+    }
+
+    @Override
+    public boolean storeScripts(Map<String, String> scripts) {
+        Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".storeScripts", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
+            protected Boolean execute(Object... args) throws Exception {
+                boolean executedSuccessfully = true;
+                for (Map.Entry<String, String> script : scripts.entrySet()) {
+                    PutStoredScriptRequest putStoredScriptRequest = new PutStoredScriptRequest();
+                    XContentBuilder builder = XContentFactory.jsonBuilder();
+                    builder.startObject();
+                    {
+                        builder.startObject("script");
+                        {
+                            builder.field("lang", "painless");
+                            builder.field("source", script.getValue());
+                        }
+                        builder.endObject();
+                    }
+                    builder.endObject();
+                    putStoredScriptRequest.content(BytesReference.bytes(builder), XContentType.JSON);
+                    putStoredScriptRequest.id(script.getKey());
+                    AcknowledgedResponse response = client.putScript(putStoredScriptRequest, RequestOptions.DEFAULT);
+                    executedSuccessfully &= response.isAcknowledged();
+                    if (response.isAcknowledged()) {
+                        logger.info("Successfully stored painless script: {}", script.getKey());
+                    } else {
+                        logger.error("Failed to store painless script: {}", script.getKey());
+                    }
+                }
+                return executedSuccessfully;
             }
         }.catchingExecuteInClassLoader(true);
         if (result == null) {

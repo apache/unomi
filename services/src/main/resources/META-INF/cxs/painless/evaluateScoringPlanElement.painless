@@ -1,0 +1,52 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/*
+    This script is used to increment the score on all the profiles that match the Scoring plan element condition
+    required params:
+    - params.scoringId:     the ID of the Scoring plan
+    - params.scoringValue:  the score of the Scoring plan element (used for incrementation)
+*/
+
+// init the scores map
+if (!ctx._source.containsKey("scores") || ctx._source.scores == null) {
+    ctx._source.put("scores", [:]);
+}
+
+// increment the score
+if (ctx._source.scores.containsKey(params.scoringId)) {
+
+    // Score already exists, just increment
+    ctx._source.scores.put(params.scoringId, ctx._source.scores.get(params.scoringId) + params.scoringValue);
+} else {
+
+    // Score doesn't exists yet, check if the current profile is using a scoreModifier
+    if (ctx._source.containsKey("systemProperties") &&
+        ctx._source.systemProperties.containsKey("scoreModifiers") &&
+        ctx._source.systemProperties.scoreModifiers.containsKey(params.scoringId)) {
+
+        ctx._source.scores.put(params.scoringId, params.scoringValue + ctx._source.systemProperties.scoreModifiers.get(params.scoringId));
+    } else {
+        ctx._source.scores.put(params.scoringId, params.scoringValue);
+    }
+}
+
+// Update lastUpdated date on profile
+if (!ctx._source.containsKey("systemProperties")) {
+    ctx._source.put("systemProperties", [:]);
+}
+ctx._source.systemProperties.put("lastUpdated", ZonedDateTime.ofInstant(Instant.ofEpochMilli(System.currentTimeMillis()), ZoneId.of("Z")));
