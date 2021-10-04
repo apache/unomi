@@ -31,10 +31,7 @@ import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormatter;
 import org.joda.time.format.ISODateTimeFormat;
 
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class PropertyConditionESQueryBuilder implements ConditionESQueryBuilder {
 
@@ -59,15 +56,15 @@ public class PropertyConditionESQueryBuilder implements ConditionESQueryBuilder 
         Object expectedValueDate = convertDateToISO(condition.getParameter("propertyValueDate"));
         Object expectedValueDateExpr = condition.getParameter("propertyValueDateExpr");
 
-        List<?> expectedValues = ConditionContextHelper.foldToASCII((List<?>) condition.getParameter("propertyValues"));
-        List<?> expectedValuesInteger = (List<?>) condition.getParameter("propertyValuesInteger");
-        List<?> expectedValuesDouble = (List<?>) condition.getParameter("propertyValuesDouble");
-        List<?> expectedValuesDate = convertDatesToISO((List<?>) condition.getParameter("propertyValuesDate"));
-        List<?> expectedValuesDateExpr = (List<?>) condition.getParameter("propertyValuesDateExpr");
+        Collection<?> expectedValues = ConditionContextHelper.foldToASCII((Collection<?>) condition.getParameter("propertyValues"));
+        Collection<?> expectedValuesInteger = (Collection<?>) condition.getParameter("propertyValuesInteger");
+        Collection<?> expectedValuesDouble = (Collection<?>) condition.getParameter("propertyValuesDouble");
+        Collection<?> expectedValuesDate = convertDatesToISO((Collection<?>) condition.getParameter("propertyValuesDate"));
+        Collection<?> expectedValuesDateExpr = (Collection<?>) condition.getParameter("propertyValuesDateExpr");
 
         Object value = ObjectUtils.firstNonNull(expectedValue, expectedValueInteger, expectedValueDouble, expectedValueDate, expectedValueDateExpr);
         @SuppressWarnings("unchecked")
-        List<?> values = ObjectUtils.firstNonNull(expectedValues, expectedValuesInteger, expectedValuesDouble, expectedValuesDate, expectedValuesDateExpr);
+        Collection<?> values = ObjectUtils.firstNonNull(expectedValues, expectedValuesInteger, expectedValuesDouble, expectedValuesDate, expectedValuesDateExpr);
 
         switch (comparisonOperator) {
             case "equals":
@@ -90,7 +87,8 @@ public class PropertyConditionESQueryBuilder implements ConditionESQueryBuilder 
                 return QueryBuilders.rangeQuery(name).lte(value);
             case "between":
                 checkRequiredValuesSize(values, name, comparisonOperator, 2);
-                return QueryBuilders.rangeQuery(name).gte(values.get(0)).lte(values.get(1));
+                Iterator<?> iterator = values.iterator();
+                return QueryBuilders.rangeQuery(name).gte(iterator.next()).lte(iterator.next());
             case "exists":
                 return QueryBuilders.existsQuery(name);
             case "missing":
@@ -175,7 +173,7 @@ public class PropertyConditionESQueryBuilder implements ConditionESQueryBuilder 
         return null;
     }
 
-    private void checkRequiredValuesSize(List<?> values, String name, String operator, int expectedSize) {
+    private void checkRequiredValuesSize(Collection<?> values, String name, String operator, int expectedSize) {
         if (values == null || values.size() != expectedSize) {
             throw new IllegalArgumentException("Impossible to build ES filter, missing " + expectedSize + " values for a condition using comparisonOperator: " + operator + ", and propertyName: " + name);
         }
@@ -205,7 +203,7 @@ public class PropertyConditionESQueryBuilder implements ConditionESQueryBuilder 
         }
     }
 
-    private List<?> convertDatesToISO(List<?> datesValues) {
+    private Collection<?> convertDatesToISO(Collection<?> datesValues) {
         List<Object> results = new ArrayList<>();
         if (datesValues == null) {
             return null;
