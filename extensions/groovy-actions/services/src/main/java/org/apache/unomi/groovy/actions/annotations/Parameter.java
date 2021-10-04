@@ -21,7 +21,6 @@ import java.lang.annotation.RetentionPolicy;
 
 /**
  * Annotation designed to allow to add parameters to an action
- * @return parameters
  */
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Parameter {
