@@ -236,10 +236,10 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
         } else if (op.equals("lessThanOrEqualTo")) {
             return compare(actualValue, expectedValue, expectedValueDate, expectedValueInteger, expectedValueDateExpr, expectedValueDouble) <= 0;
         } else if (op.equals("between")) {
-            List<?> expectedValuesInteger = (List<?>) condition.getParameter("propertyValuesInteger");
-            List<?> expectedValuesDouble = (List<?>) condition.getParameter("propertyValuesDouble");
-            List<?> expectedValuesDate = (List<?>) condition.getParameter("propertyValuesDate");
-            List<?> expectedValuesDateExpr = (List<?>) condition.getParameter("propertyValuesDateExpr");
+            Collection<?> expectedValuesInteger = (Collection<?>) condition.getParameter("propertyValuesInteger");
+            Collection<?> expectedValuesDouble = (Collection<?>) condition.getParameter("propertyValuesDouble");
+            Collection<?> expectedValuesDate = (Collection<?>) condition.getParameter("propertyValuesDate");
+            Collection<?> expectedValuesDateExpr = (Collection<?>) condition.getParameter("propertyValuesDateExpr");
             return compare(actualValue, null,
                     getDate(getFirst(expectedValuesDate)),
                     getFirst(expectedValuesInteger),
