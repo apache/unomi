@@ -258,6 +258,17 @@
                                 </artifactItem>
                                 <artifactItem>
                                     <groupId>org.apache.unomi</groupId>
+                                    <artifactId>unomi-groovy-actions-services</artifactId>
+                                    <version>${project.version}</version>
+                                    <classifier>groovyactionscfg</classifier>
+                                    <type>cfg</type>
+                                    <outputDirectory>
+                                        ${project.build.directory}/assembly/etc
+                                    </outputDirectory>
+                                    <destFileName>org.apache.unomi.groovy.actions.cfg</destFileName>
+                                </artifactItem>
+                                <artifactItem>
+                                    <groupId>org.apache.unomi</groupId>
                                     <artifactId>unomi-plugins-mail</artifactId>
                                     <version>${project.version}</version>
                                     <classifier>mailcfg</classifier>
