@@ -45,6 +45,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.TimerTask;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -63,6 +64,8 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
     private GroovyShell groovyShell;
 
     private Map<String, GroovyCodeSource> groovyCodeSourceMap;
+
+    private ScheduledFuture<?> scheduledFuture;
 
     private static final Logger logger = LoggerFactory.getLogger(GroovyActionsServiceImpl.class.getName());
 
@@ -126,6 +129,11 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
         }
         initializeTimers();
         logger.info("Groovy action service initialized.");
+    }
+
+    public void onDestroy(){
+        logger.debug("onDestroy Method called");
+        scheduledFuture.cancel(true);
     }
 
     /**
@@ -257,6 +265,7 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
                 refreshGroovyActions();
             }
         };
-        schedulerService.getScheduleExecutorService().scheduleWithFixedDelay(task, 0, groovyActionsRefreshInterval, TimeUnit.MILLISECONDS);
+        scheduledFuture = schedulerService.getScheduleExecutorService().scheduleWithFixedDelay(task, 0, groovyActionsRefreshInterval,
+                TimeUnit.MILLISECONDS);
     }
 }
