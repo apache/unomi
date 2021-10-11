@@ -34,7 +34,7 @@
     <reference id="actionExecutorDispatcher" interface="org.apache.unomi.services.actions.ActionExecutorDispatcher"/>
 
     <bean id="groovyActionsServiceImpl" class="org.apache.unomi.groovy.actions.services.impl.GroovyActionsServiceImpl"
-          init-method="postConstruct">
+          init-method="postConstruct" destroy-method="onDestroy">
         <property name="bundleContext" ref="blueprintBundleContext"/>
         <property name="definitionsService" ref="definitionsService"/>
         <property name="persistenceService" ref="persistenceService"/>
