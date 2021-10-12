@@ -1,0 +1,20 @@
+{
+  "$id": "https://unomi.apache.org/schemas/json/parameter.json",
+  "$schema": "https://json-schema.org/draft/2019-09/schema",
+  "title": "Parameter",
+  "type": "object",
+  "properties" : {
+    "id" : {
+      "type" : "string"
+    },
+    "type" : {
+      "type" : "string"
+    },
+    "multivalued" : {
+      "type" : "boolean"
+    },
+    "defaultValue" : {
+      "type" : "string"
+    }
+  }
+}

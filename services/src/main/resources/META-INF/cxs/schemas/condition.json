@@ -1,0 +1,15 @@
+{
+  "$id": "https://unomi.apache.org/schemas/json/condition.json",
+  "$schema": "https://json-schema.org/draft/2019-09/schema",
+  "title": "Condition",
+  "type": "object",
+  "properties" : {
+    "conditionTypeId" : {
+      "type" : "string"
+    },
+    "parameterValues" : {
+      "type" : "object",
+      "maxProperties": 50
+    }
+  }
+}

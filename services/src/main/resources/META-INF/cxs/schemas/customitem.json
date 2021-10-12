@@ -1,0 +1,20 @@
+{
+  "$id": "https://unomi.apache.org/schemas/json/customitem.json",
+  "$schema": "https://json-schema.org/draft/2019-09/schema",
+  "title": "CustomItem",
+  "type": "object",
+  "allOf": [
+    {
+      "$ref": "https://unomi.apache.org/schemas/json/item.json"
+    }
+  ],
+  "properties": {
+    "customItemType" : {
+      "type" : "string"
+    },
+    "properties" : {
+      "type" : "object",
+      "maxProperties": 50
+    }
+  }
+}

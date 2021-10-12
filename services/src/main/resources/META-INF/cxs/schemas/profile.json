@@ -1,0 +1,41 @@
+{
+  "$id": "https://unomi.apache.org/schemas/json/profile.json",
+  "$schema": "https://json-schema.org/draft/2019-09/schema",
+  "title": "Profile",
+  "type": "object",
+  "allOf": [
+    {
+      "$ref": "https://unomi.apache.org/schemas/json/item.json"
+    }
+  ],
+  "properties": {
+    "properties" : {
+      "type" : "object",
+      "propertyTypes" : [ "profile" ],
+      "maxProperties": 50
+    },
+    "systemProperties" : {
+      "type" : "object",
+      "maxProperties": 50
+    },
+    "segments" : {
+      "type" : "array",
+      "items" : {
+        "type" : "string"
+      }
+    },
+    "scores" : {
+      "type" : "object",
+      "additionalProperties": { "type": "integer" },
+      "maxProperties": 100
+    },
+    "mergedWith" : {
+      "type" : "string"
+    },
+    "consents" : {
+      "type" : "object",
+      "additionalProperties": { "$ref" : "https://unomi.apache.org/schemas/json/consent.json" },
+      "maxProperties": 50
+    }
+  }
+}

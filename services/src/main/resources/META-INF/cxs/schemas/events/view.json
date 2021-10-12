@@ -1,0 +1,20 @@
+{
+  "$id": "https://unomi.apache.org/schemas/json/events/view.json",
+  "$schema": "https://json-schema.org/draft/2019-09/schema",
+  "title": "ViewEvent",
+  "type": "object",
+  "allOf": [{ "$ref": "https://unomi.apache.org/schemas/json/event.json" }],
+  "properties" : {
+    "properties" : {
+      "type" : "object",
+      "propertyTypes" : [ "events" ],
+      "maxProperties": 50
+    },
+    "source" : {
+      "$ref" : "https://unomi.apache.org/schemas/json/customitems/site.json"
+    },
+    "target" : {
+      "$ref" : "https://unomi.apache.org/schemas/json/customitems/page.json"
+    }
+  }
+}

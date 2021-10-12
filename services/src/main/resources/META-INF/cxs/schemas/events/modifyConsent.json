@@ -1,0 +1,20 @@
+{
+  "$id": "https://unomi.apache.org/schemas/json/events/modifyConsent.json",
+  "$schema": "https://json-schema.org/draft/2019-09/schema",
+  "title": "ModifyConsentEvent",
+  "type": "object",
+  "allOf": [{ "$ref": "https://unomi.apache.org/schemas/json/event.json" }],
+  "properties" : {
+    "properties" : {
+      "consent" : {
+        "$ref" : "https://unomi.apache.org/schemas/json/consent.json"
+      }
+    },
+    "source" : {
+        "$ref" : "https://unomi.apache.org/schemas/json/customitems/page.json"
+    },
+    "target" : {
+        "$ref" : "https://unomi.apache.org/schemas/json/customitem.json"
+    }
+  }
+}

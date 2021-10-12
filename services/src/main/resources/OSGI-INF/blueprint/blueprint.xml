@@ -104,12 +104,20 @@
     </bean>
     <service id="eventTypeRegistry" ref="eventTypeRegistryImpl" interface="org.apache.unomi.api.services.EventTypeRegistry"/>
 
+    <bean id="schemaRegistryImpl" class="org.apache.unomi.services.impl.schemas.SchemaRegistryImpl" init-method="init"
+          destroy-method="destroy">
+        <property name="bundleContext" ref="blueprintBundleContext"/>
+        <property name="profileService" ref="profileServiceImpl" />
+    </bean>
+    <service id="schemaRegistry" ref="schemaRegistryImpl" interface="org.apache.unomi.api.services.SchemaRegistry"/>
+
     <bean id="eventServiceImpl" class="org.apache.unomi.services.impl.events.EventServiceImpl">
         <property name="persistenceService" ref="persistenceService"/>
         <property name="definitionsService" ref="definitionsServiceImpl"/>
         <property name="sourceService" ref="sourceServiceImpl"/>
         <property name="bundleContext" ref="blueprintBundleContext"/>
         <property name="eventTypeRegistry" ref="eventTypeRegistryImpl"/>
+        <property name="schemaRegistry" ref="schemaRegistryImpl" />
         <property name="predefinedEventTypeIds">
             <set>
                 <value>view</value>
