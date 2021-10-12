@@ -17,6 +17,7 @@
 
 package org.apache.unomi.plugins.baseplugin.conditions;
 
+import org.apache.unomi.api.Event;
 import org.apache.unomi.api.Item;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.conditions.ConditionType;
@@ -54,6 +55,11 @@ public class SourceEventPropertyConditionEvaluator implements ConditionEvaluator
 
     @Override
     public boolean eval(Condition condition, Item item, Map<String, Object> context, ConditionEvaluatorDispatcher dispatcher) {
+        // in case the evaluated item is an event, we switch to his source internal object for further evaluations
+        if (item instanceof Event) {
+            item = ((Event) item).getSource();
+        }
+
         Condition andCondition = new Condition(definitionsService.getConditionType("booleanCondition"));
         andCondition.setParameter("operator", "and");
         ArrayList<Condition> conditions = new ArrayList<Condition>();
@@ -63,9 +69,15 @@ public class SourceEventPropertyConditionEvaluator implements ConditionEvaluator
         }
 
         if(conditions.size() > 0){
-            andCondition.setParameter("subConditions", conditions);
-            return dispatcher.eval(andCondition, item);
+            if (item != null) {
+                andCondition.setParameter("subConditions", conditions);
+                return dispatcher.eval(andCondition, item);
+            } else {
+                // item is null but there is conditions: it's not a match
+                return false;
+            }
         } else {
+            // no conditions: it's always a match
             return true;
         }
     }
