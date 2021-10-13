@@ -1,0 +1,13 @@
+{
+  "$id": "https://unomi.apache.org/schemas/json/timestampeditem.json",
+  "$schema": "https://json-schema.org/draft/2019-09/schema",
+  "title": "TimestampedItem",
+  "type": "object",
+  "allOf": [{ "$ref": "https://unomi.apache.org/schemas/json/item.json" }],
+  "properties" : {
+    "timeStamp" : {
+      "type" : ["null","string"],
+      "format" : "date-time"
+    }
+  }
+}

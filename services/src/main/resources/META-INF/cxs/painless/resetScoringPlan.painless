@@ -14,9 +14,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.api.utils;
 
-public class ValidationPattern {
+/*
+    This script is used to reset all profiles that have a scoring plan matching the given params.scoringId
+    required params:
+    - params.scoringId:     the ID of the Scoring plan
+*/
 
-    public static final String TEXT_VALID_CHARACTERS_PATTERN = "^(\\w|[-_@\\.]){0,60}$";
+// remove score for the given params.scoringId
+ctx._source.scores.remove(params.scoringId);
+
+// Update lastUpdated date on profile
+if (!ctx._source.containsKey("systemProperties")) {
+    ctx._source.put("systemProperties", [:]);
 }
+ctx._source.systemProperties.put("lastUpdated", ZonedDateTime.ofInstant(Instant.ofEpochMilli(System.currentTimeMillis()), ZoneId.of("Z")));

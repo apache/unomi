@@ -64,7 +64,7 @@ public class GroovyActionsEndPoint {
      * Save a groovy action file and create an actionType entry to allow to call this action
      *
      * @param file the file to save
-     * @return
+     * @return Response of the API call
      */
     @POST
     @Path("/")

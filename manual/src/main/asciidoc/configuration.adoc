@@ -376,14 +376,164 @@ org.apache.unomi.security.properties.useOGNLScripting=${env:UNOMI_SCRIPTING_USE_
 org.apache.unomi.security.personalization.sanitizeConditions=${env:UNOMI_SECURITY_SANITIZEPERSONALIZATIONCONDITIONS:-true}
 ----
 
+==== Groovy Actions
+
+Groovy actions offer the ability to define a set of actions and action types (aka action descriptors) purely from Groovy scripts defined at runtime.
+
+Initially submitted to Unomi through a purpose-built REST API endpoint, Groovy actions are then stored in Elasticsearch. When an event matches a rule configured to execute an action, the corresponding action is fetched from Elasticsearch and executed. 
+
+===== Anatomy of a Groovy Action
+
+To be valid, a Groovy action must follow a particular convention which is divided in two parts:
+
+* An annotation used to define the associated action type
+* The function to be executed
+
+Placed right before the function, the “@Action” annotation contains a set of parameter detailing how the action should be triggered.
+
+.@Action annotation
+|===
+|Field name|Type|Required|Description
+
+|id
+|String
+|YES
+|Id of the action
+
+|actionExecutor
+|String
+|YES
+|Action executor contains the name of the script to call for the action type and must be prefixed with “*groovy:*”. The prefix indicates to Unomi which dispatcher to use when processing the action. 
+
+|name
+|String
+|
+|Action name
+
+|hidden
+|Boolean
+|
+|Define if the action is hidden or not. It is usually used to hide objects in a UI.
+
+|parameters
+|List<https://github.com/apache/unomi/blob/master/extensions/groovy-actions/services/src/main/java/org/apache/unomi/groovy/actions/annotations/Parameter.java[Parameter]>
+|
+|The parameters of the actions, also defined by annotations
+
+|systemTags
+|List<String>
+|
+|A (reserved) list of tags for the associated object. This is usually populated through JSON descriptors and is not meant to be modified by end users. These tags may include values that help classify associated objects.
+
+|===
+
+The function contained within the Groovy Action must be called `execute()` and its last instruction must be an integer.
+
+This integer serves as an indication whether the values of the session and profile should be persisted. In general, the codes used are defined in the https://github.com/apache/unomi/blob/master/api/src/main/java/org/apache/unomi/api/services/EventService.java[EventService interface].
+
+Each groovy actions extends by default a Base script 
+https://github.com/apache/unomi/blob/master/extensions/groovy-actions/services/src/main/resources/META-INF/base/BaseScript.groovy[defined here]
+
+===== REST API
+
+Actions can be deployed/updated/deleted via the dedicated `/cxs/groovyActions` rest endpoint.
+
+Deploy/update an Action:
+[source,bash]
+----
+curl -X POST 'http://localhost:8181/cxs/groovyActions' \
+--user karaf:karaf \
+--form 'file=@"<file location>"'
+----
+
+A Groovy Action can be updated by submitting another Action with the same id.
+
+Delete an Action:
+[source,bash]
+----
+curl -X DELETE 'http://localhost:8181/cxs/groovyActions/<Action id>' \
+--user karaf:karaf 
+----
+
+Note that when a groovy action is deleted by the API, the action type associated with this action will also be deleted.
+
+===== Hello World!
+
+In this short example, we’re going to create a Groovy Action that will be adding “Hello world!” to the logs whenever a new view event is triggered.
+
+The first step consists in creating the groovy script on your filesystem, start by creating the file `hello-world.groovy`:
+
+[source,groovy]
+----
+@Action(id = "helloWorldGroovyAction",
+        actionExecutor = "groovy:helloWorldAction")
+        parameters = [@Parameter(id = "location", type = "string", multivalued = false)])
+def execute() {
+    logger.info("Hello {}", action.getParameterValues().get("location"))
+    EventService.NO_CHANGE
+}
+----
+
+As the last instruction of the script is `EventService.NO_CHANGE`, data will not be persisted. 
+
+Once the action has been created you need to submit it to Unomi (from the same folder as `hello-world.groovy`).
+[source,bash]
+----
+curl -X POST 'http://localhost:8181/cxs/groovyActions' \
+--user karaf:karaf \
+--form 'file=@hello-world.groovy'
+----
+
+Finally, register a rule to trigger execution of the groovy action:
+[source,bash]
+----
+curl -X POST 'http://localhost:8181/cxs/rules' \
+--user karaf:karaf \
+--header 'Content-Type: application/json' \
+--data-raw '{
+ "metadata": {
+   "id": "scriptGroovyActionRule",
+   "name": "Test Groovy Action Rule",
+   "description": "A sample rule to test Groovy actions"
+ },
+ "condition": {
+     "type": "eventTypeCondition",
+     "parameterValues": {
+       "eventTypeId": "view"
+     }
+ },
+ "actions": [
+   {
+     "parameterValues": {
+       "location": "world!"
+     },
+     "type": "helloWorldAction"
+   }
+ ]
+}'
+----
+
+Note that this rule contains a “location” parameter, with the value “world!”, which is then used in the log message triggered by the action.
+
+You can now use unomi to trigger a “view” event and see the corresponding message in the Unomi logs.
+
+Once you’re done with the Hello World! action, it can be deleted using the following command:
+[source,bash]
+----
+curl -X DELETE 'http://localhost:8181/cxs/groovyActions/helloWorldGroovyAction' \
+--user karaf:karaf 
+----
+
+And the corresponding rule can be deleted using the following command:
+[source,bash]
+----
+curl -X DELETE 'http://localhost:8181/cxs/rules/scriptGroovyActionRule' \
+--user karaf:karaf
+----
+
 ==== Scripting roadmap
 
-Scripting will probably undergo major changes in future versions of Apache Unomi, possibly replacing MVEL with a
-more secure implementation of a scripting language, or possibly even removed completely (see Groovy actions below).
-
-It is recommended that scripting be avoided as in most cases it could be replaced by custom action implementations,
-which are also possible using the Groovy Scripting language. The main difference is in the deployment mechanism,
-Groovy actions or Java actions must be deployed as plugins, which require system administrator access and permissions.
+Scripting will probably undergo major changes in future versions of Apache Unomi, with the likely retirement of MVEL in favor of Groovy Actions detailed above. 
 
 These changes will not happen on maintenance versions of Apache Unomi, only in the next major version. Maintenance
 versions will of course maintain compatibility with existing scripting solutions.

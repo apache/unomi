@@ -1,0 +1,13 @@
+{
+  "$id": "https://unomi.apache.org/schemas/json/customitems/site.json",
+  "$schema": "https://json-schema.org/draft/2019-09/schema",
+  "title": "SiteCustomItem",
+  "type": "object",
+  "allOf": [
+    {
+      "$ref": "https://unomi.apache.org/schemas/json/customitem.json"
+    }
+  ],
+  "properties": {
+  }
+}

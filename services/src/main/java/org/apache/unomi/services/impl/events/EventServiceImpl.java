@@ -31,11 +31,7 @@ import org.apache.unomi.api.ValueType;
 import org.apache.unomi.api.actions.ActionPostExecutor;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.query.Query;
-import org.apache.unomi.api.services.DefinitionsService;
-import org.apache.unomi.api.services.EventListenerService;
-import org.apache.unomi.api.services.EventService;
-import org.apache.unomi.api.services.EventTypeRegistry;
-import org.apache.unomi.api.services.SourceService;
+import org.apache.unomi.api.services.*;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.aggregate.TermsAggregate;
 import org.apache.unomi.api.utils.ParserHelper;
@@ -69,6 +65,8 @@ public class EventServiceImpl implements EventService {
     private BundleContext bundleContext;
 
     private EventTypeRegistry eventTypeRegistry;
+
+    private SchemaRegistry schemaRegistry;
 
     private Set<String> predefinedEventTypeIds = new LinkedHashSet<String>();
 
@@ -121,6 +119,10 @@ public class EventServiceImpl implements EventService {
         this.eventTypeRegistry = eventTypeRegistry;
     }
 
+    public void setSchemaRegistry(SchemaRegistry schemaRegistry) {
+        this.schemaRegistry = schemaRegistry;
+    }
+
     public void setPersistenceService(PersistenceService persistenceService) {
         this.persistenceService = persistenceService;
     }
@@ -145,6 +147,7 @@ public class EventServiceImpl implements EventService {
     }
 
     public boolean isEventValid(Event event) {
+        this.schemaRegistry.isValid(event, "https://unomi.apache.org/schemas/json/events/" + event.getEventType() + ".json");
         return this.eventTypeRegistry.isValid(event);
     }
 

@@ -37,9 +37,9 @@ public class EventTypeRegistryImpl implements EventTypeRegistry, SynchronousBund
 
     private static final Logger logger = LoggerFactory.getLogger(EventTypeRegistryImpl.class.getName());
 
-    private Map<Long, List<PluginType>> pluginTypes = new HashMap<>();
+    private final Map<Long, List<EventType>> eventTypesByBundle = new HashMap<>();
 
-    private Map<String, EventType> eventTypes = new LinkedHashMap<>();
+    private final Map<String, EventType> eventTypesById = new LinkedHashMap<>();
 
     private BundleContext bundleContext;
 
@@ -78,11 +78,11 @@ public class EventTypeRegistryImpl implements EventTypeRegistry, SynchronousBund
     }
 
     public EventType get(String typeName) {
-        return eventTypes.get(typeName);
+        return eventTypesById.get(typeName);
     }
 
     public void register(EventType eventType) {
-        eventTypes.put(eventType.getType(), eventType);
+        eventTypesById.put(eventType.getType(), eventType);
     }
 
     @Override
@@ -213,7 +213,7 @@ public class EventTypeRegistryImpl implements EventTypeRegistry, SynchronousBund
     }
 
     public Collection<EventType> getAll() {
-        return this.eventTypes.values();
+        return this.eventTypesById.values();
     }
 
     private void loadPredefinedEventTypes(BundleContext bundleContext) {
@@ -221,7 +221,7 @@ public class EventTypeRegistryImpl implements EventTypeRegistry, SynchronousBund
         if (predefinedEventTypes == null) {
             return;
         }
-        ArrayList<PluginType> pluginTypeArrayList = (ArrayList<PluginType>) pluginTypes.get(bundleContext.getBundle().getBundleId());
+        List<EventType> bundleEventTypes = this.eventTypesByBundle.get(bundleContext.getBundle().getBundleId());
 
         while (predefinedEventTypes.hasMoreElements()) {
             URL predefinedEventTypeURL = predefinedEventTypes.nextElement();
@@ -231,7 +231,7 @@ public class EventTypeRegistryImpl implements EventTypeRegistry, SynchronousBund
                 EventType eventType = CustomObjectMapper.getObjectMapper().readValue(predefinedEventTypeURL, EventType.class);
                 eventType.setPluginId(bundleContext.getBundle().getBundleId());
                 register(eventType);
-                pluginTypeArrayList.add(eventType);
+                bundleEventTypes.add(eventType);
             } catch (Exception e) {
                 logger.error("Error while loading event type definition " + predefinedEventTypeURL, e);
             }
@@ -243,7 +243,7 @@ public class EventTypeRegistryImpl implements EventTypeRegistry, SynchronousBund
         if (bundleContext == null) {
             return;
         }
-        pluginTypes.put(bundleContext.getBundle().getBundleId(), new ArrayList<PluginType>());
+        eventTypesByBundle.put(bundleContext.getBundle().getBundleId(), new ArrayList<>());
         loadPredefinedEventTypes(bundleContext);
     }
 
@@ -251,13 +251,10 @@ public class EventTypeRegistryImpl implements EventTypeRegistry, SynchronousBund
         if (bundleContext == null) {
             return;
         }
-        List<PluginType> types = pluginTypes.remove(bundleContext.getBundle().getBundleId());
-        if (types != null) {
-            for (PluginType type : types) {
-                if (type instanceof EventType) {
-                    EventType eventType = (EventType) type;
-                    eventTypes.remove(eventType.getType());
-                }
+        List<EventType> eventTypes = eventTypesByBundle.remove(bundleContext.getBundle().getBundleId());
+        if (eventTypes != null) {
+            for (EventType eventType : eventTypes) {
+                eventTypesById.remove(eventType.getType());
             }
         }
     }

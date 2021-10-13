@@ -59,14 +59,14 @@ public @interface Action {
     /**
      * Parameters specific to the action
      * The value of the parameters can be retrieved in the action like the following:
-     * action.getParameterValues().get(<parameter name>);
-     * @return parameters
+     * action.getParameterValues().get(parameterName);
+     * @return list of parameters
      */
     Parameter[] parameters() default {};
 
     /**
      * List of tags that help to classify the action
-     * @return systemTags
+     * @return list of system tags
      */
     String[] systemTags() default {};
 }

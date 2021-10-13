@@ -14,9 +14,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.api.utils;
 
-public class ValidationPattern {
+package org.apache.unomi.api.services;
 
-    public static final String TEXT_VALID_CHARACTERS_PATTERN = "^(\\w|[-_@\\.]){0,60}$";
+import org.apache.unomi.api.SchemaType;
+
+import java.util.List;
+
+public interface SchemaRegistry {
+
+    boolean isValid(Object object, String schemaId);
+
+    SchemaType getSchema(String schemaId);
+
+    List<SchemaType> getTargetSchemas(String target);
+
 }
