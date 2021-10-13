@@ -7,23 +7,23 @@
   "properties" : {
     "eventType" : {
       "type" : "string",
-      "pattern" : "^(\\w|[-_@\\.]){0,50}$"
+      "pattern" : "^(\\w|[-_@\\.]){0,60}$"
     },
     "profileId" : {
       "type" : [ "null", "string"],
-      "pattern" : "^(\\w|[-_@\\.]){0,50}$"
+      "pattern" : "^(\\w|[-_@\\.]){0,60}$"
     },
     "sessionId" : {
       "type" : [ "null", "string"],
-      "pattern" : "^(\\w|[-_@\\.]){0,50}$"
+      "pattern" : "^(\\w|[-_@\\.]){0,60}$"
     },
     "scope" : {
       "type" : [ "null", "string"],
-      "pattern" : "^(\\w|[-_@\\.]){0,50}$"
+      "pattern" : "^(\\w|[-_@\\.]){0,60}$"
     },
     "sourceId" : {
       "type" : [ "null", "string"],
-      "pattern" : "^(\\w|[-_@\\.]){0,50}$"
+      "pattern" : "^(\\w|[-_@\\.]){0,60}$"
     }
   }
 }
