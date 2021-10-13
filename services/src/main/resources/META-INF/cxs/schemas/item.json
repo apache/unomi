@@ -6,7 +6,7 @@
   "properties" : {
     "itemId" : {
       "type" : "string",
-      "pattern" : "^(\\w|[-_@\\.]){0,50}$",
+      "pattern" : "^(\\w|[-_@\\.]){0,60}$",
       "description" : "The identifier for the item"
     },
     "itemType" : {
