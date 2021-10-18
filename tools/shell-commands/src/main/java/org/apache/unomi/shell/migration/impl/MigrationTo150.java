@@ -259,7 +259,11 @@ public class MigrationTo150 implements Migration {
             mappings.put("dynamic_templates", newTypeMappings.getJSONArray("dynamic_templates"));
         }
         if (newTypeMappings.has("properties")) {
-            mappings.put("properties", getMergedPropertyMappings(mappings.getJSONObject("properties"), newTypeMappings.getJSONObject("properties")));
+            if (mappings.has("properties")) {
+                mappings.put("properties", getMergedPropertyMappings(mappings.getJSONObject("properties"), newTypeMappings.getJSONObject("properties")));
+            } else {
+                mappings.put("properties", newTypeMappings.getJSONObject("properties"));
+            }
         }
         return new JSONObject().put("mappings", mappings);
     }
