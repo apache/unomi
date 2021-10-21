@@ -17,6 +17,7 @@
 
 package org.apache.unomi.services.impl.rules;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.Item;
 import org.apache.unomi.api.Metadata;
@@ -45,6 +46,7 @@ import java.util.concurrent.TimeUnit;
 public class RulesServiceImpl implements RulesService, EventListenerService, SynchronousBundleListener {
 
     public static final String RULE_QUERY_PREFIX = "rule_";
+    public static final String TRACKED_PARAMETER_PREFIX = "tracked_";
     private static final Logger logger = LoggerFactory.getLogger(RulesServiceImpl.class.getName());
 
     private BundleContext bundleContext;
@@ -57,14 +59,14 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
     private ActionExecutorDispatcher actionExecutorDispatcher;
     private List<Rule> allRules;
 
-    private Map<String,RuleStatistics> allRuleStatistics = new ConcurrentHashMap<>();
+    private Map<String, RuleStatistics> allRuleStatistics = new ConcurrentHashMap<>();
 
     private Integer rulesRefreshInterval = 1000;
     private Integer rulesStatisticsRefreshInterval = 10000;
 
     private List<RuleListenerService> ruleListeners = new CopyOnWriteArrayList<RuleListenerService>();
 
-    private Map<String,Set<Rule>> rulesByEventType = new HashMap<>();
+    private Map<String, Set<Rule>> rulesByEventType = new HashMap<>();
     private Boolean optimizedRulesActivated = true;
 
     public void setBundleContext(BundleContext bundleContext) {
@@ -287,8 +289,8 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
         return rules;
     }
 
-    private Map<String,Set<Rule>> getRulesByEventType(List<Rule> rules) {
-        Map<String,Set<Rule>> newRulesByEventType = new HashMap<>();
+    private Map<String, Set<Rule>> getRulesByEventType(List<Rule> rules) {
+        Map<String, Set<Rule>> newRulesByEventType = new HashMap<>();
         for (Rule rule : rules) {
             updateRulesByEventType(newRulesByEventType, rule);
         }
@@ -318,7 +320,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
             changes |= eventService.send(ruleFired);
 
             RuleStatistics ruleStatistics = getLocalRuleStatistics(rule);
-            ruleStatistics.setLocalExecutionCount(ruleStatistics.getLocalExecutionCount()+1);
+            ruleStatistics.setLocalExecutionCount(ruleStatistics.getLocalExecutionCount() + 1);
             ruleStatistics.setLocalActionsTime(ruleStatistics.getLocalActionsTime() + totalActionsTime);
             this.allRuleStatistics.put(rule.getItemId(), ruleStatistics);
         }
@@ -333,14 +335,14 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
         return persistenceService.load(ruleId, RuleStatistics.class);
     }
 
-    public Map<String,RuleStatistics> getAllRuleStatistics() {
+    public Map<String, RuleStatistics> getAllRuleStatistics() {
         return allRuleStatistics;
     }
 
     @Override
     public void resetAllRuleStatistics() {
         Condition matchAllCondition = new Condition(definitionsService.getConditionType("matchAllCondition"));
-        persistenceService.removeByQuery(matchAllCondition,RuleStatistics.class);
+        persistenceService.removeByQuery(matchAllCondition, RuleStatistics.class);
         allRuleStatistics.clear();
     }
 
@@ -353,7 +355,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
     }
 
     public PartialList<Metadata> getRuleMetadatas(Query query) {
-        if(query.isForceRefresh()){
+        if (query.isForceRefresh()) {
             persistenceService.refresh();
         }
         definitionsService.resolveConditionType(query.getCondition());
@@ -399,24 +401,47 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
         persistenceService.save(rule);
     }
 
-    public Set<Condition> getTrackedConditions(Item source){
+    public Set<Condition> getTrackedConditions(Item source) {
         Set<Condition> trackedConditions = new HashSet<>();
         for (Rule r : allRules) {
             if (!r.getMetadata().isEnabled()) {
                 continue;
             }
-            Condition trackedCondition = definitionsService.extractConditionBySystemTag(r.getCondition(), "trackedCondition");
-            if(trackedCondition != null){
-                Condition sourceEventPropertyCondition = definitionsService.extractConditionBySystemTag(r.getCondition(), "sourceEventCondition");
-                if(source != null && sourceEventPropertyCondition != null) {
-                    ParserHelper.resolveConditionType(definitionsService, sourceEventPropertyCondition, "rule " + r.getItemId() + " source event condition");
-                    if(persistenceService.testMatch(sourceEventPropertyCondition, source)){
+            Condition ruleCondition = r.getCondition();
+            Condition trackedCondition = definitionsService.extractConditionBySystemTag(ruleCondition, "trackedCondition");
+            if (trackedCondition != null) {
+                Condition evalCondition = definitionsService.extractConditionBySystemTag(ruleCondition, "sourceEventCondition");
+                if (evalCondition != null) {
+                    if (persistenceService.testMatch(evalCondition, source)) {
                         trackedConditions.add(trackedCondition);
                     }
                 } else {
-                    trackedConditions.add(trackedCondition);
+                    // lookup for track parameters
+                    Map<String, Object> trackedParameters = new HashMap<>();
+                    trackedCondition.getParameterValues().forEach((key, value) -> {
+                        if (!TRACKED_PARAMETER_PREFIX.equals(key) && StringUtils.startsWith(key, TRACKED_PARAMETER_PREFIX)) {
+                            trackedParameters.put(StringUtils.replace(StringUtils.substringAfter(key, TRACKED_PARAMETER_PREFIX), "_", "."), value);
+                        }
+                    });
+                    if (trackedParameters.size() > 0) {
+                        evalCondition = new Condition(definitionsService.getConditionType("booleanCondition"));
+                        evalCondition.setParameter("operator", "and");
+                        ArrayList<Condition> conditions = new ArrayList<>();
+                        trackedParameters.forEach((key, value) -> {
+                            Condition propCondition = new Condition(definitionsService.getConditionType("eventPropertyCondition"));
+                            propCondition.setParameter("comparisonOperator", "equals");
+                            propCondition.setParameter("propertyName", key);
+                            propCondition.setParameter("propertyValue", value);
+                            conditions.add(propCondition);
+                        });
+                        evalCondition.setParameter("subConditions", conditions);
+                        if (persistenceService.testMatch(evalCondition, source)) {
+                            trackedConditions.add(trackedCondition);
+                        }
+                    } else {
+                        trackedConditions.add(trackedCondition);
+                    }
                 }
-
             }
         }
         return trackedConditions;
@@ -433,7 +458,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
                 refreshRules();
             }
         };
-        schedulerService.getScheduleExecutorService().scheduleWithFixedDelay(task, 0,rulesRefreshInterval, TimeUnit.MILLISECONDS);
+        schedulerService.getScheduleExecutorService().scheduleWithFixedDelay(task, 0, rulesRefreshInterval, TimeUnit.MILLISECONDS);
 
         TimerTask statisticsTask = new TimerTask() {
             @Override
@@ -461,7 +486,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
 
     private void syncRuleStatistics() {
         List<RuleStatistics> allPersistedRuleStatisticsList = persistenceService.getAllItems(RuleStatistics.class);
-        Map<String,RuleStatistics> allPersistedRuleStatistics = new HashMap<>();
+        Map<String, RuleStatistics> allPersistedRuleStatistics = new HashMap<>();
         for (RuleStatistics ruleStatistics : allPersistedRuleStatisticsList) {
             allPersistedRuleStatistics.put(ruleStatistics.getItemId(), ruleStatistics);
         }
@@ -548,7 +573,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
         }
     }
 
-    private void updateRulesByEventType(Map<String,Set<Rule>> rulesByEventType, Rule rule) {
+    private void updateRulesByEventType(Map<String, Set<Rule>> rulesByEventType, Rule rule) {
         Set<String> eventTypeIds = ParserHelper.resolveConditionEventTypes(rule.getCondition());
         for (String eventTypeId : eventTypeIds) {
             Set<Rule> rules = rulesByEventType.get(eventTypeId);
