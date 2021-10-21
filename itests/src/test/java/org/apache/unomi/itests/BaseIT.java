@@ -158,6 +158,8 @@ public abstract class BaseIT {
                         "src/test/resources/testCopyPropertiesWithoutSystemTags.json")),
                 replaceConfigurationFile("data/tmp/testLoginEventCondition.json", new File(
                         "src/test/resources/testLoginEventCondition.json")),
+                replaceConfigurationFile("data/tmp/testClickEventCondition.json", new File(
+                        "src/test/resources/testClickEventCondition.json")),
                 replaceConfigurationFile("data/tmp/testRuleGroovyAction.json", new File(
                         "src/test/resources/testRuleGroovyAction.json")),
                 replaceConfigurationFile("data/tmp/groovy/UpdateAddressAction.groovy", new File(
