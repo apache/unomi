@@ -1,0 +1,58 @@
+{
+  "metadata": {
+    "id": "clickEventCondition",
+    "name": "clickEventCondition",
+    "description": "",
+    "systemTags": [
+      "availableToEndUser",
+      "behavioral",
+      "profileTags",
+      "event",
+      "condition",
+      "eventCondition",
+      "usableInPastEventCondition",
+      "trackedCondition"
+    ],
+    "readOnly": true
+  },
+  "parentCondition": {
+    "type": "booleanCondition",
+    "parameterValues": {
+      "subConditions": [
+        {
+          "type": "eventTypeCondition",
+          "parameterValues": {
+            "eventTypeId": "click"
+          }
+        },
+        {
+          "type": "sourceEventPropertyCondition",
+          "parameterValues": {
+            "path": "parameter::tracked.properties.pageInfo.pagePath"
+          }
+        },
+        {
+          "type": "eventPropertyCondition",
+          "parameterValues": {
+            "propertyName": "target.itemId",
+            "propertyValue": "parameter::itemId",
+            "comparisonOperator": "equals"
+          }
+        }
+      ],
+      "operator": "and"
+    }
+  },
+  "parameters": [
+    {
+      "id": "tracked.properties.pageInfo.pagePath",
+      "type": "string",
+      "multivalued": false
+    },
+    {
+      "id": "itemId",
+      "type": "string",
+      "multivalued": false
+    }
+  ]
+}
