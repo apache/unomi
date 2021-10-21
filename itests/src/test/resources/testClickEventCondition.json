@@ -28,7 +28,7 @@
         {
           "type": "sourceEventPropertyCondition",
           "parameterValues": {
-            "path": "parameter::tracked.properties.pageInfo.pagePath"
+            "path": "parameter::tracked_properties_pageInfo_pagePath"
           }
         },
         {
@@ -45,7 +45,7 @@
   },
   "parameters": [
     {
-      "id": "tracked.properties.pageInfo.pagePath",
+      "id": "tracked_properties_pageInfo_pagePath",
       "type": "string",
       "multivalued": false
     },

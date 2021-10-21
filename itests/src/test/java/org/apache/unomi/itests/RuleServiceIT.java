@@ -185,36 +185,43 @@ public class RuleServiceIT extends BaseIT {
     @Test
     public void testGetTrackedConditions() throws InterruptedException, IOException {
         // Add custom condition with parameter
-        ConditionType conditionType = CustomObjectMapper.getObjectMapper().readValue(
-                new File("data/tmp/testClickEventCondition.json").toURI().toURL(), ConditionType.class);
-        definitionsService.setConditionType(conditionType);
-        refreshPersistence();
-        rulesService.refreshRules();
-        // Test tracked parameter
-        // Add rule that has a trackParameter condition that matches
-        ConditionBuilder builder = new ConditionBuilder(definitionsService);
-        Rule trackParameterRule = new Rule(new Metadata(TEST_SCOPE, "tracked-parameter-rule", "Tracked parameter rule", "A rule with tracked parameter"));
-        Condition trackedCondition = builder.condition("clickEventCondition").build();
-        trackedCondition.setParameter("tracked_properties_pageInfo_pagePath", "/test-page.html");
-        trackedCondition.getConditionType().getMetadata().getSystemTags().add("trackedCondition");
-        trackParameterRule.setCondition(trackedCondition);
-        rulesService.setRule(trackParameterRule);
-        // Add rule that has a trackParameter condition that does not match
-        Rule unTrackParameterRule = new Rule(new Metadata(TEST_SCOPE, "not-tracked-parameter-rule", "Not Tracked parameter rule", "A rule that has a parameter not tracked"));
-        Condition unTrackedCondition = builder.condition("clickEventCondition").build();
-        unTrackedCondition.setParameter("tracked_properties_pageInfo_pagePath", "/test-page-that-does-not-exist.html");
-        unTrackedCondition.getConditionType().getMetadata().getSystemTags().add("trackedCondition");
-        unTrackParameterRule.setCondition(unTrackedCondition);
-        rulesService.setRule(unTrackParameterRule);
-        refreshPersistence();
-        rulesService.refreshRules();
-        // Check that the given event return the tracked condition
-        Profile profile = new Profile(UUID.randomUUID().toString());
-        Session session = new Session(UUID.randomUUID().toString(), profile, new Date(), TEST_SCOPE);
-        Event viewEvent = generateViewEvent(session, profile);
-        Set<Condition> trackedConditions = rulesService.getTrackedConditions(viewEvent.getTarget());
-        Assert.assertTrue(trackedConditions.contains(trackedCondition));
-        Assert.assertFalse(trackedConditions.contains(unTrackedCondition));
+        try {
+            ConditionType conditionType = CustomObjectMapper.getObjectMapper().readValue(
+                    new File("data/tmp/testClickEventCondition.json").toURI().toURL(), ConditionType.class);
+            definitionsService.setConditionType(conditionType);
+            refreshPersistence();
+            rulesService.refreshRules();
+            // Test tracked parameter
+            // Add rule that has a trackParameter condition that matches
+            ConditionBuilder builder = new ConditionBuilder(definitionsService);
+            Rule trackParameterRule = new Rule(new Metadata(TEST_SCOPE, "tracked-parameter-rule", "Tracked parameter rule", "A rule with tracked parameter"));
+            Condition trackedCondition = builder.condition("clickEventCondition").build();
+            trackedCondition.setParameter("tracked_properties_pageInfo_pagePath", "/test-page.html");
+            trackedCondition.getConditionType().getMetadata().getSystemTags().add("trackedCondition");
+            trackParameterRule.setCondition(trackedCondition);
+            rulesService.setRule(trackParameterRule);
+            // Add rule that has a trackParameter condition that does not match
+            Rule unTrackParameterRule = new Rule(new Metadata(TEST_SCOPE, "not-tracked-parameter-rule", "Not Tracked parameter rule", "A rule that has a parameter not tracked"));
+            Condition unTrackedCondition = builder.condition("clickEventCondition").build();
+            unTrackedCondition.setParameter("tracked_properties_pageInfo_pagePath", "/test-page-that-does-not-exist.html");
+            unTrackedCondition.getConditionType().getMetadata().getSystemTags().add("trackedCondition");
+            unTrackParameterRule.setCondition(unTrackedCondition);
+            rulesService.setRule(unTrackParameterRule);
+            refreshPersistence();
+            rulesService.refreshRules();
+            // Check that the given event return the tracked condition
+            Profile profile = new Profile(UUID.randomUUID().toString());
+            Session session = new Session(UUID.randomUUID().toString(), profile, new Date(), TEST_SCOPE);
+            Event viewEvent = generateViewEvent(session, profile);
+            Set<Condition> trackedConditions = rulesService.getTrackedConditions(viewEvent.getTarget());
+            Assert.assertTrue(trackedConditions.contains(trackedCondition));
+            Assert.assertFalse(trackedConditions.contains(unTrackedCondition));
+        } finally {
+            // Clean up test data
+            rulesService.removeRule("tracked-parameter-rule");
+            rulesService.removeRule("not-tracked-parameter-rule");
+            definitionsService.removeConditionType("clickEventCondition");
+        }
     }
 
     @Override
