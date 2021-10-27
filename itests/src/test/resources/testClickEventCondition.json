@@ -26,9 +26,11 @@
           }
         },
         {
-          "type": "sourceEventPropertyCondition",
+          "type": "eventPropertyCondition",
           "parameterValues": {
-            "path": "parameter::tracked_properties_pageInfo_pagePath"
+            "propertyName": "source.properties.pageInfo.pagePath",
+            "propertyValue": "parameter::path",
+            "comparisonOperator": "equals"
           }
         },
         {
@@ -45,9 +47,20 @@
   },
   "parameters": [
     {
-      "id": "tracked_properties_pageInfo_pagePath",
+      "id": "path",
       "type": "string",
       "multivalued": false
+    },
+    {
+      "id": "referrer",
+      "type": "string",
+      "multivalued": false
+    },
+    {
+      "id": "trackedConditionParameters",
+      "type": "string",
+      "multivalued": false,
+      "defaultValue": "path:properties.pageInfo.pagePath,referrer:properties.pageInfo.referringURL"
     },
     {
       "id": "itemId",
