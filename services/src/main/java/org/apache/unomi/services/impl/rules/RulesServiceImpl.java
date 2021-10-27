@@ -46,7 +46,7 @@ import java.util.concurrent.TimeUnit;
 public class RulesServiceImpl implements RulesService, EventListenerService, SynchronousBundleListener {
 
     public static final String RULE_QUERY_PREFIX = "rule_";
-    public static final String TRACKED_PARAMETER_PREFIX = "tracked_";
+    public static final String TRACKED_PARAMETER = "trackedConditionParameters";
     private static final Logger logger = LoggerFactory.getLogger(RulesServiceImpl.class.getName());
 
     private BundleContext bundleContext;
@@ -410,12 +410,23 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
                     if (persistenceService.testMatch(evalCondition, source)) {
                         trackedConditions.add(trackedCondition);
                     }
-                } else {
+                } else if (
+                        trackedCondition.getConditionType() != null &&
+                        trackedCondition.getConditionType().getParameters() != null &&
+                        trackedCondition.getConditionType().getParameters().size() > 0
+                ) {
                     // lookup for track parameters
                     Map<String, Object> trackedParameters = new HashMap<>();
-                    trackedCondition.getParameterValues().forEach((key, value) -> {
-                        if (!TRACKED_PARAMETER_PREFIX.equals(key) && StringUtils.startsWith(key, TRACKED_PARAMETER_PREFIX)) {
-                            trackedParameters.put(StringUtils.replace(StringUtils.substringAfter(key, TRACKED_PARAMETER_PREFIX), "_", "."), value);
+                    trackedCondition.getConditionType().getParameters().forEach(parameter -> {
+                        try {
+                        if (TRACKED_PARAMETER.equals(parameter.getId())) {
+                            Arrays.stream(StringUtils.split(parameter.getDefaultValue(), ",")).forEach(trackedParameter -> {
+                                    String[] param = StringUtils.split(StringUtils.trim(trackedParameter), ":");
+                                    trackedParameters.put(StringUtils.trim(param[1]), trackedCondition.getParameter(StringUtils.trim(param[0])));
+                            });
+                        }
+                        } catch (Exception e) {
+                            logger.warn("Unable to parse tracked parameter from {} for condition type {}", parameter, trackedCondition.getConditionType().getItemId());
                         }
                     });
                     if (trackedParameters.size() > 0) {

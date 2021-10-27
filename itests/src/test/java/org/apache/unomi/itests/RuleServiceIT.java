@@ -196,14 +196,16 @@ public class RuleServiceIT extends BaseIT {
             ConditionBuilder builder = new ConditionBuilder(definitionsService);
             Rule trackParameterRule = new Rule(new Metadata(TEST_SCOPE, "tracked-parameter-rule", "Tracked parameter rule", "A rule with tracked parameter"));
             Condition trackedCondition = builder.condition("clickEventCondition").build();
-            trackedCondition.setParameter("tracked_properties_pageInfo_pagePath", "/test-page.html");
+            trackedCondition.setParameter("path", "/test-page.html");
+            trackedCondition.setParameter("referrer", "https://unomi.apache.org");
             trackedCondition.getConditionType().getMetadata().getSystemTags().add("trackedCondition");
             trackParameterRule.setCondition(trackedCondition);
             rulesService.setRule(trackParameterRule);
             // Add rule that has a trackParameter condition that does not match
             Rule unTrackParameterRule = new Rule(new Metadata(TEST_SCOPE, "not-tracked-parameter-rule", "Not Tracked parameter rule", "A rule that has a parameter not tracked"));
             Condition unTrackedCondition = builder.condition("clickEventCondition").build();
-            unTrackedCondition.setParameter("tracked_properties_pageInfo_pagePath", "/test-page-that-does-not-exist.html");
+            unTrackedCondition.setParameter("path", "/test-page.html");
+            unTrackedCondition.setParameter("referrer", "https://localhost");
             unTrackedCondition.getConditionType().getMetadata().getSystemTags().add("trackedCondition");
             unTrackParameterRule.setCondition(unTrackedCondition);
             rulesService.setRule(unTrackParameterRule);
