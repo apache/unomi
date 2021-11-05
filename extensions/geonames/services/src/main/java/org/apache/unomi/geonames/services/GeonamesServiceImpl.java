@@ -98,7 +98,7 @@ public class GeonamesServiceImpl implements GeonamesService {
         }
         final File f = new File(pathToGeonamesDatabase);
         if (f.exists()) {
-            schedulerService.getScheduleExecutorService().schedule(new TimerTask() {
+            schedulerService.getSharedScheduleExecutorService().schedule(new TimerTask() {
                 @Override
                 public void run() {
                     importGeoNameDatabase(f);
@@ -111,7 +111,7 @@ public class GeonamesServiceImpl implements GeonamesService {
         Map<String,Map<String,Object>> typeMappings = persistenceService.getPropertiesMapping(GeonameEntry.ITEM_TYPE);
         if (typeMappings == null || typeMappings.size() == 0) {
             logger.warn("Type mappings for type {} are not yet installed, delaying import until they are ready!", GeonameEntry.ITEM_TYPE);
-            schedulerService.getScheduleExecutorService().schedule(new TimerTask() {
+            schedulerService.getSharedScheduleExecutorService().schedule(new TimerTask() {
                 @Override
                 public void run() {
                     importGeoNameDatabase(f);
