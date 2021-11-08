@@ -44,6 +44,7 @@
             <cm:property name="rules.statistics.refresh.interval" value="10000"/>
             <cm:property name="events.shouldBeCheckedEventSourceId" value="false"/>
             <cm:property name="rules.optimizationActivated" value="true"/>
+            <cm:property name="schedules.thread.poolSize" value="5"/>
         </cm:default-properties>
     </cm:property-placeholder>
 
@@ -77,7 +78,9 @@
     <!-- Service definitions -->
 
     <bean id="schedulerServiceImpl" class="org.apache.unomi.services.impl.scheduler.SchedulerServiceImpl"
-          init-method="postConstruct" destroy-method="preDestroy"/>
+          init-method="postConstruct" destroy-method="preDestroy">
+        <property name="threadPoolSize" value="${services.scheduler.thread.poolSize}"/>
+    </bean>
     <service id="schedulerService" ref="schedulerServiceImpl">
         <interfaces>
             <value>org.apache.unomi.api.services.SchedulerService</value>

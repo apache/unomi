@@ -33,9 +33,7 @@ import org.osgi.framework.SynchronousBundleListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
 import java.io.InputStream;
-import java.io.StringWriter;
 import java.net.URL;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -56,6 +54,8 @@ public class SchemaRegistryImpl implements SchemaRegistry, SynchronousBundleList
     private BundleContext bundleContext;
 
     private ProfileService profileService;
+
+    ObjectMapper objectMapper = new ObjectMapper();
 
     public void bundleChanged(BundleEvent event) {
         switch (event.getType()) {
@@ -98,22 +98,15 @@ public class SchemaRegistryImpl implements SchemaRegistry, SynchronousBundleList
     public boolean isValid(Object object, String schemaId) {
         JsonSchema jsonSchema = jsonSchemasById.get(schemaId);
         if (jsonSchema != null) {
-            try {
-                // this is a workaround to get the JsonNode from the object, maybe there is a better way (more efficient) to do this ?
-                StringWriter stringWriter = new StringWriter();
-                CustomObjectMapper.getObjectMapper().writeValue(stringWriter, object);
-                JsonNode jsonNode = CustomObjectMapper.getObjectMapper().readTree(stringWriter.toString());
-                Set<ValidationMessage> validationMessages = jsonSchema.validate(jsonNode);
-                if (validationMessages == null || validationMessages.isEmpty()) {
-                    return true;
-                }
-                for (ValidationMessage validationMessage : validationMessages) {
-                    logger.error("Error validating object against schema {}: {}", schemaId, validationMessage);
-                }
-                return false;
-            } catch (IOException e) {
-                logger.error("Error validating object with schema {}", schemaId, e);
+            JsonNode jsonNode = CustomObjectMapper.getObjectMapper().convertValue(object, JsonNode.class);
+            Set<ValidationMessage> validationMessages = jsonSchema.validate(jsonNode);
+            if (validationMessages == null || validationMessages.isEmpty()) {
+                return true;
             }
+            for (ValidationMessage validationMessage : validationMessages) {
+                logger.error("Error validating object against schema {}: {}", schemaId, validationMessage);
+            }
+            return false;
         }
         return false;
     }
@@ -134,22 +127,19 @@ public class SchemaRegistryImpl implements SchemaRegistry, SynchronousBundleList
             return;
         }
 
-        ObjectMapper objectMapper = new ObjectMapper();
-
         List<SchemaType> schemaTypes = this.schemaTypesByBundle.get(bundleContext.getBundle().getBundleId());
 
         while (predefinedSchemas.hasMoreElements()) {
             URL predefinedSchemaURL = predefinedSchemas.nextElement();
             logger.debug("Found predefined JSON schema at " + predefinedSchemaURL + ", loading... ");
 
-            try {
                 JsonMetaSchema jsonMetaSchema = JsonMetaSchema.builder(URI, JsonMetaSchema.getV201909())
                         .addKeyword(new PropertyTypeKeyword(profileService, this)).build();
                 JsonSchemaFactory jsonSchemaFactory = JsonSchemaFactory.builder(JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V201909))
                         .addMetaSchema(jsonMetaSchema)
                         .defaultMetaSchemaURI(URI)
                         .uriFetcher(getBundleUriFetcher(bundleContext), "https", "http").build();
-                InputStream schemaInputStream = predefinedSchemaURL.openStream();
+            try (InputStream schemaInputStream = predefinedSchemaURL.openStream()) {
                 JsonSchema jsonSchema = jsonSchemaFactory.getSchema(schemaInputStream);
                 String schemaId = jsonSchema.getSchemaNode().get("$id").asText();
                 jsonSchemasById.put(schemaId, jsonSchema);
@@ -168,7 +158,6 @@ public class SchemaRegistryImpl implements SchemaRegistry, SynchronousBundleList
                 }
                 schemaTypes.add(schemaType);
                 schemaTypesById.put(schemaId, schemaType);
-                schemaInputStream.close();
             } catch (Exception e) {
                 logger.error("Error while loading schema definition " + predefinedSchemaURL, e);
             }

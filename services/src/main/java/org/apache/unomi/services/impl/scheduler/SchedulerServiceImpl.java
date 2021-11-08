@@ -33,19 +33,33 @@ public class SchedulerServiceImpl implements SchedulerService {
     private static final Logger logger = LoggerFactory.getLogger(SchedulerServiceImpl.class.getName());
 
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
+    private ScheduledExecutorService sharedScheduler;
+    private int threadPoolSize;
 
     public void postConstruct() {
+        sharedScheduler = Executors.newScheduledThreadPool(threadPoolSize);
         logger.info("Scheduler service initialized.");
     }
 
     public void preDestroy() {
+        sharedScheduler.shutdown();
         scheduler.shutdown();
         logger.info("Scheduler service shutdown.");
+    }
+
+    public void setThreadPoolSize(int threadPoolSize) {
+        this.threadPoolSize = threadPoolSize;
     }
 
     @Override
     public ScheduledExecutorService getScheduleExecutorService() {
         return scheduler;
+    }
+
+
+    @Override
+    public ScheduledExecutorService getSharedScheduleExecutorService() {
+        return sharedScheduler;
     }
 
     public static long getTimeDiffInSeconds(int hourInUtc, ZonedDateTime now) {
