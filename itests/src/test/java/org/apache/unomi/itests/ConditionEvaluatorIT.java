@@ -17,6 +17,7 @@
 
 package org.apache.unomi.itests;
 
+import org.apache.commons.lang3.time.DateUtils;
 import org.apache.unomi.api.Item;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.conditions.Condition;
@@ -32,6 +33,7 @@ import org.ops4j.pax.exam.util.Filter;
 
 import javax.inject.Inject;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.*;
 
@@ -116,6 +118,11 @@ public class ConditionEvaluatorIT extends BaseIT {
 
         assertTrue(eval(builder.profileProperty("properties.lastVisit").isDay(lastVisit).build()));
         assertTrue(eval(builder.profileProperty("properties.lastVisit").isNotDay(new Date(lastVisit.getTime() + (24*60*60*1000))).build()));
+        long daysFromToday = TimeUnit.MILLISECONDS.toDays(DateUtils.truncate(new Date(), Calendar.DAY_OF_MONTH).getTime() - DateUtils.truncate(lastVisit, Calendar.DAY_OF_MONTH).getTime());
+        assertTrue(eval(builder.profileProperty("properties.lastVisit").isDay("now-" + daysFromToday + "d").build()));
+        assertTrue(eval(builder.profileProperty("properties.lastVisit").isNotDay("now-" + (daysFromToday + 1) + "d").build()));
+        assertTrue(eval(builder.profileProperty("properties.lastVisit").inDateExpr("" + lastVisit.getTime()).build()));
+        assertTrue(eval(builder.profileProperty("properties.lastVisit").notInDateExpr("now-" + (daysFromToday + 1) + "d").build()));
     }
 
     @Test

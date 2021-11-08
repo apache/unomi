@@ -34,6 +34,8 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
+import static org.apache.unomi.plugins.baseplugin.conditions.PropertyConditionEvaluator.getDate;
+
 public class PropertyConditionESQueryBuilder implements ConditionESQueryBuilder {
 
     DateTimeFormatter dateTimeFormatter;
@@ -144,9 +146,31 @@ public class PropertyConditionESQueryBuilder implements ConditionESQueryBuilder 
                 return boolQueryBuilder;
             case "isDay":
                 checkRequiredValue(value, name, comparisonOperator, false);
-                return getIsSameDayRange(value, name);
+                return getIsSameDayRange(getDate(value), name);
             case "isNotDay":
                 checkRequiredValue(value, name, comparisonOperator, false);
+                return QueryBuilders.boolQuery().mustNot(getIsSameDayRange(getDate(value), name));
+            case "distance":
+                final String unitString = (String) condition.getParameter("unit");
+                final Object centerObj = condition.getParameter("center");
+                final Double distance = (Double) condition.getParameter("distance");
+
+                if (centerObj != null && distance != null) {
+                    String centerString;
+                    if (centerObj instanceof org.apache.unomi.api.GeoPoint) {
+                        centerString = ((org.apache.unomi.api.GeoPoint) centerObj).asString();
+                    } else if (centerObj instanceof String) {
+                        centerString = (String) centerObj;
+                    } else {
+                        centerString = centerObj.toString();
+                    }
+                    DistanceUnit unit = unitString != null ? DistanceUnit.fromString(unitString) : DistanceUnit.DEFAULT;
+
+                    return QueryBuilders.geoDistanceQuery(name)
+                            .ignoreUnmapped(true)
+                            .distance(distance, unit)
+                            .point(new GeoPoint(centerString));
+                }
                 return QueryBuilders.boolQuery().mustNot(getIsSameDayRange(value, name));
         }
         return null;
