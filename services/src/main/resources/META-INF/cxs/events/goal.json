@@ -18,6 +18,10 @@
           "type" : "string"
         },
         {
+          "itemId" : "customItemType",
+          "type" : "string"
+        },
+        {
           "itemId" : "campaignId",
           "type" : "string"
         },

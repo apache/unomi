@@ -75,6 +75,17 @@ public class PropertyTypedObjectDeserializer extends UntypedObjectDeserializer {
         fieldValuesToMatch.put(fieldParts[0], valuesToMatch);
     }
 
+    public void unregisterMapping(String matchExpression) {
+        registry.remove(matchExpression);
+        String[] fieldParts = matchExpression.split("=");
+        Set<String> valuesToMatch = fieldValuesToMatch.get(fieldParts[0]);
+        if (valuesToMatch == null) {
+            valuesToMatch = new LinkedHashSet<String>();
+        }
+        valuesToMatch.remove(fieldParts[1]);
+        fieldValuesToMatch.remove(fieldParts[0], valuesToMatch);
+    }
+
     @Override
     public Object deserialize(
             JsonParser jp, DeserializationContext ctxt)

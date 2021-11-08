@@ -178,7 +178,7 @@
                             <autoCreateIndex>true</autoCreateIndex>
                             <timeout>120</timeout>
                             <environmentVariables>
-                                <ES_JAVA_OPTS>-Xms2g -Xmx2g</ES_JAVA_OPTS>
+                                <ES_JAVA_OPTS>-Xms4g -Xmx4g</ES_JAVA_OPTS>
                             </environmentVariables>
                             <instanceSettings>
                                 <properties>

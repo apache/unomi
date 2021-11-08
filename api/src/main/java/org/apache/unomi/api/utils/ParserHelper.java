@@ -15,8 +15,11 @@
  * limitations under the License.
  */
 
-package org.apache.unomi.services.impl;
+package org.apache.unomi.api.utils;
 
+import org.apache.commons.beanutils.PropertyUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.unomi.api.Event;
 import org.apache.unomi.api.PropertyType;
 import org.apache.unomi.api.ValueType;
 import org.apache.unomi.api.actions.Action;
@@ -28,6 +31,7 @@ import org.apache.unomi.api.services.DefinitionsService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.lang.reflect.InvocationTargetException;
 import java.util.*;
 
 /**
@@ -39,6 +43,29 @@ public class ParserHelper {
 
     private static final Set<String> unresolvedActionTypes = new HashSet<>();
     private static final Set<String> unresolvedConditionTypes = new HashSet<>();
+
+    private static final String VALUE_NAME_SEPARATOR = "::";
+    private static final String PLACEHOLDER_PREFIX = "${";
+    private static final String PLACEHOLDER_SUFFIX = "}";
+
+    public interface ConditionVisitor {
+        void visit(Condition condition);
+        void postVisit(Condition condition);
+    }
+
+    public interface ValueExtractor {
+        Object extract(String valueAsString, Event event) throws IllegalAccessException, NoSuchMethodException, InvocationTargetException;
+    }
+
+    public static final Map<String,ValueExtractor> DEFAULT_VALUE_EXTRACTORS = new HashMap<>();
+    static {
+        DEFAULT_VALUE_EXTRACTORS.put("profileProperty", (valueAsString, event) -> PropertyUtils.getProperty(event.getProfile(), "properties." + valueAsString));
+        DEFAULT_VALUE_EXTRACTORS.put("simpleProfileProperty", (valueAsString, event) -> event.getProfile().getProperty(valueAsString));
+        DEFAULT_VALUE_EXTRACTORS.put("sessionProperty", (valueAsString, event) -> PropertyUtils.getProperty(event.getSession(), "properties." + valueAsString));
+        DEFAULT_VALUE_EXTRACTORS.put("simpleSessionProperty", (valueAsString, event) -> event.getSession().getProperty(valueAsString));
+        DEFAULT_VALUE_EXTRACTORS.put("eventProperty", (valueAsString, event) -> PropertyUtils.getProperty(event, valueAsString));
+        DEFAULT_VALUE_EXTRACTORS.put("simpleEventProperty", (valueAsString, event) -> event.getProperty(valueAsString));
+    }
 
     public static boolean resolveConditionType(final DefinitionsService definitionsService, Condition rootCondition, String contextObjectName) {
         if (rootCondition == null) {
@@ -86,7 +113,7 @@ public class ParserHelper {
         return result;
     }
 
-    private static void visitConditions(Condition rootCondition, ConditionVisitor visitor) {
+    public static void visitConditions(Condition rootCondition, ConditionVisitor visitor) {
         visitor.visit(rootCondition);
         // recursive call for sub-conditions as parameters
         for (Object parameterValue : rootCondition.getParameterValues().values()) {
@@ -152,10 +179,6 @@ public class ParserHelper {
         }
     }
 
-    interface ConditionVisitor {
-        void visit(Condition condition);
-        void postVisit(Condition condition);
-    }
 
     public static Set<String> resolveConditionEventTypes(Condition rootCondition) {
         if (rootCondition == null) {
@@ -166,7 +189,7 @@ public class ParserHelper {
         return eventTypeConditionVisitor.getEventTypeIds();
     }
 
-    static class EventTypeConditionVisitor implements ConditionVisitor {
+    public static class EventTypeConditionVisitor implements ConditionVisitor {
 
         private Set<String> eventTypeIds = new HashSet<>();
         private Stack<String> conditionTypeStack = new Stack<>();
@@ -199,4 +222,79 @@ public class ParserHelper {
             return eventTypeIds;
         }
     }
+
+    @SuppressWarnings("unchecked")
+    public static Map<String, Object> parseMap(Event event, Map<String, Object> map, Map<String, ValueExtractor> valueExtractors) {
+        Map<String, Object> values = new HashMap<>();
+        for (Map.Entry<String, Object> entry : map.entrySet()) {
+            Object value = entry.getValue();
+            if (value instanceof String) {
+                String s = (String) value;
+                try {
+                    if (s.contains(PLACEHOLDER_PREFIX)) {
+                        while (s.contains(PLACEHOLDER_PREFIX)) {
+                            String substring = s.substring(s.indexOf(PLACEHOLDER_PREFIX) + 2, s.indexOf(PLACEHOLDER_SUFFIX));
+                            Object v = extractValue(substring, event, valueExtractors);
+                            if (v != null) {
+                                s = s.replace(PLACEHOLDER_PREFIX + substring + PLACEHOLDER_SUFFIX, v.toString());
+                            } else {
+                                break;
+                            }
+                        }
+                        value = s;
+                    } else {
+                        // check if we have special values
+                        if (s.contains(VALUE_NAME_SEPARATOR)) {
+                            value = extractValue(s, event, valueExtractors);
+                        }
+                    }
+                } catch (UnsupportedOperationException e) {
+                    throw e;
+                } catch (Exception e) {
+                    throw new UnsupportedOperationException(e);
+                }
+            } else if (value instanceof Map) {
+                value = parseMap(event, (Map<String, Object>) value, valueExtractors);
+            }
+            values.put(entry.getKey(), value);
+        }
+        return values;
+    }
+
+    public static Object extractValue(String s, Event event, Map<String, ValueExtractor> valueExtractors) throws IllegalAccessException, NoSuchMethodException, InvocationTargetException {
+        Object value = null;
+
+        String valueType = StringUtils.substringBefore(s, VALUE_NAME_SEPARATOR);
+        String valueAsString = StringUtils.substringAfter(s, VALUE_NAME_SEPARATOR);
+        ValueExtractor extractor = valueExtractors.get(valueType);
+        if (extractor != null) {
+            value = extractor.extract(valueAsString, event);
+        }
+
+        return value;
+    }
+
+    @SuppressWarnings("unchecked")
+    public static boolean hasContextualParameter(Map<String, Object> values, Map<String, ValueExtractor> valueExtractors) {
+        for (Map.Entry<String, Object> entry : values.entrySet()) {
+            Object value = entry.getValue();
+            if (value instanceof String) {
+                String s = (String) value;
+                String str = s.contains(PLACEHOLDER_PREFIX) ?
+                        s.substring(s.indexOf(PLACEHOLDER_PREFIX) + 2, s.indexOf(PLACEHOLDER_SUFFIX)) :
+                        s;
+
+                if (str.contains(VALUE_NAME_SEPARATOR) && valueExtractors
+                        .containsKey(StringUtils.substringBefore(str, VALUE_NAME_SEPARATOR))) {
+                    return true;
+                }
+            } else if (value instanceof Map) {
+                if (hasContextualParameter((Map<String, Object>) value, valueExtractors)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
 }

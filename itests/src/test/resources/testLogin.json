@@ -19,15 +19,13 @@
   },
   "actions": [
     {
+      "type": "mergeProfilesOnPropertyAction",
       "parameterValues": {
         "mergeProfilePropertyValue": "eventProperty::target.properties(email)",
         "mergeProfilePropertyName": "mergeIdentifier"
-      },
-      "type": "mergeProfilesOnPropertyAction"
+      }
     },
     {
-      "parameterValues": {
-      },
       "type": "copyPropertiesAction",
       "parameterValues": {
         "singleValueStrategy": "alwaysSet"

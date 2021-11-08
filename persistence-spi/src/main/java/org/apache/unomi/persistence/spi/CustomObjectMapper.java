@@ -44,6 +44,10 @@ import java.util.TimeZone;
 public class CustomObjectMapper extends ObjectMapper {
 
     private static final long serialVersionUID = 4578277612897061535L;
+    
+    private Map<String,Class<? extends Item>> builtinItemTypeClasses = new HashMap<>();
+    private PropertyTypedObjectDeserializer propertyTypedObjectDeserializer;
+    private ItemDeserializer itemDeserializer;
 
     public CustomObjectMapper() {
         super();
@@ -56,45 +60,61 @@ public class CustomObjectMapper extends ObjectMapper {
                 new SimpleModule("PropertyTypedObjectDeserializerModule",
                         new Version(1, 0, 0, null, "org.apache.unomi.rest", "deserializer"));
 
-        PropertyTypedObjectDeserializer propertyTypedObjectDeserializer = new PropertyTypedObjectDeserializer(null, null);
+        propertyTypedObjectDeserializer = new PropertyTypedObjectDeserializer(null, null);
         propertyTypedObjectDeserializer.registerMapping("type=.*Condition", Condition.class);
         deserializerModule.addDeserializer(Object.class, propertyTypedObjectDeserializer);
 
-        ItemDeserializer itemDeserializer = new ItemDeserializer();
+        itemDeserializer = new ItemDeserializer();
         deserializerModule.addDeserializer(Item.class, itemDeserializer);
 
 
-        Map<String, Class<? extends Item>> classes = new HashMap<>();
-        classes.put(Campaign.ITEM_TYPE, Campaign.class);
-        classes.put(CampaignEvent.ITEM_TYPE, CampaignEvent.class);
-        classes.put(Event.ITEM_TYPE, Event.class);
-        classes.put(Goal.ITEM_TYPE, Goal.class);
-        classes.put(Persona.ITEM_TYPE, Persona.class);
-        classes.put(Profile.ITEM_TYPE, Profile.class);
-        classes.put(Rule.ITEM_TYPE, Rule.class);
-        classes.put(Scoring.ITEM_TYPE, Scoring.class);
-        classes.put(Segment.ITEM_TYPE, Segment.class);
-        classes.put(Session.ITEM_TYPE, Session.class);
-        classes.put(ConditionType.ITEM_TYPE, ConditionType.class);
-        classes.put(ActionType.ITEM_TYPE, ActionType.class);
-        classes.put(Topic.ITEM_TYPE, Topic.class);
-        classes.put(SourceItem.ITEM_TYPE, SourceItem.class);
-        classes.put(ProfileAlias.ITEM_TYPE, ProfileAlias.class);
-        for (Map.Entry<String, Class<? extends Item>> entry : classes.entrySet()) {
+        builtinItemTypeClasses = new HashMap<>();
+        builtinItemTypeClasses.put(Campaign.ITEM_TYPE, Campaign.class);
+        builtinItemTypeClasses.put(CampaignEvent.ITEM_TYPE, CampaignEvent.class);
+        builtinItemTypeClasses.put(Event.ITEM_TYPE, Event.class);
+        builtinItemTypeClasses.put(Goal.ITEM_TYPE, Goal.class);
+        builtinItemTypeClasses.put(Persona.ITEM_TYPE, Persona.class);
+        builtinItemTypeClasses.put(Profile.ITEM_TYPE, Profile.class);
+        builtinItemTypeClasses.put(Rule.ITEM_TYPE, Rule.class);
+        builtinItemTypeClasses.put(Scoring.ITEM_TYPE, Scoring.class);
+        builtinItemTypeClasses.put(Segment.ITEM_TYPE, Segment.class);
+        builtinItemTypeClasses.put(Session.ITEM_TYPE, Session.class);
+        builtinItemTypeClasses.put(ConditionType.ITEM_TYPE, ConditionType.class);
+        builtinItemTypeClasses.put(ActionType.ITEM_TYPE, ActionType.class);
+        builtinItemTypeClasses.put(Topic.ITEM_TYPE, Topic.class);
+        builtinItemTypeClasses.put(SourceItem.ITEM_TYPE, SourceItem.class);
+        builtinItemTypeClasses.put(ProfileAlias.ITEM_TYPE, ProfileAlias.class);
+        for (Map.Entry<String, Class<? extends Item>> entry : builtinItemTypeClasses.entrySet()) {
             propertyTypedObjectDeserializer.registerMapping("itemType=" + entry.getKey(), entry.getValue());
             itemDeserializer.registerMapping(entry.getKey(), entry.getValue());
         }
         propertyTypedObjectDeserializer.registerMapping("itemType=.*", CustomItem.class);
 
-
         super.registerModule(deserializerModule);
+    }
+
+    public void registerBuiltInItemTypeClass(String itemType, Class clazz) {
+        propertyTypedObjectDeserializer.registerMapping("itemType=" + itemType, clazz);
+        itemDeserializer.registerMapping(itemType, clazz);
+    }
+
+    public void unregisterBuiltInItemTypeClass(String itemType) {
+        propertyTypedObjectDeserializer.unregisterMapping("itemType=" + itemType);
+        itemDeserializer.unregisterMapping(itemType);
     }
 
     public static ObjectMapper getObjectMapper() {
         return Holder.INSTANCE;
     }
 
+    public static CustomObjectMapper getCustomInstance() { return Holder.INSTANCE; }
+
+    public Class<? extends Item> getBuiltinItemTypeClass(String itemType) {
+        return builtinItemTypeClasses.get(itemType);
+    }
+
     private static class Holder {
         static final CustomObjectMapper INSTANCE = new CustomObjectMapper();
     }
+
 }
