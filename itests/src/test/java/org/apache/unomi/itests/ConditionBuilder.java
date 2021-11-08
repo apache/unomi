@@ -141,6 +141,10 @@ public class ConditionBuilder {
             return op("in").stringValues(values);
         }
 
+        public ComparisonCondition inDateExpr(String... values) {
+            return op("in").dateExprValues(values);
+        }
+
         public ComparisonCondition in(Date... values) {
             return op("in").dateValues(values);
         }
@@ -229,6 +233,10 @@ public class ConditionBuilder {
             return op("notIn").dateValues(values);
         }
 
+        public ComparisonCondition notInDateExpr(String... values) {
+            return op("notIn").dateExprValues(values);
+        }
+
         public ComparisonCondition notIn(Integer... values) {
             return op("notIn").integerValues(values);
         }
@@ -288,6 +296,10 @@ public class ConditionBuilder {
 
         private ComparisonCondition dateValues(Date... values) {
             return parameter("propertyValuesDate", values != null ? Arrays.asList(values) : null);
+        }
+
+        private ComparisonCondition dateExprValues(String... values) {
+            return parameter("propertyValuesDateExpr", values != null ? Arrays.asList(values) : null);
         }
     }
 

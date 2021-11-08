@@ -42,6 +42,7 @@ import java.lang.reflect.Modifier;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 /**
  * Evaluator for property comparison conditions
@@ -89,8 +90,12 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
     }
 
     private boolean compareValues(Object actualValue, Collection<?> expectedValues, Collection<?> expectedValuesInteger,  Collection<?> expectedValuesDouble,  Collection<?> expectedValuesDate, Collection<?> expectedValuesDateExpr, String op) {
+        Collection<Object> expectedDateExpr = null;
+        if (expectedValuesDateExpr != null) {
+            expectedDateExpr = expectedValuesDateExpr.stream().map(PropertyConditionEvaluator::getDate).collect(Collectors.toList());
+        }
         @SuppressWarnings("unchecked")
-        Collection<?> expected = ObjectUtils.firstNonNull(expectedValues, expectedValuesDate, expectedValuesInteger, expectedValuesDouble, expectedValuesDateExpr);
+        Collection<?> expected = ObjectUtils.firstNonNull(expectedValues, expectedValuesDate, expectedValuesInteger, expectedValuesDouble, expectedDateExpr);
         if (actualValue == null) {
             return expected == null;
         } else if (expected == null) {
@@ -206,7 +211,7 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
         if (op == null) {
             return false;
         } else if (actualValue == null) {
-            return op.equals("missing")|| op.equals("notIn") || op.equals("notEquals") || op.equals("hasNoneOf");
+            return op.equals("missing") || op.equals("notIn") || op.equals("notEquals") || op.equals("hasNoneOf");
         } else if (op.equals("exists")) {
             if (actualValue instanceof List) {
                 return ((List) actualValue).size() > 0;
