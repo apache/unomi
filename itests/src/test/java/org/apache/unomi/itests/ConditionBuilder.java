@@ -141,6 +141,10 @@ public class ConditionBuilder {
             return op("in").stringValues(values);
         }
 
+        public ComparisonCondition inDateExpr(String... values) {
+            return op("in").dateExprValues(values);
+        }
+
         public ComparisonCondition in(Date... values) {
             return op("in").dateValues(values);
         }
@@ -149,8 +153,16 @@ public class ConditionBuilder {
             return op("isDay").dateValue(value);
         }
 
+        public ComparisonCondition isDay(String expression) {
+            return op("isDay").dateValueExpr(expression);
+        }
+
         public ComparisonCondition isNotDay(Date value) {
             return op("isNotDay").dateValue(value);
+        }
+
+        public ComparisonCondition isNotDay(String expression) {
+            return op("isNotDay").dateValueExpr(expression);
         }
 
         public ComparisonCondition in(Integer... values) {
@@ -221,6 +233,10 @@ public class ConditionBuilder {
             return op("notIn").dateValues(values);
         }
 
+        public ComparisonCondition notInDateExpr(String... values) {
+            return op("notIn").dateExprValues(values);
+        }
+
         public ComparisonCondition notIn(Integer... values) {
             return op("notIn").integerValues(values);
         }
@@ -262,6 +278,10 @@ public class ConditionBuilder {
             return parameter("propertyValueDate", value);
         }
 
+        private ComparisonCondition dateValueExpr(String value) {
+            return parameter("propertyValueDateExpr", value);
+        }
+
         private ComparisonCondition stringValues(String... values) {
             return parameter("propertyValues", values != null ? Arrays.asList(values) : null);
         }
@@ -276,6 +296,10 @@ public class ConditionBuilder {
 
         private ComparisonCondition dateValues(Date... values) {
             return parameter("propertyValuesDate", values != null ? Arrays.asList(values) : null);
+        }
+
+        private ComparisonCondition dateExprValues(String... values) {
+            return parameter("propertyValuesDateExpr", values != null ? Arrays.asList(values) : null);
         }
     }
 
