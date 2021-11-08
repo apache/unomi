@@ -149,8 +149,16 @@ public class ConditionBuilder {
             return op("isDay").dateValue(value);
         }
 
+        public ComparisonCondition isDay(String expression) {
+            return op("isDay").dateValueExpr(expression);
+        }
+
         public ComparisonCondition isNotDay(Date value) {
             return op("isNotDay").dateValue(value);
+        }
+
+        public ComparisonCondition isNotDay(String expression) {
+            return op("isNotDay").dateValueExpr(expression);
         }
 
         public ComparisonCondition in(Integer... values) {
@@ -260,6 +268,10 @@ public class ConditionBuilder {
 
         private ComparisonCondition dateValue(Date value) {
             return parameter("propertyValueDate", value);
+        }
+
+        private ComparisonCondition dateValueExpr(String value) {
+            return parameter("propertyValueDateExpr", value);
         }
 
         private ComparisonCondition stringValues(String... values) {

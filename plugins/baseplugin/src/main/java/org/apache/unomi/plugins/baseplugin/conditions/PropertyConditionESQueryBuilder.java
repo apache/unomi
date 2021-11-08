@@ -33,6 +33,8 @@ import org.joda.time.format.ISODateTimeFormat;
 
 import java.util.*;
 
+import static org.apache.unomi.plugins.baseplugin.conditions.PropertyConditionEvaluator.getDate;
+
 public class PropertyConditionESQueryBuilder implements ConditionESQueryBuilder {
 
     DateTimeFormatter dateTimeFormatter;
@@ -144,10 +146,10 @@ public class PropertyConditionESQueryBuilder implements ConditionESQueryBuilder 
                 return boolQueryBuilder;
             case "isDay":
                 checkRequiredValue(value, name, comparisonOperator, false);
-                return getIsSameDayRange(value, name);
+                return getIsSameDayRange(getDate(value), name);
             case "isNotDay":
                 checkRequiredValue(value, name, comparisonOperator, false);
-                return QueryBuilders.boolQuery().mustNot(getIsSameDayRange(value, name));
+                return QueryBuilders.boolQuery().mustNot(getIsSameDayRange(getDate(value), name));
             case "distance":
                 final String unitString = (String) condition.getParameter("unit");
                 final Object centerObj = condition.getParameter("center");

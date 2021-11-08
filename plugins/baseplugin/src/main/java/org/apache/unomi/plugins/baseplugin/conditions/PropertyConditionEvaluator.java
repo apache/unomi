@@ -69,7 +69,7 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
     }
 
     private int compare(Object actualValue, String expectedValue, Object expectedValueDate, Object expectedValueInteger, Object expectedValueDateExpr, Object expectedValueDouble) {
-        if (expectedValue == null && expectedValueDate == null && expectedValueInteger == null && getDate(expectedValueDateExpr) == null) {
+        if (expectedValue == null && expectedValueDate == null && expectedValueInteger == null && getDate(expectedValueDateExpr) == null && expectedValueDouble == null) {
             return actualValue == null ? 0 : 1;
         } else if (actualValue == null) {
             return -1;
@@ -88,9 +88,9 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
         }
     }
 
-    private boolean compareMultivalue(Object actualValue, Collection<?> expectedValues, Collection<?> expectedValuesDate, Collection<?> expectedValuesNumber, Collection<?> expectedValuesDateExpr, String op) {
+    private boolean compareValues(Object actualValue, Collection<?> expectedValues, Collection<?> expectedValuesInteger,  Collection<?> expectedValuesDouble,  Collection<?> expectedValuesDate, Collection<?> expectedValuesDateExpr, String op) {
         @SuppressWarnings("unchecked")
-        Collection<?> expected = ObjectUtils.firstNonNull(expectedValues, expectedValuesDate, expectedValuesNumber);
+        Collection<?> expected = ObjectUtils.firstNonNull(expectedValues, expectedValuesDate, expectedValuesInteger, expectedValuesDouble, expectedValuesDateExpr);
         if (actualValue == null) {
             return expected == null;
         } else if (expected == null) {
@@ -202,7 +202,7 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
     }
 
     protected boolean isMatch(String op, Object actualValue, String expectedValue, Object expectedValueInteger, Object expectedValueDouble,
-                            Object expectedValueDate, Object expectedValueDateExpr, Condition condition) {
+                              Object expectedValueDate, Object expectedValueDateExpr, Condition condition) {
         if (op == null) {
             return false;
         } else if (actualValue == null) {
@@ -266,12 +266,15 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
             Collection<?> expectedValuesInteger = (Collection<?>) condition.getParameter("propertyValuesInteger");
             Collection<?> expectedValuesDate = (Collection<?>) condition.getParameter("propertyValuesDate");
             Collection<?> expectedValuesDateExpr = (Collection<?>) condition.getParameter("propertyValuesDateExpr");
+            Collection<?> expectedValuesDouble = (Collection<?>) condition.getParameter("propertyValuesDouble");
 
-            return compareMultivalue(actualValue, expectedValues, expectedValuesDate, expectedValuesInteger, expectedValuesDateExpr, op);
-        } else if (op.equals("isDay") && expectedValueDate != null) {
-            return yearMonthDayDateFormat.format(getDate(actualValue)).equals(yearMonthDayDateFormat.format(getDate(expectedValueDate)));
-        } else if (op.equals("isNotDay") && expectedValueDate != null) {
-            return !yearMonthDayDateFormat.format(getDate(actualValue)).equals(yearMonthDayDateFormat.format(getDate(expectedValueDate)));
+            return compareValues(actualValue, expectedValues, expectedValuesInteger, expectedValuesDouble, expectedValuesDate, expectedValuesDateExpr, op);
+        } else if (op.equals("isDay") && (expectedValueDate != null || expectedValueDateExpr != null)) {
+            Object expectedDate = expectedValueDate == null ? expectedValueDateExpr : expectedValueDate;
+            return yearMonthDayDateFormat.format(getDate(actualValue)).equals(yearMonthDayDateFormat.format(getDate(expectedDate)));
+        } else if (op.equals("isNotDay") && (expectedValueDate != null || expectedValueDateExpr != null)) {
+            Object expectedDate = expectedValueDate == null ? expectedValueDateExpr : expectedValueDate;
+            return !yearMonthDayDateFormat.format(getDate(actualValue)).equals(yearMonthDayDateFormat.format(getDate(expectedDate)));
         } else if (op.equals("distance")) {
             GeoPoint actualCenter = null;
             if (actualValue instanceof GeoPoint) {
@@ -433,7 +436,7 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
         return accessor;
     }
 
-    private Date getDate(Object value) {
+    protected static Date getDate(Object value) {
         if (value == null) {
             return null;
         }
