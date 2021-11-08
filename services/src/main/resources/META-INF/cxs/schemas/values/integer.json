@@ -1,0 +1,6 @@
+{
+    "$id": "https://unomi.apache.org/schemas/json/values/integer.json",
+    "$schema": "https://json-schema.org/draft/2019-09/schema",
+    "title": "Integer",
+    "type": "integer"
+}

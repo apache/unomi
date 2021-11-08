@@ -1,0 +1,29 @@
+{
+  "$id": "https://unomi.apache.org/schemas/json/event.json",
+  "$schema": "https://json-schema.org/draft/2019-09/schema",
+  "title": "Event",
+  "type": "object",
+  "allOf": [{ "$ref": "https://unomi.apache.org/schemas/json/timestampeditem.json" }],
+  "properties" : {
+    "eventType" : {
+      "type" : "string",
+      "pattern" : "^(\\w|[-_@\\.]){0,60}$"
+    },
+    "profileId" : {
+      "type" : [ "null", "string"],
+      "pattern" : "^(\\w|[-_@\\.]){0,60}$"
+    },
+    "sessionId" : {
+      "type" : [ "null", "string"],
+      "pattern" : "^(\\w|[-_@\\.]){0,60}$"
+    },
+    "scope" : {
+      "type" : [ "null", "string"],
+      "pattern" : "^(\\w|[-_@\\.]){0,60}$"
+    },
+    "sourceId" : {
+      "type" : [ "null", "string"],
+      "pattern" : "^(\\w|[-_@\\.]){0,60}$"
+    }
+  }
+}

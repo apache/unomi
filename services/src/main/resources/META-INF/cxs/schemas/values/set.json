@@ -1,0 +1,7 @@
+{
+    "$id": "https://unomi.apache.org/schemas/json/values/set.json",
+    "$schema": "https://json-schema.org/draft/2019-09/schema",
+    "title": "Set",
+    "type": "object",
+    "maxProperties": 50
+}

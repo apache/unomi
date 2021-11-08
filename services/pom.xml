@@ -172,6 +172,12 @@
             <scope>provided</scope>
         </dependency>
 
+        <dependency>
+            <groupId>com.networknt</groupId>
+            <artifactId>json-schema-validator</artifactId>
+            <version>1.0.49</version>
+        </dependency>
+
     </dependencies>
 
     <build>
@@ -185,6 +191,10 @@
                         <Embed-Dependency>*;scope=compile|runtime</Embed-Dependency>
                         <Import-Package>
                             sun.misc;resolution:=optional,
+                            org.jcodings;resolution:=optional,
+                            org.jcodings.specific;resolution:=optional,
+                            org.joni;resolution:=optional,
+                            org.joni.exception;resolution:=optional,
                             *
                         </Import-Package>
                     </instructions>

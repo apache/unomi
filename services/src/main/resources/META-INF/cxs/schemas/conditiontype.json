@@ -1,0 +1,22 @@
+{
+  "$id": "https://unomi.apache.org/schemas/json/conditiontype.json",
+  "$schema": "https://json-schema.org/draft/2019-09/schema",
+  "title": "ConditionType",
+  "type": "object",
+  "properties" : {
+    "conditionEvaluator" : {
+      "type" : "string"
+    },
+    "queryBuilder" : {
+      "type" : "string"
+    },
+    "parentCondition" : {
+      "$ref" : "https://unomi.apache.org/schemas/json/condition.json"
+    },
+    "parameters" : {
+      "type" : "object",
+      "additionalProperties": { "$ref" : "https://unomi.apache.org/schemas/json/parameter.json" },
+      "maxProperties": 50
+    }
+  }
+}

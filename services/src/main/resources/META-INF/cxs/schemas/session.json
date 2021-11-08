@@ -1,0 +1,41 @@
+{
+  "$id": "https://unomi.apache.org/schemas/json/session.json",
+  "$schema": "https://json-schema.org/draft/2019-09/schema",
+  "title": "Session",
+  "type": "object",
+  "allOf": [
+    {
+      "$ref": "https://unomi.apache.org/schemas/json/timestampeditem.json"
+    }
+  ],
+  "properties": {
+    "profileId" : {
+      "type" : "string"
+    },
+    "profile" : {
+      "$ref" : "https://unomi.apache.org/schemas/json/profile.json"
+    },
+    "properties" : {
+      "type" : "object",
+      "maxProperties": 50
+    },
+    "systemProperties" : {
+      "type" : "object",
+      "maxProperties": 50
+    },
+    "timeStamp" : {
+      "type" : "string",
+      "format" : "date-time"
+    },
+    "lastEventDate" : {
+      "type" : "string",
+      "format" : "date-time"
+    },
+    "size" : {
+      "type" : "integer"
+    },
+    "duration" : {
+      "type" : "integer"
+    }
+  }
+}

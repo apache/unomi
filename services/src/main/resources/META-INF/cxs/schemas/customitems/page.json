@@ -1,0 +1,66 @@
+{
+  "$id": "https://unomi.apache.org/schemas/json/customitems/page.json",
+  "$schema": "https://json-schema.org/draft/2019-09/schema",
+  "title": "PageCustomItem",
+  "type": "object",
+  "allOf": [
+    {
+      "$ref": "https://unomi.apache.org/schemas/json/customitem.json"
+    }
+  ],
+  "properties": {
+    "pageInfo": {
+      "type" : "object",
+      "properties" : {
+        "templateName": {
+          "type" : "string"
+        },
+        "language": {
+          "type" : "string",
+          "maxLength": 5
+        },
+        "destinationURL": {
+          "type" : "string",
+          "format" : "uri"
+        },
+        "categories": {
+          "type" : "array",
+          "items" : { "type" : "string"}
+        },
+        "pageID": {
+          "type" : "string",
+          "pattern" : "^(\\w|[-_@\\.]){0,60}$"
+        },
+        "nodeType": {
+          "type" : "string"
+        },
+        "pagePath": {
+          "type" : "string"
+        },
+        "pageName": {
+          "type" : "string"
+        },
+        "referringURL": {
+          "type" : "string",
+          "format" : "uri"
+        },
+        "tags": {
+          "type" : "array",
+          "items" : { "type" : "string" }
+        },
+        "isContentTemplate": {
+          "type" : "boolean"
+        }
+      }
+    },
+    "attributes": {
+      "type" : ["null", "object"]
+    },
+    "consentTypes": {
+      "type" : ["null", "array"],
+      "items" : {
+        "$href" : "https://unomi.apache.org/schemas/json/consentType.json"
+      }
+    }
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "$id": "https://unomi.apache.org/schemas/json/goal.json",
+  "$schema": "https://json-schema.org/draft/2019-09/schema",
+  "title": "Goal",
+  "type": "object",
+  "allOf": [{ "$ref": "https://unomi.apache.org/schemas/json/metadataitem.json" }],
+  "properties" : {
+    "startEvent" : {
+      "$ref" : "https://unomi.apache.org/schemas/json/condition.json"
+    },
+    "targetEvent" : {
+      "$ref" : "https://unomi.apache.org/schemas/json/condition.json"
+    },
+    "campaignId" : {
+      "type" : "string"
+    }
+  }
+}
