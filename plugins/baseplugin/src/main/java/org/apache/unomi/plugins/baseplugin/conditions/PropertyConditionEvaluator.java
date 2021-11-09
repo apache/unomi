@@ -95,7 +95,6 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
         }
         @SuppressWarnings("unchecked")
         Collection<?> expected = ObjectUtils.firstNonNull(expectedValues, expectedValuesDate, expectedValuesInteger, expectedValuesDouble, expectedDateExpr);
-        List<?> expected = ObjectUtils.firstNonNull(expectedValues, expectedValuesDate, expectedValuesNumber);
         if (actualValue == null) {
             return expected == null;
         } else if (expected == null) {
@@ -211,7 +210,6 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
         if (op == null) {
             return false;
         } else if (actualValue == null) {
-            return op.equals("missing");
             return op.equals("missing") || op.equals("notIn") || op.equals("notEquals") || op.equals("hasNoneOf");
         } else if (op.equals("exists")) {
             return true;
@@ -265,11 +263,7 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
         } else if (op.equals("matchesRegex")) {
             return expectedValue != null && Pattern.compile(expectedValue).matcher(actualValue.toString()).matches();
         } else if (op.equals("in") || op.equals("inContains") || op.equals("notIn") || op.equals("hasSomeOf") || op.equals("hasNoneOf") || op.equals("all")) {
-            Collection<?> expectedValues = ConditionContextHelper.foldToASCII((Collection<?>) condition.getParameter("propertyValues"));
-            Collection<?> expectedValuesInteger = (Collection<?>) condition.getParameter("propertyValuesInteger");
-            Collection<?> expectedValuesDate = (Collection<?>) condition.getParameter("propertyValuesDate");
-            Collection<?> expectedValuesDateExpr = (Collection<?>) condition.getParameter("propertyValuesDateExpr");
-            Collection<?> expectedValuesDouble = (Collection<?>) condition.getParameter("propertyValuesDouble");
+            List<?> expectedValuesDouble = (List<?>) condition.getParameter("propertyValuesDouble");
             List<?> expectedValues = ConditionContextHelper.foldToASCII((List<?>) condition.getParameter("propertyValues"));
             List<?> expectedValuesInteger = (List<?>) condition.getParameter("propertyValuesInteger");
             List<?> expectedValuesDate = (List<?>) condition.getParameter("propertyValuesDate");
@@ -282,19 +276,6 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
         } else if (op.equals("isNotDay") && (expectedValueDate != null || expectedValueDateExpr != null)) {
             Object expectedDate = expectedValueDate == null ? expectedValueDateExpr : expectedValueDate;
             return !yearMonthDayDateFormat.format(getDate(actualValue)).equals(yearMonthDayDateFormat.format(getDate(expectedDate)));
-        } else if (op.equals("distance")) {
-            GeoPoint actualCenter = null;
-            if (actualValue instanceof GeoPoint) {
-                actualCenter = (GeoPoint) actualValue;
-            } else if (actualValue instanceof Map) {
-                actualCenter = GeoPoint.fromMap((Map<String, Double>) actualValue);
-            } else if (actualValue instanceof String) {
-                actualCenter = GeoPoint.fromString((String) actualValue);
-            }
-            if (actualCenter == null) {
-                return false;
-            }
-            return compareMultivalue(actualValue, expectedValues, expectedValuesDate, expectedValuesInteger, expectedValuesDateExpr, op);
         } else if (op.equals("isDay") && expectedValueDate != null) {
             return yearMonthDayDateFormat.format(getDate(actualValue)).equals(yearMonthDayDateFormat.format(getDate(expectedValueDate)));
         } else if (op.equals("isNotDay") && expectedValueDate != null) {
