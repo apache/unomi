@@ -57,6 +57,7 @@ public class ContextRequest {
     private boolean requireSegments;
     private List<String> requiredProfileProperties;
     private List<String> requiredSessionProperties;
+    private boolean requireScores;
     private List<Event> events;
     private List<PersonalizationService.PersonalizedContent> filters;
     private List<PersonalizationService.PersonalizationRequest> personalizations;
@@ -148,6 +149,23 @@ public class ContextRequest {
      */
     public void setRequiredSessionProperties(List<String> requiredSessionProperties) {
         this.requiredSessionProperties = requiredSessionProperties;
+    }
+
+    /**
+     * Specifies whether the profiles scores should be part of the ContextResponse.
+     * @return a boolean indicating if the scores should be part of the response.
+     */
+    public boolean isRequireScores() {
+        return requireScores;
+    }
+
+    /**
+     * Setting this value to true indicates that the profile scores should be included in the response. By default this
+     * value is false.
+     * @param requireScores set to true if you want the scores to be part of the context response
+     */
+    public void setRequireScores(boolean requireScores) {
+        this.requireScores = requireScores;
     }
 
     /**
