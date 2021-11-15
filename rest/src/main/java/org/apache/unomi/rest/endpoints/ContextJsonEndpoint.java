@@ -383,6 +383,9 @@ public class ContextJsonEndpoint {
         if (contextRequest.isRequireSegments()) {
             data.setProfileSegments(profile.getSegments());
         }
+        if (contextRequest.isRequireScores()) {
+            data.setProfileScores(profile.getScores());
+        }
 
         if (contextRequest.getRequiredProfileProperties() != null) {
             Map<String, Object> profileProperties = new HashMap<>(profile.getProperties());

@@ -23,11 +23,14 @@ import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
 import org.apache.unomi.api.*;
 import org.apache.unomi.api.conditions.Condition;
+import org.apache.unomi.api.segments.Scoring;
+import org.apache.unomi.api.segments.ScoringElement;
 import org.apache.unomi.api.segments.Segment;
 import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.api.services.SegmentService;
+import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.junit.After;
 import org.junit.Before;
@@ -555,4 +558,45 @@ public class ContextServletIT extends BaseIT {
 		Thread.sleep(2000); //Making sure event is updated in DB
 
 	}
+
+    @Test
+    public void testRequireScoring() throws IOException, InterruptedException {
+
+        Map<String,String> parameters = new HashMap<>();
+        String scoringSource = getValidatedBundleJSON("score1.json", parameters);
+        Scoring scoring = CustomObjectMapper.getObjectMapper().readValue(scoringSource, Scoring.class);
+        segmentService.setScoringDefinition(scoring);
+        refreshPersistence();
+
+        // first let's make sure everything works without the requireScoring parameter
+        parameters = new HashMap<>();
+        HttpPost request = new HttpPost(URL + CONTEXT_URL);
+        request.setEntity(new StringEntity(getValidatedBundleJSON("withoutRequireScores.json", parameters), ContentType.create("application/json")));
+        TestUtils.RequestResponse response = TestUtils.executeContextJSONRequest(request);
+        assertEquals("Invalid response code", 200, response.getStatusCode());
+        refreshPersistence();
+        Thread.sleep(2000); //Making sure event is updated in DB
+
+        assertNotNull("Context response should not be null", response.getContextResponse());
+        Map<String,Integer> scores = response.getContextResponse().getProfileScores();
+        assertNull("Context response should not contain scores", scores);
+
+        // now let's test adding it.
+        parameters = new HashMap<>();
+        request = new HttpPost(URL + CONTEXT_URL);
+        request.setEntity(new StringEntity(getValidatedBundleJSON("withRequireScores.json", parameters), ContentType.create("application/json")));
+        response = TestUtils.executeContextJSONRequest(request);
+        assertEquals("Invalid response code", 200, response.getStatusCode());
+        refreshPersistence();
+        Thread.sleep(2000); //Making sure event is updated in DB
+
+        assertNotNull("Context response should not be null", response.getContextResponse());
+        scores = response.getContextResponse().getProfileScores();
+        assertNotNull("Context response should contain scores", scores);
+        assertNotNull("score1 not found in profile scores", scores.get("score1"));
+        assertEquals("score1 does not have expected value", 1, scores.get("score1").intValue());
+
+        segmentService.removeScoringDefinition(scoring.getItemId(), false);
+    }
+
 }
