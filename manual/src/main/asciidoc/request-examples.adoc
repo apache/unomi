@@ -41,7 +41,8 @@ By default, in order to optimize the amount of data sent over the network, Apach
 the profile or session properties. If you need this data, you must send a JSON object to configure the resulting output
 of the context.js(on) servlet.
 
-Here is an example that will retrieve all the session and profile properties.
+Here is an example that will retrieve all the session and profile properties, as well as the profile's segments and
+scores
 
 [source]
 ----
@@ -56,7 +57,8 @@ curl -X POST http://localhost:8181/context.json?sessionId=1234 \
     },
     "requiredProfileProperties":["*"],
     "requiredSessionProperties":["*"],
-    "requireSegments":true
+    "requireSegments":true,
+    "requireScores":true
 }
 EOF
 ----

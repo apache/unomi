@@ -58,7 +58,7 @@ import java.util.*;
 public class BasicIT extends BaseIT {
     private final static Logger LOGGER = LoggerFactory.getLogger(BasicIT.class);
 
-    private ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     private static final String SESSION_ID_0 = "aa3b04bd-8f4d-4a07-8e96-d33ffa04d3d0";
     private static final String SESSION_ID_1 = "aa3b04bd-8f4d-4a07-8e96-d33ffa04d3d1";

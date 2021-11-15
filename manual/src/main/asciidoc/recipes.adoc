@@ -23,7 +23,7 @@ Apache Unomi.
 The simplest way to retrieve profile data for the current profile is to simply send a request to the /context.json
 endpoint. However you will need to send a body along with that request. Here's an example:
 
-Here is an example that will retrieve all the session and profile properties.
+Here is an example that will retrieve all the session and profile properties, as well as the profile's segments and scores
 
 [source]
 ----
@@ -38,7 +38,8 @@ curl -X POST http://localhost:8181/context.json?sessionId=1234 \
     },
     "requiredProfileProperties":["*"],
     "requiredSessionProperties":["*"],
-    "requireSegments":true
+    "requireSegments":true,
+    "requireScores":true
 }
 EOF
 ----

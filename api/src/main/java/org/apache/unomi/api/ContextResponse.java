@@ -46,6 +46,8 @@ public class ContextResponse implements Serializable {
 
     private Set<String> profileSegments;
 
+    private Map<String,Integer> profileScores;
+
     private Map<String, Boolean> filteringResults;
 
     private int processedEvents;
@@ -150,6 +152,22 @@ public class ContextResponse implements Serializable {
      */
     public void setProfileSegments(Set<String> profileSegments) {
         this.profileSegments = profileSegments;
+    }
+
+    /**
+     * Retrieve the current scores for the profile if they were requested in the request using the requireScores boolean.
+     * @return a map that contains the score identifier as the key and the score value as the value
+     */
+    public Map<String, Integer> getProfileScores() {
+        return profileScores;
+    }
+
+    /**
+     * Stores the scores for the current profile if requested using the requireScores boolean in the request.
+     * @param profileScores a map that contains the score identifier as the key and the score value as the value
+     */
+    public void setProfileScores(Map<String, Integer> profileScores) {
+        this.profileScores = profileScores;
     }
 
     /**
