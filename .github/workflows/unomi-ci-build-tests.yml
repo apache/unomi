@@ -22,8 +22,8 @@ jobs:
       with:
         java-version: ${{ matrix.java }}
 
-    - name: Tests
-      run: mvn test
+    - name: Build and Unit tests
+      run: mvn -U -B -e clean install
 
     - name: Integration tests
       run: mvn -pl itests clean install -Pintegration-tests
