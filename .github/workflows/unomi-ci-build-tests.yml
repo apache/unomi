@@ -22,9 +22,6 @@ jobs:
       with:
         java-version: ${{ matrix.java }}
 
-    - name: Build
-      run: mvn -U -B -e clean install -DskipTests
-
     - name: Tests
       run: mvn test
 

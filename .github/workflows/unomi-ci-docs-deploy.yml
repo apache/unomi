@@ -5,7 +5,7 @@ name: Unomi CI - Documentation and deployment
 
 on:
   push:
-    branches: [ master, unomi-1.6.x ]
+    branches: [ master, unomi-1.6.x, fixDocGenerationAndBuild ]
 
 jobs:
   docs-and-deploy:
@@ -19,6 +19,9 @@ jobs:
         server-id: apache.snapshots.https
         server-username: NEXUS_USER
         server-password: NEXUS_PW
+
+    - name: Build
+      run: mvn -U -B -e clean install -DskipTests
 
     - name: Generate documentation
       run: mvn javadoc:aggregate source:aggregate
