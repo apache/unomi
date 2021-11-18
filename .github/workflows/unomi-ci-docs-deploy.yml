@@ -21,7 +21,7 @@ jobs:
         server-password: NEXUS_PW
 
     - name: Generate documentation
-      run: mvn javadoc:aggregate source:aggregate
+      run: mvn -U -B -e clean install -DskipTests javadoc:aggregate source:aggregate
 
     - name: Deploying
       run: mvn deploy -DskipTests
