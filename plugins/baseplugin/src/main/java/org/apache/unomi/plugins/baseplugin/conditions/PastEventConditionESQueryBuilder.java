@@ -83,7 +83,7 @@ public class PastEventConditionESQueryBuilder implements ConditionESQueryBuilder
             // A property is already set on profiles matching the past event condition, use it to check the numbers of occurrences
             RangeQueryBuilder builder = QueryBuilders.rangeQuery("systemProperties.pastEvents." + generatedPropertyKey);
             builder.gte(minimumEventCount);
-            builder.lte(minimumEventCount);
+            builder.lte(maximumEventCount);
             return builder;
         } else {
             // No property set - tries to build an idsQuery
