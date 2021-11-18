@@ -22,6 +22,7 @@ import org.apache.unomi.api.actions.Action;
 import org.apache.unomi.api.conditions.Condition;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * A conditional set of actions to be executed in response to incoming events. Triggering of rules is guarded by a condition: the rule is only triggered if the associated
@@ -122,7 +123,7 @@ public class Rule extends MetadataItem {
      * @param linkedItems the linked items
      */
     public void setLinkedItems(List<String> linkedItems) {
-        this.linkedItems = linkedItems;
+        this.linkedItems = linkedItems == null ? null : linkedItems.stream().distinct().collect(Collectors.toList());
     }
 
     /**
