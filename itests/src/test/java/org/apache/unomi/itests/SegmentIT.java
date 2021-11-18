@@ -21,6 +21,7 @@ import org.apache.unomi.api.Event;
 import org.apache.unomi.api.Metadata;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.conditions.Condition;
+import org.apache.unomi.api.rules.Rule;
 import org.apache.unomi.api.segments.Scoring;
 import org.apache.unomi.api.segments.ScoringElement;
 import org.apache.unomi.api.segments.Segment;
@@ -357,5 +358,53 @@ public class SegmentIT extends BaseIT {
                 () -> profileService.load("test_profile_id"),
                 updatedProfile -> !updatedProfile.getScores().containsKey("past-event-scoring-test"),
                 1000, 20);
+    }
+
+    @Test
+    public void testLinkedItems() throws Exception {
+
+        // create the past event condition
+        Condition pastEventCondition = new Condition(definitionsService.getConditionType("pastEventCondition"));
+        pastEventCondition.setParameter("minimumEventCount", 1);
+        pastEventCondition.setParameter("maximumEventCount", 2);
+
+        pastEventCondition.setParameter("fromDate", "2000-07-15T07:00:00Z");
+        pastEventCondition.setParameter("toDate", "2001-01-15T07:00:00Z");
+        ;
+        Condition pastEventEventCondition = new Condition(definitionsService.getConditionType("eventTypeCondition"));
+        pastEventEventCondition.setParameter("eventTypeId", "test-event-type");
+        pastEventCondition.setParameter("eventCondition", pastEventEventCondition);
+
+        // create the scoring
+        Metadata scoringMetadata = new Metadata("past-event-scoring-test");
+        Scoring scoring = new Scoring(scoringMetadata);
+        List<ScoringElement> scoringElements = new ArrayList<>();
+        ScoringElement scoringElement = new ScoringElement();
+        scoringElement.setCondition(pastEventCondition);
+        scoringElement.setValue(50);
+        scoringElements.add(scoringElement);
+        scoring.setElements(scoringElements);
+        segmentService.setScoringDefinition(scoring);
+        Thread.sleep(5000);
+        // Check linkedItems
+        List<Rule> rules = persistenceService.getAllItems(Rule.class);
+        Rule scoringRule = rules.stream().filter(rule -> rule.getItemId().equals(pastEventCondition.getParameter("generatedPropertyKey"))).findFirst().get();
+        Assert.assertEquals("Scoring linked Item should be one", 1, scoringRule.getLinkedItems().size());
+
+        // save the scoring once again
+        segmentService.setScoringDefinition(scoring);
+        Thread.sleep(5000);
+        // Check linkedItems
+        rules = persistenceService.getAllItems(Rule.class);
+        scoringRule = rules.stream().filter(rule -> rule.getItemId().equals(pastEventCondition.getParameter("generatedPropertyKey"))).findFirst().get();
+        Assert.assertEquals("Scoring linked Item should be one", 1, scoringRule.getLinkedItems().size());
+
+        // Remove scoring
+        segmentService.removeSegmentDefinition(scoring.getItemId(), true);
+        Thread.sleep(5000);
+        // Check linkedItems
+        rules = persistenceService.getAllItems(Rule.class);
+        boolean isRule = rules.stream().anyMatch(rule -> rule.getItemId().equals(pastEventCondition.getParameter("generatedPropertyKey")));
+        Assert.assertFalse("Rule is properly removed", isRule);
     }
 }
