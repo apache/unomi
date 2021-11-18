@@ -277,11 +277,26 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
 
     private List<Rule> getAllRules() {
         List<Rule> rules = persistenceService.getAllItems(Rule.class, 0, -1, "priority").getList();
+        List<Rule> rulesToDisable = new ArrayList<>();
+        List<Rule> enabledRules = new ArrayList<>();
         for (Rule rule : rules) {
-            ParserHelper.resolveConditionType(definitionsService, rule.getCondition(), "rule " + rule.getItemId());
-            ParserHelper.resolveActionTypes(definitionsService, rule);
+            // Check rule integrity
+            boolean isValid = ParserHelper.resolveConditionType(definitionsService, rule.getCondition(), "rule " + rule.getItemId());
+            isValid = isValid && ParserHelper.resolveActionTypes(definitionsService, rule);
+            // exclude enabled invalid rules
+            if (isValid) {
+                enabledRules.add(rule);
+            } else if (rule.getMetadata().isEnabled()) {
+                rulesToDisable.add(rule);
+            }
         }
-        return rules;
+        // Disable invalid rules and store it.
+        rulesToDisable.forEach(rule -> {
+            logger.warn("Rule {} has been disabled due to invalid condition or actions", rule.getItemId());
+            rule.getMetadata().setEnabled(false);
+            persistenceService.save(rule);
+        });
+        return enabledRules;
     }
 
     private Map<String, Set<Rule>> getRulesByEventType(List<Rule> rules) {
@@ -392,6 +407,11 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
                 ParserHelper.resolveConditionType(definitionsService, condition, "rule " + rule.getItemId());
                 definitionsService.extractConditionBySystemTag(condition, "eventCondition");
             }
+        }
+        List<Action> actions = rule.getActions();
+        if (actions == null || actions.isEmpty()) {
+            logger.warn("rule {} won't be saved as it contains no action", rule.getItemId());
+            return;
         }
         persistenceService.save(rule);
     }

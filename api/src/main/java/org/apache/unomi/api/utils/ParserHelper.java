@@ -137,12 +137,16 @@ public class ParserHelper {
     public static boolean resolveActionTypes(DefinitionsService definitionsService, Rule rule) {
         boolean result = true;
         if (rule.getActions() == null) {
-            logger.warn("Rule {}:{} has null actions", rule.getItemId(), rule.getMetadata().getName());
+            if (rule.getMetadata().isEnabled()) {
+                logger.warn("Rule {}:{} has null actions", rule.getItemId(), rule.getMetadata().getName());
+            }
             return false;
         }
         if (rule.getActions().isEmpty()) {
-            logger.warn("Rule {}:{} has empty actions", rule.getItemId(), rule.getMetadata().getName());
-            return result;
+            if (rule.getMetadata().isEnabled()) {
+                logger.warn("Rule {}:{} has empty actions", rule.getItemId(), rule.getMetadata().getName());
+            }
+            return false;
         }
         for (Action action : rule.getActions()) {
             result &= ParserHelper.resolveActionType(definitionsService, action);
