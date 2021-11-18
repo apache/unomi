@@ -43,11 +43,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
+import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 
 @RunWith(PaxExam.class)
 @ExamReactorStrategy(PerSuite.class)
@@ -357,6 +359,105 @@ public class SegmentIT extends BaseIT {
         keepTrying("Profile should not be engaged in the scoring anymore",
                 () -> profileService.load("test_profile_id"),
                 updatedProfile -> !updatedProfile.getScores().containsKey("past-event-scoring-test"),
+                1000, 20);
+    }
+
+
+    @Test
+    public void testScoringRecalculation() throws Exception {
+        // create Profile
+        Profile profile = new Profile();
+        profile.setItemId("test_profile_id");
+        profileService.save(profile);
+        persistenceService.refreshIndex(Profile.class, null); // wait for profile to be full persisted and index
+
+        Date timestampEventInRange = new SimpleDateFormat("yyyy-MM-dd").parse("2000-10-30");
+        // create the past event condition
+        Condition pastEventCondition = new Condition(definitionsService.getConditionType("pastEventCondition"));
+        pastEventCondition.setParameter("minimumEventCount", 1);
+        pastEventCondition.setParameter("maximumEventCount", 2);
+
+        pastEventCondition.setParameter("fromDate","2000-07-15T07:00:00Z");
+        pastEventCondition.setParameter("toDate","2001-01-15T07:00:00Z");;
+        Condition pastEventEventCondition = new Condition(definitionsService.getConditionType("eventTypeCondition"));
+        pastEventEventCondition.setParameter("eventTypeId", "test-event-type");
+        pastEventCondition.setParameter("eventCondition", pastEventEventCondition);
+
+        // create the scoring
+        Metadata scoringMetadata = new Metadata("past-event-scoring-test");
+        Scoring scoring = new Scoring(scoringMetadata);
+        List<ScoringElement> scoringElements = new ArrayList<>();
+        ScoringElement scoringElement = new ScoringElement();
+        scoringElement.setCondition(pastEventCondition);
+        scoringElement.setValue(50);
+        scoringElements.add(scoringElement);
+        scoring.setElements(scoringElements);
+        segmentService.setScoringDefinition(scoring);
+        refreshPersistence();
+
+        // Send 2 events that match the scoring plan.
+        Event testEvent = new Event("test-event-type", null, profile, null, null, profile, timestampEventInRange);
+        testEvent.setPersistent(true);
+        eventService.send(testEvent);
+        refreshPersistence();
+        // 2nd event
+        testEvent = new Event("test-event-type", null, testEvent.getProfile(), null, null, testEvent.getProfile(), timestampEventInRange);
+        eventService.send(testEvent);
+        refreshPersistence();
+
+        // insure the profile is engaged;
+        try {
+            Assert.assertTrue("Profile should have 2 events in the scoring",  (Long) ((Map) testEvent.getProfile().getSystemProperties().get("pastEvents")).get(pastEventCondition.getParameterValues().get("generatedPropertyKey")) == 2);
+            Assert.assertTrue("Profile is engaged",  testEvent.getProfile().getScores().containsKey("past-event-scoring-test") && testEvent.getProfile().getScores().get("past-event-scoring-test") == 50);
+        } catch (Exception e) {
+            Assert.fail("Unable to read past event because " + e.getMessage());
+        }
+        profileService.save(testEvent.getProfile());
+        refreshPersistence();
+        // recalculate event conditions
+        segmentService.recalculatePastEventConditions();
+        // insure the profile is still engaged after recalculate;
+        keepTrying("Profile should have 2 events in the scoring",
+                () -> profileService.load("test_profile_id"),
+                updatedProfile -> {
+                    try {
+                        boolean eventCounted = (Integer) ((Map) updatedProfile.getSystemProperties().get("pastEvents")).get(pastEventCondition.getParameterValues().get("generatedPropertyKey")) == 2;
+                        boolean profileEngaged = updatedProfile.getScores().containsKey("past-event-scoring-test") && updatedProfile.getScores().get("past-event-scoring-test") == 50;
+                        return eventCounted && profileEngaged;
+                    } catch (Exception e) {
+                        // Do nothing, unable to read value
+                    };
+                    return false;
+                },
+                1000, 20);
+
+
+        // Add one more event
+        testEvent = new Event("test-event-type", null, testEvent.getProfile(), null, null, testEvent.getProfile(), timestampEventInRange);
+        eventService.send(testEvent);
+
+        // As 3 events have match, the profile should not be part of the scoring plan.
+        try {
+            Assert.assertTrue("Profile should have no scoring", testEvent.getProfile().getScores().get("past-event-scoring-test") == 0);
+        } catch (Exception e) {
+            Assert.fail("Unable to read past event because " + e.getMessage());
+        }
+        profileService.save(testEvent.getProfile());
+        refreshPersistence();
+        // now recalculate the past event conditions
+        segmentService.recalculatePastEventConditions();
+        persistenceService.refreshIndex(Profile.class, null);
+        // As 3 events have match, the profile should not be part of the scoring plan.
+        keepTrying("Profile should not be part of the scoring anymore",
+                () -> profileService.load("test_profile_id"),
+                updatedProfile -> {
+                    try {
+                        return updatedProfile.getScores().get("past-event-scoring-test") == 0;
+                    } catch (Exception e) {
+                        // Do nothing, unable to read value
+                    };
+                    return false;
+                },
                 1000, 20);
     }
 
