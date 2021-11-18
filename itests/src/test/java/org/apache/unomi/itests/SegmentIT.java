@@ -393,7 +393,7 @@ public class SegmentIT extends BaseIT {
         scoringElements.add(scoringElement);
         scoring.setElements(scoringElements);
         segmentService.setScoringDefinition(scoring);
-        Thread.sleep(5000);
+        refreshPersistence();
 
         // Send 2 events that match the scoring plan.
         Event testEvent = new Event("test-event-type", null, profile, null, null, profile, timestampEventInRange);
@@ -408,6 +408,7 @@ public class SegmentIT extends BaseIT {
         // insure the profile is engaged;
         try {
             Assert.assertTrue("Profile should have 2 events in the scoring",  (Long) ((Map) testEvent.getProfile().getSystemProperties().get("pastEvents")).get(pastEventCondition.getParameterValues().get("generatedPropertyKey")) == 2);
+            Assert.assertTrue("Profile is engaged",  testEvent.getProfile().getScores().containsKey("past-event-scoring-test") && testEvent.getProfile().getScores().get("past-event-scoring-test") == 50);
         } catch (Exception e) {
             Assert.fail("Unable to read past event because " + e.getMessage());
         }
@@ -420,7 +421,9 @@ public class SegmentIT extends BaseIT {
                 () -> profileService.load("test_profile_id"),
                 updatedProfile -> {
                     try {
-                        return (Integer) ((Map) updatedProfile.getSystemProperties().get("pastEvents")).get(pastEventCondition.getParameterValues().get("generatedPropertyKey")) == 2;
+                        boolean eventCounted = (Integer) ((Map) updatedProfile.getSystemProperties().get("pastEvents")).get(pastEventCondition.getParameterValues().get("generatedPropertyKey")) == 2;
+                        boolean profileEngaged = updatedProfile.getScores().containsKey("past-event-scoring-test") && updatedProfile.getScores().get("past-event-scoring-test") == 50;
+                        return eventCounted && profileEngaged;
                     } catch (Exception e) {
                         // Do nothing, unable to read value
                     };
