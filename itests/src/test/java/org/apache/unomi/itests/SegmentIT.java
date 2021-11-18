@@ -385,7 +385,7 @@ public class SegmentIT extends BaseIT {
         scoringElements.add(scoringElement);
         scoring.setElements(scoringElements);
         segmentService.setScoringDefinition(scoring);
-        Thread.sleep(5000);
+        refreshPersistence();
         // Check linkedItems
         List<Rule> rules = persistenceService.getAllItems(Rule.class);
         Rule scoringRule = rules.stream().filter(rule -> rule.getItemId().equals(pastEventCondition.getParameter("generatedPropertyKey"))).findFirst().get();
@@ -393,7 +393,7 @@ public class SegmentIT extends BaseIT {
 
         // save the scoring once again
         segmentService.setScoringDefinition(scoring);
-        Thread.sleep(5000);
+        refreshPersistence();
         // Check linkedItems
         rules = persistenceService.getAllItems(Rule.class);
         scoringRule = rules.stream().filter(rule -> rule.getItemId().equals(pastEventCondition.getParameter("generatedPropertyKey"))).findFirst().get();
@@ -401,7 +401,7 @@ public class SegmentIT extends BaseIT {
 
         // Remove scoring
         segmentService.removeSegmentDefinition(scoring.getItemId(), true);
-        Thread.sleep(5000);
+        refreshPersistence();
         // Check linkedItems
         rules = persistenceService.getAllItems(Rule.class);
         boolean isRule = rules.stream().anyMatch(rule -> rule.getItemId().equals(pastEventCondition.getParameter("generatedPropertyKey")));
