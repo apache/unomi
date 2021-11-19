@@ -410,8 +410,8 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
         }
         List<Action> actions = rule.getActions();
         if (actions == null || actions.isEmpty()) {
-            logger.warn("rule {} won't be saved as it contains no action", rule.getItemId());
-            return;
+            logger.warn("rule {} is disabled as it contains no action", rule.getItemId());
+            rule.getMetadata().setEnabled(false);
         }
         persistenceService.save(rule);
     }
