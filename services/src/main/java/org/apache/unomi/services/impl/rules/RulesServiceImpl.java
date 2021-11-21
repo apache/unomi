@@ -42,6 +42,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 public class RulesServiceImpl implements RulesService, EventListenerService, SynchronousBundleListener {
 
@@ -277,26 +278,26 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
 
     private List<Rule> getAllRules() {
         List<Rule> rules = persistenceService.getAllItems(Rule.class, 0, -1, "priority").getList();
-        List<Rule> rulesToDisable = new ArrayList<>();
-        List<Rule> enabledRules = new ArrayList<>();
+        List<Rule> rulesToSwitch = new ArrayList<>();
         for (Rule rule : rules) {
             // Check rule integrity
             boolean isValid = ParserHelper.resolveConditionType(definitionsService, rule.getCondition(), "rule " + rule.getItemId());
             isValid = isValid && ParserHelper.resolveActionTypes(definitionsService, rule);
-            // exclude enabled invalid rules
-            if (isValid) {
-                enabledRules.add(rule);
-            } else if (rule.getMetadata().isEnabled()) {
-                rulesToDisable.add(rule);
+            // check if rule status has changed
+            if (rule.getMetadata().isEnabled() != isValid) {
+                rule.getMetadata().setEnabled(isValid);
+                rulesToSwitch.add(rule);
             }
         }
-        // Disable invalid rules and store it.
-        rulesToDisable.forEach(rule -> {
-            logger.warn("Rule {} has been disabled due to invalid condition or actions", rule.getItemId());
-            rule.getMetadata().setEnabled(false);
+        // Store modified rules.
+        rulesToSwitch.forEach(rule -> {
+            boolean newState = !rule.getMetadata().isEnabled();
+            logger.info("Rule {} has been {}", rule.getItemId(), newState ? "enabled" : "disabled");
+            rule.getMetadata().setEnabled(newState);
             persistenceService.save(rule);
         });
-        return enabledRules;
+
+        return rules;
     }
 
     private Map<String, Set<Rule>> getRulesByEventType(List<Rule> rules) {
@@ -405,13 +406,10 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
         if (condition != null) {
             if (rule.getMetadata().isEnabled() && !rule.getMetadata().isMissingPlugins()) {
                 ParserHelper.resolveConditionType(definitionsService, condition, "rule " + rule.getItemId());
+                ParserHelper.resolveActionTypes(definitionsService, rule);
+                // Check rule's condition validity, throws an exception if not set properly.
                 definitionsService.extractConditionBySystemTag(condition, "eventCondition");
             }
-        }
-        List<Action> actions = rule.getActions();
-        if (actions == null || actions.isEmpty()) {
-            logger.warn("rule {} is disabled as it contains no action", rule.getItemId());
-            rule.getMetadata().setEnabled(false);
         }
         persistenceService.save(rule);
     }
@@ -474,6 +472,8 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
     }
 
     public void removeRule(String ruleId) {
+        Set<Rule> newRules = allRules.stream().filter(rule -> !rule.getItemId().equals(ruleId)).collect(Collectors.toSet());
+        allRules = new ArrayList<>(newRules);
         persistenceService.remove(ruleId, Rule.class);
     }
 

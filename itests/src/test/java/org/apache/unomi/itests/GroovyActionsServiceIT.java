@@ -101,7 +101,7 @@ public class GroovyActionsServiceIT extends BaseIT {
     private void createRule(String filename) throws IOException, InterruptedException {
         Rule rule = CustomObjectMapper.getObjectMapper().readValue(new File(filename).toURI().toURL(), Rule.class);
         rulesService.setRule(rule);
-        Thread.sleep(2000);
+        refreshPersistence();
     }
 
     private Event sendGroovyActionEvent() {
@@ -127,6 +127,8 @@ public class GroovyActionsServiceIT extends BaseIT {
                 () -> definitionsService.getActionType(UPDATE_ADDRESS_GROOVY_ACTION), Objects::nonNull, 1000, 100);
 
         Assert.assertNotNull(actionType);
+        // Refresh rules to enable rule
+        rulesService.refreshRules();
 
         Event event = sendGroovyActionEvent();
 

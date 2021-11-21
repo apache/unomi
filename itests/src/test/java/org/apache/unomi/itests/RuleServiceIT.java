@@ -17,6 +17,7 @@
 package org.apache.unomi.itests;
 
 import org.apache.unomi.api.*;
+import org.apache.unomi.api.actions.Action;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.api.rules.Rule;
@@ -35,6 +36,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
+import javax.validation.constraints.AssertTrue;
 
 import java.io.File;
 import java.io.IOException;
@@ -94,6 +96,7 @@ public class RuleServiceIT extends BaseIT {
         ConditionBuilder builder = new ConditionBuilder(definitionsService);
         Rule simpleEventTypeRule = new Rule(new Metadata(TEST_SCOPE, "simple-event-type-rule", "Simple event type rule", "A rule with a simple condition to match an event type"));
         simpleEventTypeRule.setCondition(builder.condition("eventTypeCondition").parameter("eventTypeId", "view").build());
+        simpleEventTypeRule.setActions(Collections.singletonList(new Action(definitionsService.getActionType("incrementPropertyAction"))));
         rulesService.setRule(simpleEventTypeRule);
         Rule complexEventTypeRule = new Rule(new Metadata(TEST_SCOPE, "complex-event-type-rule", "Complex event type rule", "A rule with a complex condition to match multiple event types with negations"));
         complexEventTypeRule.setCondition(
@@ -104,6 +107,7 @@ public class RuleServiceIT extends BaseIT {
                         )
                 ).build()
         );
+        complexEventTypeRule.setActions(Collections.singletonList(new Action(definitionsService.getActionType("incrementPropertyAction"))));
         rulesService.setRule(complexEventTypeRule);
 
         refreshPersistence();
@@ -200,6 +204,7 @@ public class RuleServiceIT extends BaseIT {
             trackedCondition.setParameter("referrer", "https://unomi.apache.org");
             trackedCondition.getConditionType().getMetadata().getSystemTags().add("trackedCondition");
             trackParameterRule.setCondition(trackedCondition);
+            trackParameterRule.setActions(Collections.singletonList(new Action(definitionsService.getActionType("incrementPropertyAction"))));
             rulesService.setRule(trackParameterRule);
             // Add rule that has a trackParameter condition that does not match
             Rule unTrackParameterRule = new Rule(new Metadata(TEST_SCOPE, "not-tracked-parameter-rule", "Not Tracked parameter rule", "A rule that has a parameter not tracked"));
@@ -208,6 +213,7 @@ public class RuleServiceIT extends BaseIT {
             unTrackedCondition.setParameter("referrer", "https://localhost");
             unTrackedCondition.getConditionType().getMetadata().getSystemTags().add("trackedCondition");
             unTrackParameterRule.setCondition(unTrackedCondition);
+            unTrackParameterRule.setActions(Collections.singletonList(new Action(definitionsService.getActionType("incrementPropertyAction"))));
             rulesService.setRule(unTrackParameterRule);
             refreshPersistence();
             rulesService.refreshRules();
@@ -224,6 +230,29 @@ public class RuleServiceIT extends BaseIT {
             rulesService.removeRule("not-tracked-parameter-rule");
             definitionsService.removeConditionType("clickEventCondition");
         }
+    }
+
+    @Test
+    public void ruleStateManagementTest() throws InterruptedException {
+        Rule testRule = new Rule(new Metadata(TEST_SCOPE, "rule-without-action",  "rule-without-action",""));
+        ConditionBuilder builder = new ConditionBuilder(definitionsService);
+        Condition condition = builder.profileProperty("dummy").equalTo("dummy").build();
+        testRule.setCondition(condition);
+        rulesService.setRule(testRule);
+        refreshPersistence();
+        rulesService.refreshRules();
+        Rule savedRule = rulesService.getRule(testRule.getItemId());
+        // Ensure that the rule is disabled
+        Assert.assertFalse("Rule is disabled", savedRule.getMetadata().isEnabled());
+        // Add valid action to the rule
+        testRule.setActions(Collections.singletonList(new Action(definitionsService.getActionType("incrementPropertyAction"))));
+        rulesService.setRule(testRule);
+        refreshPersistence();
+        rulesService.refreshRules();
+        savedRule = rulesService.getRule(testRule.getItemId());
+        // Ensure that the rule is enabled
+        Assert.assertTrue("Rule is enabled", savedRule.getMetadata().isEnabled());
+
     }
 
     @Override
