@@ -134,15 +134,19 @@ public class ParserHelper {
         visitor.postVisit(rootCondition);
     }
 
-    public static boolean resolveActionTypes(DefinitionsService definitionsService, Rule rule) {
+    public static boolean resolveActionTypes(DefinitionsService definitionsService, Rule rule, boolean ignoreErrors) {
         boolean result = true;
         if (rule.getActions() == null) {
-            logger.warn("Rule {}:{} has null actions", rule.getItemId(), rule.getMetadata().getName());
+            if (!ignoreErrors) {
+                logger.warn("Rule {}:{} has null actions", rule.getItemId(), rule.getMetadata().getName());
+            }
             return false;
         }
         if (rule.getActions().isEmpty()) {
-            logger.warn("Rule {}:{} has empty actions", rule.getItemId(), rule.getMetadata().getName());
-            return result;
+            if (!ignoreErrors) {
+                logger.warn("Rule {}:{} has empty actions", rule.getItemId(), rule.getMetadata().getName());
+            }
+            return false;
         }
         for (Action action : rule.getActions()) {
             result &= ParserHelper.resolveActionType(definitionsService, action);
@@ -196,7 +200,7 @@ public class ParserHelper {
 
         public void visit(Condition condition) {
             conditionTypeStack.push(condition.getConditionTypeId());
-             if ("eventTypeCondition".equals(condition.getConditionTypeId())) {
+            if ("eventTypeCondition".equals(condition.getConditionTypeId())) {
                 String eventTypeId = (String) condition.getParameter("eventTypeId");
                 if (eventTypeId == null) {
                     logger.warn("Null eventTypeId found!");
