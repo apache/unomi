@@ -291,9 +291,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
         }
         // Store modified rules.
         rulesToSwitch.forEach(rule -> {
-            boolean newState = !rule.getMetadata().isEnabled();
-            logger.info("Rule {} has been {}", rule.getItemId(), newState ? "enabled" : "disabled");
-            rule.getMetadata().setEnabled(newState);
+            logger.info("Rule {} has been {}", rule.getItemId(), rule.getMetadata().isEnabled() ? "enabled" : "disabled");
             persistenceService.save(rule);
         });
 
