@@ -58,6 +58,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
 
     private ActionExecutorDispatcher actionExecutorDispatcher;
     private List<Rule> allRules;
+    private final Set<String> invalidRulesId = new HashSet<>();
 
     private Map<String, RuleStatistics> allRuleStatistics = new ConcurrentHashMap<>();
 
@@ -283,9 +284,17 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
     private List<Rule> getAllRules() {
         List<Rule> rules = persistenceService.getAllItems(Rule.class, 0, -1, "priority").getList();
         for (Rule rule : rules) {
-            ParserHelper.resolveConditionType(definitionsService, rule.getCondition(), "rule " + rule.getItemId());
-            ParserHelper.resolveActionTypes(definitionsService, rule);
+            // Check rule integrity
+            boolean isValid = ParserHelper.resolveConditionType(definitionsService, rule.getCondition(), "rule " + rule.getItemId());
+            isValid = isValid && ParserHelper.resolveActionTypes(definitionsService, rule, invalidRulesId.contains(rule.getItemId()));
+            // check if rule status has changed
+            if (!isValid) {
+                invalidRulesId.add(rule.getItemId());
+            } else {
+                invalidRulesId.remove(rule.getItemId());
+            }
         }
+
         return rules;
     }
 
@@ -382,7 +391,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
         Rule rule = persistenceService.load(ruleId, Rule.class);
         if (rule != null) {
             ParserHelper.resolveConditionType(definitionsService, rule.getCondition(), "rule " + rule.getItemId());
-            ParserHelper.resolveActionTypes(definitionsService, rule);
+            ParserHelper.resolveActionTypes(definitionsService, rule, invalidRulesId.contains(rule.getItemId()));
         }
         return rule;
     }
@@ -395,6 +404,8 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
         if (condition != null) {
             if (rule.getMetadata().isEnabled() && !rule.getMetadata().isMissingPlugins()) {
                 ParserHelper.resolveConditionType(definitionsService, condition, "rule " + rule.getItemId());
+                ParserHelper.resolveActionTypes(definitionsService, rule, invalidRulesId.contains(rule.getItemId()));
+                // Check rule's condition validity, throws an exception if not set properly.
                 definitionsService.extractConditionBySystemTag(condition, "eventCondition");
             }
         }
@@ -417,19 +428,19 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
                     }
                 } else if (
                         trackedCondition.getConditionType() != null &&
-                        trackedCondition.getConditionType().getParameters() != null &&
-                        trackedCondition.getConditionType().getParameters().size() > 0
+                                trackedCondition.getConditionType().getParameters() != null &&
+                                trackedCondition.getConditionType().getParameters().size() > 0
                 ) {
                     // lookup for track parameters
                     Map<String, Object> trackedParameters = new HashMap<>();
                     trackedCondition.getConditionType().getParameters().forEach(parameter -> {
                         try {
-                        if (TRACKED_PARAMETER.equals(parameter.getId())) {
-                            Arrays.stream(StringUtils.split(parameter.getDefaultValue(), ",")).forEach(trackedParameter -> {
+                            if (TRACKED_PARAMETER.equals(parameter.getId())) {
+                                Arrays.stream(StringUtils.split(parameter.getDefaultValue(), ",")).forEach(trackedParameter -> {
                                     String[] param = StringUtils.split(StringUtils.trim(trackedParameter), ":");
                                     trackedParameters.put(StringUtils.trim(param[1]), trackedCondition.getParameter(StringUtils.trim(param[0])));
-                            });
-                        }
+                                });
+                            }
                         } catch (Exception e) {
                             logger.warn("Unable to parse tracked parameter from {} for condition type {}", parameter, trackedCondition.getConditionType().getItemId());
                         }
@@ -595,5 +606,4 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
             rulesByEventType.put(eventTypeId, rules);
         }
     }
-
 }
