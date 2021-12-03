@@ -77,9 +77,7 @@ public class RuleServiceIT extends BaseIT {
         Rule nullRule = new Rule(metadata);
         nullRule.setCondition(null);
         nullRule.setActions(null);
-        rulesService.setRule(nullRule);
-        refreshPersistence();
-        nullRule = rulesService.getRule(TEST_RULE_ID);
+        createAndWaitForRule(nullRule);
         assertNull("Expected rule actions to be null", nullRule.getActions());
         assertNull("Expected rule condition to be null", nullRule.getCondition());
         assertEquals("Invalid rule name", TEST_RULE_ID + "_name", nullRule.getMetadata().getName());
@@ -94,7 +92,7 @@ public class RuleServiceIT extends BaseIT {
         ConditionBuilder builder = new ConditionBuilder(definitionsService);
         Rule simpleEventTypeRule = new Rule(new Metadata(TEST_SCOPE, "simple-event-type-rule", "Simple event type rule", "A rule with a simple condition to match an event type"));
         simpleEventTypeRule.setCondition(builder.condition("eventTypeCondition").parameter("eventTypeId", "view").build());
-        rulesService.setRule(simpleEventTypeRule);
+        createAndWaitForRule(simpleEventTypeRule);
         Rule complexEventTypeRule = new Rule(new Metadata(TEST_SCOPE, "complex-event-type-rule", "Complex event type rule", "A rule with a complex condition to match multiple event types with negations"));
         complexEventTypeRule.setCondition(
                 builder.not(
@@ -104,10 +102,7 @@ public class RuleServiceIT extends BaseIT {
                         )
                 ).build()
         );
-        rulesService.setRule(complexEventTypeRule);
-
-        refreshPersistence();
-        rulesService.refreshRules();
+        createAndWaitForRule(complexEventTypeRule);
 
         Profile profile = new Profile(UUID.randomUUID().toString());
         Session session = new Session(UUID.randomUUID().toString(), profile, new Date(), TEST_SCOPE);
@@ -200,7 +195,7 @@ public class RuleServiceIT extends BaseIT {
             trackedCondition.setParameter("referrer", "https://unomi.apache.org");
             trackedCondition.getConditionType().getMetadata().getSystemTags().add("trackedCondition");
             trackParameterRule.setCondition(trackedCondition);
-            rulesService.setRule(trackParameterRule);
+            createAndWaitForRule(trackParameterRule);
             // Add rule that has a trackParameter condition that does not match
             Rule unTrackParameterRule = new Rule(new Metadata(TEST_SCOPE, "not-tracked-parameter-rule", "Not Tracked parameter rule", "A rule that has a parameter not tracked"));
             Condition unTrackedCondition = builder.condition("clickEventCondition").build();
@@ -208,9 +203,7 @@ public class RuleServiceIT extends BaseIT {
             unTrackedCondition.setParameter("referrer", "https://localhost");
             unTrackedCondition.getConditionType().getMetadata().getSystemTags().add("trackedCondition");
             unTrackParameterRule.setCondition(unTrackedCondition);
-            rulesService.setRule(unTrackParameterRule);
-            refreshPersistence();
-            rulesService.refreshRules();
+            createAndWaitForRule(unTrackParameterRule);
             // Check that the given event return the tracked condition
             Profile profile = new Profile(UUID.randomUUID().toString());
             Session session = new Session(UUID.randomUUID().toString(), profile, new Date(), TEST_SCOPE);

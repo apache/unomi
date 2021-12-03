@@ -165,8 +165,7 @@ public class CopyPropertiesActionIT extends BaseIT {
 
     private void createRule(String filename) throws IOException, InterruptedException {
         Rule rule = CustomObjectMapper.getObjectMapper().readValue(new File(filename).toURI().toURL(), Rule.class);
-        rulesService.setRule(rule);
-        Thread.sleep(2000);
+        createAndWaitForRule(rule);
     }
 
     private Event sendCopyPropertyEvent(Map<String, Object> properties, String profileType) {

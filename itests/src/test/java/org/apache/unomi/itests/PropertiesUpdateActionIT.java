@@ -71,6 +71,7 @@ public class PropertiesUpdateActionIT extends BaseIT {
         profile.setProperties(new HashMap<>());
         profile.setProperty("lastName", "Jose"); // property that have a propertyType registered in the system
         profile.setProperty("prop4", "New property 4"); // property that do not have a propertyType registered in the system
+        profile.setProperty("prop4", "New property 4"); // property that do not have a propertyType registered in the system
         profileService.save(profile);
         LOGGER.info("Profile saved with ID [{}].", profile.getItemId());
 
@@ -322,8 +323,7 @@ public class PropertiesUpdateActionIT extends BaseIT {
 
         // register test rule
         Rule rule = CustomObjectMapper.getObjectMapper().readValue(getValidatedBundleJSON("testSetPropertyActionRule.json", new HashMap<>()), Rule.class);
-        rulesService.setRule(rule);
-        Thread.sleep(2000);
+        createAndWaitForRule(rule);
 
         try {
             Profile profile = profileService.load(PROFILE_TEST_ID);
