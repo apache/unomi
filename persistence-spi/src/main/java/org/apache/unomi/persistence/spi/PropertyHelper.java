@@ -39,6 +39,7 @@ public class PropertyHelper {
 
     public static boolean setProperty(Object target, String propertyName, Object propertyValue, String setPropertyStrategy) {
         try {
+            // Handle remove
             String parentPropertyName;
             if (setPropertyStrategy != null && setPropertyStrategy.equals("remove")) {
                 if (resolver.hasNested(propertyName)) {
@@ -61,6 +62,13 @@ public class PropertyHelper {
                 }
                 return false;
             }
+
+            // Leave now, next strategies require a propertyValue, if no propertyValue, nothing to update.
+            if (propertyValue == null) {
+                return false;
+            }
+
+            // Resolve propertyName
             while (resolver.hasNested(propertyName)) {
                 Object v = PropertyUtils.getProperty(target, resolver.next(propertyName));
                 if (v == null) {
@@ -71,40 +79,32 @@ public class PropertyHelper {
                 target = v;
             }
 
-            if (setPropertyStrategy != null && setPropertyStrategy.equals("addValue")) {
-                Object previousValue = PropertyUtils.getProperty(target, propertyName);
-                List<Object> values = new ArrayList<>();
-                if (previousValue != null && previousValue instanceof List) {
-                    values.addAll((List) previousValue);
-                } else if (previousValue != null) {
-                    values.add(previousValue);
-                }
-                if (!values.contains(propertyValue)) {
-                    values.add(propertyValue);
-                    BeanUtils.setProperty(target, propertyName, values);
+            // Get previous value
+            Object previousValue = PropertyUtils.getProperty(target, propertyName);
+
+            // Handle strategies
+            if (setPropertyStrategy == null ||
+                    setPropertyStrategy.equals("alwaysSet") ||
+                    (setPropertyStrategy.equals("setIfMissing") && previousValue == null)) {
+                if (!compareValues(propertyValue, previousValue)) {
+                    BeanUtils.setProperty(target, propertyName, propertyValue);
                     return true;
                 }
-            }
-            if (setPropertyStrategy != null && setPropertyStrategy.equals("addValues")) {
-                Object newValues = propertyValue;
-                List<Object> newValuesList = convertToList(newValues);
-
-                Object previousValue = PropertyUtils.getProperty(target, propertyName);
+            } else if (setPropertyStrategy.equals("addValue") || setPropertyStrategy.equals("addValues")) {
+                List<Object> newValuesList = convertToList(propertyValue);
                 List<Object> previousValueList = convertToList(previousValue);
 
                 newValuesList.addAll(previousValueList);
-                Set<Object> propertiesSet = new HashSet<>(newValuesList);
-                List<Object> propertiesList = Arrays.asList(propertiesSet.toArray());
+                Set<Object> newValuesSet = new HashSet<>(newValuesList);
+                if (newValuesSet.size() != previousValueList.size()) {
+                    BeanUtils.setProperty(target, propertyName, Arrays.asList(newValuesSet.toArray()));
+                    return true;
+                }
+            } else if (setPropertyStrategy.equals("removeValue") || setPropertyStrategy.equals("removeValues")) {
+                List<Object> previousValueList = convertToList(previousValue);
 
-                BeanUtils.setProperty(target, propertyName, propertiesList);
-                return true;
-
-            }
-            else if (propertyValue != null && !compareValues(propertyValue, BeanUtils.getProperty(target, propertyName))) {
-                if (setPropertyStrategy == null ||
-                        setPropertyStrategy.equals("alwaysSet") ||
-                        (setPropertyStrategy.equals("setIfMissing") && BeanUtils.getProperty(target, propertyName) == null)) {
-                    BeanUtils.setProperty(target, propertyName, propertyValue);
+                if (previousValueList.removeAll(convertToList(propertyValue))) {
+                    BeanUtils.setProperty(target, propertyName, previousValueList);
                     return true;
                 }
             }

@@ -21,7 +21,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.io.IOUtils;
 import org.apache.unomi.api.Item;
 import org.apache.unomi.api.conditions.Condition;
+import org.apache.unomi.api.rules.Rule;
 import org.apache.unomi.api.services.DefinitionsService;
+import org.apache.unomi.api.services.RulesService;
 import org.apache.unomi.lifecycle.BundleWatcher;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.persistence.spi.PersistenceService;
@@ -78,6 +80,10 @@ public abstract class BaseIT {
     @Inject
     @Filter(timeout = 600000)
     protected PersistenceService persistenceService;
+
+    @Inject
+    @Filter(timeout = 600000)
+    protected RulesService rulesService;
 
     @Inject
     @Filter(timeout = 600000)
@@ -333,4 +339,14 @@ public abstract class BaseIT {
         return bundleContext.getService(serviceReference);
     }
 
+    public void createAndWaitForRule(Rule rule) throws InterruptedException {
+        rulesService.setRule(rule);
+        refreshPersistence();
+        keepTrying("Failed waiting for rule to be saved",
+                () -> rulesService.getRule(rule.getMetadata().getId()),
+                Objects::nonNull,
+                3000,
+                100);
+        rulesService.refreshRules();
+    }
 }

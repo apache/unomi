@@ -25,7 +25,6 @@ import org.apache.unomi.persistence.spi.PropertyHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
@@ -50,7 +49,43 @@ public class SetPropertyAction implements ActionExecutor {
         }
 
         String propertyName = (String) action.getParameterValues().get("setPropertyName");
+        Object propertyValue = getPropertyValue(action, event);
 
+        if (storeInSession) {
+            // in the case of session storage we directly update the session
+            if (PropertyHelper.setProperty(event.getSession(), propertyName, propertyValue, (String) action.getParameterValues().get("setPropertyStrategy"))) {
+                return EventService.SESSION_UPDATED;
+            }
+        } else {
+            if (useEventToUpdateProfile) {
+                // in the case of profile storage we use the update profile properties event instead.
+                Map<String, Object> propertyToUpdate = new HashMap<>();
+                propertyToUpdate.put(propertyName, propertyValue);
+
+                Event updateProperties = new Event("updateProperties", event.getSession(), event.getProfile(), event.getScope(), null, event.getProfile(), new Date());
+                updateProperties.setPersistent(false);
+
+                updateProperties.setProperty(UpdatePropertiesAction.PROPS_TO_UPDATE, propertyToUpdate);
+                int changes = eventService.send(updateProperties);
+
+                if ((changes & EventService.PROFILE_UPDATED) == EventService.PROFILE_UPDATED) {
+                    return EventService.PROFILE_UPDATED;
+                }
+            } else {
+                if (PropertyHelper.setProperty(event.getProfile(), propertyName, propertyValue, (String) action.getParameterValues().get("setPropertyStrategy"))) {
+                    return EventService.PROFILE_UPDATED;
+                }
+            }
+        }
+
+        return EventService.NO_CHANGE;
+    }
+
+    public void setEventService(EventService eventService) {
+        this.eventService = eventService;
+    }
+
+    private Object getPropertyValue(Action action, Event event) {
         Object propertyValue = action.getParameterValues().get("setPropertyValue");
         if (propertyValue == null) {
             propertyValue = action.getParameterValues().get("setPropertyValueMultiple");
@@ -88,38 +123,6 @@ public class SetPropertyAction implements ActionExecutor {
             propertyValue = format.format(event.getTimeStamp());
         }
 
-        if (storeInSession) {
-            // in the case of session storage we directly update the session
-            if (PropertyHelper.setProperty(event.getSession(), propertyName, propertyValue, (String) action.getParameterValues().get("setPropertyStrategy"))) {
-                return EventService.SESSION_UPDATED;
-            }
-        } else {
-            if (useEventToUpdateProfile) {
-                // in the case of profile storage we use the update profile properties event instead.
-                Map<String, Object> propertyToUpdate = new HashMap<>();
-                propertyToUpdate.put(propertyName, propertyValue);
-
-                Event updateProperties = new Event("updateProperties", event.getSession(), event.getProfile(), event.getScope(), null, event.getProfile(), new Date());
-                updateProperties.setPersistent(false);
-
-                updateProperties.setProperty(UpdatePropertiesAction.PROPS_TO_UPDATE, propertyToUpdate);
-                int changes = eventService.send(updateProperties);
-
-                if ((changes & EventService.PROFILE_UPDATED) == EventService.PROFILE_UPDATED) {
-                    return EventService.PROFILE_UPDATED;
-                }
-            } else {
-                if (PropertyHelper.setProperty(event.getProfile(), propertyName, propertyValue, (String) action.getParameterValues().get("setPropertyStrategy"))) {
-                    return EventService.PROFILE_UPDATED;
-                }
-            }
-        }
-
-        return EventService.NO_CHANGE;
+        return propertyValue;
     }
-
-    public void setEventService(EventService eventService) {
-        this.eventService = eventService;
-    }
-
 }
