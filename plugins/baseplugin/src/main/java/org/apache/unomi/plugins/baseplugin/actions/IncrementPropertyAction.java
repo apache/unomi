@@ -27,6 +27,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.InvocationTargetException;
+import java.util.HashMap;
 import java.util.Map;
 
 public class IncrementPropertyAction implements ActionExecutor {
@@ -96,15 +97,25 @@ public class IncrementPropertyAction implements ActionExecutor {
                     if (nestedPropertyValue == null) {
                         propertyValue = propertyTargetValue;
                     } else if (nestedPropertyValue instanceof Map) {
+                        // Create a new map to avoid modifying the original Object
+                        Map<String, Object> newPropertyValue = new HashMap<>();
                         Map<String, Object> nestedProperty = (Map<String, Object>) nestedPropertyValue;
 
+                        // increment with target
                         ((Map<String, Object>) propertyTargetValue).forEach((key, targetValue) -> {
                             if ((targetValue instanceof Integer && (nestedProperty.containsKey(key) && nestedProperty.get(key) instanceof Integer)) ||
                                     (targetValue instanceof Integer && !nestedProperty.containsKey(key))) {
-                                nestedProperty.put(key, nestedProperty.containsKey(key) ? (int) nestedProperty.get(key) + (int) targetValue : targetValue);
+                                newPropertyValue.put(key, nestedProperty.containsKey(key) ? (int) nestedProperty.get(key) + (int) targetValue : targetValue);
                             }
                         });
-                        propertyValue = nestedProperty;
+
+                        // add original props that was not incremented
+                        nestedProperty.forEach((key, nestedValue) -> {
+                            if (!newPropertyValue.containsKey(key)) {
+                                newPropertyValue.put(key, nestedValue);
+                            }
+                        });
+                        propertyValue = newPropertyValue;
                     } else {
                         throw new IllegalStateException("Property: " + propertyName + " already exist, can not increment the properties from the map because the exiting property is not map");
                     }
@@ -114,18 +125,17 @@ public class IncrementPropertyAction implements ActionExecutor {
             }
         } else {
             if (properties.containsKey(rootPropertyName)) {
-                Object nestedProperty = PropertyUtils.getNestedProperty(properties, propertyName);
-                if (nestedProperty == null) {
+                Object nestedPropertyValue = PropertyUtils.getNestedProperty(properties, propertyName);
+                if (nestedPropertyValue == null) {
                     propertyValue = 1;
-                } else if (nestedProperty instanceof Integer) {
-                    propertyValue = (int) nestedProperty + 1;
-                } else if (nestedProperty instanceof Map) {
-                    ((Map<String, Object>) nestedProperty).forEach((key, propValue) -> {
-                        if (propValue instanceof Integer) {
-                            ((Map<String, Integer>) nestedProperty).merge(key, 1, Integer::sum);
-                        }
-                    });
-                    propertyValue = nestedProperty;
+                } else if (nestedPropertyValue instanceof Integer) {
+                    propertyValue = (int) nestedPropertyValue + 1;
+                } else if (nestedPropertyValue instanceof Map) {
+                    // Create a new map to avoid modifying the original object
+                    Map<String, Object> newPropertyValue = new HashMap<>();
+                    Map<String, Object> nestedProperty = (Map<String, Object>) nestedPropertyValue;
+                    nestedProperty.forEach((key, propValue) -> newPropertyValue.put(key, propValue instanceof Integer ? (int) propValue + 1 : propValue));
+                    propertyValue = newPropertyValue;
                 } else {
                     throw new IllegalStateException("Property: " + propertyName + " already exist, can not increment the property because the exiting property is not integer or map");
                 }

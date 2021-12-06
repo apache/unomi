@@ -370,8 +370,7 @@ public class IncrementPropertyIT extends BaseIT {
         rule.setCondition(condition);
         rule.setActions(actions);
         rule.setMetadata(metadata);
-        rulesService.setRule(rule);
-        refreshPersistence();
+        createAndWaitForRule(rule);
     }
 
     private int buildActionAndSendEvent(String propertyName, String propertyTargetName, Map<String, Object> properties, Map<String, Object> targetProperties) throws InterruptedException {

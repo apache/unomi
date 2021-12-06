@@ -158,9 +158,7 @@ public class BasicIT extends BaseIT {
         // Add login rule
         Rule rule = CustomObjectMapper.getObjectMapper().readValue(new File("data/tmp/testLogin.json").toURI().toURL(),
                 Rule.class);
-        rulesService.setRule(rule);
-        Thread.sleep(2000);
-        refreshPersistence();
+        createAndWaitForRule(rule);
 
         CustomItem sourceSite = new CustomItem(ITEM_ID_SITE, ITEM_TYPE_SITE);
         sourceSite.setScope(TEST_SCOPE);

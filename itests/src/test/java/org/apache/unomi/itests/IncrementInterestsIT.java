@@ -131,8 +131,7 @@ public class IncrementInterestsIT extends BaseIT {
         rule.setActions(actions);
         rule.setMetadata(metadata);
 
-        rulesService.setRule(rule);
-        refreshPersistence();
+        createAndWaitForRule(rule);
 
         Map<String, Double> interestsAsMap = new HashMap<>();
         interestsAsMap.put(topic.getTopicId(), 50.0);

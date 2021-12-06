@@ -322,8 +322,7 @@ public class PropertiesUpdateActionIT extends BaseIT {
 
         // register test rule
         Rule rule = CustomObjectMapper.getObjectMapper().readValue(getValidatedBundleJSON("testSetPropertyActionRule.json", new HashMap<>()), Rule.class);
-        rulesService.setRule(rule);
-        Thread.sleep(2000);
+        createAndWaitForRule(rule);
 
         try {
             Profile profile = profileService.load(PROFILE_TEST_ID);
