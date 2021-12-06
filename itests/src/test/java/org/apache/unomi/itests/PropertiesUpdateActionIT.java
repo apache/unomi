@@ -71,7 +71,6 @@ public class PropertiesUpdateActionIT extends BaseIT {
         profile.setProperties(new HashMap<>());
         profile.setProperty("lastName", "Jose"); // property that have a propertyType registered in the system
         profile.setProperty("prop4", "New property 4"); // property that do not have a propertyType registered in the system
-        profile.setProperty("prop4", "New property 4"); // property that do not have a propertyType registered in the system
         profileService.save(profile);
         LOGGER.info("Profile saved with ID [{}].", profile.getItemId());
 
