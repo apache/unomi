@@ -20,13 +20,7 @@ package org.apache.unomi.rest.endpoints;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
-import org.apache.unomi.api.ContextRequest;
-import org.apache.unomi.api.ContextResponse;
-import org.apache.unomi.api.Event;
-import org.apache.unomi.api.Persona;
-import org.apache.unomi.api.PersonaWithSessions;
-import org.apache.unomi.api.Profile;
-import org.apache.unomi.api.Session;
+import org.apache.unomi.api.*;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.services.ConfigSharingService;
 import org.apache.unomi.api.services.EventService;
@@ -378,6 +372,26 @@ public class ContextJsonEndpoint {
         Changes changes = restServiceUtils.handleEvents(contextRequest.getEvents(), session, profile, request, response, timestamp);
         data.setProcessedEvents(changes.getProcessedItems());
 
+        List<PersonalizationService.PersonalizedContent> filterNodes = contextRequest.getFilters();
+        if (filterNodes != null) {
+            data.setFilteringResults(new HashMap<>());
+            for (PersonalizationService.PersonalizedContent personalizedContent : sanitizePersonalizedContentObjects(filterNodes)) {
+                data.getFilteringResults()
+                        .put(personalizedContent.getId(), personalizationService.filter(profile, session, personalizedContent));
+            }
+        }
+
+        List<PersonalizationService.PersonalizationRequest> personalizations = contextRequest.getPersonalizations();
+        if (personalizations != null) {
+            data.setPersonalizations(new HashMap<>());
+            for (PersonalizationService.PersonalizationRequest personalization : sanitizePersonalizations(personalizations)) {
+                PersonalizationResult personalizationResult = personalizationService.personalizeList(profile, session, personalization);
+                changes.setChangeType(changes.getChangeType() | personalizationResult.getChangeType());
+                data.getPersonalizations()
+                        .put(personalization.getId(), personalizationResult.getContentIds());
+            }
+        }
+
         profile = changes.getProfile();
 
         if (contextRequest.isRequireSegments()) {
@@ -407,24 +421,6 @@ public class ContextJsonEndpoint {
         }
 
         processOverrides(contextRequest, profile, session);
-
-        List<PersonalizationService.PersonalizedContent> filterNodes = contextRequest.getFilters();
-        if (filterNodes != null) {
-            data.setFilteringResults(new HashMap<>());
-            for (PersonalizationService.PersonalizedContent personalizedContent : sanitizePersonalizedContentObjects(filterNodes)) {
-                data.getFilteringResults()
-                        .put(personalizedContent.getId(), personalizationService.filter(profile, session, personalizedContent));
-            }
-        }
-
-        List<PersonalizationService.PersonalizationRequest> personalizations = contextRequest.getPersonalizations();
-        if (personalizations != null) {
-            data.setPersonalizations(new HashMap<>());
-            for (PersonalizationService.PersonalizationRequest personalization : sanitizePersonalizations(personalizations)) {
-                data.getPersonalizations()
-                        .put(personalization.getId(), personalizationService.personalizeList(profile, session, personalization));
-            }
-        }
 
         if (!(profile instanceof Persona)) {
             data.setTrackedConditions(rulesService.getTrackedConditions(contextRequest.getSource()));

@@ -17,18 +17,20 @@
 
 package org.apache.unomi.services.impl.personalization;
 
+import org.apache.unomi.api.PersonalizationResult;
 import org.apache.unomi.api.PersonalizationStrategy;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.Session;
 import org.apache.unomi.api.conditions.Condition;
+import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.api.services.PersonalizationService;
 import org.apache.unomi.api.services.ProfileService;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceReference;
 
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 public class PersonalizationServiceImpl implements PersonalizationService {
 
@@ -36,6 +38,8 @@ public class PersonalizationServiceImpl implements PersonalizationService {
     private ProfileService profileService;
 
     private Map<String, PersonalizationStrategy> personalizationStrategies = new ConcurrentHashMap<>();
+
+    private Random controlGroupRandom = new Random();
 
     public void setProfileService(ProfileService profileService) {
         this.profileService = profileService;
@@ -73,19 +77,70 @@ public class PersonalizationServiceImpl implements PersonalizationService {
 
     @Override
     public String bestMatch(Profile profile, Session session, PersonalizationRequest personalizationRequest) {
-        List<String> sorted = personalizeList(profile,session,personalizationRequest);
-        if (sorted.size() > 0) {
-            return sorted.get(0);
+        PersonalizationResult result = personalizeList(profile,session,personalizationRequest);
+        if (result.getContentIds().size() > 0) {
+            return result.getContentIds().get(0);
         }
         return null;
     }
 
     @Override
-    public List<String> personalizeList(Profile profile, Session session, PersonalizationRequest personalizationRequest) {
+    public PersonalizationResult personalizeList(Profile profile, Session session, PersonalizationRequest personalizationRequest) {
         PersonalizationStrategy strategy = personalizationStrategies.get(personalizationRequest.getStrategy());
+        int changeType = EventService.NO_CHANGE;
 
         if (strategy != null) {
-            return strategy.personalizeList(profile, session, personalizationRequest);
+            if (personalizationRequest.getStrategyOptions() != null && personalizationRequest.getStrategyOptions().containsKey("controlGroup")) {
+                Map<String,Object> controlGroupMap = (Map<String,Object>) personalizationRequest.getStrategyOptions().get("controlGroup");
+
+                boolean storeInSession = false;
+                if (controlGroupMap.containsKey("storeInSession")) {
+                    storeInSession = (Boolean) controlGroupMap.get("storeInSession");
+                }
+
+                boolean profileInControlGroup = false;
+                Optional<ControlGroup> currentControlGroup;
+
+                List<ControlGroup> controlGroups = null;
+                if (storeInSession) {
+                    controlGroups = (List<ControlGroup>) session.getProperty("unomiControlGroups");
+                } else {
+                    controlGroups = (List<ControlGroup>) profile.getProperty("unomiControlGroups");
+                }
+                if (controlGroups == null) {
+                    controlGroups = new ArrayList<>();
+                }
+                currentControlGroup = controlGroups.stream().filter(controlGroup -> controlGroup.id.equals(personalizationRequest.getId())).findFirst();
+                if (currentControlGroup.isPresent()) {
+                    // we already have an entry for this personalization so this means the profile is in the control group
+                    profileInControlGroup = true;
+                } else {
+                    double randomDouble = controlGroupRandom.nextDouble();
+                    Double controlGroupPercentage = (Double) controlGroupMap.get("percentage");
+
+                    if (randomDouble <= controlGroupPercentage) {
+                        // Profile is elected to be in control group
+                        profileInControlGroup = true;
+                        ControlGroup controlGroup = new ControlGroup(personalizationRequest.getId(),
+                                (String) controlGroupMap.get("displayName"),
+                                (String) controlGroupMap.get("path"),
+                                new Date());
+                        controlGroups.add(controlGroup);
+                        if (storeInSession) {
+                            session.setProperty("unomiControlGroups", controlGroups);
+                            changeType = EventService.SESSION_UPDATED;
+                        } else {
+                            profile.setProperty("unomiControlGroups", controlGroups);
+                            changeType = EventService.PROFILE_UPDATED;
+                        }
+                    }
+                }
+                if (profileInControlGroup) {
+                    // if profile is in control group we return the unmodified list.
+                    return new PersonalizationResult(personalizationRequest.getContents().stream().map(PersonalizedContent::getId).collect(Collectors.toList()), changeType);
+                }
+            }
+            return new PersonalizationResult(strategy.personalizeList(profile, session, personalizationRequest), changeType);
         }
 
         throw new IllegalArgumentException("Unknown strategy : "+ personalizationRequest.getStrategy());
