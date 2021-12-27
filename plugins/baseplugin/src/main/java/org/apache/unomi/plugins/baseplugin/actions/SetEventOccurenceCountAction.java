@@ -24,6 +24,7 @@ import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.persistence.spi.PersistenceService;
+import org.apache.unomi.persistence.spi.PropertyHelper;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -66,6 +67,13 @@ public class SetEventOccurenceCountAction implements ActionExecutor {
         c.setParameter("propertyValue", event.getProfileId());
         conditions.add(c);
 
+        // may be current event is already persisted and indexed, in that case we filter it from the count to increment it manually at the end
+        Condition eventIdFilter = new Condition(definitionsService.getConditionType("eventPropertyCondition"));
+        eventIdFilter.setParameter("propertyName", "itemId");
+        eventIdFilter.setParameter("comparisonOperator", "notEquals");
+        eventIdFilter.setParameter("propertyValue", event.getItemId());
+        conditions.add(eventIdFilter);
+
         Integer numberOfDays = (Integer) pastEventCondition.getParameter("numberOfDays");
         String fromDate = (String) pastEventCondition.getParameter("fromDate");
         String toDate = (String) pastEventCondition.getParameter("toDate");
@@ -98,12 +106,6 @@ public class SetEventOccurenceCountAction implements ActionExecutor {
 
         long count = persistenceService.queryCount(andCondition, Event.ITEM_TYPE);
 
-        Map<String, Object> pastEvents = (Map<String, Object>) event.getProfile().getSystemProperties().get("pastEvents");
-        if (pastEvents == null) {
-            pastEvents = new LinkedHashMap<>();
-            event.getProfile().getSystemProperties().put("pastEvents", pastEvents);
-        }
-
         LocalDateTime fromDateTime = null;
         if (fromDate != null) {
             Calendar fromDateCalendar = DatatypeConverter.parseDateTime(fromDate);
@@ -117,15 +119,16 @@ public class SetEventOccurenceCountAction implements ActionExecutor {
 
         LocalDateTime eventTime = LocalDateTime.ofInstant(event.getTimeStamp().toInstant(),ZoneId.of("UTC"));
 
-        if (!persistenceService.isConsistent(event)) {
-            if (inTimeRange(eventTime, numberOfDays, fromDateTime, toDateTime)) {
-                count++;
-            }
+        if (inTimeRange(eventTime, numberOfDays, fromDateTime, toDateTime)) {
+            count++;
         }
 
-        pastEvents.put((String) pastEventCondition.getParameter("generatedPropertyKey"), count);
+        String generatedPropertyKey = (String) pastEventCondition.getParameter("generatedPropertyKey");
+        if (PropertyHelper.setProperty(event.getProfile(), "systemProperties.pastEvents." + generatedPropertyKey, count, "alwaysSet")) {
+            return EventService.PROFILE_UPDATED;
+        }
 
-        return EventService.PROFILE_UPDATED;
+        return EventService.NO_CHANGE;
     }
 
     private boolean inTimeRange(LocalDateTime eventTime, Integer numberOfDays, LocalDateTime fromDate, LocalDateTime toDate) {
