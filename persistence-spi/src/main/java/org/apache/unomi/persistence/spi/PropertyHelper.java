@@ -137,6 +137,19 @@ public class PropertyHelper {
         return null;
     }
 
+    public static Long getLong(Object value) {
+        if (value instanceof Number) {
+            return ((Number) value).longValue();
+        } else {
+            try {
+                return Long.parseLong(value.toString());
+            } catch (NumberFormatException e) {
+                // Not a number
+            }
+        }
+        return null;
+    }
+
     public static Double getDouble(Object value) {
         if (value instanceof Number) {
             return ((Number) value).doubleValue();
@@ -189,6 +202,8 @@ public class PropertyHelper {
         }
         if (propertyValue instanceof Integer) {
             return propertyValue.equals(getInteger(beanPropertyValue));
+        } if (propertyValue instanceof Long) {
+            return propertyValue.equals(getLong(beanPropertyValue));
         } else if (propertyValue instanceof Boolean) {
             return propertyValue.equals(getBooleanValue(beanPropertyValue));
         } else {
