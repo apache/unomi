@@ -345,16 +345,17 @@ public class ContextServletIT extends BaseIT {
         HttpPost request = new HttpPost(regularURI);
         request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.create("application/json")));
         //The first event is with a default timestamp (now)
-        String cookieHeaderValue = TestUtils.executeContextJSONRequest(request, sessionId).getCookieHeaderValue();
+        TestUtils.RequestResponse response = TestUtils.executeContextJSONRequest(request, sessionId);
+        String cookieHeaderValue = response.getCookieHeaderValue();
         refreshPersistence();
         //The second event is with a customized timestamp
         request.setURI(URI.create(customTimestampURI));
         request.addHeader("Cookie", cookieHeaderValue);
-        ContextResponse response = (TestUtils.executeContextJSONRequest(request, sessionId)).getContextResponse(); //second event
+        response = (TestUtils.executeContextJSONRequest(request, sessionId)); //second event
         refreshPersistence();
 
         //Assert
-        assertEquals(0, response.getProfileSegments().size());
+        assertEquals(0, response.getContextResponse().getProfileSegments().size());
     }
 
     @Test
