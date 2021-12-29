@@ -46,10 +46,7 @@ import javax.inject.Inject;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.ZoneId;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @RunWith(PaxExam.class)
 @ExamReactorStrategy(PerSuite.class)
@@ -507,5 +504,83 @@ public class SegmentIT extends BaseIT {
         rules = persistenceService.getAllItems(Rule.class);
         boolean isRule = rules.stream().anyMatch(rule -> rule.getItemId().equals(pastEventCondition.getParameter("generatedPropertyKey")));
         Assert.assertFalse("Rule is properly removed", isRule);
+    }
+
+    @Test
+    public void testSegmentWithRelativeDateExpressions() throws Exception {
+        // create Profile
+        Profile profile = new Profile();
+        profile.setItemId("test_profile_id");
+        profileService.save(profile);
+        persistenceService.refreshIndex(Profile.class, null); // wait for profile to be full persisted and index
+
+        // create the conditions
+        Condition booleanCondition = new Condition(definitionsService.getConditionType("booleanCondition"));
+        List<Condition> subConditions = new ArrayList<>();
+        Condition dateExpCondition = new Condition(definitionsService.getConditionType("profilePropertyCondition"));
+        dateExpCondition.setParameter("propertyName", "properties.lastVisit");
+        dateExpCondition.setParameter("comparisonOperator", "greaterThanOrEqualTo");
+        dateExpCondition.setParameter("propertyValueDateExpr", "now-5d");
+        subConditions.add(dateExpCondition);
+        Condition otherCondition = new Condition(definitionsService.getConditionType("profilePropertyCondition"));
+        otherCondition.setParameter("propertyName", "properties.address");
+        otherCondition.setParameter("comparisonOperator", "notEquals");
+        otherCondition.setParameter("propertyValueDateExpr", "test");
+        subConditions.add(otherCondition);
+        booleanCondition.setParameter("operator", "and");
+        booleanCondition.setParameter("subConditions", subConditions);
+
+        // create segment and scoring
+        Metadata segmentMetadata = new Metadata("relative-date-segment-test");
+        Segment segment = new Segment(segmentMetadata);
+        segment.setCondition(booleanCondition);
+        segmentService.setSegmentDefinition(segment);
+        Metadata scoringMetadata = new Metadata("relative-date-scoring-test");
+        Scoring scoring = new Scoring(scoringMetadata);
+        ScoringElement scoringElement = new ScoringElement();
+        scoringElement.setCondition(booleanCondition);
+        scoringElement.setValue(5);
+        scoring.setElements(Collections.singletonList(scoringElement));
+        segmentService.setScoringDefinition(scoring);
+        Thread.sleep(5000);
+
+        // insure the profile is not yet engaged since we directly saved the profile in ES
+        profile = profileService.load("test_profile_id");
+        Assert.assertFalse("Profile should not be engaged in the segment", profile.getSegments().contains("relative-date-segment-test"));
+        Assert.assertTrue("Profile should not be engaged in the scoring", profile.getScores() == null || !profile.getScores().containsKey("relative-date-scoring-test"));
+
+        // Update the profile last visit to match the segment ans the scoring
+        ZoneId defaultZoneId = ZoneId.systemDefault();
+        LocalDate localDate = LocalDate.now().minusDays(3);
+        profile.setProperty("lastVisit", Date.from(localDate.atStartOfDay(defaultZoneId).toInstant()));
+        profileService.save(profile);
+        persistenceService.refreshIndex(Profile.class, null); // wait for profile to be full persisted and index
+
+        // insure the profile is not yet engaged since we directly saved the profile in ES
+        profile = profileService.load("test_profile_id");
+        Assert.assertFalse("Profile should not be engaged in the segment", profile.getSegments().contains("relative-date-segment-test"));
+        Assert.assertTrue("Profile should not be engaged in the scoring", profile.getScores() == null || profile.getScores().containsKey("relative-date-scoring-test"));
+
+        // now force the recalculation of the date relative segments/scorings
+        segmentService.recalculatePastEventConditions();
+        persistenceService.refreshIndex(Profile.class, null);
+        keepTrying("Profile should be engaged in the segment and scoring",
+                () -> profileService.load("test_profile_id"),
+                updatedProfile -> updatedProfile.getSegments().contains("relative-date-segment-test") && updatedProfile.getScores() != null && updatedProfile.getScores().get("relative-date-scoring-test") == 5,
+                1000, 20);
+
+        // update the profile to a date out of date expression
+        localDate = LocalDate.now().minusDays(15);
+        profile.setProperty("lastVisit", Date.from(localDate.atStartOfDay(defaultZoneId).toInstant()));
+        profileService.save(profile);
+        persistenceService.refreshIndex(Profile.class, null); // wait for profile to be full persisted and index
+
+        // now force the recalculation of the date relative segments/scorings
+        segmentService.recalculatePastEventConditions();
+        persistenceService.refreshIndex(Profile.class, null);
+        keepTrying("Profile should not be engaged in the segment and scoring anymore",
+                () -> profileService.load("test_profile_id"),
+                updatedProfile -> !updatedProfile.getSegments().contains("relative-date-segment-test") && (updatedProfile.getScores() == null || !updatedProfile.getScores().containsKey("relative-date-scoring-test")),
+                1000, 20);
     }
 }

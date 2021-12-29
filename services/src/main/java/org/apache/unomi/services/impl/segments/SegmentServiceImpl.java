@@ -957,11 +957,9 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
 
     @Override
     public void recalculatePastEventConditions() {
-        logger.info("running scheduled task to recalculate segments with pastEventCondition conditions");
-        long pastEventsTaskStartTime = System.currentTimeMillis();
-        Set<String> linkedItems = new HashSet<>();
+        Set<String> segmentOrScoringIdsToReevaluate = new HashSet<>();
+        // reevaluate auto generated rules used to store the event occurrence count on the profile
         for (Metadata metadata : rulesService.getRuleMetadatas()) {
-            // reevaluate auto generated rules used to store the event occurrence count on the profile
             Rule rule = rulesService.getRule(metadata.getId());
             for (Action action : rule.getActions()) {
                 if (action.getActionTypeId().equals("setEventOccurenceCountAction")) {
@@ -970,31 +968,46 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
                         recalculatePastEventOccurrencesOnProfiles(rule.getCondition(), pastEventCondition, true, true);
                         logger.info("Event occurrence count on profiles updated for rule: {}", rule.getItemId());
                         if (rule.getLinkedItems() != null && rule.getLinkedItems().size() > 0) {
-                            linkedItems.addAll(rule.getLinkedItems());
+                            segmentOrScoringIdsToReevaluate.addAll(rule.getLinkedItems());
                         }
                     }
                 }
             }
         }
+        int pastEventSegmentsAndScoringsSize = segmentOrScoringIdsToReevaluate.size();
+        logger.info("Found {} segments or scoring plans containing pastEventCondition conditions", pastEventSegmentsAndScoringsSize);
 
-        // reevaluate segments and scoring linked to this rule, since we have updated the event occurrences count on the profiles.
-        if (linkedItems.size() > 0) {
+        // get Segments and Scoring that contains relative date expressions
+        segmentOrScoringIdsToReevaluate.addAll(allSegments.stream()
+                .filter(segment -> segment.getCondition() != null && segment.getCondition().toString().contains("propertyValueDateExpr"))
+                .map(Item::getItemId)
+                .collect(Collectors.toList()));
+
+        segmentOrScoringIdsToReevaluate.addAll(allScoring.stream()
+                .filter(scoring -> scoring.getElements() != null && scoring.getElements().size() > 0 && scoring.getElements().stream()
+                        .anyMatch(scoringElement -> scoringElement != null && scoringElement.getCondition() != null && scoringElement.getCondition().toString().contains("propertyValueDateExpr")))
+                .map(Item::getItemId)
+                .collect(Collectors.toList()));
+        logger.info("Found {} segments or scoring plans containing date relative expressions", segmentOrScoringIdsToReevaluate.size() - pastEventSegmentsAndScoringsSize);
+
+        // reevaluate segments and scoring.
+        if (segmentOrScoringIdsToReevaluate.size() > 0) {
             persistenceService.refreshIndex(Profile.class, null);
-            for (String linkedItem : linkedItems) {
+            for (String linkedItem : segmentOrScoringIdsToReevaluate) {
                 Segment linkedSegment = getSegmentDefinition(linkedItem);
                 if (linkedSegment != null) {
+                    logger.info("Start segment recalculation for segment: {} - {}", linkedSegment.getItemId(), linkedSegment.getMetadata().getName());
                     updateExistingProfilesForSegment(linkedSegment);
                     continue;
                 }
 
                 Scoring linkedScoring = getScoringDefinition(linkedItem);
                 if (linkedScoring != null) {
+                    logger.info("Start scoring plan recalculation for scoring plan: {} - {}", linkedScoring.getItemId(), linkedScoring.getMetadata().getName());
                     updateExistingProfilesForScoring(linkedScoring.getItemId(), linkedScoring.getElements(), linkedScoring.getMetadata().isEnabled());
                 }
             }
         }
-
-        logger.info("finished recalculate segments with pastEventCondition conditions in {}ms. ", System.currentTimeMillis() - pastEventsTaskStartTime);
     }
 
     /**
@@ -1222,13 +1235,18 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
             @Override
             public void run() {
                 try {
+                    long currentTimeMillis = System.currentTimeMillis();
+                    logger.info("running scheduled task to recalculate segments and scoring that contains date relative conditions");
                     recalculatePastEventConditions();
+                    logger.info("finished recalculate segments and scoring that contains date relative conditions in {}ms. ", System.currentTimeMillis() - currentTimeMillis);
                 } catch (Throwable t) {
-                    logger.error("Error while updating profiles for past event conditions", t);
+                    logger.error("Error while updating profiles for segments and scoring that contains date relative conditions", t);
                 }
             }
         };
-        schedulerService.getScheduleExecutorService().scheduleAtFixedRate(task, 1, taskExecutionPeriod, TimeUnit.DAYS);
+        long initialDelay = SchedulerServiceImpl.getTimeDiffInSeconds(dailyDateExprEvaluationHourUtc, ZonedDateTime.now(ZoneOffset.UTC));
+        logger.info("daily recalculation job for segments and scoring that contains date relative conditions will run at fixed rate, initialDelay={}, taskExecutionPeriod={}", initialDelay, TimeUnit.DAYS.toSeconds(1));
+        schedulerService.getScheduleExecutorService().scheduleAtFixedRate(task, initialDelay, taskExecutionPeriod, TimeUnit.DAYS);
 
         task = new TimerTask() {
             @Override
@@ -1242,26 +1260,6 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
             }
         };
         schedulerService.getScheduleExecutorService().scheduleAtFixedRate(task, 0, segmentRefreshInterval, TimeUnit.MILLISECONDS);
-
-        task = new TimerTask() {
-            @Override
-            public void run() {
-                try {
-                    long dateExprTaskStartTime = System.currentTimeMillis();
-                    List<Segment> dateExprSegments = allSegments.stream().filter(segment ->
-                            segment.getCondition().toString().contains("propertyValueDateExpr")).collect(Collectors.toList());
-                    logger.info("running scheduled task to recalculate segments with DateExpr condition, found {} segments", dateExprSegments.size());
-                    dateExprSegments.forEach(segment -> updateExistingProfilesForSegment(segment));
-                    logger.info("finished recalculate segments with DateExpr conditions in {}ms. ", System.currentTimeMillis() - dateExprTaskStartTime);
-                } catch (Throwable t) {
-                    logger.error("Error while updating profiles for DateExpr conditions", t);
-                }
-            }
-        };
-
-        long initialDelay = SchedulerServiceImpl.getTimeDiffInSeconds(dailyDateExprEvaluationHourUtc, ZonedDateTime.now(ZoneOffset.UTC));
-        logger.info("daily DateExpr segments will run at fixed rate, initialDelay={}, taskExecutionPeriod={}, ", initialDelay, TimeUnit.DAYS.toSeconds(1));
-        schedulerService.getScheduleExecutorService().scheduleAtFixedRate(task, initialDelay, TimeUnit.DAYS.toSeconds(1), TimeUnit.SECONDS);
     }
 
     private void loadScripts() throws IOException {
