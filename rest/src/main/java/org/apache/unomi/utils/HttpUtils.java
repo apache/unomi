@@ -91,14 +91,17 @@ public class HttpUtils {
      * @param configSharingService shared config location.
      * @return the cookie string to set in the header.
      */
-    public static String getProfileCookieString(Profile profile, ConfigSharingService configSharingService) {
+    public static String getProfileCookieString(Profile profile, ConfigSharingService configSharingService, boolean isSecure) {
         final String profileIdCookieDomain = (String) configSharingService.getProperty("profileIdCookieDomain");
         final String profileIdCookieName = (String) configSharingService.getProperty("profileIdCookieName");
         final Integer profileIdCookieMaxAgeInSeconds = (Integer) configSharingService.getProperty("profileIdCookieMaxAgeInSeconds") ;
+        final Boolean profileIdCookieHttpOnly = (Boolean) configSharingService.getProperty("profileIdCookieHttpOnly");
         return profileIdCookieName + "=" + profile.getItemId() +
                 "; Path=/" +
                 "; Max-Age=" + profileIdCookieMaxAgeInSeconds +
                 (StringUtils.isNotBlank(profileIdCookieDomain) ? ("; Domain=" + profileIdCookieDomain) : "")  +
-                "; SameSite=Lax";
+                "; SameSite=Lax" +
+                (isSecure ? "; Secure" : "") +
+                (profileIdCookieHttpOnly ? "; HttpOnly" : "");
     }
 }
