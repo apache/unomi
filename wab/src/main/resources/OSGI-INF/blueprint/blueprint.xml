@@ -35,6 +35,7 @@
             <cm:property name="contextserver.domain" value=""/>
             <cm:property name="contextserver.profileIdCookieName" value="context-profile-id"/>
             <cm:property name="contextserver.profileIdCookieMaxAgeInSeconds" value="31536000"/> <!-- 1 year by default -->
+            <cm:property name="contextserver.profileIdCookieHttpOnly" value="false"/> <!-- 1 year by default -->
             <cm:property name="allowed.profile.download.formats" value="yaml"/>
             <cm:property name="public.post.request.bytes.limit" value="200000"/>
         </cm:default-properties>
@@ -46,6 +47,7 @@
         <property name="profileIdCookieDomain" value="${web.contextserver.domain}" />
         <property name="profileIdCookieName" value="${web.contextserver.profileIdCookieName}"/>
         <property name="profileIdCookieMaxAgeInSeconds" value="${web.contextserver.profileIdCookieMaxAgeInSeconds}"/>
+        <property name="profileIdCookieHttpOnly" value="${web.contextserver.profileIdCookieHttpOnly}"/>
         <property name="publicPostRequestBytesLimit" value="${web.public.post.request.bytes.limit}"/>
     </bean>
 

@@ -344,7 +344,7 @@ public class ContextJsonEndpoint {
         }
         // Set profile cookie
         if (!(profile instanceof Persona)) {
-            response.setHeader("Set-Cookie", HttpUtils.getProfileCookieString(profile, configSharingService));
+            response.setHeader("Set-Cookie", HttpUtils.getProfileCookieString(profile, configSharingService, request.isSecure()));
         }
         return contextResponse;
     }
