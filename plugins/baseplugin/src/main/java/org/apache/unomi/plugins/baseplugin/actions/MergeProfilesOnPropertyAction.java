@@ -31,8 +31,10 @@ import org.apache.unomi.persistence.spi.PersistenceService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.Cookie;
+import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.util.*;
 
@@ -51,6 +53,7 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
         String profileIdCookieName = (String) configSharingService.getProperty("profileIdCookieName");
         String profileIdCookieDomain = (String) configSharingService.getProperty("profileIdCookieDomain");
         Integer profileIdCookieMaxAgeInSeconds = (Integer) configSharingService.getProperty("profileIdCookieMaxAgeInSeconds");
+        Boolean profileIdCookieHttpOnly = (Boolean) configSharingService.getProperty("profileIdCookieHttpOnly");
 
         Profile profile = event.getProfile();
         if (profile instanceof Persona || profile.isAnonymousProfile()) {
@@ -111,7 +114,9 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
             logger.info("Different users, switch to " + profile.getItemId());
 
             HttpServletResponse httpServletResponse = (HttpServletResponse) event.getAttributes().get(Event.HTTP_RESPONSE_ATTRIBUTE);
-            sendProfileCookie(profile, httpServletResponse, profileIdCookieName, profileIdCookieDomain, profileIdCookieMaxAgeInSeconds);
+            HttpServletRequest httpServletRequest = (HttpServletRequest) event.getAttributes().get(Event.HTTP_REQUEST_ATTRIBUTE);
+            sendProfileCookie(profile, httpServletResponse, profileIdCookieName, profileIdCookieDomain,
+                    profileIdCookieMaxAgeInSeconds, profileIdCookieHttpOnly, httpServletRequest.isSecure());
 
             // At the end of the merge, we must set the merged profile as profile event to process other Actions
             event.setProfileId(profile.getItemId());
@@ -151,10 +156,11 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
             // Profile has changed
             if (forceEventProfileAsMaster || !masterProfile.getItemId().equals(profileId)) {
                 HttpServletResponse httpServletResponse = (HttpServletResponse) event.getAttributes().get(Event.HTTP_RESPONSE_ATTRIBUTE);
+                HttpServletRequest httpServletRequest = (HttpServletRequest) event.getAttributes().get(Event.HTTP_REQUEST_ATTRIBUTE);
                 // we still send back the current profile cookie. It will be changed on the next request to the ContextServlet.
                 // The current profile will be deleted only then because we cannot delete it right now (too soon)
-                sendProfileCookie(profile, httpServletResponse,
-                        profileIdCookieName, profileIdCookieDomain, profileIdCookieMaxAgeInSeconds);
+                sendProfileCookie(profile, httpServletResponse, profileIdCookieName, profileIdCookieDomain,
+                        profileIdCookieMaxAgeInSeconds, profileIdCookieHttpOnly, httpServletRequest.isSecure());
 
                 final String masterProfileId = masterProfile.getItemId();
                 // At the end of the merge, we must set the merged profile as profile event to process other Actions
@@ -238,7 +244,8 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
         }
     }
 
-    private static void sendProfileCookie(Profile profile, ServletResponse response, String profileIdCookieName, String profileIdCookieDomain, int cookieAgeInSeconds) {
+    private static void sendProfileCookie(Profile profile, ServletResponse response, String profileIdCookieName, String profileIdCookieDomain,
+                                          int cookieAgeInSeconds, boolean httpOnly, boolean secure) {
         if (response instanceof HttpServletResponse) {
             HttpServletResponse httpServletResponse = (HttpServletResponse) response;
             if (!(profile instanceof Persona)) {
@@ -247,7 +254,9 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
                                 "; Path=/" +
                                 "; Max-Age=" + cookieAgeInSeconds +
                                 (StringUtils.isNotBlank(profileIdCookieDomain) ? ("; Domain=" + profileIdCookieDomain) : "")  +
-                                "; SameSite=Lax");
+                                "; SameSite=Lax" +
+                                (secure ? "; Secure" : "") +
+                                (httpOnly ? "; HttpOnly" : ""));
             }
         }
     }
