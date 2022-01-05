@@ -592,6 +592,10 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
 
     private void updateRulesByEventType(Map<String, Set<Rule>> rulesByEventType, Rule rule) {
         Set<String> eventTypeIds = ParserHelper.resolveConditionEventTypes(rule.getCondition());
+        if (eventTypeIds.isEmpty()) {
+            // if we couldn't resolve an event type, we always execute the conditions, these conditions might lead to performance issues though.
+            eventTypeIds.add("*");
+        }
         for (String eventTypeId : eventTypeIds) {
             Set<Rule> rules = rulesByEventType.get(eventTypeId);
             if (rules == null) {
