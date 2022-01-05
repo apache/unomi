@@ -103,6 +103,13 @@ public class RuleServiceIT extends BaseIT {
                 ).build()
         );
         createAndWaitForRule(complexEventTypeRule);
+        Rule noEventTypeRule = new Rule(new Metadata(TEST_SCOPE, "no-event-type-rule", "No event type rule", "A rule with a simple condition but no event type matching"));
+        noEventTypeRule.setCondition(builder.condition("eventPropertyCondition")
+                .parameter("propertyName", "target.properties.pageInfo.language")
+                .parameter("comparisonOperator", "equals")
+                .parameter("propertyValue", "en")
+                .build());
+        createAndWaitForRule(noEventTypeRule);
 
         Profile profile = new Profile(UUID.randomUUID().toString());
         Session session = new Session(UUID.randomUUID().toString(), profile, new Date(), TEST_SCOPE);
@@ -111,6 +118,7 @@ public class RuleServiceIT extends BaseIT {
 
         assertTrue("Simple rule should be matched", matchingRules.contains(simpleEventTypeRule));
         assertFalse("Complex rule should NOT be matched", matchingRules.contains(complexEventTypeRule));
+        assertTrue("No event type rule should be matched", matchingRules.contains(noEventTypeRule));
 
         Event loginEvent = new Event(UUID.randomUUID().toString(), "login", session, profile, TEST_SCOPE, null, null, new Date());
         matchingRules = rulesService.getMatchingRules(loginEvent);
@@ -119,6 +127,7 @@ public class RuleServiceIT extends BaseIT {
 
         rulesService.removeRule(simpleEventTypeRule.getItemId());
         rulesService.removeRule(complexEventTypeRule.getItemId());
+        rulesService.removeRule(noEventTypeRule.getItemId());
         refreshPersistence();
         rulesService.refreshRules();
     }
@@ -129,11 +138,15 @@ public class RuleServiceIT extends BaseIT {
         Session session = new Session(UUID.randomUUID().toString(), profile, new Date(), TEST_SCOPE);
 
         updateConfiguration(RulesService.class.getName(), "org.apache.unomi.services", "rules.optimizationActivated", "false");
+        rulesService = getService(RulesService.class);
+        eventService = getService(EventService.class);
 
         LOGGER.info("Running unoptimized rules performance test...");
         long unoptimizedRunTime = runEventTest(profile, session);
 
         updateConfiguration(RulesService.class.getName(), "org.apache.unomi.services", "rules.optimizationActivated", "true");
+        rulesService = getService(RulesService.class);
+        eventService = getService(EventService.class);
 
         LOGGER.info("Running optimized rules performance test...");
         long optimizedRunTime = runEventTest(profile, session);

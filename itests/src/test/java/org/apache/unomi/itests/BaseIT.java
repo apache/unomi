@@ -279,6 +279,7 @@ public abstract class BaseIT {
     public void updateServices() throws InterruptedException {
         persistenceService = getService(PersistenceService.class);
         definitionsService = getService(DefinitionsService.class);
+        rulesService = getService(RulesService.class);
     }
 
     public void updateConfiguration(String serviceName, String configPid, String propName, Object propValue) throws InterruptedException, IOException {

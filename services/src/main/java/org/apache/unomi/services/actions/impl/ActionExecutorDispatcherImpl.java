@@ -201,9 +201,12 @@ public class ActionExecutorDispatcherImpl implements ActionExecutorDispatcher {
     }
 
     public int execute(Action action, Event event) {
-        String actionKey = action.getActionType().getActionExecutor();
+        String actionKey = null;
+        if (action.getActionType() != null) {
+            actionKey = action.getActionType().getActionExecutor();
+        }
         if (actionKey == null) {
-            throw new UnsupportedOperationException("No service defined for : " + action.getActionType());
+            throw new UnsupportedOperationException("No service defined for : " + action.getActionTypeId());
         }
 
         int colonPos = actionKey.indexOf(":");
