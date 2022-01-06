@@ -20,6 +20,7 @@ import org.apache.cxf.jaxrs.ext.multipart.Attachment;
 import org.apache.cxf.jaxrs.ext.multipart.Multipart;
 import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
 import org.apache.unomi.api.services.ConfigSharingService;
+import org.apache.unomi.api.utils.ValidationPattern;
 import org.apache.unomi.router.api.ImportConfiguration;
 import org.apache.unomi.router.api.RouterConstants;
 import org.apache.unomi.router.api.services.ImportExportConfigurationService;
@@ -30,6 +31,8 @@ import org.slf4j.LoggerFactory;
 
 import javax.jws.WebMethod;
 import javax.jws.WebService;
+import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Pattern;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
@@ -106,7 +109,8 @@ public class ImportConfigurationServiceEndPoint extends AbstractConfigurationSer
     @Path("/oneshot")
     @Consumes(MediaType.MULTIPART_FORM_DATA)
     @Produces(MediaType.APPLICATION_JSON)
-    public Response processOneshotImportConfigurationCSV(@Multipart(value = "importConfigId") String importConfigId, @Multipart(value = "file") Attachment file) {
+    public Response processOneshotImportConfigurationCSV(@Multipart(value = "importConfigId") @NotNull @Pattern(regexp = "^[a-zA-Z0-9_.\\-]{1,255}$") String importConfigId,
+                                                         @Multipart(value = "file") Attachment file) {
         try {
             java.nio.file.Path path = Paths.get(configSharingService.getProperty(RouterConstants.IMPORT_ONESHOT_UPLOAD_DIR) + importConfigId + ".csv");
             Files.deleteIfExists(path);
