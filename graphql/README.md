@@ -21,17 +21,19 @@ Apache Unomi GraphQL API
 Install
 -------
 
-Installing GraphQL feature:
+Graphql is built into Unomi and does not require a separate installation anymore.
 
-    feature:repo-add mvn:org.apache.unomi/cdp-graphql-feature/1.5.0-SNAPSHOT/xml/features
-    feature:install cdp-graphql-feature
-
-GraphQL Endpoint
-----------------
+GraphQL Endpoint & Playground
+-----------------------------
 
 You can then access the GraphQL endpoint at the following URL:
 
     http://localhost:8181/graphql
+
+The Graphql Playground is available at the following URL:
+
+    http://localhost:8181/graphql-ui
+
     
 Query example
 -------------
