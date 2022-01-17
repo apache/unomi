@@ -27,6 +27,9 @@ import org.apache.unomi.api.services.ProfileService;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * This strategy will use filters to only keep the contents that match all their associated filters
+ */
 public class FilterPersonalizationStrategy implements PersonalizationStrategy {
 
     private ProfileService profileService;

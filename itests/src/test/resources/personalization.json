@@ -8,7 +8,7 @@
   },
   "requireSegments": true,
   "requiredProfileProperties": [
-    "interests"
+    "*"
   ],
   "requiredSessionProperties": [
     "*"

@@ -17,6 +17,7 @@
 
 package org.apache.unomi.api.services;
 
+import org.apache.unomi.api.PersonalizationResult;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.Session;
 import org.apache.unomi.api.conditions.Condition;
@@ -57,7 +58,7 @@ public interface PersonalizationService {
      * @param personalizationRequest Personalization request, containing the list of variants and the required strategy
      * @return List of ids, based on user profile
      */
-    List<String> personalizeList(Profile profile, Session session, PersonalizationRequest personalizationRequest);
+    PersonalizationResult personalizeList(Profile profile, Session session, PersonalizationRequest personalizationRequest);
 
     /**
      * Personalization request
