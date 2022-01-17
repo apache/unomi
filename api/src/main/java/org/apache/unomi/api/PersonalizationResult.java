@@ -14,44 +14,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.unomi.api;
 
-package org.apache.unomi.utils;
-
-import org.apache.unomi.api.Profile;
+import java.util.List;
 
 /**
- * This class is a simple object to get the updated profile without the need of reloading it
- *
- * @author dgaillard
+ * A class to contain the result of a personalization, containing the list of content IDs as well as a changeType to
+ * indicate if a profile and/or a session was modified (to store control group information).
  */
-public class Changes {
-    private int changeType;
-    private int processedItems;
-    private Profile profile;
+public class PersonalizationResult {
 
-    public Changes(int changeType, Profile profile) {
-        this(changeType,0,profile);
+    List<String> contentIds;
+    int changeType;
+
+    public PersonalizationResult(List<String> contentIds, int changeType) {
+        this.contentIds = contentIds;
+        this.changeType = changeType;
     }
 
-    public Changes(int changeType, int processedItems, Profile profile) {
-        this.changeType = changeType;
-        this.processedItems = processedItems;
-        this.profile = profile;
+    public List<String> getContentIds() {
+        return contentIds;
     }
 
     public int getChangeType() {
         return changeType;
-    }
-
-    public void setChangeType(int changeType) {
-        this.changeType = changeType;
-    }
-
-    public int getProcessedItems() {
-        return processedItems;
-    }
-
-    public Profile getProfile() {
-        return profile;
     }
 }

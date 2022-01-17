@@ -24,7 +24,6 @@ import org.apache.http.entity.StringEntity;
 import org.apache.unomi.api.*;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.segments.Scoring;
-import org.apache.unomi.api.segments.ScoringElement;
 import org.apache.unomi.api.segments.Segment;
 import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.EventService;
@@ -403,6 +402,88 @@ public class ContextServletIT extends BaseIT {
 		Thread.sleep(2000); //Making sure event is updated in DB
 
 	}
+
+    @Test
+    public void testPersonalizationWithControlGroup() throws IOException, InterruptedException {
+
+        Map<String,String> parameters = new HashMap<>();
+        parameters.put("storeInSession", "false");
+        HttpPost request = new HttpPost(URL + CONTEXT_URL);
+        request.setEntity(new StringEntity(getValidatedBundleJSON("personalization-controlgroup.json", parameters), ContentType.create("application/json")));
+        TestUtils.RequestResponse response = TestUtils.executeContextJSONRequest(request);
+        assertEquals("Invalid response code", 200, response.getStatusCode());
+        refreshPersistence();
+        Thread.sleep(2000); //Making sure event is updated in DB
+        ContextResponse contextResponse = response.getContextResponse();
+
+        Map<String,List<String>> personalizations = contextResponse.getPersonalizations();
+
+        validatePersonalizations(personalizations);
+
+        // let's check that the persisted profile has the control groups;
+        Map<String,Object> profileProperties = contextResponse.getProfileProperties();
+        List<Map<String,Object>> profileControlGroups = (List<Map<String,Object>>) profileProperties.get("unomiControlGroups");
+        assertControlGroups(profileControlGroups);
+
+        Profile updatedProfile = profileService.load(contextResponse.getProfileId());
+        profileControlGroups = (List<Map<String,Object>>) updatedProfile.getProperty("unomiControlGroups");
+        assertNotNull("Profile control groups not found in persisted profile", profileControlGroups);
+        assertControlGroups(profileControlGroups);
+
+        // now let's test with session storage
+        parameters.put("storeInSession", "true");
+        request = new HttpPost(URL + CONTEXT_URL);
+        request.setEntity(new StringEntity(getValidatedBundleJSON("personalization-controlgroup.json", parameters), ContentType.create("application/json")));
+        response = TestUtils.executeContextJSONRequest(request);
+        assertEquals("Invalid response code", 200, response.getStatusCode());
+        refreshPersistence();
+        Thread.sleep(2000); //Making sure event is updated in DB
+        contextResponse = response.getContextResponse();
+
+        personalizations = contextResponse.getPersonalizations();
+
+        validatePersonalizations(personalizations);
+
+        Map<String,Object> sessionProperties = contextResponse.getSessionProperties();
+        List<Map<String,Object>> sessionControlGroups = (List<Map<String,Object>>) sessionProperties.get("unomiControlGroups");
+        assertControlGroups(sessionControlGroups);
+
+        Session updatedSession = profileService.loadSession(contextResponse.getSessionId(), new Date());
+        sessionControlGroups = (List<Map<String,Object>>) updatedSession.getProperty("unomiControlGroups");
+        assertNotNull("Session control groups not found in persisted session", sessionControlGroups);
+        assertControlGroups(sessionControlGroups);
+
+    }
+
+    private void validatePersonalizations(Map<String, List<String>> personalizations) {
+        assertEquals("Personalizations don't have expected size", 2, personalizations.size());
+
+        List<String> perso1Contents = personalizations.get("perso1");
+        assertEquals("Perso 1 content list size doesn't match", 10, perso1Contents.size());
+        List<String> expectedPerso1Contents = new ArrayList<>();
+        expectedPerso1Contents.add("perso1content1");
+        expectedPerso1Contents.add("perso1content2");
+        expectedPerso1Contents.add("perso1content3");
+        expectedPerso1Contents.add("perso1content4");
+        expectedPerso1Contents.add("perso1content5");
+        expectedPerso1Contents.add("perso1content6");
+        expectedPerso1Contents.add("perso1content7");
+        expectedPerso1Contents.add("perso1content8");
+        expectedPerso1Contents.add("perso1content9");
+        expectedPerso1Contents.add("perso1content10");
+        assertEquals("Perso1 contents do not match", expectedPerso1Contents, perso1Contents);
+    }
+
+    private void assertControlGroups(List<Map<String, Object>> profileControlGroups) {
+        assertNotNull("Couldn't find control groups for profile", profileControlGroups);
+        assertTrue("Control group size should be 1", profileControlGroups.size() == 1);
+        Map<String,Object> controlGroup = profileControlGroups.get(0);
+        assertEquals("Invalid ID for control group", "perso1", controlGroup.get("id"));
+        assertEquals("Invalid path for control group", "/home/perso1.html", controlGroup.get("path"));
+        assertEquals("Invalid displayName for control group", "First perso", controlGroup.get("displayName"));
+        assertNotNull("Null timestamp for control group", controlGroup.get("timeStamp"));
+    }
+
 
     @Test
     public void testRequireScoring() throws IOException, InterruptedException {

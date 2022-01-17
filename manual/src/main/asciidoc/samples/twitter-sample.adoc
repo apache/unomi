@@ -288,7 +288,7 @@ curl --location --request POST 'http://localhost:8181/context.json' \
     "source": null,
     "requireSegments": false,
     "requiredProfileProperties": null,
-    "requiredSessionProperties": null,
+    "requiredSessionProperties": [ "unomiControlGroups" ],
     "events": null,
     "filters": null,
     "personalizations": [
@@ -296,7 +296,13 @@ curl --location --request POST 'http://localhost:8181/context.json' \
             "id": "gender-test",
             "strategy": "matching-first",
             "strategyOptions": {
-                "fallback": "var2"
+                "fallback": "var2",
+                "controlGroup" : {
+                  "percentage" : 0.1,
+                  "displayName" : "Gender test control group",
+                  "path" : "/gender-test",
+                  "storeInSession" : true
+                }
             },
             "contents": [
                 {
@@ -333,13 +339,12 @@ curl --location --request POST 'http://localhost:8181/context.json' \
 
 In the above example, we basically setup two variants : `var1` and `var2` and setup the `var2` to be the fallback variant
 in case no variant is matched. We could of course specify more than a variant. The `strategy` indicates to the
-personalization service how to calculate the "winning" variant. In this case the strategy `matching-first` will return
-the first variant that matches the current profile.
+personalization service how to calculate the "winning" variant. In this case the strategy `matching-first` will return variants that match the current profile. We also use the `controlGroups` option to specify that we want to have a control group for this personalization. The `0.1` percentage value represents 10% (0 to 1) of traffic that will be assigned randomly to the control group. The control group will be stored in the profile and the session of the visitors if they were assigned to it. We also specify that we store the control group in the session (by default it is stored in the profile)
 
 Currently the following strategies are available:
 
-- `matching-first`: will return the first matching variant.
-- `random`: will return a random variant
+- `matching-first`: will return the variant IDs that match the current profile (using the initial content order)
+- `random`: will return a shuffled list of variant IDs (ignoring any conditions)
 - `score-sorted`: allows to sort the variants based on scores associated with the filtering conditions, effectively
 sorting them by the highest scoring condition first.
 
@@ -351,7 +356,16 @@ Here is the result of the above example:
     "profileId": "01060c4c-a055-4c8f-9692-8a699d0c434a",
     "sessionId": "demo-session-id",
     "profileProperties": null,
-    "sessionProperties": null,
+    "sessionProperties": {
+        "unomiControlGroups": [
+            {
+                "id": "previousPerso",
+                "displayName": "Previous perso",
+                "path": "/home/previousPerso.html",
+                "timeStamp": "2021-12-15T13:52:38Z"
+            }
+        ]
+    },
     "profileSegments": null,
     "filteringResults": null,
     "processedEvents": 0,
@@ -367,6 +381,7 @@ Here is the result of the above example:
 }
 ----
 
+In the above example we can see the profile and session were assigned to other control groups but not the current one (the ids are different).
 
 ====== Overrides
 
