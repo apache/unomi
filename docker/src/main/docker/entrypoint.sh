@@ -33,7 +33,5 @@ until ([ "$health_check" = 'yellow' ] || [ "$health_check" = 'green' ]); do
     sleep 1
 done
 
-$UNOMI_HOME/bin/start
-$UNOMI_HOME/bin/status # Call to status delays while Karaf creates karaf.log
-
-tail -f $UNOMI_HOME/data/log/karaf.log
+# Run Unomi in current bash session, if jCustomer crash or shutdown the container will stop
+$UNOMI_HOME/bin/karaf run
