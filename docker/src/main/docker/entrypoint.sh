@@ -33,5 +33,5 @@ until ([ "$health_check" = 'yellow' ] || [ "$health_check" = 'green' ]); do
     sleep 1
 done
 
-# Run Unomi in current bash session, if jCustomer crash or shutdown the container will stop
+# Run Unomi in current bash session, if Unomi crash or shutdown the container will stop
 $UNOMI_HOME/bin/karaf run
