@@ -369,6 +369,9 @@ public class ContextJsonEndpoint {
 
     private Changes handleRequest(ContextRequest contextRequest, Session session, Profile profile, ContextResponse data,
             ServletRequest request, ServletResponse response, Date timestamp) {
+
+        processOverrides(contextRequest, profile, session);
+
         Changes changes = restServiceUtils.handleEvents(contextRequest.getEvents(), session, profile, request, response, timestamp);
         data.setProcessedEvents(changes.getProcessedItems());
 
@@ -419,8 +422,6 @@ public class ContextJsonEndpoint {
                 data.setSessionProperties(sessionProperties);
             }
         }
-
-        processOverrides(contextRequest, profile, session);
 
         if (!(profile instanceof Persona)) {
             data.setTrackedConditions(rulesService.getTrackedConditions(contextRequest.getSource()));
