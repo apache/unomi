@@ -68,7 +68,7 @@
         <version.jackson.core>2.10.5</version.jackson.core>
         <version.jackson.databind>2.10.5.1</version.jackson.databind>
         <version.jackson.jaxb>2.10.5</version.jackson.jaxb>
-        <version.karaf>4.2.11</version.karaf>
+        <version.karaf>4.2.15</version.karaf>
         <version.karaf.cellar>4.2.1</version.karaf.cellar>
         <version.pax.exam>4.13.1</version.pax.exam>
         <elasticsearch.version>7.4.2</elasticsearch.version>
