@@ -190,6 +190,21 @@ public class BundleWatcher implements SynchronousBundleListener, ServiceListener
         }
     }
 
+    private void displayLogsForInactiveServices() {
+        requiredServicesFilters.forEach(requiredServicesFilters -> {
+            ServiceReference[] serviceReference = new ServiceReference[0];
+            String filterToString = requiredServicesFilters.toString();
+            try {
+                serviceReference = bundleContext.getServiceReferences((String) null, filterToString);
+            } catch (InvalidSyntaxException e) {
+                logger.error("Failed to get the service reference for {}", filterToString, e);
+            }
+            if (serviceReference == null) {
+                logger.warn("No service found for the filter {}, some errors could happen when using the application", filterToString);
+            }
+        });
+    }
+
     private void checkStartupComplete() {
         if (!isStartupComplete()) {
             if (scheduledFuture == null || scheduledFuture.isCancelled()) {
@@ -197,10 +212,12 @@ public class BundleWatcher implements SynchronousBundleListener, ServiceListener
                     @Override
                     public void run() {
                         displayLogsForInactiveBundles();
+                        displayLogsForInactiveServices();
                         checkStartupComplete();
                     }
                 };
-                scheduledFuture = scheduler.scheduleWithFixedDelay(task, checkStartupStateRefreshInterval, checkStartupStateRefreshInterval, TimeUnit.SECONDS);
+                scheduledFuture = scheduler
+                        .scheduleWithFixedDelay(task, checkStartupStateRefreshInterval, checkStartupStateRefreshInterval, TimeUnit.SECONDS);
             }
             return;
         }
