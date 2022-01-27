@@ -25,7 +25,7 @@
     <cm:property-placeholder persistent-id="org.apache.unomi.lifecycle"
                              update-strategy="reload" placeholder-prefix="${lifecycle.">
         <cm:default-properties>
-            <cm:property name="requiredStartedBundleCount" value="16" />
+            <cm:property name="checkStartupState.refresh.interval" value="60"/>
             <cm:property name="requiredServices" value="(urlPatterns=/eventcollector),(urlPatterns=/context.json)" />
         </cm:default-properties>
     </cm:property-placeholder>
@@ -33,7 +33,39 @@
     <bean id="bundleWatcher" init-method="init" destroy-method="destroy" class="org.apache.unomi.lifecycle.BundleWatcher">
         <property name="bundleContext" ref="blueprintBundleContext"/>
         <property name="requiredServices" value="${lifecycle.requiredServices}" />
-        <property name="requiredStartedBundleCount" value="${lifecycle.requiredStartedBundleCount}" />
+        <property name="checkStartupStateRefreshInterval" value="${lifecycle.checkStartupState.refresh.interval}"/>
+        <property name="requiredBundles">
+            <map>
+                <entry key="org.apache.unomi.api" value="false"/>
+                <entry key="org.apache.unomi.common" value="false"/>
+                <entry key="org.apache.unomi.scripting" value="false"/>
+                <entry key="org.apache.unomi.metrics" value="false"/>
+                <entry key="org.apache.unomi.persistence-spi" value="false"/>
+                <entry key="org.apache.unomi.persistence-elasticsearch-core" value="false"/>
+                <entry key="org.apache.unomi.services" value="false"/>
+                <entry key="org.apache.unomi.cxs-lists-extension-services" value="false"/>
+                <entry key="org.apache.unomi.cxs-lists-extension-rest" value="false"/>
+                <entry key="org.apache.unomi.cxs-geonames-services" value="false"/>
+                <entry key="org.apache.unomi.cxs-geonames-rest" value="false"/>
+                <entry key="org.apache.unomi.cxs-privacy-extension-services" value="false"/>
+                <entry key="org.apache.unomi.cxs-privacy-extension-rest" value="false"/>
+                <entry key="org.apache.unomi.rest" value="false"/>
+                <entry key="org.apache.unomi.wab" value="false"/>
+                <entry key="org.apache.unomi.plugins-base" value="false"/>
+                <entry key="org.apache.unomi.plugins-request" value="false"/>
+                <entry key="org.apache.unomi.plugins-mail" value="false"/>
+                <entry key="org.apache.unomi.plugins-optimization-test" value="false"/>
+                <entry key="org.apache.unomi.cxs-lists-extension-actions" value="false"/>
+                <entry key="org.apache.unomi.router-api" value="false"/>
+                <entry key="org.apache.unomi.router-core" value="false"/>
+                <entry key="org.apache.unomi.router-service" value="false"/>
+                <entry key="org.apache.unomi.router-rest" value="false"/>
+                <entry key="org.apache.unomi.shell-dev-commands" value="false"/>
+                <entry key="org.apache.unomi.web-tracker-wab" value="false"/>
+                <entry key="org.apache.unomi.groovy-actions-services" value="false"/>
+                <entry key="org.apache.unomi.groovy-actions-rest" value="false"/>
+            </map>
+        </property>
     </bean>
 
     <service id="bundleWatcherService" ref="bundleWatcher">
