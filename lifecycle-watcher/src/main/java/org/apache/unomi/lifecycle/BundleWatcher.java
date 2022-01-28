@@ -16,7 +16,14 @@
  */
 package org.apache.unomi.lifecycle;
 
-import org.osgi.framework.*;
+import org.osgi.framework.BundleContext;
+import org.osgi.framework.BundleEvent;
+import org.osgi.framework.Filter;
+import org.osgi.framework.InvalidSyntaxException;
+import org.osgi.framework.ServiceEvent;
+import org.osgi.framework.ServiceListener;
+import org.osgi.framework.ServiceReference;
+import org.osgi.framework.SynchronousBundleListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -24,7 +31,17 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URL;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TimerTask;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 /**
  * This class listens to the global Apache Unomi bundle lifecycle, to provide statistics and state of the overall
@@ -35,9 +52,10 @@ public class BundleWatcher implements SynchronousBundleListener, ServiceListener
     private static final Logger logger = LoggerFactory.getLogger(BundleWatcher.class.getName());
 
     private long startupTime;
-    private Map<String,Long> bundleStartupTimes = new LinkedHashMap<>();
-    private long unomiStartedBundleCount = 0;
-    private long requiredStartedBundleCount;
+    private Map<String, Boolean> requiredBundles;
+
+    private ScheduledExecutorService scheduler;
+    private ScheduledFuture<?> scheduledFuture;
 
     private String requiredServices;
     private Set<Filter> requiredServicesFilters = new LinkedHashSet<>();
@@ -48,8 +66,14 @@ public class BundleWatcher implements SynchronousBundleListener, ServiceListener
     private boolean shutdownMessageAlreadyDisplayed = false;
     private List<String> logoLines = new ArrayList<>();
 
-    public void setRequiredStartedBundleCount(long requiredStartedBundleCount) {
-        this.requiredStartedBundleCount = requiredStartedBundleCount;
+    private Integer checkStartupStateRefreshInterval = 60;
+
+    public void setRequiredBundles(Map<String, Boolean> requiredBundles) {
+        this.requiredBundles = requiredBundles;
+    }
+
+    public void setCheckStartupStateRefreshInterval(Integer checkStartupStateRefreshInterval) {
+        this.checkStartupStateRefreshInterval = checkStartupStateRefreshInterval;
     }
 
     public void setRequiredServices(String requiredServices) {
@@ -70,6 +94,7 @@ public class BundleWatcher implements SynchronousBundleListener, ServiceListener
     }
 
     public void init() {
+        scheduler = Executors.newSingleThreadScheduledExecutor();
         bundleContext.addBundleListener(this);
         bundleContext.addServiceListener(this);
         loadLogo();
@@ -78,9 +103,26 @@ public class BundleWatcher implements SynchronousBundleListener, ServiceListener
         logger.info("Bundle watcher initialized.");
     }
 
+    private boolean allBundleStarted() {
+        return getInactiveBundles().isEmpty();
+    }
+
+    private void displayLogsForInactiveBundles() {
+        getInactiveBundles().forEach(inactiveBundle -> logger
+                .warn("The bundle {} is in not active, some errors could happen when using the application", inactiveBundle));
+    }
+
+    private List<String> getInactiveBundles() {
+        return requiredBundles.entrySet().stream().filter(entry -> !entry.getValue()).map(Map.Entry::getKey).collect(Collectors.toList());
+
+    }
+
     public void destroy() {
         bundleContext.removeServiceListener(this);
         bundleContext.removeBundleListener(this);
+        if (scheduledFuture != null) {
+            scheduledFuture.cancel(true);
+        }
         logger.info("Bundle watcher shutdown.");
     }
 
@@ -91,7 +133,7 @@ public class BundleWatcher implements SynchronousBundleListener, ServiceListener
                 break;
             case BundleEvent.STARTED:
                 if (event.getBundle().getSymbolicName().startsWith("org.apache.unomi")) {
-                    unomiStartedBundleCount++;
+                    requiredBundles.put(event.getBundle().getSymbolicName(), true);
                     checkStartupComplete();
                 }
                 break;
@@ -99,8 +141,10 @@ public class BundleWatcher implements SynchronousBundleListener, ServiceListener
                 break;
             case BundleEvent.STOPPED:
                 if (event.getBundle().getSymbolicName().startsWith("org.apache.unomi")) {
-                    unomiStartedBundleCount--;
+                    requiredBundles.put(event.getBundle().getSymbolicName(), false);
                 }
+                break;
+            default:
                 break;
         }
     }
@@ -146,16 +190,45 @@ public class BundleWatcher implements SynchronousBundleListener, ServiceListener
         }
     }
 
+    private void displayLogsForInactiveServices() {
+        requiredServicesFilters.forEach(requiredServicesFilters -> {
+            ServiceReference[] serviceReference = new ServiceReference[0];
+            String filterToString = requiredServicesFilters.toString();
+            try {
+                serviceReference = bundleContext.getServiceReferences((String) null, filterToString);
+            } catch (InvalidSyntaxException e) {
+                logger.error("Failed to get the service reference for {}", filterToString, e);
+            }
+            if (serviceReference == null) {
+                logger.warn("No service found for the filter {}, some errors could happen when using the application", filterToString);
+            }
+        });
+    }
+
     private void checkStartupComplete() {
         if (!isStartupComplete()) {
+            if (scheduledFuture == null || scheduledFuture.isCancelled()) {
+                TimerTask task = new TimerTask() {
+                    @Override
+                    public void run() {
+                        displayLogsForInactiveBundles();
+                        displayLogsForInactiveServices();
+                        checkStartupComplete();
+                    }
+                };
+                scheduledFuture = scheduler
+                        .scheduleWithFixedDelay(task, checkStartupStateRefreshInterval, checkStartupStateRefreshInterval, TimeUnit.SECONDS);
+            }
             return;
+        }
+        if (scheduledFuture != null) {
+            scheduledFuture.cancel(true);
+            scheduledFuture = null;
         }
         if (!startupMessageAlreadyDisplayed) {
             long totalStartupTime = System.currentTimeMillis() - startupTime;
-            if (logoLines.size() > 0) {
-                for (String logoLine : logoLines) {
-                    System.out.println(logoLine);
-                }
+            if (!logoLines.isEmpty()) {
+                logoLines.forEach(System.out::println);
             }
             String buildNumber = "n/a";
             if (bundleContext.getBundle().getHeaders().get("Implementation-Build") != null) {
@@ -165,25 +238,23 @@ public class BundleWatcher implements SynchronousBundleListener, ServiceListener
             if (bundleContext.getBundle().getHeaders().get("Implementation-TimeStamp") != null) {
                 timestamp = bundleContext.getBundle().getHeaders().get("Implementation-TimeStamp");
             }
-            String versionMessage = "  " + bundleContext.getBundle().getVersion().toString() + "  Build:" + buildNumber + "  Timestamp:" + timestamp;
+            String versionMessage =
+                    "  " + bundleContext.getBundle().getVersion().toString() + "  Build:" + buildNumber + "  Timestamp:" + timestamp;
             System.out.println(versionMessage);
             System.out.println("--------------------------------------------------------------------------");
-            System.out.println("Successfully started " + unomiStartedBundleCount + " bundles and " + matchedRequiredServicesCount + " required services in " + totalStartupTime + " ms");
-            logger.info("Apache Unomi version: " + versionMessage);
-            logger.info("Apache Unomi successfully started {} bundles and {} required services in {} ms", unomiStartedBundleCount, matchedRequiredServicesCount, totalStartupTime);
+            System.out.println(
+                    "Successfully started " + requiredBundles.size() + " bundles and " + requiredServicesFilters.size() + " " + "required "
+                            + "services in " + totalStartupTime + " ms");
+            logger.info("Apache Unomi version: {}", versionMessage);
+            logger.info("Apache Unomi successfully started {} bundles and {} required services in {} ms", requiredBundles.size(),
+                    requiredServicesFilters.size(), totalStartupTime);
             startupMessageAlreadyDisplayed = true;
             shutdownMessageAlreadyDisplayed = false;
         }
     }
 
     public boolean isStartupComplete() {
-        if (unomiStartedBundleCount < requiredStartedBundleCount) {
-            return false;
-        }
-        if (matchedRequiredServicesCount < requiredServicesFilters.size()) {
-            return false;
-        }
-        return true;
+        return allBundleStarted() && matchedRequiredServicesCount == requiredServicesFilters.size();
     }
 
     private void loadLogo() {
