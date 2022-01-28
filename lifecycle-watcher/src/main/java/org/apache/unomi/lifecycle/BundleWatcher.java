@@ -191,9 +191,9 @@ public class BundleWatcher implements SynchronousBundleListener, ServiceListener
     }
 
     private void displayLogsForInactiveServices() {
-        requiredServicesFilters.forEach(requiredServicesFilters -> {
+        requiredServicesFilters.forEach(requiredServicesFilter -> {
             ServiceReference[] serviceReference = new ServiceReference[0];
-            String filterToString = requiredServicesFilters.toString();
+            String filterToString = requiredServicesFilter.toString();
             try {
                 serviceReference = bundleContext.getServiceReferences((String) null, filterToString);
             } catch (InvalidSyntaxException e) {
