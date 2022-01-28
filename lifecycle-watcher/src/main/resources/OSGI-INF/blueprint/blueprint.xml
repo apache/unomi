@@ -61,7 +61,6 @@
                 <entry key="org.apache.unomi.router-service" value="false"/>
                 <entry key="org.apache.unomi.router-rest" value="false"/>
                 <entry key="org.apache.unomi.shell-dev-commands" value="false"/>
-                <entry key="org.apache.unomi.web-tracker-wab" value="false"/>
                 <entry key="org.apache.unomi.groovy-actions-services" value="false"/>
                 <entry key="org.apache.unomi.groovy-actions-rest" value="false"/>
             </map>
