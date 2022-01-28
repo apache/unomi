@@ -192,6 +192,51 @@ public class SegmentIT extends BaseIT {
     }
 
     @Test
+    public void testSegmentWithNegativePastEventCondition() throws InterruptedException {
+        // create Profile
+        Profile profile = new Profile();
+        profile.setItemId("test_profile_id");
+        profileService.save(profile);
+        persistenceService.refreshIndex(Profile.class, null); // wait for profile to be full persisted and index
+
+        // create the negative past event condition segment
+        Metadata segmentMetadata = new Metadata("negative-past-event-segment-test");
+        Segment segment = new Segment(segmentMetadata);
+        Condition segmentCondition = new Condition(definitionsService.getConditionType("pastEventCondition"));
+        segmentCondition.setParameter("numberOfDays", 10);
+        Condition pastEventEventCondition = new Condition(definitionsService.getConditionType("eventTypeCondition"));
+        pastEventEventCondition.setParameter("eventTypeId", "negative-test-event-type");
+        segmentCondition.setParameter("eventCondition", pastEventEventCondition);
+        segmentCondition.setParameter("operator", "eventsNotOccurred");
+        segment.setCondition(segmentCondition);
+        segmentService.setSegmentDefinition(segment);
+
+        // insure that profile is correctly engaged in sement since there is no events yet.
+        keepTrying("Profile should be engaged in the segment, there is no event for the past condition yet",
+                () -> profileService.load("test_profile_id"),
+                updatedProfile -> updatedProfile.getSegments().contains("negative-past-event-segment-test"),
+                1000, 20);
+
+        // send event for profile from a previous date (today -3 days)
+        ZoneId defaultZoneId = ZoneId.systemDefault();
+        LocalDate localDate = LocalDate.now().minusDays(3);
+        Event testEvent = new Event("negative-test-event-type", null, profile, null, null, profile, Date.from(localDate.atStartOfDay(defaultZoneId).toInstant()));
+        testEvent.setPersistent(true);
+        int changes = eventService.send(testEvent);
+        if ((changes & EventService.PROFILE_UPDATED) == EventService.PROFILE_UPDATED) {
+            profileService.save(profile);
+            persistenceService.refreshIndex(Profile.class, null);
+        }
+        persistenceService.refreshIndex(Event.class, testEvent.getTimeStamp()); // wait for event to be fully persisted and indexed
+
+        // now Profile should be out of the segment since one event have been done and the past event is only valid for no events occurrences
+        keepTrying("Profile should not be engaged in the segment anymore, it have a least one event now",
+                () -> profileService.load("test_profile_id"),
+                updatedProfile -> !updatedProfile.getSegments().contains("negative-past-event-segment-test"),
+                1000, 20);
+    }
+
+    @Test
     public void testSegmentPastEventRecalculation() throws Exception {
         // create Profile
         Profile profile = new Profile();

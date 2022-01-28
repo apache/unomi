@@ -60,6 +60,16 @@
     <service
             interface="org.apache.unomi.persistence.elasticsearch.conditions.ConditionESQueryBuilder">
         <service-properties>
+            <entry key="queryBuilderId" value="idsConditionESQueryBuilder"/>
+        </service-properties>
+        <bean class="org.apache.unomi.plugins.baseplugin.conditions.IdsConditionESQueryBuilder">
+            <property name="maximumIdsQueryCount" value="${es.maximumIdsQueryCount}"/>
+        </bean>
+    </service>
+
+    <service
+            interface="org.apache.unomi.persistence.elasticsearch.conditions.ConditionESQueryBuilder">
+        <service-properties>
             <entry key="queryBuilderId" value="booleanConditionESQueryBuilder"/>
         </service-properties>
         <bean class="org.apache.unomi.plugins.baseplugin.conditions.BooleanConditionESQueryBuilder"/>
@@ -128,6 +138,13 @@
             <entry key="conditionEvaluatorId" value="booleanConditionEvaluator"/>
         </service-properties>
         <bean class="org.apache.unomi.plugins.baseplugin.conditions.BooleanConditionEvaluator"/>
+    </service>
+
+    <service interface="org.apache.unomi.persistence.elasticsearch.conditions.ConditionEvaluator">
+        <service-properties>
+            <entry key="conditionEvaluatorId" value="idsConditionEvaluator"/>
+        </service-properties>
+        <bean class="org.apache.unomi.plugins.baseplugin.conditions.IdsConditionEvaluator"/>
     </service>
 
     <service interface="org.apache.unomi.persistence.elasticsearch.conditions.ConditionEvaluator">
