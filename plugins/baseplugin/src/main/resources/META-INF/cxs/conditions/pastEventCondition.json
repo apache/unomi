@@ -41,6 +41,11 @@
       "multivalued": false
     },
     {
+      "id": "operator",
+      "type": "string",
+      "multivalued": false
+    },
+    {
       "id": "eventCondition",
       "type": "Condition",
       "multivalued": false

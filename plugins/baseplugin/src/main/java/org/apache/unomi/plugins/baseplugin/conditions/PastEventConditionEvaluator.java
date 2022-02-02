@@ -22,22 +22,17 @@ import org.apache.unomi.api.Item;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.services.DefinitionsService;
-import org.apache.unomi.persistence.elasticsearch.conditions.ConditionContextHelper;
 import org.apache.unomi.persistence.elasticsearch.conditions.ConditionEvaluator;
 import org.apache.unomi.persistence.elasticsearch.conditions.ConditionEvaluatorDispatcher;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.scripting.ScriptExecutor;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 
 public class PastEventConditionEvaluator implements ConditionEvaluator {
 
     private PersistenceService persistenceService;
-
     private DefinitionsService definitionsService;
-
     private ScriptExecutor scriptExecutor;
 
     public void setPersistenceService(PersistenceService persistenceService) {
@@ -54,11 +49,7 @@ public class PastEventConditionEvaluator implements ConditionEvaluator {
 
     @Override
     public boolean eval(Condition condition, Item item, Map<String, Object> context, ConditionEvaluatorDispatcher dispatcher) {
-
         final Map<String, Object> parameters = condition.getParameterValues();
-
-        Condition eventCondition = (Condition) parameters.get("eventCondition");
-
         long count;
 
         if (parameters.containsKey("generatedPropertyKey")) {
@@ -71,61 +62,18 @@ public class PastEventConditionEvaluator implements ConditionEvaluator {
             } else {
                 count = 0;
             }
-
         } else {
-            if (eventCondition == null) {
-                throw new IllegalArgumentException("No eventCondition");
-            }
-
-            List<Condition> l = new ArrayList<Condition>();
-            Condition andCondition = new Condition();
-            andCondition.setConditionType(definitionsService.getConditionType("booleanCondition"));
-            andCondition.setParameter("operator", "and");
-            andCondition.setParameter("subConditions", l);
-
-            l.add(ConditionContextHelper.getContextualCondition(eventCondition, context, scriptExecutor));
-
-            Condition profileCondition = new Condition();
-            profileCondition.setConditionType(definitionsService.getConditionType("sessionPropertyCondition"));
-            profileCondition.setParameter("propertyName", "profileId");
-            profileCondition.setParameter("comparisonOperator", "equals");
-            profileCondition.setParameter("propertyValue", item.getItemId());
-            l.add(profileCondition);
-
-            Integer numberOfDays = (Integer) condition.getParameter("numberOfDays");
-            String fromDate = (String) condition.getParameter("fromDate");
-            String toDate = (String) condition.getParameter("toDate");
-
-            if (numberOfDays != null) {
-                Condition numberOfDaysCondition = new Condition();
-                numberOfDaysCondition.setConditionType(definitionsService.getConditionType("sessionPropertyCondition"));
-                numberOfDaysCondition.setParameter("propertyName", "timeStamp");
-                numberOfDaysCondition.setParameter("comparisonOperator", "greaterThan");
-                numberOfDaysCondition.setParameter("propertyValueDateExpr", "now-" + numberOfDays + "d");
-                l.add(numberOfDaysCondition);
-            }
-            if (fromDate != null)  {
-                Condition startDateCondition = new Condition();
-                startDateCondition.setConditionType(definitionsService.getConditionType("sessionPropertyCondition"));
-                startDateCondition.setParameter("propertyName", "timeStamp");
-                startDateCondition.setParameter("comparisonOperator", "greaterThanOrEqualTo");
-                startDateCondition.setParameter("propertyValueDate", fromDate);
-                l.add(startDateCondition);
-            }
-            if (toDate != null)  {
-                Condition endDateCondition = new Condition();
-                endDateCondition.setConditionType(definitionsService.getConditionType("sessionPropertyCondition"));
-                endDateCondition.setParameter("propertyName", "timeStamp");
-                endDateCondition.setParameter("comparisonOperator", "lessThanOrEqualTo");
-                endDateCondition.setParameter("propertyValueDate", toDate);
-                l.add(endDateCondition);
-            }
-            count = persistenceService.queryCount(andCondition, Event.ITEM_TYPE);
+            // TODO see for deprecation, this should not happen anymore each past event condition should have a generatedPropertyKey
+            count = persistenceService.queryCount(PastEventConditionESQueryBuilder.getEventCondition(condition, context, item.getItemId(), definitionsService, scriptExecutor), Event.ITEM_TYPE);
         }
 
-        Integer minimumEventCount = parameters.get("minimumEventCount") == null  ? 0 : (Integer) parameters.get("minimumEventCount");
-        Integer maximumEventCount = parameters.get("maximumEventCount") == null  ? Integer.MAX_VALUE : (Integer) parameters.get("maximumEventCount");
-
-        return count > 0 && (count >= minimumEventCount && count <= maximumEventCount);
+        boolean eventsOccurred = PastEventConditionESQueryBuilder.getStrategyFromOperator((String) condition.getParameter("operator"));
+        if (eventsOccurred) {
+            int minimumEventCount = parameters.get("minimumEventCount") == null  ? 0 : (Integer) parameters.get("minimumEventCount");
+            int maximumEventCount = parameters.get("maximumEventCount") == null  ? Integer.MAX_VALUE : (Integer) parameters.get("maximumEventCount");
+            return count > 0 && (count >= minimumEventCount && count <= maximumEventCount);
+        } else {
+            return count == 0;
+        }
     }
 }
