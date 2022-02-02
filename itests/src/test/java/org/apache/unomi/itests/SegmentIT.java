@@ -359,6 +359,72 @@ public class SegmentIT extends BaseIT {
                 1000, 20);
     }
 
+    @Test
+    public void testScoringPastEventRecalculationMaximumEventCount() throws Exception {
+        // create Profile
+        Profile profile = new Profile();
+        profile.setItemId("test_profile_id");
+        profileService.save(profile);
+        persistenceService.refreshIndex(Profile.class, null); // wait for profile to be full persisted and index
+
+        // create the past event condition
+        Condition pastEventCondition = new Condition(definitionsService.getConditionType("pastEventCondition"));
+        pastEventCondition.setParameter("numberOfDays", 10);
+        Condition pastEventEventCondition = new Condition(definitionsService.getConditionType("eventTypeCondition"));
+        pastEventEventCondition.setParameter("eventTypeId", "test-event-type-max");
+        pastEventCondition.setParameter("eventCondition", pastEventEventCondition);
+        pastEventCondition.setParameter("maximumEventCount", 1);
+
+        // create the scoring
+        Metadata scoringMetadata = new Metadata("past-event-scoring-test-max");
+        Scoring scoring = new Scoring(scoringMetadata);
+        List<ScoringElement> scoringElements = new ArrayList<>();
+        ScoringElement scoringElement = new ScoringElement();
+        scoringElement.setCondition(pastEventCondition);
+        scoringElement.setValue(50);
+        scoringElements.add(scoringElement);
+        scoring.setElements(scoringElements);
+        segmentService.setScoringDefinition(scoring);
+        Thread.sleep(5000);
+
+        // Persist the event (do not send it into the system so that it will not be processed by the rules)
+        ZoneId defaultZoneId = ZoneId.systemDefault();
+        LocalDate localDate = LocalDate.now().minusDays(3);
+        Event testEvent = new Event("test-event-type-max", null, profile, null, null, profile, Date.from(localDate.atStartOfDay(defaultZoneId).toInstant()));
+        testEvent.setPersistent(true);
+        persistenceService.save(testEvent, null, true);
+        persistenceService.refreshIndex(Event.class, testEvent.getTimeStamp()); // wait for event to be fully persisted and indexed
+
+        // insure the profile is not yet engaged since we directly saved the event in ES
+        profile = profileService.load("test_profile_id");
+        Assert.assertTrue("Profile should not be engaged in the scoring", profile.getScores() == null || !profile.getScores().containsKey("past-event-scoring-test-max"));
+
+        // now recalculate the past event conditions
+        segmentService.recalculatePastEventConditions();
+        persistenceService.refreshIndex(Profile.class, null);
+        keepTrying("Profile should be engaged in the scoring with a score of 50",
+                () -> profileService.load("test_profile_id"),
+                updatedProfile -> updatedProfile.getScores() != null &&
+                        updatedProfile.getScores().containsKey("past-event-scoring-test-max") &&
+                        updatedProfile.getScores().get("past-event-scoring-test-max") == 50,
+                1000, 20);
+
+        // Persist the 2 event (do not send it into the system so that it will not be processed by the rules)
+        defaultZoneId = ZoneId.systemDefault();
+        localDate = LocalDate.now().minusDays(3);
+        testEvent = new Event("test-event-type-max", null, profile, null, null, profile, Date.from(localDate.atStartOfDay(defaultZoneId).toInstant()));
+        testEvent.setPersistent(true);
+        persistenceService.save(testEvent, null, true);
+        persistenceService.refreshIndex(Event.class, testEvent.getTimeStamp()); // wait for event to be fully persisted and indexed
+
+        // now recalculate the past event conditions
+        segmentService.recalculatePastEventConditions();
+        persistenceService.refreshIndex(Profile.class, null);
+        keepTrying("Profile should not be engaged in the scoring anymore",
+                () -> profileService.load("test_profile_id"),
+                updatedProfile -> !updatedProfile.getScores().containsKey("past-event-scoring-test-max"),
+                1000, 20);
+    }
 
     @Test
     public void testScoringRecalculation() throws Exception {
