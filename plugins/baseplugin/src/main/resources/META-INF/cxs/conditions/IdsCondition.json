@@ -1,0 +1,23 @@
+{
+  "metadata": {
+    "id": "idsCondition",
+    "name": "idsCondition",
+    "description": "",
+    "systemTags": [],
+    "readOnly": true
+  },
+  "conditionEvaluator": "idsConditionEvaluator",
+  "queryBuilder": "idsConditionESQueryBuilder",
+  "parameters": [
+    {
+      "id": "ids",
+      "type": "string",
+      "multivalued": true
+    },
+    {
+      "id": "match",
+      "type": "boolean",
+      "multivalued": false
+    }
+  ]
+}

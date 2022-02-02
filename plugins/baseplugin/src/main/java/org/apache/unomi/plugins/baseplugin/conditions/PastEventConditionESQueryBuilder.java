@@ -20,6 +20,7 @@ package org.apache.unomi.plugins.baseplugin.conditions;
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.conditions.Condition;
+import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.SegmentService;
 import org.apache.unomi.persistence.elasticsearch.conditions.ConditionContextHelper;
@@ -28,9 +29,7 @@ import org.apache.unomi.persistence.elasticsearch.conditions.ConditionESQueryBui
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.aggregate.TermsAggregate;
 import org.apache.unomi.scripting.ScriptExecutor;
-import org.elasticsearch.index.query.QueryBuilder;
-import org.elasticsearch.index.query.QueryBuilders;
-import org.elasticsearch.index.query.RangeQueryBuilder;
+import org.elasticsearch.index.query.*;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -74,113 +73,137 @@ public class PastEventConditionESQueryBuilder implements ConditionESQueryBuilder
         this.segmentService = segmentService;
     }
 
+    @Override
     public QueryBuilder buildQuery(Condition condition, Map<String, Object> context, ConditionESQueryBuilderDispatcher dispatcher) {
-        Integer minimumEventCount = condition.getParameter("minimumEventCount") == null ? 1 : (Integer) condition.getParameter("minimumEventCount");
-        Integer maximumEventCount = condition.getParameter("maximumEventCount") == null ? Integer.MAX_VALUE : (Integer) condition.getParameter("maximumEventCount");
+        boolean eventsOccurred = getStrategyFromOperator((String) condition.getParameter("operator"));
+        int minimumEventCount = !eventsOccurred || condition.getParameter("minimumEventCount") == null ? 1 : (Integer) condition.getParameter("minimumEventCount");
+        int maximumEventCount = !eventsOccurred || condition.getParameter("maximumEventCount") == null ? Integer.MAX_VALUE : (Integer) condition.getParameter("maximumEventCount");
         String generatedPropertyKey = (String) condition.getParameter("generatedPropertyKey");
 
         if (generatedPropertyKey != null && generatedPropertyKey.equals(segmentService.getGeneratedPropertyKey((Condition) condition.getParameter("eventCondition"), condition))) {
             // A property is already set on profiles matching the past event condition, use it to check the numbers of occurrences
-            RangeQueryBuilder builder = QueryBuilders.rangeQuery("systemProperties.pastEvents." + generatedPropertyKey);
-            builder.gte(minimumEventCount);
-            builder.lte(maximumEventCount);
-            return builder;
+            return dispatcher.buildFilter(getProfileConditionForCounter(generatedPropertyKey, minimumEventCount, maximumEventCount, eventsOccurred), context);
         } else {
             // No property set - tries to build an idsQuery
-            // Build past event condition
-            Condition eventCondition = getEventCondition(condition, context);
+            // TODO see for deprecation, this should not happen anymore each past event condition should have a generatedPropertyKey
+            Condition eventCondition = getEventCondition(condition, context, null, definitionsService, scriptExecutor);
+            Set<String> ids = getProfileIdsMatchingEventCount(eventCondition, minimumEventCount, maximumEventCount);
+            return dispatcher.buildFilter(getProfileIdsCondition(ids, eventsOccurred), context);
+        }
+    }
 
-            Set<String> ids = new HashSet<>();
+    @Override
+    public long count(Condition condition, Map<String, Object> context, ConditionESQueryBuilderDispatcher dispatcher) {
+        boolean eventsOccurred = getStrategyFromOperator((String) condition.getParameter("operator"));
+        int minimumEventCount = !eventsOccurred || condition.getParameter("minimumEventCount") == null ? 1 : (Integer) condition.getParameter("minimumEventCount");
+        int maximumEventCount = !eventsOccurred || condition.getParameter("maximumEventCount") == null ? Integer.MAX_VALUE : (Integer) condition.getParameter("maximumEventCount");
+        String generatedPropertyKey = (String) condition.getParameter("generatedPropertyKey");
 
-            if (pastEventsDisablePartitions) {
-                Map<String, Long> eventCountByProfile = persistenceService.aggregateWithOptimizedQuery(eventCondition, new TermsAggregate("profileId"), Event.ITEM_TYPE, maximumIdsQueryCount);
-                ids = eventCountByProfile.entrySet().stream()
-                        .filter(x -> !x.getKey().equals("_filtered"))
-                        .filter(x -> x.getValue() >= minimumEventCount && x.getValue() <= maximumEventCount)
-                        .map(Map.Entry::getKey)
-                        .collect(Collectors.toSet());
-            } else {
-                // Get full cardinality to partition the terms aggreggation
-                Map<String, Double> m = persistenceService.getSingleValuesMetrics(eventCondition, new String[]{"card"}, "profileId.keyword", Event.ITEM_TYPE);
-                long card = m.get("_card").longValue();
+        if (generatedPropertyKey != null && generatedPropertyKey.equals(segmentService.getGeneratedPropertyKey((Condition) condition.getParameter("eventCondition"), condition))) {
+            // query profiles directly
+            return persistenceService.queryCount(getProfileConditionForCounter(generatedPropertyKey, minimumEventCount, maximumEventCount, eventsOccurred), Profile.ITEM_TYPE);
+        } else {
+            // No count filter - simply get the full number of distinct profiles
+            // TODO see for deprecation, this should not happen anymore each past event condition should have a generatedPropertyKey
+            Condition eventCondition = getEventCondition(condition, context, null, definitionsService, scriptExecutor);
+            if (eventsOccurred && minimumEventCount == 1 && maximumEventCount == Integer.MAX_VALUE) {
+                return persistenceService.getSingleValuesMetrics(eventCondition, new String[]{"card"}, "profileId.keyword", Event.ITEM_TYPE).get("_card").longValue();
+            }
 
-                int numParts = (int) (card / aggregateQueryBucketSize) + 2;
-                for (int i = 0; i < numParts; i++) {
-                    Map<String, Long> eventCountByProfile = persistenceService.aggregateWithOptimizedQuery(eventCondition, new TermsAggregate("profileId", i, numParts), Event.ITEM_TYPE);
-                    if (eventCountByProfile != null) {
-                        eventCountByProfile.remove("_filtered");
+            Set<String> profileIds = getProfileIdsMatchingEventCount(eventCondition, minimumEventCount, maximumEventCount);
+            return eventsOccurred ? profileIds.size() : persistenceService.queryCount(getProfileIdsCondition(profileIds, false), Profile.ITEM_TYPE);
+        }
+    }
+
+    protected static boolean getStrategyFromOperator(String operator) {
+        if (operator != null && !operator.equals("eventsOccurred") && !operator.equals("eventsNotOccurred")) {
+            throw new UnsupportedOperationException("Unsupported operator: " + operator + ", please use either 'eventsOccurred' or 'eventsNotOccurred'");
+        }
+        return operator == null || operator.equals("eventsOccurred");
+    }
+
+    private Condition getProfileIdsCondition(Set<String> ids, boolean shouldMatch) {
+        Condition idsCondition = new Condition();
+        idsCondition.setConditionType(definitionsService.getConditionType("idsCondition"));
+        idsCondition.setParameter("ids", ids);
+        idsCondition.setParameter("match", shouldMatch);
+        return idsCondition;
+    }
+
+    private Condition getProfileConditionForCounter(String generatedPropertyKey, Integer minimumEventCount, Integer maximumEventCount, boolean eventsOccurred) {
+        String generatedPropertyName = "systemProperties.pastEvents." + generatedPropertyKey;
+        ConditionType profilePropertyConditionType = definitionsService.getConditionType("profilePropertyCondition");
+        if (eventsOccurred) {
+            Condition counterIsBetweenBoundaries = new Condition();
+            counterIsBetweenBoundaries.setConditionType(profilePropertyConditionType);
+            counterIsBetweenBoundaries.setParameter("propertyName", generatedPropertyName);
+            counterIsBetweenBoundaries.setParameter("comparisonOperator", "between");
+            counterIsBetweenBoundaries.setParameter("propertyValuesInteger", Arrays.asList(minimumEventCount, maximumEventCount));
+            return counterIsBetweenBoundaries;
+        } else {
+            Condition counterMissing = new Condition();
+            counterMissing.setConditionType(profilePropertyConditionType);
+            counterMissing.setParameter("propertyName", generatedPropertyName);
+            counterMissing.setParameter("comparisonOperator", "missing");
+
+            Condition counterZero = new Condition();
+            counterZero.setConditionType(profilePropertyConditionType);
+            counterZero.setParameter("propertyName", generatedPropertyName);
+            counterZero.setParameter("comparisonOperator", "equals");
+            counterZero.setParameter("propertyValueInteger", 0);
+
+            Condition counterCondition = new Condition();
+            counterCondition.setConditionType(definitionsService.getConditionType("booleanCondition"));
+            counterCondition.setParameter("operator", "or");
+            counterCondition.setParameter("subConditions", Arrays.asList(counterMissing, counterZero));
+            return counterCondition;
+        }
+    }
+
+    private Set<String> getProfileIdsMatchingEventCount(Condition eventCondition, int minimumEventCount, int maximumEventCount) {
+        boolean noBoundaries = minimumEventCount == 1 && maximumEventCount == Integer.MAX_VALUE;
+        if (pastEventsDisablePartitions) {
+            Map<String, Long> eventCountByProfile = persistenceService.aggregateWithOptimizedQuery(eventCondition, new TermsAggregate("profileId"), Event.ITEM_TYPE, maximumIdsQueryCount);
+            eventCountByProfile.remove("_filtered");
+            return noBoundaries ?
+                    eventCountByProfile.keySet() :
+                    eventCountByProfile.entrySet()
+                            .stream()
+                            .filter(eventCountPerProfile -> (eventCountPerProfile.getValue() >= minimumEventCount && eventCountPerProfile.getValue() <= maximumEventCount))
+                            .map(Map.Entry::getKey)
+                            .collect(Collectors.toSet());
+        } else {
+            Set<String> result = new HashSet<>();
+            // Get full cardinality to partition the terms aggregation
+            Map<String, Double> m = persistenceService.getSingleValuesMetrics(eventCondition, new String[]{"card"}, "profileId.keyword", Event.ITEM_TYPE);
+            long card = m.get("_card").longValue();
+
+            int numParts = (int) (card / aggregateQueryBucketSize) + 2;
+            for (int i = 0; i < numParts; i++) {
+                Map<String, Long> eventCountByProfile = persistenceService.aggregateWithOptimizedQuery(eventCondition, new TermsAggregate("profileId", i, numParts), Event.ITEM_TYPE);
+                if (eventCountByProfile != null) {
+                    eventCountByProfile.remove("_filtered");
+                    if (noBoundaries) {
+                        result.addAll(eventCountByProfile.keySet());
+                    } else {
                         for (Map.Entry<String, Long> entry : eventCountByProfile.entrySet()) {
                             if (entry.getValue() < minimumEventCount) {
                                 // No more interesting buckets in this partition
                                 break;
                             } else if (entry.getValue() <= maximumEventCount) {
-                                ids.add(entry.getKey());
-
-                                if (ids.size() > maximumIdsQueryCount) {
-                                    // Avoid building too big ids query - throw exception instead
-                                    throw new UnsupportedOperationException("Too many profiles");
-                                }
+                                result.add(entry.getKey());
                             }
                         }
                     }
                 }
             }
 
-            return QueryBuilders.idsQuery().addIds(ids.toArray(new String[0]));
-        }
-    }
-
-    public long count(Condition condition, Map<String, Object> context, ConditionESQueryBuilderDispatcher dispatcher) {
-        Condition eventCondition = getEventCondition(condition, context);
-        Map<String, Double> aggResult = null;
-
-        Integer minimumEventCount = condition.getParameter("minimumEventCount") == null ? 1 : (Integer) condition.getParameter("minimumEventCount");
-        Integer maximumEventCount = condition.getParameter("maximumEventCount") == null ? Integer.MAX_VALUE : (Integer) condition.getParameter("maximumEventCount");
-
-        // No count filter - simply get the full number of distinct profiles
-        if (minimumEventCount == 1 && maximumEventCount == Integer.MAX_VALUE) {
-            aggResult = persistenceService.getSingleValuesMetrics(eventCondition, new String[]{"card"}, "profileId.keyword", Event.ITEM_TYPE);
-            return aggResult.get("_card").longValue();
-        }
-
-        if (pastEventsDisablePartitions) {
-            Map<String, Long> eventCountByProfile = persistenceService.aggregateWithOptimizedQuery(eventCondition, new TermsAggregate("profileId"), Event.ITEM_TYPE, maximumIdsQueryCount);
-            return eventCountByProfile.entrySet().stream()
-                    .filter(x -> x.getKey().equals("_filtered"))
-                    .filter(x -> x.getValue() >= minimumEventCount && x.getValue() <= maximumEventCount)
-                    .count();
-        } else {
-            // Get full cardinality to partition the terms aggreggation
-            aggResult = persistenceService.getSingleValuesMetrics(eventCondition, new String[]{"card"}, "profileId.keyword", Event.ITEM_TYPE);
-            long card = aggResult.get("_card").longValue();
-             // Event count specified, must check occurences count for each profile
-            int result = 0;
-            int numParts = (int) (card / aggregateQueryBucketSize) + 2;
-            for (int i = 0; i < numParts; i++) {
-                Map<String, Long> eventCountByProfile = persistenceService.aggregateWithOptimizedQuery(eventCondition, new TermsAggregate("profileId", i, numParts), Event.ITEM_TYPE);
-                int j = 0;
-                if (eventCountByProfile != null) {
-                    eventCountByProfile.remove("_filtered");
-                    for (Map.Entry<String, Long> entry : eventCountByProfile.entrySet()) {
-                        if (entry.getValue() < minimumEventCount) {
-                            // No more interesting buckets in this partition
-                            break;
-                        } else if (entry.getValue() <= maximumEventCount && minimumEventCount == 1) {
-                            // Take all remaining elements
-                            result += eventCountByProfile.size() - j;
-                            break;
-                        } else if (entry.getValue() <= maximumEventCount) {
-                            result++;
-                        }
-                        j++;
-                    }
-                }
-            }
             return result;
         }
     }
 
-    private Condition getEventCondition(Condition condition, Map<String, Object> context) {
+    protected static Condition getEventCondition(Condition condition, Map<String, Object> context, String profileId,
+                                                 DefinitionsService definitionsService, ScriptExecutor scriptExecutor) {
         Condition eventCondition;
         try {
             eventCondition = (Condition) condition.getParameter("eventCondition");
@@ -198,36 +221,37 @@ public class PastEventConditionESQueryBuilder implements ConditionESQueryBuilder
 
         l.add(ConditionContextHelper.getContextualCondition(eventCondition, context, scriptExecutor));
 
+        if (profileId != null) {
+            Condition profileCondition = new Condition();
+            profileCondition.setConditionType(definitionsService.getConditionType("sessionPropertyCondition"));
+            profileCondition.setParameter("propertyName", "profileId");
+            profileCondition.setParameter("comparisonOperator", "equals");
+            profileCondition.setParameter("propertyValue", profileId);
+            l.add(profileCondition);
+        }
+
         Integer numberOfDays = (Integer) condition.getParameter("numberOfDays");
         String fromDate = (String) condition.getParameter("fromDate");
         String toDate = (String) condition.getParameter("toDate");
 
         if (numberOfDays != null) {
-            Condition numberOfDaysCondition = new Condition();
-            numberOfDaysCondition.setConditionType(definitionsService.getConditionType("sessionPropertyCondition"));
-            numberOfDaysCondition.setParameter("propertyName", "timeStamp");
-            numberOfDaysCondition.setParameter("comparisonOperator", "greaterThan");
-            numberOfDaysCondition.setParameter("propertyValueDateExpr", "now-" + numberOfDays + "d");
-            l.add(numberOfDaysCondition);
+            l.add(getTimeStampCondition("greaterThan", "propertyValueDateExpr", "now-" + numberOfDays + "d", definitionsService));
         }
         if (fromDate != null)  {
-            Condition startDateCondition = new Condition();
-            startDateCondition.setConditionType(definitionsService.getConditionType("sessionPropertyCondition"));
-            startDateCondition.setParameter("propertyName", "timeStamp");
-            startDateCondition.setParameter("comparisonOperator", "greaterThanOrEqualTo");
-            startDateCondition.setParameter("propertyValueDate", fromDate);
-            l.add(startDateCondition);
+            l.add(getTimeStampCondition("greaterThanOrEqualTo", "propertyValueDate", fromDate, definitionsService));
         }
         if (toDate != null)  {
-            Condition endDateCondition = new Condition();
-            endDateCondition.setConditionType(definitionsService.getConditionType("sessionPropertyCondition"));
-            endDateCondition.setParameter("propertyName", "timeStamp");
-            endDateCondition.setParameter("comparisonOperator", "lessThanOrEqualTo");
-            endDateCondition.setParameter("propertyValueDate", toDate);
-            l.add(endDateCondition);
+            l.add(getTimeStampCondition("lessThanOrEqualTo", "propertyValueDate", toDate, definitionsService));
         }
-
         return andCondition;
     }
 
+    private static Condition getTimeStampCondition(String operator, String propertyValueParameter, Object propertyValue, DefinitionsService definitionsService) {
+        Condition endDateCondition = new Condition();
+        endDateCondition.setConditionType(definitionsService.getConditionType("sessionPropertyCondition"));
+        endDateCondition.setParameter("propertyName", "timeStamp");
+        endDateCondition.setParameter("comparisonOperator", operator);
+        endDateCondition.setParameter(propertyValueParameter, propertyValue);
+        return endDateCondition;
+    }
 }
