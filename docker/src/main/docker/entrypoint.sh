@@ -19,7 +19,7 @@
 # Wait for healthy ElasticSearch
 # next wait for ES status to turn to Green
 
-if [ $UNOMI_ELASTICSEARCH_SSL_ENABLE ]; then
+if [ "$UNOMI_ELASTICSEARCH_SSL_ENABLE" == 'true' ]; then
   schema='https'
 else
   schema='http'
