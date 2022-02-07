@@ -16,12 +16,21 @@
  */
 package org.apache.unomi.services.impl.personalization;
 
+import org.apache.unomi.persistence.spi.CustomObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.text.ParseException;
 import java.util.Date;
+import java.util.Map;
 
 /**
  * Represents a personalization control group, stored in a profile and/or a session
  */
 public class ControlGroup {
+
+    private static final Logger logger = LoggerFactory.getLogger(ControlGroup.class.getName());
+
     String id;
     String displayName;
     String path;
@@ -32,6 +41,20 @@ public class ControlGroup {
         this.displayName = displayName;
         this.path = path;
         this.timeStamp = timeStamp;
+    }
+
+    public static ControlGroup fromMap(Map<String,Object> map) {
+        String id = (String) map.get("id");
+        String displayName = (String) map.get("displayName");
+        String path = (String) map.get("path");
+        String dateStr = (String) map.get("timeStamp");
+        Date date = null;
+        try {
+            date = CustomObjectMapper.getObjectMapper().getDateFormat().parse(dateStr);
+        } catch (ParseException e) {
+            logger.error("Error parsing control group date", e);
+        }
+        return new ControlGroup(id, displayName, path, date);
     }
 
     public String getId() {

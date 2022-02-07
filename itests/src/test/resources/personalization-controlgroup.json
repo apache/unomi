@@ -22,7 +22,7 @@
       "strategyOptions": {
         "threshold": -1,
         "controlGroup" : {
-          "percentage" : 1.0,
+          "percentage" : 100.0,
           "displayName" : "First perso",
           "path" : "/home/perso1.html",
           "storeInSession" : ###storeInSession###

@@ -34,6 +34,7 @@ import java.util.stream.Collectors;
 
 public class PersonalizationServiceImpl implements PersonalizationService {
 
+    public static final String CONTROL_GROUPS_PROPERTY_NAME = "unomiControlGroups";
     private BundleContext bundleContext;
     private ProfileService profileService;
 
@@ -103,9 +104,13 @@ public class PersonalizationServiceImpl implements PersonalizationService {
 
                 List<ControlGroup> controlGroups = null;
                 if (storeInSession) {
-                    controlGroups = (List<ControlGroup>) session.getProperty("unomiControlGroups");
+                    if (session.getProperty(CONTROL_GROUPS_PROPERTY_NAME) != null) {
+                        controlGroups = ((List<Map<String, Object>>) session.getProperty(CONTROL_GROUPS_PROPERTY_NAME)).stream().map(ControlGroup::fromMap).collect(Collectors.toList());
+                    }
                 } else {
-                    controlGroups = (List<ControlGroup>) profile.getProperty("unomiControlGroups");
+                    if (profile.getProperty(CONTROL_GROUPS_PROPERTY_NAME) != null) {
+                        controlGroups = ((List<Map<String, Object>>) profile.getProperty(CONTROL_GROUPS_PROPERTY_NAME)).stream().map(ControlGroup::fromMap).collect(Collectors.toList());
+                    }
                 }
                 if (controlGroups == null) {
                     controlGroups = new ArrayList<>();
@@ -115,8 +120,16 @@ public class PersonalizationServiceImpl implements PersonalizationService {
                     // we already have an entry for this personalization so this means the profile is in the control group
                     profileInControlGroup = true;
                 } else {
-                    double randomDouble = controlGroupRandom.nextDouble();
-                    Double controlGroupPercentage = (Double) controlGroupMap.get("percentage");
+                    double randomDouble = controlGroupRandom.nextDouble() * 100.0;
+                    Object percentageObject = controlGroupMap.get("percentage");
+                    Double controlGroupPercentage = null;
+                    if (percentageObject != null) {
+                        if (percentageObject instanceof Double) {
+                            controlGroupPercentage = (Double) percentageObject;
+                        } else if (percentageObject instanceof Integer) {
+                            controlGroupPercentage = ((Integer) percentageObject).doubleValue();
+                        }
+                    }
 
                     if (randomDouble <= controlGroupPercentage) {
                         // Profile is elected to be in control group
@@ -127,10 +140,10 @@ public class PersonalizationServiceImpl implements PersonalizationService {
                                 new Date());
                         controlGroups.add(controlGroup);
                         if (storeInSession) {
-                            session.setProperty("unomiControlGroups", controlGroups);
+                            session.setProperty(CONTROL_GROUPS_PROPERTY_NAME, controlGroups);
                             changeType = EventService.SESSION_UPDATED;
                         } else {
-                            profile.setProperty("unomiControlGroups", controlGroups);
+                            profile.setProperty(CONTROL_GROUPS_PROPERTY_NAME, controlGroups);
                             changeType = EventService.PROFILE_UPDATED;
                         }
                     }
