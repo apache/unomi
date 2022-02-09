@@ -139,11 +139,12 @@ public class PersonalizationServiceImpl implements PersonalizationService {
                                 (String) controlGroupMap.get("path"),
                                 new Date());
                         controlGroups.add(controlGroup);
+                        List<Map<String,Object>> controlGroupsMap = controlGroups.stream().map(ControlGroup::toMap).collect(Collectors.toList());
                         if (storeInSession) {
-                            session.setProperty(CONTROL_GROUPS_PROPERTY_NAME, controlGroups);
+                            session.setProperty(CONTROL_GROUPS_PROPERTY_NAME, controlGroupsMap);
                             changeType = EventService.SESSION_UPDATED;
                         } else {
-                            profile.setProperty(CONTROL_GROUPS_PROPERTY_NAME, controlGroups);
+                            profile.setProperty(CONTROL_GROUPS_PROPERTY_NAME, controlGroupsMap);
                             changeType = EventService.PROFILE_UPDATED;
                         }
                     }
