@@ -22,6 +22,7 @@ import org.slf4j.LoggerFactory;
 
 import java.text.ParseException;
 import java.util.Date;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
@@ -87,5 +88,14 @@ public class ControlGroup {
 
     public void setTimeStamp(Date timeStamp) {
         this.timeStamp = timeStamp;
+    }
+
+    public Map<String,Object> toMap() {
+        Map<String,Object> result = new LinkedHashMap<>();
+        result.put("id", id);
+        result.put("displayName", displayName);
+        result.put("path", path);
+        result.put("timeStamp", CustomObjectMapper.getObjectMapper().getDateFormat().format(timeStamp));
+        return result;
     }
 }
