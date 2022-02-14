@@ -16,13 +16,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ################################################################################
-# Wait for heathy ElasticSearch
+# Wait for healthy ElasticSearch
 # next wait for ES status to turn to Green
 
-if [ -v UNOMI_ELASTICSEARCH_USERNAME ] && [ -v UNOMI_ELASTICSEARCH_PASSWORD ]; then
-  elasticsearch_addresses="$UNOMI_ELASTICSEARCH_USERNAME:$UNOMI_ELASTICSEARCH_PASSWORD@$UNOMI_ELASTICSEARCH_ADDRESSES/_cat/health?h=status"
+if [ "$UNOMI_ELASTICSEARCH_SSL_ENABLE" == 'true' ]; then
+  schema='https'
 else
-  elasticsearch_addresses="$UNOMI_ELASTICSEARCH_ADDRESSES/_cat/health?h=status"
+  schema='http'
+fi
+
+if [ -v UNOMI_ELASTICSEARCH_USERNAME ] && [ -v UNOMI_ELASTICSEARCH_PASSWORD ]; then
+  elasticsearch_addresses="$schema://$UNOMI_ELASTICSEARCH_USERNAME:$UNOMI_ELASTICSEARCH_PASSWORD@$UNOMI_ELASTICSEARCH_ADDRESSES/_cat/health?h=status"
+else
+  elasticsearch_addresses="$schema://$UNOMI_ELASTICSEARCH_ADDRESSES/_cat/health?h=status"
 fi
 
 health_check="$(curl -fsSL "$elasticsearch_addresses")"
