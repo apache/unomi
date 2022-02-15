@@ -1,5 +1,5 @@
 {
-    "$id": "https://unomi.apache.org/schemas/json/values/date.json",
+    "$id": "https://unomi.apache.org/schemas/json/values/date/1-0-0",
     "$schema": "https://json-schema.org/draft/2019-09/schema",
     "title": "Date",
     "type": "string",

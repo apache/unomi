@@ -1,5 +1,5 @@
 {
-  "$id": "https://unomi.apache.org/schemas/json/item.json",
+  "$id": "https://unomi.apache.org/schemas/json/item/1-0-0",
   "$schema": "https://json-schema.org/draft/2019-09/schema",
   "title": "Item",
   "type": "object",

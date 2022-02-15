@@ -1,0 +1,21 @@
+{
+  "$id": "https://unomi.apache.org/schemas/json/events/float-property-type/1-0-0",
+  "$schema": "https://json-schema.org/draft/2019-09/schema",
+  "self":{
+    "vendor":"org.apache.unomi",
+    "name":"events/float-property-type",
+    "format":"jsonschema",
+    "version":"1-0-0"
+  },
+  "title": "FloatPropertyEvent",
+  "type": "object",
+  "allOf": [{ "$ref": "https://unomi.apache.org/schemas/json/event/1-0-0" }],
+  "properties" : {
+    "properties" : {
+      "type" : "object",
+      "properties" : {
+        "floatProperty" : { "type" : "number" }
+      }
+    }
+  }
+}

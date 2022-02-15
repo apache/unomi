@@ -17,12 +17,14 @@
 
 package org.apache.unomi.services.impl.schemas;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.networknt.schema.*;
 import com.networknt.schema.uri.URIFetcher;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.unomi.api.SchemaType;
+import org.apache.unomi.api.schema.json.JSONSchema;
+import org.apache.unomi.api.schema.json.JSONTypeFactory;
 import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.api.services.SchemaRegistry;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
@@ -44,8 +46,8 @@ public class SchemaRegistryImpl implements SchemaRegistry, SynchronousBundleList
 
     private static final Logger logger = LoggerFactory.getLogger(SchemaRegistryImpl.class.getName());
 
-    private final Map<Long, List<SchemaType>> schemaTypesByBundle = new HashMap<>();
-    private final Map<String, SchemaType> schemaTypesById = new HashMap<>();
+    private final Map<Long, List<JSONSchema>> schemaTypesByBundle = new HashMap<>();
+    private final Map<String, JSONSchema> schemaTypesById = new HashMap<>();
 
     private final Map<String, JsonSchema> jsonSchemasById = new LinkedHashMap<>();
 
@@ -54,6 +56,8 @@ public class SchemaRegistryImpl implements SchemaRegistry, SynchronousBundleList
     private BundleContext bundleContext;
 
     private ProfileService profileService;
+
+    private JsonSchemaFactory jsonSchemaFactory;
 
     ObjectMapper objectMapper = new ObjectMapper();
 
@@ -69,6 +73,14 @@ public class SchemaRegistryImpl implements SchemaRegistry, SynchronousBundleList
     }
 
     public void init() {
+
+        JsonMetaSchema jsonMetaSchema = JsonMetaSchema.builder(URI, JsonMetaSchema.getV201909())
+                .addKeyword(new PropertyTypeKeyword(profileService, this)).build();
+        jsonSchemaFactory = JsonSchemaFactory.builder(JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V201909))
+                .addMetaSchema(jsonMetaSchema)
+                .defaultMetaSchemaURI(URI)
+                .uriFetcher(getBundleUriFetcher(bundleContext), "https", "http").build();
+
         processBundleStartup(bundleContext);
 
         // process already started bundles
@@ -112,12 +124,12 @@ public class SchemaRegistryImpl implements SchemaRegistry, SynchronousBundleList
     }
 
     @Override
-    public List<SchemaType> getTargetSchemas(String target) {
-        return schemaTypesById.values().stream().filter(schemaType -> schemaType.getTarget().equals(target)).collect(Collectors.toList());
+    public List<JSONSchema> getTargetSchemas(String target) {
+        return schemaTypesById.values().stream().filter(jsonSchema -> jsonSchema.getTarget() != null && jsonSchema.getTarget().equals(target)).collect(Collectors.toList());
     }
 
     @Override
-    public SchemaType getSchema(String schemaId) {
+    public JSONSchema getSchema(String schemaId) {
         return schemaTypesById.get(schemaId);
     }
 
@@ -127,42 +139,62 @@ public class SchemaRegistryImpl implements SchemaRegistry, SynchronousBundleList
             return;
         }
 
-        List<SchemaType> schemaTypes = this.schemaTypesByBundle.get(bundleContext.getBundle().getBundleId());
+        List<JSONSchema> jsonSchemas = this.schemaTypesByBundle.get(bundleContext.getBundle().getBundleId());
 
         while (predefinedSchemas.hasMoreElements()) {
             URL predefinedSchemaURL = predefinedSchemas.nextElement();
             logger.debug("Found predefined JSON schema at " + predefinedSchemaURL + ", loading... ");
 
-                JsonMetaSchema jsonMetaSchema = JsonMetaSchema.builder(URI, JsonMetaSchema.getV201909())
-                        .addKeyword(new PropertyTypeKeyword(profileService, this)).build();
-                JsonSchemaFactory jsonSchemaFactory = JsonSchemaFactory.builder(JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V201909))
-                        .addMetaSchema(jsonMetaSchema)
-                        .defaultMetaSchemaURI(URI)
-                        .uriFetcher(getBundleUriFetcher(bundleContext), "https", "http").build();
             try (InputStream schemaInputStream = predefinedSchemaURL.openStream()) {
                 JsonSchema jsonSchema = jsonSchemaFactory.getSchema(schemaInputStream);
-                String schemaId = jsonSchema.getSchemaNode().get("$id").asText();
-                jsonSchemasById.put(schemaId, jsonSchema);
-                bundleIdBySchemaId.put(schemaId, bundleContext.getBundle().getBundleId());
-                SchemaType schemaType = new SchemaType();
-                schemaType.setPluginId(bundleContext.getBundle().getBundleId());
-                schemaType.setSchemaId(schemaId);
-                Map<String, Object> schemaTree = (Map<String, Object>) objectMapper.treeToValue(jsonSchema.getSchemaNode(), Map.class);
-                schemaType.setSchemaTree(schemaTree);
+                String schemaTarget = null;
                 String[] splitPath = predefinedSchemaURL.getPath().split("/");
                 if (splitPath.length > 5) {
                     String target = splitPath[4];
                     if (StringUtils.isNotBlank(target)) {
-                        schemaType.setTarget(target);
+                        schemaTarget = target;
                     }
                 }
-                schemaTypes.add(schemaType);
-                schemaTypesById.put(schemaId, schemaType);
+                registerSchema(bundleContext.getBundle().getBundleId(), jsonSchemas, schemaTarget, jsonSchema);
             } catch (Exception e) {
                 logger.error("Error while loading schema definition " + predefinedSchemaURL, e);
             }
         }
 
+    }
+
+    public String registerSchema(String target, InputStream jsonSchemaInputStream) {
+        JsonSchema jsonSchema = jsonSchemaFactory.getSchema(jsonSchemaInputStream);
+        try {
+            return registerSchema(null, null, target, jsonSchema);
+        } catch (JsonProcessingException e) {
+            logger.error("Error registering JSON schema", e);
+            return null;
+        }
+    }
+
+    public boolean unregisterSchema(String target, String schemaId) {
+        jsonSchemasById.remove(schemaId);
+        schemaTypesById.remove(schemaId);
+        return true;
+    }
+
+    private String registerSchema(Long bundleId, List<JSONSchema> jsonSchemas, String target, JsonSchema jsonSchema) throws JsonProcessingException {
+        String schemaId = jsonSchema.getSchemaNode().get("$id").asText();
+        jsonSchemasById.put(schemaId, jsonSchema);
+        if (bundleContext != null) {
+            bundleIdBySchemaId.put(schemaId, bundleId);
+        }
+        Map<String, Object> schemaTree = (Map<String, Object>) objectMapper.treeToValue(jsonSchema.getSchemaNode(), Map.class);
+        JSONSchema unomiJsonSchema = new JSONSchema(schemaTree, new JSONTypeFactory(this), this);
+        unomiJsonSchema.setPluginId(bundleId);
+        unomiJsonSchema.setSchemaId(schemaId);
+        unomiJsonSchema.setTarget(target);
+        if (jsonSchemas != null) {
+            jsonSchemas.add(unomiJsonSchema);
+        }
+        schemaTypesById.put(schemaId, unomiJsonSchema);
+        return schemaId;
     }
 
     private URIFetcher getBundleUriFetcher(BundleContext bundleContext) {
@@ -196,12 +228,12 @@ public class SchemaRegistryImpl implements SchemaRegistry, SynchronousBundleList
         if (bundleContext == null) {
             return;
         }
-        List<SchemaType> schemaTypes = schemaTypesByBundle.remove(bundleContext.getBundle().getBundleId());
-        if (schemaTypes != null) {
-            for (SchemaType schemaType : schemaTypes) {
-                jsonSchemasById.remove(schemaType.getSchemaId());
-                bundleIdBySchemaId.remove(schemaType.getSchemaId());
-                schemaTypesById.remove(schemaType.getSchemaId());
+        List<JSONSchema> JSONSchemas = schemaTypesByBundle.remove(bundleContext.getBundle().getBundleId());
+        if (JSONSchemas != null) {
+            for (JSONSchema JSONSchema : JSONSchemas) {
+                jsonSchemasById.remove(JSONSchema.getSchemaId());
+                bundleIdBySchemaId.remove(JSONSchema.getSchemaId());
+                schemaTypesById.remove(JSONSchema.getSchemaId());
             }
         }
     }

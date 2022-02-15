@@ -1,11 +1,11 @@
 {
-  "$id": "https://unomi.apache.org/schemas/json/session.json",
+  "$id": "https://unomi.apache.org/schemas/json/session/1-0-0",
   "$schema": "https://json-schema.org/draft/2019-09/schema",
   "title": "Session",
   "type": "object",
   "allOf": [
     {
-      "$ref": "https://unomi.apache.org/schemas/json/timestampeditem.json"
+      "$ref": "https://unomi.apache.org/schemas/json/timestampeditem/1-0-0"
     }
   ],
   "properties": {
@@ -13,7 +13,7 @@
       "type" : "string"
     },
     "profile" : {
-      "$ref" : "https://unomi.apache.org/schemas/json/profile.json"
+      "$ref" : "https://unomi.apache.org/schemas/json/profile/1-0-0"
     },
     "properties" : {
       "type" : "object",

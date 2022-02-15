@@ -1,5 +1,5 @@
 {
-  "$id": "https://unomi.apache.org/schemas/json/metadata.json",
+  "$id": "https://unomi.apache.org/schemas/json/metadata/1-0-0",
   "$schema": "https://json-schema.org/draft/2019-09/schema",
   "title": "Metadata",
   "type": "object",

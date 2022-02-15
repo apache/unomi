@@ -1,20 +1,27 @@
 {
-  "$id": "https://unomi.apache.org/schemas/json/events/view.json",
+  "$id": "https://unomi.apache.org/schemas/json/events/view/1-0-0",
   "$schema": "https://json-schema.org/draft/2019-09/schema",
+  "self":{
+    "vendor":"org.apache.unomi",
+    "target" : "events",
+    "name": "view",
+    "format":"jsonschema",
+    "version":"1-0-0"
+  },
   "title": "ViewEvent",
   "type": "object",
-  "allOf": [{ "$ref": "https://unomi.apache.org/schemas/json/event.json" }],
+  "allOf": [{ "$ref": "https://unomi.apache.org/schemas/json/event/1-0-0" }],
   "properties" : {
     "properties" : {
       "type" : "object",
-      "propertyTypes" : [ "events" ],
+      "unomiPropertyTypes" : [ "events" ],
       "maxProperties": 50
     },
     "source" : {
-      "$ref" : "https://unomi.apache.org/schemas/json/customitems/site.json"
+      "$ref" : "https://unomi.apache.org/schemas/json/customitems/site/1-0-0"
     },
     "target" : {
-      "$ref" : "https://unomi.apache.org/schemas/json/customitems/page.json"
+      "$ref" : "https://unomi.apache.org/schemas/json/customitems/page/1-0-0"
     }
   }
 }
