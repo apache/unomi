@@ -622,4 +622,31 @@ public class ProfileServiceEndPoint {
     public PartialList<Session> searchSession(Query query) {
         return profileService.searchSessions(query);
     }
+
+    @POST
+    @Path("/{profileId}/aliases/{aliasId}")
+    public void addAliasToProfile(final @PathParam("profileId") String profileId,
+                                  final @PathParam("aliasId") String aliasId,
+                                  final @HeaderParam("X-Unomi-ClientId") String headerClientID) {
+        String clientId = headerClientID != null ? headerClientID : "defaultClientId";
+        profileService.addAliasToProfile(profileId, aliasId, clientId);
+    }
+
+    @DELETE
+    @Path("/{profileId}/aliases/{aliasId}")
+    public void removeAliasFromProfile(final @PathParam("profileId") String profileId,
+                                       final @PathParam("aliasId") String aliasId,
+                                       final @HeaderParam("X-Unomi-ClientId") String headerClientID) {
+        String clientId = headerClientID != null ? headerClientID : "defaultClientId";
+        profileService.removeAliasFromProfile(profileId, aliasId, clientId);
+    }
+
+    @GET
+    @Path("/{profileId}/aliases")
+    public PartialList<ProfileAlias> listAliasesByProfileId(final @PathParam("profileId") String profileId,
+                                                            @QueryParam("offset") @DefaultValue("0") int offset,
+                                                            @QueryParam("size") @DefaultValue("50") int size,
+                                                            @QueryParam("sort") String sortBy) {
+        return profileService.findProfileAliases(profileId, offset, size, sortBy);
+    }
 }

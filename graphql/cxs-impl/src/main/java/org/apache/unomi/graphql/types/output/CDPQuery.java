@@ -16,7 +16,11 @@
  */
 package org.apache.unomi.graphql.types.output;
 
-import graphql.annotations.annotationTypes.*;
+import graphql.annotations.annotationTypes.GraphQLDescription;
+import graphql.annotations.annotationTypes.GraphQLField;
+import graphql.annotations.annotationTypes.GraphQLID;
+import graphql.annotations.annotationTypes.GraphQLName;
+import graphql.annotations.annotationTypes.GraphQLNonNull;
 import graphql.schema.DataFetchingEnvironment;
 import org.apache.unomi.graphql.fetchers.FindTopicsConnectionDataFetcher;
 import org.apache.unomi.graphql.fetchers.SourceDataFetcher;
@@ -26,7 +30,10 @@ import org.apache.unomi.graphql.fetchers.event.EventDataFetcher;
 import org.apache.unomi.graphql.fetchers.event.FindEventsConnectionDataFetcher;
 import org.apache.unomi.graphql.fetchers.list.GetListDataFetcher;
 import org.apache.unomi.graphql.fetchers.list.ListConnectionDataFetcher;
+import org.apache.unomi.graphql.fetchers.profile.FindProfileAliasConnectionDataFetcher;
 import org.apache.unomi.graphql.fetchers.profile.FindProfilesConnectionDataFetcher;
+import org.apache.unomi.graphql.fetchers.profile.GetProfileAliasesDataFetcher;
+import org.apache.unomi.graphql.fetchers.profile.ProfileAliasDataFetcher;
 import org.apache.unomi.graphql.fetchers.profile.ProfileDataFetcher;
 import org.apache.unomi.graphql.fetchers.profile.PropertiesConnectionDataFetcher;
 import org.apache.unomi.graphql.fetchers.segment.FindSegmentsConnectionDataFetcher;
@@ -35,6 +42,7 @@ import org.apache.unomi.graphql.fetchers.segment.UnomiSegmentDataFetcher;
 import org.apache.unomi.graphql.types.input.CDPEventFilterInput;
 import org.apache.unomi.graphql.types.input.CDPListFilterInput;
 import org.apache.unomi.graphql.types.input.CDPOrderByInput;
+import org.apache.unomi.graphql.types.input.CDPProfileAliasFilterInput;
 import org.apache.unomi.graphql.types.input.CDPProfileFilterInput;
 import org.apache.unomi.graphql.types.input.CDPProfileIDInput;
 import org.apache.unomi.graphql.types.input.CDPSegmentFilterInput;
@@ -174,4 +182,30 @@ public class CDPQuery {
         return new ListConnectionDataFetcher(filterInput, orderByInput).get(environment);
     }
 
+    @GraphQLField
+    public CDPProfileAlias getProfileAlias(
+            final @GraphQLID @GraphQLNonNull @GraphQLName("alias") String alias,
+            final DataFetchingEnvironment environment) throws Exception {
+        return new ProfileAliasDataFetcher(alias).get(environment);
+    }
+
+    @GraphQLField
+    public List<CDPProfileAlias> getProfileAliases(
+            final @GraphQLID @GraphQLName("profileID") @GraphQLNonNull String profileID,
+            final DataFetchingEnvironment environment) throws Exception {
+        return new GetProfileAliasesDataFetcher(profileID).get(environment);
+    }
+
+    @GraphQLField
+    public CDPProfileAliasConnection findProfileAliases(
+            final @GraphQLName("filter") CDPProfileAliasFilterInput filterInput,
+            final @GraphQLName("orderBy") List<CDPOrderByInput> orderByInput,
+            final @GraphQLName("first") Integer first,
+            final @GraphQLName("after") String after,
+            final @GraphQLName("last") Integer last,
+            final @GraphQLName("before") String before,
+            final DataFetchingEnvironment environment
+    ) throws Exception {
+        return new FindProfileAliasConnectionDataFetcher(filterInput, orderByInput).get(environment);
+    }
 }

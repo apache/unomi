@@ -110,6 +110,10 @@ public interface ProfileService {
 
     void addAliasToProfile(String profileID, String alias, String clientID);
 
+    ProfileAlias removeAliasFromProfile(String profileID, String alias, String clientID);
+
+    PartialList<ProfileAlias> findProfileAliases(String profileId, int offset, int size, String sortBy);
+
     /**
      * Merge the specified profile properties in an existing profile,or save new profile if it does not exist yet
      *

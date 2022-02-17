@@ -581,6 +581,51 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         }
     }
 
+    @Override
+    public ProfileAlias removeAliasFromProfile(String profileID, String alias, String clientID) {
+        Condition profileIDCondition = new Condition(definitionsService.getConditionType("profileAliasesPropertyCondition"));
+        profileIDCondition.setParameter("propertyName", "profileID.keyword");
+        profileIDCondition.setParameter("comparisonOperator", "equals");
+        profileIDCondition.setParameter("propertyValue", profileID);
+
+        Condition clientIDCondition = new Condition(definitionsService.getConditionType("profileAliasesPropertyCondition"));
+        clientIDCondition.setParameter("propertyName", "clientID.keyword");
+        clientIDCondition.setParameter("comparisonOperator", "equals");
+        clientIDCondition.setParameter("propertyValue", clientID);
+
+        Condition aliasCondition = new Condition(definitionsService.getConditionType("profileAliasesPropertyCondition"));
+        aliasCondition.setParameter("propertyName", "itemId");
+        aliasCondition.setParameter("comparisonOperator", "equals");
+        aliasCondition.setParameter("propertyValue", alias);
+
+        List<Condition> conditions = new ArrayList<>();
+        conditions.add(profileIDCondition);
+        conditions.add(clientIDCondition);
+        conditions.add(aliasCondition);
+
+        Condition condition = new Condition(definitionsService.getConditionType("booleanCondition"));
+        condition.setParameter("operator", "and");
+        condition.setParameter("subConditions", conditions);
+
+        List<ProfileAlias> profileAliases = persistenceService.query(condition, null, ProfileAlias.class);
+
+        if (profileAliases.size() == 1 && persistenceService.removeByQuery(condition, ProfileAlias.class)) {
+            return profileAliases.get(0);
+        }
+
+        return null;
+    }
+
+    @Override
+    public PartialList<ProfileAlias> findProfileAliases(String profileId, int offset, int size, String sortBy) {
+        Condition condition = new Condition(definitionsService.getConditionType("profileAliasesPropertyCondition"));
+        condition.setParameter("propertyName", "profileID.keyword");
+        condition.setParameter("comparisonOperator", "equals");
+        condition.setParameter("propertyValue", profileId);
+
+        return persistenceService.query(condition, sortBy, ProfileAlias.class, offset, size);
+    }
+
     private Profile save(Profile profile, boolean forceRefresh) {
         if (profile.getItemId() == null) {
             return null;
