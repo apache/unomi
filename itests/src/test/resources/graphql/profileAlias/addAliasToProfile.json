@@ -1,0 +1,16 @@
+{
+  "operationName": "addAliasToProfile",
+  "variables": {
+    "profileAlias": {
+      "alias": "myAlias",
+      "profileID": {
+        "id": "f6c1c5a0-eff3-42b7-b375-44da5d01f2a6",
+        "client": {
+          "id": "facebook",
+          "title": "Facebook"
+        }
+      }
+    }
+  },
+  "query": "mutation addAliasToProfile($profileAlias: CDP_ProfileAliasInput!) {\n  cdp {\n    addAliasToProfile(profileAlias: $profileAlias) {\n      alias\n      profileID {\n        client {\n          ID\n          title\n        }\n        id\n      }\n    }\n  }\n}\n"
+}

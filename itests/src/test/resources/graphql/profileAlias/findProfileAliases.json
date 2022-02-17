@@ -1,0 +1,8 @@
+{
+  "operationName": null,
+  "variables": {
+    "alias": "myAlias",
+    "clientID": "facebook"
+  },
+  "query": "query ($alias: String, $clientID: String) {\n  cdp {\n    findProfileAliases(filter: {and: [{alias_equals: $alias}, {clientID_equals: $clientID}]}) {\n      totalCount\n      edges {\n        cursor\n        node {\n          alias\n          profileID {\n            id\n            client {\n              ID\n            }\n          }\n        }\n      }\n    }\n  }\n}\n"
+}
