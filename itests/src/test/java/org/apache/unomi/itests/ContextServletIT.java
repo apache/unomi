@@ -36,6 +36,7 @@ import org.ops4j.pax.exam.junit.PaxExam;
 import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
 import org.ops4j.pax.exam.spi.reactors.PerSuite;
 import org.ops4j.pax.exam.util.Filter;
+import org.osgi.framework.BundleContext;
 
 import javax.inject.Inject;
 import java.io.File;
@@ -91,12 +92,12 @@ public class ContextServletIT extends BaseIT {
 
     @Inject
     @Filter(timeout = 600000)
-    protected SchemaRegistry schemaRegistry;
+    protected BundleContext bundleContext;
 
     private Profile profile;
 
     @Before
-    public void setUp() throws InterruptedException {
+    public void setUp() throws InterruptedException, IOException {
         this.registerEventType(TEST_EVENT_TYPE_SCHEMA);
         this.registerEventType(FLOAT_PROPERTY_EVENT_TYPE_SCHEMA);
 
@@ -131,8 +132,8 @@ public class ContextServletIT extends BaseIT {
         schemaRegistry.unregisterSchema("events", FLOAT_PROPERTY_EVENT_TYPE);
     }
 
-    private void registerEventType(String jsonSchemaFileName) {
-        InputStream jsonSchemaInputStream = this.getClass().getClassLoader().getResourceAsStream("schemas/events/" + jsonSchemaFileName);
+    private void registerEventType(String jsonSchemaFileName) throws IOException {
+        InputStream jsonSchemaInputStream = bundleContext.getBundle().getResource("schemas/events/" + jsonSchemaFileName).openStream();
         schemaRegistry.registerSchema("events", jsonSchemaInputStream);
     }
 

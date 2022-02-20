@@ -38,6 +38,8 @@ import org.slf4j.LoggerFactory;
 import java.io.InputStream;
 import java.net.URL;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 public class SchemaRegistryImpl implements SchemaRegistry, SynchronousBundleListener {
@@ -61,6 +63,8 @@ public class SchemaRegistryImpl implements SchemaRegistry, SynchronousBundleList
 
     ObjectMapper objectMapper = new ObjectMapper();
 
+    Pattern uriPathPattern = Pattern.compile("/schemas/json(.*)/\\d-\\d-\\d");
+
     public void bundleChanged(BundleEvent event) {
         switch (event.getType()) {
             case BundleEvent.STARTED:
@@ -75,7 +79,9 @@ public class SchemaRegistryImpl implements SchemaRegistry, SynchronousBundleList
     public void init() {
 
         JsonMetaSchema jsonMetaSchema = JsonMetaSchema.builder(URI, JsonMetaSchema.getV201909())
-                .addKeyword(new PropertyTypeKeyword(profileService, this)).build();
+                .addKeyword(new PropertyTypeKeyword(profileService, this))
+                .addKeyword(new NonValidationKeyword("self"))
+                .build();
         jsonSchemaFactory = JsonSchemaFactory.builder(JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V201909))
                 .addMetaSchema(jsonMetaSchema)
                 .defaultMetaSchemaURI(URI)
@@ -187,7 +193,9 @@ public class SchemaRegistryImpl implements SchemaRegistry, SynchronousBundleList
         }
         Map<String, Object> schemaTree = (Map<String, Object>) objectMapper.treeToValue(jsonSchema.getSchemaNode(), Map.class);
         JSONSchema unomiJsonSchema = new JSONSchema(schemaTree, new JSONTypeFactory(this), this);
-        unomiJsonSchema.setPluginId(bundleId);
+        if (bundleId != null) {
+            unomiJsonSchema.setPluginId(bundleId);
+        }
         unomiJsonSchema.setSchemaId(schemaId);
         unomiJsonSchema.setTarget(target);
         if (jsonSchemas != null) {
@@ -205,7 +213,11 @@ public class SchemaRegistryImpl implements SchemaRegistry, SynchronousBundleList
                 logger.error("Couldn't find bundle for schema {}", uri);
                 return null;
             }
-            String uriPath = uri.getPath().substring("/schemas/json".length());
+            Matcher uriPathMatcher = uriPathPattern.matcher(uri.getPath());
+            String uriPath = uri.getPath();
+            if (uriPathMatcher.matches()) {
+                uriPath = uriPathMatcher.group(1) + ".json";
+            }
             URL schemaURL = bundleContext.getBundle(bundleId).getResource("META-INF/cxs/schemas" + uriPath);
             if (schemaURL != null) {
                 return schemaURL.openStream();

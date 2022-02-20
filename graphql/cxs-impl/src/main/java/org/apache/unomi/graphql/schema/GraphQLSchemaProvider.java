@@ -359,7 +359,7 @@ public class GraphQLSchemaProvider {
             final GraphQLCodeRegistry.Builder codeRegisterBuilder = graphQLAnnotations.getContainer().getCodeRegistryBuilder();
 
             for (JSONSchema unomiEventType : unomiEventTypes) {
-                final String typeName = UnomiToGraphQLConverter.convertEventType(unomiEventType.getSchemaId());
+                final String typeName = UnomiToGraphQLConverter.convertEventType(unomiEventType.getName());
 
                 final GraphQLObjectType objectType;
                 if (!graphQLAnnotations.getContainer().getTypeRegistry().containsKey(typeName)) {
@@ -652,7 +652,7 @@ public class GraphQLSchemaProvider {
         // now add all unomi defined event types
         final List<JSONSchema> unomiEventTypes = schemaRegistry.getTargetSchemas("events");
         unomiEventTypes.forEach(eventType -> {
-            final String typeName = UnomiToGraphQLConverter.convertEventType(eventType.getSchemaId());
+            final String typeName = UnomiToGraphQLConverter.convertEventType(eventType.getName());
             final GraphQLInputType eventInputType = (GraphQLInputType) getFromTypeRegistry(typeName + "Input");
             if (eventInputType == null) {
                 logger.warn("Couldn't find event input type {}", typeName + "Input, will not add it as a field.");

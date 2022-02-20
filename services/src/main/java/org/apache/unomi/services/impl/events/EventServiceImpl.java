@@ -140,7 +140,10 @@ public class EventServiceImpl implements EventService {
     }
 
     public boolean isEventValid(Event event) {
-        return this.schemaRegistry.isValid(event, "https://unomi.apache.org/schemas/json/events/" + event.getEventType() + "/1-0-0");
+        if (!this.schemaRegistry.isValid(event, "https://unomi.apache.org/schemas/json/events/" + event.getEventType() + "/1-0-0")) {
+            logger.warn("Event doesn't validate.");
+        };
+        return true;
     }
 
     public String authenticateThirdPartyServer(String key, String ip) {

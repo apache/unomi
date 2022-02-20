@@ -24,6 +24,7 @@ import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.rules.Rule;
 import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.RulesService;
+import org.apache.unomi.api.services.SchemaRegistry;
 import org.apache.unomi.lifecycle.BundleWatcher;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.persistence.spi.PersistenceService;
@@ -98,6 +99,10 @@ public abstract class BaseIT {
     @Inject
     @Filter(timeout = 600000)
     protected ConfigurationAdmin configurationAdmin;
+
+    @Inject
+    @Filter(timeout = 600000)
+    protected SchemaRegistry schemaRegistry;
 
     @Before
     public void waitForStartup() throws InterruptedException {
@@ -286,6 +291,7 @@ public abstract class BaseIT {
         persistenceService = getService(PersistenceService.class);
         definitionsService = getService(DefinitionsService.class);
         rulesService = getService(RulesService.class);
+        schemaRegistry = getService(SchemaRegistry.class);
     }
 
     public void updateConfiguration(String serviceName, String configPid, String propName, Object propValue) throws InterruptedException, IOException {
