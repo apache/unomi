@@ -153,6 +153,8 @@ public class RuleServiceIT extends BaseIT {
 
         double improvementRatio = ((double) unoptimizedRunTime) / ((double) optimizedRunTime);
         LOGGER.info("Unoptimized run time = {}ms, optimized run time = {}ms. Improvement={}x", unoptimizedRunTime, optimizedRunTime, improvementRatio);
+        // we check with a ratio of 0.9 because the test can sometimes fail due to the fact that the sample size is small and can be affected by
+        // environmental issues such as CPU or I/O load.
         assertTrue("Optimized run time should be smaller than unoptimized", improvementRatio > 0.9);
     }
 
