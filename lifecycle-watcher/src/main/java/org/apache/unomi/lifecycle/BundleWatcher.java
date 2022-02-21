@@ -37,10 +37,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TimerTask;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.stream.Collectors;
 
 /**
@@ -69,7 +66,7 @@ public class BundleWatcher implements SynchronousBundleListener, ServiceListener
     private Integer checkStartupStateRefreshInterval = 60;
 
     public void setRequiredBundles(Map<String, Boolean> requiredBundles) {
-        this.requiredBundles = requiredBundles;
+        this.requiredBundles = new ConcurrentHashMap<>(requiredBundles);
     }
 
     public void setCheckStartupStateRefreshInterval(Integer checkStartupStateRefreshInterval) {
@@ -133,6 +130,7 @@ public class BundleWatcher implements SynchronousBundleListener, ServiceListener
                 break;
             case BundleEvent.STARTED:
                 if (event.getBundle().getSymbolicName().startsWith("org.apache.unomi")) {
+                    logger.info("Bundle {} was started.", event.getBundle().getSymbolicName());
                     requiredBundles.put(event.getBundle().getSymbolicName(), true);
                     checkStartupComplete();
                 }
@@ -141,6 +139,7 @@ public class BundleWatcher implements SynchronousBundleListener, ServiceListener
                 break;
             case BundleEvent.STOPPED:
                 if (event.getBundle().getSymbolicName().startsWith("org.apache.unomi")) {
+                    logger.info("Bundle {} was stopped", event.getBundle().getSymbolicName());
                     requiredBundles.put(event.getBundle().getSymbolicName(), false);
                 }
                 break;
