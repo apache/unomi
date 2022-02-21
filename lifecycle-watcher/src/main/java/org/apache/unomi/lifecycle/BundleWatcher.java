@@ -16,14 +16,7 @@
  */
 package org.apache.unomi.lifecycle;
 
-import org.osgi.framework.BundleContext;
-import org.osgi.framework.BundleEvent;
-import org.osgi.framework.Filter;
-import org.osgi.framework.InvalidSyntaxException;
-import org.osgi.framework.ServiceEvent;
-import org.osgi.framework.ServiceListener;
-import org.osgi.framework.ServiceReference;
-import org.osgi.framework.SynchronousBundleListener;
+import org.osgi.framework.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,7 +42,7 @@ public class BundleWatcher implements SynchronousBundleListener, ServiceListener
     private static final Logger logger = LoggerFactory.getLogger(BundleWatcher.class.getName());
 
     private long startupTime;
-    private Map<String, Boolean> requiredBundles;
+    private Map<String, Boolean> requiredBundles = new ConcurrentHashMap<>();
 
     private ScheduledExecutorService scheduler;
     private ScheduledFuture<?> scheduledFuture;
@@ -92,6 +85,7 @@ public class BundleWatcher implements SynchronousBundleListener, ServiceListener
 
     public void init() {
         scheduler = Executors.newSingleThreadScheduledExecutor();
+        checkExistingBundles();
         bundleContext.addBundleListener(this);
         bundleContext.addServiceListener(this);
         loadLogo();
@@ -123,13 +117,26 @@ public class BundleWatcher implements SynchronousBundleListener, ServiceListener
         logger.info("Bundle watcher shutdown.");
     }
 
+    public void checkExistingBundles() {
+        for (Bundle bundle : bundleContext.getBundles()) {
+            if (bundle.getSymbolicName().startsWith("org.apache.unomi") && requiredBundles.containsKey(bundle.getSymbolicName())) {
+                if (bundle.getState() == Bundle.ACTIVE) {
+                    requiredBundles.put(bundle.getSymbolicName(), true);
+                } else {
+                    requiredBundles.put(bundle.getSymbolicName(), false);
+                }
+            }
+        }
+        checkStartupComplete();
+    }
+
     @Override
     public void bundleChanged(BundleEvent event) {
         switch (event.getType()) {
             case BundleEvent.STARTING:
                 break;
             case BundleEvent.STARTED:
-                if (event.getBundle().getSymbolicName().startsWith("org.apache.unomi")) {
+                if (event.getBundle().getSymbolicName().startsWith("org.apache.unomi") && requiredBundles.containsKey(event.getBundle().getSymbolicName())) {
                     logger.info("Bundle {} was started.", event.getBundle().getSymbolicName());
                     requiredBundles.put(event.getBundle().getSymbolicName(), true);
                     checkStartupComplete();
@@ -138,7 +145,7 @@ public class BundleWatcher implements SynchronousBundleListener, ServiceListener
             case BundleEvent.STOPPING:
                 break;
             case BundleEvent.STOPPED:
-                if (event.getBundle().getSymbolicName().startsWith("org.apache.unomi")) {
+                if (event.getBundle().getSymbolicName().startsWith("org.apache.unomi") && requiredBundles.containsKey(event.getBundle().getSymbolicName())) {
                     logger.info("Bundle {} was stopped", event.getBundle().getSymbolicName());
                     requiredBundles.put(event.getBundle().getSymbolicName(), false);
                 }
