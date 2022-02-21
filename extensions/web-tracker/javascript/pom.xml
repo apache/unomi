@@ -21,7 +21,7 @@
     <parent>
         <groupId>org.apache.unomi</groupId>
         <artifactId>unomi-web-tracker</artifactId>
-        <version>1.6.1-SNAPSHOT</version>
+        <version>1.6.0-SNAPSHOT</version>
     </parent>
 
     <artifactId>unomi-web-tracker-javascript</artifactId>
