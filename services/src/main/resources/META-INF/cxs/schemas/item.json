@@ -5,7 +5,7 @@
   "type": "object",
   "properties" : {
     "itemId" : {
-      "type" : "string",
+      "type" : ["null","string"],
       "pattern" : "^(\\w|[-_@\\.]){0,60}$",
       "description" : "The identifier for the item"
     },

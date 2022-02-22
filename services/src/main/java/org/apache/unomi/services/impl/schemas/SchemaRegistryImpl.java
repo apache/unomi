@@ -79,7 +79,7 @@ public class SchemaRegistryImpl implements SchemaRegistry, SynchronousBundleList
     public void init() {
 
         JsonMetaSchema jsonMetaSchema = JsonMetaSchema.builder(URI, JsonMetaSchema.getV201909())
-                .addKeyword(new PropertyTypeKeyword(profileService, this))
+                .addKeyword(new UnomiPropertyTypeKeyword(profileService, this))
                 .addKeyword(new NonValidationKeyword("self"))
                 .build();
         jsonSchemaFactory = JsonSchemaFactory.builder(JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V201909))
