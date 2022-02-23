@@ -35,7 +35,7 @@ import java.util.List;
 
 public class PropertyFilterUtils {
 
-    public static List<GraphQLInputObjectField> buildInputPropertyFilters(final Collection<PropertyType> propertyTypes, final GraphQLAnnotations graphQLAnnotations) {
+    public static List<GraphQLInputObjectField> buildInputPropertyFilters(final Collection<GraphQLSchemaProvider.DefinitionType> propertyTypes, final GraphQLAnnotations graphQLAnnotations) {
         if (propertyTypes == null || propertyTypes.isEmpty()) {
             return Collections.emptyList();
         }
@@ -47,10 +47,10 @@ public class PropertyFilterUtils {
         return fieldDefinitions;
     }
 
-    private static void addFilters(final List<GraphQLInputObjectField> fieldDefinitions, final PropertyType propertyType, final GraphQLAnnotations graphQLAnnotations) {
-        final String propertyName = PropertyNameTranslator.translateFromUnomiToGraphQL(propertyType.getItemId());
+    private static void addFilters(final List<GraphQLInputObjectField> fieldDefinitions, final GraphQLSchemaProvider.DefinitionType propertyType, final GraphQLAnnotations graphQLAnnotations) {
+        final String propertyName = PropertyNameTranslator.translateFromUnomiToGraphQL(propertyType.getName());
 
-        if ("integer".equals(propertyType.getValueTypeId())) {
+        if ("integer".equals(propertyType.getTypeId())) {
             fieldDefinitions.add(GraphQLInputObjectField.newInputObjectField()
                     .name(propertyName + "_equals")
                     .type(Scalars.GraphQLInt)
@@ -71,7 +71,7 @@ public class PropertyFilterUtils {
                     .name(propertyName + "_gte")
                     .type(Scalars.GraphQLInt)
                     .build());
-        } else if ("long".equals(propertyType.getValueTypeId())) {
+        } else if ("long".equals(propertyType.getTypeId())) {
             fieldDefinitions.add(GraphQLInputObjectField.newInputObjectField()
                     .name(propertyName + "_equals")
                     .type(Scalars.GraphQLLong)
@@ -92,7 +92,7 @@ public class PropertyFilterUtils {
                     .name(propertyName + "_gte")
                     .type(Scalars.GraphQLLong)
                     .build());
-        } else if ("float".equals(propertyType.getValueTypeId())) {
+        } else if ("float".equals(propertyType.getTypeId())) {
 
             fieldDefinitions.add(GraphQLInputObjectField.newInputObjectField()
                     .name(propertyName + "_equals")
@@ -114,7 +114,7 @@ public class PropertyFilterUtils {
                     .name(propertyName + "_gte")
                     .type(Scalars.GraphQLFloat)
                     .build());
-        } else if ("date".equals(propertyType.getValueTypeId())) {
+        } else if ("date".equals(propertyType.getTypeId())) {
             fieldDefinitions.add(GraphQLInputObjectField.newInputObjectField()
                     .name(propertyName + "_equals")
                     .type(DateTimeFunction.DATE_TIME_SCALAR)
@@ -135,18 +135,18 @@ public class PropertyFilterUtils {
                     .name(propertyName + "_gte")
                     .type(DateTimeFunction.DATE_TIME_SCALAR)
                     .build());
-        } else if ("boolean".equals(propertyType.getValueTypeId())) {
+        } else if ("boolean".equals(propertyType.getTypeId())) {
             fieldDefinitions.add(GraphQLInputObjectField.newInputObjectField()
                     .name(propertyName + "_equals")
                     .type(Scalars.GraphQLBoolean)
                     .build());
-        } else if ("id".equals(propertyType.getValueTypeId())) {
+        } else if ("id".equals(propertyType.getTypeId())) {
             fieldDefinitions.add(GraphQLInputObjectField.newInputObjectField()
                     .name(propertyName + "_equals")
                     .type(Scalars.GraphQLString)
                     .build());
-        } else if ("set".equals(propertyType.getValueTypeId())) {
-            if (propertyType.getChildPropertyTypes() != null && !propertyType.getChildPropertyTypes().isEmpty()) {
+        } else if ("set".equals(propertyType.getTypeId())) {
+            if (propertyType.hasSubTypes()) {
                 final String typeName = StringUtils.capitalize(propertyName) + "FilterInput";
 
                 GraphQLInputObjectType inputObjectType;
@@ -156,7 +156,7 @@ public class PropertyFilterUtils {
 
                     final List<GraphQLInputObjectField> setFieldDefinitions = new ArrayList<>();
 
-                    propertyType.getChildPropertyTypes().forEach(childPropertyType ->
+                    propertyType.getSubTypes().forEach(childPropertyType ->
                             addFilters(setFieldDefinitions, childPropertyType, graphQLAnnotations));
 
                     dynamicTypeBuilder.fields(setFieldDefinitions);
@@ -173,7 +173,7 @@ public class PropertyFilterUtils {
                         .type(inputObjectType)
                         .build());
             }
-        } else if ("geopoint".equals(propertyType.getValueTypeId())) {
+        } else if ("geopoint".equals(propertyType.getTypeId())) {
 
             fieldDefinitions.add(GraphQLInputObjectField.newInputObjectField()
                     .name(propertyName + "_equals")

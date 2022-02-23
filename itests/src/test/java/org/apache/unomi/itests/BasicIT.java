@@ -72,9 +72,9 @@ public class BasicIT extends BaseIT {
     private static final String TEST_SCOPE = "testScope";
 
     private static final String ITEM_TYPE_SITE = "site";
-    private static final String ITEM_ID_SITE = "/test/site";
+    private static final String ITEM_ID_SITE = "site-8f4d-4a07-8e96-d33ffa04d3d4";
     private static final String ITEM_TYPE_VISITOR = "VISITOR";
-    protected static final String ITEM_ID_PAGE_1 = "/test/site/page1";
+    protected static final String ITEM_ID_PAGE_1 = "page-8f4d-4a07-8e96-d33ffa04d3d4";
     protected static final String ITEM_TYPE_PAGE = "page";
 
     private static final String FIRST_NAME = "firstName";

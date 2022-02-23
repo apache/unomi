@@ -1,11 +1,18 @@
 {
-  "$id": "https://unomi.apache.org/schemas/json/customitems/site.json",
+  "$id": "https://unomi.apache.org/schemas/json/customitems/site/1-0-0",
   "$schema": "https://json-schema.org/draft/2019-09/schema",
+  "self":{
+    "vendor":"org.apache.unomi",
+    "target" : "customitems",
+    "name": "site",
+    "format":"jsonschema",
+    "version":"1-0-0"
+  },
   "title": "SiteCustomItem",
   "type": "object",
   "allOf": [
     {
-      "$ref": "https://unomi.apache.org/schemas/json/customitem.json"
+      "$ref": "https://unomi.apache.org/schemas/json/customitem/1-0-0"
     }
   ],
   "properties": {

@@ -1,11 +1,11 @@
 {
-  "$id": "https://unomi.apache.org/schemas/json/customitem.json",
+  "$id": "https://unomi.apache.org/schemas/json/customitem/1-0-0",
   "$schema": "https://json-schema.org/draft/2019-09/schema",
   "title": "CustomItem",
   "type": "object",
   "allOf": [
     {
-      "$ref": "https://unomi.apache.org/schemas/json/item.json"
+      "$ref": "https://unomi.apache.org/schemas/json/item/1-0-0"
     }
   ],
   "properties": {

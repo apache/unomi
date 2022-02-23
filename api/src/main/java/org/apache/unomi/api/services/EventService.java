@@ -19,7 +19,6 @@ package org.apache.unomi.api.services;
 
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.EventProperty;
-import org.apache.unomi.api.EventType;
 import org.apache.unomi.api.PartialList;
 import org.apache.unomi.api.Session;
 import org.apache.unomi.api.actions.ActionPostExecutor;
@@ -72,7 +71,7 @@ public interface EventService {
 
 
     /**
-     * Check if event fields complies with corresponding {@link EventType} definition
+     * Check if event fields complies with corresponding event JSON schema definition
      *
      * @param event        event to test
      * @return true if the event is valid
@@ -95,19 +94,6 @@ public interface EventService {
      * @deprecated use event types instead
      */
     List<EventProperty> getEventProperties();
-
-    /**
-     * Retrieves an event type
-     * @param typeName the name identifier for the event type
-     * @return the EventType object corresponding to the name, or null if not found.
-     */
-    EventType getEventType(String typeName);
-
-    /**
-     * Registers event type
-     * @param eventType event type to register
-     */
-    void registerEventType(EventType eventType);
 
     /**
      * Retrieves the set of known event type identifiers.
