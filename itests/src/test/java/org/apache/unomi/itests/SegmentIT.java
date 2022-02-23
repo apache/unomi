@@ -217,6 +217,9 @@ public class SegmentIT extends BaseIT {
                 updatedProfile -> updatedProfile.getSegments().contains("negative-past-event-segment-test"),
                 1000, 20);
 
+        // we load the profile so that we are sure that it contains the segments
+        profile = profileService.load("test_profile_id");
+
         // send event for profile from a previous date (today -3 days)
         ZoneId defaultZoneId = ZoneId.systemDefault();
         LocalDate localDate = LocalDate.now().minusDays(3);
@@ -256,6 +259,7 @@ public class SegmentIT extends BaseIT {
         segmentService.setSegmentDefinition(segment);
         Thread.sleep(5000);
 
+        profile = profileService.load("test_profile_id");
         // Persist the event (do not send it into the system so that it will not be processed by the rules)
         ZoneId defaultZoneId = ZoneId.systemDefault();
         LocalDate localDate = LocalDate.now().minusDays(3);
@@ -504,6 +508,7 @@ public class SegmentIT extends BaseIT {
         refreshPersistence();
 
         // Send 2 events that match the scoring plan.
+        profile = profileService.load("test_profile_id");
         Event testEvent = new Event("test-event-type", null, profile, null, null, profile, timestampEventInRange);
         testEvent.setPersistent(true);
         eventService.send(testEvent);
