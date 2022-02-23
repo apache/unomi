@@ -14,24 +14,15 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.unomi.api.schema.json;
 
-package org.apache.unomi.api.services;
+import org.apache.unomi.api.services.SchemaRegistry;
 
-import org.apache.unomi.api.schema.json.JSONSchema;
+import java.util.Map;
 
-import java.io.InputStream;
-import java.util.List;
-
-public interface SchemaRegistry {
-
-    boolean isValid(Object object, String schemaId);
-
-    JSONSchema getSchema(String schemaId);
-
-    List<JSONSchema> getTargetSchemas(String target);
-
-    String registerSchema(String target, InputStream jsonSchemaInputStream);
-
-    boolean unregisterSchema(String target, String schemaId);
-
+public class JSONBooleanType extends JSONType {
+    public JSONBooleanType(Map<String, Object> schemaTree, JSONTypeFactory jsonTypeFactory, SchemaRegistry schemaRegistry) {
+        super(schemaTree, jsonTypeFactory, schemaRegistry);
+        setType("boolean");
+    }
 }

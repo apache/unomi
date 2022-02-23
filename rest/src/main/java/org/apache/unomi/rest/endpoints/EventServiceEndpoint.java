@@ -18,7 +18,6 @@ package org.apache.unomi.rest.endpoints;
 
 import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
 import org.apache.unomi.api.Event;
-import org.apache.unomi.api.EventType;
 import org.apache.unomi.api.PartialList;
 import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.services.EventService;
@@ -89,17 +88,6 @@ public class EventServiceEndpoint {
     @Path("types")
     public Set<String> getEventTypeNames() {
         return eventService.getEventTypeIds();
-    }
-
-    /**
-     * Returns the list of event properties
-     * @param typeName the type name identifier
-     * @return a List of EventProperty objects that make up the properties that the server has seen.
-     */
-    @GET
-    @Path("types/{typeName}")
-    public EventType getEventType(@PathParam("typeName") String typeName) {
-        return eventService.getEventType(typeName);
     }
 
 }

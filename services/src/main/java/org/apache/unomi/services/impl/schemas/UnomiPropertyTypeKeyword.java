@@ -26,9 +26,9 @@ import org.slf4j.LoggerFactory;
 import java.text.MessageFormat;
 import java.util.*;
 
-class PropertyTypeKeyword extends AbstractKeyword {
+class UnomiPropertyTypeKeyword extends AbstractKeyword {
 
-    private static final Logger logger = LoggerFactory.getLogger(PropertyTypeKeyword.class);
+    private static final Logger logger = LoggerFactory.getLogger(UnomiPropertyTypeKeyword.class);
 
     private final ProfileService profileService;
     private final SchemaRegistryImpl schemaRegistry;
@@ -97,8 +97,8 @@ class PropertyTypeKeyword extends AbstractKeyword {
         }
     }
 
-    public PropertyTypeKeyword(ProfileService profileService, SchemaRegistryImpl schemaRegistry) {
-        super("propertyTypes");
+    public UnomiPropertyTypeKeyword(ProfileService profileService, SchemaRegistryImpl schemaRegistry) {
+        super("unomiPropertyTypes");
         this.profileService = profileService;
         this.schemaRegistry = schemaRegistry;
     }
