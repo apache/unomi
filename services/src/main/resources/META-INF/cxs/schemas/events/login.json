@@ -1,22 +1,24 @@
 {
-  "$id": "https://unomi.apache.org/schemas/json/events/float-property-type/1-0-0",
+  "$id": "https://unomi.apache.org/schemas/json/events/login/1-0-0",
   "$schema": "https://json-schema.org/draft/2019-09/schema",
   "self":{
     "vendor":"org.apache.unomi",
-    "name":"events/float-property-type",
+    "target" : "events",
+    "name": "login",
     "format":"jsonschema",
     "version":"1-0-0"
   },
-  "title": "FloatPropertyEvent",
+  "title": "LoginEvent",
   "type": "object",
   "allOf": [{ "$ref": "https://unomi.apache.org/schemas/json/event/1-0-0" }],
   "properties" : {
     "properties" : {
       "type" : "object",
-      "properties" : {
-        "floatProperty" : { "type" : "number" }
-      },
-      "additionalProperties": false
+      "unomiPropertyTypes" : [ "events" ],
+      "maxProperties": 50
+    },
+    "target" : {
+      "$ref" : "https://unomi.apache.org/schemas/json/customitem/1-0-0"
     }
   }
 }
