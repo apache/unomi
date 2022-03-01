@@ -1,0 +1,85 @@
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+=== Updating Events Using the Context Servlet
+One of the use cases that needed to be supported by Unomi is the ability to build a user profile based on Internal System events or https://en.wikipedia.org/wiki/Change_data_capture[Change Data Capture] which usally transported through internal messaging queues such as Kafka.
+
+This can easily achieved using the `KafkaInjector` module built in within Unomi.
+
+But, as streaming system usually operates in https://dzone.com/articles/kafka-clients-at-most-once-at-least-once-exactly-o[at-least-once] semantics,
+we need to have a way to guarantee we wont have duplicate events in the system.
+
+==== Solution
+
+One of the solutions to this scenario is to have the ability to control and pass in the `eventId` property from outside of Unomi,
+Using an authorized 3rd party. This way whenever an event with the same `itemId` will be processed once again he wont be appended to list of events, but will be updated.
+
+Here is an example of a request contains the `itemdId`
+
+[source]
+----
+curl -X POST http://localhost:8181/cxs/context.json \
+-H "Content-Type: application/json" \
+-d @- <<'EOF'
+{
+    "events":[
+        {
+            "itemId": "exampleEventId",
+            "eventType":"view",
+            "scope": "example",
+            "properties" : {
+              "firstName" : "example"
+            }
+        }
+    ]
+}
+EOF
+----
+Make sure to use an authorized third party using `X-Unomi-Peer` requests headers and that the `eventType` is in the list of allowed events
+
+==== Defining Rules
+Another use case we support is the ability to define a rule on the above mentioned events.
+If we have a rule that increment a property on profile level, we would want the action to be executed only once per event id.
+this can be achieved by adding `"raiseEventOnlyOnce": false` to the rule definition.
+
+[source]
+----
+curl -X POST http://localhost:8181/cxs/context.json \
+-H "Content-Type: application/json" \
+-d @- <<'EOF'
+{
+  "metadata": {
+    "id": "updateNumberOfOrders",
+    "name": "update number of orders on orderCreated eventType",
+    "description": "update number of orders on orderCreated eventType"
+  },
+  "raiseEventOnlyOnce": false,
+  "condition": {
+    "type": "eventTypeCondition",
+    "parameterValues": {
+      "eventTypeId": "orderCreated"
+    }
+  },
+  "actions": [
+    {
+      "parameterValues": {
+        "setPropertyName": "properties.nbOfOrders",
+        "setPropertyValue": "script::profile.properties.?nbOfOrders != null ? (profile.properties.nbOfOrders + 1) : 1",
+        "storeInSession": false
+      },
+      "type": "setPropertyAction"
+    }
+  ]
+}
+EOF
+----

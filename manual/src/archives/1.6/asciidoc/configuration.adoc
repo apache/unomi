@@ -1,0 +1,794 @@
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+== Configuration
+
+=== Centralized configuration
+
+Apache Unomi uses a centralized configuration file that contains both system properties and configuration properties.
+These settings are then fed to the OSGi and other configuration files using placeholder that look something like this:
+
+[source]
+----
+contextserver.publicAddress=${org.apache.unomi.cluster.public.address:-http://localhost:8181}
+contextserver.internalAddress=${org.apache.unomi.cluster.internal.address:-https://localhost:9443}
+----
+
+Default values are stored in a file called `$MY_KARAF_HOME/etc/custom.system.properties` but you should never modify
+this file directly, as an override mechanism is available. Simply create a file called:
+
+    unomi.custom.system.properties
+
+and put your own property values in their to override the defaults OR you can use environment variables to also override
+the values in the `$MY_KARAF_HOME/etc/custom.system.properties`. See the next section for more information about that.
+
+=== Changing the default configuration using environment variables (i.e. Docker configuration)
+
+You might want to use environment variables to change the default system configuration, especially if you intend to run
+Apache Unomi inside a Docker container. You can find the list of all the environment variable names in the following file:
+
+https://github.com/apache/unomi/blob/master/package/src/main/resources/etc/custom.system.properties
+
+If you are using Docker Container, simply pass the environment variables on the docker command line or if you are using
+Docker Compose you can put the environment variables in the docker-compose.yml file.
+
+If you want to "save" the environment values in a file, you can use the `bin/setenv(.bat)` to setup the environment
+variables you want to use.
+
+=== Changing the default configuration using property files
+
+If you want to change the default configuration using property files instead of environment variables, you can perform
+any modification you want in the `$MY_KARAF_HOME/etc/unomi.custom.system.properties` file.
+
+By default this file does not exist and is designed to be a file that will contain only your custom modifications to the
+default configuration.
+
+For example, if you want to change the HTTP ports that the server is listening on, you will need to create the
+following lines in the $MY_KARAF_HOME/etc/unomi.custom.system.properties (and create it if you haven't yet) file:
+
+[source]
+----
+org.osgi.service.http.port.secure=9443
+org.osgi.service.http.port=8181
+----
+
+If you change these ports, also make sure you adjust the following settings in the same file :
+
+[source]
+----
+org.apache.unomi.cluster.public.address=http://localhost:8181
+org.apache.unomi.cluster.internal.address=https://localhost:9443
+----
+
+If you need to specify an ElasticSearch cluster name, or a host and port that are different than the default,
+it is recommended to do this BEFORE you start the server for the first time, or you will loose all the data
+you have stored previously.
+
+You can use the following properties for the ElasticSearch configuration
+[source]
+----
+org.apache.unomi.elasticsearch.cluster.name=contextElasticSearch
+# The elasticsearch.adresses may be a comma seperated list of host names and ports such as
+# hostA:9200,hostB:9200
+# Note: the port number must be repeated for each host.
+org.apache.unomi.elasticsearch.addresses=localhost:9200
+----
+
+=== Secured events configuration
+
+Apache Unomi secures some events by default. It comes out of the box with a default configuration that you can adjust
+by using the centralized configuration file override in `$MY_KARAF_HOME/etc/unomi.custom.system.properties`
+
+
+You can find the default configuration in the following file:
+
+    $MY_KARAF_HOME/etc/custom.system.properties
+
+The properties start with the prefix : `org.apache.unomi.thirdparty.*` and here are the default values :
+
+    org.apache.unomi.thirdparty.provider1.key=${env:UNOMI_THIRDPARTY_PROVIDER1_KEY:-670c26d1cc413346c3b2fd9ce65dab41}
+    org.apache.unomi.thirdparty.provider1.ipAddresses=${env:UNOMI_THIRDPARTY_PROVIDER1_IPADDRESSES:-127.0.0.1,::1}
+    org.apache.unomi.thirdparty.provider1.allowedEvents=${env:UNOMI_THIRDPARTY_PROVIDER1_ALLOWEDEVENTS:-login,updateProperties}
+
+The events set in allowedEvents will be secured and will only be accepted if the call comes from the specified IP
+address, and if the secret-key is passed in the X-Unomi-Peer HTTP request header. The "env:" part means that it will
+attempt to read an environment variable by that name, and if it's not found it will default to the value after the ":-"
+marker.
+
+It is now also possible to use IP address ranges instead of having to list all valid IP addresses for event sources. This
+is very useful when working in cluster deployments where servers may be added or removed dynamically. In order to support
+this Apache Unomi uses a library called https://seancfoley.github.io/IPAddress/#_Toc525135541[IPAddress] that supports
+IP ranges and subnets. Here is an example of how to setup a range:
+
+    org.apache.unomi.thirdparty.provider1.ipAddresses=${env:UNOMI_THIRDPARTY_PROVIDER1_IPADDRESSES:-192.168.1.1-100,::1}
+
+The above configuration will allow a range of IP addresses between 192.168.1.1 and 192.168.1.100 as well as the IPv6
+loopback.
+
+Here's another example using the subnet format:
+
+    org.apache.unomi.thirdparty.provider1.ipAddresses=${env:UNOMI_THIRDPARTY_PROVIDER1_IPADDRESSES:-1.2.0.0/16,::1}
+
+The above configuration will allow all addresses starting with 1.2 as well as the IPv6 loopback address.
+
+Wildcards may also be used:
+
+    org.apache.unomi.thirdparty.provider1.ipAddresses=${env:UNOMI_THIRDPARTY_PROVIDER1_IPADDRESSES:-1.2.*.*,::1}
+
+The above configuration is exactly the same as the previous one.
+
+More advanced ranges and subnets can be used as well, please refer to the https://seancfoley.github.io/IPAddress[IPAddress] library documentation for details on
+how to format them.
+
+If you want to add another provider you will need to add them manually in the following file (and make sure you maintain
+the changes when upgrading) :
+
+    $MY_KARAF_HOME/etc/org.apache.unomi.thirdparty.cfg
+
+Usually, login events, which operate on profiles and do merge on protected properties, must be secured. For each
+trusted third party server, you need to add these 3 lines :
+
+[source]
+----
+thirdparty.provider1.key=secret-key
+thirdparty.provider1.ipAddresses=127.0.0.1,::1
+thirdparty.provider1.allowedEvents=login,updateProperties
+----
+
+
+=== Installing the MaxMind GeoIPLite2 IP lookup database
+
+Apache Unomi requires an IP database in order to resolve IP addresses to user location.
+The GeoLite2 database can be downloaded from MaxMind here :
+http://dev.maxmind.com/geoip/geoip2/geolite2/[http://dev.maxmind.com/geoip/geoip2/geolite2/]
+
+Simply download the GeoLite2-City.mmdb file into the "etc" directory.
+
+=== Installing Geonames database
+
+Apache Unomi includes a geocoding service based on the geonames database ( http://www.geonames.org/[http://www.geonames.org/] ). It can be
+used to create conditions on countries or cities.
+
+In order to use it, you need to install the Geonames database into . Get the "allCountries.zip" database from here :
+http://download.geonames.org/export/dump/[http://download.geonames.org/export/dump/]
+
+Download it and put it in the "etc" directory, without unzipping it.
+Edit `$MY_KARAF_HOME/etc/unomi.custom.system.properties` and set `org.apache.unomi.geonames.forceImport` to true,
+import should start right away.
+Otherwise, import should start at the next startup. Import runs in background, but can take about 15 minutes.
+At the end, you should have about 4 million entries in the geonames index.
+
+=== REST API Security
+
+The Apache Unomi Context Server REST API is protected using JAAS authentication and using Basic or Digest HTTP auth.
+By default, the login/password for the REST API full administrative access is "karaf/karaf".
+
+The generated package is also configured with a default SSL certificate. You can change it by following these steps :
+
+Replace the existing keystore in $MY_KARAF_HOME/etc/keystore by your own certificate :
+
+http://wiki.eclipse.org/Jetty/Howto/Configure_SSL[http://wiki.eclipse.org/Jetty/Howto/Configure_SSL]
+
+Update the keystore and certificate password in $MY_KARAF_HOME/etc/unomi.custom.system.properties file :
+
+[source]
+----
+org.ops4j.pax.web.ssl.keystore=${env:UNOMI_SSL_KEYSTORE:-${karaf.etc}/keystore}
+org.ops4j.pax.web.ssl.password=${env:UNOMI_SSL_PASSWORD:-changeme}
+org.ops4j.pax.web.ssl.keypassword=${env:UNOMI_SSL_KEYPASSWORD:-changeme}
+----
+
+You should now have SSL setup on Karaf with your certificate, and you can test it by trying to access it on port 9443.
+
+Changing the default Karaf password can be done by modifying the `org.apache.unomi.security.root.password` in the
+`$MY_KARAF_HOME/etc/unomi.custom.system.properties` file
+
+=== Scripting security
+
+==== Multi-layer scripting filtering system
+
+The scripting security system is multi-layered.
+
+For requests coming in through the /cxs/context.json endpoint, the following flow is used to secure incoming requests:
+
+image::expression-filtering-layers.png[Expression filtering layers]
+
+Conditions submitted through the context.json public endpoint are first sanitized, meaning that any scripting directly
+injected is removed. However, as conditions can use sub conditions that include scripting, only the first directly
+injected layer of scripts are removed.
+
+The second layer is the expression filtering system, that uses an allow-listing mechanism to only accept pre-vetted
+expressions (through configuration and deployment on the server side). Any unrecognized expression will not be accepted.
+
+Finally, once the script starts executing in the scripting engine, a filtering class loader will only let the script
+access classes that have been allowed.
+
+This multi-layered approach makes it possible to retain a high level of security even if one layer is poorly
+configured or abused.
+
+For requests coming in through the secure APIs such as rules, only the condition sanitizing step is skipped,
+otherwise the rest of the filtering system is the same.
+
+==== Scripts and expressions
+
+Apache Unomi allows using different types of expressions in the following subsystems:
+
+- context.json filters and personalization queries
+- rule conditions and actions parameters
+
+Apache Unomi uses two integrated scripting languages to provide this functionality: OGNL and MVEL.
+OGNL is deprecated and is now disabled by default since 1.5.2 as it is little used (and replaced by better performing
+hardcoded property lookups). MVEL is more commonly used in rule actions as in the following example:
+
+From https://github.com/apache/unomi/blob/unomi-1.5.x/plugins/baseplugin/src/main/resources/META-INF/cxs/rules/sessionAssigned.json[https://github.com/apache/unomi/blob/unomi-1.5.x/plugins/baseplugin/src/main/resources/META-INF/cxs/rules/sessionAssigned.json]:
+
+[source,json]
+----
+{
+  "metadata": {
+    "id": "_ajhg9u2s5_sessionAssigned",
+    "name": "Session assigned to a profile",
+    "description": "Update profile visit information",
+    "readOnly":true
+  },
+
+  "condition": {
+    "type": "booleanCondition",
+    "parameterValues": {
+      "subConditions":[
+        {
+          "type": "eventTypeCondition",
+          "parameterValues": {
+            "eventTypeId": "sessionCreated"
+          }
+        },
+        {
+          "type": "eventTypeCondition",
+          "parameterValues": {
+            "eventTypeId": "sessionReassigned"
+          }
+        }
+
+        ],
+      "operator":"or"
+
+    }
+  },
+
+  "actions": [
+    {
+      "parameterValues": {
+        "setPropertyName": "properties.previousVisit",
+        "setPropertyValue": "profileProperty::lastVisit",
+        "storeInSession": false
+      },
+      "type": "setPropertyAction"
+    },
+    {
+      "parameterValues": {
+        "setPropertyName": "properties.lastVisit",
+        "setPropertyValue": "now",
+        "storeInSession": false
+      },
+      "type": "setPropertyAction"
+    },
+    {
+      "parameterValues": {
+        "setPropertyName": "properties.nbOfVisits",
+        "setPropertyValue": "script::profile.properties.?nbOfVisits != null ? (profile.properties.nbOfVisits + 1) : 1",
+        "storeInSession": false
+      },
+      "type": "setPropertyAction"
+    }
+  ]
+
+}
+----
+
+As we see in the above example, we use an MVEL script with the setPropertyAction to set a property value.
+Starting with version 1.5.2, any expression use in rules MUST be allow-listed.
+
+OGNL was previously used wherever a parameter could be used, but MVEL could only be used with a “script::” prefix.
+Starting with version 1.5.2 OGNL will no longer be allowed and is replaced by a compatible “hardcoded” property
+lookup system, while MVEL requires allow-listing the scripts that are to be used.
+
+By default, Apache Unomi comes with some built-in allowed expressions that cover all the internal uses cases.
+
+Default allowed MVEL expressions (from https://github.com/apache/unomi/blob/unomi-1.5.x/plugins/baseplugin/src/main/resources/META-INF/cxs/expressions/mvel.json[https://github.com/apache/unomi/blob/unomi-1.5.x/plugins/baseplugin/src/main/resources/META-INF/cxs/expressions/mvel.json]) :
+
+[source,json]
+----
+[
+  "\\Q'systemProperties.goals.'+goalId+'TargetReached'\\E",
+  "\\Q'now-'+since+'d'\\E",
+  "\\Q'scores.'+scoringPlanId\\E",
+  "\\QminimumDuration*1000\\E",
+  "\\QmaximumDuration*1000\\E",
+  "\\Qprofile.properties.?nbOfVisits != null ? (profile.properties.nbOfVisits + 1) : 1\\E",
+  "\\Qsession != null ? session.size + 1 : 0\\E",
+  "\\Q'properties.optimizationTest_'+event.target.itemId\\E",
+  "\\Qevent.target.properties.variantId\\E",
+  "\\Qprofile.properties.?systemProperties.goals.\\E[\\w\\_]*\\QReached != null ? (profile.properties.systemProperties.goals.\\E[\\w\\_]*\\QReached) : 'now'\\E",
+  "\\Qprofile.properties.?systemProperties.campaigns.\\E[\\w\\_]*\\QEngaged != null ? (profile.properties.systemProperties.campaigns.\\E[\\w\\_]*\\QEngaged) : 'now'\\E"
+]
+----
+
+If you require or are already using custom expressions, you should add a plugin to  Apache Unomi to allow for this.
+The choice of a plugin was to make sure only system administrators and solution developers could provide such a
+list, avoiding the possibility to provide it through an API call or another security sensitive deployment mechanism.
+
+There is another way of allow-listing expressions through configuration, see the “scripting configuration parameters” section below.
+
+Procedure to add allowed expressions:
+
+1. Create a new Apache Unomi plugin project.
+2. Create a JSON file in src/main/resources/META-INF/cxs/expressions/mvel.json with an array of regular expressions that will contain the allowed expressions.
+3. Build the project and deploy it to Apache Unomi
+
+Warning: Do not make regular expressions too general. They should actually be as specific as possible to avoid potential injection of malicious code.
+
+==== Scripting expression filtering configuration parameters
+
+Alongside with the allow-listing technology, there are new configuration parameters to control the security of the scripting engines:
+
+[source]
+----
+# These parameters control the list of classes that are allowed or forbidden when executing expressions.
+org.apache.unomi.scripting.allow=${env:UNOMI_ALLOW_SCRIPTING_CLASSES:-org.apache.unomi.api.Event,org.apache.unomi.api.Profile,org.apache.unomi.api.Session,org.apache.unomi.api.Item,org.apache.unomi.api.CustomItem,ognl.*,java.lang.Object,java.util.Map,java.util.HashMap,java.lang.Integer,org.mvel2.*}
+org.apache.unomi.scripting.forbid=${env:UNOMI_FORBID_SCRIPTING_CLASSES:-}
+
+# This parameter controls the whole expression filtering system. It is not recommended to turn it off. The main reason to turn it off would be to check if it is interfering with something, but it should always be active in production.
+org.apache.unomi.scripting.filter.activated=${env:UNOMI_SCRIPTING_FILTER_ACTIVATED:-true}
+
+# The following parameters control the filtering using regular expressions for each scripting sub-system.
+# The "collections" parameter tells the expression filtering system which configurations to expect. By default only MVEL and/or OGNL are accepted values, but in the future these might be replaced by new scripting sub-systems.
+org.apache.unomi.scripting.filter.collections=${env:UNOMI_SCRIPTING_FILTER_COLLECTIONS:-mvel,ognl}
+
+# For each scripting sub-system, there is an allow and a forbid property that reference a .json files,
+# you can either edit this files or reference your own file directly in the following config.
+# Note: You can add new expressions to the "allow" file, although it is better to add them inside any plugins you may be adding.
+#       This configuration is only designed to compensate for the cases where something was not properly designed or to deal with compatibility issues.
+#       Just be VERY careful to make your patterns AS SPECIFIC AS POSSIBLE in order to avoid introducing a way to abuse the expression filtering.
+# Note: It is NOT recommended to change the built-in "forbid" value unless you are having issues with its value.
+# Note: mvel-allow.json contains an empty array: [], this mean nothing is allowed, so far.
+#       If you want to allow all expression, just remove the property org.apache.unomi.scripting.filter.mvel.allow, but this is not recommended
+#       It's better to list your expressions, and provide them in the mvel-allow.json file
+#       example: ["\\Qsession.size + 1\\E"]
+org.apache.unomi.scripting.filter.mvel.allow=${env:UNOMI_SCRIPTING_FILTER_MVEL_ALLOW:-${karaf.etc}/mvel-allow.json}
+org.apache.unomi.scripting.filter.mvel.forbid=${env:UNOMI_SCRIPTING_FILTER_MVEL_FORBID:-${karaf.etc}/mvel-forbid.json}
+org.apache.unomi.scripting.filter.ognl.allow=${env:UNOMI_SCRIPTING_FILTER_OGNL_ALLOW:-${karaf.etc}/ognl-allow.json}
+org.apache.unomi.scripting.filter.ognl.forbid=${env:UNOMI_SCRIPTING_FILTER_OGNL_FORBID:-${karaf.etc}/ognl-forbid.json}
+
+# This parameter controls whether OGNL scripting is allowed in expressions. Because of security reasons it is deactivated by default. If you run into compatibility issues you could reactivate it but it is at your own risk.
+org.apache.unomi.security.properties.useOGNLScripting=${env:UNOMI_SCRIPTING_USE_OGNL:-false}
+
+# This parameter controls the condition sanitizing done on the ContextServlet (/cxs/context.json). If will remove any expressions that start with "script::". It is not recommended to change this value, unless you run into compatibility issues.
+org.apache.unomi.security.personalization.sanitizeConditions=${env:UNOMI_SECURITY_SANITIZEPERSONALIZATIONCONDITIONS:-true}
+----
+
+==== Groovy Actions
+
+Groovy actions offer the ability to define a set of actions and action types (aka action descriptors) purely from Groovy scripts defined at runtime.
+
+Initially submitted to Unomi through a purpose-built REST API endpoint, Groovy actions are then stored in Elasticsearch. When an event matches a rule configured to execute an action, the corresponding action is fetched from Elasticsearch and executed. 
+
+===== Anatomy of a Groovy Action
+
+To be valid, a Groovy action must follow a particular convention which is divided in two parts:
+
+* An annotation used to define the associated action type
+* The function to be executed
+
+Placed right before the function, the “@Action” annotation contains a set of parameter detailing how the action should be triggered.
+
+.@Action annotation
+|===
+|Field name|Type|Required|Description
+
+|id
+|String
+|YES
+|Id of the action
+
+|actionExecutor
+|String
+|YES
+|Action executor contains the name of the script to call for the action type and must be prefixed with “*groovy:*”. The prefix indicates to Unomi which dispatcher to use when processing the action. 
+
+|name
+|String
+|
+|Action name
+
+|hidden
+|Boolean
+|
+|Define if the action is hidden or not. It is usually used to hide objects in a UI.
+
+|parameters
+|List<https://github.com/apache/unomi/blob/master/extensions/groovy-actions/services/src/main/java/org/apache/unomi/groovy/actions/annotations/Parameter.java[Parameter]>
+|
+|The parameters of the actions, also defined by annotations
+
+|systemTags
+|List<String>
+|
+|A (reserved) list of tags for the associated object. This is usually populated through JSON descriptors and is not meant to be modified by end users. These tags may include values that help classify associated objects.
+
+|===
+
+The function contained within the Groovy Action must be called `execute()` and its last instruction must be an integer.
+
+This integer serves as an indication whether the values of the session and profile should be persisted. In general, the codes used are defined in the https://github.com/apache/unomi/blob/master/api/src/main/java/org/apache/unomi/api/services/EventService.java[EventService interface].
+
+Each groovy actions extends by default a Base script 
+https://github.com/apache/unomi/blob/master/extensions/groovy-actions/services/src/main/resources/META-INF/base/BaseScript.groovy[defined here]
+
+===== REST API
+
+Actions can be deployed/updated/deleted via the dedicated `/cxs/groovyActions` rest endpoint.
+
+Deploy/update an Action:
+[source,bash]
+----
+curl -X POST 'http://localhost:8181/cxs/groovyActions' \
+--user karaf:karaf \
+--form 'file=@"<file location>"'
+----
+
+A Groovy Action can be updated by submitting another Action with the same id.
+
+Delete an Action:
+[source,bash]
+----
+curl -X DELETE 'http://localhost:8181/cxs/groovyActions/<Action id>' \
+--user karaf:karaf 
+----
+
+Note that when a groovy action is deleted by the API, the action type associated with this action will also be deleted.
+
+===== Hello World!
+
+In this short example, we’re going to create a Groovy Action that will be adding “Hello world!” to the logs whenever a new view event is triggered.
+
+The first step consists in creating the groovy script on your filesystem, start by creating the file `hello-world.groovy`:
+
+[source,groovy]
+----
+@Action(id = "helloWorldGroovyAction",
+        actionExecutor = "groovy:helloWorldAction")
+        parameters = [@Parameter(id = "location", type = "string", multivalued = false)])
+def execute() {
+    logger.info("Hello {}", action.getParameterValues().get("location"))
+    EventService.NO_CHANGE
+}
+----
+
+As the last instruction of the script is `EventService.NO_CHANGE`, data will not be persisted. 
+
+Once the action has been created you need to submit it to Unomi (from the same folder as `hello-world.groovy`).
+[source,bash]
+----
+curl -X POST 'http://localhost:8181/cxs/groovyActions' \
+--user karaf:karaf \
+--form 'file=@hello-world.groovy'
+----
+
+Finally, register a rule to trigger execution of the groovy action:
+[source,bash]
+----
+curl -X POST 'http://localhost:8181/cxs/rules' \
+--user karaf:karaf \
+--header 'Content-Type: application/json' \
+--data-raw '{
+ "metadata": {
+   "id": "scriptGroovyActionRule",
+   "name": "Test Groovy Action Rule",
+   "description": "A sample rule to test Groovy actions"
+ },
+ "condition": {
+     "type": "eventTypeCondition",
+     "parameterValues": {
+       "eventTypeId": "view"
+     }
+ },
+ "actions": [
+   {
+     "parameterValues": {
+       "location": "world!"
+     },
+     "type": "helloWorldAction"
+   }
+ ]
+}'
+----
+
+Note that this rule contains a “location” parameter, with the value “world!”, which is then used in the log message triggered by the action.
+
+You can now use unomi to trigger a “view” event and see the corresponding message in the Unomi logs.
+
+Once you’re done with the Hello World! action, it can be deleted using the following command:
+[source,bash]
+----
+curl -X DELETE 'http://localhost:8181/cxs/groovyActions/helloWorldGroovyAction' \
+--user karaf:karaf 
+----
+
+And the corresponding rule can be deleted using the following command:
+[source,bash]
+----
+curl -X DELETE 'http://localhost:8181/cxs/rules/scriptGroovyActionRule' \
+--user karaf:karaf
+----
+
+==== Scripting roadmap
+
+Scripting will probably undergo major changes in future versions of Apache Unomi, with the likely retirement of MVEL in favor of Groovy Actions detailed above. 
+
+These changes will not happen on maintenance versions of Apache Unomi, only in the next major version. Maintenance
+versions will of course maintain compatibility with existing scripting solutions.
+
+=== Automatic profile merging
+
+Apache Unomi is capable of merging profiles based on a common property value. In order to use this, you must
+add the MergeProfileOnPropertyAction to a rule (such as a login rule for example), and configure it with the name
+ of the property that will be used to identify the profiles to be merged. An example could be the "email" property,
+ meaning that if two (or more) profiles are found to have the same value for the "email" property they will be merged
+ by this action.
+
+Upon merge, the old profiles are marked with a "mergedWith" property that will be used on next profile access to delete
+the original profile and replace it with the merged profile (aka "master" profile). Once this is done, all cookie tracking
+will use the merged profile.
+
+To test, simply configure the action in the "login" or "facebookLogin" rules and set it up on the "email" property.
+Upon sending one of the events, all matching profiles will be merged.
+
+=== Securing a production environment
+
+Before going live with a project, you should _absolutely_ read the following section that will help you setup a proper
+secure environment for running your context server.
+
+Step 1: Install and configure a firewall
+
+You should setup a firewall around your cluster of context servers and/or Elasticsearch nodes. If you have an
+application-level firewall you should only allow the following connections open to the whole world :
+
+* http://localhost:8181/cxs/context.js[http://localhost:8181/cxs/context.js]
+* http://localhost:8181/cxs/eventcollector[http://localhost:8181/cxs/eventcollector]
+
+All other ports should not be accessible to the world.
+
+For your Apache Unomi client applications (such as the Jahia CMS), you will need to make the following ports
+accessible :
+
+[source]
+----
+8181 (Context Server HTTP port)
+9443 (Context Server HTTPS port)
+----
+
+The Apache Unomi actually requires HTTP Basic Auth for access to the Context Server administration REST API, so it is
+highly recommended that you design your client applications to use the HTTPS port for accessing the REST API.
+
+The user accounts to access the REST API are actually routed through Karaf's JAAS support, which you may find the
+documentation for here :
+
+* http://karaf.apache.org/manual/latest/users-guide/security.html[http://karaf.apache.org/manual/latest/users-guide/security.html]
+
+The default username/password is
+
+[source]
+----
+karaf/karaf
+----
+
+You should really change this default username/password as soon as possible. Changing the default Karaf password can be
+done by modifying the `org.apache.unomi.security.root.password` in the `$MY_KARAF_HOME/etc/unomi.custom.system.properties` file
+
+Or if you want to also change the user name you could modify the following file :
+
+    $MY_KARAF_HOME/etc/users.properties
+
+But you will also need to change the following property in the $MY_KARAF_HOME/etc/unomi.custom.system.properties :
+
+    karaf.local.user = karaf
+
+For your context servers, and for any standalone Elasticsearch nodes you will need to open the following ports for proper
+node-to-node communication : 9200 (Elasticsearch REST API), 9300 (Elasticsearch TCP transport)
+
+Of course any ports listed here are the default ports configured in each server, you may adjust them if needed.
+
+Step 2 : Follow industry recommended best practices for securing Elasticsearch
+
+You may find more valuable recommendations here :
+
+* https://www.elastic.co/blog/found-elasticsearch-security[https://www.elastic.co/blog/found-elasticsearch-security]
+* https://www.elastic.co/blog/scripting-security[https://www.elastic.co/blog/scripting-security]
+
+Step 4 : Setup a proxy in front of the context server
+
+As an alternative to an application-level firewall, you could also route all traffic to the context server through
+a proxy, and use it to filter any communication.
+
+=== Integrating with an Apache HTTP web server
+
+If you want to setup an Apache HTTP web server in from of Apache Unomi, here is an example configuration using
+mod_proxy.
+
+In your Unomi package directory, in $MY_KARAF_HOME/etc/unomi.custom.system.properties setup the public address for
+the hostname `unomi.apache.org`:
+
+org.apache.unomi.cluster.public.address=https://unomi.apache.org/
+org.apache.unomi.cluster.internal.address=http://192.168.1.1:8181
+
+and you will also need to change the cookie domain in the same file:
+
+org.apache.unomi.profile.cookie.domain=apache.org
+
+Main virtual host config:
+
+[source]
+----
+<VirtualHost *:80>
+        Include /var/www/vhosts/unomi.apache.org/conf/common.conf
+</VirtualHost>
+
+<IfModule mod_ssl.c>
+    <VirtualHost *:443>
+        Include /var/www/vhosts/unomi.apache.org/conf/common.conf
+
+        SSLEngine on
+
+        SSLCertificateFile    /var/www/vhosts/unomi.apache.org/conf/ssl/24d5b9691e96eafa.crt
+        SSLCertificateKeyFile /var/www/vhosts/unomi.apache.org/conf/ssl/apache.org.key
+        SSLCertificateChainFile /var/www/vhosts/unomi.apache.org/conf/ssl/gd_bundle-g2-g1.crt
+
+        <FilesMatch "\.(cgi|shtml|phtml|php)$">
+                SSLOptions +StdEnvVars
+        </FilesMatch>
+        <Directory /usr/lib/cgi-bin>
+                SSLOptions +StdEnvVars
+        </Directory>
+        BrowserMatch "MSIE [2-6]" \
+                nokeepalive ssl-unclean-shutdown \
+                downgrade-1.0 force-response-1.0
+        BrowserMatch "MSIE [17-9]" ssl-unclean-shutdown
+
+    </VirtualHost>
+</IfModule>
+----
+
+common.conf:
+
+[source]
+----
+ServerName unomi.apache.org
+ServerAdmin webmaster@apache.org
+
+DocumentRoot /var/www/vhosts/unomi.apache.org/html
+CustomLog /var/log/apache2/access-unomi.apache.org.log combined
+<Directory />
+        Options FollowSymLinks
+        AllowOverride None
+</Directory>
+<Directory /var/www/vhosts/unomi.apache.org/html>
+        Options FollowSymLinks MultiViews
+        AllowOverride None
+        Order allow,deny
+        allow from all
+</Directory>
+<Location /cxs>
+    Order deny,allow
+    deny from all
+    allow from 88.198.26.2
+    allow from www.apache.org
+</Location>
+
+RewriteEngine On
+RewriteCond %{REQUEST_METHOD} ^(TRACE|TRACK)
+RewriteRule .* - [F]
+ProxyPreserveHost On
+ProxyPass /server-status !
+ProxyPass /robots.txt !
+
+RewriteCond %{HTTP_USER_AGENT} Googlebot [OR]
+RewriteCond %{HTTP_USER_AGENT} msnbot [OR]
+RewriteCond %{HTTP_USER_AGENT} Slurp
+RewriteRule ^.* - [F,L]
+
+ProxyPass / http://localhost:8181/ connectiontimeout=20 timeout=300 ttl=120
+ProxyPassReverse / http://localhost:8181/
+----
+
+=== Changing the default tracking location
+
+When performing localhost requests to Apache Unomi, a default location will be used to insert values into the session
+to make the location-based personalization still work. You can modify the default location settings using the
+centralized configuration file (`$MY_KARAF_HOME/etc/unomi.custom.system.properties`).
+
+Here are the default values for the location settings :
+
+[source]
+----
+# The following settings represent the default position that is used for localhost requests
+org.apache.unomi.ip.database.location=${env:UNOMI_IP_DB:-${karaf.etc}/GeoLite2-City.mmdb}
+org.apache.unomi.ip.default.countryCode=${env:UNOMI_IP_DEFAULT_COUNTRYCODE:-CH}
+org.apache.unomi.ip.default.countryName=${env:UNOMI_IP_DEFAULT_COUNTRYNAME:-Switzerland}
+org.apache.unomi.ip.default.city=${env:UNOMI_IP_DEFAULT_CITY:-Geneva}
+org.apache.unomi.ip.default.subdiv1=${env:UNOMI_IP_DEFAULT_SUBDIV1:-2660645}
+org.apache.unomi.ip.default.subdiv2=${env:UNOMI_IP_DEFAULT_SUBDIV2:-6458783}
+org.apache.unomi.ip.default.isp=${env:UNOMI_IP_DEFAULT_ISP:-Cablecom}
+org.apache.unomi.ip.default.latitude=${env:UNOMI_IP_DEFAULT_LATITUDE:-46.1884341}
+org.apache.unomi.ip.default.longitude=${env:UNOMI_IP_DEFAULT_LONGITUDE:-6.1282508}
+----
+
+You might want to change these for testing or for demonstration purposes.
+
+=== Apache Karaf SSH Console
+
+The Apache Karaf SSH console is available inside Apache Unomi, but the port has been changed from the default value of
+8101 to 8102 to avoid conflicts with other Karaf-based products. So to connect to the SSH console you should use:
+
+[source]
+----
+ssh -p 8102 karaf@localhost
+----
+
+or the user/password you have setup to protect the system if you have changed it. You can find the list of Apache Unomi
+shell commands in the "Shell commands" section of the documentation.
+
+=== ElasticSearch authentication and security
+
+With ElasticSearch 7, it's possible to secure the access to your data. (https://www.elastic.co/guide/en/elasticsearch/reference/7.5/secure-cluster.html[https://www.elastic.co/guide/en/elasticsearch/reference/7.5/secure-cluster.html])
+
+Depending on your ElasticSearch license you may need to install Kibana and enable xpack security: https://www.elastic.co/guide/en/elasticsearch/reference/7.5/configuring-security.html[https://www.elastic.co/guide/en/elasticsearch/reference/7.5/configuring-security.html]
+
+==== User authentication !
+
+If your ElasticSearch have been configured to be only accessible by authenticated users (https://www.elastic.co/guide/en/elasticsearch/reference/7.5/setting-up-authentication.html[https://www.elastic.co/guide/en/elasticsearch/reference/7.5/setting-up-authentication.html])
+
+Just edit `etc/org.apache.unomi.persistence.elasticsearch.cfg` to add the following settings:
+
+[source]
+----
+username=USER
+password=PASSWORD
+----
+
+==== SSL communication
+
+By default Unomi will communicate with ElasticSearch using `http`
+but you can configure your ElasticSearch server(s) to allow encrypted request using `https`.
+
+You can follow this documentation to enable SSL on your ElasticSearch server(s):
+
+* https://www.elastic.co/guide/en/elasticsearch/reference/7.5/ssl-tls.html[Full documentation]
+* https://www.elastic.co/guide/en/elasticsearch/reference/7.5/configuring-tls.html#node-certificates[Configure certificates]
+* https://www.elastic.co/guide/en/elasticsearch/reference/7.5/configuring-tls.html#tls-http[Encrypt HTTP communications]
+
+If your ElasticSearch is correctly configure to encrypt communications on `https`:
+
+Just edit `etc/org.apache.unomi.persistence.elasticsearch.cfg` to add the following settings:
+
+[source]
+----
+sslEnable=true
+----
+
+By default, certificates will have to be configured on the Apache Unomi server to be able to trust the identity
+of the ElasticSearch server(s). But if you need to trust all certificates automatically, you can use this setting:
+
+[source]
+----
+sslTrustAllCertificates=true
+----

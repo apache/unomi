@@ -1,0 +1,63 @@
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+=== Login sample
+
+This samples is an example of what is involved in integrated a login with Apache Unomi.
+
+==== Warning !
+
+The example code uses client-side Javascript code to send the login event. This is only
+done this way for the sake of samples simplicity but if should NEVER BE DONE THIS WAY in real cases.
+
+The login event should always be sent from the server performing the actual login since it must
+only be sent if the user has authenticated properly, and only the authentication server can validate this.
+
+==== Installing the samples
+
+Login into the Unomi Karaf SSH shell using something like this :
+
+[source]
+----
+ssh -p 8102 karaf@localhost (default password is karaf) 
+----
+
+Install the login samples using the following command:
+
+[source]
+----
+bundle:install mvn:org.apache.unomi/login-integration-sample/${project.version}
+----
+
+when the bundle is successfully install you will get an bundle ID back we will call it BUNDLE_ID. 
+
+You can then do:
+
+[source]
+----
+bundle:start BUNDLE_ID
+----
+
+If all went well you can access the login samples HTML page here :
+
+[source]
+----
+http://localhost:8181/login/index.html
+----
+
+You can fill in the form to test it. Note that the hardcoded password is:
+
+[source]
+----
+test1234
+----
