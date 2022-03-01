@@ -1,0 +1,37 @@
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+== Migrations
+
+This section contains information and steps to migrate between major Unomi versions.
+
+=== From version 1.4 to 1.5
+
+include::migrate-1.4-to-1.5.adoc[]
+
+=== Important changes in public servlets since version 1.5.5 and 2.0.0
+What used to be dedicated servlets are now part of the REST endpoints.
+Prior to version 1.5.5 the following servlets were used:
+
+* /context.js /context.json
+* /eventcollector
+* /client
+
+In version 2.0.0 and 1.5.5 and later you have to use the new `cxs` REST endpoints:
+
+* /cxs/context.js /cxs/context.json
+* /cxs/eventcollector
+* /cxs/client
+
+The old servlets have been deprecated and will be removed in a future major version, so make sure
+to update your client applications.

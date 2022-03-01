@@ -1,0 +1,344 @@
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+Apache Unomi contains a `query` endpoint that is quite powerful. It provides ways to perform queries that can quickly
+get result counts, apply metrics such as sum/min/max/avg or even use powerful aggregations.
+
+In this section we will show examples of requests that may be built using this API.
+
+=== Query counts
+
+Query counts are highly optimized queries that will count the number of objects that match a certain condition without
+retrieving the results. This can be used for example to quickly figure out how many objects will match a given condition
+before actually retrieving the results. It uses ElasticSearch/Lucene optimizations to avoid the cost of loading all the
+resulting objects.
+
+Here's an example of a query:
+
+[source,bash]
+----
+curl -X POST http://localhost:8181/cxs/query/profile/count \
+--user karaf:karaf \
+-H "Content-Type: application/json" \
+-d @- <<'EOF'
+{
+  "parameterValues": {
+    "subConditions": [
+      {
+        "type": "profilePropertyCondition",
+        "parameterValues": {
+          "propertyName": "systemProperties.isAnonymousProfile",
+          "comparisonOperator": "missing"
+        }
+      },
+      {
+        "type": "profilePropertyCondition",
+        "parameterValues": {
+          "propertyName": "properties.nbOfVisits",
+          "comparisonOperator": "equals",
+          "propertyValueInteger": 1
+        }
+      }
+    ],
+    "operator": "and"
+  },
+  "type": "booleanCondition"
+}
+EOF
+----
+
+The above result will return the profile count of all the profiles
+
+Result will be something like this:
+
+    2084
+
+=== Metrics
+
+Metric queries make it possible to apply functions to the resulting property. The supported metrics are:
+
+- sum
+- avg
+- min
+- max
+
+It is also possible to request more than one metric in a single request by concatenating them with a "/" in the URL.
+Here's an example request that uses the `sum` and `avg` metrics:
+
+[source]
+----
+curl -X POST http://localhost:8181/cxs/query/session/profile.properties.nbOfVisits/sum/avg \
+--user karaf:karaf \
+-H "Content-Type: application/json" \
+-d @- <<'EOF'
+{
+  "parameterValues": {
+    "subConditions": [
+      {
+        "type": "sessionPropertyCondition",
+        "parameterValues": {
+          "comparisonOperator": "equals",
+          "propertyName": "scope",
+          "propertyValue": "digitall"
+        }
+      }
+    ],
+    "operator": "and"
+  },
+  "type": "booleanCondition"
+}
+EOF
+----
+
+The result will look something like this:
+
+[source,json]
+----
+{
+   "_avg":1.0,
+   "_sum":9.0
+}
+----
+
+
+=== Aggregations
+
+Aggregations are a very powerful way to build queries in Apache Unomi that will collect and aggregate data by filtering
+on certain conditions.
+
+Aggregations are composed of :
+- an object type and a property on which to aggregate
+- an aggregation setup (how data will be aggregated, by date, by numeric range, date range or ip range)
+- a condition (used to filter the data set that will be aggregated)
+
+==== Aggregation types
+
+Aggregations may be of different types. They are listed here below.
+
+===== Date
+
+Date aggregations make it possible to automatically generate "buckets" by time periods. For more information about the
+format, it is directly inherited from ElasticSearch and you may find it here: https://www.elastic.co/guide/en/elasticsearch/reference/5.6/search-aggregations-bucket-datehistogram-aggregation.html
+
+Here's an example of a request to retrieve a histogram of by day of all the session that have been create by newcomers (nbOfVisits=1)
+
+[source]
+----
+curl -X POST http://localhost:8181/cxs/query/session/timeStamp \
+--user karaf:karaf \
+-H "Content-Type: application/json" \
+-d @- <<'EOF'
+{
+  "aggregate": {
+    "type": "date",
+    "parameters": {
+      "interval": "1d",
+      "format": "yyyy-MM-dd"
+    }
+  },
+  "condition": {
+    "type": "booleanCondition",
+    "parameterValues": {
+      "operator": "and",
+      "subConditions": [
+        {
+          "type": "sessionPropertyCondition",
+          "parameterValues": {
+            "propertyName": "scope",
+            "comparisonOperator": "equals",
+            "propertyValue": "acme"
+          }
+        },
+        {
+          "type": "sessionPropertyCondition",
+          "parameterValues": {
+            "propertyName": "profile.properties.nbOfVisits",
+            "comparisonOperator": "equals",
+            "propertyValueInteger": 1
+          }
+        }
+      ]
+    }
+  }
+}
+EOF
+----
+
+The above request will produce a similar that looks like this:
+
+[source,json]
+----
+{
+  "_all": 8062,
+  "_filtered": 4085,
+  "2018-10-02": 3,
+  "2018-10-03": 17,
+  "2018-10-04": 18,
+  "2018-10-05": 19,
+  "2018-10-06": 23,
+  "2018-10-07": 18,
+  "2018-10-08": 20
+}
+----
+
+You can see that we retrieve the count of newcomers aggregated by day.
+
+===== Date range
+
+Date ranges make it possible to "bucket" dates, for example to regroup profiles by their birth date as in the example
+below:
+
+[source,shell script]
+----
+curl -X POST http://localhost:8181/cxs/query/profile/properties.birthDate \
+--user karaf:karaf \
+-H "Content-Type: application/json" \
+-d @- <<'EOF'
+{
+  "aggregate": {
+    "property": "properties.birthDate",
+    "type": "dateRange",
+    "dateRanges": [
+      {
+        "key": "After 2009",
+        "from": "now-10y/y",
+        "to": null
+      },
+      {
+        "key": "Between 1999 and 2009",
+        "from": "now-20y/y",
+        "to": "now-10y/y"
+      },
+      {
+        "key": "Between 1989 and 1999",
+        "from": "now-30y/y",
+        "to": "now-20y/y"
+      },
+      {
+        "key": "Between 1979 and 1989",
+        "from": "now-40y/y",
+        "to": "now-30y/y"
+      },
+      {
+        "key": "Between 1969 and 1979",
+        "from": "now-50y/y",
+        "to": "now-40y/y"
+      },
+      {
+        "key": "Before 1969",
+        "from": null,
+        "to": "now-50y/y"
+      }
+    ]
+  },
+  "condition": {
+    "type": "matchAllCondition",
+    "parameterValues": {}
+  }
+}
+EOF
+----
+
+The resulting JSON response will look something like this:
+
+[source,json]
+----
+{
+    "_all":4095,
+    "_filtered":4095,
+    "Before 1969":2517,
+    "Between 1969 and 1979":353,
+    "Between 1979 and 1989":336,
+    "Between 1989 and 1999":337,
+    "Between 1999 and 2009":35,
+    "After 2009":0,
+    "_missing":517
+}
+----
+
+You can find more information about the date range formats here: https://www.elastic.co/guide/en/elasticsearch/reference/5.6/search-aggregations-bucket-daterange-aggregation.html
+
+
+===== Numeric range
+
+Numeric ranges make it possible to use "buckets" for the various ranges you want to classify.
+
+Here's an example of a using numeric range to regroup profiles by number of visits:
+
+[source,shell script]
+----
+curl -X POST http://localhost:8181/cxs/query/profile/properties.nbOfVisits \
+--user karaf:karaf \
+-H "Content-Type: application/json" \
+-d @- <<'EOF'
+{
+  "aggregate": {
+    "property": "properties.nbOfVisits",
+    "type": "numericRange",
+    "numericRanges": [
+      {
+        "key": "Less than 5",
+        "from": null,
+        "to": 5
+      },
+      {
+        "key": "Between 5 and 10",
+        "from": 5,
+        "to": 10
+      },
+      {
+        "key": "Between 10 and 20",
+        "from": 10,
+        "to": 20
+      },
+      {
+        "key": "Between 20 and 40",
+        "from": 20,
+        "to": 40
+      },
+      {
+        "key": "Between 40 and 80",
+        "from": 40,
+        "to": 80
+      },
+      {
+        "key": "Greater than 100",
+        "from": 100,
+        "to": null
+      }
+    ]
+  },
+  "condition": {
+    "type": "matchAllCondition",
+    "parameterValues": {}
+  }
+}
+EOF
+----
+
+This will produce an output that looks like this:
+
+[source,json]
+----
+{
+    "_all":4095,
+    "_filtered":4095,
+    "Less than 5":3855,
+    "Between 5 and 10":233,
+    "Between 10 and 20":7,
+    "Between 20 and 40":0,
+    "Between 40 and 80":0,
+    "Greater than 100":0
+}
+----
+
