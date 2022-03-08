@@ -16,13 +16,11 @@
  */
 package org.apache.unomi.api.schema.json;
 
-import org.apache.unomi.api.services.SchemaRegistry;
-
 import java.util.Map;
 
 public class JSONNumberType extends JSONType {
-    public JSONNumberType(Map<String, Object> schemaTree, JSONTypeFactory jsonTypeFactory, SchemaRegistry schemaRegistry) {
-        super(schemaTree, jsonTypeFactory, schemaRegistry);
+    public JSONNumberType(Map<String, Object> schemaTree, JSONTypeFactory jsonTypeFactory) {
+        super(schemaTree, jsonTypeFactory);
         setType("number");
     }
 }

@@ -16,8 +16,6 @@
  */
 package org.apache.unomi.api.schema.json;
 
-import org.apache.unomi.api.services.SchemaRegistry;
-
 import java.util.List;
 import java.util.Map;
 
@@ -26,8 +24,8 @@ public class JSONArrayType extends JSONType {
     List<JSONType> items;
     JSONType contains;
 
-    public JSONArrayType(Map<String, Object> schemaTree, JSONTypeFactory jsonTypeFactory, SchemaRegistry schemaRegistry) {
-        super(schemaTree, jsonTypeFactory, schemaRegistry);
+    public JSONArrayType(Map<String, Object> schemaTree, JSONTypeFactory jsonTypeFactory) {
+        super(schemaTree, jsonTypeFactory);
         setType("array");
     }
 }

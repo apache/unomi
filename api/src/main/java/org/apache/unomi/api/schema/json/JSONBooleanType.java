@@ -16,13 +16,11 @@
  */
 package org.apache.unomi.api.schema.json;
 
-import org.apache.unomi.api.services.SchemaRegistry;
-
 import java.util.Map;
 
 public class JSONBooleanType extends JSONType {
-    public JSONBooleanType(Map<String, Object> schemaTree, JSONTypeFactory jsonTypeFactory, SchemaRegistry schemaRegistry) {
-        super(schemaTree, jsonTypeFactory, schemaRegistry);
+    public JSONBooleanType(Map<String, Object> schemaTree, JSONTypeFactory jsonTypeFactory) {
+        super(schemaTree, jsonTypeFactory);
         setType("boolean");
     }
 }

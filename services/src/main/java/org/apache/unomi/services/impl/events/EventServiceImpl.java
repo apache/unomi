@@ -115,7 +115,6 @@ public class EventServiceImpl implements EventService {
     public void setSchemaRegistry(SchemaRegistry schemaRegistry) {
         this.schemaRegistry = schemaRegistry;
     }
-
     public void setPersistenceService(PersistenceService persistenceService) {
         this.persistenceService = persistenceService;
     }
@@ -140,7 +139,7 @@ public class EventServiceImpl implements EventService {
     }
 
     public boolean isEventValid(Event event) {
-        return this.schemaRegistry.isValid(event, "https://unomi.apache.org/schemas/json/events/" + event.getEventType() + "/1-0-0");
+        return schemaRegistry.isValid(event, "https://unomi.apache.org/schemas/json/events/" + event.getEventType() + "/1-0-0");
     }
 
     public String authenticateThirdPartyServer(String key, String ip) {

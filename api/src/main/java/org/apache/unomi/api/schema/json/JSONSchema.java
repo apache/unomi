@@ -18,7 +18,6 @@
 package org.apache.unomi.api.schema.json;
 
 import org.apache.unomi.api.PluginType;
-import org.apache.unomi.api.services.SchemaRegistry;
 
 import java.util.List;
 import java.util.Map;
@@ -34,11 +33,11 @@ public class JSONSchema extends JSONType implements PluginType {
     private String name;
     private String version;
 
-    public JSONSchema(Map<String, Object> schemaTree, JSONTypeFactory jsonTypeFactory, SchemaRegistry schemaRegistry) {
-        super(schemaTree, jsonTypeFactory, schemaRegistry);
+    public JSONSchema(Map<String, Object> schemaTree, JSONTypeFactory jsonTypeFactory) {
+        super(schemaTree, jsonTypeFactory);
         schemaId = (String) schemaTree.get("$id");
         if (schemaTree.containsKey("self")) {
-            Map<String,Object> self = (Map<String,Object>) schemaTree.get("self");
+            Map<String, Object> self = (Map<String, Object>) schemaTree.get("self");
             name = (String) self.get("name");
             vendor = (String) self.get("vendor");
             version = (String) self.get("version");

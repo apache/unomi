@@ -331,7 +331,7 @@ public class GraphQLSchemaProvider {
     }
 
     private void registerDynamicUnomiInputEvents(GraphQLSchema.Builder schemaBuilder) {
-        final List<JSONSchema> unomiEventTypes = schemaRegistry.getTargetSchemas("events");
+        final List<JSONSchema> unomiEventTypes = schemaRegistry.getSchemasByTarget("events");
 
         if (!unomiEventTypes.isEmpty()) {
             for (JSONSchema unomiEventType : unomiEventTypes) {
@@ -353,7 +353,7 @@ public class GraphQLSchemaProvider {
     }
 
     private void registerDynamicUnomiOutputEvents(GraphQLSchema.Builder schemaBuilder) {
-        final List<JSONSchema> unomiEventTypes = schemaRegistry.getTargetSchemas("events");
+        final List<JSONSchema> unomiEventTypes = schemaRegistry.getSchemasByTarget("events");
 
         if (!unomiEventTypes.isEmpty()) {
             final GraphQLCodeRegistry.Builder codeRegisterBuilder = graphQLAnnotations.getContainer().getCodeRegistryBuilder();
@@ -377,8 +377,8 @@ public class GraphQLSchemaProvider {
     }
 
     private void registerDynamicInputFilterFields(final String typeName,
-                                                  final Class<?> annotatedClass,
-                                                  final Collection<DefinitionType> propertyTypes) {
+            final Class<?> annotatedClass,
+            final Collection<DefinitionType> propertyTypes) {
         final GraphQLInputObjectType originalObject = getInputObjectType(annotatedClass);
 
         final List<GraphQLInputObjectField> inputObjectFields =
@@ -391,17 +391,17 @@ public class GraphQLSchemaProvider {
     }
 
     private void registerDynamicOutputFields(final String graphQLTypeName,
-                                             final Class<?> annotatedClass,
-                                             final Class<? extends DynamicFieldDataFetcher> fetcherClass,
-                                             final Collection<DefinitionType> propertyTypes) {
+            final Class<?> annotatedClass,
+            final Class<? extends DynamicFieldDataFetcher> fetcherClass,
+            final Collection<DefinitionType> propertyTypes) {
         final GraphQLObjectType objectType = graphQLAnnotations.object(annotatedClass);
         registerDynamicOutputFields(graphQLTypeName, objectType, fetcherClass, propertyTypes);
     }
 
     private void registerDynamicOutputFields(final String graphQLTypeName,
-                                             final GraphQLObjectType graphQLObjectType,
-                                             final Class<? extends DynamicFieldDataFetcher> fetcherClass,
-                                             final Collection<DefinitionType> propertyTypes) {
+            final GraphQLObjectType graphQLObjectType,
+            final Class<? extends DynamicFieldDataFetcher> fetcherClass,
+            final Collection<DefinitionType> propertyTypes) {
         final GraphQLCodeRegistry.Builder codeRegisterBuilder = graphQLAnnotations.getContainer().getCodeRegistryBuilder();
 
         final List<GraphQLFieldDefinition> fieldDefinitions = new ArrayList<>();
@@ -572,15 +572,15 @@ public class GraphQLSchemaProvider {
     }
 
     private void registerDynamicInputFields(final String graphQLTypeName,
-                                            final Class<?> clazz,
-                                            final Collection<DefinitionType> propertyTypes) {
+            final Class<?> clazz,
+            final Collection<DefinitionType> propertyTypes) {
         final GraphQLInputObjectType inputObjectType = getInputObjectType(clazz);
         registerDynamicInputFields(graphQLTypeName, inputObjectType, propertyTypes);
     }
 
     private void registerDynamicInputFields(final String graphQLTypeName,
-                                            final GraphQLInputObjectType graphQLInputObjectType,
-                                            final Collection<DefinitionType> propertyTypes) {
+            final GraphQLInputObjectType graphQLInputObjectType,
+            final Collection<DefinitionType> propertyTypes) {
         final List<GraphQLInputObjectField> fieldDefinitions = new ArrayList<>();
 
         propertyTypes.forEach(propertyType -> {
@@ -650,7 +650,7 @@ public class GraphQLSchemaProvider {
         }
 
         // now add all unomi defined event types
-        final List<JSONSchema> unomiEventTypes = schemaRegistry.getTargetSchemas("events");
+        final List<JSONSchema> unomiEventTypes = schemaRegistry.getSchemasByTarget("events");
         unomiEventTypes.forEach(eventType -> {
             final String typeName = UnomiToGraphQLConverter.convertEventType(eventType.getName());
             final GraphQLInputType eventInputType = (GraphQLInputType) getFromTypeRegistry(typeName + "Input");

@@ -37,11 +37,12 @@ import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
 import org.ops4j.pax.exam.spi.reactors.PerSuite;
 import org.ops4j.pax.exam.util.Filter;
 import org.osgi.framework.BundleContext;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.URI;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -60,6 +61,8 @@ import static org.junit.Assert.*;
 @ExamReactorStrategy(PerSuite.class)
 public class ContextServletIT extends BaseIT {
     private final static String CONTEXT_URL = "/cxs/context.json";
+    private final static String JSONSCHEMA_URL = "/cxs/jsonSchema";
+
     private final static String THIRD_PARTY_HEADER_NAME = "X-Unomi-Peer";
     private final static String TEST_EVENT_TYPE = "test-event-type";
     private final static String TEST_EVENT_TYPE_SCHEMA = "test-event-type.json";
@@ -68,7 +71,12 @@ public class ContextServletIT extends BaseIT {
     private final static String SEGMENT_ID = "test-segment-id";
     private final static int SEGMENT_NUMBER_OF_DAYS = 30;
 
+    private static final int DEFAULT_TRYING_TIMEOUT = 2000;
+    private static final int DEFAULT_TRYING_TRIES = 30;
+
     private ObjectMapper objectMapper = new ObjectMapper();
+
+    private final static Logger LOGGER = LoggerFactory.getLogger(ContextServletIT.class);
 
     @Inject
     @Filter(timeout = 600000)
@@ -117,6 +125,9 @@ public class ContextServletIT extends BaseIT {
         profile = new Profile(profileId);
         profileService.save(profile);
 
+        keepTrying("Couldn't find json schema endpoint",
+                () -> get(JSONSCHEMA_URL, List.class), Objects::nonNull,
+                DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
         refreshPersistence();
     }
 
@@ -128,13 +139,21 @@ public class ContextServletIT extends BaseIT {
         profileService.delete(profile.getItemId(), false);
         segmentService.removeSegmentDefinition(SEGMENT_ID, false);
 
-        schemaRegistry.unregisterSchema("events", TEST_EVENT_TYPE);
-        schemaRegistry.unregisterSchema("events", FLOAT_PROPERTY_EVENT_TYPE);
+        String encodedString = Base64.getEncoder()
+                .encodeToString("https://unomi.apache.org/schemas/json/events/test-event-type/1-0-0".getBytes());
+        delete(JSONSCHEMA_URL + "/" + encodedString);
+
+        encodedString = Base64.getEncoder()
+                .encodeToString("https://unomi.apache.org/schemas/json/events/float-property-type/1-0-0".getBytes());
+        delete(JSONSCHEMA_URL + "/" + encodedString);
+
+        encodedString = Base64.getEncoder()
+                .encodeToString("https://unomi.apache.org/schemas/json/events/float-property-type/1-0-0".getBytes());
+        delete(JSONSCHEMA_URL + "/" + encodedString);
     }
 
-    private void registerEventType(String jsonSchemaFileName) throws IOException {
-        InputStream jsonSchemaInputStream = bundleContext.getBundle().getResource("schemas/events/" + jsonSchemaFileName).openStream();
-        schemaRegistry.registerSchema("events", jsonSchemaInputStream);
+    private void registerEventType(String jsonSchemaFileName) {
+        post(JSONSCHEMA_URL, "schemas/events/" + jsonSchemaFileName, ContentType.create("text/plain"));
     }
 
     @Test
