@@ -33,7 +33,7 @@ class UnomiPropertyTypeKeyword extends AbstractKeyword {
     private final ProfileService profileService;
     private final SchemaRegistryImpl schemaRegistry;
 
-    private static final class PropertyTypeJsonValidator extends AbstractJsonValidator {
+    private static final class UnomiPropertyTypeJsonValidator extends AbstractJsonValidator {
 
         String schemaPath;
         JsonNode schemaNode;
@@ -42,7 +42,7 @@ class UnomiPropertyTypeKeyword extends AbstractKeyword {
         ProfileService profileService;
         SchemaRegistryImpl schemaRegistry;
 
-        public PropertyTypeJsonValidator(String keyword, String schemaPath, JsonNode schemaNode, JsonSchema parentSchema, ValidationContext validationContext, ProfileService profileService, SchemaRegistryImpl schemaRegistry) {
+        public UnomiPropertyTypeJsonValidator(String keyword, String schemaPath, JsonNode schemaNode, JsonSchema parentSchema, ValidationContext validationContext, ProfileService profileService, SchemaRegistryImpl schemaRegistry) {
             super(keyword);
             this.schemaPath = schemaPath;
             this.schemaNode = schemaNode;
@@ -105,6 +105,6 @@ class UnomiPropertyTypeKeyword extends AbstractKeyword {
 
     @Override
     public JsonValidator newValidator(String schemaPath, JsonNode schemaNode, JsonSchema parentSchema, ValidationContext validationContext) throws JsonSchemaException, Exception {
-        return new PropertyTypeJsonValidator(this.getValue(), schemaPath, schemaNode, parentSchema, validationContext, profileService, schemaRegistry);
+        return new UnomiPropertyTypeJsonValidator(this.getValue(), schemaPath, schemaNode, parentSchema, validationContext, profileService, schemaRegistry);
     }
 }

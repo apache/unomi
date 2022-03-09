@@ -19,6 +19,22 @@ package org.apache.unomi.itests;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.io.IOUtils;
+import org.apache.http.auth.AuthScope;
+import org.apache.http.auth.UsernamePasswordCredentials;
+import org.apache.http.client.config.RequestConfig;
+import org.apache.http.client.methods.*;
+import org.apache.http.config.Registry;
+import org.apache.http.config.RegistryBuilder;
+import org.apache.http.conn.socket.ConnectionSocketFactory;
+import org.apache.http.conn.socket.PlainConnectionSocketFactory;
+import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
+import org.apache.http.entity.ContentType;
+import org.apache.http.entity.StringEntity;
+import org.apache.http.impl.client.BasicCredentialsProvider;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.apache.unomi.api.Item;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.rules.Rule;
@@ -28,6 +44,7 @@ import org.apache.unomi.api.services.SchemaRegistry;
 import org.apache.unomi.lifecycle.BundleWatcher;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.persistence.spi.PersistenceService;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.runner.RunWith;
@@ -51,8 +68,16 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.security.KeyManagementException;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
+import java.security.cert.X509Certificate;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.function.Predicate;
@@ -77,6 +102,11 @@ public abstract class BaseIT {
     protected static final String URL = "http://localhost:" + HTTP_PORT;
     protected static final String KARAF_DIR = "target/exam";
     protected static final String UNOMI_KEY = "670c26d1cc413346c3b2fd9ce65dab41";
+    protected static final ContentType JSON_CONTENT_TYPE = ContentType.create("application/json");
+    protected static final String BASE_URL = "http://localhost";
+    protected static final String BASIC_AUTH_USER_NAME = "karaf";
+    protected static final String BASIC_AUTH_PASSWORD = "karaf";
+    protected static final int REQUEST_TIMEOUT = 60000;
 
     @Inject
     @Filter(timeout = 600000)
@@ -104,13 +134,23 @@ public abstract class BaseIT {
     @Filter(timeout = 600000)
     protected SchemaRegistry schemaRegistry;
 
+    private CloseableHttpClient httpClient;
+
     @Before
     public void waitForStartup() throws InterruptedException {
         while (!bundleWatcher.isStartupComplete()) {
             LOGGER.info("Waiting for startup to complete...");
             Thread.sleep(1000);
         }
+        httpClient = initHttpClient();
     }
+
+    @After
+    public void shutdown() {
+        closeHttpClient(httpClient);
+        httpClient = null;
+    }
+
 
     protected void removeItems(final Class<? extends Item> ...classes) throws InterruptedException {
         Condition condition = new Condition(definitionsService.getConditionType("matchAllCondition"));
@@ -362,4 +402,162 @@ public abstract class BaseIT {
                 100);
         rulesService.refreshRules();
     }
+
+    public String getFullUrl(String url) throws Exception {
+        return BASE_URL + ":" + HTTP_PORT + url;
+    }
+
+    protected <T> T get(final String url, Class<T> clazz) {
+        CloseableHttpResponse response = null;
+        try {
+            final HttpGet httpGet = new HttpGet(getFullUrl(url));
+            response = executeHttpRequest(httpGet);
+            if (response.getStatusLine().getStatusCode() == 200) {
+                ObjectMapper objectMapper = new ObjectMapper();
+                return objectMapper.readValue(response.getEntity().getContent(), clazz);
+            } else {
+                return null;
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            if (response != null) {
+                try {
+                    response.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+        return null;
+    }
+
+    protected CloseableHttpResponse post(final String url, final String resource) {
+        try {
+            final HttpPost request = new HttpPost(getFullUrl(url));
+
+            if (resource != null) {
+                final String resourceAsString = resourceAsString(resource);
+                request.setEntity(new StringEntity(resourceAsString, JSON_CONTENT_TYPE));
+            }
+
+            return executeHttpRequest(request);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    protected void delete(final String url) {
+        CloseableHttpResponse response = null;
+        try {
+            final HttpDelete httpDelete = new HttpDelete(getFullUrl(url));
+            response = executeHttpRequest(httpDelete);
+        } catch (IOException e) {
+            e.printStackTrace();
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            if (response != null) {
+                try {
+                    response.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+
+    protected CloseableHttpResponse executeHttpRequest(HttpUriRequest request) throws IOException {
+        System.out.println("Executing request " + request.getMethod() + " " + request.getURI() + "...");
+        CloseableHttpResponse response = httpClient.execute(request);
+        int statusCode = response.getStatusLine().getStatusCode();
+        if (statusCode != 200) {
+            String content = null;
+            if (response.getEntity() != null) {
+                InputStream contentInputStream = response.getEntity().getContent();
+                if (contentInputStream != null) {
+                    content = IOUtils.toString(response.getEntity().getContent());
+                }
+            }
+            LOGGER.error("Response status code: {}, reason: {}, content:{}", response.getStatusLine().getStatusCode(), response.getStatusLine().getReasonPhrase(), content);
+        }
+        return response;
+    }
+
+    protected String resourceAsString(final String resource) {
+        final java.net.URL url = bundleContext.getBundle().getResource(resource);
+        try (InputStream stream = url.openStream()) {
+            final ObjectMapper objectMapper = new ObjectMapper();
+            return objectMapper.writeValueAsString(objectMapper.readTree(stream));
+        } catch (final Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static CloseableHttpClient initHttpClient() {
+        long requestStartTime = System.currentTimeMillis();
+        BasicCredentialsProvider credsProvider = null;
+        credsProvider = new BasicCredentialsProvider();
+        credsProvider.setCredentials(
+                AuthScope.ANY,
+                new UsernamePasswordCredentials(BASIC_AUTH_USER_NAME, BASIC_AUTH_PASSWORD));
+        HttpClientBuilder httpClientBuilder = HttpClients.custom().useSystemProperties().setDefaultCredentialsProvider(credsProvider);
+
+        try {
+            SSLContext sslContext = SSLContext.getInstance("SSL");
+            sslContext.init(null, new TrustManager[]{new X509TrustManager() {
+                public X509Certificate[] getAcceptedIssuers() {
+                    return null;
+                }
+
+                public void checkClientTrusted(X509Certificate[] certs,
+                                               String authType) {
+                }
+
+                public void checkServerTrusted(X509Certificate[] certs,
+                                               String authType) {
+                }
+            }}, new SecureRandom());
+
+            Registry<ConnectionSocketFactory> socketFactoryRegistry = RegistryBuilder.<ConnectionSocketFactory>create()
+                    .register("http", PlainConnectionSocketFactory.getSocketFactory())
+                    .register("https", new SSLConnectionSocketFactory(sslContext, SSLConnectionSocketFactory.ALLOW_ALL_HOSTNAME_VERIFIER))
+                    .build();
+
+            PoolingHttpClientConnectionManager poolingHttpClientConnectionManager = new PoolingHttpClientConnectionManager(socketFactoryRegistry);
+            poolingHttpClientConnectionManager.setMaxTotal(10);
+
+            httpClientBuilder.setHostnameVerifier(SSLConnectionSocketFactory.ALLOW_ALL_HOSTNAME_VERIFIER)
+                    .setConnectionManager(poolingHttpClientConnectionManager);
+
+        } catch (NoSuchAlgorithmException | KeyManagementException e) {
+            LOGGER.error("Error creating SSL Context", e);
+        }
+
+        RequestConfig requestConfig = RequestConfig.custom()
+                .setConnectTimeout(REQUEST_TIMEOUT)
+                .setSocketTimeout(REQUEST_TIMEOUT)
+                .setConnectionRequestTimeout(REQUEST_TIMEOUT)
+                .build();
+        httpClientBuilder.setDefaultRequestConfig(requestConfig);
+
+        if (LOGGER.isDebugEnabled()) {
+            long totalRequestTime = System.currentTimeMillis() - requestStartTime;
+            LOGGER.debug("Init HttpClient executed in " + totalRequestTime + "ms");
+        }
+
+        return httpClientBuilder.build();
+    }
+
+    public static void closeHttpClient(CloseableHttpClient httpClient) {
+        try {
+            if (httpClient != null) {
+                httpClient.close();
+            }
+        } catch (IOException e) {
+            LOGGER.error("Could not close httpClient: " + httpClient, e);
+        }
+    }
+
 }
