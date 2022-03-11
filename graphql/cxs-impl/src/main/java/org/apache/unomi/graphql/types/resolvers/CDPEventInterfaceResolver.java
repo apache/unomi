@@ -34,7 +34,7 @@ public class CDPEventInterfaceResolver extends BaseTypeResolver {
         final CDPEventInterface eventInterface = env.getObject();
         final JSONSchema eventSchema = schemaRegistry.getSchema("https://unomi.apache.org/schemas/json/events/" + eventInterface.getEvent().getEventType() + "/1-0-0");
         if (eventSchema != null) {
-            final String typeName = UnomiToGraphQLConverter.convertEventType(eventSchema.getSchemaId());
+            final String typeName = UnomiToGraphQLConverter.convertEventType(eventSchema.getName());
             return env.getSchema().getObjectType(typeName);
         } else {
             return super.getType(env);

@@ -17,6 +17,8 @@
 
 package org.apache.unomi.api;
 
+import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
@@ -27,9 +29,15 @@ public class ServerInfo {
 
     private String serverIdentifier;
     private String serverVersion;
+    private String serverBuildNumber;
+    private Date serverBuildDate;
+    private String serverTimestamp;
+    private String serverScmBranch;
 
     private List<EventInfo> eventTypes;
     private Map<String,String> capabilities;
+
+    private List<String> logoLines = new ArrayList<>();
 
     public ServerInfo() {
     }
@@ -50,6 +58,38 @@ public class ServerInfo {
         this.serverVersion = serverVersion;
     }
 
+    public String getServerBuildNumber() {
+        return serverBuildNumber;
+    }
+
+    public void setServerBuildNumber(String serverBuildNumber) {
+        this.serverBuildNumber = serverBuildNumber;
+    }
+
+    public Date getServerBuildDate() {
+        return serverBuildDate;
+    }
+
+    public void setServerBuildDate(Date serverBuildDate) {
+        this.serverBuildDate = serverBuildDate;
+    }
+
+    public String getServerTimestamp() {
+        return serverTimestamp;
+    }
+
+    public void setServerTimestamp(String serverTimestamp) {
+        this.serverTimestamp = serverTimestamp;
+    }
+
+    public String getServerScmBranch() {
+        return serverScmBranch;
+    }
+
+    public void setServerScmBranch(String serverScmBranch) {
+        this.serverScmBranch = serverScmBranch;
+    }
+
     public List<EventInfo> getEventTypes() {
         return eventTypes;
     }
@@ -64,5 +104,13 @@ public class ServerInfo {
 
     public void setCapabilities(Map<String, String> capabilities) {
         this.capabilities = capabilities;
+    }
+
+    public List<String> getLogoLines() {
+        return logoLines;
+    }
+
+    public void setLogoLines(List<String> logoLines) {
+        this.logoLines = logoLines;
     }
 }

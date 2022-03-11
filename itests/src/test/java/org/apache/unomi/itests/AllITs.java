@@ -51,6 +51,7 @@ import org.junit.runners.Suite.SuiteClasses;
         ContextServletIT.class,
         SecurityIT.class,
         RuleServiceIT.class,
+        PrivacyServiceIT.class,
         GroovyActionsServiceIT.class,
         GraphQLEventIT.class,
         GraphQLListIT.class,

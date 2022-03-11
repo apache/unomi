@@ -21,6 +21,7 @@ import org.apache.unomi.api.*;
 import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.api.services.PrivacyService;
 import org.apache.unomi.api.services.ProfileService;
+import org.apache.unomi.lifecycle.BundleWatcher;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.aggregate.TermsAggregate;
 import org.osgi.framework.BundleContext;
@@ -40,6 +41,7 @@ public class PrivacyServiceImpl implements PrivacyService {
     private ProfileService profileService;
     private EventService eventService;
     private BundleContext bundleContext;
+    private BundleWatcher bundleWatcher;
 
     public PrivacyServiceImpl() {
         logger.info("Initializing privacy service...");
@@ -61,12 +63,20 @@ public class PrivacyServiceImpl implements PrivacyService {
         this.bundleContext = bundleContext;
     }
 
+    public void setBundleWatcher(BundleWatcher bundleWatcher) {
+        this.bundleWatcher = bundleWatcher;
+    }
+
     @Override
     public ServerInfo getServerInfo() {
-        ServerInfo serverInfo = new ServerInfo();
-        serverInfo.setServerIdentifier("Apache Unomi");
-        serverInfo.setServerVersion(bundleContext.getBundle().getVersion().toString());
+        List<ServerInfo> serverInfos = bundleWatcher.getServerInfos();
+        ServerInfo serverInfo = serverInfos.get(0); // Unomi is always be the first entry
 
+        addUnomiInfo(serverInfo);
+        return serverInfo;
+    }
+
+    private void addUnomiInfo(ServerInfo serverInfo) {
         // let's retrieve all the event types the server has seen.
         Map<String, Long> eventTypeCounts = persistenceService.aggregateWithOptimizedQuery(null, new TermsAggregate("eventType"), Event.ITEM_TYPE);
         List<EventInfo> eventTypes = new ArrayList<EventInfo>();
@@ -79,7 +89,12 @@ public class PrivacyServiceImpl implements PrivacyService {
         serverInfo.setEventTypes(eventTypes);
 
         serverInfo.setCapabilities(new HashMap<String, String>());
-        return serverInfo;
+    }
+
+    public List<ServerInfo> getServerInfos() {
+        List<ServerInfo> serverInfos = bundleWatcher.getServerInfos();
+        addUnomiInfo(serverInfos.get(0));
+        return serverInfos;
     }
 
     @Override
