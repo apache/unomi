@@ -30,7 +30,7 @@
         </cm:default-properties>
     </cm:property-placeholder>
 
-    <bean id="bundleWatcher" init-method="init" destroy-method="destroy" class="org.apache.unomi.lifecycle.BundleWatcher">
+    <bean id="bundleWatcherImpl" init-method="init" destroy-method="destroy" class="org.apache.unomi.lifecycle.BundleWatcherImpl">
         <property name="bundleContext" ref="blueprintBundleContext"/>
         <property name="requiredServices" value="${lifecycle.requiredServices}" />
         <property name="checkStartupStateRefreshInterval" value="${lifecycle.checkStartupState.refresh.interval}"/>
@@ -67,7 +67,7 @@
         </property>
     </bean>
 
-    <service id="bundleWatcherService" ref="bundleWatcher">
+    <service id="bundleWatcherService" ref="bundleWatcherImpl">
         <interfaces>
             <value>org.apache.unomi.lifecycle.BundleWatcher</value>
         </interfaces>

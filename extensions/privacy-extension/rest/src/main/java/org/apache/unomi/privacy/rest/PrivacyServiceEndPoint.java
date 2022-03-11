@@ -57,6 +57,12 @@ public class PrivacyServiceEndPoint {
         return privacyService.getServerInfo();
     }
 
+    @GET
+    @Path("/infos")
+    public List<ServerInfo> getServerInfos() {
+        return privacyService.getServerInfos();
+    }
+
     @DELETE
     @Path("/profiles/{profileId}")
     public Response deleteProfileData(@PathParam("profileId") String profileId, @QueryParam("withData") @DefaultValue("false") boolean withData,
