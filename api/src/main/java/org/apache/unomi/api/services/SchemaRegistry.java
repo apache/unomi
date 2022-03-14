@@ -26,7 +26,7 @@ import java.io.InputStream;
 import java.util.List;
 
 /**
- *
+ * Service that allow to manage JSON schema. It allows to get, save and delete schemas
  */
 public interface SchemaRegistry {
 

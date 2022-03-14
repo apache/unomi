@@ -19,7 +19,6 @@ package org.apache.unomi.itests;
 
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.entity.ContentType;
-import org.apache.unomi.api.Metadata;
 import org.apache.unomi.api.schema.UnomiJSONSchema;
 import org.apache.unomi.api.services.SchemaRegistry;
 import org.apache.unomi.persistence.spi.PersistenceService;
@@ -36,7 +35,6 @@ import javax.inject.Inject;
 import java.io.IOException;
 import java.util.Base64;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 
 import static org.junit.Assert.assertEquals;
@@ -64,9 +62,8 @@ public class JSONSchemaIT extends BaseIT {
 
     @Before
     public void setUp() throws InterruptedException {
-        keepTrying("Couldn't find json schema endpoint",
-                () -> get(JSONSCHEMA_URL, List.class), Objects::nonNull,
-                DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+        keepTrying("Couldn't find json schema endpoint", () -> get(JSONSCHEMA_URL, List.class), Objects::nonNull, DEFAULT_TRYING_TIMEOUT,
+                DEFAULT_TRYING_TRIES);
     }
 
     @After
@@ -79,11 +76,11 @@ public class JSONSchemaIT extends BaseIT {
         List jsonSchemas = get(JSONSCHEMA_URL, List.class);
         assertTrue("JSON schema list should be empty", jsonSchemas.isEmpty());
 
-        post(JSONSCHEMA_URL, "schemas/events/test-event-type.json", ContentType.create("text/plain"));
+        post(JSONSCHEMA_URL, "schemas/events/test-event-type.json", ContentType.TEXT_PLAIN);
 
         refreshPersistence();
-        Thread.sleep(2000); //Making sure jsonSchema is updated in DB
-        jsonSchemas = get(JSONSCHEMA_URL, List.class);
+        jsonSchemas = keepTrying("Couldn't find json schemas", () -> get(JSONSCHEMA_URL, List.class), (list) -> !list.isEmpty(),
+                DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
         assertFalse("JSON schema list should not be empty", jsonSchemas.isEmpty());
         assertEquals("JSON schema list should not be empty", 1, jsonSchemas.size());
     }
@@ -93,22 +90,24 @@ public class JSONSchemaIT extends BaseIT {
 
         assertTrue("JSON schema list should be empty", persistenceService.getAllItems(UnomiJSONSchema.class).isEmpty());
 
-        CloseableHttpResponse response = post(JSONSCHEMA_URL, "schemas/events/test-event-type.json", ContentType.create("text/plain"));
+        CloseableHttpResponse response = post(JSONSCHEMA_URL, "schemas/events/test-event-type.json", ContentType.TEXT_PLAIN);
 
         assertEquals("Invalid response code", 200, response.getStatusLine().getStatusCode());
         refreshPersistence();
-        Thread.sleep(2000); //Making sure jsonSchema is updated in DB
-        assertFalse("JSON schema list should not be empty", persistenceService.getAllItems(UnomiJSONSchema.class).isEmpty());
+        List jsonSchemas = keepTrying("Couldn't find json schemas", () -> get(JSONSCHEMA_URL, List.class), (list) -> !list.isEmpty(),
+                DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+        assertFalse("JSON schema list should not be empty", jsonSchemas.isEmpty());
     }
 
     @Test
-    public void testDeleteJSONSchema() throws IOException, InterruptedException {
+    public void testDeleteJSONSchema() throws InterruptedException {
         assertTrue("JSON schema list should be empty", persistenceService.getAllItems(UnomiJSONSchema.class).isEmpty());
 
-        post(JSONSCHEMA_URL, "schemas/events/test-event-type.json", ContentType.create("text/plain"));
+        post(JSONSCHEMA_URL, "schemas/events/test-event-type.json", ContentType.TEXT_PLAIN);
 
         refreshPersistence();
-        Thread.sleep(2000); //Making sure jsonSchema is updated in DB
+        keepTrying("Couldn't find json schemas", () -> get(JSONSCHEMA_URL, List.class), (list) -> !list.isEmpty(), DEFAULT_TRYING_TIMEOUT,
+                DEFAULT_TRYING_TRIES);
 
         String encodedString = Base64.getEncoder()
                 .encodeToString("https://unomi.apache.org/schemas/json/events/test-event-type/1-0-0".getBytes());
@@ -116,14 +115,16 @@ public class JSONSchemaIT extends BaseIT {
         assertEquals("Invalid response code", 204, response.getStatusLine().getStatusCode());
 
         refreshPersistence();
-        Thread.sleep(2000); //Making sure jsonSchema is updated in DB
-        assertTrue("JSON schema list should be empty", persistenceService.getAllItems(UnomiJSONSchema.class).isEmpty());
+        List jsonSchemas = keepTrying("wait for empty list of schemas", () -> get(JSONSCHEMA_URL, List.class), List::isEmpty,
+                DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+
+        assertTrue("JSON schema list should be empty", jsonSchemas.isEmpty());
     }
 
     @Test
     public void testSaveNewInvalidJSONSchema() throws IOException {
         assertTrue("JSON schema list should be empty", persistenceService.getAllItems(UnomiJSONSchema.class).isEmpty());
-        try (CloseableHttpResponse response = post(JSONSCHEMA_URL, "schemas/events/test-invalid.json", ContentType.create("text/plain"))) {
+        try (CloseableHttpResponse response = post(JSONSCHEMA_URL, "schemas/events/test-invalid.json", ContentType.TEXT_PLAIN)) {
             assertEquals("Save should have failed", 500, response.getStatusLine().getStatusCode());
         }
     }

@@ -20,7 +20,7 @@ import org.apache.unomi.api.Metadata;
 import org.apache.unomi.api.MetadataItem;
 
 /**
- * Object which represents a JSON schema stored in Elasticsearch
+ * Object which represents a JSON schema stored in the persistence service
  */
 public class UnomiJSONSchema extends MetadataItem {
     public static final String ITEM_TYPE = "jsonSchema";

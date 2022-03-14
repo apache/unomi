@@ -153,7 +153,7 @@ public class ContextServletIT extends BaseIT {
     }
 
     private void registerEventType(String jsonSchemaFileName) {
-        post(JSONSCHEMA_URL, "schemas/events/" + jsonSchemaFileName, ContentType.create("text/plain"));
+        post(JSONSCHEMA_URL, "schemas/events/" + jsonSchemaFileName, ContentType.TEXT_PLAIN);
     }
 
     @Test
@@ -180,7 +180,7 @@ public class ContextServletIT extends BaseIT {
         contextRequest.setEvents(Arrays.asList(event));
         HttpPost request = new HttpPost(URL + CONTEXT_URL);
         request.addHeader(THIRD_PARTY_HEADER_NAME, UNOMI_KEY);
-        request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.create("application/json")));
+        request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
         TestUtils.executeContextJSONRequest(request, sessionId);
         refreshPersistence();
         Thread.sleep(2000); //Making sure event is updated in DB
@@ -214,7 +214,7 @@ public class ContextServletIT extends BaseIT {
         contextRequest.setSessionId(session.getItemId());
         contextRequest.setEvents(Arrays.asList(event));
         HttpPost request = new HttpPost(URL + CONTEXT_URL);
-        request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.create("application/json")));
+        request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
         TestUtils.executeContextJSONRequest(request, sessionId);
         refreshPersistence();
         Thread.sleep(2000); //Making sure event is updated in DB
@@ -246,7 +246,7 @@ public class ContextServletIT extends BaseIT {
         contextRequest.setSessionId(session.getItemId());
         contextRequest.setEvents(Arrays.asList(event));
         HttpPost request = new HttpPost(URL + CONTEXT_URL);
-        request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.create("application/json")));
+        request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
         TestUtils.executeContextJSONRequest(request, sessionId);
         refreshPersistence();
         Thread.sleep(2000); //Making sure event is updated in DB
@@ -272,7 +272,7 @@ public class ContextServletIT extends BaseIT {
         contextRequest.setRequireSegments(true);
         contextRequest.setEvents(Arrays.asList(event));
         HttpPost request = new HttpPost(URL + CONTEXT_URL);
-        request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.create("application/json")));
+        request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
         String cookieHeaderValue = TestUtils.executeContextJSONRequest(request, sessionId).getCookieHeaderValue();
         refreshPersistence();
         Thread.sleep(1000); //Making sure DB is updated
@@ -306,7 +306,7 @@ public class ContextServletIT extends BaseIT {
         contextRequest.setRequireSegments(true);
         contextRequest.setEvents(Arrays.asList(event));
         HttpPost request = new HttpPost(regularURI);
-        request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.create("application/json")));
+        request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
         //The first event is with a default timestamp (now)
         String cookieHeaderValue = TestUtils.executeContextJSONRequest(request, sessionId).getCookieHeaderValue();
         refreshPersistence();
@@ -338,7 +338,7 @@ public class ContextServletIT extends BaseIT {
         contextRequest.setRequireSegments(true);
         contextRequest.setEvents(Arrays.asList(event));
         HttpPost request = new HttpPost(regularURI);
-        request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.create("application/json")));
+        request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
         //The first event is with a default timestamp (now)
         TestUtils.RequestResponse response = TestUtils.executeContextJSONRequest(request, sessionId);
         String cookieHeaderValue = response.getCookieHeaderValue();
@@ -370,7 +370,7 @@ public class ContextServletIT extends BaseIT {
         //Act
         HttpPost request = new HttpPost(URL + CONTEXT_URL);
         request.addHeader(THIRD_PARTY_HEADER_NAME, UNOMI_KEY);
-        request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.create("application/json")));
+        request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
         TestUtils.executeContextJSONRequest(request);
         refreshPersistence();
         Thread.sleep(2000); //Making sure event is updated in DB
@@ -400,7 +400,7 @@ public class ContextServletIT extends BaseIT {
         //Act
         HttpPost request = new HttpPost(URL + CONTEXT_URL);
         request.addHeader(THIRD_PARTY_HEADER_NAME, UNOMI_KEY);
-        request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.create("application/json")));
+        request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
         TestUtils.executeContextJSONRequest(request);
         refreshPersistence();
         Thread.sleep(2000); //Making sure event is updated in DB
@@ -431,7 +431,7 @@ public class ContextServletIT extends BaseIT {
         //Act
         HttpPost request = new HttpPost(URL + CONTEXT_URL);
         request.addHeader(THIRD_PARTY_HEADER_NAME, UNOMI_KEY);
-        request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.create("application/json")));
+        request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
         TestUtils.executeContextJSONRequest(request);
         refreshPersistence();
         Thread.sleep(2000); //Making sure event is updated in DB
@@ -461,7 +461,7 @@ public class ContextServletIT extends BaseIT {
         //Act
         HttpPost request = new HttpPost(URL + CONTEXT_URL);
         request.addHeader(THIRD_PARTY_HEADER_NAME, UNOMI_KEY);
-        request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.create("application/json")));
+        request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
         TestUtils.executeContextJSONRequest(request);
         refreshPersistence();
         Thread.sleep(2000); //Making sure event is updated in DB
@@ -484,7 +484,7 @@ public class ContextServletIT extends BaseIT {
         Map<String, String> parameters = new HashMap<>();
         parameters.put("VULN_FILE_PATH", vulnFileCanonicalPath);
         HttpPost request = new HttpPost(URL + CONTEXT_URL);
-        request.setEntity(new StringEntity(getValidatedBundleJSON("security/ognl-payload-1.json", parameters), ContentType.create("application/json")));
+        request.setEntity(new StringEntity(getValidatedBundleJSON("security/ognl-payload-1.json", parameters), ContentType.APPLICATION_JSON));
         TestUtils.executeContextJSONRequest(request);
         refreshPersistence();
         Thread.sleep(2000); //Making sure event is updated in DB
@@ -506,7 +506,7 @@ public class ContextServletIT extends BaseIT {
         Map<String, String> parameters = new HashMap<>();
         parameters.put("VULN_FILE_PATH", vulnFileCanonicalPath);
         HttpPost request = new HttpPost(URL + CONTEXT_URL);
-        request.setEntity(new StringEntity(getValidatedBundleJSON("security/mvel-payload-1.json", parameters), ContentType.create("application/json")));
+        request.setEntity(new StringEntity(getValidatedBundleJSON("security/mvel-payload-1.json", parameters), ContentType.APPLICATION_JSON));
         TestUtils.executeContextJSONRequest(request);
         refreshPersistence();
         Thread.sleep(2000); //Making sure event is updated in DB
@@ -520,7 +520,7 @@ public class ContextServletIT extends BaseIT {
 
 		Map<String,String> parameters = new HashMap<>();
 		HttpPost request = new HttpPost(URL + CONTEXT_URL);
-		request.setEntity(new StringEntity(getValidatedBundleJSON("personalization.json", parameters), ContentType.create("application/json")));
+		request.setEntity(new StringEntity(getValidatedBundleJSON("personalization.json", parameters), ContentType.APPLICATION_JSON));
 		TestUtils.RequestResponse response = TestUtils.executeContextJSONRequest(request);
 		assertEquals("Invalid response code", 200, response.getStatusCode());
 		refreshPersistence();
@@ -534,7 +534,7 @@ public class ContextServletIT extends BaseIT {
         Map<String,String> parameters = new HashMap<>();
         parameters.put("storeInSession", "false");
         HttpPost request = new HttpPost(URL + CONTEXT_URL);
-        request.setEntity(new StringEntity(getValidatedBundleJSON("personalization-controlgroup.json", parameters), ContentType.create("application/json")));
+        request.setEntity(new StringEntity(getValidatedBundleJSON("personalization-controlgroup.json", parameters), ContentType.APPLICATION_JSON));
         TestUtils.RequestResponse response = TestUtils.executeContextJSONRequest(request);
         assertEquals("Invalid response code", 200, response.getStatusCode());
         refreshPersistence();
@@ -558,7 +558,7 @@ public class ContextServletIT extends BaseIT {
         // now let's test with session storage
         parameters.put("storeInSession", "true");
         request = new HttpPost(URL + CONTEXT_URL);
-        request.setEntity(new StringEntity(getValidatedBundleJSON("personalization-controlgroup.json", parameters), ContentType.create("application/json")));
+        request.setEntity(new StringEntity(getValidatedBundleJSON("personalization-controlgroup.json", parameters), ContentType.APPLICATION_JSON));
         response = TestUtils.executeContextJSONRequest(request);
         assertEquals("Invalid response code", 200, response.getStatusCode());
         refreshPersistence();
@@ -622,7 +622,7 @@ public class ContextServletIT extends BaseIT {
         // first let's make sure everything works without the requireScoring parameter
         parameters = new HashMap<>();
         HttpPost request = new HttpPost(URL + CONTEXT_URL);
-        request.setEntity(new StringEntity(getValidatedBundleJSON("withoutRequireScores.json", parameters), ContentType.create("application/json")));
+        request.setEntity(new StringEntity(getValidatedBundleJSON("withoutRequireScores.json", parameters), ContentType.APPLICATION_JSON));
         TestUtils.RequestResponse response = TestUtils.executeContextJSONRequest(request);
         assertEquals("Invalid response code", 200, response.getStatusCode());
         refreshPersistence();
@@ -635,7 +635,7 @@ public class ContextServletIT extends BaseIT {
         // now let's test adding it.
         parameters = new HashMap<>();
         request = new HttpPost(URL + CONTEXT_URL);
-        request.setEntity(new StringEntity(getValidatedBundleJSON("withRequireScores.json", parameters), ContentType.create("application/json")));
+        request.setEntity(new StringEntity(getValidatedBundleJSON("withRequireScores.json", parameters), ContentType.APPLICATION_JSON));
         response = TestUtils.executeContextJSONRequest(request);
         assertEquals("Invalid response code", 200, response.getStatusCode());
         refreshPersistence();
