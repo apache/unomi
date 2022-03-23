@@ -17,6 +17,8 @@
 package org.apache.unomi.api.schema.json;
 
 import org.apache.unomi.api.services.SchemaRegistry;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
@@ -26,6 +28,8 @@ import java.util.List;
 import java.util.Map;
 
 public class JSONTypeFactory {
+
+    private static final Logger logger = LoggerFactory.getLogger(JSONTypeFactory.class);
 
     Map<String, Class<? extends JSONType>> jsonTypes = new HashMap<>();
 
@@ -42,7 +46,7 @@ public class JSONTypeFactory {
         jsonTypes.put("null", JSONNullType.class);
     }
 
-    List<JSONType> getTypes(Map<String,Object> schemaTree) {
+    List<JSONType> getTypes(Map<String, Object> schemaTree) {
         if (schemaTree.containsKey("$ref")) {
             String schemaId = (String) schemaTree.get("$ref");
             JSONSchema refSchema = schemaRegistry.getSchema(schemaId);
@@ -54,7 +58,7 @@ public class JSONTypeFactory {
         }
         if (schemaTree.containsKey("enum")) {
             List<JSONType> result = new ArrayList<>();
-            result.add(new JSONEnumType(schemaTree, this, schemaRegistry));
+            result.add(new JSONEnumType(schemaTree, this));
             return result;
         }
         Object typeObject = schemaTree.get("type");
@@ -77,12 +81,12 @@ public class JSONTypeFactory {
                 continue;
             }
             Class<? extends JSONType> typeClass = jsonTypes.get(type);
-            Constructor<? extends JSONType> constructor = null;
+            Constructor<? extends JSONType> constructor;
             try {
-                constructor = typeClass.getConstructor(Map.class, JSONTypeFactory.class, SchemaRegistry.class);
-                resultJsonTypes.add(constructor.newInstance(schemaTree, this, schemaRegistry));
+                constructor = typeClass.getConstructor(Map.class, JSONTypeFactory.class);
+                resultJsonTypes.add(constructor.newInstance(schemaTree, this));
             } catch (NoSuchMethodException | InvocationTargetException | InstantiationException | IllegalAccessException e) {
-                e.printStackTrace();
+                logger.error("Error while building object type", e);
             }
         }
         return resultJsonTypes;

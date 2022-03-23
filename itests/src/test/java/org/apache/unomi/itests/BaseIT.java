@@ -40,7 +40,6 @@ import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.rules.Rule;
 import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.RulesService;
-import org.apache.unomi.api.services.SchemaRegistry;
 import org.apache.unomi.lifecycle.BundleWatcher;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.persistence.spi.PersistenceService;
@@ -129,10 +128,6 @@ public abstract class BaseIT {
     @Inject
     @Filter(timeout = 600000)
     protected ConfigurationAdmin configurationAdmin;
-
-    @Inject
-    @Filter(timeout = 600000)
-    protected SchemaRegistry schemaRegistry;
 
     private CloseableHttpClient httpClient;
 
@@ -331,7 +326,6 @@ public abstract class BaseIT {
         persistenceService = getService(PersistenceService.class);
         definitionsService = getService(DefinitionsService.class);
         rulesService = getService(RulesService.class);
-        schemaRegistry = getService(SchemaRegistry.class);
     }
 
     public void updateConfiguration(String serviceName, String configPid, String propName, Object propValue) throws InterruptedException, IOException {
@@ -432,13 +426,13 @@ public abstract class BaseIT {
         return null;
     }
 
-    protected CloseableHttpResponse post(final String url, final String resource) {
+    protected CloseableHttpResponse post(final String url, final String resource, ContentType contentType) {
         try {
             final HttpPost request = new HttpPost(getFullUrl(url));
 
             if (resource != null) {
                 final String resourceAsString = resourceAsString(resource);
-                request.setEntity(new StringEntity(resourceAsString, JSON_CONTENT_TYPE));
+                request.setEntity(new StringEntity(resourceAsString, contentType));
             }
 
             return executeHttpRequest(request);
@@ -448,7 +442,11 @@ public abstract class BaseIT {
         return null;
     }
 
-    protected void delete(final String url) {
+    protected CloseableHttpResponse post(final String url, final String resource) {
+        return post(url,resource, JSON_CONTENT_TYPE);
+    }
+
+    protected CloseableHttpResponse delete(final String url) {
         CloseableHttpResponse response = null;
         try {
             final HttpDelete httpDelete = new HttpDelete(getFullUrl(url));
@@ -466,6 +464,7 @@ public abstract class BaseIT {
                 }
             }
         }
+        return response;
     }
 
     protected CloseableHttpResponse executeHttpRequest(HttpUriRequest request) throws IOException {

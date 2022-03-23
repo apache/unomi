@@ -16,8 +16,6 @@
  */
 package org.apache.unomi.api.schema.json;
 
-import org.apache.unomi.api.services.SchemaRegistry;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -31,18 +29,15 @@ public class JSONType {
     List<JSONType> anyOf;
     List<JSONType> oneOf;
 
-    Map<String,Object> customKeywords;
+    Map<String, Object> customKeywords;
 
-    protected Map<String,Object> schemaTree;
+    protected Map<String, Object> schemaTree;
 
     protected JSONTypeFactory jsonTypeFactory;
 
-    protected SchemaRegistry schemaRegistry;
-
-    public JSONType(Map<String,Object> schemaTree, JSONTypeFactory jsonTypeFactory, SchemaRegistry schemaRegistry) {
+    public JSONType(Map<String, Object> schemaTree, JSONTypeFactory jsonTypeFactory) {
         this.schemaTree = schemaTree;
         this.jsonTypeFactory = jsonTypeFactory;
-        this.schemaRegistry = schemaRegistry;
     }
 
     public String getName() {
@@ -69,20 +64,16 @@ public class JSONType {
         return jsonTypeFactory;
     }
 
-    public SchemaRegistry getSchemaRegistry() {
-        return schemaRegistry;
-    }
-
     public String getRef() {
         ref = (String) schemaTree.get("$ref");
         return ref;
     }
 
     public List<JSONType> getAllOf() {
-        List<Map<String,Object>> allOfTree = (List<Map<String,Object>>) schemaTree.get("allOf");
+        List<Map<String, Object>> allOfTree = (List<Map<String, Object>>) schemaTree.get("allOf");
         List<JSONType> allOfTypes = new ArrayList<>();
         if (allOfTree != null) {
-            for (Map<String,Object> allOfEntry : allOfTree) {
+            for (Map<String, Object> allOfEntry : allOfTree) {
                 List<JSONType> entryTypes = jsonTypeFactory.getTypes(allOfEntry);
                 allOfTypes.addAll(entryTypes);
             }
