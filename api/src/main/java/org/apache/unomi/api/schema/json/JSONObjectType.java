@@ -16,37 +16,35 @@
  */
 package org.apache.unomi.api.schema.json;
 
-import org.apache.unomi.api.services.SchemaRegistry;
-
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 public class JSONObjectType extends JSONType {
 
-    Map<String,List<JSONType>> properties = new HashMap<>();
+    Map<String, List<JSONType>> properties = new HashMap<>();
     JSONType additionalProperties;
-    Map<String,List<JSONType>> patternProperties = new HashMap<>();
+    Map<String, List<JSONType>> patternProperties = new HashMap<>();
     JSONType propertyNames;
 
     int maxProperties;
 
-    public JSONObjectType(Map<String, Object> schemaTree, JSONTypeFactory jsonTypeFactory, SchemaRegistry schemaRegistry) {
-        super(schemaTree, jsonTypeFactory, schemaRegistry);
+    public JSONObjectType(Map<String, Object> schemaTree, JSONTypeFactory jsonTypeFactory) {
+        super(schemaTree, jsonTypeFactory);
         setType("object");
-        Map<String,Object> propertiesTree = (Map<String,Object>) schemaTree.get("properties");
+        Map<String, Object> propertiesTree = (Map<String, Object>) schemaTree.get("properties");
         if (propertiesTree != null) {
             propertiesTree.entrySet().forEach(entry -> {
-                properties.put(entry.getKey(), jsonTypeFactory.getTypes((Map<String,Object>)entry.getValue()));
+                properties.put(entry.getKey(), jsonTypeFactory.getTypes((Map<String, Object>) entry.getValue()));
             });
         }
     }
 
-    public Map<String,List<JSONType>> getProperties() {
+    public Map<String, List<JSONType>> getProperties() {
         return properties;
     }
 
-    public void setProperties(Map<String,List<JSONType>> properties) {
+    public void setProperties(Map<String, List<JSONType>> properties) {
         this.properties = properties;
     }
 }
