@@ -133,9 +133,7 @@ public class ConditionContextHelper {
     public static String foldToASCII(String s) {
         if (s != null) {
             s = s.toLowerCase();
-            StringReader stringReader = new StringReader(s);
-            Reader foldedStringReader = mappingCharFilterFactory.create(stringReader);
-            try {
+            try (StringReader stringReader = new StringReader(s); Reader foldedStringReader = mappingCharFilterFactory.create(stringReader)) {
                 return IOUtils.toString(foldedStringReader);
             } catch (IOException e) {
                 logger.error("Error folding to ASCII string " + s, e);
