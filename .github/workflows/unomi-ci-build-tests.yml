@@ -27,3 +27,7 @@ jobs:
 
     - name: Integration tests
       run: mvn -pl itests clean install -Pintegration-tests
+    - name: Deploy snapshots to Apache Snapshots repository
+      run: mvn clean install deploy -P integration-tests,docker
+    - name: Deploy Docker snapshot image
+      run: mvn clean install -P docker; pushd docker; mvn docker:push; popd
