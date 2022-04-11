@@ -28,3 +28,6 @@ jobs:
       env:
         NEXUS_USER: ${{ secrets.NEXUS_USER }}
         NEXUS_PW: ${{ secrets.NEXUS_PW }}
+
+    - name: Deploy Docker snapshot image
+      run: mvn clean install -P docker; pushd docker; mvn docker:push; popd
