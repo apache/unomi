@@ -30,4 +30,4 @@ jobs:
         NEXUS_PW: ${{ secrets.NEXUS_PW }}
 
     - name: Deploy Docker snapshot image
-      run: mvn clean install -P docker; pushd docker; mvn docker:push; popd
+      run: mvn clean install -P docker; pushd docker; mvn -Ddocker.username=${{ secrets.DOCKERHUB_USER }} -Ddocker.password=${{ secrets.DOCKERHUB_TOKEN }} docker:push; popd
