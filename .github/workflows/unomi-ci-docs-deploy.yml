@@ -1,33 +1,57 @@
 # This workflow will build a Java project with Maven
 # For more information see: https://help.github.com/actions/language-and-framework-guides/building-and-testing-java-with-maven
 
-name: Unomi CI - Documentation and deployment
+name: Unomi CI - Documentation and publishing
 
 on:
   push:
     branches: [ master, unomi-1.6.x ]
 
 jobs:
-  docs-and-deploy:
+  generate-docs:
+    name: Generate Javadoc
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
-    - name: Set up JDK 1.8
-      uses: actions/setup-java@v1
-      with:
-        java-version: 1.8
-        server-id: apache.snapshots.https
-        server-username: NEXUS_USER
-        server-password: NEXUS_PW
+      - uses: actions/checkout@v2
+      - name: Set up JDK 1.8
+        uses: actions/setup-java@v1
+        with:
+          java-version: 1.8
+          server-id: apache.snapshots.https
+          server-username: NEXUS_USER
+          server-password: NEXUS_PW
+      - name: Generate documentation
+        run: mvn -U -e clean install -DskipTests javadoc:aggregate source:aggregate
 
-    - name: Generate documentation
-      run: mvn -U -B -e clean install -DskipTests javadoc:aggregate source:aggregate
+  publish-snapshots:
+    name: Publish snapshots
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up JDK 1.8
+        uses: actions/setup-java@v1
+        with:
+          java-version: 1.8
+          server-id: apache.snapshots.https
+          server-username: NEXUS_USER
+          server-password: NEXUS_PW
+      - name: Build & deploy snapshots
+        run: mvn clean install deploy -DskipTests
+        env:
+          NEXUS_USER: ${{ secrets.NEXUS_USER }}
+          NEXUS_PW: ${{ secrets.NEXUS_PW }}
 
-    - name: Deploying
-      run: mvn deploy -DskipTests
-      env:
-        NEXUS_USER: ${{ secrets.NEXUS_USER }}
-        NEXUS_PW: ${{ secrets.NEXUS_PW }}
-
-    - name: Deploy Docker snapshot image
-      run: mvn clean install -P docker; pushd docker; mvn -Ddocker.username=${{ secrets.DOCKERHUB_USER }} -Ddocker.password=${{ secrets.DOCKERHUB_TOKEN }} docker:push; popd
+  publish-docker-image:
+    name: Push docker image snapshot
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up JDK 1.8
+        uses: actions/setup-java@v1
+        with:
+          java-version: 1.8
+          server-id: apache.snapshots.https
+          server-username: NEXUS_USER
+          server-password: NEXUS_PW
+      - name: Building & pushing Docker snapshot image
+        run: mvn clean install -P docker; pushd docker; mvn -Ddocker.username=${{ secrets.DOCKERHUB_USER }} -Ddocker.password=${{ secrets.DOCKERHUB_TOKEN }} docker:push; popd
