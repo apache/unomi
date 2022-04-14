@@ -59,7 +59,8 @@ import org.junit.runners.Suite.SuiteClasses;
         GraphQLProfilePropertiesIT.class,
         GraphQLSegmentIT.class,
         GraphQLWebSocketIT.class,
-        JSONSchemaIT.class
+        JSONSchemaIT.class,
+        GraphQLProfileAliasesIT.class
 })
 public class AllITs {
 }
