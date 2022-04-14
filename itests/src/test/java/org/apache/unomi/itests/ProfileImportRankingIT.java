@@ -47,9 +47,11 @@ import java.util.Objects;
 @ExamReactorStrategy(PerSuite.class)
 public class ProfileImportRankingIT extends BaseIT {
 
-    @Inject @Filter(value="(configDiscriminator=IMPORT)", timeout = 600000)
+    @Inject
+    @Filter(value = "(configDiscriminator=IMPORT)", timeout = 600000)
     protected ImportExportConfigurationService<ImportConfiguration> importConfigurationService;
-    @Inject @Filter(timeout = 600000)
+    @Inject
+    @Filter(timeout = 600000)
     protected ProfileService profileService;
 
     @Test
@@ -72,18 +74,11 @@ public class ProfileImportRankingIT extends BaseIT {
 
         profileService.setPropertyType(propertyTypeRank);
 
-        PropertyType propUciId = keepTrying("Failed waiting for property type 'uciId'",
-                () -> profileService.getPropertyType("uciId"),
-                Objects::nonNull,
-                1000,
-                100);
+        PropertyType propUciId = keepTrying("Failed waiting for property type 'uciId'", () -> profileService.getPropertyType("uciId"),
+                Objects::nonNull, 1000, 100);
 
-        PropertyType propRankId = keepTrying("Failed waiting for property type 'rank'",
-                () -> profileService.getPropertyType("rank"),
-                Objects::nonNull,
-                1000,
-                100);
-
+        PropertyType propRankId = keepTrying("Failed waiting for property type 'rank'", () -> profileService.getPropertyType("rank"),
+                Objects::nonNull, 1000, 100);
 
         /*** Surfers Test ***/
         String itemId = "5-ranking-test";
@@ -106,20 +101,19 @@ public class ProfileImportRankingIT extends BaseIT {
 
         importConfigRanking.getProperties().put("mapping", mappingRanking);
         File importSurfersFile = new File("data/tmp/recurrent_import/");
-        importConfigRanking.getProperties().put("source", "file://" + importSurfersFile.getAbsolutePath() + "?fileName=5-ranking-test.csv&consumer.delay=10m&move=.done");
+        importConfigRanking.getProperties().put("source",
+                "file://" + importSurfersFile.getAbsolutePath() + "?fileName=5-ranking-test.csv&consumer.delay=10m&move=.done");
         importConfigRanking.setActive(true);
 
         importConfigurationService.save(importConfigRanking, true);
 
-
         //Wait for data to be processed
-        keepTrying("Failed waiting for ranking import to complete", ()->profileService.findProfilesByPropertyValue("properties.city", "rankingCity", 0, 50, null), (p)->p.getTotalSize() == 25, 1000, 200);
+        keepTrying("Failed waiting for ranking import to complete",
+                () -> profileService.findProfilesByPropertyValue("properties.city", "rankingCity", 0, 50, null),
+                (p) -> p.getTotalSize() == 25, 1000, 200);
 
         List<ImportConfiguration> importConfigurations = keepTrying("Failed waiting for import configurations list with 1 item",
-                () -> importConfigurationService.getAll(),
-                (list) -> Objects.nonNull(list) && list.size() == 1,
-                1000,
-                100);
+                () -> importConfigurationService.getAll(), (list) -> Objects.nonNull(list) && list.size() == 1, 1000, 100);
 
         PartialList<Profile> gregProfileList = profileService.findProfilesByPropertyValue("properties.uciId", "10004451371", 0, 10, null);
         Assert.assertEquals(1, gregProfileList.getList().size());

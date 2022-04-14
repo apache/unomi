@@ -16,34 +16,16 @@
  */
 package org.apache.unomi.itests;
 
-import org.apache.http.HttpHost;
-import org.apache.http.auth.AuthScope;
-import org.apache.http.auth.UsernamePasswordCredentials;
-import org.apache.http.client.AuthCache;
-import org.apache.http.client.CredentialsProvider;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.protocol.HttpClientContext;
-import org.apache.http.impl.auth.BasicScheme;
-import org.apache.http.impl.client.BasicAuthCache;
-import org.apache.http.impl.client.BasicCredentialsProvider;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClientBuilder;
-import org.apache.http.util.EntityUtils;
-import org.apache.unomi.api.PartialList;
-import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.ops4j.pax.exam.junit.PaxExam;
 import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
 import org.ops4j.pax.exam.spi.reactors.PerSuite;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -57,23 +39,21 @@ public class PrivacyServiceIT extends BaseIT {
     private static final int DEFAULT_TRYING_TRIES = 30;
 
     @Before
-    public void setUp() throws InterruptedException, IOException {
-        keepTrying("Couldn't find privacy endpoint",
-                () -> get(PRIVACY_ENDPOINT + "/info", Map.class),
-                serverInfo -> serverInfo != null,
+    public void setUp() throws InterruptedException {
+        keepTrying("Couldn't find privacy endpoint", () -> get(PRIVACY_ENDPOINT + "/info", Map.class), Objects::nonNull,
                 DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
     }
 
     @Test
-    public void testServerInfo() throws IOException {
-        Map<String,Object> serverInfo = get(PRIVACY_ENDPOINT + "/info", Map.class);
+    public void testServerInfo() {
+        Map<String, Object> serverInfo = get(PRIVACY_ENDPOINT + "/info", Map.class);
         assertNotNull("Server info is null", serverInfo);
         assertEquals("Server identifier is incorrect", "Apache Unomi", serverInfo.get("serverIdentifier"));
     }
 
     @Test
-    public void testServerInfos() throws IOException {
-        List<Map<String,Object>> serverInfos = get(PRIVACY_ENDPOINT + "/infos", List.class);
+    public void testServerInfos() {
+        List<Map<String, Object>> serverInfos = get(PRIVACY_ENDPOINT + "/infos", List.class);
         assertEquals("Server info list is invalid", 1, serverInfos.size());
         assertEquals("Server identifier is incorrect", "Apache Unomi", serverInfos.get(0).get("serverIdentifier"));
     }

@@ -16,10 +16,6 @@
  */
 package org.apache.unomi.itests;
 
-import java.util.*;
-
-import javax.inject.Inject;
-
 import org.apache.unomi.api.CustomItem;
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.Metadata;
@@ -42,6 +38,15 @@ import org.ops4j.pax.exam.junit.PaxExam;
 import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
 import org.ops4j.pax.exam.spi.reactors.PerSuite;
 import org.ops4j.pax.exam.util.Filter;
+
+import javax.inject.Inject;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.UUID;
 
 import static org.apache.unomi.itests.BasicIT.ITEM_TYPE_PAGE;
 
@@ -76,14 +81,21 @@ public class IncrementInterestsIT extends BaseIT {
     public void setup() throws Exception {
         topic = createTopic("topicId");
         profile = createProfile();
-        rule = new Rule(new Metadata(null, UUID.randomUUID().toString(), "IncrementInterestRule", "Test rule for IncrementInterestIT automated tests"));
+        rule = new Rule(new Metadata(null, UUID.randomUUID().toString(), "IncrementInterestRule",
+                "Test rule for IncrementInterestIT automated tests"));
     }
 
     @After
-    public void tearDown() {
+    public void tearDown() throws InterruptedException {
         rulesService.removeRule(rule.getItemId());
+        waitForNullValue("Rule still present after deletion", () -> rulesService.getRule(rule.getItemId()), DEFAULT_TRYING_TIMEOUT,
+                DEFAULT_TRYING_TRIES);
         topicService.delete(topic.getItemId());
+        waitForNullValue("Topic still present after deletion", () -> topicService.load(topic.getItemId()), DEFAULT_TRYING_TIMEOUT,
+                DEFAULT_TRYING_TRIES);
         profileService.delete(profile.getItemId(), false);
+        waitForNullValue("Topic still present after deletion", () -> topicService.load(profile.getItemId()), DEFAULT_TRYING_TIMEOUT,
+                DEFAULT_TRYING_TRIES);
     }
 
     @Test
@@ -139,7 +151,7 @@ public class IncrementInterestsIT extends BaseIT {
 
         Map<String, Object> properties = new HashMap<>();
 
-        Map<String,Object> pageInfo = new HashMap<>();
+        Map<String, Object> pageInfo = new HashMap<>();
         pageInfo.put("language", "en");
         pageInfo.put("destinationURL", "https://www.acme.com/test-page.html");
         pageInfo.put("referringURL", "https://unomi.apache.org");
@@ -188,8 +200,9 @@ public class IncrementInterestsIT extends BaseIT {
         topic.setScope("scope");
 
         topicService.save(topic);
-        refreshPersistence();
 
+        keepTrying("Topic not found in the required time", () -> topicService.load(topicId), Objects::nonNull, DEFAULT_TRYING_TIMEOUT,
+                DEFAULT_TRYING_TRIES);
         return topic;
     }
 
@@ -200,8 +213,9 @@ public class IncrementInterestsIT extends BaseIT {
         profile.setProperty("lastName", "LastName");
 
         profileService.save(profile);
-        refreshPersistence();
 
+        keepTrying("Topic not found in the required time", () -> profileService.load(profile.getItemId()), Objects::nonNull,
+                DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
         return profile;
     }
 }

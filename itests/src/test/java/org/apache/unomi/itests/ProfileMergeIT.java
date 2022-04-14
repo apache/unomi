@@ -42,6 +42,7 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Integration test for MergeProfilesOnPropertyAction
@@ -50,15 +51,20 @@ import java.util.List;
 @ExamReactorStrategy(PerSuite.class)
 public class ProfileMergeIT extends BaseIT {
 
-    @Inject @Filter(timeout = 600000)
+    @Inject
+    @Filter(timeout = 600000)
     protected EventService eventService;
-    @Inject @Filter(timeout = 600000)
+    @Inject
+    @Filter(timeout = 600000)
     protected RulesService rulesService;
-    @Inject @Filter(timeout = 600000)
+    @Inject
+    @Filter(timeout = 600000)
     protected DefinitionsService definitionsService;
-    @Inject @Filter(timeout = 600000)
+    @Inject
+    @Filter(timeout = 600000)
     protected ProfileService profileService;
-    @Inject @Filter(timeout = 600000)
+    @Inject
+    @Filter(timeout = 600000)
     protected PersistenceService persistenceService;
 
     private final static String TEST_EVENT_TYPE = "mergeProfileTestEventType";
@@ -93,7 +99,7 @@ public class ProfileMergeIT extends BaseIT {
         Condition condition = new Condition(definitionsService.getConditionType("eventTypeCondition"));
         condition.setParameter("eventTypeId", TEST_EVENT_TYPE);
 
-        final Action action = new Action( definitionsService.getActionType( "mergeProfilesOnPropertyAction"));
+        final Action action = new Action(definitionsService.getActionType("mergeProfilesOnPropertyAction"));
         action.setParameter("mergeProfilePropertyValue", "eventProperty::target.properties(email)");
         action.setParameter("mergeProfilePropertyName", "mergeIdentifier");
         action.setParameter("forceEventProfileAsMaster", false);
@@ -118,18 +124,19 @@ public class ProfileMergeIT extends BaseIT {
         eventProfile.setProperty("email", "username@domain.com");
         profileService.save(eventProfile);
 
-        refreshPersistence();
-
+        keepTrying("Profile with id masterProfileID not found in the required time", () -> profileService.load("masterProfileID"),
+                Objects::nonNull, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+        keepTrying("Profile with id eventProfileID not found in the required time", () -> profileService.load("eventProfileID"),
+                Objects::nonNull, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
         Event event = new Event(TEST_EVENT_TYPE, null, eventProfile, null, null, eventProfile, new Date());
-        eventService.send(event);
 
-        refreshPersistence();
+        eventService.send(event);
 
         Assert.assertNotNull(event.getProfile());
 
-        List<ProfileAlias> profileAliases = persistenceService.getAllItems(ProfileAlias.class);
-
-        Assert.assertFalse(profileAliases.isEmpty());
+        keepTrying("Profile with id masterProfileID not found in the required time",
+                () -> persistenceService.getAllItems(ProfileAlias.class), (profileAliases) -> !profileAliases.isEmpty(),
+                DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
 
         List<ProfileAlias> aliases = persistenceService.query("profileID", masterProfile.getItemId(), null, ProfileAlias.class);
 
@@ -152,13 +159,14 @@ public class ProfileMergeIT extends BaseIT {
 
     private Rule createMergeOnPropertyRule(boolean forceEventProfileAsMaster) throws InterruptedException {
         Rule mergeOnPropertyTestRule = new Rule();
-        mergeOnPropertyTestRule.setMetadata(new Metadata(null, TEST_RULE_ID, TEST_RULE_ID, "Test rule for testing MergeProfilesOnPropertyAction"));
+        mergeOnPropertyTestRule
+                .setMetadata(new Metadata(null, TEST_RULE_ID, TEST_RULE_ID, "Test rule for testing MergeProfilesOnPropertyAction"));
 
         Condition condition = new Condition(definitionsService.getConditionType("eventTypeCondition"));
         condition.setParameter("eventTypeId", TEST_EVENT_TYPE);
         mergeOnPropertyTestRule.setCondition(condition);
 
-        final Action mergeProfilesOnPropertyAction = new Action( definitionsService.getActionType( "mergeProfilesOnPropertyAction"));
+        final Action mergeProfilesOnPropertyAction = new Action(definitionsService.getActionType("mergeProfilesOnPropertyAction"));
         mergeProfilesOnPropertyAction.setParameter("mergeProfilePropertyValue", "eventProperty::target.properties(j:nodename)");
         mergeProfilesOnPropertyAction.setParameter("mergeProfilePropertyName", "mergeIdentifier");
         mergeProfilesOnPropertyAction.setParameter("forceEventProfileAsMaster", forceEventProfileAsMaster);

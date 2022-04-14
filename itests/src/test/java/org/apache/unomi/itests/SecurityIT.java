@@ -49,18 +49,18 @@ public class SecurityIT extends BaseIT {
     private ObjectMapper objectMapper;
 
     @Before
-    public void setUp() throws InterruptedException {
+    public void setUp() {
         objectMapper = CustomObjectMapper.getObjectMapper();
     }
 
     @Test
-    public void testOGNLInjection() throws IOException, InterruptedException {
+    public void testOGNLInjection() throws IOException {
         ContextRequest contextRequest = new ContextRequest();
         List<PersonalizationService.PersonalizationRequest> personalizations = new ArrayList<>();
         PersonalizationService.PersonalizationRequest personalizationRequest = new PersonalizationService.PersonalizationRequest();
         personalizationRequest.setId("vuln-test");
         personalizationRequest.setStrategy("matching-first");
-        Map<String,Object> strategyOptions = new HashMap<>();
+        Map<String, Object> strategyOptions = new HashMap<>();
         strategyOptions.put("fallback", "var2");
         personalizationRequest.setStrategyOptions(strategyOptions);
         List<PersonalizationService.PersonalizedContent> personalizationContents = new ArrayList<>();
@@ -76,7 +76,9 @@ public class SecurityIT extends BaseIT {
         condition.setConditionTypeId("profilePropertyCondition");
         condition.setParameter("propertyName", "@java.lang.Runtime@getRuntime().exec('touch " + vulnFile.getCanonicalPath() + "')");
         condition.setParameter("comparisonOperator", "equals");
-        condition.setParameter("propertyValue" , "script::java.io.PrintWriter writer = new java.io.PrintWriter(new java.io.BufferedWriter(new java.io.FileWriter(\"" + vulnFile.getCanonicalPath() + "\", true)));\nwriter.println(\"test\");\nwriter.close();");
+        condition.setParameter("propertyValue",
+                "script::java.io.PrintWriter writer = new java.io.PrintWriter(new java.io.BufferedWriter(new java.io.FileWriter(\""
+                        + vulnFile.getCanonicalPath() + "\", true)));\nwriter.println(\"test\");\nwriter.close();");
         filter.setCondition(condition);
         filters.add(filter);
         var1Content.setFilters(filters);
@@ -100,7 +102,5 @@ public class SecurityIT extends BaseIT {
     private TestUtils.RequestResponse executeContextJSONRequest(HttpPost request, String sessionId) throws IOException {
         return TestUtils.executeContextJSONRequest(request, sessionId);
     }
-
-
 
 }

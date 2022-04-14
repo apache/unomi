@@ -64,7 +64,8 @@ public class ProfileImportActorsIT extends BaseIT {
         propertyTypeTwitterId.getMetadata().setSystemTags(Collections.singleton("basicProfileProperties"));
         propertyTypeTwitterId.setTarget("profiles");
 
-        PropertyType propertyTypeActorsGenres = new PropertyType(new Metadata("integration", "movieGenres", "Movie Genres", "Movie Genres"));
+        PropertyType propertyTypeActorsGenres = new PropertyType(
+                new Metadata("integration", "movieGenres", "Movie Genres", "Movie Genres"));
         propertyTypeActorsGenres.setValueTypeId("string");
         propertyTypeActorsGenres.setMultivalued(true);
         propertyTypeActorsGenres.getMetadata().setSystemTags(Collections.singleton("basicProfileProperties"));
@@ -73,18 +74,11 @@ public class ProfileImportActorsIT extends BaseIT {
         profileService.setPropertyType(propertyTypeTwitterId);
         profileService.setPropertyType(propertyTypeActorsGenres);
 
-        PropertyType propTwitterId = keepTrying("Failed waiting for property type 'twitterId'",
-                () -> profileService.getPropertyType("twitterId"),
-                Objects::nonNull,
-                1000,
-                100);
+        keepTrying("Failed waiting for property type 'twitterId'", () -> profileService.getPropertyType("twitterId"), Objects::nonNull,
+                DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
 
-        PropertyType propActorsGenre = keepTrying("Failed waiting for property type 'movieGenres'",
-                () -> profileService.getPropertyType("movieGenres"),
-                Objects::nonNull,
-                1000,
-                100);
-
+        keepTrying("Failed waiting for property type 'movieGenres'", () -> profileService.getPropertyType("movieGenres"), Objects::nonNull,
+                DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
 
         /*** Actors Test ***/
         String itemId = "6-actors-test";
@@ -108,17 +102,16 @@ public class ProfileImportActorsIT extends BaseIT {
 
         importConfigActors.getProperties().put("mapping", mappingActors);
         File importSurfersFile = new File("data/tmp/recurrent_import/");
-        importConfigActors.getProperties().put("source", "file://" + importSurfersFile.getAbsolutePath() + "?fileName=6-actors-test.csv&consumer.delay=10m&move=.done");
+        importConfigActors.getProperties().put("source",
+                "file://" + importSurfersFile.getAbsolutePath() + "?fileName=6-actors-test.csv&consumer.delay=10m&move=.done");
         importConfigActors.setActive(true);
 
         importConfigurationService.save(importConfigActors, true);
 
         //Wait for data to be processed
         keepTrying("Failed waiting for actors initial import to complete",
-                () -> profileService.findProfilesByPropertyValue("properties.city", "hollywood", 0, 10, null),
-                (p) -> p.getTotalSize() == 6,
-                1000,
-                200);
+                () -> profileService.findProfilesByPropertyValue("properties.city", "hollywood", 0, 10, null), (p) -> p.getTotalSize() == 6,
+                1000, 200);
 
         List<ImportConfiguration> importConfigurations = importConfigurationService.getAll();
         Assert.assertEquals(1, importConfigurations.size());
@@ -128,7 +121,7 @@ public class ProfileImportActorsIT extends BaseIT {
         Assert.assertNotNull(jeanneProfile.get(0));
         Assert.assertEquals("Jeanne; D'arc", jeanneProfile.get(0).getProperty("lastName"));
         Assert.assertEquals("jean@darc.com", jeanneProfile.get(0).getProperty("email"));
-        Assert.assertArrayEquals(new String[]{}, ((List) jeanneProfile.get(0).getProperty("movieGenres")).toArray());
+        Assert.assertArrayEquals(new String[] {}, ((List) jeanneProfile.get(0).getProperty("movieGenres")).toArray());
 
         PartialList<Profile> rockProfile = profileService.findProfilesByPropertyValue("properties.twitterId", "6", 0, 10, null);
         Assert.assertEquals(1, rockProfile.getList().size());
