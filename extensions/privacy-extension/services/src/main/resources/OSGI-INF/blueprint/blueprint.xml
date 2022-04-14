@@ -29,6 +29,8 @@
 
     <reference id="profileService" interface="org.apache.unomi.api.services.ProfileService"/>
 
+    <reference id="bundleWatcher" interface="org.apache.unomi.lifecycle.BundleWatcher" />
+
     <!-- Privacy service -->
 
     <bean id="privacyServiceImpl" class="org.apache.unomi.privacy.internal.PrivacyServiceImpl">
@@ -36,6 +38,7 @@
         <property name="eventService" ref="eventService" />
         <property name="profileService" ref="profileService" />
         <property name="bundleContext" ref="blueprintBundleContext"/>
+        <property name="bundleWatcher" ref="bundleWatcher"/>
     </bean>
     <service id="privacyService" ref="privacyServiceImpl" interface="org.apache.unomi.api.services.PrivacyService"/>
 </blueprint>

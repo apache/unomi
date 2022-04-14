@@ -1,9 +1,9 @@
 {
-  "$id": "https://unomi.apache.org/schemas/json/event.json",
+  "$id": "https://unomi.apache.org/schemas/json/event/1-0-0",
   "$schema": "https://json-schema.org/draft/2019-09/schema",
   "title": "Event",
   "type": "object",
-  "allOf": [{ "$ref": "https://unomi.apache.org/schemas/json/timestampeditem.json" }],
+  "allOf": [{ "$ref": "https://unomi.apache.org/schemas/json/timestampeditem/1-0-0" }],
   "properties" : {
     "eventType" : {
       "type" : "string",

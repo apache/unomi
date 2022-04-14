@@ -1,0 +1,70 @@
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+=== Getting started with Unomi
+
+We will first get you up and running with an example. We will then lift the corner of the cover somewhat and explain
+in greater details what just happened.
+
+==== Prerequisites
+
+This document assumes working knowledge of https://git-scm.com/[git] to be able to retrieve the code for Unomi and the example.
+Additionally, you will require a working Java 8 or above install. Refer to http://www.oracle.com/technetwork/java/javase/[http://www.oracle.com/technetwork/java/javase/] for details on how to download and install Java SE 8 or greater.
+
+===== JDK compatibility
+
+Starting with Java 9, Oracle made some big changes to the Java platform releases. This is why Apache Unomi is focused on
+supporting the Long Term Supported versions of the JDK, currently versions 8 and 11. We do not test with intermediate
+versions so they may or may not work properly. Currently the most tested version is version 8 and version 11 is also
+supported.
+
+Also, as there are new licensing restrictions on JDKs provided by Oracle for production usages, Apache Unomi has also
+added support for OpenJDK builds. Other JDK distributions might also work but are not regularly tested so you should use
+them at your own risks.
+
+===== ElasticSearch compatibility
+
+Starting with version 1.5.0 Apache Unomi adds compatibility with ElasticSearch 7.4 . It is highly recommended to use the
+ElasticSearch version provided by the documentation when possible. However minor versions (7.4.x) should also work, and
+one version higher (7.5) will usually work. Going higher than that is risky given the way that ElasticSearch is developed
+and breaking changes are introduced quite often. If in doubt, don't hesitate to check with the Apache Unomi community
+to get the latest information about ElasticSearch version compatibility.
+
+==== Running Unomi
+
+===== Start Unomi
+
+Start Unomi according to the <<Five Minutes QuickStart,five minutes quick start>> or by compiling using the
+<<Building,building instructions>>. Once you have Karaf running,
+ you should wait until you see the following messages on the Karaf console:
+
+[source]
+----
+Initializing user list service endpoint...
+Initializing geonames service endpoint...
+Initializing segment service endpoint...
+Initializing scoring service endpoint...
+Initializing campaigns service endpoint...
+Initializing rule service endpoint...
+Initializing profile service endpoint...
+Initializing cluster service endpoint...
+----
+
+This indicates that all the Unomi services are started and ready to react to requests. You can then open a browser and go to `http://localhost:8181/cxs` to see the list of
+available RESTful services or retrieve an initial context at `http://localhost:8181/cxs/context.json` (which isn't very useful at this point).
+
+You can now find an introduction page at the following location: http://localhost:8181
+
+Also now that your service is up and running you can go look at the
+<<Request examples,request examples>> to learn basic
+requests you can do once your server is up and running.

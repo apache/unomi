@@ -1,14 +1,14 @@
 {
-  "$id": "https://unomi.apache.org/schemas/json/metadataitem.json",
+  "$id": "https://unomi.apache.org/schemas/json/metadataitem/1-0-0",
   "$schema": "https://json-schema.org/draft/2019-09/schema",
   "title": "MetadataItem",
   "type": "object",
   "allOf": [
-    { "$ref": "https://unomi.apache.org/schemas/json/item.json" }
+    { "$ref": "https://unomi.apache.org/schemas/json/item/1-0-0" }
   ],
   "properties" : {
     "metadata" : {
-      "$ref" : "https://unomi.apache.org/schemas/json/metadata.json"
+      "$ref" : "https://unomi.apache.org/schemas/json/metadata/1-0-0"
     }
   }
 }

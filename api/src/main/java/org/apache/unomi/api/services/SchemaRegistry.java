@@ -17,16 +17,93 @@
 
 package org.apache.unomi.api.services;
 
-import org.apache.unomi.api.SchemaType;
+import org.apache.unomi.api.Metadata;
+import org.apache.unomi.api.PartialList;
+import org.apache.unomi.api.schema.json.JSONSchema;
 
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.List;
 
+/**
+ * Service that allow to manage JSON schema. It allows to get, save and delete schemas
+ */
 public interface SchemaRegistry {
 
+    /**
+     * Retrieves json schema metadatas, ordered according to the specified {@code sortBy} String and and paged: only {@code size} of them
+     * are retrieved, starting with the {@code
+     * offset}-th one.
+     *
+     * @param offset zero or a positive integer specifying the position of the first element in the total ordered collection of matching elements
+     * @param size   a positive integer specifying how many matching elements should be retrieved or {@code -1} if all of them should be retrieved
+     * @param sortBy an optional ({@code null} if no sorting is required) String of comma ({@code ,}) separated property names on which ordering should be performed, ordering elements according to the property order in the
+     *               String, considering each in turn and moving on to the next one in case of equality of all preceding ones. Each property name is optionally followed by
+     *               a column ({@code :}) and an order specifier: {@code asc} or {@code desc}.
+     * @return a {@link PartialList} of json schema metadata
+     */
+    PartialList<Metadata> getJsonSchemaMetadatas(int offset, int size, String sortBy);
+
+    /**
+     * Verify if an object is valid against a schema
+     *
+     * @param object   to validate
+     * @param schemaId id of the schema used for the validation
+     * @return true is the object is valid
+     */
     boolean isValid(Object object, String schemaId);
 
-    SchemaType getSchema(String schemaId);
 
-    List<SchemaType> getTargetSchemas(String target);
+    /**
+     * Get a schema matching by a schema id
+     *
+     * @param schemaId Id of the schema
+     * @return A JSON schema
+     */
+    JSONSchema getSchema(String schemaId);
 
+    /**
+     * Get a list a {@link org.apache.unomi.api.schema.json.JSONSchema}
+     *
+     * @param target to filter the schemas
+     * @return a list of JSONSchema
+     */
+    List<JSONSchema> getSchemasByTarget(String target);
+
+    /**
+     * Save a new schema or update a schema
+     *
+     * @param schema as a String value
+     */
+    void saveSchema(String schema);
+
+    /**
+     * Save a new schema or update a schema
+     *
+     * @param schemaStream inputStream of the schema
+     */
+    void saveSchema(InputStream schemaStream) throws IOException;
+
+    /**
+     * Load a predefined schema into memory
+     *
+     * @param schemaStream inputStream of the schema
+     */
+    void loadPredefinedSchema(InputStream schemaStream);
+
+    /**
+     * Delete a schema according to its id
+     *
+     * @param schemaId id of the schema to delete
+     * @return true if the schema has been deleted
+     */
+    boolean deleteSchema(String schemaId);
+
+    /**
+     * Delete a schema
+     *
+     * @param schemaStream inputStream of the schema to delete
+     * @return true if the schema has been deleted
+     */
+    boolean deleteSchema(InputStream schemaStream);
 }

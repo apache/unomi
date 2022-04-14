@@ -1,0 +1,83 @@
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+=== Useful Apache Unomi URLs
+
+In this section we will list some useful URLs that can be used to quickly access parts of Apache Unomi that can help
+you understand or diagnose what is going on in the system.
+
+You can of course find more information about the REST API in the http://unomi.apache.org/documentation.html[related section]
+in the Apache Unomi website.
+
+For these requests it can be nice to use a browser (such as Firefox) that understands JSON to make it easier to view the
+results as the returned JSON is not beautified (another possiblity is a tool such as Postman).
+
+Important : all URLs are relative to the private Apache Unomi URL, by default: https://localhost:9443
+
+.Useful URLs
+|===
+|Path|Method|Description
+
+|/cxs/profiles/properties
+|GET
+|Listing deployed properties
+
+|/cxs/definitions/conditions
+|GET
+|Listing deployed conditions
+
+|/cxs/definitions/actions
+|GET
+|Listing deployed actions
+
+|/cxs/profiles/PROFILE_ID
+|GET
+|Dumping a profile in JSON
+
+|/cxs/profiles/PROFILE_ID/sessions
+|GET
+|Listing sessions for a profile
+
+|/cxs/profiles/sessions/SESSION_ID
+|GET
+|Dumping a session in JSON
+
+|/cxs/profiles/sessions/SESSION_ID/events
+|GET
+|Listing events for a session. This query can have additional such as eventTypes, q (query), offset, size, sort. See the https://unomi.apache.org/rest-api-doc/#1019321624[related
+section in the REST API] for details.
+
+|/cxs/events/search
+|POST
+|Listing events for a profile. You will need to provide a query in the body of the request that looks something like this (and https://unomi.apache.org/rest-api-doc/#1768188821[documentation is available in the REST API]) :
+{ "offset" : 0,
+  "limit" : 20,
+  "condition" : {
+    "type": "eventPropertyCondition",
+    "parameterValues" : {
+      "propertyName" : "profileId",
+      "comparisonOperator" : "equals",
+      "propertyValue" : "PROFILE_ID"
+    }
+  }
+}
+where PROFILE_ID is a profile identifier. This will indeed retrieve all the events for a given profile.
+
+|/cxs/rules/statistics
+|GET
+|Get all rule execution statistics
+
+|/cxs/rules/statistics
+|DELETE
+|Reset all rule execution statistics to 0
+|===

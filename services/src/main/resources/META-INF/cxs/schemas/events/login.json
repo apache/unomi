@@ -1,0 +1,24 @@
+{
+  "$id": "https://unomi.apache.org/schemas/json/events/login/1-0-0",
+  "$schema": "https://json-schema.org/draft/2019-09/schema",
+  "self":{
+    "vendor":"org.apache.unomi",
+    "target" : "events",
+    "name": "login",
+    "format":"jsonschema",
+    "version":"1-0-0"
+  },
+  "title": "LoginEvent",
+  "type": "object",
+  "allOf": [{ "$ref": "https://unomi.apache.org/schemas/json/event/1-0-0" }],
+  "properties" : {
+    "properties" : {
+      "type" : "object",
+      "unomiPropertyTypes" : [ "events" ],
+      "maxProperties": 50
+    },
+    "target" : {
+      "$ref" : "https://unomi.apache.org/schemas/json/customitem/1-0-0"
+    }
+  }
+}

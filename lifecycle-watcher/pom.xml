@@ -34,6 +34,12 @@
             <groupId>org.osgi</groupId>
             <artifactId>osgi.core</artifactId>
         </dependency>
+        <dependency>
+            <groupId>org.apache.unomi</groupId>
+            <artifactId>unomi-api</artifactId>
+            <version>${project.version}</version>
+            <scope>provided</scope>
+        </dependency>
     </dependencies>
 
     <build>
@@ -64,6 +70,8 @@
                         <Embed-Dependency>*;scope=compile|runtime</Embed-Dependency>
                         <Implementation-Build>${buildNumber}</Implementation-Build>
                         <Implementation-TimeStamp>${timestamp}</Implementation-TimeStamp>
+                        <Implementation-ScmBranch>${scmBranch}</Implementation-ScmBranch>
+                        <Implementation-ServerIdentifier>Apache Unomi</Implementation-ServerIdentifier>
                     </instructions>
                 </configuration>
             </plugin>

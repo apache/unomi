@@ -32,6 +32,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.servlet.ServletResponse;
+import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.util.Arrays;
 import java.util.List;
@@ -112,7 +113,11 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
             logger.info("Different users, switch to " + profile.getItemId());
 
 //            HttpServletResponse httpServletResponse = (HttpServletResponse) event.getAttributes().get(Event.HTTP_RESPONSE_ATTRIBUTE);
-//            sendProfileCookie(profile, httpServletResponse, profileIdCookieName, profileIdCookieDomain, profileIdCookieMaxAgeInSeconds);
+//            HttpServletRequest httpServletRequest = (HttpServletRequest) event.getAttributes().get(Event.HTTP_REQUEST_ATTRIBUTE);
+//            if (httpServletRequest != null) {
+//                sendProfileCookie(profile, httpServletResponse, profileIdCookieName, profileIdCookieDomain,
+//                        profileIdCookieMaxAgeInSeconds, profileIdCookieHttpOnly, httpServletRequest.isSecure());
+//            }
 
             // At the end of the merge, we must set the merged profile as profile event to process other Actions
             event.setProfileId(profile.getItemId());
@@ -154,8 +159,10 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
                 HttpServletResponse httpServletResponse = (HttpServletResponse) event.getAttributes().get(Event.HTTP_RESPONSE_ATTRIBUTE);
                 // we still send back the current profile cookie. It will be changed on the next request to the ContextServlet.
                 // The current profile will be deleted only then because we cannot delete it right now (too soon)
-//                sendProfileCookie(profile, httpServletResponse,
-//                        profileIdCookieName, profileIdCookieDomain, profileIdCookieMaxAgeInSeconds);
+//                if (httpServletRequest != null) {
+//                    sendProfileCookie(profile, httpServletResponse, profileIdCookieName, profileIdCookieDomain,
+//                            profileIdCookieMaxAgeInSeconds, profileIdCookieHttpOnly, httpServletRequest.isSecure());
+//                }
 
                 final String masterProfileId = masterProfile.getItemId();
                 // At the end of the merge, we must set the merged profile as profile event to process other Actions
@@ -235,7 +242,7 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
     }
 
 //    private static void sendProfileCookie(Profile profile, ServletResponse response, String profileIdCookieName, String profileIdCookieDomain, int cookieAgeInSeconds) {
-//        if (response instanceof HttpServletResponse) {
+//        if (response != null && response instanceof HttpServletResponse) {
 //            HttpServletResponse httpServletResponse = (HttpServletResponse) response;
 //            if (!(profile instanceof Persona)) {
 //                httpServletResponse.addHeader("Set-Cookie",

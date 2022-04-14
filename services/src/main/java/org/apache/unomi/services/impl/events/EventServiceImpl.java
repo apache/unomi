@@ -22,7 +22,6 @@ import inet.ipaddr.IPAddressString;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.EventProperty;
-import org.apache.unomi.api.EventType;
 import org.apache.unomi.api.Metadata;
 import org.apache.unomi.api.PartialList;
 import org.apache.unomi.api.PropertyType;
@@ -63,8 +62,6 @@ public class EventServiceImpl implements EventService {
     private SourceService sourceService;
 
     private BundleContext bundleContext;
-
-    private EventTypeRegistry eventTypeRegistry;
 
     private SchemaRegistry schemaRegistry;
 
@@ -115,14 +112,9 @@ public class EventServiceImpl implements EventService {
         this.shouldBeCheckedEventSourceId = shouldBeCheckedEventSourceId;
     }
 
-    public void setEventTypeRegistry(EventTypeRegistry eventTypeRegistry) {
-        this.eventTypeRegistry = eventTypeRegistry;
-    }
-
     public void setSchemaRegistry(SchemaRegistry schemaRegistry) {
         this.schemaRegistry = schemaRegistry;
     }
-
     public void setPersistenceService(PersistenceService persistenceService) {
         this.persistenceService = persistenceService;
     }
@@ -147,8 +139,7 @@ public class EventServiceImpl implements EventService {
     }
 
     public boolean isEventValid(Event event) {
-        this.schemaRegistry.isValid(event, "https://unomi.apache.org/schemas/json/events/" + event.getEventType() + ".json");
-        return this.eventTypeRegistry.isValid(event);
+        return schemaRegistry.isValid(event, "https://unomi.apache.org/schemas/json/events/" + event.getEventType() + "/1-0-0");
     }
 
     public String authenticateThirdPartyServer(String key, String ip) {
@@ -225,15 +216,6 @@ public class EventServiceImpl implements EventService {
             changes = ERROR;
         }
         return changes;
-    }
-
-    @Override
-    public EventType getEventType(String typeName) {
-        return eventTypeRegistry.get(typeName);
-    }
-
-    public void registerEventType(final EventType eventType) {
-        eventTypeRegistry.register(eventType);
     }
 
     @Override

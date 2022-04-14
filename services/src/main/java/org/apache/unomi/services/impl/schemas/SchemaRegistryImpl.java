@@ -17,86 +17,109 @@
 
 package org.apache.unomi.services.impl.schemas;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.networknt.schema.*;
+import com.networknt.schema.JsonMetaSchema;
+import com.networknt.schema.JsonSchema;
+import com.networknt.schema.JsonSchemaFactory;
+import com.networknt.schema.NonValidationKeyword;
+import com.networknt.schema.SpecVersion;
+import com.networknt.schema.ValidationMessage;
 import com.networknt.schema.uri.URIFetcher;
-import org.apache.commons.lang3.StringUtils;
-import org.apache.unomi.api.SchemaType;
+import org.apache.commons.io.IOUtils;
+import org.apache.unomi.api.Metadata;
+import org.apache.unomi.api.PartialList;
+import org.apache.unomi.api.schema.UnomiJSONSchema;
+import org.apache.unomi.api.schema.json.JSONSchema;
+import org.apache.unomi.api.schema.json.JSONTypeFactory;
 import org.apache.unomi.api.services.ProfileService;
+import org.apache.unomi.api.services.SchedulerService;
 import org.apache.unomi.api.services.SchemaRegistry;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
-import org.osgi.framework.Bundle;
+import org.apache.unomi.persistence.spi.PersistenceService;
 import org.osgi.framework.BundleContext;
-import org.osgi.framework.BundleEvent;
-import org.osgi.framework.SynchronousBundleListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.io.InputStream;
-import java.net.URL;
-import java.util.*;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.TimerTask;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-public class SchemaRegistryImpl implements SchemaRegistry, SynchronousBundleListener {
+public class SchemaRegistryImpl implements SchemaRegistry {
 
     private static final String URI = "https://json-schema.org/draft/2019-09/schema";
 
     private static final Logger logger = LoggerFactory.getLogger(SchemaRegistryImpl.class.getName());
 
-    private final Map<Long, List<SchemaType>> schemaTypesByBundle = new HashMap<>();
-    private final Map<String, SchemaType> schemaTypesById = new HashMap<>();
+    private final Map<String, JSONSchema> predefinedUnomiJSONSchemaById = new HashMap<>();
 
-    private final Map<String, JsonSchema> jsonSchemasById = new LinkedHashMap<>();
-
-    private final Map<String, Long> bundleIdBySchemaId = new HashMap<>();
+    private Map<String, JSONSchema> schemasById = new HashMap<>();
 
     private BundleContext bundleContext;
 
     private ProfileService profileService;
 
+    private PersistenceService persistenceService;
+
+    private SchedulerService schedulerService;
+
+    private JsonSchemaFactory jsonSchemaFactory;
+
     ObjectMapper objectMapper = new ObjectMapper();
 
-    public void bundleChanged(BundleEvent event) {
-        switch (event.getType()) {
-            case BundleEvent.STARTED:
-                processBundleStartup(event.getBundle().getBundleContext());
-                break;
-            case BundleEvent.STOPPING:
-                processBundleStop(event.getBundle().getBundleContext());
-                break;
+    private ScheduledFuture<?> scheduledFuture;
+
+    private Integer jsonSchemaRefreshInterval = 1000;
+
+    public void setPersistenceService(PersistenceService persistenceService) {
+        this.persistenceService = persistenceService;
+    }
+
+    public void setSchedulerService(SchedulerService schedulerService) {
+        this.schedulerService = schedulerService;
+    }
+
+    public void setJsonSchemaRefreshInterval(Integer jsonSchemaRefreshInterval) {
+        this.jsonSchemaRefreshInterval = jsonSchemaRefreshInterval;
+    }
+
+    @Override
+    public PartialList<Metadata> getJsonSchemaMetadatas(int offset, int size, String sortBy) {
+        PartialList<UnomiJSONSchema> items = persistenceService.getAllItems(UnomiJSONSchema.class, offset, size, sortBy);
+        List<Metadata> details = new LinkedList<>();
+        for (UnomiJSONSchema definition : items.getList()) {
+            details.add(definition.getMetadata());
         }
+        return new PartialList<>(details, items.getOffset(), items.getPageSize(), items.getTotalSize(), items.getTotalSizeRelation());
     }
 
-    public void init() {
-        processBundleStartup(bundleContext);
-
-        // process already started bundles
-        for (Bundle bundle : bundleContext.getBundles()) {
-            if (bundle.getBundleContext() != null && bundle.getBundleId() != bundleContext.getBundle().getBundleId()) {
-                processBundleStartup(bundle.getBundleContext());
-            }
-        }
-
-        bundleContext.addBundleListener(this);
-        logger.info("Schema registry initialized.");
-    }
-
-    public void destroy() {
-        bundleContext.removeBundleListener(this);
-        logger.info("Schema registry shutdown.");
-    }
-
-    public void setBundleContext(BundleContext bundleContext) {
-        this.bundleContext = bundleContext;
-    }
-
-    public void setProfileService(ProfileService profileService) {
-        this.profileService = profileService;
-    }
-
+    @Override
     public boolean isValid(Object object, String schemaId) {
-        JsonSchema jsonSchema = jsonSchemasById.get(schemaId);
+        String schemaAsString;
+        JsonSchema jsonSchema = null;
+        try {
+            JSONSchema validationSchema = schemasById.get(schemaId);
+            if (validationSchema != null){
+                schemaAsString = objectMapper.writeValueAsString(schemasById.get(schemaId).getSchemaTree());
+                jsonSchema = jsonSchemaFactory.getSchema(schemaAsString);
+            } else {
+                logger.warn("No schema found for {}", schemaId);
+            }
+        } catch (JsonProcessingException e) {
+            logger.error("Failed to process json schema", e);
+        }
+
         if (jsonSchema != null) {
             JsonNode jsonNode = CustomObjectMapper.getObjectMapper().convertValue(object, JsonNode.class);
             Set<ValidationMessage> validationMessages = jsonSchema.validate(jsonNode);
@@ -112,102 +135,142 @@ public class SchemaRegistryImpl implements SchemaRegistry, SynchronousBundleList
     }
 
     @Override
-    public List<SchemaType> getTargetSchemas(String target) {
-        return schemaTypesById.values().stream().filter(schemaType -> schemaType.getTarget().equals(target)).collect(Collectors.toList());
+    public List<JSONSchema> getSchemasByTarget(String target) {
+        return schemasById.values().stream().filter(jsonSchema -> jsonSchema.getTarget() != null && jsonSchema.getTarget().equals(target))
+                .collect(Collectors.toList());
+
     }
 
     @Override
-    public SchemaType getSchema(String schemaId) {
-        return schemaTypesById.get(schemaId);
+    public void saveSchema(String schema) {
+        JsonSchema jsonSchema = jsonSchemaFactory.getSchema(schema);
+        if (predefinedUnomiJSONSchemaById.get(jsonSchema.getSchemaNode().get("$id").asText()) == null) {
+            persistenceService.save(buildUnomiJsonSchema(schema));
+            JSONSchema localSchema = buildJSONSchema(jsonSchema);
+            schemasById.put(jsonSchema.getSchemaNode().get("$id").asText(), localSchema);
+        } else {
+            logger.error("Can not store a JSON Schema which have the id of a schema preovided by Unomi");
+        }
     }
 
-    private void loadPredefinedSchemas(BundleContext bundleContext) {
-        Enumeration<URL> predefinedSchemas = bundleContext.getBundle().findEntries("META-INF/cxs/schemas", "*.json", true);
-        if (predefinedSchemas == null) {
-            return;
-        }
+    @Override
+    public void saveSchema(InputStream schemaStream) throws IOException {
+        saveSchema(IOUtils.toString(schemaStream));
+    }
 
-        List<SchemaType> schemaTypes = this.schemaTypesByBundle.get(bundleContext.getBundle().getBundleId());
+    @Override
+    public void loadPredefinedSchema(InputStream schemaStream) {
+        JsonSchema jsonSchema = jsonSchemaFactory.getSchema(schemaStream);
+        JSONSchema localJsonSchema = buildJSONSchema(jsonSchema);
 
-        while (predefinedSchemas.hasMoreElements()) {
-            URL predefinedSchemaURL = predefinedSchemas.nextElement();
-            logger.debug("Found predefined JSON schema at " + predefinedSchemaURL + ", loading... ");
+        predefinedUnomiJSONSchemaById.put(jsonSchema.getSchemaNode().get("$id").asText(), localJsonSchema);
+        schemasById.put(jsonSchema.getSchemaNode().get("$id").asText(), localJsonSchema);
+    }
 
-                JsonMetaSchema jsonMetaSchema = JsonMetaSchema.builder(URI, JsonMetaSchema.getV201909())
-                        .addKeyword(new PropertyTypeKeyword(profileService, this)).build();
-                JsonSchemaFactory jsonSchemaFactory = JsonSchemaFactory.builder(JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V201909))
-                        .addMetaSchema(jsonMetaSchema)
-                        .defaultMetaSchemaURI(URI)
-                        .uriFetcher(getBundleUriFetcher(bundleContext), "https", "http").build();
-            try (InputStream schemaInputStream = predefinedSchemaURL.openStream()) {
-                JsonSchema jsonSchema = jsonSchemaFactory.getSchema(schemaInputStream);
-                String schemaId = jsonSchema.getSchemaNode().get("$id").asText();
-                jsonSchemasById.put(schemaId, jsonSchema);
-                bundleIdBySchemaId.put(schemaId, bundleContext.getBundle().getBundleId());
-                SchemaType schemaType = new SchemaType();
-                schemaType.setPluginId(bundleContext.getBundle().getBundleId());
-                schemaType.setSchemaId(schemaId);
-                Map<String, Object> schemaTree = (Map<String, Object>) objectMapper.treeToValue(jsonSchema.getSchemaNode(), Map.class);
-                schemaType.setSchemaTree(schemaTree);
-                String[] splitPath = predefinedSchemaURL.getPath().split("/");
-                if (splitPath.length > 5) {
-                    String target = splitPath[4];
-                    if (StringUtils.isNotBlank(target)) {
-                        schemaType.setTarget(target);
-                    }
-                }
-                schemaTypes.add(schemaType);
-                schemaTypesById.put(schemaId, schemaType);
-            } catch (Exception e) {
-                logger.error("Error while loading schema definition " + predefinedSchemaURL, e);
+    @Override
+    public boolean deleteSchema(String schemaId) {
+        schemasById.remove(schemaId);
+        return persistenceService.remove(schemaId, UnomiJSONSchema.class);
+    }
+
+    @Override
+    public boolean deleteSchema(InputStream schemaStream) {
+        JsonNode schemaNode = jsonSchemaFactory.getSchema(schemaStream).getSchemaNode();
+        return deleteSchema(schemaNode.get("$id").asText());
+    }
+
+    @Override
+    public JSONSchema getSchema(String schemaId) {
+        return schemasById.get(schemaId);
+    }
+
+    private JSONSchema buildJSONSchema(JsonSchema jsonSchema) {
+        return Optional.of(jsonSchema).map(jsonSchemaToProcess -> {
+            try {
+                return (Map<String, Object>) objectMapper.treeToValue(jsonSchemaToProcess.getSchemaNode(), Map.class);
+            } catch (JsonProcessingException e) {
+                logger.error("Failed to process Json object, e");
             }
-        }
-
+            return Collections.<String, Object>emptyMap();
+        }).map(jsonSchemaToProcess -> {
+            JSONSchema schema = new JSONSchema(jsonSchemaToProcess, new JSONTypeFactory(this));
+            schema.setPluginId(bundleContext.getBundle().getBundleId());
+            return schema;
+        }).get();
     }
 
-    private URIFetcher getBundleUriFetcher(BundleContext bundleContext) {
+    private UnomiJSONSchema buildUnomiJsonSchema(String schema) {
+        JsonNode schemaNode = jsonSchemaFactory.getSchema(schema).getSchemaNode();
+        return new UnomiJSONSchema(schemaNode.get("$id").asText(), schema, schemaNode.at("/self/target").asText());
+    }
+
+    public JsonSchema getJsonSchema(String schemaId) {
+        String schemaAsString = null;
+        try {
+            schemaAsString = objectMapper.writeValueAsString(schemasById.get(schemaId).getSchemaTree());
+        } catch (JsonProcessingException e) {
+            logger.error("Failed to process json schema", e);
+        }
+        return jsonSchemaFactory.getSchema(schemaAsString);
+    }
+
+    private URIFetcher getUriFetcher() {
         return uri -> {
             logger.debug("Fetching schema {}", uri);
-            Long bundleId = bundleIdBySchemaId.get(uri.toString());
-            if (bundleId == null) {
-                logger.error("Couldn't find bundle for schema {}", uri);
+            String schemaAsString = null;
+            try {
+                schemaAsString = objectMapper.writeValueAsString(schemasById.get(uri.toString()).getSchemaTree());
+            } catch (JsonProcessingException e) {
+                logger.error("Failed to process json schema", e);
+            }
+            JsonSchema schema = jsonSchemaFactory.getSchema(schemaAsString);
+            if (schema == null) {
+                logger.error("Couldn't find schema {}", uri);
                 return null;
             }
-            String uriPath = uri.getPath().substring("/schemas/json".length());
-            URL schemaURL = bundleContext.getBundle(bundleId).getResource("META-INF/cxs/schemas" + uriPath);
-            if (schemaURL != null) {
-                return schemaURL.openStream();
-            } else {
-                logger.error("Couldn't find resource {} in bundle {}", "META-INF/cxs/schemas" + uriPath, bundleId);
-                return null;
-            }
+            return IOUtils.toInputStream(schema.getSchemaNode().asText());
         };
     }
 
-    private void processBundleStartup(BundleContext bundleContext) {
-        if (bundleContext == null) {
-            return;
-        }
-        schemaTypesByBundle.put(bundleContext.getBundle().getBundleId(), new ArrayList<>());
-        loadPredefinedSchemas(bundleContext);
+    private void refreshJSONSchemas() {
+        schemasById = new HashMap<>();
+        schemasById.putAll(predefinedUnomiJSONSchemaById);
+        persistenceService.getAllItems(UnomiJSONSchema.class).forEach(
+                jsonSchema -> schemasById.put(jsonSchema.getId(), buildJSONSchema(jsonSchemaFactory.getSchema(jsonSchema.getSchema()))));
     }
 
-    private void processBundleStop(BundleContext bundleContext) {
-        if (bundleContext == null) {
-            return;
-        }
-        List<SchemaType> schemaTypes = schemaTypesByBundle.remove(bundleContext.getBundle().getBundleId());
-        if (schemaTypes != null) {
-            for (SchemaType schemaType : schemaTypes) {
-                jsonSchemasById.remove(schemaType.getSchemaId());
-                bundleIdBySchemaId.remove(schemaType.getSchemaId());
-                schemaTypesById.remove(schemaType.getSchemaId());
+    private void initializeTimers() {
+        TimerTask task = new TimerTask() {
+            @Override
+            public void run() {
+                refreshJSONSchemas();
             }
-        }
+        };
+        scheduledFuture = schedulerService.getScheduleExecutorService()
+                .scheduleWithFixedDelay(task, 0, jsonSchemaRefreshInterval, TimeUnit.MILLISECONDS);
     }
 
-    protected JsonSchema getJsonSchema(String schemaId) {
-        return jsonSchemasById.get(schemaId);
+    public void init() {
+
+        JsonMetaSchema jsonMetaSchema = JsonMetaSchema.builder(URI, JsonMetaSchema.getV201909())
+                .addKeyword(new UnomiPropertyTypeKeyword(profileService, this)).addKeyword(new NonValidationKeyword("self")).build();
+        jsonSchemaFactory = JsonSchemaFactory.builder(JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V201909))
+                .addMetaSchema(jsonMetaSchema).defaultMetaSchemaURI(URI).uriFetcher(getUriFetcher(), "https", "http").build();
+
+        initializeTimers();
+        logger.info("Schema registry initialized.");
     }
 
+    public void destroy() {
+        scheduledFuture.cancel(true);
+        logger.info("Schema registry shutdown.");
+    }
+
+    public void setBundleContext(BundleContext bundleContext) {
+        this.bundleContext = bundleContext;
+    }
+
+    public void setProfileService(ProfileService profileService) {
+        this.profileService = profileService;
+    }
 }

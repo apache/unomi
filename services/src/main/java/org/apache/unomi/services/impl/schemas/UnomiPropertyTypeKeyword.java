@@ -17,23 +17,33 @@
 package org.apache.unomi.services.impl.schemas;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.networknt.schema.*;
+import com.networknt.schema.AbstractJsonValidator;
+import com.networknt.schema.AbstractKeyword;
+import com.networknt.schema.CustomErrorMessageType;
+import com.networknt.schema.JsonSchema;
+import com.networknt.schema.JsonSchemaException;
+import com.networknt.schema.JsonValidator;
+import com.networknt.schema.ValidationContext;
+import com.networknt.schema.ValidationMessage;
 import org.apache.unomi.api.PropertyType;
 import org.apache.unomi.api.services.ProfileService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.text.MessageFormat;
-import java.util.*;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Set;
 
-class PropertyTypeKeyword extends AbstractKeyword {
-
-    private static final Logger logger = LoggerFactory.getLogger(PropertyTypeKeyword.class);
+class UnomiPropertyTypeKeyword extends AbstractKeyword {
 
     private final ProfileService profileService;
     private final SchemaRegistryImpl schemaRegistry;
 
-    private static final class PropertyTypeJsonValidator extends AbstractJsonValidator {
+    private static final class UnomiPropertyTypeJsonValidator extends AbstractJsonValidator {
 
         String schemaPath;
         JsonNode schemaNode;
@@ -42,7 +52,8 @@ class PropertyTypeKeyword extends AbstractKeyword {
         ProfileService profileService;
         SchemaRegistryImpl schemaRegistry;
 
-        public PropertyTypeJsonValidator(String keyword, String schemaPath, JsonNode schemaNode, JsonSchema parentSchema, ValidationContext validationContext, ProfileService profileService, SchemaRegistryImpl schemaRegistry) {
+        public UnomiPropertyTypeJsonValidator(String keyword, String schemaPath, JsonNode schemaNode, JsonSchema parentSchema,
+                ValidationContext validationContext, ProfileService profileService, SchemaRegistryImpl schemaRegistry) {
             super(keyword);
             this.schemaPath = schemaPath;
             this.schemaNode = schemaNode;
@@ -60,13 +71,17 @@ class PropertyTypeKeyword extends AbstractKeyword {
                 String fieldName = fieldNames.next();
                 PropertyType propertyType = getPropertyType(fieldName);
                 if (propertyType == null) {
-                    validationMessages.add(buildValidationMessage(CustomErrorMessageType.of("property-not-found", new MessageFormat("{0} : Couldn''t find property type with id={1}")), at, fieldName));
+                    validationMessages.add(buildValidationMessage(CustomErrorMessageType
+                            .of("property-not-found", new MessageFormat("{0} : Couldn''t find property type with id={1}")), at, fieldName));
                 } else {
                     // @todo further validation, if it can be used in this context (event, profile, session)
                     String valueTypeId = propertyType.getValueTypeId();
-                    JsonSchema jsonSchema = schemaRegistry.getJsonSchema("https://unomi.apache.org/schemas/json/values/" + valueTypeId + ".json");
+                    JsonSchema jsonSchema = schemaRegistry
+                            .getJsonSchema("https://unomi.apache.org/schemas/json/values/" + valueTypeId + ".json");
                     if (jsonSchema == null) {
-                        validationMessages.add(buildValidationMessage(CustomErrorMessageType.of("value-schema-not-found", new MessageFormat("{0} : Couldn''t find schema type with id={1}")), at, "https://unomi.apache.org/schemas/json/values/" + valueTypeId + ".json"));
+                        validationMessages.add(buildValidationMessage(CustomErrorMessageType
+                                        .of("value-schema-not-found", new MessageFormat("{0} : Couldn''t find schema type with id={1}")), at,
+                                "https://unomi.apache.org/schemas/json/values/" + valueTypeId + ".json"));
                     } else {
                         Set<ValidationMessage> propertyValidationMessages = jsonSchema.validate(node.get(fieldName));
                         if (propertyValidationMessages != null) {
@@ -97,14 +112,16 @@ class PropertyTypeKeyword extends AbstractKeyword {
         }
     }
 
-    public PropertyTypeKeyword(ProfileService profileService, SchemaRegistryImpl schemaRegistry) {
-        super("propertyTypes");
+    public UnomiPropertyTypeKeyword(ProfileService profileService, SchemaRegistryImpl schemaRegistry) {
+        super("unomiPropertyTypes");
         this.profileService = profileService;
         this.schemaRegistry = schemaRegistry;
     }
 
     @Override
-    public JsonValidator newValidator(String schemaPath, JsonNode schemaNode, JsonSchema parentSchema, ValidationContext validationContext) throws JsonSchemaException, Exception {
-        return new PropertyTypeJsonValidator(this.getValue(), schemaPath, schemaNode, parentSchema, validationContext, profileService, schemaRegistry);
+    public JsonValidator newValidator(String schemaPath, JsonNode schemaNode, JsonSchema parentSchema, ValidationContext validationContext)
+            throws JsonSchemaException, Exception {
+        return new UnomiPropertyTypeJsonValidator(this.getValue(), schemaPath, schemaNode, parentSchema, validationContext, profileService,
+                schemaRegistry);
     }
 }
