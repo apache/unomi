@@ -108,7 +108,37 @@ public interface ProfileService {
      */
     Profile save(Profile profile);
 
+    /**
+     * Adds the alias to the profile.
+     *
+     * @param profileID the identifier of the profile
+     * @param alias     the alias which should be linked with of the profile
+     * @param clientID  the identifier of the client
+     */
     void addAliasToProfile(String profileID, String alias, String clientID);
+
+    /**
+     * Removes the alias from the profile.
+     *
+     * @param profileID the identifier of the profile
+     * @param alias     the alias which should be unlinked from the profile
+     * @param clientID  the identifier of the client
+     */
+    ProfileAlias removeAliasFromProfile(String profileID, String alias, String clientID);
+
+    /**
+     * Find profile aliases which have the specified property with the specified value, ordered according to the specified {@code sortBy} String and paged: only
+     * {@code size} of them are retrieved, starting with the {@code offset}-th one.
+     *
+     * @param profileId the identifier of the profile
+     * @param offset    zero or a positive integer specifying the position of the first profile in the total ordered collection of matching profiles
+     * @param size      a positive integer specifying how many matching profiles should be retrieved or {@code -1} if all of them should be retrieved
+     * @param sortBy    an optional ({@code null} if no sorting is required) String of comma ({@code ,}) separated property names on which ordering should be performed, ordering elements according to  the property order in
+     *                  the String, considering each in turn and moving on to the next one in case of equality of all preceding ones. Each property name is optionally
+     *                  followed by a column ({@code :}) and an order specifier: {@code asc} or {@code desc}.
+     * @return a {@link PartialList} of matching profiles
+     */
+    PartialList<ProfileAlias> findProfileAliases(String profileId, int offset, int size, String sortBy);
 
     /**
      * Merge the specified profile properties in an existing profile,or save new profile if it does not exist yet

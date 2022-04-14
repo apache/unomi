@@ -21,6 +21,7 @@ import graphql.annotations.annotationTypes.GraphQLID;
 import graphql.annotations.annotationTypes.GraphQLName;
 import graphql.annotations.annotationTypes.GraphQLNonNull;
 import graphql.schema.DataFetchingEnvironment;
+import org.apache.unomi.graphql.commands.AddAliasToProfileCommand;
 import org.apache.unomi.graphql.commands.CreateOrUpdatePersonaCommand;
 import org.apache.unomi.graphql.commands.CreateOrUpdateProfilePropertiesCommand;
 import org.apache.unomi.graphql.commands.CreateOrUpdateSourceCommand;
@@ -33,6 +34,7 @@ import org.apache.unomi.graphql.commands.DeleteSourceCommand;
 import org.apache.unomi.graphql.commands.DeleteTopicCommand;
 import org.apache.unomi.graphql.commands.DeleteViewCommand;
 import org.apache.unomi.graphql.commands.ProcessEventsCommand;
+import org.apache.unomi.graphql.commands.RemoveAliasFromProfileCommand;
 import org.apache.unomi.graphql.commands.list.AddProfileToListCommand;
 import org.apache.unomi.graphql.commands.list.CreateOrUpdateListCommand;
 import org.apache.unomi.graphql.commands.list.DeleteListCommand;
@@ -43,6 +45,7 @@ import org.apache.unomi.graphql.commands.segments.DeleteSegmentCommand;
 import org.apache.unomi.graphql.types.input.CDPEventInput;
 import org.apache.unomi.graphql.types.input.CDPListInput;
 import org.apache.unomi.graphql.types.input.CDPPersonaInput;
+import org.apache.unomi.graphql.types.input.CDPProfileAliasInput;
 import org.apache.unomi.graphql.types.input.CDPProfileIDInput;
 import org.apache.unomi.graphql.types.input.CDPPropertyInput;
 import org.apache.unomi.graphql.types.input.CDPSegmentInput;
@@ -265,4 +268,28 @@ public class CDPMutation {
                 .execute();
     }
 
+    @GraphQLField
+    public CDPProfileAlias addAliasToProfile(
+            final @GraphQLNonNull @GraphQLName("profileAlias") CDPProfileAliasInput profileAliasInput,
+            final DataFetchingEnvironment environment) {
+        return AddAliasToProfileCommand.create()
+                .profileAliasInput(profileAliasInput)
+                .setEnvironment(environment)
+                .build()
+                .execute();
+    }
+
+    @GraphQLField
+    public CDPProfileAlias removeAliasFromProfile(
+            final @GraphQLID @GraphQLNonNull @GraphQLName("alias") String alias,
+            final @GraphQLName("profileID") CDPProfileIDInput profileIDInput,
+            final DataFetchingEnvironment environment
+    ) {
+        return RemoveAliasFromProfileCommand.create()
+                .setAlias(alias)
+                .setProfileIDInput(profileIDInput)
+                .setEnvironment(environment)
+                .build()
+                .execute();
+    }
 }
