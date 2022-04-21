@@ -63,7 +63,7 @@ public class EventServiceImpl implements EventService {
 
     private BundleContext bundleContext;
 
-    private SchemaRegistry schemaRegistry;
+    private SchemaService schemaService;
 
     private Set<String> predefinedEventTypeIds = new LinkedHashSet<String>();
 
@@ -112,8 +112,8 @@ public class EventServiceImpl implements EventService {
         this.shouldBeCheckedEventSourceId = shouldBeCheckedEventSourceId;
     }
 
-    public void setSchemaRegistry(SchemaRegistry schemaRegistry) {
-        this.schemaRegistry = schemaRegistry;
+    public void setSchemaService(SchemaService schemaService) {
+        this.schemaService = schemaService;
     }
     public void setPersistenceService(PersistenceService persistenceService) {
         this.persistenceService = persistenceService;
@@ -139,7 +139,7 @@ public class EventServiceImpl implements EventService {
     }
 
     public boolean isEventValid(Event event) {
-        return schemaRegistry.isValid(event, "https://unomi.apache.org/schemas/json/events/" + event.getEventType() + "/1-0-0");
+        return schemaService.isValid(event, "https://unomi.apache.org/schemas/json/events/" + event.getEventType() + "/1-0-0");
     }
 
     public String authenticateThirdPartyServer(String key, String ip) {

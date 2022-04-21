@@ -102,7 +102,7 @@
         </interfaces>
     </service>
 
-    <bean id="schemaRegistryImpl" class="org.apache.unomi.services.impl.schemas.SchemaRegistryImpl" init-method="init"
+    <bean id="schemaServiceImpl" class="org.apache.unomi.services.impl.schemas.SchemaServiceImpl" init-method="init"
           destroy-method="destroy">
         <property name="bundleContext" ref="blueprintBundleContext"/>
         <property name="profileService" ref="profileServiceImpl"/>
@@ -110,13 +110,13 @@
         <property name="schedulerService" ref="schedulerServiceImpl"/>
         <property name="jsonSchemaRefreshInterval" value="${services.json.schema.refresh.interval}"/>
     </bean>
-    <service id="schemaRegistry" ref="schemaRegistryImpl" interface="org.apache.unomi.api.services.SchemaRegistry"/>
+    <service id="schemaService" ref="schemaServiceImpl" interface="org.apache.unomi.api.services.SchemaService"/>
 
     <bean id="jsonSchemaListenerImpl" class="org.apache.unomi.services.listener.JsonSchemaListener"
           init-method="postConstruct" destroy-method="preDestroy">
         <property name="persistenceService" ref="persistenceService"/>
         <property name="bundleContext" ref="blueprintBundleContext"/>
-        <property name="schemaRegistry" ref="schemaRegistryImpl"/>
+        <property name="schemaService" ref="schemaServiceImpl"/>
     </bean>
     <service id="jsonSchemaListener" ref="jsonSchemaListenerImpl">
         <interfaces>
@@ -129,7 +129,7 @@
         <property name="definitionsService" ref="definitionsServiceImpl"/>
         <property name="sourceService" ref="sourceServiceImpl"/>
         <property name="bundleContext" ref="blueprintBundleContext"/>
-        <property name="schemaRegistry" ref="schemaRegistryImpl"/>
+        <property name="schemaService" ref="schemaServiceImpl"/>
         <property name="predefinedEventTypeIds">
             <set>
                 <value>view</value>

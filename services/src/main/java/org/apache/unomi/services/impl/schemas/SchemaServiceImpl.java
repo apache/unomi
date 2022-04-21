@@ -30,12 +30,13 @@ import com.networknt.schema.uri.URIFetcher;
 import org.apache.commons.io.IOUtils;
 import org.apache.unomi.api.Metadata;
 import org.apache.unomi.api.PartialList;
+import org.apache.unomi.api.schema.JSONSchemaExtension;
 import org.apache.unomi.api.schema.UnomiJSONSchema;
 import org.apache.unomi.api.schema.json.JSONSchema;
 import org.apache.unomi.api.schema.json.JSONTypeFactory;
 import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.api.services.SchedulerService;
-import org.apache.unomi.api.services.SchemaRegistry;
+import org.apache.unomi.api.services.SchemaService;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.osgi.framework.BundleContext;
@@ -56,15 +57,17 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-public class SchemaRegistryImpl implements SchemaRegistry {
+public class SchemaServiceImpl implements SchemaService {
 
     private static final String URI = "https://json-schema.org/draft/2019-09/schema";
 
-    private static final Logger logger = LoggerFactory.getLogger(SchemaRegistryImpl.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(SchemaServiceImpl.class.getName());
 
     private final Map<String, JSONSchema> predefinedUnomiJSONSchemaById = new HashMap<>();
 
     private Map<String, JSONSchema> schemasById = new HashMap<>();
+
+    private Map<String, JSONSchemaExtension> extensionById = new HashMap<>();
 
     private BundleContext bundleContext;
 
@@ -110,7 +113,7 @@ public class SchemaRegistryImpl implements SchemaRegistry {
         JsonSchema jsonSchema = null;
         try {
             JSONSchema validationSchema = schemasById.get(schemaId);
-            if (validationSchema != null){
+            if (validationSchema != null) {
                 schemaAsString = objectMapper.writeValueAsString(schemasById.get(schemaId).getSchemaTree());
                 jsonSchema = jsonSchemaFactory.getSchema(schemaAsString);
             } else {
@@ -180,6 +183,55 @@ public class SchemaRegistryImpl implements SchemaRegistry {
     }
 
     @Override
+    public void saveExtension(InputStream extensionStream) throws IOException {
+        saveExtension(IOUtils.toString(extensionStream));
+    }
+
+    @Override
+    public void saveExtension(String extension) throws IOException {
+        JSONSchemaExtension jsonSchemaExtension = buildExtension(extension);
+        persistenceService.save(jsonSchemaExtension);
+        extensionById.put(jsonSchemaExtension.getId(), jsonSchemaExtension);
+    }
+
+    @Override
+    public boolean deleteExtension(InputStream extensionStream) throws IOException {
+        JsonNode jsonNode = objectMapper.readTree(extensionStream);
+        return deleteExtension(jsonNode.get("id").asText());
+    }
+
+    @Override
+    public boolean deleteExtension(String extensionId) {
+        extensionById.remove(extensionId);
+        return persistenceService.remove(extensionId, JSONSchemaExtension.class);
+    }
+
+    @Override
+    public PartialList<Metadata> getJsonSchemaExtensionsMetadatas(int offset, int size, String sortBy) {
+        PartialList<JSONSchemaExtension> items = persistenceService.getAllItems(JSONSchemaExtension.class, offset, size, sortBy);
+        List<Metadata> details = new LinkedList<>();
+        for (JSONSchemaExtension definition : items.getList()) {
+            details.add(definition.getMetadata());
+        }
+        return new PartialList<>(details, items.getOffset(), items.getPageSize(), items.getTotalSize(), items.getTotalSizeRelation());
+    }
+
+    private JSONSchemaExtension buildExtension(String extension) throws JsonProcessingException {
+        JsonNode jsonNode = objectMapper.readTree(extension);
+        JSONSchemaExtension jsonSchemaExtension = new JSONSchemaExtension();
+        jsonSchemaExtension.setId(jsonNode.get("id").asText());
+        jsonSchemaExtension.setSchemaId(jsonNode.get("schemaId").asText());
+        jsonSchemaExtension.setExtension(jsonNode.get("extension").toString());
+        jsonSchemaExtension.setPriority(jsonNode.get("priority").asDouble());
+        Metadata metadata = new Metadata();
+        metadata.setId(jsonNode.get("id").asText());
+        metadata.setDescription(jsonNode.get("description").asText());
+        metadata.setName(jsonNode.get("name").asText());
+        jsonSchemaExtension.setMetadata(metadata);
+        return jsonSchemaExtension;
+    }
+
+    @Override
     public JSONSchema getSchema(String schemaId) {
         return schemasById.get(schemaId);
     }
@@ -239,11 +291,17 @@ public class SchemaRegistryImpl implements SchemaRegistry {
                 jsonSchema -> schemasById.put(jsonSchema.getId(), buildJSONSchema(jsonSchemaFactory.getSchema(jsonSchema.getSchema()))));
     }
 
+    private void refreshJSONSchemasExtensions() {
+        extensionById = new HashMap<>();
+        persistenceService.getAllItems(JSONSchemaExtension.class).forEach(extension -> extensionById.put(extension.getId(), extension));
+    }
+
     private void initializeTimers() {
         TimerTask task = new TimerTask() {
             @Override
             public void run() {
                 refreshJSONSchemas();
+                refreshJSONSchemasExtensions();
             }
         };
         scheduledFuture = schedulerService.getScheduleExecutorService()
@@ -251,19 +309,18 @@ public class SchemaRegistryImpl implements SchemaRegistry {
     }
 
     public void init() {
-
         JsonMetaSchema jsonMetaSchema = JsonMetaSchema.builder(URI, JsonMetaSchema.getV201909())
                 .addKeyword(new UnomiPropertyTypeKeyword(profileService, this)).addKeyword(new NonValidationKeyword("self")).build();
         jsonSchemaFactory = JsonSchemaFactory.builder(JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V201909))
                 .addMetaSchema(jsonMetaSchema).defaultMetaSchemaURI(URI).uriFetcher(getUriFetcher(), "https", "http").build();
 
         initializeTimers();
-        logger.info("Schema registry initialized.");
+        logger.info("Schema service initialized.");
     }
 
     public void destroy() {
         scheduledFuture.cancel(true);
-        logger.info("Schema registry shutdown.");
+        logger.info("Schema service shutdown.");
     }
 
     public void setBundleContext(BundleContext bundleContext) {

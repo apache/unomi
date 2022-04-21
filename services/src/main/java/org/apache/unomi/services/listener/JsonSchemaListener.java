@@ -16,8 +16,9 @@
  */
 package org.apache.unomi.services.listener;
 
+import org.apache.unomi.api.schema.JSONSchemaExtension;
 import org.apache.unomi.api.schema.UnomiJSONSchema;
-import org.apache.unomi.api.services.SchemaRegistry;
+import org.apache.unomi.api.services.SchemaService;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
@@ -33,16 +34,19 @@ import java.util.Enumeration;
 /**
  * An implementation of a BundleListener for the JSON schema.
  * It will load the pre-defined schema files in the folder META-INF/cxs/schemas.
- * The script will be stored in the ES index jsonSchemas
+ * It will load the extension of schema in the folder META-INF/cxs/schemasextensions.
+ * The scripts will be stored in the ES index jsonSchema and the extension will be stored in jsonSchemaExtension
  */
 public class JsonSchemaListener implements SynchronousBundleListener {
 
     private static final Logger logger = LoggerFactory.getLogger(JsonSchemaListener.class.getName());
     public static final String ENTRIES_LOCATION = "META-INF/cxs/schemas";
 
+    public static final String EXTENSIONS_ENTRIES_LOCATION = "META-INF/cxs/schemasextensions";
+
     private PersistenceService persistenceService;
 
-    private SchemaRegistry schemaRegistry;
+    private SchemaService schemaService;
 
     private BundleContext bundleContext;
 
@@ -50,8 +54,8 @@ public class JsonSchemaListener implements SynchronousBundleListener {
         this.persistenceService = persistenceService;
     }
 
-    public void setSchemaRegistry(SchemaRegistry schemaRegistry) {
-        this.schemaRegistry = schemaRegistry;
+    public void setSchemaService(SchemaService schemaService) {
+        this.schemaService = schemaService;
     }
 
     public void setBundleContext(BundleContext bundleContext) {
@@ -61,13 +65,14 @@ public class JsonSchemaListener implements SynchronousBundleListener {
     public void postConstruct() {
         logger.info("JSON schema listener initializing...");
         logger.debug("postConstruct {}", bundleContext.getBundle());
-        createIndex();
+        createIndexes();
 
         loadPredefinedSchemas(bundleContext);
 
         for (Bundle bundle : bundleContext.getBundles()) {
             if (bundle.getBundleContext() != null && bundle.getBundleId() != bundleContext.getBundle().getBundleId()) {
                 saveSchemas(bundle.getBundleContext());
+                saveExtensions(bundle.getBundleContext());
             }
         }
 
@@ -92,6 +97,7 @@ public class JsonSchemaListener implements SynchronousBundleListener {
             return;
         }
         unloadSchemas(bundleContext);
+        unloadExtensions(bundleContext);
     }
 
     public void bundleChanged(BundleEvent event) {
@@ -107,11 +113,16 @@ public class JsonSchemaListener implements SynchronousBundleListener {
         }
     }
 
-    public void createIndex() {
+    public void createIndexes() {
         if (persistenceService.createIndex(UnomiJSONSchema.ITEM_TYPE)) {
             logger.info("{} index created", UnomiJSONSchema.ITEM_TYPE);
         } else {
             logger.info("{} index already exists", UnomiJSONSchema.ITEM_TYPE);
+        }
+        if (persistenceService.createIndex(JSONSchemaExtension.ITEM_TYPE)) {
+            logger.info("{} index created", JSONSchemaExtension.ITEM_TYPE);
+        } else {
+            logger.info("{} index already exists", JSONSchemaExtension.ITEM_TYPE);
         }
     }
 
@@ -126,7 +137,7 @@ public class JsonSchemaListener implements SynchronousBundleListener {
             logger.debug("Found JSON schema at {}, loading... ", predefinedSchemaURL);
 
             try (InputStream schemaInputStream = predefinedSchemaURL.openStream()) {
-                schemaRegistry.saveSchema(schemaInputStream);
+                schemaService.saveSchema(schemaInputStream);
             } catch (Exception e) {
                 logger.error("Error while loading schema definition {}", predefinedSchemaURL, e);
             }
@@ -143,7 +154,7 @@ public class JsonSchemaListener implements SynchronousBundleListener {
             URL predefinedSchemaURL = predefinedSchemas.nextElement();
             logger.debug("Found predefined JSON schema at {}, loading... ", predefinedSchemaURL);
             try (InputStream schemaInputStream = predefinedSchemaURL.openStream()) {
-                schemaRegistry.loadPredefinedSchema(schemaInputStream);
+                schemaService.loadPredefinedSchema(schemaInputStream);
             } catch (Exception e) {
                 logger.error("Error while loading schema definition {}", predefinedSchemaURL, e);
             }
@@ -161,9 +172,45 @@ public class JsonSchemaListener implements SynchronousBundleListener {
             logger.debug("Found predefined JSON schema at {}, loading... ", predefinedSchemaURL);
 
             try (InputStream schemaInputStream = predefinedSchemaURL.openStream()) {
-                schemaRegistry.deleteSchema(schemaInputStream);
+                schemaService.deleteSchema(schemaInputStream);
             } catch (Exception e) {
                 logger.error("Error while removing schema at {}", predefinedSchemaURL, e);
+            }
+        }
+    }
+
+    private void saveExtensions(BundleContext bundleContext) {
+        Enumeration<URL> extensions = bundleContext.getBundle().findEntries(EXTENSIONS_ENTRIES_LOCATION, "*.json", true);
+        if (extensions == null) {
+            return;
+        }
+
+        while (extensions.hasMoreElements()) {
+            URL extensionURL = extensions.nextElement();
+            logger.debug("Found JSON schema extension at {}, loading... ", extensionURL);
+
+            try (InputStream extensionInputStream = extensionURL.openStream()) {
+                schemaService.saveExtension(extensionInputStream);
+            } catch (Exception e) {
+                logger.error("Error while loading schema extension at {}", extensionURL, e);
+            }
+        }
+    }
+
+    private void unloadExtensions(BundleContext bundleContext) {
+        Enumeration<URL> extensions = bundleContext.getBundle().findEntries(EXTENSIONS_ENTRIES_LOCATION, "*.json", true);
+        if (extensions == null) {
+            return;
+        }
+
+        while (extensions.hasMoreElements()) {
+            URL predefinedSchemaURL = extensions.nextElement();
+            logger.debug("Found JSON schema extension at {}, loading... ", predefinedSchemaURL);
+
+            try (InputStream extensionInputStream = predefinedSchemaURL.openStream()) {
+                schemaService.deleteExtension(extensionInputStream);
+            } catch (Exception e) {
+                logger.error("Error while loading schema extension at {}", predefinedSchemaURL, e);
             }
         }
     }

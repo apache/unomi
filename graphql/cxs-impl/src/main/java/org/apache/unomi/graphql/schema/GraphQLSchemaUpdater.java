@@ -21,7 +21,7 @@ import graphql.execution.SubscriptionExecutionStrategy;
 import graphql.schema.GraphQLCodeRegistry;
 import graphql.schema.GraphQLSchema;
 import org.apache.unomi.api.services.ProfileService;
-import org.apache.unomi.api.services.SchemaRegistry;
+import org.apache.unomi.api.services.SchemaService;
 import org.apache.unomi.graphql.fetchers.event.UnomiEventPublisher;
 import org.apache.unomi.graphql.providers.GraphQLAdditionalTypesProvider;
 import org.apache.unomi.graphql.providers.GraphQLCodeRegistryProvider;
@@ -83,7 +83,7 @@ public class GraphQLSchemaUpdater {
 
     private ProfileService profileService;
 
-    private SchemaRegistry schemaRegistry;
+    private SchemaService schemaService;
 
     private CDPEventInterfaceRegister eventInterfaceRegister;
 
@@ -131,8 +131,8 @@ public class GraphQLSchemaUpdater {
     }
 
     @Reference
-    public void setSchemaRegistry(SchemaRegistry schemaRegistry) {
-        this.schemaRegistry = schemaRegistry;
+    public void setSchemaService(SchemaService schemaService) {
+        this.schemaService = schemaService;
     }
 
     @Reference
@@ -330,7 +330,7 @@ public class GraphQLSchemaUpdater {
 
     @SuppressWarnings("unchecked")
     private GraphQLSchema createGraphQLSchema() {
-        final GraphQLSchemaProvider schemaProvider = GraphQLSchemaProvider.create(profileService, schemaRegistry)
+        final GraphQLSchemaProvider schemaProvider = GraphQLSchemaProvider.create(profileService, schemaService)
                 .typeFunctionProviders(typeFunctionProviders)
                 .extensionsProviders(extensionsProviders)
                 .additionalTypesProviders(additionalTypesProviders)

@@ -28,7 +28,7 @@ import java.util.List;
 /**
  * Service that allow to manage JSON schema. It allows to get, save and delete schemas
  */
-public interface SchemaRegistry {
+public interface SchemaService {
 
     /**
      * Retrieves json schema metadatas, ordered according to the specified {@code sortBy} String and and paged: only {@code size} of them
@@ -52,7 +52,6 @@ public interface SchemaRegistry {
      * @return true is the object is valid
      */
     boolean isValid(Object object, String schemaId);
-
 
     /**
      * Get a schema matching by a schema id
@@ -106,4 +105,50 @@ public interface SchemaRegistry {
      * @return true if the schema has been deleted
      */
     boolean deleteSchema(InputStream schemaStream);
+
+    /**
+     * Save an extension of a JSON schema
+     *
+     * @param extensionStream inputStream of the extension
+     */
+    void saveExtension(InputStream extensionStream) throws IOException;
+
+    /**
+     * Save an extension of a JSON schema
+     *
+     * @param extension as String value
+     */
+    void saveExtension(String extension) throws IOException;
+
+    /**
+     * Delete an extension
+     *
+     * @param extensionStream inputStream of the extension to delete
+     * @return true if the extension has been deleted
+     */
+    boolean deleteExtension(InputStream extensionStream) throws IOException;
+
+    /**
+     * Delete an extension by an id
+     *
+     * @param extensionId id of the extension
+     * @return true if the extension has been deleted
+     */
+    boolean deleteExtension(String extensionId);
+
+    /**
+     * Retrieves json schema extension metadatas, ordered according to the specified {@code sortBy} String and and paged: only {@code size}
+     * of them
+     * are retrieved, starting with the {@code
+     * offset}-th one.
+     *
+     * @param offset zero or a positive integer specifying the position of the first element in the total ordered collection of matching elements
+     * @param size   a positive integer specifying how many matching elements should be retrieved or {@code -1} if all of them should be retrieved
+     * @param sortBy an optional ({@code null} if no sorting is required) String of comma ({@code ,}) separated property names on which ordering should be performed, ordering elements according to the property order in the
+     *               String, considering each in turn and moving on to the next one in case of equality of all preceding ones. Each property name is optionally followed by
+     *               a column ({@code :}) and an order specifier: {@code asc} or {@code desc}.
+     * @return a {@link PartialList} of json schema extension metadata
+     */
+    PartialList<Metadata> getJsonSchemaExtensionsMetadatas(int offset, int size, String sortBy);
+
 }

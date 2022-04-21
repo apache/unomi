@@ -38,23 +38,23 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import java.util.Base64;
+import java.io.IOException;
 import java.util.List;
 
 @WebService
 @Produces(MediaType.APPLICATION_JSON + ";charset=UTF-8")
 @CrossOriginResourceSharing(allowAllOrigins = true, allowCredentials = true)
-@Path("/jsonSchema")
-@Component(service = JsonSchemaEndPoint.class, property = "osgi.jaxrs.resource=true")
-public class JsonSchemaEndPoint {
+@Path("/jsonSchemaExtension")
+@Component(service = JsonSchemaExtensionEndPoint.class, property = "osgi.jaxrs.resource=true")
+public class JsonSchemaExtensionEndPoint {
 
-    private static final Logger logger = LoggerFactory.getLogger(JsonSchemaEndPoint.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(JsonSchemaExtensionEndPoint.class.getName());
 
     @Reference
     private SchemaService schemaService;
 
-    public JsonSchemaEndPoint() {
-        logger.info("Initializing JSON schema endpoint...");
+    public JsonSchemaExtensionEndPoint() {
+        logger.info("Initializing JSON schema extension endpoint...");
     }
 
     @WebMethod(exclude = true)
@@ -63,7 +63,7 @@ public class JsonSchemaEndPoint {
     }
 
     /**
-     * Retrieves the 50 first json schema metadatas by default.
+     * Retrieves the 50 first json schema extension metadatas by default.
      *
      * @param offset zero or a positive integer specifying the position of the first element in the total ordered collection of matching elements
      * @param size   a positive integer specifying how many matching elements should be retrieved or {@code -1} if all of them should be retrieved
@@ -75,35 +75,35 @@ public class JsonSchemaEndPoint {
      */
     @GET
     @Path("/")
-    public List<Metadata> getJsonSchemaMetadatas(@QueryParam("offset") @DefaultValue("0") int offset,
+    public List<Metadata> getJsonSchemaExtensionsMetadatas(@QueryParam("offset") @DefaultValue("0") int offset,
             @QueryParam("size") @DefaultValue("50") int size, @QueryParam("sort") String sortBy) {
-        return schemaService.getJsonSchemaMetadatas(offset, size, sortBy).getList();
+        return schemaService.getJsonSchemaExtensionsMetadatas(offset, size, sortBy).getList();
     }
 
     /**
-     * Save a JSON schema
+     * Save a JSON schema extension
      *
-     * @param jsonSchema the schema as string to save
+     * @param jsonSchemaExtension the schema as string to save
      * @return Response of the API call
      */
     @POST
     @Path("/")
     @Consumes(MediaType.TEXT_PLAIN)
     @Produces(MediaType.APPLICATION_JSON)
-    public Response save(String jsonSchema) {
-        schemaService.saveSchema(jsonSchema);
+    public Response save(String jsonSchemaExtension) throws IOException {
+        schemaService.saveExtension(jsonSchemaExtension);
         return Response.ok().build();
     }
 
     /**
-     * Deletes a JSON schema.
+     * Deletes a JSON schema extension.
      * The id is a Base64 id as the id have is basically an URL
      *
-     * @param base64JsonSchemaId the identifier of the JSON schema that we want to delete
+     * @param id the identifier of the JSON schema that we want to delete
      */
     @DELETE
-    @Path("/{base64JsonSchemaId}")
-    public void remove(@PathParam("base64JsonSchemaId") String base64JsonSchemaId) {
-        schemaService.deleteSchema(new String(Base64.getDecoder().decode(base64JsonSchemaId)));
+    @Path("/{id}")
+    public void remove(@PathParam("id") String id) {
+        schemaService.deleteExtension(id);
     }
 }
