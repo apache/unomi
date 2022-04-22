@@ -5,7 +5,7 @@
   "type": "object",
   "properties" : {
     "itemId" : {
-      "type" : ["string"],
+      "type" : ["null","string"],
       "pattern" : "^(\\w|[-_@\\.]){0,60}$",
       "description" : "The identifier for the item"
     },
@@ -14,16 +14,16 @@
       "description" : "The type for the item"
     },
     "scope" : {
-      "type" : ["string"],
+      "type" : ["null","string"],
       "description" : "The item's scope"
     },
     "version" : {
-      "type" : ["integer"],
+      "type" : ["null","integer"],
       "minimum" : 0,
       "description" : "The item's version number"
     },
     "systemMetadata" : {
-      "type" : ["object"],
+      "type" : ["null","object"],
       "description" : "Any system metadata for the item",
       "maxProperties" : 50
     }

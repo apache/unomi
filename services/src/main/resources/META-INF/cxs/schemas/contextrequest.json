@@ -8,37 +8,37 @@
       "$ref": "https://unomi.apache.org/schemas/json/item/1-0-0"
     },
     "requireSegments": {
-      "type": "boolean"
+      "type": ["null", "boolean"]
     },
     "requiredProfileProperties": {
-      "type": ["array"],
+      "type": ["null", "array"],
       "items": {
         "type": "string"
       }
     },
     "requiredSessionProperties": {
-      "type": ["array"],
+      "type": ["null", "array"],
       "items": {
         "type": "string"
       }
     },
     "requireScores": {
-      "type": "boolean"
+      "type": ["null", "boolean"]
     },
     "events": {
-      "type": "array",
+      "type": ["null", "array"],
       "items": {
         "$ref": "https://unomi.apache.org/schemas/json/event/1-0-0"
       }
     },
     "filters": {
-      "type": ["array"],
+      "type": ["null", "array"],
       "items": {
         "$ref": "https://unomi.apache.org/schemas/json/personalization/personalizedcontent/1-0-0"
       }
     },
     "personalizations": {
-      "type": ["array"],
+      "type": ["null", "array"],
       "items": {
         "$ref": "https://unomi.apache.org/schemas/json/event/1-0-0"
       }
@@ -47,18 +47,18 @@
       "$ref": "https://unomi.apache.org/schemas/json/profile/1-0-0"
     },
     "sessionPropertiesOverrides": {
-      "type": ["object"]
+      "type": ["null", "object"]
     },
     "sessionId": {
-      "type": ["string"],
+      "type": ["null", "string"],
       "pattern" : "^(\\w|[-_@\\.]){0,60}$"
     },
     "profileId": {
-      "type": ["string"],
+      "type": ["null", "string"],
       "pattern" : "^(\\w|[-_@\\.]){0,60}$"
     },
     "clientId": {
-      "type": ["string"]
+      "type": ["null", "string"]
     }
   }
 }
