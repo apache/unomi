@@ -108,7 +108,7 @@ public class SchemaServiceImpl implements SchemaService {
     }
 
     @Override
-    public boolean isValid(Object object, String schemaId) {
+    public boolean isValid(JsonNode jsonNode, String schemaId) {
         String schemaAsString;
         JsonSchema jsonSchema = null;
         try {
@@ -124,7 +124,7 @@ public class SchemaServiceImpl implements SchemaService {
         }
 
         if (jsonSchema != null) {
-            JsonNode jsonNode = CustomObjectMapper.getObjectMapper().convertValue(object, JsonNode.class);
+
             Set<ValidationMessage> validationMessages = jsonSchema.validate(jsonNode);
             if (validationMessages == null || validationMessages.isEmpty()) {
                 return true;

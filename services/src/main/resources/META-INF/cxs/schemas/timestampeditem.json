@@ -6,7 +6,7 @@
   "allOf": [{ "$ref": "https://unomi.apache.org/schemas/json/item/1-0-0" }],
   "properties" : {
     "timeStamp" : {
-      "type" : ["null","string"],
+      "type" : ["string"],
       "format" : "date-time"
     }
   }
