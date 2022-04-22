@@ -29,6 +29,8 @@ import org.apache.unomi.api.services.PersonalizationService;
 import org.apache.unomi.api.services.SchemaRegistry;
 
 import javax.ws.rs.BadRequestException;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -128,6 +130,8 @@ public class ContextRequestDeserializer extends StdDeserializer<ContextRequest> 
             }
             return cr;
         }
-        throw new BadRequestException("Unable to deserialize provided context request");
+
+        throw new BadRequestException(Response.status(Response.Status.BAD_REQUEST).header("Content-Type", MediaType.TEXT_PLAIN)
+                .entity("Request rejected by the server because: Invalid received data").build());
     }
 }
