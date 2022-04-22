@@ -28,6 +28,7 @@ import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.services.PersonalizationService;
 import org.apache.unomi.api.services.SchemaRegistry;
 
+import javax.ws.rs.BadRequestException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -127,6 +128,6 @@ public class ContextRequestDeserializer extends StdDeserializer<ContextRequest> 
             }
             return cr;
         }
-        throw new IOException("Unable to deserialize provided context request");
+        throw new BadRequestException("Unable to deserialize provided context request");
     }
 }
