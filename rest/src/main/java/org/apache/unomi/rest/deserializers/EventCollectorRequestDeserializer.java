@@ -50,11 +50,13 @@ public class EventCollectorRequestDeserializer extends StdDeserializer<EventsCol
     public EventsCollectorRequest deserialize(JsonParser jsonParser, DeserializationContext context) throws IOException, JsonProcessingException {
         JsonNode node = jsonParser.getCodec().readTree(jsonParser);
         // Validate schema on each event
-        ArrayNode events = (ArrayNode) node.get("events");
         List<Event> filteredEvents = new ArrayList<>();
-        for (JsonNode event : events) {
-            if (schemaRegistry.isValid(event, "https://unomi.apache.org/schemas/json/events/" + event.get("eventType").textValue() + "/1-0-0")) {
-                filteredEvents.add(jsonParser.getCodec().treeToValue(event, Event.class));
+        final JsonNode eventsNode = node.get("events");
+        if (eventsNode instanceof ArrayNode) {
+            for (JsonNode event : eventsNode) {
+                if (schemaRegistry.isValid(event, "https://unomi.apache.org/schemas/json/events/" + event.get("eventType").textValue() + "/1-0-0")) {
+                    filteredEvents.add(jsonParser.getCodec().treeToValue(event, Event.class));
+                }
             }
         }
         EventsCollectorRequest eventsCollectorRequest = new EventsCollectorRequest();

@@ -55,22 +55,27 @@ public class ContextRequestDeserializer extends StdDeserializer<ContextRequest> 
         // Validate schema on it
         if (schemaRegistry.isValid(node, "https://unomi.apache.org/schemas/json/contextrequest/1-0-0")) {
             ContextRequest cr = new ContextRequest();
-            if (node.get("requiredSessionProperties") != null) {
-                cr.setRequireSegments(node.get("requiredSessionProperties").booleanValue());
+            if (node.get("requireSegments") != null) {
+                cr.setRequireSegments(node.get("requireSegments").booleanValue());
             }
-            if (node.get("requiredProfileProperties") != null) {
+            final JsonNode requiredProfileProperties = node.get("requiredProfileProperties");
+            if (requiredProfileProperties instanceof ArrayNode) {
                 List<String> profileProperties = new ArrayList<>();
-                node.get("requiredProfileProperties").elements().forEachRemaining(el -> profileProperties.add(el.textValue()));
+                requiredProfileProperties.elements().forEachRemaining(el -> profileProperties.add(el.textValue()));
                 cr.setRequiredProfileProperties(profileProperties);
             }
-            if (node.get("requiredSessionProperties") != null) {
+            final JsonNode requiredSessionPropertiesNode = node.get("requiredSessionProperties");
+            if (requiredSessionPropertiesNode instanceof ArrayNode) {
                 List<String> requiredSessionProperties = new ArrayList<>();
-                node.get("requiredSessionProperties").elements().forEachRemaining(el -> requiredSessionProperties.add(el.textValue()));
+                requiredSessionPropertiesNode.elements().forEachRemaining(el -> requiredSessionProperties.add(el.textValue()));
                 cr.setRequiredProfileProperties(requiredSessionProperties);
+            }
+            if (node.get("requireScores") != null) {
                 cr.setRequireScores(node.get("requireScores").booleanValue());
             }
-            if (node.get("events") != null) {
-                ArrayNode events = (ArrayNode) node.get("events");
+            final JsonNode eventsNode = node.get("events");
+            if (eventsNode instanceof ArrayNode) {
+                ArrayNode events = (ArrayNode) eventsNode;
                 List<Event> filteredEvents = new ArrayList<>();
                 for (JsonNode event : events) {
                     if (schemaRegistry.isValid(event, "https://unomi.apache.org/schemas/json/events/" + event.get("eventType").textValue() + "/1-0-0")) {
@@ -79,8 +84,9 @@ public class ContextRequestDeserializer extends StdDeserializer<ContextRequest> 
                 }
                 cr.setEvents(filteredEvents);
             }
-            if (node.get("filters") != null) {
-                ArrayNode filters = (ArrayNode) node.get("filters");
+            final JsonNode filtersNode = node.get("filters");
+            if (filtersNode instanceof ArrayNode) {
+                ArrayNode filters = (ArrayNode) filtersNode;
                 List<PersonalizationService.PersonalizedContent> f = new ArrayList<>();
                 filters.elements().forEachRemaining(el -> {
                     try {
@@ -91,8 +97,9 @@ public class ContextRequestDeserializer extends StdDeserializer<ContextRequest> 
                 });
                 cr.setFilters(f);
             }
-            if (node.get("personalizations") != null) {
-                ArrayNode personalizations = (ArrayNode) node.get("personalizations");
+            final JsonNode personalizationsNode = node.get("personalizations");
+            if (personalizationsNode instanceof ArrayNode) {
+                ArrayNode personalizations = (ArrayNode) personalizationsNode;
                 List<PersonalizationService.PersonalizationRequest> p = new ArrayList<>();
                 personalizations.elements().forEachRemaining(el -> {
                     try {
@@ -123,23 +130,3 @@ public class ContextRequestDeserializer extends StdDeserializer<ContextRequest> 
         throw new IOException("Unable to deserialize provided context request");
     }
 }
-/**
- * private Item source;
- *     private boolean requireSegments;
- *     private List<String> requiredProfileProperties;
- *     private List<String> requiredSessionProperties;
- *     private boolean requireScores;
- *     private List<Event> events;
- *     private List<PersonalizationService.PersonalizedContent> filters;
- *     private List<PersonalizationService.PersonalizationRequest> personalizations;
- *     private Profile profileOverrides;
- *     private Map<String, Object> sessionPropertiesOverrides;
- *
- *     @Pattern(regexp = ValidationPattern.TEXT_VALID_CHARACTERS_PATTERN)
- *     private String sessionId;
- *
- *     @Pattern(regexp = ValidationPattern.TEXT_VALID_CHARACTERS_PATTERN)
- *     private String profileId;
- *
- *     private String clientId;
- */
