@@ -106,6 +106,8 @@ public abstract class BaseIT {
     protected static final String BASIC_AUTH_USER_NAME = "karaf";
     protected static final String BASIC_AUTH_PASSWORD = "karaf";
     protected static final int REQUEST_TIMEOUT = 60000;
+    protected static final int DEFAULT_TRYING_TIMEOUT = 2000;
+    protected static final int DEFAULT_TRYING_TRIES = 30;
 
     @Inject
     @Filter(timeout = 600000)
@@ -302,6 +304,30 @@ public abstract class BaseIT {
         return value;
     }
 
+    protected <T> void waitForNullValue(String failMessage, Supplier<T> call, int timeout, int retries) throws InterruptedException {
+        int count = 0;
+        while (call.get() != null) {
+            if (count++ > retries) {
+                Assert.fail(failMessage);
+            }
+            Thread.sleep(timeout);
+        }
+    }
+
+    protected <T> T shouldBeTrueUntilEnd(String failMessage, Supplier<T> call, Predicate<T> predicate, int timeout, int retries) throws InterruptedException {
+        int count = 0;
+        T value = null;
+        while (count <= retries) {
+            count++;
+            value = call.get();
+            if (!predicate.test(value)) {
+                Assert.fail(failMessage);
+            }
+            Thread.sleep(timeout);
+        }
+        return value;
+    }
+
     protected String bundleResourceAsString(final String resourcePath) throws IOException {
         final java.net.URL url = bundleContext.getBundle().getResource(resourcePath);
         if (url != null) {
@@ -388,7 +414,6 @@ public abstract class BaseIT {
 
     public void createAndWaitForRule(Rule rule) throws InterruptedException {
         rulesService.setRule(rule);
-        refreshPersistence();
         keepTrying("Failed waiting for rule to be saved",
                 () -> rulesService.getRule(rule.getMetadata().getId()),
                 Objects::nonNull,

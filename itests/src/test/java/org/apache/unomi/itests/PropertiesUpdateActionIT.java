@@ -37,13 +37,17 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
-import java.io.File;
 import java.io.IOException;
-import java.net.MalformedURLException;
 import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.TimeZone;
 
 /**
  * Created by amidani on 12/10/2017.
@@ -57,15 +61,18 @@ public class PropertiesUpdateActionIT extends BaseIT {
     private final static String PROFILE_TARGET_TEST_ID = "profile-target-event";
     private final static String PROFILE_TEST_ID = "profile-to-update-by-event";
 
-    @Inject @Filter(timeout = 600000)
+    @Inject
+    @Filter(timeout = 600000)
     protected ProfileService profileService;
-    @Inject @Filter(timeout = 600000)
+    @Inject
+    @Filter(timeout = 600000)
     protected EventService eventService;
-    @Inject @Filter(timeout = 600000)
+    @Inject
+    @Filter(timeout = 600000)
     protected RulesService rulesService;
 
     @Before
-    public void setUp() throws IOException, InterruptedException {
+    public void setUp() throws InterruptedException {
         Profile profile = new Profile();
         profile.setItemId(PROFILE_TEST_ID);
         profile.setProperties(new HashMap<>());
@@ -79,7 +86,10 @@ public class PropertiesUpdateActionIT extends BaseIT {
         profileService.save(profileTarget);
         LOGGER.info("Profile saved with ID [{}].", profileTarget.getItemId());
 
-        refreshPersistence();
+        keepTrying("Profile " + PROFILE_TEST_ID + " not found in the required time", () -> profileService.load(PROFILE_TEST_ID),
+                Objects::nonNull, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+        keepTrying("Profile " + PROFILE_TARGET_TEST_ID + " not found in the required time",
+                () -> profileService.load(PROFILE_TARGET_TEST_ID), Objects::nonNull, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
     }
 
     @Test
@@ -147,8 +157,9 @@ public class PropertiesUpdateActionIT extends BaseIT {
         profileService.save(profile);
         refreshPersistence();
 
-        profile = profileService.load(PROFILE_TEST_ID);
-        Assert.assertEquals("Props_to_add should set the prop if it's missing", "New property 1", profile.getProperty("prop1"));
+        profile = keepTrying("Props_to_add should set the prop if it's missing", () -> profileService.load(PROFILE_TEST_ID),
+                loadedProfile -> "New property 1".equals(loadedProfile.getProperty("prop1")), DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+
         Assert.assertEquals("Props_to_add should set the prop if it's missing", "New property 2", profile.getProperty("prop2"));
         Assert.assertEquals("Props_to_add should set the prop if it's missing", "New property 3", profile.getProperty("prop3"));
         Assert.assertEquals("Props_to_add should not override existing prop", "New property 4", profile.getProperty("prop4"));
@@ -173,7 +184,9 @@ public class PropertiesUpdateActionIT extends BaseIT {
         profileService.save(profile);
         refreshPersistence();
 
-        profile = profileService.load(PROFILE_TEST_ID);
+        profile = keepTrying("prop1 not updated", () -> profileService.load(PROFILE_TEST_ID),
+                loadedProfile -> "New property 1".equals(loadedProfile.getProperty("prop1")), DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+
         Assert.assertEquals("New property 1", profile.getProperty("prop1"));
         Assert.assertEquals("New property 2", profile.getProperty("prop2"));
         Assert.assertEquals("New property 3", profile.getProperty("prop3"));
@@ -321,7 +334,8 @@ public class PropertiesUpdateActionIT extends BaseIT {
         dateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
 
         // register test rule
-        Rule rule = CustomObjectMapper.getObjectMapper().readValue(getValidatedBundleJSON("testSetPropertyActionRule.json", new HashMap<>()), Rule.class);
+        Rule rule = CustomObjectMapper.getObjectMapper()
+                .readValue(getValidatedBundleJSON("testSetPropertyActionRule.json", new HashMap<>()), Rule.class);
         createAndWaitForRule(rule);
 
         try {
@@ -335,7 +349,8 @@ public class PropertiesUpdateActionIT extends BaseIT {
             profileService.save(profile);
             refreshPersistence();
             profile = profileService.load(PROFILE_TEST_ID);
-            Assert.assertEquals("currentEventTimeStamp should be the exact date of the event timestamp", eventTimeStamp1, profile.getProperty("currentEventTimeStamp"));
+            Assert.assertEquals("currentEventTimeStamp should be the exact date of the event timestamp", eventTimeStamp1,
+                    profile.getProperty("currentEventTimeStamp"));
             Assert.assertNotEquals("currentDate should be the current system date", eventTimeStamp1, profile.getProperty("currentDate"));
             Assert.assertNotNull("currentDate should be set", profile.getProperty("currentDate"));
         } finally {

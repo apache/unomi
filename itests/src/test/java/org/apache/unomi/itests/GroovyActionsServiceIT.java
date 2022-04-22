@@ -26,7 +26,6 @@ import org.apache.unomi.api.rules.Rule;
 import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.api.services.ProfileService;
-import org.apache.unomi.api.services.RulesService;
 import org.apache.unomi.groovy.actions.services.GroovyActionsService;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.junit.After;
@@ -66,10 +65,6 @@ public class GroovyActionsServiceIT extends BaseIT {
 
     @Inject
     @Filter(timeout = 600000)
-    protected RulesService rulesService;
-
-    @Inject
-    @Filter(timeout = 600000)
     protected ProfileService profileService;
 
     @Inject
@@ -85,13 +80,15 @@ public class GroovyActionsServiceIT extends BaseIT {
         profile.setProperty("firstname", "Alexandre");
         profile.setProperty("address", "Address");
         profileService.save(profile);
-        refreshPersistence();
+        keepTrying("Can not find the created profile", () -> profileService.load(PROFILE_ID), Objects::nonNull, DEFAULT_TRYING_TIMEOUT,
+                DEFAULT_TRYING_TRIES);
     }
 
     @After
     public void cleanUp() throws InterruptedException {
         profileService.delete(PROFILE_ID, false);
-        refreshPersistence();
+        waitForNullValue("The profile has not been deleted correctly", () -> profileService.load(PROFILE_ID), DEFAULT_TRYING_TIMEOUT,
+                DEFAULT_TRYING_TRIES);
     }
 
     private String loadGroovyAction(String pathname) throws IOException {
@@ -161,16 +158,11 @@ public class GroovyActionsServiceIT extends BaseIT {
         Assert.assertNotNull(groovyCodeSource);
 
         groovyActionsService.remove(UPDATE_ADDRESS_ACTION);
-        refreshPersistence();
 
-        Thread.sleep(2000);
-        groovyCodeSource = groovyActionsService.getGroovyCodeSource(UPDATE_ADDRESS_ACTION);
+        waitForNullValue("Groovy action is still present", () -> groovyActionsService.getGroovyCodeSource(UPDATE_ADDRESS_ACTION),
+                DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
 
-        Assert.assertNull(groovyCodeSource);
-
-        ActionType actionType = definitionsService.getActionType(UPDATE_ADDRESS_GROOVY_ACTION);
-
-        Assert.assertNull(actionType);
-
+        waitForNullValue("Action type is still present", () -> definitionsService.getActionType(UPDATE_ADDRESS_GROOVY_ACTION),
+                DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
     }
 }

@@ -16,11 +16,10 @@
  */
 package org.apache.unomi.itests;
 
-import java.util.*;
-
-import javax.inject.Inject;
-
-import org.apache.unomi.api.*;
+import org.apache.unomi.api.CustomItem;
+import org.apache.unomi.api.Event;
+import org.apache.unomi.api.Metadata;
+import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.actions.Action;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.rules.Rule;
@@ -37,6 +36,15 @@ import org.ops4j.pax.exam.junit.PaxExam;
 import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
 import org.ops4j.pax.exam.spi.reactors.PerSuite;
 import org.ops4j.pax.exam.util.Filter;
+
+import javax.inject.Inject;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.UUID;
 
 import static org.apache.unomi.itests.BasicIT.ITEM_TYPE_PAGE;
 
@@ -70,9 +78,13 @@ public class IncrementPropertyIT extends BaseIT {
     }
 
     @After
-    public void tearDown() {
+    public void tearDown() throws InterruptedException {
         rulesService.removeRule(rule.getItemId());
         profileService.delete(profile.getItemId(), false);
+        waitForNullValue("Rule still present after deletion", () -> rulesService.getRule(rule.getItemId()), DEFAULT_TRYING_TIMEOUT,
+                DEFAULT_TRYING_TRIES);
+        waitForNullValue("Profile still present after deletion", () -> profileService.load(profile.getItemId()), DEFAULT_TRYING_TIMEOUT,
+                DEFAULT_TRYING_TRIES);
     }
 
     @Test
@@ -81,7 +93,6 @@ public class IncrementPropertyIT extends BaseIT {
 
         if (eventCode == EventService.PROFILE_UPDATED) {
             Profile updatedProfile = profileService.save(event.getProfile());
-            refreshPersistence();
 
             int value = ((Map<String, Integer>) updatedProfile.getProperty("pageView")).get("acme-space");
             Assert.assertEquals(1, value, 0.0);
@@ -254,7 +265,8 @@ public class IncrementPropertyIT extends BaseIT {
         if (eventCode == EventService.PROFILE_UPDATED) {
             Profile updatedProfile = profileService.save(event.getProfile());
 
-            Map<String, Integer> property = (Map<String, Integer>) ((Map<String, Object>) ((Map<String, Object>) updatedProfile.getProperty("continent")).get("country")).get("state");
+            Map<String, Integer> property = (Map<String, Integer>) ((Map<String, Object>) ((Map<String, Object>) updatedProfile
+                    .getProperty("continent")).get("country")).get("state");
             Assert.assertEquals(14, property.get("city"), 0.0);
         } else {
             Assert.fail("Profile was not updated");
@@ -268,7 +280,8 @@ public class IncrementPropertyIT extends BaseIT {
         if (eventCode == EventService.PROFILE_UPDATED) {
             Profile updatedProfile = profileService.save(event.getProfile());
 
-            Map<String, Integer> property = (Map<String, Integer>) ((Map<String, Object>) ((Map<String, Object>) updatedProfile.getProperty("continent")).get("country")).get("state");
+            Map<String, Integer> property = (Map<String, Integer>) ((Map<String, Object>) ((Map<String, Object>) updatedProfile
+                    .getProperty("continent")).get("country")).get("state");
             Assert.assertEquals(1, property.get("city"), 0.0);
         } else {
             Assert.fail("Profile was not updated");
@@ -298,7 +311,8 @@ public class IncrementPropertyIT extends BaseIT {
         if (eventCode == EventService.PROFILE_UPDATED) {
             Profile updatedProfile = profileService.save(event.getProfile());
 
-            Map<String, Integer> property = (Map<String, Integer>) ((Map<String, Object>) ((Map<String, Object>) updatedProfile.getProperty("continent")).get("country")).get("state");
+            Map<String, Integer> property = (Map<String, Integer>) ((Map<String, Object>) ((Map<String, Object>) updatedProfile
+                    .getProperty("continent")).get("country")).get("state");
             Assert.assertEquals(120, property.get("city"), 0.0);
         } else {
             Assert.fail("Profile was not updated");
@@ -373,14 +387,17 @@ public class IncrementPropertyIT extends BaseIT {
         createAndWaitForRule(rule);
     }
 
-    private int buildActionAndSendEvent(String propertyName, String propertyTargetName, Map<String, Object> properties, Map<String, Object> targetProperties) throws InterruptedException {
+    private int buildActionAndSendEvent(String propertyName, String propertyTargetName, Map<String, Object> properties,
+            Map<String, Object> targetProperties) throws InterruptedException {
         Action incrementPropertyAction = new Action(definitionsService.getActionType("incrementPropertyAction"));
         incrementPropertyAction.setParameter("propertyName", propertyName);
-        if (propertyTargetName != null) incrementPropertyAction.setParameter("propertyTarget", propertyTargetName);
+        if (propertyTargetName != null)
+            incrementPropertyAction.setParameter("propertyTarget", propertyTargetName);
 
         createRule(incrementPropertyAction);
 
-        if (properties != null) profile.setProperties(properties);
+        if (properties != null)
+            profile.setProperties(properties);
 
         CustomItem target = new CustomItem("ITEM_ID_PAGE", ITEM_TYPE_PAGE);
         target.setScope("acme-space");
@@ -401,7 +418,6 @@ public class IncrementPropertyIT extends BaseIT {
         event.setPersistent(false);
 
         int eventCode = eventService.send(event);
-        refreshPersistence();
 
         return eventCode;
     }
@@ -427,8 +443,8 @@ public class IncrementPropertyIT extends BaseIT {
         Profile profile = new Profile(UUID.randomUUID().toString());
 
         profileService.save(profile);
-        refreshPersistence();
 
-        return profile;
+        return keepTrying("Profile " + profile.getItemId() + " not found in the required time",
+                () -> profileService.load(profile.getItemId()), Objects::nonNull, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
     }
 }

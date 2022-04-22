@@ -64,7 +64,7 @@ public class PatchIT extends BaseIT {
     protected BundleContext bundleContext;
 
     @Test
-    public void testPatch() throws IOException, InterruptedException {
+    public void testPatch() throws IOException {
         PropertyType company = profileService.getPropertyType("company");
 
         try {
@@ -83,7 +83,7 @@ public class PatchIT extends BaseIT {
     }
 
     @Test
-    public void testOverride() throws IOException, InterruptedException {
+    public void testOverride() throws IOException {
         PropertyType gender = profileService.getPropertyType("gender");
 
         try {

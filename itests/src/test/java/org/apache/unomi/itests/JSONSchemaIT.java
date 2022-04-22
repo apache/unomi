@@ -78,7 +78,6 @@ public class JSONSchemaIT extends BaseIT {
 
         post(JSONSCHEMA_URL, "schemas/events/test-event-type.json", ContentType.TEXT_PLAIN);
 
-        refreshPersistence();
         jsonSchemas = keepTrying("Couldn't find json schemas", () -> get(JSONSCHEMA_URL, List.class), (list) -> !list.isEmpty(),
                 DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
         assertFalse("JSON schema list should not be empty", jsonSchemas.isEmpty());
@@ -93,7 +92,6 @@ public class JSONSchemaIT extends BaseIT {
         CloseableHttpResponse response = post(JSONSCHEMA_URL, "schemas/events/test-event-type.json", ContentType.TEXT_PLAIN);
 
         assertEquals("Invalid response code", 200, response.getStatusLine().getStatusCode());
-        refreshPersistence();
         List jsonSchemas = keepTrying("Couldn't find json schemas", () -> get(JSONSCHEMA_URL, List.class), (list) -> !list.isEmpty(),
                 DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
         assertFalse("JSON schema list should not be empty", jsonSchemas.isEmpty());
@@ -105,7 +103,6 @@ public class JSONSchemaIT extends BaseIT {
 
         post(JSONSCHEMA_URL, "schemas/events/test-event-type.json", ContentType.TEXT_PLAIN);
 
-        refreshPersistence();
         keepTrying("Couldn't find json schemas", () -> get(JSONSCHEMA_URL, List.class), (list) -> !list.isEmpty(), DEFAULT_TRYING_TIMEOUT,
                 DEFAULT_TRYING_TRIES);
 
@@ -114,7 +111,6 @@ public class JSONSchemaIT extends BaseIT {
         CloseableHttpResponse response = delete(JSONSCHEMA_URL + "/" + encodedString);
         assertEquals("Invalid response code", 204, response.getStatusLine().getStatusCode());
 
-        refreshPersistence();
         List jsonSchemas = keepTrying("wait for empty list of schemas", () -> get(JSONSCHEMA_URL, List.class), List::isEmpty,
                 DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
 

@@ -146,7 +146,7 @@ public class InputValidationIT extends BaseIT {
     }
 
     @Test
-    public void test_cookie_profileIdPattern() throws IOException, InterruptedException {
+    public void test_cookie_profileIdPattern() throws IOException {
         Map<String, String> headers = new HashMap<>();
         headers.put("Cookie", "context-profile-id=<script>alert();</script>");
         doPOSTRequestTest(CONTEXT_JSON_URL, headers, null, 400, ERROR_MESSAGE_INVALID_DATA_RECEIVED);

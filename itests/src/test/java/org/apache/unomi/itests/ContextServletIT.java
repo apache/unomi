@@ -21,11 +21,19 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
-import org.apache.unomi.api.*;
+import org.apache.unomi.api.ContextRequest;
+import org.apache.unomi.api.ContextResponse;
+import org.apache.unomi.api.Event;
+import org.apache.unomi.api.Metadata;
+import org.apache.unomi.api.Profile;
+import org.apache.unomi.api.Session;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.segments.Scoring;
 import org.apache.unomi.api.segments.Segment;
-import org.apache.unomi.api.services.*;
+import org.apache.unomi.api.services.DefinitionsService;
+import org.apache.unomi.api.services.EventService;
+import org.apache.unomi.api.services.ProfileService;
+import org.apache.unomi.api.services.SegmentService;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.junit.After;
@@ -36,9 +44,6 @@ import org.ops4j.pax.exam.junit.PaxExam;
 import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
 import org.ops4j.pax.exam.spi.reactors.PerSuite;
 import org.ops4j.pax.exam.util.Filter;
-import org.osgi.framework.BundleContext;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
 import java.io.File;
@@ -47,11 +52,21 @@ import java.net.URI;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Base64;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 
 import static org.hamcrest.core.IsCollectionContaining.hasItem;
-import static org.junit.Assert.*;
-
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 
 /**
  * Created by Ron Barabash on 5/4/2020.
@@ -68,6 +83,8 @@ public class ContextServletIT extends BaseIT {
     private final static String TEST_EVENT_TYPE_SCHEMA = "test-event-type.json";
     private final static String FLOAT_PROPERTY_EVENT_TYPE = "float-property-type";
     private final static String FLOAT_PROPERTY_EVENT_TYPE_SCHEMA = "float-property-type.json";
+    private final static String TEST_PROFILE_ID = "test-profile-id";
+
     private final static String SEGMENT_ID = "test-segment-id";
     private final static int SEGMENT_NUMBER_OF_DAYS = 30;
 
@@ -75,8 +92,6 @@ public class ContextServletIT extends BaseIT {
     private static final int DEFAULT_TRYING_TRIES = 30;
 
     private ObjectMapper objectMapper = new ObjectMapper();
-
-    private final static Logger LOGGER = LoggerFactory.getLogger(ContextServletIT.class);
 
     @Inject
     @Filter(timeout = 600000)
@@ -98,14 +113,10 @@ public class ContextServletIT extends BaseIT {
     @Filter(timeout = 600000)
     protected SegmentService segmentService;
 
-    @Inject
-    @Filter(timeout = 600000)
-    protected BundleContext bundleContext;
-
     private Profile profile;
 
     @Before
-    public void setUp() throws InterruptedException, IOException {
+    public void setUp() throws InterruptedException {
         this.registerEventType(TEST_EVENT_TYPE_SCHEMA);
         this.registerEventType(FLOAT_PROPERTY_EVENT_TYPE_SCHEMA);
 
@@ -121,14 +132,14 @@ public class ContextServletIT extends BaseIT {
         segment.setCondition(segmentCondition);
         segmentService.setSegmentDefinition(segment);
 
-        String profileId = "test-profile-id";
-        profile = new Profile(profileId);
+        profile = new Profile(TEST_PROFILE_ID);
         profileService.save(profile);
 
-        keepTrying("Couldn't find json schema endpoint",
-                () -> get(JSONSCHEMA_URL, List.class), Objects::nonNull,
-                DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
-        refreshPersistence();
+        keepTrying("Profile " + TEST_PROFILE_ID + " not found in the required time", () -> profileService.load(TEST_PROFILE_ID),
+                Objects::nonNull, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+
+        keepTrying("Couldn't find json schema endpoint", () -> get(JSONSCHEMA_URL, List.class), Objects::nonNull, DEFAULT_TRYING_TIMEOUT,
+                DEFAULT_TRYING_TRIES);
     }
 
     @After
@@ -160,19 +171,24 @@ public class ContextServletIT extends BaseIT {
     public void testUpdateEventFromContextAuthorizedThirdParty_Success() throws IOException, InterruptedException {
         //Arrange
         String eventId = "test-event-id-" + System.currentTimeMillis();
-        String profileId = "test-profile-id";
         String sessionId = "test-session-id";
         String scope = "test-scope";
         String eventTypeOriginal = "test-event-type-original";
-        String eventTypeUpdated = TEST_EVENT_TYPE;
-        Profile profile = new Profile(profileId);
+        Profile profile = new Profile(TEST_PROFILE_ID);
         Session session = new Session(sessionId, profile, new Date(), scope);
         Event event = new Event(eventId, eventTypeOriginal, session, profile, scope, null, null, new Date());
         profileService.save(profile);
+
+        keepTrying("Profile " + TEST_PROFILE_ID + " not found in the required time", () -> profileService.load(TEST_PROFILE_ID),
+                Objects::nonNull, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+
         this.eventService.send(event);
-        refreshPersistence();
-        Thread.sleep(2000);
-        event.setEventType(eventTypeUpdated); //change the event so we can see the update effect
+
+        keepTrying("Event " + eventId + " not updated in the required time", () -> this.eventService.getEvent(eventId),
+                savedEvent -> Objects.nonNull(savedEvent) && eventTypeOriginal.equals(savedEvent.getEventType()), DEFAULT_TRYING_TIMEOUT,
+                DEFAULT_TRYING_TRIES);
+
+        event.setEventType(TEST_EVENT_TYPE); //change the event so we can see the update effect
 
         //Act
         ContextRequest contextRequest = new ContextRequest();
@@ -182,31 +198,35 @@ public class ContextServletIT extends BaseIT {
         request.addHeader(THIRD_PARTY_HEADER_NAME, UNOMI_KEY);
         request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
         TestUtils.executeContextJSONRequest(request, sessionId);
-        refreshPersistence();
-        Thread.sleep(2000); //Making sure event is updated in DB
 
-        //Assert
-        event = this.eventService.getEvent(eventId);
+        event = keepTrying("Event " + eventId + " not updated in the required time", () -> eventService.getEvent(eventId),
+                savedEvent -> Objects.nonNull(savedEvent) && TEST_EVENT_TYPE.equals(savedEvent.getEventType()), DEFAULT_TRYING_TIMEOUT,
+                DEFAULT_TRYING_TRIES);
         assertEquals(2, event.getVersion().longValue());
-        assertEquals(eventTypeUpdated, event.getEventType());
     }
 
     @Test
     public void testUpdateEventFromContextUnAuthorizedThirdParty_Fail() throws IOException, InterruptedException {
         //Arrange
         String eventId = "test-event-id-" + System.currentTimeMillis();
-        String profileId = "test-profile-id";
         String sessionId = "test-session-id";
         String scope = "test-scope";
         String eventTypeOriginal = "test-event-type-original";
         String eventTypeUpdated = TEST_EVENT_TYPE;
-        Profile profile = new Profile(profileId);
+        Profile profile = new Profile(TEST_PROFILE_ID);
         Session session = new Session(sessionId, profile, new Date(), scope);
         Event event = new Event(eventId, eventTypeOriginal, session, profile, scope, null, null, new Date());
         profileService.save(profile);
+
+        keepTrying("Profile " + TEST_PROFILE_ID + " not found in the required time", () -> profileService.load(TEST_PROFILE_ID),
+                Objects::nonNull, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+
         this.eventService.send(event);
-        refreshPersistence();
-        Thread.sleep(2000);
+
+        keepTrying("Event " + eventId + " not saved in the required time", () -> this.eventService.getEvent(eventId),
+                savedEvent -> Objects.nonNull(savedEvent) && eventTypeOriginal.equals(savedEvent.getEventType()), DEFAULT_TRYING_TIMEOUT,
+                DEFAULT_TRYING_TRIES);
+
         event.setEventType(eventTypeUpdated); //change the event so we can see the update effect
 
         //Act
@@ -216,15 +236,12 @@ public class ContextServletIT extends BaseIT {
         HttpPost request = new HttpPost(URL + CONTEXT_URL);
         request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
         TestUtils.executeContextJSONRequest(request, sessionId);
-        refreshPersistence();
-        Thread.sleep(2000); //Making sure event is updated in DB
 
-        //Assert
-        event = this.eventService.getEvent(eventId);
+        // Check event type did not changed
+        event = shouldBeTrueUntilEnd("Event type should not have changed", () -> eventService.getEvent(eventId),
+                (savedEvent) -> eventTypeOriginal.equals(savedEvent.getEventType()), DEFAULT_TRYING_TIMEOUT, 10);
         assertEquals(1, event.getVersion().longValue());
-        assertEquals(eventTypeOriginal, event.getEventType());
     }
-
 
     @Test
     public void testUpdateEventFromContextAuthorizedThirdPartyNoItemID_Fail() throws IOException, InterruptedException {
@@ -237,8 +254,11 @@ public class ContextServletIT extends BaseIT {
         Session session = new Session(sessionId, profile, new Date(), scope);
         Event event = new Event(eventId, eventTypeOriginal, session, profile, scope, null, null, new Date());
         this.eventService.send(event);
-        refreshPersistence();
-        Thread.sleep(2000);
+
+        keepTrying("Event " + eventId + " not saved in the required time", () -> this.eventService.getEvent(eventId),
+                savedEvent -> Objects.nonNull(savedEvent) && eventTypeOriginal.equals(savedEvent.getEventType()), DEFAULT_TRYING_TIMEOUT,
+                DEFAULT_TRYING_TRIES);
+
         event.setEventType(eventTypeUpdated); //change the event so we can see the update effect
 
         //Act
@@ -248,13 +268,12 @@ public class ContextServletIT extends BaseIT {
         HttpPost request = new HttpPost(URL + CONTEXT_URL);
         request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
         TestUtils.executeContextJSONRequest(request, sessionId);
-        refreshPersistence();
-        Thread.sleep(2000); //Making sure event is updated in DB
 
-        //Assert
-        event = this.eventService.getEvent(eventId);
+        // Check event type did not changed
+        event = shouldBeTrueUntilEnd("Event type should not have changed", () -> eventService.getEvent(eventId),
+                (savedEvent) -> eventTypeOriginal.equals(savedEvent.getEventType()), DEFAULT_TRYING_TIMEOUT, 10);
+
         assertEquals(1, event.getVersion().longValue());
-        assertEquals(eventTypeOriginal, event.getEventType());
     }
 
     @Test
@@ -274,8 +293,8 @@ public class ContextServletIT extends BaseIT {
         HttpPost request = new HttpPost(URL + CONTEXT_URL);
         request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
         String cookieHeaderValue = TestUtils.executeContextJSONRequest(request, sessionId).getCookieHeaderValue();
+
         refreshPersistence();
-        Thread.sleep(1000); //Making sure DB is updated
 
         //Add the context-profile-id cookie to the second event
         request.addHeader("Cookie", cookieHeaderValue);
@@ -286,6 +305,7 @@ public class ContextServletIT extends BaseIT {
         //Assert
         assertEquals(1, response.getProfileSegments().size());
         assertThat(response.getProfileSegments(), hasItem(SEGMENT_ID));
+
     }
 
     @Test
@@ -297,7 +317,8 @@ public class ContextServletIT extends BaseIT {
         event.setEventType(TEST_EVENT_TYPE);
         event.setScope(scope);
         String regularURI = URL + CONTEXT_URL;
-        long oldTimestamp = LocalDateTime.now(ZoneId.of("UTC")).minusDays(SEGMENT_NUMBER_OF_DAYS + 1).toInstant(ZoneOffset.UTC).toEpochMilli();
+        long oldTimestamp = LocalDateTime.now(ZoneId.of("UTC")).minusDays(SEGMENT_NUMBER_OF_DAYS + 1).toInstant(ZoneOffset.UTC)
+                .toEpochMilli();
         String customTimestampURI = regularURI + "?timestamp=" + oldTimestamp;
 
         //Act
@@ -309,15 +330,15 @@ public class ContextServletIT extends BaseIT {
         request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
         //The first event is with a default timestamp (now)
         String cookieHeaderValue = TestUtils.executeContextJSONRequest(request, sessionId).getCookieHeaderValue();
-        refreshPersistence();
         //The second event is with a customized timestamp
         request.setURI(URI.create(customTimestampURI));
         request.addHeader("Cookie", cookieHeaderValue);
         ContextResponse response = (TestUtils.executeContextJSONRequest(request, sessionId)).getContextResponse(); //second event
-        refreshPersistence();
 
-        //Assert
-        assertEquals(0, response.getProfileSegments().size());
+        shouldBeTrueUntilEnd("Profile " + response.getProfileId() + " not found in the required time",
+                () -> profileService.load(response.getProfileId()),
+                (savedProfile) -> Objects.nonNull(savedProfile) && !savedProfile.getSegments().contains(SEGMENT_ID), DEFAULT_TRYING_TIMEOUT,
+                DEFAULT_TRYING_TRIES);
     }
 
     @Test
@@ -340,31 +361,30 @@ public class ContextServletIT extends BaseIT {
         HttpPost request = new HttpPost(regularURI);
         request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
         //The first event is with a default timestamp (now)
-        TestUtils.RequestResponse response = TestUtils.executeContextJSONRequest(request, sessionId);
-        String cookieHeaderValue = response.getCookieHeaderValue();
-        refreshPersistence();
+        String cookieHeaderValue = TestUtils.executeContextJSONRequest(request, sessionId).getCookieHeaderValue();
+
         //The second event is with a customized timestamp
         request.setURI(URI.create(customTimestampURI));
         request.addHeader("Cookie", cookieHeaderValue);
-        response = (TestUtils.executeContextJSONRequest(request, sessionId)); //second event
-        refreshPersistence();
+        ContextResponse response = TestUtils.executeContextJSONRequest(request, sessionId).getContextResponse(); //second event
 
-        //Assert
-        assertEquals(0, response.getContextResponse().getProfileSegments().size());
+        shouldBeTrueUntilEnd("Profile " + response.getProfileId() + " not found in the required time",
+                () -> profileService.load(response.getProfileId()),
+                (savedProfile) -> Objects.nonNull(savedProfile) && !savedProfile.getSegments().contains(SEGMENT_ID), DEFAULT_TRYING_TIMEOUT,
+                DEFAULT_TRYING_TRIES);
     }
 
     @Test
     public void testCreateEventWithProfileId_Success() throws IOException, InterruptedException {
         //Arrange
         String eventId = "test-event-id-" + System.currentTimeMillis();
-        String profileId = "test-profile-id";
         String eventType = "test-event-type";
         Event event = new Event();
         event.setEventType(eventType);
         event.setItemId(eventId);
 
         ContextRequest contextRequest = new ContextRequest();
-        contextRequest.setProfileId(profileId);
+        contextRequest.setProfileId(TEST_PROFILE_ID);
         contextRequest.setEvents(Arrays.asList(event));
 
         //Act
@@ -372,12 +392,9 @@ public class ContextServletIT extends BaseIT {
         request.addHeader(THIRD_PARTY_HEADER_NAME, UNOMI_KEY);
         request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
         TestUtils.executeContextJSONRequest(request);
-        refreshPersistence();
-        Thread.sleep(2000); //Making sure event is updated in DB
 
-        //Assert
-        Profile profile = this.profileService.load(profileId);
-        assertEquals(profileId, profile.getItemId());
+        keepTrying("Profile " + TEST_PROFILE_ID + " not found in the required time", () -> profileService.load(TEST_PROFILE_ID),
+                Objects::nonNull, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
     }
 
     @Test
@@ -402,11 +419,10 @@ public class ContextServletIT extends BaseIT {
         request.addHeader(THIRD_PARTY_HEADER_NAME, UNOMI_KEY);
         request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
         TestUtils.executeContextJSONRequest(request);
-        refreshPersistence();
-        Thread.sleep(2000); //Making sure event is updated in DB
 
         //Assert
-        event = this.eventService.getEvent(eventId);
+        event = keepTrying("Event not found", () -> eventService.getEvent(eventId), Objects::nonNull, DEFAULT_TRYING_TIMEOUT,
+                DEFAULT_TRYING_TRIES);
         assertEquals(eventType, event.getEventType());
         assertEquals(3.14159, event.getProperty("floatProperty"));
     }
@@ -433,12 +449,10 @@ public class ContextServletIT extends BaseIT {
         request.addHeader(THIRD_PARTY_HEADER_NAME, UNOMI_KEY);
         request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
         TestUtils.executeContextJSONRequest(request);
-        refreshPersistence();
-        Thread.sleep(2000); //Making sure event is updated in DB
 
         //Assert
-        event = this.eventService.getEvent(eventId);
-        assertNull(event);
+        shouldBeTrueUntilEnd("Event should be null", () -> eventService.getEvent(eventId), Objects::isNull, DEFAULT_TRYING_TIMEOUT,
+                DEFAULT_TRYING_TRIES);
     }
 
     @Test
@@ -446,9 +460,8 @@ public class ContextServletIT extends BaseIT {
         //Arrange
         String eventId = "invalid-event-prop-id-" + System.currentTimeMillis();
         String profileId = "invalid-profile-id";
-        String eventType = FLOAT_PROPERTY_EVENT_TYPE;
         Event event = new Event();
-        event.setEventType(eventType);
+        event.setEventType(FLOAT_PROPERTY_EVENT_TYPE);
         event.setItemId(eventId);
         Map<String, Object> props = new HashMap<>();
         props.put("ffloatProperty", 3.14159);
@@ -463,12 +476,10 @@ public class ContextServletIT extends BaseIT {
         request.addHeader(THIRD_PARTY_HEADER_NAME, UNOMI_KEY);
         request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
         TestUtils.executeContextJSONRequest(request);
-        refreshPersistence();
-        Thread.sleep(2000); //Making sure event is updated in DB
 
         //Assert
-        event = this.eventService.getEvent(eventId);
-        assertNull(event);
+        shouldBeTrueUntilEnd("Event should be null", () -> eventService.getEvent(eventId), Objects::isNull, DEFAULT_TRYING_TIMEOUT,
+                DEFAULT_TRYING_TRIES);
     }
 
     @Test
@@ -484,13 +495,12 @@ public class ContextServletIT extends BaseIT {
         Map<String, String> parameters = new HashMap<>();
         parameters.put("VULN_FILE_PATH", vulnFileCanonicalPath);
         HttpPost request = new HttpPost(URL + CONTEXT_URL);
-        request.setEntity(new StringEntity(getValidatedBundleJSON("security/ognl-payload-1.json", parameters), ContentType.APPLICATION_JSON));
+        request.setEntity(
+                new StringEntity(getValidatedBundleJSON("security/ognl-payload-1.json", parameters), ContentType.APPLICATION_JSON));
         TestUtils.executeContextJSONRequest(request);
-        refreshPersistence();
-        Thread.sleep(2000); //Making sure event is updated in DB
 
-        assertFalse("Vulnerability successfully executed ! File created at " + vulnFileCanonicalPath, vulnFile.exists());
-
+        shouldBeTrueUntilEnd("Vulnerability successfully executed ! File created at " + vulnFileCanonicalPath, vulnFile::exists,
+                exists -> exists == Boolean.FALSE, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
     }
 
     @Test
@@ -506,78 +516,74 @@ public class ContextServletIT extends BaseIT {
         Map<String, String> parameters = new HashMap<>();
         parameters.put("VULN_FILE_PATH", vulnFileCanonicalPath);
         HttpPost request = new HttpPost(URL + CONTEXT_URL);
-        request.setEntity(new StringEntity(getValidatedBundleJSON("security/mvel-payload-1.json", parameters), ContentType.APPLICATION_JSON));
+        request.setEntity(
+                new StringEntity(getValidatedBundleJSON("security/mvel-payload-1.json", parameters), ContentType.APPLICATION_JSON));
         TestUtils.executeContextJSONRequest(request);
-        refreshPersistence();
-        Thread.sleep(2000); //Making sure event is updated in DB
 
-        assertFalse("Vulnerability successfully executed ! File created at " + vulnFileCanonicalPath, vulnFile.exists());
-
+        shouldBeTrueUntilEnd("Vulnerability successfully executed ! File created at " + vulnFileCanonicalPath, vulnFile::exists,
+                exists -> exists == Boolean.FALSE, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
     }
 
-	@Test
-	public void testPersonalization() throws IOException, InterruptedException {
+    @Test
+    public void testPersonalization() throws IOException, InterruptedException {
 
-		Map<String,String> parameters = new HashMap<>();
-		HttpPost request = new HttpPost(URL + CONTEXT_URL);
-		request.setEntity(new StringEntity(getValidatedBundleJSON("personalization.json", parameters), ContentType.APPLICATION_JSON));
-		TestUtils.RequestResponse response = TestUtils.executeContextJSONRequest(request);
-		assertEquals("Invalid response code", 200, response.getStatusCode());
-		refreshPersistence();
-		Thread.sleep(2000); //Making sure event is updated in DB
-
-	}
+        Map<String, String> parameters = new HashMap<>();
+        HttpPost request = new HttpPost(URL + CONTEXT_URL);
+        request.setEntity(new StringEntity(getValidatedBundleJSON("personalization.json", parameters), ContentType.APPLICATION_JSON));
+        TestUtils.RequestResponse response = TestUtils.executeContextJSONRequest(request);
+        assertEquals("Invalid response code", 200, response.getStatusCode());
+    }
 
     @Test
     public void testPersonalizationWithControlGroup() throws IOException, InterruptedException {
 
-        Map<String,String> parameters = new HashMap<>();
+        Map<String, String> parameters = new HashMap<>();
         parameters.put("storeInSession", "false");
         HttpPost request = new HttpPost(URL + CONTEXT_URL);
-        request.setEntity(new StringEntity(getValidatedBundleJSON("personalization-controlgroup.json", parameters), ContentType.APPLICATION_JSON));
+        request.setEntity(
+                new StringEntity(getValidatedBundleJSON("personalization-controlgroup.json", parameters), ContentType.APPLICATION_JSON));
         TestUtils.RequestResponse response = TestUtils.executeContextJSONRequest(request);
         assertEquals("Invalid response code", 200, response.getStatusCode());
-        refreshPersistence();
-        Thread.sleep(2000); //Making sure event is updated in DB
+
         ContextResponse contextResponse = response.getContextResponse();
 
-        Map<String,List<String>> personalizations = contextResponse.getPersonalizations();
+        Map<String, List<String>> personalizations = contextResponse.getPersonalizations();
 
         validatePersonalizations(personalizations);
 
         // let's check that the persisted profile has the control groups;
-        Map<String,Object> profileProperties = contextResponse.getProfileProperties();
-        List<Map<String,Object>> profileControlGroups = (List<Map<String,Object>>) profileProperties.get("unomiControlGroups");
+        Map<String, Object> profileProperties = contextResponse.getProfileProperties();
+        List<Map<String, Object>> profileControlGroups = (List<Map<String, Object>>) profileProperties.get("unomiControlGroups");
         assertControlGroups(profileControlGroups);
 
-        Profile updatedProfile = profileService.load(contextResponse.getProfileId());
-        profileControlGroups = (List<Map<String,Object>>) updatedProfile.getProperty("unomiControlGroups");
+        String profileId = contextResponse.getProfileId();
+        Profile updatedProfile = keepTrying("Profile not found", () -> profileService.load(profileId), Objects::nonNull,
+                DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+        profileControlGroups = (List<Map<String, Object>>) updatedProfile.getProperty("unomiControlGroups");
         assertNotNull("Profile control groups not found in persisted profile", profileControlGroups);
         assertControlGroups(profileControlGroups);
 
         // now let's test with session storage
         parameters.put("storeInSession", "true");
         request = new HttpPost(URL + CONTEXT_URL);
-        request.setEntity(new StringEntity(getValidatedBundleJSON("personalization-controlgroup.json", parameters), ContentType.APPLICATION_JSON));
+        request.setEntity(
+                new StringEntity(getValidatedBundleJSON("personalization-controlgroup.json", parameters), ContentType.APPLICATION_JSON));
         response = TestUtils.executeContextJSONRequest(request);
         assertEquals("Invalid response code", 200, response.getStatusCode());
-        refreshPersistence();
-        Thread.sleep(2000); //Making sure event is updated in DB
         contextResponse = response.getContextResponse();
 
         personalizations = contextResponse.getPersonalizations();
 
         validatePersonalizations(personalizations);
 
-        Map<String,Object> sessionProperties = contextResponse.getSessionProperties();
-        List<Map<String,Object>> sessionControlGroups = (List<Map<String,Object>>) sessionProperties.get("unomiControlGroups");
+        Map<String, Object> sessionProperties = contextResponse.getSessionProperties();
+        List<Map<String, Object>> sessionControlGroups = (List<Map<String, Object>>) sessionProperties.get("unomiControlGroups");
         assertControlGroups(sessionControlGroups);
 
         Session updatedSession = profileService.loadSession(contextResponse.getSessionId(), new Date());
-        sessionControlGroups = (List<Map<String,Object>>) updatedSession.getProperty("unomiControlGroups");
+        sessionControlGroups = (List<Map<String, Object>>) updatedSession.getProperty("unomiControlGroups");
         assertNotNull("Session control groups not found in persisted session", sessionControlGroups);
         assertControlGroups(sessionControlGroups);
-
     }
 
     private void validatePersonalizations(Map<String, List<String>> personalizations) {
@@ -602,22 +608,23 @@ public class ContextServletIT extends BaseIT {
     private void assertControlGroups(List<Map<String, Object>> profileControlGroups) {
         assertNotNull("Couldn't find control groups for profile", profileControlGroups);
         assertTrue("Control group size should be 1", profileControlGroups.size() == 1);
-        Map<String,Object> controlGroup = profileControlGroups.get(0);
+        Map<String, Object> controlGroup = profileControlGroups.get(0);
         assertEquals("Invalid ID for control group", "perso1", controlGroup.get("id"));
         assertEquals("Invalid path for control group", "/home/perso1.html", controlGroup.get("path"));
         assertEquals("Invalid displayName for control group", "First perso", controlGroup.get("displayName"));
         assertNotNull("Null timestamp for control group", controlGroup.get("timeStamp"));
     }
 
-
     @Test
     public void testRequireScoring() throws IOException, InterruptedException {
 
-        Map<String,String> parameters = new HashMap<>();
+        Map<String, String> parameters = new HashMap<>();
         String scoringSource = getValidatedBundleJSON("score1.json", parameters);
         Scoring scoring = CustomObjectMapper.getObjectMapper().readValue(scoringSource, Scoring.class);
         segmentService.setScoringDefinition(scoring);
-        refreshPersistence();
+
+        keepTrying("Profile does not contains scores in the required time", () -> profileService.load(TEST_PROFILE_ID), storedProfile ->
+                storedProfile.getScores() != null && storedProfile.getScores().get("score1") != null, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
 
         // first let's make sure everything works without the requireScoring parameter
         parameters = new HashMap<>();
@@ -625,11 +632,9 @@ public class ContextServletIT extends BaseIT {
         request.setEntity(new StringEntity(getValidatedBundleJSON("withoutRequireScores.json", parameters), ContentType.APPLICATION_JSON));
         TestUtils.RequestResponse response = TestUtils.executeContextJSONRequest(request);
         assertEquals("Invalid response code", 200, response.getStatusCode());
-        refreshPersistence();
-        Thread.sleep(2000); //Making sure event is updated in DB
 
         assertNotNull("Context response should not be null", response.getContextResponse());
-        Map<String,Integer> scores = response.getContextResponse().getProfileScores();
+        Map<String, Integer> scores = response.getContextResponse().getProfileScores();
         assertNull("Context response should not contain scores", scores);
 
         // now let's test adding it.
@@ -638,8 +643,6 @@ public class ContextServletIT extends BaseIT {
         request.setEntity(new StringEntity(getValidatedBundleJSON("withRequireScores.json", parameters), ContentType.APPLICATION_JSON));
         response = TestUtils.executeContextJSONRequest(request);
         assertEquals("Invalid response code", 200, response.getStatusCode());
-        refreshPersistence();
-        Thread.sleep(2000); //Making sure event is updated in DB
 
         assertNotNull("Context response should not be null", response.getContextResponse());
         scores = response.getContextResponse().getProfileScores();
@@ -649,5 +652,4 @@ public class ContextServletIT extends BaseIT {
 
         segmentService.removeScoringDefinition(scoring.getItemId(), false);
     }
-
 }

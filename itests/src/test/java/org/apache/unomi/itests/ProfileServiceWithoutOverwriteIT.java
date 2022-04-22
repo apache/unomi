@@ -29,13 +29,12 @@ import org.ops4j.pax.exam.junit.PaxExam;
 import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
 import org.ops4j.pax.exam.spi.reactors.PerSuite;
 import org.ops4j.pax.exam.util.Filter;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 
 import static org.junit.Assert.assertEquals;
 import static org.ops4j.pax.exam.CoreOptions.systemProperty;
@@ -46,7 +45,6 @@ import static org.ops4j.pax.exam.CoreOptions.systemProperty;
 @RunWith(PaxExam.class)
 @ExamReactorStrategy(PerSuite.class)
 public class ProfileServiceWithoutOverwriteIT extends BaseIT {
-    private final static Logger LOGGER = LoggerFactory.getLogger(ProfileServiceWithoutOverwriteIT.class);
 
     private final static String TEST_PROFILE_ID = "test-profile-id";
 
@@ -59,7 +57,8 @@ public class ProfileServiceWithoutOverwriteIT extends BaseIT {
         return options.toArray(new Option[0]);
     }
 
-    @Inject @Filter(timeout = 600000)
+    @Inject
+    @Filter(timeout = 600000)
     protected ProfileService profileService;
 
     @Inject
@@ -100,12 +99,17 @@ public class ProfileServiceWithoutOverwriteIT extends BaseIT {
         profileService.refresh();
 
         Profile updatedProfile = profileService.load(profileId);
+        /*Profile updatedProfile = keepTrying("Profile " + profileId + " not found in the required time",
+                () -> profileService.load(profileId), Objects::nonNull, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);*/
         updatedProfile.setProperty("country", "test2-country");
         profileService.save(updatedProfile);
 
         profileService.refresh();
 
         Profile profileWithNewCountry = profileService.load(profileId);
+
+        /*Profile profileWithNewCountry = keepTrying("Profile " + profileId + " not found in the required time",
+                () -> profileService.load(profileId), Objects::nonNull, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);*/
         assertEquals("Country property doesn't have expected value", "test2-country", profileWithNewCountry.getProperty("country"));
     }
 
@@ -117,6 +121,9 @@ public class ProfileServiceWithoutOverwriteIT extends BaseIT {
         profileService.refresh();
 
         Profile updatedProfile = profileService.load(profileId);
+
+        /*Profile updatedProfile = keepTrying("Profile " + profileId + " not found in the required time",
+                () -> profileService.load(profileId), Objects::nonNull, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);*/
         updatedProfile.setProperty("country", "test2-country");
         updatedProfile.setSystemMetadata("seq_no", 1L);
         profileService.save(updatedProfile);

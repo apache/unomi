@@ -24,7 +24,6 @@ import org.apache.unomi.api.PropertyType;
 import org.apache.unomi.api.rules.Rule;
 import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.api.services.ProfileService;
-import org.apache.unomi.api.services.RulesService;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.junit.After;
 import org.junit.Assert;
@@ -47,6 +46,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * Created by amidani on 12/10/2017.
@@ -66,16 +66,13 @@ public class CopyPropertiesActionIT extends BaseIT {
 
     @Inject
     @Filter(timeout = 600000)
-    protected RulesService rulesService;
-    @Inject
-    @Filter(timeout = 600000)
     protected ProfileService profileService;
     @Inject
     @Filter(timeout = 600000)
     protected EventService eventService;
 
     @Before
-    public void setUp() throws IOException, InterruptedException {
+    public void setUp() throws InterruptedException {
         Profile profile = new Profile();
         profile.setItemId(PROFILE_WITH_PROPERTIES);
         profile.setProperties(new HashMap<>());
@@ -83,23 +80,28 @@ public class CopyPropertiesActionIT extends BaseIT {
         profile.setProperty("singleValue", "A single value");
         profile.setProperty("existingArray", Arrays.asList("element1", "element2"));
         profileService.save(profile);
+        keepTrying("Profile " + PROFILE_WITH_PROPERTIES + " not found in the required time",
+                () -> profileService.load(PROFILE_WITH_PROPERTIES), Objects::nonNull, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
         LOGGER.info("Profile saved with ID [{}].", profile.getItemId());
 
         Profile profileTarget = new Profile();
         profileTarget.setItemId(EMPTY_PROFILE);
         profileService.save(profileTarget);
+        keepTrying("Profile " + EMPTY_PROFILE + " not found in the required time", () -> profileService.load(EMPTY_PROFILE),
+                Objects::nonNull, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
         LOGGER.info("Profile saved with ID [{}].", profileTarget.getItemId());
-
-        refreshPersistence();
     }
 
     @After
-    public void cleanUp() throws IOException, InterruptedException {
+    public void cleanUp() throws InterruptedException {
         profileService.delete(PROFILE_WITH_PROPERTIES, false);
         profileService.delete(EMPTY_PROFILE, false);
         profileService.deletePropertyType(ARRAY_PARAM_NAME);
         profileService.deletePropertyType(SINGLE_PARAM_NAME);
-        refreshPersistence();
+        waitForNullValue("Profile still present after deletion", () -> profileService.load(PROFILE_WITH_PROPERTIES), DEFAULT_TRYING_TIMEOUT,
+                DEFAULT_TRYING_TRIES);
+        waitForNullValue("Profile still present after deletion", () -> profileService.load(EMPTY_PROFILE), DEFAULT_TRYING_TIMEOUT,
+                DEFAULT_TRYING_TRIES);
     }
 
     private void initializePropertyType() {
@@ -131,7 +133,7 @@ public class CopyPropertiesActionIT extends BaseIT {
         profileService.setPropertyType(propertyType2);
     }
 
-    private void initializePropertyTypeWithMapping(){
+    private void initializePropertyTypeWithMapping() {
         Metadata metadata = new Metadata();
         metadata.setId(MAPPED_PROPERTY);
         metadata.setName("single parameter");
@@ -145,8 +147,8 @@ public class CopyPropertiesActionIT extends BaseIT {
 
         propertyType1.setAutomaticMappingsFrom(new HashSet<>(Arrays.asList(PROPERTY_TO_MAP)));
         profileService.setPropertyType(propertyType1);
-
     }
+
     private void initializePropertyTypeWithDifferentSystemTag() {
         Metadata metadata = new Metadata();
         metadata.setSystemTags(new HashSet<>(Arrays.asList("shouldBeAbsent")));
@@ -203,7 +205,7 @@ public class CopyPropertiesActionIT extends BaseIT {
 
         Event event = sendCopyPropertyEvent(properties, PROFILE_WITH_PROPERTIES);
 
-        Assert.assertTrue(((String) event.getProfile().getProperty("singleValue")).equals("A single value"));
+        Assert.assertTrue(event.getProfile().getProperty("singleValue").equals("A single value"));
     }
 
     @Test
@@ -215,7 +217,7 @@ public class CopyPropertiesActionIT extends BaseIT {
 
         Event event = sendCopyPropertyEvent(properties, PROFILE_WITH_PROPERTIES);
 
-        Assert.assertTrue(((String) event.getProfile().getProperty("singleValue")).equals("New value"));
+        Assert.assertTrue(event.getProfile().getProperty("singleValue").equals("New value"));
     }
 
     @Test
@@ -273,7 +275,7 @@ public class CopyPropertiesActionIT extends BaseIT {
 
         Event event = sendCopyPropertyEvent(properties, EMPTY_PROFILE);
 
-        Assert.assertTrue(((String) event.getProfile().getProperty(SINGLE_PARAM_NAME)).equals("New value"));
+        Assert.assertTrue(event.getProfile().getProperty(SINGLE_PARAM_NAME).equals("New value"));
     }
 
     @Test
@@ -287,7 +289,7 @@ public class CopyPropertiesActionIT extends BaseIT {
 
         Event event = sendCopyPropertyEvent(properties, EMPTY_PROFILE);
 
-        Assert.assertTrue(((String) event.getProfile().getProperty(MAPPED_PROPERTY)).equals("New value"));
+        Assert.assertTrue(event.getProfile().getProperty(MAPPED_PROPERTY).equals("New value"));
     }
 
     @Test
