@@ -40,14 +40,15 @@
     "personalizations": {
       "type": ["null", "array"],
       "items": {
-        "$ref": "https://unomi.apache.org/schemas/json/event/1-0-0"
+        "$ref": "https://unomi.apache.org/schemas/json/personalization/personalizedrequest/1-0-0"
       }
     },
     "profileOverrides": {
       "$ref": "https://unomi.apache.org/schemas/json/profile/1-0-0"
     },
     "sessionPropertiesOverrides": {
-      "type": ["null", "object"]
+      "type": ["null", "object"],
+      "maxProperties": 50
     },
     "sessionId": {
       "type": ["null", "string"],
