@@ -25,6 +25,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.EventsCollectorRequest;
 import org.apache.unomi.api.services.SchemaRegistry;
+import org.apache.unomi.rest.validation.request.InvalidRequestException;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -49,6 +50,10 @@ public class EventCollectorRequestDeserializer extends StdDeserializer<EventsCol
     @Override
     public EventsCollectorRequest deserialize(JsonParser jsonParser, DeserializationContext context) throws IOException, JsonProcessingException {
         JsonNode node = jsonParser.getCodec().readTree(jsonParser);
+        if (!schemaRegistry.isValid(node, "https://unomi.apache.org/schemas/json/eventscollectorrequest/1-0-0")) {
+            throw new InvalidRequestException("Invalid received data", "Invalid received data");
+        }
+
         // Validate schema on each event
         List<Event> filteredEvents = new ArrayList<>();
         final JsonNode eventsNode = node.get("events");

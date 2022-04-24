@@ -20,9 +20,12 @@ import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.unomi.api.ContextRequest;
 import org.apache.unomi.api.EventsCollectorRequest;
+import org.apache.unomi.rest.validation.request.InvalidRequestException;
 
+import javax.ws.rs.BadRequestException;
 import javax.ws.rs.ProcessingException;
 import javax.ws.rs.ext.*;
+import java.io.IOException;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
@@ -62,7 +65,7 @@ public class RetroCompatibilityParamConverterProvider implements ParamConverterP
                     try {
                         return objectMapper.readValue(factory.createParser(value), rawType);
                     } catch (Exception e) {
-                        throw new ProcessingException(e);
+                        throw new InvalidRequestException("Invalid received data", "Invalid received data");
                     }
                 }
 

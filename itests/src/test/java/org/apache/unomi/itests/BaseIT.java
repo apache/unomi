@@ -108,6 +108,7 @@ public abstract class BaseIT {
     protected static final int REQUEST_TIMEOUT = 60000;
     protected static final int DEFAULT_TRYING_TIMEOUT = 2000;
     protected static final int DEFAULT_TRYING_TRIES = 30;
+    private final static String JSONSCHEMA_URL = "/cxs/jsonSchema";
 
     @Inject
     @Filter(timeout = 600000)
@@ -582,6 +583,13 @@ public abstract class BaseIT {
         } catch (IOException e) {
             LOGGER.error("Could not close httpClient: " + httpClient, e);
         }
+    }
+
+    void registerEventType(String jsonSchemaFileName) {
+        post(JSONSCHEMA_URL, "schemas/events/" + jsonSchemaFileName, ContentType.TEXT_PLAIN);
+    }
+    void unRegisterEventType(String jsonSchemaId) {
+        delete(JSONSCHEMA_URL + "/" + jsonSchemaId);
     }
 
 }
