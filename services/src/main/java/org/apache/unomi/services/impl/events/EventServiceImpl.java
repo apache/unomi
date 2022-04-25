@@ -140,10 +140,6 @@ public class EventServiceImpl implements EventService {
         return true;
     }
 
-    public boolean isEventValid(Event event) {
-        return schemaService.isValid(CustomObjectMapper.getObjectMapper().convertValue(event, JsonNode.class), "https://unomi.apache.org/schemas/json/events/" + event.getEventType() + "/1-0-0");
-    }
-
     public String authenticateThirdPartyServer(String key, String ip) {
         logger.debug("Authenticating third party server with key: " + key + " and IP: " + ip);
         if (key != null) {
