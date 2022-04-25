@@ -71,7 +71,7 @@ public class ContextRequestDeserializer extends StdDeserializer<ContextRequest> 
         if (requiredSessionPropertiesNode instanceof ArrayNode) {
             List<String> requiredSessionProperties = new ArrayList<>();
             requiredSessionPropertiesNode.elements().forEachRemaining(el -> requiredSessionProperties.add(el.textValue()));
-            cr.setRequiredProfileProperties(requiredSessionProperties);
+            cr.setRequiredSessionProperties(requiredSessionProperties);
         }
         if (node.get("requireScores") != null) {
             cr.setRequireScores(node.get("requireScores").booleanValue());
