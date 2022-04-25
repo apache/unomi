@@ -589,7 +589,7 @@ public abstract class BaseIT {
         post(JSONSCHEMA_URL, "schemas/events/" + jsonSchemaFileName, ContentType.TEXT_PLAIN);
     }
     void unRegisterEventType(String jsonSchemaId) {
-        delete(JSONSCHEMA_URL + "/" + jsonSchemaId);
+        delete(JSONSCHEMA_URL + "/" + Base64.getEncoder().encodeToString(jsonSchemaId.getBytes()));
     }
 
 }
