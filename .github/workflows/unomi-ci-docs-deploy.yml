@@ -21,9 +21,9 @@ jobs:
           server-username: NEXUS_USER
           server-password: NEXUS_PW
       - name: Generate documentation
-        run: mvn -U -e clean install -DskipTests javadoc:aggregate source:aggregate
+        run: mvn -U -ntp -e clean install -DskipTests javadoc:aggregate source:aggregate
       - name: Build & deploy snapshots
-        run: mvn deploy -DskipTests
+        run: mvn -ntp deploy -DskipTests
         env:
           NEXUS_USER: ${{ secrets.NEXUS_USER }}
           NEXUS_PW: ${{ secrets.NEXUS_PW }}
@@ -41,4 +41,4 @@ jobs:
           server-username: NEXUS_USER
           server-password: NEXUS_PW
       - name: Building & pushing Docker snapshot image
-        run: mvn clean install -P docker; pushd docker; mvn -Ddocker.username=${{ secrets.DOCKERHUB_USER }} -Ddocker.password=${{ secrets.DOCKERHUB_TOKEN }} docker:push; popd
+        run: mvn -ntp clean install -P docker; pushd docker; mvn -Ddocker.username=${{ secrets.DOCKERHUB_USER }} -Ddocker.password=${{ secrets.DOCKERHUB_TOKEN }} docker:push; popd

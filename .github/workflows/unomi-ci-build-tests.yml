@@ -24,7 +24,7 @@ jobs:
         java-version: ${{ matrix.java }}
         cache: maven
     - name: Build and Unit tests
-      run: mvn -U -B -e clean install
+      run: mvn -U -ntp -e clean install
 
   integration-tests:
     name: Execute integration tests
@@ -40,4 +40,4 @@ jobs:
           java-version: ${{ matrix.java }}
           cache: maven
       - name: Integration tests
-        run: mvn clean install -Pintegration-tests
+        run: mvn -ntp clean install -Pintegration-tests
