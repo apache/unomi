@@ -39,7 +39,6 @@ jobs:
   integration-tests:
     name: Execute integration tests
     runs-on: ubuntu-latest
-    continue-on-error: true
     strategy:
       matrix:
         java: [ 1.8, 11]
