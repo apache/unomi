@@ -163,10 +163,6 @@ public class ContextServletIT extends BaseIT {
         delete(JSONSCHEMA_URL + "/" + encodedString);
     }
 
-    private void registerEventType(String jsonSchemaFileName) {
-        post(JSONSCHEMA_URL, "schemas/events/" + jsonSchemaFileName, ContentType.TEXT_PLAIN);
-    }
-
     @Test
     public void testUpdateEventFromContextAuthorizedThirdParty_Success() throws IOException, InterruptedException {
         //Arrange

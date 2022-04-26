@@ -87,11 +87,6 @@ public class RestServiceUtilsImpl implements RestServiceUtils {
             for (Event event : events) {
                 processedEventsCnt++;
                 if (event.getEventType() != null) {
-                    if (!eventService.isEventValid(event)) {
-                        logger.warn("Event is not valid : {}", event.getEventType());
-                        continue;
-                    }
-
                     Event eventToSend = new Event(event.getEventType(), session, profile, event.getSourceId(), event.getSource(),
                             event.getTarget(), event.getProperties(), timestamp, event.isPersistent());
                     if (!eventService.isEventAllowed(event, thirdPartyId)) {

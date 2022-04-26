@@ -24,6 +24,7 @@ import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.util.EntityUtils;
 import org.apache.unomi.itests.tools.httpclient.HttpClientThatWaitsForUnomi;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.ops4j.pax.exam.junit.PaxExam;
@@ -45,6 +46,7 @@ public class InputValidationIT extends BaseIT {
     private final static String EVENT_COLLECTOR_URL = "/eventcollector";
     private final static String CONTEXT_JS_URL = "/context.js";
     private final static String CONTEXT_JSON_URL = "/context.json";
+    private final static String DUMMY_EVENT_TYPE_SCHEMA = "dummy-event-type.json";
 
     private final static String ERROR_MESSAGE_REQUEST_SIZE_LIMIT_EXCEEDED = "Request rejected by the server because: Request size exceed the limit";
     private final static String ERROR_MESSAGE_INVALID_DATA_RECEIVED = "Request rejected by the server because: Invalid received data";
@@ -69,8 +71,10 @@ public class InputValidationIT extends BaseIT {
 
     @Test
     public void test_eventCollector_valid() throws IOException {
+        registerEventType(DUMMY_EVENT_TYPE_SCHEMA);
         doPOSTRequestTest(EVENT_COLLECTOR_URL, null, "/validation/eventcollector_valid.json", 200, null);
         doGETRequestTest(EVENT_COLLECTOR_URL, null, "/validation/eventcollector_valid.json", 200, null);
+        unRegisterEventType("https://unomi.apache.org/schemas/json/events/dummy_event_type/1-0-0");
     }
 
     @Test
@@ -99,8 +103,10 @@ public class InputValidationIT extends BaseIT {
 
     @Test
     public void test_eventCollector_request_size_exceed_limit() throws IOException {
+        registerEventType(DUMMY_EVENT_TYPE_SCHEMA);
         doPOSTRequestTest(EVENT_COLLECTOR_URL, null, "/validation/eventcollector_request_size_invalid.json", 400, ERROR_MESSAGE_REQUEST_SIZE_LIMIT_EXCEEDED);
         doPOSTRequestTest(EVENT_COLLECTOR_URL, null, "/validation/eventcollector_request_size_valid.json", 200, null);
+        unRegisterEventType("https://unomi.apache.org/schemas/json/events/dummy_event_type/1-0-0");
     }
 
     @Test

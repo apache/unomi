@@ -10,19 +10,19 @@
       "pattern" : "^(\\w|[-_@\\.]){0,60}$"
     },
     "profileId" : {
-      "type" : [ "null", "string"],
+      "type" : [ "string"],
       "pattern" : "^(\\w|[-_@\\.]){0,60}$"
     },
     "sessionId" : {
-      "type" : [ "null", "string"],
+      "type" : [ "string"],
       "pattern" : "^(\\w|[-_@\\.]){0,60}$"
     },
     "scope" : {
-      "type" : [ "null", "string"],
+      "type" : [ "string"],
       "pattern" : "^(\\w|[-_@\\.]){0,60}$"
     },
     "sourceId" : {
-      "type" : [ "null", "string"],
+      "type" : [ "string"],
       "pattern" : "^(\\w|[-_@\\.]){0,60}$"
     }
   }

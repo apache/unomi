@@ -17,6 +17,7 @@
 
 package org.apache.unomi.api.services;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import org.apache.unomi.api.Metadata;
 import org.apache.unomi.api.PartialList;
 import org.apache.unomi.api.schema.json.JSONSchema;
@@ -45,13 +46,13 @@ public interface SchemaService {
     PartialList<Metadata> getJsonSchemaMetadatas(int offset, int size, String sortBy);
 
     /**
-     * Verify if an object is valid against a schema
+     * Verify if a jsonNode is valid against a schema
      *
-     * @param object   to validate
+     * @param jsonNode   to validate
      * @param schemaId id of the schema used for the validation
      * @return true is the object is valid
      */
-    boolean isValid(Object object, String schemaId);
+    boolean isValid(JsonNode jsonNode, String schemaId);
 
     /**
      * Get a schema matching by a schema id

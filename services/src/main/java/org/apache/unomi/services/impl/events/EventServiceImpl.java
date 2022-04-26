@@ -17,6 +17,7 @@
 
 package org.apache.unomi.services.impl.events;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import inet.ipaddr.IPAddress;
 import inet.ipaddr.IPAddressString;
 import org.apache.commons.lang3.StringUtils;
@@ -31,6 +32,7 @@ import org.apache.unomi.api.actions.ActionPostExecutor;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.services.*;
+import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.aggregate.TermsAggregate;
 import org.apache.unomi.api.utils.ParserHelper;
@@ -136,10 +138,6 @@ public class EventServiceImpl implements EventService {
             return thirdPartyServers.containsKey(thirdPartyId) && thirdPartyServers.get(thirdPartyId).getAllowedEvents().contains(event.getEventType());
         }
         return true;
-    }
-
-    public boolean isEventValid(Event event) {
-        return schemaService.isValid(event, "https://unomi.apache.org/schemas/json/events/" + event.getEventType() + "/1-0-0");
     }
 
     public String authenticateThirdPartyServer(String key, String ip) {

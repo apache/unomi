@@ -20,6 +20,7 @@ package org.apache.unomi.persistence.spi;
 import com.fasterxml.jackson.core.Version;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.fasterxml.jackson.databind.util.ISO8601DateFormat;
 import com.fasterxml.jackson.module.jaxb.JaxbAnnotationModule;
@@ -50,6 +51,10 @@ public class CustomObjectMapper extends ObjectMapper {
     private ItemDeserializer itemDeserializer;
 
     public CustomObjectMapper() {
+        this(null);
+    }
+
+    public CustomObjectMapper(Map<Class, StdDeserializer<?>> deserializers) {
         super();
         super.registerModule(new JaxbAnnotationModule());
         configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false);
@@ -67,6 +72,9 @@ public class CustomObjectMapper extends ObjectMapper {
         itemDeserializer = new ItemDeserializer();
         deserializerModule.addDeserializer(Item.class, itemDeserializer);
 
+        if (deserializers != null) {
+            deserializers.forEach(deserializerModule::addDeserializer);
+        }
 
         builtinItemTypeClasses = new HashMap<>();
         builtinItemTypeClasses.put(Campaign.ITEM_TYPE, Campaign.class);

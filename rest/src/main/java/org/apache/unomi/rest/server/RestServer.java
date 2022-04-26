@@ -17,6 +17,7 @@
 package org.apache.unomi.rest.server;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
 import com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider;
 import org.apache.cxf.Bus;
 import org.apache.cxf.endpoint.Server;
@@ -28,10 +29,15 @@ import org.apache.cxf.jaxrs.security.SimpleAuthorizingFilter;
 import org.apache.cxf.jaxrs.validation.JAXRSBeanValidationInInterceptor;
 import org.apache.cxf.jaxrs.validation.JAXRSBeanValidationOutInterceptor;
 import org.apache.cxf.message.Message;
+import org.apache.unomi.api.ContextRequest;
+import org.apache.unomi.api.EventsCollectorRequest;
 import org.apache.unomi.api.services.ConfigSharingService;
+import org.apache.unomi.api.services.SchemaService;
 import org.apache.unomi.rest.authentication.AuthenticationFilter;
 import org.apache.unomi.rest.authentication.AuthorizingInterceptor;
 import org.apache.unomi.rest.authentication.RestAuthenticationConfig;
+import org.apache.unomi.rest.deserializers.ContextRequestDeserializer;
+import org.apache.unomi.rest.deserializers.EventCollectorRequestDeserializer;
 import org.apache.unomi.rest.server.provider.RetroCompatibilityParamConverterProvider;
 import org.apache.unomi.rest.validation.JAXRSBeanValidationInInterceptorOverride;
 import org.apache.unomi.rest.validation.BeanValidationService;
@@ -52,11 +58,7 @@ import org.slf4j.LoggerFactory;
 
 import javax.ws.rs.ext.ExceptionMapper;
 import javax.xml.namespace.QName;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Timer;
-import java.util.TimerTask;
+import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 @Component
@@ -75,6 +77,7 @@ public class RestServer {
     private List<ExceptionMapper> exceptionMappers = new ArrayList<>();
     private BeanValidationService beanValidationService;
     private ConfigSharingService configSharingService;
+    private SchemaService schemaService;
 
     // refresh
     private long timeOfLastUpdate = System.currentTimeMillis();
@@ -82,6 +85,11 @@ public class RestServer {
     private long startupDelay = 1000L;
 
     private static final QName UNOMI_REST_SERVER_END_POINT_NAME = new QName("http://rest.unomi.apache.org/", "UnomiRestServerEndPoint");
+
+    @Reference(cardinality = ReferenceCardinality.MANDATORY)
+    public void setSchemaService(SchemaService schemaService) {
+        this.schemaService = schemaService;
+    }
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY)
     public void setServerBus(Bus serverBus) {
@@ -203,8 +211,13 @@ public class RestServer {
         List<Interceptor<? extends Message>> inInterceptors = new ArrayList<>();
         List<Interceptor<? extends Message>> outInterceptors = new ArrayList<>();
 
+        Map<Class, StdDeserializer<?>> desers = new HashMap<>();
+        desers.put(ContextRequest.class, new ContextRequestDeserializer(schemaService));
+        desers.put(EventsCollectorRequest.class, new EventCollectorRequestDeserializer(schemaService));
+
+
         // Build the server
-        ObjectMapper objectMapper = new org.apache.unomi.persistence.spi.CustomObjectMapper();
+        ObjectMapper objectMapper = new org.apache.unomi.persistence.spi.CustomObjectMapper(desers);
         JAXRSServerFactoryBean jaxrsServerFactoryBean = new JAXRSServerFactoryBean();
         jaxrsServerFactoryBean.setAddress("/");
         jaxrsServerFactoryBean.setBus(serverBus);
