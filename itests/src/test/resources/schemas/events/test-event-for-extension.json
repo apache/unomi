@@ -1,0 +1,33 @@
+{
+  "$id": "https://unomi.apache.org/schemas/json/events/test-event-for-extension/1-0-0",
+  "$schema": "https://json-schema.org/draft/2019-09/schema",
+  "self": {
+    "vendor": "org.apache.unomi",
+    "name": "testEventForExtension",
+    "format": "jsonschema",
+    "target": "events",
+    "version": "1-0-0"
+  },
+  "title": "TestEvent",
+  "type": "object",
+  "allOf": [
+    {
+      "$ref": "https://unomi.apache.org/schemas/json/event/1-0-0"
+    }
+  ],
+  "properties": {
+    "properties": {
+      "type": "object",
+      "properties": {
+        "floatProperty": {
+          "type": "number"
+        },
+        "stringProperty": {
+          "type": "string",
+          "maxLength": 50,
+          "description": "Initial description"
+        }
+      }
+    }
+  }
+}

@@ -1,23 +1,31 @@
 {
   "id": "extension-test-event-1",
-  "schemaId": "https://unomi.apache.org/schemas/json/events/test-event-type/1-0-0",
+  "schemaId": "https://unomi.apache.org/schemas/json/events/test-event-for-extension/1-0-0",
   "description": "An event for example",
   "name": "Name of the event",
   "priority": "10",
   "extension": {
     "allOf": [
       {
-        "$ref": "https://unomi.apache.org/schemas/json/event/1-0-0"
+        "$ref": "https://unomi.apache.org/schemas/json/customitem/1-0-0"
       }
     ],
     "properties": {
       "properties": {
-        "type": "object",
         "properties": {
           "floatProperty": {
             "type": "number",
-            "maximum": "100",
+            "maximum": 100,
             "description": "Extension of float property"
+          },
+          "stringProperty": {
+            "type": "string",
+            "maxLength": 100,
+            "description": "Updated description"
+          },
+          "newProperty": {
+            "type": "string",
+            "description": "A new element"
           }
         }
       }

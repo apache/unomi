@@ -17,7 +17,7 @@
 package org.apache.unomi.services.listener;
 
 import org.apache.unomi.api.schema.JSONSchemaExtension;
-import org.apache.unomi.api.schema.UnomiJSONSchema;
+import org.apache.unomi.api.schema.JSONSchemaEntity;
 import org.apache.unomi.api.services.SchemaService;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.osgi.framework.Bundle;
@@ -114,10 +114,10 @@ public class JsonSchemaListener implements SynchronousBundleListener {
     }
 
     public void createIndexes() {
-        if (persistenceService.createIndex(UnomiJSONSchema.ITEM_TYPE)) {
-            logger.info("{} index created", UnomiJSONSchema.ITEM_TYPE);
+        if (persistenceService.createIndex(JSONSchemaEntity.ITEM_TYPE)) {
+            logger.info("{} index created", JSONSchemaEntity.ITEM_TYPE);
         } else {
-            logger.info("{} index already exists", UnomiJSONSchema.ITEM_TYPE);
+            logger.info("{} index already exists", JSONSchemaEntity.ITEM_TYPE);
         }
         if (persistenceService.createIndex(JSONSchemaExtension.ITEM_TYPE)) {
             logger.info("{} index created", JSONSchemaExtension.ITEM_TYPE);

@@ -17,11 +17,15 @@
 
 package org.apache.unomi.itests;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.entity.ContentType;
-import org.apache.unomi.api.schema.UnomiJSONSchema;
 import org.apache.unomi.api.schema.JSONSchemaExtension;
+import org.apache.unomi.api.schema.JSONSchemaEntity;
+import org.apache.unomi.api.schema.json.JSONSchema;
 import org.apache.unomi.api.services.SchemaService;
+import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.junit.After;
 import org.junit.Before;
@@ -72,7 +76,7 @@ public class JSONSchemaIT extends BaseIT {
 
     @After
     public void tearDown() {
-        schemaService.deleteSchema("https://unomi.apache.org/schemas/json/events/test-event-type/1-0-0");
+        schemaService.deleteSchema("https://unomi.apache.org/schemas/json/events/test-event-for-extension/1-0-0");
         schemaService.deleteExtension("extension-test-event-1");
     }
 
@@ -81,7 +85,7 @@ public class JSONSchemaIT extends BaseIT {
         List jsonSchemas = get(JSONSCHEMA_URL, List.class);
         assertTrue("JSON schema list should be empty", jsonSchemas.isEmpty());
 
-        post(JSONSCHEMA_URL, "schemas/events/test-event-type.json", ContentType.TEXT_PLAIN);
+        post(JSONSCHEMA_URL, "schemas/events/test-event-for-extension.json", ContentType.TEXT_PLAIN);
 
         jsonSchemas = keepTrying("Couldn't find json schemas", () -> get(JSONSCHEMA_URL, List.class), (list) -> !list.isEmpty(),
                 DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
@@ -92,9 +96,9 @@ public class JSONSchemaIT extends BaseIT {
     @Test
     public void testSaveNewValidJSONSchema() throws InterruptedException {
 
-        assertTrue("JSON schema list should be empty", persistenceService.getAllItems(UnomiJSONSchema.class).isEmpty());
+        assertTrue("JSON schema list should be empty", persistenceService.getAllItems(JSONSchemaEntity.class).isEmpty());
 
-        CloseableHttpResponse response = post(JSONSCHEMA_URL, "schemas/events/test-event-type.json", ContentType.TEXT_PLAIN);
+        CloseableHttpResponse response = post(JSONSCHEMA_URL, "schemas/events/test-event-for-extension.json", ContentType.TEXT_PLAIN);
 
         assertEquals("Invalid response code", 200, response.getStatusLine().getStatusCode());
         List jsonSchemas = keepTrying("Couldn't find json schemas", () -> get(JSONSCHEMA_URL, List.class), (list) -> !list.isEmpty(),
@@ -104,15 +108,15 @@ public class JSONSchemaIT extends BaseIT {
 
     @Test
     public void testDeleteJSONSchema() throws InterruptedException {
-        assertTrue("JSON schema list should be empty", persistenceService.getAllItems(UnomiJSONSchema.class).isEmpty());
+        assertTrue("JSON schema list should be empty", persistenceService.getAllItems(JSONSchemaEntity.class).isEmpty());
 
-        post(JSONSCHEMA_URL, "schemas/events/test-event-type.json", ContentType.TEXT_PLAIN);
+        post(JSONSCHEMA_URL, "schemas/events/test-event-for-extension.json", ContentType.TEXT_PLAIN);
 
         keepTrying("Couldn't find json schemas", () -> get(JSONSCHEMA_URL, List.class), (list) -> !list.isEmpty(), DEFAULT_TRYING_TIMEOUT,
                 DEFAULT_TRYING_TRIES);
 
         String encodedString = Base64.getEncoder()
-                .encodeToString("https://unomi.apache.org/schemas/json/events/test-event-type/1-0-0".getBytes());
+                .encodeToString("https://unomi.apache.org/schemas/json/events/test-event-for-extension/1-0-0".getBytes());
         CloseableHttpResponse response = delete(JSONSCHEMA_URL + "/" + encodedString);
         assertEquals("Invalid response code", 204, response.getStatusLine().getStatusCode());
 
@@ -124,7 +128,7 @@ public class JSONSchemaIT extends BaseIT {
 
     @Test
     public void testSaveNewInvalidJSONSchema() throws IOException {
-        assertTrue("JSON schema list should be empty", persistenceService.getAllItems(UnomiJSONSchema.class).isEmpty());
+        assertTrue("JSON schema list should be empty", persistenceService.getAllItems(JSONSchemaEntity.class).isEmpty());
         try (CloseableHttpResponse response = post(JSONSCHEMA_URL, "schemas/events/test-invalid.json", ContentType.TEXT_PLAIN)) {
             assertEquals("Save should have failed", 500, response.getStatusLine().getStatusCode());
         }
@@ -173,4 +177,47 @@ public class JSONSchemaIT extends BaseIT {
                 DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
     }
 
+    @Test
+    public void testIfSchemaIsExtendedCorrectly() throws InterruptedException, JsonProcessingException {
+        List jsonSchemaExtensions = get(JSONSCHEMAEXTENSION_URL, List.class);
+        List jsonSchemas = get(JSONSCHEMA_URL, List.class);
+
+        assertTrue("JSON schema extension list should be empty", jsonSchemaExtensions.isEmpty());
+        assertTrue("JSON schema list should be empty", jsonSchemas.isEmpty());
+
+        post(JSONSCHEMA_URL, "schemas/events/test-event-for-extension.json", ContentType.TEXT_PLAIN);
+
+        keepTrying("Couldn't find json schemas", () -> get(JSONSCHEMA_URL, List.class), (list) -> !list.isEmpty(), DEFAULT_TRYING_TIMEOUT,
+                DEFAULT_TRYING_TRIES);
+
+        post(JSONSCHEMAEXTENSION_URL, "schemas/extension/extension-test-event-example.json", ContentType.TEXT_PLAIN);
+
+        keepTrying("Couldn't find json schemas extension", () -> get(JSONSCHEMAEXTENSION_URL, List.class), (list) -> !list.isEmpty(),
+                DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+
+        CloseableHttpResponse response = post(JSONSCHEMAEXTENSION_URL, "schemas/extension/extension-test-event-example.json",
+                ContentType.TEXT_PLAIN);
+
+        assertEquals("Invalid response code", 200, response.getStatusLine().getStatusCode());
+
+        keepTrying("Couldn't find json schemas extensions", () -> get(JSONSCHEMAEXTENSION_URL, List.class), (list) -> !list.isEmpty(),
+                DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+
+        JSONSchema schema = keepTrying("Couldn't find json schemas",
+                () -> schemaService.getSchema("https://unomi.apache.org/schemas/json/events/test-event-for-extension/1-0-0"),
+                Objects::nonNull, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+
+        assertEquals("Invalid number for property allOf", 2, schema.getAllOf().size());
+
+        String jsonNodeAsString = CustomObjectMapper.getObjectMapper().writeValueAsString(schema.getSchemaTree());
+        JsonNode jsonNode = CustomObjectMapper.getObjectMapper().readTree(jsonNodeAsString);
+        assertEquals("Invalid number for property allOf", 100, jsonNode.at("/properties/properties/properties/floatProperty/maximum").asInt());
+        assertEquals("Invalid value for property allOf", "Extension of float property",
+                jsonNode.at("/properties/properties/properties/floatProperty/description").asText());
+        assertEquals("Invalid number for property", 50, jsonNode.at("/properties/properties/properties/stringProperty/maxLength").asInt());
+        assertEquals("Invalid value for property", "string", jsonNode.at("/properties/properties/properties/stringProperty/type").asText());
+        assertEquals("Invalid value for property", "Initial description",
+                jsonNode.at("/properties/properties/properties/stringProperty/description").asText());
+        assertEquals("Invalid value for property", "A new element", jsonNode.at("/properties/properties/properties/newProperty/description").asText());
+    }
 }

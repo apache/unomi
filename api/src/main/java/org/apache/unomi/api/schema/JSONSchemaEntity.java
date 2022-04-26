@@ -22,14 +22,14 @@ import org.apache.unomi.api.MetadataItem;
 /**
  * Object which represents a JSON schema stored in the persistence service
  */
-public class UnomiJSONSchema extends MetadataItem {
+public class JSONSchemaEntity extends MetadataItem {
     public static final String ITEM_TYPE = "jsonSchema";
 
     private String id;
     private String schema;
     private String target;
 
-    public UnomiJSONSchema(){}
+    public JSONSchemaEntity(){}
 
     /**
      * Instantiates a new JSON schema with an id and a schema as string
@@ -38,7 +38,7 @@ public class UnomiJSONSchema extends MetadataItem {
      * @param schema as string
      * @param target of the schema
      */
-    public UnomiJSONSchema(String id, String schema, String target) {
+    public JSONSchemaEntity(String id, String schema, String target) {
         super(new Metadata(id));
         this.id = id;
         this.schema = schema;

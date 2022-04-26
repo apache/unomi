@@ -17,9 +17,13 @@
 
 package org.apache.unomi.services.impl.schemas;
 
+import com.fasterxml.jackson.core.JsonPointer;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.MissingNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.networknt.schema.JsonMetaSchema;
 import com.networknt.schema.JsonSchema;
 import com.networknt.schema.JsonSchemaFactory;
@@ -31,13 +35,12 @@ import org.apache.commons.io.IOUtils;
 import org.apache.unomi.api.Metadata;
 import org.apache.unomi.api.PartialList;
 import org.apache.unomi.api.schema.JSONSchemaExtension;
-import org.apache.unomi.api.schema.UnomiJSONSchema;
+import org.apache.unomi.api.schema.JSONSchemaEntity;
 import org.apache.unomi.api.schema.json.JSONSchema;
 import org.apache.unomi.api.schema.json.JSONTypeFactory;
 import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.api.services.SchedulerService;
 import org.apache.unomi.api.services.SchemaService;
-import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.osgi.framework.BundleContext;
 import org.slf4j.Logger;
@@ -50,6 +53,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TimerTask;
@@ -63,7 +67,7 @@ public class SchemaServiceImpl implements SchemaService {
 
     private static final Logger logger = LoggerFactory.getLogger(SchemaServiceImpl.class.getName());
 
-    private final Map<String, JSONSchema> predefinedUnomiJSONSchemaById = new HashMap<>();
+    private final Map<String, JSONSchema> predefinedJsonSchemaById = new HashMap<>();
 
     private Map<String, JSONSchema> schemasById = new HashMap<>();
 
@@ -99,9 +103,9 @@ public class SchemaServiceImpl implements SchemaService {
 
     @Override
     public PartialList<Metadata> getJsonSchemaMetadatas(int offset, int size, String sortBy) {
-        PartialList<UnomiJSONSchema> items = persistenceService.getAllItems(UnomiJSONSchema.class, offset, size, sortBy);
+        PartialList<JSONSchemaEntity> items = persistenceService.getAllItems(JSONSchemaEntity.class, offset, size, sortBy);
         List<Metadata> details = new LinkedList<>();
-        for (UnomiJSONSchema definition : items.getList()) {
+        for (JSONSchemaEntity definition : items.getList()) {
             details.add(definition.getMetadata());
         }
         return new PartialList<>(details, items.getOffset(), items.getPageSize(), items.getTotalSize(), items.getTotalSizeRelation());
@@ -147,12 +151,13 @@ public class SchemaServiceImpl implements SchemaService {
     @Override
     public void saveSchema(String schema) {
         JsonSchema jsonSchema = jsonSchemaFactory.getSchema(schema);
-        if (predefinedUnomiJSONSchemaById.get(jsonSchema.getSchemaNode().get("$id").asText()) == null) {
-            persistenceService.save(buildUnomiJsonSchema(schema));
+        if (predefinedJsonSchemaById.get(jsonSchema.getSchemaNode().get("$id").asText()) == null) {
+            persistenceService.save(buildJSONSchemaEntity(schema));
             JSONSchema localSchema = buildJSONSchema(jsonSchema);
             schemasById.put(jsonSchema.getSchemaNode().get("$id").asText(), localSchema);
+            findExtensionAndUpdateSchema(jsonSchema.getSchemaNode().get("$id").asText());
         } else {
-            logger.error("Can not store a JSON Schema which have the id of a schema preovided by Unomi");
+            logger.error("Can not store a JSON Schema which have the id of a schema provided by Unomi");
         }
     }
 
@@ -166,14 +171,14 @@ public class SchemaServiceImpl implements SchemaService {
         JsonSchema jsonSchema = jsonSchemaFactory.getSchema(schemaStream);
         JSONSchema localJsonSchema = buildJSONSchema(jsonSchema);
 
-        predefinedUnomiJSONSchemaById.put(jsonSchema.getSchemaNode().get("$id").asText(), localJsonSchema);
+        predefinedJsonSchemaById.put(jsonSchema.getSchemaNode().get("$id").asText(), localJsonSchema);
         schemasById.put(jsonSchema.getSchemaNode().get("$id").asText(), localJsonSchema);
     }
 
     @Override
     public boolean deleteSchema(String schemaId) {
         schemasById.remove(schemaId);
-        return persistenceService.remove(schemaId, UnomiJSONSchema.class);
+        return persistenceService.remove(schemaId, JSONSchemaEntity.class);
     }
 
     @Override
@@ -192,6 +197,7 @@ public class SchemaServiceImpl implements SchemaService {
         JSONSchemaExtension jsonSchemaExtension = buildExtension(extension);
         persistenceService.save(jsonSchemaExtension);
         extensionById.put(jsonSchemaExtension.getId(), jsonSchemaExtension);
+        findAndUpdateSchemaWithExtension(jsonSchemaExtension.getSchemaId(), jsonSchemaExtension.getId());
     }
 
     @Override
@@ -251,9 +257,9 @@ public class SchemaServiceImpl implements SchemaService {
         }).get();
     }
 
-    private UnomiJSONSchema buildUnomiJsonSchema(String schema) {
+    private JSONSchemaEntity buildJSONSchemaEntity(String schema) {
         JsonNode schemaNode = jsonSchemaFactory.getSchema(schema).getSchemaNode();
-        return new UnomiJSONSchema(schemaNode.get("$id").asText(), schema, schemaNode.at("/self/target").asText());
+        return new JSONSchemaEntity(schemaNode.get("$id").asText(), schema, schemaNode.at("/self/target").asText());
     }
 
     public JsonSchema getJsonSchema(String schemaId) {
@@ -264,6 +270,69 @@ public class SchemaServiceImpl implements SchemaService {
             logger.error("Failed to process json schema", e);
         }
         return jsonSchemaFactory.getSchema(schemaAsString);
+    }
+
+    private void findExtensionAndUpdateSchema(String schemaId) {
+        try {
+            String schemaAsString = objectMapper.writeValueAsString(schemasById.get(schemaId).getSchemaTree());
+            if (Objects.nonNull(schemaAsString)) {
+                extensionById.entrySet().stream().filter(entry -> entry.getValue().getSchemaId().equals(schemaId))
+                        .forEach(entry -> findAndUpdateSchemaWithExtension(schemaId, entry.getValue().getId()));
+            }
+        } catch (JsonProcessingException e) {
+            logger.error("Error when merging extensions into schema {}", schemaId, e);
+        }
+    }
+
+    private void findAndUpdateSchemaWithExtension(String schemaId, String extensionId) {
+        try {
+            JSONSchema schema = schemasById.get(schemaId);
+            if (Objects.nonNull(schema)) {
+                String schemaAsString = objectMapper.writeValueAsString(schemasById.get(schemaId).getSchemaTree());
+                JsonNode mergedSchema = mergeIntoSchema(objectMapper.readTree(schemaAsString),
+                        objectMapper.readTree(extensionById.get(extensionId).getExtension()));
+                schemasById.put(mergedSchema.get("$id").asText(), buildJSONSchema(jsonSchemaFactory.getSchema(mergedSchema)));
+            }
+        } catch (JsonProcessingException e) {
+            logger.error("Error when merging extension {} into schema {}", extensionId, schemaId, e);
+        }
+    }
+
+    private JsonNode mergeIntoSchema(JsonNode schemaNode, JsonNode extension) {
+        extension.fields().forEachRemaining((entry) -> {
+            String path = JsonPointer.SEPARATOR + entry.getKey();
+            JsonNode targetNode = schemaNode.at(path);
+            JsonNode nodeToAdd = entry.getValue();
+            if (targetNode.isArray()) {
+                handleArray((ArrayNode) targetNode, nodeToAdd);
+            } else if (targetNode.isObject() && nodeToAdd.isObject()) {
+                mergeIntoSchema(targetNode, nodeToAdd);
+            } else if (targetNode instanceof MissingNode) {
+                ((ObjectNode) schemaNode).set(path.replace("/", ""), nodeToAdd);
+            }
+        });
+        return schemaNode;
+    }
+
+    private JsonNode handleArray(ArrayNode targetArray, JsonNode valueToAdd) {
+        if (valueToAdd.isArray()) {
+            for (JsonNode singleValue : valueToAdd) {
+                addToArray(targetArray, singleValue);
+            }
+        } else {
+            addToArray(targetArray, valueToAdd);
+        }
+        return targetArray;
+    }
+
+    private void addToArray(ArrayNode targetedArray, JsonNode value) {
+        boolean isPresent = false;
+        for (JsonNode target : targetedArray) {
+            isPresent = isPresent || target.equals(value);
+        }
+        if (!isPresent) {
+            targetedArray.add(value);
+        }
     }
 
     private URIFetcher getUriFetcher() {
@@ -286,14 +355,17 @@ public class SchemaServiceImpl implements SchemaService {
 
     private void refreshJSONSchemas() {
         schemasById = new HashMap<>();
-        schemasById.putAll(predefinedUnomiJSONSchemaById);
-        persistenceService.getAllItems(UnomiJSONSchema.class).forEach(
+        schemasById.putAll(predefinedJsonSchemaById);
+        persistenceService.getAllItems(JSONSchemaEntity.class).forEach(
                 jsonSchema -> schemasById.put(jsonSchema.getId(), buildJSONSchema(jsonSchemaFactory.getSchema(jsonSchema.getSchema()))));
     }
 
     private void refreshJSONSchemasExtensions() {
         extensionById = new HashMap<>();
-        persistenceService.getAllItems(JSONSchemaExtension.class).forEach(extension -> extensionById.put(extension.getId(), extension));
+        persistenceService.getAllItems(JSONSchemaExtension.class).forEach(extension -> {
+            extensionById.put(extension.getId(), extension);
+            findAndUpdateSchemaWithExtension(extension.getSchemaId(), extension.getId());
+        });
     }
 
     private void initializeTimers() {
