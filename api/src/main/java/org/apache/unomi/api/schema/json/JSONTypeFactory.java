@@ -16,7 +16,7 @@
  */
 package org.apache.unomi.api.schema.json;
 
-import org.apache.unomi.api.services.SchemaRegistry;
+import org.apache.unomi.api.services.SchemaService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,10 +33,10 @@ public class JSONTypeFactory {
 
     Map<String, Class<? extends JSONType>> jsonTypes = new HashMap<>();
 
-    SchemaRegistry schemaRegistry;
+    SchemaService schemaService;
 
-    public JSONTypeFactory(SchemaRegistry schemaRegistry) {
-        this.schemaRegistry = schemaRegistry;
+    public JSONTypeFactory(SchemaService schemaService) {
+        this.schemaService = schemaService;
         jsonTypes.put("object", JSONObjectType.class);
         jsonTypes.put("string", JSONStringType.class);
         jsonTypes.put("array", JSONArrayType.class);
@@ -49,7 +49,7 @@ public class JSONTypeFactory {
     List<JSONType> getTypes(Map<String, Object> schemaTree) {
         if (schemaTree.containsKey("$ref")) {
             String schemaId = (String) schemaTree.get("$ref");
-            JSONSchema refSchema = schemaRegistry.getSchema(schemaId);
+            JSONSchema refSchema = schemaService.getSchema(schemaId);
             if (refSchema != null) {
                 schemaTree = refSchema.getSchemaTree();
             } else {

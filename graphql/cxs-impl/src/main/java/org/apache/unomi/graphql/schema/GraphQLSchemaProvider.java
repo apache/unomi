@@ -38,7 +38,7 @@ import org.apache.unomi.api.schema.json.JSONObjectType;
 import org.apache.unomi.api.schema.json.JSONSchema;
 import org.apache.unomi.api.schema.json.JSONType;
 import org.apache.unomi.api.services.ProfileService;
-import org.apache.unomi.api.services.SchemaRegistry;
+import org.apache.unomi.api.services.SchemaService;
 import org.apache.unomi.graphql.CDPGraphQLConstants;
 import org.apache.unomi.graphql.converters.UnomiToGraphQLConverter;
 import org.apache.unomi.graphql.fetchers.CustomEventOrSetPropertyDataFetcher;
@@ -88,7 +88,7 @@ public class GraphQLSchemaProvider {
 
     private final ProfileService profileService;
 
-    private final SchemaRegistry schemaRegistry;
+    private final SchemaService schemaService;
 
     private final List<GraphQLTypeFunctionProvider> typeFunctionProviders;
 
@@ -188,7 +188,7 @@ public class GraphQLSchemaProvider {
 
     private GraphQLSchemaProvider(final Builder builder) {
         this.profileService = builder.profileService;
-        this.schemaRegistry = builder.schemaRegistry;
+        this.schemaService = builder.schemaService;
         this.eventPublisher = builder.eventPublisher;
         this.typeFunctionProviders = builder.typeFunctionProviders;
         this.extensionsProviders = builder.extensionsProviders;
@@ -331,7 +331,7 @@ public class GraphQLSchemaProvider {
     }
 
     private void registerDynamicUnomiInputEvents(GraphQLSchema.Builder schemaBuilder) {
-        final List<JSONSchema> unomiEventTypes = schemaRegistry.getSchemasByTarget("events");
+        final List<JSONSchema> unomiEventTypes = schemaService.getSchemasByTarget("events");
 
         if (!unomiEventTypes.isEmpty()) {
             for (JSONSchema unomiEventType : unomiEventTypes) {
@@ -353,7 +353,7 @@ public class GraphQLSchemaProvider {
     }
 
     private void registerDynamicUnomiOutputEvents(GraphQLSchema.Builder schemaBuilder) {
-        final List<JSONSchema> unomiEventTypes = schemaRegistry.getSchemasByTarget("events");
+        final List<JSONSchema> unomiEventTypes = schemaService.getSchemasByTarget("events");
 
         if (!unomiEventTypes.isEmpty()) {
             final GraphQLCodeRegistry.Builder codeRegisterBuilder = graphQLAnnotations.getContainer().getCodeRegistryBuilder();
@@ -650,7 +650,7 @@ public class GraphQLSchemaProvider {
         }
 
         // now add all unomi defined event types
-        final List<JSONSchema> unomiEventTypes = schemaRegistry.getSchemasByTarget("events");
+        final List<JSONSchema> unomiEventTypes = schemaService.getSchemasByTarget("events");
         unomiEventTypes.forEach(eventType -> {
             final String typeName = UnomiToGraphQLConverter.convertEventType(eventType.getName());
             final GraphQLInputType eventInputType = (GraphQLInputType) getFromTypeRegistry(typeName + "Input");
@@ -812,15 +812,15 @@ public class GraphQLSchemaProvider {
                 .getGraphQLType(annotatedClass, graphQLAnnotations.getContainer(), false);
     }
 
-    public static Builder create(final ProfileService profileService, final SchemaRegistry schemaRegistry) {
-        return new Builder(profileService, schemaRegistry);
+    public static Builder create(final ProfileService profileService, final SchemaService schemaService) {
+        return new Builder(profileService, schemaService);
     }
 
     static class Builder {
 
         final ProfileService profileService;
 
-        final SchemaRegistry schemaRegistry;
+        final SchemaService schemaService;
 
         List<GraphQLTypeFunctionProvider> typeFunctionProviders;
 
@@ -840,9 +840,9 @@ public class GraphQLSchemaProvider {
 
         UnomiEventPublisher eventPublisher;
 
-        private Builder(final ProfileService profileService, final SchemaRegistry schemaRegistry) {
+        private Builder(final ProfileService profileService, final SchemaService schemaService) {
             this.profileService = profileService;
-            this.schemaRegistry = schemaRegistry;
+            this.schemaService = schemaService;
         }
 
         public Builder typeFunctionProviders(List<GraphQLTypeFunctionProvider> typeFunctionProviders) {

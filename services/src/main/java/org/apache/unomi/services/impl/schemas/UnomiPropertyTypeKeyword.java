@@ -27,8 +27,7 @@ import com.networknt.schema.ValidationContext;
 import com.networknt.schema.ValidationMessage;
 import org.apache.unomi.api.PropertyType;
 import org.apache.unomi.api.services.ProfileService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.apache.unomi.api.services.SchemaService;
 
 import java.text.MessageFormat;
 import java.util.Collection;
@@ -41,7 +40,7 @@ import java.util.Set;
 class UnomiPropertyTypeKeyword extends AbstractKeyword {
 
     private final ProfileService profileService;
-    private final SchemaRegistryImpl schemaRegistry;
+    private final SchemaServiceImpl schemaService;
 
     private static final class UnomiPropertyTypeJsonValidator extends AbstractJsonValidator {
 
@@ -50,17 +49,17 @@ class UnomiPropertyTypeKeyword extends AbstractKeyword {
         JsonSchema parentSchema;
         ValidationContext validationContext;
         ProfileService profileService;
-        SchemaRegistryImpl schemaRegistry;
+        SchemaServiceImpl schemaService;
 
         public UnomiPropertyTypeJsonValidator(String keyword, String schemaPath, JsonNode schemaNode, JsonSchema parentSchema,
-                ValidationContext validationContext, ProfileService profileService, SchemaRegistryImpl schemaRegistry) {
+                ValidationContext validationContext, ProfileService profileService, SchemaServiceImpl schemaService) {
             super(keyword);
             this.schemaPath = schemaPath;
             this.schemaNode = schemaNode;
             this.parentSchema = parentSchema;
             this.validationContext = validationContext;
             this.profileService = profileService;
-            this.schemaRegistry = schemaRegistry;
+            this.schemaService = schemaService;
         }
 
         @Override
@@ -76,7 +75,7 @@ class UnomiPropertyTypeKeyword extends AbstractKeyword {
                 } else {
                     // @todo further validation, if it can be used in this context (event, profile, session)
                     String valueTypeId = propertyType.getValueTypeId();
-                    JsonSchema jsonSchema = schemaRegistry
+                    JsonSchema jsonSchema = schemaService
                             .getJsonSchema("https://unomi.apache.org/schemas/json/values/" + valueTypeId + ".json");
                     if (jsonSchema == null) {
                         validationMessages.add(buildValidationMessage(CustomErrorMessageType
@@ -112,16 +111,16 @@ class UnomiPropertyTypeKeyword extends AbstractKeyword {
         }
     }
 
-    public UnomiPropertyTypeKeyword(ProfileService profileService, SchemaRegistryImpl schemaRegistry) {
+    public UnomiPropertyTypeKeyword(ProfileService profileService, SchemaServiceImpl schemaService) {
         super("unomiPropertyTypes");
         this.profileService = profileService;
-        this.schemaRegistry = schemaRegistry;
+        this.schemaService = schemaService;
     }
 
     @Override
     public JsonValidator newValidator(String schemaPath, JsonNode schemaNode, JsonSchema parentSchema, ValidationContext validationContext)
             throws JsonSchemaException, Exception {
         return new UnomiPropertyTypeJsonValidator(this.getValue(), schemaPath, schemaNode, parentSchema, validationContext, profileService,
-                schemaRegistry);
+                schemaService);
     }
 }
