@@ -26,7 +26,7 @@ import org.apache.unomi.api.ContextRequest;
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.services.PersonalizationService;
-import org.apache.unomi.api.services.SchemaRegistry;
+import org.apache.unomi.api.services.SchemaService;
 import org.apache.unomi.rest.validation.request.InvalidRequestException;
 
 import java.io.IOException;
@@ -39,22 +39,22 @@ import java.util.Map;
  */
 public class ContextRequestDeserializer extends StdDeserializer<ContextRequest> {
 
-    private final SchemaRegistry schemaRegistry;
+    private final SchemaService schemaService;
 
-    public ContextRequestDeserializer(SchemaRegistry schemaRegistry) {
+    public ContextRequestDeserializer(SchemaService schemaRegistry) {
         this(null, schemaRegistry);
     }
 
-    public ContextRequestDeserializer(Class<ContextRequest> vc, SchemaRegistry schemaRegistry) {
+    public ContextRequestDeserializer(Class<ContextRequest> vc, SchemaService schemaRegistry) {
         super(vc);
-        this.schemaRegistry = schemaRegistry;
+        this.schemaService = schemaRegistry;
     }
 
     @Override
     public ContextRequest deserialize(JsonParser jsonParser, DeserializationContext context) throws IOException, JsonProcessingException {
         JsonNode node = jsonParser.getCodec().readTree(jsonParser);
         // Validate schema on it
-        if (!schemaRegistry.isValid(node, "https://unomi.apache.org/schemas/json/contextrequest/1-0-0")) {
+        if (!schemaService.isValid(node, "https://unomi.apache.org/schemas/json/contextrequest/1-0-0")) {
             throw new InvalidRequestException("Invalid received data", "Invalid received data");
         }
         ContextRequest cr = new ContextRequest();
@@ -81,7 +81,7 @@ public class ContextRequestDeserializer extends StdDeserializer<ContextRequest> 
             ArrayNode events = (ArrayNode) eventsNode;
             List<Event> filteredEvents = new ArrayList<>();
             for (JsonNode event : events) {
-                if (schemaRegistry.isValid(event, "https://unomi.apache.org/schemas/json/events/" + event.get("eventType").textValue() + "/1-0-0")) {
+                if (schemaService.isValid(event, "https://unomi.apache.org/schemas/json/events/" + event.get("eventType").textValue() + "/1-0-0")) {
                     filteredEvents.add(jsonParser.getCodec().treeToValue(event, Event.class));
                 }
             }

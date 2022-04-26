@@ -32,7 +32,7 @@ import org.apache.cxf.message.Message;
 import org.apache.unomi.api.ContextRequest;
 import org.apache.unomi.api.EventsCollectorRequest;
 import org.apache.unomi.api.services.ConfigSharingService;
-import org.apache.unomi.api.services.SchemaRegistry;
+import org.apache.unomi.api.services.SchemaService;
 import org.apache.unomi.rest.authentication.AuthenticationFilter;
 import org.apache.unomi.rest.authentication.AuthorizingInterceptor;
 import org.apache.unomi.rest.authentication.RestAuthenticationConfig;
@@ -77,7 +77,7 @@ public class RestServer {
     private List<ExceptionMapper> exceptionMappers = new ArrayList<>();
     private BeanValidationService beanValidationService;
     private ConfigSharingService configSharingService;
-    private SchemaRegistry schemaRegistry;
+    private SchemaService schemaService;
 
     // refresh
     private long timeOfLastUpdate = System.currentTimeMillis();
@@ -87,8 +87,8 @@ public class RestServer {
     private static final QName UNOMI_REST_SERVER_END_POINT_NAME = new QName("http://rest.unomi.apache.org/", "UnomiRestServerEndPoint");
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY)
-    public void setSchemaRegistry(SchemaRegistry schemaRegistry) {
-        this.schemaRegistry = schemaRegistry;
+    public void setSchemaService(SchemaService schemaService) {
+        this.schemaService = schemaService;
     }
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY)
@@ -212,8 +212,8 @@ public class RestServer {
         List<Interceptor<? extends Message>> outInterceptors = new ArrayList<>();
 
         Map<Class, StdDeserializer<?>> desers = new HashMap<>();
-        desers.put(ContextRequest.class, new ContextRequestDeserializer(schemaRegistry));
-        desers.put(EventsCollectorRequest.class, new EventCollectorRequestDeserializer(schemaRegistry));
+        desers.put(ContextRequest.class, new ContextRequestDeserializer(schemaService));
+        desers.put(EventsCollectorRequest.class, new EventCollectorRequestDeserializer(schemaService));
 
 
         // Build the server
