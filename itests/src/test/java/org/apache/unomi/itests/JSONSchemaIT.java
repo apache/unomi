@@ -185,7 +185,7 @@ public class JSONSchemaIT extends BaseIT {
         assertTrue("JSON schema extension list should be empty", jsonSchemaExtensions.isEmpty());
         assertTrue("JSON schema list should be empty", jsonSchemas.isEmpty());
 
-        post(JSONSCHEMA_URL, "schemas/events/test-event-for-extension.json", ContentType.APPLICATION_JSON);
+        post(JSONSCHEMA_URL, "schemas/events/test-event-for-extension.json", ContentType.TEXT_PLAIN);
 
         keepTrying("Couldn't find json schemas", () -> get(JSONSCHEMA_URL, List.class), (list) -> !list.isEmpty(), DEFAULT_TRYING_TIMEOUT,
                 DEFAULT_TRYING_TRIES);

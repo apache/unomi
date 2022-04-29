@@ -6,7 +6,6 @@
     "id": "extension-test-event-1",
     "name": "The name of the extension"
   },
-  "name": "Name of the event",
   "priority": "10",
   "extension": {
     "allOf": [
