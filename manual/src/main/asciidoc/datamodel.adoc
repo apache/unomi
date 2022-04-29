@@ -1066,7 +1066,7 @@ Inherits all the fields from: <<MetadataItem>>
 |===
 | *Field name* | *Type* | *Description*
 
-| elements | ScoringElement array | A ScoringElement is composed of: a Condition and a score value to increment. Each element defines a separate condition (tree) that will increment the defined score for this scoring plan, making it possible to have completely different conditions to augment a score
+| elements | ScoringElement array | A ScoringElement is composed of: a Condition and a score value to increment. Each element defines a separate condition (tree) that will increment the defined score for this scoring plan, making it possible to have completely different conditions to augment a score.
 
 |===
 
