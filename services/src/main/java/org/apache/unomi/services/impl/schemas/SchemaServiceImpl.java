@@ -34,8 +34,8 @@ import com.networknt.schema.uri.URIFetcher;
 import org.apache.commons.io.IOUtils;
 import org.apache.unomi.api.Metadata;
 import org.apache.unomi.api.PartialList;
-import org.apache.unomi.api.schema.JSONSchemaExtension;
 import org.apache.unomi.api.schema.JSONSchemaEntity;
+import org.apache.unomi.api.schema.JSONSchemaExtension;
 import org.apache.unomi.api.schema.json.JSONSchema;
 import org.apache.unomi.api.schema.json.JSONTypeFactory;
 import org.apache.unomi.api.services.ProfileService;
@@ -309,6 +309,8 @@ public class SchemaServiceImpl implements SchemaService {
                 mergeIntoSchema(targetNode, nodeToAdd);
             } else if (targetNode instanceof MissingNode) {
                 ((ObjectNode) schemaNode).set(path.replace("/", ""), nodeToAdd);
+            } else {
+                logger.warn("Changing value for a single value is not supported Property : {}", entry.getKey());
             }
         });
         return schemaNode;
