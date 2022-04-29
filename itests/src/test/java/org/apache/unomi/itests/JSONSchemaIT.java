@@ -139,7 +139,7 @@ public class JSONSchemaIT extends BaseIT {
         List jsonSchemaExtensions = get(JSONSCHEMAEXTENSION_URL, List.class);
         assertTrue("JSON schema extension list should be empty", jsonSchemaExtensions.isEmpty());
 
-        post(JSONSCHEMAEXTENSION_URL, "schemas/extension/extension-test-event-example.json", ContentType.TEXT_PLAIN);
+        post(JSONSCHEMAEXTENSION_URL, "schemas/extension/extension-test-event-example.json", ContentType.APPLICATION_JSON);
 
         jsonSchemaExtensions = keepTrying("Couldn't find json extensions", () -> get(JSONSCHEMAEXTENSION_URL, List.class),
                 (list) -> !list.isEmpty(), DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
@@ -153,7 +153,7 @@ public class JSONSchemaIT extends BaseIT {
         assertTrue("JSON schema list should be empty", persistenceService.getAllItems(JSONSchemaExtension.class).isEmpty());
 
         CloseableHttpResponse response = post(JSONSCHEMAEXTENSION_URL, "schemas/extension/extension-test-event-example.json",
-                ContentType.TEXT_PLAIN);
+                ContentType.APPLICATION_JSON);
 
         assertEquals("Invalid response code", 200, response.getStatusLine().getStatusCode());
 
@@ -165,7 +165,7 @@ public class JSONSchemaIT extends BaseIT {
     public void testDeleteJSONSchemaExtension() throws InterruptedException {
         assertTrue("JSON schema list should be empty", persistenceService.getAllItems(JSONSchemaExtension.class).isEmpty());
 
-        post(JSONSCHEMAEXTENSION_URL, "schemas/extension/extension-test-event-example.json", ContentType.TEXT_PLAIN);
+        post(JSONSCHEMAEXTENSION_URL, "schemas/extension/extension-test-event-example.json", ContentType.APPLICATION_JSON);
 
         keepTrying("Couldn't find json schemas extension", () -> get(JSONSCHEMAEXTENSION_URL, List.class), (list) -> !list.isEmpty(),
                 DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
@@ -185,18 +185,13 @@ public class JSONSchemaIT extends BaseIT {
         assertTrue("JSON schema extension list should be empty", jsonSchemaExtensions.isEmpty());
         assertTrue("JSON schema list should be empty", jsonSchemas.isEmpty());
 
-        post(JSONSCHEMA_URL, "schemas/events/test-event-for-extension.json", ContentType.TEXT_PLAIN);
+        post(JSONSCHEMA_URL, "schemas/events/test-event-for-extension.json", ContentType.APPLICATION_JSON);
 
         keepTrying("Couldn't find json schemas", () -> get(JSONSCHEMA_URL, List.class), (list) -> !list.isEmpty(), DEFAULT_TRYING_TIMEOUT,
                 DEFAULT_TRYING_TRIES);
 
-        post(JSONSCHEMAEXTENSION_URL, "schemas/extension/extension-test-event-example.json", ContentType.TEXT_PLAIN);
-
-        keepTrying("Couldn't find json schemas extension", () -> get(JSONSCHEMAEXTENSION_URL, List.class), (list) -> !list.isEmpty(),
-                DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
-
         CloseableHttpResponse response = post(JSONSCHEMAEXTENSION_URL, "schemas/extension/extension-test-event-example.json",
-                ContentType.TEXT_PLAIN);
+                ContentType.APPLICATION_JSON);
 
         assertEquals("Invalid response code", 200, response.getStatusLine().getStatusCode());
 

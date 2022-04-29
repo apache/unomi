@@ -20,6 +20,7 @@ package org.apache.unomi.api.services;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.apache.unomi.api.Metadata;
 import org.apache.unomi.api.PartialList;
+import org.apache.unomi.api.schema.JSONSchemaExtension;
 import org.apache.unomi.api.schema.json.JSONSchema;
 
 import java.io.IOException;
@@ -117,9 +118,9 @@ public interface SchemaService {
     /**
      * Save an extension of a JSON schema
      *
-     * @param extension as String value
+     * @param jsonSchemaExtension extension
      */
-    void saveExtension(String extension) throws IOException;
+    void saveExtension(JSONSchemaExtension jsonSchemaExtension);
 
     /**
      * Delete an extension

@@ -26,7 +26,7 @@ public class JSONSchemaExtension extends MetadataItem {
     public static final String ITEM_TYPE = "jsonSchemaExtension";
 
     private String id;
-    private String extension;
+    private Object extension;
     private double priority;
     private String schemaId;
 
@@ -38,10 +38,10 @@ public class JSONSchemaExtension extends MetadataItem {
      *
      * @param id        id of the extension
      * @param schemaId  id of the schema
-     * @param extension as string
+     * @param extension as Object
      * @param priority  priority to process the extension
      */
-    public JSONSchemaExtension(String id, String schemaId, String extension, float priority) {
+    public JSONSchemaExtension(String id, String schemaId, Object extension, float priority) {
         super(new Metadata(id));
         this.id = id;
         this.extension = extension;
@@ -57,11 +57,11 @@ public class JSONSchemaExtension extends MetadataItem {
         this.id = id;
     }
 
-    public String getExtension() {
+    public Object getExtension() {
         return extension;
     }
 
-    public void setExtension(String extension) {
+    public void setExtension(Object extension) {
         this.extension = extension;
     }
 

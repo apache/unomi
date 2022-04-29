@@ -189,12 +189,11 @@ public class SchemaServiceImpl implements SchemaService {
 
     @Override
     public void saveExtension(InputStream extensionStream) throws IOException {
-        saveExtension(IOUtils.toString(extensionStream));
+        saveExtension(objectMapper.readValue(extensionStream, JSONSchemaExtension.class));
     }
 
     @Override
-    public void saveExtension(String extension) throws IOException {
-        JSONSchemaExtension jsonSchemaExtension = buildExtension(extension);
+    public void saveExtension(JSONSchemaExtension jsonSchemaExtension) {
         persistenceService.save(jsonSchemaExtension);
         extensionById.put(jsonSchemaExtension.getId(), jsonSchemaExtension);
         findAndUpdateSchemaWithExtension(jsonSchemaExtension.getSchemaId(), jsonSchemaExtension.getId());
@@ -220,21 +219,6 @@ public class SchemaServiceImpl implements SchemaService {
             details.add(definition.getMetadata());
         }
         return new PartialList<>(details, items.getOffset(), items.getPageSize(), items.getTotalSize(), items.getTotalSizeRelation());
-    }
-
-    private JSONSchemaExtension buildExtension(String extension) throws JsonProcessingException {
-        JsonNode jsonNode = objectMapper.readTree(extension);
-        JSONSchemaExtension jsonSchemaExtension = new JSONSchemaExtension();
-        jsonSchemaExtension.setId(jsonNode.get("id").asText());
-        jsonSchemaExtension.setSchemaId(jsonNode.get("schemaId").asText());
-        jsonSchemaExtension.setExtension(jsonNode.get("extension").toString());
-        jsonSchemaExtension.setPriority(jsonNode.get("priority").asDouble());
-        Metadata metadata = new Metadata();
-        metadata.setId(jsonNode.get("id").asText());
-        metadata.setDescription(jsonNode.get("description").asText());
-        metadata.setName(jsonNode.get("name").asText());
-        jsonSchemaExtension.setMetadata(metadata);
-        return jsonSchemaExtension;
     }
 
     @Override
@@ -290,7 +274,7 @@ public class SchemaServiceImpl implements SchemaService {
             if (Objects.nonNull(schema)) {
                 String schemaAsString = objectMapper.writeValueAsString(schemasById.get(schemaId).getSchemaTree());
                 JsonNode mergedSchema = mergeIntoSchema(objectMapper.readTree(schemaAsString),
-                        objectMapper.readTree(extensionById.get(extensionId).getExtension()));
+                        objectMapper.valueToTree(extensionById.get(extensionId).getExtension()));
                 schemasById.put(mergedSchema.get("$id").asText(), buildJSONSchema(jsonSchemaFactory.getSchema(mergedSchema)));
             }
         } catch (JsonProcessingException e) {

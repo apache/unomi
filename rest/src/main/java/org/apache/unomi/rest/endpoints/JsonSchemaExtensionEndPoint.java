@@ -19,6 +19,7 @@ package org.apache.unomi.rest.endpoints;
 
 import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
 import org.apache.unomi.api.Metadata;
+import org.apache.unomi.api.schema.JSONSchemaExtension;
 import org.apache.unomi.api.services.SchemaService;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
@@ -38,7 +39,6 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import java.io.IOException;
 import java.util.List;
 
 @WebService
@@ -83,14 +83,14 @@ public class JsonSchemaExtensionEndPoint {
     /**
      * Save a JSON schema extension
      *
-     * @param jsonSchemaExtension the schema as string to save
+     * @param jsonSchemaExtension the schema extension to save
      * @return Response of the API call
      */
     @POST
     @Path("/")
-    @Consumes(MediaType.TEXT_PLAIN)
+    @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public Response save(String jsonSchemaExtension) throws IOException {
+    public Response save(JSONSchemaExtension jsonSchemaExtension) {
         schemaService.saveExtension(jsonSchemaExtension);
         return Response.ok().build();
     }
@@ -99,7 +99,7 @@ public class JsonSchemaExtensionEndPoint {
      * Deletes a JSON schema extension.
      * The id is a Base64 id as the id have is basically an URL
      *
-     * @param id the identifier of the JSON schema that we want to delete
+     * @param id the identifier of the JSON schema extension that we want to delete
      */
     @DELETE
     @Path("/{id}")
