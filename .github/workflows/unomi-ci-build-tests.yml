@@ -41,11 +41,16 @@ jobs:
           cache: maven
       - name: Integration tests
         run: mvn -ntp clean install -Pintegration-tests
+      - name: Archive code coverage logs
+        uses: actions/upload-artifact@v3
+        with:
+          name: unomi-code-coverage-jdk${{ matrix.java }}-${{ github.run_number }}
+          path: itests/target/site/jacoco
       - name: Archive unomi logs
         uses: actions/upload-artifact@v3
         if: failure()
         with:
-          name: unomi-${{ matrix.java }}-${{ github.run_number }}
+          name: unomi-log-jdk${{ matrix.java }}-${{ github.run_number }}
           path: itests/target/exam/**/data/log
       - name: Publish Test Report
         uses: mikepenz/action-junit-report@v3
