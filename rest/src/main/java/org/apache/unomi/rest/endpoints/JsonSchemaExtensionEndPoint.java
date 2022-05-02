@@ -42,7 +42,8 @@ import javax.ws.rs.core.Response;
 import java.util.List;
 
 @WebService
-@Produces(MediaType.APPLICATION_JSON + ";charset=UTF-8")
+@Consumes(MediaType.APPLICATION_JSON)
+@Produces(MediaType.APPLICATION_JSON)
 @CrossOriginResourceSharing(allowAllOrigins = true, allowCredentials = true)
 @Path("/jsonSchemaExtension")
 @Component(service = JsonSchemaExtensionEndPoint.class, property = "osgi.jaxrs.resource=true")
@@ -88,8 +89,6 @@ public class JsonSchemaExtensionEndPoint {
      */
     @POST
     @Path("/")
-    @Consumes(MediaType.APPLICATION_JSON)
-    @Produces(MediaType.APPLICATION_JSON)
     public Response save(JSONSchemaExtension jsonSchemaExtension) {
         schemaService.saveExtension(jsonSchemaExtension);
         return Response.ok().build();

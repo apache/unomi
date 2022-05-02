@@ -1,0 +1,8 @@
+{
+  "properties": {
+    "extension": {
+      "type": "object",
+      "dynamic": false
+    }
+  }
+}
