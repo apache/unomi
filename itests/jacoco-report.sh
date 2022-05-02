@@ -18,23 +18,27 @@
 #
 ################################################################################
 echo "Copy sources and classes locally"
-for project in `echo ../*/`
-do
+for project in $(echo ../*/); do
   echo "  get sources for $project"
-  if [[ -d ${project}target ]]
-  then
+  if [[ -d ${project}target ]]; then
     echo "    sources and target found for $project"
     cp -rf ${project}src/main src
     cp -rf ${project}target/classes target
-    for subproject in `echo ${project}*/`
-    do
+    for subproject in $(echo ${project}*/); do
       echo "      get sources for sub $subproject"
-      if [[ -d ${subproject}target/classes ]]
-      then
-        echo "        sources and target found for $project"
+      if [[ -d ${subproject}target/classes ]]; then
+        echo "        sources and target found for $subproject"
         cp -rf ${subproject}src/main src
         cp -rf ${subproject}target/classes target
       fi
+      for subsubproject in $(echo ${subproject}*/); do
+        echo "      get sources for sub $subsubproject"
+        if [[ -d ${subsubproject}target/classes ]]; then
+          echo "        sources and target found for $subsubproject"
+          cp -rf ${subsubproject}src/main src
+          cp -rf ${subsubproject}target/classes target
+        fi
+      done
     done
   fi
 done
