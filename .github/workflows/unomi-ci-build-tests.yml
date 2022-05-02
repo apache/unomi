@@ -14,6 +14,7 @@ jobs:
     name: Execute unit tests
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         java: [ 1.8, 11]
     steps:
@@ -30,6 +31,7 @@ jobs:
     name: Execute integration tests
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         java: [ 1.8, 11]
     steps:

@@ -17,11 +17,26 @@
 #    limitations under the License.
 #
 ################################################################################
-echo "Copy classes locally"
-for project in api common graphql/cxs-impl metrics persistence-elasticsearch/core persistence-spi plugins/baseplugin rest wab
+echo "Copy sources and classes locally"
+for project in `echo ../*/`
 do
-  cp -rf ../$project/src/main src
-  cp -rf ../$project/target/classes target
+  echo "  get sources for $project"
+  if [[ -d ${project}target ]]
+  then
+    echo "    sources and target found for $project"
+    cp -rf ${project}src/main src
+    cp -rf ${project}target/classes target
+    for subproject in `echo ${project}*/`
+    do
+      echo "      get sources for sub $subproject"
+      if [[ -d ${subproject}target/classes ]]
+      then
+        echo "        sources and target found for $project"
+        cp -rf ${subproject}src/main src
+        cp -rf ${subproject}target/classes target
+      fi
+    done
+  fi
 done
 mvn jacoco:report -Dit.code.coverage=true
 echo "clean up src/main"
