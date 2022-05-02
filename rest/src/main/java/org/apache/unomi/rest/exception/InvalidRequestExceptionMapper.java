@@ -16,7 +16,6 @@
  */
 package org.apache.unomi.rest.exception;
 
-import org.apache.unomi.rest.validation.request.InvalidRequestException;
 import org.osgi.service.component.annotations.Component;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,7 +32,8 @@ public class InvalidRequestExceptionMapper implements ExceptionMapper<InvalidReq
 
     @Override
     public Response toResponse(InvalidRequestException exception) {
-        logger.error(exception.getMessage(), exception);
+        logger.error("{} - set InvalidRequestExceptionMapper to debug level to get full error", exception.getMessage());
+        logger.debug("error", exception);
 
         return Response.status(Response.Status.BAD_REQUEST).header("Content-Type", MediaType.TEXT_PLAIN)
                 .entity("Request rejected by the server because: " + exception.getResponseMessage()).build();

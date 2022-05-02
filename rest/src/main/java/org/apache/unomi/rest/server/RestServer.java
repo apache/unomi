@@ -26,8 +26,6 @@ import org.apache.cxf.jaxrs.JAXRSServerFactoryBean;
 import org.apache.cxf.jaxrs.openapi.OpenApiCustomizer;
 import org.apache.cxf.jaxrs.openapi.OpenApiFeature;
 import org.apache.cxf.jaxrs.security.SimpleAuthorizingFilter;
-import org.apache.cxf.jaxrs.validation.JAXRSBeanValidationInInterceptor;
-import org.apache.cxf.jaxrs.validation.JAXRSBeanValidationOutInterceptor;
 import org.apache.cxf.message.Message;
 import org.apache.unomi.api.ContextRequest;
 import org.apache.unomi.api.EventsCollectorRequest;
@@ -37,10 +35,8 @@ import org.apache.unomi.rest.authentication.AuthenticationFilter;
 import org.apache.unomi.rest.authentication.AuthorizingInterceptor;
 import org.apache.unomi.rest.authentication.RestAuthenticationConfig;
 import org.apache.unomi.rest.deserializers.ContextRequestDeserializer;
-import org.apache.unomi.rest.deserializers.EventCollectorRequestDeserializer;
+import org.apache.unomi.rest.deserializers.EventsCollectorRequestDeserializer;
 import org.apache.unomi.rest.server.provider.RetroCompatibilityParamConverterProvider;
-import org.apache.unomi.rest.validation.JAXRSBeanValidationInInterceptorOverride;
-import org.apache.unomi.rest.validation.BeanValidationService;
 import org.apache.unomi.rest.validation.request.RequestValidatorInterceptor;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.Filter;
@@ -75,7 +71,6 @@ public class RestServer {
     private Bus serverBus;
     private RestAuthenticationConfig restAuthenticationConfig;
     private List<ExceptionMapper> exceptionMappers = new ArrayList<>();
-    private BeanValidationService beanValidationService;
     private ConfigSharingService configSharingService;
     private SchemaService schemaService;
 
@@ -111,11 +106,6 @@ public class RestServer {
         this.exceptionMappers.add(exceptionMapper);
         timeOfLastUpdate = System.currentTimeMillis();
         refreshServer();
-    }
-
-    @Reference(cardinality = ReferenceCardinality.MANDATORY)
-    public void setBeanValidationService(BeanValidationService beanValidationService) {
-        this.beanValidationService = beanValidationService;
     }
 
     public void removeExceptionMapper(ExceptionMapper exceptionMapper) {
@@ -213,7 +203,7 @@ public class RestServer {
 
         Map<Class, StdDeserializer<?>> desers = new HashMap<>();
         desers.put(ContextRequest.class, new ContextRequestDeserializer(schemaService));
-        desers.put(EventsCollectorRequest.class, new EventCollectorRequestDeserializer(schemaService));
+        desers.put(EventsCollectorRequest.class, new EventsCollectorRequestDeserializer(schemaService));
 
 
         // Build the server
@@ -250,14 +240,6 @@ public class RestServer {
         customizer.setDynamicBasePath(true);
         openApiFeature.setCustomizer(customizer);
         jaxrsServerFactoryBean.getFeatures().add(openApiFeature);
-
-        // Hibernate validator config
-        JAXRSBeanValidationInInterceptor beanValidationInInterceptor = new JAXRSBeanValidationInInterceptorOverride();
-        JAXRSBeanValidationOutInterceptor beanValidationOutInterceptor = new JAXRSBeanValidationOutInterceptor();
-        beanValidationInInterceptor.setProvider(beanValidationService.getBeanValidationProvider());
-        beanValidationOutInterceptor.setProvider(beanValidationService.getBeanValidationProvider());
-        inInterceptors.add(beanValidationInInterceptor);
-        outInterceptors.add(beanValidationOutInterceptor);
 
         // Request validator
         inInterceptors.add(new RequestValidatorInterceptor(configSharingService));
