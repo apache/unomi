@@ -11,7 +11,7 @@
   "properties": {
     "properties" : {
       "type" : "object",
-      "propertyTypes" : [ "profile" ],
+      "unomiPropertyTypes" : [ "profiles" ],
       "maxProperties": 50
     },
     "systemProperties" : {

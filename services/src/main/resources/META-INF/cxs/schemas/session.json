@@ -17,6 +17,7 @@
     },
     "properties" : {
       "type" : "object",
+      "unomiPropertyTypes" : [ "sessions" ],
       "maxProperties": 50
     },
     "systemProperties" : {
