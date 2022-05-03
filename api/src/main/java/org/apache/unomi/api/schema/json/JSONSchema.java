@@ -33,6 +33,9 @@ public class JSONSchema extends JSONType implements PluginType {
     private String name;
     private String version;
 
+    private String extensionSchemaId;
+    private String extensionOperator;
+
     public JSONSchema(Map<String, Object> schemaTree, JSONTypeFactory jsonTypeFactory) {
         super(schemaTree, jsonTypeFactory);
         schemaId = (String) schemaTree.get("$id");
@@ -42,6 +45,11 @@ public class JSONSchema extends JSONType implements PluginType {
             vendor = (String) self.get("vendor");
             version = (String) self.get("version");
             target = (String) self.get("target");
+            if (self.containsKey("unomiExtends")) {
+                Map<String,Object> unomiExtends = (Map<String,Object>) self.get("unomiExtends");
+                extensionSchemaId = (String) unomiExtends.get("schemaId");
+                extensionOperator = (String) unomiExtends.get("operator");
+            }
         }
     }
 
@@ -91,6 +99,22 @@ public class JSONSchema extends JSONType implements PluginType {
 
     public void setTarget(String target) {
         this.target = target;
+    }
+
+    public String getExtensionSchemaId() {
+        return extensionSchemaId;
+    }
+
+    public void setExtensionSchemaId(String extensionSchemaId) {
+        this.extensionSchemaId = extensionSchemaId;
+    }
+
+    public String getExtensionOperator() {
+        return extensionOperator;
+    }
+
+    public void setExtensionOperator(String extensionOperator) {
+        this.extensionOperator = extensionOperator;
     }
 
     public List<JSONType> getRootTypes() {

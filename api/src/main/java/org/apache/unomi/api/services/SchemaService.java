@@ -71,6 +71,13 @@ public interface SchemaService {
     List<JSONSchema> getSchemasByTarget(String target);
 
     /**
+     * Return a list of schemas that are extensions of the given schema
+     * @param schemaId the ID of the schema to retrieve extensions for
+     * @return a list of schemas that extend the specified schemaId, or an empty list of no schemas extend it
+     */
+    List<JSONSchema> getSchemaExtensions(String schemaId);
+
+    /**
      * Save a new schema or update a schema
      *
      * @param schema as a String value

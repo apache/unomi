@@ -236,6 +236,10 @@ public class SchemaServiceImpl implements SchemaService {
         return schemasById.get(schemaId);
     }
 
+    public List<JSONSchema> getSchemaExtensions(String schemaId) {
+        return schemasById.values().stream().filter(schema -> schema.getExtensionSchemaId().equals(schemaId)).collect(Collectors.toList());
+    }
+
     private JSONSchema buildJSONSchema(JsonSchema jsonSchema) {
         return Optional.of(jsonSchema).map(jsonSchemaToProcess -> {
             try {
