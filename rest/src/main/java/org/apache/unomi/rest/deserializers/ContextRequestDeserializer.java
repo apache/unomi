@@ -27,7 +27,7 @@ import org.apache.unomi.api.Event;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.services.PersonalizationService;
 import org.apache.unomi.api.services.SchemaService;
-import org.apache.unomi.rest.validation.request.InvalidRequestException;
+import org.apache.unomi.rest.exception.InvalidRequestException;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -55,7 +55,7 @@ public class ContextRequestDeserializer extends StdDeserializer<ContextRequest> 
         JsonNode node = jsonParser.getCodec().readTree(jsonParser);
         // Validate schema on it
         if (!schemaService.isValid(node, "https://unomi.apache.org/schemas/json/contextrequest/1-0-0")) {
-            throw new InvalidRequestException("Invalid received data", "Invalid received data");
+            throw new InvalidRequestException("Invalid Context request object", "Invalid received data");
         }
         ContextRequest cr = new ContextRequest();
         if (node.get("requireSegments") != null) {

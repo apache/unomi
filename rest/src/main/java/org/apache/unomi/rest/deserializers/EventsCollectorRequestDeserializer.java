@@ -25,7 +25,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.EventsCollectorRequest;
 import org.apache.unomi.api.services.SchemaService;
-import org.apache.unomi.rest.validation.request.InvalidRequestException;
+import org.apache.unomi.rest.exception.InvalidRequestException;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -34,15 +34,15 @@ import java.util.List;
 /**
  * Custom deserializer for EventCollectorRequest that do validate the events using JSon Schema
  */
-public class EventCollectorRequestDeserializer extends StdDeserializer<EventsCollectorRequest> {
+public class EventsCollectorRequestDeserializer extends StdDeserializer<EventsCollectorRequest> {
 
     private final SchemaService schemaService;
 
-    public EventCollectorRequestDeserializer(SchemaService schemaRegistry) {
+    public EventsCollectorRequestDeserializer(SchemaService schemaRegistry) {
         this(null, schemaRegistry);
     }
 
-    public EventCollectorRequestDeserializer(Class<EventsCollectorRequest> vc, SchemaService schemaService) {
+    public EventsCollectorRequestDeserializer(Class<EventsCollectorRequest> vc, SchemaService schemaService) {
         super(vc);
         this.schemaService = schemaService;
     }
@@ -51,7 +51,7 @@ public class EventCollectorRequestDeserializer extends StdDeserializer<EventsCol
     public EventsCollectorRequest deserialize(JsonParser jsonParser, DeserializationContext context) throws IOException, JsonProcessingException {
         JsonNode node = jsonParser.getCodec().readTree(jsonParser);
         if (!schemaService.isValid(node, "https://unomi.apache.org/schemas/json/eventscollectorrequest/1-0-0")) {
-            throw new InvalidRequestException("Invalid received data", "Invalid received data");
+            throw new InvalidRequestException("Invalid events collector object", "Invalid received data");
         }
 
         // Validate schema on each event

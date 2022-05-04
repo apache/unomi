@@ -1,0 +1,12 @@
+{
+  "$id": "https://unomi.apache.org/schemas/json/cookie/1-0-0",
+  "$schema": "https://json-schema.org/draft/2019-09/schema",
+  "title": "Cookie",
+  "type": "object",
+  "properties": {
+    "profileIdCookieName" : {
+      "type" : "string",
+      "pattern" : "^(\\w|[-_@\\.]){0,60}$"
+    }
+  }
+}

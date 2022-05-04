@@ -14,24 +14,29 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.rest.validation;
-
-import static java.util.Collections.singletonList;
-import org.hibernate.validator.HibernateValidator;
-
-import javax.validation.ValidationProviderResolver;
-import javax.validation.spi.ValidationProvider;
-import java.util.List;
+package org.apache.unomi.rest.exception;
 
 /**
- * OSGi-friendly implementation of {@code javax.validation.ValidationProviderResolver} returning
- * {@code org.hibernate.validator.HibernateValidator} instance.
- *
+ * Exception throw when the request exceed the configured limit size
  */
-public class HibernateValidationProviderResolver implements ValidationProviderResolver {
+public class InvalidRequestException extends RuntimeException {
 
-    @Override
-    public List<ValidationProvider<?>> getValidationProviders() {
-        return singletonList(new HibernateValidator());
+    /**
+     * This will be the message return to the client in the body request in case
+     */
+    private final String responseMessage;
+
+    /**
+     * Build an invalid request
+     * @param message message in the logs. It contains detailed information
+     * @param responseMessage message in the response, sent to the browser, must be vague as possible.
+     */
+    public InvalidRequestException(String message, String responseMessage) {
+        super(message);
+        this.responseMessage = responseMessage;
+    }
+
+    public String getResponseMessage() {
+        return responseMessage;
     }
 }

@@ -10,10 +10,11 @@
   ],
   "properties": {
     "events" : {
-      "type": ["null", "array"],
+      "type": ["array"],
       "items": {
         "$ref": "https://unomi.apache.org/schemas/json/event/1-0-0"
-      }
+      },
+      "minItems": 1
     },
     "sessionId" : {
       "type": ["null", "string"],

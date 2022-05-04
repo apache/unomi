@@ -28,6 +28,7 @@ import org.apache.unomi.api.services.ConfigSharingService;
 import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.api.services.PrivacyService;
 import org.apache.unomi.api.services.ProfileService;
+import org.apache.unomi.rest.exception.InvalidRequestException;
 import org.apache.unomi.rest.models.EventCollectorResponse;
 import org.apache.unomi.rest.service.RestServiceUtils;
 import org.apache.unomi.utils.Changes;
@@ -88,19 +89,22 @@ public class EventsCollectorEndpoint {
 
     @GET
     @Path("/eventcollector")
-    public EventCollectorResponse collectAsGet(@QueryParam("payload") @NotNull @Valid EventsCollectorRequest eventsCollectorRequest,
+    public EventCollectorResponse collectAsGet(@QueryParam("payload") EventsCollectorRequest eventsCollectorRequest,
                                                @QueryParam("timestamp") Long timestampAsString) {
         return doEvent(eventsCollectorRequest, timestampAsString);
     }
 
     @POST
     @Path("/eventcollector")
-    public EventCollectorResponse collectAsPost(@NotNull @Valid EventsCollectorRequest eventsCollectorRequest,
+    public EventCollectorResponse collectAsPost(EventsCollectorRequest eventsCollectorRequest,
             @QueryParam("timestamp") Long timestampAsLong) {
         return doEvent(eventsCollectorRequest, timestampAsLong);
     }
 
     private EventCollectorResponse doEvent(EventsCollectorRequest eventsCollectorRequest, Long timestampAsLong) {
+        if (eventsCollectorRequest == null) {
+            throw new InvalidRequestException("events collector cannot be empty", "Invalid received data");
+        }
         Date timestamp = new Date();
         if (timestampAsLong != null) {
             timestamp = new Date(timestampAsLong);
