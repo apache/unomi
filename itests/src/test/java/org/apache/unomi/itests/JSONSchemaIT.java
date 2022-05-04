@@ -132,7 +132,7 @@ public class JSONSchemaIT extends BaseIT {
 
     @Test
     public void testSaveSchemaWithInvalidName() throws IOException {
-        assertTrue("JSON schema list should be empty", persistenceService.getAllItems(JsonSchemaEntity.class).isEmpty());
+        assertTrue("JSON schema list should be empty", persistenceService.getAllItems(UnomiJSONSchema.class).isEmpty());
         try (CloseableHttpResponse response = post(JSONSCHEMA_URL, "schemas/events/test-invalid-name.json", ContentType.TEXT_PLAIN)) {
             assertEquals("Save should have failed", 500, response.getStatusLine().getStatusCode());
         }
@@ -176,7 +176,7 @@ public class JSONSchemaIT extends BaseIT {
         CloseableHttpResponse response = delete(JSONSCHEMAEXTENSION_URL + "/extension-test-event-1");
         assertEquals("Invalid response code", 204, response.getStatusLine().getStatusCode());
 
-        keepTrying("wait for empty list of schemas extensions", () -> get(JSONSCHEMA_URL, List.class), List::isEmpty,
+        keepTrying("wait for empty list of schemas extensions", () -> get(JSONSCHEMAEXTENSION_URL, List.class), List::isEmpty,
                 DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
     }
 
