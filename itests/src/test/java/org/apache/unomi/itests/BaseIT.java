@@ -73,6 +73,9 @@ import javax.net.ssl.X509TrustManager;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
@@ -259,9 +262,15 @@ public abstract class BaseIT {
         }
 
         // Jacoco setup
-        final String jacocoOption = "-javaagent:" + System.getProperty("user.dir") + "/target/jacoco/lib/jacocoagent.jar=destfile=" + System.getProperty("user.dir") + "/target/jacoco.exec,includes=org.apache.unomi.*";
-        LOGGER.info("set jacoco java agent: {}", jacocoOption);
-        options.add(new VMOption(jacocoOption));
+        final String agentFile = System.getProperty("user.dir") + "/target/jacoco/lib/jacocoagent.jar";
+        Path path = Paths.get(agentFile);
+        if (Files.exists(path)) {
+            final String jacocoOption = "-javaagent:" + agentFile + "=destfile=" + System.getProperty("user.dir") + "/target/jacoco.exec,includes=org.apache.unomi.*";
+            LOGGER.info("set jacoco java agent: {}", jacocoOption);
+            options.add(new VMOption(jacocoOption));
+        } else {
+            LOGGER.warn("Unable to set jacoco agent as {} was not found", agentFile);
+        }
 
         if (JavaVersionUtil.getMajorVersion() >= 9) {
             Option[] jdk9PlusOptions = new Option[]{

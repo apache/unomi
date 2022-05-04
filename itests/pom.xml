@@ -176,26 +176,10 @@
                                         https://search.maven.org/remotecontent?filepath=org/jacoco/jacoco/0.8.8/jacoco-0.8.8.zip
                                     </url>
                                     <outputFileName>jacoco.zip</outputFileName>
-                                    <!-- default target location, just to demonstrate the parameter -->
+                                    <unpack>true</unpack>
                                     <outputDirectory>${project.build.directory}/jacoco/</outputDirectory>
+                                    <failOnError>false</failOnError>
                                 </configuration>
-                            </execution>
-                        </executions>
-                    </plugin>
-                    <plugin>
-                        <artifactId>maven-antrun-plugin</artifactId>
-                        <executions>
-                            <execution>
-                                <phase>pre-integration-test</phase>
-                                <configuration>
-                                    <tasks>
-                                        <unzip src="${project.build.directory}/jacoco/jacoco.zip"
-                                               dest="${project.build.directory}/jacoco"/>
-                                    </tasks>
-                                </configuration>
-                                <goals>
-                                    <goal>run</goal>
-                                </goals>
                             </execution>
                         </executions>
                     </plugin>
