@@ -73,6 +73,9 @@ import javax.net.ssl.X509TrustManager;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
@@ -125,7 +128,8 @@ public abstract class BaseIT {
     @Inject
     protected BundleContext bundleContext;
 
-    @Inject @Filter(timeout = 600000)
+    @Inject
+    @Filter(timeout = 600000)
     protected BundleWatcher bundleWatcher;
 
     @Inject
@@ -150,7 +154,7 @@ public abstract class BaseIT {
     }
 
 
-    protected void removeItems(final Class<? extends Item> ...classes) throws InterruptedException {
+    protected void removeItems(final Class<? extends Item>... classes) throws InterruptedException {
         Condition condition = new Condition(definitionsService.getConditionType("matchAllCondition"));
         for (Class<? extends Item> aClass : classes) {
             persistenceService.removeByQuery(condition, aClass);
@@ -257,6 +261,17 @@ public abstract class BaseIT {
             options.add(0, debugConfiguration(port, hold));
         }
 
+        // Jacoco setup
+        final String agentFile = System.getProperty("user.dir") + "/target/jacoco/lib/jacocoagent.jar";
+        Path path = Paths.get(agentFile);
+        if (Files.exists(path)) {
+            final String jacocoOption = "-javaagent:" + agentFile + "=destfile=" + System.getProperty("user.dir") + "/target/jacoco.exec,includes=org.apache.unomi.*";
+            LOGGER.info("set jacoco java agent: {}", jacocoOption);
+            options.add(new VMOption(jacocoOption));
+        } else {
+            LOGGER.warn("Unable to set jacoco agent as {} was not found", agentFile);
+        }
+
         if (JavaVersionUtil.getMajorVersion() >= 9) {
             Option[] jdk9PlusOptions = new Option[]{
                     new VMOption("--add-reads=java.xml=java.logging"),
@@ -338,10 +353,10 @@ public abstract class BaseIT {
         }
     }
 
-    protected String getValidatedBundleJSON(final String resourcePath, Map<String,String> parameters) throws IOException {
+    protected String getValidatedBundleJSON(final String resourcePath, Map<String, String> parameters) throws IOException {
         String jsonString = bundleResourceAsString(resourcePath);
         if (parameters != null && parameters.size() > 0) {
-            for (Map.Entry<String,String> parameterEntry : parameters.entrySet()) {
+            for (Map.Entry<String, String> parameterEntry : parameters.entrySet()) {
                 jsonString = jsonString.replace("###" + parameterEntry.getKey() + "###", parameterEntry.getValue());
             }
         }
@@ -378,7 +393,7 @@ public abstract class BaseIT {
         ServiceListener serviceListener = e -> {
             LOGGER.info("Service {} {}", e.getServiceReference().getProperty("objectClass"), serviceEventTypeToString(e));
             if ((e.getType() == ServiceEvent.UNREGISTERING || e.getType() == ServiceEvent.REGISTERED)
-                    && ((String[])e.getServiceReference().getProperty("objectClass"))[0].equals(serviceName)) {
+                    && ((String[]) e.getServiceReference().getProperty("objectClass"))[0].equals(serviceName)) {
                 latch1.countDown();
             }
         };
@@ -469,7 +484,7 @@ public abstract class BaseIT {
     }
 
     protected CloseableHttpResponse post(final String url, final String resource) {
-        return post(url,resource, JSON_CONTENT_TYPE);
+        return post(url, resource, JSON_CONTENT_TYPE);
     }
 
     protected CloseableHttpResponse delete(final String url) {
@@ -588,6 +603,7 @@ public abstract class BaseIT {
     void registerEventType(String jsonSchemaFileName) {
         post(JSONSCHEMA_URL, "schemas/events/" + jsonSchemaFileName, ContentType.TEXT_PLAIN);
     }
+
     void unRegisterEventType(String jsonSchemaId) {
         delete(JSONSCHEMA_URL + "/" + Base64.getEncoder().encodeToString(jsonSchemaId.getBytes()));
     }

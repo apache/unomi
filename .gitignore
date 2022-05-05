@@ -15,3 +15,4 @@ allCountries.zip
 rest/.miredot-offline.json
 /extensions/salesforce-connector/test.properties
 **/*.versionsBackup
+itests/src/main
