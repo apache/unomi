@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import org.apache.unomi.api.ContextRequest;
 import org.apache.unomi.api.Event;
+import org.apache.unomi.api.Item;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.services.PersonalizationService;
 import org.apache.unomi.api.services.SchemaService;
@@ -58,6 +59,10 @@ public class ContextRequestDeserializer extends StdDeserializer<ContextRequest> 
             throw new InvalidRequestException("Invalid Context request object", "Invalid received data");
         }
         ContextRequest cr = new ContextRequest();
+        if (node.get("source") != null) {
+            cr.setSource(jsonParser.getCodec().treeToValue(node.get("source"), Item.class));
+        }
+
         if (node.get("requireSegments") != null) {
             cr.setRequireSegments(node.get("requireSegments").booleanValue());
         }
