@@ -65,7 +65,10 @@ public class EventsCollectorRequestDeserializer extends StdDeserializer<EventsCo
             }
         }
         EventsCollectorRequest eventsCollectorRequest = new EventsCollectorRequest();
-        eventsCollectorRequest.setSessionId(node.get("sessionId").textValue());
+        final JsonNode sessionId = node.get("sessionId");
+        if (sessionId != null) {
+            eventsCollectorRequest.setSessionId(sessionId.textValue());
+        }
         eventsCollectorRequest.setEvents(filteredEvents);
         return eventsCollectorRequest;
     }
