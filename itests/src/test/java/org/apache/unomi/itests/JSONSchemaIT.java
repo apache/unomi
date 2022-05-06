@@ -72,7 +72,7 @@ public class JSONSchemaIT extends BaseIT {
 
     @After
     public void tearDown() {
-        schemaService.deleteSchema("https://unomi.apache.org/schemas/json/events/test-event-type/1-0-0");
+        schemaService.deleteSchema("https://unomi.apache.org/schemas/json/events/testEventType/1-0-0");
         schemaService.deleteExtension("extension-test-event-1");
     }
 
@@ -112,7 +112,7 @@ public class JSONSchemaIT extends BaseIT {
                 DEFAULT_TRYING_TRIES);
 
         String encodedString = Base64.getEncoder()
-                .encodeToString("https://unomi.apache.org/schemas/json/events/test-event-type/1-0-0".getBytes());
+                .encodeToString("https://unomi.apache.org/schemas/json/events/testEventType/1-0-0".getBytes());
         CloseableHttpResponse response = delete(JSONSCHEMA_URL + "/" + encodedString);
         assertEquals("Invalid response code", 204, response.getStatusLine().getStatusCode());
 
@@ -130,6 +130,13 @@ public class JSONSchemaIT extends BaseIT {
         }
     }
 
+    @Test
+    public void testSaveSchemaWithInvalidName() throws IOException {
+        assertTrue("JSON schema list should be empty", persistenceService.getAllItems(UnomiJSONSchema.class).isEmpty());
+        try (CloseableHttpResponse response = post(JSONSCHEMA_URL, "schemas/events/test-invalid-name.json", ContentType.TEXT_PLAIN)) {
+            assertEquals("Save should have failed", 500, response.getStatusLine().getStatusCode());
+        }
+    }
     @Test
     public void testGetJsonSchemaExtensionsMetadatas() throws InterruptedException {
         List jsonSchemaExtensions = get(JSONSCHEMAEXTENSION_URL, List.class);
@@ -169,7 +176,7 @@ public class JSONSchemaIT extends BaseIT {
         CloseableHttpResponse response = delete(JSONSCHEMAEXTENSION_URL + "/extension-test-event-1");
         assertEquals("Invalid response code", 204, response.getStatusLine().getStatusCode());
 
-        keepTrying("wait for empty list of schemas extensions", () -> get(JSONSCHEMA_URL, List.class), List::isEmpty,
+        keepTrying("wait for empty list of schemas extensions", () -> get(JSONSCHEMAEXTENSION_URL, List.class), List::isEmpty,
                 DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
     }
 

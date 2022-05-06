@@ -3,7 +3,7 @@
   "$schema": "https://json-schema.org/draft/2019-09/schema",
   "self": {
     "vendor": "org.apache.unomi",
-    "name": "events/dummy_event_type",
+    "name": "dummy_event_type",
     "format": "jsonschema",
     "target": "events",
     "version": "1-0-0"

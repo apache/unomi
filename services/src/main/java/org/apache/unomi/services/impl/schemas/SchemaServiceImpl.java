@@ -147,6 +147,12 @@ public class SchemaServiceImpl implements SchemaService {
     @Override
     public void saveSchema(String schema) {
         JsonSchema jsonSchema = jsonSchemaFactory.getSchema(schema);
+        if (jsonSchema.getSchemaNode().at("/self/target").asText().equals("events") && !jsonSchema.getSchemaNode().at("/self/name").asText()
+                .matches("[_A-Za-z][_0-9A-Za-z]*")) {
+            throw new IllegalArgumentException(
+                    "The \"/self/name\" value should match the following regular expression [_A-Za-z][_0-9A-Za-z]* for the Json schema on"
+                            + " events");
+        }
         if (predefinedUnomiJSONSchemaById.get(jsonSchema.getSchemaNode().get("$id").asText()) == null) {
             persistenceService.save(buildUnomiJsonSchema(schema));
             JSONSchema localSchema = buildJSONSchema(jsonSchema);
