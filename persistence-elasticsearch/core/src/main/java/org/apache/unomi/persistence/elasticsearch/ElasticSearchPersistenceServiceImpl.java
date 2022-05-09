@@ -27,6 +27,7 @@ import org.apache.http.auth.UsernamePasswordCredentials;
 import org.apache.http.client.CredentialsProvider;
 import org.apache.http.conn.ssl.NoopHostnameVerifier;
 import org.apache.http.impl.client.BasicCredentialsProvider;
+import org.apache.log4j.Level;
 import org.apache.lucene.search.TotalHits;
 import org.apache.unomi.api.Item;
 import org.apache.unomi.api.PartialList;
@@ -120,7 +121,6 @@ import javax.net.ssl.X509TrustManager;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.lang.reflect.Field;
 import java.net.URL;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
@@ -130,7 +130,6 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 import static org.elasticsearch.index.query.QueryBuilders.termQuery;
 
@@ -202,6 +201,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     private String itemClassesToCache;
     private boolean useBatchingForSave = false;
     private boolean useBatchingForUpdate = true;
+    private boolean errorLogLevelRestClient = true;
     private boolean alwaysOverwrite = true;
     private boolean aggQueryThrowOnMissingDocs = false;
     private Integer aggQueryMaxResponseSizeHttp = null;
@@ -396,8 +396,18 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         this.alwaysOverwrite = alwaysOverwrite;
     }
 
+    public void setErrorLogLevelRestClient(boolean errorLogLevelRestClient) {
+        this.errorLogLevelRestClient = errorLogLevelRestClient;
+    }
 
     public void start() throws Exception {
+
+        // Work around to avoid ES Logs regarding the deprecated [ignore_throttled] parameter
+        if (errorLogLevelRestClient) {
+            org.apache.log4j.Logger.getLogger("org.elasticsearch.client.RestClient").setLevel(Level.ERROR);
+        } else {
+            org.apache.log4j.Logger.getLogger("org.elasticsearch.client.RestClient").setLevel(Level.INFO);
+        }
 
         // on startup
         new InClassLoaderExecute<Object>(null, null, this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
