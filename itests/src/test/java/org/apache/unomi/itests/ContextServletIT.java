@@ -11,7 +11,7 @@
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
+ * See the License for the specific language gtestCreateEventWithPropertiesValidation_Successoverning permissions and
  * limitations under the License
  */
 
@@ -79,9 +79,9 @@ public class ContextServletIT extends BaseIT {
     private final static String JSONSCHEMA_URL = "/cxs/jsonSchema";
 
     private final static String THIRD_PARTY_HEADER_NAME = "X-Unomi-Peer";
-    private final static String TEST_EVENT_TYPE = "test-event-type";
+    private final static String TEST_EVENT_TYPE = "testEventType";
     private final static String TEST_EVENT_TYPE_SCHEMA = "test-event-type.json";
-    private final static String FLOAT_PROPERTY_EVENT_TYPE = "float-property-type";
+    private final static String FLOAT_PROPERTY_EVENT_TYPE = "floatPropertyType";
     private final static String FLOAT_PROPERTY_EVENT_TYPE_SCHEMA = "float-property-type.json";
     private final static String TEST_PROFILE_ID = "test-profile-id";
 
@@ -151,15 +151,15 @@ public class ContextServletIT extends BaseIT {
         segmentService.removeSegmentDefinition(SEGMENT_ID, false);
 
         String encodedString = Base64.getEncoder()
-                .encodeToString("https://unomi.apache.org/schemas/json/events/test-event-type/1-0-0".getBytes());
+                .encodeToString("https://unomi.apache.org/schemas/json/events/testEventType/1-0-0".getBytes());
         delete(JSONSCHEMA_URL + "/" + encodedString);
 
         encodedString = Base64.getEncoder()
-                .encodeToString("https://unomi.apache.org/schemas/json/events/float-property-type/1-0-0".getBytes());
+                .encodeToString("https://unomi.apache.org/schemas/json/events/floatPropertyType/1-0-0".getBytes());
         delete(JSONSCHEMA_URL + "/" + encodedString);
 
         encodedString = Base64.getEncoder()
-                .encodeToString("https://unomi.apache.org/schemas/json/events/float-property-type/1-0-0".getBytes());
+                .encodeToString("https://unomi.apache.org/schemas/json/events/floatPropertyType/1-0-0".getBytes());
         delete(JSONSCHEMA_URL + "/" + encodedString);
     }
 
