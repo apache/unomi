@@ -240,7 +240,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     private String itemClassesToCache;
     private boolean useBatchingForSave = false;
     private boolean useBatchingForUpdate = true;
-    private boolean errorLogLevelRestClient = true;
+    private String logLevelRestClient = "ERROR";
     private boolean alwaysOverwrite = true;
     private boolean aggQueryThrowOnMissingDocs = false;
     private Integer aggQueryMaxResponseSizeHttp = null;
@@ -435,17 +435,18 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         this.alwaysOverwrite = alwaysOverwrite;
     }
 
-    public void setErrorLogLevelRestClient(boolean errorLogLevelRestClient) {
-        this.errorLogLevelRestClient = errorLogLevelRestClient;
+    public void setLogLevelRestClient(String logLevelRestClient) {
+        this.logLevelRestClient = logLevelRestClient;
     }
 
     public void start() throws Exception {
 
         // Work around to avoid ES Logs regarding the deprecated [ignore_throttled] parameter
-        if (errorLogLevelRestClient) {
-            org.apache.log4j.Logger.getLogger("org.elasticsearch.client.RestClient").setLevel(Level.ERROR);
-        } else {
-            org.apache.log4j.Logger.getLogger("org.elasticsearch.client.RestClient").setLevel(Level.INFO);
+        try {
+            Level lvl = Level.toLevel(logLevelRestClient, Level.ERROR);
+            org.apache.log4j.Logger.getLogger("org.elasticsearch.client.RestClient").setLevel(lvl);
+        } catch (Exception e) {
+            // Never fail because of the set of the logger
         }
 
         // on startup
