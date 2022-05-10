@@ -65,8 +65,6 @@ public class EventServiceImpl implements EventService {
 
     private BundleContext bundleContext;
 
-    private SchemaService schemaService;
-
     private Set<String> predefinedEventTypeIds = new LinkedHashSet<String>();
 
     private Set<String> restrictedEventTypeIds = new LinkedHashSet<String>();
@@ -114,9 +112,6 @@ public class EventServiceImpl implements EventService {
         this.shouldBeCheckedEventSourceId = shouldBeCheckedEventSourceId;
     }
 
-    public void setSchemaService(SchemaService schemaService) {
-        this.schemaService = schemaService;
-    }
     public void setPersistenceService(PersistenceService persistenceService) {
         this.persistenceService = persistenceService;
     }

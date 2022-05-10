@@ -17,7 +17,6 @@
 package org.apache.unomi.rest.service.impl;
 
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.fasterxml.jackson.databind.node.TextNode;
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.Persona;
 import org.apache.unomi.api.Profile;
@@ -25,9 +24,9 @@ import org.apache.unomi.api.Session;
 import org.apache.unomi.api.services.ConfigSharingService;
 import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.api.services.PrivacyService;
-import org.apache.unomi.api.services.SchemaService;
 import org.apache.unomi.rest.exception.InvalidRequestException;
 import org.apache.unomi.rest.service.RestServiceUtils;
+import org.apache.unomi.schema.api.SchemaService;
 import org.apache.unomi.utils.Changes;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
@@ -38,7 +37,6 @@ import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
-import javax.ws.rs.BadRequestException;
 import java.util.Date;
 import java.util.List;
 
@@ -56,7 +54,8 @@ public class RestServiceUtilsImpl implements RestServiceUtils {
     @Reference
     private EventService eventService;
 
-    @Reference SchemaService schemaService;
+    @Reference
+    SchemaService schemaService;
 
     public String getProfileIdCookieValue(HttpServletRequest httpServletRequest) {
         String cookieProfileId = null;
@@ -67,7 +66,7 @@ public class RestServiceUtilsImpl implements RestServiceUtils {
             for (Cookie cookie : cookies) {
                 final Object profileIdCookieName = configSharingService.getProperty("profileIdCookieName");
                 if (profileIdCookieName.equals(cookie.getName())) {
-                    if (!schemaService.isValid(JsonNodeFactory.instance.objectNode().put("profileIdCookieName", cookie.getValue()), "https://unomi.apache.org/schemas/json/cookie/1-0-0")) {
+                    if (!schemaService.isValid(JsonNodeFactory.instance.objectNode().put("profileIdCookieName", cookie.getValue()).toString(), "https://unomi.apache.org/schemas/json/cookie/1-0-0")) {
                         throw new InvalidRequestException("Invalid profile ID format in cookie", "Invalid received data");
                     }
                     cookieProfileId = cookie.getValue();

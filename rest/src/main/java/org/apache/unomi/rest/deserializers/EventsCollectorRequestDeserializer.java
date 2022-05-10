@@ -24,8 +24,8 @@ import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.EventsCollectorRequest;
-import org.apache.unomi.api.services.SchemaService;
 import org.apache.unomi.rest.exception.InvalidRequestException;
+import org.apache.unomi.schema.api.SchemaService;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -50,7 +50,7 @@ public class EventsCollectorRequestDeserializer extends StdDeserializer<EventsCo
     @Override
     public EventsCollectorRequest deserialize(JsonParser jsonParser, DeserializationContext context) throws IOException, JsonProcessingException {
         JsonNode node = jsonParser.getCodec().readTree(jsonParser);
-        if (!schemaService.isValid(node, "https://unomi.apache.org/schemas/json/eventscollectorrequest/1-0-0")) {
+        if (!schemaService.isValid(node.toString(), "https://unomi.apache.org/schemas/json/eventscollectorrequest/1-0-0")) {
             throw new InvalidRequestException("Invalid events collector object", "Invalid received data");
         }
 
@@ -59,7 +59,7 @@ public class EventsCollectorRequestDeserializer extends StdDeserializer<EventsCo
         final JsonNode eventsNode = node.get("events");
         if (eventsNode instanceof ArrayNode) {
             for (JsonNode event : eventsNode) {
-                if (schemaService.isValid(event, "https://unomi.apache.org/schemas/json/events/" + event.get("eventType").textValue() + "/1-0-0")) {
+                if (schemaService.isValid(event.toString(), "https://unomi.apache.org/schemas/json/events/" + event.get("eventType").textValue() + "/1-0-0")) {
                     filteredEvents.add(jsonParser.getCodec().treeToValue(event, Event.class));
                 }
             }

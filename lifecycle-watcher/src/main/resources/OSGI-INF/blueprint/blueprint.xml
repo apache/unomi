@@ -49,6 +49,8 @@
                 <entry key="org.apache.unomi.cxs-geonames-rest" value="false"/>
                 <entry key="org.apache.unomi.cxs-privacy-extension-services" value="false"/>
                 <entry key="org.apache.unomi.cxs-privacy-extension-rest" value="false"/>
+                <entry key="org.apache.unomi.json-schema-services" value="false"/>
+                <entry key="org.apache.unomi.json-schema-rest" value="false"/>
                 <entry key="org.apache.unomi.rest" value="false"/>
                 <entry key="org.apache.unomi.wab" value="false"/>
                 <entry key="org.apache.unomi.plugins-base" value="false"/>
