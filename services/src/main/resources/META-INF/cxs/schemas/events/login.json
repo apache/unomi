@@ -14,7 +14,6 @@
   "properties" : {
     "properties" : {
       "type" : "object",
-      "unomiPropertyTypes" : [ "events" ],
       "maxProperties": 50
     },
     "target" : {
