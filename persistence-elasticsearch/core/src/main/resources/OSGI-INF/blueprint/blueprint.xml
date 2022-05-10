@@ -146,6 +146,7 @@
         <property name="sslTrustAllCertificates" value="${es.sslTrustAllCertificates}" />
         <property name="throwExceptions" value="${es.throwExceptions}" />
         <property name="alwaysOverwrite" value="${es.alwaysOverwrite}" />
+        <property name="logLevelRestClient" value="${es.logLevelRestClient}" />
     </bean>
 
     <!-- We use a listener here because using the list directly for listening to proxies coming from the same bundle didn't seem to work -->
