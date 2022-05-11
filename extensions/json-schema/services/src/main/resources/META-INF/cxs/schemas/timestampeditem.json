@@ -4,21 +4,9 @@
   "title": "TimestampedItem",
   "type": "object",
   "allOf": [{ "$ref": "https://unomi.apache.org/schemas/json/item/1-0-0" }],
-  "oneOf": [
-    {
-      "properties" : {
-        "timeStamp" : {
-          "type" : "string",
-          "format" : "date-time"
-        }
-      }
-    },
-    {
-      "properties" : {
-        "timeStamp" : {
-          "type" : "integer"
-        }
-      }
+  "properties" : {
+    "timeStamp" : {
+      "type" :  ["string", "integer"]
     }
-  ]
+  }
 }

@@ -80,8 +80,9 @@ public class SchemaServiceImpl implements SchemaService {
         try {
             jsonNode = objectMapper.readTree(data);
             jsonSchema = jsonSchemaFactory.getSchema(new URI(schemaId));
-        } catch (JsonProcessingException | URISyntaxException e) {
-            logger.error("Failed to process data to validate", e);
+        } catch (Exception e) {
+            logger.error("Failed to process data to validate because {} - Set SchemaServiceImpl at DEBUG level for more detail ", e.getMessage());
+            logger.debug("full error",e);
             return false;
         }
 
