@@ -20,6 +20,12 @@ package org.apache.unomi.schema.api;
 import org.apache.unomi.api.Metadata;
 import org.apache.unomi.api.MetadataItem;
 
+/**
+ * Object which represents a JSON schema, it's a wrapper because it contains some additional info used by the
+ * Service layer of Unomi like the id and the target.
+ * The JSON schema is store as String to avoid transformation during JSON schema resolution in the Unomi SchemaService.
+ * Also, it's extending  MetadataItem so that it can be persisted like that in Unomi storage system.
+ */
 public class JsonSchemaWrapper extends MetadataItem {
     public static final String ITEM_TYPE = "jsonSchema";
 

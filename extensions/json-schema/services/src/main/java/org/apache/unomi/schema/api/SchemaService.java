@@ -91,7 +91,7 @@ public interface SchemaService {
     void loadPredefinedSchema(InputStream schemaStream) throws IOException;
 
     /**
-     * unload a predefined schema into memory
+     * Unload a predefined schema into memory
      *
      * @param schemaStream inputStream of the schema to delete
      * @return true if the schema has been deleted
