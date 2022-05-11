@@ -17,7 +17,9 @@
 
 package org.apache.unomi.itests;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import org.apache.http.HttpEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -59,7 +61,6 @@ import java.util.*;
 public class BasicIT extends BaseIT {
     private final static Logger LOGGER = LoggerFactory.getLogger(BasicIT.class);
 
-    private final ObjectMapper objectMapper = new ObjectMapper();
 
     private static final String SESSION_ID_0 = "aa3b04bd-8f4d-4a07-8e96-d33ffa04d3d0";
     private static final String SESSION_ID_1 = "aa3b04bd-8f4d-4a07-8e96-d33ffa04d3d1";

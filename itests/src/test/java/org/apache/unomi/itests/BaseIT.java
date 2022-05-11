@@ -17,6 +17,7 @@
 
 package org.apache.unomi.itests;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.io.IOUtils;
 import org.apache.http.auth.AuthScope;
@@ -112,6 +113,13 @@ public abstract class BaseIT {
     protected static final int DEFAULT_TRYING_TIMEOUT = 2000;
     protected static final int DEFAULT_TRYING_TRIES = 30;
     private final static String JSONSCHEMA_URL = "/cxs/jsonSchema";
+
+    protected final static ObjectMapper objectMapper;
+
+    static {
+        objectMapper = new ObjectMapper();
+        objectMapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
+    }
 
     @Inject
     @Filter(timeout = 600000)
@@ -448,7 +456,6 @@ public abstract class BaseIT {
             final HttpGet httpGet = new HttpGet(getFullUrl(url));
             response = executeHttpRequest(httpGet);
             if (response.getStatusLine().getStatusCode() == 200) {
-                ObjectMapper objectMapper = new ObjectMapper();
                 return objectMapper.readValue(response.getEntity().getContent(), clazz);
             } else {
                 return null;
@@ -528,7 +535,6 @@ public abstract class BaseIT {
     protected String resourceAsString(final String resource) {
         final java.net.URL url = bundleContext.getBundle().getResource(resource);
         try (InputStream stream = url.openStream()) {
-            final ObjectMapper objectMapper = new ObjectMapper();
             return objectMapper.writeValueAsString(objectMapper.readTree(stream));
         } catch (final Exception e) {
             throw new RuntimeException(e);

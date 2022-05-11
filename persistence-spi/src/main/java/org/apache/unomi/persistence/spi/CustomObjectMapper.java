@@ -17,6 +17,7 @@
 
 package org.apache.unomi.persistence.spi;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.Version;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
@@ -58,6 +59,7 @@ public class CustomObjectMapper extends ObjectMapper {
         super();
         super.registerModule(new JaxbAnnotationModule());
         configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false);
+        setSerializationInclusion(JsonInclude.Include.NON_NULL);
         ISO8601DateFormat dateFormat = new ISO8601DateFormat();
         dateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
         setDateFormat(dateFormat);
