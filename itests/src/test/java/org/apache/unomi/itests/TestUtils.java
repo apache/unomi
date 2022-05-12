@@ -62,7 +62,6 @@ public class TestUtils {
 			return null;
 		}
 		String jsonFromResponse = EntityUtils.toString(response.getEntity());
-		// ObjectMapper mapper = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 		ObjectMapper mapper = CustomObjectMapper.getObjectMapper();
 		try {
 			T value = mapper.readValue(jsonFromResponse, clazz);

@@ -18,11 +18,13 @@ package org.apache.unomi.graphql.types.resolvers;
 
 import graphql.TypeResolutionEnvironment;
 import graphql.schema.GraphQLObjectType;
-import org.apache.unomi.api.schema.json.JSONSchema;
-import org.apache.unomi.api.services.SchemaService;
+import org.apache.unomi.graphql.schema.GraphQLSchemaProvider;
+import org.apache.unomi.graphql.schema.json.JSONSchema;
 import org.apache.unomi.graphql.converters.UnomiToGraphQLConverter;
 import org.apache.unomi.graphql.services.ServiceManager;
 import org.apache.unomi.graphql.types.output.CDPEventInterface;
+import org.apache.unomi.schema.api.JsonSchemaWrapper;
+import org.apache.unomi.schema.api.SchemaService;
 
 public class CDPEventInterfaceResolver extends BaseTypeResolver {
 
@@ -32,11 +34,10 @@ public class CDPEventInterfaceResolver extends BaseTypeResolver {
         SchemaService schemaService = serviceManager.getService(SchemaService.class);
 
         final CDPEventInterface eventInterface = env.getObject();
-        final JSONSchema eventSchema =
-                schemaService.getSchema("https://unomi.apache.org/schemas/json/events/" + eventInterface.getEvent().getEventType() + "/1-0"
-                        + "-0");
+        final JsonSchemaWrapper eventSchema = schemaService.getSchema("https://unomi.apache.org/schemas/json/events/" + eventInterface.getEvent().getEventType() + "/1-0-0");
         if (eventSchema != null) {
-            final String typeName = UnomiToGraphQLConverter.convertEventType(eventSchema.getName());
+            final JSONSchema jsonSchema = GraphQLSchemaProvider.buildJSONSchema(eventSchema, schemaService);
+            final String typeName = UnomiToGraphQLConverter.convertEventType(jsonSchema.getName());
             return env.getSchema().getObjectType(typeName);
         } else {
             return super.getType(env);

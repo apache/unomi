@@ -44,6 +44,8 @@
                 <value>org.apache.unomi.cxs-geonames-rest</value>
                 <value>org.apache.unomi.cxs-privacy-extension-services</value>
                 <value>org.apache.unomi.cxs-privacy-extension-rest</value>
+                <value>org.apache.unomi.json-schema-services</value>
+                <value>org.apache.unomi.json-schema-rest</value>
                 <value>org.apache.unomi.rest</value>
                 <value>org.apache.unomi.wab</value>
                 <value>org.apache.unomi.plugins-base</value>

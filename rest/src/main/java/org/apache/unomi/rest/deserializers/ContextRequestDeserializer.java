@@ -27,8 +27,8 @@ import org.apache.unomi.api.Event;
 import org.apache.unomi.api.Item;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.services.PersonalizationService;
-import org.apache.unomi.api.services.SchemaService;
 import org.apache.unomi.rest.exception.InvalidRequestException;
+import org.apache.unomi.schema.api.SchemaService;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -55,7 +55,7 @@ public class ContextRequestDeserializer extends StdDeserializer<ContextRequest> 
     public ContextRequest deserialize(JsonParser jsonParser, DeserializationContext context) throws IOException, JsonProcessingException {
         JsonNode node = jsonParser.getCodec().readTree(jsonParser);
         // Validate schema on it
-        if (!schemaService.isValid(node, "https://unomi.apache.org/schemas/json/contextrequest/1-0-0")) {
+        if (!schemaService.isValid(node.toString(), "https://unomi.apache.org/schemas/json/contextrequest/1-0-0")) {
             throw new InvalidRequestException("Invalid Context request object", "Invalid received data");
         }
         ContextRequest cr = new ContextRequest();
@@ -86,7 +86,7 @@ public class ContextRequestDeserializer extends StdDeserializer<ContextRequest> 
             ArrayNode events = (ArrayNode) eventsNode;
             List<Event> filteredEvents = new ArrayList<>();
             for (JsonNode event : events) {
-                if (schemaService.isValid(event, "https://unomi.apache.org/schemas/json/events/" + event.get("eventType").textValue() + "/1-0-0")) {
+                if (schemaService.isValid(event.toString(), "https://unomi.apache.org/schemas/json/events/" + event.get("eventType").textValue() + "/1-0-0")) {
                     filteredEvents.add(jsonParser.getCodec().treeToValue(event, Event.class));
                 }
             }

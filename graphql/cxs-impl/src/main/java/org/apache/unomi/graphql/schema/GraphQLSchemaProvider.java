@@ -16,6 +16,8 @@
  */
 package org.apache.unomi.graphql.schema;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.networknt.schema.JsonSchema;
 import graphql.annotations.AnnotationsSchemaCreator;
 import graphql.annotations.processor.GraphQLAnnotations;
 import graphql.annotations.processor.ProcessingElementsContainer;
@@ -34,11 +36,10 @@ import graphql.schema.GraphQLSchema;
 import graphql.schema.GraphQLType;
 import graphql.schema.visibility.GraphqlFieldVisibility;
 import org.apache.unomi.api.PropertyType;
-import org.apache.unomi.api.schema.json.JSONObjectType;
-import org.apache.unomi.api.schema.json.JSONSchema;
-import org.apache.unomi.api.schema.json.JSONType;
+import org.apache.unomi.graphql.schema.json.JSONObjectType;
+import org.apache.unomi.graphql.schema.json.JSONSchema;
+import org.apache.unomi.graphql.schema.json.JSONType;
 import org.apache.unomi.api.services.ProfileService;
-import org.apache.unomi.api.services.SchemaService;
 import org.apache.unomi.graphql.CDPGraphQLConstants;
 import org.apache.unomi.graphql.converters.UnomiToGraphQLConverter;
 import org.apache.unomi.graphql.fetchers.CustomEventOrSetPropertyDataFetcher;
@@ -55,6 +56,7 @@ import org.apache.unomi.graphql.providers.GraphQLMutationProvider;
 import org.apache.unomi.graphql.providers.GraphQLQueryProvider;
 import org.apache.unomi.graphql.providers.GraphQLSubscriptionProvider;
 import org.apache.unomi.graphql.providers.GraphQLTypeFunctionProvider;
+import org.apache.unomi.graphql.schema.json.JSONTypeFactory;
 import org.apache.unomi.graphql.types.input.CDPEventFilterInput;
 import org.apache.unomi.graphql.types.input.CDPEventInput;
 import org.apache.unomi.graphql.types.input.CDPEventProcessor;
@@ -69,8 +71,11 @@ import org.apache.unomi.graphql.types.output.CDPPersona;
 import org.apache.unomi.graphql.types.output.CDPProfile;
 import org.apache.unomi.graphql.types.output.RootMutation;
 import org.apache.unomi.graphql.types.output.RootQuery;
+import org.apache.unomi.graphql.utils.GraphQLObjectMapper;
 import org.apache.unomi.graphql.utils.ReflectionUtil;
 import org.apache.unomi.graphql.utils.StringUtils;
+import org.apache.unomi.schema.api.JsonSchemaWrapper;
+import org.apache.unomi.schema.api.SchemaService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -331,7 +336,8 @@ public class GraphQLSchemaProvider {
     }
 
     private void registerDynamicUnomiInputEvents(GraphQLSchema.Builder schemaBuilder) {
-        final List<JSONSchema> unomiEventTypes = schemaService.getSchemasByTarget("events");
+        final List<JSONSchema> unomiEventTypes = schemaService.getSchemasByTarget("events").stream()
+                .map(jsonSchemaWrapper -> buildJSONSchema(jsonSchemaWrapper, schemaService)).collect(Collectors.toList());
 
         if (!unomiEventTypes.isEmpty()) {
             for (JSONSchema unomiEventType : unomiEventTypes) {
@@ -353,7 +359,8 @@ public class GraphQLSchemaProvider {
     }
 
     private void registerDynamicUnomiOutputEvents(GraphQLSchema.Builder schemaBuilder) {
-        final List<JSONSchema> unomiEventTypes = schemaService.getSchemasByTarget("events");
+        final List<JSONSchema> unomiEventTypes = schemaService.getSchemasByTarget("events").stream()
+                .map(jsonSchemaWrapper -> buildJSONSchema(jsonSchemaWrapper, schemaService)).collect(Collectors.toList());
 
         if (!unomiEventTypes.isEmpty()) {
             final GraphQLCodeRegistry.Builder codeRegisterBuilder = graphQLAnnotations.getContainer().getCodeRegistryBuilder();
@@ -650,7 +657,8 @@ public class GraphQLSchemaProvider {
         }
 
         // now add all unomi defined event types
-        final List<JSONSchema> unomiEventTypes = schemaService.getSchemasByTarget("events");
+        final List<JSONSchema> unomiEventTypes = schemaService.getSchemasByTarget("events").stream()
+                .map(jsonSchemaWrapper -> buildJSONSchema(jsonSchemaWrapper, schemaService)).collect(Collectors.toList());
         unomiEventTypes.forEach(eventType -> {
             final String typeName = UnomiToGraphQLConverter.convertEventType(eventType.getName());
             final GraphQLInputType eventInputType = (GraphQLInputType) getFromTypeRegistry(typeName + "Input");
@@ -666,6 +674,17 @@ public class GraphQLSchemaProvider {
         });
 
         registerInTypeRegistry(CDPEventInput.TYPE_NAME, builder.build());
+    }
+
+    public static JSONSchema buildJSONSchema(JsonSchemaWrapper jsonSchemaWrapper, SchemaService schemaService) {
+        Map<String, Object> schemaMap;
+        try {
+            schemaMap = GraphQLObjectMapper.getInstance().readValue(jsonSchemaWrapper.getSchema(), Map.class);
+        } catch (JsonProcessingException e) {
+            logger.error("Failed to process Json object, e");
+            schemaMap = Collections.emptyMap();
+        }
+        return new JSONSchema(schemaMap, new JSONTypeFactory(schemaService));
     }
 
     private void registerDynamicEventFilterInputFields() {

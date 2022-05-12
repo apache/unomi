@@ -45,7 +45,6 @@
             <cm:property name="events.shouldBeCheckedEventSourceId" value="false"/>
             <cm:property name="rules.optimizationActivated" value="true"/>
             <cm:property name="schedules.thread.poolSize" value="5"/>
-            <cm:property name="json.schema.refresh.interval" value="1000"/>
         </cm:default-properties>
     </cm:property-placeholder>
 
@@ -102,34 +101,11 @@
         </interfaces>
     </service>
 
-    <bean id="schemaServiceImpl" class="org.apache.unomi.services.impl.schemas.SchemaServiceImpl" init-method="init"
-          destroy-method="destroy">
-        <property name="bundleContext" ref="blueprintBundleContext"/>
-        <property name="profileService" ref="profileServiceImpl"/>
-        <property name="persistenceService" ref="persistenceService"/>
-        <property name="schedulerService" ref="schedulerServiceImpl"/>
-        <property name="jsonSchemaRefreshInterval" value="${services.json.schema.refresh.interval}"/>
-    </bean>
-    <service id="schemaService" ref="schemaServiceImpl" interface="org.apache.unomi.api.services.SchemaService"/>
-
-    <bean id="jsonSchemaListenerImpl" class="org.apache.unomi.services.listener.JsonSchemaListener"
-          init-method="postConstruct" destroy-method="preDestroy">
-        <property name="persistenceService" ref="persistenceService"/>
-        <property name="bundleContext" ref="blueprintBundleContext"/>
-        <property name="schemaService" ref="schemaServiceImpl"/>
-    </bean>
-    <service id="jsonSchemaListener" ref="jsonSchemaListenerImpl">
-        <interfaces>
-            <value>org.osgi.framework.SynchronousBundleListener</value>
-        </interfaces>
-    </service>
-
     <bean id="eventServiceImpl" class="org.apache.unomi.services.impl.events.EventServiceImpl">
         <property name="persistenceService" ref="persistenceService"/>
         <property name="definitionsService" ref="definitionsServiceImpl"/>
         <property name="sourceService" ref="sourceServiceImpl"/>
         <property name="bundleContext" ref="blueprintBundleContext"/>
-        <property name="schemaService" ref="schemaServiceImpl"/>
         <property name="predefinedEventTypeIds">
             <set>
                 <value>view</value>

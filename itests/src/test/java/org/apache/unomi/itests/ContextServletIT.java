@@ -91,8 +91,6 @@ public class ContextServletIT extends BaseIT {
     private static final int DEFAULT_TRYING_TIMEOUT = 2000;
     private static final int DEFAULT_TRYING_TRIES = 30;
 
-    private ObjectMapper objectMapper = new ObjectMapper();
-
     @Inject
     @Filter(timeout = 600000)
     protected EventService eventService;

@@ -18,7 +18,6 @@
 package org.apache.unomi.rest.endpoints;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.apache.commons.lang3.StringUtils;
@@ -26,10 +25,10 @@ import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
 import org.apache.unomi.api.*;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.services.*;
-import org.apache.unomi.api.utils.ValidationPattern;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.rest.exception.InvalidRequestException;
 import org.apache.unomi.rest.service.RestServiceUtils;
+import org.apache.unomi.schema.api.SchemaService;
 import org.apache.unomi.utils.Changes;
 import org.apache.unomi.utils.HttpUtils;
 import org.osgi.service.component.annotations.Component;
@@ -43,8 +42,6 @@ import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.validation.Valid;
-import javax.validation.constraints.Pattern;
 import javax.ws.rs.*;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
@@ -57,7 +54,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.Objects;
 
 @WebService
 @Consumes(MediaType.APPLICATION_JSON)
@@ -164,7 +160,7 @@ public class ContextJsonEndpoint {
         if (sessionId != null) {
             paramsAsJson.put("sessionId", sessionId);
         }
-        if (!schemaService.isValid(paramsAsJson, "https://unomi.apache.org/schemas/json/contextrequestparams/1-0-0")) {
+        if (!schemaService.isValid(paramsAsJson.toString(), "https://unomi.apache.org/schemas/json/contextrequestparams/1-0-0")) {
             throw new InvalidRequestException("Invalid parameter", "Invalid received data");
         }
         Date timestamp = new Date();
