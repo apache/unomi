@@ -131,8 +131,7 @@ public class SchemaServiceImpl implements SchemaService {
             persistenceService.save(jsonSchemaWrapper);
             schemasById.put(id, jsonSchemaWrapper);
         } else {
-            // TODO we should crash error in case save failed, so that caller can react on save fail and get the reason why using Exceptions
-            logger.error("Trying to save a Json Schema that is using the ID of an existing Json Schema provided by Unomi is forbidden");
+            throw new IllegalArgumentException("Trying to save a Json Schema that is using the ID of an existing Json Schema provided by Unomi is forbidden");
         }
     }
 

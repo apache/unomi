@@ -19,6 +19,7 @@ package org.apache.unomi.schema.rest;
 
 import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
 import org.apache.unomi.api.Metadata;
+import org.apache.unomi.rest.exception.InvalidRequestException;
 import org.apache.unomi.schema.api.SchemaService;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
@@ -83,9 +84,12 @@ public class JsonSchemaEndPoint {
     @Consumes(MediaType.TEXT_PLAIN)
     @Produces(MediaType.APPLICATION_JSON)
     public Response save(String jsonSchema) {
-        schemaService.saveSchema(jsonSchema);
-        // TODO we should return error in case save failed (for example saving a schema with an ID of an already existing predefined schema is forbidden)
-        return Response.ok().build();
+        try {
+            schemaService.saveSchema(jsonSchema);
+            return Response.ok().build();
+        } catch (Exception e) {
+            throw new InvalidRequestException(e.getMessage(), "Unable to save schema");
+        }
     }
 
     /**

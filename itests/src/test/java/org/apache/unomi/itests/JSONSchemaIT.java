@@ -98,6 +98,14 @@ public class JSONSchemaIT extends BaseIT {
     }
 
     @Test
+    public void testSavePredefinedJSONSchema() throws IOException {
+        assertTrue("JSON schema list should be empty", persistenceService.getAllItems(JsonSchemaWrapper.class).isEmpty());
+        try (CloseableHttpResponse response = post(JSONSCHEMA_URL, "schemas/events/predefined-event-type.json", ContentType.TEXT_PLAIN)) {
+            assertEquals("Unable to save schema", 400, response.getStatusLine().getStatusCode());
+        }
+    }
+
+    @Test
     public void testDeleteJSONSchema() throws InterruptedException {
         assertTrue("JSON schema list should be empty", persistenceService.getAllItems(JsonSchemaWrapper.class).isEmpty());
 
@@ -121,7 +129,7 @@ public class JSONSchemaIT extends BaseIT {
     public void testSaveNewInvalidJSONSchema() throws IOException {
         assertTrue("JSON schema list should be empty", persistenceService.getAllItems(JsonSchemaWrapper.class).isEmpty());
         try (CloseableHttpResponse response = post(JSONSCHEMA_URL, "schemas/events/test-invalid.json", ContentType.TEXT_PLAIN)) {
-            assertEquals("Save should have failed", 500, response.getStatusLine().getStatusCode());
+            assertEquals("Unable to save schema", 400, response.getStatusLine().getStatusCode());
         }
     }
 
@@ -129,7 +137,7 @@ public class JSONSchemaIT extends BaseIT {
     public void testSaveSchemaWithInvalidName() throws IOException {
         assertTrue("JSON schema list should be empty", persistenceService.getAllItems(JsonSchemaWrapper.class).isEmpty());
         try (CloseableHttpResponse response = post(JSONSCHEMA_URL, "schemas/events/test-invalid-name.json", ContentType.TEXT_PLAIN)) {
-            assertEquals("Save should have failed", 500, response.getStatusLine().getStatusCode());
+            assertEquals("Unable to save schema", 400, response.getStatusLine().getStatusCode());
         }
     }
 }
