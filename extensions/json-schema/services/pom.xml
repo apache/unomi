@@ -28,7 +28,7 @@
 
     <artifactId>unomi-json-schema-services</artifactId>
     <name>Apache Unomi :: Extensions :: JSON Schema :: Service</name>
-    <description>TODO</description>
+    <description>JSON Schema service for the Apache Unomi Context Server</description>
     <packaging>bundle</packaging>
 
     <properties>

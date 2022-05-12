@@ -27,7 +27,7 @@
 
     <artifactId>unomi-json-schema-rest</artifactId>
     <name>Apache Unomi :: Extensions :: JSON Schema :: REST API</name>
-    <description>TODO</description>
+    <description>JSON Schema REST API for the Apache Unomi Context Server</description>
     <packaging>bundle</packaging>
 
     <dependencies>

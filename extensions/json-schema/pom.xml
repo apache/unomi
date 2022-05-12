@@ -26,7 +26,7 @@
 
     <artifactId>unomi-json-schema-root</artifactId>
     <name>Apache Unomi :: Extensions :: JSON Schema</name>
-    <description>TODO</description>
+    <description>JSON Schema extension for the Apache Unomi Context Server</description>
     <packaging>pom</packaging>
 
     <modules>
