@@ -33,7 +33,7 @@
 
     <properties>
         <version.schema>1.0.69</version.schema>
-        <version.schema.jackson>2.12.1</version.schema.jackson>
+        <version.schema.jackson>2.12.6.1</version.schema.jackson>
         <version.schema.itu>1.5.1</version.schema.itu>
     </properties>
 
