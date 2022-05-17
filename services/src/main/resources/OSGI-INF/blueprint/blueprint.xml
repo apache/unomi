@@ -73,7 +73,7 @@
     <reference id="karafCellarGroupManager" interface="org.apache.karaf.cellar.core.GroupManager"/>
     <reference id="osgiConfigurationAdmin" interface="org.osgi.service.cm.ConfigurationAdmin"/>
     <reference id="metricsService" interface="org.apache.unomi.metrics.MetricsService"/>
-    <reference id="scriptExecutor" interface="org.apache.unomi.scripting.ScriptExecutor" />
+    <reference id="scriptExecutor" interface="org.apache.unomi.scripting.ScriptExecutor"/>
 
     <!-- Service definitions -->
 
@@ -145,9 +145,14 @@
         </interfaces>
     </service>
 
+    <bean id="scopeServiceImpl" class="org.apache.unomi.services.impl.scope.ScopeServiceImpl">
+        <property name="persistenceService" ref="persistenceService"/>
+    </bean>
+    <service id="scopeService" ref="scopeServiceImpl" interface="org.apache.unomi.api.services.ScopeService"/>
+
     <bean id="actionExecutorDispatcherImpl"
-        class="org.apache.unomi.services.actions.impl.ActionExecutorDispatcherImpl">
-        <property name="metricsService" ref="metricsService" />
+          class="org.apache.unomi.services.actions.impl.ActionExecutorDispatcherImpl">
+        <property name="metricsService" ref="metricsService"/>
         <property name="scriptExecutor" ref="scriptExecutor"/>
         <property name="bundleContext" ref="blueprintBundleContext"/>
     </bean>
@@ -192,11 +197,11 @@
         <property name="aggregateQueryBucketSize" value="${es.aggregateQueryBucketSize}"/>
         <property name="pastEventsDisablePartitions" value="${es.pastEventsDisablePartitions}"/>
         <property name="maximumIdsQueryCount" value="${es.maximumIdsQueryCount}"/>
-        <property name="maxRetriesForUpdateProfileSegment" value="${services.segment.max.retries.update.profile.segment}" />
-        <property name="secondsDelayForRetryUpdateProfileSegment" value="${services.segment.retry.update.segment.seconds.delay}" />
-        <property name="batchSegmentProfileUpdate" value="${services.segment.batch.update}" />
-        <property name="sendProfileUpdateEventForSegmentUpdate" value="${services.segment.send.profile.update.event}" />
-        <property name="dailyDateExprEvaluationHourUtc" value="${services.segment.daily.dateexpr.evaluation.hourutc}" />
+        <property name="maxRetriesForUpdateProfileSegment" value="${services.segment.max.retries.update.profile.segment}"/>
+        <property name="secondsDelayForRetryUpdateProfileSegment" value="${services.segment.retry.update.segment.seconds.delay}"/>
+        <property name="batchSegmentProfileUpdate" value="${services.segment.batch.update}"/>
+        <property name="sendProfileUpdateEventForSegmentUpdate" value="${services.segment.send.profile.update.event}"/>
+        <property name="dailyDateExprEvaluationHourUtc" value="${services.segment.daily.dateexpr.evaluation.hourutc}"/>
 
     </bean>
     <service id="segmentService" ref="segmentServiceImpl">
