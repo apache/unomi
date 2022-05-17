@@ -5,7 +5,7 @@
   "type": "object",
   "properties": {
     "source": {
-      "$ref": "https://unomi.apache.org/schemas/json/item/1-0-0"
+      "$ref": "https://unomi.apache.org/schemas/json/contextrequest/source/1-0-0"
     },
     "requireSegments": {
       "type": ["null", "boolean"]
