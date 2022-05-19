@@ -24,11 +24,11 @@ import org.apache.unomi.api.services.SchedulerService;
 import org.apache.unomi.api.services.ScopeService;
 import org.apache.unomi.persistence.spi.PersistenceService;
 
-import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 import java.util.TimerTask;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -41,7 +41,7 @@ public class ScopeServiceImpl implements ScopeService {
 
     private Integer scopesRefreshInterval = 1000;
 
-    private Map<String, Scope> scopes = new HashMap<>();
+    private ConcurrentMap<String, Scope> scopes = new ConcurrentHashMap<>();
 
     private ScheduledFuture<?> scheduledFuture;
 
@@ -77,23 +77,17 @@ public class ScopeServiceImpl implements ScopeService {
 
     @Override
     public void save(Scope scope) {
-        if (persistenceService.save(scope)) {
-            scopes.put(scope.getItemId(), scope);
-        }
+        persistenceService.save(scope);
     }
 
     @Override
     public boolean delete(String id) {
-        if (persistenceService.remove(id, Scope.class)) {
-            scopes.remove(id);
-            return true;
-        }
-        return false;
+        return persistenceService.remove(id, Scope.class);
     }
 
     @Override
     public Scope getScope(String id) {
-        return persistenceService.load(id, Scope.class);
+        return scopes.get(id);
     }
 
     private void initializeTimers() {
@@ -108,6 +102,6 @@ public class ScopeServiceImpl implements ScopeService {
     }
 
     private void refreshScopes() {
-        scopes = persistenceService.getAllItems(Scope.class).stream().collect(Collectors.toMap(Item::getItemId, scope -> scope));
+        scopes = persistenceService.getAllItems(Scope.class).stream().collect(Collectors.toConcurrentMap(Item::getItemId, scope -> scope));
     }
 }
