@@ -30,13 +30,11 @@ import javax.jws.WebMethod;
 import javax.jws.WebService;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
-import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
-import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.util.List;
@@ -67,21 +65,14 @@ public class ScopeServiceEndPoint {
     }
 
     /**
-     * Retrieves the 50 first json schema metadatas by default.
+     * Retrieves the scopes metadatas by default.
      *
-     * @param offset zero or a positive integer specifying the position of the first element in the total ordered collection of matching elements
-     * @param size   a positive integer specifying how many matching elements should be retrieved or {@code -1} if all of them should be retrieved
-     * @param sortBy an optional ({@code null} if no sorting is required) String of comma ({@code ,}) separated property names on which ordering should be performed, ordering
-     *               elements according to the property order in the
-     *               String, considering each in turn and moving on to the next one in case of equality of all preceding ones. Each property name is optionally followed by
-     *               a column ({@code :}) and an order specifier: {@code asc} or {@code desc}.
-     * @return a List of the 50 first scope metadata
+     * @return a List of the scope metadata
      */
     @GET
     @Path("/")
-    public List<Metadata> getScopesMetadatas(@QueryParam("offset") @DefaultValue("0") int offset,
-            @QueryParam("size") @DefaultValue("50") int size, @QueryParam("sort") String sortBy) {
-        return scopeService.getScopesMetadatas(offset, size, sortBy).getList();
+    public List<Metadata> getScopesMetadatas() {
+        return scopeService.getScopesMetadatas();
     }
 
     /**

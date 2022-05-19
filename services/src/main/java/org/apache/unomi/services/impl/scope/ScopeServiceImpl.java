@@ -18,13 +18,13 @@ package org.apache.unomi.services.impl.scope;
 
 import org.apache.unomi.api.Item;
 import org.apache.unomi.api.Metadata;
+import org.apache.unomi.api.MetadataItem;
 import org.apache.unomi.api.PartialList;
 import org.apache.unomi.api.Scope;
 import org.apache.unomi.api.services.SchedulerService;
 import org.apache.unomi.api.services.ScopeService;
 import org.apache.unomi.persistence.spi.PersistenceService;
 
-import java.util.LinkedList;
 import java.util.List;
 import java.util.TimerTask;
 import java.util.concurrent.ConcurrentHashMap;
@@ -66,13 +66,8 @@ public class ScopeServiceImpl implements ScopeService {
     }
 
     @Override
-    public PartialList<Metadata> getScopesMetadatas(int offset, int size, String sortBy) {
-        PartialList<Scope> items = persistenceService.getAllItems(Scope.class, offset, size, sortBy);
-        List<Metadata> details = new LinkedList<>();
-        for (Scope definition : items.getList()) {
-            details.add(definition.getMetadata());
-        }
-        return new PartialList<>(details, items.getOffset(), items.getPageSize(), items.getTotalSize(), items.getTotalSizeRelation());
+    public List<Metadata> getScopesMetadatas() {
+        return scopes.values().stream().map(MetadataItem::getMetadata).collect(Collectors.toList());
     }
 
     @Override

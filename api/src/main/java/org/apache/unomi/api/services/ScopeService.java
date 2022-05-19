@@ -18,8 +18,9 @@
 package org.apache.unomi.api.services;
 
 import org.apache.unomi.api.Metadata;
-import org.apache.unomi.api.PartialList;
 import org.apache.unomi.api.Scope;
+
+import java.util.List;
 
 /**
  * A service to create, update and delete scope.
@@ -31,7 +32,7 @@ public interface ScopeService {
      *
      * @return the Set of known metadata
      */
-    PartialList<Metadata> getScopesMetadatas(int offset, int size, String sortBy);
+    List<Metadata> getScopesMetadatas();
 
     /**
      * Save a scope
