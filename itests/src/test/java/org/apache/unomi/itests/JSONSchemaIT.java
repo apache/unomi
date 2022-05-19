@@ -19,7 +19,7 @@ package org.apache.unomi.itests;
 
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.entity.ContentType;
-import org.apache.unomi.persistence.spi.PersistenceService;
+import org.apache.unomi.api.Event;
 import org.apache.unomi.schema.api.JsonSchemaWrapper;
 import org.apache.unomi.schema.api.SchemaService;
 import org.junit.After;
@@ -37,9 +37,7 @@ import java.util.Base64;
 import java.util.List;
 import java.util.Objects;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 /**
  * Class to tests the JSON schema features
@@ -56,10 +54,6 @@ public class JSONSchemaIT extends BaseIT {
     @Filter(timeout = 600000)
     protected SchemaService schemaService;
 
-    @Inject
-    @Filter(timeout = 600000)
-    protected PersistenceService persistenceService;
-
     @Before
     public void setUp() throws InterruptedException {
         keepTrying("Couldn't find json schema endpoint", () -> get(JSONSCHEMA_URL, List.class), Objects::nonNull, DEFAULT_TRYING_TIMEOUT,
@@ -67,76 +61,141 @@ public class JSONSchemaIT extends BaseIT {
     }
 
     @After
-    public void tearDown() {
-        schemaService.deleteSchema("https://unomi.apache.org/schemas/json/events/testEventType/1-0-0");
-    }
-
-    @Test
-    public void testGetJsonSchemasMetadatas() throws InterruptedException {
-        List jsonSchemas = get(JSONSCHEMA_URL, List.class);
-        assertTrue("JSON schema list should be empty", jsonSchemas.isEmpty());
-
-        post(JSONSCHEMA_URL, "schemas/events/test-event-type.json", ContentType.TEXT_PLAIN);
-
-        jsonSchemas = keepTrying("Couldn't find json schemas", () -> get(JSONSCHEMA_URL, List.class), (list) -> !list.isEmpty(),
+    public void tearDown() throws InterruptedException {
+        removeItems(JsonSchemaWrapper.class, Event.class);
+        // ensure all schemas have been cleaned from schemaService.
+        keepTrying("Couldn't find json schemas",
+                () -> schemaService.getInstalledJsonSchemaIds(),
+                (list) -> (!list.contains("https://unomi.apache.org/schemas/json/events/dummy/1-0-0") &&
+                        !list.contains("https://unomi.apache.org/schemas/json/events/dummy/properties/1-0-0")),
                 DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
-        assertFalse("JSON schema list should not be empty", jsonSchemas.isEmpty());
-        assertEquals("JSON schema list should not be empty", 1, jsonSchemas.size());
     }
 
     @Test
-    public void testSaveNewValidJSONSchema() throws InterruptedException {
+    public void testValidation_SaveDeleteSchemas() throws InterruptedException, IOException {
+        // check that event is not valid at first
+        assertFalse(schemaService.isValid(resourceAsString("schemas/event-dummy-valid.json"), "https://unomi.apache.org/schemas/json/events/dummy/1-0-0"));
 
-        assertTrue("JSON schema list should be empty", persistenceService.getAllItems(JsonSchemaWrapper.class).isEmpty());
-
-        CloseableHttpResponse response = post(JSONSCHEMA_URL, "schemas/events/test-event-type.json", ContentType.TEXT_PLAIN);
-
-        assertEquals("Invalid response code", 200, response.getStatusLine().getStatusCode());
-        List jsonSchemas = keepTrying("Couldn't find json schemas", () -> get(JSONSCHEMA_URL, List.class), (list) -> !list.isEmpty(),
+        // Push schemas
+        schemaService.saveSchema(resourceAsString("schemas/schema-dummy.json"));
+        schemaService.saveSchema(resourceAsString("schemas/schema-dummy-properties.json"));
+        keepTrying("Couldn't find json schemas",
+                () -> get(JSONSCHEMA_URL, List.class),
+                (list) -> (list.contains("https://unomi.apache.org/schemas/json/events/dummy/1-0-0") &&
+                        list.contains("https://unomi.apache.org/schemas/json/events/dummy/properties/1-0-0")),
                 DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
-        assertFalse("JSON schema list should not be empty", jsonSchemas.isEmpty());
+
+        // event should be valid now
+        keepTrying("Event should be valid",
+                () -> schemaService.isValid(resourceAsString("schemas/event-dummy-valid.json"), "https://unomi.apache.org/schemas/json/events/dummy/1-0-0"),
+                isValid -> isValid,
+                DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+
+        // Test multiple invalid event:
+        // unevaluated property at root:
+        assertFalse(schemaService.isValid(resourceAsString("schemas/event-dummy-invalid-1.json"), "https://unomi.apache.org/schemas/json/events/dummy/1-0-0"));
+        // unevaluated property in properties:
+        assertFalse(schemaService.isValid(resourceAsString("schemas/event-dummy-invalid-2.json"), "https://unomi.apache.org/schemas/json/events/dummy/1-0-0"));
+        // bad type number but should be string:
+        assertFalse(schemaService.isValid(resourceAsString("schemas/event-dummy-invalid-3.json"), "https://unomi.apache.org/schemas/json/events/dummy/1-0-0"));
+
+        // remove one of the schema:
+        assertTrue(schemaService.deleteSchema("https://unomi.apache.org/schemas/json/events/dummy/properties/1-0-0"));
+        keepTrying("Schema should have been deleted",
+                () -> schemaService.getInstalledJsonSchemaIds(),
+                (list) -> !list.contains("https://unomi.apache.org/schemas/json/events/dummy/properties/1-0-0"),
+                DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+
+        // event should be invalid now that one of the schema have been deleted -> this is validating cache is correctly flushed
+        keepTrying("Event should be invalid since of the schema have been deleted",
+                () -> schemaService.isValid(resourceAsString("schemas/event-dummy-valid.json"), "https://unomi.apache.org/schemas/json/events/dummy/1-0-0"),
+                isValid -> !isValid,
+                DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
     }
 
     @Test
-    public void testSavePredefinedJSONSchema() throws IOException {
-        assertTrue("JSON schema list should be empty", persistenceService.getAllItems(JsonSchemaWrapper.class).isEmpty());
-        try (CloseableHttpResponse response = post(JSONSCHEMA_URL, "schemas/events/predefined-event-type.json", ContentType.TEXT_PLAIN)) {
-            assertEquals("Unable to save schema", 400, response.getStatusLine().getStatusCode());
+    public void testValidation_UpdateSchema() throws InterruptedException, IOException {
+        // check that event is not valid at first
+        assertFalse(schemaService.isValid(resourceAsString("schemas/event-dummy-valid.json"), "https://unomi.apache.org/schemas/json/events/dummy/1-0-0"));
+
+        // Push schemas
+        schemaService.saveSchema(resourceAsString("schemas/schema-dummy.json"));
+        schemaService.saveSchema(resourceAsString("schemas/schema-dummy-properties.json"));
+        keepTrying("Couldn't find json schemas",
+                () -> get(JSONSCHEMA_URL, List.class),
+                (list) -> (list.contains("https://unomi.apache.org/schemas/json/events/dummy/1-0-0") &&
+                        list.contains("https://unomi.apache.org/schemas/json/events/dummy/properties/1-0-0")),
+                DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+
+        // event should be valid now
+        keepTrying("Event should be valid",
+                () -> schemaService.isValid(resourceAsString("schemas/event-dummy-valid.json"), "https://unomi.apache.org/schemas/json/events/dummy/1-0-0"),
+                isValid -> isValid,
+                DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+
+        // Test the invalid event, that use the new prop "invalidPropName" in properties:
+        assertFalse(schemaService.isValid(resourceAsString("schemas/event-dummy-invalid-2.json"), "https://unomi.apache.org/schemas/json/events/dummy/1-0-0"));
+
+        // update the schema to allow "invalidPropName":
+        schemaService.saveSchema(resourceAsString("schemas/schema-dummy-properties-updated.json"));
+        keepTrying("schema should be updated by refresh 1sec",
+                () -> schemaService.getSchema("https://unomi.apache.org/schemas/json/events/dummy/properties/1-0-0"),
+                schema -> (schema != null && schema.getSchema().contains("invalidPropName")),
+                DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+
+        // "invalidPropName" should be valid and allowed now
+        keepTrying("Event should be valid since of the schema have been updated",
+                () -> schemaService.isValid(resourceAsString("schemas/event-dummy-invalid-2.json"), "https://unomi.apache.org/schemas/json/events/dummy/1-0-0"),
+                isValid -> isValid,
+                DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+    }
+
+    @Test
+    public void testEndPoint_GetInstalledJsonSchemas() throws InterruptedException {
+        List<String> jsonSchemas = get(JSONSCHEMA_URL, List.class);
+        assertFalse("JSON schema list should not be empty, it should contains predefined Unomi schemas", jsonSchemas.isEmpty());
+    }
+
+    @Test
+    public void testEndPoint_SaveDelete() throws InterruptedException, IOException {
+        assertNull(schemaService.getSchema("https://unomi.apache.org/schemas/json/events/dummy/1-0-0"));
+
+        // Post schema using REST call
+        try(CloseableHttpResponse response = post(JSONSCHEMA_URL, "schemas/schema-dummy.json", ContentType.TEXT_PLAIN)) {
+            assertEquals("Invalid response code", 200, response.getStatusLine().getStatusCode());
         }
-    }
 
-    @Test
-    public void testDeleteJSONSchema() throws InterruptedException {
-        assertTrue("JSON schema list should be empty", persistenceService.getAllItems(JsonSchemaWrapper.class).isEmpty());
+        // See schema is available
+        keepTrying("Schema should have been created", () -> schemaService.getSchema("https://unomi.apache.org/schemas/json/events/dummy/1-0-0"),
+                Objects::nonNull, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
 
-        post(JSONSCHEMA_URL, "schemas/events/test-event-type.json", ContentType.TEXT_PLAIN);
-
-        keepTrying("Couldn't find json schemas", () -> get(JSONSCHEMA_URL, List.class), (list) -> !list.isEmpty(), DEFAULT_TRYING_TIMEOUT,
-                DEFAULT_TRYING_TRIES);
-
+        // Delete Schema using REST call
         String encodedString = Base64.getEncoder()
-                .encodeToString("https://unomi.apache.org/schemas/json/events/testEventType/1-0-0".getBytes());
+                .encodeToString("https://unomi.apache.org/schemas/json/events/dummy/1-0-0".getBytes());
         CloseableHttpResponse response = delete(JSONSCHEMA_URL + "/" + encodedString);
         assertEquals("Invalid response code", 204, response.getStatusLine().getStatusCode());
 
-        List jsonSchemas = keepTrying("wait for empty list of schemas", () -> get(JSONSCHEMA_URL, List.class), List::isEmpty,
-                DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
-
-        assertTrue("JSON schema list should be empty", jsonSchemas.isEmpty());
+        keepTrying("Schema should have been deleted", () -> schemaService.getSchema("https://unomi.apache.org/schemas/json/events/dummy/1-0-0"),
+                Objects::isNull, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
     }
 
     @Test
-    public void testSaveNewInvalidJSONSchema() throws IOException {
-        assertTrue("JSON schema list should be empty", persistenceService.getAllItems(JsonSchemaWrapper.class).isEmpty());
-        try (CloseableHttpResponse response = post(JSONSCHEMA_URL, "schemas/events/test-invalid.json", ContentType.TEXT_PLAIN)) {
+    public void testSaveFail_PredefinedJSONSchema() throws IOException {
+        try (CloseableHttpResponse response = post(JSONSCHEMA_URL, "schemas/schema-predefined.json", ContentType.TEXT_PLAIN)) {
             assertEquals("Unable to save schema", 400, response.getStatusLine().getStatusCode());
         }
     }
 
     @Test
-    public void testSaveSchemaWithInvalidName() throws IOException {
-        assertTrue("JSON schema list should be empty", persistenceService.getAllItems(JsonSchemaWrapper.class).isEmpty());
-        try (CloseableHttpResponse response = post(JSONSCHEMA_URL, "schemas/events/test-invalid-name.json", ContentType.TEXT_PLAIN)) {
+    public void testSaveFail_NewInvalidJSONSchema() throws IOException {
+        try (CloseableHttpResponse response = post(JSONSCHEMA_URL, "schemas/schema-invalid.json", ContentType.TEXT_PLAIN)) {
+            assertEquals("Unable to save schema", 400, response.getStatusLine().getStatusCode());
+        }
+    }
+
+    @Test
+    public void testSaveFail_SchemaWithInvalidName() throws IOException {
+        try (CloseableHttpResponse response = post(JSONSCHEMA_URL, "schemas/schema-invalid-name.json", ContentType.TEXT_PLAIN)) {
             assertEquals("Unable to save schema", 400, response.getStatusLine().getStatusCode());
         }
     }

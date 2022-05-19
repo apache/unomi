@@ -16,8 +16,6 @@
  */
 package org.apache.unomi.schema.listener;
 
-import org.apache.unomi.persistence.spi.PersistenceService;
-import org.apache.unomi.schema.api.JsonSchemaWrapper;
 import org.apache.unomi.schema.api.SchemaService;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
@@ -41,13 +39,8 @@ public class JsonSchemaListener implements SynchronousBundleListener {
     private static final Logger logger = LoggerFactory.getLogger(JsonSchemaListener.class.getName());
     public static final String ENTRIES_LOCATION = "META-INF/cxs/schemas";
 
-    private PersistenceService persistenceService;
     private SchemaService schemaService;
     private BundleContext bundleContext;
-
-    public void setPersistenceService(PersistenceService persistenceService) {
-        this.persistenceService = persistenceService;
-    }
 
     public void setSchemaService(SchemaService schemaService) {
         this.schemaService = schemaService;
@@ -60,7 +53,6 @@ public class JsonSchemaListener implements SynchronousBundleListener {
     public void postConstruct() {
         logger.info("JSON schema listener initializing...");
         logger.debug("postConstruct {}", bundleContext.getBundle());
-        createIndexes();
 
         loadPredefinedSchemas(bundleContext, true);
 
@@ -103,14 +95,6 @@ public class JsonSchemaListener implements SynchronousBundleListener {
                     processBundleStop(event.getBundle().getBundleContext());
                 }
                 break;
-        }
-    }
-
-    public void createIndexes() {
-        if (persistenceService.createIndex(JsonSchemaWrapper.ITEM_TYPE)) {
-            logger.info("{} index created", JsonSchemaWrapper.ITEM_TYPE);
-        } else {
-            logger.info("{} index already exists", JsonSchemaWrapper.ITEM_TYPE);
         }
     }
 

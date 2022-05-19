@@ -33,7 +33,6 @@
 
     <bean id="schemaServiceImpl" class="org.apache.unomi.schema.impl.SchemaServiceImpl" init-method="init"
           destroy-method="destroy">
-        <property name="bundleContext" ref="blueprintBundleContext"/>
         <property name="persistenceService" ref="persistenceService"/>
         <property name="schedulerService" ref="schedulerService"/>
         <property name="jsonSchemaRefreshInterval" value="${json.schema.refresh.interval}"/>
@@ -42,7 +41,6 @@
 
     <bean id="jsonSchemaListenerImpl" class="org.apache.unomi.schema.listener.JsonSchemaListener"
           init-method="postConstruct" destroy-method="preDestroy">
-        <property name="persistenceService" ref="persistenceService"/>
         <property name="bundleContext" ref="blueprintBundleContext"/>
         <property name="schemaService" ref="schemaServiceImpl"/>
     </bean>

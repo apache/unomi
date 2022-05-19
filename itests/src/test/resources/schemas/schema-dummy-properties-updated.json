@@ -1,0 +1,24 @@
+{
+  "$id": "https://unomi.apache.org/schemas/json/events/dummy/properties/1-0-0",
+  "$schema": "https://json-schema.org/draft/2019-09/schema",
+  "self": {
+    "vendor": "org.modules.jahia",
+    "name": "dummyProperties",
+    "format": "jsonschema",
+    "version": "1-0-0"
+  },
+  "title": "dummyProperties",
+  "type": "object",
+  "properties": {
+    "workspace": {
+      "type": "string"
+    },
+    "path": {
+      "type": "string"
+    },
+    "invalidPropName": {
+      "type": "string"
+    }
+  },
+  "unevaluatedProperties": false
+}
