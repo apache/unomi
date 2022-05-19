@@ -45,6 +45,7 @@
             <cm:property name="events.shouldBeCheckedEventSourceId" value="false"/>
             <cm:property name="rules.optimizationActivated" value="true"/>
             <cm:property name="schedules.thread.poolSize" value="5"/>
+            <cm:property name="scopes.refresh.interval" value="1000"/>
         </cm:default-properties>
     </cm:property-placeholder>
 
@@ -145,8 +146,11 @@
         </interfaces>
     </service>
 
-    <bean id="scopeServiceImpl" class="org.apache.unomi.services.impl.scope.ScopeServiceImpl">
+    <bean id="scopeServiceImpl" class="org.apache.unomi.services.impl.scope.ScopeServiceImpl"
+          init-method="postConstruct" destroy-method="preDestroy">
         <property name="persistenceService" ref="persistenceService"/>
+        <property name="schedulerService" ref="schedulerServiceImpl"/>
+        <property name="scopesRefreshInterval" value="${services.scopes.refresh.interval}"/>
     </bean>
     <service id="scopeService" ref="scopeServiceImpl" interface="org.apache.unomi.api.services.ScopeService"/>
 

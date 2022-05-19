@@ -16,21 +16,53 @@
  */
 package org.apache.unomi.services.impl.scope;
 
+import org.apache.unomi.api.Item;
 import org.apache.unomi.api.Metadata;
 import org.apache.unomi.api.PartialList;
 import org.apache.unomi.api.Scope;
+import org.apache.unomi.api.services.SchedulerService;
 import org.apache.unomi.api.services.ScopeService;
 import org.apache.unomi.persistence.spi.PersistenceService;
 
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
+import java.util.TimerTask;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 public class ScopeServiceImpl implements ScopeService {
 
     private PersistenceService persistenceService;
 
+    private SchedulerService schedulerService;
+
+    private Integer scopesRefreshInterval = 1000;
+
+    private Map<String, Scope> scopes = new HashMap<>();
+
+    private ScheduledFuture<?> scheduledFuture;
+
     public void setPersistenceService(PersistenceService persistenceService) {
         this.persistenceService = persistenceService;
+    }
+
+    public void setSchedulerService(SchedulerService schedulerService) {
+        this.schedulerService = schedulerService;
+    }
+
+    public void setScopesRefreshInterval(Integer scopesRefreshInterval) {
+        this.scopesRefreshInterval = scopesRefreshInterval;
+    }
+
+    public void postConstruct() {
+        initializeTimers();
+    }
+
+    public void preDestroy() {
+        scheduledFuture.cancel(true);
     }
 
     @Override
@@ -46,17 +78,36 @@ public class ScopeServiceImpl implements ScopeService {
     @Override
     public void save(Scope scope) {
         if (persistenceService.save(scope)) {
-            persistenceService.refreshIndex(Scope.class, null);
+            scopes.put(scope.getItemId(), scope);
         }
     }
 
     @Override
     public boolean delete(String id) {
-        return persistenceService.remove(id, Scope.class);
+        if (persistenceService.remove(id, Scope.class)) {
+            scopes.remove(id);
+            return true;
+        }
+        return false;
     }
 
     @Override
     public Scope getScope(String id) {
         return persistenceService.load(id, Scope.class);
+    }
+
+    private void initializeTimers() {
+        TimerTask task = new TimerTask() {
+            @Override
+            public void run() {
+                refreshScopes();
+            }
+        };
+        scheduledFuture = schedulerService.getScheduleExecutorService()
+                .scheduleWithFixedDelay(task, 0, scopesRefreshInterval, TimeUnit.MILLISECONDS);
+    }
+
+    private void refreshScopes() {
+        scopes = persistenceService.getAllItems(Scope.class).stream().collect(Collectors.toMap(Item::getItemId, scope -> scope));
     }
 }
