@@ -29,29 +29,9 @@ public class Scope extends MetadataItem {
      */
     public static final String ITEM_TYPE = "scope";
 
-    private String value;
-
     /**
      * Instantiates a new Scope.
      */
     public Scope() {
     }
-
-    /**
-     * Instantiates a new Scope with the specified identifier.
-     *
-     * @param value of the scope
-     */
-    public Scope(String value) {
-        super(new Metadata(value));
-    }
-
-    public void setValue(String value) {
-        this.value = value;
-    }
-
-    public String getValue() {
-        return this.value;
-    }
-
 }

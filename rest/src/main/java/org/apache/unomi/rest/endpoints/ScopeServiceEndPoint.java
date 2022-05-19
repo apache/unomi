@@ -18,7 +18,6 @@
 package org.apache.unomi.rest.endpoints;
 
 import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
-import org.apache.unomi.api.Metadata;
 import org.apache.unomi.api.Scope;
 import org.apache.unomi.api.services.ScopeService;
 import org.osgi.service.component.annotations.Component;
@@ -65,14 +64,14 @@ public class ScopeServiceEndPoint {
     }
 
     /**
-     * Retrieves the scopes metadatas by default.
+     * Retrieves all known scopes.
      *
-     * @return a List of the scope metadata
+     * @return a List of the scopes
      */
     @GET
     @Path("/")
-    public List<Metadata> getScopesMetadatas() {
-        return scopeService.getScopesMetadatas();
+    public List<Scope> getScopes() {
+        return scopeService.getScopes();
     }
 
     /**

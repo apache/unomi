@@ -17,14 +17,12 @@
 package org.apache.unomi.services.impl.scope;
 
 import org.apache.unomi.api.Item;
-import org.apache.unomi.api.Metadata;
-import org.apache.unomi.api.MetadataItem;
-import org.apache.unomi.api.PartialList;
 import org.apache.unomi.api.Scope;
 import org.apache.unomi.api.services.SchedulerService;
 import org.apache.unomi.api.services.ScopeService;
 import org.apache.unomi.persistence.spi.PersistenceService;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.TimerTask;
 import java.util.concurrent.ConcurrentHashMap;
@@ -66,8 +64,8 @@ public class ScopeServiceImpl implements ScopeService {
     }
 
     @Override
-    public List<Metadata> getScopesMetadatas() {
-        return scopes.values().stream().map(MetadataItem::getMetadata).collect(Collectors.toList());
+    public List<Scope> getScopes() {
+        return new ArrayList<>(scopes.values());
     }
 
     @Override

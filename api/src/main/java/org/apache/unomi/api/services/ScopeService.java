@@ -28,11 +28,11 @@ import java.util.List;
 public interface ScopeService {
 
     /**
-     * Retrieves the metadata for all known scopes.
+     * Retrieves all known scopes.
      *
-     * @return the Set of known metadata
+     * @return the List of known scopes
      */
-    List<Metadata> getScopesMetadatas();
+    List<Scope> getScopes();
 
     /**
      * Save a scope

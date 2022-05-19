@@ -70,7 +70,7 @@ public class ScopeIT extends BaseIT {
     }
 
     @Test
-    public void testGetScopesMetadatas() throws InterruptedException {
+    public void testGetScopes() throws InterruptedException {
         List scopes = get(SCOPE_URL, List.class);
         assertTrue("Scope list should be empty", scopes.isEmpty());
 
@@ -92,7 +92,7 @@ public class ScopeIT extends BaseIT {
         storedScope = keepTrying("Couldn't find scopes", () -> get(SCOPE_URL + "/scopeTest", Scope.class), Objects::nonNull,
                 DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
 
-        assertEquals("storedScope.getValue() shoould be equal to scopeToTest", "scopeToTest", storedScope.getValue());
+        assertEquals("storedScope.getItemId() shoould be equal to scopeToTest", "scopeToTest", storedScope.getItemId());
     }
 
     @Test
