@@ -175,8 +175,10 @@ public class JSONSchemaIT extends BaseIT {
         CloseableHttpResponse response = delete(JSONSCHEMA_URL + "/" + encodedString);
         assertEquals("Invalid response code", 204, response.getStatusLine().getStatusCode());
 
-        keepTrying("Schema should have been deleted", () -> schemaService.getSchema("https://unomi.apache.org/schemas/json/events/dummy/1-0-0"),
-                Objects::isNull, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+        waitForNullValue("Schema should have been deleted",
+                () -> schemaService.getSchema("https://unomi.apache.org/schemas/json/events/dummy/1-0-0"),
+                DEFAULT_TRYING_TIMEOUT,
+                DEFAULT_TRYING_TRIES);
     }
 
     @Test
