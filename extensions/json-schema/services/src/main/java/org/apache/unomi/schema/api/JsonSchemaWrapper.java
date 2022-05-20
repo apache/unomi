@@ -33,7 +33,7 @@ public class JsonSchemaWrapper extends Item implements TimestampedItem {
 
     private String schema;
     private String target;
-    private String extendsSchema;
+    private String extendsSchemaId;
     private Date timeStamp;
 
     /**
@@ -48,14 +48,14 @@ public class JsonSchemaWrapper extends Item implements TimestampedItem {
      * @param id     id of the schema
      * @param schema as string
      * @param target of the schema (optional)
-     * @param extendsSchema is the URI of another Schema to be extended by current one. (optional)
+     * @param extendsSchemaId is the URI of another Schema to be extended by current one. (optional)
      * @param timeStamp of the schema
      */
-    public JsonSchemaWrapper(String id, String schema, String target, String extendsSchema, Date timeStamp) {
+    public JsonSchemaWrapper(String id, String schema, String target, String extendsSchemaId, Date timeStamp) {
         super(id);
         this.schema = schema;
         this.target = target;
-        this.extendsSchema = extendsSchema;
+        this.extendsSchemaId = extendsSchemaId;
         this.timeStamp = timeStamp;
     }
 
@@ -75,12 +75,12 @@ public class JsonSchemaWrapper extends Item implements TimestampedItem {
         this.target = target;
     }
 
-    public String getExtendsSchema() {
-        return extendsSchema;
+    public String getExtendsSchemaId() {
+        return extendsSchemaId;
     }
 
-    public void setExtendsSchema(String extendsSchema) {
-        this.extendsSchema = extendsSchema;
+    public void setExtendsSchemaId(String extendsSchemaId) {
+        this.extendsSchemaId = extendsSchemaId;
     }
 
     @Override

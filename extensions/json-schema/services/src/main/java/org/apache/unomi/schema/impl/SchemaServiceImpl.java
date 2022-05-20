@@ -17,11 +17,16 @@
 
 package org.apache.unomi.schema.impl;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.MissingNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.networknt.schema.*;
 import com.networknt.schema.uri.URIFetcher;
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.unomi.api.Item;
 import org.apache.unomi.api.services.SchedulerService;
 import org.apache.unomi.persistence.spi.PersistenceService;
@@ -48,22 +53,18 @@ public class SchemaServiceImpl implements SchemaService {
 
     ObjectMapper objectMapper = new ObjectMapper();
 
+    /**
+     *  Schemas provided by Unomi runtime bundles in /META-INF/cxs/schemas/...
+     */
     private final ConcurrentMap<String, JsonSchemaWrapper> predefinedUnomiJSONSchemaById = new ConcurrentHashMap<>();
-    private ConcurrentMap<String, JsonSchemaWrapper> schemasById = new ConcurrentHashMap<>();
-
-    private final JsonMetaSchema jsonMetaSchema = JsonMetaSchema.builder(URI, JsonMetaSchema.getV201909())
-            .addKeyword(new NonValidationKeyword("self"))
-            .build();
-    private final URIFetcher jsonSchemaURIFetcher = uri -> {
-        logger.debug("Fetching schema {}", uri);
-        JsonSchemaWrapper jsonSchemaWrapper = schemasById.get(uri.toString());
-        if (jsonSchemaWrapper == null) {
-            logger.error("Couldn't find schema {}", uri);
-            return null;
-        }
-
-        return IOUtils.toInputStream(jsonSchemaWrapper.getSchema());
-    };
+    /**
+     * All Unomi schemas indexed by URI
+     */
+    private final ConcurrentMap<String, JsonSchemaWrapper> schemasById = new ConcurrentHashMap<>();
+    /**
+     * Available extensions indexed by key:schema URI to be extended, value: list of schema extension URIs
+     */
+    private final ConcurrentMap<String, Set<String>> extensions = new ConcurrentHashMap<>();
 
     private Integer jsonSchemaRefreshInterval = 1000;
     private ScheduledFuture<?> scheduledFuture;
@@ -130,7 +131,8 @@ public class SchemaServiceImpl implements SchemaService {
 
     @Override
     public List<JsonSchemaWrapper> getSchemasByTarget(String target) {
-        return schemasById.values().stream().filter(jsonSchemaWrapper -> jsonSchemaWrapper.getTarget() != null && jsonSchemaWrapper.getTarget().equals(target))
+        return schemasById.values().stream()
+                .filter(jsonSchemaWrapper -> jsonSchemaWrapper.getTarget() != null && jsonSchemaWrapper.getTarget().equals(target))
                 .collect(Collectors.toList());
     }
 
@@ -175,39 +177,96 @@ public class SchemaServiceImpl implements SchemaService {
         String schemaId = schemaNode.get("$id").asText();
         String target = schemaNode.at("/self/target").asText();
         String name = schemaNode.at("/self/name").asText();
-        String extendsSchema = schemaNode.at("/self/extends").asText();
+        String extendsSchemaId = schemaNode.at("/self/extends").asText();
 
         if ("events".equals(target) && !name.matches("[_A-Za-z][_0-9A-Za-z]*")) {
             throw new IllegalArgumentException(
                     "The \"/self/name\" value should match the following regular expression [_A-Za-z][_0-9A-Za-z]* for the Json schema on events");
         }
 
-        return new JsonSchemaWrapper(schemaId, schema, target, extendsSchema, new Date());
+        return new JsonSchemaWrapper(schemaId, schema, target, extendsSchemaId, new Date());
     }
 
     private void refreshJSONSchemas() {
         // use local variable to avoid concurrency issues.
-        ConcurrentMap<String, JsonSchemaWrapper> schemasByIdReloaded = new ConcurrentHashMap<>();
+        Map<String, JsonSchemaWrapper> schemasByIdReloaded = new HashMap<>();
         schemasByIdReloaded.putAll(predefinedUnomiJSONSchemaById);
         schemasByIdReloaded.putAll(persistenceService.getAllItems(JsonSchemaWrapper.class).stream().collect(Collectors.toMap(Item::getItemId, s -> s)));
 
         // flush cache if size is different (can be new schema or deleted schemas)
-        boolean flushCache = schemasByIdReloaded.size() != schemasById.size();
-        // check dates
-        if (!flushCache) {
+        boolean changes = schemasByIdReloaded.size() != schemasById.size();
+        // check for modifications
+        if (!changes) {
             for (JsonSchemaWrapper reloadedSchema : schemasByIdReloaded.values()) {
                 JsonSchemaWrapper oldSchema = schemasById.get(reloadedSchema.getItemId());
                 if (oldSchema == null || !oldSchema.getTimeStamp().equals(reloadedSchema.getTimeStamp())) {
-                    flushCache = true;
+                    changes = true;
                     break;
                 }
             }
         }
 
-        if (flushCache) {
+        if (changes) {
+            schemasById.clear();
+            schemasById.putAll(schemasByIdReloaded);
+
+            initExtensions(schemasByIdReloaded);
             initJsonSchemaFactory();
         }
-        schemasById = schemasByIdReloaded;
+    }
+
+    private void initExtensions(Map<String, JsonSchemaWrapper> schemas) {
+        Map<String, Set<String>> extensionsReloaded = new HashMap<>();
+        // lookup extensions
+        List<JsonSchemaWrapper> schemaExtensions = schemas.values()
+                .stream()
+                .filter(jsonSchemaWrapper -> StringUtils.isNotBlank(jsonSchemaWrapper.getExtendsSchemaId()))
+                .collect(Collectors.toList());
+
+        // build new in RAM extensions map
+        for (JsonSchemaWrapper extension : schemaExtensions) {
+            String extendedSchemaId = extension.getExtendsSchemaId();
+            if (!extension.getItemId().equals(extendedSchemaId)) {
+                if (!extensionsReloaded.containsKey(extendedSchemaId)) {
+                    extensionsReloaded.put(extendedSchemaId, new HashSet<>());
+                }
+                extensionsReloaded.get(extendedSchemaId).add(extension.getItemId());
+            } else {
+                logger.warn("A schema cannot extends himself, please fix your schema definition for schema: {}", extendedSchemaId);
+            }
+        }
+
+        extensions.clear();
+        extensions.putAll(extensionsReloaded);
+    }
+
+    private String checkForExtensions(String id, String schema) throws JsonProcessingException {
+        Set<String> extensionIds = extensions.get(id);
+        if (extensionIds != null && extensionIds.size() > 0) {
+            // This schema need to be extends !
+            ObjectNode jsonSchema = (ObjectNode) objectMapper.readTree(schema);
+            ArrayNode allOf;
+            if (jsonSchema.at("/allOf") instanceof MissingNode) {
+                allOf = objectMapper.createArrayNode();
+            } else if (jsonSchema.at("/allOf") instanceof ArrayNode){
+                allOf = (ArrayNode) jsonSchema.at("/allOf");
+            } else {
+                logger.warn("Cannot extends schema allOf property, it should be an Array, please fix your schema definition for schema: {}", id);
+                return schema;
+            }
+
+            // Add each extension URIs as new ref in the allOf
+            for (String extensionId : extensionIds) {
+                ObjectNode newAllOf = objectMapper.createObjectNode();
+                newAllOf.put("$ref", extensionId);
+                allOf.add(newAllOf);
+            }
+
+            // generate new extended schema as String
+            jsonSchema.putArray("allOf").addAll(allOf);
+            return objectMapper.writeValueAsString(jsonSchema);
+        }
+        return schema;
     }
 
     private void initPersistenceIndex() {
@@ -231,9 +290,25 @@ public class SchemaServiceImpl implements SchemaService {
 
     private void initJsonSchemaFactory() {
         jsonSchemaFactory = JsonSchemaFactory.builder(JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V201909))
-                .addMetaSchema(jsonMetaSchema)
+                .addMetaSchema(JsonMetaSchema.builder(URI, JsonMetaSchema.getV201909())
+                        .addKeyword(new NonValidationKeyword("self"))
+                        .build())
                 .defaultMetaSchemaURI(URI)
-                .uriFetcher(jsonSchemaURIFetcher, "https", "http")
+                .uriFetcher(uri -> {
+                    logger.debug("Fetching schema {}", uri);
+                    String schemaId = uri.toString();
+                    JsonSchemaWrapper jsonSchemaWrapper = getSchema(schemaId);
+                    if (jsonSchemaWrapper == null) {
+                        logger.error("Couldn't find schema {}", uri);
+                        return null;
+                    }
+
+                    String schema = jsonSchemaWrapper.getSchema();
+                    // Check if schema need to be extended
+                    schema = checkForExtensions(schemaId, schema);
+
+                    return IOUtils.toInputStream(schema);
+                }, "https", "http")
                 .build();
     }
 
