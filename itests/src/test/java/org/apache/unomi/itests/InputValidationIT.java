@@ -23,9 +23,10 @@ import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.util.EntityUtils;
+import org.apache.unomi.api.Event;
 import org.apache.unomi.itests.tools.httpclient.HttpClientThatWaitsForUnomi;
-import org.junit.Before;
-import org.junit.Test;
+import org.apache.unomi.schema.api.JsonSchemaWrapper;
+import org.junit.*;
 import org.junit.runner.RunWith;
 import org.ops4j.pax.exam.junit.PaxExam;
 import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
@@ -70,11 +71,25 @@ public class InputValidationIT extends BaseIT {
     }
 
     @Test
-    public void test_eventCollector_valid() throws IOException {
-        registerEventType(DUMMY_EVENT_TYPE_SCHEMA);
+    public void test_eventCollector_valid() throws IOException, InterruptedException {
+        // needed schema for event to be valid during tests
+        schemaService.saveSchema(resourceAsString("schemas/schema-dummy.json"));
+        schemaService.saveSchema(resourceAsString("schemas/schema-dummy-properties.json"));
+        keepTrying("Event should be valid",
+                () -> schemaService.isValid(resourceAsString("schemas/event-dummy-valid.json"), "https://unomi.apache.org/schemas/json/events/dummy/1-0-0"),
+                isValid -> isValid,
+                DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+
         doPOSTRequestTest(EVENT_COLLECTOR_URL, null, "/validation/eventcollector_valid.json", 200, null);
         doGETRequestTest(EVENT_COLLECTOR_URL, null, "/validation/eventcollector_valid.json", 200, null);
-        unRegisterEventType("https://unomi.apache.org/schemas/json/events/dummy_event_type/1-0-0");
+
+        // remove schemas
+        schemaService.deleteSchema("https://unomi.apache.org/schemas/json/events/dummy/1-0-0");
+        schemaService.deleteSchema("https://unomi.apache.org/schemas/json/events/dummy/properties/1-0-0");
+        keepTrying("Event should be invalid",
+                () -> schemaService.isValid(resourceAsString("schemas/event-dummy-valid.json"), "https://unomi.apache.org/schemas/json/events/dummy/1-0-0"),
+                isValid -> !isValid,
+                DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
     }
 
     @Test
@@ -102,11 +117,25 @@ public class InputValidationIT extends BaseIT {
     }
 
     @Test
-    public void test_eventCollector_request_size_exceed_limit() throws IOException {
-        registerEventType(DUMMY_EVENT_TYPE_SCHEMA);
+    public void test_eventCollector_request_size_exceed_limit() throws IOException, InterruptedException {
+        // needed schema for event to be valid during tests
+        schemaService.saveSchema(resourceAsString("schemas/schema-dummy.json"));
+        schemaService.saveSchema(resourceAsString("schemas/schema-dummy-properties.json"));
+        keepTrying("Event should be valid",
+                () -> schemaService.isValid(resourceAsString("schemas/event-dummy-valid.json"), "https://unomi.apache.org/schemas/json/events/dummy/1-0-0"),
+                isValid -> isValid,
+                DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+
         doPOSTRequestTest(EVENT_COLLECTOR_URL, null, "/validation/eventcollector_request_size_invalid.json", 400, ERROR_MESSAGE_REQUEST_SIZE_LIMIT_EXCEEDED);
         doPOSTRequestTest(EVENT_COLLECTOR_URL, null, "/validation/eventcollector_request_size_valid.json", 200, null);
-        unRegisterEventType("https://unomi.apache.org/schemas/json/events/dummy_event_type/1-0-0");
+
+        // remove schemas
+        schemaService.deleteSchema("https://unomi.apache.org/schemas/json/events/dummy/1-0-0");
+        schemaService.deleteSchema("https://unomi.apache.org/schemas/json/events/dummy/properties/1-0-0");
+        keepTrying("Event should be invalid",
+                () -> schemaService.isValid(resourceAsString("schemas/event-dummy-valid.json"), "https://unomi.apache.org/schemas/json/events/dummy/1-0-0"),
+                isValid -> !isValid,
+                DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
     }
 
     @Test

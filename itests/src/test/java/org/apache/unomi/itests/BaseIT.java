@@ -44,6 +44,7 @@ import org.apache.unomi.api.services.RulesService;
 import org.apache.unomi.lifecycle.BundleWatcher;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.persistence.spi.PersistenceService;
+import org.apache.unomi.schema.api.SchemaService;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -112,7 +113,6 @@ public abstract class BaseIT {
     protected static final int REQUEST_TIMEOUT = 60000;
     protected static final int DEFAULT_TRYING_TIMEOUT = 2000;
     protected static final int DEFAULT_TRYING_TRIES = 30;
-    private final static String JSONSCHEMA_URL = "/cxs/jsonSchema";
 
     protected final static ObjectMapper objectMapper;
 
@@ -128,6 +128,10 @@ public abstract class BaseIT {
     @Inject
     @Filter(timeout = 600000)
     protected RulesService rulesService;
+
+    @Inject
+    @Filter(timeout = 600000)
+    protected SchemaService schemaService;
 
     @Inject
     @Filter(timeout = 600000)
@@ -376,6 +380,7 @@ public abstract class BaseIT {
         persistenceService = getService(PersistenceService.class);
         definitionsService = getService(DefinitionsService.class);
         rulesService = getService(RulesService.class);
+        schemaService = getService(SchemaService.class);
     }
 
     public void updateConfiguration(String serviceName, String configPid, String propName, Object propValue) throws InterruptedException, IOException {
@@ -605,13 +610,4 @@ public abstract class BaseIT {
             LOGGER.error("Could not close httpClient: " + httpClient, e);
         }
     }
-
-    void registerEventType(String jsonSchemaFileName) {
-        post(JSONSCHEMA_URL, "schemas/events/" + jsonSchemaFileName, ContentType.TEXT_PLAIN);
-    }
-
-    void unRegisterEventType(String jsonSchemaId) {
-        delete(JSONSCHEMA_URL + "/" + Base64.getEncoder().encodeToString(jsonSchemaId.getBytes()));
-    }
-
 }

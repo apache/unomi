@@ -1,0 +1,18 @@
+{
+  "$id": "https://unomi.apache.org/schemas/json/events/dummy/extension/1-0-0",
+  "$schema": "https://json-schema.org/draft/2019-09/schema",
+  "self":{
+    "vendor":"org.apache.unomi",
+    "name":"dummyExtension",
+    "format":"jsonschema",
+    "extends": "https://unomi.apache.org/schemas/json/events/dummy/1-0-0",
+    "version":"1-0-0"
+  },
+  "title": "DummyEventExtension",
+  "type": "object",
+  "properties": {
+    "newRootProp": {
+      "type": "string"
+    }
+  }
+}

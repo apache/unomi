@@ -2,15 +2,11 @@
   "sessionId": "<script>alert();</script>",
   "events":[
     {
-      "eventType":"dummy_event_type",
+      "eventType":"dummy",
       "scope":"dummy_scope",
-      "source":{
-        "itemType":"pageView",
-        "scope":"dummy_scope",
-        "itemId":"pageView",
-        "properties":{
-          "myProperty":"myValue"
-        }
+      "properties": {
+        "workspace": "dummy_workspace",
+        "path": "dummy/path"
       }
     }
   ]

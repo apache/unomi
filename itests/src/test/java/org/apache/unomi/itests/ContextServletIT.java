@@ -80,9 +80,9 @@ public class ContextServletIT extends BaseIT {
 
     private final static String THIRD_PARTY_HEADER_NAME = "X-Unomi-Peer";
     private final static String TEST_EVENT_TYPE = "testEventType";
-    private final static String TEST_EVENT_TYPE_SCHEMA = "test-event-type.json";
+    private final static String TEST_EVENT_TYPE_SCHEMA = "schemas/events/test-event-type.json";
     private final static String FLOAT_PROPERTY_EVENT_TYPE = "floatPropertyType";
-    private final static String FLOAT_PROPERTY_EVENT_TYPE_SCHEMA = "float-property-type.json";
+    private final static String FLOAT_PROPERTY_EVENT_TYPE_SCHEMA = "schemas/events/float-property-type.json";
     private final static String TEST_PROFILE_ID = "test-profile-id";
 
     private final static String SEGMENT_ID = "test-segment-id";
@@ -115,8 +115,6 @@ public class ContextServletIT extends BaseIT {
 
     @Before
     public void setUp() throws InterruptedException {
-        this.registerEventType(TEST_EVENT_TYPE_SCHEMA);
-        this.registerEventType(FLOAT_PROPERTY_EVENT_TYPE_SCHEMA);
 
         //Create a past-event segment
         Metadata segmentMetadata = new Metadata(SEGMENT_ID);
@@ -136,29 +134,32 @@ public class ContextServletIT extends BaseIT {
         keepTrying("Profile " + TEST_PROFILE_ID + " not found in the required time", () -> profileService.load(TEST_PROFILE_ID),
                 Objects::nonNull, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
 
-        keepTrying("Couldn't find json schema endpoint", () -> get(JSONSCHEMA_URL, List.class), Objects::nonNull, DEFAULT_TRYING_TIMEOUT,
-                DEFAULT_TRYING_TRIES);
+        // create schemas required for tests
+        schemaService.saveSchema(resourceAsString(TEST_EVENT_TYPE_SCHEMA));
+        schemaService.saveSchema(resourceAsString(FLOAT_PROPERTY_EVENT_TYPE_SCHEMA));
+        keepTrying("Couldn't find json schemas",
+                () -> schemaService.getInstalledJsonSchemaIds(),
+                (schemaIds) -> (schemaIds.contains("https://unomi.apache.org/schemas/json/events/floatPropertyType/1-0-0") &&
+                        schemaIds.contains("https://unomi.apache.org/schemas/json/events/testEventType/1-0-0")),
+                DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
     }
 
     @After
-    public void tearDown() {
+    public void tearDown() throws InterruptedException {
         TestUtils.removeAllEvents(definitionsService, persistenceService);
         TestUtils.removeAllSessions(definitionsService, persistenceService);
         TestUtils.removeAllProfiles(definitionsService, persistenceService);
         profileService.delete(profile.getItemId(), false);
         segmentService.removeSegmentDefinition(SEGMENT_ID, false);
 
-        String encodedString = Base64.getEncoder()
-                .encodeToString("https://unomi.apache.org/schemas/json/events/testEventType/1-0-0".getBytes());
-        delete(JSONSCHEMA_URL + "/" + encodedString);
-
-        encodedString = Base64.getEncoder()
-                .encodeToString("https://unomi.apache.org/schemas/json/events/floatPropertyType/1-0-0".getBytes());
-        delete(JSONSCHEMA_URL + "/" + encodedString);
-
-        encodedString = Base64.getEncoder()
-                .encodeToString("https://unomi.apache.org/schemas/json/events/floatPropertyType/1-0-0".getBytes());
-        delete(JSONSCHEMA_URL + "/" + encodedString);
+        // cleanup schemas
+        schemaService.deleteSchema("https://unomi.apache.org/schemas/json/events/testEventType/1-0-0");
+        schemaService.deleteSchema("https://unomi.apache.org/schemas/json/events/floatPropertyType/1-0-0");
+        keepTrying("Couldn't find json schemas",
+                () -> schemaService.getInstalledJsonSchemaIds(),
+                (schemaIds) -> (!schemaIds.contains("https://unomi.apache.org/schemas/json/events/floatPropertyType/1-0-0") &&
+                        !schemaIds.contains("https://unomi.apache.org/schemas/json/events/testEventType/1-0-0")),
+                DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
     }
 
     @Test
