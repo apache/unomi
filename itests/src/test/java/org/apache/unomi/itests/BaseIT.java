@@ -131,10 +131,6 @@ public abstract class BaseIT {
 
     @Inject
     @Filter(timeout = 600000)
-    protected SchemaService schemaService;
-
-    @Inject
-    @Filter(timeout = 600000)
     protected DefinitionsService definitionsService;
 
     @Inject
@@ -380,7 +376,6 @@ public abstract class BaseIT {
         persistenceService = getService(PersistenceService.class);
         definitionsService = getService(DefinitionsService.class);
         rulesService = getService(RulesService.class);
-        schemaService = getService(SchemaService.class);
     }
 
     public void updateConfiguration(String serviceName, String configPid, String propName, Object propValue) throws InterruptedException, IOException {

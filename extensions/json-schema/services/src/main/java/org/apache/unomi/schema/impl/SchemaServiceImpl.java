@@ -281,7 +281,11 @@ public class SchemaServiceImpl implements SchemaService {
         TimerTask task = new TimerTask() {
             @Override
             public void run() {
-                refreshJSONSchemas();
+                try {
+                    refreshJSONSchemas();
+                } catch (Exception e) {
+                    logger.error("Error while refreshing JSON Schemas", e);
+                }
             }
         };
         scheduledFuture = schedulerService.getScheduleExecutorService()

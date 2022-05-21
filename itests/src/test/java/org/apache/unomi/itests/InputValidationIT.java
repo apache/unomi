@@ -26,12 +26,15 @@ import org.apache.http.util.EntityUtils;
 import org.apache.unomi.api.Event;
 import org.apache.unomi.itests.tools.httpclient.HttpClientThatWaitsForUnomi;
 import org.apache.unomi.schema.api.JsonSchemaWrapper;
+import org.apache.unomi.schema.api.SchemaService;
 import org.junit.*;
 import org.junit.runner.RunWith;
 import org.ops4j.pax.exam.junit.PaxExam;
 import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
 import org.ops4j.pax.exam.spi.reactors.PerSuite;
+import org.ops4j.pax.exam.util.Filter;
 
+import javax.inject.Inject;
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -51,6 +54,10 @@ public class InputValidationIT extends BaseIT {
 
     private final static String ERROR_MESSAGE_REQUEST_SIZE_LIMIT_EXCEEDED = "Request rejected by the server because: Request size exceed the limit";
     private final static String ERROR_MESSAGE_INVALID_DATA_RECEIVED = "Request rejected by the server because: Invalid received data";
+
+    @Inject
+    @Filter(timeout = 600000)
+    protected SchemaService schemaService;
 
     @Test
     public void test_param_EventsCollectorRequestNotNull() throws IOException {

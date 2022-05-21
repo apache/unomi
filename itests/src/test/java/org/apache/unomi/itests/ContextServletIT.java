@@ -36,6 +36,7 @@ import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.api.services.SegmentService;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.persistence.spi.PersistenceService;
+import org.apache.unomi.schema.api.SchemaService;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -110,6 +111,10 @@ public class ContextServletIT extends BaseIT {
     @Inject
     @Filter(timeout = 600000)
     protected SegmentService segmentService;
+
+    @Inject
+    @Filter(timeout = 600000)
+    protected SchemaService schemaService;
 
     private Profile profile;
 
