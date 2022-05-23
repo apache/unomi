@@ -16,6 +16,7 @@
  */
 package org.apache.unomi.shell.migration.impl;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpStatus;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -33,6 +34,9 @@ import org.osgi.framework.Version;
 import org.osgi.service.component.annotations.Component;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
@@ -45,6 +49,7 @@ public class MigrationTo200 implements Migration {
     private CloseableHttpClient httpClient;
     private Session session;
     private String esAddress;
+    private BundleContext bundleContext;
 
     @Override
     public Version getFromVersion() {
@@ -68,6 +73,7 @@ public class MigrationTo200 implements Migration {
         this.httpClient = httpClient;
         this.session = session;
         this.esAddress = esAddress;
+        this.bundleContext = bundleContext;
 
         doExecute();
     }
@@ -78,6 +84,7 @@ public class MigrationTo200 implements Migration {
         for (String index : indexes) {
             updateMapping(index);
         }
+        createScopeMapping(indexPrefix);
         createScopes(getSetOfScopes(indexes), indexPrefix);
     }
 
@@ -87,11 +94,9 @@ public class MigrationTo200 implements Migration {
         httpPut.addHeader("Accept", "application/json");
         httpPut.addHeader("Content-Type", "application/json");
 
-        String request = "{\n" + "\"properties\": {\n" + " \"sourceId\": {\n" + "  \"analyzer\": \"folding\",\n" + "  \"type\": \"text\",\n"
-                + "  \"fields\": {\n" + "   \"keyword\": {\n" + "    \"type\": \"keyword\",\n" + "    \"ignore_above\": 256\n" + "    }\n"
-                + "   }\n" + "  }\n" + " }\n" + "}";
+        String requestBody = resourceAsString("requestBody/updateMapping.json");
 
-        httpPut.setEntity(new StringEntity(request));
+        httpPut.setEntity(new StringEntity(requestBody));
 
         try (CloseableHttpResponse response = httpClient.execute(httpPut)) {
             JSONObject responseAsJson = new JSONObject(EntityUtils.toString(response.getEntity()));
@@ -113,10 +118,9 @@ public class MigrationTo200 implements Migration {
         httpPost.addHeader("Accept", "application/json");
         httpPost.addHeader("Content-Type", "application/json");
 
-        String request = "{\n" + "  \"script\": {\n" + "    \"source\": \"ctx._source.sourceId = ctx._source.scope\",\n"
-                + "    \"lang\": \"painless\"\n" + "  }\n" + "}";
+        String requestBody = resourceAsString("requestBody/copyValueScopeToSourceId.json");
 
-        httpPost.setEntity(new StringEntity(request));
+        httpPost.setEntity(new StringEntity(requestBody));
 
         try (CloseableHttpResponse response = httpClient.execute(httpPost)) {
             JSONObject responseAsJson = new JSONObject(EntityUtils.toString(response.getEntity()));
@@ -143,12 +147,60 @@ public class MigrationTo200 implements Migration {
         return Collections.emptySet();
     }
 
+    private boolean scopeIndexNotExists(String indexPrefix) throws IOException {
+        final HttpGet httpGet = new HttpGet(esAddress + "/" + indexPrefix + "-scope");
+
+        httpGet.addHeader("Accept", "application/json");
+        httpGet.addHeader("Content-Type", "application/json");
+
+        try (CloseableHttpResponse response = httpClient.execute(httpGet)) {
+            return response.getStatusLine().getStatusCode() != HttpStatus.SC_OK;
+        }
+    }
+
+    private void createScopeMapping(String indexPrefix) throws IOException {
+
+        if (scopeIndexNotExists(indexPrefix)) {
+            System.out.println("Creation for index = \"" + indexPrefix + "-scope\" starting.");
+            System.out.println("Specify the following parameters:");
+            String numberOfShards = ConsoleUtils.askUserWithDefaultAnswer(session, "number_of_shards: (default: 3)", "3");
+            String numberOfReplicas = ConsoleUtils.askUserWithDefaultAnswer(session, "number_of_replicas: (default: 0)", "0");
+            String mappingTotalFieldsLimit = ConsoleUtils
+                    .askUserWithDefaultAnswer(session, "mapping.total_fields.limit: (default: 1000)", "1000");
+            String maxDocValueFieldsSearch = ConsoleUtils
+                    .askUserWithDefaultAnswer(session, "max_docvalue_fields_search: (default: 1000)", "1000");
+
+            final HttpPut httpPost = new HttpPut(esAddress + "/" + indexPrefix + "-scope");
+
+            httpPost.addHeader("Accept", "application/json");
+            httpPost.addHeader("Content-Type", "application/json");
+
+            String request = resourceAsString("requestBody/scopeMapping.json").replace("$numberOfShards", numberOfShards)
+                    .replace("$numberOfReplicas", numberOfReplicas).replace("$mappingTotalFieldsLimit", mappingTotalFieldsLimit)
+                    .replace("$maxDocValueFieldsSearch", maxDocValueFieldsSearch);
+
+            httpPost.setEntity(new StringEntity(request));
+
+            try (CloseableHttpResponse response = httpClient.execute(httpPost)) {
+                if (response.getStatusLine().getStatusCode() == HttpStatus.SC_OK) {
+                    System.out.println(indexPrefix + "-scope has been correctly created");
+                } else {
+                    System.out.println(
+                            "Failed to create the index " + indexPrefix + "-scope.Code:" + response.getStatusLine().getStatusCode());
+                    throw new RuntimeException("Can not create the scope index. Stop the execution of the migration.");
+                }
+            }
+        } else {
+            System.out.println("The scope index already exists. Skipping the creation of this index");
+        }
+
+    }
+
     private void createScopes(Set<String> scopes, String indexPrefix) throws IOException {
         final StringBuilder body = new StringBuilder();
-        scopes.forEach(scope -> {
-            body.append("{\"index\": {\"_id\": \"" + scope + "\"}}\n");
-            body.append("{\"itemId\": \"" + scope + "\", \"itemType\": \"scope\", \"metadata\": { \"id\": \"" + scope + "\" }}\n");
-        });
+        String saveScopeBody = resourceAsString("requestBody/bulkSaveScope.ndjson");
+        scopes.forEach(scope -> body.append(saveScopeBody.replace("$scope", scope)));
+
         final HttpPost httpPost = new HttpPost(esAddress + "/" + indexPrefix + "-scope/_bulk");
 
         httpPost.addHeader("Accept", "application/json");
@@ -173,11 +225,7 @@ public class MigrationTo200 implements Migration {
         httpPost.addHeader("Accept", "application/json");
         httpPost.addHeader("Content-Type", "application/json");
 
-        String request =
-                "{\n" + "  \"_source\": false,\n" + "  \"size\": 0,\n" + "  \"aggs\": {\n" + "    \"scopes\": {\n" + "      \"terms\": {\n"
-                        + "        \"field\": \"scope.keyword\"\n" + "      }\n" + "    },\n" + "    \"bucketInfos\": {\n"
-                        + "      \"stats_bucket\": {\n" + "        \"buckets_path\": \"scopes._count\"\n" + "      }\n" + "    }\n"
-                        + "  }\n" + "}";
+        String request = resourceAsString("requestBody/searchScope.json");
 
         httpPost.setEntity(new StringEntity(request));
 
@@ -196,5 +244,14 @@ public class MigrationTo200 implements Migration {
             }
         }
         return scopes;
+    }
+
+    protected String resourceAsString(final String resource) {
+        final URL url = bundleContext.getBundle().getResource(resource);
+        try (InputStream stream = url.openStream()) {
+            return IOUtils.toString(stream, StandardCharsets.UTF_8);
+        } catch (final Exception e) {
+            throw new RuntimeException(e);
+        }
     }
 }

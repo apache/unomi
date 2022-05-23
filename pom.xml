@@ -513,6 +513,8 @@
                                 <exclude>**/*.mf</exclude>
                                 <!-- test json files -->
                                 <exclude>**/*.json</exclude>
+                                <!-- nd json files -->
+                                <exclude>**/*.ndjson</exclude>
                                 <!-- SSH keys -->
                                 <exclude>**/*.key</exclude>
                                 <!-- For Jenkins, ignore the .repository -->
