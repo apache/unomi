@@ -55,11 +55,11 @@ public class SchemaServiceImpl implements SchemaService {
     /**
      * All Unomi schemas indexed by URI
      */
-    private final ConcurrentMap<String, JsonSchemaWrapper> schemasById = new ConcurrentHashMap<>();
+    private ConcurrentMap<String, JsonSchemaWrapper> schemasById = new ConcurrentHashMap<>();
     /**
      * Available extensions indexed by key:schema URI to be extended, value: list of schema extension URIs
      */
-    private final ConcurrentMap<String, Set<String>> extensions = new ConcurrentHashMap<>();
+    private ConcurrentMap<String, Set<String>> extensions = new ConcurrentHashMap<>();
 
     private Integer jsonSchemaRefreshInterval = 1000;
     private ScheduledFuture<?> scheduledFuture;
@@ -204,8 +204,7 @@ public class SchemaServiceImpl implements SchemaService {
         }
 
         if (changes) {
-            schemasById.clear();
-            schemasById.putAll(schemasByIdReloaded);
+            schemasById = new ConcurrentHashMap<>(schemasByIdReloaded);
 
             initExtensions(schemasByIdReloaded);
             initJsonSchemaFactory();
@@ -233,8 +232,7 @@ public class SchemaServiceImpl implements SchemaService {
             }
         }
 
-        extensions.clear();
-        extensions.putAll(extensionsReloaded);
+        extensions = new ConcurrentHashMap<>(extensionsReloaded);
     }
 
     private String generateExtendedSchema(String id, String schema) throws JsonProcessingException {
