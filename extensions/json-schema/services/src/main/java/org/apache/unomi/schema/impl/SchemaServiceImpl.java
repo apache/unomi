@@ -24,11 +24,9 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.MissingNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.networknt.schema.*;
-import com.networknt.schema.uri.URIFetcher;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.unomi.api.Item;
-import org.apache.unomi.api.services.SchedulerService;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.schema.api.JsonSchemaWrapper;
 import org.apache.unomi.schema.api.SchemaService;
@@ -39,10 +37,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.stream.Collectors;
 
 public class SchemaServiceImpl implements SchemaService {
@@ -70,8 +65,12 @@ public class SchemaServiceImpl implements SchemaService {
     private ScheduledFuture<?> scheduledFuture;
 
     private PersistenceService persistenceService;
-    private SchedulerService schedulerService;
     private JsonSchemaFactory jsonSchemaFactory;
+
+    // TODO UNOMI-572: when fixing UNOMI-572 please remove the usage of the custom ScheduledExecutorService and re-introduce the Unomi Scheduler Service
+    private ScheduledExecutorService scheduler;
+    //private SchedulerService schedulerService;
+
 
     @Override
     public boolean isValid(String data, String schemaId) {
@@ -288,8 +287,7 @@ public class SchemaServiceImpl implements SchemaService {
                 }
             }
         };
-        scheduledFuture = schedulerService.getScheduleExecutorService()
-                .scheduleWithFixedDelay(task, 0, jsonSchemaRefreshInterval, TimeUnit.MILLISECONDS);
+        scheduledFuture = scheduler.scheduleWithFixedDelay(task, 0, jsonSchemaRefreshInterval, TimeUnit.MILLISECONDS);
     }
 
     private void initJsonSchemaFactory() {
@@ -317,6 +315,7 @@ public class SchemaServiceImpl implements SchemaService {
     }
 
     public void init() {
+        scheduler = Executors.newSingleThreadScheduledExecutor();
         initPersistenceIndex();
         initJsonSchemaFactory();
         initTimers();
@@ -325,15 +324,14 @@ public class SchemaServiceImpl implements SchemaService {
 
     public void destroy() {
         scheduledFuture.cancel(true);
+        if (scheduler != null) {
+            scheduler.shutdown();
+        }
         logger.info("Schema service shutdown.");
     }
 
     public void setPersistenceService(PersistenceService persistenceService) {
         this.persistenceService = persistenceService;
-    }
-
-    public void setSchedulerService(SchedulerService schedulerService) {
-        this.schedulerService = schedulerService;
     }
 
     public void setJsonSchemaRefreshInterval(Integer jsonSchemaRefreshInterval) {
