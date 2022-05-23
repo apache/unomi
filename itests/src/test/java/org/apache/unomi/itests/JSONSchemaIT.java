@@ -64,7 +64,7 @@ public class JSONSchemaIT extends BaseIT {
     public void tearDown() throws InterruptedException {
         removeItems(JsonSchemaWrapper.class, Event.class);
         // ensure all schemas have been cleaned from schemaService.
-        keepTrying("Couldn't find json schemas",
+        keepTrying("Should not find json schemas anymore",
                 () -> schemaService.getInstalledJsonSchemaIds(),
                 (list) -> (!list.contains("https://unomi.apache.org/schemas/json/events/dummy/1-0-0") &&
                         !list.contains("https://unomi.apache.org/schemas/json/events/dummy/properties/1-0-0")),
@@ -188,7 +188,7 @@ public class JSONSchemaIT extends BaseIT {
     @Test
     public void testEndPoint_GetInstalledJsonSchemas() throws InterruptedException {
         List<String> jsonSchemas = get(JSONSCHEMA_URL, List.class);
-        assertFalse("JSON schema list should not be empty, it should contains predefined Unomi schemas", jsonSchemas.isEmpty());
+        assertFalse("JSON schema list should not be empty, it should contain predefined Unomi schemas", jsonSchemas.isEmpty());
     }
 
     @Test

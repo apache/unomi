@@ -160,7 +160,7 @@ public class ContextServletIT extends BaseIT {
         // cleanup schemas
         schemaService.deleteSchema("https://unomi.apache.org/schemas/json/events/testEventType/1-0-0");
         schemaService.deleteSchema("https://unomi.apache.org/schemas/json/events/floatPropertyType/1-0-0");
-        keepTrying("Couldn't find json schemas",
+        keepTrying("Should not find json schemas anymore",
                 () -> schemaService.getInstalledJsonSchemaIds(),
                 (schemaIds) -> (!schemaIds.contains("https://unomi.apache.org/schemas/json/events/floatPropertyType/1-0-0") &&
                         !schemaIds.contains("https://unomi.apache.org/schemas/json/events/testEventType/1-0-0")),

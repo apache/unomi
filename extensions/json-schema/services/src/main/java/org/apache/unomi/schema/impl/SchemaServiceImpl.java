@@ -81,7 +81,7 @@ public class SchemaServiceImpl implements SchemaService {
             jsonNode = objectMapper.readTree(data);
             jsonSchema = jsonSchemaFactory.getSchema(new URI(schemaId));
         } catch (Exception e) {
-            logger.error("Schema validation failed because: {} - Set SchemaServiceImpl at DEBUG level for more detail ", e.getMessage());
+            logger.error("Schema validation failed because: Error during data reading and initial schema lookup - Set SchemaServiceImpl at DEBUG level for more detail ");
             logger.debug("full error",e);
             return false;
         }
@@ -92,7 +92,8 @@ public class SchemaServiceImpl implements SchemaService {
         }
 
         if (jsonSchema == null) {
-            logger.warn("Schema validation failed because: Schema not found {}", schemaId);
+            logger.warn("Schema validation failed because: Schema not found - Set SchemaServiceImpl at DEBUG level for more detail ");
+            logger.warn("Schema not found: {}", schemaId);
             return false;
         }
 
@@ -100,8 +101,8 @@ public class SchemaServiceImpl implements SchemaService {
         try {
             validationMessages = jsonSchema.validate(jsonNode);
         } catch (Exception e) {
-            logger.error("Schema validation failed because: {} - Set SchemaServiceImpl at DEBUG level for more detail ", e.getMessage());
-            logger.debug("full error",e);
+            logger.error("Schema validation failed because: Error during validation - Set SchemaServiceImpl at DEBUG level for more detail ");
+            logger.debug("full error", e);
             return false;
         }
 
@@ -239,7 +240,7 @@ public class SchemaServiceImpl implements SchemaService {
         extensions.putAll(extensionsReloaded);
     }
 
-    private String checkForExtensions(String id, String schema) throws JsonProcessingException {
+    private String generateExtendedSchema(String id, String schema) throws JsonProcessingException {
         Set<String> extensionIds = extensions.get(id);
         if (extensionIds != null && extensionIds.size() > 0) {
             // This schema need to be extends !
@@ -307,7 +308,7 @@ public class SchemaServiceImpl implements SchemaService {
 
                     String schema = jsonSchemaWrapper.getSchema();
                     // Check if schema need to be extended
-                    schema = checkForExtensions(schemaId, schema);
+                    schema = generateExtendedSchema(schemaId, schema);
 
                     return IOUtils.toInputStream(schema);
                 }, "https", "http")
