@@ -81,19 +81,17 @@ public class SchemaServiceImpl implements SchemaService {
             jsonNode = objectMapper.readTree(data);
             jsonSchema = jsonSchemaFactory.getSchema(new URI(schemaId));
         } catch (Exception e) {
-            logger.error("Schema validation failed because: Error during data reading and initial schema lookup - Set SchemaServiceImpl at DEBUG level for more detail ");
-            logger.debug("full error",e);
+            logger.debug("Schema validation failed", e);
             return false;
         }
 
         if (jsonNode == null) {
-            // no data to validate
+            logger.debug("Schema validation failed because: no data to validate");
             return false;
         }
 
         if (jsonSchema == null) {
-            logger.warn("Schema validation failed because: Schema not found - Set SchemaServiceImpl at DEBUG level for more detail ");
-            logger.warn("Schema not found: {}", schemaId);
+            logger.debug("Schema validation failed because: Schema not found {}", schemaId);
             return false;
         }
 
@@ -101,16 +99,15 @@ public class SchemaServiceImpl implements SchemaService {
         try {
             validationMessages = jsonSchema.validate(jsonNode);
         } catch (Exception e) {
-            logger.error("Schema validation failed because: Error during validation - Set SchemaServiceImpl at DEBUG level for more detail ");
-            logger.debug("full error", e);
+            logger.debug("Schema validation failed", e);
             return false;
         }
 
         if (validationMessages == null || validationMessages.isEmpty()) {
             return true;
         } else {
-            logger.error("Schema validation found {} errors while validating against schema: {}  - Set SchemaServiceImpl at DEBUG level for more detail ", validationMessages.size(), schemaId);
             if (logger.isDebugEnabled()) {
+                logger.debug("Schema validation found {} errors while validating against schema: {}", validationMessages.size(), schemaId);
                 for (ValidationMessage validationMessage : validationMessages) {
                     logger.debug("Validation error: {}", validationMessage);
                 }
