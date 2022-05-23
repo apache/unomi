@@ -17,8 +17,10 @@
 
 package org.apache.unomi.schema.api;
 
-import org.apache.unomi.api.Metadata;
-import org.apache.unomi.api.MetadataItem;
+import org.apache.unomi.api.Item;
+import org.apache.unomi.api.TimestampedItem;
+
+import java.util.Date;
 
 /**
  * Object which represents a JSON schema, it's a wrapper because it contains some additional info used by the
@@ -26,35 +28,35 @@ import org.apache.unomi.api.MetadataItem;
  * The JSON schema is store as String to avoid transformation during JSON schema resolution in the Unomi SchemaService.
  * Also, it's extending  MetadataItem so that it can be persisted like that in Unomi storage system.
  */
-public class JsonSchemaWrapper extends MetadataItem {
+public class JsonSchemaWrapper extends Item implements TimestampedItem {
     public static final String ITEM_TYPE = "jsonSchema";
 
-    private String id;
     private String schema;
     private String target;
-
-    public JsonSchemaWrapper(){}
+    private String extendsSchemaId;
+    private Date timeStamp;
 
     /**
-     * Instantiates a new JSON schema with an id and a schema as string
+     * Instantiates a new JSON schema
+     */
+    public JsonSchemaWrapper() {
+    }
+
+    /**
+     * Instantiates a new JSON schema
      *
      * @param id     id of the schema
      * @param schema as string
-     * @param target of the schema
+     * @param target of the schema (optional)
+     * @param extendsSchemaId is the URI of another Schema to be extended by current one. (optional)
+     * @param timeStamp of the schema
      */
-    public JsonSchemaWrapper(String id, String schema, String target) {
-        super(new Metadata(id));
-        this.id = id;
+    public JsonSchemaWrapper(String id, String schema, String target, String extendsSchemaId, Date timeStamp) {
+        super(id);
         this.schema = schema;
         this.target = target;
-    }
-
-    public String getId() {
-        return id;
-    }
-
-    public void setId(String id) {
-        this.id = id;
+        this.extendsSchemaId = extendsSchemaId;
+        this.timeStamp = timeStamp;
     }
 
     public String getSchema() {
@@ -71,5 +73,18 @@ public class JsonSchemaWrapper extends MetadataItem {
 
     public void setTarget(String target) {
         this.target = target;
+    }
+
+    public String getExtendsSchemaId() {
+        return extendsSchemaId;
+    }
+
+    public void setExtendsSchemaId(String extendsSchemaId) {
+        this.extendsSchemaId = extendsSchemaId;
+    }
+
+    @Override
+    public Date getTimeStamp() {
+        return timeStamp;
     }
 }

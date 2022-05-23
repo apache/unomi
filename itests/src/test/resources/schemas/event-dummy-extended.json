@@ -1,0 +1,10 @@
+{
+  "eventType":"dummy",
+  "scope":"dummy_scope",
+  "newRootProp": "extended Root Prop !",
+  "properties": {
+    "workspace": "dummy_workspace",
+    "path": "dummy/path",
+    "newProp": "extended Prop !"
+  }
+}
