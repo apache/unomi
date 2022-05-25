@@ -194,7 +194,7 @@ Inherits all the fields from: <<Item>>
 |===
 | *Field* | *Type* | *Description*
 
-| eventType | String | Contains an identifier for the field type, which may be any value as Apache Unomi does not come with strict event type definitions and accepts custom events types. The system comes with built-in event types such as “view”, “form”, “login”, “updateProperties” but additional event types may of course be used by developers integrating with Apache Unomi.
+| eventType | String | Contains an identifier for the event type, which may be any value as Apache Unomi does not come with strict event type definitions and accepts custom events types. The system comes with built-in event types such as “view”, “form”, “login”, “updateProperties” but additional event types may of course be used by developers integrating with Apache Unomi.
 
 | sessionId | String | The unique identifier of a Session object
 
@@ -415,7 +415,7 @@ Inherits all the fields from: n/a
 
 | typeIdentifier | String | This is a unique consent type identifier, basically a unique name for the consent. Example of such types might include: “newsletter”, “personalization”, “tracking”.
 
-| status | GRANTED / DENIED / REVOKED | A copy of the profile associated with the session
+| status | GRANTED / DENIED / REVOKED | The type of status for this consent
 
 | statusDate | Date | The date (in ISO 8601 format) at which the current status was set
 
@@ -1066,7 +1066,7 @@ Inherits all the fields from: <<MetadataItem>>
 |===
 | *Field name* | *Type* | *Description*
 
-| elements | ScoringElement array | A ScoringElement is composed of:* A Condition* A Score increment valueEach element defines a separate condition (tree) that will increment the defined score for this scoring plan, making it possible to have completely different conditions to augment a score
+| elements | ScoringElement array | A ScoringElement is composed of: a Condition and a score value to increment. Each element defines a separate condition (tree) that will increment the defined score for this scoring plan, making it possible to have completely different conditions to augment a score.
 
 |===
 
