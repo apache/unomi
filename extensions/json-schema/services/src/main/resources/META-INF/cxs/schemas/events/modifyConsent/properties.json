@@ -1,0 +1,18 @@
+{
+  "$id": "https://unomi.apache.org/schemas/json/events/modifyConsent/properties/1-0-0",
+  "$schema": "https://json-schema.org/draft/2019-09/schema",
+  "self":{
+    "vendor":"org.apache.unomi",
+    "name": "modifyConsentProperties",
+    "format":"jsonschema",
+    "version":"1-0-0"
+  },
+  "title": "ModifyConsentProperties",
+  "type": "object",
+  "properties" : {
+      "consent" : {
+        "$ref" : "https://unomi.apache.org/schemas/json/consent/1-0-0"
+      }
+  },
+  "unevaluatedProperties": false
+}

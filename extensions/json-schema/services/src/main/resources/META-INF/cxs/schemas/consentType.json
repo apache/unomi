@@ -1,6 +1,12 @@
 {
   "$id": "https://unomi.apache.org/schemas/json/consentType/1-0-0",
   "$schema": "https://json-schema.org/draft/2019-09/schema",
+  "self":{
+    "vendor":"org.apache.unomi",
+    "name": "consentType",
+    "format":"jsonschema",
+    "version":"1-0-0"
+  },
   "title": "ConsentType",
   "type": "object",
   "properties" : {
@@ -16,5 +22,6 @@
     "description" : {
       "type" : ["null", "string"]
     }
-  }
+  },
+  "unevaluatedProperties": false
 }

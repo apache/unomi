@@ -1,6 +1,12 @@
 {
   "$id": "https://unomi.apache.org/schemas/json/goal/1-0-0",
   "$schema": "https://json-schema.org/draft/2019-09/schema",
+  "self":{
+    "vendor":"org.apache.unomi",
+    "name": "goal",
+    "format":"jsonschema",
+    "version":"1-0-0"
+  },
   "title": "Goal",
   "type": "object",
   "allOf": [{ "$ref": "https://unomi.apache.org/schemas/json/metadataitem/1-0-0" }],
@@ -14,5 +20,6 @@
     "campaignId" : {
       "type" : "string"
     }
-  }
+  },
+  "unevaluatedProperties": false
 }

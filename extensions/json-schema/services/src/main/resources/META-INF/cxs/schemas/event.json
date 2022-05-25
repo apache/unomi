@@ -1,6 +1,12 @@
 {
   "$id": "https://unomi.apache.org/schemas/json/event/1-0-0",
   "$schema": "https://json-schema.org/draft/2019-09/schema",
+  "self":{
+    "vendor":"org.apache.unomi",
+    "name": "event",
+    "format":"jsonschema",
+    "version":"1-0-0"
+  },
   "title": "Event",
   "type": "object",
   "allOf": [{ "$ref": "https://unomi.apache.org/schemas/json/timestampeditem/1-0-0" }],
@@ -24,6 +30,9 @@
     "sourceId" : {
       "type" : [ "string"],
       "pattern" : "^(\\w|[-_@\\.]){0,60}$"
+    },
+    "persistent" : {
+      "type" : "boolean"
     }
   }
 }

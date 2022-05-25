@@ -1,6 +1,12 @@
 {
   "$id": "https://unomi.apache.org/schemas/json/personalization/personalizedcontent/1-0-0",
   "$schema": "https://json-schema.org/draft/2019-09/schema",
+  "self":{
+    "vendor":"org.apache.unomi",
+    "name": "personalizedContent",
+    "format":"jsonschema",
+    "version":"1-0-0"
+  },
   "title": "PersonalizedContent",
   "type": "object",
   "properties": {
@@ -15,8 +21,7 @@
       "maxProperties": 50
     },
     "properties": {
-      "type": "object",
-      "maxProperties": 50
+      "$ref" : "https://unomi.apache.org/schemas/json/personalization/personalizedcontent/properties/1-0-0"
     }
   }
 }

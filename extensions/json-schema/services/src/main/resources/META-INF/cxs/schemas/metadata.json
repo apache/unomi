@@ -1,6 +1,12 @@
 {
   "$id": "https://unomi.apache.org/schemas/json/metadata/1-0-0",
   "$schema": "https://json-schema.org/draft/2019-09/schema",
+  "self":{
+    "vendor":"org.apache.unomi",
+    "name": "metadata",
+    "format":"jsonschema",
+    "version":"1-0-0"
+  },
   "title": "Metadata",
   "type": "object",
   "properties" : {
@@ -40,5 +46,6 @@
     "readOnly" : {
       "type" : "boolean"
     }
-  }
+  },
+  "unevaluatedProperties": false
 }

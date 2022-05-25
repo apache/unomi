@@ -1,0 +1,27 @@
+{
+  "$id": "https://unomi.apache.org/schemas/json/customitems/page/properties/1-0-0",
+  "$schema": "https://json-schema.org/draft/2019-09/schema",
+  "self":{
+    "vendor":"org.apache.unomi",
+    "name":"pageProperties",
+    "format":"jsonschema",
+    "version":"1-0-0"
+  },
+  "title": "PageProperties",
+  "type": "object",
+  "properties": {
+    "pageInfo": {
+      "$ref" : "https://unomi.apache.org/schemas/json/customitems/page/properties/pageInfo/1-0-0"
+    },
+    "attributes": {
+      "$ref" : "https://unomi.apache.org/schemas/json/customitems/page/properties/attributes/1-0-0"
+    },
+    "consentTypes": {
+      "type" : ["null", "array"],
+      "items" : {
+        "$ref" : "https://unomi.apache.org/schemas/json/consentType/1-0-0"
+      }
+    }
+  },
+  "unevaluatedProperties" : false
+}

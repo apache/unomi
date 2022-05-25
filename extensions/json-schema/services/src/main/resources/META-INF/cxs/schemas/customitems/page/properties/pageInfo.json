@@ -1,0 +1,58 @@
+{
+  "$id": "https://unomi.apache.org/schemas/json/customitems/page/properties/pageInfo/1-0-0",
+  "$schema": "https://json-schema.org/draft/2019-09/schema",
+  "self": {
+    "vendor": "org.apache.unomi",
+    "name": "pageInfo",
+    "format": "jsonschema",
+    "version": "1-0-0"
+  },
+  "title": "PageInfo",
+  "type": "object",
+  "properties": {
+    "templateName": {
+      "type": "string"
+    },
+    "language": {
+      "type": "string",
+      "maxLength": 5
+    },
+    "destinationURL": {
+      "type": "string",
+      "format": "uri"
+    },
+    "categories": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "pageID": {
+      "type": "string",
+      "pattern": "^(\\w|[-_@\\.]){0,60}$"
+    },
+    "nodeType": {
+      "type": "string"
+    },
+    "pagePath": {
+      "type": "string"
+    },
+    "pageName": {
+      "type": "string"
+    },
+    "referringURL": {
+      "type": "string",
+      "format": "uri"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "isContentTemplate": {
+      "type": "boolean"
+    }
+  },
+  "unevaluatedProperties" : false
+}

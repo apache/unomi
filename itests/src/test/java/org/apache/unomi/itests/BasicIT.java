@@ -39,6 +39,7 @@ import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.api.services.RulesService;
 import org.apache.unomi.itests.tools.httpclient.HttpClientThatWaitsForUnomi;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
+import org.apache.unomi.schema.api.SchemaService;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -69,6 +70,7 @@ public class BasicIT extends BaseIT {
     private static final String SESSION_ID_4 = "aa3b04bd-8f4d-4a07-8e96-d33ffa04d3d4";
 
     private static final String EVENT_TYPE_LOGIN = "login";
+    private static final String EVENT_TYPE_LOGIN_SCHEMA = "schemas/events/login.json";
     private static final String EVENT_TYPE_VIEW = "view";
     private static final String TEST_SCOPE = "testScope";
 
@@ -98,6 +100,8 @@ public class BasicIT extends BaseIT {
     protected ProfileService profileService;
     @Inject @Filter(timeout = 600000)
     protected DefinitionsService definitionsService;
+    @Inject @Filter(timeout = 600000)
+    protected SchemaService schemaService;
 
     @Test
     public void testContextJS() throws IOException {
@@ -149,6 +153,13 @@ public class BasicIT extends BaseIT {
     @Test
     public void testMultipleLoginOnSameBrowser() throws IOException, InterruptedException {
         LOGGER.info("Start test testMultipleLoginOnSameBrowser");
+
+        schemaService.saveSchema(resourceAsString(EVENT_TYPE_LOGIN_SCHEMA));
+        keepTrying("Couldn't find login JSON schema",
+                () -> schemaService.getInstalledJsonSchemaIds(),
+                (schemaIds) -> (schemaIds.contains("https://unomi.apache.org/schemas/json/events/login/1-0-0")),
+                DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+
         // Add login event condition
         ConditionType conditionType = CustomObjectMapper.getObjectMapper().readValue(
                 new File("data/tmp/testLoginEventCondition.json").toURI().toURL(), ConditionType.class);
@@ -269,6 +280,13 @@ public class BasicIT extends BaseIT {
         checkVisitor1ResponseProperties(profileVisitor1.getProperties());
         Profile profileVisitor2 = profileService.load(profileIdVisitor2);
         checkVisitor2ResponseProperties(profileVisitor2.getProperties());
+
+        // cleanup schemas
+        schemaService.deleteSchema("https://unomi.apache.org/schemas/json/events/login/1-0-0");
+        keepTrying("Should not find login JSON schema anymore",
+                () -> schemaService.getInstalledJsonSchemaIds(),
+                (schemaIds) -> (!schemaIds.contains("https://unomi.apache.org/schemas/json/events/login/1-0-0")),
+                DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
         LOGGER.info("End test testMultipleLoginOnSameBrowser");
     }
 
@@ -278,8 +296,12 @@ public class BasicIT extends BaseIT {
         CustomItem loginEventTarget = new CustomItem(visitorId, ITEM_TYPE_VISITOR);
         loginEventTarget.setProperties(loginEventProperties);
 
-        Event loginEvent = new Event(EVENT_TYPE_LOGIN, null, new Profile(""), TEST_SCOPE,
-                null, loginEventTarget, new Date());
+        // We use setters to avoid having auto-populated fields by the other event constructor methods.
+        Event loginEvent = new Event();
+        loginEvent.setEventType(EVENT_TYPE_LOGIN);
+        loginEvent.setScope(TEST_SCOPE);
+        loginEvent.setTarget(loginEventTarget);
+        loginEvent.setTimeStamp(new Date());
 
         ContextRequest contextRequest = new ContextRequest();
         contextRequest.setSource(sourceSite);
@@ -301,8 +323,14 @@ public class BasicIT extends BaseIT {
 
         customPageItem.setProperties(properties);
 
-        // Create page view event to mock a connection to a site
-        Event pageViewEvent = new Event(EVENT_TYPE_VIEW, null, new Profile(""), TEST_SCOPE, sourceSite, customPageItem, new Date());
+        // Create page view event to mock a connection to a site. We use setters to avoid having auto-populated fields
+        Event pageViewEvent = new Event();
+        pageViewEvent.setEventType(EVENT_TYPE_VIEW);
+        pageViewEvent.setSessionId(sessionId);
+        pageViewEvent.setScope(TEST_SCOPE);
+        pageViewEvent.setSource(sourceSite);
+        pageViewEvent.setTarget(customPageItem);
+        pageViewEvent.setTimeStamp(new Date());
 
         // Initialize context like if you display the first page on the website
         ContextRequest contextRequest = new ContextRequest();

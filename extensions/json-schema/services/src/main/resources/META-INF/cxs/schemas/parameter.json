@@ -1,6 +1,12 @@
 {
   "$id": "https://unomi.apache.org/schemas/json/parameter/1-0-0",
   "$schema": "https://json-schema.org/draft/2019-09/schema",
+  "self":{
+    "vendor":"org.apache.unomi",
+    "name": "parameter",
+    "format":"jsonschema",
+    "version":"1-0-0"
+  },
   "title": "Parameter",
   "type": "object",
   "properties" : {
@@ -16,5 +22,6 @@
     "defaultValue" : {
       "type" : "string"
     }
-  }
+  },
+  "unevaluatedProperties": false
 }

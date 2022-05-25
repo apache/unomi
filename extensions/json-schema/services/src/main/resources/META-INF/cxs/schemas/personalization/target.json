@@ -1,6 +1,12 @@
 {
   "$id": "https://unomi.apache.org/schemas/json/personalization/target/1-0-0",
   "$schema": "https://json-schema.org/draft/2019-09/schema",
+  "self":{
+    "vendor":"org.apache.unomi",
+    "name": "target",
+    "format":"jsonschema",
+    "version":"1-0-0"
+  },
   "title": "Target",
   "type": "object",
   "properties": {

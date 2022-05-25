@@ -16,11 +16,16 @@
  */
 package org.apache.unomi.graphql.schema.json;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 public class JSONObjectType extends JSONType {
+
+    private static final Logger logger = LoggerFactory.getLogger(JSONTypeFactory.class);
 
     Map<String, List<JSONType>> properties = new HashMap<>();
     JSONType additionalProperties;
@@ -35,7 +40,11 @@ public class JSONObjectType extends JSONType {
         Map<String, Object> propertiesTree = (Map<String, Object>) schemaTree.get("properties");
         if (propertiesTree != null) {
             propertiesTree.entrySet().forEach(entry -> {
-                properties.put(entry.getKey(), jsonTypeFactory.getTypes((Map<String, Object>) entry.getValue()));
+                if (entry.getValue() instanceof Map) {
+                    properties.put(entry.getKey(), jsonTypeFactory.getTypes((Map<String, Object>) entry.getValue()));
+                } else {
+                    logger.error("Expected map type for property {}, instead found {}", entry.getKey(), entry.getValue().getClass());
+                }
             });
         }
     }

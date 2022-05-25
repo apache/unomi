@@ -1,0 +1,22 @@
+{
+  "$id": "https://unomi.apache.org/schemas/json/events/articleCompleted/properties/1-0-0",
+  "$schema": "https://json-schema.org/draft/2019-09/schema",
+  "self": {
+    "vendor": "org.apache.unomi",
+    "target": "events",
+    "name": "articleCompletedProperties",
+    "format": "jsonschema",
+    "version": "1-0-0"
+  },
+  "title": "ArticleCompletedProperties",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string"
+    },
+    "course": {
+      "type": "string"
+    }
+  }
+}
+}

@@ -97,7 +97,7 @@ public class PropertiesUpdateActionIT extends BaseIT {
         Profile profile = profileService.load(PROFILE_TARGET_TEST_ID);
         Assert.assertNull(profile.getProperty("firstName"));
 
-        Event updateProperties = new Event("updateProperties", null, profile, null, null, profile, new Date());
+        Event updateProperties = new Event("updateProperties", null, profile, null, null, null, new Date());
         updateProperties.setPersistent(false);
 
         Map<String, Object> propertyToUpdate = new HashMap<>();
@@ -121,7 +121,7 @@ public class PropertiesUpdateActionIT extends BaseIT {
         Profile profileToUpdate = profileService.load(PROFILE_TEST_ID);
         Assert.assertNull(profileToUpdate.getProperty("firstName"));
 
-        Event updateProperties = new Event("updateProperties", null, profile, null, null, profile, new Date());
+        Event updateProperties = new Event("updateProperties", null, profile, null, null, null, new Date());
         updateProperties.setPersistent(false);
 
         Map<String, Object> propertyToUpdate = new HashMap<>();
@@ -140,7 +140,7 @@ public class PropertiesUpdateActionIT extends BaseIT {
     public void testUpdateProperties_CurrentProfile_PROPS_TO_ADD() throws InterruptedException {
         Profile profile = profileService.load(PROFILE_TEST_ID);
 
-        Event updateProperties = new Event("updateProperties", null, profile, null, null, profile, new Date());
+        Event updateProperties = new Event("updateProperties", null, profile, null, null, null, new Date());
         updateProperties.setPersistent(false);
 
         Map<String, Object> propertyToAdd = new HashMap<>();
@@ -169,7 +169,7 @@ public class PropertiesUpdateActionIT extends BaseIT {
     @Test
     public void testUpdateProperties_CurrentProfile_PROPS_TO_ADD_TO_SET() throws InterruptedException {
         Profile profile = profileService.load(PROFILE_TEST_ID);
-        Event updateProperties = new Event("updateProperties", null, profile, null, null, profile, new Date());
+        Event updateProperties = new Event("updateProperties", null, profile, null, null, null, new Date());
         updateProperties.setPersistent(false);
 
         Map<String, Object> propertyToAddToSet = new HashMap<>();
@@ -196,7 +196,7 @@ public class PropertiesUpdateActionIT extends BaseIT {
         propertyToAddToSet.put("properties.prop1", "New property 1 bis");
         propertyToAddToSet.put("properties.prop3", "New property 3 bis");
 
-        updateProperties = new Event("updateProperties", null, profile, null, null, profile, new Date());
+        updateProperties = new Event("updateProperties", null, profile, null, null, null, new Date());
         updateProperties.setPersistent(false);
         updateProperties.setProperty(UpdatePropertiesAction.PROPS_TO_ADD_TO_SET, propertyToAddToSet);
         updateProperties.setProperty(UpdatePropertiesAction.TARGET_ID_KEY, PROFILE_TEST_ID);
@@ -216,7 +216,7 @@ public class PropertiesUpdateActionIT extends BaseIT {
     @Test
     public void testUpdateProperties_CurrentProfile_PROPS_TO_DELETE() throws InterruptedException {
         Profile profile = profileService.load(PROFILE_TEST_ID);
-        Event updateProperties = new Event("updateProperties", null, profile, null, null, profile, new Date());
+        Event updateProperties = new Event("updateProperties", null, profile, null, null, null, new Date());
         updateProperties.setPersistent(false);
 
         Map<String, Object> propertyToAdd = new HashMap<>();
@@ -242,7 +242,7 @@ public class PropertiesUpdateActionIT extends BaseIT {
         List<String> propertyToDelete = new ArrayList<>();
         propertyToDelete.add("properties.prop1bis");
 
-        updateProperties = new Event("updateProperties", null, profile, null, null, profile, new Date());
+        updateProperties = new Event("updateProperties", null, profile, null, null, null, new Date());
         updateProperties.setPersistent(false);
         updateProperties.setProperty(UpdatePropertiesAction.PROPS_TO_DELETE, propertyToDelete);
         updateProperties.setProperty(UpdatePropertiesAction.TARGET_ID_KEY, PROFILE_TEST_ID);

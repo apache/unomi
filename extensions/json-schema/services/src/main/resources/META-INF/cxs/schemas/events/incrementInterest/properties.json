@@ -1,0 +1,19 @@
+{
+  "$id": "https://unomi.apache.org/schemas/json/events/incrementInterest/properties/1-0-0",
+  "$schema": "https://json-schema.org/draft/2019-09/schema",
+  "self":{
+    "vendor":"org.apache.unomi",
+    "name": "incrementInterestProperties",
+    "format":"jsonschema",
+    "version":"1-0-0"
+  },
+  "title": "IncrementInterestProperties",
+  "type": "object",
+  "properties" : {
+    "interests" : {
+      "$ref" : "https://unomi.apache.org/schemas/json/events/incrementInterest/properties/interests/1-0-0"
+    }
+  },
+  "$comment" : "TODO-interests as map must be refactored to use arrays before we can use unevaluatedProperties on this object",
+  "unevaluatedProperties" : false
+}

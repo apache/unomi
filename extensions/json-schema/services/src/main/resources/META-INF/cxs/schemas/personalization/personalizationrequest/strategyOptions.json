@@ -1,0 +1,13 @@
+{
+  "$id": "https://unomi.apache.org/schemas/json/personalization/personalizedrequest/strategyOptions/1-0-0",
+  "$schema": "https://json-schema.org/draft/2019-09/schema",
+  "self":{
+    "vendor":"org.apache.unomi",
+    "name": "strategyOptions",
+    "format":"jsonschema",
+    "version":"1-0-0"
+  },
+  "title": "StrategyOptions",
+  "type": "object",
+  "maxProperties": 50
+}

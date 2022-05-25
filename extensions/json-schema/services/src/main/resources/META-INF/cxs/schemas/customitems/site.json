@@ -15,6 +15,5 @@
       "$ref": "https://unomi.apache.org/schemas/json/customitem/1-0-0"
     }
   ],
-  "properties": {
-  }
+  "unevaluatedProperties" : false
 }

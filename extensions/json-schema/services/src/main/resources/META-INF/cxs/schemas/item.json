@@ -1,6 +1,12 @@
 {
   "$id": "https://unomi.apache.org/schemas/json/item/1-0-0",
   "$schema": "https://json-schema.org/draft/2019-09/schema",
+  "self":{
+    "vendor":"org.apache.unomi",
+    "name": "item",
+    "format":"jsonschema",
+    "version":"1-0-0"
+  },
   "title": "Item",
   "type": "object",
   "properties" : {
@@ -21,11 +27,6 @@
       "type" : ["null","integer"],
       "minimum" : 0,
       "description" : "The item's version number"
-    },
-    "systemMetadata" : {
-      "type" : ["null","object"],
-      "description" : "Any system metadata for the item",
-      "maxProperties" : 50
     }
   }
 }

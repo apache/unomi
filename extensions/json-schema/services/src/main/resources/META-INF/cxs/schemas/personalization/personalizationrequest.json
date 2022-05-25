@@ -1,6 +1,12 @@
 {
   "$id": "https://unomi.apache.org/schemas/json/personalization/personalizedrequest/1-0-0",
   "$schema": "https://json-schema.org/draft/2019-09/schema",
+  "self":{
+    "vendor":"org.apache.unomi",
+    "name": "personalizationRequest",
+    "format":"jsonschema",
+    "version":"1-0-0"
+  },
   "title": "PersonalizationRequest",
   "type": "object",
   "properties": {
@@ -11,8 +17,7 @@
       "type" : "string"
     },
     "strategyOptions" : {
-      "type": "object",
-      "maxProperties": 50
+      "$ref" : "https://unomi.apache.org/schemas/json/personalization/personalizedrequest/strategyOptions/1-0-0"
     },
     "contents" : {
       "type" : "array",

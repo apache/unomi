@@ -1,6 +1,12 @@
 {
   "$id": "https://unomi.apache.org/schemas/json/personalization/filter/1-0-0",
   "$schema": "https://json-schema.org/draft/2019-09/schema",
+  "self":{
+    "vendor":"org.apache.unomi",
+    "name": "filter",
+    "format":"jsonschema",
+    "version":"1-0-0"
+  },
   "title": "Filter",
   "type": "object",
   "properties": {
@@ -14,8 +20,7 @@
       "$ref": "https://unomi.apache.org/schemas/json/condition/1-0-0"
     },
     "properties": {
-      "type": "object",
-      "maxProperties": 50
+      "$ref" : "https://unomi.apache.org/schemas/json/personalization/filter/properties/1-0-0"
     }
   }
 }

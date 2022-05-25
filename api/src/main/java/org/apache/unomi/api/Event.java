@@ -74,7 +74,7 @@ public class Event extends Item implements TimestampedItem {
 
     private boolean persistent = true;
 
-    private transient Map<String, Object> attributes = new LinkedHashMap<>();
+    private transient Map<String, Object> attributes;
 
     /**
      * Instantiates a new Event.
@@ -170,7 +170,8 @@ public class Event extends Item implements TimestampedItem {
         this.properties = new HashMap<>();
         this.flattenedProperties = new HashMap<>();
 
-        actionPostExecutors = new ArrayList<>();
+        this.actionPostExecutors = new ArrayList<>();
+        this.attributes = new LinkedHashMap<>();
     }
 
     /**

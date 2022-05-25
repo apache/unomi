@@ -1,7 +1,13 @@
 {
   "$id": "https://unomi.apache.org/schemas/json/contextrequest/source/1-0-0",
   "$schema": "https://json-schema.org/draft/2019-09/schema",
-  "title": "Item",
+  "self":{
+    "vendor":"org.apache.unomi",
+    "name": "source",
+    "format":"jsonschema",
+    "version":"1-0-0"
+  },
+  "title": "Source",
   "type": "object",
   "properties" : {
     "itemId" : {

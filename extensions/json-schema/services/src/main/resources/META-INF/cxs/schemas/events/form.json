@@ -12,16 +12,12 @@
   "type": "object",
   "allOf": [{ "$ref": "https://unomi.apache.org/schemas/json/event/1-0-0" }],
   "properties" : {
-    "properties" : {
-      "type" : "object",
-      "unomiFormMappingLookup" : true,
-      "maxProperties": 50
-    },
     "source" : {
       "$ref" : "https://unomi.apache.org/schemas/json/customitems/site/1-0-0"
     },
     "target" : {
       "$ref" : "https://unomi.apache.org/schemas/json/customitems/page/1-0-0"
     }
-  }
+  },
+  "unevaluatedProperties" : false
 }

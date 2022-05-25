@@ -18,7 +18,9 @@
 package org.apache.unomi.itests;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.module.jaxb.JaxbAnnotationModule;
 import org.apache.commons.io.IOUtils;
 import org.apache.http.auth.AuthScope;
 import org.apache.http.auth.UsernamePasswordCredentials;
@@ -132,6 +134,8 @@ public abstract class BaseIT {
 
     static {
         objectMapper = new ObjectMapper();
+        objectMapper.registerModule(new JaxbAnnotationModule());
+        objectMapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
         objectMapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
     }
 
@@ -274,6 +278,13 @@ public abstract class BaseIT {
             options.add(new VMOption(jacocoOption));
         } else {
             LOGGER.warn("Unable to set jacoco agent as {} was not found", agentFile);
+        }
+
+        String customLogging = System.getProperty("it.karaf.customLogging");
+        if (customLogging != null) {
+            String[] customLoggingParts = customLogging.split(":");
+            options.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.logger.customLogging.name", customLoggingParts[0]));
+            options.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.logger.customLogging.level", customLoggingParts[1]));
         }
 
         if (JavaVersionUtil.getMajorVersion() >= 9) {
