@@ -1,0 +1,6 @@
+{
+  "script": {
+    "source": "ctx._source.sourceId = ctx._source.scope",
+    "lang": "painless"
+  }
+}
