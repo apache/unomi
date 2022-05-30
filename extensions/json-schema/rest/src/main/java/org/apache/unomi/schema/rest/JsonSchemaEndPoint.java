@@ -27,10 +27,13 @@ import org.slf4j.LoggerFactory;
 
 import javax.jws.WebMethod;
 import javax.jws.WebService;
-import javax.ws.rs.*;
+import javax.ws.rs.Consumes;
+import javax.ws.rs.GET;
+import javax.ws.rs.POST;
+import javax.ws.rs.Path;
+import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import java.util.Base64;
 import java.util.Set;
 
 @WebService
@@ -66,6 +69,18 @@ public class JsonSchemaEndPoint {
     }
 
     /**
+     * Get a schema by it's id
+     *
+     * @param id of the schema
+     * @return Json schema matching the id
+     */
+    @POST
+    @Path("/queryId")
+    public String getSchema(String id) {
+        return schemaService.getSchema(id).getSchema().replace("\n", "");
+    }
+
+    /**
      * Save a JSON schema
      *
      * @param jsonSchema the schema as string to save
@@ -73,7 +88,7 @@ public class JsonSchemaEndPoint {
      */
     @POST
     @Path("/")
-    @Consumes({MediaType.TEXT_PLAIN, MediaType.APPLICATION_JSON})
+    @Consumes({ MediaType.TEXT_PLAIN, MediaType.APPLICATION_JSON })
     @Produces(MediaType.APPLICATION_JSON)
     public Response save(String jsonSchema) {
         try {
@@ -85,14 +100,13 @@ public class JsonSchemaEndPoint {
     }
 
     /**
-     * Deletes a JSON schema.
-     * The id is a Base64 id as the id have is basically an URL
+     * Deletes a JSON schema by it's id.
      *
-     * @param base64JsonSchemaId the identifier of the JSON schema that we want to delete
+     * @param id the identifier of the JSON schema that we want to delete
      */
-    @DELETE
-    @Path("/{base64JsonSchemaId}")
-    public void remove(@PathParam("base64JsonSchemaId") String base64JsonSchemaId) {
-        schemaService.deleteSchema(new String(Base64.getDecoder().decode(base64JsonSchemaId)));
+    @POST
+    @Path("/delete")
+    public void remove(String id) {
+        schemaService.deleteSchema(id);
     }
 }
