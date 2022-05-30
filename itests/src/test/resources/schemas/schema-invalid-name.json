@@ -1,8 +1,8 @@
 {
-  "$id": "https://unomi.apache.org/schemas/json/events/invalidName/1-0-0",
+  "$id": "https://vendor.test.com/schemas/json/events/invalidName/1-0-0",
   "$schema": "https://json-schema.org/draft/2019-09/schema",
   "self":{
-    "vendor":"org.apache.unomi",
+    "vendor":"com.vendor.test",
     "name":"events/invalidName",
     "format":"jsonschema",
     "target":"events",

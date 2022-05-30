@@ -83,7 +83,7 @@ public class InputValidationIT extends BaseIT {
         schemaService.saveSchema(resourceAsString("schemas/schema-dummy.json"));
         schemaService.saveSchema(resourceAsString("schemas/schema-dummy-properties.json"));
         keepTrying("Event should be valid",
-                () -> schemaService.isValid(resourceAsString("schemas/event-dummy-valid.json"), "https://unomi.apache.org/schemas/json/events/dummy/1-0-0"),
+                () -> schemaService.isEventValid(resourceAsString("schemas/event-dummy-valid.json"), "dummy"),
                 isValid -> isValid,
                 DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
 
@@ -91,10 +91,10 @@ public class InputValidationIT extends BaseIT {
         doGETRequestTest(EVENT_COLLECTOR_URL, null, "/validation/eventcollector_valid.json", 200, null);
 
         // remove schemas
-        schemaService.deleteSchema("https://unomi.apache.org/schemas/json/events/dummy/1-0-0");
-        schemaService.deleteSchema("https://unomi.apache.org/schemas/json/events/dummy/properties/1-0-0");
+        schemaService.deleteSchema("https://vendor.test.com/schemas/json/events/dummy/1-0-0");
+        schemaService.deleteSchema("https://vendor.test.com/schemas/json/events/dummy/properties/1-0-0");
         keepTrying("Event should be invalid",
-                () -> schemaService.isValid(resourceAsString("schemas/event-dummy-valid.json"), "https://unomi.apache.org/schemas/json/events/dummy/1-0-0"),
+                () -> schemaService.isEventValid(resourceAsString("schemas/event-dummy-valid.json"), "dummy"),
                 isValid -> !isValid,
                 DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
     }
@@ -129,7 +129,7 @@ public class InputValidationIT extends BaseIT {
         schemaService.saveSchema(resourceAsString("schemas/schema-dummy.json"));
         schemaService.saveSchema(resourceAsString("schemas/schema-dummy-properties.json"));
         keepTrying("Event should be valid",
-                () -> schemaService.isValid(resourceAsString("schemas/event-dummy-valid.json"), "https://unomi.apache.org/schemas/json/events/dummy/1-0-0"),
+                () -> schemaService.isEventValid(resourceAsString("schemas/event-dummy-valid.json"), "dummy"),
                 isValid -> isValid,
                 DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
 
@@ -137,10 +137,10 @@ public class InputValidationIT extends BaseIT {
         doPOSTRequestTest(EVENT_COLLECTOR_URL, null, "/validation/eventcollector_request_size_valid.json", 200, null);
 
         // remove schemas
-        schemaService.deleteSchema("https://unomi.apache.org/schemas/json/events/dummy/1-0-0");
-        schemaService.deleteSchema("https://unomi.apache.org/schemas/json/events/dummy/properties/1-0-0");
+        schemaService.deleteSchema("https://vendor.test.com/schemas/json/events/dummy/1-0-0");
+        schemaService.deleteSchema("https://vendor.test.com/schemas/json/events/dummy/properties/1-0-0");
         keepTrying("Event should be invalid",
-                () -> schemaService.isValid(resourceAsString("schemas/event-dummy-valid.json"), "https://unomi.apache.org/schemas/json/events/dummy/1-0-0"),
+                () -> schemaService.isEventValid(resourceAsString("schemas/event-dummy-valid.json"), "dummy"),
                 isValid -> !isValid,
                 DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
     }

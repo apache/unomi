@@ -59,7 +59,7 @@ public class EventsCollectorRequestDeserializer extends StdDeserializer<EventsCo
         final JsonNode eventsNode = node.get("events");
         if (eventsNode instanceof ArrayNode) {
             for (JsonNode event : eventsNode) {
-                if (schemaService.isValid(event.toString(), "https://unomi.apache.org/schemas/json/events/" + event.get("eventType").textValue() + "/1-0-0")) {
+                if (schemaService.isEventValid(event.toString(), event.get("eventType").textValue())) {
                     filteredEvents.add(jsonParser.getCodec().treeToValue(event, Event.class));
                 }
             }

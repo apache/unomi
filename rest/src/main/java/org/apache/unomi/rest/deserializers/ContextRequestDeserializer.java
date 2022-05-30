@@ -28,6 +28,7 @@ import org.apache.unomi.api.Item;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.services.PersonalizationService;
 import org.apache.unomi.rest.exception.InvalidRequestException;
+import org.apache.unomi.schema.api.JsonSchemaWrapper;
 import org.apache.unomi.schema.api.SchemaService;
 
 import java.io.IOException;
@@ -86,7 +87,7 @@ public class ContextRequestDeserializer extends StdDeserializer<ContextRequest> 
             ArrayNode events = (ArrayNode) eventsNode;
             List<Event> filteredEvents = new ArrayList<>();
             for (JsonNode event : events) {
-                if (schemaService.isValid(event.toString(), "https://unomi.apache.org/schemas/json/events/" + event.get("eventType").textValue() + "/1-0-0")) {
+                if (schemaService.isEventValid(event.toString(), event.get("eventType").textValue())) {
                     filteredEvents.add(jsonParser.getCodec().treeToValue(event, Event.class));
                 }
             }

@@ -144,8 +144,8 @@ public class ContextServletIT extends BaseIT {
         schemaService.saveSchema(resourceAsString(FLOAT_PROPERTY_EVENT_TYPE_SCHEMA));
         keepTrying("Couldn't find json schemas",
                 () -> schemaService.getInstalledJsonSchemaIds(),
-                (schemaIds) -> (schemaIds.contains("https://unomi.apache.org/schemas/json/events/floatPropertyType/1-0-0") &&
-                        schemaIds.contains("https://unomi.apache.org/schemas/json/events/testEventType/1-0-0")),
+                (schemaIds) -> (schemaIds.contains("https://vendor.test.com/schemas/json/events/floatPropertyType/1-0-0") &&
+                        schemaIds.contains("https://vendor.test.com/schemas/json/events/testEventType/1-0-0")),
                 DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
     }
 
@@ -158,12 +158,12 @@ public class ContextServletIT extends BaseIT {
         segmentService.removeSegmentDefinition(SEGMENT_ID, false);
 
         // cleanup schemas
-        schemaService.deleteSchema("https://unomi.apache.org/schemas/json/events/testEventType/1-0-0");
-        schemaService.deleteSchema("https://unomi.apache.org/schemas/json/events/floatPropertyType/1-0-0");
+        schemaService.deleteSchema("https://vendor.test.com/schemas/json/events/testEventType/1-0-0");
+        schemaService.deleteSchema("https://vendor.test.com/schemas/json/events/floatPropertyType/1-0-0");
         keepTrying("Should not find json schemas anymore",
                 () -> schemaService.getInstalledJsonSchemaIds(),
-                (schemaIds) -> (!schemaIds.contains("https://unomi.apache.org/schemas/json/events/floatPropertyType/1-0-0") &&
-                        !schemaIds.contains("https://unomi.apache.org/schemas/json/events/testEventType/1-0-0")),
+                (schemaIds) -> (!schemaIds.contains("https://vendor.test.com/schemas/json/events/floatPropertyType/1-0-0") &&
+                        !schemaIds.contains("https://vendor.test.com/schemas/json/events/testEventType/1-0-0")),
                 DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
     }
 

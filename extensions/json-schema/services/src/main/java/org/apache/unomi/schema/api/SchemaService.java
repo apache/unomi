@@ -37,6 +37,15 @@ public interface SchemaService {
     boolean isValid(String data, String schemaId);
 
     /**
+     * Verify if the event is valid
+     *
+     * @param event   to validate
+     * @param eventType The type of the event
+     * @return true is the event is valid
+     */
+    boolean isEventValid(String event, String eventType);
+
+    /**
      * Get the list of installed Json Schema Ids
      *
      * @return A Set of JSON schema ids
@@ -58,6 +67,14 @@ public interface SchemaService {
      * @return a list of JSONSchema
      */
     List<JsonSchemaWrapper> getSchemasByTarget(String target);
+
+    /**
+     * Get the schema that is able to validate the specific event type
+     *
+     * @param eventType the eventType
+     * @return The JSON Schema able to validate the given event type or null if not found.
+     */
+    JsonSchemaWrapper getSchemaForEventType(String eventType);
 
     /**
      * Save a new schema or update a schema
