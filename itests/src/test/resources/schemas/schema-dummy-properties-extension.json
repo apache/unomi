@@ -1,12 +1,12 @@
 {
-  "$id": "https://unomi.apache.org/schemas/json/events/dummy/properties/extension/1-0-0",
+  "$id": "https://vendor.test.com/schemas/json/events/dummy/properties/extension/1-0-0",
   "$schema": "https://json-schema.org/draft/2019-09/schema",
   "self": {
-    "vendor": "org.modules.jahia",
+    "vendor": "com.vendor.test",
     "name": "dummyPropertiesExtension",
     "format": "jsonschema",
     "version": "1-0-0",
-    "extends": "https://unomi.apache.org/schemas/json/events/dummy/properties/1-0-0"
+    "extends": "https://vendor.test.com/schemas/json/events/dummy/properties/1-0-0"
   },
   "title": "dummyPropertiesExtension",
   "type": "object",

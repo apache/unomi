@@ -45,6 +45,7 @@ public class SchemaServiceImpl implements SchemaService {
     private static final String URI = "https://json-schema.org/draft/2019-09/schema";
 
     private static final Logger logger = LoggerFactory.getLogger(SchemaServiceImpl.class.getName());
+    private static final String TARGET_EVENTS = "events";
 
     ObjectMapper objectMapper = new ObjectMapper();
 
@@ -117,6 +118,17 @@ public class SchemaServiceImpl implements SchemaService {
     }
 
     @Override
+    public boolean isEventValid(String event, String eventType) {
+        JsonSchemaWrapper eventSchema = getSchemaForEventType(eventType);
+        if (eventSchema != null) {
+            return isValid(event, eventSchema.getItemId());
+        }
+
+        // Event schema not found
+        return false;
+    }
+
+    @Override
     public JsonSchemaWrapper getSchema(String schemaId) {
         return schemasById.get(schemaId);
     }
@@ -131,6 +143,22 @@ public class SchemaServiceImpl implements SchemaService {
         return schemasById.values().stream()
                 .filter(jsonSchemaWrapper -> jsonSchemaWrapper.getTarget() != null && jsonSchemaWrapper.getTarget().equals(target))
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public JsonSchemaWrapper getSchemaForEventType(String eventType) {
+        if (StringUtils.isEmpty(eventType)) {
+            return null;
+        }
+
+        return schemasById.values().stream()
+                .filter(jsonSchemaWrapper ->
+                        jsonSchemaWrapper.getTarget() != null &&
+                        jsonSchemaWrapper.getTarget().equals(TARGET_EVENTS) &&
+                        jsonSchemaWrapper.getName() != null &&
+                        jsonSchemaWrapper.getName().equals(eventType))
+                .findFirst()
+                .orElse(null);
     }
 
     @Override
@@ -176,12 +204,12 @@ public class SchemaServiceImpl implements SchemaService {
         String name = schemaNode.at("/self/name").asText();
         String extendsSchemaId = schemaNode.at("/self/extends").asText();
 
-        if ("events".equals(target) && !name.matches("[_A-Za-z][_0-9A-Za-z]*")) {
+        if (TARGET_EVENTS.equals(target) && !name.matches("[_A-Za-z][_0-9A-Za-z]*")) {
             throw new IllegalArgumentException(
                     "The \"/self/name\" value should match the following regular expression [_A-Za-z][_0-9A-Za-z]* for the Json schema on events");
         }
 
-        return new JsonSchemaWrapper(schemaId, schema, target, extendsSchemaId, new Date());
+        return new JsonSchemaWrapper(schemaId, schema, target, name, extendsSchemaId, new Date());
     }
 
     private void refreshJSONSchemas() {
