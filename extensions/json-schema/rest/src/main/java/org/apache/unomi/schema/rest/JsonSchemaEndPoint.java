@@ -82,7 +82,7 @@ public class JsonSchemaEndPoint {
         if (schema != null) {
             return schema.getSchema().replace("\n", "");
         }
-        return "";
+        return null;
     }
 
     /**
