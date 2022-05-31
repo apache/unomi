@@ -2,7 +2,7 @@
   "$id": "https://unomi.apache.org/schemas/json/contextrequestparams/1-0-0",
   "$schema": "https://json-schema.org/draft/2019-09/schema",
   "self":{
-    "vendor":"org.apache.unomi",
+    "vendor":"The Apache Software Foundation",
     "name": "contextRequestParams",
     "format":"jsonschema",
     "version":"1-0-0"
