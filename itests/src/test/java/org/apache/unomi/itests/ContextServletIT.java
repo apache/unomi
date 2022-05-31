@@ -55,7 +55,6 @@ import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Base64;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -77,7 +76,6 @@ import static org.junit.Assert.assertTrue;
 @ExamReactorStrategy(PerSuite.class)
 public class ContextServletIT extends BaseIT {
     private final static String CONTEXT_URL = "/cxs/context.json";
-    private final static String JSONSCHEMA_URL = "/cxs/jsonSchema";
 
     private final static String THIRD_PARTY_HEADER_NAME = "X-Unomi-Peer";
     private final static String TEST_EVENT_TYPE = "testEventType";
