@@ -206,12 +206,12 @@ public class JSONSchemaIT extends BaseIT {
         schemaService.saveSchema(resourceAsString("schemas/schema-dummy.json"));
         schemaService.saveSchema(resourceAsString("schemas/schema-dummy-properties.json"));
 
-        final String schemaId = "https://unomi.apache.org/schemas/json/events/dummy/1-0-0";
-        final HttpPost request = new HttpPost(getFullUrl(JSONSCHEMA_URL + "/queryId"));
+        final String schemaId = "https://vendor.test.com/schemas/json/events/dummy/1-0-0";
+        final HttpPost request = new HttpPost(getFullUrl(JSONSCHEMA_URL + "/query"));
 
-        request.setEntity(new StringEntity(schemaId, ContentType.APPLICATION_JSON));
+        request.setEntity(new StringEntity(schemaId));
 
-        keepTrying("Should return a schema with when calling the endpoint", () -> {
+        keepTrying("Should return a schema when calling the endpoint", () -> {
             try (CloseableHttpResponse response = executeHttpRequest(request)) {
                 return EntityUtils.toString(response.getEntity());
             } catch (IOException e) {
@@ -237,9 +237,9 @@ public class JSONSchemaIT extends BaseIT {
 
         // Delete Schema using REST call
         final HttpPost request = new HttpPost(getFullUrl(JSONSCHEMA_URL + "/delete"));
-        request.setEntity(new StringEntity("https://vendor.test.com/schemas/json/events/dummy/1-0-0", ContentType.APPLICATION_JSON));
+        request.setEntity(new StringEntity("https://vendor.test.com/schemas/json/events/dummy/1-0-0"));
         CloseableHttpResponse response = executeHttpRequest(request);
-        assertEquals("Invalid response code", 204, response.getStatusLine().getStatusCode());
+        assertEquals("Invalid response code", 200, response.getStatusLine().getStatusCode());
 
         waitForNullValue("Schema should have been deleted",
                 () -> schemaService.getSchema("https://vendor.test.com/schemas/json/events/dummy/1-0-0"), DEFAULT_TRYING_TIMEOUT,

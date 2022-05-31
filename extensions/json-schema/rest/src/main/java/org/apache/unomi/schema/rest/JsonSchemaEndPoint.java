@@ -19,6 +19,7 @@ package org.apache.unomi.schema.rest;
 
 import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
 import org.apache.unomi.rest.exception.InvalidRequestException;
+import org.apache.unomi.schema.api.JsonSchemaWrapper;
 import org.apache.unomi.schema.api.SchemaService;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
@@ -75,9 +76,13 @@ public class JsonSchemaEndPoint {
      * @return Json schema matching the id
      */
     @POST
-    @Path("/queryId")
+    @Path("/query")
     public String getSchema(String id) {
-        return schemaService.getSchema(id).getSchema().replace("\n", "");
+        JsonSchemaWrapper schema = schemaService.getSchema(id);
+        if (schema != null) {
+            return schema.getSchema().replace("\n", "");
+        }
+        return "";
     }
 
     /**
@@ -106,7 +111,7 @@ public class JsonSchemaEndPoint {
      */
     @POST
     @Path("/delete")
-    public void remove(String id) {
-        schemaService.deleteSchema(id);
+    public boolean remove(String id) {
+        return schemaService.deleteSchema(id);
     }
 }
