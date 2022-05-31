@@ -23,6 +23,7 @@ import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.persistence.spi.PersistenceService;
+import org.apache.unomi.plugins.baseplugin.conditions.PropertyConditionEvaluator;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -118,7 +119,8 @@ public class ConditionEvaluatorIT extends BaseIT {
 
         assertTrue(eval(builder.profileProperty("properties.lastVisit").isDay(lastVisit).build()));
         assertTrue(eval(builder.profileProperty("properties.lastVisit").isNotDay(new Date(lastVisit.getTime() + (24*60*60*1000))).build()));
-        long daysFromToday = TimeUnit.MILLISECONDS.toDays(DateUtils.truncate(new Date(), Calendar.DAY_OF_MONTH).getTime() - DateUtils.truncate(lastVisit, Calendar.DAY_OF_MONTH).getTime());
+        // we add one hour to the current time to compensate for differences due to Daylight Saving Time.
+        long daysFromToday = TimeUnit.MILLISECONDS.toDays(DateUtils.truncate(new Date(), Calendar.DAY_OF_MONTH).getTime()+60*60*1000 - DateUtils.truncate(lastVisit, Calendar.DAY_OF_MONTH).getTime());
         assertTrue(eval(builder.profileProperty("properties.lastVisit").isDay("now-" + daysFromToday + "d").build()));
         assertTrue(eval(builder.profileProperty("properties.lastVisit").isNotDay("now-" + (daysFromToday + 1) + "d").build()));
         assertTrue(eval(builder.profileProperty("properties.lastVisit").inDateExpr("" + lastVisit.getTime()).build()));
