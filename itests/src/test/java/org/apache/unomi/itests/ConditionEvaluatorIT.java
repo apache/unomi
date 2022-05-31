@@ -23,7 +23,6 @@ import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.persistence.spi.PersistenceService;
-import org.apache.unomi.plugins.baseplugin.conditions.PropertyConditionEvaluator;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
