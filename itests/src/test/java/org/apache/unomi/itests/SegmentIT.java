@@ -163,6 +163,12 @@ public class SegmentIT extends BaseIT {
 
     @Test
     public void testProfileEngagedSegmentAddedRemoved() throws InterruptedException {
+        Condition segmentSearchCondition = new Condition();
+        segmentSearchCondition.setConditionType(definitionsService.getConditionType("profilePropertyCondition"));
+        segmentSearchCondition.setParameter("propertyName", "segments");
+        segmentSearchCondition.setParameter("comparisonOperator", "equals");
+        segmentSearchCondition.setParameter("propertyValue", "add-delete-segment-test");
+
         // create Profile
         Profile profile = new Profile();
         profile.setItemId("test_profile_id");
@@ -170,8 +176,8 @@ public class SegmentIT extends BaseIT {
         profileService.save(profile);
         persistenceService.refreshIndex(Profile.class, null);
 
-        keepTrying("Profile should not be engaged in the segment yet", () -> profileService.load("test_profile_id"),
-                loadedProfile -> loadedProfile != null && (loadedProfile.getSegments() == null || !loadedProfile.getSegments().contains("add-delete-segment-test")), 1000, 20);
+        keepTrying("Profile should not be engaged in the segment yet", () -> persistenceService.query(segmentSearchCondition, null, Profile.class),
+                profiles -> profiles.size() == 0, 1000, 20);
 
         // create the segment
         Metadata segmentMetadata = new Metadata("add-delete-segment-test");
@@ -181,19 +187,17 @@ public class SegmentIT extends BaseIT {
         segmentCondition.setParameter("comparisonOperator", "exists");
         segment.setCondition(segmentCondition);
         segmentService.setSegmentDefinition(segment);
-        persistenceService.refreshIndex(Profile.class, null);
 
         // insure the profile that did the past event condition is correctly engaged in the segment.
-        keepTrying("Profile should be engaged in the segment", () -> profileService.load("test_profile_id"),
-                loadedProfile -> loadedProfile != null && loadedProfile.getSegments() != null && loadedProfile.getSegments().contains("add-delete-segment-test"), 1000, 20);
+        keepTrying("Profile should be engaged in the segment", () -> persistenceService.query(segmentSearchCondition, null, Profile.class),
+                profiles -> profiles.size() == 1, 1000, 20);
 
         // delete the segment
         segmentService.removeSegmentDefinition("add-delete-segment-test", false);
-        persistenceService.refreshIndex(Profile.class, null);
 
         // insure the profile is not engaged anymore after segment deleted
-        keepTrying("Profile should not be engaged in the segment anymore after the segment have been deleted", () -> profileService.load("test_profile_id"),
-                loadedProfile -> loadedProfile != null && (loadedProfile.getSegments() == null || !loadedProfile.getSegments().contains("add-delete-segment-test")), 1000, 20);
+        keepTrying("Profile should not be engaged in the segment anymore after the segment have been deleted", () -> persistenceService.query(segmentSearchCondition, null, Profile.class),
+                profiles -> profiles.size() == 0, 1000, 20);
     }
 
     @Test
