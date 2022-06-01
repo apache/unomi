@@ -391,21 +391,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
             segmentCondition.setParameter("propertyName", "segments");
             segmentCondition.setParameter("comparisonOperator", "equals");
             segmentCondition.setParameter("propertyValue", segmentId);
-
-            List<Profile> previousProfiles = persistenceService.query(segmentCondition, null, Profile.class);
-            long updatedProfileCount = 0;
-            long profileRemovalStartTime = System.currentTimeMillis();
-            if (batchSegmentProfileUpdate && previousProfiles.size() > 0) {
-                batchUpdateProfilesSegment(segmentId, previousProfiles, false);
-            } else {
-                for (Profile profileToRemove : previousProfiles) {
-                    Map<String, Object> sourceMap = buildPropertiesMapForUpdateSegment(profileToRemove, segmentId, false);
-                    persistenceService.update(profileToRemove, null, Profile.class, sourceMap);
-                }
-            }
-
-            updatedProfileCount += previousProfiles.size();
-            logger.info("Removed segment from {} profiles in {} ms", updatedProfileCount, System.currentTimeMillis() - profileRemovalStartTime);
+            updateProfilesSegment(segmentCondition, segmentId, false);
 
             // update impacted segments
             for (Segment segment : impactedSegments) {

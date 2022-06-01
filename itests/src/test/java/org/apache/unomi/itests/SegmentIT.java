@@ -162,6 +162,39 @@ public class SegmentIT extends BaseIT {
     }
 
     @Test
+    public void testProfileEngagedSegmentAddedRemoved() throws InterruptedException {
+        // create Profile
+        Profile profile = new Profile();
+        profile.setItemId("test_profile_id");
+        profile.setProperty("age", 42);
+        profileService.save(profile);
+        persistenceService.refreshIndex(Profile.class, null);
+
+        keepTrying("Profile should not be engaged in the segment yet", () -> profileService.load("test_profile_id"),
+                loadedProfile -> loadedProfile != null && (loadedProfile.getSegments() == null || !loadedProfile.getSegments().contains("add-delete-segment-test")), 1000, 20);
+
+        // create the segment
+        Metadata segmentMetadata = new Metadata("add-delete-segment-test");
+        Segment segment = new Segment(segmentMetadata);
+        Condition segmentCondition = new Condition(definitionsService.getConditionType("profilePropertyCondition"));
+        segmentCondition.setParameter("propertyName", "properties.age");
+        segmentCondition.setParameter("comparisonOperator", "exists");
+        segment.setCondition(segmentCondition);
+        segmentService.setSegmentDefinition(segment);
+
+        // insure the profile that did the past event condition is correctly engaged in the segment.
+        keepTrying("Profile should be engaged in the segment", () -> profileService.load("test_profile_id"),
+                updatedProfile -> updatedProfile.getSegments().contains("add-delete-segment-test"), 1000, 20);
+
+        // delete the segment
+        segmentService.removeSegmentDefinition("add-delete-segment-test", false);
+
+        // insure the profile is not engaged anymore after segment deleted
+        keepTrying("Profile should not be engaged in the segment anymore after the segment have been deleted", () -> profileService.load("test_profile_id"),
+                loadedProfile -> loadedProfile != null && (loadedProfile.getSegments() == null || !loadedProfile.getSegments().contains("add-delete-segment-test")), 1000, 20);
+    }
+
+    @Test
     public void testSegmentWithPastEventCondition() throws InterruptedException {
         // create Profile
         Profile profile = new Profile();
