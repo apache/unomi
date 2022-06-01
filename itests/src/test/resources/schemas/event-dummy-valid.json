@@ -1,7 +1,10 @@
 {
-  "eventType":"dummy",
-  "scope":"dummy_scope",
-  "properties": {
+  "eventType":"form",
+  "scope":"digitall",
+  "flattenedProperties": {
+    "formFields": {
+      "f"
+    },
     "workspace": "dummy_workspace",
     "path": "dummy/path"
   }

@@ -185,7 +185,7 @@ public class SegmentIT extends BaseIT {
 
         // insure the profile that did the past event condition is correctly engaged in the segment.
         keepTrying("Profile should be engaged in the segment", () -> profileService.load("test_profile_id"),
-                loadedProfile -> loadedProfile != null && loadedProfile.getSegments() != null && loadedProfile.getSegments().contains("add-delete-segment-test"), 2000, 20);
+                loadedProfile -> loadedProfile != null && loadedProfile.getSegments() != null && loadedProfile.getSegments().contains("add-delete-segment-test"), 1000, 20);
 
         // delete the segment
         segmentService.removeSegmentDefinition("add-delete-segment-test", false);
@@ -193,7 +193,7 @@ public class SegmentIT extends BaseIT {
 
         // insure the profile is not engaged anymore after segment deleted
         keepTrying("Profile should not be engaged in the segment anymore after the segment have been deleted", () -> profileService.load("test_profile_id"),
-                loadedProfile -> loadedProfile != null && (loadedProfile.getSegments() == null || !loadedProfile.getSegments().contains("add-delete-segment-test")), 2000, 20);
+                loadedProfile -> loadedProfile != null && (loadedProfile.getSegments() == null || !loadedProfile.getSegments().contains("add-delete-segment-test")), 1000, 20);
     }
 
     @Test

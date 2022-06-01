@@ -391,7 +391,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
             segmentCondition.setParameter("propertyName", "segments");
             segmentCondition.setParameter("comparisonOperator", "equals");
             segmentCondition.setParameter("propertyValue", segmentId);
-            updateProfilesSegment(segmentCondition, segmentId, false);
+            updateProfilesSegment(segmentCondition, segmentId, false, false);
 
             // update impacted segments
             for (Segment segment : impactedSegments) {
@@ -1074,15 +1074,15 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
             profilesToRemoveSubConditions.add(notNewSegmentCondition);
             profilesToRemoveCondition.setParameter("subConditions", profilesToRemoveSubConditions);
 
-            updatedProfileCount += updateProfilesSegment(profilesToAddCondition, segmentId, true);
-            updatedProfileCount += updateProfilesSegment(profilesToRemoveCondition, segmentId, false);
+            updatedProfileCount += updateProfilesSegment(profilesToAddCondition, segmentId, true, sendProfileUpdateEventForSegmentUpdate);
+            updatedProfileCount += updateProfilesSegment(profilesToRemoveCondition, segmentId, false, sendProfileUpdateEventForSegmentUpdate);
         } else {
-            updatedProfileCount += updateProfilesSegment(segmentCondition, segmentId, false);
+            updatedProfileCount += updateProfilesSegment(segmentCondition, segmentId, false, sendProfileUpdateEventForSegmentUpdate);
         }
         logger.info("{} profiles updated in {}ms", updatedProfileCount, System.currentTimeMillis() - updateProfilesForSegmentStartTime);
     }
 
-    private long updateProfilesSegment(Condition profilesToUpdateCondition, String segmentId, boolean isAdd) {
+    private long updateProfilesSegment(Condition profilesToUpdateCondition, String segmentId, boolean isAdd, boolean sendProfileUpdateEvent) {
         long updatedProfileCount = 0;
         PartialList<Profile> profiles = persistenceService.query(profilesToUpdateCondition, null, Profile.class, 0, segmentUpdateBatchSize, "10m");
 
@@ -1096,7 +1096,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
                     persistenceService.update(profileToUpdate, null, Profile.class, sourceMap);
                 }
             }
-            if (sendProfileUpdateEventForSegmentUpdate)
+            if (sendProfileUpdateEvent)
                 sendProfileUpdatedEvent(profiles.getList());
 
             updatedProfileCount += profiles.size();
