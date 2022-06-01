@@ -53,7 +53,7 @@ public class ContextRequestDeserializer extends StdDeserializer<ContextRequest> 
     }
 
     @Override
-    public ContextRequest deserialize(JsonParser jsonParser, DeserializationContext context) throws IOException, JsonProcessingException {
+    public ContextRequest deserialize(JsonParser jsonParser, DeserializationContext context) throws IOException {
         JsonNode node = jsonParser.getCodec().readTree(jsonParser);
         // Validate schema on it
         if (!schemaService.isValid(node.toString(), "https://unomi.apache.org/schemas/json/contextrequest/1-0-0")) {

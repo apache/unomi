@@ -40,6 +40,12 @@
             <version>${project.version}</version>
             <scope>provided</scope>
         </dependency>
+        <dependency>
+            <groupId>org.apache.karaf.features</groupId>
+            <artifactId>org.apache.karaf.features.core</artifactId>
+            <version>${version.karaf}</version>
+            <scope>provided</scope>
+        </dependency>
     </dependencies>
 
     <build>
@@ -72,6 +78,11 @@
                         <Implementation-TimeStamp>${timestamp}</Implementation-TimeStamp>
                         <Implementation-ScmBranch>${scmBranch}</Implementation-ScmBranch>
                         <Implementation-ServerIdentifier>Apache Unomi</Implementation-ServerIdentifier>
+                        <Import-Package>
+                            org.apache.karaf.util.tracker.annotation;resolution:=optional,
+                            org.eclipse.osgi.service.resolver;resolution:=optional,
+                            *
+                        </Import-Package>
                     </instructions>
                 </configuration>
             </plugin>

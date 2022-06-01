@@ -15,8 +15,9 @@
   ~ See the License for the specific language governing permissions and
   ~ limitations under the License.
   -->
-<features xmlns="http://karaf.apache.org/xmlns/features/v1.6.0" name="cdp-graphql-feature">
-    <feature name="cdp-graphql-feature" description="Apache Unomi :: GraphQL API :: Karaf Feature" version="${project.version}">
+<features xmlns="http://karaf.apache.org/xmlns/features/v1.6.0" name="cdp-graphql-features">
+    <feature name="cdp-graphql-feature-denpendencies" description="Dependencies necessary to deploy the graphQL feature"
+             version="${project.version}">
         <details>Apache Unomi Context GraphQL API Karaf Feature</details>
         <feature prerequisite="true">wrap</feature>
         <feature>unomi-kar</feature>
@@ -52,6 +53,11 @@
         <bundle start-level="80">mvn:org.eclipse.jetty/jetty-security/${jetty.websocket.version}</bundle>
         <bundle start-level="80">mvn:org.eclipse.jetty/jetty-server/${jetty.websocket.version}</bundle>
         <bundle start-level="80">mvn:org.eclipse.jetty/jetty-http/${jetty.websocket.version}</bundle>
-        <bundle start-level="80" start="false">mvn:org.apache.unomi/cdp-graphql-api-impl/${project.version}</bundle>
+    </feature>
+    <feature name="cdp-graphql-feature" description="Apache Unomi :: GraphQL API :: Karaf Feature"
+             version="${project.version}">
+        <feature>unomi-kar</feature>
+        <bundle start-level="80">mvn:org.apache.unomi/cdp-graphql-api-impl/${project.version}</bundle>
+        <bundle start-level="80">mvn:org.apache.unomi/unomi-graphql-playground/${project.version}</bundle>
     </feature>
 </features>

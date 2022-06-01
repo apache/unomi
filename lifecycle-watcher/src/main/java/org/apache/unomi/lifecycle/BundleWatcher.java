@@ -30,10 +30,12 @@ public interface BundleWatcher {
      * Retrieves the list of the server information objects, that include extensions. Each object includes the
      * name and version of the server, build time information and the event types
      * if recognizes as well as the capabilities supported by the system.
+     *
      * @return a list of ServerInfo objects with all the server information
      */
     List<ServerInfo> getServerInfos();
 
-
     boolean isStartupComplete();
+
+    boolean allAdditionalBundleStarted();
 }

@@ -17,8 +17,17 @@
 package org.apache.unomi.lifecycle;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.karaf.features.FeaturesService;
 import org.apache.unomi.api.ServerInfo;
-import org.osgi.framework.*;
+import org.osgi.framework.Bundle;
+import org.osgi.framework.BundleContext;
+import org.osgi.framework.BundleEvent;
+import org.osgi.framework.Filter;
+import org.osgi.framework.InvalidSyntaxException;
+import org.osgi.framework.ServiceEvent;
+import org.osgi.framework.ServiceListener;
+import org.osgi.framework.ServiceReference;
+import org.osgi.framework.SynchronousBundleListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -27,8 +36,19 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URL;
 import java.text.MessageFormat;
-import java.util.*;
-import java.util.concurrent.*;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.EnumSet;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TimerTask;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
@@ -39,11 +59,15 @@ public class BundleWatcherImpl implements SynchronousBundleListener, ServiceList
 
     private static final Logger logger = LoggerFactory.getLogger(BundleWatcherImpl.class.getName());
 
+    private static final String CDP_GRAPHQL_FEATURE = "cdp-graphql-feature";
+
     private long startupTime;
     private Map<String, Boolean> requiredBundles = new ConcurrentHashMap<>();
+    private Map<String, Boolean> requiredBundlesFromFeatures = new ConcurrentHashMap<>();
 
     private ScheduledExecutorService scheduler;
     private ScheduledFuture<?> scheduledFuture;
+    private FeaturesService featuresService;
 
     private String requiredServices;
     private Set<Filter> requiredServicesFilters = new LinkedHashSet<>();
@@ -52,10 +76,11 @@ public class BundleWatcherImpl implements SynchronousBundleListener, ServiceList
     private BundleContext bundleContext;
     private boolean startupMessageAlreadyDisplayed = false;
     private boolean shutdownMessageAlreadyDisplayed = false;
-    private List<String> logoLines = new ArrayList<>();
 
     private Integer checkStartupStateRefreshInterval = 60;
 
+    private Set<String> featuresToInstall = ConcurrentHashMap.newKeySet();
+    private boolean installingFeatureStarted = false;
     private List<ServerInfo> serverInfos = new ArrayList<>();
 
     public void setRequiredBundles(Map<String, Boolean> requiredBundles) {
@@ -83,8 +108,13 @@ public class BundleWatcherImpl implements SynchronousBundleListener, ServiceList
         this.bundleContext = bundleContext;
     }
 
+    public void setFeaturesService(FeaturesService featuresService) {
+        this.featuresService = featuresService;
+    }
+
     public void init() {
         scheduler = Executors.newSingleThreadScheduledExecutor();
+        fillFeaturesToInstall();
         checkExistingBundles();
         bundleContext.addBundleListener(this);
         bundleContext.addServiceListener(this);
@@ -99,17 +129,21 @@ public class BundleWatcherImpl implements SynchronousBundleListener, ServiceList
     }
 
     private boolean allBundleStarted() {
-        return getInactiveBundles().isEmpty();
+        return getInactiveBundles(requiredBundles).isEmpty();
     }
 
-    private void displayLogsForInactiveBundles() {
-        getInactiveBundles().forEach(inactiveBundle -> logger
+    @Override
+    public boolean allAdditionalBundleStarted() {
+        return getInactiveBundles(requiredBundlesFromFeatures).isEmpty();
+    }
+
+    private void displayLogsForInactiveBundles(Map<String, Boolean> bundles) {
+        getInactiveBundles(bundles).forEach(inactiveBundle -> logger
                 .warn("The bundle {} is in not active, some errors could happen when using the application", inactiveBundle));
     }
 
-    private List<String> getInactiveBundles() {
-        return requiredBundles.entrySet().stream().filter(entry -> !entry.getValue()).map(Map.Entry::getKey).collect(Collectors.toList());
-
+    private List<String> getInactiveBundles(Map<String, Boolean> bundles) {
+        return bundles.entrySet().stream().filter(entry -> !entry.getValue()).map(Map.Entry::getKey).collect(Collectors.toList());
     }
 
     public void destroy() {
@@ -125,13 +159,9 @@ public class BundleWatcherImpl implements SynchronousBundleListener, ServiceList
         serverInfos.clear();
         serverInfos.add(getBundleServerInfo(bundleContext.getBundle())); // make sure the first server info is the default one
         for (Bundle bundle : bundleContext.getBundles()) {
-            if (bundle.getSymbolicName().startsWith("org.apache.unomi") && requiredBundles.containsKey(bundle.getSymbolicName())) {
-                if (bundle.getState() == Bundle.ACTIVE) {
-                    requiredBundles.put(bundle.getSymbolicName(), true);
-                } else {
-                    requiredBundles.put(bundle.getSymbolicName(), false);
-                }
-            }
+            checkInBundlesList(bundle, requiredBundles);
+            checkInBundlesList(bundle, requiredBundlesFromFeatures);
+
             if (!bundle.getSymbolicName().equals(bundleContext.getBundle().getSymbolicName())) {
                 ServerInfo serverInfo = getBundleServerInfo(bundle);
                 if (serverInfo != null) {
@@ -142,25 +172,38 @@ public class BundleWatcherImpl implements SynchronousBundleListener, ServiceList
         checkStartupComplete();
     }
 
+    private void checkInBundlesList(Bundle bundle, Map<String, Boolean> bundles) {
+        if (bundle.getSymbolicName().startsWith("org.apache.unomi") && bundles.containsKey(bundle.getSymbolicName())) {
+            if (bundle.getState() == Bundle.ACTIVE) {
+                bundles.put(bundle.getSymbolicName(), true);
+            } else {
+                bundles.put(bundle.getSymbolicName(), false);
+            }
+        }
+    }
+
+    private void managedBundleEvent(Bundle bundle, Map<String, Boolean> bundles, Boolean start) {
+        if (bundle.getSymbolicName().startsWith("org.apache.unomi") && bundles.containsKey(bundle.getSymbolicName())) {
+            logger.info("Bundle {} was {}.", bundle.getSymbolicName(), start ? "started" : "stopped");
+            bundles.put(bundle.getSymbolicName(), start);
+            checkStartupComplete();
+        }
+    }
+
     @Override
     public void bundleChanged(BundleEvent event) {
         switch (event.getType()) {
             case BundleEvent.STARTING:
                 break;
             case BundleEvent.STARTED:
-                if (event.getBundle().getSymbolicName().startsWith("org.apache.unomi") && requiredBundles.containsKey(event.getBundle().getSymbolicName())) {
-                    logger.info("Bundle {} was started.", event.getBundle().getSymbolicName());
-                    requiredBundles.put(event.getBundle().getSymbolicName(), true);
-                    checkStartupComplete();
-                }
+                managedBundleEvent(event.getBundle(), requiredBundles, true);
+                managedBundleEvent(event.getBundle(), requiredBundlesFromFeatures, true);
                 break;
             case BundleEvent.STOPPING:
                 break;
             case BundleEvent.STOPPED:
-                if (event.getBundle().getSymbolicName().startsWith("org.apache.unomi") && requiredBundles.containsKey(event.getBundle().getSymbolicName())) {
-                    logger.info("Bundle {} was stopped", event.getBundle().getSymbolicName());
-                    requiredBundles.put(event.getBundle().getSymbolicName(), false);
-                }
+                managedBundleEvent(event.getBundle(), requiredBundles, false);
+                managedBundleEvent(event.getBundle(), requiredBundlesFromFeatures, false);
                 break;
             default:
                 break;
@@ -223,50 +266,93 @@ public class BundleWatcherImpl implements SynchronousBundleListener, ServiceList
         });
     }
 
+    private void fillFeaturesToInstall() {
+        String installGraphQLFeature = bundleContext.getProperty("org.apache.unomi.graphql.feature.activated");
+        boolean graphQLToInstall = StringUtils.isNotBlank(installGraphQLFeature) && installGraphQLFeature.equals("true");
+        if (graphQLToInstall) {
+            featuresToInstall.add(CDP_GRAPHQL_FEATURE);
+            requiredBundlesFromFeatures.put("org.apache.unomi.cdp-graphql-api-impl", false);
+            requiredBundlesFromFeatures.put("org.apache.unomi.graphql-playground", false);
+        }
+    }
+
+    public boolean shouldInstallAdditionalFeatures() {
+        return !featuresToInstall.isEmpty();
+    }
+
+    private void installFeatures() {
+        List<String> installedFeatures = new ArrayList<>();
+        featuresToInstall.forEach(value -> {
+            try {
+                long featureStartupTime = System.currentTimeMillis();
+                if (!featuresService.isInstalled(featuresService.getFeature(value))) {
+                    System.out.println("Installing feature " + value);
+                    featuresService.installFeature(value, EnumSet.of(FeaturesService.Option.NoAutoRefreshManagedBundles,
+                            FeaturesService.Option.NoAutoRefreshUnmanagedBundles, FeaturesService.Option.NoAutoRefreshBundles));
+                    logger.info("Feature {} successfully installed in {} ms", value, System.currentTimeMillis() - featureStartupTime);
+                }
+                installedFeatures.add(value);
+            } catch (Exception e) {
+                logger.error("Error when installing {} feature", value, e);
+            }
+        });
+        installedFeatures.forEach(value -> featuresToInstall.remove(value));
+    }
+
+    private void startScheduler() {
+        if (scheduledFuture == null || scheduledFuture.isCancelled()) {
+            TimerTask task = new TimerTask() {
+                @Override
+                public void run() {
+                    displayLogsForInactiveBundles(requiredBundles);
+                    displayLogsForInactiveBundles(requiredBundlesFromFeatures);
+                    displayLogsForInactiveServices();
+                    checkStartupComplete();
+                }
+            };
+            scheduledFuture = scheduler
+                    .scheduleWithFixedDelay(task, checkStartupStateRefreshInterval, checkStartupStateRefreshInterval, TimeUnit.SECONDS);
+        }
+    }
+
     private void checkStartupComplete() {
         if (!isStartupComplete()) {
-            if (scheduledFuture == null || scheduledFuture.isCancelled()) {
-                TimerTask task = new TimerTask() {
-                    @Override
-                    public void run() {
-                        displayLogsForInactiveBundles();
-                        displayLogsForInactiveServices();
-                        checkStartupComplete();
-                    }
-                };
-                scheduledFuture = scheduler
-                        .scheduleWithFixedDelay(task, checkStartupStateRefreshInterval, checkStartupStateRefreshInterval, TimeUnit.SECONDS);
-            }
+            startScheduler();
             return;
         }
         if (scheduledFuture != null) {
             scheduledFuture.cancel(true);
             scheduledFuture = null;
         }
+        if (shouldInstallAdditionalFeatures() && !installingFeatureStarted) {
+            installingFeatureStarted = true;
+            installFeatures();
+            checkStartupComplete();
+            return;
+        }
+        if (!allAdditionalBundleStarted()) {
+            startScheduler();
+            return;
+        }
         if (!startupMessageAlreadyDisplayed) {
             long totalStartupTime = System.currentTimeMillis() - startupTime;
 
-            List<String> logoLines = serverInfos.get(serverInfos.size()-1).getLogoLines();
+            List<String> logoLines = serverInfos.get(serverInfos.size() - 1).getLogoLines();
             if (logoLines != null && !logoLines.isEmpty()) {
                 logoLines.forEach(System.out::println);
             }
             System.out.println("--------------------------------------------------------------------------------------------");
             serverInfos.forEach(serverInfo -> {
                 String versionMessage = MessageFormat.format(" {0} {1} ({2,date,yyyy-MM-dd HH:mm:ssZ} // {3} // {4} // {5}) ",
-                        StringUtils.rightPad(serverInfo.getServerIdentifier(), 12, " "),
-                        serverInfo.getServerVersion(),
-                        serverInfo.getServerBuildDate(),
-                        serverInfo.getServerTimestamp(),
-                        serverInfo.getServerScmBranch(),
-                        serverInfo.getServerBuildNumber()
-                        );
+                        StringUtils.rightPad(serverInfo.getServerIdentifier(), 12, " "), serverInfo.getServerVersion(),
+                        serverInfo.getServerBuildDate(), serverInfo.getServerTimestamp(), serverInfo.getServerScmBranch(),
+                        serverInfo.getServerBuildNumber());
                 System.out.println(versionMessage);
                 logger.info(versionMessage);
             });
             System.out.println("--------------------------------------------------------------------------------------------");
-            System.out.println(
-                    "Server successfully started " + requiredBundles.size() + " bundles and " + requiredServicesFilters.size() + " required "
-                            + "services in " + totalStartupTime + " ms");
+            System.out.println("Server successfully started " + requiredBundles.size() + " bundles and " + requiredServicesFilters.size()
+                    + " required " + "services in " + totalStartupTime + " ms");
             logger.info("Server successfully started {} bundles and {} required services in {} ms", requiredBundles.size(),
                     requiredServicesFilters.size(), totalStartupTime);
             startupMessageAlreadyDisplayed = true;

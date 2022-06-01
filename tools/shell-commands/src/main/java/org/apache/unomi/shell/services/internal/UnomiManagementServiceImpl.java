@@ -17,10 +17,13 @@
 package org.apache.unomi.shell.services.internal;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.karaf.features.FeaturesService;
 import org.apache.unomi.shell.services.UnomiManagementService;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -31,13 +34,19 @@ import java.util.List;
  */
 public class UnomiManagementServiceImpl implements UnomiManagementService {
 
+    private static final Logger logger = LoggerFactory.getLogger(UnomiManagementServiceImpl.class);
+
     private BundleContext bundleContext;
+    private FeaturesService featuresService;
     private List<String> bundleSymbolicNames;
     private List<String> reversedBundleSymbolicNames;
 
+    private static final String CDP_GRAPHQL_FEATURE = "cdp-graphql-feature";
+
     public void init() throws BundleException {
         initReversedBundleSymbolicNames();
-        if (StringUtils.isNotBlank(bundleContext.getProperty("unomi.autoStart")) && bundleContext.getProperty("unomi.autoStart").equals("true")) {
+        if (StringUtils.isNotBlank(bundleContext.getProperty("unomi.autoStart")) && bundleContext.getProperty("unomi.autoStart")
+                .equals("true")) {
             startUnomi();
         }
     }
@@ -78,6 +87,10 @@ public class UnomiManagementServiceImpl implements UnomiManagementService {
         this.bundleSymbolicNames = bundleSymbolicNames;
     }
 
+    public void setFeaturesService(FeaturesService featuresService) {
+        this.featuresService = featuresService;
+    }
+
     public void initReversedBundleSymbolicNames() {
         if (reversedBundleSymbolicNames == null || reversedBundleSymbolicNames.isEmpty()) {
             this.reversedBundleSymbolicNames = new ArrayList<>();
@@ -85,4 +98,5 @@ public class UnomiManagementServiceImpl implements UnomiManagementService {
             Collections.reverse(reversedBundleSymbolicNames);
         }
     }
+
 }
