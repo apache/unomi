@@ -79,12 +79,6 @@
             <version>4.11</version>
             <scope>test</scope>
         </dependency>
-        <dependency>
-            <groupId>org.apache.karaf.features</groupId>
-            <artifactId>org.apache.karaf.features.core</artifactId>
-            <version>${version.karaf}</version>
-            <scope>provided</scope>
-        </dependency>
     </dependencies>
 
     <build>
@@ -95,11 +89,6 @@
                 <configuration>
                     <instructions>
                         <Karaf-Commands>*</Karaf-Commands>
-                        <Import-Package>
-                            org.apache.karaf.util.tracker.annotation;resolution:=optional,
-                            org.eclipse.osgi.service.resolver;resolution:=optional,
-                            *
-                        </Import-Package>
                     </instructions>
                 </configuration>
             </plugin>

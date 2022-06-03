@@ -67,6 +67,7 @@ public class BundleWatcherImpl implements SynchronousBundleListener, ServiceList
 
     private ScheduledExecutorService scheduler;
     private ScheduledFuture<?> scheduledFuture;
+    private ScheduledFuture<?> scheduledFutureAdditionalBundles;
     private FeaturesService featuresService;
 
     private String requiredServices;
@@ -114,7 +115,7 @@ public class BundleWatcherImpl implements SynchronousBundleListener, ServiceList
 
     public void init() {
         scheduler = Executors.newSingleThreadScheduledExecutor();
-        fillFeaturesToInstall();
+        prepareGraphQLFeatureToInstall();
         checkExistingBundles();
         bundleContext.addBundleListener(this);
         bundleContext.addServiceListener(this);
@@ -186,7 +187,9 @@ public class BundleWatcherImpl implements SynchronousBundleListener, ServiceList
         if (bundle.getSymbolicName().startsWith("org.apache.unomi") && bundles.containsKey(bundle.getSymbolicName())) {
             logger.info("Bundle {} was {}.", bundle.getSymbolicName(), start ? "started" : "stopped");
             bundles.put(bundle.getSymbolicName(), start);
-            checkStartupComplete();
+            if (start) {
+                checkStartupComplete();
+            }
         }
     }
 
@@ -266,7 +269,7 @@ public class BundleWatcherImpl implements SynchronousBundleListener, ServiceList
         });
     }
 
-    private void fillFeaturesToInstall() {
+    private void prepareGraphQLFeatureToInstall() {
         String installGraphQLFeature = bundleContext.getProperty("org.apache.unomi.graphql.feature.activated");
         boolean graphQLToInstall = StringUtils.isNotBlank(installGraphQLFeature) && installGraphQLFeature.equals("true");
         if (graphQLToInstall) {
@@ -305,12 +308,29 @@ public class BundleWatcherImpl implements SynchronousBundleListener, ServiceList
                 @Override
                 public void run() {
                     displayLogsForInactiveBundles(requiredBundles);
-                    displayLogsForInactiveBundles(requiredBundlesFromFeatures);
                     displayLogsForInactiveServices();
                     checkStartupComplete();
                 }
             };
             scheduledFuture = scheduler
+                    .scheduleWithFixedDelay(task, checkStartupStateRefreshInterval, checkStartupStateRefreshInterval, TimeUnit.SECONDS);
+        }
+    }
+
+    private void startSchedulerForAdditionalBundles() {
+        if (scheduledFutureAdditionalBundles == null || scheduledFutureAdditionalBundles.isCancelled()) {
+            TimerTask task = new TimerTask() {
+                @Override
+                public void run() {
+                    if (shouldInstallAdditionalFeatures() && !installingFeatureStarted) {
+                        installingFeatureStarted = true;
+                        installFeatures();
+                    }
+                    displayLogsForInactiveBundles(requiredBundlesFromFeatures);
+                    checkStartupComplete();
+                }
+            };
+            scheduledFutureAdditionalBundles = scheduler
                     .scheduleWithFixedDelay(task, checkStartupStateRefreshInterval, checkStartupStateRefreshInterval, TimeUnit.SECONDS);
         }
     }
@@ -324,15 +344,14 @@ public class BundleWatcherImpl implements SynchronousBundleListener, ServiceList
             scheduledFuture.cancel(true);
             scheduledFuture = null;
         }
-        if (shouldInstallAdditionalFeatures() && !installingFeatureStarted) {
-            installingFeatureStarted = true;
-            installFeatures();
-            checkStartupComplete();
+
+        if (!allAdditionalBundleStarted()) {
+            startSchedulerForAdditionalBundles();
             return;
         }
-        if (!allAdditionalBundleStarted()) {
-            startScheduler();
-            return;
+        if (scheduledFutureAdditionalBundles != null) {
+            scheduledFutureAdditionalBundles.cancel(true);
+            scheduledFutureAdditionalBundles = null;
         }
         if (!startupMessageAlreadyDisplayed) {
             long totalStartupTime = System.currentTimeMillis() - startupTime;
