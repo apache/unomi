@@ -18,6 +18,9 @@
     }
   ],
   "properties": {
+    "flattenedProperties": {
+      "type": "flattened"
+    },
     "timeStamp": {
       "type": "date"
     },

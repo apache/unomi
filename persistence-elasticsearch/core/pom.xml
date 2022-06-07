@@ -114,6 +114,13 @@
             <artifactId>lucene-test-framework</artifactId>
             <version>8.2.0</version>
             <scope>test</scope>
+            <exclusions>
+                <exclusion>
+                    <!-- internal dep that is scoped "compile", ending up to be embedded and conflicting with ES Rest client internal deps -->
+                    <groupId>org.apache.lucene</groupId>
+                    <artifactId>lucene-core</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>

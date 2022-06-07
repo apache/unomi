@@ -200,12 +200,12 @@
                         <groupId>com.github.alexcojocaru</groupId>
                         <artifactId>elasticsearch-maven-plugin</artifactId>
                         <!-- REPLACE THE FOLLOWING WITH THE PLUGIN VERSION YOU NEED -->
-                        <version>6.19</version>
+                        <version>6.23</version>
                         <configuration>
                             <clusterName>contextElasticSearchITests</clusterName>
                             <transportPort>9500</transportPort>
                             <httpPort>9400</httpPort>
-                            <version>${elasticsearch.version}</version>
+                            <version>${elasticsearch.test.version}</version>
                             <autoCreateIndex>true</autoCreateIndex>
                             <timeout>120</timeout>
                             <environmentVariables>
@@ -213,9 +213,10 @@
                             </environmentVariables>
                             <instanceSettings>
                                 <properties>
-                                    <cluster.routing.allocation.disk.threshold_enabled>false
-                                    </cluster.routing.allocation.disk.threshold_enabled>
+                                    <cluster.routing.allocation.disk.threshold_enabled>false</cluster.routing.allocation.disk.threshold_enabled>
                                     <http.cors.allow-origin>*</http.cors.allow-origin>
+                                    <http.cors.allow-methods>OPTIONS,HEAD,GET,POST,PUT,DELETE</http.cors.allow-methods>
+                                    <http.cors.allow-headers>Authorization,X-Requested-With,X-Auth-Token,Content-Type,Content-Length</http.cors.allow-headers>
                                 </properties>
                             </instanceSettings>
                         </configuration>

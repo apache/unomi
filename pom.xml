@@ -72,6 +72,7 @@
         <version.karaf.cellar>4.2.1</version.karaf.cellar>
         <version.pax.exam>4.13.1</version.pax.exam>
         <elasticsearch.version>7.4.2</elasticsearch.version>
+        <elasticsearch.test.version>7.11.0</elasticsearch.test.version>
         <groovy.version>3.0.3</groovy.version>
         <networknt.version>1.0.49</networknt.version>
         <bean.validation.version>1.1.0.Final</bean.validation.version>

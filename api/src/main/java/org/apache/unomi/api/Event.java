@@ -58,6 +58,7 @@ public class Event extends Item implements TimestampedItem {
     private String profileId = null;
     private Date timeStamp;
     private Map<String, Object> properties;
+    private Map<String, Object> flattenedProperties;
 
     private transient Profile profile;
     private transient Session session;
@@ -166,7 +167,8 @@ public class Event extends Item implements TimestampedItem {
         }
         this.timeStamp = timestamp;
 
-        this.properties = new HashMap<String, Object>();
+        this.properties = new HashMap<>();
+        this.flattenedProperties = new HashMap<>();
 
         actionPostExecutors = new ArrayList<>();
     }
@@ -374,6 +376,22 @@ public class Event extends Item implements TimestampedItem {
      */
     public void setProperties(Map<String, Object> properties) {
         this.properties = properties;
+    }
+
+    /**
+     * Retrieves the flattened properties
+     * @return the flattened properties.
+     */
+    public Map<String, Object> getFlattenedProperties() {
+        return flattenedProperties;
+    }
+
+    /**
+     * Set the flattened properties for current event
+     * @param flattenedProperties the properties
+     */
+    public void setFlattenedProperties(Map<String, Object> flattenedProperties) {
+        this.flattenedProperties = flattenedProperties;
     }
 
     /**
