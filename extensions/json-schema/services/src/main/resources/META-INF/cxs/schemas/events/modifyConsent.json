@@ -16,7 +16,7 @@
       "$ref" : "https://unomi.apache.org/schemas/json/events/modifyConsent/properties/1-0-0"
     },
     "source" : {
-        "$ref" : "https://unomi.apache.org/schemas/json/customitems/page/1-0-0"
+        "$ref" : "https://unomi.apache.org/schemas/json/items/page/1-0-0"
     },
     "target" : {
         "$ref" : "https://unomi.apache.org/schemas/json/consent/1-0-0"

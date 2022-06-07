@@ -1,5 +1,5 @@
 {
-  "$id": "https://unomi.apache.org/schemas/json/customitems/page/properties/attributes/1-0-0",
+  "$id": "https://unomi.apache.org/schemas/json/items/page/properties/attributes/1-0-0",
   "$schema": "https://json-schema.org/draft/2019-09/schema",
   "self": {
     "vendor": "org.apache.unomi",
