@@ -1,0 +1,18 @@
+{
+  "$id": "https://vendor.test.com/schemas/json/events/flattened/flattenedProperties/1-0-0",
+  "$schema": "https://json-schema.org/draft/2019-09/schema",
+  "self": {
+    "vendor": "com.vendor.test",
+    "name": "flattenedProperties",
+    "format": "jsonschema",
+    "version": "1-0-0"
+  },
+  "title": "Flattened Properties",
+  "type": "object",
+  "properties": {
+    "interests": {
+      "$ref": "https://vendor.test.com/schemas/json/events/flattened/flattenedProperties/interests/1-0-0"
+    }
+  },
+  "unevaluatedProperties": false
+}

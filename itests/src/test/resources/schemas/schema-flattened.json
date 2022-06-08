@@ -1,0 +1,25 @@
+{
+  "$id": "https://vendor.test.com/schemas/json/events/flattened/1-0-0",
+  "$schema": "https://json-schema.org/draft/2019-09/schema",
+  "self":{
+    "vendor":"com.vendor.test",
+    "name":"flattened",
+    "format":"jsonschema",
+    "target":"events",
+    "version":"1-0-0"
+  },
+  "title": "Flattened Event test",
+  "type": "object",
+  "allOf": [
+    { "$ref": "https://unomi.apache.org/schemas/json/event/1-0-0" }
+  ],
+  "properties": {
+    "flattenedProperties": {
+      "$ref": "https://vendor.test.com/schemas/json/events/flattened/flattenedProperties/1-0-0"
+    },
+    "properties": {
+      "$ref": "https://vendor.test.com/schemas/json/events/flattened/properties/1-0-0"
+    }
+  },
+  "unevaluatedProperties": false
+}

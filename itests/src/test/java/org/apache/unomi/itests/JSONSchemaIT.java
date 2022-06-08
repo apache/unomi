@@ -23,6 +23,8 @@ import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.util.EntityUtils;
 import org.apache.unomi.api.Event;
+import org.apache.unomi.api.conditions.Condition;
+import org.apache.unomi.itests.tools.httpclient.HttpClientThatWaitsForUnomi;
 import org.apache.unomi.schema.api.JsonSchemaWrapper;
 import org.apache.unomi.schema.api.SchemaService;
 import org.junit.After;
@@ -38,13 +40,9 @@ import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
 import java.io.IOException;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 /**
  * Class to tests the JSON schema features
@@ -54,6 +52,7 @@ import static org.junit.Assert.assertTrue;
 @ExamReactorStrategy(PerSuite.class)
 public class JSONSchemaIT extends BaseIT {
     private final static Logger LOGGER = LoggerFactory.getLogger(JSONSchemaIT.class);
+    private final static String EVENT_COLLECTOR_URL = "/cxs/eventcollector";
     private final static String JSONSCHEMA_URL = "/cxs/jsonSchema";
     private static final int DEFAULT_TRYING_TIMEOUT = 2000;
     private static final int DEFAULT_TRYING_TRIES = 30;
@@ -247,6 +246,53 @@ public class JSONSchemaIT extends BaseIT {
     }
 
     @Test
+    public void testFlattenedProperties() throws Exception {
+        assertNull(schemaService.getSchema("https://vendor.test.com/schemas/json/events/flattened/1-0-0"));
+        assertNull(schemaService.getSchema("https://vendor.test.com/schemas/json/events/flattened/properties/1-0-0"));
+        assertNull(schemaService.getSchema("https://vendor.test.com/schemas/json/events/flattened/properties/interests/1-0-0"));
+
+        // Test that at first the flattened event is not valid.
+        assertFalse(schemaService.isEventValid(resourceAsString("schemas/event-flattened-valid.json"), "flattened"));
+
+        // save schemas and check the event pass the validation
+        schemaService.saveSchema(resourceAsString("schemas/schema-flattened.json"));
+        schemaService.saveSchema(resourceAsString("schemas/schema-flattened-flattenedProperties.json"));
+        schemaService.saveSchema(resourceAsString("schemas/schema-flattened-flattenedProperties-interests.json"));
+        schemaService.saveSchema(resourceAsString("schemas/schema-flattened-properties.json"));
+        keepTrying("Event should be valid now",
+                () -> schemaService.isEventValid(resourceAsString("schemas/event-flattened-valid.json"), "flattened"),
+                isValid -> isValid, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+
+        // insure event is correctly indexed when send to /cxs/eventCollector
+        Event event = sendEventAndWaitItsIndexed("schemas/event-flattened-valid.json");
+        Map<String, Integer> interests = (Map<String, Integer>) event.getFlattenedProperties().get("interests");
+        assertEquals(15, interests.get("cars").intValue());
+        assertEquals(59, interests.get("football").intValue());
+        assertEquals(2, interests.size());
+
+        // check that range query is not working on flattened props:
+        Condition condition = new Condition(definitionsService.getConditionType("eventPropertyCondition"));
+        condition.setParameter("propertyName","flattenedProperties.interests.cars");
+        condition.setParameter("comparisonOperator","greaterThan");
+        condition.setParameter("propertyValueInteger", 2);
+        assertNull(persistenceService.query(condition, null, Event.class, 0, -1));
+
+        // check that term query is working on flattened props:
+        condition = new Condition(definitionsService.getConditionType("eventPropertyCondition"));
+        condition.setParameter("propertyName","flattenedProperties.interests.cars");
+        condition.setParameter("comparisonOperator","equals");
+        condition.setParameter("propertyValueInteger", 15);
+        List<Event> events = persistenceService.query(condition, null, Event.class, 0, -1).getList();
+        assertEquals(1, events.size());
+        assertEquals(events.get(0).getItemId(), event.getItemId());
+
+        // Bonus: Check that other invalid flattened events are correctly rejected by schema service:
+        assertFalse(schemaService.isEventValid(resourceAsString("schemas/event-flattened-invalid-1.json"), "flattened"));
+        assertFalse(schemaService.isEventValid(resourceAsString("schemas/event-flattened-invalid-2.json"), "flattened"));
+        assertFalse(schemaService.isEventValid(resourceAsString("schemas/event-flattened-invalid-3.json"), "flattened"));
+    }
+
+    @Test
     public void testSaveFail_PredefinedJSONSchema() throws IOException {
         try (CloseableHttpResponse response = post(JSONSCHEMA_URL, "schemas/schema-predefined.json", ContentType.TEXT_PLAIN)) {
             assertEquals("Unable to save schema", 400, response.getStatusLine().getStatusCode());
@@ -265,5 +311,43 @@ public class JSONSchemaIT extends BaseIT {
         try (CloseableHttpResponse response = post(JSONSCHEMA_URL, "schemas/schema-invalid-name.json", ContentType.TEXT_PLAIN)) {
             assertEquals("Unable to save schema", 400, response.getStatusLine().getStatusCode());
         }
+    }
+
+    private Event sendEventAndWaitItsIndexed(String eventResourcePath) throws IOException, InterruptedException {
+        // build event collector request
+        String eventMarker = UUID.randomUUID().toString();
+        HashMap<String, String> eventReplacements = new HashMap<>();
+        eventReplacements.put("EVENT_MARKER", eventMarker);
+        String event = getValidatedBundleJSON(eventResourcePath, eventReplacements);
+        HashMap<String, String> eventRequestReplacements = new HashMap<>();
+        eventRequestReplacements.put("EVENTS", event);
+        String eventRequest = getValidatedBundleJSON("schemas/event-request.json", eventRequestReplacements);
+
+        // send event
+        eventCollectorPost(eventRequest);
+
+        // wait for the event to be indexed
+        Condition condition = new Condition(definitionsService.getConditionType("eventPropertyCondition"));
+        condition.setParameter("propertyName","properties.marker.keyword");
+        condition.setParameter("comparisonOperator","equals");
+        condition.setParameter("propertyValue", eventMarker);
+        List<Event> events = keepTrying("The event should have been persisted",
+                () -> persistenceService.query(condition, null, Event.class), results -> results.size() == 1,
+                DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+        return events.get(0);
+    }
+
+    private void eventCollectorPost(String eventCollectorRequest) {
+        HttpPost request = new HttpPost(URL + EVENT_COLLECTOR_URL);
+        request.addHeader("Content-Type", "application/json");
+        request.setEntity(new StringEntity(eventCollectorRequest, ContentType.create("application/json")));
+        CloseableHttpResponse response;
+        try {
+            response = HttpClientThatWaitsForUnomi.doRequest(request, 200);
+        } catch (Exception e) {
+            fail("Something went wrong with the request to Unomi that is unexpected: " + e.getMessage());
+            return;
+        }
+        assertEquals("Invalid response code", 200, response.getStatusLine().getStatusCode());
     }
 }
