@@ -1,0 +1,19 @@
+{
+  "$id": "https://unomi.apache.org/schemas/json/items/page/1-0-0",
+  "$schema": "https://json-schema.org/draft/2019-09/schema",
+  "self":{
+    "vendor":"org.apache.unomi",
+    "name":"page",
+    "format":"jsonschema",
+    "version":"1-0-0"
+  },
+  "title": "PageCustomItem",
+  "type": "object",
+  "allOf": [{ "$ref": "https://unomi.apache.org/schemas/json/item/1-0-0" }],
+  "properties": {
+    "properties" : {
+      "$ref" : "https://unomi.apache.org/schemas/json/items/page/properties/1-0-0"
+    }
+  },
+  "unevaluatedProperties" : false
+}

@@ -1,0 +1,18 @@
+{
+  "$id": "https://unomi.apache.org/schemas/json/interests/1-0-0",
+  "$schema": "https://json-schema.org/draft/2019-09/schema",
+  "self":{
+    "vendor":"org.apache.unomi",
+    "name": "interests",
+    "format":"jsonschema",
+    "version":"1-0-0"
+  },
+  "title": "Interests",
+  "type": "object",
+  "patternProperties": {
+    "^.*$": {
+      "type": "number"
+    }
+  },
+  "unevaluatedProperties": false
+}

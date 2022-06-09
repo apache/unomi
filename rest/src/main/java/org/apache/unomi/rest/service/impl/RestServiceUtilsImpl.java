@@ -63,10 +63,11 @@ public class RestServiceUtilsImpl implements RestServiceUtils {
         Cookie[] cookies = httpServletRequest.getCookies();
 
         if (cookies != null) {
+            final Object profileIdCookieName = configSharingService.getProperty("profileIdCookieName");
             for (Cookie cookie : cookies) {
-                final Object profileIdCookieName = configSharingService.getProperty("profileIdCookieName");
                 if (profileIdCookieName.equals(cookie.getName())) {
-                    if (!schemaService.isValid(JsonNodeFactory.instance.objectNode().put("profileIdCookieName", cookie.getValue()).toString(), "https://unomi.apache.org/schemas/json/cookie/1-0-0")) {
+                    String profileIdJSON = JsonNodeFactory.instance.objectNode().put("profileId", cookie.getValue()).toString();
+                    if (!schemaService.isValid(profileIdJSON, "https://unomi.apache.org/schemas/json/rest/requestIds/1-0-0")) {
                         throw new InvalidRequestException("Invalid profile ID format in cookie", "Invalid received data");
                     }
                     cookieProfileId = cookie.getValue();

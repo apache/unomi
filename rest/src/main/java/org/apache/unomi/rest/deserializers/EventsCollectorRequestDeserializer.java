@@ -50,7 +50,7 @@ public class EventsCollectorRequestDeserializer extends StdDeserializer<EventsCo
     @Override
     public EventsCollectorRequest deserialize(JsonParser jsonParser, DeserializationContext context) throws IOException, JsonProcessingException {
         JsonNode node = jsonParser.getCodec().readTree(jsonParser);
-        if (!schemaService.isValid(node.toString(), "https://unomi.apache.org/schemas/json/eventscollectorrequest/1-0-0")) {
+        if (!schemaService.isValid(node.toString(), "https://unomi.apache.org/schemas/json/rest/eventscollectorrequest/1-0-0")) {
             throw new InvalidRequestException("Invalid events collector object", "Invalid received data");
         }
 

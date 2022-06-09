@@ -154,13 +154,9 @@ public class ContextJsonEndpoint {
 
         // Schema validation
         ObjectNode paramsAsJson = JsonNodeFactory.instance.objectNode();
-        if (personaId != null) {
-            paramsAsJson.put("personaId", personaId);
-        }
-        if (sessionId != null) {
-            paramsAsJson.put("sessionId", sessionId);
-        }
-        if (!schemaService.isValid(paramsAsJson.toString(), "https://unomi.apache.org/schemas/json/contextrequestparams/1-0-0")) {
+        paramsAsJson.put("personaId", personaId);
+        paramsAsJson.put("sessionId", sessionId);
+        if (!schemaService.isValid(paramsAsJson.toString(), "https://unomi.apache.org/schemas/json/rest/requestIds/1-0-0")) {
             throw new InvalidRequestException("Invalid parameter", "Invalid received data");
         }
         Date timestamp = new Date();

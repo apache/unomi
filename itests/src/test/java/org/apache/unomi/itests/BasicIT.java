@@ -154,12 +154,6 @@ public class BasicIT extends BaseIT {
     public void testMultipleLoginOnSameBrowser() throws IOException, InterruptedException {
         LOGGER.info("Start test testMultipleLoginOnSameBrowser");
 
-        schemaService.saveSchema(resourceAsString(EVENT_TYPE_LOGIN_SCHEMA));
-        keepTrying("Couldn't find login JSON schema",
-                () -> schemaService.getInstalledJsonSchemaIds(),
-                (schemaIds) -> (schemaIds.contains("https://unomi.apache.org/schemas/json/events/login/1-0-0")),
-                DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
-
         // Add login event condition
         ConditionType conditionType = CustomObjectMapper.getObjectMapper().readValue(
                 new File("data/tmp/testLoginEventCondition.json").toURI().toURL(), ConditionType.class);
@@ -281,12 +275,6 @@ public class BasicIT extends BaseIT {
         Profile profileVisitor2 = profileService.load(profileIdVisitor2);
         checkVisitor2ResponseProperties(profileVisitor2.getProperties());
 
-        // cleanup schemas
-        schemaService.deleteSchema("https://unomi.apache.org/schemas/json/events/login/1-0-0");
-        keepTrying("Should not find login JSON schema anymore",
-                () -> schemaService.getInstalledJsonSchemaIds(),
-                (schemaIds) -> (!schemaIds.contains("https://unomi.apache.org/schemas/json/events/login/1-0-0")),
-                DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
         LOGGER.info("End test testMultipleLoginOnSameBrowser");
     }
 

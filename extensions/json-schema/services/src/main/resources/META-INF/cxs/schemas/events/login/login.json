@@ -1,23 +1,21 @@
 {
-  "$id": "https://unomi.apache.org/schemas/json/events/floatPropertyType/1-0-0",
+  "$id": "https://unomi.apache.org/schemas/json/events/login/1-0-0",
   "$schema": "https://json-schema.org/draft/2019-09/schema",
   "self":{
     "vendor":"org.apache.unomi",
     "target" : "events",
-    "name":"floatPropertyType",
+    "name": "login",
     "format":"jsonschema",
     "version":"1-0-0"
   },
-  "title": "FloatPropertyEvent",
+  "title": "LoginEvent",
   "type": "object",
   "allOf": [{ "$ref": "https://unomi.apache.org/schemas/json/event/1-0-0" }],
   "properties" : {
     "properties" : {
       "type" : "object",
-      "properties" : {
-        "floatProperty" : { "type" : "number" }
-      },
-      "additionalProperties": false
+      "maxProperties": 50
     }
-  }
+  },
+  "$comment" : "WARNING: This schema is open and do not restrict unevaluated properties because it is protected with third-party server key check"
 }
