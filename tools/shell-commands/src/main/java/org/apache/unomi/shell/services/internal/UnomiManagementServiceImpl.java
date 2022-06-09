@@ -37,7 +37,8 @@ public class UnomiManagementServiceImpl implements UnomiManagementService {
 
     public void init() throws BundleException {
         initReversedBundleSymbolicNames();
-        if (StringUtils.isNotBlank(bundleContext.getProperty("unomi.autoStart")) && bundleContext.getProperty("unomi.autoStart").equals("true")) {
+        if (StringUtils.isNotBlank(bundleContext.getProperty("unomi.autoStart")) && bundleContext.getProperty("unomi.autoStart")
+                .equals("true")) {
             startUnomi();
         }
     }
@@ -85,4 +86,5 @@ public class UnomiManagementServiceImpl implements UnomiManagementService {
             Collections.reverse(reversedBundleSymbolicNames);
         }
     }
+
 }

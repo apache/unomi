@@ -23,7 +23,11 @@ import org.apache.commons.io.IOUtils;
 import org.apache.http.auth.AuthScope;
 import org.apache.http.auth.UsernamePasswordCredentials;
 import org.apache.http.client.config.RequestConfig;
-import org.apache.http.client.methods.*;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpDelete;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.config.Registry;
 import org.apache.http.config.RegistryBuilder;
 import org.apache.http.conn.socket.ConnectionSocketFactory;
@@ -44,7 +48,6 @@ import org.apache.unomi.api.services.RulesService;
 import org.apache.unomi.lifecycle.BundleWatcher;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.persistence.spi.PersistenceService;
-import org.apache.unomi.schema.api.SchemaService;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -60,6 +63,7 @@ import org.ops4j.pax.exam.options.extra.VMOption;
 import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
 import org.ops4j.pax.exam.spi.reactors.PerSuite;
 import org.ops4j.pax.exam.util.Filter;
+import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceEvent;
 import org.osgi.framework.ServiceListener;
@@ -82,14 +86,24 @@ import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Dictionary;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.CountDownLatch;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 import static org.ops4j.pax.exam.CoreOptions.maven;
 import static org.ops4j.pax.exam.CoreOptions.systemProperty;
-import static org.ops4j.pax.exam.karaf.options.KarafDistributionOption.*;
+import static org.ops4j.pax.exam.karaf.options.KarafDistributionOption.debugConfiguration;
+import static org.ops4j.pax.exam.karaf.options.KarafDistributionOption.editConfigurationFilePut;
+import static org.ops4j.pax.exam.karaf.options.KarafDistributionOption.karafDistributionConfiguration;
+import static org.ops4j.pax.exam.karaf.options.KarafDistributionOption.keepRuntimeFolder;
+import static org.ops4j.pax.exam.karaf.options.KarafDistributionOption.logLevel;
+import static org.ops4j.pax.exam.karaf.options.KarafDistributionOption.replaceConfigurationFile;
 
 /**
  * Base class for integration tests.
@@ -148,7 +162,7 @@ public abstract class BaseIT {
 
     @Before
     public void waitForStartup() throws InterruptedException {
-        while (!bundleWatcher.isStartupComplete()) {
+        while (!bundleWatcher.isStartupComplete() || !bundleWatcher.allAdditionalBundleStarted()) {
             LOGGER.info("Waiting for startup to complete...");
             Thread.sleep(1000);
         }
@@ -160,7 +174,6 @@ public abstract class BaseIT {
         closeHttpClient(httpClient);
         httpClient = null;
     }
-
 
     protected void removeItems(final Class<? extends Item>... classes) throws InterruptedException {
         Condition condition = new Condition(definitionsService.getConditionType("matchAllCondition"));
@@ -184,54 +197,39 @@ public abstract class BaseIT {
     @Configuration
     public Option[] config() throws InterruptedException {
 
-        MavenArtifactUrlReference karafUrl = maven()
-                .groupId("org.apache.unomi")
-                .artifactId("unomi")
-                .type("tar.gz")
-                .versionAsInProject();
+        MavenArtifactUrlReference karafUrl = maven().groupId("org.apache.unomi").artifactId("unomi").type("tar.gz").versionAsInProject();
 
         List<Option> options = new ArrayList<>();
 
-        Option[] commonOptions = new Option[]{
-                karafDistributionConfiguration()
-                        .frameworkUrl(karafUrl)
-                        .unpackDirectory(new File(KARAF_DIR))
-                        .useDeployFolder(true),
-                replaceConfigurationFile("etc/org.apache.unomi.router.cfg", new File(
-                        "src/test/resources/org.apache.unomi.router.cfg")),
-                replaceConfigurationFile("data/tmp/1-basic-test.csv", new File(
-                        "src/test/resources/1-basic-test.csv")),
-                replaceConfigurationFile("data/tmp/recurrent_import/2-surfers-test.csv", new File(
-                        "src/test/resources/2-surfers-test.csv")),
-                replaceConfigurationFile("data/tmp/recurrent_import/3-surfers-overwrite-test.csv", new File(
-                        "src/test/resources/3-surfers-overwrite-test.csv")),
-                replaceConfigurationFile("data/tmp/recurrent_import/4-surfers-delete-test.csv", new File(
-                        "src/test/resources/4-surfers-delete-test.csv")),
-                replaceConfigurationFile("data/tmp/recurrent_import/5-ranking-test.csv", new File(
-                        "src/test/resources/5-ranking-test.csv")),
-                replaceConfigurationFile("data/tmp/recurrent_import/6-actors-test.csv", new File(
-                        "src/test/resources/6-actors-test.csv")),
-                replaceConfigurationFile("data/tmp/testLogin.json", new File(
-                        "src/test/resources/testLogin.json")),
-                replaceConfigurationFile("data/tmp/testCopyProperties.json", new File(
-                        "src/test/resources/testCopyProperties.json")),
-                replaceConfigurationFile("data/tmp/testCopyPropertiesWithoutSystemTags.json", new File(
-                        "src/test/resources/testCopyPropertiesWithoutSystemTags.json")),
-                replaceConfigurationFile("data/tmp/testLoginEventCondition.json", new File(
-                        "src/test/resources/testLoginEventCondition.json")),
-                replaceConfigurationFile("data/tmp/testClickEventCondition.json", new File(
-                        "src/test/resources/testClickEventCondition.json")),
-                replaceConfigurationFile("data/tmp/testRuleGroovyAction.json", new File(
-                        "src/test/resources/testRuleGroovyAction.json")),
-                replaceConfigurationFile("data/tmp/groovy/UpdateAddressAction.groovy", new File(
-                        "src/test/resources/groovy/UpdateAddressAction.groovy")),
-                keepRuntimeFolder(),
+        Option[] commonOptions = new Option[] {
+                karafDistributionConfiguration().frameworkUrl(karafUrl).unpackDirectory(new File(KARAF_DIR)).useDeployFolder(true),
+                replaceConfigurationFile("etc/org.apache.unomi.router.cfg", new File("src/test/resources/org.apache.unomi.router.cfg")),
+                replaceConfigurationFile("data/tmp/1-basic-test.csv", new File("src/test/resources/1-basic-test.csv")),
+                replaceConfigurationFile("data/tmp/recurrent_import/2-surfers-test.csv", new File("src/test/resources/2-surfers-test.csv")),
+                replaceConfigurationFile("data/tmp/recurrent_import/3-surfers-overwrite-test.csv",
+                        new File("src/test/resources/3-surfers-overwrite-test.csv")),
+                replaceConfigurationFile("data/tmp/recurrent_import/4-surfers-delete-test.csv",
+                        new File("src/test/resources/4-surfers-delete-test.csv")),
+                replaceConfigurationFile("data/tmp/recurrent_import/5-ranking-test.csv", new File("src/test/resources/5-ranking-test.csv")),
+                replaceConfigurationFile("data/tmp/recurrent_import/6-actors-test.csv", new File("src/test/resources/6-actors-test.csv")),
+                replaceConfigurationFile("data/tmp/testLogin.json", new File("src/test/resources/testLogin.json")),
+                replaceConfigurationFile("data/tmp/testCopyProperties.json", new File("src/test/resources/testCopyProperties.json")),
+                replaceConfigurationFile("data/tmp/testCopyPropertiesWithoutSystemTags.json",
+                        new File("src/test/resources/testCopyPropertiesWithoutSystemTags.json")),
+                replaceConfigurationFile("data/tmp/testLoginEventCondition.json",
+                        new File("src/test/resources/testLoginEventCondition.json")),
+                replaceConfigurationFile("data/tmp/testClickEventCondition.json",
+                        new File("src/test/resources/testClickEventCondition.json")),
+                replaceConfigurationFile("data/tmp/testRuleGroovyAction.json", new File("src/test/resources/testRuleGroovyAction.json")),
+                replaceConfigurationFile("data/tmp/groovy/UpdateAddressAction.groovy",
+                        new File("src/test/resources/groovy/UpdateAddressAction.groovy")), keepRuntimeFolder(),
                 // configureConsole().ignoreLocalConsole(),
                 logLevel(LogLevel.INFO),
+                editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.graphql.feature.activated", "true"),
                 editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.rootLogger.level", "INFO"),
                 editConfigurationFilePut("etc/org.apache.karaf.features.cfg", "serviceRequirements", "disable"),
-//                editConfigurationFilePut("etc/org.ops4j.pax.web.cfg", "org.osgi.service.http.port", HTTP_PORT),
-//                systemProperty("org.osgi.service.http.port").value(HTTP_PORT),
+                //                editConfigurationFilePut("etc/org.ops4j.pax.web.cfg", "org.osgi.service.http.port", HTTP_PORT),
+                //                systemProperty("org.osgi.service.http.port").value(HTTP_PORT),
                 systemProperty("org.ops4j.pax.exam.rbc.rmi.port").value("1199"),
                 systemProperty("org.apache.unomi.itests.elasticsearch.transport.port").value("9500"),
                 systemProperty("org.apache.unomi.itests.elasticsearch.cluster.name").value("contextElasticSearchITests"),
@@ -242,10 +240,7 @@ public abstract class BaseIT {
                 systemProperty("org.apache.unomi.hazelcast.network.port").value("5701"),
                 systemProperty("org.apache.unomi.hazelcast.tcp-ip.members").value("127.0.0.1"),
                 systemProperty("org.apache.unomi.hazelcast.tcp-ip.interface").value("127.0.0.1"),
-                systemProperty("unomi.autoStart").value("true"),
-                CoreOptions.bundleStartLevel(100),
-                CoreOptions.frameworkStartLevel(100)
-        };
+                systemProperty("unomi.autoStart").value("true"), CoreOptions.bundleStartLevel(100), CoreOptions.frameworkStartLevel(100) };
 
         options.addAll(Arrays.asList(commonOptions));
 
@@ -273,7 +268,8 @@ public abstract class BaseIT {
         final String agentFile = System.getProperty("user.dir") + "/target/jacoco/lib/jacocoagent.jar";
         Path path = Paths.get(agentFile);
         if (Files.exists(path)) {
-            final String jacocoOption = "-javaagent:" + agentFile + "=destfile=" + System.getProperty("user.dir") + "/target/jacoco.exec,includes=org.apache.unomi.*";
+            final String jacocoOption = "-javaagent:" + agentFile + "=destfile=" + System.getProperty("user.dir")
+                    + "/target/jacoco.exec,includes=org.apache.unomi.*";
             LOGGER.info("set jacoco java agent: {}", jacocoOption);
             options.add(new VMOption(jacocoOption));
         } else {
@@ -281,31 +277,22 @@ public abstract class BaseIT {
         }
 
         if (JavaVersionUtil.getMajorVersion() >= 9) {
-            Option[] jdk9PlusOptions = new Option[]{
-                    new VMOption("--add-reads=java.xml=java.logging"),
+            Option[] jdk9PlusOptions = new Option[] { new VMOption("--add-reads=java.xml=java.logging"),
                     new VMOption("--add-exports=java.base/org.apache.karaf.specs.locator=java.xml,ALL-UNNAMED"),
                     new VMOption("--patch-module"),
-                    new VMOption("java.base=lib/endorsed/org.apache.karaf.specs.locator-"
-                            + System.getProperty("karaf.version") + ".jar"),
-                    new VMOption("--patch-module"), new VMOption("java.xml=lib/endorsed/org.apache.karaf.specs.java.xml-"
-                    + System.getProperty("karaf.version") + ".jar"),
-                    new VMOption("--add-opens"),
-                    new VMOption("java.base/java.security=ALL-UNNAMED"),
-                    new VMOption("--add-opens"),
-                    new VMOption("java.base/java.net=ALL-UNNAMED"),
-                    new VMOption("--add-opens"),
-                    new VMOption("java.base/java.lang=ALL-UNNAMED"),
-                    new VMOption("--add-opens"),
-                    new VMOption("java.base/java.util=ALL-UNNAMED"),
-                    new VMOption("--add-opens"),
-                    new VMOption("java.naming/javax.naming.spi=ALL-UNNAMED"),
-                    new VMOption("--add-opens"),
+                    new VMOption("java.base=lib/endorsed/org.apache.karaf.specs.locator-" + System.getProperty("karaf.version") + ".jar"),
+                    new VMOption("--patch-module"),
+                    new VMOption("java.xml=lib/endorsed/org.apache.karaf.specs.java.xml-" + System.getProperty("karaf.version") + ".jar"),
+                    new VMOption("--add-opens"), new VMOption("java.base/java.security=ALL-UNNAMED"), new VMOption("--add-opens"),
+                    new VMOption("java.base/java.net=ALL-UNNAMED"), new VMOption("--add-opens"),
+                    new VMOption("java.base/java.lang=ALL-UNNAMED"), new VMOption("--add-opens"),
+                    new VMOption("java.base/java.util=ALL-UNNAMED"), new VMOption("--add-opens"),
+                    new VMOption("java.naming/javax.naming.spi=ALL-UNNAMED"), new VMOption("--add-opens"),
                     new VMOption("java.rmi/sun.rmi.transport.tcp=ALL-UNNAMED"),
                     new VMOption("--add-exports=java.base/sun.net.www.protocol.http=ALL-UNNAMED"),
                     new VMOption("--add-exports=java.base/sun.net.www.protocol.https=ALL-UNNAMED"),
                     new VMOption("--add-exports=java.base/sun.net.www.protocol.jar=ALL-UNNAMED"),
-                    new VMOption("--add-exports=jdk.naming.rmi/com.sun.jndi.url.rmi=ALL-UNNAMED"),
-                    new VMOption("-classpath"),
+                    new VMOption("--add-exports=jdk.naming.rmi/com.sun.jndi.url.rmi=ALL-UNNAMED"), new VMOption("-classpath"),
                     new VMOption("lib/jdk9plus/*" + File.pathSeparator + "lib/boot/*")
 
             };
@@ -315,7 +302,8 @@ public abstract class BaseIT {
         return options.toArray(new Option[0]);
     }
 
-    protected <T> T keepTrying(String failMessage, Supplier<T> call, Predicate<T> predicate, int timeout, int retries) throws InterruptedException {
+    protected <T> T keepTrying(String failMessage, Supplier<T> call, Predicate<T> predicate, int timeout, int retries)
+            throws InterruptedException {
         int count = 0;
         T value = null;
         while (value == null || !predicate.test(value)) {
@@ -338,7 +326,8 @@ public abstract class BaseIT {
         }
     }
 
-    protected <T> T shouldBeTrueUntilEnd(String failMessage, Supplier<T> call, Predicate<T> predicate, int timeout, int retries) throws InterruptedException {
+    protected <T> T shouldBeTrueUntilEnd(String failMessage, Supplier<T> call, Predicate<T> predicate, int timeout, int retries)
+            throws InterruptedException {
         int count = 0;
         T value = null;
         while (count <= retries) {
@@ -378,7 +367,8 @@ public abstract class BaseIT {
         rulesService = getService(RulesService.class);
     }
 
-    public void updateConfiguration(String serviceName, String configPid, String propName, Object propValue) throws InterruptedException, IOException {
+    public void updateConfiguration(String serviceName, String configPid, String propName, Object propValue)
+            throws InterruptedException, IOException {
         org.osgi.service.cm.Configuration cfg = configurationAdmin.getConfiguration(configPid);
         Dictionary<String, Object> props = cfg.getProperties();
         props.put(propName, propValue);
@@ -400,8 +390,8 @@ public abstract class BaseIT {
         CountDownLatch latch1 = new CountDownLatch(2);
         ServiceListener serviceListener = e -> {
             LOGGER.info("Service {} {}", e.getServiceReference().getProperty("objectClass"), serviceEventTypeToString(e));
-            if ((e.getType() == ServiceEvent.UNREGISTERING || e.getType() == ServiceEvent.REGISTERED)
-                    && ((String[]) e.getServiceReference().getProperty("objectClass"))[0].equals(serviceName)) {
+            if ((e.getType() == ServiceEvent.UNREGISTERING || e.getType() == ServiceEvent.REGISTERED) && ((String[]) e.getServiceReference()
+                    .getProperty("objectClass"))[0].equals(serviceName)) {
                 latch1.countDown();
             }
         };
@@ -438,10 +428,7 @@ public abstract class BaseIT {
 
     public void createAndWaitForRule(Rule rule) throws InterruptedException {
         rulesService.setRule(rule);
-        keepTrying("Failed waiting for rule to be saved",
-                () -> rulesService.getRule(rule.getMetadata().getId()),
-                Objects::nonNull,
-                3000,
+        keepTrying("Failed waiting for rule to be saved", () -> rulesService.getRule(rule.getMetadata().getId()), Objects::nonNull, 3000,
                 100);
         rulesService.refreshRules();
     }
@@ -527,7 +514,8 @@ public abstract class BaseIT {
                     content = IOUtils.toString(response.getEntity().getContent());
                 }
             }
-            LOGGER.error("Response status code: {}, reason: {}, content:{}", response.getStatusLine().getStatusCode(), response.getStatusLine().getReasonPhrase(), content);
+            LOGGER.error("Response status code: {}, reason: {}, content:{}", response.getStatusLine().getStatusCode(),
+                    response.getStatusLine().getReasonPhrase(), content);
         }
         return response;
     }
@@ -545,33 +533,30 @@ public abstract class BaseIT {
         long requestStartTime = System.currentTimeMillis();
         BasicCredentialsProvider credsProvider = null;
         credsProvider = new BasicCredentialsProvider();
-        credsProvider.setCredentials(
-                AuthScope.ANY,
-                new UsernamePasswordCredentials(BASIC_AUTH_USER_NAME, BASIC_AUTH_PASSWORD));
+        credsProvider.setCredentials(AuthScope.ANY, new UsernamePasswordCredentials(BASIC_AUTH_USER_NAME, BASIC_AUTH_PASSWORD));
         HttpClientBuilder httpClientBuilder = HttpClients.custom().useSystemProperties().setDefaultCredentialsProvider(credsProvider);
 
         try {
             SSLContext sslContext = SSLContext.getInstance("SSL");
-            sslContext.init(null, new TrustManager[]{new X509TrustManager() {
+            sslContext.init(null, new TrustManager[] { new X509TrustManager() {
                 public X509Certificate[] getAcceptedIssuers() {
                     return null;
                 }
 
-                public void checkClientTrusted(X509Certificate[] certs,
-                                               String authType) {
+                public void checkClientTrusted(X509Certificate[] certs, String authType) {
                 }
 
-                public void checkServerTrusted(X509Certificate[] certs,
-                                               String authType) {
+                public void checkServerTrusted(X509Certificate[] certs, String authType) {
                 }
-            }}, new SecureRandom());
+            } }, new SecureRandom());
 
             Registry<ConnectionSocketFactory> socketFactoryRegistry = RegistryBuilder.<ConnectionSocketFactory>create()
                     .register("http", PlainConnectionSocketFactory.getSocketFactory())
                     .register("https", new SSLConnectionSocketFactory(sslContext, SSLConnectionSocketFactory.ALLOW_ALL_HOSTNAME_VERIFIER))
                     .build();
 
-            PoolingHttpClientConnectionManager poolingHttpClientConnectionManager = new PoolingHttpClientConnectionManager(socketFactoryRegistry);
+            PoolingHttpClientConnectionManager poolingHttpClientConnectionManager = new PoolingHttpClientConnectionManager(
+                    socketFactoryRegistry);
             poolingHttpClientConnectionManager.setMaxTotal(10);
 
             httpClientBuilder.setHostnameVerifier(SSLConnectionSocketFactory.ALLOW_ALL_HOSTNAME_VERIFIER)
@@ -581,11 +566,8 @@ public abstract class BaseIT {
             LOGGER.error("Error creating SSL Context", e);
         }
 
-        RequestConfig requestConfig = RequestConfig.custom()
-                .setConnectTimeout(REQUEST_TIMEOUT)
-                .setSocketTimeout(REQUEST_TIMEOUT)
-                .setConnectionRequestTimeout(REQUEST_TIMEOUT)
-                .build();
+        RequestConfig requestConfig = RequestConfig.custom().setConnectTimeout(REQUEST_TIMEOUT).setSocketTimeout(REQUEST_TIMEOUT)
+                .setConnectionRequestTimeout(REQUEST_TIMEOUT).build();
         httpClientBuilder.setDefaultRequestConfig(requestConfig);
 
         if (LOGGER.isDebugEnabled()) {

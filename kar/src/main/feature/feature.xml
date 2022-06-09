@@ -33,6 +33,7 @@
         <feature>cxf-rs-description-openapi-v3</feature>
         <feature>cellar</feature>
         <feature>eventadmin</feature>
+        <feature>feature</feature>
         <feature>shell-compat</feature>
         <feature version="${hibernate.validator.version}">hibernate-validator</feature>
         <configfile finalname="/etc/org.apache.unomi.web.cfg">mvn:org.apache.unomi/unomi-wab/${project.version}/cfg/unomicfg</configfile>
@@ -102,10 +103,5 @@
     <feature name="unomi-rest-ui" description="Enables Swagger UI to browse the REST API" version="${project.version}">
         <feature>unomi-kar</feature>
         <bundle start-level="85">mvn:org.webjars/swagger-ui/3.23.8</bundle>
-    </feature>
-
-    <feature name="unomi-graphql-ui" description="Enables GraphQL UI to browse the GraphQL API" version="${project.version}">
-        <feature>unomi-kar</feature>
-        <bundle start-level="85">mvn:org.apache.unomi/unomi-graphql-playground/${project.version}</bundle>
     </feature>
 </features>
