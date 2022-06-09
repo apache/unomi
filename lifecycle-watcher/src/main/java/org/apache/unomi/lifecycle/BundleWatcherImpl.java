@@ -67,7 +67,6 @@ public class BundleWatcherImpl implements SynchronousBundleListener, ServiceList
 
     private ScheduledExecutorService scheduler;
     private ScheduledFuture<?> scheduledFuture;
-    private ScheduledFuture<?> scheduledFutureAdditionalBundles;
     private FeaturesService featuresService;
 
     private String requiredServices;
@@ -270,9 +269,7 @@ public class BundleWatcherImpl implements SynchronousBundleListener, ServiceList
     }
 
     private void prepareGraphQLFeatureToInstall() {
-        String installGraphQLFeature = bundleContext.getProperty("org.apache.unomi.graphql.feature.activated");
-        boolean graphQLToInstall = StringUtils.isNotBlank(installGraphQLFeature) && installGraphQLFeature.equals("true");
-        if (graphQLToInstall) {
+        if (Boolean.parseBoolean(bundleContext.getProperty("org.apache.unomi.graphql.feature.activated"))) {
             featuresToInstall.add(CDP_GRAPHQL_FEATURE);
             requiredBundlesFromFeatures.put("org.apache.unomi.cdp-graphql-api-impl", false);
             requiredBundlesFromFeatures.put("org.apache.unomi.graphql-playground", false);
@@ -302,56 +299,58 @@ public class BundleWatcherImpl implements SynchronousBundleListener, ServiceList
         installedFeatures.forEach(value -> featuresToInstall.remove(value));
     }
 
-    private void startScheduler() {
-        if (scheduledFuture == null || scheduledFuture.isCancelled()) {
-            TimerTask task = new TimerTask() {
-                @Override
-                public void run() {
-                    displayLogsForInactiveBundles(requiredBundles);
-                    displayLogsForInactiveServices();
-                    checkStartupComplete();
+    private TimerTask getBundleCheckTask() {
+        return new TimerTask() {
+            @Override
+            public void run() {
+                displayLogsForInactiveBundles(requiredBundles);
+                displayLogsForInactiveServices();
+                checkStartupComplete();
+            }
+        };
+    }
+
+    private TimerTask getAdditionalBundleCheckTask() {
+        return new TimerTask() {
+            @Override
+            public void run() {
+                if (shouldInstallAdditionalFeatures() && !installingFeatureStarted) {
+                    installingFeatureStarted = true;
+                    installFeatures();
                 }
-            };
+                displayLogsForInactiveBundles(requiredBundlesFromFeatures);
+                checkStartupComplete();
+            }
+        };
+    }
+
+    private void startScheduler(TimerTask timerTask) {
+        if (scheduledFuture == null || scheduledFuture.isCancelled()) {
             scheduledFuture = scheduler
-                    .scheduleWithFixedDelay(task, checkStartupStateRefreshInterval, checkStartupStateRefreshInterval, TimeUnit.SECONDS);
+                    .scheduleWithFixedDelay(timerTask, checkStartupStateRefreshInterval, checkStartupStateRefreshInterval,
+                            TimeUnit.SECONDS);
         }
     }
 
-    private void startSchedulerForAdditionalBundles() {
-        if (scheduledFutureAdditionalBundles == null || scheduledFutureAdditionalBundles.isCancelled()) {
-            TimerTask task = new TimerTask() {
-                @Override
-                public void run() {
-                    if (shouldInstallAdditionalFeatures() && !installingFeatureStarted) {
-                        installingFeatureStarted = true;
-                        installFeatures();
-                    }
-                    displayLogsForInactiveBundles(requiredBundlesFromFeatures);
-                    checkStartupComplete();
-                }
-            };
-            scheduledFutureAdditionalBundles = scheduler
-                    .scheduleWithFixedDelay(task, checkStartupStateRefreshInterval, checkStartupStateRefreshInterval, TimeUnit.SECONDS);
-        }
+    private void destroyScheduler() {
+        scheduledFuture.cancel(true);
+        scheduledFuture = null;
     }
 
     private void checkStartupComplete() {
         if (!isStartupComplete()) {
-            startScheduler();
+            startScheduler(getBundleCheckTask());
             return;
         }
         if (scheduledFuture != null) {
-            scheduledFuture.cancel(true);
-            scheduledFuture = null;
+            destroyScheduler();
         }
-
         if (!allAdditionalBundleStarted()) {
-            startSchedulerForAdditionalBundles();
+            startScheduler(getAdditionalBundleCheckTask());
             return;
         }
-        if (scheduledFutureAdditionalBundles != null) {
-            scheduledFutureAdditionalBundles.cancel(true);
-            scheduledFutureAdditionalBundles = null;
+        if (scheduledFuture != null) {
+            destroyScheduler();
         }
         if (!startupMessageAlreadyDisplayed) {
             long totalStartupTime = System.currentTimeMillis() - startupTime;
@@ -456,5 +455,4 @@ public class BundleWatcherImpl implements SynchronousBundleListener, ServiceList
         }
         return serverInfo;
     }
-
 }

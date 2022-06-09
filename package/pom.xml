@@ -378,7 +378,6 @@
                         <feature>unomi-web-tracker-karaf-kar</feature>
                         <feature>unomi-groovy-actions</feature>
                         <feature>unomi-rest-ui</feature>
-                        <feature>cdp-graphql-feature-denpendencies</feature>
                     </bootFeatures>
                     <!--
                     <libraries>
