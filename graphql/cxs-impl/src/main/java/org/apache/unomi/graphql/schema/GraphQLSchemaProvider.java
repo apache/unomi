@@ -164,11 +164,16 @@ public class GraphQLSchemaProvider {
             Optional<JSONType> firstNonNullType = jsonTypes.stream().filter(jsonType -> !"null".equals(jsonType.getType())).findFirst();
             if (firstNonNullType.isPresent()) {
                 this.firstNonNullType = firstNonNullType.get();
+            } else {
+                logger.warn("Couldn't find non null type for {} and types {}", name, jsonTypes);
             }
         }
 
         @Override
         public String getTypeId() {
+            if (firstNonNullType == null) {
+                return null;
+            }
             return firstNonNullType.getType();
         }
 
@@ -345,7 +350,7 @@ public class GraphQLSchemaProvider {
 
                 final GraphQLInputObjectType objectType;
                 if (!graphQLAnnotations.getContainer().getTypeRegistry().containsKey(typeName)) {
-                    objectType = createDynamicEventInputType(new JSONTypeDefinitionType(unomiEventType.getName(), unomiEventType.getRootTypes()));
+                    objectType = createDynamicEventInputType(new JSONTypeDefinitionType(unomiEventType.getName(), unomiEventType.getRootTypes()), new ArrayDeque<>());
                 } else {
                     objectType = (GraphQLInputObjectType) getFromTypeRegistry(typeName);
                     registerDynamicInputFields(typeName, objectType, new JSONTypeDefinitionType(unomiEventType.getName(), unomiEventType.getRootTypes()).getSubTypes());
@@ -525,15 +530,23 @@ public class GraphQLSchemaProvider {
         return null;
     }
 
-    private GraphQLInputObjectType createDynamicEventInputType(final DefinitionType eventType) {
-        return createDynamicInputType(UnomiToGraphQLConverter.convertEventType(eventType.getName()), eventType.getSubTypes(), true);
+    private GraphQLInputObjectType createDynamicEventInputType(final DefinitionType eventType, Deque<String> typeStack) {
+        return createDynamicInputType(UnomiToGraphQLConverter.convertEventType(eventType.getName()), eventType.getSubTypes(), true, typeStack);
     }
 
-    private GraphQLInputObjectType createDynamicSetInputType(final DefinitionType propertyType, final String parentName) {
-        return createDynamicInputType(parentName != null ? parentName : propertyType.getName(), propertyType.getSubTypes(), false);
+    private GraphQLInputObjectType createDynamicSetInputType(final DefinitionType propertyType, final String parentName, Deque<String> typeStack) {
+        return createDynamicInputType(parentName != null ? parentName : propertyType.getName(), propertyType.getSubTypes(), false, typeStack);
     }
 
-    private GraphQLInputObjectType createDynamicInputType(final String name, final List<DefinitionType> propertyTypes, final boolean isEvent) {
+    private GraphQLInputObjectType createDynamicInputType(final String name,
+                                                          final List<DefinitionType> propertyTypes,
+                                                          final boolean isEvent,
+                                                          Deque<String> typeStack) {
+        if (typeStack.contains(name)) {
+            logger.error("Loop detected when creating dynamic input types {} !" , typeStack);
+            return null;
+        }
+        typeStack.push(name);
         final String typeName = StringUtils.capitalize(PropertyNameTranslator.translateFromUnomiToGraphQL(name)) + "Input";
 
         final GraphQLInputObjectType.Builder dynamicTypeBuilder = GraphQLInputObjectType.newInputObject()
@@ -554,7 +567,7 @@ public class GraphQLSchemaProvider {
 
                 GraphQLInputType objectType;
                 if (isSet) {
-                    objectType = createDynamicSetInputType(childPropertyType, typeName + "_" + childPropertyName);
+                    objectType = createDynamicSetInputType(childPropertyType, typeName + "_" + childPropertyName, typeStack);
                 } else {
                     objectType = (GraphQLInputType) UnomiToGraphQLConverter.convertPropertyType(childPropertyType.getTypeId());
                 }
@@ -572,8 +585,10 @@ public class GraphQLSchemaProvider {
             fieldDefinitions.forEach(dynamicTypeBuilder::field);
             final GraphQLInputObjectType objectType = dynamicTypeBuilder.build();
             registerInTypeRegistry(typeName, objectType);
+            typeStack.pop();
             return objectType;
         } else {
+            typeStack.pop();
             return null;
         }
     }
@@ -597,7 +612,7 @@ public class GraphQLSchemaProvider {
                 final String typeName = StringUtils.capitalize(propertyName) + "Input";
 
                 if (!graphQLAnnotations.getContainer().getTypeRegistry().containsKey(typeName)) {
-                    final GraphQLInputObjectType inputType = createDynamicSetInputType(propertyType, null);
+                    final GraphQLInputObjectType inputType = createDynamicSetInputType(propertyType, null, new ArrayDeque<>());
                     if (inputType != null) {
                         fieldDefinitions.add(GraphQLInputObjectField.newInputObjectField()
                                 .name(propertyName)

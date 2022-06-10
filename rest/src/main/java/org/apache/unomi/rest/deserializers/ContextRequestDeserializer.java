@@ -56,7 +56,7 @@ public class ContextRequestDeserializer extends StdDeserializer<ContextRequest> 
     public ContextRequest deserialize(JsonParser jsonParser, DeserializationContext context) throws IOException {
         JsonNode node = jsonParser.getCodec().readTree(jsonParser);
         // Validate schema on it
-        if (!schemaService.isValid(node.toString(), "https://unomi.apache.org/schemas/json/contextrequest/1-0-0")) {
+        if (!schemaService.isValid(node.toString(), "https://unomi.apache.org/schemas/json/rest/requestIds/1-0-0")) {
             throw new InvalidRequestException("Invalid Context request object", "Invalid received data");
         }
         ContextRequest cr = new ContextRequest();

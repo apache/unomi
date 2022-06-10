@@ -69,7 +69,7 @@ public class EventBuilder {
     }
 
     public Event build() {
-        final Event event = new Event(eventType, null, profile, null, null, profile, new Date());
+        final Event event = new Event(eventType, null, profile, null, null, null, new Date());
         event.setPersistent(persistent);
         event.setProperty("targetId", profile.getItemId());
         event.setProperty("targetType", Profile.ITEM_TYPE);

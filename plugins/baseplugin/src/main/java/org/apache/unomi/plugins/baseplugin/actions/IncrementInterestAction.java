@@ -89,7 +89,7 @@ public class IncrementInterestAction implements ActionExecutor {
         final Map<String, Object> propertyToUpdate = new HashMap<>();
         propertyToUpdate.put("properties.interests", profileInterestsMap);
 
-        final Event updatePropertiesEvent = new Event("updateProperties", null, profile, null, null, profile, new Date());
+        final Event updatePropertiesEvent = new Event("updateProperties", null, profile, null, null, null, new Date());
         updatePropertiesEvent.setProperty("update", propertyToUpdate);
 
         return eventService.send(updatePropertiesEvent);

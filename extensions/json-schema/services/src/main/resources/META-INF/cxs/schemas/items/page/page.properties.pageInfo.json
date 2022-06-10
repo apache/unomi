@@ -1,0 +1,63 @@
+{
+  "$id": "https://unomi.apache.org/schemas/json/items/page/properties/pageInfo/1-0-0",
+  "$schema": "https://json-schema.org/draft/2019-09/schema",
+  "self": {
+    "vendor": "org.apache.unomi",
+    "name": "pageInfo",
+    "format": "jsonschema",
+    "version": "1-0-0"
+  },
+  "title": "PageInfo",
+  "type": "object",
+  "properties": {
+    "templateName": {
+      "type": ["null", "string"]
+    },
+    "language": {
+      "type": ["null", "string"],
+      "maxLength": 5
+    },
+    "destinationURL": {
+      "type": ["null", "string"],
+      "format": "uri"
+    },
+    "destinationSearch": {
+      "type": ["null", "string"]
+    },
+    "categories": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "pageID": {
+      "type": ["null", "string"]
+    },
+    "nodeType": {
+      "type": ["null", "string"]
+    },
+    "pagePath": {
+      "type": ["null", "string"]
+    },
+    "pageName": {
+      "type": ["null", "string"]
+    },
+    "referringURL": {
+      "type": ["null", "string"],
+      "format": "uri"
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "isContentTemplate": {
+      "type": ["null", "boolean"]
+    },
+    "sameDomainReferrer": {
+      "type": ["null", "boolean"]
+    }
+  },
+  "unevaluatedProperties" : false
+}

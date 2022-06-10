@@ -1,7 +1,0 @@
-{
-    "$id": "https://unomi.apache.org/schemas/json/values/email/1-0-0",
-    "$schema": "https://json-schema.org/draft/2019-09/schema",
-    "title": "Email",
-    "type": "string",
-    "format" : "email"
-}

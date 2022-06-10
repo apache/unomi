@@ -72,7 +72,7 @@ public class ModifyConsentIT extends BaseIT {
         Assert.assertNotNull(profile);
         Assert.assertEquals(0, profile.getConsents().size());
 
-        Event modifyConsentEvent = new Event("modifyConsent", null, profile, null, null, profile, new Date());
+        Event modifyConsentEvent = new Event("modifyConsent", null, profile, null, null, null, new Date());
         modifyConsentEvent.setPersistent(false);
 
         ISO8601DateFormat dateFormat = new ISO8601DateFormat();

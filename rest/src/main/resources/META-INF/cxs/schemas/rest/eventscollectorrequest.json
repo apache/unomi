@@ -1,0 +1,22 @@
+{
+  "$id": "https://unomi.apache.org/schemas/json/rest/eventscollectorrequest/1-0-0",
+  "$schema": "https://json-schema.org/draft/2019-09/schema",
+  "self":{
+    "vendor":"org.apache.unomi",
+    "name": "eventsCollectorRequest",
+    "format":"jsonschema",
+    "version":"1-0-0"
+  },
+  "title": "EventsCollectorRequest",
+  "type": "object",
+  "allOf": [{ "$ref": "https://unomi.apache.org/schemas/json/rest/requestIds/1-0-0" }],
+  "properties": {
+    "events" : {
+      "type": ["array"],
+      "items": {
+        "type": "object"
+      },
+      "minItems": 1
+    }
+  }
+}
