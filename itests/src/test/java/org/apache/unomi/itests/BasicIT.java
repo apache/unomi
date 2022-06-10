@@ -17,9 +17,6 @@
 
 package org.apache.unomi.itests;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
 import org.apache.http.HttpEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
@@ -36,10 +33,8 @@ import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.api.rules.Rule;
 import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.ProfileService;
-import org.apache.unomi.api.services.RulesService;
 import org.apache.unomi.itests.tools.httpclient.HttpClientThatWaitsForUnomi;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
-import org.apache.unomi.schema.api.SchemaService;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -53,7 +48,6 @@ import org.slf4j.LoggerFactory;
 import javax.inject.Inject;
 import java.io.File;
 import java.io.IOException;
-import java.text.SimpleDateFormat;
 import java.util.*;
 
 
@@ -95,13 +89,9 @@ public class BasicIT extends BaseIT {
     private static final String EMAIL_VISITOR_2 = "visitor2@apache.unomi.org";
 
     @Inject @Filter(timeout = 600000)
-    protected RulesService rulesService;
-    @Inject @Filter(timeout = 600000)
     protected ProfileService profileService;
     @Inject @Filter(timeout = 600000)
     protected DefinitionsService definitionsService;
-    @Inject @Filter(timeout = 600000)
-    protected SchemaService schemaService;
 
     @Test
     public void testContextJS() throws IOException {
