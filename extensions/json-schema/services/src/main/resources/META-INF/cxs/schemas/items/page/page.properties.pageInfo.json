@@ -11,15 +11,18 @@
   "type": "object",
   "properties": {
     "templateName": {
-      "type": "string"
+      "type": ["null", "string"]
     },
     "language": {
-      "type": "string",
+      "type": ["null", "string"],
       "maxLength": 5
     },
     "destinationURL": {
-      "type": "string",
+      "type": ["null", "string"],
       "format": "uri"
+    },
+    "destinationSearch": {
+      "type": ["null", "string"]
     },
     "categories": {
       "type": "array",
@@ -28,20 +31,19 @@
       }
     },
     "pageID": {
-      "type": "string",
-      "pattern": "^(\\w|[-_@\\.]){0,60}$"
+      "type": ["null", "string"]
     },
     "nodeType": {
-      "type": "string"
+      "type": ["null", "string"]
     },
     "pagePath": {
-      "type": "string"
+      "type": ["null", "string"]
     },
     "pageName": {
-      "type": "string"
+      "type": ["null", "string"]
     },
     "referringURL": {
-      "type": "string",
+      "type": ["null", "string"],
       "format": "uri"
     },
     "tags": {
@@ -51,7 +53,10 @@
       }
     },
     "isContentTemplate": {
-      "type": "boolean"
+      "type": ["null", "boolean"]
+    },
+    "sameDomainReferrer": {
+      "type": ["null", "boolean"]
     }
   },
   "unevaluatedProperties" : false
