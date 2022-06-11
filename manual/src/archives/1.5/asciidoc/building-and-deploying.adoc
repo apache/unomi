@@ -48,7 +48,17 @@ This will compile Apache Unomi and run all of the tests in the
 +
 This will compile Apache Unomi without running the tests and takes less
  time to build.
-
++
+TIP: On a non-English Windows env, the Asciidoctor Maven Plugin may fail to
+     generate manuals due to an encoding conversion issue.
+     To solve this issue, we recommend setting the *file.encoding* system property
+     to _UTF-8_ like the following example before issuing the commands shown above.
++
+[source]
+----
+     > set MAVEN_OPTS="-Dfile.encoding=UTF-8"
+----
++
 . The distributions will be available under "package/target" directory.
 
 ==== Installing an ElasticSearch server
