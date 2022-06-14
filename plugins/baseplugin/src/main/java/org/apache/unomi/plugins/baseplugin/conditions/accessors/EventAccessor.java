@@ -30,6 +30,9 @@ public class EventAccessor extends HardcodedPropertyAccessor<Event> {
         if ("properties".equals(propertyName)) {
             return registry.getProperty(object.getProperties(), leftoverExpression);
         }
+        if ("flattenedProperties".equals(propertyName)) {
+            return registry.getProperty(object.getFlattenedProperties(), leftoverExpression);
+        }
         if ("eventType".equals(propertyName)) {
             return object.getEventType();
         }
