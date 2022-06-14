@@ -12,6 +12,9 @@
   "properties" : {
     "interests": {
       "$ref" : "https://unomi.apache.org/schemas/json/interests/1-0-0"
+    },
+    "URLParameters": {
+      "$ref": "https://unomi.apache.org/schemas/json/URLParameters/1-0-0"
     }
   },
   "unevaluatedProperties" : false

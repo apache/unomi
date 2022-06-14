@@ -1,0 +1,19 @@
+{
+  "$id": "https://unomi.apache.org/schemas/json/URLParameters/1-0-0",
+  "$schema": "https://json-schema.org/draft/2019-09/schema",
+  "self":{
+    "vendor":"org.apache.unomi",
+    "name": "URLParameters",
+    "format":"jsonschema",
+    "version":"1-0-0"
+  },
+  "title": "URLParameters",
+  "type": "object",
+  "patternProperties": {
+    "^.*$": {
+      "type": "string"
+    }
+  },
+  "unevaluatedProperties": false,
+  "$comment" : "TODO: UNOMI-595, allow for both types: [\"array\", \"string\"] when json-schema-validator is fixed on multiple types handling"
+}
