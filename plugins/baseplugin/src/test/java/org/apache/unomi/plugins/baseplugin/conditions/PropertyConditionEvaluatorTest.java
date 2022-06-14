@@ -104,6 +104,13 @@ public class PropertyConditionEvaluatorTest {
     }
 
     @Test
+    public void testFlattenedProperties() {
+        Event mockEvent = generateMockEvent(mockProfile, mockSession);
+        mockEvent.getFlattenedProperties().put("test", "test");
+        assertEquals("FlattenedProperties should be readable form accessor", "test", propertyConditionEvaluator.getHardcodedPropertyValue(mockEvent, "flattenedProperties.test"));
+    }
+
+    @Test
     public void testOGNLEvaluator() throws Exception {
         Event mockEvent = generateMockEvent(mockProfile, mockSession);
         assertEquals("Target itemId value is not correct", MOCK_ITEM_ID, propertyConditionEvaluator.getOGNLPropertyValue(mockEvent, "target.itemId"));
