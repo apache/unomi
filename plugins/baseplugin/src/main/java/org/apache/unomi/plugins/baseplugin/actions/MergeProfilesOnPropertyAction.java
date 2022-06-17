@@ -125,7 +125,8 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
 
             if (currentSession != null) {
                 currentSession.setProfile(profile);
-                eventService.send(new Event("sessionReassigned", currentSession, profile, event.getSourceId(), event, currentSession, event.getTimeStamp()));
+                eventService.send(new Event("sessionReassigned", currentSession, profile, event.getSourceId(), event, currentSession,
+                        null, event.getTimeStamp(), false));
             }
 
             return EventService.PROFILE_UPDATED + EventService.SESSION_UPDATED;

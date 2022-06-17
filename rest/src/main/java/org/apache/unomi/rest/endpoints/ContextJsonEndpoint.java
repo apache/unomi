@@ -276,7 +276,7 @@ public class ContextJsonEndpoint {
                     // Only save session and send event if a session id was provided, otherwise keep transient session
                     session = new Session(sessionId, sessionProfile, timestamp, scope);
                     changes |= EventService.SESSION_UPDATED;
-                    Event event = new Event("sessionCreated", session, profile, scope, null, session, timestamp);
+                    Event event = new Event("sessionCreated", session, profile, scope, null, session, null, timestamp, false);
                     if (sessionProfile.isAnonymousProfile()) {
                         // Do not keep track of profile in event
                         event.setProfileId(null);

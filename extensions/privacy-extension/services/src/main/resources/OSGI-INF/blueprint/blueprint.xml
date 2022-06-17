@@ -37,7 +37,6 @@
         <property name="persistenceService" ref="persistenceService"/>
         <property name="eventService" ref="eventService" />
         <property name="profileService" ref="profileService" />
-        <property name="bundleContext" ref="blueprintBundleContext"/>
         <property name="bundleWatcher" ref="bundleWatcher"/>
     </bean>
     <service id="privacyService" ref="privacyServiceImpl" interface="org.apache.unomi.api.services.PrivacyService"/>
