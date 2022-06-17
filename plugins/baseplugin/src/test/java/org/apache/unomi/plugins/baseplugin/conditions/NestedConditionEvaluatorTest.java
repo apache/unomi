@@ -19,7 +19,6 @@ package org.apache.unomi.plugins.baseplugin.conditions;
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.Session;
-import org.apache.unomi.api.segments.Segment;
 import org.junit.Test;
 
 import java.util.*;
