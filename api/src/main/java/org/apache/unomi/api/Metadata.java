@@ -20,6 +20,7 @@ package org.apache.unomi.api;
 import java.io.Serializable;
 import java.util.LinkedHashSet;
 import java.util.Set;
+import java.util.Date;
 
 /**
  * A class providing information about context server entities.
@@ -44,11 +45,13 @@ public class Metadata implements Comparable<Metadata>, Serializable {
     private boolean missingPlugins = false;
     private boolean hidden = false;
     private boolean readOnly = false;
+    private Date timeStamp;
 
     /**
      * Instantiates a new Metadata.
      */
     public Metadata() {
+        this.timeStamp = new Date();
     }
 
     /**
@@ -58,6 +61,7 @@ public class Metadata implements Comparable<Metadata>, Serializable {
      */
     public Metadata(String id) {
         this.id = id;
+        this.timeStamp = new Date();
     }
 
     /**
@@ -73,6 +77,7 @@ public class Metadata implements Comparable<Metadata>, Serializable {
         this.id = id;
         this.name = name;
         this.description = description;
+        this.timeStamp = new Date();
     }
 
     /**
@@ -127,6 +132,15 @@ public class Metadata implements Comparable<Metadata>, Serializable {
      */
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    /**
+     * Retrieves the metadata creation timestamp.
+     *
+     * @return the metadata creation timestamp
+     */
+    public Date getTimeStamp() {
+        return timeStamp;
     }
 
     /**
