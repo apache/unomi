@@ -131,6 +131,14 @@
         </bean>
     </service>
 
+    <service
+            interface="org.apache.unomi.persistence.elasticsearch.conditions.ConditionESQueryBuilder">
+        <service-properties>
+            <entry key="queryBuilderId" value="nestedConditionESQueryBuilder"/>
+        </service-properties>
+        <bean class="org.apache.unomi.plugins.baseplugin.conditions.NestedConditionESQueryBuilder"/>
+    </service>
+
 
     <!-- Condition evaluators -->
     <service interface="org.apache.unomi.persistence.elasticsearch.conditions.ConditionEvaluator">
@@ -154,13 +162,13 @@
         <bean class="org.apache.unomi.plugins.baseplugin.conditions.NotConditionEvaluator"/>
     </service>
 
-    <service interface="org.apache.unomi.persistence.elasticsearch.conditions.ConditionEvaluator">
+    <bean id="propertyConditionEvaluator" class="org.apache.unomi.plugins.baseplugin.conditions.PropertyConditionEvaluator">
+        <property name="usePropertyConditionOptimizations" value="${base.usePropertyConditionOptimizations}"/>
+    </bean>
+    <service  interface="org.apache.unomi.persistence.elasticsearch.conditions.ConditionEvaluator" ref="propertyConditionEvaluator">
         <service-properties>
             <entry key="conditionEvaluatorId" value="propertyConditionEvaluator"/>
         </service-properties>
-        <bean class="org.apache.unomi.plugins.baseplugin.conditions.PropertyConditionEvaluator">
-            <property name="usePropertyConditionOptimizations" value="${base.usePropertyConditionOptimizations}"/>
-        </bean>
     </service>
 
     <service interface="org.apache.unomi.persistence.elasticsearch.conditions.ConditionEvaluator">
@@ -195,6 +203,15 @@
             <property name="definitionsService" ref="definitionsService"/>
             <property name="persistenceService" ref="persistenceService"/>
             <property name="scriptExecutor" ref="scriptExecutor"/>
+        </bean>
+    </service>
+
+    <service interface="org.apache.unomi.persistence.elasticsearch.conditions.ConditionEvaluator">
+        <service-properties>
+            <entry key="conditionEvaluatorId" value="nestedConditionEvaluator"/>
+        </service-properties>
+        <bean class="org.apache.unomi.plugins.baseplugin.conditions.NestedConditionEvaluator">
+            <property name="propertyConditionEvaluator" ref="propertyConditionEvaluator"/>
         </bean>
     </service>
 

@@ -47,6 +47,7 @@ import static org.junit.Assert.*;
 public class ConditionEvaluatorIT extends BaseIT {
     protected ConditionBuilder builder;
     protected Item item;
+    protected Item emptyItem;
     protected Date lastVisit;
 
     @Inject @Filter(timeout = 600000)
@@ -56,6 +57,10 @@ public class ConditionEvaluatorIT extends BaseIT {
 
     protected boolean eval(Condition c) {
         return persistenceService.testMatch(c, item);
+    }
+
+    protected boolean evalEmpty(Condition c) {
+        return persistenceService.testMatch(c, emptyItem);
     }
 
     @Before
@@ -72,8 +77,21 @@ public class ConditionEvaluatorIT extends BaseIT {
         profile.setProperty("gender", "female");
         profile.setProperty("lastVisit", lastVisit);
         profile.setProperty("randomStats", 0.15);
+
+        List<Map<String, Object>> interests = new ArrayList<>();
+        Map<String, Object> interest1 = new HashMap<>();
+        interest1.put("key", "cars");
+        interest1.put("value", 50);
+        interests.add(interest1);
+        Map<String, Object> interest2 = new HashMap<>();
+        interest2.put("key", "football");
+        interest2.put("value", 15);
+        interests.add(interest2);
+        profile.setProperty("interests", interests);
         profile.setSegments(new HashSet<>(Arrays.asList("s1", "s2", "s3")));
         item = profile;
+
+        emptyItem = new Profile("profile-" + UUID.randomUUID().toString());
     }
 
     @Test
@@ -218,5 +236,56 @@ public class ConditionEvaluatorIT extends BaseIT {
                 builder.profileProperty("properties.age").greaterThanOrEqualTo(40)
         ).build();
         assertTrue(eval(condition));
+    }
+
+    @Test
+    public void testNestedConditionEvaluator() {
+        // football cars is 50 on the profile
+        assertTrue(eval(buildConditionOnNestedInterests("cars", 45, "greaterThan")));
+        assertTrue(eval(buildConditionOnNestedInterests("cars", 60, "lessThan")));
+        assertFalse(eval(buildConditionOnNestedInterests("cars", 60, "greaterThan")));
+        assertFalse(eval(buildConditionOnNestedInterests("cars", 15, "lessThan")));
+
+        // football interest is 15 on the profile
+        assertTrue(eval(buildConditionOnNestedInterests("football", 15, "equals")));
+        assertTrue(eval(buildConditionOnNestedInterests("football", 50, "notEquals")));
+        assertFalse(eval(buildConditionOnNestedInterests("football", 15, "notEquals")));
+        assertFalse(eval(buildConditionOnNestedInterests("football", 50, "equals")));
+    }
+
+    @Test
+    public void testNestedConditionEvaluator_emptyItem() {
+        // football cars is 50 on the profile
+        assertFalse(evalEmpty(buildConditionOnNestedInterests("cars", 45, "greaterThan")));
+        assertFalse(evalEmpty(buildConditionOnNestedInterests("cars", 60, "lessThan")));
+        assertFalse(evalEmpty(buildConditionOnNestedInterests("cars", 60, "greaterThan")));
+        assertFalse(evalEmpty(buildConditionOnNestedInterests("cars", 15, "lessThan")));
+
+        // football interest is 15 on the profile
+        assertFalse(evalEmpty(buildConditionOnNestedInterests("football", 15, "equals")));
+        assertFalse(evalEmpty(buildConditionOnNestedInterests("football", 50, "notEquals")));
+        assertFalse(evalEmpty(buildConditionOnNestedInterests("football", 15, "notEquals")));
+        assertFalse(evalEmpty(buildConditionOnNestedInterests("football", 50, "equals")));
+    }
+
+    protected Condition buildConditionOnNestedInterests(String interestName, Integer interestValue, String operator) {
+        Condition interestKeyCondition = new Condition(definitionsService.getConditionType("profilePropertyCondition"));
+        interestKeyCondition.setParameter("propertyName","properties.interests.key");
+        interestKeyCondition.setParameter("comparisonOperator","equals");
+        interestKeyCondition.setParameter("propertyValue", interestName);
+
+        Condition interestValueCondition = new Condition(definitionsService.getConditionType("profilePropertyCondition"));
+        interestValueCondition.setParameter("propertyName","properties.interests.value");
+        interestValueCondition.setParameter("comparisonOperator", operator);
+        interestValueCondition.setParameter("propertyValueInteger",interestValue);
+
+        Condition booleanCondition = new Condition(definitionsService.getConditionType("booleanCondition"));
+        booleanCondition.setParameter("operator", "and");
+        booleanCondition.setParameter("subConditions", Arrays.asList(interestKeyCondition, interestValueCondition));
+
+        Condition nestedCondition = new Condition(definitionsService.getConditionType("nestedCondition"));
+        nestedCondition.setParameter("path", "properties.interests");
+        nestedCondition.setParameter("subCondition", booleanCondition);
+        return nestedCondition;
     }
 }

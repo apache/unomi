@@ -1,0 +1,29 @@
+{
+  "metadata": {
+    "id": "nestedCondition",
+    "name": "nestedCondition",
+    "description": "",
+    "systemTags": [
+      "profileTags",
+      "logical",
+      "condition",
+      "profileCondition",
+      "sessionCondition"
+    ],
+    "readOnly": true
+  },
+  "conditionEvaluator": "nestedConditionEvaluator",
+  "queryBuilder": "nestedConditionESQueryBuilder",
+  "parameters": [
+    {
+      "id": "path",
+      "type": "String",
+      "multivalued": false
+    },
+    {
+      "id": "subCondition",
+      "type": "Condition",
+      "multivalued": false
+    }
+  ]
+}

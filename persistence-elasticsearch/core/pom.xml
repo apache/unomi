@@ -112,7 +112,7 @@
         <dependency>
             <groupId>org.apache.lucene</groupId>
             <artifactId>lucene-test-framework</artifactId>
-            <version>8.2.0</version>
+            <version>${lucene.version}</version>
             <scope>test</scope>
             <exclusions>
                 <exclusion>
@@ -317,6 +317,7 @@
                         <Export-Package>
                             org.elasticsearch.*;version="${elasticsearch.version}",
                             org.elasticsearch.index.query.*;version="${elasticsearch.version}",
+                            org.apache.lucene.search.join.*;version="${lucene.version}",
                             org.apache.unomi.persistence.elasticsearch.conditions;version="${project.version}"
                         </Export-Package>
                         <Embed-Dependency>*;scope=compile|runtime</Embed-Dependency>
