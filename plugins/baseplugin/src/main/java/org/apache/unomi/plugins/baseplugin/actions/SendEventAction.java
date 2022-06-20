@@ -47,7 +47,7 @@ public class SendEventAction implements ActionExecutor {
         subEvent.setProfileId(event.getProfileId());
         subEvent.getAttributes().putAll(event.getAttributes());
         subEvent.getProperties().putAll(eventProperties);
-        if(!toBePersisted){
+        if (toBePersisted != null && !toBePersisted) {
             subEvent.setPersistent(false);
         }
 
