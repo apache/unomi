@@ -17,6 +17,7 @@
 
 package org.apache.unomi.plugins.baseplugin.actions;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.Item;
 import org.apache.unomi.api.actions.Action;
@@ -36,18 +37,19 @@ public class SendEventAction implements ActionExecutor {
     @Override
     public int execute(Action action, Event event) {
         String eventType = (String) action.getParameterValues().get("eventType");
+        Boolean toBePersisted = (Boolean) action.getParameterValues().get("toBePersisted");
+
         @SuppressWarnings("unchecked")
         Map<String, Object> eventProperties = (Map<String, Object>) action.getParameterValues().get("eventProperties");
         Item target = (Item) action.getParameterValues().get("eventTarget");
-//        String type = (String) target.get("type");
-
-//            Item targetItem = new CustomItem();
-//            BeanUtils.populate(targetItem, target);
 
         Event subEvent = new Event(eventType, event.getSession(), event.getProfile(), event.getSourceId(), event, target, event.getTimeStamp());
         subEvent.setProfileId(event.getProfileId());
         subEvent.getAttributes().putAll(event.getAttributes());
         subEvent.getProperties().putAll(eventProperties);
+        if (toBePersisted != null && !toBePersisted) {
+            subEvent.setPersistent(false);
+        }
 
         return eventService.send(subEvent);
     }

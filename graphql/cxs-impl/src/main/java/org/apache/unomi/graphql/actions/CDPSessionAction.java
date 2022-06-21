@@ -60,10 +60,7 @@ public class CDPSessionAction implements ActionExecutor {
             final Session session = new Session(sessionId, profile, new Date(), scope);
             session.setProperty("state", state);
 
-            final Event sessionCreated =
-                    new Event("sessionCreated", session, profile, scope, null, session, event.getTimeStamp());
-
-            int eventCode = eventService.send(sessionCreated);
+            int eventCode = eventService.send(new Event("sessionCreated", session, profile, scope, null, session, null,event.getTimeStamp(), false));
 
             profileService.saveSession(session);
 

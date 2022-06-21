@@ -40,7 +40,6 @@ public class PrivacyServiceImpl implements PrivacyService {
     private PersistenceService persistenceService;
     private ProfileService profileService;
     private EventService eventService;
-    private BundleContext bundleContext;
     private BundleWatcher bundleWatcher;
 
     public PrivacyServiceImpl() {
@@ -59,9 +58,6 @@ public class PrivacyServiceImpl implements PrivacyService {
         this.eventService = eventService;
     }
 
-    public void setBundleContext(BundleContext bundleContext) {
-        this.bundleContext = bundleContext;
-    }
 
     public void setBundleWatcher(BundleWatcher bundleWatcher) {
         this.bundleWatcher = bundleWatcher;
@@ -88,7 +84,7 @@ public class PrivacyServiceImpl implements PrivacyService {
         }
         serverInfo.setEventTypes(eventTypes);
 
-        serverInfo.setCapabilities(new HashMap<String, String>());
+        serverInfo.setCapabilities(new HashMap<>());
     }
 
     public List<ServerInfo> getServerInfos() {
@@ -103,9 +99,7 @@ public class PrivacyServiceImpl implements PrivacyService {
         if (profile == null) {
             return false;
         }
-        Event profileDeletedEvent = new Event("profileDeleted", null, profile, null, null, profile, new Date());
-        profileDeletedEvent.setPersistent(true);
-        eventService.send(profileDeletedEvent);
+        eventService.send(new Event("profileDeleted", null, profile, null, null, profile,null, new Date(), false));
         // we simply overwrite the existing profile with an empty one.
         Profile emptyProfile = new Profile(profileId);
         profileService.save(emptyProfile);
@@ -120,15 +114,11 @@ public class PrivacyServiceImpl implements PrivacyService {
         }
 
         // first we send out the anonymize profile event to make sure other systems can still use external identifiers to lookup the profile and anonymize it.
-        Event anonymizeProfileEvent = new Event("anonymizeProfile", null, profile, scope, null, profile, new Date());
-        anonymizeProfileEvent.setPersistent(true);
-        eventService.send(anonymizeProfileEvent);
+        eventService.send(new Event("anonymizeProfile", null, profile, scope, null, profile, null, new Date(), false));
 
         boolean res = profile.getProperties().keySet().removeAll(getDeniedProperties(profile.getItemId()));
 
-        Event profileUpdatedEvent = new Event("profileUpdated", null, profile, scope, null, profile, new Date());
-        profileUpdatedEvent.setPersistent(false);
-        eventService.send(profileUpdatedEvent);
+        eventService.send(new Event("profileUpdated", null, profile, scope, null, profile, null, new Date(), false));
 
         profileService.save(profile);
 
