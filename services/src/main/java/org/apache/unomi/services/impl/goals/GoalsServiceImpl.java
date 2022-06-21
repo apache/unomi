@@ -189,6 +189,7 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
             action3.setParameter("eventType", "goal");
             action3.setParameter("eventTarget", goal);
             action3.setParameter("eventProperties", new HashMap<String, Object>());
+            action3.setParameter("toBePersisted", false);
             rule.setActions(Arrays.asList(action1,action2,action3));
         }
 
