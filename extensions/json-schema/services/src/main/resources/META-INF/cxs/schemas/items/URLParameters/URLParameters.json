@@ -11,9 +11,11 @@
   "type": "object",
   "patternProperties": {
     "^.*$": {
-      "type": "string"
+      "type": ["array", "string"],
+      "items": {
+        "type": "string"
+      }
     }
   },
-  "unevaluatedProperties": false,
-  "$comment" : "TODO: UNOMI-595, allow for both types: [\"array\", \"string\"] when json-schema-validator is fixed on multiple types handling"
+  "unevaluatedProperties": false
 }
