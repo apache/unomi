@@ -18,6 +18,9 @@
     "target" : {
       "$ref" : "https://unomi.apache.org/schemas/json/items/page/1-0-0"
     },
+    "properties": {
+      "$ref" : "https://unomi.apache.org/schemas/json/events/view/properties/1-0-0"
+    },
     "flattenedProperties": {
       "$ref" : "https://unomi.apache.org/schemas/json/events/view/flattenProperties/1-0-0"
     }
