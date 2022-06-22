@@ -1,0 +1,21 @@
+{
+  "operationName": "updateProfile",
+  "variables": {
+    "events": [
+      {
+        "cdp_objectID": "objectId",
+        "cdp_profileID": {
+          "id": "profile-1",
+          "client": {
+            "id": "defaultClientId"
+          }
+        },
+        "cdp_profileUpdateEvent": {
+          "firstName": "Gigi",
+          "lastName": "Bergkamp"
+        }
+      }
+    ]
+  },
+  "query": "mutation updateProfile($events: [CDP_EventInput]!) {\n  cdp {\n    processEvents(events: $events)\n  }\n}\n"
+}

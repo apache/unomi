@@ -22,6 +22,7 @@ import graphql.ExecutionResult;
 import graphql.introspection.IntrospectionQuery;
 import org.apache.unomi.graphql.schema.GraphQLSchemaUpdater;
 import org.apache.unomi.graphql.services.ServiceManager;
+import org.apache.unomi.graphql.servlet.auth.GraphQLServletSecurityValidator;
 import org.apache.unomi.graphql.servlet.websocket.SubscriptionWebSocketFactory;
 import org.apache.unomi.graphql.utils.GraphQLObjectMapper;
 import org.eclipse.jetty.websocket.servlet.ServletUpgradeRequest;
@@ -46,9 +47,13 @@ import java.util.Map;
 )
 public class GraphQLServlet extends WebSocketServlet {
 
+    public static final String SCHEMA_URL = "/schema.json";
+
     private GraphQLSchemaUpdater graphQLSchemaUpdater;
 
     private ServiceManager serviceManager;
+
+    private GraphQLServletSecurityValidator validator;
 
     @Reference
     public void setServiceManager(ServiceManager serviceManager) {
@@ -63,6 +68,7 @@ public class GraphQLServlet extends WebSocketServlet {
     @Override
     public void init(ServletConfig config) throws ServletException {
         super.init(config);
+        this.validator = new GraphQLServletSecurityValidator();
     }
 
     private WebSocketServletFactory factory;
@@ -95,7 +101,7 @@ public class GraphQLServlet extends WebSocketServlet {
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {
         String query = req.getParameter("query");
-        if ("/schema.json".equals(req.getPathInfo())) {
+        if (SCHEMA_URL.equals(req.getPathInfo())) {
             query = IntrospectionQuery.INTROSPECTION_QUERY;
         }
         String operationName = req.getParameter("operationName");
@@ -107,6 +113,9 @@ public class GraphQLServlet extends WebSocketServlet {
             variables = GraphQLObjectMapper.getInstance().readValue(variableStr, typeRef);
         }
 
+        if (!validator.validate(query, operationName, req, resp)) {
+            return;
+        }
         setupCORSHeaders(req, resp);
         executeGraphQLRequest(resp, query, operationName, variables);
     }
@@ -127,6 +136,9 @@ public class GraphQLServlet extends WebSocketServlet {
             variables = new HashMap<>();
         }
 
+        if (!validator.validate(query, operationName, req, resp)) {
+            return;
+        }
         setupCORSHeaders(req, resp);
         executeGraphQLRequest(resp, query, operationName, variables);
     }
