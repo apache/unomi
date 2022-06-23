@@ -4,6 +4,8 @@
     "name": "returningVisitorCondition",
     "description": "",
     "systemTags": [
+      "availableToEndUser",
+      "visitBased",
       "profileTags",
       "event",
       "condition",

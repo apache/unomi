@@ -4,6 +4,7 @@
     "name": "scoringCondition",
     "description": "",
     "systemTags": [
+      "availableToEndUser",
       "profileTags",
       "aggregated",
       "condition",

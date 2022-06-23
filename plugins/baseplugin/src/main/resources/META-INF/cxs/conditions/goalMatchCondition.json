@@ -4,6 +4,8 @@
     "name": "goalMatchCondition",
     "description": "",
     "systemTags": [
+      "availableToEndUser",
+      "behavioral",
       "condition",
       "profileCondition",
       "profileTags",

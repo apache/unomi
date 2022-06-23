@@ -10,6 +10,8 @@
     },
     "type": "integer",
     "defaultValue": "",
-    "automaticMappingsFrom": [ ],
+    "automaticMappingsFrom": [
+        "j:income"
+    ],
     "rank": "603.0"
 }

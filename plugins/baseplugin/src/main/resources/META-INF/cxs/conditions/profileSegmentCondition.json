@@ -1,35 +1,35 @@
 {
-  "metadata": {
-    "id": "profileSegmentCondition",
-    "name": "profileSegmentCondition",
-    "description": "",
-    "systemTags": [
-      "profileTags",
-      "aggregated",
-      "condition",
-      "profileCondition"
-    ],
-    "readOnly": true
-  },
-  "parentCondition": {
-    "type": "profilePropertyCondition",
-    "parameterValues": {
-      "propertyName": "segments",
-      "propertyValues": "parameter::segments",
-      "comparisonOperator": "parameter::matchType"
-    }
-  },
-
-  "parameters": [
-    {
-      "id": "segments",
-      "type": "string",
-      "multivalued": true
+    "metadata": {
+        "id": "profileSegmentCondition",
+        "name": "profileSegmentCondition",
+        "description": "",
+        "systemTags": [
+            "availableToEndUser",
+            "profileTags",
+            "aggregated",
+            "condition",
+            "profileCondition"
+        ],
+        "readOnly": true
     },
-    {
-      "id": "matchType",
-      "type": "string",
-      "multivalued": false
-    }
-  ]
+    "parentCondition": {
+        "type": "profilePropertyCondition",
+        "parameterValues": {
+            "propertyName": "segments",
+            "propertyValues": "parameter::segments",
+            "comparisonOperator": "parameter::matchType"
+        }
+    },
+    "parameters": [
+        {
+            "id": "segments",
+            "type": "string",
+            "multivalued": true
+        },
+        {
+            "id": "matchType",
+            "type": "string",
+            "multivalued": false
+        }
+    ]
 }

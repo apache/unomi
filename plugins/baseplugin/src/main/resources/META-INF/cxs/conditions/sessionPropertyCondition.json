@@ -4,6 +4,8 @@
     "name": "sessionPropertyCondition",
     "description": "",
     "systemTags": [
+      "availableToEndUser",
+      "sessionBased",
       "profileTags",
       "event",
       "condition",

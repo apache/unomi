@@ -11,6 +11,8 @@
     },
     "type": "string",
     "defaultValue": "",
-    "automaticMappingsFrom": [ ],
+    "automaticMappingsFrom": [
+        "j:firstName"
+    ],
     "rank": "101.0"
 }

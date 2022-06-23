@@ -18,6 +18,8 @@
     {"key":"40_50", "from": "now-50y/y", "to" : "now-40y/y"  },
     {"key":"50_*", "to": "now-50y/y"}
   ],
-  "automaticMappingsFrom": [ ],
+  "automaticMappingsFrom": [
+      "j:birthDate"
+  ],
   "rank": "502.0"
 }

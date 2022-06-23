@@ -122,7 +122,7 @@ public class PatchIT extends BaseIT {
     @Test
     public void testPatchOnConditionType() throws IOException, InterruptedException {
         ConditionType formCondition = definitionsService.getConditionType("formEventCondition");
-        Assert.assertTrue(formCondition.getMetadata().getSystemTags().contains("usableInPastEventCondition"));
+        Assert.assertTrue(formCondition.getMetadata().getSystemTags().contains("profileTags"));
 
         try {
             Patch patch = CustomObjectMapper.getObjectMapper().readValue(bundleContext.getBundle().getResource("patch4.json"), Patch.class);
@@ -132,7 +132,7 @@ public class PatchIT extends BaseIT {
             definitionsService.refresh();
 
             ConditionType newFormCondition = definitionsService.getConditionType("formEventCondition");
-            Assert.assertFalse(newFormCondition.getMetadata().getSystemTags().contains("usableInPastEventCondition"));
+            Assert.assertFalse(newFormCondition.getMetadata().getSystemTags().contains("profileTags"));
         } finally {
             definitionsService.setConditionType(formCondition);
         }
