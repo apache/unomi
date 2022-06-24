@@ -4,8 +4,9 @@
     "name": "geoLocationByPointSessionCondition",
     "description": "",
     "systemTags": [
+      "availableToEndUser",
+      "sessionBased",
       "profileTags",
-      "geographic",
       "condition",
       "sessionCondition"
     ],

@@ -8,7 +8,6 @@
       "op": "replace",
       "path": "/metadata/systemTags",
       "value": [
-        "profileTags",
         "event",
         "condition",
         "eventCondition",

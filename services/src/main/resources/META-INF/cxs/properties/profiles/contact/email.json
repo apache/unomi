@@ -11,6 +11,8 @@
     },
     "type": "email",
     "defaultValue": "",
-    "automaticMappingsFrom": [ ],
+    "automaticMappingsFrom": [
+        "j:email"
+    ],
     "rank": "301.0"
 }

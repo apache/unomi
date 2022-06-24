@@ -4,6 +4,8 @@
     "name": "pastEventCondition",
     "description": "",
     "systemTags": [
+      "availableToEndUser",
+      "behavioral",
       "profileTags",
       "event",
       "condition",
