@@ -45,6 +45,10 @@
     },
     "raiseEventOnlyOnce": {
       "type": "boolean"
+    },
+    "condition": {
+      "type": "object",
+      "enabled": false
     }
   }
 }
