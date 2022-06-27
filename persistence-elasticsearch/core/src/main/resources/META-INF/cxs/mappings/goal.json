@@ -33,6 +33,14 @@
           "type": "boolean"
         }
       }
+    },
+    "startEvent": {
+      "type": "object",
+      "enabled": false
+    },
+    "targetEvent": {
+      "type": "object",
+      "enabled": false
     }
   }
 }

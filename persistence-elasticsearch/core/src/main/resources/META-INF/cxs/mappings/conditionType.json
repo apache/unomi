@@ -16,5 +16,11 @@
         }
       }
     }
-  ]
+  ],
+  "properties": {
+    "parentCondition":  {
+      "type": "object",
+      "enabled": false
+    }
+  }
 }

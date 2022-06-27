@@ -33,6 +33,14 @@
           "type": "boolean"
         }
       }
+    },
+    "elements": {
+      "properties": {
+        "condition": {
+          "type": "object",
+          "enabled": false
+        }
+      }
     }
   }
 }

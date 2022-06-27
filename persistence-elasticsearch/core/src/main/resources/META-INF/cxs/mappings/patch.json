@@ -28,7 +28,8 @@
       "type": "text"
     },
     "data": {
-      "type": "object"
+      "type": "object",
+      "enabled": false
     },
     "lastApplication": {
       "type": "date"
