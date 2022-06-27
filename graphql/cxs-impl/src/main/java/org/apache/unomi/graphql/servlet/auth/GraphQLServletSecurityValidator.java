@@ -78,9 +78,11 @@ public class GraphQLServletSecurityValidator {
         final Definition<?> def = queryDoc.getDefinitions().get(0);
         if (def instanceof OperationDefinition) {
             OperationDefinition opDef = (OperationDefinition) def;
-            if ("IntrospectionQuery".equals(opDef.getName())
-                    || SUBSCRIPTION.equals(opDef.getOperation())) {
-                // allow subscriptions and introspection query
+            if (SUBSCRIPTION.equals(opDef.getOperation())) {
+                // subscriptions are not public
+                return false;
+            } else if ("IntrospectionQuery".equals(opDef.getName())) {
+                // allow introspection query
                 return true;
             }
 

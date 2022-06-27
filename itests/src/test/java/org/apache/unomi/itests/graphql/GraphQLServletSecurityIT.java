@@ -75,4 +75,12 @@ public class GraphQLServletSecurityIT extends BaseGraphQLIT {
             Assert.assertNull(context.getValue("data.cdp.getEvent"));
         }
     }
+
+    @Test
+    public void testAnonymousSubscriptionRequest() throws Exception {
+        try (CloseableHttpResponse response = postAnonymous("graphql/security/subscribe.json")) {
+
+            Assert.assertEquals(401, response.getStatusLine().getStatusCode());
+        }
+    }
 }
