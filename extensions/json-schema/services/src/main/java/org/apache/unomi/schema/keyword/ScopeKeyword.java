@@ -14,44 +14,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.unomi.schema.keyword;
 
-package org.apache.unomi.api.services;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.networknt.schema.AbstractKeyword;
+import com.networknt.schema.JsonSchema;
+import com.networknt.schema.JsonValidator;
+import com.networknt.schema.ValidationContext;
+import org.apache.unomi.api.services.ScopeService;
 
-import org.apache.unomi.api.Scope;
+public class ScopeKeyword extends AbstractKeyword {
 
-import java.util.List;
+    private ScopeService scopeService;
 
-/**
- * A service to create, update and delete scope.
- */
-public interface ScopeService {
+    public ScopeKeyword(ScopeService scopeService) {
+        super("scope");
+        this.scopeService = scopeService;
+    }
 
-    /**
-     * Retrieves all known scopes.
-     *
-     * @return the List of known scopes
-     */
-    List<Scope> getScopes();
-
-    /**
-     * Save a scope
-     *
-     * @param scope to save
-     */
-    void save(Scope scope);
-
-    /**
-     * Delete a scope
-     *
-     * @param id of the scope
-     * @return true if scope is deleted
-     */
-    boolean delete(String id);
-
-    /**
-     * Get a scope by its id
-     *
-     * @return Scope matching the id
-     */
-    Scope getScope(String id);
+    @Override
+    public JsonValidator newValidator(String schemaPath, JsonNode schemaNode, JsonSchema parentSchema,
+            ValidationContext validationContext) {
+        return new ScopeValidator(scopeService);
+    }
 }

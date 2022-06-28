@@ -27,13 +27,14 @@
         </cm:default-properties>
     </cm:property-placeholder>
 
-    <reference id="profileService" interface="org.apache.unomi.api.services.ProfileService"/>
+    <reference id="scopeService" interface="org.apache.unomi.api.services.ScopeService"/>
     <reference id="persistenceService" interface="org.apache.unomi.persistence.spi.PersistenceService"/>
     <!--reference id="schedulerService" interface="org.apache.unomi.api.services.SchedulerService"/-->
 
     <bean id="schemaServiceImpl" class="org.apache.unomi.schema.impl.SchemaServiceImpl" init-method="init"
           destroy-method="destroy">
         <property name="persistenceService" ref="persistenceService"/>
+        <property name="scopeService" ref="scopeService"/>
         <!--property name="schedulerService" ref="schedulerService"/-->
         <property name="jsonSchemaRefreshInterval" value="${json.schema.refresh.interval}"/>
     </bean>

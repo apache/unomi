@@ -21,6 +21,7 @@
     },
     "scope" : {
       "type" : ["null","string"],
+      "scope":  true,
       "description" : "The item's scope"
     },
     "version" : {

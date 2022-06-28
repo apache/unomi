@@ -1,6 +1,6 @@
 {
   "eventType":"flattened",
-  "scope":"scope",
+  "scope":"dummy_scope",
   "flattenedProperties": {
     "interests": {
       "cars": 15,

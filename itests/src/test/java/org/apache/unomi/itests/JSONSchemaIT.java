@@ -23,7 +23,10 @@ import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.util.EntityUtils;
 import org.apache.unomi.api.Event;
+import org.apache.unomi.api.Metadata;
+import org.apache.unomi.api.Scope;
 import org.apache.unomi.api.conditions.Condition;
+import org.apache.unomi.api.services.ScopeService;
 import org.apache.unomi.itests.tools.httpclient.HttpClientThatWaitsForUnomi;
 import org.apache.unomi.schema.api.JsonSchemaWrapper;
 import org.apache.unomi.schema.api.SchemaService;
@@ -61,15 +64,27 @@ public class JSONSchemaIT extends BaseIT {
     @Filter(timeout = 600000)
     protected SchemaService schemaService;
 
+    @Inject
+    @Filter(timeout = 6000000)
+    protected ScopeService scopeService;
+
     @Before
     public void setUp() throws InterruptedException {
         keepTrying("Couldn't find json schema endpoint", () -> get(JSONSCHEMA_URL, List.class), Objects::nonNull, DEFAULT_TRYING_TIMEOUT,
                 DEFAULT_TRYING_TRIES);
+
+        Scope scope = new Scope();
+        scope.setItemId("dummy_scope");
+        Metadata metadata = new Metadata();
+        metadata.setName("Dummy scope");
+        metadata.setId("dummy_scope");
+        scope.setMetadata(metadata);
+        scopeService.save(scope);
     }
 
     @After
     public void tearDown() throws InterruptedException {
-        removeItems(JsonSchemaWrapper.class, Event.class);
+        removeItems(JsonSchemaWrapper.class, Event.class, Scope.class);
         // ensure all schemas have been cleaned from schemaService.
         keepTrying("Should not find json schemas anymore",
                 () -> schemaService.getInstalledJsonSchemaIds(),
@@ -100,6 +115,10 @@ public class JSONSchemaIT extends BaseIT {
                 "dummy"));
         // bad type number but should be string:
         assertFalse(schemaService.isEventValid(resourceAsString("schemas/event-dummy-invalid-3.json"),
+                "dummy"));
+
+        // Event with unexisting scope:
+        assertFalse(schemaService.isEventValid(resourceAsString("schemas/event-dummy-invalid-4.json"),
                 "dummy"));
 
         // remove one of the schema:

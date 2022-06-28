@@ -1,0 +1,8 @@
+{
+    "eventType": "dummy",
+    "scope": "unknown_scope",
+    "properties": {
+        "workspace": "dummy_workspace",
+        "path": "dummy/path"
+    }
+}
