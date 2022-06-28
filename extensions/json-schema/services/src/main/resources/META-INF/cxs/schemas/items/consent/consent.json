@@ -12,7 +12,7 @@
   "properties" : {
     "scope" : {
       "type" : "string",
-      "scope":  true
+      "validateScope" : true
     },
     "typeIdentifier" : {
       "type" : "string"

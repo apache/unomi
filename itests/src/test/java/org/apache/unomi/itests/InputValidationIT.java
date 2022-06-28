@@ -24,6 +24,9 @@ import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.util.EntityUtils;
 import org.apache.unomi.api.Event;
+import org.apache.unomi.api.Metadata;
+import org.apache.unomi.api.Scope;
+import org.apache.unomi.api.services.ScopeService;
 import org.apache.unomi.itests.tools.httpclient.HttpClientThatWaitsForUnomi;
 import org.apache.unomi.schema.api.JsonSchemaWrapper;
 import org.apache.unomi.schema.api.SchemaService;
@@ -39,7 +42,9 @@ import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
@@ -58,6 +63,26 @@ public class InputValidationIT extends BaseIT {
     @Inject
     @Filter(timeout = 600000)
     protected SchemaService schemaService;
+
+    @Inject
+    @Filter(timeout = 600000)
+    protected ScopeService scopeService;
+
+    @Before
+    public void setUp() {
+        Scope scope = new Scope();
+        scope.setItemId("dummy_scope");
+        Metadata metadata = new Metadata();
+        metadata.setName("Dummy scope");
+        metadata.setId("dummy_scope");
+        scope.setMetadata(metadata);
+        scopeService.save(scope);
+    }
+
+    @After
+    public void tearDown() throws InterruptedException {
+        removeItems(Scope.class);
+    }
 
     @Test
     public void test_param_EventsCollectorRequestNotNull() throws IOException {

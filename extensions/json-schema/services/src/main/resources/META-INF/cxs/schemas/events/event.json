@@ -25,7 +25,7 @@
     },
     "scope" : {
       "type" : [ "string"],
-      "scope":  true,
+      "validateScope": true,
       "pattern" : "^(\\w|[-_@\\.]){0,60}$"
     },
     "sourceId" : {

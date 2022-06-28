@@ -15,7 +15,7 @@
     },
     "scope": {
       "type": "string",
-      "scope": true
+      "validateScope": true
     },
     "path": {
       "type": "string",

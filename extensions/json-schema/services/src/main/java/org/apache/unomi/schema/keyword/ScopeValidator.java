@@ -34,7 +34,7 @@ public class ScopeValidator extends AbstractJsonValidator {
     private ScopeService scopeService;
 
     public ScopeValidator(ScopeService scopeService) {
-        super("scope");
+        super("validateScope");
         this.scopeService = scopeService;
     }
 

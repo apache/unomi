@@ -26,6 +26,7 @@ import org.apache.unomi.api.ContextResponse;
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.Metadata;
 import org.apache.unomi.api.Profile;
+import org.apache.unomi.api.Scope;
 import org.apache.unomi.api.Session;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.segments.Scoring;
@@ -33,6 +34,7 @@ import org.apache.unomi.api.segments.Segment;
 import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.api.services.ProfileService;
+import org.apache.unomi.api.services.ScopeService;
 import org.apache.unomi.api.services.SegmentService;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.persistence.spi.PersistenceService;
@@ -89,6 +91,7 @@ public class ContextServletIT extends BaseIT {
 
     private static final int DEFAULT_TRYING_TIMEOUT = 2000;
     private static final int DEFAULT_TRYING_TRIES = 30;
+    public static final String TEST_SCOPE = "test-scope";
 
     @Inject
     @Filter(timeout = 600000)
@@ -113,6 +116,10 @@ public class ContextServletIT extends BaseIT {
     @Inject
     @Filter(timeout = 600000)
     protected SchemaService schemaService;
+
+    @Inject
+    @Filter(timeout = 600000)
+    protected ScopeService scopeService;
 
     private Profile profile;
 
@@ -145,6 +152,16 @@ public class ContextServletIT extends BaseIT {
                 (schemaIds) -> (schemaIds.contains("https://unomi.apache.org/schemas/json/events/floatPropertyType/1-0-0") &&
                         schemaIds.contains("https://unomi.apache.org/schemas/json/events/testEventType/1-0-0")),
                 DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+
+        Scope scope = new Scope();
+        scope.setItemId(TEST_SCOPE);
+        Metadata metadata = new Metadata();
+        metadata.setName("Test scope");
+        metadata.setId(TEST_SCOPE);
+        scope.setMetadata(metadata);
+        scopeService.save(scope);
+        keepTrying("Scope test-scope not found in the required time", () -> scopeService.getScope(TEST_SCOPE),
+                Objects::nonNull, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
     }
 
     @After
@@ -163,6 +180,8 @@ public class ContextServletIT extends BaseIT {
                 (schemaIds) -> (!schemaIds.contains("https://unomi.apache.org/schemas/json/events/floatPropertyType/1-0-0") &&
                         !schemaIds.contains("https://unomi.apache.org/schemas/json/events/testEventType/1-0-0")),
                 DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+
+        scopeService.delete(TEST_SCOPE);
     }
 
     @Test
@@ -170,7 +189,7 @@ public class ContextServletIT extends BaseIT {
         //Arrange
         String eventId = "test-event-id-" + System.currentTimeMillis();
         String sessionId = "test-session-id";
-        String scope = "test-scope";
+        String scope = TEST_SCOPE;
         String eventTypeOriginal = "test-event-type-original";
         Profile profile = new Profile(TEST_PROFILE_ID);
         Session session = new Session(sessionId, profile, new Date(), scope);
@@ -208,7 +227,7 @@ public class ContextServletIT extends BaseIT {
         //Arrange
         String eventId = "test-event-id-" + System.currentTimeMillis();
         String sessionId = "test-session-id";
-        String scope = "test-scope";
+        String scope = TEST_SCOPE;
         String eventTypeOriginal = "test-event-type-original";
         String eventTypeUpdated = TEST_EVENT_TYPE;
         Profile profile = new Profile(TEST_PROFILE_ID);
@@ -246,7 +265,7 @@ public class ContextServletIT extends BaseIT {
         //Arrange
         String eventId = "test-event-id-" + System.currentTimeMillis();
         String sessionId = "test-session-id";
-        String scope = "test-scope";
+        String scope = TEST_SCOPE;
         String eventTypeOriginal = "test-event-type-original";
         String eventTypeUpdated = TEST_EVENT_TYPE;
         Session session = new Session(sessionId, profile, new Date(), scope);
@@ -278,7 +297,7 @@ public class ContextServletIT extends BaseIT {
     public void testCreateEventsWithNoTimestampParam_profileAddedToSegment() throws IOException, InterruptedException {
         //Arrange
         String sessionId = "test-session-id";
-        String scope = "test-scope";
+        String scope = TEST_SCOPE;
         Event event = new Event();
         event.setEventType(TEST_EVENT_TYPE);
         event.setScope(scope);
@@ -310,7 +329,7 @@ public class ContextServletIT extends BaseIT {
     public void testCreateEventWithTimestampParam_pastEvent_profileIsNotAddedToSegment() throws IOException, InterruptedException {
         //Arrange
         String sessionId = "test-session-id";
-        String scope = "test-scope";
+        String scope = TEST_SCOPE;
         Event event = new Event();
         event.setEventType(TEST_EVENT_TYPE);
         event.setScope(scope);
@@ -343,7 +362,7 @@ public class ContextServletIT extends BaseIT {
     public void testCreateEventWithTimestampParam_futureEvent_profileIsNotAddedToSegment() throws IOException, InterruptedException {
         //Arrange
         String sessionId = "test-session-id";
-        String scope = "test-scope";
+        String scope = TEST_SCOPE;
         Event event = new Event();
         event.setEventType(TEST_EVENT_TYPE);
         event.setScope(scope);

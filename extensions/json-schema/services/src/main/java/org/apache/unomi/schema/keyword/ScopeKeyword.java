@@ -28,7 +28,7 @@ public class ScopeKeyword extends AbstractKeyword {
     private ScopeService scopeService;
 
     public ScopeKeyword(ScopeService scopeService) {
-        super("scope");
+        super("validateScope");
         this.scopeService = scopeService;
     }
 
