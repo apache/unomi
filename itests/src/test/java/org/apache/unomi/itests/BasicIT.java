@@ -28,14 +28,19 @@ import org.apache.http.util.EntityUtils;
 import org.apache.unomi.api.ContextRequest;
 import org.apache.unomi.api.CustomItem;
 import org.apache.unomi.api.Event;
+import org.apache.unomi.api.Metadata;
 import org.apache.unomi.api.Profile;
+import org.apache.unomi.api.Scope;
 import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.api.rules.Rule;
 import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.ProfileService;
+import org.apache.unomi.api.services.ScopeService;
 import org.apache.unomi.itests.tools.httpclient.HttpClientThatWaitsForUnomi;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
+import org.junit.After;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.ops4j.pax.exam.junit.PaxExam;
@@ -64,7 +69,6 @@ public class BasicIT extends BaseIT {
     private static final String SESSION_ID_4 = "aa3b04bd-8f4d-4a07-8e96-d33ffa04d3d4";
 
     private static final String EVENT_TYPE_LOGIN = "login";
-    private static final String EVENT_TYPE_LOGIN_SCHEMA = "schemas/events/login.json";
     private static final String EVENT_TYPE_VIEW = "view";
     private static final String TEST_SCOPE = "testScope";
 
@@ -92,6 +96,21 @@ public class BasicIT extends BaseIT {
     protected ProfileService profileService;
     @Inject @Filter(timeout = 600000)
     protected DefinitionsService definitionsService;
+
+    @Inject @Filter(timeout = 600000)
+    protected ScopeService scopeService;
+
+    @Before
+    public void setUp() throws InterruptedException {
+        TestUtils.createScope(TEST_SCOPE, "Test scope", scopeService);
+        keepTrying("Scope "+ TEST_SCOPE +" not found in the required time", () -> scopeService.getScope(TEST_SCOPE),
+                Objects::nonNull, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+    }
+
+    @After
+    public void tearDown() {
+        scopeService.delete(TEST_SCOPE);
+    }
 
     @Test
     public void testContextJS() throws IOException {

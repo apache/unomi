@@ -37,10 +37,13 @@ import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.util.EntityUtils;
 import org.apache.unomi.api.ContextResponse;
 import org.apache.unomi.api.Event;
+import org.apache.unomi.api.Metadata;
 import org.apache.unomi.api.Profile;
+import org.apache.unomi.api.Scope;
 import org.apache.unomi.api.Session;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.services.DefinitionsService;
+import org.apache.unomi.api.services.ScopeService;
 import org.apache.unomi.itests.tools.httpclient.HttpClientThatWaitsForUnomi;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.persistence.spi.PersistenceService;
@@ -129,6 +132,16 @@ public class TestUtils {
 		condition.setParameter("propertyValue","session");
 
 		return persistenceService.removeByQuery(condition, Session.class);
+	}
+
+	public static void createScope(String scopeId, String scopeName, ScopeService scopeService) {
+		Scope scope = new Scope();
+		scope.setItemId(scopeId);
+		Metadata metadata = new Metadata();
+		metadata.setName(scopeName);
+		metadata.setId(scopeId);
+		scope.setMetadata(metadata);
+		scopeService.save(scope);
 	}
 
 	public static class RequestResponse {

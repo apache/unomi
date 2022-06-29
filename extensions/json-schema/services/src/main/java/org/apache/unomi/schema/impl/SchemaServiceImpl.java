@@ -27,9 +27,11 @@ import com.networknt.schema.*;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.unomi.api.Item;
+import org.apache.unomi.api.services.ScopeService;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.schema.api.JsonSchemaWrapper;
 import org.apache.unomi.schema.api.SchemaService;
+import org.apache.unomi.schema.keyword.ScopeKeyword;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -66,6 +68,8 @@ public class SchemaServiceImpl implements SchemaService {
     private ScheduledFuture<?> scheduledFuture;
 
     private PersistenceService persistenceService;
+    private ScopeService scopeService;
+
     private JsonSchemaFactory jsonSchemaFactory;
 
     // TODO UNOMI-572: when fixing UNOMI-572 please remove the usage of the custom ScheduledExecutorService and re-introduce the Unomi Scheduler Service
@@ -317,6 +321,7 @@ public class SchemaServiceImpl implements SchemaService {
     private void initJsonSchemaFactory() {
         jsonSchemaFactory = JsonSchemaFactory.builder(JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V201909))
                 .addMetaSchema(JsonMetaSchema.builder(URI, JsonMetaSchema.getV201909())
+                        .addKeyword(new ScopeKeyword(scopeService))
                         .addKeyword(new NonValidationKeyword("self"))
                         .build())
                 .defaultMetaSchemaURI(URI)
@@ -356,6 +361,10 @@ public class SchemaServiceImpl implements SchemaService {
 
     public void setPersistenceService(PersistenceService persistenceService) {
         this.persistenceService = persistenceService;
+    }
+
+    public void setScopeService(ScopeService scopeService) {
+        this.scopeService = scopeService;
     }
 
     public void setJsonSchemaRefreshInterval(Integer jsonSchemaRefreshInterval) {

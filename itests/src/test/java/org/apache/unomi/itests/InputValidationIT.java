@@ -24,6 +24,9 @@ import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.util.EntityUtils;
 import org.apache.unomi.api.Event;
+import org.apache.unomi.api.Metadata;
+import org.apache.unomi.api.Scope;
+import org.apache.unomi.api.services.ScopeService;
 import org.apache.unomi.itests.tools.httpclient.HttpClientThatWaitsForUnomi;
 import org.apache.unomi.schema.api.JsonSchemaWrapper;
 import org.apache.unomi.schema.api.SchemaService;
@@ -39,7 +42,9 @@ import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
@@ -54,10 +59,27 @@ public class InputValidationIT extends BaseIT {
 
     private final static String ERROR_MESSAGE_REQUEST_SIZE_LIMIT_EXCEEDED = "Request rejected by the server because: Request size exceed the limit";
     private final static String ERROR_MESSAGE_INVALID_DATA_RECEIVED = "Request rejected by the server because: Invalid received data";
+    public static final String DUMMY_SCOPE = "dummy_scope";
 
     @Inject
     @Filter(timeout = 600000)
     protected SchemaService schemaService;
+
+    @Inject
+    @Filter(timeout = 600000)
+    protected ScopeService scopeService;
+
+    @Before
+    public void setUp() throws InterruptedException {
+        TestUtils.createScope(DUMMY_SCOPE, "Dummy scope", scopeService);
+        keepTrying("Scope "+ DUMMY_SCOPE +" not found in the required time", () -> scopeService.getScope(DUMMY_SCOPE),
+                Objects::nonNull, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+    }
+
+    @After
+    public void tearDown() throws InterruptedException {
+        removeItems(Scope.class);
+    }
 
     @Test
     public void test_param_EventsCollectorRequestNotNull() throws IOException {

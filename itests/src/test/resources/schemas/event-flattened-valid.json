@@ -1,13 +1,13 @@
 {
-  "eventType":"flattened",
-  "scope":"scope",
-  "flattenedProperties": {
-    "interests": {
-      "cars": 15,
-      "football": 59
+    "eventType": "flattened",
+    "scope": "dummy_scope",
+    "flattenedProperties": {
+        "interests": {
+            "cars": 15,
+            "football": 59
+        }
+    },
+    "properties": {
+        "marker": "###EVENT_MARKER###"
     }
-  },
-  "properties": {
-    "marker": "###EVENT_MARKER###"
-  }
 }

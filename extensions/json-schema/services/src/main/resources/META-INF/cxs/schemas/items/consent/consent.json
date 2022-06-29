@@ -11,7 +11,8 @@
   "type": "object",
   "properties" : {
     "scope" : {
-      "type" : "string"
+      "type" : "string",
+      "validateScope" : true
     },
     "typeIdentifier" : {
       "type" : "string"

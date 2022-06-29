@@ -13,6 +13,10 @@
     "workspace": {
       "type": "string"
     },
+    "scope": {
+      "type": "string",
+      "validateScope": true
+    },
     "path": {
       "type": "string",
       "maxLength": 20000
