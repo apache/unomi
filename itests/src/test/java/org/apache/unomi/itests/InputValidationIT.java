@@ -59,6 +59,7 @@ public class InputValidationIT extends BaseIT {
 
     private final static String ERROR_MESSAGE_REQUEST_SIZE_LIMIT_EXCEEDED = "Request rejected by the server because: Request size exceed the limit";
     private final static String ERROR_MESSAGE_INVALID_DATA_RECEIVED = "Request rejected by the server because: Invalid received data";
+    public static final String DUMMY_SCOPE = "dummy_scope";
 
     @Inject
     @Filter(timeout = 600000)
@@ -69,14 +70,10 @@ public class InputValidationIT extends BaseIT {
     protected ScopeService scopeService;
 
     @Before
-    public void setUp() {
-        Scope scope = new Scope();
-        scope.setItemId("dummy_scope");
-        Metadata metadata = new Metadata();
-        metadata.setName("Dummy scope");
-        metadata.setId("dummy_scope");
-        scope.setMetadata(metadata);
-        scopeService.save(scope);
+    public void setUp() throws InterruptedException {
+        TestUtils.createScope(DUMMY_SCOPE, "Dummy scope", scopeService);
+        keepTrying("Scope "+ DUMMY_SCOPE +" not found in the required time", () -> scopeService.getScope(DUMMY_SCOPE),
+                Objects::nonNull, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
     }
 
     @After

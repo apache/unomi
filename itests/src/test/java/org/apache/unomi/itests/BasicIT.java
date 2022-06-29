@@ -102,21 +102,15 @@ public class BasicIT extends BaseIT {
 
     @Before
     public void setUp() throws InterruptedException {
-        Scope scope = new Scope();
-        scope.setItemId(TEST_SCOPE);
-        Metadata metadata = new Metadata();
-        metadata.setName("Test scope");
-        metadata.setId(TEST_SCOPE);
-        scope.setMetadata(metadata);
-        scopeService.save(scope);
-        keepTrying("Scope test-scope not found in the required time", () -> scopeService.getScope(TEST_SCOPE),
+        TestUtils.createScope(TEST_SCOPE, "Test scope", scopeService);
+        keepTrying("Scope "+ TEST_SCOPE +" not found in the required time", () -> scopeService.getScope(TEST_SCOPE),
                 Objects::nonNull, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
     }
+
     @After
     public void tearDown() {
         scopeService.delete(TEST_SCOPE);
     }
-
 
     @Test
     public void testContextJS() throws IOException {

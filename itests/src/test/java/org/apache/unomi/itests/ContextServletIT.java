@@ -153,13 +153,7 @@ public class ContextServletIT extends BaseIT {
                         schemaIds.contains("https://unomi.apache.org/schemas/json/events/testEventType/1-0-0")),
                 DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
 
-        Scope scope = new Scope();
-        scope.setItemId(TEST_SCOPE);
-        Metadata metadata = new Metadata();
-        metadata.setName("Test scope");
-        metadata.setId(TEST_SCOPE);
-        scope.setMetadata(metadata);
-        scopeService.save(scope);
+        TestUtils.createScope(TEST_SCOPE, "Test scope", scopeService);
         keepTrying("Scope test-scope not found in the required time", () -> scopeService.getScope(TEST_SCOPE),
                 Objects::nonNull, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
     }

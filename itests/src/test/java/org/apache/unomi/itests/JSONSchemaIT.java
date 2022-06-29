@@ -59,6 +59,7 @@ public class JSONSchemaIT extends BaseIT {
     private final static String JSONSCHEMA_URL = "/cxs/jsonSchema";
     private static final int DEFAULT_TRYING_TIMEOUT = 2000;
     private static final int DEFAULT_TRYING_TRIES = 30;
+    public static final String DUMMY_SCOPE = "dummy_scope";
 
     @Inject
     @Filter(timeout = 600000)
@@ -73,13 +74,9 @@ public class JSONSchemaIT extends BaseIT {
         keepTrying("Couldn't find json schema endpoint", () -> get(JSONSCHEMA_URL, List.class), Objects::nonNull, DEFAULT_TRYING_TIMEOUT,
                 DEFAULT_TRYING_TRIES);
 
-        Scope scope = new Scope();
-        scope.setItemId("dummy_scope");
-        Metadata metadata = new Metadata();
-        metadata.setName("Dummy scope");
-        metadata.setId("dummy_scope");
-        scope.setMetadata(metadata);
-        scopeService.save(scope);
+        TestUtils.createScope(DUMMY_SCOPE, "Dummy scope", scopeService);
+        keepTrying("Scope "+ DUMMY_SCOPE +" not found in the required time", () -> scopeService.getScope(DUMMY_SCOPE),
+                Objects::nonNull, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
     }
 
     @After
