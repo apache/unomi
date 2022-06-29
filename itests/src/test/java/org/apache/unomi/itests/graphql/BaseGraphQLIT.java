@@ -25,18 +25,16 @@ import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.util.EntityUtils;
 import org.apache.unomi.graphql.utils.GraphQLObjectMapper;
 import org.apache.unomi.itests.BaseIT;
-import org.apache.unomi.lifecycle.BundleWatcher;
-import org.junit.Before;
 import org.junit.runner.RunWith;
 import org.ops4j.pax.exam.junit.PaxExam;
 import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
 import org.ops4j.pax.exam.spi.reactors.PerSuite;
-import org.ops4j.pax.exam.util.Filter;
 import org.osgi.framework.BundleContext;
 
 import javax.inject.Inject;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -53,12 +51,28 @@ public abstract class BaseGraphQLIT extends BaseIT {
     @Inject
     protected BundleContext bundleContext;
 
+    protected CloseableHttpResponse postAnonymous(final String resource) throws IOException {
+        return postAs(resource, null, null);
+    }
+
     protected CloseableHttpResponse post(final String resource) throws IOException {
+        return postAs(resource, "karaf", "karaf");
+    }
+
+    protected CloseableHttpResponse postAs(final String resource, final String username, final String password) throws IOException {
         final String resourceAsString = resourceAsString(resource);
 
         final HttpPost request = new HttpPost(GRAPHQL_ENDPOINT);
 
         request.setEntity(new StringEntity(resourceAsString, JSON_CONTENT_TYPE));
+
+        if (username != null && password != null) {
+            String basicAuth = username + ":" + password;
+            String wrap = "Basic " + new String(Base64.getEncoder().encode(basicAuth.getBytes()));
+            request.setHeader("Authorization", wrap);
+        } else {
+            request.removeHeaders("Authorization");
+        }
 
         return HttpClientBuilder.create().build().execute(request);
     }
