@@ -36,8 +36,6 @@ include::recipes.adoc[]
 
 include::request-examples.adoc[]
 
-include::web-tracker.adoc[]
-
 include::configuration.adoc[]
 
 include::migrations/migrations.adoc[]
