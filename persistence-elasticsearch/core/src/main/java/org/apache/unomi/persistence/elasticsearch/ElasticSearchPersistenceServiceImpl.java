@@ -778,7 +778,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             }
         }
     }
-    
+
     @Override
     public <T extends Item> T load(final String itemId, final Class<T> clazz) {
         return load(itemId, null, clazz);
@@ -1964,7 +1964,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     @Override
     public <T extends Item> PartialList<T> continueScrollQuery(final Class<T> clazz, final String scrollIdentifier, final String scrollTimeValidity) {
         return new InClassLoaderExecute<PartialList<T>>(metricsService, this.getClass().getName() + ".continueScrollQuery", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
-            
+
             @Override
             protected PartialList<T> execute(Object... args) throws Exception {
                 List<T> results = new ArrayList<T>();
@@ -2292,7 +2292,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
                 SimpleDateFormat d = new SimpleDateFormat("yyyy-MM");
 
-                List<String> toDelete = new ArrayList<String>();
+                List<String> toDelete = new ArrayList<>();
                 for (String currentIndexName : indices) {
                     int indexDatePrefixPos = currentIndexName.indexOf(INDEX_DATE_PREFIX);
                     if (indexDatePrefixPos > -1) {

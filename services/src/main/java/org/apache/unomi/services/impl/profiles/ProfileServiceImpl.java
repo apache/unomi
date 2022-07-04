@@ -371,6 +371,8 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
                         persistenceService.removeByQuery(purgeProfileQuery, Profile.class);
 
                         if (purgeSessionsAndEventsTime > 0) {
+                            logger.info("Monthly indexes purge: Session and events created before {} months, will be purged",
+                                    purgeSessionsAndEventsTime);
                             persistenceService.purge(getMonth(-purgeSessionsAndEventsTime).getTime());
                         }
 
