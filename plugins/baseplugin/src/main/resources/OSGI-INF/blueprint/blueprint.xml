@@ -39,14 +39,6 @@
         </cm:default-properties>
     </cm:property-placeholder>
 
-    <cm:property-placeholder persistent-id="org.apache.unomi.interests" update-strategy="reload">
-        <cm:default-properties>
-            <cm:property name="min_value" value="0.0"/>
-            <cm:property name="max_value" value="150.0"/>
-            <cm:property name="divider_value" value="100.0"/>
-        </cm:default-properties>
-    </cm:property-placeholder>
-
     <reference id="definitionsService" interface="org.apache.unomi.api.services.DefinitionsService"/>
     <reference id="persistenceService" interface="org.apache.unomi.persistence.spi.PersistenceService"/>
     <reference id="profileService" interface="org.apache.unomi.api.services.ProfileService"/>
@@ -325,19 +317,6 @@
             <property name="privacyService" ref="privacyService"/>
             <property name="configSharingService" ref="configSharingService"/>
             <property name="maxProfilesInOneMerge" value="${base.maxProfilesInOneMerge}"/>
-        </bean>
-    </service>
-
-    <service interface="org.apache.unomi.api.actions.ActionExecutor">
-        <service-properties>
-            <entry key="actionExecutorId" value="incrementInterest"/>
-        </service-properties>
-        <bean class="org.apache.unomi.plugins.baseplugin.actions.IncrementInterestAction">
-            <property name="eventService" ref="eventService"/>
-            <property name="topicService" ref="topicService"/>
-            <property name="interestsMinValue" value="${min_value}"/>
-            <property name="interestsMaxValue" value="${max_value}"/>
-            <property name="interestsDividerValue" value="${divider_value}"/>
         </bean>
     </service>
 
