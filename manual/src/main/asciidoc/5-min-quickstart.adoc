@@ -39,6 +39,4 @@ make sure you are using the proper version.
 
 Next steps:
 
-- Connect to http://localhost:8181 to try our some live examples (such as the web tracker)
 - Trying our integration <<Samples,samples page>>
-- Learning more about the <<Web Tracker,web tracker>>

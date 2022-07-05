@@ -335,7 +335,7 @@ Based on the structure of the following object: Event
 
 ===== Example
 
-In this example (coming from the Apache Unomi tracker example), an event containing additional information about the user (his nickname, favorite compiler and industry) was sent to Apache Unomi.
+In this example, an event containing additional information about the user (his nickname, favorite compiler and industry) was sent to Apache Unomi.
 
 [source,json]
 ----
@@ -354,11 +354,11 @@ In this example (coming from the Apache Unomi tracker example), an event contain
         "scope": "myScope",
         "properties": {
             "page": {
-                "path": "/tracker/",
+                "path": "/web-page/",
                 "referrer": "http://localhost:8181/",
                 "search": "",
-                "title": "Apache Unomi Web Tracker Test Page",
-                "url": "http://localhost:8181/tracker/"
+                "title": "Apache Unomi Web Test Page",
+                "url": "http://localhost:8181/web-page/"
             }
         }
     },

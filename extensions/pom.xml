@@ -38,7 +38,6 @@
         <module>salesforce-connector</module>
         <module>unomi-mailchimp</module>
         <module>weather-update</module>
-        <module>web-tracker</module>
         <module>groovy-actions</module>
         <module>json-schema</module>
     </modules>

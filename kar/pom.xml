@@ -166,11 +166,6 @@
         </dependency>
         <dependency>
             <groupId>org.apache.unomi</groupId>
-            <artifactId>unomi-web-tracker-wab</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.unomi</groupId>
             <artifactId>unomi-scripting</artifactId>
             <version>${project.version}</version>
         </dependency>
