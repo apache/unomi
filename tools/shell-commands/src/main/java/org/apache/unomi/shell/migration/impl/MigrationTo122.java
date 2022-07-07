@@ -23,10 +23,10 @@ import org.apache.unomi.shell.migration.utils.ConsoleUtils;
 import org.apache.unomi.shell.migration.utils.HttpRequestException;
 import org.apache.unomi.shell.migration.utils.HttpUtils;
 import org.osgi.framework.BundleContext;
-import org.osgi.framework.Version;
 import org.osgi.service.component.annotations.Component;
 
 import java.io.IOException;
+import java.util.Map;
 
 @Component
 public class MigrationTo122 implements Migration {
@@ -35,25 +35,10 @@ public class MigrationTo122 implements Migration {
     private String esAddress;
 
     @Override
-    public Version getFromVersion() {
-        return null;
-    }
-
-    @Override
-    public Version getToVersion() {
-        return new Version("1.2.2");
-    }
-
-    @Override
-    public String getDescription() {
-        return "Delete old index template";
-    }
-
-    @Override
-    public void execute(Session session, CloseableHttpClient httpClient, String esAddress, BundleContext bundleContext) throws IOException {
+    public void execute(Session session, CloseableHttpClient httpClient, Map<String, Object> migrationConfig, BundleContext bundleContext) throws IOException {
         this.httpClient = httpClient;
         this.session = session;
-        this.esAddress = esAddress;
+        this.esAddress = (String) migrationConfig.get("esAddress");
         deleteOldIndexTemplate();
 
     }

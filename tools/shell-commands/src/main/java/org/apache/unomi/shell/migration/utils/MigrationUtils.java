@@ -16,12 +16,17 @@
  */
 package org.apache.unomi.shell.migration.utils;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.json.JSONObject;
+import org.osgi.framework.BundleContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
 
 /**
  * @author dgaillard
@@ -43,5 +48,44 @@ public class MigrationUtils {
 
     public static void bulkUpdate(CloseableHttpClient httpClient, String url, String jsonData) throws IOException {
         HttpUtils.executePostRequest(httpClient, url, jsonData, null);
+    }
+
+    public static String resourceAsString(BundleContext bundleContext, final String resource) {
+        final URL url = bundleContext.getBundle().getResource(resource);
+        try (InputStream stream = url.openStream()) {
+            return IOUtils.toString(stream, StandardCharsets.UTF_8);
+        } catch (final Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static void reIndex(CloseableHttpClient httpClient, BundleContext bundleContext, String esAddress, String indexName, String newIndexSettings) throws IOException {
+        String indexNameCloned = indexName + "-cloned";
+
+        // Init requests
+        JSONObject originalIndexSettings = new JSONObject(HttpUtils.executeGetRequest(httpClient, esAddress + "/" + indexName + "/_settings", null));
+        // TODO UNOMI-606 validate following lines: (normally those properties are automatically added to unomi indices so they should always be present on the existing indices)
+        String newIndexRequest = newIndexSettings
+                .replace("#numberOfShards", originalIndexSettings.getJSONObject(indexName).getJSONObject("settings").getJSONObject("index").getString("number_of_shards"))
+                .replace("#numberOfReplicas", originalIndexSettings.getJSONObject(indexName).getJSONObject("settings").getJSONObject("index").getString("number_of_replicas"))
+                .replace("#maxDocValueFieldsSearch", originalIndexSettings.getJSONObject(indexName).getJSONObject("settings").getJSONObject("index").getString("max_docvalue_fields_search"))
+                .replace("#mappingTotalFieldsLimit", originalIndexSettings.getJSONObject(indexName).getJSONObject("settings").getJSONObject("index").getJSONObject("mapping").getJSONObject("total_fields").getString("limit"));
+        String reIndexRequest = resourceAsString(bundleContext, "requestBody/2.0.0/base_reindex_request.json")
+                .replace("#source", indexNameCloned)
+                .replace("#dest", indexName);
+        String setIndexReadOnlyRequest = resourceAsString(bundleContext, "requestBody/2.0.0/base_set_index_readonly_request.json");
+
+        // Set original index as readOnly
+        HttpUtils.executePutRequest(httpClient, esAddress + "/" + indexName + "/_settings", setIndexReadOnlyRequest, null);
+        // Clone the original index for backup
+        HttpUtils.executePostRequest(httpClient, esAddress + "/" + indexName + "/_clone/" + indexNameCloned, null, null);
+        // Delete original index
+        HttpUtils.executeDeleteRequest(httpClient, esAddress + "/" + indexName, null);
+        // Recreate the original index with new mappings
+        HttpUtils.executePutRequest(httpClient, esAddress + "/" + indexName, newIndexRequest, null);
+        // Reindex data from clone
+        HttpUtils.executePostRequest(httpClient, esAddress + "/_reindex", reIndexRequest, null);
+        // Remove clone
+        HttpUtils.executeDeleteRequest(httpClient, esAddress + "/" + indexNameCloned, null);
     }
 }

@@ -25,38 +25,20 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
-import org.osgi.framework.Version;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URL;
-import java.util.Enumeration;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.TreeSet;
+import java.util.*;
 
 public class MigrationTo150 implements Migration {
 
     public static final String INDEX_DATE_PREFIX = "date-";
 
     @Override
-    public Version getFromVersion() {
-        return new Version("1.3.0");
-    }
-
-    @Override
-    public Version getToVersion() {
-        return new Version("1.5.0");
-    }
-
-    @Override
-    public String getDescription() {
-        return "Migrate the data from ElasticSearch 5.6 to 7.4";
-    }
-
-    @Override
-    public void execute(Session session, CloseableHttpClient httpClient, String esAddress, BundleContext bundleContext) throws IOException {
+    public void execute(Session session, CloseableHttpClient httpClient, Map<String, Object> migrationConfig, BundleContext bundleContext) throws IOException {
+        String esAddress = (String) migrationConfig.get("esAddress");
         String es5Address = ConsoleUtils.askUserWithDefaultAnswer(session, "SOURCE Elasticsearch 5.6 cluster address (default: http://localhost:9210) : ", "http://localhost:9210");
         String sourceIndexPrefix = ConsoleUtils.askUserWithDefaultAnswer(session, "SOURCE index name (default: context) : ", "context");
         String destIndexPrefix = ConsoleUtils.askUserWithDefaultAnswer(session, "TARGET index prefix (default: context) : ", "context");

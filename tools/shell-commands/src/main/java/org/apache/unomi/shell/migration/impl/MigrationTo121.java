@@ -25,8 +25,6 @@ import org.apache.unomi.shell.migration.utils.MigrationUtils;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.osgi.framework.BundleContext;
-import org.osgi.framework.Version;
-import org.osgi.service.component.annotations.Component;
 
 import java.io.IOException;
 import java.util.*;
@@ -34,7 +32,6 @@ import java.util.*;
 /**
  * @author dgaillard
  */
-@Component
 public class MigrationTo121 implements Migration {
 
     private CloseableHttpClient httpClient;
@@ -44,25 +41,10 @@ public class MigrationTo121 implements Migration {
     private List propsTaggedAsPersonalIdentifier = Arrays.asList("firstName", "lastName", "email", "phoneNumber", "address", "facebookId", "googleId", "linkedInId", "twitterId");
 
     @Override
-    public Version getFromVersion() {
-        return null;
-    }
-
-    @Override
-    public Version getToVersion() {
-        return new Version("1.2.1");
-    }
-
-    @Override
-    public String getDescription() {
-        return "Migrate tags";
-    }
-
-    @Override
-    public void execute(Session session, CloseableHttpClient httpClient, String esAddress, BundleContext bundleContext) throws IOException {
+    public void execute(Session session, CloseableHttpClient httpClient, Map<String, Object> migrationConfig, BundleContext bundleContext) throws IOException {
         this.httpClient = httpClient;
         this.session = session;
-        this.esAddress = esAddress;
+        this.esAddress = (String) migrationConfig.get("esAddress");
         migrateTags();
     }
 

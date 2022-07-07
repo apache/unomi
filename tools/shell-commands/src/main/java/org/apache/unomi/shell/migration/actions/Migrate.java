@@ -16,6 +16,9 @@
  */
 package org.apache.unomi.shell.migration.actions;
 
+import groovy.lang.GroovyClassLoader;
+import groovy.lang.GroovyShell;
+import groovy.util.GroovyScriptEngine;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.karaf.shell.api.action.Action;
 import org.apache.karaf.shell.api.action.Argument;
@@ -23,19 +26,26 @@ import org.apache.karaf.shell.api.action.Command;
 import org.apache.karaf.shell.api.action.lifecycle.Reference;
 import org.apache.karaf.shell.api.action.lifecycle.Service;
 import org.apache.karaf.shell.api.console.Session;
-import org.apache.unomi.shell.migration.Migration;
+import org.apache.unomi.shell.migration.MigrateScript;
 import org.apache.unomi.shell.migration.utils.ConsoleUtils;
 import org.apache.unomi.shell.migration.utils.HttpUtils;
-import org.osgi.framework.BundleContext;
-import org.osgi.framework.InvalidSyntaxException;
-import org.osgi.framework.ServiceReference;
-import org.osgi.framework.Version;
+import org.osgi.framework.*;
+import org.osgi.framework.wiring.BundleWiring;
 
+import java.io.IOException;
+import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
-@Command(scope = "unomi", name = "migrate", description = "This will Migrate your date in ES to be compliant with current version")
+@Command(scope = "unomi", name = "migrate", description = "This will Migrate your data in ES to be compliant with current version")
 @Service
 public class Migrate implements Action {
+    public static final String CONFIG_ES_ADDRESS = "esAddress";
+    public static final String CONFIG_TRUST_ALL_CERTIFICATES = "httpClient.trustAllCertificates";
 
     @Reference
     Session session;
@@ -43,93 +53,146 @@ public class Migrate implements Action {
     @Reference
     BundleContext bundleContext;
 
-    @Argument(name = "fromVersionWithoutSuffix", description = "Origin version without suffix/qualifier (e.g: 1.2.0)", multiValued = false, valueToShowInHelp = "1.2.0")
-    private String fromVersionWithoutSuffix;
+    @Argument(index = 0, name = "originVersion", description = "Origin version without suffix/qualifier (e.g: 1.2.0)", valueToShowInHelp = "1.2.0")
+    private String originVersion;
 
     public Object execute() throws Exception {
-        if (fromVersionWithoutSuffix == null) {
-            listMigrations();
+        // Load migration scrips
+        Set<MigrateScript> scripts = loadOSGIScripts();
+        scripts.addAll(loadFileSystemScripts());
+
+        if (originVersion == null) {
+            displayMigrations(scripts);
+            ConsoleUtils.printMessage(session, "Select your migration starting point by specifying the current version (e.g. 1.2.0) or the last script that was already run (e.g. 1.2.1)");
             return null;
         }
 
-        String confirmation = ConsoleUtils.askUserWithAuthorizedAnswer(session,"[WARNING] You are about to execute a migration, this a very sensitive operation, are you sure? (yes/no): ", Arrays.asList("yes", "no"));
-        if (confirmation.equalsIgnoreCase("no")) {
-            System.out.println("Migration process aborted");
+        // Check that there is some migration scripts available from given version
+        Version fromVersion = new Version(originVersion);
+        scripts = filterScriptsFromVersion(scripts, fromVersion);
+        if (scripts.size() == 0) {
+            ConsoleUtils.printMessage(session, "No migration scripts available found starting from version: " + originVersion);
+            return null;
+        } else {
+            ConsoleUtils.printMessage(session, "The following migration scripts starting from version: " + originVersion + " will be executed.");
+            displayMigrations(scripts);
+        }
+
+        // Check for user approval before migrate
+        if (ConsoleUtils.askUserWithAuthorizedAnswer(session,
+                "[WARNING] You are about to execute a migration, this a very sensitive operation, are you sure? (yes/no): ",
+                Arrays.asList("yes", "no")).equalsIgnoreCase("no")) {
+            ConsoleUtils.printMessage(session, "Migration process aborted");
             return null;
         }
 
-        System.out.println("Starting migration process from version: " + fromVersionWithoutSuffix);
+        // Build conf
+        Map<String, Object> migrationConfig = new HashMap<>();
+        migrationConfig.put(CONFIG_ES_ADDRESS, ConsoleUtils.askUserWithDefaultAnswer(session, "Enter ElasticSearch 7 TARGET address (default = http://localhost:9200): ", "http://localhost:9200"));
+        migrationConfig.put(CONFIG_TRUST_ALL_CERTIFICATES, ConsoleUtils.askUserWithAuthorizedAnswer(session,"We need to initialize a HttpClient, do we need to trust all certificates? (yes/no): ", Arrays.asList("yes", "no")).equalsIgnoreCase("yes"));
 
-        Version fromVersion = new Version(fromVersionWithoutSuffix);
-        Version currentVersion = getCurrentVersionWithoutQualifier();
-        System.out.println("current version: " + currentVersion.toString());
-        if (currentVersion.compareTo(fromVersion) <= 0) {
-            System.out.println("From version is same or superior than current version, nothing to migrate.");
-            return null;
-        }
+        try (CloseableHttpClient httpClient = HttpUtils.initHttpClient((Boolean) migrationConfig.get(CONFIG_TRUST_ALL_CERTIFICATES))) {
 
-        CloseableHttpClient httpClient = null;
-        try {
-            httpClient = HttpUtils.initHttpClient(session);
+            // Compile scripts
+            scripts = parseScripts(scripts, session, httpClient, migrationConfig);
 
-            String esAddress = ConsoleUtils.askUserWithDefaultAnswer(session, "Enter ElasticSearch 7 TARGET address (default = http://localhost:9200): ", "http://localhost:9200");
-
-            for (Migration migration : getMigrations()) {
-                if (fromVersion.compareTo(migration.getToVersion()) < 0) {
-                    String migrateConfirmation = ConsoleUtils.askUserWithAuthorizedAnswer(session,"Starting migration to version " + migration.getToVersion() + ", do you want to proceed? (yes/no): ", Arrays.asList("yes", "no"));
-                    if (migrateConfirmation.equalsIgnoreCase("no")) {
-                        System.out.println("Migration process aborted");
-                        break;
-                    }
-                    migration.execute(session, httpClient, esAddress, bundleContext);
-                    System.out.println("Migration to version " + migration.getToVersion() + " done successfully");
+            // Start migration
+            ConsoleUtils.printMessage(session, "Starting migration process from version: " + originVersion);
+            for (MigrateScript migrateScript : scripts) {
+                ConsoleUtils.printMessage(session, "Starting execution of: " + migrateScript);
+                try {
+                    migrateScript.getCompiledScript().run();
+                } catch (Exception e) {
+                    ConsoleUtils.printException(session, "Error executing: " + migrateScript, e);
+                    return null;
                 }
-            }
-        } finally {
-            if (httpClient != null) {
-                httpClient.close();
+
+                ConsoleUtils.printMessage(session, "Finnish execution of: " + migrateScript);
             }
         }
 
         return null;
     }
 
-    private Version getCurrentVersionWithoutQualifier() {
-        Version currentVersion = bundleContext.getBundle().getVersion();
-        return new Version(currentVersion.getMajor() + "." + currentVersion.getMinor() + "." + currentVersion.getMicro());
-    }
-
-    private void listMigrations() {
+    private void displayMigrations(Set<MigrateScript> scripts) {
         Version previousVersion = new Version("0.0.0");
-        for (Migration migration : getMigrations()) {
-            if (migration.getToVersion().getMajor() > previousVersion.getMajor() || migration.getToVersion().getMinor() > previousVersion.getMinor()) {
-                System.out.println("From " + migration.getToVersion().getMajor() + "." + migration.getToVersion().getMinor() + ".0:");
+        for (MigrateScript migration : scripts) {
+            if (migration.getVersion().getMajor() > previousVersion.getMajor() || migration.getVersion().getMinor() > previousVersion.getMinor()) {
+                ConsoleUtils.printMessage(session, "From " + migration.getVersion().getMajor() + "." + migration.getVersion().getMinor() + ".0:");
             }
-            System.out.println("- " + migration.getToVersion() + " " + migration.getDescription());
-            previousVersion = migration.getToVersion();
+            ConsoleUtils.printMessage(session, "- " + migration);
+            previousVersion = migration.getVersion();
         }
-        System.out.println("Select your migration starting point by specifying the current version (e.g. 1.2.0) or the last script that was already run (e.g. 1.2.1)");
-
     }
 
-    private List<Migration> getMigrations() {
-        Collection<ServiceReference<Migration>> migrationServiceReferences = null;
-        try {
-            migrationServiceReferences = bundleContext.getServiceReferences(Migration.class, null);
-        } catch (InvalidSyntaxException e) {
-            e.printStackTrace();
-        }
-        SortedSet<Migration> migrations = new TreeSet<>(new Comparator<Migration>() {
-            @Override
-            public int compare(Migration o1, Migration o2) {
-                return o1.getToVersion().compareTo(o2.getToVersion());
-            }
-        });
-        for (ServiceReference<Migration> migrationServiceReference : migrationServiceReferences) {
-            Migration migration = bundleContext.getService(migrationServiceReference);
-            migrations.add(migration);
-        }
-        return new ArrayList<>(migrations);
+    private Set<MigrateScript> filterScriptsFromVersion(Set<MigrateScript> scripts, Version fromVersion) {
+        return scripts.stream()
+                .filter(migrateScript -> fromVersion.compareTo(migrateScript.getVersion()) < 0)
+                .collect(Collectors.toCollection(TreeSet::new));
     }
 
+    private Set<MigrateScript> parseScripts(Set<MigrateScript> scripts, Session session, CloseableHttpClient httpClient, Map<String, Object> migrationConfig) {
+        Map<String, GroovyShell> shellsPerBundle = new HashMap<>();
+
+        return scripts.stream()
+                .peek(migrateScript -> {
+                    // fallback on current bundle if the scripts is not provided by OSGI
+                    Bundle scriptBundle = migrateScript.getBundle() != null ? migrateScript.getBundle() : bundleContext.getBundle();
+                    if (!shellsPerBundle.containsKey(scriptBundle.getSymbolicName())) {
+                        shellsPerBundle.put(scriptBundle.getSymbolicName(), buildShellForBundle(scriptBundle, session, httpClient, migrationConfig));
+                    }
+                    migrateScript.setCompiledScript(shellsPerBundle.get(scriptBundle.getSymbolicName()).parse(migrateScript.getScript()));
+                })
+                .collect(Collectors.toCollection(TreeSet::new));
+    }
+
+    private Set<MigrateScript> loadOSGIScripts() throws IOException {
+        SortedSet<MigrateScript> migrationScripts = new TreeSet<>();
+        for (Bundle bundle : bundleContext.getBundles()) {
+            Enumeration<URL> scripts = bundle.findEntries("META-INF/cxs/migration", "*.groovy", true);
+            if (scripts != null) {
+                // check for shell
+
+                while (scripts.hasMoreElements()) {
+                    URL scriptURL = scripts.nextElement();
+                    migrationScripts.add(new MigrateScript(scriptURL, bundle));
+                }
+            }
+        }
+
+        return migrationScripts;
+    }
+
+    private Set<MigrateScript> loadFileSystemScripts() throws IOException {
+        // check migration folder exists
+        Path migrationFolder = Paths.get(System.getProperty( "karaf.data" ), "migration", "scripts");
+        if (!Files.isDirectory(migrationFolder)) {
+            return Collections.emptySet();
+        }
+
+        List<Path> paths;
+        try (Stream<Path> walk = Files.walk(migrationFolder)) {
+            paths = walk
+                    .filter(path -> !Files.isDirectory(path))
+                    .filter(path -> path.toString().toLowerCase().endsWith("groovy"))
+                    .collect(Collectors.toList());
+        }
+
+        SortedSet<MigrateScript> migrationScripts = new TreeSet<>();
+        for (Path path : paths) {
+            migrationScripts.add(new MigrateScript(path.toUri().toURL(), null));
+        }
+        return migrationScripts;
+    }
+
+    private GroovyShell buildShellForBundle(Bundle bundle, Session session, CloseableHttpClient httpClient, Map<String, Object> migrationConfig) {
+        GroovyClassLoader groovyLoader = new GroovyClassLoader(bundle.adapt(BundleWiring.class).getClassLoader());
+        GroovyScriptEngine groovyScriptEngine = new GroovyScriptEngine((URL[]) null, groovyLoader);
+        GroovyShell groovyShell = new GroovyShell(groovyScriptEngine.getGroovyClassLoader());
+        groovyShell.setVariable("session", session);
+        groovyShell.setVariable("httpClient", httpClient);
+        groovyShell.setVariable("migrationConfig", migrationConfig);
+        groovyShell.setVariable("bundleContext", bundle.getBundleContext());
+        return groovyShell;
+    }
 }
