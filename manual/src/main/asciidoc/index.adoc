@@ -38,6 +38,8 @@ include::request-examples.adoc[]
 
 include::configuration.adoc[]
 
+include::jsonSchema/json-schema.adoc[]
+
 include::migrations/migrations.adoc[]
 
 == Queries and aggregations

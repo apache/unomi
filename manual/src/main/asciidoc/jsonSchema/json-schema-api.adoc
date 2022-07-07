@@ -1,0 +1,138 @@
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+=== JSON schema API
+
+The JSON schema endpoints are private, so the user has to be authenticated to manage the JSON schema in UNOMI.
+
+==== List existing schemas
+
+The REST endpoint GET `{{url}}/cxs/jsonSchema` allows to get all ids of available schemas and subschemas.
+
+List of predefined schemas:
+
+[source]
+----
+[
+    "https://unomi.apache.org/schemas/json/events/modifyConsent/properties/1-0-0",
+    "https://unomi.apache.org/schemas/json/item/1-0-0",
+    "https://unomi.apache.org/schemas/json/events/login/1-0-0",
+    "https://unomi.apache.org/schemas/json/events/modifyConsent/1-0-0",
+    "https://unomi.apache.org/schemas/json/consentType/1-0-0",
+    "https://unomi.apache.org/schemas/json/items/page/properties/1-0-0",
+    "https://unomi.apache.org/schemas/json/items/page/properties/attributes/1-0-0",
+    "https://unomi.apache.org/schemas/json/events/incrementInterest/1-0-0",
+    "https://unomi.apache.org/schemas/json/events/view/flattenProperties/1-0-0",
+    "https://unomi.apache.org/schemas/json/interests/1-0-0",
+    "https://unomi.apache.org/schemas/json/items/site/1-0-0",
+    "https://unomi.apache.org/schemas/json/items/page/properties/pageInfo/1-0-0",
+    "https://unomi.apache.org/schemas/json/rest/requestIds/1-0-0",
+    "https://unomi.apache.org/schemas/json/rest/eventscollectorrequest/1-0-0",
+    "https://unomi.apache.org/schemas/json/events/view/properties/1-0-0",
+    "https://unomi.apache.org/schemas/json/items/page/1-0-0",
+    "https://unomi.apache.org/schemas/json/URLParameters/1-0-0",
+    "https://unomi.apache.org/schemas/json/event/1-0-0",
+    "https://unomi.apache.org/schemas/json/timestampeditem/1-0-0",
+    "https://unomi.apache.org/schemas/json/events/updateProperties/1-0-0",
+    "https://unomi.apache.org/schemas/json/consent/1-0-0",
+    "https://unomi.apache.org/schemas/json/events/incrementInterest/flattenProperties/1-0-0",
+    "https://unomi.apache.org/schemas/json/events/view/1-0-0"
+]
+----
+
+Custom schemas will also be present in this list once added.
+
+==== Read a schema
+
+It’s possible to get a schema by its id by calling the endpoint `POST {{url}}/cxs/jsonSchema/query` with the id of the schema in the payload of the query.
+
+Example:
+
+[source]
+----
+curl --location --request POST 'http://localhost:8181/cxs/jsonSchema/query' \
+-u 'karaf:karaf'
+--header 'Content-Type: text/plain' \
+--header 'Cookie: context-profile-id=0f2fbca8-c242-4e6d-a439-d65fcbf0f0a8' \
+--data-raw 'https://unomi.apache.org/schemas/json/event/1-0-0'
+----
+
+==== Create / update a JSON schema to validate an event
+
+It’s possible to add or update JSON schema by calling the endpoint `POST {{url}}/cxs/jsonSchema` with the JSON schema in the payload of the request.
+If the JSON schema exists it will be updated with the new one.
+
+Example of creation:
+
+[source]
+----
+curl --location --request POST 'http://localhost:8181/cxs/jsonSchema' \
+-u 'karaf:karaf' \
+--header 'Content-Type: application/json' \
+--header 'Cookie: context-profile-id=0f2fbca8-c242-4e6d-a439-d65fcbf0f0a8' \
+--data-raw '{
+    "$id": "https://vendor.test.com/schemas/json/events/dummy/1-0-0",
+    "$schema": "https://json-schema.org/draft/2019-09/schema",
+    "self": {
+        "vendor": "com.vendor.test",
+        "name": "dummy",
+        "format": "jsonschema",
+        "target": "events",
+        "version": "1-0-0"
+    },
+    "title": "DummyEvent",
+    "type": "object",
+    "allOf": [
+        {
+            "$ref": "https://unomi.apache.org/schemas/json/event/1-0-0"
+        }
+    ],
+    "properties": {
+        "properties": {
+            "$ref": "https://vendor.test.com/schemas/json/events/dummy/properties/1-0-0"
+        }
+    },
+    "unevaluatedProperties": false
+}'
+----
+
+==== Deleting a schema
+
+To delete a schema, call the endpoint `POST {{url}}/cxs/jsonSchema/delete`  with the id of the schema into the payload of the request
+
+Example:
+
+[source]
+----
+curl --location --request POST 'http://localhost:8181/cxs/jsonSchema/delete' \
+-u 'karaf:karaf' \
+--header 'Content-Type: text/plain' \
+--header 'Cookie: context-profile-id=0f2fbca8-c242-4e6d-a439-d65fcbf0f0a8' \
+--data-raw 'https://vendor.test.com/schemas/json/events/dummy/1-0-0'
+----
+
+==== Error Management
+
+When calling an endpoint with invalid data, such as an invalid value for the *sessionId* property in the contextRequest object or eventCollectorRequest object, the server would respond with a 400 error code and the message *Request rejected by the server because: Invalid received data*.
+
+==== Details on invalid events
+
+If it’s an event which is incorrect the server will continue to process the request but will exclude the invalid events.
+Running Apache Unomi with the Debug flag will add to the logs the reason why events are rejected.
+You can set the log level of the class validating the events to debug by using the following karaf command:
+
+[source]
+----
+log:set DEBUG org.apache.unomi.schema.impl.SchemaServiceImpl
+----
