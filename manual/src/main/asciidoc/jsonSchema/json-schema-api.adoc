@@ -14,7 +14,7 @@
 
 === JSON schema API
 
-The JSON schema endpoints are private, so the user has to be authenticated to manage the JSON schema in UNOMI.
+The JSON schema endpoints are private, so the user has to be authenticated to manage the JSON schema in Unomi.
 
 ==== List existing schemas
 
@@ -129,7 +129,7 @@ When calling an endpoint with invalid data, such as an invalid value for the *se
 ==== Details on invalid events
 
 If it’s an event which is incorrect the server will continue to process the request but will exclude the invalid events.
-Running Apache Unomi with the Debug flag will add to the logs the reason why events are rejected.
+Running Apache Unomi with the logs in debug level will add to the logs the reason why events are rejected.
 You can set the log level of the class validating the events to debug by using the following karaf command:
 
 [source]
