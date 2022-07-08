@@ -1,0 +1,280 @@
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+=== Introduction
+
+==== What is a JSON Schema
+
+https://json-schema.org/specification.html[JSON Schema] is a powerful standard for validating the structure of JSON data.
+Described as a JSON object, a JSON schema file contains format, types, patterns, and more.
+Used against JSON data, a JSON schema validates that the data is compatible with the specified schema.
+
+Example of a basic JSON schema that validates that the path property is a string property:
+
+[source]
+----
+{
+    "$id":"https://unomi.apache.org/schemas/json/example/1-0-0",
+    "$schema":"https://json-schema.org/draft/2019-09/schema",
+    "title":"Example of a basic schema",
+    "type":"object",
+    "properties":{
+        "path":{
+            "type":"string",
+            "$comment":"Example of a property."
+        }
+    }
+}
+----
+
+[source]
+----
+{
+    "path": "example/of/path" //Is valid
+}
+----
+
+[source]
+----
+{
+    "path": 100  // Is not valid
+}
+----
+
+Apache Unomi is using json-schema-validator to integrate JSON schema.
+The library and its source code is available at: https://github.com/networknt/json-schema-validator[https://github.com/networknt/json-schema-validator], you can refer to the feature’s pom.xml available at https://github.com/apache/unomi/blob/master/extensions/json-schema/services/pom.xml#L35[json-schema/service/pom.xml] to identify which version of the library is currently integrated.
+
+You can discover and play with JSON schema using online tools such as https://www.jsonschemavalidator.net/[JSON Schema Validator].
+Such tools allow you to validate a schema against JSON data (such as the example above), and can point to particular errors.
+More details about JSON schema are available on the official specification’s website: https://json-schema.org/specification.html[https://json-schema.org/specification.html]
+
+==== Key concepts
+
+This section details concepts that are important to understand in order to use JSON schema validation with Apache Unomi.
+
+===== $id keyword
+
+The *$id* keyword:
+
+Each schema in Apache Unomi should have a *$id*, the *$id* value is an URI which will be used to retrieve the schema and must be unique.
+
+Example:
+
+[source]
+----
+{
+    "$id":"https://unomi.apache.org/schemas/json/example/1-0-0"
+}
+----
+
+===== $ref keyword
+
+The *$ref* keyword allows you to reference another JSON schema by its *$id* keyword.
+It’s possible to separate complex structures or repetitive parts of schema into other small files and use *$ref* to include them into several json schemas.
+
+Example with a person and an address:
+
+[source]
+----
+{
+    "$id": "https://example.com/schemas/address",
+    "type": "object",
+    "properties": {
+        "street_address": { "type": "string" },
+        "city": { "type": "string" },
+        "state": { "type": "string" }
+    }
+}
+----
+
+[source]
+----
+{
+    "type": "object",
+    "properties": {
+        "first_name":{ "type": "string" },
+        "last_name": { "type": "string" },
+        "shipping_address": {
+            "$ref": "https://example.com/schemas/address"
+        },
+        "billing_address": {
+            "$ref": "https://example.com/schemas/address"
+        }
+    }
+}
+----
+
+More details about *$ref* can be found in the specifications: https://json-schema.org/understanding-json-schema/structuring.html#ref[https://json-schema.org/understanding-json-schema/structuring.html#ref]
+
+===== allOf keyword
+
+The allOf keyword is an array of fields which allows schema composition.
+The data will be valid against a schema if the data are valid against all of the given subschemas in the allOf part and are valid against the properties defined in the schema.
+
+[source]
+----
+{
+    "$id": "https://unomi.apache.org/schemas/json/example/1-0-0",
+    "$schema": "https://json-schema.org/draft/2019-09/schema",
+    "type": "object",
+    "allOf": [
+        {
+            "type": "object",
+            "properties": {
+                "fromAllOf": {
+                    "type": "integer",
+                    "$comment": "Example of allOf."
+                }
+            }
+        }
+    ],
+    "properties": {
+        "myProperty": {
+            "type": "string",
+            "$comment": "Example of a property."
+        }
+    }
+}
+----
+
+Valid JSON:
+
+[source]
+----
+{
+    "myProperty": "My property",
+    "fromAllOf" : 10
+}
+----
+
+Invalid JSON:
+
+[source]
+----
+{
+    "myProperty": "My property",
+    "fromAllOf" : "My value"
+}
+----
+
+It’s also possible to use a reference *$ref* in the *allOf* keyword to reference another schema.
+
+In Unomi, there is an example of using *$ref* in the *allOf* keyword to validate the properties which are defined in the event schema.
+This schema contains properties common to all events.
+It’s done in the the view event schema.
+The file can be found on github: https://github.com/apache/unomi/blob/master/extensions/json-schema/services/src/main/resources/META-INF/cxs/schemas/events/view/view.json#L13[view.json]
+More details about allOf can be found in the specifications: https://json-schema.org/understanding-json-schema/reference/combining.html#allof[https://json-schema.org/understanding-json-schema/reference/combining.html#allof]
+
+===== unevaluatedProperties keyword
+
+The *unevaluatedProperties* keyword is useful for schema composition as well as enforcing stricter schemas.
+This keyword is similar to *additionalProperties* except that it can recognize properties declared in sub schemas.
+When setting the *unevaluatedProperties* value to *false*, the properties which are not present in the properties part and are not present in the sub schemas will be considered as invalid.
+
+Example with the following schema:
+
+[source]
+----
+{
+    "$id": "https://unomi.apache.org/schemas/json/example/1-0-0",
+    "$schema": "https://json-schema.org/draft/2019-09/schema",
+    "type": "object",
+    "allOf": [
+        {
+            "$ref": "https://unomi.apache.org/schemas/json/subschema/1-0-0"
+        }
+    ],
+    "properties": {
+        "myProperty": {
+            "type": "string",
+            "$comment": "Example of a property."
+        }
+    },
+    "unevaluatedProperties": false
+}
+----
+
+Sub schema:
+
+[source]
+----
+{
+    "$id": "https://unomi.apache.org/schemas/json/subschema/1-0-0",
+    "$schema": "https://json-schema.org/draft/2019-09/schema",
+    "type": "object",
+    "properties": {
+        "fromAllOf": {
+            "type": "string",
+            "$comment": "Example of allOf."
+        }
+    }
+}
+----
+
+With the following data, the validation will fail because the property *myNewProperty* is not defined neither the *properties* part nor the *allOf* part.
+
+[source]
+----
+{
+    "myProperty": "My property",
+    "fromAllOf" : 10,
+    "myNewProperty": "another one" //Not valid
+}
+----
+
+==== How are JSON Schema used in Unomi
+
+JSON Schema is used in Unomi to validate the data coming from the two public endpoints */contextRequest* and */eventCollector*.
+Both endpoints have a custom deserializer which will begin by validating the payload of the request, then will filter invalid events present in this payload.
+If an event is not valid it will not be processed by the system.
+The internal events are not validated by JSON schema as they are not sent through the public endpoints.
+
+In Unomi, each event type must have an associated JSON schema.
+To validate an event, Unomi will search for a schema in which the target of the schema is *events*, and with the name of the schema matching the event type.
+
+A custom keyword named *self* has to be present in the JSON schemas to store the information related to each schema.
+The following example is the *self* part of the view event JSON schema.
+Having the target set to *events* and the name set to *view*, this schema will be used to validate the events of type *view*.
+
+[source]
+----
+…
+"self":{
+    "vendor":"org.apache.unomi",
+    "target" : "events",
+    "name": "view",
+    "format":"jsonschema",
+    "version":"1-0-0"
+},
+…
+----
+
+Link to the schema on github: https://github.com/apache/unomi/blob/master/extensions/json-schema/services/src/main/resources/META-INF/cxs/schemas/events/view/view.json[view.json].
+
+A set of predefined schema are present in Unomi, these schemas can be found under the folder : https://github.com/apache/unomi/tree/master/extensions/json-schema/services/src/main/resources/META-INF/cxs/schemas[extensions/json-schema/services/src/main/resources/META-INF/cxs/schemas].
+
+These schemas will be loaded in memory at startup.
+Each schema where the *target* value is set to *events*, will be used to validate events.
+The others are simply used as part of JSON schema or can be used in additional JSON schemas.
+
+It’s possible to add JSON schemas to validate your own event by using the API, the explanations to manage JSON schema through the API are
+in the <<Create / update a JSON schema to validate an event, Create / update a JSON schema to validate an event>> section.
+
+Contrary to the predefined schemas, the schemas added through the API will be persisted in Elasticsearch in the jsonSchema index.
+Schemas persisted in Elasticsearch do not require a restart of the platform to reflect changes.
+
+Process of creation of schemas:
+
+image::process-creation-schema.png[pdfwidth=35%,align=center]
+
