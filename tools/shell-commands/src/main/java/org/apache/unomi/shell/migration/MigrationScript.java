@@ -18,6 +18,7 @@ package org.apache.unomi.shell.migration;
 
 import groovy.lang.Script;
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.osgi.framework.Bundle;
@@ -25,9 +26,20 @@ import org.osgi.framework.Version;
 
 import java.io.IOException;
 import java.net.URL;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
-public class MigrateScript implements Comparable<MigrateScript> {
+/**
+ * Java bean representing a migration script, current implementation support groovy script as migration script
+ * following file name pattern need to be respected:
+ * migrate-VERSION-PRIORITY-NAME.groovy
+ *
+ * example:
+ * migrate-2.0.0-01-segmentReindex.groovy
+ */
+public class MigrationScript implements Comparable<MigrationScript> {
 
+    private static final Pattern SCRIPT_FILENAME_PATTERN = Pattern.compile("^migrate-(\\d.\\d.\\d)-(\\d+)-(\\w+).groovy$");
 
     private final String script;
     private Script compiledScript;
@@ -36,16 +48,21 @@ public class MigrateScript implements Comparable<MigrateScript> {
     private final int priority;
     private final String name;
 
-    public MigrateScript(URL scriptURL, Bundle bundle) throws IOException {
+    public MigrationScript(URL scriptURL, Bundle bundle) throws IOException {
         this.bundle = bundle;
         this.script = IOUtils.toString(scriptURL);
 
-        // parse file name expected format is: migrate-VERSION-PRIORITY-NAME.groovy like: migrate-1.2.1-00-migrateTags.groovy
         String path = scriptURL.getPath();
-        String[] splitName = path.substring(path.lastIndexOf("/"), path.lastIndexOf(".groovy")).split("-");
-        this.version = new Version(splitName[1]);
-        this.priority = Integer.parseInt(splitName[2]);
-        this.name = splitName[3];
+        String fileName = StringUtils.substringAfterLast(path, "/");
+        Matcher m = SCRIPT_FILENAME_PATTERN.matcher(fileName);
+        if (m.find()) {
+            this.version = new Version(m.group(1));
+            this.priority = Integer.parseInt(m.group(2));
+            this.name = m.group(3);
+        } else {
+            throw new IllegalStateException("Migration script file name do not respect the expected format: " + fileName +
+                    ". Expected format is: migrate-VERSION-PRIORITY-NAME.groovy. Example: migrate-2.0.0-01-segmentReindex.groovy");
+        }
     }
 
     public Script getCompiledScript() {
@@ -86,7 +103,7 @@ public class MigrateScript implements Comparable<MigrateScript> {
     }
 
     @Override
-    public int compareTo(MigrateScript other) {
+    public int compareTo(MigrationScript other) {
         int result = version.compareTo(other.getVersion());
         if (result != 0) {
             return result;
@@ -106,7 +123,7 @@ public class MigrateScript implements Comparable<MigrateScript> {
 
         if (o == null || getClass() != o.getClass()) return false;
 
-        MigrateScript that = (MigrateScript) o;
+        MigrationScript that = (MigrationScript) o;
 
         return new EqualsBuilder().append(priority, that.priority).append(version, that.version).append(name, that.name).isEquals();
     }

@@ -26,7 +26,7 @@ import org.apache.karaf.shell.api.action.Command;
 import org.apache.karaf.shell.api.action.lifecycle.Reference;
 import org.apache.karaf.shell.api.action.lifecycle.Service;
 import org.apache.karaf.shell.api.console.Session;
-import org.apache.unomi.shell.migration.MigrateScript;
+import org.apache.unomi.shell.migration.MigrationScript;
 import org.apache.unomi.shell.migration.utils.ConsoleUtils;
 import org.apache.unomi.shell.migration.utils.HttpUtils;
 import org.osgi.framework.*;
@@ -58,7 +58,7 @@ public class Migrate implements Action {
 
     public Object execute() throws Exception {
         // Load migration scrips
-        Set<MigrateScript> scripts = loadOSGIScripts();
+        Set<MigrationScript> scripts = loadOSGIScripts();
         scripts.addAll(loadFileSystemScripts());
 
         if (originVersion == null) {
@@ -98,7 +98,7 @@ public class Migrate implements Action {
 
             // Start migration
             ConsoleUtils.printMessage(session, "Starting migration process from version: " + originVersion);
-            for (MigrateScript migrateScript : scripts) {
+            for (MigrationScript migrateScript : scripts) {
                 ConsoleUtils.printMessage(session, "Starting execution of: " + migrateScript);
                 try {
                     migrateScript.getCompiledScript().run();
@@ -114,9 +114,9 @@ public class Migrate implements Action {
         return null;
     }
 
-    private void displayMigrations(Set<MigrateScript> scripts) {
+    private void displayMigrations(Set<MigrationScript> scripts) {
         Version previousVersion = new Version("0.0.0");
-        for (MigrateScript migration : scripts) {
+        for (MigrationScript migration : scripts) {
             if (migration.getVersion().getMajor() > previousVersion.getMajor() || migration.getVersion().getMinor() > previousVersion.getMinor()) {
                 ConsoleUtils.printMessage(session, "From " + migration.getVersion().getMajor() + "." + migration.getVersion().getMinor() + ".0:");
             }
@@ -125,13 +125,13 @@ public class Migrate implements Action {
         }
     }
 
-    private Set<MigrateScript> filterScriptsFromVersion(Set<MigrateScript> scripts, Version fromVersion) {
+    private Set<MigrationScript> filterScriptsFromVersion(Set<MigrationScript> scripts, Version fromVersion) {
         return scripts.stream()
                 .filter(migrateScript -> fromVersion.compareTo(migrateScript.getVersion()) < 0)
                 .collect(Collectors.toCollection(TreeSet::new));
     }
 
-    private Set<MigrateScript> parseScripts(Set<MigrateScript> scripts, Session session, CloseableHttpClient httpClient, Map<String, Object> migrationConfig) {
+    private Set<MigrationScript> parseScripts(Set<MigrationScript> scripts, Session session, CloseableHttpClient httpClient, Map<String, Object> migrationConfig) {
         Map<String, GroovyShell> shellsPerBundle = new HashMap<>();
 
         return scripts.stream()
@@ -146,8 +146,8 @@ public class Migrate implements Action {
                 .collect(Collectors.toCollection(TreeSet::new));
     }
 
-    private Set<MigrateScript> loadOSGIScripts() throws IOException {
-        SortedSet<MigrateScript> migrationScripts = new TreeSet<>();
+    private Set<MigrationScript> loadOSGIScripts() throws IOException {
+        SortedSet<MigrationScript> migrationScripts = new TreeSet<>();
         for (Bundle bundle : bundleContext.getBundles()) {
             Enumeration<URL> scripts = bundle.findEntries("META-INF/cxs/migration", "*.groovy", true);
             if (scripts != null) {
@@ -155,7 +155,7 @@ public class Migrate implements Action {
 
                 while (scripts.hasMoreElements()) {
                     URL scriptURL = scripts.nextElement();
-                    migrationScripts.add(new MigrateScript(scriptURL, bundle));
+                    migrationScripts.add(new MigrationScript(scriptURL, bundle));
                 }
             }
         }
@@ -163,7 +163,7 @@ public class Migrate implements Action {
         return migrationScripts;
     }
 
-    private Set<MigrateScript> loadFileSystemScripts() throws IOException {
+    private Set<MigrationScript> loadFileSystemScripts() throws IOException {
         // check migration folder exists
         Path migrationFolder = Paths.get(System.getProperty( "karaf.data" ), "migration", "scripts");
         if (!Files.isDirectory(migrationFolder)) {
@@ -178,9 +178,9 @@ public class Migrate implements Action {
                     .collect(Collectors.toList());
         }
 
-        SortedSet<MigrateScript> migrationScripts = new TreeSet<>();
+        SortedSet<MigrationScript> migrationScripts = new TreeSet<>();
         for (Path path : paths) {
-            migrationScripts.add(new MigrateScript(path.toUri().toURL(), null));
+            migrationScripts.add(new MigrationScript(path.toUri().toURL(), null));
         }
         return migrationScripts;
     }

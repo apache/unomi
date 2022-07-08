@@ -25,7 +25,7 @@ import java.util.Map;
 
 /**
  * @author dgaillard
- * @deprecated do groovy script for implementing new migrations
+ * @deprecated use groovy script for implementing new migrations
  */
 public interface Migration {
     /**

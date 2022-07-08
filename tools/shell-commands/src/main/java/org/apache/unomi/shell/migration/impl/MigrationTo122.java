@@ -28,7 +28,6 @@ import org.osgi.service.component.annotations.Component;
 import java.io.IOException;
 import java.util.Map;
 
-@Component
 public class MigrationTo122 implements Migration {
     private CloseableHttpClient httpClient;
     private Session session;
