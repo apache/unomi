@@ -52,10 +52,7 @@ import java.util.Map;
 public class HttpUtils {
     private static final Logger logger = LoggerFactory.getLogger(HttpUtils.class);
 
-    public static CloseableHttpClient initHttpClient(Session session) throws IOException {
-        String confirmation = ConsoleUtils.askUserWithAuthorizedAnswer(session,"We need to initialize a HttpClient, do we need to trust all certificates? (yes/no): ", Arrays.asList("yes", "no"));
-        boolean trustAllCertificates = confirmation.equalsIgnoreCase("yes");
-
+    public static CloseableHttpClient initHttpClient(boolean trustAllCertificates) throws IOException {
         long requestStartTime = System.currentTimeMillis();
 
         HttpClientBuilder httpClientBuilder = HttpClients.custom().useSystemProperties();

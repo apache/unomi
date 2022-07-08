@@ -19,41 +19,23 @@ package org.apache.unomi.shell.migration;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.karaf.shell.api.console.Session;
 import org.osgi.framework.BundleContext;
-import org.osgi.framework.Version;
 
 import java.io.IOException;
+import java.util.Map;
 
 /**
- * This interface must be implemented if you create a new migration class
  * @author dgaillard
+ * @deprecated use groovy script for implementing new migrations
  */
 public interface Migration {
     /**
-     * This method return the minimal version before applying this migration
-     * TODO: not used for now
-     * @return return the version
-     */
-    Version getFromVersion();
-
-    /**
-     * This method return the target version after migration
-     * @return the target version
-     */
-    Version getToVersion();
-
-    /**
-     * This method returns a short description of the changes performed during this migration
-     * @return the migration description
-     */
-    String getDescription();
-
-    /**
      * This method is called to execute the migration
-     * @param session       the shell's session
-     * @param httpClient    CloseableHttpClient
-     * @param esAddress     the fully qualified address at which the ElasticSearch is reachable (ie http://localhost:9200)
-     * @param bundleContext the bundle context object
+     * @param session               the shell's session
+     * @param httpClient            CloseableHttpClient
+     * @param migrationConfig       config used to perform the migration, like esAddress, trustAllCertificates, etc ...
+     * @param bundleContext         the bundle context object
      * @throws IOException if there was an error while executing the migration
+     * @deprecated do groovy script for implementing new migrations
      */
-    void execute(Session session, CloseableHttpClient httpClient, String esAddress, BundleContext bundleContext) throws IOException;
+    void execute(Session session, CloseableHttpClient httpClient, Map<String, Object> migrationConfig, BundleContext bundleContext) throws IOException;
 }

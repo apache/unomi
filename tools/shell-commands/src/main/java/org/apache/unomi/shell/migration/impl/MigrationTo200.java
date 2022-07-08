@@ -16,7 +16,6 @@
  */
 package org.apache.unomi.shell.migration.impl;
 
-import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpStatus;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpEntityEnclosingRequestBase;
@@ -29,25 +28,21 @@ import org.apache.http.util.EntityUtils;
 import org.apache.karaf.shell.api.console.Session;
 import org.apache.unomi.shell.migration.Migration;
 import org.apache.unomi.shell.migration.utils.ConsoleUtils;
+import org.apache.unomi.shell.migration.utils.MigrationUtils;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.osgi.framework.BundleContext;
-import org.osgi.framework.Version;
-import org.osgi.service.component.annotations.Component;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.URI;
-import java.net.URL;
-import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
-@Component
 public class MigrationTo200 implements Migration {
 
     private CloseableHttpClient httpClient;
@@ -56,28 +51,10 @@ public class MigrationTo200 implements Migration {
     private BundleContext bundleContext;
 
     @Override
-    public Version getFromVersion() {
-        return new Version("1.5.0");
-    }
-
-    @Override
-    public Version getToVersion() {
-        return new Version("2.0.0");
-    }
-
-    @Override
-    public String getDescription() {
-        return "Updates mapping for an index \"event\" with prefix \"context\" by default. Adds the \"sourceId\" field and copies value "
-                + "from the \"scope\" field to it."
-                + "Creates the scope entries in the index \"scope\" from the existing scopes of the events. "
-                + "Creates the \"profileAlias\" documents based on \"profile\".";
-    }
-
-    @Override
-    public void execute(Session session, CloseableHttpClient httpClient, String esAddress, BundleContext bundleContext) throws IOException {
+    public void execute(Session session, CloseableHttpClient httpClient, Map<String, Object> migrationConfig, BundleContext bundleContext) throws IOException {
         this.httpClient = httpClient;
         this.session = session;
-        this.esAddress = esAddress;
+        this.esAddress = (String) migrationConfig.get("esAddress");
         this.bundleContext = bundleContext;
 
         doExecute();
@@ -100,7 +77,7 @@ public class MigrationTo200 implements Migration {
         httpPut.addHeader("Accept", "application/json");
         httpPut.addHeader("Content-Type", "application/json");
 
-        String requestBody = resourceAsString("requestBody/updateMapping.json");
+        String requestBody = MigrationUtils.resourceAsString(bundleContext,"requestBody/updateMapping.json");
 
         httpPut.setEntity(new StringEntity(requestBody));
 
@@ -124,7 +101,7 @@ public class MigrationTo200 implements Migration {
         httpPost.addHeader("Accept", "application/json");
         httpPost.addHeader("Content-Type", "application/json");
 
-        String requestBody = resourceAsString("requestBody/copyValueScopeToSourceId.json");
+        String requestBody = MigrationUtils.resourceAsString(bundleContext,"requestBody/copyValueScopeToSourceId.json");
 
         httpPost.setEntity(new StringEntity(requestBody));
 
@@ -181,7 +158,7 @@ public class MigrationTo200 implements Migration {
             httpPost.addHeader("Accept", "application/json");
             httpPost.addHeader("Content-Type", "application/json");
 
-            String request = resourceAsString("requestBody/scopeMapping.json").replace("$numberOfShards", numberOfShards)
+            String request = MigrationUtils.resourceAsString(bundleContext,"requestBody/scopeMapping.json").replace("$numberOfShards", numberOfShards)
                     .replace("$numberOfReplicas", numberOfReplicas).replace("$mappingTotalFieldsLimit", mappingTotalFieldsLimit)
                     .replace("$maxDocValueFieldsSearch", maxDocValueFieldsSearch);
 
@@ -204,7 +181,7 @@ public class MigrationTo200 implements Migration {
 
     private void createScopes(Set<String> scopes, String indexPrefix) throws IOException {
         final StringBuilder body = new StringBuilder();
-        String saveScopeBody = resourceAsString("requestBody/bulkSaveScope.ndjson");
+        String saveScopeBody = MigrationUtils.resourceAsString(bundleContext,"requestBody/bulkSaveScope.ndjson");
         scopes.forEach(scope -> body.append(saveScopeBody.replace("$scope", scope)));
 
         final HttpPost httpPost = new HttpPost(esAddress + "/" + indexPrefix + "-scope/_bulk");
@@ -231,7 +208,7 @@ public class MigrationTo200 implements Migration {
         httpPost.addHeader("Accept", "application/json");
         httpPost.addHeader("Content-Type", "application/json");
 
-        String request = resourceAsString("requestBody/searchScope.json");
+        String request = MigrationUtils.resourceAsString(bundleContext,"requestBody/searchScope.json");
 
         httpPost.setEntity(new StringEntity(request));
 
@@ -287,7 +264,7 @@ public class MigrationTo200 implements Migration {
                         JSONObject profile = hit.getJSONObject("_source");
                         if (profile.has("itemId")) {
                             String itemId = profile.getString("itemId");
-                            String bulkSaveProfileAliases = resourceAsString("requestBody/bulkSaveProfileAliases.ndjson");
+                            String bulkSaveProfileAliases = MigrationUtils.resourceAsString(bundleContext,"requestBody/bulkSaveProfileAliases.ndjson");
                             bulkCreateRequest.append(bulkSaveProfileAliases.
                                     replace("$itemId", itemId).
                                     replace("$migrationTime", migrationTime.toString()));
@@ -369,14 +346,5 @@ public class MigrationTo200 implements Migration {
         bulkRequest.setEntity(new StringEntity(bulkRequestAsString));
 
         return bulkRequest;
-    }
-
-    protected String resourceAsString(final String resource) {
-        final URL url = bundleContext.getBundle().getResource(resource);
-        try (InputStream stream = url.openStream()) {
-            return IOUtils.toString(stream, StandardCharsets.UTF_8);
-        } catch (final Exception e) {
-            throw new RuntimeException(e);
-        }
     }
 }
