@@ -17,6 +17,6 @@ import org.apache.unomi.shell.migration.utils.MigrationUtils
  * limitations under the License.
  */
 
-String newIndexSettings = MigrationUtils.resourceAsString(bundleContext, "requestBody/2.0.0/segment_index.json");
-MigrationUtils.reIndex(httpClient, bundleContext, migrationConfig.get("esAddress"), migrationConfig.get("indexPrefix") + "-segment",
+String newIndexSettings = MigrationUtils.resourceAsString(bundleContext, "requestBody/2.0.0/scoring_index.json");
+MigrationUtils.reIndex(httpClient, bundleContext, migrationConfig.get("esAddress"), migrationConfig.get("indexPrefix") + "-scoring",
         newIndexSettings)

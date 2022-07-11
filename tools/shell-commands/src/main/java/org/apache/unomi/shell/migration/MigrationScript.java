@@ -39,7 +39,7 @@ import java.util.regex.Pattern;
  */
 public class MigrationScript implements Comparable<MigrationScript> {
 
-    private static final Pattern SCRIPT_FILENAME_PATTERN = Pattern.compile("^migrate-(\\d.\\d.\\d)-(\\d+)-(\\w+).groovy$");
+    private static final Pattern SCRIPT_FILENAME_PATTERN = Pattern.compile("^migrate-(\\d.\\d.\\d)-(\\d+)-([\\w|.]+).groovy$");
 
     private final String script;
     private Script compiledScript;

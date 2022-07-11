@@ -19,8 +19,6 @@ package org.apache.unomi.shell.migration.utils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.karaf.shell.api.console.Session;
 import org.jline.reader.LineReader;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.PrintStream;
@@ -30,7 +28,6 @@ import java.util.List;
  * @author dgaillard
  */
 public class ConsoleUtils {
-    private static final Logger logger = LoggerFactory.getLogger(HttpUtils.class);
 
     /**
      * This will ask a question to the user and return the default answer if the user does not answer.
@@ -74,9 +71,8 @@ public class ConsoleUtils {
      * @param session   the shell's session
      * @param msg       String message to prompt
      * @return the user answer
-     * @throws IOException if there was an error retrieving an answer from the user on the console
      */
-    public static String promptMessageToUser(Session session, String msg) throws IOException {
+    public static String promptMessageToUser(Session session, String msg) {
         LineReader reader = (LineReader) session.get(".jline.reader");
         return reader.readLine(msg, null);
     }
