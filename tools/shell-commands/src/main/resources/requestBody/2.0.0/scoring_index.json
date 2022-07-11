@@ -1,0 +1,68 @@
+{
+  "settings": {
+    "index": {
+      "number_of_shards": #numberOfShards,
+      "number_of_replicas": #numberOfReplicas,
+      "mapping.total_fields.limit": #mappingTotalFieldsLimit,
+      "max_docvalue_fields_search": #maxDocValueFieldsSearch
+    },
+    "analysis": {
+      "analyzer": {
+        "folding": {
+          "type": "custom",
+          "tokenizer": "keyword",
+          "filter": [
+            "lowercase",
+            "asciifolding"
+          ]
+        }
+      }
+    }
+  },
+  "mappings": {
+    "dynamic_templates": [
+      {
+        "all": {
+          "match": "*",
+          "match_mapping_type": "string",
+          "mapping": {
+            "type": "text",
+            "analyzer": "folding",
+            "fields": {
+              "keyword": {
+                "type": "keyword",
+                "ignore_above": 256
+              }
+            }
+          }
+        }
+      }
+    ],
+    "properties": {
+      "metadata": {
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "hidden": {
+            "type": "boolean"
+          },
+          "missingPlugins": {
+            "type": "boolean"
+          },
+          "readOnly": {
+            "type": "boolean"
+          }
+        }
+      },
+      "elements": {
+        "properties": {
+          "condition": {
+            "type": "object",
+            "enabled": false
+          }
+        }
+      }
+    }
+  }
+}

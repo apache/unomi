@@ -57,11 +57,10 @@ public class MigrationTo200 implements Migration {
         this.esAddress = (String) migrationConfig.get("esAddress");
         this.bundleContext = bundleContext;
 
-        doExecute();
+        doExecute((String) migrationConfig.get("indexPrefix"));
     }
 
-    private void doExecute() throws IOException {
-        String indexPrefix = ConsoleUtils.askUserWithDefaultAnswer(session, "SOURCE index name (default: context) : ", "context");
+    private void doExecute(String indexPrefix) throws IOException {
         Set<String> indexes = getEventIndexes(indexPrefix);
         for (String index : indexes) {
             updateMapping(index);

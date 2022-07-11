@@ -46,6 +46,7 @@ import java.util.stream.Stream;
 public class Migrate implements Action {
     public static final String CONFIG_ES_ADDRESS = "esAddress";
     public static final String CONFIG_TRUST_ALL_CERTIFICATES = "httpClient.trustAllCertificates";
+    public static final String INDEX_PREFIX = "indexPrefix";
 
     @Reference
     Session session;
@@ -53,7 +54,7 @@ public class Migrate implements Action {
     @Reference
     BundleContext bundleContext;
 
-    @Argument(index = 0, name = "originVersion", description = "Origin version without suffix/qualifier (e.g: 1.2.0)", valueToShowInHelp = "1.2.0")
+    @Argument(name = "originVersion", description = "Origin version without suffix/qualifier (e.g: 1.2.0)", valueToShowInHelp = "1.2.0")
     private String originVersion;
 
     public Object execute() throws Exception {
@@ -90,6 +91,7 @@ public class Migrate implements Action {
         Map<String, Object> migrationConfig = new HashMap<>();
         migrationConfig.put(CONFIG_ES_ADDRESS, ConsoleUtils.askUserWithDefaultAnswer(session, "Enter ElasticSearch 7 TARGET address (default = http://localhost:9200): ", "http://localhost:9200"));
         migrationConfig.put(CONFIG_TRUST_ALL_CERTIFICATES, ConsoleUtils.askUserWithAuthorizedAnswer(session,"We need to initialize a HttpClient, do we need to trust all certificates? (yes/no): ", Arrays.asList("yes", "no")).equalsIgnoreCase("yes"));
+        migrationConfig.put(INDEX_PREFIX, ConsoleUtils.askUserWithDefaultAnswer(session, "SOURCE index name (default: context) : ", "context"));
 
         try (CloseableHttpClient httpClient = HttpUtils.initHttpClient((Boolean) migrationConfig.get(CONFIG_TRUST_ALL_CERTIFICATES))) {
 
