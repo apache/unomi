@@ -64,7 +64,6 @@ public class MigrationUtils {
 
         // Init requests
         JSONObject originalIndexSettings = new JSONObject(HttpUtils.executeGetRequest(httpClient, esAddress + "/" + indexName + "/_settings", null));
-        // TODO UNOMI-606 validate following lines: (normally those properties are automatically added to unomi indices so they should always be present on the existing indices)
         String newIndexRequest = newIndexSettings
                 .replace("#numberOfShards", originalIndexSettings.getJSONObject(indexName).getJSONObject("settings").getJSONObject("index").getString("number_of_shards"))
                 .replace("#numberOfReplicas", originalIndexSettings.getJSONObject(indexName).getJSONObject("settings").getJSONObject("index").getString("number_of_replicas"))

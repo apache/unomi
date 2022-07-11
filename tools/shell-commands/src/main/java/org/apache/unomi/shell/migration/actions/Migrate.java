@@ -109,7 +109,7 @@ public class Migrate implements Action {
                     return null;
                 }
 
-                ConsoleUtils.printMessage(session, "Finnish execution of: " + migrateScript);
+                ConsoleUtils.printMessage(session, "Finish execution of: " + migrateScript);
             }
         }
 
