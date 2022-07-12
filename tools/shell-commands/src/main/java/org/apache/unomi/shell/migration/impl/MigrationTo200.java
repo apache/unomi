@@ -243,7 +243,8 @@ public class MigrationTo200 implements Migration {
 
             while (true) {
                 JSONObject responseAsJson = getResponseAsJSON(response);
-                String scrollId = responseAsJson.getString("_scroll_id");
+
+                String scrollId = responseAsJson.has("_scroll_id") ? responseAsJson.getString("_scroll_id"): null;
                 JSONArray hits = getProfileHits(responseAsJson);
 
                 if (hits.length() == 0) {

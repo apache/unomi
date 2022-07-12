@@ -17,14 +17,16 @@
 package org.apache.unomi.shell.migration.utils;
 
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.json.JSONObject;
 import org.osgi.framework.BundleContext;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
+import java.io.BufferedReader;
+import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 
@@ -32,7 +34,6 @@ import java.nio.charset.StandardCharsets;
  * @author dgaillard
  */
 public class MigrationUtils {
-    private static final Logger logger = LoggerFactory.getLogger(MigrationUtils.class);
 
     public static JSONObject queryWithScroll(CloseableHttpClient httpClient, String url) throws IOException {
         url += "?scroll=1m";
@@ -59,7 +60,26 @@ public class MigrationUtils {
         }
     }
 
-    public static void reIndex(CloseableHttpClient httpClient, BundleContext bundleContext, String esAddress, String indexName, String newIndexSettings) throws IOException {
+    public static String getFileWithoutComments(BundleContext bundleContext, final String resource) {
+        final URL url = bundleContext.getBundle().getResource(resource);
+        try (InputStream stream = url.openStream()) {
+            DataInputStream in = new DataInputStream(stream);
+            BufferedReader br = new BufferedReader(new InputStreamReader(in));
+            String line;
+            StringBuilder value = new StringBuilder();
+            while ((line = br.readLine()) != null) {
+                if (!line.startsWith("/*") && !line.startsWith(" *") && !line.startsWith("*/"))
+                    value.append(line);
+            }
+            in.close();
+            return value.toString();
+        } catch (final Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static void reIndex(CloseableHttpClient httpClient, BundleContext bundleContext, String esAddress, String indexName,
+            String newIndexSettings, String painlessScript) throws IOException {
         String indexNameCloned = indexName + "-cloned";
 
         // Init requests
@@ -70,8 +90,9 @@ public class MigrationUtils {
                 .replace("#maxDocValueFieldsSearch", originalIndexSettings.getJSONObject(indexName).getJSONObject("settings").getJSONObject("index").getString("max_docvalue_fields_search"))
                 .replace("#mappingTotalFieldsLimit", originalIndexSettings.getJSONObject(indexName).getJSONObject("settings").getJSONObject("index").getJSONObject("mapping").getJSONObject("total_fields").getString("limit"));
         String reIndexRequest = resourceAsString(bundleContext, "requestBody/2.0.0/base_reindex_request.json")
-                .replace("#source", indexNameCloned)
-                .replace("#dest", indexName);
+                .replace("#source", indexNameCloned).replace("#dest", indexName)
+                .replace("#painless", StringUtils.isNotEmpty(painlessScript) ? getScriptPart(painlessScript) : "");
+
         String setIndexReadOnlyRequest = resourceAsString(bundleContext, "requestBody/2.0.0/base_set_index_readonly_request.json");
 
         // Set original index as readOnly
@@ -86,5 +107,9 @@ public class MigrationUtils {
         HttpUtils.executePostRequest(httpClient, esAddress + "/_reindex", reIndexRequest, null);
         // Remove clone
         HttpUtils.executeDeleteRequest(httpClient, esAddress + "/" + indexNameCloned, null);
+    }
+
+    private static String getScriptPart(String painlessScript) {
+        return ", \"script\": {\"source\": \"" + painlessScript + "\", \"lang\": \"painless\"}";
     }
 }
