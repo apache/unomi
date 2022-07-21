@@ -41,15 +41,11 @@ if ('view' == ctx._source.eventType){
 }
 
 /* Handle form events */
-if ('form' == ctx._source.eventType){
+if ('form' == ctx._source.eventType && ctx._source.properties != null){
 
-    /* Check for form fields */
-    if (ctx._source.properties != null){
-
-        if (ctx._source.flattenedProperties == null) {
-            ctx._source.put('flattenedProperties', new HashMap());
-        }
-        ctx._source.flattenedProperties.put('fields', ctx._source.properties);
-        ctx._source.put('properties', new HashMap());
+    if (ctx._source.flattenedProperties == null) {
+        ctx._source.put('flattenedProperties', new HashMap());
     }
+    ctx._source.flattenedProperties.put('fields', ctx._source.properties);
+    ctx._source.put('properties', new HashMap());
 }
