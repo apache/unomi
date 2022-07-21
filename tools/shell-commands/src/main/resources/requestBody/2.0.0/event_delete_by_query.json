@@ -1,0 +1,15 @@
+{
+  "query": {
+    "bool": {
+      "should": [
+        {"term": {"eventType.keyword": "profileUpdated"}},
+        {"term": {"eventType.keyword": "profileDeleted"}},
+        {"term": {"eventType.keyword": "anonymizeProfile"}},
+        {"term": {"eventType.keyword": "sessionCreated"}},
+        {"term": {"eventType.keyword": "sessionReassigned"}},
+        {"term": {"eventType.keyword": "updateProperties"}},
+        {"term": {"eventType.keyword": "goal"}}
+      ]
+    }
+  }
+}

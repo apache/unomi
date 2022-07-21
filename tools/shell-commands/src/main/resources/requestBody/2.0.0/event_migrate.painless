@@ -1,0 +1,55 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+/* Handle view events */
+if ('view' == ctx._source.eventType){
+
+    /* Check for interests */
+    if (ctx._source.target != null && ctx._source.target.properties != null && ctx._source.target.properties.interests != null){
+
+        if (ctx._source.flattenedProperties == null) {
+            ctx._source.put('flattenedProperties', new HashMap());
+        }
+        ctx._source.flattenedProperties.put('interests', ctx._source.target.properties.interests);
+        ctx._source.target.properties.remove('interests');
+    }
+
+    /* Check for URL parameters */
+    if (ctx._source.target != null && ctx._source.target.properties != null && ctx._source.target.properties.pageInfo != null &&
+        ctx._source.target.properties.pageInfo.parameters != null){
+
+        if (ctx._source.flattenedProperties == null) {
+            ctx._source.put('flattenedProperties', new HashMap());
+        }
+        ctx._source.flattenedProperties.put('URLParameters', ctx._source.target.properties.pageInfo.parameters);
+        ctx._source.target.properties.pageInfo.remove('parameters');
+    }
+}
+
+/* Handle form events */
+if ('form' == ctx._source.eventType){
+
+    /* Check for form fields */
+    if (ctx._source.properties != null){
+
+        if (ctx._source.flattenedProperties == null) {
+            ctx._source.put('flattenedProperties', new HashMap());
+        }
+        ctx._source.flattenedProperties.put('fields', ctx._source.properties);
+        ctx._source.put('properties', new HashMap());
+    }
+}

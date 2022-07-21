@@ -18,7 +18,11 @@ package org.apache.unomi.shell.migration.utils;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.http.HttpStatus;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.util.EntityUtils;
 import org.json.JSONObject;
 import org.osgi.framework.BundleContext;
 
@@ -29,6 +33,9 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.Collections;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * @author dgaillard
@@ -76,6 +83,18 @@ public class MigrationUtils {
         } catch (final Exception e) {
             throw new RuntimeException(e);
         }
+    }
+
+    public static Set<String> getIndexesPrefixedBy(CloseableHttpClient httpClient, String esAddress, String prefix) throws IOException {
+        try (CloseableHttpResponse response = httpClient.execute(new HttpGet(esAddress + "/_aliases"))) {
+            if (response.getStatusLine().getStatusCode() == HttpStatus.SC_OK) {
+                JSONObject indexesAsJson = new JSONObject(EntityUtils.toString(response.getEntity()));
+                return indexesAsJson.keySet().stream().
+                        filter(alias -> alias.startsWith(prefix)).
+                        collect(Collectors.toSet());
+            }
+        }
+        return Collections.emptySet();
     }
 
     public static void reIndex(CloseableHttpClient httpClient, BundleContext bundleContext, String esAddress, String indexName,

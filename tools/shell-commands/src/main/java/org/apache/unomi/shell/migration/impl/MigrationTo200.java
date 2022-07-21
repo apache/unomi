@@ -61,72 +61,10 @@ public class MigrationTo200 implements Migration {
     }
 
     private void doExecute(String indexPrefix) throws IOException {
-        Set<String> indexes = getEventIndexes(indexPrefix);
-        for (String index : indexes) {
-            updateMapping(index);
-        }
+        Set<String> indexes = MigrationUtils.getIndexesPrefixedBy(httpClient, esAddress, indexPrefix + "-event-");
         createScopeMapping(indexPrefix);
         createScopes(getSetOfScopes(indexes), indexPrefix);
         createProfileAliasDocumentsFromProfile();
-    }
-
-    private void updateMapping(final String indexName) throws IOException {
-        HttpPut httpPut = new HttpPut(esAddress + "/" + indexName + "/_mapping");
-
-        httpPut.addHeader("Accept", "application/json");
-        httpPut.addHeader("Content-Type", "application/json");
-
-        String requestBody = MigrationUtils.resourceAsString(bundleContext,"requestBody/updateMapping.json");
-
-        httpPut.setEntity(new StringEntity(requestBody));
-
-        try (CloseableHttpResponse response = httpClient.execute(httpPut)) {
-            JSONObject responseAsJson = new JSONObject(EntityUtils.toString(response.getEntity()));
-
-            if (response.getStatusLine().getStatusCode() == HttpStatus.SC_OK && responseAsJson.has("acknowledged") && responseAsJson
-                    .getBoolean("acknowledged")) {
-                System.out.println("Mapping for index = \"" + indexName + "\" successfully updated.");
-
-                copyValueScopeToSourceId(indexName, httpClient);
-            } else {
-                System.out.println("Update the mapping for index = \"" + indexName + "\" failed.");
-            }
-        }
-    }
-
-    private void copyValueScopeToSourceId(final String indexName, final CloseableHttpClient httpClient) throws IOException {
-        final HttpPost httpPost = new HttpPost(esAddress + "/" + indexName + "/_update_by_query");
-
-        httpPost.addHeader("Accept", "application/json");
-        httpPost.addHeader("Content-Type", "application/json");
-
-        String requestBody = MigrationUtils.resourceAsString(bundleContext,"requestBody/copyValueScopeToSourceId.json");
-
-        httpPost.setEntity(new StringEntity(requestBody));
-
-        try (CloseableHttpResponse response = httpClient.execute(httpPost)) {
-            JSONObject responseAsJson = new JSONObject(EntityUtils.toString(response.getEntity()));
-
-            if (response.getStatusLine().getStatusCode() == HttpStatus.SC_OK) {
-                System.out.println("Copying the \"scope\" field to the \"sourceId\" field for index = \"" + indexName
-                        + "\" successfully completed. Total: " + responseAsJson.get("total") + ", updated: " + responseAsJson.get("updated")
-                        + ".");
-            } else {
-                System.out.println("Copying the \"scope\" field to the \"sourceId\" field for index = \"" + indexName + "\" failed.");
-            }
-        }
-    }
-
-    private Set<String> getEventIndexes(String indexPrefix) throws IOException {
-        try (CloseableHttpResponse response = httpClient.execute(new HttpGet(esAddress + "/_aliases"))) {
-            if (response.getStatusLine().getStatusCode() == HttpStatus.SC_OK) {
-                JSONObject indexesAsJson = new JSONObject(EntityUtils.toString(response.getEntity()));
-                return indexesAsJson.keySet().stream().
-                        filter(alias -> alias.startsWith(indexPrefix + "-event")).
-                        collect(Collectors.toSet());
-            }
-        }
-        return Collections.emptySet();
     }
 
     private boolean scopeIndexNotExists(String indexPrefix) throws IOException {
