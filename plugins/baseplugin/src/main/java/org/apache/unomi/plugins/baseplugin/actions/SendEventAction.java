@@ -43,7 +43,7 @@ public class SendEventAction implements ActionExecutor {
         Map<String, Object> eventProperties = (Map<String, Object>) action.getParameterValues().get("eventProperties");
         Item target = (Item) action.getParameterValues().get("eventTarget");
 
-        Event subEvent = new Event(eventType, event.getSession(), event.getProfile(), event.getSourceId(), event, target, event.getTimeStamp());
+        Event subEvent = new Event(eventType, event.getSession(), event.getProfile(), event.getScope(), event, target, event.getTimeStamp());
         subEvent.setProfileId(event.getProfileId());
         subEvent.getAttributes().putAll(event.getAttributes());
         subEvent.getProperties().putAll(eventProperties);

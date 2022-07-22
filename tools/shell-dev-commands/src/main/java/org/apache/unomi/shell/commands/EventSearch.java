@@ -90,7 +90,7 @@ public class EventSearch extends ListCommandSupport  {
             rowData.add(event.getSessionId());
             rowData.add(event.getProfileId());
             rowData.add(event.getTimeStamp().toString());
-            rowData.add(event.getSourceId());
+            rowData.add(event.getScope());
             rowData.add(Boolean.toString(event.isPersistent()));
             dataTable.addRow(rowData.toArray(new Comparable[rowData.size()]));
         }

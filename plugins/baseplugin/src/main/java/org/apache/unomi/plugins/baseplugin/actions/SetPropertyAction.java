@@ -62,7 +62,7 @@ public class SetPropertyAction implements ActionExecutor {
                 Map<String, Object> propertyToUpdate = new HashMap<>();
                 propertyToUpdate.put(propertyName, propertyValue);
 
-                Event updateProperties = new Event("updateProperties", event.getSession(), event.getProfile(), event.getSourceId(), null, null, new Date());
+                Event updateProperties = new Event("updateProperties", event.getSession(), event.getProfile(), event.getScope(), null, null, new Date());
                 updateProperties.setPersistent(false);
 
                 updateProperties.setProperty(UpdatePropertiesAction.PROPS_TO_UPDATE, propertyToUpdate);

@@ -17,7 +17,7 @@
 package org.apache.unomi.itests.graphql;
 
 import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.unomi.api.services.SourceService;
+import org.apache.unomi.api.services.ScopeService;
 import org.junit.Test;
 import org.ops4j.pax.exam.util.Filter;
 
@@ -30,7 +30,7 @@ public class GraphQLSourceIT extends BaseGraphQLIT {
 
     @Inject
     @Filter(timeout = 600000)
-    SourceService sourceService;
+    ScopeService scopeService;
 
     @Test
     public void testCRUD() throws IOException, InterruptedException {

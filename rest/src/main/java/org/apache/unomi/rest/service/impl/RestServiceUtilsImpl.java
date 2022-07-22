@@ -92,7 +92,7 @@ public class RestServiceUtilsImpl implements RestServiceUtils {
             for (Event event : events) {
                 processedEventsCnt++;
                 if (event.getEventType() != null) {
-                    Event eventToSend = new Event(event.getEventType(), session, profile, event.getSourceId(), event.getSource(),
+                    Event eventToSend = new Event(event.getEventType(), session, profile, event.getScope(), event.getSource(),
                             event.getTarget(), event.getProperties(), timestamp, event.isPersistent());
                     eventToSend.setFlattenedProperties(event.getFlattenedProperties());
                     if (!eventService.isEventAllowed(event, thirdPartyId)) {
@@ -100,7 +100,7 @@ public class RestServiceUtilsImpl implements RestServiceUtils {
                         continue;
                     }
                     if (thirdPartyId != null && event.getItemId() != null) {
-                        eventToSend = new Event(event.getItemId(), event.getEventType(), session, profile, event.getSourceId(),
+                        eventToSend = new Event(event.getItemId(), event.getEventType(), session, profile, event.getScope(),
                                 event.getSource(), event.getTarget(), event.getProperties(), timestamp, event.isPersistent());
                         eventToSend.setFlattenedProperties(event.getFlattenedProperties());
                     }

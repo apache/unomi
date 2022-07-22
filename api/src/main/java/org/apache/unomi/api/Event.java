@@ -64,11 +64,6 @@ public class Event extends Item implements TimestampedItem {
     private transient Session session;
     private transient List<ActionPostExecutor> actionPostExecutors;
 
-    @Deprecated
-    private String scope;
-
-    private String sourceId;
-
     private Item source;
     private Item target;
 
@@ -396,19 +391,6 @@ public class Event extends Item implements TimestampedItem {
     }
 
     /**
-     * @return the scope
-     */
-    @Deprecated
-    public String getScope() {
-        return scope;
-    }
-
-    @Deprecated
-    public void setScope(String scope) {
-        this.scope = scope;
-    }
-
-    /**
      * Retrieves the source.
      *
      * @return the source
@@ -463,16 +445,4 @@ public class Event extends Item implements TimestampedItem {
         this.actionPostExecutors = actionPostExecutors;
     }
 
-    public String getSourceId() {
-        if ( sourceId == null && scope != null ) {
-            return scope;
-        } else {
-            return sourceId;
-        }
-    }
-
-    public void setSourceId( final String sourceId )
-    {
-        this.sourceId = sourceId;
-    }
 }

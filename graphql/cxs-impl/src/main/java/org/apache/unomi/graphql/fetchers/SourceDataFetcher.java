@@ -18,8 +18,8 @@ package org.apache.unomi.graphql.fetchers;
 
 import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
-import org.apache.unomi.api.SourceItem;
-import org.apache.unomi.api.services.SourceService;
+import org.apache.unomi.api.Scope;
+import org.apache.unomi.api.services.ScopeService;
 import org.apache.unomi.graphql.services.ServiceManager;
 import org.apache.unomi.graphql.types.output.CDPSource;
 
@@ -32,12 +32,12 @@ public class SourceDataFetcher implements DataFetcher<List<CDPSource>> {
     public List<CDPSource> get(final DataFetchingEnvironment environment) throws Exception {
         ServiceManager serviceManager = environment.getContext();
 
-        SourceService sourceService = serviceManager.getService(SourceService.class);
+        ScopeService scopeService = serviceManager.getService(ScopeService.class);
 
-        List<SourceItem> sources = sourceService.getAll();
+        List<Scope> sources = scopeService.getScopes();
 
         return sources.stream().
-                map(sourceItem -> new CDPSource(sourceItem.getSourceId(), sourceItem.getThirdParty())).
+                map(scope -> new CDPSource(scope.getItemId(), false)).
                 collect(Collectors.toList());
     }
 
