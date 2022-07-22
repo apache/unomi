@@ -16,7 +16,7 @@
  */
 package org.apache.unomi.graphql.commands;
 
-import org.apache.unomi.api.services.SourceService;
+import org.apache.unomi.api.services.ScopeService;
 
 import java.util.Objects;
 
@@ -32,7 +32,7 @@ public class DeleteSourceCommand extends BaseCommand<Boolean> {
 
     @Override
     public Boolean execute() {
-        return serviceManager.getService(SourceService.class).delete(sourceId);
+        return serviceManager.getService(ScopeService.class).delete(sourceId);
     }
 
     public static Builder create(final String sourceId) {

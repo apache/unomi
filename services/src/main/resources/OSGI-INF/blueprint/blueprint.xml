@@ -42,7 +42,6 @@
             <cm:property name="segment.daily.dateexpr.evaluation.hourutc" value="5"/>
             <cm:property name="rules.refresh.interval" value="1000"/>
             <cm:property name="rules.statistics.refresh.interval" value="10000"/>
-            <cm:property name="events.shouldBeCheckedEventSourceId" value="false"/>
             <cm:property name="rules.optimizationActivated" value="true"/>
             <cm:property name="schedules.thread.poolSize" value="5"/>
             <cm:property name="scopes.refresh.interval" value="1000"/>
@@ -105,7 +104,6 @@
     <bean id="eventServiceImpl" class="org.apache.unomi.services.impl.events.EventServiceImpl">
         <property name="persistenceService" ref="persistenceService"/>
         <property name="definitionsService" ref="definitionsServiceImpl"/>
-        <property name="sourceService" ref="sourceServiceImpl"/>
         <property name="bundleContext" ref="blueprintBundleContext"/>
         <property name="predefinedEventTypeIds">
             <set>
@@ -128,7 +126,6 @@
         <property name="thirdPartyConfiguration">
             <cm:cm-properties persistent-id="org.apache.unomi.thirdparty" update="true"/>
         </property>
-        <property name="shouldBeCheckedEventSourceId" value="${services.events.shouldBeCheckedEventSourceId}"/>
     </bean>
     <service id="eventService" ref="eventServiceImpl" interface="org.apache.unomi.api.services.EventService"/>
 
@@ -299,18 +296,6 @@
     <service id="topicService" ref="topicServiceImpl">
         <interfaces>
             <value>org.apache.unomi.api.services.TopicService</value>
-            <value>org.osgi.framework.SynchronousBundleListener</value>
-        </interfaces>
-    </service>
-
-    <bean id="sourceServiceImpl" class="org.apache.unomi.services.impl.source.SourceServiceImpl"
-          init-method="postConstruct" destroy-method="preDestroy">
-        <property name="persistenceService" ref="persistenceService"/>
-        <property name="bundleContext" ref="blueprintBundleContext"/>
-    </bean>
-    <service id="sourceService" ref="sourceServiceImpl">
-        <interfaces>
-            <value>org.apache.unomi.api.services.SourceService</value>
             <value>org.osgi.framework.SynchronousBundleListener</value>
         </interfaces>
     </service>

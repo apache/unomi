@@ -92,7 +92,6 @@ public class CustomObjectMapper extends ObjectMapper {
         builtinItemTypeClasses.put(ConditionType.ITEM_TYPE, ConditionType.class);
         builtinItemTypeClasses.put(ActionType.ITEM_TYPE, ActionType.class);
         builtinItemTypeClasses.put(Topic.ITEM_TYPE, Topic.class);
-        builtinItemTypeClasses.put(SourceItem.ITEM_TYPE, SourceItem.class);
         builtinItemTypeClasses.put(ProfileAlias.ITEM_TYPE, ProfileAlias.class);
         for (Map.Entry<String, Class<? extends Item>> entry : builtinItemTypeClasses.entrySet()) {
             propertyTypedObjectDeserializer.registerMapping("itemType=" + entry.getKey(), entry.getValue());

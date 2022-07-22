@@ -125,7 +125,7 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
 
             if (currentSession != null) {
                 currentSession.setProfile(profile);
-                eventService.send(new Event("sessionReassigned", currentSession, profile, event.getSourceId(), event, currentSession,
+                eventService.send(new Event("sessionReassigned", currentSession, profile, event.getScope(), event, currentSession,
                         null, event.getTimeStamp(), false));
             }
 
@@ -175,7 +175,7 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
                 if (currentSession != null) {
                     currentSession.setProfile(masterProfile);
                     if (privacyService.isRequireAnonymousBrowsing(profile)) {
-                        privacyService.setRequireAnonymousBrowsing(masterProfileId, true, event.getSourceId());
+                        privacyService.setRequireAnonymousBrowsing(masterProfileId, true, event.getScope());
                     }
 
                     if (anonymousBrowsing) {
