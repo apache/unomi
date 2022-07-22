@@ -391,17 +391,6 @@ public class Event extends Item implements TimestampedItem {
     }
 
     /**
-     * @return the scope
-     */
-    public String getScope() {
-        return scope;
-    }
-
-    public void setScope(String scope) {
-        this.scope = scope;
-    }
-
-    /**
      * Retrieves the source.
      *
      * @return the source
