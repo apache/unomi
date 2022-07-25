@@ -49,7 +49,7 @@ public class ProfileServiceWithoutOverwriteIT extends BaseIT {
     private final static String TEST_PROFILE_ID = "test-profile-id";
 
     @Configuration
-    public Option[] config() throws InterruptedException {
+    public Option[] config() {
         List<Option> options = new ArrayList<>();
         options.addAll(Arrays.asList(super.config()));
         options.add(systemProperty("org.apache.unomi.elasticsearch.throwExceptions").value("true"));

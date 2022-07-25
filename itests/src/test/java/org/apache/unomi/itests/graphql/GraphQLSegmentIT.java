@@ -48,7 +48,7 @@ public class GraphQLSegmentIT extends BaseGraphQLIT {
     }
 
     @Test
-    public void testCreateThenGetAndDeleteSegment() throws IOException, InterruptedException {
+    public void testCreateThenGetAndDeleteSegment() throws Exception {
         try (CloseableHttpResponse response = post("graphql/segment/create-or-update-segment.json")) {
             final ResponseContext context = ResponseContext.parse(response.getEntity());
 

@@ -179,7 +179,7 @@ public class ContextServletIT extends BaseIT {
     }
 
     @Test
-    public void testUpdateEventFromContextAuthorizedThirdParty_Success() throws IOException, InterruptedException {
+    public void testUpdateEventFromContextAuthorizedThirdParty_Success() throws Exception {
         //Arrange
         String eventId = "test-event-id-" + System.currentTimeMillis();
         String sessionId = "test-session-id";
@@ -205,7 +205,7 @@ public class ContextServletIT extends BaseIT {
         ContextRequest contextRequest = new ContextRequest();
         contextRequest.setSessionId(session.getItemId());
         contextRequest.setEvents(Arrays.asList(event));
-        HttpPost request = new HttpPost(URL + CONTEXT_URL);
+        HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
         request.addHeader(THIRD_PARTY_HEADER_NAME, UNOMI_KEY);
         request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
         TestUtils.executeContextJSONRequest(request, sessionId);
@@ -217,7 +217,7 @@ public class ContextServletIT extends BaseIT {
     }
 
     @Test
-    public void testUpdateEventFromContextUnAuthorizedThirdParty_Fail() throws IOException, InterruptedException {
+    public void testUpdateEventFromContextUnAuthorizedThirdParty_Fail() throws Exception {
         //Arrange
         String eventId = "test-event-id-" + System.currentTimeMillis();
         String sessionId = "test-session-id";
@@ -244,7 +244,7 @@ public class ContextServletIT extends BaseIT {
         ContextRequest contextRequest = new ContextRequest();
         contextRequest.setSessionId(session.getItemId());
         contextRequest.setEvents(Arrays.asList(event));
-        HttpPost request = new HttpPost(URL + CONTEXT_URL);
+        HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
         request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
         TestUtils.executeContextJSONRequest(request, sessionId);
 
@@ -255,7 +255,7 @@ public class ContextServletIT extends BaseIT {
     }
 
     @Test
-    public void testUpdateEventFromContextAuthorizedThirdPartyNoItemID_Fail() throws IOException, InterruptedException {
+    public void testUpdateEventFromContextAuthorizedThirdPartyNoItemID_Fail() throws Exception {
         //Arrange
         String eventId = "test-event-id-" + System.currentTimeMillis();
         String sessionId = "test-session-id";
@@ -276,7 +276,7 @@ public class ContextServletIT extends BaseIT {
         ContextRequest contextRequest = new ContextRequest();
         contextRequest.setSessionId(session.getItemId());
         contextRequest.setEvents(Arrays.asList(event));
-        HttpPost request = new HttpPost(URL + CONTEXT_URL);
+        HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
         request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
         TestUtils.executeContextJSONRequest(request, sessionId);
 
@@ -288,7 +288,7 @@ public class ContextServletIT extends BaseIT {
     }
 
     @Test
-    public void testCreateEventsWithNoTimestampParam_profileAddedToSegment() throws IOException, InterruptedException {
+    public void testCreateEventsWithNoTimestampParam_profileAddedToSegment() throws Exception {
         //Arrange
         String sessionId = "test-session-id";
         String scope = TEST_SCOPE;
@@ -301,7 +301,7 @@ public class ContextServletIT extends BaseIT {
         contextRequest.setSessionId(sessionId);
         contextRequest.setRequireSegments(true);
         contextRequest.setEvents(Arrays.asList(event));
-        HttpPost request = new HttpPost(URL + CONTEXT_URL);
+        HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
         request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
         String cookieHeaderValue = TestUtils.executeContextJSONRequest(request, sessionId).getCookieHeaderValue();
 
@@ -320,14 +320,14 @@ public class ContextServletIT extends BaseIT {
     }
 
     @Test
-    public void testCreateEventWithTimestampParam_pastEvent_profileIsNotAddedToSegment() throws IOException, InterruptedException {
+    public void testCreateEventWithTimestampParam_pastEvent_profileIsNotAddedToSegment() throws Exception {
         //Arrange
         String sessionId = "test-session-id";
         String scope = TEST_SCOPE;
         Event event = new Event();
         event.setEventType(TEST_EVENT_TYPE);
         event.setScope(scope);
-        String regularURI = URL + CONTEXT_URL;
+        String regularURI = getFullUrl(CONTEXT_URL);
         long oldTimestamp = LocalDateTime.now(ZoneId.of("UTC")).minusDays(SEGMENT_NUMBER_OF_DAYS + 1).toInstant(ZoneOffset.UTC)
                 .toEpochMilli();
         String customTimestampURI = regularURI + "?timestamp=" + oldTimestamp;
@@ -353,14 +353,14 @@ public class ContextServletIT extends BaseIT {
     }
 
     @Test
-    public void testCreateEventWithTimestampParam_futureEvent_profileIsNotAddedToSegment() throws IOException, InterruptedException {
+    public void testCreateEventWithTimestampParam_futureEvent_profileIsNotAddedToSegment() throws Exception {
         //Arrange
         String sessionId = "test-session-id";
         String scope = TEST_SCOPE;
         Event event = new Event();
         event.setEventType(TEST_EVENT_TYPE);
         event.setScope(scope);
-        String regularURI = URL + CONTEXT_URL;
+        String regularURI = getFullUrl(CONTEXT_URL);
         long futureTimestamp = LocalDateTime.now(ZoneId.of("UTC")).plusDays(1).toInstant(ZoneOffset.UTC).toEpochMilli();
         String customTimestampURI = regularURI + "?timestamp=" + futureTimestamp;
 
@@ -386,7 +386,7 @@ public class ContextServletIT extends BaseIT {
     }
 
     @Test
-    public void testCreateEventWithProfileId_Success() throws IOException, InterruptedException {
+    public void testCreateEventWithProfileId_Success() throws Exception {
         //Arrange
         String eventId = "test-event-id-" + System.currentTimeMillis();
         String eventType = "test-event-type";
@@ -399,7 +399,7 @@ public class ContextServletIT extends BaseIT {
         contextRequest.setEvents(Arrays.asList(event));
 
         //Act
-        HttpPost request = new HttpPost(URL + CONTEXT_URL);
+        HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
         request.addHeader(THIRD_PARTY_HEADER_NAME, UNOMI_KEY);
         request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
         TestUtils.executeContextJSONRequest(request);
@@ -409,7 +409,7 @@ public class ContextServletIT extends BaseIT {
     }
 
     @Test
-    public void testCreateEventWithPropertiesValidation_Success() throws IOException, InterruptedException {
+    public void testCreateEventWithPropertiesValidation_Success() throws Exception {
         //Arrange
         String eventId = "valid-event-id-" + System.currentTimeMillis();
         String profileId = "valid-profile-id";
@@ -426,7 +426,7 @@ public class ContextServletIT extends BaseIT {
         contextRequest.setEvents(Arrays.asList(event));
 
         //Act
-        HttpPost request = new HttpPost(URL + CONTEXT_URL);
+        HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
         request.addHeader(THIRD_PARTY_HEADER_NAME, UNOMI_KEY);
         request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
         TestUtils.executeContextJSONRequest(request);
@@ -439,7 +439,7 @@ public class ContextServletIT extends BaseIT {
     }
 
     @Test
-    public void testCreateEventWithPropertyValueValidation_Failure() throws IOException, InterruptedException {
+    public void testCreateEventWithPropertyValueValidation_Failure() throws Exception {
         //Arrange
         String eventId = "invalid-event-value-id-" + System.currentTimeMillis();
         String profileId = "invalid-profile-id";
@@ -456,7 +456,7 @@ public class ContextServletIT extends BaseIT {
         contextRequest.setEvents(Arrays.asList(event));
 
         //Act
-        HttpPost request = new HttpPost(URL + CONTEXT_URL);
+        HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
         request.addHeader(THIRD_PARTY_HEADER_NAME, UNOMI_KEY);
         request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
         TestUtils.executeContextJSONRequest(request);
@@ -467,7 +467,7 @@ public class ContextServletIT extends BaseIT {
     }
 
     @Test
-    public void testCreateEventWithPropertyNameValidation_Failure() throws IOException, InterruptedException {
+    public void testCreateEventWithPropertyNameValidation_Failure() throws Exception {
         //Arrange
         String eventId = "invalid-event-prop-id-" + System.currentTimeMillis();
         String profileId = "invalid-profile-id";
@@ -483,7 +483,7 @@ public class ContextServletIT extends BaseIT {
         contextRequest.setEvents(Arrays.asList(event));
 
         //Act
-        HttpPost request = new HttpPost(URL + CONTEXT_URL);
+        HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
         request.addHeader(THIRD_PARTY_HEADER_NAME, UNOMI_KEY);
         request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
         TestUtils.executeContextJSONRequest(request);
@@ -494,7 +494,7 @@ public class ContextServletIT extends BaseIT {
     }
 
     @Test
-    public void testOGNLVulnerability() throws IOException, InterruptedException {
+    public void testOGNLVulnerability() throws Exception {
 
         File vulnFile = new File("target/vuln-file.txt");
         if (vulnFile.exists()) {
@@ -505,7 +505,7 @@ public class ContextServletIT extends BaseIT {
 
         Map<String, String> parameters = new HashMap<>();
         parameters.put("VULN_FILE_PATH", vulnFileCanonicalPath);
-        HttpPost request = new HttpPost(URL + CONTEXT_URL);
+        HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
         request.setEntity(
                 new StringEntity(getValidatedBundleJSON("security/ognl-payload-1.json", parameters), ContentType.APPLICATION_JSON));
         TestUtils.executeContextJSONRequest(request);
@@ -515,7 +515,7 @@ public class ContextServletIT extends BaseIT {
     }
 
     @Test
-    public void testMVELVulnerability() throws IOException, InterruptedException {
+    public void testMVELVulnerability() throws Exception {
 
         File vulnFile = new File("target/vuln-file.txt");
         if (vulnFile.exists()) {
@@ -526,7 +526,7 @@ public class ContextServletIT extends BaseIT {
 
         Map<String, String> parameters = new HashMap<>();
         parameters.put("VULN_FILE_PATH", vulnFileCanonicalPath);
-        HttpPost request = new HttpPost(URL + CONTEXT_URL);
+        HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
         request.setEntity(
                 new StringEntity(getValidatedBundleJSON("security/mvel-payload-1.json", parameters), ContentType.APPLICATION_JSON));
         TestUtils.executeContextJSONRequest(request);
@@ -536,21 +536,21 @@ public class ContextServletIT extends BaseIT {
     }
 
     @Test
-    public void testPersonalization() throws IOException, InterruptedException {
+    public void testPersonalization() throws Exception {
 
         Map<String, String> parameters = new HashMap<>();
-        HttpPost request = new HttpPost(URL + CONTEXT_URL);
+        HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
         request.setEntity(new StringEntity(getValidatedBundleJSON("personalization.json", parameters), ContentType.APPLICATION_JSON));
         TestUtils.RequestResponse response = TestUtils.executeContextJSONRequest(request);
         assertEquals("Invalid response code", 200, response.getStatusCode());
     }
 
     @Test
-    public void testPersonalizationWithControlGroup() throws IOException, InterruptedException {
+    public void testPersonalizationWithControlGroup() throws Exception {
 
         Map<String, String> parameters = new HashMap<>();
         parameters.put("storeInSession", "false");
-        HttpPost request = new HttpPost(URL + CONTEXT_URL);
+        HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
         request.setEntity(
                 new StringEntity(getValidatedBundleJSON("personalization-controlgroup.json", parameters), ContentType.APPLICATION_JSON));
         TestUtils.RequestResponse response = TestUtils.executeContextJSONRequest(request);
@@ -576,7 +576,7 @@ public class ContextServletIT extends BaseIT {
 
         // now let's test with session storage
         parameters.put("storeInSession", "true");
-        request = new HttpPost(URL + CONTEXT_URL);
+        request = new HttpPost(getFullUrl(CONTEXT_URL));
         request.setEntity(
                 new StringEntity(getValidatedBundleJSON("personalization-controlgroup.json", parameters), ContentType.APPLICATION_JSON));
         response = TestUtils.executeContextJSONRequest(request);
@@ -627,7 +627,7 @@ public class ContextServletIT extends BaseIT {
     }
 
     @Test
-    public void testRequireScoring() throws IOException, InterruptedException {
+    public void testRequireScoring() throws Exception {
 
         Map<String, String> parameters = new HashMap<>();
         String scoringSource = getValidatedBundleJSON("score1.json", parameters);
@@ -639,7 +639,7 @@ public class ContextServletIT extends BaseIT {
 
         // first let's make sure everything works without the requireScoring parameter
         parameters = new HashMap<>();
-        HttpPost request = new HttpPost(URL + CONTEXT_URL);
+        HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
         request.setEntity(new StringEntity(getValidatedBundleJSON("withoutRequireScores.json", parameters), ContentType.APPLICATION_JSON));
         TestUtils.RequestResponse response = TestUtils.executeContextJSONRequest(request);
         assertEquals("Invalid response code", 200, response.getStatusCode());
@@ -650,7 +650,7 @@ public class ContextServletIT extends BaseIT {
 
         // now let's test adding it.
         parameters = new HashMap<>();
-        request = new HttpPost(URL + CONTEXT_URL);
+        request = new HttpPost(getFullUrl(CONTEXT_URL));
         request.setEntity(new StringEntity(getValidatedBundleJSON("withRequireScores.json", parameters), ContentType.APPLICATION_JSON));
         response = TestUtils.executeContextJSONRequest(request);
         assertEquals("Invalid response code", 200, response.getStatusCode());

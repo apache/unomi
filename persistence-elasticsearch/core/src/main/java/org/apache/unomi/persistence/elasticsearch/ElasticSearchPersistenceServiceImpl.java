@@ -459,17 +459,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 bulkProcessorFlushInterval = System.getProperty(BULK_PROCESSOR_FLUSH_INTERVAL, bulkProcessorFlushInterval);
                 bulkProcessorBackoffPolicy = System.getProperty(BULK_PROCESSOR_BACKOFF_POLICY, bulkProcessorBackoffPolicy);
                 itemsMonthlyIndexed = itemsMonthlyIndexedOverride.equals("none") ? Collections.emptyList() : Arrays.asList(System.getProperty(MONTHLY_INDEX_ITEMS_MONTHLY_INDEXED, itemsMonthlyIndexedOverride).split(",").clone());
-                // this property is used for integration tests, to make sure we don't conflict with an already running ElasticSearch instance.
-                if (System.getProperty("org.apache.unomi.itests.elasticsearch.http.port") != null) {
-                    elasticSearchAddressList.clear();
-                    elasticSearchAddressList.add("localhost:" + System.getProperty("org.apache.unomi.itests.elasticsearch.http.port"));
-                    logger.info("Overriding ElasticSearch address list from system property=" + elasticSearchAddressList);
-                }
-                // this property is used for integration tests, to make sure we don't conflict with an already running ElasticSearch instance.
-                if (System.getProperty("org.apache.unomi.itests.elasticsearch.cluster.name") != null) {
-                    clusterName = System.getProperty("org.apache.unomi.itests.elasticsearch.cluster.name");
-                    logger.info("Overriding cluster name from system property=" + clusterName);
-                }
 
                 buildClient();
 

@@ -63,6 +63,7 @@
     <inceptionYear>2014</inceptionYear>
 
     <properties>
+        <karaf.version>4.2.15</karaf.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <cxf.version>3.3.11</cxf.version>
         <version.jackson.core>2.10.5</version.jackson.core>

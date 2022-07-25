@@ -33,7 +33,7 @@ public class GraphQLSourceIT extends BaseGraphQLIT {
     ScopeService scopeService;
 
     @Test
-    public void testCRUD() throws IOException, InterruptedException {
+    public void testCRUD() throws Exception {
         try (CloseableHttpResponse response = post("graphql/source/create-source.json")) {
             final ResponseContext context = ResponseContext.parse(response.getEntity());
 

@@ -61,7 +61,7 @@ public class GraphQLEventIT extends BaseGraphQLIT {
 
 
     @Test
-    public void testGetEvent_notExists() throws IOException {
+    public void testGetEvent_notExists() throws Exception {
         try (CloseableHttpResponse response = post("graphql/event/get-event-not-exists.json")) {
             final ResponseContext context = ResponseContext.parse(response.getEntity());
 
@@ -70,7 +70,7 @@ public class GraphQLEventIT extends BaseGraphQLIT {
     }
 
     @Test
-    public void testGetEvent() throws IOException, InterruptedException {
+    public void testGetEvent() throws Exception {
         final Event event = createEvent(eventID, profile);
         refreshPersistence();
 
@@ -84,7 +84,7 @@ public class GraphQLEventIT extends BaseGraphQLIT {
     }
 
     @Test
-    public void testFindEvents() throws IOException, InterruptedException {
+    public void testFindEvents() throws Exception {
         createEvent(eventID, profile);
         createEvent("event-2", profile);
         final Profile profile2 = new Profile("profile-2");
@@ -102,7 +102,7 @@ public class GraphQLEventIT extends BaseGraphQLIT {
     }
 
     @Test
-    public void testProcessEvents() throws IOException {
+    public void testProcessEvents() throws Exception {
         final Profile originalProfile = persistenceService.load(profileID, Profile.class);
         Assert.assertNull(originalProfile.getProperty("firstName"));
         Assert.assertNull(originalProfile.getProperty("lastName"));

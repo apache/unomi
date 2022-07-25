@@ -44,25 +44,23 @@ import java.util.regex.Pattern;
 @ExamReactorStrategy(PerSuite.class)
 public abstract class BaseGraphQLIT extends BaseIT {
 
-    protected static final String GRAPHQL_ENDPOINT = URL + "/graphql";
-
     protected static final ContentType JSON_CONTENT_TYPE = ContentType.create("application/json");
 
     @Inject
     protected BundleContext bundleContext;
 
-    protected CloseableHttpResponse postAnonymous(final String resource) throws IOException {
+    protected CloseableHttpResponse postAnonymous(final String resource) throws Exception {
         return postAs(resource, null, null);
     }
 
-    protected CloseableHttpResponse post(final String resource) throws IOException {
+    protected CloseableHttpResponse post(final String resource) throws Exception {
         return postAs(resource, "karaf", "karaf");
     }
 
-    protected CloseableHttpResponse postAs(final String resource, final String username, final String password) throws IOException {
+    protected CloseableHttpResponse postAs(final String resource, final String username, final String password) throws Exception {
         final String resourceAsString = resourceAsString(resource);
 
-        final HttpPost request = new HttpPost(GRAPHQL_ENDPOINT);
+        final HttpPost request = new HttpPost(getFullUrl("/graphql"));
 
         request.setEntity(new StringEntity(resourceAsString, JSON_CONTENT_TYPE));
 
