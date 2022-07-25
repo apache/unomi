@@ -61,6 +61,7 @@ import org.ops4j.pax.exam.Option;
 import org.ops4j.pax.exam.junit.PaxExam;
 import org.ops4j.pax.exam.karaf.options.LogLevelOption.LogLevel;
 import org.ops4j.pax.exam.options.MavenArtifactUrlReference;
+import org.ops4j.pax.exam.options.extra.VMOption;
 import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
 import org.ops4j.pax.exam.spi.reactors.PerSuite;
 import org.ops4j.pax.exam.util.Filter;
@@ -79,6 +80,9 @@ import javax.net.ssl.X509TrustManager;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
@@ -251,6 +255,18 @@ public abstract class BaseIT extends KarafTestSupport {
                 }
             }
             karafOptions.add(0, debugConfiguration(port, hold));
+        }
+
+        // Jacoco setup
+        final String agentFile = System.getProperty("user.dir") + "/target/jacoco/lib/jacocoagent.jar";
+        Path path = Paths.get(agentFile);
+        if (Files.exists(path)) {
+            final String jacocoOption = "-javaagent:" + agentFile + "=destfile=" + System.getProperty("user.dir")
+                    + "/target/jacoco.exec,includes=org.apache.unomi.*";
+            LOGGER.info("set jacoco java agent: {}", jacocoOption);
+            karafOptions.add(new VMOption(jacocoOption));
+        } else {
+            LOGGER.warn("Unable to set jacoco agent as {} was not found", agentFile);
         }
 
         String customLogging = System.getProperty("it.karaf.customLogging");
