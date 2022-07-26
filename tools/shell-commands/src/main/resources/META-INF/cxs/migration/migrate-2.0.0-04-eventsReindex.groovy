@@ -18,8 +18,8 @@ import org.apache.unomi.shell.migration.utils.MigrationUtils
  * limitations under the License.
  */
 
-String esAddress = migrationConfig.get("esAddress")
-String indexPrefix = migrationConfig.get("indexPrefix")
+String esAddress = migrationConfig.getString("esAddress", session)
+String indexPrefix = migrationConfig.getString("indexPrefix", session)
 
 // Remove all internal events that are no more persisted
 String removeInternalEventsRequest = MigrationUtils.resourceAsString(bundleContext, "requestBody/2.0.0/event_delete_by_query.json")
