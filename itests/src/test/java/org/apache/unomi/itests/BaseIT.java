@@ -163,6 +163,10 @@ public abstract class BaseIT extends KarafTestSupport {
 
     @Before
     public void waitForStartup() throws InterruptedException {
+        // disable retry
+        retry = new KarafTestSupport.Retry(false);
+
+        // Start Unomi if not already done
         if (!unomiStarted) {
             executeCommand("unomi:start");
             unomiStarted = true;

@@ -21,6 +21,11 @@ String esAddress = migrationConfig.getString("esAddress", session)
 String indexPrefix = migrationConfig.getString("indexPrefix", session)
 
 String baseSettings = MigrationUtils.resourceAsString(bundleContext, "requestBody/2.0.0/base_index_mapping.json")
-String mapping = MigrationUtils.extractMappingFromBundles(bundleContext, "segment.json")
-String newIndexSettings = MigrationUtils.buildIndexCreationRequest(httpClient, esAddress, baseSettings, indexPrefix + "-segment", mapping)
-MigrationUtils.reIndex(httpClient, bundleContext, esAddress, indexPrefix + "-segment", newIndexSettings, null)
+String[] indicesToReindex = ["segment", "scoring", "campaign", "conditionType", "goal", "patch", "rule"];
+indicesToReindex.each { indexToReindex ->
+    String mappingFileName = "${indexToReindex}.json"
+    String realIndexName = "${indexPrefix}-${indexToReindex.toLowerCase()}"
+    String mapping = MigrationUtils.extractMappingFromBundles(bundleContext, mappingFileName)
+    String newIndexSettings = MigrationUtils.buildIndexCreationRequest(httpClient, esAddress, baseSettings, realIndexName, mapping)
+    MigrationUtils.reIndex(httpClient, bundleContext, esAddress, realIndexName, newIndexSettings, null)
+}
