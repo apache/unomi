@@ -44,25 +44,6 @@ import java.io.IOException;
 public class PatchIT extends BaseIT {
     private Logger logger = LoggerFactory.getLogger(PatchIT.class);
 
-    @Inject
-    @Filter(timeout = 600000)
-    protected PatchService patchService;
-
-    @Inject
-    @Filter(timeout = 600000)
-    protected ProfileService profileService;
-
-    @Inject
-    @Filter(timeout = 600000)
-    protected DefinitionsService definitionsService;
-
-    @Inject
-    @Filter(timeout = 600000)
-    protected PersistenceService persistenceService;
-
-    @Inject
-    protected BundleContext bundleContext;
-
     @Test
     public void testPatch() throws IOException {
         PropertyType company = profileService.getPropertyType("company");

@@ -47,13 +47,6 @@ import java.util.Objects;
 @ExamReactorStrategy(PerSuite.class)
 public class ProfileImportRankingIT extends BaseIT {
 
-    @Inject
-    @Filter(value = "(configDiscriminator=IMPORT)", timeout = 600000)
-    protected ImportExportConfigurationService<ImportConfiguration> importConfigurationService;
-    @Inject
-    @Filter(timeout = 600000)
-    protected ProfileService profileService;
-
     @Test
     public void testImportRanking() throws InterruptedException {
 

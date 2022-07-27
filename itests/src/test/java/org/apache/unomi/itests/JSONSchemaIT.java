@@ -61,14 +61,6 @@ public class JSONSchemaIT extends BaseIT {
     private static final int DEFAULT_TRYING_TRIES = 30;
     public static final String DUMMY_SCOPE = "dummy_scope";
 
-    @Inject
-    @Filter(timeout = 600000)
-    protected SchemaService schemaService;
-
-    @Inject
-    @Filter(timeout = 6000000)
-    protected ScopeService scopeService;
-
     @Before
     public void setUp() throws InterruptedException {
         keepTrying("Couldn't find json schema endpoint", () -> get(JSONSCHEMA_URL, List.class), Objects::nonNull, DEFAULT_TRYING_TIMEOUT,

@@ -39,10 +39,6 @@ import java.util.Objects;
 
 public class GraphQLProfilePropertiesIT extends BaseGraphQLIT {
 
-    @Inject
-    @Filter(timeout = 600000)
-    protected ProfileService profileService;
-
     private final static Logger LOGGER = LoggerFactory.getLogger(GraphQLProfilePropertiesIT.class);
 
     @Test

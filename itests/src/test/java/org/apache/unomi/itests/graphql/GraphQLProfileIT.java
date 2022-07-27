@@ -30,10 +30,6 @@ import java.util.Objects;
 
 public class GraphQLProfileIT extends BaseGraphQLIT {
 
-    @Inject
-    @Filter(timeout = 600000)
-    protected ProfileService profileService;
-
     @Before
     public void setUp() throws InterruptedException {
         removeItems(Profile.class);

@@ -61,14 +61,6 @@ public class InputValidationIT extends BaseIT {
     private final static String ERROR_MESSAGE_INVALID_DATA_RECEIVED = "Request rejected by the server because: Invalid received data";
     public static final String DUMMY_SCOPE = "dummy_scope";
 
-    @Inject
-    @Filter(timeout = 600000)
-    protected SchemaService schemaService;
-
-    @Inject
-    @Filter(timeout = 600000)
-    protected ScopeService scopeService;
-
     @Before
     public void setUp() throws InterruptedException {
         TestUtils.createScope(DUMMY_SCOPE, "Dummy scope", scopeService);

@@ -50,11 +50,6 @@ public class ConditionEvaluatorIT extends BaseIT {
     protected Item emptyItem;
     protected Date lastVisit;
 
-    @Inject @Filter(timeout = 600000)
-    protected PersistenceService persistenceService;
-    @Inject @Filter(timeout = 600000)
-    private DefinitionsService definitionsService;
-
     protected boolean eval(Condition c) {
         return persistenceService.testMatch(c, item);
     }

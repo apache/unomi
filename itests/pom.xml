@@ -129,6 +129,12 @@
             <scope>test</scope>
         </dependency>
         <dependency>
+            <groupId>org.apache.unomi</groupId>
+            <artifactId>shell-commands</artifactId>
+            <version>${project.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
             <groupId>org.codehaus.groovy</groupId>
             <artifactId>groovy</artifactId>
             <version>${groovy.version}</version>
@@ -182,6 +188,23 @@
                         </executions>
                     </plugin>
                     <plugin>
+                        <artifactId>maven-antrun-plugin</artifactId>
+                        <version>1.8</version>
+                        <executions>
+                            <execution>
+                                <phase>generate-resources</phase>
+                                <configuration>
+                                    <tasks>
+                                        <unzip src="${project.basedir}/src/test/resources/migration/snapshots_repository.zip" dest="${project.build.directory}" />
+                                    </tasks>
+                                </configuration>
+                                <goals>
+                                    <goal>run</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
                         <groupId>com.github.alexcojocaru</groupId>
                         <artifactId>elasticsearch-maven-plugin</artifactId>
                         <!-- REPLACE THE FOLLOWING WITH THE PLUGIN VERSION YOU NEED -->
@@ -198,6 +221,7 @@
                             </environmentVariables>
                             <instanceSettings>
                                 <properties>
+                                    <path.repo>${project.build.directory}/snapshots_repository</path.repo>
                                     <cluster.routing.allocation.disk.threshold_enabled>false</cluster.routing.allocation.disk.threshold_enabled>
                                     <http.cors.allow-origin>*</http.cors.allow-origin>
                                     <http.cors.allow-methods>OPTIONS,HEAD,GET,POST,PUT,DELETE</http.cors.allow-methods>

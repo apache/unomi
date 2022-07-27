@@ -35,18 +35,6 @@ import java.util.Map;
 
 public class GraphQLEventIT extends BaseGraphQLIT {
 
-    @Inject
-    @Filter(timeout = 600000)
-    protected EventService eventService;
-
-    @Inject
-    @Filter(timeout = 600000)
-    protected PersistenceService persistenceService;
-
-    @Inject
-    @Filter(timeout = 600000)
-    protected DefinitionsService definitionsService;
-
     private final String profileID = "profile-1";
     private final String eventID = "event-1";
     private Profile profile;

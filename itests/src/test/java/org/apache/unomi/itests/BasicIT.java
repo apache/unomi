@@ -92,14 +92,6 @@ public class BasicIT extends BaseIT {
     private static final String EMAIL_VISITOR_1 = "visitor1@apache.unomi.org";
     private static final String EMAIL_VISITOR_2 = "visitor2@apache.unomi.org";
 
-    @Inject @Filter(timeout = 600000)
-    protected ProfileService profileService;
-    @Inject @Filter(timeout = 600000)
-    protected DefinitionsService definitionsService;
-
-    @Inject @Filter(timeout = 600000)
-    protected ScopeService scopeService;
-
     @Before
     public void setUp() throws InterruptedException {
         TestUtils.createScope(TEST_SCOPE, "Test scope", scopeService);

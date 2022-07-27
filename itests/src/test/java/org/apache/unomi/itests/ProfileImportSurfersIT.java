@@ -50,13 +50,6 @@ import java.util.Objects;
 public class ProfileImportSurfersIT extends BaseIT {
     private Logger logger = LoggerFactory.getLogger(ProfileImportSurfersIT.class);
 
-    @Inject
-    @Filter(value = "(configDiscriminator=IMPORT)", timeout = 600000)
-    protected ImportExportConfigurationService<ImportConfiguration> importConfigurationService;
-    @Inject
-    @Filter(timeout = 600000)
-    protected ProfileService profileService;
-
     @Test
     public void testImportSurfers() throws InterruptedException {
 

@@ -20,6 +20,8 @@ import org.apache.unomi.shell.migration.utils.MigrationUtils
 String esAddress = migrationConfig.getString("esAddress", session)
 String indexPrefix = migrationConfig.getString("indexPrefix", session)
 
-String newIndexSettings = MigrationUtils.resourceAsString(bundleContext, "requestBody/2.0.0/profile_index.json")
+String baseSettings = MigrationUtils.resourceAsString(bundleContext, "requestBody/2.0.0/base_index_mapping.json")
+String mapping = MigrationUtils.extractMappingFromBundles(bundleContext, "profile.json")
+String newIndexSettings = MigrationUtils.buildIndexCreationRequest(httpClient, esAddress, baseSettings, indexPrefix + "-profile", mapping)
 MigrationUtils.reIndex(httpClient, bundleContext, esAddress, indexPrefix + "-profile",
         newIndexSettings, MigrationUtils.getFileWithoutComments(bundleContext, "requestBody/2.0.0/profile_migrate.painless"))

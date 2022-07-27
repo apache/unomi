@@ -1,0 +1,6 @@
+{
+  "type": "fs",
+  "settings": {
+    "location": "snapshots"
+  }
+}

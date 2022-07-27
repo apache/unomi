@@ -49,14 +49,6 @@ public class EventServiceIT extends BaseIT {
 
     private final static String TEST_PROFILE_ID = "test-profile-id";
 
-    @Inject
-    @Filter(timeout = 600000)
-    protected EventService eventService;
-
-    @Inject
-    @Filter(timeout = 600000)
-    protected ProfileService profileService;
-
     @After
     public void tearDown() {
         TestUtils.removeAllEvents(definitionsService, persistenceService);

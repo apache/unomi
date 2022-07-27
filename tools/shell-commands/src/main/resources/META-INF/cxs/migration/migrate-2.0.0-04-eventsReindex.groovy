@@ -26,9 +26,11 @@ String removeInternalEventsRequest = MigrationUtils.resourceAsString(bundleConte
 HttpUtils.executePostRequest(httpClient, "${esAddress}/${indexPrefix}-event-*/_delete_by_query", removeInternalEventsRequest, null)
 
 // Reindex the rest of the events
-String newIndexSettings = MigrationUtils.resourceAsString(bundleContext, "requestBody/2.0.0/event_index.json");
+String baseSettings = MigrationUtils.resourceAsString(bundleContext, "requestBody/2.0.0/base_index_mapping.json")
 String reIndexScript = MigrationUtils.getFileWithoutComments(bundleContext, "requestBody/2.0.0/event_migrate.painless");
+String mapping = MigrationUtils.extractMappingFromBundles(bundleContext, "event.json")
 Set<String> eventIndices = MigrationUtils.getIndexesPrefixedBy(httpClient, esAddress, "${indexPrefix}-event-")
 eventIndices.each { eventIndex ->
+    String newIndexSettings = MigrationUtils.buildIndexCreationRequest(httpClient, esAddress, baseSettings, eventIndex, mapping)
     MigrationUtils.reIndex(httpClient, bundleContext, esAddress, eventIndex, newIndexSettings, reIndexScript)
 }

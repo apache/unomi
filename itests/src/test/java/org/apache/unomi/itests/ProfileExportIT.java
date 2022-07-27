@@ -49,13 +49,6 @@ import java.util.UUID;
 public class ProfileExportIT extends BaseIT {
     private Logger logger = LoggerFactory.getLogger(ProfileExportIT.class);
 
-    @Inject
-    @Filter(value = "(configDiscriminator=EXPORT)", timeout = 600000)
-    protected ImportExportConfigurationService<ExportConfiguration> exportConfigurationService;
-    @Inject
-    @Filter(timeout = 600000)
-    protected ProfileService profileService;
-
     @Test
     public void testExport() throws InterruptedException {
         Date timestamp = new Date();

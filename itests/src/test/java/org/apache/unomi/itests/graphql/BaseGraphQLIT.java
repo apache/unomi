@@ -46,9 +46,6 @@ public abstract class BaseGraphQLIT extends BaseIT {
 
     protected static final ContentType JSON_CONTENT_TYPE = ContentType.create("application/json");
 
-    @Inject
-    protected BundleContext bundleContext;
-
     protected CloseableHttpResponse postAnonymous(final String resource) throws Exception {
         return postAs(resource, null, null);
     }

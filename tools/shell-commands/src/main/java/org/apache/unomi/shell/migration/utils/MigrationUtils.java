@@ -24,6 +24,7 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.util.EntityUtils;
 import org.json.JSONObject;
+import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 
 import java.io.BufferedReader;
@@ -34,6 +35,7 @@ import java.io.InputStreamReader;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
+import java.util.Enumeration;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -97,17 +99,43 @@ public class MigrationUtils {
         return Collections.emptySet();
     }
 
+    public static String extractMappingFromBundles(BundleContext bundleContext, String fileName) throws IOException {
+        for (Bundle bundle : bundleContext.getBundles()) {
+            Enumeration<URL> predefinedMappings = bundle.findEntries("META-INF/cxs/mappings", fileName, true);
+            if (predefinedMappings == null) {
+                continue;
+            }
+            while (predefinedMappings.hasMoreElements()) {
+                URL predefinedMappingURL = predefinedMappings.nextElement();
+                return IOUtils.toString(predefinedMappingURL);
+            }
+        }
+
+        throw new RuntimeException("no mapping found in bundles for: " + fileName);
+    }
+
+    public static String buildIndexCreationRequest(CloseableHttpClient httpClient, String esAddress, String baseIndexSettings,
+                                            String originalIndexForSettingsExtraction, String mapping) throws IOException {
+
+        String settings = baseIndexSettings;
+
+        // Extract existing settings on index that still exists
+        if (originalIndexForSettingsExtraction != null) {
+            JSONObject originalIndexSettings = new JSONObject(HttpUtils.executeGetRequest(httpClient, esAddress + "/" + originalIndexForSettingsExtraction + "/_settings", null));
+            settings = settings
+                    .replace("#numberOfShards", originalIndexSettings.getJSONObject(originalIndexForSettingsExtraction).getJSONObject("settings").getJSONObject("index").getString("number_of_shards"))
+                    .replace("#numberOfReplicas", originalIndexSettings.getJSONObject(originalIndexForSettingsExtraction).getJSONObject("settings").getJSONObject("index").getString("number_of_replicas"))
+                    .replace("#maxDocValueFieldsSearch", originalIndexSettings.getJSONObject(originalIndexForSettingsExtraction).getJSONObject("settings").getJSONObject("index").getString("max_docvalue_fields_search"))
+                    .replace("#mappingTotalFieldsLimit", originalIndexSettings.getJSONObject(originalIndexForSettingsExtraction).getJSONObject("settings").getJSONObject("index").getJSONObject("mapping").getJSONObject("total_fields").getString("limit"));
+        }
+
+        return settings.replace("#mappings", mapping);
+    }
+
     public static void reIndex(CloseableHttpClient httpClient, BundleContext bundleContext, String esAddress, String indexName,
             String newIndexSettings, String painlessScript) throws IOException {
         String indexNameCloned = indexName + "-cloned";
 
-        // Init requests
-        JSONObject originalIndexSettings = new JSONObject(HttpUtils.executeGetRequest(httpClient, esAddress + "/" + indexName + "/_settings", null));
-        String newIndexRequest = newIndexSettings
-                .replace("#numberOfShards", originalIndexSettings.getJSONObject(indexName).getJSONObject("settings").getJSONObject("index").getString("number_of_shards"))
-                .replace("#numberOfReplicas", originalIndexSettings.getJSONObject(indexName).getJSONObject("settings").getJSONObject("index").getString("number_of_replicas"))
-                .replace("#maxDocValueFieldsSearch", originalIndexSettings.getJSONObject(indexName).getJSONObject("settings").getJSONObject("index").getString("max_docvalue_fields_search"))
-                .replace("#mappingTotalFieldsLimit", originalIndexSettings.getJSONObject(indexName).getJSONObject("settings").getJSONObject("index").getJSONObject("mapping").getJSONObject("total_fields").getString("limit"));
         String reIndexRequest = resourceAsString(bundleContext, "requestBody/2.0.0/base_reindex_request.json")
                 .replace("#source", indexNameCloned).replace("#dest", indexName)
                 .replace("#painless", StringUtils.isNotEmpty(painlessScript) ? getScriptPart(painlessScript) : "");
@@ -121,7 +149,7 @@ public class MigrationUtils {
         // Delete original index
         HttpUtils.executeDeleteRequest(httpClient, esAddress + "/" + indexName, null);
         // Recreate the original index with new mappings
-        HttpUtils.executePutRequest(httpClient, esAddress + "/" + indexName, newIndexRequest, null);
+        HttpUtils.executePutRequest(httpClient, esAddress + "/" + indexName, newIndexSettings, null);
         // Reindex data from clone
         HttpUtils.executePostRequest(httpClient, esAddress + "/_reindex", reIndexRequest, null);
         // Remove clone

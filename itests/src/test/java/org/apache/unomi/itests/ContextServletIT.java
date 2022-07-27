@@ -93,34 +93,6 @@ public class ContextServletIT extends BaseIT {
     private static final int DEFAULT_TRYING_TRIES = 30;
     public static final String TEST_SCOPE = "test-scope";
 
-    @Inject
-    @Filter(timeout = 600000)
-    protected EventService eventService;
-
-    @Inject
-    @Filter(timeout = 600000)
-    protected PersistenceService persistenceService;
-
-    @Inject
-    @Filter(timeout = 600000)
-    protected ProfileService profileService;
-
-    @Inject
-    @Filter(timeout = 600000)
-    protected DefinitionsService definitionsService;
-
-    @Inject
-    @Filter(timeout = 600000)
-    protected SegmentService segmentService;
-
-    @Inject
-    @Filter(timeout = 600000)
-    protected SchemaService schemaService;
-
-    @Inject
-    @Filter(timeout = 600000)
-    protected ScopeService scopeService;
-
     private Profile profile;
 
     @Before

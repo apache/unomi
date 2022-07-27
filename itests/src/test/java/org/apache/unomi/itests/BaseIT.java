@@ -46,11 +46,16 @@ import org.apache.karaf.itests.KarafTestSupport;
 import org.apache.unomi.api.Item;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.rules.Rule;
-import org.apache.unomi.api.services.DefinitionsService;
-import org.apache.unomi.api.services.RulesService;
+import org.apache.unomi.api.services.*;
+import org.apache.unomi.groovy.actions.services.GroovyActionsService;
 import org.apache.unomi.lifecycle.BundleWatcher;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.persistence.spi.PersistenceService;
+import org.apache.unomi.router.api.ExportConfiguration;
+import org.apache.unomi.router.api.ImportConfiguration;
+import org.apache.unomi.router.api.services.ImportExportConfigurationService;
+import org.apache.unomi.schema.api.SchemaService;
+import org.apache.unomi.services.UserListService;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -122,6 +127,7 @@ public abstract class BaseIT extends KarafTestSupport {
     protected static final int DEFAULT_TRYING_TRIES = 30;
 
     protected final static ObjectMapper objectMapper;
+    protected static boolean unomiStarted = false;
 
     static {
         objectMapper = new ObjectMapper();
@@ -130,37 +136,63 @@ public abstract class BaseIT extends KarafTestSupport {
         objectMapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
     }
 
-    @Inject
-    @Filter(timeout = 600000)
     protected PersistenceService persistenceService;
-
-    @Inject
-    @Filter(timeout = 600000)
     protected RulesService rulesService;
-
-    @Inject
-    @Filter(timeout = 600000)
     protected DefinitionsService definitionsService;
+    protected ProfileService profileService;
+    protected EventService eventService;
+    protected BundleWatcher bundleWatcher;
+    protected GroovyActionsService groovyActionsService;
+    protected SegmentService segmentService;
+    protected SchemaService schemaService;
+    protected ScopeService scopeService;
+    protected PatchService patchService;
+    protected ImportExportConfigurationService<ImportConfiguration> importConfigurationService;
+    protected ImportExportConfigurationService<ExportConfiguration> exportConfigurationService;
+    protected UserListService userListService;
+    protected TopicService topicService;
 
     @Inject
     protected BundleContext bundleContext;
 
     @Inject
     @Filter(timeout = 600000)
-    protected BundleWatcher bundleWatcher;
-
-    @Inject
-    @Filter(timeout = 600000)
     protected ConfigurationAdmin configurationAdmin;
 
-    private CloseableHttpClient httpClient;
+    protected CloseableHttpClient httpClient;
 
     @Before
     public void waitForStartup() throws InterruptedException {
+        if (!unomiStarted) {
+            executeCommand("unomi:start");
+            unomiStarted = true;
+        }
+
+        // Wait for startup complete
+        bundleWatcher = getOsgiService(BundleWatcher.class, 600000);
         while (!bundleWatcher.isStartupComplete() || !bundleWatcher.allAdditionalBundleStarted()) {
             LOGGER.info("Waiting for startup to complete...");
             Thread.sleep(1000);
         }
+
+        // init unomi services that are available once unomi:start have been called
+        persistenceService = getOsgiService(PersistenceService.class, 600000);
+        rulesService = getOsgiService(RulesService.class, 600000);
+        definitionsService = getOsgiService(DefinitionsService.class, 600000);
+        profileService = getOsgiService(ProfileService.class, 600000);
+        eventService = getOsgiService(EventService.class, 600000);
+        groovyActionsService = getOsgiService(GroovyActionsService.class, 600000);
+        segmentService = getOsgiService(SegmentService.class, 600000);
+        schemaService = getOsgiService(SchemaService.class, 600000);
+        scopeService = getOsgiService(ScopeService.class, 600000);
+        patchService = getOsgiService(PatchService.class, 600000);
+        userListService = getOsgiService(UserListService.class, 600000);
+        topicService = getOsgiService(TopicService.class, 600000);
+        patchService = getOsgiService(PatchService.class, 600000);
+        importConfigurationService = getOsgiService(ImportExportConfigurationService.class, "(configDiscriminator=IMPORT)", 600000);
+        exportConfigurationService = getOsgiService(ImportExportConfigurationService.class, "(configDiscriminator=EXPORT)", 600000);
+
+        // init httpClient
         httpClient = initHttpClient();
     }
 
@@ -199,6 +231,8 @@ public abstract class BaseIT extends KarafTestSupport {
         System.out.println("==== Configuring container");
         Option[] options = new Option[]{
                 replaceConfigurationFile("etc/org.apache.unomi.router.cfg", new File("src/test/resources/org.apache.unomi.router.cfg")),
+                replaceConfigurationFile("etc/org.apache.unomi.migration.cfg", new File("src/test/resources/migration/org.apache.unomi.migration.cfg")),
+
                 replaceConfigurationFile("data/tmp/1-basic-test.csv", new File("src/test/resources/1-basic-test.csv")),
                 replaceConfigurationFile("data/tmp/recurrent_import/2-surfers-test.csv", new File("src/test/resources/2-surfers-test.csv")),
                 replaceConfigurationFile("data/tmp/recurrent_import/3-surfers-overwrite-test.csv", new File("src/test/resources/3-surfers-overwrite-test.csv")),
@@ -219,7 +253,6 @@ public abstract class BaseIT extends KarafTestSupport {
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.graphql.feature.activated", "true"),
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.elasticsearch.cluster.name", "contextElasticSearchITests"),
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.elasticsearch.addresses", "localhost:9400"),
-                editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.elasticsearch.index.prefix", "itest"),
 
                 systemProperty("org.ops4j.pax.exam.rbc.rmi.port").value("1199"),
                 systemProperty("org.apache.unomi.hazelcast.group.name").value("cellar"),
@@ -227,7 +260,6 @@ public abstract class BaseIT extends KarafTestSupport {
                 systemProperty("org.apache.unomi.hazelcast.network.port").value("5701"),
                 systemProperty("org.apache.unomi.hazelcast.tcp-ip.members").value("127.0.0.1"),
                 systemProperty("org.apache.unomi.hazelcast.tcp-ip.interface").value("127.0.0.1"),
-                systemProperty("unomi.autoStart").value("true"),
 
                 logLevel(LogLevel.INFO),
                 keepRuntimeFolder(),

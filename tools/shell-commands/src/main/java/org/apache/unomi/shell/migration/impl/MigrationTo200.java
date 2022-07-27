@@ -87,20 +87,15 @@ public class MigrationTo200 implements Migration {
 
         if (scopeIndexNotExists()) {
             System.out.println("Creation for index = \"" + indexPrefix + "-scope\" starting.");
-            System.out.println("Specify the following parameters:");
-            String numberOfShards = migrationConfig.getString(MigrationConfig.NUMBER_OF_SHARDS, session);
-            String numberOfReplicas = migrationConfig.getString(MigrationConfig.NUMBER_OF_REPLICAS, session);
-            String mappingTotalFieldsLimit = migrationConfig.getString(MigrationConfig.TOTAL_FIELDS_LIMIT, session);
-            String maxDocValueFieldsSearch = migrationConfig.getString(MigrationConfig.MAX_DOC_VALUE_FIELDS_SEARCH, session);
-
             final HttpPut httpPost = new HttpPut(esAddress + "/" + indexPrefix + "-scope");
 
             httpPost.addHeader("Accept", "application/json");
             httpPost.addHeader("Content-Type", "application/json");
 
-            String request = MigrationUtils.resourceAsString(bundleContext,"requestBody/scopeMapping.json").replace("$numberOfShards", numberOfShards)
-                    .replace("$numberOfReplicas", numberOfReplicas).replace("$mappingTotalFieldsLimit", mappingTotalFieldsLimit)
-                    .replace("$maxDocValueFieldsSearch", maxDocValueFieldsSearch);
+            String baseRequest = MigrationUtils.resourceAsString(bundleContext,"requestBody/2.0.0/base_index_mapping.json");
+            String mapping = MigrationUtils.extractMappingFromBundles(bundleContext, "scope.json");
+            // We intentionally extract setting from profile index, because the scope index doesnt exist yet, and all indices share the same configuration regarding shards, replicas, etc ..
+            String request = MigrationUtils.buildIndexCreationRequest(httpClient, esAddress, baseRequest, indexPrefix + "-profile", mapping);
 
             httpPost.setEntity(new StringEntity(request));
 

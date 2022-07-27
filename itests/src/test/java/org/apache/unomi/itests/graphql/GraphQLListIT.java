@@ -28,10 +28,6 @@ import java.util.Objects;
 
 public class GraphQLListIT extends BaseGraphQLIT {
 
-    @Inject
-    @Filter(timeout = 600000)
-    protected ProfileService profileService;
-
     @Test
     public void testCRUD() throws Exception {
         Profile persistedProfile = null;

@@ -48,13 +48,6 @@ import java.util.Objects;
 @ExamReactorStrategy(PerSuite.class)
 public class ProfileImportActorsIT extends BaseIT {
 
-    @Inject
-    @Filter(value = "(configDiscriminator=IMPORT)", timeout = 600000)
-    protected ImportExportConfigurationService<ImportConfiguration> importConfigurationService;
-    @Inject
-    @Filter(timeout = 600000)
-    protected ProfileService profileService;
-
     @Test
     public void testImportActors() throws InterruptedException {
 

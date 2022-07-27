@@ -33,10 +33,6 @@ import java.util.UUID;
 
 public class GraphQLSegmentIT extends BaseGraphQLIT {
 
-    @Inject
-    @Filter(timeout = 600000)
-    protected ProfileService profileService;
-
     @Before
     public void setUp() throws InterruptedException {
         removeItems(Segment.class);

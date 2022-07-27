@@ -57,18 +57,6 @@ public class ProfileServiceWithoutOverwriteIT extends BaseIT {
         return options.toArray(new Option[0]);
     }
 
-    @Inject
-    @Filter(timeout = 600000)
-    protected ProfileService profileService;
-
-    @Inject
-    @Filter(timeout = 600000)
-    protected PersistenceService persistenceService;
-
-    @Inject
-    @Filter(timeout = 600000)
-    protected DefinitionsService definitionsService;
-
     @Before
     public void setUp() {
         TestUtils.removeAllProfiles(definitionsService, persistenceService);

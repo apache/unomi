@@ -28,10 +28,6 @@ import static org.junit.Assert.*;
 
 public class GraphQLSourceIT extends BaseGraphQLIT {
 
-    @Inject
-    @Filter(timeout = 600000)
-    ScopeService scopeService;
-
     @Test
     public void testCRUD() throws Exception {
         try (CloseableHttpResponse response = post("graphql/source/create-source.json")) {
