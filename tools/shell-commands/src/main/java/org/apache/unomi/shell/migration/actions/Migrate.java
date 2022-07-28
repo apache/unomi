@@ -44,7 +44,8 @@ import java.util.stream.Stream;
 
 import static org.apache.unomi.shell.migration.MigrationConfig.CONFIG_TRUST_ALL_CERTIFICATES;
 
-@Command(scope = "unomi", name = "migrate", description = "This will Migrate your data in ES to be compliant with current version")
+@Command(scope = "unomi", name = "migrate", description = "This will Migrate your data in ES to be compliant with current version. " +
+        "It's possible to configure the migration using OSGI configuration file: org.apache.unomi.migration.cfg, if no configuration is provided then questions will be prompted during the migration process.")
 @Service
 public class Migrate implements Action {
 
@@ -61,7 +62,8 @@ public class Migrate implements Action {
     @Argument(name = "originVersion", description = "Origin version without suffix/qualifier (e.g: 1.2.0)", valueToShowInHelp = "1.2.0")
     private String originVersion;
 
-    @Argument(index = 1, name = "silent", description = "Should the migration process be silent ? (default: false)", valueToShowInHelp = "true")
+    @Argument(index = 1, name = "silent", description = "Should the migration process be silent ?. " +
+            "The configuration org.apache.unomi.migration.cfg is required for this option to work properly", valueToShowInHelp = "false")
     private boolean silent = false;
 
     public Object execute() throws Exception {
