@@ -27,6 +27,7 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.util.EntityUtils;
 import org.apache.karaf.shell.api.console.Session;
 import org.apache.unomi.shell.migration.Migration;
+import org.apache.unomi.shell.migration.MigrationConfig;
 import org.apache.unomi.shell.migration.utils.ConsoleUtils;
 import org.apache.unomi.shell.migration.utils.MigrationUtils;
 import org.json.JSONArray;
@@ -48,26 +49,30 @@ public class MigrationTo200 implements Migration {
     private CloseableHttpClient httpClient;
     private Session session;
     private String esAddress;
+    private String indexPrefix;
     private BundleContext bundleContext;
+    private MigrationConfig migrationConfig;
 
     @Override
-    public void execute(Session session, CloseableHttpClient httpClient, Map<String, Object> migrationConfig, BundleContext bundleContext) throws IOException {
+    public void execute(Session session, CloseableHttpClient httpClient, MigrationConfig migrationConfig, BundleContext bundleContext) throws IOException {
         this.httpClient = httpClient;
         this.session = session;
-        this.esAddress = (String) migrationConfig.get("esAddress");
+        this.esAddress = migrationConfig.getString(MigrationConfig.CONFIG_ES_ADDRESS, session);
+        this.indexPrefix = migrationConfig.getString(MigrationConfig.INDEX_PREFIX, session);
         this.bundleContext = bundleContext;
+        this.migrationConfig = migrationConfig;
 
-        doExecute((String) migrationConfig.get("indexPrefix"));
+        doExecute();
     }
 
-    private void doExecute(String indexPrefix) throws IOException {
+    private void doExecute() throws IOException {
         Set<String> indexes = MigrationUtils.getIndexesPrefixedBy(httpClient, esAddress, indexPrefix + "-event-");
-        createScopeMapping(indexPrefix);
-        createScopes(getSetOfScopes(indexes), indexPrefix);
+        createScopeMapping();
+        createScopes(getSetOfScopes(indexes));
         createProfileAliasDocumentsFromProfile();
     }
 
-    private boolean scopeIndexNotExists(String indexPrefix) throws IOException {
+    private boolean scopeIndexNotExists() throws IOException {
         final HttpGet httpGet = new HttpGet(esAddress + "/" + indexPrefix + "-scope");
 
         httpGet.addHeader("Accept", "application/json");
@@ -78,26 +83,19 @@ public class MigrationTo200 implements Migration {
         }
     }
 
-    private void createScopeMapping(String indexPrefix) throws IOException {
+    private void createScopeMapping() throws IOException {
 
-        if (scopeIndexNotExists(indexPrefix)) {
+        if (scopeIndexNotExists()) {
             System.out.println("Creation for index = \"" + indexPrefix + "-scope\" starting.");
-            System.out.println("Specify the following parameters:");
-            String numberOfShards = ConsoleUtils.askUserWithDefaultAnswer(session, "number_of_shards: (default: 3)", "3");
-            String numberOfReplicas = ConsoleUtils.askUserWithDefaultAnswer(session, "number_of_replicas: (default: 0)", "0");
-            String mappingTotalFieldsLimit = ConsoleUtils
-                    .askUserWithDefaultAnswer(session, "mapping.total_fields.limit: (default: 1000)", "1000");
-            String maxDocValueFieldsSearch = ConsoleUtils
-                    .askUserWithDefaultAnswer(session, "max_docvalue_fields_search: (default: 1000)", "1000");
-
             final HttpPut httpPost = new HttpPut(esAddress + "/" + indexPrefix + "-scope");
 
             httpPost.addHeader("Accept", "application/json");
             httpPost.addHeader("Content-Type", "application/json");
 
-            String request = MigrationUtils.resourceAsString(bundleContext,"requestBody/scopeMapping.json").replace("$numberOfShards", numberOfShards)
-                    .replace("$numberOfReplicas", numberOfReplicas).replace("$mappingTotalFieldsLimit", mappingTotalFieldsLimit)
-                    .replace("$maxDocValueFieldsSearch", maxDocValueFieldsSearch);
+            String baseRequest = MigrationUtils.resourceAsString(bundleContext,"requestBody/2.0.0/base_index_mapping.json");
+            String mapping = MigrationUtils.extractMappingFromBundles(bundleContext, "scope.json");
+            // We intentionally extract setting from profile index, because the scope index doesnt exist yet, and all indices share the same configuration regarding shards, replicas, etc ..
+            String request = MigrationUtils.buildIndexCreationRequest(httpClient, esAddress, baseRequest, indexPrefix + "-profile", mapping);
 
             httpPost.setEntity(new StringEntity(request));
 
@@ -116,7 +114,7 @@ public class MigrationTo200 implements Migration {
 
     }
 
-    private void createScopes(Set<String> scopes, String indexPrefix) throws IOException {
+    private void createScopes(Set<String> scopes) throws IOException {
         final StringBuilder body = new StringBuilder();
         String saveScopeBody = MigrationUtils.resourceAsString(bundleContext,"requestBody/bulkSaveScope.ndjson");
         scopes.forEach(scope -> body.append(saveScopeBody.replace("$scope", scope)));

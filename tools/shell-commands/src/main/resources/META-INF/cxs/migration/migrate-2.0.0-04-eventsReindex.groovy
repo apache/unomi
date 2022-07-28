@@ -18,17 +18,19 @@ import org.apache.unomi.shell.migration.utils.MigrationUtils
  * limitations under the License.
  */
 
-String esAddress = migrationConfig.get("esAddress")
-String indexPrefix = migrationConfig.get("indexPrefix")
+String esAddress = migrationConfig.getString("esAddress", session)
+String indexPrefix = migrationConfig.getString("indexPrefix", session)
 
 // Remove all internal events that are no more persisted
 String removeInternalEventsRequest = MigrationUtils.resourceAsString(bundleContext, "requestBody/2.0.0/event_delete_by_query.json")
 HttpUtils.executePostRequest(httpClient, "${esAddress}/${indexPrefix}-event-*/_delete_by_query", removeInternalEventsRequest, null)
 
 // Reindex the rest of the events
-String newIndexSettings = MigrationUtils.resourceAsString(bundleContext, "requestBody/2.0.0/event_index.json");
+String baseSettings = MigrationUtils.resourceAsString(bundleContext, "requestBody/2.0.0/base_index_mapping.json")
 String reIndexScript = MigrationUtils.getFileWithoutComments(bundleContext, "requestBody/2.0.0/event_migrate.painless");
+String mapping = MigrationUtils.extractMappingFromBundles(bundleContext, "event.json")
 Set<String> eventIndices = MigrationUtils.getIndexesPrefixedBy(httpClient, esAddress, "${indexPrefix}-event-")
 eventIndices.each { eventIndex ->
+    String newIndexSettings = MigrationUtils.buildIndexCreationRequest(httpClient, esAddress, baseSettings, eventIndex, mapping)
     MigrationUtils.reIndex(httpClient, bundleContext, esAddress, eventIndex, newIndexSettings, reIndexScript)
 }

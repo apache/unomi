@@ -55,22 +55,6 @@ public class GroovyActionsServiceIT extends BaseIT {
     public static final String UPDATE_ADDRESS_ACTION_GROOVY_FILE = "data/tmp/groovy/UpdateAddressAction.groovy";
     public static final String UPDATE_ADDRESS_ACTION = "UpdateAddressAction";
 
-    @Inject
-    @Filter(timeout = 600000)
-    protected GroovyActionsService groovyActionsService;
-
-    @Inject
-    @Filter(timeout = 600000)
-    protected DefinitionsService definitionsService;
-
-    @Inject
-    @Filter(timeout = 600000)
-    protected ProfileService profileService;
-
-    @Inject
-    @Filter(timeout = 600000)
-    protected EventService eventService;
-
     @Before
     public void setUp() throws InterruptedException {
         Profile profile = new Profile();

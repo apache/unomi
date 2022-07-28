@@ -92,14 +92,6 @@ public class BasicIT extends BaseIT {
     private static final String EMAIL_VISITOR_1 = "visitor1@apache.unomi.org";
     private static final String EMAIL_VISITOR_2 = "visitor2@apache.unomi.org";
 
-    @Inject @Filter(timeout = 600000)
-    protected ProfileService profileService;
-    @Inject @Filter(timeout = 600000)
-    protected DefinitionsService definitionsService;
-
-    @Inject @Filter(timeout = 600000)
-    protected ScopeService scopeService;
-
     @Before
     public void setUp() throws InterruptedException {
         TestUtils.createScope(TEST_SCOPE, "Test scope", scopeService);
@@ -113,9 +105,15 @@ public class BasicIT extends BaseIT {
     }
 
     @Test
-    public void testContextJS() throws IOException {
+    public void simpleTest() throws Exception {
+        System.out.println("==== System Property in probe bundle: " + System.getProperty("my.system.property"));
+        assertContains("foo", System.getProperty("my.system.property"));
+    }
+
+    @Test
+    public void testContextJS() throws Exception {
         LOGGER.info("Start test testContextJS");
-        HttpUriRequest request = new HttpGet(URL + "/cxs/context.js?sessionId=" + SESSION_ID_0);
+        HttpUriRequest request = new HttpGet(getFullUrl("/cxs/context.js?sessionId=" + SESSION_ID_0));
         request.setHeader("Content-Type", "application/json");
         // The underlying HTTP connection is still held by the response object
         // to allow the response content to be streamed directly from the network socket.
@@ -137,10 +135,10 @@ public class BasicIT extends BaseIT {
     }
 
     @Test
-    public void testContextJSONWithUrlParameter() throws IOException, InterruptedException {
+    public void testContextJSONWithUrlParameter() throws Exception {
         LOGGER.info("Start test testContextJSONWithUrlParameter");
         ContextRequest contextRequest = new ContextRequest();
-        HttpPost request = new HttpPost(URL + "/cxs/context.json?sessionId=" + SESSION_ID_1);
+        HttpPost request = new HttpPost(getFullUrl("/cxs/context.json?sessionId=" + SESSION_ID_1));
         request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.create("application/json")));
 
         executeContextJSONRequest(request, SESSION_ID_1);
@@ -148,11 +146,11 @@ public class BasicIT extends BaseIT {
     }
 
     @Test
-    public void testContextJSON() throws IOException, InterruptedException {
+    public void testContextJSON() throws Exception {
         LOGGER.info("Start test testContextJSON");
         ContextRequest contextRequest = new ContextRequest();
         contextRequest.setSessionId(SESSION_ID_2);
-        HttpPost request = new HttpPost(URL + "/cxs/context.json");
+        HttpPost request = new HttpPost(getFullUrl("/cxs/context.json"));
         request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.create("application/json")));
 
         executeContextJSONRequest(request, SESSION_ID_2);
@@ -160,7 +158,7 @@ public class BasicIT extends BaseIT {
     }
 
     @Test
-    public void testMultipleLoginOnSameBrowser() throws IOException, InterruptedException {
+    public void testMultipleLoginOnSameBrowser() throws Exception {
         LOGGER.info("Start test testMultipleLoginOnSameBrowser");
 
         // Add login event condition
@@ -180,7 +178,7 @@ public class BasicIT extends BaseIT {
 
         // First page view with the first visitor aka VISITOR_1 and SESSION_ID_3
         ContextRequest contextRequestPageViewSession1 = getContextRequestWithPageViewEvent(sourceSite, SESSION_ID_3);
-        HttpPost requestPageView1 = new HttpPost(URL + "/cxs/context.json");
+        HttpPost requestPageView1 = new HttpPost(getFullUrl("/cxs/context.json"));
         requestPageView1.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequestPageViewSession1),
                 ContentType.create("application/json")));
         TestUtils.RequestResponse requestResponsePageView1 = executeContextJSONRequest(requestPageView1, SESSION_ID_3);
@@ -198,7 +196,7 @@ public class BasicIT extends BaseIT {
         // Create login event with VISITOR_1
         ContextRequest contextRequestLoginVisitor1 = getContextRequestWithLoginEvent(sourceSite, loginEventPropertiesVisitor1,
                 EMAIL_VISITOR_1, SESSION_ID_3);
-        HttpPost requestLoginVisitor1 = new HttpPost(URL + "/cxs/context.json");
+        HttpPost requestLoginVisitor1 = new HttpPost(getFullUrl("/cxs/context.json"));
         requestLoginVisitor1.addHeader("Cookie", requestResponsePageView1.getCookieHeaderValue());
         requestLoginVisitor1.addHeader("X-Unomi-Peer", UNOMI_KEY);
         requestLoginVisitor1.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequestLoginVisitor1),
@@ -212,7 +210,7 @@ public class BasicIT extends BaseIT {
         Thread.sleep(1000);
 
         // Lets add a page view with VISITOR_1 to simulate reloading the page after login and be able to check the profile properties
-        HttpPost requestPageView2 = new HttpPost(URL + "/cxs/context.json");
+        HttpPost requestPageView2 = new HttpPost(getFullUrl("/cxs/context.json"));
         requestPageView2.addHeader("Cookie", requestResponsePageView1.getCookieHeaderValue());
         requestPageView2.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequestPageViewSession1),
                 ContentType.create("application/json")));
@@ -227,7 +225,7 @@ public class BasicIT extends BaseIT {
         // Lets simulate a logout by requesting the context with a new page view event and a new session id
         // but we will send the cookie of the profile id from VISITOR_1
         ContextRequest contextRequestPageViewSession2 = getContextRequestWithPageViewEvent(sourceSite, SESSION_ID_4);
-        HttpPost requestPageView3 = new HttpPost(URL + "/cxs/context.json");
+        HttpPost requestPageView3 = new HttpPost(getFullUrl("/cxs/context.json"));
         requestPageView3.addHeader("Cookie", requestResponsePageView1.getCookieHeaderValue());
         requestPageView3.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequestPageViewSession2),
                 ContentType.create("application/json")));
@@ -252,7 +250,7 @@ public class BasicIT extends BaseIT {
         // Create login event with VISITOR_2
         ContextRequest contextRequestLoginVisitor2 = getContextRequestWithLoginEvent(sourceSite, loginEventPropertiesVisitor2,
                 EMAIL_VISITOR_2, SESSION_ID_4);
-        HttpPost requestLoginVisitor2 = new HttpPost(URL + "/cxs/context.json");
+        HttpPost requestLoginVisitor2 = new HttpPost(getFullUrl("/cxs/context.json"));
         requestLoginVisitor2.addHeader("Cookie", requestResponsePageView1.getCookieHeaderValue());
         requestLoginVisitor2.addHeader("X-Unomi-Peer", UNOMI_KEY);
         requestLoginVisitor2.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequestLoginVisitor2),
@@ -266,7 +264,7 @@ public class BasicIT extends BaseIT {
         Thread.sleep(1000);
 
         // Lets add a page view with VISITOR_2 to simulate reloading the page after login
-        HttpPost requestPageView4 = new HttpPost(URL + "/cxs/context.json");
+        HttpPost requestPageView4 = new HttpPost(getFullUrl("/cxs/context.json"));
         requestPageView4.addHeader("Cookie", requestResponseLoginVisitor2.getCookieHeaderValue());
         requestPageView4.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequestPageViewSession2),
                 ContentType.create("application/json")));

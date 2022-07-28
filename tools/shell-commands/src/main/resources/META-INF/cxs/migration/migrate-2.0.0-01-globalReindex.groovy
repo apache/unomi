@@ -17,6 +17,15 @@ import org.apache.unomi.shell.migration.utils.MigrationUtils
  * limitations under the License.
  */
 
-String newIndexSettings = MigrationUtils.resourceAsString(bundleContext, "requestBody/2.0.0/scoring_index.json");
-MigrationUtils.reIndex(httpClient, bundleContext, migrationConfig.get("esAddress"), migrationConfig.get("indexPrefix") + "-scoring",
-        newIndexSettings, null)
+String esAddress = migrationConfig.getString("esAddress", session)
+String indexPrefix = migrationConfig.getString("indexPrefix", session)
+
+String baseSettings = MigrationUtils.resourceAsString(bundleContext, "requestBody/2.0.0/base_index_mapping.json")
+String[] indicesToReindex = ["segment", "scoring", "campaign", "conditionType", "goal", "patch", "rule"];
+indicesToReindex.each { indexToReindex ->
+    String mappingFileName = "${indexToReindex}.json"
+    String realIndexName = "${indexPrefix}-${indexToReindex.toLowerCase()}"
+    String mapping = MigrationUtils.extractMappingFromBundles(bundleContext, mappingFileName)
+    String newIndexSettings = MigrationUtils.buildIndexCreationRequest(httpClient, esAddress, baseSettings, realIndexName, mapping)
+    MigrationUtils.reIndex(httpClient, bundleContext, esAddress, realIndexName, newIndexSettings, null)
+}

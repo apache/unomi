@@ -55,14 +55,6 @@ public class RuleServiceIT extends BaseIT {
     private final static String TEST_RULE_ID = "test-rule-id";
     public static final String TEST_SCOPE = "test-scope";
 
-    @Inject
-    @Filter(timeout = 600000)
-    protected RulesService rulesService;
-
-    @Inject
-    @Filter(timeout = 600000)
-    protected EventService eventService;
-
     @Before
     public void setUp() {
         TestUtils.removeAllProfiles(definitionsService, persistenceService);

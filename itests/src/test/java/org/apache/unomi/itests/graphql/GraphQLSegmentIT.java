@@ -33,10 +33,6 @@ import java.util.UUID;
 
 public class GraphQLSegmentIT extends BaseGraphQLIT {
 
-    @Inject
-    @Filter(timeout = 600000)
-    protected ProfileService profileService;
-
     @Before
     public void setUp() throws InterruptedException {
         removeItems(Segment.class);
@@ -48,7 +44,7 @@ public class GraphQLSegmentIT extends BaseGraphQLIT {
     }
 
     @Test
-    public void testCreateThenGetAndDeleteSegment() throws IOException, InterruptedException {
+    public void testCreateThenGetAndDeleteSegment() throws Exception {
         try (CloseableHttpResponse response = post("graphql/segment/create-or-update-segment.json")) {
             final ResponseContext context = ResponseContext.parse(response.getEntity());
 

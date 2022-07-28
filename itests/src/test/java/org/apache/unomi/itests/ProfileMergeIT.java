@@ -51,22 +51,6 @@ import java.util.Objects;
 @ExamReactorStrategy(PerSuite.class)
 public class ProfileMergeIT extends BaseIT {
 
-    @Inject
-    @Filter(timeout = 600000)
-    protected EventService eventService;
-    @Inject
-    @Filter(timeout = 600000)
-    protected RulesService rulesService;
-    @Inject
-    @Filter(timeout = 600000)
-    protected DefinitionsService definitionsService;
-    @Inject
-    @Filter(timeout = 600000)
-    protected ProfileService profileService;
-    @Inject
-    @Filter(timeout = 600000)
-    protected PersistenceService persistenceService;
-
     private final static String TEST_EVENT_TYPE = "mergeProfileTestEventType";
     private final static String TEST_RULE_ID = "mergeOnPropertyTest";
     private final static String TEST_PROFILE_ID = "mergeOnPropertyTestProfileId";

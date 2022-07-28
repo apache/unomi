@@ -49,25 +49,13 @@ public class ProfileServiceWithoutOverwriteIT extends BaseIT {
     private final static String TEST_PROFILE_ID = "test-profile-id";
 
     @Configuration
-    public Option[] config() throws InterruptedException {
+    public Option[] config() {
         List<Option> options = new ArrayList<>();
         options.addAll(Arrays.asList(super.config()));
         options.add(systemProperty("org.apache.unomi.elasticsearch.throwExceptions").value("true"));
         options.add(systemProperty("org.apache.unomi.elasticsearch.alwaysOverwrite").value("false"));
         return options.toArray(new Option[0]);
     }
-
-    @Inject
-    @Filter(timeout = 600000)
-    protected ProfileService profileService;
-
-    @Inject
-    @Filter(timeout = 600000)
-    protected PersistenceService persistenceService;
-
-    @Inject
-    @Filter(timeout = 600000)
-    protected DefinitionsService definitionsService;
 
     @Before
     public void setUp() {

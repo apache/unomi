@@ -58,18 +58,6 @@ public class ProfileServiceIT extends BaseIT {
 
     private static final String TEST_PROFILE_ALIAS = "test-profile-alias";
 
-    @Inject
-    @Filter(timeout = 600000)
-    protected ProfileService profileService;
-
-    @Inject
-    @Filter(timeout = 600000)
-    protected PersistenceService persistenceService;
-
-    @Inject
-    @Filter(timeout = 600000)
-    protected DefinitionsService definitionsService;
-
     @Before
     public void setUp() {
         TestUtils.removeAllProfiles(definitionsService, persistenceService);

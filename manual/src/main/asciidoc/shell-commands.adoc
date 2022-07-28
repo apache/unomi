@@ -41,15 +41,21 @@ karaf@root()> help unomi:migrate
 DESCRIPTION
         unomi:migrate
 
-    This will Migrate your date in ES to be compliant with current version
+    This will Migrate your date in ES to be compliant with current version.
+    It's possible to configure the migration using OSGI configuration file: org.apache.unomi.migration.cfg,
+    if no configuration is provided then questions will be prompted during the migration process.
 
 SYNTAX
-        unomi:migrate [fromVersionWithoutSuffix]
+        unomi:migrate [fromVersionWithoutSuffix] [skipConfirmation]
 
 ARGUMENTS
         fromVersionWithoutSuffix
                 Origin version without suffix/qualifier (e.g: 1.2.0)
                 (defaults to 1.2.0)
+        skipConfirmation
+                Should the confirmation before starting the migration process be skipped ?
+                (defaults to false)
+
 ```
 ==== Lifecycle commands
 

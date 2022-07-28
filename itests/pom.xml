@@ -28,41 +28,93 @@
     <name>Apache Unomi :: Integration Tests</name>
     <description>Apache Unomi Context Server integration tests</description>
 
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.apache.karaf</groupId>
+                <artifactId>karaf-bom</artifactId>
+                <version>${karaf.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
     <dependencies>
+        <!-- Provide the KarafTestSupport -->
+        <dependency>
+            <groupId>org.apache.karaf.itests</groupId>
+            <artifactId>common</artifactId>
+            <version>${karaf.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <!-- Define the Apache Karaf version to download and use for the test -->
+        <!-- We use a released version here to avoid SNAPSHOT resolution -->
         <dependency>
             <groupId>org.apache.unomi</groupId>
             <artifactId>unomi</artifactId>
             <version>${project.version}</version>
             <type>tar.gz</type>
             <scope>test</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.apache.karaf</groupId>
+                    <artifactId>org.apache.karaf.client</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.apache.httpcomponents</groupId>
+                    <artifactId>httpclient-osgi</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
+        <!-- Required to use shell commands in the tests -->
         <dependency>
-            <groupId>org.apache.unomi</groupId>
-            <artifactId>unomi-router-karaf-feature</artifactId>
-            <classifier>features</classifier>
-            <version>${project.version}</version>
-            <type>xml</type>
+            <groupId>org.apache.karaf.shell</groupId>
+            <artifactId>org.apache.karaf.shell.core</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- Provide the PaxExam Karaf support -->
+        <dependency>
+            <groupId>org.ops4j.pax.exam</groupId>
+            <artifactId>pax-exam-container-karaf</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- Provide the PaxExam JUnit extension -->
+        <dependency>
+            <groupId>org.ops4j.pax.exam</groupId>
+            <artifactId>pax-exam-junit4</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>org.apache.unomi</groupId>
-            <artifactId>cdp-graphql-feature</artifactId>
-            <classifier>features</classifier>
-            <version>${project.version}</version>
-            <type>xml</type>
+            <groupId>org.apache.geronimo.specs</groupId>
+            <artifactId>geronimo-atinject_1.0_spec</artifactId>
+            <version>1.2</version>
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>org.apache.unomi</groupId>
-            <artifactId>unomi-persistence-spi</artifactId>
-            <version>${project.version}</version>
-            <scope>provided</scope>
+            <groupId>org.awaitility</groupId>
+            <artifactId>awaitility</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.apache.unomi</groupId>
-            <artifactId>unomi-wab</artifactId>
-            <version>${project.version}</version>
-            <scope>test</scope>
+            <groupId>org.apache.servicemix.bundles</groupId>
+            <artifactId>org.apache.servicemix.bundles.hamcrest</artifactId>
+            <version>1.3_1</version>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpclient-osgi</artifactId>
+            <version>4.5.5</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpcore-osgi</artifactId>
+            <version>4.4.9</version>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.jetty.websocket</groupId>
+            <artifactId>websocket-client</artifactId>
+            <version>9.4.28.v20200408</version>
         </dependency>
         <dependency>
             <groupId>org.apache.unomi</groupId>
@@ -70,84 +122,23 @@
             <version>${project.version}</version>
             <scope>test</scope>
         </dependency>
-
         <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-api</artifactId>
-            <scope>provided</scope>
+            <groupId>org.apache.unomi</groupId>
+            <artifactId>unomi-persistence-spi</artifactId>
+            <version>${project.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.unomi</groupId>
+            <artifactId>shell-commands</artifactId>
+            <version>${project.version}</version>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.codehaus.groovy</groupId>
             <artifactId>groovy</artifactId>
             <version>${groovy.version}</version>
             <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.httpcomponents</groupId>
-            <artifactId>httpclient-osgi</artifactId>
-            <type>bundle</type>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.httpcomponents</groupId>
-            <artifactId>httpcore-osgi</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.eclipse.jetty.websocket</groupId>
-            <artifactId>websocket-client</artifactId>
-            <version>9.4.28.v20200408</version>
-            <type>bundle</type>
-        </dependency>
-
-
-        <!-- Dependencies for pax exam karaf container -->
-        <dependency>
-            <groupId>org.ops4j.pax.exam</groupId>
-            <artifactId>pax-exam-container-karaf</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.ops4j.pax.exam</groupId>
-            <artifactId>pax-exam-junit4</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.ops4j.pax.exam</groupId>
-            <artifactId>pax-exam</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.ops4j.pax.url</groupId>
-            <artifactId>pax-url-aether</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>javax.inject</groupId>
-            <artifactId>javax.inject</artifactId>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.osgi</groupId>
-            <artifactId>osgi.core</artifactId>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-simple</artifactId>
-            <version>1.6.6</version>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>org.ops4j.pax.url</groupId>
-            <artifactId>pax-url-wrap</artifactId>
-            <classifier>uber</classifier>
-            <version>2.5.4</version>
-            <scope>test</scope>
         </dependency>
     </dependencies>
 
@@ -197,6 +188,23 @@
                         </executions>
                     </plugin>
                     <plugin>
+                        <artifactId>maven-antrun-plugin</artifactId>
+                        <version>1.8</version>
+                        <executions>
+                            <execution>
+                                <phase>generate-resources</phase>
+                                <configuration>
+                                    <tasks>
+                                        <unzip src="${project.basedir}/src/test/resources/migration/snapshots_repository.zip" dest="${project.build.directory}" />
+                                    </tasks>
+                                </configuration>
+                                <goals>
+                                    <goal>run</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    <plugin>
                         <groupId>com.github.alexcojocaru</groupId>
                         <artifactId>elasticsearch-maven-plugin</artifactId>
                         <!-- REPLACE THE FOLLOWING WITH THE PLUGIN VERSION YOU NEED -->
@@ -213,6 +221,7 @@
                             </environmentVariables>
                             <instanceSettings>
                                 <properties>
+                                    <path.repo>${project.build.directory}/snapshots_repository</path.repo>
                                     <cluster.routing.allocation.disk.threshold_enabled>false</cluster.routing.allocation.disk.threshold_enabled>
                                     <http.cors.allow-origin>*</http.cors.allow-origin>
                                     <http.cors.allow-methods>OPTIONS,HEAD,GET,POST,PUT,DELETE</http.cors.allow-methods>
@@ -249,6 +258,9 @@
                             <includes>
                                 <include>**/*AllITs.java</include>
                             </includes>
+                            <systemPropertyVariables>
+                                <my.system.property>foo</my.system.property>
+                            </systemPropertyVariables>
                         </configuration>
                         <executions>
                             <execution>

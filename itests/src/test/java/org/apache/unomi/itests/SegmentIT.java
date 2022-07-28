@@ -58,22 +58,6 @@ public class SegmentIT extends BaseIT {
     private final static Logger LOGGER = LoggerFactory.getLogger(SegmentIT.class);
     private final static String SEGMENT_ID = "test-segment-id-2";
 
-    @Inject
-    @Filter(timeout = 600000)
-    protected SegmentService segmentService;
-
-    @Inject
-    @Filter(timeout = 600000)
-    protected ProfileService profileService;
-
-    @Inject
-    @Filter(timeout = 600000)
-    protected EventService eventService;
-
-    @Inject
-    @Filter(timeout = 600000)
-    protected PersistenceService persistenceService;
-
     @Before
     public void setUp() throws InterruptedException {
         removeItems(Segment.class);

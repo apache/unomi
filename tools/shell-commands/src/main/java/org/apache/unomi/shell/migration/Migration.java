@@ -37,5 +37,5 @@ public interface Migration {
      * @throws IOException if there was an error while executing the migration
      * @deprecated do groovy script for implementing new migrations
      */
-    void execute(Session session, CloseableHttpClient httpClient, Map<String, Object> migrationConfig, BundleContext bundleContext) throws IOException;
+    void execute(Session session, CloseableHttpClient httpClient, MigrationConfig migrationConfig, BundleContext bundleContext) throws IOException;
 }

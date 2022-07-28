@@ -54,7 +54,7 @@ public class SecurityIT extends BaseIT {
     }
 
     @Test
-    public void testOGNLInjection() throws IOException {
+    public void testOGNLInjection() throws Exception {
         ContextRequest contextRequest = new ContextRequest();
         List<PersonalizationService.PersonalizationRequest> personalizations = new ArrayList<>();
         PersonalizationService.PersonalizationRequest personalizationRequest = new PersonalizationService.PersonalizationRequest();
@@ -92,7 +92,7 @@ public class SecurityIT extends BaseIT {
         contextRequest.setPersonalizations(personalizations);
 
         contextRequest.setSessionId(SESSION_ID);
-        HttpPost request = new HttpPost(URL + "/cxs/context.json");
+        HttpPost request = new HttpPost(getFullUrl("/cxs/context.json"));
         request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.create("application/json")));
 
         TestUtils.RequestResponse response = executeContextJSONRequest(request, SESSION_ID);

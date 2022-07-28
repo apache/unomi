@@ -61,16 +61,6 @@ public class PropertiesUpdateActionIT extends BaseIT {
     private final static String PROFILE_TARGET_TEST_ID = "profile-target-event";
     private final static String PROFILE_TEST_ID = "profile-to-update-by-event";
 
-    @Inject
-    @Filter(timeout = 600000)
-    protected ProfileService profileService;
-    @Inject
-    @Filter(timeout = 600000)
-    protected EventService eventService;
-    @Inject
-    @Filter(timeout = 600000)
-    protected RulesService rulesService;
-
     @Before
     public void setUp() throws InterruptedException {
         Profile profile = new Profile();

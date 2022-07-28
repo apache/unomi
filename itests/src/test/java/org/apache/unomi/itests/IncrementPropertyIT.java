@@ -55,22 +55,6 @@ public class IncrementPropertyIT extends BaseIT {
     private Rule rule;
     private Event event;
 
-    @Inject
-    @Filter(timeout = 600000)
-    protected ProfileService profileService;
-
-    @Inject
-    @Filter(timeout = 600000)
-    protected EventService eventService;
-
-    @Inject
-    @Filter(timeout = 600000)
-    protected RulesService rulesService;
-
-    @Inject
-    @Filter(timeout = 600000)
-    protected DefinitionsService definitionsService;
-
     @Before
     public void setup() throws Exception {
         profile = createProfile();

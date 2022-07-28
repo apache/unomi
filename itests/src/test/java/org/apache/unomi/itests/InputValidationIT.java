@@ -61,14 +61,6 @@ public class InputValidationIT extends BaseIT {
     private final static String ERROR_MESSAGE_INVALID_DATA_RECEIVED = "Request rejected by the server because: Invalid received data";
     public static final String DUMMY_SCOPE = "dummy_scope";
 
-    @Inject
-    @Filter(timeout = 600000)
-    protected SchemaService schemaService;
-
-    @Inject
-    @Filter(timeout = 600000)
-    protected ScopeService scopeService;
-
     @Before
     public void setUp() throws InterruptedException {
         TestUtils.createScope(DUMMY_SCOPE, "Dummy scope", scopeService);
@@ -82,25 +74,25 @@ public class InputValidationIT extends BaseIT {
     }
 
     @Test
-    public void test_param_EventsCollectorRequestNotNull() throws IOException {
+    public void test_param_EventsCollectorRequestNotNull() throws Exception {
         doPOSTRequestTest(EVENT_COLLECTOR_URL, null, null, 400, ERROR_MESSAGE_INVALID_DATA_RECEIVED);
         doGETRequestTest(EVENT_COLLECTOR_URL, null, null, 400, ERROR_MESSAGE_INVALID_DATA_RECEIVED);
     }
 
     @Test
-    public void test_param_EventsNotEmpty() throws IOException {
+    public void test_param_EventsNotEmpty() throws Exception {
         doPOSTRequestTest(EVENT_COLLECTOR_URL, null, "/validation/eventcollector_emptyEvents.json", 400, ERROR_MESSAGE_INVALID_DATA_RECEIVED);
         doGETRequestTest(EVENT_COLLECTOR_URL, null, "/validation/eventcollector_emptyEvents.json", 400, ERROR_MESSAGE_INVALID_DATA_RECEIVED);
     }
 
     @Test
-    public void test_param_SessionIDPattern() throws IOException {
+    public void test_param_SessionIDPattern() throws Exception {
         doPOSTRequestTest(EVENT_COLLECTOR_URL, null, "/validation/eventcollector_invalidSessionId.json", 400, ERROR_MESSAGE_INVALID_DATA_RECEIVED);
         doGETRequestTest(EVENT_COLLECTOR_URL, null, "/validation/eventcollector_invalidSessionId.json", 400, ERROR_MESSAGE_INVALID_DATA_RECEIVED);
     }
 
     @Test
-    public void test_eventCollector_valid() throws IOException, InterruptedException {
+    public void test_eventCollector_valid() throws Exception {
         // needed schema for event to be valid during tests
         schemaService.saveSchema(resourceAsString("schemas/schema-dummy.json"));
         schemaService.saveSchema(resourceAsString("schemas/schema-dummy-properties.json"));
@@ -122,7 +114,7 @@ public class InputValidationIT extends BaseIT {
     }
 
     @Test
-    public void test_contextRequest_SessionIDPattern() throws IOException {
+    public void test_contextRequest_SessionIDPattern() throws Exception {
         doPOSTRequestTest(CONTEXT_JSON_URL, null, "/validation/contextRequest_invalidSessionId.json", 400, ERROR_MESSAGE_INVALID_DATA_RECEIVED);
         doPOSTRequestTest(CONTEXT_JS_URL, null, "/validation/contextRequest_invalidSessionId.json", 400, ERROR_MESSAGE_INVALID_DATA_RECEIVED);
         doGETRequestTest(CONTEXT_JSON_URL, null, "/validation/contextRequest_invalidSessionId.json", 400, ERROR_MESSAGE_INVALID_DATA_RECEIVED);
@@ -130,7 +122,7 @@ public class InputValidationIT extends BaseIT {
     }
 
     @Test
-    public void test_contextRequest_ProfileIDPattern() throws IOException {
+    public void test_contextRequest_ProfileIDPattern() throws Exception {
         doPOSTRequestTest(CONTEXT_JSON_URL, null, "/validation/contextRequest_invalidProfileId.json", 400, ERROR_MESSAGE_INVALID_DATA_RECEIVED);
         doPOSTRequestTest(CONTEXT_JS_URL, null, "/validation/contextRequest_invalidProfileId.json", 400, ERROR_MESSAGE_INVALID_DATA_RECEIVED);
         doGETRequestTest(CONTEXT_JSON_URL, null, "/validation/contextRequest_invalidProfileId.json", 400, ERROR_MESSAGE_INVALID_DATA_RECEIVED);
@@ -138,7 +130,7 @@ public class InputValidationIT extends BaseIT {
     }
 
     @Test
-    public void test_contextRequest_valid() throws IOException {
+    public void test_contextRequest_valid() throws Exception {
         doPOSTRequestTest(CONTEXT_JSON_URL, null, "/validation/contextRequest_valid.json", 200, null);
         doPOSTRequestTest(CONTEXT_JS_URL, null, "/validation/contextRequest_valid.json", 200, null);
         doGETRequestTest(CONTEXT_JSON_URL, null, "/validation/contextRequest_valid.json", 200, null);
@@ -146,7 +138,7 @@ public class InputValidationIT extends BaseIT {
     }
 
     @Test
-    public void test_eventCollector_request_size_exceed_limit() throws IOException, InterruptedException {
+    public void test_eventCollector_request_size_exceed_limit() throws Exception {
         // needed schema for event to be valid during tests
         schemaService.saveSchema(resourceAsString("schemas/schema-dummy.json"));
         schemaService.saveSchema(resourceAsString("schemas/schema-dummy-properties.json"));
@@ -168,7 +160,7 @@ public class InputValidationIT extends BaseIT {
     }
 
     @Test
-    public void test_contextJSON_SessionIDPattern() throws IOException {
+    public void test_contextJSON_SessionIDPattern() throws Exception {
         String baseUrl = CONTEXT_JS_URL;
         String queryString = "?sessionId=" + URLEncoder.encode("<script>alert();</script>", StandardCharsets.UTF_8.toString());
         doPOSTRequestTest(baseUrl + queryString, null, null, 400, ERROR_MESSAGE_INVALID_DATA_RECEIVED);
@@ -189,7 +181,7 @@ public class InputValidationIT extends BaseIT {
     }
 
     @Test
-    public void test_contextJSON_PersonaIdPattern() throws IOException {
+    public void test_contextJSON_PersonaIdPattern() throws Exception {
         String baseUrl = CONTEXT_JS_URL;
         String queryString = "?personaId=" + URLEncoder.encode("<script>alert();</script>", StandardCharsets.UTF_8.toString());
         doPOSTRequestTest(baseUrl + queryString, null, null, 400, ERROR_MESSAGE_INVALID_DATA_RECEIVED);
@@ -210,7 +202,7 @@ public class InputValidationIT extends BaseIT {
     }
 
     @Test
-    public void test_cookie_profileIdPattern() throws IOException {
+    public void test_cookie_profileIdPattern() throws Exception {
         Map<String, String> headers = new HashMap<>();
         headers.put("Cookie", "context-profile-id=<script>alert();</script>");
         doPOSTRequestTest(CONTEXT_JSON_URL, headers, null, 400, ERROR_MESSAGE_INVALID_DATA_RECEIVED);
@@ -225,11 +217,11 @@ public class InputValidationIT extends BaseIT {
         doGETRequestTest(CONTEXT_JS_URL, headers, null, 200, null);
     }
 
-    private void doGETRequestTest(String uri, Map<String, String> headers, String entityResourcePath, int expectedHTTPStatusCode, String expectedErrorMessage) throws IOException {
+    private void doGETRequestTest(String uri, Map<String, String> headers, String entityResourcePath, int expectedHTTPStatusCode, String expectedErrorMessage) throws Exception {
         // test old servlets
-        performGETRequestTest(URL + uri, headers, entityResourcePath, expectedHTTPStatusCode, expectedErrorMessage);
+        performGETRequestTest(getFullUrl(uri), headers, entityResourcePath, expectedHTTPStatusCode, expectedErrorMessage);
         // test directly CXS endpoints
-        performGETRequestTest(URL + "/cxs" + uri, headers, entityResourcePath, expectedHTTPStatusCode, expectedErrorMessage);
+        performGETRequestTest(getFullUrl("/cxs" + uri), headers, entityResourcePath, expectedHTTPStatusCode, expectedErrorMessage);
     }
 
     private void performGETRequestTest(String url, Map<String, String> headers, String entityResourcePath, int expectedHTTPStatusCode, String expectedErrorMessage) throws IOException {
@@ -240,11 +232,11 @@ public class InputValidationIT extends BaseIT {
         performRequest(new HttpGet(url), headers, expectedHTTPStatusCode, expectedErrorMessage);
     }
 
-    private void doPOSTRequestTest(String uri, Map<String, String> headers, String entityResourcePath, int expectedHTTPStatusCode, String expectedErrorMessage) throws IOException {
+    private void doPOSTRequestTest(String uri, Map<String, String> headers, String entityResourcePath, int expectedHTTPStatusCode, String expectedErrorMessage) throws Exception {
         // test old servlets
-        performPOSTRequestTest(URL + uri, headers, entityResourcePath, expectedHTTPStatusCode, expectedErrorMessage);
+        performPOSTRequestTest(getFullUrl(uri), headers, entityResourcePath, expectedHTTPStatusCode, expectedErrorMessage);
         // test directly CXS endpoints
-        performPOSTRequestTest(URL + "/cxs" + uri, headers, entityResourcePath, expectedHTTPStatusCode, expectedErrorMessage);
+        performPOSTRequestTest(getFullUrl("/cxs" + uri), headers, entityResourcePath, expectedHTTPStatusCode, expectedErrorMessage);
     }
 
     private void performPOSTRequestTest(String url, Map<String, String> headers, String entityResourcePath, int expectedHTTPStatusCode, String expectedErrorMessage) throws IOException {

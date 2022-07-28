@@ -48,13 +48,6 @@ public class SendEventActionIT extends BaseIT {
     private final static String TEST_EVENT_TYPE = "sendEventTestEventType";
     private final static String TEST_PROFILE_ID = "sendEventTestProfileId";
 
-    @Inject
-    @Filter(timeout = 600000)
-    protected ProfileService profileService;
-    @Inject
-    @Filter(timeout = 600000)
-    protected EventService eventService;
-
     @After
     public void tearDown() throws InterruptedException {
         eventService.removeProfileEvents(TEST_PROFILE_ID);

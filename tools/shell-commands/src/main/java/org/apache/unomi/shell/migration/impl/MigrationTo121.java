@@ -20,6 +20,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.karaf.shell.api.console.Session;
 import org.apache.unomi.shell.migration.Migration;
+import org.apache.unomi.shell.migration.MigrationConfig;
 import org.apache.unomi.shell.migration.utils.ConsoleUtils;
 import org.apache.unomi.shell.migration.utils.MigrationUtils;
 import org.json.JSONArray;
@@ -41,10 +42,10 @@ public class MigrationTo121 implements Migration {
     private List propsTaggedAsPersonalIdentifier = Arrays.asList("firstName", "lastName", "email", "phoneNumber", "address", "facebookId", "googleId", "linkedInId", "twitterId");
 
     @Override
-    public void execute(Session session, CloseableHttpClient httpClient, Map<String, Object> migrationConfig, BundleContext bundleContext) throws IOException {
+    public void execute(Session session, CloseableHttpClient httpClient, MigrationConfig migrationConfig, BundleContext bundleContext) throws IOException {
         this.httpClient = httpClient;
         this.session = session;
-        this.esAddress = (String) migrationConfig.get("esAddress");
+        this.esAddress = migrationConfig.getString(MigrationConfig.CONFIG_ES_ADDRESS, session);
         migrateTags();
     }
 

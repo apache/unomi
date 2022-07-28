@@ -49,11 +49,6 @@ import java.util.Map;
 public class ProfileImportBasicIT extends BaseIT {
     private Logger logger = LoggerFactory.getLogger(ProfileImportBasicIT.class);
 
-    @Inject @Filter(value="(configDiscriminator=IMPORT)", timeout = 600000)
-    protected ImportExportConfigurationService<ImportConfiguration> importConfigurationService;
-    @Inject @Filter(timeout = 600000)
-    protected ProfileService profileService;
-
     @Test
     public void testImportBasic() throws IOException, InterruptedException {
         /*** Basic Test ***/

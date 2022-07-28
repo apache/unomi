@@ -42,8 +42,6 @@ public class GraphQLWebSocketIT extends BaseGraphQLIT {
 
     private final static Logger LOGGER = LoggerFactory.getLogger(GraphQLWebSocketIT.class);
 
-    private static final String SUBSCRIPTION_ENDPOINT = "ws://localhost:" + HTTP_PORT + "/graphql";
-
     @Test
     public void testWebSocketConnectionSegment() throws Exception {
         WebSocketClient client = new WebSocketClient();
@@ -52,7 +50,7 @@ public class GraphQLWebSocketIT extends BaseGraphQLIT {
             LOGGER.info("Starting web socket client...");
             client.start();
 
-            URI echoUri = new URI(SUBSCRIPTION_ENDPOINT);
+            URI echoUri = new URI("ws://localhost:" + getHttpPort() + "/graphql");
             ClientUpgradeRequest request = new ClientUpgradeRequest();
 
             Future<Session> onConnected = client.connect(socket, echoUri, request);

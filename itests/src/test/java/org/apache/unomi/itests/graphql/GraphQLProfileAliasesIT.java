@@ -29,10 +29,6 @@ import javax.inject.Inject;
 
 public class GraphQLProfileAliasesIT extends BaseGraphQLIT {
 
-    @Inject
-    @Filter(timeout = 600000)
-    protected ProfileService profileService;
-
     @Before
     public void setUp() throws InterruptedException {
         removeItems(ProfileAlias.class);

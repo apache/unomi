@@ -40,22 +40,6 @@ public class GraphQLViewIT
     extends BaseGraphQLIT
 {
 
-    @Inject
-    @Filter(timeout = 600000)
-    protected UserListService userListService;
-
-    @Inject
-    @Filter(timeout = 600000)
-    protected TopicService topicService;
-
-    @Inject
-    @Filter(timeout = 600000)
-    protected SegmentService segmentService;
-
-    @Inject
-    @Filter(timeout = 600000)
-    protected DefinitionsService definitionsService;
-
     @Test
     public void test()
         throws Exception

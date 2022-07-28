@@ -27,12 +27,8 @@ import java.io.IOException;
 
 public class GraphQLTopicIT extends BaseGraphQLIT {
 
-    @Inject
-    @Filter(timeout = 600000)
-    protected TopicService topicService;
-
     @Test
-    public void testCRUD() throws IOException, InterruptedException {
+    public void testCRUD() throws Exception {
         try (CloseableHttpResponse response = post("graphql/topic/create-topic.json")) {
             final ResponseContext context = ResponseContext.parse(response.getEntity());
 

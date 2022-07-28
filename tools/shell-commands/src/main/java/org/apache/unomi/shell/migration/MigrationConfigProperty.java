@@ -1,5 +1,3 @@
-import org.apache.unomi.shell.migration.utils.MigrationUtils
-
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -16,7 +14,25 @@ import org.apache.unomi.shell.migration.utils.MigrationUtils
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.unomi.shell.migration;
 
-String newIndexSettings = MigrationUtils.resourceAsString(bundleContext, "requestBody/2.0.0/segment_index.json");
-MigrationUtils.reIndex(httpClient, bundleContext, migrationConfig.get("esAddress"), migrationConfig.get("indexPrefix") + "-segment",
-        newIndexSettings, null)
+/**
+ * Just a bean for a configuration property to be used during migration process
+ */
+public class MigrationConfigProperty {
+    String description;
+    String defaultValue;
+
+    public MigrationConfigProperty(String description, String defaultValue) {
+        this.description = description;
+        this.defaultValue = defaultValue;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public String getDefaultValue() {
+        return defaultValue;
+    }
+}

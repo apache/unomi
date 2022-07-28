@@ -50,14 +50,6 @@ public class ScopeIT extends BaseIT {
     private static final int DEFAULT_TRYING_TIMEOUT = 2000;
     private static final int DEFAULT_TRYING_TRIES = 30;
 
-    @Inject
-    @Filter(timeout = 600000)
-    protected ScopeService scopeService;
-
-    @Inject
-    @Filter(timeout = 600000)
-    protected PersistenceService persistenceService;
-
     @Before
     public void setUp() throws InterruptedException {
         keepTrying("Couldn't find scope endpoint", () -> get(SCOPE_URL, List.class), Objects::nonNull, DEFAULT_TRYING_TIMEOUT,

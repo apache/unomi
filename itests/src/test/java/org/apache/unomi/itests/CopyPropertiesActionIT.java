@@ -64,13 +64,6 @@ public class CopyPropertiesActionIT extends BaseIT {
     public static final String PROPERTY_TO_MAP = "PropertyToMap";
     public static final String MAPPED_PROPERTY = "MappedProperty";
 
-    @Inject
-    @Filter(timeout = 600000)
-    protected ProfileService profileService;
-    @Inject
-    @Filter(timeout = 600000)
-    protected EventService eventService;
-
     @Before
     public void setUp() throws InterruptedException {
         Profile profile = new Profile();

@@ -30,17 +30,13 @@ import java.util.Objects;
 
 public class GraphQLProfileIT extends BaseGraphQLIT {
 
-    @Inject
-    @Filter(timeout = 600000)
-    protected ProfileService profileService;
-
     @Before
     public void setUp() throws InterruptedException {
         removeItems(Profile.class);
     }
 
     @Test
-    public void testGetProfile_WithoutCreation() throws IOException {
+    public void testGetProfile_WithoutCreation() throws Exception {
         try (CloseableHttpResponse response = post("graphql/profile/get-profile-without-creation.json")) {
             final ResponseContext context = ResponseContext.parse(response.getEntity());
 
@@ -49,7 +45,7 @@ public class GraphQLProfileIT extends BaseGraphQLIT {
     }
 
     @Test
-    public void testGetProfile_WithCreation() throws IOException {
+    public void testGetProfile_WithCreation() throws Exception {
         try (CloseableHttpResponse response = post("graphql/profile/get-profile-with-creation.json")) {
             final ResponseContext context = ResponseContext.parse(response.getEntity());
 

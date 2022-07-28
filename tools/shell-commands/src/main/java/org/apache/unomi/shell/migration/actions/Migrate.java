@@ -26,6 +26,7 @@ import org.apache.karaf.shell.api.action.Command;
 import org.apache.karaf.shell.api.action.lifecycle.Reference;
 import org.apache.karaf.shell.api.action.lifecycle.Service;
 import org.apache.karaf.shell.api.console.Session;
+import org.apache.unomi.shell.migration.MigrationConfig;
 import org.apache.unomi.shell.migration.MigrationScript;
 import org.apache.unomi.shell.migration.utils.ConsoleUtils;
 import org.apache.unomi.shell.migration.utils.HttpUtils;
@@ -41,12 +42,13 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-@Command(scope = "unomi", name = "migrate", description = "This will Migrate your data in ES to be compliant with current version")
+import static org.apache.unomi.shell.migration.MigrationConfig.CONFIG_TRUST_ALL_CERTIFICATES;
+
+@Command(scope = "unomi", name = "migrate", description = "This will Migrate your data in ES to be compliant with current version. " +
+        "It's possible to configure the migration using OSGI configuration file: org.apache.unomi.migration.cfg, if no configuration is provided then questions will be prompted during the migration process.")
 @Service
 public class Migrate implements Action {
-    public static final String CONFIG_ES_ADDRESS = "esAddress";
-    public static final String CONFIG_TRUST_ALL_CERTIFICATES = "httpClient.trustAllCertificates";
-    public static final String INDEX_PREFIX = "indexPrefix";
+
 
     @Reference
     Session session;
@@ -54,8 +56,14 @@ public class Migrate implements Action {
     @Reference
     BundleContext bundleContext;
 
+    @Reference
+    MigrationConfig migrationConfig;
+
     @Argument(name = "originVersion", description = "Origin version without suffix/qualifier (e.g: 1.2.0)", valueToShowInHelp = "1.2.0")
     private String originVersion;
+
+    @Argument(index = 1, name = "skipConfirmation", description = "Should the confirmation before starting the migration process be skipped ?", valueToShowInHelp = "false")
+    private boolean skipConfirmation = false;
 
     public Object execute() throws Exception {
         // Load migration scrips
@@ -80,20 +88,17 @@ public class Migrate implements Action {
         }
 
         // Check for user approval before migrate
-        if (ConsoleUtils.askUserWithAuthorizedAnswer(session,
+        if (!skipConfirmation && ConsoleUtils.askUserWithAuthorizedAnswer(session,
                 "[WARNING] You are about to execute a migration, this a very sensitive operation, are you sure? (yes/no): ",
                 Arrays.asList("yes", "no")).equalsIgnoreCase("no")) {
             ConsoleUtils.printMessage(session, "Migration process aborted");
             return null;
         }
 
-        // Build conf
-        Map<String, Object> migrationConfig = new HashMap<>();
-        migrationConfig.put(CONFIG_ES_ADDRESS, ConsoleUtils.askUserWithDefaultAnswer(session, "Enter ElasticSearch 7 TARGET address (default = http://localhost:9200): ", "http://localhost:9200"));
-        migrationConfig.put(CONFIG_TRUST_ALL_CERTIFICATES, ConsoleUtils.askUserWithAuthorizedAnswer(session,"We need to initialize a HttpClient, do we need to trust all certificates? (yes/no): ", Arrays.asList("yes", "no")).equalsIgnoreCase("yes"));
-        migrationConfig.put(INDEX_PREFIX, ConsoleUtils.askUserWithDefaultAnswer(session, "SOURCE index name (default: context) : ", "context"));
-
-        try (CloseableHttpClient httpClient = HttpUtils.initHttpClient((Boolean) migrationConfig.get(CONFIG_TRUST_ALL_CERTIFICATES))) {
+        // reset migration config from previous stored users choices.
+        migrationConfig.reset();
+        
+        try (CloseableHttpClient httpClient = HttpUtils.initHttpClient(migrationConfig.getBoolean(CONFIG_TRUST_ALL_CERTIFICATES, session))) {
 
             // Compile scripts
             scripts = parseScripts(scripts, session, httpClient, migrationConfig);
@@ -133,7 +138,7 @@ public class Migrate implements Action {
                 .collect(Collectors.toCollection(TreeSet::new));
     }
 
-    private Set<MigrationScript> parseScripts(Set<MigrationScript> scripts, Session session, CloseableHttpClient httpClient, Map<String, Object> migrationConfig) {
+    private Set<MigrationScript> parseScripts(Set<MigrationScript> scripts, Session session, CloseableHttpClient httpClient, MigrationConfig migrationConfig) {
         Map<String, GroovyShell> shellsPerBundle = new HashMap<>();
 
         return scripts.stream()
@@ -187,7 +192,7 @@ public class Migrate implements Action {
         return migrationScripts;
     }
 
-    private GroovyShell buildShellForBundle(Bundle bundle, Session session, CloseableHttpClient httpClient, Map<String, Object> migrationConfig) {
+    private GroovyShell buildShellForBundle(Bundle bundle, Session session, CloseableHttpClient httpClient, MigrationConfig migrationConfig) {
         GroovyClassLoader groovyLoader = new GroovyClassLoader(bundle.adapt(BundleWiring.class).getClassLoader());
         GroovyScriptEngine groovyScriptEngine = new GroovyScriptEngine((URL[]) null, groovyLoader);
         GroovyShell groovyShell = new GroovyShell(groovyScriptEngine.getGroovyClassLoader());

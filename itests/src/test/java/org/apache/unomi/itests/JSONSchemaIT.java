@@ -61,14 +61,6 @@ public class JSONSchemaIT extends BaseIT {
     private static final int DEFAULT_TRYING_TRIES = 30;
     public static final String DUMMY_SCOPE = "dummy_scope";
 
-    @Inject
-    @Filter(timeout = 600000)
-    protected SchemaService schemaService;
-
-    @Inject
-    @Filter(timeout = 6000000)
-    protected ScopeService scopeService;
-
     @Before
     public void setUp() throws InterruptedException {
         keepTrying("Couldn't find json schema endpoint", () -> get(JSONSCHEMA_URL, List.class), Objects::nonNull, DEFAULT_TRYING_TIMEOUT,
@@ -329,7 +321,7 @@ public class JSONSchemaIT extends BaseIT {
         }
     }
 
-    private Event sendEventAndWaitItsIndexed(String eventResourcePath) throws IOException, InterruptedException {
+    private Event sendEventAndWaitItsIndexed(String eventResourcePath) throws Exception {
         // build event collector request
         String eventMarker = UUID.randomUUID().toString();
         HashMap<String, String> eventReplacements = new HashMap<>();
@@ -353,8 +345,8 @@ public class JSONSchemaIT extends BaseIT {
         return events.get(0);
     }
 
-    private void eventCollectorPost(String eventCollectorRequest) {
-        HttpPost request = new HttpPost(URL + EVENT_COLLECTOR_URL);
+    private void eventCollectorPost(String eventCollectorRequest) throws Exception {
+        HttpPost request = new HttpPost(getFullUrl(EVENT_COLLECTOR_URL));
         request.addHeader("Content-Type", "application/json");
         request.setEntity(new StringEntity(eventCollectorRequest, ContentType.create("application/json")));
         CloseableHttpResponse response;
