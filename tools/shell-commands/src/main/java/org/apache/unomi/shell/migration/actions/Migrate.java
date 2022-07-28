@@ -62,9 +62,8 @@ public class Migrate implements Action {
     @Argument(name = "originVersion", description = "Origin version without suffix/qualifier (e.g: 1.2.0)", valueToShowInHelp = "1.2.0")
     private String originVersion;
 
-    @Argument(index = 1, name = "silent", description = "Should the migration process be silent ?. " +
-            "The configuration org.apache.unomi.migration.cfg is required for this option to work properly", valueToShowInHelp = "false")
-    private boolean silent = false;
+    @Argument(index = 1, name = "skipConfirmation", description = "Should the confirmation before starting the migration process be skipped ?", valueToShowInHelp = "false")
+    private boolean skipConfirmation = false;
 
     public Object execute() throws Exception {
         // Load migration scrips
@@ -89,7 +88,7 @@ public class Migrate implements Action {
         }
 
         // Check for user approval before migrate
-        if (!silent && ConsoleUtils.askUserWithAuthorizedAnswer(session,
+        if (!skipConfirmation && ConsoleUtils.askUserWithAuthorizedAnswer(session,
                 "[WARNING] You are about to execute a migration, this a very sensitive operation, are you sure? (yes/no): ",
                 Arrays.asList("yes", "no")).equalsIgnoreCase("no")) {
             ConsoleUtils.printMessage(session, "Migration process aborted");

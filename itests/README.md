@@ -113,7 +113,7 @@ Also the ElasticSearch maven plugin is configured to allow this snapshot reposit
 
     <path.repo>${project.build.directory}/snapshots_repository</path.repo>
 
-Now that migration accept configuration file we can provide it, this allows to benefit from silent migration (in BaseIT configuration):
+Now that migration accept configuration file we can provide it, this allows to avoid the migration process to prompt questions (in BaseIT configuration):
 
     replaceConfigurationFile("etc/org.apache.unomi.migration.cfg", new File("src/test/resources/migration/org.apache.unomi.migration.cfg")),
 

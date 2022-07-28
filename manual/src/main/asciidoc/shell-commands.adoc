@@ -46,15 +46,14 @@ DESCRIPTION
     if no configuration is provided then questions will be prompted during the migration process.
 
 SYNTAX
-        unomi:migrate [fromVersionWithoutSuffix] [silent]
+        unomi:migrate [fromVersionWithoutSuffix] [skipConfirmation]
 
 ARGUMENTS
         fromVersionWithoutSuffix
                 Origin version without suffix/qualifier (e.g: 1.2.0)
                 (defaults to 1.2.0)
-        silent
-                Should the migration process be silent ?. (No questions will be prompted in the console)
-                The configuration org.apache.unomi.migration.cfg is required for this option to work properly
+        skipConfirmation
+                Should the confirmation before starting the migration process be skipped ?
                 (defaults to false)
 
 ```
