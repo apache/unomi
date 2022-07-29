@@ -39,7 +39,7 @@ public class Migrate16xTo200IT extends BaseIT {
     public void waitForStartup() throws InterruptedException {
 
         // Restore snapshot from 1.6.x
-        try (CloseableHttpClient httpClient = HttpUtils.initHttpClient(true)) {
+        try (CloseableHttpClient httpClient = HttpUtils.initHttpClient(true, null)) {
             // Create snapshot repo
             HttpUtils.executePutRequest(httpClient, "http://localhost:9400/_snapshot/snapshots_repository/", resourceAsString("migration/create_snapshots_repository.json"), null);
             // Get snapshot, insure it exists
