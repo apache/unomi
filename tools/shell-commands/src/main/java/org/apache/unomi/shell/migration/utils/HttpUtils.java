@@ -17,6 +17,7 @@
 package org.apache.unomi.shell.migration.utils;
 
 import org.apache.http.HttpEntity;
+import org.apache.http.client.CredentialsProvider;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.*;
 import org.apache.http.config.Registry;
@@ -52,11 +53,13 @@ import java.util.Map;
 public class HttpUtils {
     private static final Logger logger = LoggerFactory.getLogger(HttpUtils.class);
 
-    public static CloseableHttpClient initHttpClient(boolean trustAllCertificates) throws IOException {
+    public static CloseableHttpClient initHttpClient(boolean trustAllCertificates, CredentialsProvider credentialsProvider) throws IOException {
         long requestStartTime = System.currentTimeMillis();
 
         HttpClientBuilder httpClientBuilder = HttpClients.custom().useSystemProperties();
-
+        if (credentialsProvider != null) {
+            httpClientBuilder.setDefaultCredentialsProvider(credentialsProvider);
+        }
         if (trustAllCertificates) {
             try {
                 SSLContext sslContext = SSLContext.getInstance("SSL");

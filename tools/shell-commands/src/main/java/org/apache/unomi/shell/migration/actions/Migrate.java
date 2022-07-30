@@ -19,6 +19,11 @@ package org.apache.unomi.shell.migration.actions;
 import groovy.lang.GroovyClassLoader;
 import groovy.lang.GroovyShell;
 import groovy.util.GroovyScriptEngine;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.http.auth.AuthScope;
+import org.apache.http.auth.UsernamePasswordCredentials;
+import org.apache.http.client.CredentialsProvider;
+import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.karaf.shell.api.action.Action;
 import org.apache.karaf.shell.api.action.Argument;
@@ -42,7 +47,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static org.apache.unomi.shell.migration.MigrationConfig.CONFIG_TRUST_ALL_CERTIFICATES;
+import static org.apache.unomi.shell.migration.MigrationConfig.*;
 
 @Command(scope = "unomi", name = "migrate", description = "This will Migrate your data in ES to be compliant with current version. " +
         "It's possible to configure the migration using OSGI configuration file: org.apache.unomi.migration.cfg, if no configuration is provided then questions will be prompted during the migration process.")
@@ -97,8 +102,18 @@ public class Migrate implements Action {
 
         // reset migration config from previous stored users choices.
         migrationConfig.reset();
-        
-        try (CloseableHttpClient httpClient = HttpUtils.initHttpClient(migrationConfig.getBoolean(CONFIG_TRUST_ALL_CERTIFICATES, session))) {
+
+        // Handle credentials
+        CredentialsProvider credentialsProvider = null;
+        String login = migrationConfig.getString(CONFIG_ES_LOGIN, session);
+        if (StringUtils.isNotEmpty(login)) {
+            credentialsProvider = new BasicCredentialsProvider();
+            UsernamePasswordCredentials credentials
+                    = new UsernamePasswordCredentials(login, migrationConfig.getString(CONFIG_ES_PASSWORD, session));
+            credentialsProvider.setCredentials(AuthScope.ANY, credentials);
+        }
+
+        try (CloseableHttpClient httpClient = HttpUtils.initHttpClient(migrationConfig.getBoolean(CONFIG_TRUST_ALL_CERTIFICATES, session), credentialsProvider)) {
 
             // Compile scripts
             scripts = parseScripts(scripts, session, httpClient, migrationConfig);
