@@ -29,6 +29,8 @@ import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.services.PersonalizationService;
 import org.apache.unomi.rest.exception.InvalidRequestException;
 import org.apache.unomi.schema.api.SchemaService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -39,6 +41,8 @@ import java.util.Map;
  * Custom deserializer for ContextRequest that do validate the object using JSON Schema
  */
 public class ContextRequestDeserializer extends StdDeserializer<ContextRequest> {
+
+    private static final Logger logger = LoggerFactory.getLogger(ContextRequestDeserializer.class);
 
     private final SchemaService schemaService;
 
@@ -88,6 +92,8 @@ public class ContextRequestDeserializer extends StdDeserializer<ContextRequest> 
             for (JsonNode event : events) {
                 if (schemaService.isEventValid(event.toString(), event.get("eventType").textValue())) {
                     filteredEvents.add(jsonParser.getCodec().treeToValue(event, Event.class));
+                } else {
+                    logger.error("An event was rejected - switch to DEBUG log level for more information");
                 }
             }
             cr.setEvents(filteredEvents);
