@@ -174,12 +174,12 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
         action1.setActionType(definitionsService.getActionType("setPropertyAction"));
         String name = "systemProperties.goals." + goal.getMetadata().getId() + id + "Reached";
         action1.setParameter("setPropertyName", name);
-        action1.setParameter("setPropertyValue", "now");
+        action1.setParameter("setPropertyValueCurrentEventTimestamp", true);
         action1.setParameter("storeInSession", true);
         Action action2 = new Action();
         action2.setActionType(definitionsService.getActionType("setPropertyAction"));
         action2.setParameter("setPropertyName", name);
-        action2.setParameter("setPropertyValue", "script::profile.properties.?"+name+" != null ? (profile.properties."+name+") : 'now'");
+        action2.setParameter("setPropertyValueCurrentEventTimestamp", true);
         action2.setParameter("storeInSession", false);
         rule.setActions(Arrays.asList(action1, action2));
 
@@ -325,12 +325,12 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
         action1.setActionType(definitionsService.getActionType("setPropertyAction"));
         String name = "systemProperties.campaigns." + campaign.getMetadata().getId() + "Engaged";
         action1.setParameter("setPropertyName", name);
-        action1.setParameter("setPropertyValue", "now");
+        action1.setParameter("setPropertyValueCurrentEventTimestamp", true);
         action1.setParameter("storeInSession", true);
         Action action2 = new Action();
         action2.setActionType(definitionsService.getActionType("setPropertyAction"));
         action2.setParameter("setPropertyName", name);
-        action2.setParameter("setPropertyValue", "script::profile.properties.?"+name+" != null ? (profile.properties."+name+") : 'now'");
+        action2.setParameter("setPropertyValueCurrentEventTimestamp", true);
         action2.setParameter("storeInSession", false);
         rule.setActions(Arrays.asList(action1,action2));
         rulesService.setRule(rule);
