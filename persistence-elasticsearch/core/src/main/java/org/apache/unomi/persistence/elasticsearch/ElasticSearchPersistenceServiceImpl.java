@@ -1444,7 +1444,10 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             }
             Map<String, Object> subMappings = mappings.computeIfAbsent("properties", k -> new HashMap<>());
             Map<String, Object> subSubMappings = (Map<String, Object>) subMappings.computeIfAbsent("properties", k -> new HashMap<>());
-            mergePropertiesMapping(subSubMappings, createPropertyMapping(property));
+            Map<String, Object> propertyMapping = createPropertyMapping(property);
+            if (propertyMapping != null) {
+                mergePropertiesMapping(subSubMappings, propertyMapping);
+            }
 
             Map<String, Object> mappingsWrapper = new HashMap<>();
             mappingsWrapper.put("properties", mappings);
@@ -1479,12 +1482,15 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         if ("set".equals(property.getValueTypeId())) {
             Map<String, Object> childProperties = new HashMap<>();
             property.getChildPropertyTypes().forEach(childType -> {
-                mergePropertiesMapping(childProperties, createPropertyMapping(childType));
+                Map<String, Object> propertyMapping = createPropertyMapping(childType);
+                if (propertyMapping != null) {
+                    mergePropertiesMapping(childProperties, propertyMapping);
+                }
             });
             definition.put("properties", childProperties);
         }
 
-        return Collections.singletonMap(property.getItemId(), definition);
+        return !definition.isEmpty() ? Collections.singletonMap(property.getItemId(), definition) : null;
     }
 
     private String convertValueTypeToESType(String valueTypeId) {
