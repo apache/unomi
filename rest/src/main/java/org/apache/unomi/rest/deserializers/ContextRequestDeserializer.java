@@ -128,7 +128,7 @@ public class ContextRequestDeserializer extends StdDeserializer<ContextRequest> 
             cr.setProfileOverrides(jsonParser.getCodec().treeToValue(node.get("profileOverrides"), Profile.class));
         }
         if (node.get("sessionPropertiesOverrides") != null) {
-            jsonParser.getCodec().treeToValue(node.get("sessionPropertiesOverrides"), Map.class);
+            cr.setSessionPropertiesOverrides(jsonParser.getCodec().treeToValue(node.get("sessionPropertiesOverrides"), Map.class));
         }
         if (node.get("sessionId") != null) {
             cr.setSessionId(node.get("sessionId").textValue());
