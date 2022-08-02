@@ -1438,13 +1438,19 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     public void setPropertyMapping(final PropertyType property, final String itemType) {
         try {
+            Map<String, Object> propertyMapping = createPropertyMapping(property);
+            if (propertyMapping.isEmpty()) {
+                return;
+            }
+
             Map<String, Map<String, Object>> mappings = getPropertiesMapping(itemType);
             if (mappings == null) {
                 mappings = new HashMap<>();
             }
             Map<String, Object> subMappings = mappings.computeIfAbsent("properties", k -> new HashMap<>());
             Map<String, Object> subSubMappings = (Map<String, Object>) subMappings.computeIfAbsent("properties", k -> new HashMap<>());
-            mergePropertiesMapping(subSubMappings, createPropertyMapping(property));
+
+            mergePropertiesMapping(subSubMappings, propertyMapping);
 
             Map<String, Object> mappingsWrapper = new HashMap<>();
             mappingsWrapper.put("properties", mappings);
@@ -1461,8 +1467,8 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         final HashMap<String, Object> definition = new HashMap<>();
 
         if (esType == null) {
-            logger.warn("No predefined type found for property[" + property.getValueTypeId() + "], letting ES decide");
-            // we don't have a fixed type for that property so let ES decide it
+            logger.warn("No predefined type found for property[{}], no mapping will be created", property.getValueTypeId());
+            return Collections.emptyMap();
         } else {
             definition.put("type", esType);
             if ("text".equals(esType)) {
@@ -1479,7 +1485,10 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         if ("set".equals(property.getValueTypeId())) {
             Map<String, Object> childProperties = new HashMap<>();
             property.getChildPropertyTypes().forEach(childType -> {
-                mergePropertiesMapping(childProperties, createPropertyMapping(childType));
+                Map<String, Object> propertyMapping = createPropertyMapping(childType);
+                if (!propertyMapping.isEmpty()) {
+                    mergePropertiesMapping(childProperties, propertyMapping);
+                }
             });
             definition.put("properties", childProperties);
         }
