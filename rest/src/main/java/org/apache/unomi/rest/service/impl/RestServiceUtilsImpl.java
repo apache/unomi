@@ -17,31 +17,34 @@
 package org.apache.unomi.rest.service.impl;
 
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import org.apache.unomi.api.Event;
-import org.apache.unomi.api.Persona;
-import org.apache.unomi.api.Profile;
-import org.apache.unomi.api.Session;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.unomi.api.*;
 import org.apache.unomi.api.services.ConfigSharingService;
 import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.api.services.PrivacyService;
+import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.rest.exception.InvalidRequestException;
 import org.apache.unomi.rest.service.RestServiceUtils;
 import org.apache.unomi.schema.api.SchemaService;
-import org.apache.unomi.utils.Changes;
+import org.apache.unomi.utils.HttpUtils;
+import org.apache.unomi.utils.EventsRequestContext;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.BadRequestException;
 import java.util.Date;
 import java.util.List;
+import java.util.UUID;
 
 @Component(service = RestServiceUtils.class)
 public class RestServiceUtilsImpl implements RestServiceUtils {
+
+    private static final String DEFAULT_CLIENT_ID = "defaultClientId";
 
     private static final Logger logger = LoggerFactory.getLogger(RestServiceUtilsImpl.class.getName());
 
@@ -55,8 +58,12 @@ public class RestServiceUtilsImpl implements RestServiceUtils {
     private EventService eventService;
 
     @Reference
+    private ProfileService profileService;
+
+    @Reference
     SchemaService schemaService;
 
+    @Override
     public String getProfileIdCookieValue(HttpServletRequest httpServletRequest) {
         String cookieProfileId = null;
 
@@ -78,59 +85,243 @@ public class RestServiceUtilsImpl implements RestServiceUtils {
     }
 
     @Override
-    public Changes handleEvents(List<Event> events, Session session, Profile profile, ServletRequest request, ServletResponse response,
-            Date timestamp) {
-        List<String> filteredEventTypes = privacyService.getFilteredEventTypes(profile);
+    public EventsRequestContext initEventsRequest(String scope, String sessionId, String profileId, String personaId,
+                                                  boolean invalidateProfile, boolean invalidateSession,
+                                                  HttpServletRequest request, HttpServletResponse response, Date timestamp) {
 
-        String thirdPartyId = eventService
-                .authenticateThirdPartyServer(((HttpServletRequest) request).getHeader("X-Unomi-Peer"), request.getRemoteAddr());
+        // Build context
+        EventsRequestContext eventsRequestContext = new EventsRequestContext(timestamp, null, null, request, response);
 
-        int changes = EventService.NO_CHANGE;
+        // Handle persona
+        if (personaId != null) {
+            PersonaWithSessions personaWithSessions = profileService.loadPersonaWithSessions(personaId);
+            if (personaWithSessions == null) {
+                logger.error("Couldn't find persona, please check your personaId parameter");
+            } else {
+                eventsRequestContext.setProfile(personaWithSessions.getPersona());
+                eventsRequestContext.setSession(personaWithSessions.getLastSession());
+            }
+        }
+
+        if (profileId == null) {
+            // Get profile id from the cookie
+            profileId = getProfileIdCookieValue(request);
+        }
+
+        if (profileId == null && sessionId == null && personaId == null) {
+            logger.error("Couldn't find profileId, sessionId or personaId in incoming request! Stopped processing request. See debug level for more information");
+            if (logger.isDebugEnabled()) {
+                logger.debug("Request dump: {}", HttpUtils.dumpRequestInfo(request));
+            }
+            throw new BadRequestException("Couldn't find profileId, sessionId or personaId in incoming request!");
+        }
+
+        boolean profileCreated = false;
+        if (eventsRequestContext.getProfile() == null) {
+            if (profileId == null || invalidateProfile) {
+                // no profileId cookie was found or the profile has to be invalidated, we generate a new one and create the profile in the profile service
+                eventsRequestContext.setProfile(createNewProfile(null, timestamp));
+                profileCreated = true;
+            } else {
+                eventsRequestContext.setProfile(profileService.load(profileId));
+                if (eventsRequestContext.getProfile() == null) {
+                    // this can happen if we have an old cookie but have reset the server,
+                    // or if we merged the profiles and somehow this cookie didn't get updated.
+                    eventsRequestContext.setProfile(createNewProfile(profileId, timestamp));
+                    profileCreated = true;
+                }
+            }
+
+            // Try to recover existing session
+            Profile sessionProfile;
+            if (StringUtils.isNotBlank(sessionId) && !invalidateSession) {
+
+                eventsRequestContext.setSession(profileService.loadSession(sessionId, timestamp));
+                if (eventsRequestContext.getSession() != null) {
+
+                    sessionProfile = eventsRequestContext.getSession().getProfile();
+                    boolean anonymousSessionProfile = sessionProfile.isAnonymousProfile();
+                    if (!eventsRequestContext.getProfile().isAnonymousProfile() &&
+                            !anonymousSessionProfile &&
+                            !eventsRequestContext.getProfile().getItemId().equals(sessionProfile.getItemId())) {
+                        // Session user has been switched, profile id in cookie is not up to date
+                        // We must reload the profile with the session ID as some properties could be missing from the session profile
+                        // #personalIdentifier
+                        eventsRequestContext.setProfile(profileService.load(sessionProfile.getItemId()));
+                    }
+
+                    // Handle anonymous situation
+                    Boolean requireAnonymousBrowsing = privacyService.isRequireAnonymousBrowsing(eventsRequestContext.getProfile());
+                    if (requireAnonymousBrowsing && anonymousSessionProfile) {
+                        // User wants to browse anonymously, anonymous profile is already set.
+                    } else if (requireAnonymousBrowsing && !anonymousSessionProfile) {
+                        // User wants to browse anonymously, update the sessionProfile to anonymous profile
+                        sessionProfile = privacyService.getAnonymousProfile(eventsRequestContext.getProfile());
+                        eventsRequestContext.getSession().setProfile(sessionProfile);
+                        eventsRequestContext.addChanges(EventService.SESSION_UPDATED);
+                    } else if (!requireAnonymousBrowsing && anonymousSessionProfile) {
+                        // User does not want to browse anonymously anymore, update the sessionProfile to real profile
+                        sessionProfile = eventsRequestContext.getProfile();
+                        eventsRequestContext.getSession().setProfile(sessionProfile);
+                        eventsRequestContext.addChanges(EventService.SESSION_UPDATED);
+                    } else if (!requireAnonymousBrowsing && !anonymousSessionProfile) {
+                        // User does not want to browse anonymously, use the real profile. Check that session contains the current profile.
+                        sessionProfile = eventsRequestContext.getProfile();
+                        if (!eventsRequestContext.getSession().getProfileId().equals(sessionProfile.getItemId())) {
+                            eventsRequestContext.addChanges(EventService.SESSION_UPDATED);
+                        }
+                        eventsRequestContext.getSession().setProfile(sessionProfile);
+                    }
+                }
+            }
+
+            // Try to create new session
+            if (eventsRequestContext.getSession() == null || invalidateSession) {
+                sessionProfile = privacyService.isRequireAnonymousBrowsing(eventsRequestContext.getProfile()) ?
+                        privacyService.getAnonymousProfile(eventsRequestContext.getProfile()) : eventsRequestContext.getProfile();
+
+                if (StringUtils.isNotBlank(sessionId)) {
+                    // Only save session and send event if a session id was provided, otherwise keep transient session
+                    eventsRequestContext.setSession(new Session(sessionId, sessionProfile, timestamp, scope));
+                    eventsRequestContext.addChanges(EventService.SESSION_UPDATED);
+
+                    Event event = new Event("sessionCreated", eventsRequestContext.getSession(), eventsRequestContext.getProfile(),
+                            scope, null, eventsRequestContext.getSession(), null, timestamp, false);
+                    if (sessionProfile.isAnonymousProfile()) {
+                        // Do not keep track of profile in event
+                        event.setProfileId(null);
+                    }
+                    event.getAttributes().put(Event.HTTP_REQUEST_ATTRIBUTE, request);
+                    event.getAttributes().put(Event.HTTP_RESPONSE_ATTRIBUTE, response);
+                    if (logger.isDebugEnabled()) {
+                        logger.debug("Received event {} for profile={} session={} target={} timestamp={}", event.getEventType(),
+                                eventsRequestContext.getProfile().getItemId(), eventsRequestContext.getSession().getItemId(), event.getTarget(), timestamp);
+                    }
+                    eventsRequestContext.addChanges(eventService.send(event));
+                }
+            }
+
+            // Handle new profile creation
+            if (profileCreated) {
+                eventsRequestContext.addChanges(EventService.PROFILE_UPDATED);
+
+                Event profileUpdated = new Event("profileUpdated", eventsRequestContext.getSession(), eventsRequestContext.getProfile(),
+                        scope, null, eventsRequestContext.getProfile(), timestamp);
+                profileUpdated.setPersistent(false);
+                profileUpdated.getAttributes().put(Event.HTTP_REQUEST_ATTRIBUTE, request);
+                profileUpdated.getAttributes().put(Event.HTTP_RESPONSE_ATTRIBUTE, response);
+                profileUpdated.getAttributes().put(Event.CLIENT_ID_ATTRIBUTE, DEFAULT_CLIENT_ID);
+
+                if (logger.isDebugEnabled()) {
+                    logger.debug("Received event {} for profile={} {} target={} timestamp={}", profileUpdated.getEventType(),
+                            eventsRequestContext.getProfile().getItemId(),
+                            " session=" + (eventsRequestContext.getSession() != null ? eventsRequestContext.getSession().getItemId() : null),
+                            profileUpdated.getTarget(), timestamp);
+                }
+                eventsRequestContext.addChanges(eventService.send(profileUpdated));
+            }
+        }
+
+        return eventsRequestContext;
+    }
+
+    @Override
+    public EventsRequestContext performEventsRequest(List<Event> events, EventsRequestContext eventsRequestContext) {
+        List<String> filteredEventTypes = privacyService.getFilteredEventTypes(eventsRequestContext.getProfile());
+        String thirdPartyId = eventService.authenticateThirdPartyServer(eventsRequestContext.getRequest().getHeader("X-Unomi-Peer"),
+                eventsRequestContext.getRequest().getRemoteAddr());
+
         // execute provided events if any
-        int processedEventsCnt = 0;
-        if (events != null && !(profile instanceof Persona)) {
+        if (events != null && !(eventsRequestContext.getProfile() instanceof Persona)) {
+            // set Total items on context
+            eventsRequestContext.setTotalItems(events.size());
+
             for (Event event : events) {
-                processedEventsCnt++;
+                eventsRequestContext.setProcessedItems(eventsRequestContext.getProcessedItems() + 1);
+
                 if (event.getEventType() != null) {
-                    Event eventToSend = new Event(event.getEventType(), session, profile, event.getScope(), event.getSource(),
-                            event.getTarget(), event.getProperties(), timestamp, event.isPersistent());
+                    Event eventToSend = new Event(event.getEventType(), eventsRequestContext.getSession(), eventsRequestContext.getProfile(), event.getScope(), event.getSource(),
+                            event.getTarget(), event.getProperties(), eventsRequestContext.getTimestamp(), event.isPersistent());
                     eventToSend.setFlattenedProperties(event.getFlattenedProperties());
                     if (!eventService.isEventAllowed(event, thirdPartyId)) {
                         logger.warn("Event is not allowed : {}", event.getEventType());
                         continue;
                     }
                     if (thirdPartyId != null && event.getItemId() != null) {
-                        eventToSend = new Event(event.getItemId(), event.getEventType(), session, profile, event.getScope(),
-                                event.getSource(), event.getTarget(), event.getProperties(), timestamp, event.isPersistent());
+                        eventToSend = new Event(event.getItemId(), event.getEventType(), eventsRequestContext.getSession(), eventsRequestContext.getProfile(), event.getScope(),
+                                event.getSource(), event.getTarget(), event.getProperties(), eventsRequestContext.getTimestamp(), event.isPersistent());
                         eventToSend.setFlattenedProperties(event.getFlattenedProperties());
                     }
                     if (filteredEventTypes != null && filteredEventTypes.contains(event.getEventType())) {
                         logger.debug("Profile is filtering event type {}", event.getEventType());
                         continue;
                     }
-                    if (profile.isAnonymousProfile()) {
+                    if (eventsRequestContext.getProfile().isAnonymousProfile()) {
                         // Do not keep track of profile in event
                         eventToSend.setProfileId(null);
                     }
 
-                    eventToSend.getAttributes().put(Event.HTTP_REQUEST_ATTRIBUTE, request);
-                    eventToSend.getAttributes().put(Event.HTTP_RESPONSE_ATTRIBUTE, response);
-                    logger.debug("Received event " + event.getEventType() + " for profile=" + profile.getItemId() + " session=" + (
-                            session != null ? session.getItemId() : null) + " target=" + event.getTarget() + " timestamp=" + timestamp);
-                    changes |= eventService.send(eventToSend);
+                    eventToSend.getAttributes().put(Event.HTTP_REQUEST_ATTRIBUTE, eventsRequestContext.getRequest());
+                    eventToSend.getAttributes().put(Event.HTTP_RESPONSE_ATTRIBUTE, eventsRequestContext.getResponse());
+                    logger.debug("Received event " + event.getEventType() + " for profile=" + eventsRequestContext.getProfile().getItemId() + " session=" + (
+                            eventsRequestContext.getSession() != null ? eventsRequestContext.getSession().getItemId() : null) +
+                            " target=" + event.getTarget() + " timestamp=" + eventsRequestContext.getTimestamp());
+                    eventsRequestContext.addChanges(eventService.send(eventToSend));
                     // If the event execution changes the profile we need to update it so the next event use the right profile
-                    if ((changes & EventService.PROFILE_UPDATED) == EventService.PROFILE_UPDATED) {
-                        profile = eventToSend.getProfile();
+                    if ((eventsRequestContext.getChanges() & EventService.PROFILE_UPDATED) == EventService.PROFILE_UPDATED) {
+                        eventsRequestContext.setProfile(eventToSend.getProfile());
                     }
-                    if ((changes & EventService.ERROR) == EventService.ERROR) {
+                    if ((eventsRequestContext.getChanges() & EventService.ERROR) == EventService.ERROR) {
                         //Don't count the event that failed
-                        processedEventsCnt--;
-                        logger.error("Error processing events. Total number of processed events: {}/{}", processedEventsCnt, events.size());
+                        eventsRequestContext.setProcessedItems(eventsRequestContext.getProcessedItems() - 1);
+                        logger.error("Error processing events. Total number of processed events: {}/{}", eventsRequestContext.getProcessedItems(), eventsRequestContext.getTotalItems());
                         break;
                     }
                 }
             }
         }
-        return new Changes(changes, processedEventsCnt, profile);
+
+        return eventsRequestContext;
+    }
+
+    @Override
+    public void finalizeEventsRequest(EventsRequestContext eventsRequestContext, boolean crashOnError) {
+        // in case of changes on profile, persist the profile
+        if ((eventsRequestContext.getChanges() & EventService.PROFILE_UPDATED) == EventService.PROFILE_UPDATED) {
+            profileService.save(eventsRequestContext.getProfile());
+        }
+
+        // in case of changes on session, persist the session
+        if ((eventsRequestContext.getChanges() & EventService.SESSION_UPDATED) == EventService.SESSION_UPDATED && eventsRequestContext.getSession() != null) {
+            profileService.saveSession(eventsRequestContext.getSession());
+        }
+
+        // In case of error, return an error message
+        if ((eventsRequestContext.getChanges() & EventService.ERROR) == EventService.ERROR) {
+            if (crashOnError) {
+                String errorMessage = "Error processing events. Total number of processed events: " + eventsRequestContext.getProcessedItems() + "/"
+                        + eventsRequestContext.getTotalItems();
+                throw new BadRequestException(errorMessage);
+            } else {
+                eventsRequestContext.getResponse().setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+            }
+        }
+
+        // Set profile cookie
+        if (!(eventsRequestContext.getProfile() instanceof Persona)) {
+            eventsRequestContext.getResponse().setHeader("Set-Cookie",
+                    HttpUtils.getProfileCookieString(eventsRequestContext.getProfile(), configSharingService, eventsRequestContext.getRequest().isSecure()));
+        }
+    }
+
+    private Profile createNewProfile(String existingProfileId, Date timestamp) {
+        Profile profile;
+        String profileId = existingProfileId;
+        if (profileId == null) {
+            profileId = UUID.randomUUID().toString();
+        }
+        profile = new Profile(profileId);
+        profile.setProperty("firstVisit", timestamp);
+        return profile;
     }
 }
