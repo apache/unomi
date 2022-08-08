@@ -20,8 +20,9 @@
         <details>${project.description}</details>
         <feature prerequisite="true" dependency="false">wrap</feature>
         <feature dependency="true">unomi-kar</feature>
-        <bundle start-level="85">mvn:org.codehaus.groovy/groovy/3.0.3</bundle>
-        <bundle start-level="85">mvn:org.codehaus.groovy/groovy-xml/3.0.3</bundle>
+        <bundle start-level="85">mvn:org.codehaus.groovy/groovy/${groovy.version}</bundle>
+        <bundle start-level="85">mvn:org.codehaus.groovy/groovy-xml/${groovy.version}</bundle>
+        <bundle start-level="85">mvn:org.codehaus.groovy/groovy-json/${groovy.version}</bundle>
         <bundle start-level="85" start="false">mvn:org.apache.unomi/unomi-groovy-actions-services/${project.version}</bundle>
         <bundle start-level="85" start="false">mvn:org.apache.unomi/unomi-groovy-actions-rest/${project.version}</bundle>
         <bundle start-level="85">wrap:mvn:io.github.http-builder-ng/http-builder-ng-core/1.0.4</bundle>

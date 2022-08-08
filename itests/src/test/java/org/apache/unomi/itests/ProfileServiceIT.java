@@ -219,4 +219,6 @@ public class ProfileServiceIT extends BaseIT {
         }
     }
 
+    // todo test alias cannot be created on profile itself
+
 }

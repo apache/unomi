@@ -31,10 +31,6 @@ import org.apache.unomi.persistence.spi.PersistenceService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.servlet.ServletResponse;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
-import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
@@ -46,13 +42,9 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
     private EventService eventService;
     private DefinitionsService definitionsService;
     private PrivacyService privacyService;
-    private ConfigSharingService configSharingService;
     private int maxProfilesInOneMerge = -1;
 
     public int execute(Action action, Event event) {
-//        String profileIdCookieName = (String) configSharingService.getProperty("profileIdCookieName");
-//        String profileIdCookieDomain = (String) configSharingService.getProperty("profileIdCookieDomain");
-//        Integer profileIdCookieMaxAgeInSeconds = (Integer) configSharingService.getProperty("profileIdCookieMaxAgeInSeconds");
 
         Profile profile = event.getProfile();
         if (profile instanceof Persona || profile.isAnonymousProfile()) {
@@ -84,15 +76,7 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
         propertyCondition.setParameter("propertyName", "systemProperties." + mergeProfilePropertyName);
         propertyCondition.setParameter("propertyValue", mergeProfilePropertyValue);
 
-        Condition excludeMergedProfilesCondition = new Condition(definitionsService.getConditionType("profilePropertyCondition"));
-        excludeMergedProfilesCondition.setParameter("comparisonOperator", "missing");
-        excludeMergedProfilesCondition.setParameter("propertyName", "mergedWith");
-
-        Condition c = new Condition(definitionsService.getConditionType("booleanCondition"));
-        c.setParameter("operator", "and");
-        c.setParameter("subConditions", Arrays.asList(propertyCondition, excludeMergedProfilesCondition));
-
-        final List<Profile> profiles = persistenceService.query(c, "properties.firstVisit", Profile.class, 0, maxProfilesInOneMerge).getList();
+        final List<Profile> profiles = persistenceService.query(propertyCondition, "properties.firstVisit", Profile.class, 0, maxProfilesInOneMerge).getList();
 
         // Check if the user switched to another profile
         if (StringUtils.isNotEmpty(mergeProfilePreviousPropertyValue) && !mergeProfilePreviousPropertyValue.equals(mergeProfilePropertyValue)) {
@@ -111,14 +95,6 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
             }
 
             logger.info("Different users, switch to " + profile.getItemId());
-
-//            HttpServletResponse httpServletResponse = (HttpServletResponse) event.getAttributes().get(Event.HTTP_RESPONSE_ATTRIBUTE);
-//            HttpServletRequest httpServletRequest = (HttpServletRequest) event.getAttributes().get(Event.HTTP_REQUEST_ATTRIBUTE);
-//            if (httpServletRequest != null) {
-//                sendProfileCookie(profile, httpServletResponse, profileIdCookieName, profileIdCookieDomain,
-//                        profileIdCookieMaxAgeInSeconds, profileIdCookieHttpOnly, httpServletRequest.isSecure());
-//            }
-
             // At the end of the merge, we must set the merged profile as profile event to process other Actions
             event.setProfileId(profile.getItemId());
             event.setProfile(profile);
@@ -157,13 +133,6 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
 
             // Profile has changed
             if (forceEventProfileAsMaster || !masterProfile.getItemId().equals(profileId)) {
-                HttpServletResponse httpServletResponse = (HttpServletResponse) event.getAttributes().get(Event.HTTP_RESPONSE_ATTRIBUTE);
-                // we still send back the current profile cookie. It will be changed on the next request to the ContextServlet.
-                // The current profile will be deleted only then because we cannot delete it right now (too soon)
-//                if (httpServletRequest != null) {
-//                    sendProfileCookie(profile, httpServletResponse, profileIdCookieName, profileIdCookieDomain,
-//                            profileIdCookieMaxAgeInSeconds, profileIdCookieHttpOnly, httpServletRequest.isSecure());
-//                }
 
                 final String masterProfileId = masterProfile.getItemId();
                 // At the end of the merge, we must set the merged profile as profile event to process other Actions
@@ -242,20 +211,6 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
         }
     }
 
-//    private static void sendProfileCookie(Profile profile, ServletResponse response, String profileIdCookieName, String profileIdCookieDomain, int cookieAgeInSeconds) {
-//        if (response != null && response instanceof HttpServletResponse) {
-//            HttpServletResponse httpServletResponse = (HttpServletResponse) response;
-//            if (!(profile instanceof Persona)) {
-//                httpServletResponse.addHeader("Set-Cookie",
-//                        profileIdCookieName + "=" + profile.getItemId() +
-//                                "; Path=/" +
-//                                "; Max-Age=" + cookieAgeInSeconds +
-//                                (StringUtils.isNotBlank(profileIdCookieDomain) ? ("; Domain=" + profileIdCookieDomain) : "") +
-//                                "; SameSite=Lax");
-//            }
-//        }
-//    }
-
     public void setProfileService(ProfileService profileService) {
         this.profileService = profileService;
     }
@@ -276,12 +231,7 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
         this.definitionsService = definitionsService;
     }
 
-    public void setConfigSharingService(ConfigSharingService configSharingService) {
-        this.configSharingService = configSharingService;
-    }
-
     public void setMaxProfilesInOneMerge(String maxProfilesInOneMerge) {
         this.maxProfilesInOneMerge = Integer.parseInt(maxProfilesInOneMerge);
     }
-
 }

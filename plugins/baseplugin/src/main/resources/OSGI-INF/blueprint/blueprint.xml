@@ -315,7 +315,6 @@
             <property name="persistenceService" ref="persistenceService"/>
             <property name="definitionsService" ref="definitionsService"/>
             <property name="privacyService" ref="privacyService"/>
-            <property name="configSharingService" ref="configSharingService"/>
             <property name="maxProfilesInOneMerge" value="${base.maxProfilesInOneMerge}"/>
         </bean>
     </service>

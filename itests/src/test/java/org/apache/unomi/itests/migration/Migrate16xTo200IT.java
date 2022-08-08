@@ -28,6 +28,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -62,6 +63,7 @@ public class Migrate16xTo200IT extends BaseIT {
     @After
     public void cleanup() throws InterruptedException {
         removeItems(Profile.class);
+        removeItems(ProfileAlias.class);
         removeItems(Session.class);
         removeItems(Event.class);
         removeItems(Scope.class);
@@ -69,6 +71,7 @@ public class Migrate16xTo200IT extends BaseIT {
 
     @Test
     public void checkMigratedData() throws Exception {
+        checkMergedProfilesAliases();
         checkProfileInterests();
         checkScopeHaveBeenCreated();
         checkFormEventRestructured();
@@ -82,6 +85,7 @@ public class Migrate16xTo200IT extends BaseIT {
      */
     private void checkForMappingUpdates() throws IOException {
         Assert.assertTrue(HttpUtils.executeGetRequest(httpClient, "http://localhost:9400/context-scope/_mapping", null).contains("\"match\":\"*\",\"match_mapping_type\":\"string\",\"mapping\":{\"analyzer\":\"folding\""));
+        Assert.assertTrue(HttpUtils.executeGetRequest(httpClient, "http://localhost:9400/context-profilealias/_mapping", null).contains("\"match\":\"*\",\"match_mapping_type\":\"string\",\"mapping\":{\"analyzer\":\"folding\""));
         Assert.assertTrue(HttpUtils.executeGetRequest(httpClient, "http://localhost:9400/context-segment/_mapping", null).contains("\"condition\":{\"type\":\"object\",\"enabled\":false}"));
         Assert.assertTrue(HttpUtils.executeGetRequest(httpClient, "http://localhost:9400/context-scoring/_mapping", null).contains("\"condition\":{\"type\":\"object\",\"enabled\":false}"));
         Assert.assertTrue(HttpUtils.executeGetRequest(httpClient, "http://localhost:9400/context-campaign/_mapping", null).contains("\"entryCondition\":{\"type\":\"object\",\"enabled\":false}"));
@@ -214,5 +218,28 @@ public class Migrate16xTo200IT extends BaseIT {
                 Assert.assertEquals(50, interest.get("value"));
             }
         }
+    }
+
+    /**
+     * Data set contains a master profile: 468ca2bf-7d24-41ea-9ef4-5b96f78207e4
+     * And two profiles that have been merged with this master profile: c33dec90-ffc9-4484-9e61-e42c323f268f and ac5b6b0f-afce-4c4f-9391-4ff0b891b254
+     */
+    private void checkMergedProfilesAliases() {
+        // Check that both profiles aliases have been created and the merged profiles are now deleted.
+        List<String> mergedProfiles = Arrays.asList("c33dec90-ffc9-4484-9e61-e42c323f268f", "ac5b6b0f-afce-4c4f-9391-4ff0b891b254");
+        String masterProfile = "468ca2bf-7d24-41ea-9ef4-5b96f78207e4";
+        for (String mergedProfile : mergedProfiles) {
+            // control the created alias
+            ProfileAlias alias = persistenceService.load(mergedProfile, ProfileAlias.class);
+            Assert.assertNotNull(alias);
+            Assert.assertEquals(alias.getProfileID(), masterProfile);
+
+            // control the merged profile do not exist anymore
+            Assert.assertNull(persistenceService.load(mergedProfile, Profile.class));
+        }
+
+        // Check master profile still exists a no alias have been created for him
+        Assert.assertNotNull(persistenceService.load(masterProfile, Profile.class));
+        Assert.assertNull(persistenceService.load(masterProfile, ProfileAlias.class));
     }
 }

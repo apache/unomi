@@ -1,2 +1,0 @@
-{ "create" : { "_id": "$itemId" }}
-{ "itemId":  "$itemId", "itemType":  "profileAlias", "profileID":  "$itemId", "scope":  null, "clientID": "defaultClientId", "creationTime":  "$migrationTime", "modifiedTime":  "$migrationTime"}

@@ -563,7 +563,14 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
 
     @Override
     public void addAliasToProfile(String profileID, String alias, String clientID) {
+        if (Objects.equals(alias, profileID)) {
+            throw new IllegalArgumentException("Alias cannot be created on itself, please use an alias different from the profile ID");
+        }
+
         ProfileAlias profileAlias = persistenceService.load(alias, ProfileAlias.class);
+        if (profileAlias != null && !Objects.equals(profileAlias.getProfileID(), profileID)) {
+            throw new IllegalArgumentException("Alias \"" + alias + "\" already used by profile with ID = \"" + profileAlias.getProfileID() + "\"");
+        }
 
         if (profileAlias == null) {
             profileAlias = new ProfileAlias();
@@ -578,8 +585,6 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
             profileAlias.setModifiedTime(creationTime);
 
             persistenceService.save(profileAlias);
-        } else if (!Objects.equals(profileAlias.getProfileID(), profileID)) {
-            throw new IllegalArgumentException("Alias \"" + alias + "\" already used by profile with ID = \"" + profileID + "\"");
         }
     }
 
@@ -678,12 +683,6 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         if (persona) {
             persistenceService.remove(profileId, Persona.class);
         } else {
-            Condition mergeCondition = new Condition(definitionsService.getConditionType("profilePropertyCondition"));
-            mergeCondition.setParameter("propertyName", "mergedWith");
-            mergeCondition.setParameter("comparisonOperator", "equals");
-            mergeCondition.setParameter("propertyValue", profileId);
-            persistenceService.removeByQuery(mergeCondition, Profile.class);
-
             Condition removeAliasesCondition = new Condition(definitionsService.getConditionType("profileAliasesPropertyCondition"));
             removeAliasesCondition.setParameter("propertyName", "profileID");
             removeAliasesCondition.setParameter("comparisonOperator", "equals");
