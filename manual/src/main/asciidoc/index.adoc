@@ -44,6 +44,8 @@ include::configuration.adoc[]
 
 include::jsonSchema/json-schema.adoc[]
 
+include::graphql.adoc[]
+
 include::migrations/migrations.adoc[]
 
 == Queries and aggregations
