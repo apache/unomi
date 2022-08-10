@@ -749,15 +749,11 @@ shell commands in the "Shell commands" section of the documentation.
 
 === ElasticSearch authentication and security
 
-With ElasticSearch 7, it's possible to secure the access to your data. (https://www.elastic.co/guide/en/elasticsearch/reference/7.5/secure-cluster.html[https://www.elastic.co/guide/en/elasticsearch/reference/7.5/secure-cluster.html])
-
-Depending on your ElasticSearch license you may need to install Kibana and enable xpack security: https://www.elastic.co/guide/en/elasticsearch/reference/7.5/configuring-security.html[https://www.elastic.co/guide/en/elasticsearch/reference/7.5/configuring-security.html]
+With ElasticSearch 7, it's possible to secure the access to your data. (see https://www.elastic.co/guide/en/elasticsearch/reference/7.17/configuring-stack-security.html[https://www.elastic.co/guide/en/elasticsearch/reference/7.17/configuring-stack-security.html] and https://www.elastic.co/guide/en/elasticsearch/reference/7.17/secure-cluster.html[https://www.elastic.co/guide/en/elasticsearch/reference/7.17/secure-cluster.html])
 
 ==== User authentication !
 
-If your ElasticSearch have been configured to be only accessible by authenticated users (https://www.elastic.co/guide/en/elasticsearch/reference/7.5/setting-up-authentication.html[https://www.elastic.co/guide/en/elasticsearch/reference/7.5/setting-up-authentication.html])
-
-Just edit `etc/org.apache.unomi.persistence.elasticsearch.cfg` to add the following settings:
+If your ElasticSearch have been configured to be only accessible by authenticated users, edit `etc/org.apache.unomi.persistence.elasticsearch.cfg` to add the following settings:
 
 [source]
 ----
@@ -770,11 +766,7 @@ password=PASSWORD
 By default Unomi will communicate with ElasticSearch using `http`
 but you can configure your ElasticSearch server(s) to allow encrypted request using `https`.
 
-You can follow this documentation to enable SSL on your ElasticSearch server(s):
-
-* https://www.elastic.co/guide/en/elasticsearch/reference/7.5/ssl-tls.html[Full documentation]
-* https://www.elastic.co/guide/en/elasticsearch/reference/7.5/configuring-tls.html#node-certificates[Configure certificates]
-* https://www.elastic.co/guide/en/elasticsearch/reference/7.5/configuring-tls.html#tls-http[Encrypt HTTP communications]
+You can follow this documentation to enable SSL on your ElasticSearch server(s): https://www.elastic.co/guide/en/elasticsearch/reference/7.17/security-basic-setup-https.html[https://www.elastic.co/guide/en/elasticsearch/reference/7.17/security-basic-setup-https.html]
 
 If your ElasticSearch is correctly configure to encrypt communications on `https`:
 
