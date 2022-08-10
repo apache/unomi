@@ -44,4 +44,4 @@ Two endpoints were introduced for Apache Unomi 2 GraphQL API:
 
 Thanks to GraphQL introspection, there is no dedicated documentation per-se as the Schema itself serves as documentation. 
 
-You can easily view the schema by navigrating to `/graphql-ui`.
+You can easily view the schema by navigrating to `/graphql-ui`, depending on your setup (localhost, public host, ...), you might need to adjust the URL to point GraphQL Playground to the `/graphql` endpoint.

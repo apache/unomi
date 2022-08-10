@@ -34,10 +34,8 @@ them at your own risks.
 
 ===== ElasticSearch compatibility
 
-Starting with version 1.5.0 Apache Unomi adds compatibility with ElasticSearch 7.4 . It is highly recommended to use the
-ElasticSearch version provided by the documentation when possible. However minor versions (7.4.x) should also work, and
-one version higher (7.5) will usually work. Going higher than that is risky given the way that ElasticSearch is developed
-and breaking changes are introduced quite often. If in doubt, don't hesitate to check with the Apache Unomi community
+Starting with version 2.0.0 Apache Unomi adds compatibility with ElasticSearch 7.17.5 . It is highly recommended to use the
+ElasticSearch version provided by the documentation when possible. If in doubt, don't hesitate to check with the Apache Unomi community
 to get the latest information about ElasticSearch version compatibility.
 
 ==== Running Unomi
