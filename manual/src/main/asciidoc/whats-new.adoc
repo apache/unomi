@@ -78,4 +78,11 @@ In a nutshell, the migration process will be:
 Special caution must be taken if you declared custom events as our migration scripts can only handle objects we know of. 
 More details about migration (incl. of custom events) is available in the corresponding section <<Migrations,corresponding section>> of the documentation.
 
+==== Elasticsearch version
 
+We currently recommend using Elasticsearch 7.17.5 with Apache Unomi 2.0, this ensure you are both on a recent version that is not impacted to log4j vulnerabilities (fixed in Elasticsearch 7.16.3).
+
+This version increase is releated to Apache Unomi 2.0 makeing use of a new Elasticsearch field type 
+called https://www.elastic.co/guide/en/elasticsearch/reference/7.17/flattened.html[Flattened], 
+and although it was available in prior versions of Elasticsearch, we do not recommend using those 
+due to the above-mentioned log4j vulnerabilities.

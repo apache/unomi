@@ -11,12 +11,47 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-=== Five Minutes QuickStart
+
+=== Quick start with Docker
+
+Begin by creating a `docker-compose.yml` file with the following content:
+
+[source]
+----
+version: '3.8'
+services:
+    elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.5
+    environment:
+        - discovery.type=single-node
+    ports:
+        - 9200:9200                    
+    unomi:
+    # Unomi version can be updated based on your needs
+    image: apache/unomi:2.0.0
+    environment:
+        - UNOMI_ELASTICSEARCH_ADDRESSES=elasticsearch:9200
+        - UNOMI_THIRDPARTY_PROVIDER1_IPADDRESSES=0.0.0.0/0,::1,127.0.0.1
+    ports:
+        - 8181:8181
+        - 9443:9443
+        - 8102:8102
+    links:
+        - elasticsearch
+    depends_on:
+        - elasticsearch 
+----
+
+From the same folder, start the environment using docker-compose up and wait for the startup to complete.
+
+Try accessing https://localhost:9443/cxs/cluster with username/password: karaf/karaf . You might get a certificate warning in your browser, just accept it despite the warning it is safe.
+
+=== Quick Start manually
 
 1) Install JDK 8 (https://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html) and make sure you set the
 JAVA_HOME variable https://docs.oracle.com/cd/E19182-01/820-7851/inst_cli_jdk_javahome_t/ (see our <<JDK compatibility,Getting Started>> guide for more information on JDK compatibility)
 
-2) Download ElasticSearch here : https://www.elastic.co/downloads/past-releases/elasticsearch-7-4-2 (please <strong>make sure</strong> you use the proper version : 7.4.2)
+2) Download ElasticSearch here : https://www.elastic.co/downloads/past-releases/elasticsearch-7-17-5 (please <strong>make sure</strong> you use the proper version : 7.17.5)
 
 3) Uncompress it and change the `config/elasticsearch.yml` to include the following config : <code>cluster.name: contextElasticSearch</code>
 
