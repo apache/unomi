@@ -13,19 +13,35 @@
 //
 === GraphQL API
 
-TODO: ADD details
+First introduced in Apache Unomi 2.0, a GraphQL API is available as an alternative to REST for interacting with the platform. 
+
+As of version 2.0, the GraphQL API is considered a beta feature and is disabled by default.
+
+We look forward for this new GraphQL API to be used, feel free to open discussion on https://the-asf.slack.com/messages/CBP2Z98Q7/[Unomi Slack channel] or https://issues.apache.org/jira/projects/UNOMI/issues[create tickets on Jira]
 
 ==== Enabling/ the API
 
-TODO: ADD details
+The GraphQL API must be enabled using a system property (or environment variable):
 
-==== Endpoint
+[source]
+----
+# Extract from: etc/custom.system.properties
+#######################################################################################################################
+## Settings for GraphQL                                                                                              ##
+#######################################################################################################################
+org.apache.unomi.graphql.feature.activated=${env:UNOMI_GRAPHQL_FEATURE_ACTIVATED:-false}
+----
 
-TODO: ADD details
+You can either modify the `org.apache.unomi.graphql.feature.activated` or specify the `UNOMI_GRAPHQL_FEATURE_ACTIVATED` environment variable (if using Docker for example).
+
+==== Endpoints
+
+Two endpoints were introduced for Apache Unomi 2 GraphQL API:
+* `/graphql` is the primary endpoint for interacting programatically with the API and aims at receiving POST requests.
+* `/graphql-ui` provides access to the GraphQL Playground UI and aims at being accessed by a Web Browser.
 
 ==== GraphQL Schema
 
-TODO: ADD details
+Thanks to GraphQL introspection, there is no dedicated documentation per-se as the Schema itself serves as documentation. 
 
-
-
+You can easily view the schema by navigrating to `/graphql-ui`.
