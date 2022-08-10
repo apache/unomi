@@ -35,14 +35,14 @@ them at your own risks.
 ===== ElasticSearch compatibility
 
 Starting with version 2.0.0 Apache Unomi adds compatibility with ElasticSearch 7.17.5 . It is highly recommended to use the
-ElasticSearch version provided by the documentation when possible. If in doubt, don't hesitate to check with the Apache Unomi community
+ElasticSearch version specified in the documentation whenever possible. If in doubt, don't hesitate to check with the Apache Unomi community
 to get the latest information about ElasticSearch version compatibility.
 
 ==== Running Unomi
 
 ===== Start Unomi
 
-Start Unomi according to the <<Five Minutes QuickStart,five minutes quick start>> or by compiling using the
+Start Unomi according to the <<Five Minutes QuickStart,quick start with docker>> or by compiling using the
 <<Building,building instructions>>. Once you have Karaf running,
  you should wait until you see the following messages on the Karaf console:
 
