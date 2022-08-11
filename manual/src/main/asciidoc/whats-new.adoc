@@ -18,6 +18,15 @@ The introduction of tighter data validation with JSON Schemas required some chan
 
 This new release also introduces a first (beta) version of Unomi GraphQL API.
 
+==== Required scopes
+
+Scopes are required in Unomi 2. When submitting an event and specifying a scope, 
+that scope must already be declared on the platform.
+
+Scopes can be easily created via the corresponding REST API (`cxs/scopes`)
+
+[TODO: Add link to scopes documentation]
+
 ==== JSON Schemas
 
 Apache Unomi 2 introduces support for https://json-schema.org/specification.html[JSON Schema] for all of its publicly exposed endpoints. 
