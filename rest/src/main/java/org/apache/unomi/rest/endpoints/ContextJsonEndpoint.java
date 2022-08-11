@@ -20,7 +20,6 @@ package org.apache.unomi.rest.endpoints;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
 import org.apache.unomi.api.*;
 import org.apache.unomi.api.conditions.Condition;
@@ -29,8 +28,7 @@ import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.rest.exception.InvalidRequestException;
 import org.apache.unomi.rest.service.RestServiceUtils;
 import org.apache.unomi.schema.api.SchemaService;
-import org.apache.unomi.utils.Changes;
-import org.apache.unomi.utils.HttpUtils;
+import org.apache.unomi.utils.EventsRequestContext;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 import org.slf4j.Logger;
@@ -38,8 +36,6 @@ import org.slf4j.LoggerFactory;
 
 import javax.jws.WebService;
 import javax.servlet.ServletContext;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.*;
@@ -53,7 +49,6 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 @WebService
 @Consumes(MediaType.APPLICATION_JSON)
@@ -63,9 +58,7 @@ import java.util.UUID;
 public class ContextJsonEndpoint {
     private static final Logger logger = LoggerFactory.getLogger(ContextJsonEndpoint.class.getName());
 
-    private static final String DEFAULT_CLIENT_ID = "defaultClientId";
-
-    private boolean sanitizeConditions = Boolean
+    private final boolean sanitizeConditions = Boolean
             .parseBoolean(System.getProperty("org.apache.unomi.security.personalization.sanitizeConditions", "true"));
 
     @Context
@@ -76,17 +69,11 @@ public class ContextJsonEndpoint {
     HttpServletResponse response;
 
     @Reference
-    private ProfileService profileService;
-    @Reference
     private PrivacyService privacyService;
-    @Reference
-    private EventService eventService;
     @Reference
     private RulesService rulesService;
     @Reference
     private PersonalizationService personalizationService;
-    @Reference
-    private ConfigSharingService configSharingService;
     @Reference
     private RestServiceUtils restServiceUtils;
     @Reference
@@ -147,10 +134,11 @@ public class ContextJsonEndpoint {
     @Produces(MediaType.APPLICATION_JSON + ";charset=UTF-8")
     @Path("/context.json")
     public ContextResponse contextJSONAsPost(ContextRequest contextRequest,
-            @QueryParam("personaId") String personaId,
-            @QueryParam("sessionId") String sessionId,
-            @QueryParam("timestamp") Long timestampAsLong, @QueryParam("invalidateProfile") boolean invalidateProfile,
-            @QueryParam("invalidateSession") boolean invalidateSession) {
+                                             @QueryParam("personaId") String personaId,
+                                             @QueryParam("sessionId") String sessionId,
+                                             @QueryParam("timestamp") Long timestampAsLong,
+                                             @QueryParam("invalidateProfile") boolean invalidateProfile,
+                                             @QueryParam("invalidateSession") boolean invalidateSession) {
 
         // Schema validation
         ObjectNode paramsAsJson = JsonNodeFactory.instance.objectNode();
@@ -159,233 +147,57 @@ public class ContextJsonEndpoint {
         if (!schemaService.isValid(paramsAsJson.toString(), "https://unomi.apache.org/schemas/json/rest/requestIds/1-0-0")) {
             throw new InvalidRequestException("Invalid parameter", "Invalid received data");
         }
+
+        // Generate timestamp
         Date timestamp = new Date();
         if (timestampAsLong != null) {
             timestamp = new Date(timestampAsLong);
         }
 
-        // Handle persona
-        Profile profile = null;
-        Session session = null;
+        // init ids
         String profileId = null;
-        if (personaId != null) {
-            PersonaWithSessions personaWithSessions = profileService.loadPersonaWithSessions(personaId);
-            if (personaWithSessions == null) {
-                logger.error("Couldn't find persona, please check your personaId parameter");
-                profile = null;
-            } else {
-                profile = personaWithSessions.getPersona();
-                session = personaWithSessions.getLastSession();
-            }
-        }
-
         String scope = null;
         if (contextRequest != null) {
-            if (contextRequest.getSource() != null) {
-                scope = contextRequest.getSource().getScope();
-            }
-
-            if (contextRequest.getSessionId() != null) {
-                sessionId = contextRequest.getSessionId();
-            }
-
+            scope = contextRequest.getSource() != null ? contextRequest.getSource().getScope() : scope;
+            sessionId = contextRequest.getSessionId() != null ? contextRequest.getSessionId() : sessionId;
             profileId = contextRequest.getProfileId();
         }
-        if (profileId == null) {
-            // Get profile id from the cookie
-            profileId = restServiceUtils.getProfileIdCookieValue(request);
-        }
 
-        if (profileId == null && sessionId == null && personaId == null) {
-            logger.error(
-                    "Couldn't find profileId, sessionId or personaId in incoming request! Stopped processing request. See debug level for more information");
-            if (logger.isDebugEnabled()) {
-                logger.debug("Request dump: {}", HttpUtils.dumpRequestInfo(request));
-            }
-            throw new BadRequestException("Couldn't find profileId, sessionId or personaId in incoming request!");
-        }
+        // build public context, profile + session creation/anonymous etc ...
+        EventsRequestContext eventsRequestContext = restServiceUtils.initEventsRequest(scope, sessionId, profileId,
+                personaId, invalidateProfile, invalidateSession, request, response, timestamp);
 
-        int changes = EventService.NO_CHANGE;
-
-        // Not a persona, resolve profile now
-        boolean profileCreated = false;
-
-        if (profile == null) {
-            if (profileId == null || invalidateProfile) {
-                // no profileId cookie was found or the profile has to be invalidated, we generate a new one and create the profile in the profile service
-                profile = createNewProfile(null, timestamp);
-                profileCreated = true;
-            } else {
-                profile = profileService.load(profileId);
-                if (profile == null) {
-                    // this can happen if we have an old cookie but have reset the server,
-                    // or if we merged the profiles and somehow this cookie didn't get updated.
-                    profile = createNewProfile(profileId, timestamp);
-                    profileCreated = true;
-                } else {
-                    Changes changesObject = checkMergedProfile(profile, session);
-                    changes |= changesObject.getChangeType();
-                    profile = changesObject.getProfile();
-                }
-            }
-
-            Profile sessionProfile;
-            if (StringUtils.isNotBlank(sessionId) && !invalidateSession) {
-                session = profileService.loadSession(sessionId, timestamp);
-                if (session != null) {
-                    sessionProfile = session.getProfile();
-
-                    boolean anonymousSessionProfile = sessionProfile.isAnonymousProfile();
-                    if (!profile.isAnonymousProfile() && !anonymousSessionProfile && !profile.getItemId()
-                            .equals(sessionProfile.getItemId())) {
-                        // Session user has been switched, profile id in cookie is not up to date
-                        // We must reload the profile with the session ID as some properties could be missing from the session profile
-                        // #personalIdentifier
-                        profile = profileService.load(sessionProfile.getItemId());
-                    }
-
-                    // Handle anonymous situation
-                    Boolean requireAnonymousBrowsing = privacyService.isRequireAnonymousBrowsing(profile);
-                    if (requireAnonymousBrowsing && anonymousSessionProfile) {
-                        // User wants to browse anonymously, anonymous profile is already set.
-                    } else if (requireAnonymousBrowsing && !anonymousSessionProfile) {
-                        // User wants to browse anonymously, update the sessionProfile to anonymous profile
-                        sessionProfile = privacyService.getAnonymousProfile(profile);
-                        session.setProfile(sessionProfile);
-                        changes |= EventService.SESSION_UPDATED;
-                    } else if (!requireAnonymousBrowsing && anonymousSessionProfile) {
-                        // User does not want to browse anonymously anymore, update the sessionProfile to real profile
-                        sessionProfile = profile;
-                        session.setProfile(sessionProfile);
-                        changes |= EventService.SESSION_UPDATED;
-                    } else if (!requireAnonymousBrowsing && !anonymousSessionProfile) {
-                        // User does not want to browse anonymously, use the real profile. Check that session contains the current profile.
-                        sessionProfile = profile;
-                        if (!session.getProfileId().equals(sessionProfile.getItemId())) {
-                            changes |= EventService.SESSION_UPDATED;
-                        }
-                        session.setProfile(sessionProfile);
-                    }
-                }
-            }
-
-            if (session == null || invalidateSession) {
-                sessionProfile = privacyService.isRequireAnonymousBrowsing(profile) ? privacyService.getAnonymousProfile(profile) : profile;
-
-                if (StringUtils.isNotBlank(sessionId)) {
-                    // Only save session and send event if a session id was provided, otherwise keep transient session
-                    session = new Session(sessionId, sessionProfile, timestamp, scope);
-                    changes |= EventService.SESSION_UPDATED;
-                    Event event = new Event("sessionCreated", session, profile, scope, null, session, null, timestamp, false);
-                    if (sessionProfile.isAnonymousProfile()) {
-                        // Do not keep track of profile in event
-                        event.setProfileId(null);
-                    }
-                    event.getAttributes().put(Event.HTTP_REQUEST_ATTRIBUTE, request);
-                    event.getAttributes().put(Event.HTTP_RESPONSE_ATTRIBUTE, response);
-                    if (logger.isDebugEnabled()) {
-                        logger.debug("Received event {} for profile={} session={} target={} timestamp={}", event.getEventType(),
-                                profile.getItemId(), session.getItemId(), event.getTarget(), timestamp);
-                    }
-                    changes |= eventService.send(event);
-                }
-            }
-
-            if (profileCreated) {
-                changes |= EventService.PROFILE_UPDATED;
-
-                Event profileUpdated = new Event("profileUpdated", session, profile, scope, null, profile, timestamp);
-                profileUpdated.setPersistent(false);
-                profileUpdated.getAttributes().put(Event.HTTP_REQUEST_ATTRIBUTE, request);
-                profileUpdated.getAttributes().put(Event.HTTP_RESPONSE_ATTRIBUTE, response);
-                profileUpdated.getAttributes().put(Event.CLIENT_ID_ATTRIBUTE, DEFAULT_CLIENT_ID);
-
-                if (logger.isDebugEnabled()) {
-                    logger.debug("Received event {} for profile={} {} target={} timestamp={}", profileUpdated.getEventType(),
-                            profile.getItemId(), " session=" + (session != null ? session.getItemId() : null), profileUpdated.getTarget(),
-                            timestamp);
-                }
-                changes |= eventService.send(profileUpdated);
-            }
-        }
-
+        // Build response
         ContextResponse contextResponse = new ContextResponse();
-        contextResponse.setProfileId(profile.getItemId());
-        if (session != null) {
-            contextResponse.setSessionId(session.getItemId());
+        if (contextRequest != null) {
+            eventsRequestContext = processContextRequest(contextRequest, contextResponse, eventsRequestContext);
+        }
+
+        // finalize request, save profile and session if necessary and return profileId cookie in response
+        restServiceUtils.finalizeEventsRequest(eventsRequestContext, false);
+
+        contextResponse.setProfileId(eventsRequestContext.getProfile().getItemId());
+        if (eventsRequestContext.getSession() != null) {
+            contextResponse.setSessionId(eventsRequestContext.getSession().getItemId());
         } else if (sessionId != null) {
             contextResponse.setSessionId(sessionId);
-        }
-
-        if (contextRequest != null) {
-            Changes changesObject = handleRequest(contextRequest, session, profile, contextResponse, request, response, timestamp);
-            changes |= changesObject.getChangeType();
-            profile = changesObject.getProfile();
-        }
-
-        if ((changes & EventService.PROFILE_UPDATED) == EventService.PROFILE_UPDATED) {
-            profileService.save(profile);
-            contextResponse.setProfileId(profile.getItemId());
-
-            if (profileCreated) {
-                String clientId = contextRequest != null && contextRequest.getClientId() != null ? contextRequest.getClientId() : DEFAULT_CLIENT_ID;
-                String profileMasterId = profile.getMergedWith() != null ? profile.getMergedWith() : profile.getItemId();
-                profileService.addAliasToProfile(profileMasterId, profile.getItemId(), clientId );
-            }
-        }
-        if ((changes & EventService.SESSION_UPDATED) == EventService.SESSION_UPDATED && session != null) {
-            profileService.saveSession(session);
-            contextResponse.setSessionId(session.getItemId());
-        }
-
-        if ((changes & EventService.ERROR) == EventService.ERROR) {
-            response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-        }
-        // Set profile cookie
-        if (!(profile instanceof Persona)) {
-            response.setHeader("Set-Cookie", HttpUtils.getProfileCookieString(profile, configSharingService, request.isSecure()));
         }
         return contextResponse;
     }
 
-    private Changes checkMergedProfile(Profile profile, Session session) {
-        int changes = EventService.NO_CHANGE;
-        if (profile.getMergedWith() != null && !privacyService.isRequireAnonymousBrowsing(profile) && !profile.isAnonymousProfile()) {
-            Profile currentProfile = profile;
-            String masterProfileId = profile.getMergedWith();
-            Profile masterProfile = profileService.load(masterProfileId);
-            if (masterProfile != null) {
-                logger.info("Current profile {} was merged with profile {}, replacing profile in session", currentProfile.getItemId(),
-                        masterProfileId);
-                profile = masterProfile;
-                if (session != null) {
-                    session.setProfile(profile);
-                    changes = EventService.SESSION_UPDATED;
-                }
-            } else {
-                logger.warn("Couldn't find merged profile {}, falling back to profile {}", masterProfileId, currentProfile.getItemId());
-                profile.setMergedWith(null);
-                changes = EventService.PROFILE_UPDATED;
-            }
-        }
+    private EventsRequestContext processContextRequest(ContextRequest contextRequest, ContextResponse data, EventsRequestContext eventsRequestContext) {
 
-        return new Changes(changes, profile);
-    }
+        processOverrides(contextRequest, eventsRequestContext.getProfile(), eventsRequestContext.getSession());
 
-    private Changes handleRequest(ContextRequest contextRequest, Session session, Profile profile, ContextResponse data,
-            ServletRequest request, ServletResponse response, Date timestamp) {
-
-        processOverrides(contextRequest, profile, session);
-
-        Changes changes = restServiceUtils.handleEvents(contextRequest.getEvents(), session, profile, request, response, timestamp);
-        data.setProcessedEvents(changes.getProcessedItems());
+        eventsRequestContext = restServiceUtils.performEventsRequest(contextRequest.getEvents(), eventsRequestContext);
+        data.setProcessedEvents(eventsRequestContext.getProcessedItems());
 
         List<PersonalizationService.PersonalizedContent> filterNodes = contextRequest.getFilters();
         if (filterNodes != null) {
             data.setFilteringResults(new HashMap<>());
             for (PersonalizationService.PersonalizedContent personalizedContent : sanitizePersonalizedContentObjects(filterNodes)) {
                 data.getFilteringResults()
-                        .put(personalizedContent.getId(), personalizationService.filter(profile, session, personalizedContent));
+                        .put(personalizedContent.getId(), personalizationService.filter(eventsRequestContext.getProfile(), eventsRequestContext.getSession(), personalizedContent));
             }
         }
 
@@ -393,34 +205,31 @@ public class ContextJsonEndpoint {
         if (personalizations != null) {
             data.setPersonalizations(new HashMap<>());
             for (PersonalizationService.PersonalizationRequest personalization : sanitizePersonalizations(personalizations)) {
-                PersonalizationResult personalizationResult = personalizationService.personalizeList(profile, session, personalization);
-                changes.setChangeType(changes.getChangeType() | personalizationResult.getChangeType());
-                data.getPersonalizations()
-                        .put(personalization.getId(), personalizationResult.getContentIds());
+                PersonalizationResult personalizationResult = personalizationService.personalizeList(eventsRequestContext.getProfile(), eventsRequestContext.getSession(), personalization);
+                eventsRequestContext.addChanges(personalizationResult.getChangeType());
+                data.getPersonalizations().put(personalization.getId(), personalizationResult.getContentIds());
             }
         }
 
-        profile = changes.getProfile();
-
         if (contextRequest.isRequireSegments()) {
-            data.setProfileSegments(profile.getSegments());
+            data.setProfileSegments(eventsRequestContext.getProfile().getSegments());
         }
         if (contextRequest.isRequireScores()) {
-            data.setProfileScores(profile.getScores());
+            data.setProfileScores(eventsRequestContext.getProfile().getScores());
         }
 
         if (contextRequest.getRequiredProfileProperties() != null) {
-            Map<String, Object> profileProperties = new HashMap<>(profile.getProperties());
+            Map<String, Object> profileProperties = new HashMap<>(eventsRequestContext.getProfile().getProperties());
             if (!contextRequest.getRequiredProfileProperties().contains("*")) {
                 profileProperties.keySet().retainAll(contextRequest.getRequiredProfileProperties());
             }
             data.setProfileProperties(profileProperties);
         }
 
-        if (session != null) {
-            data.setSessionId(session.getItemId());
+        if (eventsRequestContext.getSession() != null) {
+            data.setSessionId(eventsRequestContext.getSession().getItemId());
             if (contextRequest.getRequiredSessionProperties() != null) {
-                Map<String, Object> sessionProperties = new HashMap<>(session.getProperties());
+                Map<String, Object> sessionProperties = new HashMap<>(eventsRequestContext.getSession().getProperties());
                 if (!contextRequest.getRequiredSessionProperties().contains("*")) {
                     sessionProperties.keySet().retainAll(contextRequest.getRequiredSessionProperties());
                 }
@@ -428,16 +237,16 @@ public class ContextJsonEndpoint {
             }
         }
 
-        if (!(profile instanceof Persona)) {
+        if (!(eventsRequestContext.getProfile() instanceof Persona)) {
             data.setTrackedConditions(rulesService.getTrackedConditions(contextRequest.getSource()));
         } else {
             data.setTrackedConditions(Collections.emptySet());
         }
 
-        data.setAnonymousBrowsing(privacyService.isRequireAnonymousBrowsing(profile));
-        data.setConsents(profile.getConsents());
+        data.setAnonymousBrowsing(privacyService.isRequireAnonymousBrowsing(eventsRequestContext.getProfile()));
+        data.setConsents(eventsRequestContext.getProfile().getConsents());
 
-        return changes;
+        return eventsRequestContext;
     }
 
     /**
@@ -465,17 +274,6 @@ public class ContextJsonEndpoint {
                 session.setProperties(contextRequest.getSessionPropertiesOverrides());
             }
         }
-    }
-
-    private Profile createNewProfile(String existingProfileId, Date timestamp) {
-        Profile profile;
-        String profileId = existingProfileId;
-        if (profileId == null) {
-            profileId = UUID.randomUUID().toString();
-        }
-        profile = new Profile(profileId);
-        profile.setProperty("firstVisit", timestamp);
-        return profile;
     }
 
     public void destroy() {

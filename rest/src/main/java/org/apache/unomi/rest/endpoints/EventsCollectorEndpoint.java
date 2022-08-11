@@ -21,28 +21,16 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.EventsCollectorRequest;
-import org.apache.unomi.api.Persona;
-import org.apache.unomi.api.Profile;
-import org.apache.unomi.api.Session;
-import org.apache.unomi.api.services.ConfigSharingService;
-import org.apache.unomi.api.services.EventService;
-import org.apache.unomi.api.services.PrivacyService;
-import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.rest.exception.InvalidRequestException;
 import org.apache.unomi.rest.models.EventCollectorResponse;
 import org.apache.unomi.rest.service.RestServiceUtils;
-import org.apache.unomi.utils.Changes;
+import org.apache.unomi.utils.EventsRequestContext;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import javax.jws.WebService;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.validation.Valid;
-import javax.validation.constraints.NotNull;
-import javax.ws.rs.BadRequestException;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
 import javax.ws.rs.OPTIONS;
@@ -54,7 +42,6 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.util.Date;
-import java.util.UUID;
 
 @WebService
 @Produces(MediaType.APPLICATION_JSON + ";charset=UTF-8")
@@ -63,16 +50,7 @@ import java.util.UUID;
 @Path("/")
 @Component(service = EventsCollectorEndpoint.class, property = "osgi.jaxrs.resource=true")
 public class EventsCollectorEndpoint {
-    private static final Logger logger = LoggerFactory.getLogger(EventsCollectorEndpoint.class.getName());
 
-    @Reference
-    private EventService eventService;
-    @Reference
-    private ProfileService profileService;
-    @Reference
-    private PrivacyService privacyService;
-    @Reference
-    private ConfigSharingService configSharingService;
     @Reference
     private RestServiceUtils restServiceUtils;
 
@@ -114,87 +92,34 @@ public class EventsCollectorEndpoint {
         if (sessionId == null) {
             sessionId = request.getParameter("sessionId");
         }
-        Session session = null;
-        if (sessionId != null) {
-            session = profileService.loadSession(sessionId, timestamp);
-        }
-        Profile profile = null;
-        if (session == null) {
-            String scope = "systemscope";
-            // Get the first available scope that is not equal to systemscope to create the session otherwise systemscope will be used
-            for (Event event : eventsCollectorRequest.getEvents()) {
-                if (StringUtils.isNotBlank(event.getEventType())) {
-                    if (StringUtils.isNotBlank(event.getScope()) && !event.getScope().equals("systemscope")) {
-                        scope = event.getScope();
-                        break;
-                    } else if (event.getSource() != null && StringUtils.isNotBlank(event.getSource().getScope()) && !event.getSource()
-                            .getScope().equals("systemscope")) {
-                        scope = event.getSource().getScope();
-                        break;
-                    }
-                }
-            }
-            logger.debug("scope is now {}", scope);
-            String cookieProfileId = restServiceUtils.getProfileIdCookieValue(request);
-            if (StringUtils.isNotBlank(cookieProfileId)) {
-                profile = profileService.load(cookieProfileId);
-            }
-            if (profile == null) {
-                // Create non persisted profile to create the session
-                profile = new Profile("temp_" + UUID.randomUUID().toString());
-                profile.setProperty("firstVisit", timestamp);
-            }
-            /*
-            // Create anonymous profile so we don't keep track of the temp profile anywhere
-            Profile anonymousProfile = privacyService.getAnonymousProfile(profile);
-            // Create new session which should not be persisted as well as the temp profile
-            session = new Session(sessionId, anonymousProfile, timestamp, scope);
-            if (logger.isDebugEnabled()) {
-                logger.debug("No session found for sessionId={}, creating new session!", sessionId);
-            }
-            */
-        } else {
-            Profile sessionProfile = session.getProfile();
-            final String errorMessage = String
-                    .format("No valid profile found or persona found for profileId=%s, aborting request !", session.getProfileId());
-            if (sessionProfile.getItemId() != null) {
-                // Reload up-to-date profile
-                profile = profileService.load(sessionProfile.getItemId());
-                if (profile == null || profile instanceof Persona) {
-                    logger.error(errorMessage);
-                    throw new BadRequestException(errorMessage);
-                }
-            } else {
-                // Session uses anonymous profile, try to find profile from cookie
-                String cookieProfileId = restServiceUtils.getProfileIdCookieValue(request);
-                if (StringUtils.isNotBlank(cookieProfileId)) {
-                    profile = profileService.load(cookieProfileId);
-                }
 
-                if (profile == null) {
-                    logger.error(errorMessage);
-                    throw new BadRequestException(errorMessage);
+        String profileId = eventsCollectorRequest.getProfileId();
+        // Get the first available scope that is not equal to systemscope otherwise systemscope will be used
+        String scope = "systemscope";
+        for (Event event : eventsCollectorRequest.getEvents()) {
+            if (StringUtils.isNotBlank(event.getEventType())) {
+                if (StringUtils.isNotBlank(event.getScope()) && !event.getScope().equals("systemscope")) {
+                    scope = event.getScope();
+                    break;
+                } else if (event.getSource() != null &&
+                        StringUtils.isNotBlank(event.getSource().getScope()) &&
+                        !event.getSource().getScope().equals("systemscope")) {
+                    scope = event.getSource().getScope();
+                    break;
                 }
             }
         }
 
-        Changes changesObject = restServiceUtils
-                .handleEvents(eventsCollectorRequest.getEvents(), session, profile, request, response, timestamp);
-        int changes = changesObject.getChangeType();
-        profile = changesObject.getProfile();
+        // build public context, profile + session creation/anonymous etc ...
+        EventsRequestContext eventsRequestContext = restServiceUtils.initEventsRequest(scope, sessionId, profileId,
+                null, false, false, request, response, timestamp);
 
-        if ((changes & EventService.PROFILE_UPDATED) == EventService.PROFILE_UPDATED) {
-            profileService.save(profile);
-        }
-        if ((changes & EventService.SESSION_UPDATED) == EventService.SESSION_UPDATED && session != null) {
-            profileService.saveSession(session);
-        }
-        if ((changes & EventService.ERROR) == EventService.ERROR) {
-            String errorMessage = "Error processing events. Total number of processed events: " + changesObject.getProcessedItems() + "/"
-                    + eventsCollectorRequest.getEvents().size();
-            throw new BadRequestException(errorMessage);
-        }
+        // process events
+        eventsRequestContext = restServiceUtils.performEventsRequest(eventsCollectorRequest.getEvents(), eventsRequestContext);
 
-        return new EventCollectorResponse(changes);
+        // finalize request
+        restServiceUtils.finalizeEventsRequest(eventsRequestContext, true);
+
+        return new EventCollectorResponse(eventsRequestContext.getChanges());
     }
 }

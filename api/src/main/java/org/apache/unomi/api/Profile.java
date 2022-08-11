@@ -55,6 +55,10 @@ public class Profile extends Item {
 
     private Map<String, Integer> scores;
 
+    /**
+     * @deprecated since 2.0.0 merge mechanism is now based on profile aliases, and this property is not used anymore
+     */
+    @Deprecated
     private String mergedWith;
 
     private Map<String, Consent> consents = new LinkedHashMap<>();
@@ -201,18 +205,17 @@ public class Profile extends Item {
     }
 
     /**
-     * Retrieves the identifier of the profile this profile is merged with if any.
-     *
-     * @return the identifier of the profile this profile is merged with if any, {@code null} otherwise
+     * @deprecated since 2.0.0 merge mechanism is now based on profile aliases, and this property is not used anymore
      */
+    @Deprecated
     public String getMergedWith() {
         return mergedWith;
     }
 
     /**
-     * TODO: should be removed from the API
-     * @param mergedWith new value for mergedWith
+     * @deprecated since 2.0.0 merge mechanism is now based on profile aliases, and this property is not used anymore
      */
+    @Deprecated
     public void setMergedWith(String mergedWith) {
         this.mergedWith = mergedWith;
     }
@@ -290,7 +293,6 @@ public class Profile extends Item {
         sb.append(", systemProperties=").append(systemProperties);
         sb.append(", segments=").append(segments);
         sb.append(", scores=").append(scores);
-        sb.append(", mergedWith='").append(mergedWith).append('\'');
         sb.append(", consents=").append(consents);
         sb.append(", itemId='").append(itemId).append('\'');
         sb.append(", itemType='").append(itemType).append('\'');

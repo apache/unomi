@@ -54,7 +54,6 @@ import static org.apache.unomi.shell.migration.MigrationConfig.*;
 @Service
 public class Migrate implements Action {
 
-
     @Reference
     Session session;
 

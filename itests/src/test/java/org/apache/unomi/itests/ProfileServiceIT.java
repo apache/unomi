@@ -16,13 +16,13 @@
  */
 package org.apache.unomi.itests;
 
-import org.apache.unomi.api.PartialList;
-import org.apache.unomi.api.Profile;
-import org.apache.unomi.api.ProfileAlias;
+import org.apache.unomi.api.*;
 import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.persistence.spi.PersistenceService;
+import org.apache.unomi.schema.api.JsonSchemaWrapper;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -61,6 +61,11 @@ public class ProfileServiceIT extends BaseIT {
     @Before
     public void setUp() {
         TestUtils.removeAllProfiles(definitionsService, persistenceService);
+    }
+
+    @After
+    public void tearDown() throws InterruptedException {
+        removeItems(Profile.class, ProfileAlias.class);
     }
 
     @Test
@@ -219,4 +224,46 @@ public class ProfileServiceIT extends BaseIT {
         }
     }
 
+    @Test
+    public void testAliasCannotBeCreatedOnSameProfile() throws Exception {
+        String profileID = UUID.randomUUID().toString();
+        Profile profile = new Profile();
+        profile.setItemId(profileID);
+        profileService.save(profile);
+
+        keepTrying("Profile " + profileID + " not found in the required time", () -> profileService.load(profileID), Objects::nonNull,
+                DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+
+        try {
+            profileService.addAliasToProfile(profileID, profileID, "defaultClientId");
+            fail("It should not be possible to create an Alias on the same profile ID");
+        } catch (Exception e) {
+            // do nothing, it's expected
+        }
+    }
+
+    @Test
+    public void testAliasCannotBeCreatedInCaseAlreadyExists() throws Exception {
+        String profileID = UUID.randomUUID().toString();
+        String alias = UUID.randomUUID().toString();
+        Profile profile = new Profile();
+        profile.setItemId(profileID);
+        profileService.save(profile);
+
+        keepTrying("Profile " + profileID + " not found in the required time", () -> profileService.load(profileID), Objects::nonNull,
+                DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+
+        profileService.addAliasToProfile(profileID, alias, "defaultClientId");
+
+        keepTrying("Profile " + profileID + " not found in the required time", () -> profileService.load(alias), Objects::nonNull,
+                DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+
+        String otherProfileId = UUID.randomUUID().toString();
+        try {
+            profileService.addAliasToProfile(otherProfileId, alias, "defaultClientId");
+            fail("It should not be possible to create an Alias when an alias already exists with same ID");
+        } catch (Exception e) {
+            // do nothing, it's expected
+        }
+    }
 }

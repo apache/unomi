@@ -1,0 +1,8 @@
+{
+  "size": 1000,
+  "query": {
+    "exists": {
+      "field": "mergedWith"
+    }
+  }
+}

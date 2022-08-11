@@ -23,6 +23,7 @@ import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.util.EntityUtils;
+import org.json.JSONArray;
 import org.json.JSONObject;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
@@ -84,6 +85,13 @@ public class MigrationUtils {
             return value.toString();
         } catch (final Exception e) {
             throw new RuntimeException(e);
+        }
+    }
+
+    public static boolean indexExists(CloseableHttpClient httpClient, String esAddress, String indexName) throws IOException {
+        final HttpGet httpGet = new HttpGet(esAddress + "/" + indexName);
+        try (CloseableHttpResponse response = httpClient.execute(httpGet)) {
+            return response.getStatusLine().getStatusCode() == HttpStatus.SC_OK;
         }
     }
 
@@ -154,6 +162,45 @@ public class MigrationUtils {
         HttpUtils.executePostRequest(httpClient, esAddress + "/_reindex", reIndexRequest, null);
         // Remove clone
         HttpUtils.executeDeleteRequest(httpClient, esAddress + "/" + indexNameCloned, null);
+    }
+
+    public static void scrollQuery(CloseableHttpClient httpClient, String esAddress, String queryURL, String query, String scrollDuration, ScrollCallback scrollCallback) throws IOException {
+        String response = HttpUtils.executePostRequest(httpClient, esAddress + queryURL + "?scroll=" + scrollDuration, query, null);
+
+        while (true) {
+            JSONObject responseAsJson = new JSONObject(response);
+            String scrollId = responseAsJson.has("_scroll_id") ? responseAsJson.getString("_scroll_id"): null;
+            JSONArray hits = new JSONArray();
+            if (responseAsJson.has("hits")) {
+                JSONObject hitsObject = responseAsJson.getJSONObject("hits");
+                if (hitsObject.has("hits")) {
+                    hits = hitsObject.getJSONArray("hits");
+                }
+            }
+
+            // no more results, delete scroll
+            if (hits.length() == 0) {
+                if (scrollId != null) {
+                    HttpUtils.executeDeleteRequest(httpClient, esAddress + "/_search/scroll/" + scrollId, null);
+                }
+                break;
+            }
+
+            // execute callback
+            if (scrollCallback != null) {
+                scrollCallback.execute(hits.toString());
+            }
+
+            // scroll
+            response = HttpUtils.executePostRequest(httpClient, esAddress + "/_search/scroll", "{\n" +
+                    "  \"scroll_id\": \"" + scrollId + "\",\n" +
+                    "  \"scroll\": \"" + scrollDuration + "\"\n" +
+                    "}", null);
+        }
+    }
+
+    public interface ScrollCallback {
+        void execute(String hits);
     }
 
     private static String getScriptPart(String painlessScript) {

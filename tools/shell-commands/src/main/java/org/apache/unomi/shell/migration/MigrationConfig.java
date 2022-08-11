@@ -53,7 +53,7 @@ public class MigrationConfig {
         m.put(CONFIG_ES_ADDRESS, new MigrationConfigProperty("Enter ElasticSearch TARGET address (default: http://localhost:9200): ", "http://localhost:9200"));
         m.put(CONFIG_ES_LOGIN, new MigrationConfigProperty("Enter ElasticSearch TARGET login (default: none): ", ""));
         m.put(CONFIG_ES_PASSWORD, new MigrationConfigProperty("Enter ElasticSearch TARGET password (default: none): ", ""));
-        m.put(CONFIG_TRUST_ALL_CERTIFICATES, new MigrationConfigProperty("We need to initialize a HttpClient, do we need to trust all certificates ?", null));
+        m.put(CONFIG_TRUST_ALL_CERTIFICATES, new MigrationConfigProperty("We need to initialize a HttpClient, do we need to trust all certificates ? (yes/no)", null));
         m.put(INDEX_PREFIX, new MigrationConfigProperty("Enter ElasticSearch Unomi indices prefix (default: context): ", "context"));
         m.put(NUMBER_OF_SHARDS, new MigrationConfigProperty("Enter ElasticSearch index mapping configuration: number_of_shards (default: 3): ", "3"));
         m.put(NUMBER_OF_REPLICAS, new MigrationConfigProperty("Enter ElasticSearch index mapping configuration: number_of_replicas (default: 0): ", "0"));

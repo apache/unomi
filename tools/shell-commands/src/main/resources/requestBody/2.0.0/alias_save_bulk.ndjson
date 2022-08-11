@@ -1,0 +1,2 @@
+{ "create" : { "_id": "##itemId##" }}
+{ "itemId":  "##itemId##", "itemType":  "profileAlias", "profileID":  "##profileId##", "scope":  null, "clientID": "defaultClientId", "creationTime":  "##migrationTime##", "modifiedTime":  "##migrationTime##"}

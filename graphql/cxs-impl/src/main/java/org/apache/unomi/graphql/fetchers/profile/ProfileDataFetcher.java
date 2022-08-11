@@ -53,8 +53,6 @@ public class ProfileDataFetcher extends BaseDataFetcher<CDPProfile> {
 
             profile = profileService.save(profile);
 
-            profileService.addAliasToProfile(profile.getItemId(), profile.getItemId(), profileIDInput.getClient().getId());
-
             return new CDPProfile(profile);
         }
 

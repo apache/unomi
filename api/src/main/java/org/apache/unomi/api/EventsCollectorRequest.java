@@ -34,6 +34,9 @@ public class EventsCollectorRequest {
     @Pattern(regexp = ValidationPattern.TEXT_VALID_CHARACTERS_PATTERN)
     private String sessionId;
 
+    @Pattern(regexp = ValidationPattern.TEXT_VALID_CHARACTERS_PATTERN)
+    private String profileId;
+
     /**
      * Retrieves the events to be processed.
      *
@@ -67,4 +70,22 @@ public class EventsCollectorRequest {
         this.sessionId = sessionId;
     }
 
+    /**
+     * Retrieve the profileId passed along with the request. All events will be processed with this profileId as a
+     * default
+     *
+     * @return the identifier for the profile
+     */
+    public String getProfileId() {
+        return profileId;
+    }
+
+    /**
+     * Sets the profileId in the request.
+     *
+     * @param profileId an unique identifier for the profile
+     */
+    public void setProfileId(String profileId) {
+        this.profileId = profileId;
+    }
 }

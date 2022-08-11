@@ -86,6 +86,13 @@
             <version>${groovy.version}</version>
             <scope>provided</scope>
         </dependency>
+
+        <dependency>
+            <groupId>org.codehaus.groovy</groupId>
+            <artifactId>groovy-json</artifactId>
+            <version>${groovy.version}</version>
+            <scope>provided</scope>
+        </dependency>
     </dependencies>
 
     <build>
