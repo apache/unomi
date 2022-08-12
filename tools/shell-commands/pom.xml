@@ -93,6 +93,20 @@
             <version>${groovy.version}</version>
             <scope>provided</scope>
         </dependency>
+
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-core</artifactId>
+            <version>${version.jackson.core}</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>${version.jackson.databind}</version>
+            <scope>provided</scope>
+        </dependency>
     </dependencies>
 
     <build>
@@ -103,7 +117,8 @@
                 <configuration>
                     <instructions>
                         <Export-Package>
-                            org.apache.unomi.shell.migration.utils
+                            org.apache.unomi.shell.migration.utils,
+                            org.apache.unomi.shell.migration.actions,
                         </Export-Package>
                         <Embed-Dependency>*;scope=compile|runtime</Embed-Dependency>
                         <DynamicImport-Package>*</DynamicImport-Package>

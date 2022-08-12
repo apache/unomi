@@ -1,3 +1,4 @@
+import org.apache.unomi.shell.migration.actions.MigrationHistory
 import org.apache.unomi.shell.migration.utils.MigrationUtils
 
 /*
@@ -17,6 +18,7 @@ import org.apache.unomi.shell.migration.utils.MigrationUtils
  * limitations under the License.
  */
 
+MigrationHistory history = migrationHistory
 String esAddress = migrationConfig.getString("esAddress", session)
 String indexPrefix = migrationConfig.getString("indexPrefix", session)
 
@@ -27,5 +29,5 @@ indicesToReindex.each { indexToReindex ->
     String realIndexName = "${indexPrefix}-${indexToReindex.toLowerCase()}"
     String mapping = MigrationUtils.extractMappingFromBundles(bundleContext, mappingFileName)
     String newIndexSettings = MigrationUtils.buildIndexCreationRequest(httpClient, esAddress, baseSettings, realIndexName, mapping)
-    MigrationUtils.reIndex(httpClient, bundleContext, esAddress, realIndexName, newIndexSettings, null)
+    MigrationUtils.reIndex(httpClient, bundleContext, esAddress, realIndexName, newIndexSettings, null, history)
 }

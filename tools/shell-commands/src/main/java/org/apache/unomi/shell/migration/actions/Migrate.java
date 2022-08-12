@@ -31,8 +31,6 @@ import org.apache.karaf.shell.api.action.Command;
 import org.apache.karaf.shell.api.action.lifecycle.Reference;
 import org.apache.karaf.shell.api.action.lifecycle.Service;
 import org.apache.karaf.shell.api.console.Session;
-import org.apache.unomi.shell.migration.MigrationConfig;
-import org.apache.unomi.shell.migration.MigrationScript;
 import org.apache.unomi.shell.migration.utils.ConsoleUtils;
 import org.apache.unomi.shell.migration.utils.HttpUtils;
 import org.osgi.framework.*;
@@ -47,12 +45,15 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static org.apache.unomi.shell.migration.MigrationConfig.*;
+import static org.apache.unomi.shell.migration.actions.MigrationConfig.*;
 
 @Command(scope = "unomi", name = "migrate", description = "This will Migrate your data in ES to be compliant with current version. " +
         "It's possible to configure the migration using OSGI configuration file: org.apache.unomi.migration.cfg, if no configuration is provided then questions will be prompted during the migration process.")
 @Service
 public class Migrate implements Action {
+
+    protected static final String MIGRATION_FS_ROOT_FOLDER = "migration";
+    protected static final Path MIGRATION_FS_SCRIPTS_FOLDER = Paths.get(System.getProperty( "karaf.data" ), MIGRATION_FS_ROOT_FOLDER, "scripts");
 
     @Reference
     Session session;
@@ -101,6 +102,9 @@ public class Migrate implements Action {
 
         // reset migration config from previous stored users choices.
         migrationConfig.reset();
+        Files.createDirectories(MIGRATION_FS_SCRIPTS_FOLDER);
+        MigrationHistory migrationHistory = new MigrationHistory(session, migrationConfig);
+        migrationHistory.tryRecover();
 
         // Handle credentials
         CredentialsProvider credentialsProvider = null;
@@ -115,7 +119,7 @@ public class Migrate implements Action {
         try (CloseableHttpClient httpClient = HttpUtils.initHttpClient(migrationConfig.getBoolean(CONFIG_TRUST_ALL_CERTIFICATES, session), credentialsProvider)) {
 
             // Compile scripts
-            scripts = parseScripts(scripts, session, httpClient, migrationConfig);
+            scripts = parseScripts(scripts, session, httpClient, migrationConfig, migrationHistory);
 
             // Start migration
             ConsoleUtils.printMessage(session, "Starting migration process from version: " + originVersion);
@@ -130,6 +134,9 @@ public class Migrate implements Action {
 
                 ConsoleUtils.printMessage(session, "Finish execution of: " + migrateScript);
             }
+
+            // We clean history, migration is successful
+            migrationHistory.clean();
         }
 
         return null;
@@ -152,7 +159,7 @@ public class Migrate implements Action {
                 .collect(Collectors.toCollection(TreeSet::new));
     }
 
-    private Set<MigrationScript> parseScripts(Set<MigrationScript> scripts, Session session, CloseableHttpClient httpClient, MigrationConfig migrationConfig) {
+    private Set<MigrationScript> parseScripts(Set<MigrationScript> scripts, Session session, CloseableHttpClient httpClient, MigrationConfig migrationConfig, MigrationHistory migrationHistory) {
         Map<String, GroovyShell> shellsPerBundle = new HashMap<>();
 
         return scripts.stream()
@@ -160,7 +167,7 @@ public class Migrate implements Action {
                     // fallback on current bundle if the scripts is not provided by OSGI
                     Bundle scriptBundle = migrateScript.getBundle() != null ? migrateScript.getBundle() : bundleContext.getBundle();
                     if (!shellsPerBundle.containsKey(scriptBundle.getSymbolicName())) {
-                        shellsPerBundle.put(scriptBundle.getSymbolicName(), buildShellForBundle(scriptBundle, session, httpClient, migrationConfig));
+                        shellsPerBundle.put(scriptBundle.getSymbolicName(), buildShellForBundle(scriptBundle, session, httpClient, migrationConfig, migrationHistory));
                     }
                     migrateScript.setCompiledScript(shellsPerBundle.get(scriptBundle.getSymbolicName()).parse(migrateScript.getScript()));
                 })
@@ -186,13 +193,12 @@ public class Migrate implements Action {
 
     private Set<MigrationScript> loadFileSystemScripts() throws IOException {
         // check migration folder exists
-        Path migrationFolder = Paths.get(System.getProperty( "karaf.data" ), "migration", "scripts");
-        if (!Files.isDirectory(migrationFolder)) {
+        if (!Files.isDirectory(MIGRATION_FS_SCRIPTS_FOLDER)) {
             return Collections.emptySet();
         }
 
         List<Path> paths;
-        try (Stream<Path> walk = Files.walk(migrationFolder)) {
+        try (Stream<Path> walk = Files.walk(MIGRATION_FS_SCRIPTS_FOLDER)) {
             paths = walk
                     .filter(path -> !Files.isDirectory(path))
                     .filter(path -> path.toString().toLowerCase().endsWith("groovy"))
@@ -206,13 +212,14 @@ public class Migrate implements Action {
         return migrationScripts;
     }
 
-    private GroovyShell buildShellForBundle(Bundle bundle, Session session, CloseableHttpClient httpClient, MigrationConfig migrationConfig) {
+    private GroovyShell buildShellForBundle(Bundle bundle, Session session, CloseableHttpClient httpClient, MigrationConfig migrationConfig, MigrationHistory migrationHistory) {
         GroovyClassLoader groovyLoader = new GroovyClassLoader(bundle.adapt(BundleWiring.class).getClassLoader());
         GroovyScriptEngine groovyScriptEngine = new GroovyScriptEngine((URL[]) null, groovyLoader);
         GroovyShell groovyShell = new GroovyShell(groovyScriptEngine.getGroovyClassLoader());
         groovyShell.setVariable("session", session);
         groovyShell.setVariable("httpClient", httpClient);
         groovyShell.setVariable("migrationConfig", migrationConfig);
+        groovyShell.setVariable("migrationHistory", migrationHistory);
         groovyShell.setVariable("bundleContext", bundle.getBundleContext());
         return groovyShell;
     }

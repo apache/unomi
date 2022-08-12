@@ -55,7 +55,12 @@ public class Migrate16xTo200IT extends BaseIT {
         }
 
         // Do migrate the data set
-        executeCommand("unomi:migrate 1.6.0 true");
+        String commandResults = executeCommand("unomi:migrate 1.6.0 true");
+
+        // Prin the resulted output in the karaf shell directly
+        System.out.println("Migration command output results:");
+        System.out.println(commandResults);
+
         // Call super for starting Unomi and wait for the complete startup
         super.waitForStartup();
     }

@@ -1,3 +1,6 @@
+import org.apache.unomi.shell.migration.actions.MigrationHistory
+import org.apache.unomi.shell.migration.utils.ConsoleUtils
+
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -14,25 +17,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.shell.migration;
 
-/**
- * Just a bean for a configuration property to be used during migration process
- */
-public class MigrationConfigProperty {
-    String description;
-    String defaultValue;
+MigrationHistory history = migrationHistory
+history.performMigrationStep("step 1", () -> {
+    ConsoleUtils.printMessage(session, "inside step 1")
+})
 
-    public MigrationConfigProperty(String description, String defaultValue) {
-        this.description = description;
-        this.defaultValue = defaultValue;
-    }
+history.performMigrationStep("step 2", () -> {
+    ConsoleUtils.printMessage(session, "inside step 2")
+})
 
-    public String getDescription() {
-        return description;
-    }
+history.performMigrationStep("step 3", () -> {
+    ConsoleUtils.printMessage(session, "inside step 3")
+})
 
-    public String getDefaultValue() {
-        return defaultValue;
-    }
-}
+history.performMigrationStep("step 4", () -> {
+    ConsoleUtils.printMessage(session, "inside step 4")
+})
+
+history.performMigrationStep("step 5", () -> {
+    ConsoleUtils.printMessage(session, "inside step 5")
+})

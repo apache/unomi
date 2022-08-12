@@ -23,6 +23,7 @@ import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.util.EntityUtils;
+import org.apache.unomi.shell.migration.actions.MigrationHistory;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.osgi.framework.Bundle;
@@ -141,7 +142,12 @@ public class MigrationUtils {
     }
 
     public static void reIndex(CloseableHttpClient httpClient, BundleContext bundleContext, String esAddress, String indexName,
-            String newIndexSettings, String painlessScript) throws IOException {
+                               String newIndexSettings, String painlessScript, MigrationHistory history) throws Exception {
+        if (indexName.endsWith("-cloned")) {
+            // We should never reIndex a clone ...
+            return;
+        }
+
         String indexNameCloned = indexName + "-cloned";
 
         String reIndexRequest = resourceAsString(bundleContext, "requestBody/2.0.0/base_reindex_request.json")
@@ -150,18 +156,34 @@ public class MigrationUtils {
 
         String setIndexReadOnlyRequest = resourceAsString(bundleContext, "requestBody/2.0.0/base_set_index_readonly_request.json");
 
-        // Set original index as readOnly
-        HttpUtils.executePutRequest(httpClient, esAddress + "/" + indexName + "/_settings", setIndexReadOnlyRequest, null);
-        // Clone the original index for backup
-        HttpUtils.executePostRequest(httpClient, esAddress + "/" + indexName + "/_clone/" + indexNameCloned, null, null);
-        // Delete original index
-        HttpUtils.executeDeleteRequest(httpClient, esAddress + "/" + indexName, null);
-        // Recreate the original index with new mappings
-        HttpUtils.executePutRequest(httpClient, esAddress + "/" + indexName, newIndexSettings, null);
-        // Reindex data from clone
-        HttpUtils.executePostRequest(httpClient, esAddress + "/_reindex", reIndexRequest, null);
-        // Remove clone
-        HttpUtils.executeDeleteRequest(httpClient, esAddress + "/" + indexNameCloned, null);
+        history.performMigrationStep("Reindex step for: " + indexName + " (clone creation)", () -> {
+            // Delete clone in case it already exists, could be incomplete from a previous reindex attempt, so better create a fresh one.
+            if (indexExists(httpClient, esAddress, indexNameCloned)) {
+                HttpUtils.executeDeleteRequest(httpClient, esAddress + "/" + indexNameCloned, null);
+            }
+            // Set original index as readOnly
+            HttpUtils.executePutRequest(httpClient, esAddress + "/" + indexName + "/_settings", setIndexReadOnlyRequest, null);
+            // Clone the original index for backup
+            HttpUtils.executePostRequest(httpClient, esAddress + "/" + indexName + "/_clone/" + indexNameCloned, null, null);
+        });
+
+        history.performMigrationStep("Reindex step for: " + indexName + " (recreate the index and perform the re-indexation)", () -> {
+            // Delete original index if it still exists
+            if (indexExists(httpClient, esAddress, indexName)) {
+                HttpUtils.executeDeleteRequest(httpClient, esAddress + "/" + indexName, null);
+            }
+            // Recreate the original index with new mappings
+            HttpUtils.executePutRequest(httpClient, esAddress + "/" + indexName, newIndexSettings, null);
+            // Reindex data from clone
+            HttpUtils.executePostRequest(httpClient, esAddress + "/_reindex", reIndexRequest, null);
+        });
+
+        history.performMigrationStep("Reindex step for: " + indexName + " (delete clone)", () -> {
+            // Delete original index if it still exists
+            if (indexExists(httpClient, esAddress, indexNameCloned)) {
+                HttpUtils.executeDeleteRequest(httpClient, esAddress + "/" + indexNameCloned, null);
+            }
+        });
     }
 
     public static void scrollQuery(CloseableHttpClient httpClient, String esAddress, String queryURL, String query, String scrollDuration, ScrollCallback scrollCallback) throws IOException {

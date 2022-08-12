@@ -19,7 +19,7 @@ package org.apache.unomi.shell.migration.impl;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.karaf.shell.api.console.Session;
 import org.apache.unomi.shell.migration.Migration;
-import org.apache.unomi.shell.migration.MigrationConfig;
+import org.apache.unomi.shell.migration.actions.MigrationConfig;
 import org.apache.unomi.shell.migration.utils.ConsoleUtils;
 import org.apache.unomi.shell.migration.utils.HttpUtils;
 import org.json.JSONArray;
