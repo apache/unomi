@@ -18,10 +18,10 @@ package org.apache.unomi.shell.migration;
 
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.karaf.shell.api.console.Session;
+import org.apache.unomi.shell.migration.actions.MigrationConfig;
 import org.osgi.framework.BundleContext;
 
 import java.io.IOException;
-import java.util.Map;
 
 /**
  * @author dgaillard

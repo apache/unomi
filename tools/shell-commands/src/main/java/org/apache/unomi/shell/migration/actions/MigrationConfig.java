@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.shell.migration;
+package org.apache.unomi.shell.migration.actions;
 
 import org.apache.karaf.shell.api.console.Session;
 import org.apache.unomi.shell.migration.utils.ConsoleUtils;
@@ -46,6 +46,7 @@ public class MigrationConfig {
     public static final String NUMBER_OF_REPLICAS = "number_of_replicas";
     public static final String TOTAL_FIELDS_LIMIT = "mapping.total_fields.limit";
     public static final String MAX_DOC_VALUE_FIELDS_SEARCH = "max_docvalue_fields_search";
+    public static final String MIGRATION_HISTORY_RECOVER = "recoverFromHistory";
 
     private static final Map<String, MigrationConfigProperty> configProperties;
     static {
@@ -59,6 +60,7 @@ public class MigrationConfig {
         m.put(NUMBER_OF_REPLICAS, new MigrationConfigProperty("Enter ElasticSearch index mapping configuration: number_of_replicas (default: 0): ", "0"));
         m.put(TOTAL_FIELDS_LIMIT, new MigrationConfigProperty("Enter ElasticSearch index mapping configuration: mapping.total_fields.limit (default: 1000): ", "1000"));
         m.put(MAX_DOC_VALUE_FIELDS_SEARCH, new MigrationConfigProperty("Enter ElasticSearch index mapping configuration: max_docvalue_fields_search (default: 1000): ", "1000"));
+        m.put(MIGRATION_HISTORY_RECOVER, new MigrationConfigProperty("We found an existing migration attempt, should we restart from it ? (this will avoid redoing steps already completed successfully) (yes/no)", null));
         configProperties = Collections.unmodifiableMap(m);
     }
 

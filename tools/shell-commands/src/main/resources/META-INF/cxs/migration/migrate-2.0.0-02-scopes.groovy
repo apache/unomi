@@ -1,5 +1,8 @@
 import groovy.json.JsonSlurper
+import org.apache.http.impl.client.CloseableHttpClient
+import org.apache.unomi.shell.migration.actions.MigrationHistory
 import org.apache.unomi.shell.migration.utils.ConsoleUtils
+import org.apache.unomi.shell.migration.utils.HttpRequestException
 import org.apache.unomi.shell.migration.utils.HttpUtils
 import org.apache.unomi.shell.migration.utils.MigrationUtils
 
@@ -20,6 +23,8 @@ import org.apache.unomi.shell.migration.utils.MigrationUtils
  * limitations under the License.
  */
 
+MigrationHistory history = migrationHistory
+CloseableHttpClient client = httpClient
 def jsonSlurper = new JsonSlurper()
 String searchScopesRequest = MigrationUtils.resourceAsString(bundleContext,"requestBody/2.0.0/scope_search.json")
 String saveScopeRequestBulk = MigrationUtils.resourceAsString(bundleContext, "requestBody/2.0.0/scope_save_bulk.ndjson")
@@ -27,24 +32,47 @@ String esAddress = migrationConfig.getString("esAddress", session)
 String indexPrefix = migrationConfig.getString("indexPrefix", session)
 String scopeIndex = indexPrefix + "-scope"
 
-// Create scope index:
-if (!MigrationUtils.indexExists(httpClient, esAddress, scopeIndex)) {
-    String baseRequest = MigrationUtils.resourceAsString(bundleContext,"requestBody/2.0.0/base_index_mapping.json")
-    String mapping = MigrationUtils.extractMappingFromBundles(bundleContext, "scope.json")
-    String newIndexSettings = MigrationUtils.buildIndexCreationRequest(httpClient, esAddress, baseRequest, indexPrefix + "-profile", mapping)
-    HttpUtils.executePutRequest(httpClient, esAddress + "/" + scopeIndex, newIndexSettings, null)
+history.performMigrationStep("2.0.0-create-scope-index", () -> {
+    if (!MigrationUtils.indexExists(client, esAddress, scopeIndex)) {
+        String baseRequest = MigrationUtils.resourceAsString(bundleContext, "requestBody/2.0.0/base_index_mapping.json")
+        String mapping = MigrationUtils.extractMappingFromBundles(bundleContext, "scope.json")
+        String newIndexSettings = MigrationUtils.buildIndexCreationRequest(client, esAddress, baseRequest, indexPrefix + "-profile", mapping)
+        HttpUtils.executePutRequest(client, esAddress + "/" + scopeIndex, newIndexSettings, null)
+    }
+})
 
+history.performMigrationStep("2.0.0-create-scopes-from-existing-events", () -> {
     // search existing scopes from event
-    def searchResponse = jsonSlurper.parseText(HttpUtils.executePostRequest(httpClient, esAddress + "/" + indexPrefix + "-event-*/_search", searchScopesRequest, null))
+    def searchResponse = jsonSlurper.parseText(HttpUtils.executePostRequest(client, esAddress + "/" + indexPrefix + "-event-*/_search", searchScopesRequest, null))
     ConsoleUtils.printMessage(session, "Detected: " + searchResponse.aggregations.bucketInfos.count + " scopes to create")
 
     // create scopes
     def buckets = searchResponse.aggregations.scopes.buckets
     if (buckets != null && buckets.size() > 0) {
         final StringBuilder bulkSaveRequest = new StringBuilder()
+
         buckets.each {
-            bucket -> bulkSaveRequest.append(saveScopeRequestBulk.replace("##scope##", bucket.key))
+            bucket -> {
+                // Filter empty scope from existing events
+                if (bucket.key) {
+                    // check that the scope doesn't already exists
+                    def scopeAlreadyExists = false
+                    try {
+                        def existingScope = jsonSlurper.parseText(HttpUtils.executeGetRequest(client, esAddress + "/" + scopeIndex + "/_doc/" + bucket.key, null));
+                        scopeAlreadyExists = existingScope.found
+                    } catch (HttpRequestException e) {
+                        // can happen in case response code > 400 due to item not exist in ElasticSearch
+                    }
+
+                    if (!scopeAlreadyExists) {
+                        bulkSaveRequest.append(saveScopeRequestBulk.replace("##scope##", bucket.key))
+                    }
+                }
+            }
         }
-        HttpUtils.executePostRequest(httpClient, esAddress + "/" + scopeIndex + "/_bulk", bulkSaveRequest.toString(), null)
+
+        if (bulkSaveRequest.length() > 0) {
+            HttpUtils.executePostRequest(client, esAddress + "/" + scopeIndex + "/_bulk", bulkSaveRequest.toString(), null)
+        }
     }
-}
+})

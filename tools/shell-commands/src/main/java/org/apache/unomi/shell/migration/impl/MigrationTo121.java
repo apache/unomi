@@ -20,7 +20,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.karaf.shell.api.console.Session;
 import org.apache.unomi.shell.migration.Migration;
-import org.apache.unomi.shell.migration.MigrationConfig;
+import org.apache.unomi.shell.migration.actions.MigrationConfig;
 import org.apache.unomi.shell.migration.utils.ConsoleUtils;
 import org.apache.unomi.shell.migration.utils.MigrationUtils;
 import org.json.JSONArray;

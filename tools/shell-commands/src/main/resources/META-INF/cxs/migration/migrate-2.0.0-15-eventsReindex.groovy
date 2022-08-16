@@ -1,3 +1,4 @@
+import org.apache.unomi.shell.migration.actions.MigrationHistory
 import org.apache.unomi.shell.migration.utils.HttpUtils
 import org.apache.unomi.shell.migration.utils.MigrationUtils
 
@@ -18,12 +19,14 @@ import org.apache.unomi.shell.migration.utils.MigrationUtils
  * limitations under the License.
  */
 
+MigrationHistory history = migrationHistory
 String esAddress = migrationConfig.getString("esAddress", session)
 String indexPrefix = migrationConfig.getString("indexPrefix", session)
 
-// Remove all internal events that are no more persisted
-String removeInternalEventsRequest = MigrationUtils.resourceAsString(bundleContext, "requestBody/2.0.0/event_delete_by_query.json")
-HttpUtils.executePostRequest(httpClient, "${esAddress}/${indexPrefix}-event-*/_delete_by_query", removeInternalEventsRequest, null)
+history.performMigrationStep("2.0.0-remove-events-not-persisted-anymore", () -> {
+    String removeInternalEventsRequest = MigrationUtils.resourceAsString(bundleContext, "requestBody/2.0.0/event_delete_by_query.json")
+    HttpUtils.executePostRequest(httpClient, "${esAddress}/${indexPrefix}-event-*/_delete_by_query", removeInternalEventsRequest, null)
+})
 
 // Reindex the rest of the events
 String baseSettings = MigrationUtils.resourceAsString(bundleContext, "requestBody/2.0.0/base_index_mapping.json")
@@ -32,5 +35,5 @@ String mapping = MigrationUtils.extractMappingFromBundles(bundleContext, "event.
 Set<String> eventIndices = MigrationUtils.getIndexesPrefixedBy(httpClient, esAddress, "${indexPrefix}-event-")
 eventIndices.each { eventIndex ->
     String newIndexSettings = MigrationUtils.buildIndexCreationRequest(httpClient, esAddress, baseSettings, eventIndex, mapping)
-    MigrationUtils.reIndex(httpClient, bundleContext, esAddress, eventIndex, newIndexSettings, reIndexScript)
+    MigrationUtils.reIndex(httpClient, bundleContext, esAddress, eventIndex, newIndexSettings, reIndexScript, history)
 }

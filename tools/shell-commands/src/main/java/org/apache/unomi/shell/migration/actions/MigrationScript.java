@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.shell.migration;
+package org.apache.unomi.shell.migration.actions;
 
 import groovy.lang.Script;
 import org.apache.commons.io.IOUtils;
@@ -39,7 +39,7 @@ import java.util.regex.Pattern;
  */
 public class MigrationScript implements Comparable<MigrationScript> {
 
-    private static final Pattern SCRIPT_FILENAME_PATTERN = Pattern.compile("^migrate-(\\d.\\d.\\d)-(\\d+)-([\\w|.]+).groovy$");
+    private static final Pattern SCRIPT_FILENAME_PATTERN = Pattern.compile("^migrate-(\\d+.\\d+.\\d+)-(\\d+)-([\\w|.]+).groovy$");
 
     private final String script;
     private Script compiledScript;

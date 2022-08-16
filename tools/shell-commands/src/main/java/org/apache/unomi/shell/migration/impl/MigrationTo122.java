@@ -19,15 +19,13 @@ package org.apache.unomi.shell.migration.impl;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.karaf.shell.api.console.Session;
 import org.apache.unomi.shell.migration.Migration;
-import org.apache.unomi.shell.migration.MigrationConfig;
+import org.apache.unomi.shell.migration.actions.MigrationConfig;
 import org.apache.unomi.shell.migration.utils.ConsoleUtils;
 import org.apache.unomi.shell.migration.utils.HttpRequestException;
 import org.apache.unomi.shell.migration.utils.HttpUtils;
 import org.osgi.framework.BundleContext;
-import org.osgi.service.component.annotations.Component;
 
 import java.io.IOException;
-import java.util.Map;
 
 public class MigrationTo122 implements Migration {
     private CloseableHttpClient httpClient;

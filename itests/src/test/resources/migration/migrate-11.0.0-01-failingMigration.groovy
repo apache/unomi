@@ -1,5 +1,5 @@
 import org.apache.unomi.shell.migration.actions.MigrationHistory
-import org.apache.unomi.shell.migration.utils.MigrationUtils
+import org.apache.unomi.shell.migration.utils.ConsoleUtils
 
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
@@ -19,11 +19,23 @@ import org.apache.unomi.shell.migration.utils.MigrationUtils
  */
 
 MigrationHistory history = migrationHistory
-String esAddress = migrationConfig.getString("esAddress", session)
-String indexPrefix = migrationConfig.getString("indexPrefix", session)
+history.performMigrationStep("step 1", () -> {
+    ConsoleUtils.printMessage(session, "inside step 1")
+})
 
-String baseSettings = MigrationUtils.resourceAsString(bundleContext, "requestBody/2.0.0/base_index_mapping.json")
-String mapping = MigrationUtils.extractMappingFromBundles(bundleContext, "profile.json")
-String newIndexSettings = MigrationUtils.buildIndexCreationRequest(httpClient, esAddress, baseSettings, indexPrefix + "-profile", mapping)
-MigrationUtils.reIndex(httpClient, bundleContext, esAddress, indexPrefix + "-profile",
-        newIndexSettings, MigrationUtils.getFileWithoutComments(bundleContext, "requestBody/2.0.0/profile_migrate.painless"), history)
+history.performMigrationStep("step 2", () -> {
+    ConsoleUtils.printMessage(session, "inside step 2")
+})
+
+history.performMigrationStep("step 3", () -> {
+    ConsoleUtils.printMessage(session, "inside step 3")
+    throw new RuntimeException("Intentional failure !")
+})
+
+history.performMigrationStep("step 4", () -> {
+    ConsoleUtils.printMessage(session, "inside step 4")
+})
+
+history.performMigrationStep("step 5", () -> {
+    ConsoleUtils.printMessage(session, "inside step 5")
+})
