@@ -66,6 +66,7 @@ Custom migration scripts can be placed in `data/migration/scripts`
 ===== Checklist
 
 Before starting the mirgation, please ensure that:
+
  - You do have a backup of your data
  - You did practice the migration in a staging environment, never migrate production without prior validation
  - You verified your applications were operational with Apache Unomi 2.0 (JSON schemas created, client applications updated, ...)
@@ -78,11 +79,12 @@ Before starting the mirgation, please ensure that:
 The migration is performed by means of a dedicated Apache Unomi 2.0 node started in a particular migration mode. 
 
 In a nutshell, the migration process will consist in the following steps:
-* Shutdown your Apache Unomi 1.6 cluster
-* Start an Apache Unomi 2.0 migration node
-* Wait for data migration to complete
-* Start you Apache Unomi 2.0 cluster
-* (optional) Import additional JSON Schemas
+
+- Shutdown your Apache Unomi 1.6 cluster
+- Start an Apache Unomi 2.0 migration node
+- Wait for data migration to complete
+- Start you Apache Unomi 2.0 cluster
+- (optional) Import additional JSON Schemas
 
 The migration itselfs consists in a set of scripts (or steps) executed sequentially. Each step maintains its execution state, meaning if a step fails, you can fix its migration script, then execute it again.
 
