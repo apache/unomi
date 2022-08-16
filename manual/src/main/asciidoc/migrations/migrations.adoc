@@ -15,6 +15,14 @@
 
 This section contains information and steps to migrate between major Unomi versions.
 
+=== From version 1.6 to 2.0
+
+include::migrate-1.6-to-2.0.adoc[]
+
+=== From version 1.5 to 1.6
+
+include::migrate-1.5-to-1.6.adoc[]
+
 === From version 1.4 to 1.5
 
 include::migrate-1.4-to-1.5.adoc[]

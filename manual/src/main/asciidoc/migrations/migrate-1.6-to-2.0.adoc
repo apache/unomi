@@ -1,0 +1,90 @@
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+=== Migration Overview
+
+Apache Unomi 2.0 is a major release, and as such it does introduce breaking changes. This portion of the document detail the various steps we recommend following to successfully migrate your environment from Apache Unomi 1.6 to Apache Unomi 2.0.
+
+There are two main steps in preparing your migration to Apache Unomi 2.0:
+- Updating applications consuming Unomi
+- Migrating your existing data
+
+=== Updating applications consuming Unomi
+
+Since Apache Unomi is an engine, you've probably built multiple applications consuming its APIs, you might also have built extensions directly running in Unomi. 
+
+As you begin updating applications consuming Apache Unomi, it is generally a good practice to <<Enable debug mode>>. 
+Doing so will display any errors when processing events (such as JSON Schema validations), and will provide useful indications towards solving issues.
+
+==== Data Model changes
+
+[TODO: List changes on objects, with examples]
+
+==== Create JSON schemas
+
+Once you updated your applications to align with Unomi 2 data model, the next step will be to update (or create new) JSON Schemas.
+
+Any event (and more generally, any object) received through Unomi public endpoints do require a valid JSON schema. 
+Apache Unomi ships with all of the necessary JSON Schemas for its own operation out of the box but you will need to create schemas for any custom event you're sending. 
+If you did not customize events
+
+Reviewing debug messages associated with JSON Schema (using: `log:set DEBUG org.apache.unomi.schema.impl.SchemaServiceImpl` in Karaf console), will point to errors in your schemas.
+
+Although possible, we recommend against creating a JSON Schema allowing any event payload.
+
+=== Migrating your existing data
+
+==== Upgrade Elasticsearch 
+
+While still using Unomi 1.6, the first step will be to upgrade your Elasticsearch to 7.17.5. Documentation is available on https://www.elastic.co/guide/en/elasticsearch/reference/7.17/setup-upgrade.html[Elasticsearch's website].
+
+==== Migrate custom data
+
+Apache Unomi 2.0 knows how to migrate its own data from the new model to the old one, but it does not know how to migrate custom events you might be using in your environment.
+
+===== Data Migration overview
+
+Apache Unomi 2.0 relies on a set of groovy scripts to perform its data migration. 
+
+Located in https://github.com/apache/unomi/tree/master/tools/shell-commands/src/main/resources/META-INF/cxs/migration[tools/shell-commands/src/main/resources/META-INF/cxs/migration], these scripts are sorted alphabetically and executed sequentially. 
+
+In most cases, migration steps consist of an Elasticsearch painless script that will handle the new migration. Reviewing the existing migration scripts will provide clear indications on how to prepare migration of your custom data.
+
+==== Perform the migration
+
+===== Checklist
+
+Before starting the mirgation, please ensure that:
+ - You do have a backup of your data
+ - You did practice the migration in a staging environment, never migrate production without prior validation
+ - You verified your applications were operational with Apache Unomi 2.0 (JSON schemas created, client applications updated, ...)
+ - You are running Elasticsearch 7.17.5 (or a later 7.x version)
+ - Your Elasticsearch cluster has enough capacity to hold twice its dataset
+ - You are running Apache Unomi 1.6 (or a later 1.x version)
+
+===== Migration process overview
+
+The migration is performed by means of a dedicated Apache Unomi 2.0 node started in a particular migration mode. 
+
+In a nutshell, the migration process will consist in the following steps:
+* Shutdown your Apache Unomi 1.6 cluster
+* Start an Apache Unomi 2.0 migration node
+* Wait for data migration to complete
+* Start you Apache Unomi 2.0 cluster
+
+The migration itselfs consists in a set of scripts (or steps) executed sequentially. Each step maintains its execution state, meaning if a step fails, you can fix its migration script, then execute it again.
+
+===== Step by step migration
+
+[TODO: Add instructions]

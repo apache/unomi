@@ -18,7 +18,7 @@ The introduction of tighter data validation with JSON Schemas required some chan
 
 This new release also introduces a first (beta) version of Unomi GraphQL API.
 
-==== Required scopes
+==== Scopes are required
 
 Scopes are required in Unomi 2. When submitting an event and specifying a scope, 
 that scope must already be declared on the platform.
@@ -62,6 +62,14 @@ Most objects were refactored as part of this new release.
 If using the default Apache 1.x data model, our Unomi 2 migration process will handle the data model changes for you. 
 If you are using custom events/objects, please refer to the detailed migration guide for more details. 
 
+==== Removal of the Web Tracker
+
+Apache Unomi 2.0 Web Tracker, previously located in `extensions/web-tracker/` has been removed.
+We considered it as outdated and instead recommend implementing your own tracker logic based on your project
+use case.
+
+[TODO: Add more ?]
+
 ==== GraphQL API (beta)
 
 Apache Unomi 2.0 see the introduction of a new (beta) GraphQL API. 
@@ -78,7 +86,7 @@ To facilitate migration we prepared a set of scripts that will automatically han
 It is worth keeping in mind that for Apache Unomi 2.0 we do not support “hot” migration, 
 the migration process will require a shutdown of your cluster to guarantee that no new events will be collected while data migration is in progress.
 
-In a nutshell, the migration process will be:
+In a nutshell, the migration process will consist in the following steps:
 * Shutdown your Apache Unomi 1.x cluster
 * Start an Apache Unomi 2.0 migration node
 * Wait for data migration to complete
