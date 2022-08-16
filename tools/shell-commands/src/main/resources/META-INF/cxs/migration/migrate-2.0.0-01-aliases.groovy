@@ -1,7 +1,5 @@
 import groovy.json.JsonSlurper
-import org.apache.http.impl.client.CloseableHttpClient
-import org.apache.unomi.shell.migration.actions.MigrationHistory
-import org.apache.unomi.shell.migration.utils.ConsoleUtils
+import org.apache.unomi.shell.migration.service.MigrationContext
 import org.apache.unomi.shell.migration.utils.HttpRequestException
 import org.apache.unomi.shell.migration.utils.HttpUtils
 import org.apache.unomi.shell.migration.utils.MigrationUtils
@@ -25,33 +23,32 @@ import java.time.Instant
  * limitations under the License.
  */
 
-MigrationHistory history = migrationHistory
-CloseableHttpClient client = httpClient
+MigrationContext context = migrationContext
 Instant migrationTime = Instant.now()
 def jsonSlurper = new JsonSlurper()
-String esAddress = migrationConfig.getString("esAddress", session)
-String indexPrefix = migrationConfig.getString("indexPrefix", session)
+String esAddress = context.getConfigString("esAddress")
+String indexPrefix = context.getConfigString("indexPrefix")
 String aliasIndex = indexPrefix + "-profilealias"
 String profileIndex = indexPrefix + "-profile"
 
 
-history.performMigrationStep("2.0.0-create-profileAlias-index", () -> {
-    if (!MigrationUtils.indexExists(client, esAddress, aliasIndex)) {
+context.performMigrationStep("2.0.0-create-profileAlias-index", () -> {
+    if (!MigrationUtils.indexExists(context.getHttpClient(), esAddress, aliasIndex)) {
         String baseRequest = MigrationUtils.resourceAsString(bundleContext,"requestBody/2.0.0/base_index_mapping.json")
         String mapping = MigrationUtils.extractMappingFromBundles(bundleContext, "profileAlias.json")
-        String newIndexSettings = MigrationUtils.buildIndexCreationRequest(client, esAddress, baseRequest, profileIndex, mapping)
-        HttpUtils.executePutRequest(client, esAddress + "/" + aliasIndex, newIndexSettings, null)
+        String newIndexSettings = MigrationUtils.buildIndexCreationRequest(context.getHttpClient(), esAddress, baseRequest, profileIndex, mapping)
+        HttpUtils.executePutRequest(context.getHttpClient(), esAddress + "/" + aliasIndex, newIndexSettings, null)
     }
 })
 
-history.performMigrationStep("2.0.0-create-aliases-for-existing-merged-profiles", () -> {
+context.performMigrationStep("2.0.0-create-aliases-for-existing-merged-profiles", () -> {
     String aliasSaveBulkRequest = MigrationUtils.resourceAsString(bundleContext,"requestBody/2.0.0/alias_save_bulk.ndjson");
     String profileMergedSearchRequest = MigrationUtils.resourceAsString(bundleContext,"requestBody/2.0.0/profile_merged_search.json")
 
-    MigrationUtils.scrollQuery(client, esAddress, "/" + profileIndex + "/_search", profileMergedSearchRequest, "1h", hits -> {
+    MigrationUtils.scrollQuery(context.getHttpClient(), esAddress, "/" + profileIndex + "/_search", profileMergedSearchRequest, "1h", hits -> {
         // create aliases for those merged profiles and delete them.
         def jsonHits = jsonSlurper.parseText(hits)
-        ConsoleUtils.printMessage(session, "Detected: " + jsonHits.size() + " existing profiles merged")
+        context.printMessage("Detected: " + jsonHits.size() + " existing profiles merged")
         final StringBuilder bulkSaveRequest = new StringBuilder()
 
         jsonHits.each {
@@ -63,14 +60,14 @@ history.performMigrationStep("2.0.0-create-aliases-for-existing-merged-profiles"
                 def aliasAlreadyExists = false
 
                 try {
-                    def masterProfile = jsonSlurper.parseText(HttpUtils.executeGetRequest(client, esAddress + "/" + profileIndex + "/_doc/" + masterProfileId, null))
+                    def masterProfile = jsonSlurper.parseText(HttpUtils.executeGetRequest(context.getHttpClient(), esAddress + "/" + profileIndex + "/_doc/" + masterProfileId, null))
                     masterProfileExists = masterProfile.found
                 } catch (HttpRequestException e) {
                     // can happen in case response code > 400 due to item not exist in ElasticSearch
                 }
 
                 try {
-                    def existingAlias = jsonSlurper.parseText(HttpUtils.executeGetRequest(client, esAddress + "/" + aliasIndex + "/_doc/" + mergedProfileId, null));
+                    def existingAlias = jsonSlurper.parseText(HttpUtils.executeGetRequest(context.getHttpClient(), esAddress + "/" + aliasIndex + "/_doc/" + mergedProfileId, null));
                     aliasAlreadyExists = existingAlias.found
                 } catch (HttpRequestException e) {
                     // can happen in case of response code > 400 due to item not exist in ElasticSearch
@@ -86,12 +83,12 @@ history.performMigrationStep("2.0.0-create-aliases-for-existing-merged-profiles"
         }
 
         if (bulkSaveRequest.length() > 0) {
-            HttpUtils.executePostRequest(client, esAddress + "/" + aliasIndex + "/_bulk", bulkSaveRequest.toString(), null)
+            HttpUtils.executePostRequest(context.getHttpClient(), esAddress + "/" + aliasIndex + "/_bulk", bulkSaveRequest.toString(), null)
         }
     })
 })
 
-history.performMigrationStep("2.0.0-delete-existing-merged-profiles", () -> {
+context.performMigrationStep("2.0.0-delete-existing-merged-profiles", () -> {
     String profileMergedDeleteRequest = MigrationUtils.resourceAsString(bundleContext,"requestBody/2.0.0/profile_merged_delete.json")
-    HttpUtils.executePostRequest(client, esAddress + "/" + profileIndex + "/_delete_by_query", profileMergedDeleteRequest, null)
+    HttpUtils.executePostRequest(context.getHttpClient(), esAddress + "/" + profileIndex + "/_delete_by_query", profileMergedDeleteRequest, null)
 })

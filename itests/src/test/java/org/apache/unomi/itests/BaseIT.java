@@ -235,7 +235,6 @@ public abstract class BaseIT extends KarafTestSupport {
         System.out.println("==== Configuring container");
         Option[] options = new Option[]{
                 replaceConfigurationFile("etc/org.apache.unomi.router.cfg", new File("src/test/resources/org.apache.unomi.router.cfg")),
-                replaceConfigurationFile("etc/org.apache.unomi.migration.cfg", new File("src/test/resources/migration/org.apache.unomi.migration.cfg")),
 
                 replaceConfigurationFile("data/tmp/1-basic-test.csv", new File("src/test/resources/1-basic-test.csv")),
                 replaceConfigurationFile("data/tmp/recurrent_import/2-surfers-test.csv", new File("src/test/resources/2-surfers-test.csv")),

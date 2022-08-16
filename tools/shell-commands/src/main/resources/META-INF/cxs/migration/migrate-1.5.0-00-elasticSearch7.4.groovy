@@ -17,4 +17,4 @@ import org.apache.unomi.shell.migration.impl.MigrationTo150
  * limitations under the License.
  */
 
-new MigrationTo150().execute(session, httpClient, migrationConfig, bundleContext)
+new MigrationTo150().execute(migrationContext, bundleContext)

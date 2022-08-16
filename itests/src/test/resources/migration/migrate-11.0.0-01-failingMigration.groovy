@@ -1,5 +1,4 @@
-import org.apache.unomi.shell.migration.actions.MigrationHistory
-import org.apache.unomi.shell.migration.utils.ConsoleUtils
+import org.apache.unomi.shell.migration.service.MigrationContext
 
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
@@ -18,24 +17,24 @@ import org.apache.unomi.shell.migration.utils.ConsoleUtils
  * limitations under the License.
  */
 
-MigrationHistory history = migrationHistory
-history.performMigrationStep("step 1", () -> {
-    ConsoleUtils.printMessage(session, "inside step 1")
+MigrationContext context = migrationContext
+context.performMigrationStep("step 1", () -> {
+    context.printMessage("inside step 1")
 })
 
-history.performMigrationStep("step 2", () -> {
-    ConsoleUtils.printMessage(session, "inside step 2")
+context.performMigrationStep("step 2", () -> {
+    context.printMessage("inside step 2")
 })
 
-history.performMigrationStep("step 3", () -> {
-    ConsoleUtils.printMessage(session, "inside step 3")
+context.performMigrationStep("step 3", () -> {
+    context.printMessage("inside step 3")
     throw new RuntimeException("Intentional failure !")
 })
 
-history.performMigrationStep("step 4", () -> {
-    ConsoleUtils.printMessage(session, "inside step 4")
+context.performMigrationStep("step 4", () -> {
+    context.printMessage("inside step 4")
 })
 
-history.performMigrationStep("step 5", () -> {
-    ConsoleUtils.printMessage(session, "inside step 5")
+context.performMigrationStep("step 5", () -> {
+    context.printMessage("inside step 5")
 })

@@ -18,10 +18,9 @@ package org.apache.unomi.shell.migration.impl;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.karaf.shell.api.console.Session;
 import org.apache.unomi.shell.migration.Migration;
-import org.apache.unomi.shell.migration.actions.MigrationConfig;
-import org.apache.unomi.shell.migration.utils.ConsoleUtils;
+import org.apache.unomi.shell.migration.service.MigrationConfig;
+import org.apache.unomi.shell.migration.service.MigrationContext;
 import org.apache.unomi.shell.migration.utils.MigrationUtils;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -36,23 +35,21 @@ import java.util.*;
 public class MigrationTo121 implements Migration {
 
     private CloseableHttpClient httpClient;
-    private Session session;
     private String esAddress;
     private LinkedHashMap<String, List<String>> tagsStructurePriorTo130;
     private List propsTaggedAsPersonalIdentifier = Arrays.asList("firstName", "lastName", "email", "phoneNumber", "address", "facebookId", "googleId", "linkedInId", "twitterId");
 
     @Override
-    public void execute(Session session, CloseableHttpClient httpClient, MigrationConfig migrationConfig, BundleContext bundleContext) throws IOException {
-        this.httpClient = httpClient;
-        this.session = session;
-        this.esAddress = migrationConfig.getString(MigrationConfig.CONFIG_ES_ADDRESS, session);
-        migrateTags();
+    public void execute(MigrationContext migrationContext, BundleContext bundleContext) throws IOException {
+        this.httpClient = migrationContext.getHttpClient();
+        this.esAddress = migrationContext.getConfigString(MigrationConfig.CONFIG_ES_ADDRESS);
+        migrateTags(migrationContext);
     }
 
-    private void migrateTags() throws IOException {
+    private void migrateTags(MigrationContext migrationContext) throws IOException {
         initTagsStructurePriorTo130();
-        String tagsOperation = ConsoleUtils.askUserWithAuthorizedAnswer(session, "How to manage tags?\n1. copy: will duplicate tags in systemTags property\n2. move: will move tags in systemTags property\n[1 - 2]: ", Arrays.asList("1", "2"));
-        String removeNamespaceOnSystemTags = ConsoleUtils.askUserWithAuthorizedAnswer(session, "As we will copy/move the tags, do you wish to remove existing namespace on tags before copy/move in systemTags? (e.g: hidden.) (yes/no): ", Arrays.asList("yes", "no"));
+        String tagsOperation = migrationContext.askUserWithAuthorizedAnswer("How to manage tags?\n1. copy: will duplicate tags in systemTags property\n2. move: will move tags in systemTags property\n[1 - 2]: ", Arrays.asList("1", "2"));
+        String removeNamespaceOnSystemTags = migrationContext.askUserWithAuthorizedAnswer("As we will copy/move the tags, do you wish to remove existing namespace on tags before copy/move in systemTags? (e.g: hidden.) (yes/no): ", Arrays.asList("yes", "no"));
 
         List<String> typeToMigrate = Arrays.asList("actionType", "conditionType", "campaign", "goal", "rule", "scoring", "segment", "userList");
         for (String type : typeToMigrate) {

@@ -17,4 +17,4 @@ import org.apache.unomi.shell.migration.impl.MigrationTo121
  * limitations under the License.
  */
 
-new MigrationTo121().execute(session, httpClient, migrationConfig, bundleContext)
+new MigrationTo121().execute(migrationContext, bundleContext)

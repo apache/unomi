@@ -17,10 +17,9 @@
 package org.apache.unomi.shell.migration.impl;
 
 import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.karaf.shell.api.console.Session;
 import org.apache.unomi.shell.migration.Migration;
-import org.apache.unomi.shell.migration.actions.MigrationConfig;
-import org.apache.unomi.shell.migration.utils.ConsoleUtils;
+import org.apache.unomi.shell.migration.service.MigrationConfig;
+import org.apache.unomi.shell.migration.service.MigrationContext;
 import org.apache.unomi.shell.migration.utils.HttpUtils;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -38,13 +37,14 @@ public class MigrationTo150 implements Migration {
     public static final String INDEX_DATE_PREFIX = "date-";
 
     @Override
-    public void execute(Session session, CloseableHttpClient httpClient, MigrationConfig migrationConfig, BundleContext bundleContext) throws IOException {
-        String esAddress = migrationConfig.getString(MigrationConfig.CONFIG_ES_ADDRESS, session);
-        String es5Address = ConsoleUtils.askUserWithDefaultAnswer(session, "SOURCE Elasticsearch 5.6 cluster address (default: http://localhost:9210) : ", "http://localhost:9210");
-        String sourceIndexPrefix = migrationConfig.getString(MigrationConfig.INDEX_PREFIX, session);
-        String destIndexPrefix = ConsoleUtils.askUserWithDefaultAnswer(session, "TARGET index prefix (default: context) : ", "context");
-        int numberOfShards = Integer.parseInt(ConsoleUtils.askUserWithDefaultAnswer(session, "Number of shards for TARGET (default: 5) : ", "5"));
-        int numberOfReplicas = Integer.parseInt(ConsoleUtils.askUserWithDefaultAnswer(session, "Number of replicas for TARGET (default: 1) : ", "1"));
+    public void execute(MigrationContext migrationContext, BundleContext bundleContext) throws IOException {
+        CloseableHttpClient httpClient = migrationContext.getHttpClient();
+        String esAddress = migrationContext.getConfigString(MigrationConfig.CONFIG_ES_ADDRESS);
+        String es5Address = migrationContext.askUserWithDefaultAnswer("SOURCE Elasticsearch 5.6 cluster address (default: http://localhost:9210) : ", "http://localhost:9210");
+        String sourceIndexPrefix = migrationContext.getConfigString(MigrationConfig.INDEX_PREFIX);
+        String destIndexPrefix = migrationContext.askUserWithDefaultAnswer("TARGET index prefix (default: context) : ", "context");
+        int numberOfShards = Integer.parseInt(migrationContext.askUserWithDefaultAnswer("Number of shards for TARGET (default: 5) : ", "5"));
+        int numberOfReplicas = Integer.parseInt(migrationContext.askUserWithDefaultAnswer("Number of replicas for TARGET (default: 1) : ", "1"));
         Set<String> monthlyIndexTypes = new HashSet<>();
         monthlyIndexTypes.add("event");
         monthlyIndexTypes.add("session");
@@ -75,27 +75,27 @@ public class MigrationTo150 implements Migration {
                 if (!monthlyIndexTypes.contains(itemType)) {
                     String indexName = "geonameEntry".equals(itemType) ? "geonames" : sourceIndexPrefix;
 
-                    JSONObject es5TypeMapping = getES5TypeMapping(session, httpClient, es5Address, indexName, itemType);
+                    JSONObject es5TypeMapping = getES5TypeMapping(httpClient, es5Address, indexName, itemType);
                     int es5MappingsTotalFieldsLimit = getES5MappingsTotalFieldsLimit(httpClient, es5Address, indexName);
                     String destIndexName = itemType.toLowerCase();
                     if (!indexExists(httpClient, esAddress, destIndexPrefix, destIndexName)) {
                         createESIndex(httpClient, esAddress, destIndexPrefix, destIndexName, numberOfShards, numberOfReplicas, es5MappingsTotalFieldsLimit, getMergedTypeMapping(es5TypeMapping, newTypeMapping));
-                        reIndex(session, httpClient, esAddress, es5Address, indexName, getIndexName(destIndexPrefix, destIndexName), itemType);
+                        reIndex(migrationContext, httpClient, esAddress, es5Address, indexName, getIndexName(destIndexPrefix, destIndexName), itemType);
                     } else {
-                        ConsoleUtils.printMessage(session, "Index " + getIndexName(destIndexPrefix, itemType.toLowerCase()) + " already exists, skipping re-indexation...");
+                        migrationContext.printMessage("Index " + getIndexName(destIndexPrefix, itemType.toLowerCase()) + " already exists, skipping re-indexation...");
                     }
                 } else {
                     for (String indexName : monthlyIndexNames) {
                         // we need to extract the date part
                         String datePart = indexName.substring(sourceIndexPrefix.length() + 1);
                         String destIndexName = itemType.toLowerCase() + "-" + INDEX_DATE_PREFIX + datePart;
-                        JSONObject es5TypeMapping = getES5TypeMapping(session, httpClient, es5Address, indexName, itemType);
+                        JSONObject es5TypeMapping = getES5TypeMapping(httpClient, es5Address, indexName, itemType);
                         int es5MappingsTotalFieldsLimit = getES5MappingsTotalFieldsLimit(httpClient, es5Address, indexName);
                         if (!indexExists(httpClient, esAddress, destIndexPrefix, destIndexName)) {
                             createESIndex(httpClient, esAddress, destIndexPrefix, destIndexName, numberOfShards, numberOfReplicas, es5MappingsTotalFieldsLimit, getMergedTypeMapping(es5TypeMapping, newTypeMapping));
-                            reIndex(session, httpClient, esAddress, es5Address, indexName, getIndexName(destIndexPrefix, destIndexName), itemType);
+                            reIndex(migrationContext, httpClient, esAddress, es5Address, indexName, getIndexName(destIndexPrefix, destIndexName), itemType);
                         } else {
-                            ConsoleUtils.printMessage(session, "Index " + getIndexName(destIndexPrefix, destIndexName) + " already exists, skipping re-indexation...");
+                            migrationContext.printMessage("Index " + getIndexName(destIndexPrefix, destIndexName) + " already exists, skipping re-indexation...");
                         }
                     }
                 }
@@ -103,7 +103,7 @@ public class MigrationTo150 implements Migration {
         }
 
         long totalMigrationTime = System.currentTimeMillis() - startTime;
-        ConsoleUtils.printMessage(session, "Migration operations completed in " + totalMigrationTime + "ms");
+        migrationContext.printMessage("Migration operations completed in " + totalMigrationTime + "ms");
     }
 
     private String loadMappingFile(URL predefinedMappingURL) throws IOException {
@@ -158,7 +158,7 @@ public class MigrationTo150 implements Migration {
         HttpUtils.executePutRequest(httpClient, esAddress + "/" + getIndexName(indexPrefix, indexName), indexBody.toString(), null);
     }
 
-    private void reIndex(Session session, CloseableHttpClient httpClient,
+    private void reIndex(MigrationContext migrationContext, CloseableHttpClient httpClient,
                            String esAddress,
                            String es5Address,
                            String sourceIndexName,
@@ -176,31 +176,31 @@ public class MigrationTo150 implements Migration {
                 .put("dest", new JSONObject()
                         .put("index", destIndexName)
                 );
-        ConsoleUtils.printMessage(session, "Reindexing " + sourceIndexName + " to " + destIndexName + "...");
+        migrationContext.printMessage("Reindexing " + sourceIndexName + " to " + destIndexName + "...");
         long startTime = System.currentTimeMillis();
         try {
             String response = HttpUtils.executePostRequest(httpClient, esAddress + "/_reindex", reindexSettings.toString(), null);
             long reindexationTime = System.currentTimeMillis() - startTime;
-            ConsoleUtils.printMessage(session, "Reindexing completed in " + reindexationTime + "ms. Result=" + response);
+            migrationContext.printMessage("Reindexing completed in " + reindexationTime + "ms. Result=" + response);
         } catch (IOException ioe) {
-            ConsoleUtils.printException(session, "Error executing reindexing", ioe);
-            ConsoleUtils.printMessage(session, "Attempting to delete index " + destIndexName + " so that we can restart from this point...");
-            deleteIndex(session, httpClient, esAddress, destIndexName);
+            migrationContext.printException("Error executing reindexing", ioe);
+            migrationContext.printMessage("Attempting to delete index " + destIndexName + " so that we can restart from this point...");
+            deleteIndex(migrationContext, httpClient, esAddress, destIndexName);
             throw ioe;
         }
     }
 
-    private void deleteIndex(Session session, CloseableHttpClient httpClient,
+    private void deleteIndex(MigrationContext migrationContext, CloseableHttpClient httpClient,
                         String esAddress,
                         String indexName) {
         try {
             HttpUtils.executeDeleteRequest(httpClient, esAddress + "/" + indexName, null);
         } catch (IOException ioe) {
-            ConsoleUtils.printException(session, "Error attempting to delete index" + indexName, ioe);
+            migrationContext.printException("Error attempting to delete index" + indexName, ioe);
         }
     }
 
-    private JSONObject getES5TypeMapping(Session session, CloseableHttpClient httpClient, String es5Address, String indexName, String typeName) throws IOException {
+    private JSONObject getES5TypeMapping(CloseableHttpClient httpClient, String es5Address, String indexName, String typeName) throws IOException {
         String response = HttpUtils.executeGetRequest(httpClient, es5Address + "/" + indexName, null);
         if (response != null) {
             JSONObject indexInfo = new JSONObject(response).getJSONObject(indexName);

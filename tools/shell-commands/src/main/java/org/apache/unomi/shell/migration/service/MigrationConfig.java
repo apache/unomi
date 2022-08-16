@@ -14,30 +14,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.shell.migration.actions;
+package org.apache.unomi.shell.migration.service;
 
-import org.apache.karaf.shell.api.console.Session;
-import org.apache.unomi.shell.migration.utils.ConsoleUtils;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Modified;
 
-import java.io.IOException;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Service uses to aggregate different configuration needed by the migrations
- * Source of config:
- * - file system in OSGI config file: org.apache.unomi.migration.cfg
- * - user interactions in the console during the migration process
+ * Service uses to provide configuration information for the migration
  */
 @Component(immediate = true, service = MigrationConfig.class, configurationPid = {"org.apache.unomi.migration"})
 public class MigrationConfig {
 
     public static final String CONFIG_ES_ADDRESS = "esAddress";
+    public static final String CONFIG_ES_ADDRESSES = "esAddresses";
+    public static final String CONFIG_ES_SSL_ENABLED = "esSSLEnabled";
     public static final String CONFIG_ES_LOGIN = "esLogin";
     public static final String CONFIG_ES_PASSWORD = "esPassword";
     public static final String CONFIG_TRUST_ALL_CERTIFICATES = "httpClient.trustAllCertificates";
@@ -48,10 +43,11 @@ public class MigrationConfig {
     public static final String MAX_DOC_VALUE_FIELDS_SEARCH = "max_docvalue_fields_search";
     public static final String MIGRATION_HISTORY_RECOVER = "recoverFromHistory";
 
-    private static final Map<String, MigrationConfigProperty> configProperties;
+    protected static final Map<String, MigrationConfigProperty> configProperties;
     static {
         Map<String, MigrationConfigProperty> m = new HashMap<>();
-        m.put(CONFIG_ES_ADDRESS, new MigrationConfigProperty("Enter ElasticSearch TARGET address (default: http://localhost:9200): ", "http://localhost:9200"));
+        m.put(CONFIG_ES_ADDRESSES, new MigrationConfigProperty("Enter ElasticSearch TARGET address (default: localhost:9200): ", "localhost:9200"));
+        m.put(CONFIG_ES_SSL_ENABLED, new MigrationConfigProperty("Should the ElasticSearch TARGET connection be established using SSL (https) protocol ? (yes/no)", null));
         m.put(CONFIG_ES_LOGIN, new MigrationConfigProperty("Enter ElasticSearch TARGET login (default: none): ", ""));
         m.put(CONFIG_ES_PASSWORD, new MigrationConfigProperty("Enter ElasticSearch TARGET password (default: none): ", ""));
         m.put(CONFIG_TRUST_ALL_CERTIFICATES, new MigrationConfigProperty("We need to initialize a HttpClient, do we need to trust all certificates ? (yes/no)", null));
@@ -64,47 +60,15 @@ public class MigrationConfig {
         configProperties = Collections.unmodifiableMap(m);
     }
 
-    Map<String, String> initialConfig = new HashMap<>();
-    Map<String, String> computeConfig = new HashMap<>();
+    private Map<String, String> config = new HashMap<>();
 
     @Activate
     @Modified
     public void modified(Map<String, String> config) {
-        initialConfig = config;
-        reset();
+        this.config = config;
     }
 
-    /**
-     * Used reset user choices to initial file system config (useful at the beginning of each new migrate session)
-     */
-    public void reset() {
-        computeConfig.clear();
-        computeConfig.putAll(initialConfig);
-    }
-
-    public String getString(String name, Session session) throws IOException {
-        if (computeConfig.containsKey(name)) {
-            return computeConfig.get(name);
-        }
-        if (configProperties.containsKey(name)) {
-            MigrationConfigProperty migrateConfigProperty = configProperties.get(name);
-            String answer = ConsoleUtils.askUserWithDefaultAnswer(session, migrateConfigProperty.getDescription(), migrateConfigProperty.getDefaultValue());
-            computeConfig.put(name, answer);
-            return answer;
-        }
-        return null;
-    }
-
-    public boolean getBoolean(String name, Session session) throws IOException {
-        if (computeConfig.containsKey(name)) {
-            return Boolean.parseBoolean(computeConfig.get(name));
-        }
-        if (configProperties.containsKey(name)) {
-            MigrationConfigProperty migrateConfigProperty = configProperties.get(name);
-            boolean answer = ConsoleUtils.askUserWithAuthorizedAnswer(session, migrateConfigProperty.getDescription(), Arrays.asList("yes", "no")).equalsIgnoreCase("yes");
-            computeConfig.put(name, answer ? "true" : "false");
-            return answer;
-        }
-        return false;
+    protected Map<String, String> getConfig() {
+        return this.config;
     }
 }
