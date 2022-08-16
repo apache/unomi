@@ -109,7 +109,7 @@ For this reason, it will be necessary to re-declare these elements in a dedicate
 
 Once your cluster is shutdown, performing the migration will be as simple as starting a dedicated docker container. 
 
-In the context of this migration guide, we will asssume that:
+In the context of this migration guide, we will asssume that: 
  - The configuration file is located in `/home/unomi/migration/etc/`
  - Custom migration scripts are located in `/home/unomi/migration/scripts/`
  - Painless scripts, or more generally any migration assets are located in `/home/unomi/migration/assets/`, these scripts will be mounted under `/tmp/assets/` inside the Docker container. 
