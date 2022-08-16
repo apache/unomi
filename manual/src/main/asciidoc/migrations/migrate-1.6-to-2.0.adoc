@@ -45,21 +45,21 @@ Although possible, we recommend against creating a JSON Schema allowing any even
 
 === Migrating your existing data
 
-==== Upgrade Elasticsearch 
+==== Elasticsearch version and capacity
 
 While still using Unomi 1.6, the first step will be to upgrade your Elasticsearch to 7.17.5. Documentation is available on https://www.elastic.co/guide/en/elasticsearch/reference/7.17/setup-upgrade.html[Elasticsearch's website].
+
+Your Elasticsearch cluster must have enough capacity to handle the migration. At a minimum, the required capacity must be greater than the size of the dataset in production + the size of the largest index.
 
 ==== Migrate custom data
 
 Apache Unomi 2.0 knows how to migrate its own data from the new model to the old one, but it does not know how to migrate custom events you might be using in your environment.
 
-===== Data Migration overview
-
-Apache Unomi 2.0 relies on a set of groovy scripts to perform its data migration. 
-
-Located in https://github.com/apache/unomi/tree/master/tools/shell-commands/src/main/resources/META-INF/cxs/migration[tools/shell-commands/src/main/resources/META-INF/cxs/migration], these scripts are sorted alphabetically and executed sequentially. 
+Apache Unomi 2.0 relies on a set of groovy scripts to perform its data migration, located in https://github.com/apache/unomi/tree/master/tools/shell-commands/src/main/resources/META-INF/cxs/migration[tools/shell-commands/src/main/resources/META-INF/cxs/migration], these scripts are sorted alphabetically and executed sequentially. 
 
 In most cases, migration steps consist of an Elasticsearch painless script that will handle the new migration. Reviewing the existing migration scripts will provide clear indications on how to prepare migration of your custom data.
+
+Custom migration scripts can be placed in `data/migration/scripts`
 
 ==== Perform the migration
 
@@ -70,8 +70,8 @@ Before starting the mirgation, please ensure that:
  - You did practice the migration in a staging environment, never migrate production without prior validation
  - You verified your applications were operational with Apache Unomi 2.0 (JSON schemas created, client applications updated, ...)
  - You are running Elasticsearch 7.17.5 (or a later 7.x version)
- - Your Elasticsearch cluster has enough capacity to hold twice its dataset
- - You are running Apache Unomi 1.6 (or a later 1.x version)
+ - Your Elasticsearch cluster has enough capacity to handle the migration
+ - You are currently running Apache Unomi 1.6 (or a later 1.x version)
 
 ===== Migration process overview
 
@@ -82,9 +82,54 @@ In a nutshell, the migration process will consist in the following steps:
 * Start an Apache Unomi 2.0 migration node
 * Wait for data migration to complete
 * Start you Apache Unomi 2.0 cluster
+* (optional) Import additional JSON Schemas
 
 The migration itselfs consists in a set of scripts (or steps) executed sequentially. Each step maintains its execution state, meaning if a step fails, you can fix its migration script, then execute it again.
 
-===== Step by step migration
+===== Configuration
 
-[TODO: Add instructions]
+The Unomi 2.0 node will be performing the migration without having started the entire Unomi stack. This means it does not have access to the configuration service (that contains Elasticsearch credentials for example). 
+
+For this reason, it will be necessary to re-declare these elements in a dedicated file located in `etc/org.apache.unomi.migration.cfg`
+
+[source]
+----
+# Migration config used for silent migration
+
+# esAddress = http://localhost:9200
+# esLogin = elastic
+# esPassword = password
+# httpClient.trustAllCertificates = true
+# indexPrefix = context
+----
+
+===== Step by step migration with Docker
+
+Once your cluster is shutdown, performing the migration will be as simple as starting a dedicated docker container. 
+
+In the context of this migration guide, we will asssume that:
+ - The configuration file is located in `/home/unomi/migration/etc/`
+ - Custom migration scripts are located in `/home/unomi/migration/scripts/`
+ - Painless scripts, or more generally any migration assets are located in `/home/unomi/migration/assets/`, these scripts will be mounted under `/tmp/assets/` inside the Docker container. 
+
+You can start the migration by executing the following command:
+
+[TODO: Update environment variable]
+
+[source]
+----
+docker run \
+    -e MIGRATION_MODE=true \
+    --v /home/unomi/migration/etc/org.apache.unomi.migration.cfg:/opt/apache-unomi/etc/org.apache.unomi.migration.cfg \
+    --v /home/unomi/migration/scripts/:/opt/apache-unomi/data/migration/scripts \
+    --v /home/unomi/migration/assets/:/tmp/assets/ \
+    apache/unomi:2.0.0-SNAPSHOT
+----
+
+The migration will the start immediately after starting the command. If the migration fails for any reason, simply execute the command again.
+
+At the end of the migration, [TODO: Add details, is there any validation the user should be doing prior to starting the cluster?]
+
+Once all of the data has been migrated, you can start your Unomi cluster in version 2.0.
+
+Finally, use Apache Unomi 2.0 API to submit your new JSON Schemas.
