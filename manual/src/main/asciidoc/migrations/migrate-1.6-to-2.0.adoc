@@ -41,6 +41,10 @@ If you did not customize events
 
 Reviewing debug messages associated with JSON Schema (using: `log:set DEBUG org.apache.unomi.schema.impl.SchemaServiceImpl` in Karaf console), will point to errors in your schemas.
 
+It is currently not possible to modify or surcharge an existing JSON schema via the REST API.
+If you are using custom properties on an event type for which an Apache Unomi schema already exists, 
+you will need to either change its eventType and create the corresponding Schema or to create a Unomi extension.
+
 Although possible, we recommend against creating a JSON Schema allowing any event payload.
 
 === Migrating your existing data
