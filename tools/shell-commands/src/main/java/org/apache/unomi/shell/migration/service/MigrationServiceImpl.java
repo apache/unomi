@@ -135,6 +135,9 @@ public class MigrationServiceImpl implements MigrationService {
 
                 context.printMessage("Finish execution of: " + migrateScript);
             }
+
+            // Persist final flag in history
+            context.performMigrationStep("migrationStatus", () -> { /* nothing it's just a marker to persist in the history to know that everything is finished */ });
         }
     }
 
