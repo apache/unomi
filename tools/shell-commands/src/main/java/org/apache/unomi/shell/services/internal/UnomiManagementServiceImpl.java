@@ -55,8 +55,8 @@ public class UnomiManagementServiceImpl implements UnomiManagementService {
             migrationService.migrateUnomi(bundleContext.getProperty("unomi.autoMigrate"), true, null);
         }
 
-        if (StringUtils.isNotBlank(bundleContext.getProperty("unomi.autoStart")) && bundleContext.getProperty("unomi.autoStart")
-                .equals("true")) {
+        if (StringUtils.isNotBlank(bundleContext.getProperty("unomi.autoStart")) &&
+                bundleContext.getProperty("unomi.autoStart").equals("true")) {
             startUnomi();
         }
     }

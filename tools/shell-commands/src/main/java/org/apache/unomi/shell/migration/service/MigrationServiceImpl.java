@@ -135,9 +135,6 @@ public class MigrationServiceImpl implements MigrationService {
 
                 context.printMessage("Finish execution of: " + migrateScript);
             }
-
-            // We clean history, migration is successful
-            context.cleanHistory();
         }
     }
 

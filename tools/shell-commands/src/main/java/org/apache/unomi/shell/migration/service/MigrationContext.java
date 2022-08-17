@@ -253,15 +253,19 @@ public class MigrationContext {
         return false;
     }
 
+    /**
+     * This HTTP client is configured to be used for ElasticSearch requests to be able to perform migrations requests.
+     * @return the http client.
+     */
+    public CloseableHttpClient getHttpClient() {
+        return httpClient;
+    }
+
 
     private void updateHistoryStep(String stepKey, MigrationStepState stepState) throws IOException {
         printMessage("Migration step: " + stepKey + " reach: " + stepState);
         history.put(stepKey, stepState);
         objectMapper.writeValue(MIGRATION_FS_HISTORY_FILE.toFile(), history);
-    }
-
-    public CloseableHttpClient getHttpClient() {
-        return httpClient;
     }
 
     protected void setHttpClient(CloseableHttpClient httpClient) {

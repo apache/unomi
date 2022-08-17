@@ -24,10 +24,10 @@ import org.apache.karaf.shell.api.console.Session;
 public interface MigrationService {
 
     /**
-     * This will Migrate your data in ES to be compliant with current version.
+     * This will Migrate your data in ES to be compliant with current Unomi version.
      * It's possible to configure the migration using OSGI configuration file: org.apache.unomi.migration.cfg,
      *  if no configuration is provided then questions will be prompted during the migration process.
-     *  (only in case you are in karaf shell context, if not a missing configuration will fail the migration process)
+     *  (only in case you are in karaf shell context, if not, a missing configuration will fail the migration process)
      *
      * @param originVersion Origin version without suffix/qualifier (e.g: 1.2.0)
      * @param skipConfirmation Should the confirmation before starting the migration process be skipped ? (only supported in karaf shell context)
