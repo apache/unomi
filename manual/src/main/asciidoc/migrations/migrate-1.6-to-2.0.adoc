@@ -73,6 +73,7 @@ Before starting the mirgation, please ensure that:
  - You are running Elasticsearch 7.17.5 (or a later 7.x version)
  - Your Elasticsearch cluster has enough capacity to handle the migration
  - You are currently running Apache Unomi 1.6 (or a later 1.x version)
+ - You will be using the same Apache Unomi instance for the entire migration progress. Do not start the migration on one node, and re-start an interrupted migration on another node.
 
 ===== Migration process overview
 
