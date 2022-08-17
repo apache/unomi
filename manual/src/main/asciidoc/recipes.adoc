@@ -55,7 +55,15 @@ simply tail the logs to the terminal you used to enable debug mode.
 [source]
 ----
 karaf@root()> log:tail
+08:55:28.128 DEBUG [qtp1422628821-128] Schema validation found 2 errors while validating against schema: https://unomi.apache.org/schemas/json/events/view/1-0-0
+08:55:28.138 DEBUG [qtp1422628821-128] Validation error: There are unevaluated properties at following paths $.source.properties
+08:55:28.140 DEBUG [qtp1422628821-128] Validation error: There are unevaluated properties at following paths $.source.itemId, $.source.itemType, $.source.scope, $.source.properties
+08:55:28.142 ERROR [qtp1422628821-128] An event was rejected - switch to DEBUG log level for more information
 ----
+
+The example above shows schema validation failure at the `$.source.properties` path. 
+Note that the validation will output one log line for the exact failing path and a log line for its parent, 
+therefore to find the source of a schema validation issue it's best to start from the top.
 
 ==== How to read a profile
 
