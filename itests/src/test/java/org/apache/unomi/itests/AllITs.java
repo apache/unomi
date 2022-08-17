@@ -32,39 +32,7 @@ import org.junit.runners.Suite.SuiteClasses;
 @RunWith(Suite.class)
 @SuiteClasses({
         Migrate16xTo200IT.class,
-        MigrationIT.class,
-        BasicIT.class,
-        ConditionEvaluatorIT.class,
-        ConditionESQueryBuilderIT.class,
-        SegmentIT.class,
-        ProfileServiceIT.class,
-        ProfileImportBasicIT.class,
-        ProfileImportSurfersIT.class,
-        ProfileImportRankingIT.class,
-        ProfileImportActorsIT.class,
-        ProfileExportIT.class,
-        ProfileMergeIT.class,
-        EventServiceIT.class,
-        PropertiesUpdateActionIT.class,
-        CopyPropertiesActionIT.class,
-        IncrementPropertyIT.class,
-        InputValidationIT.class,
-        ModifyConsentIT.class,
-        PatchIT.class,
-        ContextServletIT.class,
-        SecurityIT.class,
-        RuleServiceIT.class,
-        PrivacyServiceIT.class,
-        GroovyActionsServiceIT.class,
-        GraphQLEventIT.class,
-        GraphQLListIT.class,
-        GraphQLProfileIT.class,
-        GraphQLProfilePropertiesIT.class,
-        GraphQLSegmentIT.class,
-        GraphQLWebSocketIT.class,
-        JSONSchemaIT.class,
-        GraphQLProfileAliasesIT.class,
-        SendEventActionIT.class
+        MigrationIT.class
 })
 public class AllITs {
 }

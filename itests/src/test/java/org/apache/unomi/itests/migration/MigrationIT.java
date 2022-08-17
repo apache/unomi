@@ -16,14 +16,16 @@
  */
 package org.apache.unomi.itests.migration;
 
-import graphql.Assert;
 import org.apache.unomi.itests.BaseIT;
+import org.junit.Assert;
 import org.junit.Test;
 
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+
+import static org.junit.Assert.fail;
 
 public class MigrationIT  extends BaseIT {
     protected static final Path BASE_DIRECTORIES = Paths.get(System.getProperty( "karaf.data" ), "migration", "scripts");
@@ -42,6 +44,7 @@ public class MigrationIT  extends BaseIT {
             Files.write(FAILING_SCRIPT_FS_PATH, bundleResourceAsString(FAILING_SCRIPT_RESOURCE).getBytes(StandardCharsets.UTF_8));
             try {
                 executeCommand("unomi:migrate 10.0.0 true");
+                fail("Migration should have failed and crashed by Exception throwing");
             } catch (Exception e) {
                 // this is expected, the script fail at step 3
             }
@@ -53,8 +56,8 @@ public class MigrationIT  extends BaseIT {
             System.out.println(successResult);
             // step 1 and 2 should not be contains, they passed on first attempt.
             // Only step 3, 4 and 5 should be performed.
-            Assert.assertTrue(!successResult.contains("inside step 1"));
-            Assert.assertTrue(!successResult.contains("inside step 2"));
+            Assert.assertFalse(successResult.contains("inside step 1"));
+            Assert.assertFalse(successResult.contains("inside step 2"));
             Assert.assertTrue(successResult.contains("inside step 3"));
             Assert.assertTrue(successResult.contains("inside step 4"));
             Assert.assertTrue(successResult.contains("inside step 5"));

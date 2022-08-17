@@ -24,6 +24,6 @@ String indexPrefix = context.getConfigString("indexPrefix")
 
 String baseSettings = MigrationUtils.resourceAsString(bundleContext, "requestBody/2.0.0/base_index_mapping.json")
 String mapping = MigrationUtils.extractMappingFromBundles(bundleContext, "profile.json")
-String newIndexSettings = MigrationUtils.buildIndexCreationRequest(context.getHttpClient(), esAddress, baseSettings, indexPrefix + "-profile", mapping)
+String newIndexSettings = MigrationUtils.buildIndexCreationRequest(context.getHttpClient(), esAddress, baseSettings, "${indexPrefix}-segment", mapping)
 MigrationUtils.reIndex(context.getHttpClient(), bundleContext, esAddress, indexPrefix + "-profile",
         newIndexSettings, MigrationUtils.getFileWithoutComments(bundleContext, "requestBody/2.0.0/profile_migrate.painless"), context)

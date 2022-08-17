@@ -33,7 +33,9 @@ String baseSettings = MigrationUtils.resourceAsString(bundleContext, "requestBod
 String reIndexScript = MigrationUtils.getFileWithoutComments(bundleContext, "requestBody/2.0.0/event_migrate.painless");
 String mapping = MigrationUtils.extractMappingFromBundles(bundleContext, "event.json")
 Set<String> eventIndices = MigrationUtils.getIndexesPrefixedBy(context.getHttpClient(), esAddress, "${indexPrefix}-event-")
+// use session indices to extract monthly index settings
+Set<String> sessionIndices = MigrationUtils.getIndexesPrefixedBy(context.getHttpClient(), esAddress, "${indexPrefix}-session-")
+String newIndexSettings = MigrationUtils.buildIndexCreationRequest(context.getHttpClient(), esAddress, baseSettings, sessionIndices[0], mapping)
 eventIndices.each { eventIndex ->
-    String newIndexSettings = MigrationUtils.buildIndexCreationRequest(context.getHttpClient(), esAddress, baseSettings, eventIndex, mapping)
     MigrationUtils.reIndex(context.getHttpClient(), bundleContext, esAddress, eventIndex, newIndexSettings, reIndexScript, context)
 }

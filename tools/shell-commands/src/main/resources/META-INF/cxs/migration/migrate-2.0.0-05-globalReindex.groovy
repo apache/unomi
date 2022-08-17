@@ -25,9 +25,7 @@ String indexPrefix = context.getConfigString("indexPrefix")
 String baseSettings = MigrationUtils.resourceAsString(bundleContext, "requestBody/2.0.0/base_index_mapping.json")
 String[] indicesToReindex = ["segment", "scoring", "campaign", "conditionType", "goal", "patch", "rule"];
 indicesToReindex.each { indexToReindex ->
-    String mappingFileName = "${indexToReindex}.json"
-    String realIndexName = "${indexPrefix}-${indexToReindex.toLowerCase()}"
-    String mapping = MigrationUtils.extractMappingFromBundles(bundleContext, mappingFileName)
-    String newIndexSettings = MigrationUtils.buildIndexCreationRequest(context.getHttpClient(), esAddress, baseSettings, realIndexName, mapping)
-    MigrationUtils.reIndex(context.getHttpClient(), bundleContext, esAddress, realIndexName, newIndexSettings, null, context)
+    String mapping = MigrationUtils.extractMappingFromBundles(bundleContext, "${indexToReindex}.json")
+    String newIndexSettings = MigrationUtils.buildIndexCreationRequest(context.getHttpClient(), esAddress, baseSettings, "${indexPrefix}-profile", mapping)
+    MigrationUtils.reIndex(context.getHttpClient(), bundleContext, esAddress, "${indexPrefix}-${indexToReindex.toLowerCase()}", newIndexSettings, null, context)
 }
