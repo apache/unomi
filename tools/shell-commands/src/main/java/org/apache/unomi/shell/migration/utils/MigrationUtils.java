@@ -41,6 +41,8 @@ import java.util.Enumeration;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import static org.apache.unomi.shell.migration.service.MigrationConfig.*;
+
 /**
  * @author dgaillard
  */
@@ -123,20 +125,12 @@ public class MigrationUtils {
         throw new RuntimeException("no mapping found in bundles for: " + fileName);
     }
 
-    public static String buildIndexCreationRequest(CloseableHttpClient httpClient, String esAddress, String baseIndexSettings,
-                                            String originalIndexForSettingsExtraction, String mapping) throws IOException {
-
-        String settings = baseIndexSettings;
-
-        // Extract existing settings on index that still exists
-        if (originalIndexForSettingsExtraction != null) {
-            JSONObject originalIndexSettings = new JSONObject(HttpUtils.executeGetRequest(httpClient, esAddress + "/" + originalIndexForSettingsExtraction + "/_settings", null));
-            settings = settings
-                    .replace("#numberOfShards", originalIndexSettings.getJSONObject(originalIndexForSettingsExtraction).getJSONObject("settings").getJSONObject("index").getString("number_of_shards"))
-                    .replace("#numberOfReplicas", originalIndexSettings.getJSONObject(originalIndexForSettingsExtraction).getJSONObject("settings").getJSONObject("index").getString("number_of_replicas"))
-                    .replace("#maxDocValueFieldsSearch", originalIndexSettings.getJSONObject(originalIndexForSettingsExtraction).getJSONObject("settings").getJSONObject("index").getString("max_docvalue_fields_search"))
-                    .replace("#mappingTotalFieldsLimit", originalIndexSettings.getJSONObject(originalIndexForSettingsExtraction).getJSONObject("settings").getJSONObject("index").getJSONObject("mapping").getJSONObject("total_fields").getString("limit"));
-        }
+    public static String buildIndexCreationRequest(String baseIndexSettings, String mapping,  MigrationContext context, boolean isMonthlyIndex) throws IOException {
+        String settings = baseIndexSettings
+                .replace("#numberOfShards", context.getConfigString(isMonthlyIndex ? MONTHLY_NUMBER_OF_SHARDS : NUMBER_OF_SHARDS))
+                .replace("#numberOfReplicas", context.getConfigString(isMonthlyIndex ? MONTHLY_NUMBER_OF_REPLICAS : NUMBER_OF_REPLICAS))
+                .replace("#maxDocValueFieldsSearch", context.getConfigString(isMonthlyIndex ? MONTHLY_MAX_DOC_VALUE_FIELDS_SEARCH : MAX_DOC_VALUE_FIELDS_SEARCH))
+                .replace("#mappingTotalFieldsLimit", context.getConfigString(isMonthlyIndex ? MONTHLY_TOTAL_FIELDS_LIMIT : TOTAL_FIELDS_LIMIT));
 
         return settings.replace("#mappings", mapping);
     }
