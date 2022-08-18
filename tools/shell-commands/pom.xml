@@ -118,7 +118,7 @@
                     <instructions>
                         <Export-Package>
                             org.apache.unomi.shell.migration.utils,
-                            org.apache.unomi.shell.migration.actions,
+                            org.apache.unomi.shell.migration.service,
                         </Export-Package>
                         <Embed-Dependency>*;scope=compile|runtime</Embed-Dependency>
                         <DynamicImport-Package>*</DynamicImport-Package>

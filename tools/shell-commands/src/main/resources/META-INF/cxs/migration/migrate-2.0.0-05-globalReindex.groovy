@@ -1,4 +1,4 @@
-import org.apache.unomi.shell.migration.actions.MigrationHistory
+import org.apache.unomi.shell.migration.service.MigrationContext
 import org.apache.unomi.shell.migration.utils.MigrationUtils
 
 /*
@@ -18,16 +18,14 @@ import org.apache.unomi.shell.migration.utils.MigrationUtils
  * limitations under the License.
  */
 
-MigrationHistory history = migrationHistory
-String esAddress = migrationConfig.getString("esAddress", session)
-String indexPrefix = migrationConfig.getString("indexPrefix", session)
+MigrationContext context = migrationContext
+String esAddress = context.getConfigString("esAddress")
+String indexPrefix = context.getConfigString("indexPrefix")
 
 String baseSettings = MigrationUtils.resourceAsString(bundleContext, "requestBody/2.0.0/base_index_mapping.json")
 String[] indicesToReindex = ["segment", "scoring", "campaign", "conditionType", "goal", "patch", "rule"];
 indicesToReindex.each { indexToReindex ->
-    String mappingFileName = "${indexToReindex}.json"
-    String realIndexName = "${indexPrefix}-${indexToReindex.toLowerCase()}"
-    String mapping = MigrationUtils.extractMappingFromBundles(bundleContext, mappingFileName)
-    String newIndexSettings = MigrationUtils.buildIndexCreationRequest(httpClient, esAddress, baseSettings, realIndexName, mapping)
-    MigrationUtils.reIndex(httpClient, bundleContext, esAddress, realIndexName, newIndexSettings, null, history)
+    String mapping = MigrationUtils.extractMappingFromBundles(bundleContext, "${indexToReindex}.json")
+    String newIndexSettings = MigrationUtils.buildIndexCreationRequest(context.getHttpClient(), esAddress, baseSettings, "${indexPrefix}-profile", mapping)
+    MigrationUtils.reIndex(context.getHttpClient(), bundleContext, esAddress, "${indexPrefix}-${indexToReindex.toLowerCase()}", newIndexSettings, null, context)
 }

@@ -16,53 +16,25 @@
  */
 package org.apache.unomi.shell.migration.actions;
 
-import groovy.lang.GroovyClassLoader;
-import groovy.lang.GroovyShell;
-import groovy.util.GroovyScriptEngine;
-import org.apache.commons.lang3.StringUtils;
-import org.apache.http.auth.AuthScope;
-import org.apache.http.auth.UsernamePasswordCredentials;
-import org.apache.http.client.CredentialsProvider;
-import org.apache.http.impl.client.BasicCredentialsProvider;
-import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.karaf.shell.api.action.Action;
 import org.apache.karaf.shell.api.action.Argument;
 import org.apache.karaf.shell.api.action.Command;
 import org.apache.karaf.shell.api.action.lifecycle.Reference;
 import org.apache.karaf.shell.api.action.lifecycle.Service;
 import org.apache.karaf.shell.api.console.Session;
-import org.apache.unomi.shell.migration.utils.ConsoleUtils;
-import org.apache.unomi.shell.migration.utils.HttpUtils;
-import org.osgi.framework.*;
-import org.osgi.framework.wiring.BundleWiring;
-
-import java.io.IOException;
-import java.net.URL;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.*;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
-import static org.apache.unomi.shell.migration.actions.MigrationConfig.*;
+import org.apache.unomi.shell.migration.MigrationService;
 
 @Command(scope = "unomi", name = "migrate", description = "This will Migrate your data in ES to be compliant with current version. " +
-        "It's possible to configure the migration using OSGI configuration file: org.apache.unomi.migration.cfg, if no configuration is provided then questions will be prompted during the migration process.")
+        "It's possible to configure the migration using OSGI configuration file: org.apache.unomi.migration.cfg, " +
+        "if no configuration is provided then questions will be prompted during the migration process.")
 @Service
 public class Migrate implements Action {
-
-    protected static final String MIGRATION_FS_ROOT_FOLDER = "migration";
-    protected static final Path MIGRATION_FS_SCRIPTS_FOLDER = Paths.get(System.getProperty( "karaf.data" ), MIGRATION_FS_ROOT_FOLDER, "scripts");
 
     @Reference
     Session session;
 
     @Reference
-    BundleContext bundleContext;
-
-    @Reference
-    MigrationConfig migrationConfig;
+    MigrationService migrationService;
 
     @Argument(name = "originVersion", description = "Origin version without suffix/qualifier (e.g: 1.2.0)", valueToShowInHelp = "1.2.0")
     private String originVersion;
@@ -71,156 +43,7 @@ public class Migrate implements Action {
     private boolean skipConfirmation = false;
 
     public Object execute() throws Exception {
-        // Load migration scrips
-        Set<MigrationScript> scripts = loadOSGIScripts();
-        scripts.addAll(loadFileSystemScripts());
-
-        if (originVersion == null) {
-            displayMigrations(scripts);
-            ConsoleUtils.printMessage(session, "Select your migration starting point by specifying the current version (e.g. 1.2.0) or the last script that was already run (e.g. 1.2.1)");
-            return null;
-        }
-
-        // Check that there is some migration scripts available from given version
-        Version fromVersion = new Version(originVersion);
-        scripts = filterScriptsFromVersion(scripts, fromVersion);
-        if (scripts.size() == 0) {
-            ConsoleUtils.printMessage(session, "No migration scripts available found starting from version: " + originVersion);
-            return null;
-        } else {
-            ConsoleUtils.printMessage(session, "The following migration scripts starting from version: " + originVersion + " will be executed.");
-            displayMigrations(scripts);
-        }
-
-        // Check for user approval before migrate
-        if (!skipConfirmation && ConsoleUtils.askUserWithAuthorizedAnswer(session,
-                "[WARNING] You are about to execute a migration, this a very sensitive operation, are you sure? (yes/no): ",
-                Arrays.asList("yes", "no")).equalsIgnoreCase("no")) {
-            ConsoleUtils.printMessage(session, "Migration process aborted");
-            return null;
-        }
-
-        // reset migration config from previous stored users choices.
-        migrationConfig.reset();
-        Files.createDirectories(MIGRATION_FS_SCRIPTS_FOLDER);
-        MigrationHistory migrationHistory = new MigrationHistory(session, migrationConfig);
-        migrationHistory.tryRecover();
-
-        // Handle credentials
-        CredentialsProvider credentialsProvider = null;
-        String login = migrationConfig.getString(CONFIG_ES_LOGIN, session);
-        if (StringUtils.isNotEmpty(login)) {
-            credentialsProvider = new BasicCredentialsProvider();
-            UsernamePasswordCredentials credentials
-                    = new UsernamePasswordCredentials(login, migrationConfig.getString(CONFIG_ES_PASSWORD, session));
-            credentialsProvider.setCredentials(AuthScope.ANY, credentials);
-        }
-
-        try (CloseableHttpClient httpClient = HttpUtils.initHttpClient(migrationConfig.getBoolean(CONFIG_TRUST_ALL_CERTIFICATES, session), credentialsProvider)) {
-
-            // Compile scripts
-            scripts = parseScripts(scripts, session, httpClient, migrationConfig, migrationHistory);
-
-            // Start migration
-            ConsoleUtils.printMessage(session, "Starting migration process from version: " + originVersion);
-            for (MigrationScript migrateScript : scripts) {
-                ConsoleUtils.printMessage(session, "Starting execution of: " + migrateScript);
-                try {
-                    migrateScript.getCompiledScript().run();
-                } catch (Exception e) {
-                    ConsoleUtils.printException(session, "Error executing: " + migrateScript, e);
-                    return null;
-                }
-
-                ConsoleUtils.printMessage(session, "Finish execution of: " + migrateScript);
-            }
-
-            // We clean history, migration is successful
-            migrationHistory.clean();
-        }
-
+        migrationService.migrateUnomi(originVersion, skipConfirmation, session);
         return null;
-    }
-
-    private void displayMigrations(Set<MigrationScript> scripts) {
-        Version previousVersion = new Version("0.0.0");
-        for (MigrationScript migration : scripts) {
-            if (migration.getVersion().getMajor() > previousVersion.getMajor() || migration.getVersion().getMinor() > previousVersion.getMinor()) {
-                ConsoleUtils.printMessage(session, "From " + migration.getVersion().getMajor() + "." + migration.getVersion().getMinor() + ".0:");
-            }
-            ConsoleUtils.printMessage(session, "- " + migration);
-            previousVersion = migration.getVersion();
-        }
-    }
-
-    private Set<MigrationScript> filterScriptsFromVersion(Set<MigrationScript> scripts, Version fromVersion) {
-        return scripts.stream()
-                .filter(migrateScript -> fromVersion.compareTo(migrateScript.getVersion()) < 0)
-                .collect(Collectors.toCollection(TreeSet::new));
-    }
-
-    private Set<MigrationScript> parseScripts(Set<MigrationScript> scripts, Session session, CloseableHttpClient httpClient, MigrationConfig migrationConfig, MigrationHistory migrationHistory) {
-        Map<String, GroovyShell> shellsPerBundle = new HashMap<>();
-
-        return scripts.stream()
-                .peek(migrateScript -> {
-                    // fallback on current bundle if the scripts is not provided by OSGI
-                    Bundle scriptBundle = migrateScript.getBundle() != null ? migrateScript.getBundle() : bundleContext.getBundle();
-                    if (!shellsPerBundle.containsKey(scriptBundle.getSymbolicName())) {
-                        shellsPerBundle.put(scriptBundle.getSymbolicName(), buildShellForBundle(scriptBundle, session, httpClient, migrationConfig, migrationHistory));
-                    }
-                    migrateScript.setCompiledScript(shellsPerBundle.get(scriptBundle.getSymbolicName()).parse(migrateScript.getScript()));
-                })
-                .collect(Collectors.toCollection(TreeSet::new));
-    }
-
-    private Set<MigrationScript> loadOSGIScripts() throws IOException {
-        SortedSet<MigrationScript> migrationScripts = new TreeSet<>();
-        for (Bundle bundle : bundleContext.getBundles()) {
-            Enumeration<URL> scripts = bundle.findEntries("META-INF/cxs/migration", "*.groovy", true);
-            if (scripts != null) {
-                // check for shell
-
-                while (scripts.hasMoreElements()) {
-                    URL scriptURL = scripts.nextElement();
-                    migrationScripts.add(new MigrationScript(scriptURL, bundle));
-                }
-            }
-        }
-
-        return migrationScripts;
-    }
-
-    private Set<MigrationScript> loadFileSystemScripts() throws IOException {
-        // check migration folder exists
-        if (!Files.isDirectory(MIGRATION_FS_SCRIPTS_FOLDER)) {
-            return Collections.emptySet();
-        }
-
-        List<Path> paths;
-        try (Stream<Path> walk = Files.walk(MIGRATION_FS_SCRIPTS_FOLDER)) {
-            paths = walk
-                    .filter(path -> !Files.isDirectory(path))
-                    .filter(path -> path.toString().toLowerCase().endsWith("groovy"))
-                    .collect(Collectors.toList());
-        }
-
-        SortedSet<MigrationScript> migrationScripts = new TreeSet<>();
-        for (Path path : paths) {
-            migrationScripts.add(new MigrationScript(path.toUri().toURL(), null));
-        }
-        return migrationScripts;
-    }
-
-    private GroovyShell buildShellForBundle(Bundle bundle, Session session, CloseableHttpClient httpClient, MigrationConfig migrationConfig, MigrationHistory migrationHistory) {
-        GroovyClassLoader groovyLoader = new GroovyClassLoader(bundle.adapt(BundleWiring.class).getClassLoader());
-        GroovyScriptEngine groovyScriptEngine = new GroovyScriptEngine((URL[]) null, groovyLoader);
-        GroovyShell groovyShell = new GroovyShell(groovyScriptEngine.getGroovyClassLoader());
-        groovyShell.setVariable("session", session);
-        groovyShell.setVariable("httpClient", httpClient);
-        groovyShell.setVariable("migrationConfig", migrationConfig);
-        groovyShell.setVariable("migrationHistory", migrationHistory);
-        groovyShell.setVariable("bundleContext", bundle.getBundleContext());
-        return groovyShell;
     }
 }

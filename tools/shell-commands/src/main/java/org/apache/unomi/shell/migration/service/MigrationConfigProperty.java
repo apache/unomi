@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.shell.migration.actions;
+package org.apache.unomi.shell.migration.service;
 
 /**
  * Just a bean for a configuration property to be used during migration process
@@ -23,7 +23,7 @@ public class MigrationConfigProperty {
     String description;
     String defaultValue;
 
-    public MigrationConfigProperty(String description, String defaultValue) {
+    protected MigrationConfigProperty(String description, String defaultValue) {
         this.description = description;
         this.defaultValue = defaultValue;
     }

@@ -255,6 +255,13 @@ public class SegmentIT extends BaseIT {
         Event testEvent = new Event("negative-test-event-type", null, profile, null, null, profile,
                 Date.from(localDate.atStartOfDay(defaultZoneId).toInstant()));
         testEvent.setPersistent(true);
+
+        // wait for segment auto generated rule to be available
+        keepTrying("The segment auto generated rule should be available to handle the test event",
+                () -> rulesService.getMatchingRules(testEvent),
+                rules -> rules.size() > 0, 1000, 20);
+
+        // send the event
         int changes = eventService.send(testEvent);
         if ((changes & EventService.PROFILE_UPDATED) == EventService.PROFILE_UPDATED) {
             profileService.save(profile);

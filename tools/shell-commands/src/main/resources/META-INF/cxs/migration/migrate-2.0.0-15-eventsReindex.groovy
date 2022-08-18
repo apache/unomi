@@ -1,4 +1,4 @@
-import org.apache.unomi.shell.migration.actions.MigrationHistory
+import org.apache.unomi.shell.migration.service.MigrationContext
 import org.apache.unomi.shell.migration.utils.HttpUtils
 import org.apache.unomi.shell.migration.utils.MigrationUtils
 
@@ -19,21 +19,23 @@ import org.apache.unomi.shell.migration.utils.MigrationUtils
  * limitations under the License.
  */
 
-MigrationHistory history = migrationHistory
-String esAddress = migrationConfig.getString("esAddress", session)
-String indexPrefix = migrationConfig.getString("indexPrefix", session)
+MigrationContext context = migrationContext
+String esAddress = context.getConfigString("esAddress")
+String indexPrefix = context.getConfigString("indexPrefix")
 
-history.performMigrationStep("2.0.0-remove-events-not-persisted-anymore", () -> {
+context.performMigrationStep("2.0.0-remove-events-not-persisted-anymore", () -> {
     String removeInternalEventsRequest = MigrationUtils.resourceAsString(bundleContext, "requestBody/2.0.0/event_delete_by_query.json")
-    HttpUtils.executePostRequest(httpClient, "${esAddress}/${indexPrefix}-event-*/_delete_by_query", removeInternalEventsRequest, null)
+    HttpUtils.executePostRequest(context.getHttpClient(), "${esAddress}/${indexPrefix}-event-*/_delete_by_query", removeInternalEventsRequest, null)
 })
 
 // Reindex the rest of the events
 String baseSettings = MigrationUtils.resourceAsString(bundleContext, "requestBody/2.0.0/base_index_mapping.json")
 String reIndexScript = MigrationUtils.getFileWithoutComments(bundleContext, "requestBody/2.0.0/event_migrate.painless");
 String mapping = MigrationUtils.extractMappingFromBundles(bundleContext, "event.json")
-Set<String> eventIndices = MigrationUtils.getIndexesPrefixedBy(httpClient, esAddress, "${indexPrefix}-event-")
+Set<String> eventIndices = MigrationUtils.getIndexesPrefixedBy(context.getHttpClient(), esAddress, "${indexPrefix}-event-")
+// use session indices to extract monthly index settings
+Set<String> sessionIndices = MigrationUtils.getIndexesPrefixedBy(context.getHttpClient(), esAddress, "${indexPrefix}-session-")
+String newIndexSettings = MigrationUtils.buildIndexCreationRequest(context.getHttpClient(), esAddress, baseSettings, sessionIndices[0], mapping)
 eventIndices.each { eventIndex ->
-    String newIndexSettings = MigrationUtils.buildIndexCreationRequest(httpClient, esAddress, baseSettings, eventIndex, mapping)
-    MigrationUtils.reIndex(httpClient, bundleContext, esAddress, eventIndex, newIndexSettings, reIndexScript, history)
+    MigrationUtils.reIndex(context.getHttpClient(), bundleContext, esAddress, eventIndex, newIndexSettings, reIndexScript, context)
 }

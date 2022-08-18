@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.shell.migration.actions;
+package org.apache.unomi.shell.migration.service;
 
 import groovy.lang.Script;
 import org.apache.commons.io.IOUtils;
@@ -48,7 +48,7 @@ public class MigrationScript implements Comparable<MigrationScript> {
     private final int priority;
     private final String name;
 
-    public MigrationScript(URL scriptURL, Bundle bundle) throws IOException {
+    protected MigrationScript(URL scriptURL, Bundle bundle) throws IOException {
         this.bundle = bundle;
         this.script = IOUtils.toString(scriptURL);
 
@@ -65,31 +65,31 @@ public class MigrationScript implements Comparable<MigrationScript> {
         }
     }
 
-    public Script getCompiledScript() {
+    protected Script getCompiledScript() {
         return compiledScript;
     }
 
-    public void setCompiledScript(Script compiledScript) {
+    protected void setCompiledScript(Script compiledScript) {
         this.compiledScript = compiledScript;
     }
 
-    public String getScript() {
+    protected String getScript() {
         return script;
     }
 
-    public Bundle getBundle() {
+    protected Bundle getBundle() {
         return bundle;
     }
 
-    public Version getVersion() {
+    protected Version getVersion() {
         return version;
     }
 
-    public int getPriority() {
+    protected int getPriority() {
         return priority;
     }
 
-    public String getName() {
+    protected String getName() {
         return name;
     }
 

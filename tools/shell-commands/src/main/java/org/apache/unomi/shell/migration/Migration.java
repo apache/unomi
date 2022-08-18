@@ -18,7 +18,8 @@ package org.apache.unomi.shell.migration;
 
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.karaf.shell.api.console.Session;
-import org.apache.unomi.shell.migration.actions.MigrationConfig;
+import org.apache.unomi.shell.migration.service.MigrationConfig;
+import org.apache.unomi.shell.migration.service.MigrationContext;
 import org.osgi.framework.BundleContext;
 
 import java.io.IOException;
@@ -30,12 +31,10 @@ import java.io.IOException;
 public interface Migration {
     /**
      * This method is called to execute the migration
-     * @param session               the shell's session
-     * @param httpClient            CloseableHttpClient
-     * @param migrationConfig       config used to perform the migration, like esAddress, trustAllCertificates, etc ...
+     * @param migrationContext      the current migration context (config, history, messaging, logging)
      * @param bundleContext         the bundle context object
      * @throws IOException if there was an error while executing the migration
      * @deprecated do groovy script for implementing new migrations
      */
-    void execute(Session session, CloseableHttpClient httpClient, MigrationConfig migrationConfig, BundleContext bundleContext) throws IOException;
+    void execute(MigrationContext migrationContext, BundleContext bundleContext) throws IOException;
 }

@@ -1,4 +1,4 @@
-import org.apache.unomi.shell.migration.actions.MigrationHistory
+import org.apache.unomi.shell.migration.service.MigrationContext
 import org.apache.unomi.shell.migration.utils.MigrationUtils
 
 /*
@@ -18,12 +18,12 @@ import org.apache.unomi.shell.migration.utils.MigrationUtils
  * limitations under the License.
  */
 
-MigrationHistory history = migrationHistory
-String esAddress = migrationConfig.getString("esAddress", session)
-String indexPrefix = migrationConfig.getString("indexPrefix", session)
+MigrationContext context = migrationContext
+String esAddress = context.getConfigString("esAddress")
+String indexPrefix = context.getConfigString("indexPrefix")
 
 String baseSettings = MigrationUtils.resourceAsString(bundleContext, "requestBody/2.0.0/base_index_mapping.json")
 String mapping = MigrationUtils.extractMappingFromBundles(bundleContext, "profile.json")
-String newIndexSettings = MigrationUtils.buildIndexCreationRequest(httpClient, esAddress, baseSettings, indexPrefix + "-profile", mapping)
-MigrationUtils.reIndex(httpClient, bundleContext, esAddress, indexPrefix + "-profile",
-        newIndexSettings, MigrationUtils.getFileWithoutComments(bundleContext, "requestBody/2.0.0/profile_migrate.painless"), history)
+String newIndexSettings = MigrationUtils.buildIndexCreationRequest(context.getHttpClient(), esAddress, baseSettings, "${indexPrefix}-segment", mapping)
+MigrationUtils.reIndex(context.getHttpClient(), bundleContext, esAddress, indexPrefix + "-profile",
+        newIndexSettings, MigrationUtils.getFileWithoutComments(bundleContext, "requestBody/2.0.0/profile_migrate.painless"), context)
