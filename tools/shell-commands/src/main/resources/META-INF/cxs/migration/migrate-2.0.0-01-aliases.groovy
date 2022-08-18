@@ -1,4 +1,5 @@
 import groovy.json.JsonSlurper
+import org.apache.unomi.shell.migration.service.MigrationConfig
 import org.apache.unomi.shell.migration.service.MigrationContext
 import org.apache.unomi.shell.migration.utils.HttpRequestException
 import org.apache.unomi.shell.migration.utils.HttpUtils
@@ -36,7 +37,7 @@ context.performMigrationStep("2.0.0-create-profileAlias-index", () -> {
     if (!MigrationUtils.indexExists(context.getHttpClient(), esAddress, aliasIndex)) {
         String baseRequest = MigrationUtils.resourceAsString(bundleContext,"requestBody/2.0.0/base_index_mapping.json")
         String mapping = MigrationUtils.extractMappingFromBundles(bundleContext, "profileAlias.json")
-        String newIndexSettings = MigrationUtils.buildIndexCreationRequest(context.getHttpClient(), esAddress, baseRequest, profileIndex, mapping)
+        String newIndexSettings = MigrationUtils.buildIndexCreationRequest(baseRequest, mapping, context, false)
         HttpUtils.executePutRequest(context.getHttpClient(), esAddress + "/" + aliasIndex, newIndexSettings, null)
     }
 })
