@@ -784,3 +784,14 @@ of the ElasticSearch server(s). But if you need to trust all certificates automa
 ----
 sslTrustAllCertificates=true
 ----
+
+==== Permissions
+
+Apache Unomi requires a particular set of Elasticsearch permissions for its operation. 
+
+If you are using Elasticsearch in a production environment, you will most likely need to fine tune permissions given to the user used by Unomi.
+
+The following permissions are required by Unomi:
+
+ - required cluster privileges: `manage` OR `al`l
+ - required index privileges on unomi indices: ((`write`) AND (`manage`) AND (`read`)) OR `all`
