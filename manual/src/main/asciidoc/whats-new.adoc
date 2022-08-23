@@ -25,19 +25,29 @@ that scope must already be declared on the platform.
 
 Scopes can be easily created via the corresponding REST API (`cxs/scopes`)
 
-[TODO: Add link to scopes documentation]
+For example, an "apache" scope can be created using the following API call.
+[source]
+----
+curl --location --request POST 'http://localhost:8181/cxs/scopes' \
+-u 'karaf:karaf' \
+--header 'Content-Type: application/json' \
+--data-raw '{
+"itemId": "apache",
+"itemType": "scope"
+}'
+----
 
 ==== JSON Schemas
 
 Apache Unomi 2 introduces support for https://json-schema.org/specification.html[JSON Schema] for all of its publicly exposed endpoints. 
 Data received by Apache Unomi 2 will first be validated against a known schema to make sure it complies with an expected payload. 
-If the received payload does not match a known schema, it be rejected by Apache Unomi 2.
+If the received payload does not match a known schema, it will be rejected by Apache Unomi 2.
 
 Apache Unomi 2 also introduces a set of administrative endpoints allowing new schemas and/or schemas extensions to be registered.
 
 More details about JSON Schemas implementation are available in the <<JSON schemas,corresponding section>> of the documentation.
 
-===== Updated data model
+==== Updated data model
 
 The introduction of JSON schema required us to modify Apache Unomi data model, One of the key differences is the removal of open maps.
 
@@ -68,12 +78,12 @@ Apache Unomi 2.0 Web Tracker, previously located in `extensions/web-tracker/` ha
 We considered it as outdated and instead recommend implementing your own tracker logic based on your project
 use case.
 
-[TODO: Add more ?]
+[TODO: Add more details about the web tracker]
 
 ==== GraphQL API (beta)
 
-Apache Unomi 2.0 see the introduction of a new (beta) GraphQL API. 
-Available behind a feature flag (thus disabled by default), the GraphQL API is available for you to play with. 
+Apache Unomi 2.0 sees the introduction of a new (beta) GraphQL API. 
+Available behind a feature flag (the API disabled by default), the GraphQL API is available for you to play with. 
 
 More details about how to enable/disable the GraphQL API are available in the <<GraphQL API,corresponding section>> of the documentation.
 
@@ -86,18 +96,13 @@ To facilitate migration we prepared a set of scripts that will automatically han
 It is worth keeping in mind that for Apache Unomi 2.0 we do not support “hot” migration, 
 the migration process will require a shutdown of your cluster to guarantee that no new events will be collected while data migration is in progress.
 
-In a nutshell, the migration process will consist in the following steps:
-* Shutdown your Apache Unomi 1.x cluster
-* Start an Apache Unomi 2.0 migration node
-* Wait for data migration to complete
-* Start you Apache Unomi 2.0 cluster
-
 Special caution must be taken if you declared custom events as our migration scripts can only handle objects we know of. 
 More details about migration (incl. of custom events) is available in the corresponding section <<Migrations,corresponding section>> of the documentation.
 
-==== Elasticsearch version
+==== Elasticsearch compatibility
 
-We currently recommend using Elasticsearch 7.17.5 with Apache Unomi 2.0, this ensure you are both on a recent version that is not impacted to log4j vulnerabilities (fixed in Elasticsearch 7.16.3).
+We currently recommend using Elasticsearch 7.17.5 with Apache Unomi 2.0, 
+this ensure you are on a recent version that is not impacted by the log4j vulnerabilities (fixed in Elasticsearch 7.16.3).
 
 This version increase is releated to Apache Unomi 2.0 makeing use of a new Elasticsearch field type 
 called https://www.elastic.co/guide/en/elasticsearch/reference/7.17/flattened.html[Flattened], 

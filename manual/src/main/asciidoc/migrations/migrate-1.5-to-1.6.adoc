@@ -12,4 +12,4 @@
 // limitations under the License.
 //
 
-TODO
+Migration from Unomi 1.5x to 1.6x does not require any particular steps, simply restart your cluster in the new version.

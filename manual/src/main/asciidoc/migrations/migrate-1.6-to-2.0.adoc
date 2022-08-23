@@ -29,7 +29,7 @@ Doing so will display any errors when processing events (such as JSON Schema val
 
 ==== Data Model changes
 
-[TODO: List changes on objects, with examples]
+There has been changes to Unomi Data model, please make sure to review those in the << what_s_new>> section of the user manual.
 
 ==== Create JSON schemas
 
@@ -38,11 +38,15 @@ Once you updated your applications to align with Unomi 2 data model, the next st
 Any event (and more generally, any object) received through Unomi public endpoints do require a valid JSON schema. 
 Apache Unomi ships, out of the box, with all of the necessary JSON Schemas for its own operation but you will need to create schemas for any custom event. 
 
-When creating your new schemas, reviewing debug messages in the logs (using: `log:set DEBUG org.apache.unomi.schema.impl.SchemaServiceImpl` in Karaf console), will point to errors in your schemas.
+When creating your new schemas, reviewing debug messages in the logs (using: `log:set DEBUG org.apache.unomi.schema.impl.SchemaServiceImpl` in Karaf console), 
+will point to errors in your schemas.
 
 Note that it is currently not possible to modify or surcharge an existing JSON schema via the REST API. 
 If you are using custom properties on an event type for which an Apache Unomi schema already exists, 
 you will need to either change its eventType and create the corresponding Schema or to create a Unomi extension.
+
+You can use as a source of inspiration for creating new schemas, Apache Unomi 2.0 schema located at: 
+ https://github.com/apache/unomi/tree/master/extensions/json-schema/services/src/main/resources/META-INF/cxs/schemas[extensions/json-schema/services/src/main/resources/META-INF/cxs/schemas].
 
 Finally, and altuough it is technically feasible, we recommend against creating permissive JSON Schemas allowing any event payload.
 
@@ -50,9 +54,11 @@ Finally, and altuough it is technically feasible, we recommend against creating 
 
 ==== Elasticsearch version and capacity
 
-While still using Unomi 1.6, the first step will be to upgrade your Elasticsearch to 7.17.5. Documentation is available on https://www.elastic.co/guide/en/elasticsearch/reference/7.17/setup-upgrade.html[Elasticsearch's website].
+While still using Unomi 1.6, the first step will be to upgrade your Elasticsearch to 7.17.5. 
+Documentation is available on https://www.elastic.co/guide/en/elasticsearch/reference/7.17/setup-upgrade.html[Elasticsearch's website].
 
-Your Elasticsearch cluster must have enough capacity to handle the migration. At a minimum, the required capacity must be greater than the size of the dataset in production + the size of the largest index.
+Your Elasticsearch cluster must have enough capacity to handle the migration. 
+At a minimum, the required capacity must be greater than the size of the dataset in production + the size of the largest index.
 
 ==== Migrate custom data
 
@@ -171,7 +177,6 @@ You might need to provide additional variables (see table above) depending of yo
 If the migration fail, you can simply restart this command.
 
 Using the above command, Unomi 2.0 will not start automatically at the end of the migration. You can start Unomi automatically at the end of the migration by passing: `-e KARAF_OPTS="-Dunomi.autoMigrate=1.6.0 -Dunomi.autoStart=true"`
-
 
 ===== Step by step migration with Docker
 

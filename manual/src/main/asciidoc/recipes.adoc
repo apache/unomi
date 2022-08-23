@@ -187,8 +187,7 @@ sending them to Apache Unomi whenever you like) of type 'contactInfoSubmitted' a
 course change any of the property names to find your needs. For example you might want to prefix the profile properties
 with the source of the event, such as 'mobileApp:firstName'.
 
-Now that our rule is defined, the next step is to create a scope [TODO: ADD INTERNAL LINK TO SCOPE DOCS] and 
-a JSON Schema [TODO: ADD INTERNAL LINK TO SCOPE DOCS] corresponding to the event to be submitted.
+Now that our rule is defined, the next step is to create a scope and  a JSON Schema corresponding to the event to be submitted.
 
 We will start by creating a scope called "example" scope:
 [source]
