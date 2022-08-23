@@ -14,8 +14,7 @@
 === GraphQL API
 
 First introduced in Apache Unomi 2.0, a GraphQL API is available as an alternative to REST for interacting with the platform. 
-
-As of version 2.0, the GraphQL API is considered a beta feature and is disabled by default.
+Disabled by default, the GraphQL API is currently considered a beta feature.
 
 We look forward for this new GraphQL API to be used, feel free to open discussion on https://the-asf.slack.com/messages/CBP2Z98Q7/[Unomi Slack channel] or https://issues.apache.org/jira/projects/UNOMI/issues[create tickets on Jira]
 
