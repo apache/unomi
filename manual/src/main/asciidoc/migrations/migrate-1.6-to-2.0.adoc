@@ -33,19 +33,18 @@ Doing so will display any errors when processing events (such as JSON Schema val
 
 ==== Create JSON schemas
 
-Once you updated your applications to align with Unomi 2 data model, the next step will be to update (or create new) JSON Schemas.
+Once you updated your applications to align with Unomi 2 data model, the next step will be to create the necessary JSON Schemas.
 
 Any event (and more generally, any object) received through Unomi public endpoints do require a valid JSON schema. 
-Apache Unomi ships with all of the necessary JSON Schemas for its own operation out of the box but you will need to create schemas for any custom event you're sending. 
-If you did not customize events
+Apache Unomi ships, out of the box, with all of the necessary JSON Schemas for its own operation but you will need to create schemas for any custom event. 
 
-Reviewing debug messages associated with JSON Schema (using: `log:set DEBUG org.apache.unomi.schema.impl.SchemaServiceImpl` in Karaf console), will point to errors in your schemas.
+When creating your new schemas, reviewing debug messages in the logs (using: `log:set DEBUG org.apache.unomi.schema.impl.SchemaServiceImpl` in Karaf console), will point to errors in your schemas.
 
-It is currently not possible to modify or surcharge an existing JSON schema via the REST API.
+Note that it is currently not possible to modify or surcharge an existing JSON schema via the REST API. 
 If you are using custom properties on an event type for which an Apache Unomi schema already exists, 
 you will need to either change its eventType and create the corresponding Schema or to create a Unomi extension.
 
-Although possible, we recommend against creating a JSON Schema allowing any event payload.
+Finally, and altuough it is technically feasible, we recommend against creating permissive JSON Schemas allowing any event payload.
 
 === Migrating your existing data
 
@@ -59,11 +58,13 @@ Your Elasticsearch cluster must have enough capacity to handle the migration. At
 
 Apache Unomi 2.0 knows how to migrate its own data from the new model to the old one, but it does not know how to migrate custom events you might be using in your environment.
 
-Apache Unomi 2.0 relies on a set of groovy scripts to perform its data migration, located in https://github.com/apache/unomi/tree/master/tools/shell-commands/src/main/resources/META-INF/cxs/migration[tools/shell-commands/src/main/resources/META-INF/cxs/migration], these scripts are sorted alphabetically and executed sequentially. 
+It relies on a set of groovy scripts to perform its data migration, 
+located in https://github.com/apache/unomi/tree/master/tools/shell-commands/src/main/resources/META-INF/cxs/migration[tools/shell-commands/src/main/resources/META-INF/cxs/migration], 
+these scripts are sorted alphabetically and executed sequentially when migration is started. You can use these scripts as a source of inspiration for creating your own.
 
-In most cases, migration steps consist of an Elasticsearch painless script that will handle the new migration. Reviewing the existing migration scripts will provide clear indications on how to prepare migration of your custom data.
+In most cases, migration steps consist of an Elasticsearch painless script that will handle the data changes.
 
-Custom migration scripts can be placed in `data/migration/scripts`
+At runtime, and when starting the migration, Unomi 2.0 will take its own scripts, any additional scripts located in `data/migration/scripts`, will sort the resulting list alphabetically and execute each migration script sequentially.
 
 ==== Perform the migration
 
@@ -72,7 +73,7 @@ Custom migration scripts can be placed in `data/migration/scripts`
 Before starting the mirgation, please ensure that:
 
  - You do have a backup of your data
- - You did practice the migration in a staging environment, never migrate production without prior validation
+ - You did practice the migration in a staging environment, NEVER migrate a production environment without prior validation
  - You verified your applications were operational with Apache Unomi 2.0 (JSON schemas created, client applications updated, ...)
  - You are running Elasticsearch 7.17.5 (or a later 7.x version)
  - Your Elasticsearch cluster has enough capacity to handle the migration
@@ -91,52 +92,93 @@ In a nutshell, the migration process will consist in the following steps:
 - Start you Apache Unomi 2.0 cluster
 - (optional) Import additional JSON Schemas
 
-The migration itselfs consists in a set of scripts (or steps) executed sequentially. Each step maintains its execution state, meaning if a step fails, you can fix its migration script, then execute it again.
+Each migration step maintains its execution state, meaning if a step fails you can fix the issue, and resume the migration from the failed step.
 
 ===== Configuration
 
-The Unomi 2.0 node will be performing the migration without having started the entire Unomi stack. This means it does not have access to the configuration service (that contains Elasticsearch credentials for example). 
+The following environment variables are used for the migration:
 
-For this reason, it will be necessary to re-declare these elements in a dedicated file located in `etc/org.apache.unomi.migration.cfg`
+|===
+|Environment Variable|Unomi Setting|Default
 
-[source]
-----
-# Migration config used for silent migration
+|UNOMI_ELASTICSEARCH_ADDRESSES
+|org.apache.unomi.elasticsearch.addresses
+|localhost:9200
 
-# esAddress = http://localhost:9200
-# esLogin = elastic
-# esPassword = password
-# httpClient.trustAllCertificates = true
-# indexPrefix = context
-----
+|UNOMI_ELASTICSEARCH_SSL_ENABLE
+|org.apache.unomi.elasticsearch.sslEnable
+|false
 
-===== Step by step migration with Docker
+|UNOMI_ELASTICSEARCH_USERNAME
+|org.apache.unomi.elasticsearch.username
+|
 
-Once your cluster is shutdown, performing the migration will be as simple as starting a dedicated docker container. 
+|UNOMI_ELASTICSEARCH_PASSWORD
+|org.apache.unomi.elasticsearch.password
+|
+
+|UNOMI_ELASTICSEARCH_SSL_TRUST_ALL_CERTIFICATES
+|org.apache.unomi.elasticsearch.sslTrustAllCertificates
+|false
+
+|UNOMI_ELASTICSEARCH_INDEXPREFIX
+|org.apache.unomi.elasticsearch.index.prefix
+|context
+
+|UNOMI_MIGRATION_RECOVER_FROM_HISTORY
+|org.apache.unomi.migration.recoverFromHistory
+|true
+
+|===
+
+If there is a need for advanced configuratiion, the configuration file used by Apache Unomi 2.0 is located in: `etc/org.apache.unomi.migration.cfg`
+
+===== Migrate manually
+
+You can migrate manually using the Karaf console. 
+
+After having started Apache Unomi 2.0 with the `./karaf` command, you will be presented with the Karaf shell.
+
+From there you have two options:
+
+ - The necessary configuration variables (see above) are set, the migration can be started using: `unomi:migrate 1.6.0`
+ - Or, you want to provide the configuration settings via the terminal, in that case you can start the migration in interactive mode using: `unomi:migrate 1.6.0`
+
+The value of the migrate command (1.6.0 in the example above), corresponds to the version you're migrating from.
+
+At the end of the migration, you can start Unomi 2.0 as usual using: `unomi:start`.
+
+===== Migrate with Docker
+
+The migration can also be performed using Docker images, the migration itself can be started by passing a specific value to the `KARAF_OPTS` environment variable.
 
 In the context of this migration guide, we will asssume that: 
- - The configuration file is located in `/home/unomi/migration/etc/`
  - Custom migration scripts are located in `/home/unomi/migration/scripts/`
  - Painless scripts, or more generally any migration assets are located in `/home/unomi/migration/assets/`, these scripts will be mounted under `/tmp/assets/` inside the Docker container. 
-
-You can start the migration by executing the following command:
-
-[TODO: Update environment variable]
 
 [source]
 ----
 docker run \
-    -e MIGRATION_MODE=true \
-    --v /home/unomi/migration/etc/org.apache.unomi.migration.cfg:/opt/apache-unomi/etc/org.apache.unomi.migration.cfg \
+    -e UNOMI_ELASTICSEARCH_ADDRESSES=localhost:9200 \
+    -e KARAF_OPTS="-Dunomi.autoMigrate=1.6.0" \
     --v /home/unomi/migration/scripts/:/opt/apache-unomi/data/migration/scripts \
     --v /home/unomi/migration/assets/:/tmp/assets/ \
     apache/unomi:2.0.0-SNAPSHOT
 ----
 
-The migration will the start immediately after starting the command. If the migration fails for any reason, simply execute the command again.
+You might need to provide additional variables (see table above) depending of your environment.
 
-At the end of the migration, [TODO: Add details, is there any validation the user should be doing prior to starting the cluster?]
+If the migration fail, you can simply restart this command.
 
-Once all of the data has been migrated, you can start your Unomi cluster in version 2.0.
+Using the above command, Unomi 2.0 will not start automatically at the end of the migration. You can start Unomi automatically at the end of the migration by passing: `-e KARAF_OPTS="-Dunomi.autoMigrate=1.6.0 -Dunomi.autoStart=true"`
 
-Finally, use Apache Unomi 2.0 API to submit your new JSON Schemas.
+
+===== Step by step migration with Docker
+
+Once your cluster is shutdown, performing the migration will be as simple as starting a dedicated docker container. 
+
+===== Post Migration
+
+Once the migration has been executed, you will be able to start Apache Unomi 2.0
+
+Remember you still need to submit JSON schemas corresponding to your events, you can do so using the API.
