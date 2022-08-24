@@ -79,6 +79,7 @@ public class Migrate16xTo200IT extends BaseIT {
         checkMergedProfilesAliases();
         checkProfileInterests();
         checkScopeHaveBeenCreated();
+        checkLoginEventWithScope();
         checkFormEventRestructured();
         checkViewEventRestructured();
         checkEventTypesNotPersistedAnymore();
@@ -141,6 +142,23 @@ public class Migrate16xTo200IT extends BaseIT {
                 Assert.assertEquals(2, sports.size());
                 Assert.assertTrue(sports.contains("football"));
                 Assert.assertTrue(sports.contains("tennis"));
+            }
+        }
+    }
+
+    private void checkLoginEventWithScope() {
+        List<Event> events = persistenceService.query("eventType", "view", null, Event.class);
+        List<String> digitallLoginEvent = Arrays.asList("4054a3e0-35ef-4256-999b-b9c05c1209f1", "f3f71ff8-2d6d-4b6c-8bdc-cb39905cddfe", "ff24ae6f-5a98-421e-aeb0-e86855b462ff");
+        for (Event loginEvent : events) {
+            if (loginEvent.getItemId().equals("5c4ac1df-f42b-4117-9432-12fdf9ecdf98")) {
+                Assert.assertEquals(loginEvent.getScope(), "systemsite");
+                Assert.assertEquals(loginEvent.getTarget().getScope(), "systemsite");
+                Assert.assertEquals(loginEvent.getSource().getScope(), "systemsite");
+            }
+            if (digitallLoginEvent.contains(loginEvent.getItemId())) {
+                Assert.assertEquals(loginEvent.getScope(), "digitall");
+                Assert.assertEquals(loginEvent.getTarget().getScope(), "digitall");
+                Assert.assertEquals(loginEvent.getSource().getScope(), "digitall");
             }
         }
     }

@@ -15,8 +15,17 @@
  * limitations under the License.
  */
 
+/* Handle login events */
+if ('login' == ctx._source.eventType) {
+    /* Look for empty scope */
+    if (ctx._source.scope == '') {
+         ctx._source.put('scope', 'systemsite');
+         ctx._source.source.put('scope', 'systemsite');
+         ctx._source.target.put('scope', 'systemsite');
+    }
+}
 /* Handle view events */
-if ('view' == ctx._source.eventType){
+if ('view' == ctx._source.eventType) {
 
     /* Check for interests */
     if (ctx._source.target != null && ctx._source.target.properties != null && ctx._source.target.properties.interests != null){
