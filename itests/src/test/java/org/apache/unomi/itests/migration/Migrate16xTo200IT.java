@@ -217,7 +217,7 @@ public class Migrate16xTo200IT extends BaseIT {
         for (String scopeFromEvents : existingScopesFromEvents.keySet()) {
             if (!Objects.equals(scopeFromEvents, "_filtered")) {
                 Scope scope = scopeService.getScope(scopeFromEvents);
-                Assert.assertNotNull(scope);
+                Assert.assertNotNull(String.format("Unable to find registered scope %s", scopeFromEvents), scope);
             }
         }
     }
