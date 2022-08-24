@@ -39,10 +39,10 @@ import java.util.List;
 public class UnomiManagementServiceImpl implements UnomiManagementService {
 
     private BundleContext bundleContext;
-    
+
     @Reference(cardinality = ReferenceCardinality.MANDATORY)
     private MigrationService migrationService;
-    
+
     private final List<String> bundleSymbolicNames = new ArrayList<>();
     private List<String> reversedBundleSymbolicNames;
 

@@ -1,6 +1,7 @@
 /NOTICE-generated
 .settings
 target
+dist
 .classpath
 .project
 node_modules

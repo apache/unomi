@@ -1,0 +1,32 @@
+{
+    "name": "unomi-tracker",
+    "version": "2.0.0-SNAPSHOT",
+    "description": "The Apache Unomi tracker script.",
+    "main": "dist/unomi-tracker.js",
+    "keywords": [
+        "unomi",
+        "apache"
+    ],
+    "author": "Apache Software Foundation",
+    "license": "Apache-2.0",
+    "scripts": {
+        "clean": "rm -Rf dist",
+        "clean:all": "yarn clean && rimraf node_modules",
+        "build:dev": "yarn clean && webpack --mode development",
+        "build:prod": "yarn clean && webpack --mode production"
+    },
+    "dependencies": {
+        "core-js": "^3.12.1"
+    },
+    "devDependencies": {
+        "@babel/core": "^7.18.10",
+        "@babel/preset-env": "^7.18.10",
+        "babel-loader": "^8.2.5",
+        "clean-webpack-plugin": "^4.0.0",
+        "eslint": "^8.22.0",
+        "rimraf": "^2.6.2",
+        "webpack": "^5.74.0",
+        "webpack-cli": "4.10.0",
+        "yarn": "^1.22.10"
+    }
+}

@@ -100,8 +100,8 @@
         <httpclient-osgi.version>4.5.5</httpclient-osgi.version>
         <httpcore-osgi.version>4.4.9</httpcore-osgi.version>
 
-        <node.version>v12.19.0</node.version>
-        <yarn.version>v1.22.5</yarn.version>
+        <node.version>v14.17.3</node.version>
+        <yarn.version>v1.22.10</yarn.version>
 
         <release.arguments>-Papache-release,integration-tests</release.arguments>
 
@@ -532,6 +532,7 @@
                                 <exclude>**/*.log</exclude>
                                 <!-- exclude node_modules directories and JS package manager files -->
                                 <exclude>**/node_modules/**/*</exclude>
+                                <exclude>**/dist/**/*</exclude>
                                 <exclude>**/node/**/*</exclude>
                                 <exclude>**/yarn.lock</exclude>
                                 <exclude>**/*.js.map</exclude>
