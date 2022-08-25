@@ -47,13 +47,13 @@ public interface RestServiceUtils {
      * @param request the current request
      * @param response the current request response
      * @param timestamp the current date, for timestamp the current visitor data
-     *
+     * @param events list of events sent with the request
      * @return the built EventsRequestContext
      */
     EventsRequestContext initEventsRequest(String scope, String sessionId, String profileId, String personaId,
                                            boolean invalidateProfile, boolean invalidateSession,
                                            HttpServletRequest request, HttpServletResponse response,
-                                           Date timestamp);
+                                           Date timestamp, List<Event> events);
 
     /**
      * Execute the list of events using the dedicated eventsRequestContext

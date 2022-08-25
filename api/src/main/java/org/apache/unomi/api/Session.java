@@ -19,6 +19,7 @@ package org.apache.unomi.api;
 
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -51,6 +52,9 @@ public class Session extends Item implements TimestampedItem {
     private int size = 0;
 
     private int duration = 0;
+
+    private List<String> originEventTypes;
+    private List<String> originEventIds;
 
     /**
      * Instantiates a new Session.
@@ -223,5 +227,41 @@ public class Session extends Item implements TimestampedItem {
 
     public void setScope(String scope) {
         this.scope = scope;
+    }
+
+    /**
+     * Get the events types which causes the session creation
+     *
+     * @return List of event types
+     */
+    public List<String> getOriginEventTypes() {
+        return originEventTypes;
+    }
+
+    /**
+     * Set the events types which causes the session creation
+     *
+     * @param originEventTypes List of event types
+     */
+    public void setOriginEventTypes(List<String> originEventTypes) {
+        this.originEventTypes = originEventTypes;
+    }
+
+    /**
+     * Get the events ids which causes the session creation
+     *
+     * @return event ids
+     */
+    public List<String> getOriginEventIds() {
+        return originEventIds;
+    }
+
+    /**
+     * Set the events ids which causes the session creation
+     *
+     * @param originEventIds List of event ids
+     */
+    public void setOriginEventIds(List<String> originEventIds) {
+        this.originEventIds = originEventIds;
     }
 }

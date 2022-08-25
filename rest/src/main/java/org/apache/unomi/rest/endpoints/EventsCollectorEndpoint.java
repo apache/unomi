@@ -42,6 +42,7 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.util.Date;
+import java.util.List;
 
 @WebService
 @Produces(MediaType.APPLICATION_JSON + ";charset=UTF-8")
@@ -51,6 +52,7 @@ import java.util.Date;
 @Component(service = EventsCollectorEndpoint.class, property = "osgi.jaxrs.resource=true")
 public class EventsCollectorEndpoint {
 
+    public static final String SYSTEMSCOPE = "systemscope";
     @Reference
     private RestServiceUtils restServiceUtils;
 
@@ -68,7 +70,7 @@ public class EventsCollectorEndpoint {
     @GET
     @Path("/eventcollector")
     public EventCollectorResponse collectAsGet(@QueryParam("payload") EventsCollectorRequest eventsCollectorRequest,
-                                               @QueryParam("timestamp") Long timestampAsString) {
+            @QueryParam("timestamp") Long timestampAsString) {
         return doEvent(eventsCollectorRequest, timestampAsString);
     }
 
@@ -95,15 +97,15 @@ public class EventsCollectorEndpoint {
 
         String profileId = eventsCollectorRequest.getProfileId();
         // Get the first available scope that is not equal to systemscope otherwise systemscope will be used
-        String scope = "systemscope";
-        for (Event event : eventsCollectorRequest.getEvents()) {
+        String scope = SYSTEMSCOPE;
+        List<Event> events = eventsCollectorRequest.getEvents();
+        for (Event event : events) {
             if (StringUtils.isNotBlank(event.getEventType())) {
-                if (StringUtils.isNotBlank(event.getScope()) && !event.getScope().equals("systemscope")) {
+                if (StringUtils.isNotBlank(event.getScope()) && !event.getScope().equals(SYSTEMSCOPE)) {
                     scope = event.getScope();
                     break;
-                } else if (event.getSource() != null &&
-                        StringUtils.isNotBlank(event.getSource().getScope()) &&
-                        !event.getSource().getScope().equals("systemscope")) {
+                } else if (event.getSource() != null && StringUtils.isNotBlank(event.getSource().getScope()) && !event.getSource()
+                        .getScope().equals(SYSTEMSCOPE)) {
                     scope = event.getSource().getScope();
                     break;
                 }
@@ -111,8 +113,8 @@ public class EventsCollectorEndpoint {
         }
 
         // build public context, profile + session creation/anonymous etc ...
-        EventsRequestContext eventsRequestContext = restServiceUtils.initEventsRequest(scope, sessionId, profileId,
-                null, false, false, request, response, timestamp);
+        EventsRequestContext eventsRequestContext = restServiceUtils.initEventsRequest(scope, sessionId, profileId, null, false, false,
+                request, response, timestamp, events);
 
         // process events
         eventsRequestContext = restServiceUtils.performEventsRequest(eventsCollectorRequest.getEvents(), eventsRequestContext);
