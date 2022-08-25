@@ -29,11 +29,7 @@ import org.json.JSONObject;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 
-import java.io.BufferedReader;
-import java.io.DataInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
@@ -125,7 +121,7 @@ public class MigrationUtils {
         throw new RuntimeException("no mapping found in bundles for: " + fileName);
     }
 
-    public static String buildIndexCreationRequest(String baseIndexSettings, String mapping,  MigrationContext context, boolean isMonthlyIndex) throws IOException {
+    public static String buildIndexCreationRequest(String baseIndexSettings, String mapping, MigrationContext context, boolean isMonthlyIndex) throws IOException {
         String settings = baseIndexSettings
                 .replace("#numberOfShards", context.getConfigString(isMonthlyIndex ? MONTHLY_NUMBER_OF_SHARDS : NUMBER_OF_SHARDS))
                 .replace("#numberOfReplicas", context.getConfigString(isMonthlyIndex ? MONTHLY_NUMBER_OF_REPLICAS : NUMBER_OF_REPLICAS))
@@ -178,6 +174,10 @@ public class MigrationUtils {
                 HttpUtils.executeDeleteRequest(httpClient, esAddress + "/" + indexNameCloned, null);
             }
         });
+        // Do a refresh
+        HttpUtils.executePostRequest(httpClient, esAddress + "/" + indexName + "/_refresh", null, null);
+
+        waitForYellowStatus(httpClient, esAddress, migrationContext);
     }
 
     public static void scrollQuery(CloseableHttpClient httpClient, String esAddress, String queryURL, String query, String scrollDuration, ScrollCallback scrollCallback) throws IOException {
@@ -185,7 +185,7 @@ public class MigrationUtils {
 
         while (true) {
             JSONObject responseAsJson = new JSONObject(response);
-            String scrollId = responseAsJson.has("_scroll_id") ? responseAsJson.getString("_scroll_id"): null;
+            String scrollId = responseAsJson.has("_scroll_id") ? responseAsJson.getString("_scroll_id") : null;
             JSONArray hits = new JSONArray();
             if (responseAsJson.has("hits")) {
                 JSONObject hitsObject = responseAsJson.getJSONObject("hits");
@@ -213,6 +213,21 @@ public class MigrationUtils {
                     "  \"scroll\": \"" + scrollDuration + "\"\n" +
                     "}", null);
         }
+    }
+
+    /**
+     * Utility method that waits for the ES cluster to be in yellow status
+     */
+    public static void waitForYellowStatus(CloseableHttpClient httpClient, String esAddress, MigrationContext migrationContext) throws Exception {
+        while (true) {
+            final JSONObject status = new JSONObject(HttpUtils.executeGetRequest(httpClient, esAddress + "/_cluster/health?wait_for_status=yellow&timeout=60s", null));
+            if (!status.get("timed_out").equals("true")) {
+                migrationContext.printMessage("ES Cluster status is "  + status.get("status"));
+                break;
+            }
+            migrationContext.printMessage("Waiting for ES Cluster status to be Yellow, current status is " + status.get("status"));
+        }
+
     }
 
     public interface ScrollCallback {

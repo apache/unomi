@@ -179,7 +179,7 @@ public class MigrationContext {
             logger.info(msg);
         } else {
             PrintStream writer = session.getConsole();
-            writer.println(msg);
+            writer.printf("%s: %s%n",new Date(), msg);
         }
     }
 
