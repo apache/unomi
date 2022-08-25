@@ -42,7 +42,7 @@ services:
         - elasticsearch 
 ----
 
-From the same folder, start the environment using docker-compose up and wait for the startup to complete.
+From the same folder, start the environment using `docker-compose up` and wait for the startup to complete.
 
 Try accessing https://localhost:9443/cxs/cluster with username/password: karaf/karaf . You might get a certificate warning in your browser, just accept it despite the warning it is safe.
 
