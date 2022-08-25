@@ -301,7 +301,7 @@ The first step consists in creating the groovy script on your filesystem, start 
 [source,groovy]
 ----
 @Action(id = "helloWorldGroovyAction",
-        actionExecutor = "groovy:helloWorldAction")
+        actionExecutor = "groovy:helloWorldAction",
         parameters = [@Parameter(id = "location", type = "string", multivalued = false)])
 def execute() {
     logger.info("Hello {}", action.getParameterValues().get("location"))
@@ -342,7 +342,7 @@ curl -X POST 'http://localhost:8181/cxs/rules' \
      "parameterValues": {
        "location": "world!"
      },
-     "type": "helloWorldAction"
+     "type": "helloWorldGroovyAction"
    }
  ]
 }'
