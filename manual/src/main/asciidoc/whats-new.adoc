@@ -16,7 +16,7 @@
 Apache Unomi 2 is a new release focused on improving core functionalities and robustness of the product. 
 The introduction of tighter data validation with JSON Schemas required some changes in the product data model, which presented an opportunity for noticeable improvements in the overall performance.
 
-This new release also introduces a first (beta) version of Unomi GraphQL API.
+This new release also introduces a first (beta) version of the Unomi GraphQL API.
 
 ==== Scopes are required
 
