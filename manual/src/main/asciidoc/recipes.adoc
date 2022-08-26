@@ -18,7 +18,7 @@
 In this section of the documentation we provide quick recipes focused on helping you achieve a specific result with
 Apache Unomi.
 
-==== Enable debug mode
+==== Enabling debug mode
 
 Although the examples provided in this documentation are correct (they will work "as-is"), 
 you might be tempted to modify them to fit your use case, which might result in errors.
