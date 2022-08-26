@@ -43,7 +43,7 @@ will point to errors in your schemas or will help you diagnose why the events ar
 
 Note that it is currently not possible to modify or surcharge an existing system-deployed JSON schema via the REST API. It is however possible to deploy new schemas and manage them through the REST API on the `/cxs/jsonSchema` endpoint.
 If you are currently using custom properties on an Apache Unomi-provided event type, 
-you will need to either change its eventType and create the corresponding Schema or to create a Unomi extension.
+you will need to either change to use a new custom eventType and create the corresponding schema or to create a Unomi schema extension.
 
 You can use as a source of inspiration for creating new schemas, Apache Unomi 2.0 schema located at: 
  https://github.com/apache/unomi/tree/master/extensions/json-schema/services/src/main/resources/META-INF/cxs/schemas[extensions/json-schema/services/src/main/resources/META-INF/cxs/schemas].
