@@ -39,7 +39,7 @@ Any event (and more generally, any object) received through Unomi public endpoin
 Apache Unomi ships, out of the box, with all of the necessary JSON Schemas for its own operation but you will need to create schemas for any custom event you may be using.
 
 When creating your new schemas, reviewing debug messages in the logs (using: `log:set DEBUG org.apache.unomi.schema.impl.SchemaServiceImpl` in Karaf console), 
-will point to errors in your schemas.
+will point to errors in your schemas or will help you diagnose why the events are not being accepted.
 
 Note that it is currently not possible to modify or surcharge an existing JSON schema via the REST API. 
 If you are using custom properties on an event type for which an Apache Unomi schema already exists, 
