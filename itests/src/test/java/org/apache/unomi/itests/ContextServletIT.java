@@ -57,6 +57,7 @@ import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -186,6 +187,36 @@ public class ContextServletIT extends BaseIT {
                 savedEvent -> Objects.nonNull(savedEvent) && TEST_EVENT_TYPE.equals(savedEvent.getEventType()), DEFAULT_TRYING_TIMEOUT,
                 DEFAULT_TRYING_TRIES);
         assertEquals(2, event.getVersion().longValue());
+    }
+
+    @Test
+    public void testCallingContextWithSessionCreation() throws Exception {
+        //Arrange
+        String eventId = "test-event-id-" + System.currentTimeMillis();
+        String sessionId = "test-session-id";
+        Profile profile = new Profile(TEST_PROFILE_ID);
+        profileService.save(profile);
+
+        keepTrying("Profile " + TEST_PROFILE_ID + " not found in the required time", () -> profileService.load(TEST_PROFILE_ID),
+                Objects::nonNull, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+
+        //Act
+        Event event = new Event(eventId, TEST_EVENT_TYPE, null, profile, TEST_SCOPE, null, null, new Date());
+
+        ContextRequest contextRequest = new ContextRequest();
+        contextRequest.setSessionId(sessionId);
+        contextRequest.setEvents(Collections.singletonList(event));
+        HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
+        request.addHeader(THIRD_PARTY_HEADER_NAME, UNOMI_KEY);
+        request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
+        TestUtils.executeContextJSONRequest(request, sessionId);
+
+        keepTrying("Event " + eventId + " not saved in the required time", () -> eventService.getEvent(eventId), Objects::nonNull, DEFAULT_TRYING_TIMEOUT,
+                DEFAULT_TRYING_TRIES);
+
+        Session session = profileService.loadSession(sessionId, null);
+        assertEquals(TEST_EVENT_TYPE, session.getOriginEventTypes().get(0));
+        assertEquals(eventId, session.getOriginEventIds().get(0));
     }
 
     @Test

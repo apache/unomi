@@ -157,15 +157,17 @@ public class ContextJsonEndpoint {
         // init ids
         String profileId = null;
         String scope = null;
+        List<Event> events = null;
         if (contextRequest != null) {
             scope = contextRequest.getSource() != null ? contextRequest.getSource().getScope() : scope;
             sessionId = contextRequest.getSessionId() != null ? contextRequest.getSessionId() : sessionId;
             profileId = contextRequest.getProfileId();
+            events = contextRequest.getEvents();
         }
 
         // build public context, profile + session creation/anonymous etc ...
         EventsRequestContext eventsRequestContext = restServiceUtils.initEventsRequest(scope, sessionId, profileId,
-                personaId, invalidateProfile, invalidateSession, request, response, timestamp);
+                personaId, invalidateProfile, invalidateSession, request, response, timestamp, events != null ? events: Collections.emptyList());
 
         // Build response
         ContextResponse contextResponse = new ContextResponse();

@@ -40,6 +40,7 @@ import javax.ws.rs.BadRequestException;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Component(service = RestServiceUtils.class)
 public class RestServiceUtilsImpl implements RestServiceUtils {
@@ -87,7 +88,8 @@ public class RestServiceUtilsImpl implements RestServiceUtils {
     @Override
     public EventsRequestContext initEventsRequest(String scope, String sessionId, String profileId, String personaId,
                                                   boolean invalidateProfile, boolean invalidateSession,
-                                                  HttpServletRequest request, HttpServletResponse response, Date timestamp) {
+                                                  HttpServletRequest request, HttpServletResponse response, Date timestamp,
+            List<Event> events) {
 
         // Build context
         EventsRequestContext eventsRequestContext = new EventsRequestContext(timestamp, null, null, request, response);
@@ -182,9 +184,12 @@ public class RestServiceUtilsImpl implements RestServiceUtils {
 
                 if (StringUtils.isNotBlank(sessionId)) {
                     // Only save session and send event if a session id was provided, otherwise keep transient session
-                    eventsRequestContext.setSession(new Session(sessionId, sessionProfile, timestamp, scope));
-                    eventsRequestContext.addChanges(EventService.SESSION_UPDATED);
 
+                    Session session = new Session(sessionId, sessionProfile, timestamp, scope);
+                    session.setOriginEventTypes(events.stream().map(Event::getEventType).collect(Collectors.toList()));
+                    session.setOriginEventIds(events.stream().map(Item::getItemId).collect(Collectors.toList()));
+                    eventsRequestContext.setSession(session);
+                    eventsRequestContext.addChanges(EventService.SESSION_UPDATED);
                     Event event = new Event("sessionCreated", eventsRequestContext.getSession(), eventsRequestContext.getProfile(),
                             scope, null, eventsRequestContext.getSession(), null, timestamp, false);
                     if (sessionProfile.isAnonymousProfile()) {
