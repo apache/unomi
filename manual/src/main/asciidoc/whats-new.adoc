@@ -18,7 +18,7 @@ The introduction of tighter data validation with JSON Schemas required some chan
 
 This new release also introduces a first (beta) version of the Unomi GraphQL API.
 
-==== Scopes are required
+==== Scopes declarations are now required
 
 Scopes are required in Unomi 2. When submitting an event and specifying a scope, 
 that scope must already be declared on the platform.
