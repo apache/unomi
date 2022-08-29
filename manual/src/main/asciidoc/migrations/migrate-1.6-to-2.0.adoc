@@ -174,7 +174,7 @@ docker run \
 
 You might need to provide additional variables (see table above) depending of your environment.
 
-If the migration fail, you can simply restart this command.
+If the migration fails, you can simply restart this command.
 
 Using the above command, Unomi 2.0 will not start automatically at the end of the migration. You can start Unomi automatically at the end of the migration by passing: `-e KARAF_OPTS="-Dunomi.autoMigrate=1.6.0 -Dunomi.autoStart=true"`
 
