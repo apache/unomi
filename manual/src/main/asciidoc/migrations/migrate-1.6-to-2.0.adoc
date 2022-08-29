@@ -45,7 +45,7 @@ Note that it is currently not possible to modify or surcharge an existing system
 If you are currently using custom properties on an Apache Unomi-provided event type, 
 you will need to either change to use a new custom eventType and create the corresponding schema or to create a Unomi schema extension. You can find more details in the <<JSON schemas,JSON Schema>> section of this documentation.
 
-You can use as a source of inspiration for creating new schemas, Apache Unomi 2.0 schema located at: 
+You can use, as a source of inspiration for creating new schemas, Apache Unomi 2.0 schema located at: 
  https://github.com/apache/unomi/tree/master/extensions/json-schema/services/src/main/resources/META-INF/cxs/schemas[extensions/json-schema/services/src/main/resources/META-INF/cxs/schemas].
 
 Finally, and altuough it is technically feasible, we recommend against creating permissive JSON Schemas allowing any event payload.
