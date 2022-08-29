@@ -148,7 +148,7 @@ After having started Apache Unomi 2.0 with the `./karaf` command, you will be pr
 From there you have two options:
 
  - The necessary configuration variables (see above) have already been set, you can start the migration using the command: `unomi:migrate 1.6.0`
- - Or, you want to provide the configuration settings via the terminal, in that case you can start the migration in interactive mode using: `unomi:migrate 1.6.0`
+ - Or, you want to provide the configuration settings interactively via the terminal, in that case you can start the migration in interactive mode using: `unomi:migrate 1.6.0`
 
 The value of the migrate command (1.6.0 in the example above), corresponds to the version you're migrating from.
 
