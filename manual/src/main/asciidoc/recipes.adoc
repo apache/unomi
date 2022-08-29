@@ -307,7 +307,7 @@ curl -X POST http://localhost:8181/cxs/events/search \
 }'
 ----
 
-===== Debug common errors
+===== Troubleshooting common errors
 
 There could be two types of common errors while customizing the above requests:
 * The schema is invalid
