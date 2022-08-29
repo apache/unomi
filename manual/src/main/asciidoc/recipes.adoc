@@ -314,7 +314,7 @@ There could be two types of common errors while customizing the above requests:
 * The event is invalid
 
 While first submitting the schema during its creation, Apache Unomi will validate it is syntaxically correct (JSON) 
-but will not perform any further validation. Since the schema will be process for the first time when events are submitted, 
+but will not perform any further validation. Since the schema will be processed for the first time when events are submitted, 
 errors might be noticeable at that time. 
 
 Those errors are usually self-explanatory, such as this one pointing to an incorrect lcoation for the "firstName" keyword:
