@@ -10,13 +10,60 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
+// 
 === Recipes
 
 ==== Introduction
 
 In this section of the documentation we provide quick recipes focused on helping you achieve a specific result with
 Apache Unomi.
+
+==== Enabling debug mode
+
+Although the examples provided in this documentation are correct (they will work "as-is"), 
+you might be tempted to modify them to fit your use case, which might result in errors.
+
+The best approach during development is to enable Apache Unomi debug mode, which will provide 
+you with more detailed logs about events processing.
+
+The debug mode can be activated via the karaf SSH console (default credentials are karaf/karaf):
+
+[source]
+----
+ubuntu@ip-10-0-3-252:~/$ ssh -p 8102 karaf@localhost
+Password authentication
+Password:
+        __ __                  ____
+       / //_/____ __________ _/ __/
+      / ,<  / __ `/ ___/ __ `/ /_
+     / /| |/ /_/ / /  / /_/ / __/
+    /_/ |_|\__,_/_/   \__,_/_/
+
+  Apache Karaf (4.2.15)
+
+Hit '<tab>' for a list of available commands
+and '[cmd] --help' for help on a specific command.
+Hit 'system:shutdown' to shutdown Karaf.
+Hit '<ctrl-d>' or type 'logout' to disconnect shell from current session.
+
+karaf@root()> log:set DEBUG org.apache.unomi.schema.impl.SchemaServiceImpl
+----
+
+You can then either watch the logs via your preferred logging mechanism (docker logs, log file, ...) or 
+simply tail the logs to the terminal you used to enable debug mode.
+
+[source]
+----
+karaf@root()> log:tail
+08:55:28.128 DEBUG [qtp1422628821-128] Schema validation found 2 errors while validating against schema: https://unomi.apache.org/schemas/json/events/view/1-0-0
+08:55:28.138 DEBUG [qtp1422628821-128] Validation error: There are unevaluated properties at following paths $.source.properties
+08:55:28.140 DEBUG [qtp1422628821-128] Validation error: There are unevaluated properties at following paths $.source.itemId, $.source.itemType, $.source.scope, $.source.properties
+08:55:28.142 ERROR [qtp1422628821-128] An event was rejected - switch to DEBUG log level for more information
+----
+
+The example above shows schema validation failure at the `$.source.properties` path. 
+Note that the validation will output one log line for the exact failing path and a log line for its parent, 
+therefore to find the source of a schema validation issue it's best to start from the top.
 
 ==== How to read a profile
 
@@ -29,8 +76,7 @@ Here is an example that will retrieve all the session and profile properties, as
 ----
 curl -X POST http://localhost:8181/cxs/context.json?sessionId=1234 \
 -H "Content-Type: application/json" \
--d @- <<'EOF'
-{
+--data-raw '{
     "source": {
         "itemId":"homepage",
         "itemType":"page",
@@ -40,14 +86,13 @@ curl -X POST http://localhost:8181/cxs/context.json?sessionId=1234 \
     "requiredSessionProperties":["*"],
     "requireSegments":true,
     "requireScores":true
-}
-EOF
+}'
 ----
 
 The `requiredProfileProperties` and `requiredSessionProperties` are properties that take an array of property names
 that should be retrieved. In this case we use the wildcard character '*' to say we want to retrieve all the available
-properties. The structure of the JSON object that you should send is a JSON-serialized version of the http://unomi.apache.org/unomi-api/apidocs/org/apache/unomi/api/ContextRequest.html[ContextRequest]
-Java class.
+properties. The structure of the JSON object that you should send is a JSON-serialized version of the 
+http://unomi.apache.org/unomi-api/apidocs/org/apache/unomi/api/ContextRequest.html[ContextRequest] Java class.
 
 Note that it is also possible to access a profile's data through the /cxs/profiles/ endpoint but that really should be
 reserved to administrative purposes. All public accesses should always use the /cxs/context.json endpoint for consistency
@@ -78,10 +123,8 @@ ones that you might not want to be overriden.
 Instead you can use the following solutions to update profiles:
 
 - (Preferred) Use you own custom event(s) to send data you want to be inserted in a profile, and use rules to map the
-event data to the profile. This is simpler than it sounds, as usually all it requires is setting up a simple rule and
-you're ready to update profiles using events. This is also the safest way to update a profile because if you design your
-events to be as specific as possible to your needs, only the data that you specified will be copied to the profile,
-making sure that even in the case an attacker tries to send more data using your custom event it will simply be ignored.
+event data to the profile. This is simpler than it sounds, as usually all it requires is setting up a simple rule, 
+defining the corresponding JSON schema and you're ready to update profiles using events. 
 
 - Use the protected built-in "updateProperties" event. This event is designed to be used for administrative purposes
 only. Again, prefer the custom events solution because as this is a protected event it will require sending the Unomi
@@ -96,8 +139,7 @@ Let's go into more detail about the preferred way to update a profile. Let's con
 curl -X POST http://localhost:8181/cxs/rules \
 --user karaf:karaf \
 -H "Content-Type: application/json" \
--d @- <<'EOF'
-{
+--data-raw '{
   "metadata": {
     "id": "setContactInfo",
     "name": "Copy the received contact info to the current profile",
@@ -136,8 +178,7 @@ curl -X POST http://localhost:8181/cxs/rules \
       }
     }
   ]
-}
-EOF
+}'
 ----
 
 What this rule does is that it listen for a custom event (events don't need any registration, you can simply start
@@ -146,14 +187,80 @@ sending them to Apache Unomi whenever you like) of type 'contactInfoSubmitted' a
 course change any of the property names to find your needs. For example you might want to prefix the profile properties
 with the source of the event, such as 'mobileApp:firstName'.
 
-You could then simply send the `contactInfoSubmitted` event using a request similar to this one:
+Now that our rule is defined, the next step is to create a scope and a JSON Schema corresponding to the event to be submitted.
+
+We will start by creating a scope called "example" scope:
+[source]
+----
+curl --location --request POST 'http://localhost:8181/cxs/scopes' \
+-u 'karaf:karaf' \
+--header 'Content-Type: application/json' \
+--data-raw '{
+"itemId": "example",
+"itemType": "scope"
+}'
+----
+
+The next step consist in creating a JSON Schema to validate our event.
+
+[source]
+----
+curl --location --request POST 'http://localhost:8181/cxs/jsonSchema' \
+-u 'karaf:karaf' \
+--header 'Content-Type: application/json' \
+--data-raw '{
+    "$id": "https://unomi.apache.org/schemas/json/events/contactInfoSubmitted/1-0-0",
+    "$schema": "https://json-schema.org/draft/2019-09/schema",
+    "self": {
+        "vendor": "org.apache.unomi",
+        "name": "contactInfoSubmitted",
+        "format": "jsonschema",
+        "target": "events",
+        "version": "1-0-0"
+    },
+    "title": "contactInfoSubmittedEvent",
+    "type": "object",
+    "allOf": [{ "$ref": "https://unomi.apache.org/schemas/json/event/1-0-0" }],
+    "properties": {
+        "source" : {
+          "$ref" : "https://unomi.apache.org/schemas/json/item/1-0-0"
+        },
+        "target" : {
+          "$ref" : "https://unomi.apache.org/schemas/json/item/1-0-0"
+        },
+        "properties": {
+          "type": "object",
+          "properties": {
+            "firstName": {
+              "type": ["null", "string"]
+            },
+            "lastName": {
+              "type": ["null", "string"]
+            },
+            "email": {
+              "type": ["null", "string"]
+            }
+          }
+        }
+    },
+    "unevaluatedProperties": false
+}'
+----
+
+You can notice the following in the above schema:
+
+* We are creating a schema of type "events" ("self.target" equals "events")
+* The name of this schema is "contactInfoSubmitted", this MUST match the value of the "eventType" field in the event itself (below)
+* To simplify our schema declaration, we're referring to an already existing schema (https://unomi.apache.org/schemas/json/item/1-0-0) to validate the "source" and "target" properties. Apache Unomi ships with a set of predefined JSON Schemas, detailed here: https://github.com/apache/unomi/tree/master/extensions/json-schema/services/src/main/resources/META-INF/cxs/schemas.
+* `"unevaluatedProperties": false` indicates that the event should be rejected if it contains any additional metadata.
+
+Finally, send the `contactInfoSubmitted` event using a request similar to this one:
 
 [source]
 ----
 curl -X POST http://localhost:8181/cxs/eventcollector \
 -H "Content-Type: application/json" \
--d @- <<'EOF'
-{
+--data-raw '{
     "sessionId" : "1234",
     "events":[
         {
@@ -161,25 +268,69 @@ curl -X POST http://localhost:8181/cxs/eventcollector \
             "scope": "example",
             "source":{
                 "itemType": "site",
-                "scope":"example",
+                "scope": "example",
                 "itemId": "mysite"
             },
             "target":{
-                "itemType":"form",
-                "scope":"example",
-                "itemId":"contactForm"
+                "itemType": "form",
+                "scope": "example",
+                "itemId": "contactForm"
             },
             "properties" : {
-              "firstName" : "John",
-              "lastName" : "Doe",
-              "email" : "john.doe@acme.com"
+              "firstName": "John",
+              "lastName": "Doe",
+              "email": "john.doe@acme.com"
             }
         }
     ]
-}
-EOF
+}'
 ----
 
+The event we just submitted can be retrieved using the following request:
+
+[source]
+----
+curl -X POST http://localhost:8181/cxs/events/search \
+--user karaf:karaf \
+-H "Content-Type: application/json" \
+--data-raw '{
+  "offset" : 0,
+  "limit" : 20,
+  "condition" : {
+    "type": "eventPropertyCondition",
+    "parameterValues" : {
+      "propertyName" : "properties.firstName",
+      "comparisonOperator" : "equals",
+      "propertyValue" : "John"
+    }
+  }
+}'
+----
+
+===== Troubleshooting common errors
+
+There could be two types of common errors while customizing the above requests:
+* The schema is invalid
+* The event is invalid
+
+While first submitting the schema during its creation, Apache Unomi will validate it is syntaxically correct (JSON) 
+but will not perform any further validation. Since the schema will be processed for the first time when events are submitted, 
+errors might be noticeable at that time. 
+
+Those errors are usually self-explanatory, such as this one pointing to an incorrect lcoation for the "firstName" keyword:
+[source]
+----
+09:35:56.573 WARN [qtp1421852915-83] Unknown keyword firstName - you should define your own Meta Schema. If the keyword is irrelevant for validation, just use a NonValidationKeyword
+----
+
+If an event is invalid, the logs will contain details about the part of the event that did not validate against the schema. 
+In the example below, an extra property "abcd" was added to the event:
+[source]
+----
+12:27:04.269 DEBUG [qtp1421852915-481] Schema validation found 1 errors while validating against schema: https://unomi.apache.org/schemas/json/events/contactInfoSubmitted/1-0-0
+12:27:04.272 DEBUG [qtp1421852915-481] Validation error: There are unevaluated properties at following paths $.properties.abcd
+12:27:04.273 ERROR [qtp1421852915-481] An event was rejected - switch to DEBUG log level for more information
+----
 
 ==== How to search for profile events
 
@@ -191,8 +342,8 @@ that looks something like this (and https://unomi.apache.org/rest-api-doc/#17681
 curl -X POST http://localhost:8181/cxs/events/search \
 --user karaf:karaf \
 -H "Content-Type: application/json" \
--d @- <<'EOF'
-{ "offset" : 0,
+--data-raw '{
+  "offset" : 0,
   "limit" : 20,
   "condition" : {
     "type": "eventPropertyCondition",
@@ -202,8 +353,7 @@ curl -X POST http://localhost:8181/cxs/events/search \
       "propertyValue" : "PROFILE_ID"
     }
   }
-}
-EOF
+}'
 ----
 
 where PROFILE_ID is a profile identifier. This will indeed retrieve all the events for a given profile.
@@ -224,8 +374,7 @@ on the Apache Unomi server.
 curl -X POST http://localhost:8181/cxs/rules \
 --user karaf:karaf \
 -H "Content-Type: application/json" \
--d @- <<'EOF'
-{
+--data-raw '{
   "metadata": {
     "id": "exampleEventCopy",
     "name": "Example Copy Event to Profile",
@@ -244,8 +393,7 @@ curl -X POST http://localhost:8181/cxs/rules \
       "type": "allEventToProfilePropertiesAction"
     }
   ]
-}
-EOF
+}'
 ----
 
 The above rule will be executed if the incoming event is of type `myEvent` and will simply copy all the properties
@@ -261,8 +409,7 @@ structure. Here's an example of a profile search with a Query object:
 curl -X POST http://localhost:8181/cxs/profiles/search \
 --user karaf:karaf \
 -H "Content-Type: application/json" \
--d @- <<'EOF'
-{
+--data-raw '{
   "text" : "unomi",
   "offset" : 0,
   "limit" : 10,
@@ -289,8 +436,7 @@ curl -X POST http://localhost:8181/cxs/profiles/search \
       ]
     }
   }
-}
-EOF
+}'
 ----
 
 In the above example, you search for all the profiles that have the `leadAssignedTo` and `lastName` properties and that

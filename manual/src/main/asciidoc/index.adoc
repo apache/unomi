@@ -12,7 +12,7 @@
 // limitations under the License.
 //
 
-= Apache Unomi 1.x - Documentation
+= Apache Unomi 2.x - Documentation
 Apache Software Foundation
 :doctype: article
 :toc: left
@@ -23,6 +23,10 @@ Apache Software Foundation
 :homepage: https://unomi.apache.org
 
 image::asf_logo_url.png[pdfwidth=35%,align=center]
+
+== What's new
+
+include::whats-new.adoc[]
 
 == Quick start
 
@@ -39,6 +43,8 @@ include::request-examples.adoc[]
 include::configuration.adoc[]
 
 include::jsonSchema/json-schema.adoc[]
+
+include::graphql.adoc[]
 
 include::migrations/migrations.adoc[]
 

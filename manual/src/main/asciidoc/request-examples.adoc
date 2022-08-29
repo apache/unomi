@@ -99,7 +99,7 @@ curl -X POST http://localhost:8181/cxs/context.json?sessionId=1234 \
                 "itemId":"homepage",
                 "properties":{
                     "pageInfo":{
-                        "referringURL":""
+                        "referringURL":"https://apache.org/"
                     }
                 }
             }
@@ -141,7 +141,7 @@ curl -X POST http://localhost:8181/cxs/eventcollector \
                 "itemId":"homepage",
                 "properties":{
                     "pageInfo":{
-                        "referringURL":""
+                        "referringURL":"https://apache.org/"
                     }
                 }
             }
