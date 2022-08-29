@@ -48,7 +48,7 @@ you will need to either change to use a new custom eventType and create the corr
 You can use, as a source of inspiration for creating new schemas, Apache Unomi 2.0 schema located at: 
  https://github.com/apache/unomi/tree/master/extensions/json-schema/services/src/main/resources/META-INF/cxs/schemas[extensions/json-schema/services/src/main/resources/META-INF/cxs/schemas].
 
-Finally, and altuough it is technically feasible, we recommend against creating permissive JSON Schemas allowing any event payload.
+Finally, and although it is technically feasible, we recommend against creating permissive JSON Schemas allowing any event payload. This requires making sure that you don't allow open properties by using JSON schema keywords such as https://json-schema.org/understanding-json-schema/reference/object.html#unevaluated-properties[unevaluated properties]
 
 === Migrating your existing data
 
