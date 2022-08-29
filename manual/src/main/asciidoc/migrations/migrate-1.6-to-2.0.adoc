@@ -76,7 +76,7 @@ At runtime, and when starting the migration, Unomi 2.0 will take its own scripts
 
 ===== Checklist
 
-Before starting the mirgation, please ensure that:
+Before starting the migration, please ensure that:
 
  - You do have a backup of your data
  - You did practice the migration in a staging environment, NEVER migrate a production environment without prior validation
