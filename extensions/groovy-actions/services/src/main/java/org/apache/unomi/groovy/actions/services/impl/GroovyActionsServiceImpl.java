@@ -131,7 +131,7 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
         logger.info("Groovy action service initialized.");
     }
 
-    public void onDestroy(){
+    public void onDestroy() {
         logger.debug("onDestroy Method called");
         scheduledFuture.cancel(true);
     }
@@ -251,11 +251,12 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
     }
 
     private void refreshGroovyActions() {
+        Map<String, GroovyCodeSource> refreshedGroovyCodeSourceMap = new HashMap<>();
         GroovyCodeSource baseScript = groovyCodeSourceMap.get(BASE_SCRIPT_NAME);
-        groovyCodeSourceMap = new HashMap<>();
-        groovyCodeSourceMap.put(BASE_SCRIPT_NAME, baseScript);
-        persistenceService.getAllItems(GroovyAction.class).forEach(groovyAction -> groovyCodeSourceMap
+        refreshedGroovyCodeSourceMap.put(BASE_SCRIPT_NAME, baseScript);
+        persistenceService.getAllItems(GroovyAction.class).forEach(groovyAction -> refreshedGroovyCodeSourceMap
                 .put(groovyAction.getName(), buildClassScript(groovyAction.getScript(), groovyAction.getName())));
+        groovyCodeSourceMap = refreshedGroovyCodeSourceMap;
     }
 
     private void initializeTimers() {
