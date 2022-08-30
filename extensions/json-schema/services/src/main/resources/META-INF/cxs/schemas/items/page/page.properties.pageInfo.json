@@ -46,6 +46,14 @@
       "type": ["null", "string"],
       "format": "uri"
     },
+    "referrerQuery": {
+      "type": ["null", "string"],
+      "format": "string"
+    },
+    "referrerHost": {
+      "type": ["null", "string"],
+      "format": "string"
+    },
     "tags": {
       "type": "array",
       "items": {
