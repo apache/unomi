@@ -28,6 +28,9 @@
       "type" : ["null","integer"],
       "minimum" : 0,
       "description" : "The item's version number"
+    },
+    "properties": {
+      "type": ["null", "object"]
     }
   }
 }
