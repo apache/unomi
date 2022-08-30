@@ -74,6 +74,6 @@ public class GroovyActionDispatcher implements ActionDispatcher {
                 logger.error("Error executing Groovy action with key=" + actionName, e);
             }
         }
-        return null;
+        return 0;
     }
 }
