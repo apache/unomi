@@ -47,12 +47,10 @@
       "format": "uri"
     },
     "referrerQuery": {
-      "type": ["null", "string"],
-      "format": "string"
+      "type": ["null", "string"]
     },
     "referrerHost": {
-      "type": ["null", "string"],
-      "format": "string"
+      "type": ["null", "string"]
     },
     "tags": {
       "type": "array",
