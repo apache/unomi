@@ -74,13 +74,13 @@ If you are using custom events/objects, please refer to the detailed migration g
 
 ==== Removal of the Web Tracker
 
+[TODO: Add more details about the web tracker]
+
 Apache Unomi 2.0 Web Tracker, previously located in `extensions/web-tracker/` has been removed.
 We considered it as outdated and instead recommend implementing your own tracker logic based on your project
 use case.
 
-[TODO: Add more details about the web tracker]
-
-==== GraphQL API (beta)
+==== GraphQL API - beta
 
 Apache Unomi 2.0 sees the introduction of a new (beta) GraphQL API. 
 Available behind a feature flag (the API disabled by default), the GraphQL API is available for you to play with. 
