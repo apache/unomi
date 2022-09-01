@@ -793,5 +793,5 @@ If you are using Elasticsearch in a production environment, you will most likely
 
 The following permissions are required by Unomi:
 
- - required cluster privileges: `manage` OR `al`l
- - required index privileges on unomi indices: ((`write`) AND (`manage`) AND (`read`)) OR `all`
+ - required cluster privileges: `manage` OR `all`
+ - required index privileges on unomi indices: `write, manage, read` OR `all`
