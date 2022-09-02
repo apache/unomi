@@ -186,6 +186,7 @@ public class RestServiceUtilsImpl implements RestServiceUtils {
 
                     Session session = new Session(sessionId, sessionProfile, timestamp, scope);
                     eventsRequestContext.setSession(session);
+                    eventsRequestContext.setNewSession(true);
                     eventsRequestContext.addChanges(EventService.SESSION_UPDATED);
                     Event event = new Event("sessionCreated", eventsRequestContext.getSession(), eventsRequestContext.getProfile(),
                             scope, null, eventsRequestContext.getSession(), null, timestamp, false);
@@ -238,11 +239,6 @@ public class RestServiceUtilsImpl implements RestServiceUtils {
             // set Total items on context
             eventsRequestContext.setTotalItems(events.size());
 
-            boolean toStoreEventIdsInSession = false;
-            if (eventsRequestContext.getSession() != null
-                    && profileService.loadSession(eventsRequestContext.getSession().getItemId(), null) == null) {
-                toStoreEventIdsInSession= true;
-            }
             for (Event event : events) {
                 eventsRequestContext.setProcessedItems(eventsRequestContext.getProcessedItems() + 1);
 
@@ -278,7 +274,7 @@ public class RestServiceUtilsImpl implements RestServiceUtils {
                     if ((eventsRequestContext.getChanges() & EventService.PROFILE_UPDATED) == EventService.PROFILE_UPDATED) {
                         eventsRequestContext.setProfile(eventToSend.getProfile());
                     }
-                    if(toStoreEventIdsInSession){
+                    if (eventsRequestContext.isNewSession()) {
                         eventsRequestContext.getSession().getOriginEventIds().add(eventToSend.getItemId());
                         eventsRequestContext.getSession().getOriginEventTypes().add(eventToSend.getEventType());
                     }
