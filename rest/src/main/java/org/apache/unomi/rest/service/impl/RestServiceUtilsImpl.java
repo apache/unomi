@@ -88,8 +88,7 @@ public class RestServiceUtilsImpl implements RestServiceUtils {
     @Override
     public EventsRequestContext initEventsRequest(String scope, String sessionId, String profileId, String personaId,
                                                   boolean invalidateProfile, boolean invalidateSession,
-                                                  HttpServletRequest request, HttpServletResponse response, Date timestamp,
-            List<Event> events) {
+                                                  HttpServletRequest request, HttpServletResponse response, Date timestamp) {
 
         // Build context
         EventsRequestContext eventsRequestContext = new EventsRequestContext(timestamp, null, null, request, response);
@@ -186,9 +185,8 @@ public class RestServiceUtilsImpl implements RestServiceUtils {
                     // Only save session and send event if a session id was provided, otherwise keep transient session
 
                     Session session = new Session(sessionId, sessionProfile, timestamp, scope);
-                    session.setOriginEventTypes(events.stream().map(Event::getEventType).collect(Collectors.toList()));
-                    session.setOriginEventIds(events.stream().map(Item::getItemId).collect(Collectors.toList()));
                     eventsRequestContext.setSession(session);
+                    eventsRequestContext.setNewSession(true);
                     eventsRequestContext.addChanges(EventService.SESSION_UPDATED);
                     Event event = new Event("sessionCreated", eventsRequestContext.getSession(), eventsRequestContext.getProfile(),
                             scope, null, eventsRequestContext.getSession(), null, timestamp, false);
@@ -276,6 +274,10 @@ public class RestServiceUtilsImpl implements RestServiceUtils {
                     if ((eventsRequestContext.getChanges() & EventService.PROFILE_UPDATED) == EventService.PROFILE_UPDATED) {
                         eventsRequestContext.setProfile(eventToSend.getProfile());
                     }
+                    if (eventsRequestContext.isNewSession()) {
+                        eventsRequestContext.getSession().getOriginEventIds().add(eventToSend.getItemId());
+                        eventsRequestContext.getSession().getOriginEventTypes().add(eventToSend.getEventType());
+                    }
                     if ((eventsRequestContext.getChanges() & EventService.ERROR) == EventService.ERROR) {
                         //Don't count the event that failed
                         eventsRequestContext.setProcessedItems(eventsRequestContext.getProcessedItems() - 1);
@@ -284,6 +286,7 @@ public class RestServiceUtilsImpl implements RestServiceUtils {
                     }
                 }
             }
+
         }
 
         return eventsRequestContext;

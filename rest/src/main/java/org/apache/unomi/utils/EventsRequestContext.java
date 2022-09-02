@@ -35,6 +35,8 @@ public class EventsRequestContext {
     private Date timestamp;
     private Profile profile;
     private Session session;
+
+    private boolean newSession = false;
     private HttpServletRequest request;
     private HttpServletResponse response;
     private int changes;
@@ -77,6 +79,14 @@ public class EventsRequestContext {
 
     public void setSession(Session session) {
         this.session = session;
+    }
+
+    public boolean isNewSession() {
+        return newSession;
+    }
+
+    public void setNewSession(boolean newSession) {
+        this.newSession = newSession;
     }
 
     public int getChanges() {

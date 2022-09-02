@@ -66,6 +66,7 @@ import java.util.Objects;
 
 import static org.hamcrest.core.IsCollectionContaining.hasItem;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThat;
@@ -201,7 +202,7 @@ public class ContextServletIT extends BaseIT {
                 Objects::nonNull, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
 
         //Act
-        Event event = new Event(eventId, TEST_EVENT_TYPE, null, profile, TEST_SCOPE, null, null, new Date());
+        Event event = new Event(TEST_EVENT_TYPE, null, profile, TEST_SCOPE, null, null, new Date());
 
         ContextRequest contextRequest = new ContextRequest();
         contextRequest.setSessionId(sessionId);
@@ -211,12 +212,13 @@ public class ContextServletIT extends BaseIT {
         request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
         TestUtils.executeContextJSONRequest(request, sessionId);
 
-        keepTrying("Event " + eventId + " not saved in the required time", () -> eventService.getEvent(eventId), Objects::nonNull, DEFAULT_TRYING_TIMEOUT,
+        Session session = keepTrying("Session with the id " + sessionId + " not saved in the required time",
+                () -> profileService.loadSession(sessionId,
+                        null), Objects::nonNull, DEFAULT_TRYING_TIMEOUT,
                 DEFAULT_TRYING_TRIES);
 
-        Session session = profileService.loadSession(sessionId, null);
         assertEquals(TEST_EVENT_TYPE, session.getOriginEventTypes().get(0));
-        assertEquals(eventId, session.getOriginEventIds().get(0));
+        assertFalse(session.getOriginEventIds().isEmpty());
     }
 
     @Test
