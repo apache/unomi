@@ -57,37 +57,37 @@
         <dependency>
             <groupId>org.eclipse.jetty</groupId>
             <artifactId>jetty-client</artifactId>
-            <version>7.4.4.v20110707</version>
+            <version>9.4.48.v20220622</version>
         </dependency>
         <dependency>
             <groupId>org.eclipse.jetty</groupId>
             <artifactId>jetty-http</artifactId>
-            <version>7.4.4.v20110707</version>
+            <version>9.4.48.v20220622</version>
         </dependency>
         <dependency>
             <groupId>org.eclipse.jetty</groupId>
             <artifactId>jetty-io</artifactId>
-            <version>7.4.4.v20110707</version>
+            <version>9.4.48.v20220622</version>
         </dependency>
         <dependency>
             <groupId>org.eclipse.jetty</groupId>
             <artifactId>jetty-util</artifactId>
-            <version>7.4.4.v20110707</version>
+            <version>9.4.48.v20220622</version>
         </dependency>
         <dependency>
             <groupId>org.cometd.java</groupId>
             <artifactId>bayeux-api</artifactId>
-            <version>2.3.1</version>
+            <version>4.0.9</version>
         </dependency>
         <dependency>
             <groupId>org.cometd.java</groupId>
-            <artifactId>cometd-java-common</artifactId>
-            <version>2.3.1</version>
+            <artifactId>cometd-java-client-common</artifactId>
+            <version>5.0.13</version>
         </dependency>
         <dependency>
             <groupId>org.cometd.java</groupId>
-            <artifactId>cometd-java-client</artifactId>
-            <version>2.3.1</version>
+            <artifactId>cometd-java-client-http-jetty</artifactId>
+            <version>5.0.13</version>
         </dependency>
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
