@@ -17,6 +17,7 @@
 
 package org.apache.unomi.api;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -53,8 +54,8 @@ public class Session extends Item implements TimestampedItem {
 
     private int duration = 0;
 
-    private List<String> originEventTypes;
-    private List<String> originEventIds;
+    private List<String> originEventTypes = new ArrayList<>();
+    private List<String> originEventIds = new ArrayList<>();
 
     /**
      * Instantiates a new Session.

@@ -167,7 +167,7 @@ public class ContextJsonEndpoint {
 
         // build public context, profile + session creation/anonymous etc ...
         EventsRequestContext eventsRequestContext = restServiceUtils.initEventsRequest(scope, sessionId, profileId,
-                personaId, invalidateProfile, invalidateSession, request, response, timestamp, events != null ? events: Collections.emptyList());
+                personaId, invalidateProfile, invalidateSession, request, response, timestamp);
 
         // Build response
         ContextResponse contextResponse = new ContextResponse();

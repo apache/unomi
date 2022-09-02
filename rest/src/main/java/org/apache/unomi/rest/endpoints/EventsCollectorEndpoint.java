@@ -114,7 +114,7 @@ public class EventsCollectorEndpoint {
 
         // build public context, profile + session creation/anonymous etc ...
         EventsRequestContext eventsRequestContext = restServiceUtils.initEventsRequest(scope, sessionId, profileId, null, false, false,
-                request, response, timestamp, events);
+                request, response, timestamp);
 
         // process events
         eventsRequestContext = restServiceUtils.performEventsRequest(eventsCollectorRequest.getEvents(), eventsRequestContext);
