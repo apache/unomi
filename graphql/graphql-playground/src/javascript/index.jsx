@@ -25,6 +25,6 @@ document.addEventListener('DOMContentLoaded', function() {
         <Provider store={store}>
             <Playground endpoint='http://localhost:8181/graphql'/>
         </Provider>,
-        document.body
+        document.getElementById('root')
     )
 }, false);

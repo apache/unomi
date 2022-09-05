@@ -30,6 +30,7 @@ import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.message.BasicNameValuePair;
+import org.apache.http.ssl.SSLContexts;
 import org.apache.http.util.EntityUtils;
 import org.apache.unomi.api.Consent;
 import org.apache.unomi.api.Profile;
@@ -41,11 +42,12 @@ import org.cometd.bayeux.Channel;
 import org.cometd.bayeux.Message;
 import org.cometd.bayeux.client.ClientSessionChannel;
 import org.cometd.client.BayeuxClient;
+import org.cometd.client.http.jetty.JettyHttpClientTransport;
 import org.cometd.client.transport.ClientTransport;
-import org.cometd.client.transport.LongPollingTransport;
-import org.eclipse.jetty.client.ContentExchange;
 import org.eclipse.jetty.client.HttpClient;
+import org.eclipse.jetty.client.api.Request;
 import org.eclipse.jetty.util.ajax.JSON;
+import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -615,9 +617,9 @@ public class SFDCServiceImpl implements SFDCService {
     }
 
     private BayeuxClient makeClient() throws Exception {
-        HttpClient httpClient = new HttpClient();
+        HttpClient httpClient = new HttpClient(new SslContextFactory.Client.Client(true));
         httpClient.setConnectTimeout(CONNECTION_TIMEOUT);
-        httpClient.setTimeout(READ_TIMEOUT);
+        httpClient.setIdleTimeout(READ_TIMEOUT);
         httpClient.start();
 
         if (sfdcSession == null) {
@@ -628,20 +630,19 @@ public class SFDCServiceImpl implements SFDCService {
                 + "\nSession ID=" + sfdcSession.getSessionId());
 
         Map<String, Object> options = new HashMap<String, Object>();
-        options.put(ClientTransport.TIMEOUT_OPTION, READ_TIMEOUT);
-        LongPollingTransport transport = new LongPollingTransport(
+        options.put(ClientTransport.MAX_NETWORK_DELAY_OPTION, READ_TIMEOUT);
+        JettyHttpClientTransport transport = new JettyHttpClientTransport(
                 options, httpClient) {
 
             @Override
-            protected void customize(ContentExchange exchange) {
-                super.customize(exchange);
-                exchange.addRequestHeader("Authorization", "OAuth " + sfdcSession.getSessionId());
+            protected void customize(Request request) {
+                super.customize(request);
+                request.header("Authorization", "OAuth " + sfdcSession.getSessionId());
             }
         };
 
-        BayeuxClient client = new BayeuxClient(getSalesforceStreamingEndpoint(
+        return new BayeuxClient(getSalesforceStreamingEndpoint(
                 sfdcSession.getEndPoint()), transport);
-        return client;
     }
 
     public void setupPushListener(String channelName, ClientSessionChannel.MessageListener messageListener) throws
@@ -658,7 +659,7 @@ public class SFDCServiceImpl implements SFDCService {
                     @Override
                     public void onMessage(ClientSessionChannel channel, Message message) {
 
-                        logger.debug("[CHANNEL:META_HANDSHAKE]: " + message);
+                        logger.info("[CHANNEL:META_HANDSHAKE]: " + message);
 
                         boolean success = message.isSuccessful();
                         if (!success) {
@@ -680,7 +681,7 @@ public class SFDCServiceImpl implements SFDCService {
                 new ClientSessionChannel.MessageListener() {
                     public void onMessage(ClientSessionChannel channel, Message message) {
 
-                        logger.debug("[CHANNEL:META_CONNECT]: " + message);
+                        logger.info("[CHANNEL:META_CONNECT]: " + message);
 
                         boolean success = message.isSuccessful();
                         if (!success) {
@@ -841,7 +842,7 @@ public class SFDCServiceImpl implements SFDCService {
                 return handleRequest(request, 0, true);
             } else {
                 logger.error("Error executing request {}: {}-{}", request, response.getStatusLine().getStatusCode(),
-                        response.getStatusLine().getStatusCode());
+                        response.getStatusLine().getReasonPhrase());
                 if (response.getEntity() != null) {
                     logger.error("Entity={}", EntityUtils.toString(response.getEntity()));
                 }

@@ -134,7 +134,7 @@
         <dependency>
             <groupId>org.apache.kafka</groupId>
             <artifactId>kafka-clients</artifactId>
-            <version>0.10.1.0</version>
+            <version>${kafka.client.version}</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
