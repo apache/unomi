@@ -787,7 +787,7 @@
             <dependency>
                 <groupId>org.apache.commons</groupId>
                 <artifactId>commons-email</artifactId>
-                <version>1.3.3</version>
+                <version>1.5</version>
                 <!-- This is the latest version we can use right now because of the javax.mail dependency that is still on 1.3 provided by pax-web, standard and cxf features -->
             </dependency>
             <!-- End of Apache Commons dependencies -->
