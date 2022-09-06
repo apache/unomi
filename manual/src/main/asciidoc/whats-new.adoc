@@ -13,14 +13,14 @@
 //
 === What's new in Apache Unomi 2.0
 
-Apache Unomi 2 is a new release focused on improving core functionalities and robustness of the product. 
+Apache Unomi 2 is a new release focused on improving core functionalities and robustness of the product.
 The introduction of tighter data validation with JSON Schemas required some changes in the product data model, which presented an opportunity for noticeable improvements in the overall performance.
 
 This new release also introduces a first (beta) version of the Unomi GraphQL API.
 
 ==== Scopes declarations are now required
 
-Scopes declarations are now required in Unomi 2. When submitting an event and specifying a scope, 
+Scopes declarations are now required in Unomi 2. When submitting an event and specifying a scope,
 that scope must already be declared on the platform.
 
 Scopes can be easily created via the corresponding REST API (`cxs/scopes`)
@@ -39,8 +39,8 @@ curl --location --request POST 'http://localhost:8181/cxs/scopes' \
 
 ==== JSON Schemas
 
-Apache Unomi 2 introduces support for https://json-schema.org/specification.html[JSON Schema] for all of its publicly exposed endpoints. 
-Data received by Apache Unomi 2 will first be validated against a known schema to make sure it complies with an expected payload. 
+Apache Unomi 2 introduces support for https://json-schema.org/specification.html[JSON Schema] for all of its publicly exposed endpoints.
+Data received by Apache Unomi 2 will first be validated against a known schema to make sure it complies with an expected payload.
 If the received payload does not match a known schema, it will be rejected by Apache Unomi 2.
 
 Apache Unomi 2 also introduces a set of administrative endpoints allowing new schemas and/or schemas extensions to be registered.
@@ -51,11 +51,46 @@ More details about JSON Schemas implementation are available in the <<JSON schem
 
 The introduction of JSON schema required us to modify Apache Unomi data model, One of the key differences is the removal of open maps.
 
-For example, the following event model in Apache Unomi 1.x:
+The properties field in the events objects provided by unomi are now restricted by JSON schema.
+It's not possible to add value in this property without adding the JSON schema which allows to add the properties.
+
+If there is dynamic properties that you want to add to the event, you should use the new property of the event named flattenedProperties.
+It's also necessary to specify the format of the values which are added to flattenedProperties by JSON schema but theses value will
+stored as flattened and will not create dynamic mapping contrary to the properties field of the events.
+
+Here is an example for objects that used dynamic properties for URL parameters:
+
+The following event example in Apache Unomi 1.x:
 [source]
 ----
 {
-    "TODO": "ADD JSON"
+    "eventType":"view",
+    "scope":"digitall",
+    "properties":{
+        "URLParameters":{
+           "utm_source":"source"
+        }
+    },
+    "target":{
+        "scope":"digitall",
+        "itemId":"30c0a9e3-4330-417d-9c66-4c1beec85f08",
+        "itemType":"page",
+        "properties":{
+           "pageInfo":{
+              "pageID":"30c0a9e3-4330-417d-9c66-4c1beec85f08",
+              "nodeType":"jnt:page",
+              "pageName":"Home",
+              ...
+           },
+           "attributes":{},
+           "consentTypes":[]
+        }
+    },
+    "source":{
+        "scope":"digitall",
+        "itemId":"ff5886e0-d75a-4061-9de9-d90dfc9e18d8",
+        "itemType":"site"
+    }
 }
 ----
 
@@ -63,14 +98,38 @@ Is replaced by the following in Apache Unomi 2.x:
 [source]
 ----
 {
-    "TODO": "ADD JSON"
+    "eventType":"view",
+    "scope":"digitall",
+    "flattenedProperties":{
+        "URLParameters":{
+           "utm_source":"source"
+        }
+    },
+    "target":{
+        "scope":"digitall",
+        "itemId":"30c0a9e3-4330-417d-9c66-4c1beec85f08",
+        "itemType":"page",
+        "properties":{
+           "pageInfo":{
+              "pageID":"30c0a9e3-4330-417d-9c66-4c1beec85f08",
+              "nodeType":"jnt:page",
+              "pageName":"Home",
+              ...
+           },
+           "attributes":{},
+           "consentTypes":[]
+        }
+    },
+    "source":{
+        "scope":"digitall",
+        "itemId":"ff5886e0-d75a-4061-9de9-d90dfc9e18d8",
+        "itemType":"site"
+    }
 }
 ----
 
-Most objects were refactored as part of this new release. 
-
-If using the default Apache 1.x data model, our Unomi 2 migration process will handle the data model changes for you. 
-If you are using custom events/objects, please refer to the detailed migration guide for more details. 
+If using the default Apache 1.x data model, our Unomi 2 migration process will handle the data model changes for you.
+If you are using custom events/objects, please refer to the detailed migration guide for more details.
 
 ==== Removal of the Web Tracker
 
@@ -82,8 +141,8 @@ use case.
 
 ==== GraphQL API - beta
 
-Apache Unomi 2.0 sees the introduction of a new (beta) GraphQL API. 
-Available behind a feature flag (the API disabled by default), the GraphQL API is available for you to play with. 
+Apache Unomi 2.0 sees the introduction of a new (beta) GraphQL API.
+Available behind a feature flag (the API disabled by default), the GraphQL API is available for you to play with.
 
 More details about how to enable/disable the GraphQL API are available in the <<GraphQL API,corresponding section>> of the documentation.
 
@@ -91,20 +150,20 @@ We welcome tickets/PRs to improve its robustness and progressively make it ready
 
 ==== Migrate from Unomi 1.x
 
-To facilitate migration we prepared a set of scripts that will automatically handle the migration of your data from Apache Unomi 1.5+ to Apache Unomi 2.0. 
+To facilitate migration we prepared a set of scripts that will automatically handle the migration of your data from Apache Unomi 1.5+ to Apache Unomi 2.0.
 
-It is worth keeping in mind that for Apache Unomi 2.0 we do not support “hot” migration, 
+It is worth keeping in mind that for Apache Unomi 2.0 we do not support “hot” migration,
 the migration process will require a shutdown of your cluster to guarantee that no new events will be collected while data migration is in progress.
 
-Special caution must be taken if you declared custom events as our migration scripts can only handle objects we know of. 
+Special caution must be taken if you declared custom events as our migration scripts can only handle objects we know of.
 More details about migration (incl. of custom events) is available in the corresponding section <<Migrations,corresponding section>> of the documentation.
 
 ==== Elasticsearch compatibility
 
-We currently recommend using Elasticsearch 7.17.5 with Apache Unomi 2.0, 
+We currently recommend using Elasticsearch 7.17.5 with Apache Unomi 2.0,
 this ensure you are on a recent version that is not impacted by the log4j vulnerabilities (fixed in Elasticsearch 7.16.3).
 
-This version increase is releated to Apache Unomi 2.0 makeing use of a new Elasticsearch field type 
-called https://www.elastic.co/guide/en/elasticsearch/reference/7.17/flattened.html[Flattened], 
-and although it was available in prior versions of Elasticsearch, we do not recommend using those 
+This version increase is releated to Apache Unomi 2.0 makeing use of a new Elasticsearch field type
+called https://www.elastic.co/guide/en/elasticsearch/reference/7.17/flattened.html[Flattened],
+and although it was available in prior versions of Elasticsearch, we do not recommend using those
 due to the above-mentioned log4j vulnerabilities.

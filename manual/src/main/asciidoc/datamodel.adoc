@@ -21,14 +21,16 @@ user profiles into segments along user-definable dimensions or acted upon by alg
 The following data model only contains the classes and properties directly related to the most important objects of Apache Unomi.
 There are other classes that are less central to the functionality but all the major ones are represented in the diagram below:
 
-image::data-model-overview.png[]
+image::data-model.png[]
 
 We will detail many of these classes in the document below.
 
 === Scope
 
-Scopes are not actually an object in the system, but simply unique strings that are used to "classify" objects.
+Scopes are objects which simply contains unique strings that are used to "classify" objects.
 For example, when using scopes with a web content management system, a scope could be associated with a site identifier or even a host name.
+
+In events, scopes are used to validate event. Events with scope which are unknown by the system will be considered as invalid
 
 ____
 
@@ -204,11 +206,15 @@ Inherits all the fields from: <<Item>>
 
 | scope | String | (Optional, event type specific) An identifier for a scope
 
+| persistent | Boolean | Defines if the event should be persisted or not (default: true)
+
 | source | <<Item>> | An Item that is the source of the event. For example a web site, an application name, a web page
 
 | target | <<Item>> | An Item that is the target of the event. For example a button, a link, a file or a page
 
 | properties | Map<String,Object> | Properties for the event. These will change depending on the event type.
+
+| flattenedProperties | Map<String,Object> | Properties that will be persisted as flattened. These will change depending on the event type.
 
 |===
 
@@ -253,7 +259,7 @@ Inherits all the fields from: <<Item>>
 
 | scores | Map<String,Integer> | A map of scores with the score identifier as the key and the score total value as the value.
 
-| mergedWith | String | If merged with another profile, the profile identifier to the master profile is stored here
+| @Deprecated mergedWith | String | If merged with another profile, the profile identifier to the master profile is stored here
 
 | consents | Map<String,<<Consent>>> | The consents for the profile, as a map with the consent identifier as a key and the Consent object type as a value.
 
@@ -314,13 +320,13 @@ image::profile.png[]
         "lists": [
             "userListId"
         ],
-"goals": {
-    "viewLanguagePageGoalTargetReached": "2020-02-10T19:30:31Z",
-    "downloadGoalExampleTargetReached": "2020-02-10T15:22:41Z",
-    "viewLandingPageGoalStartReached": "2020-02-10T19:30:27Z",
-    "downloadGoalExampleStartReached": "2020-02-10T19:30:27Z",
-    "optimizationTestGoalStartReached": "2020-02-10T19:30:27Z"
-}
+        "goals": {
+            "viewLanguagePageGoalTargetReached": "2020-02-10T19:30:31Z",
+            "downloadGoalExampleTargetReached": "2020-02-10T15:22:41Z",
+            "viewLandingPageGoalStartReached": "2020-02-10T19:30:27Z",
+            "downloadGoalExampleStartReached": "2020-02-10T19:30:27Z",
+            "optimizationTestGoalStartReached": "2020-02-10T19:30:27Z"
+        }
     },
     "segments": [
         "leads",
@@ -394,7 +400,6 @@ In the following example a Persona represents a visitor from Europe, that can be
     "systemProperties": {},
     "segments": [],
     "scores": null,
-    "mergedWith": null,
     "consents": {}
 }
 ----
@@ -786,7 +791,7 @@ Inherits all the fields from: <<MetadataItem>>
 
 ==== Example
 
-In this exmample we should the default `updateProperties` built-in rule that matches the `updateProperties` event and
+In this example we can see the default `updateProperties` built-in rule that matches the `updateProperties` event and
 executes the built-in `updatePropertiesAction`
 
 [source,json]
@@ -1001,7 +1006,7 @@ Inherits all the fields from: <<MetadataItem>>
 
 In the following example a campaign that starts January 1st 31, 2020 at 8:38am and finished on February 29th, 2020 at the same time has the following entry condition: the session duration must be less or equal to 3000 milliseconds (3 seconds) and the profile has viewed the “about” page on the “digitall” website.
 The cost of the campaign is USD 1’000’000 and the timezone is Europe/Zurich.
-The primary goal for the campaign is the goal we should as an example in the Goal section.
+The primary goal for the campaign is the goal we should have as an example in the Goal section.
 
 [source,json]
 ----
