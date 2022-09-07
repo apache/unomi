@@ -52,10 +52,14 @@ More details about JSON Schemas implementation are available in the <<JSON schem
 The introduction of JSON schema required us to modify Apache Unomi data model, One of the key differences is the removal of open maps.
 
 The properties field in the events objects provided by unomi are now restricted by JSON schema.
-It's not possible to add value in this property without adding the JSON schema which allows to add the properties.
+This means object properties must be declared in a JSON schema for an event to be accepted.
 
-If there is dynamic properties that you want to add to the event, you should use the new property of the event named flattenedProperties.
-It's also necessary to specify the format of the values which are added to flattenedProperties by JSON schema but theses value will
+A new property, flattenedProperties has been introduced to the event object, this property has been added to store the properties as
+flattened in Elasticsearch and should avoid mapping explosion for dynamic properties.
+
+If there is dynamic properties that you want to send with your event, you should use the flattenedProperties field of the event.
+
+It's also necessary to specify the format of the values which are added to flattenedProperties by JSON schema but these value will be
 stored as flattened and will not create dynamic mapping contrary to the properties field of the events.
 
 Here is an example for objects that used dynamic properties for URL parameters:
