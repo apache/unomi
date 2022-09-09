@@ -5,5 +5,6 @@ updates:
     schedule:
       interval: "daily"
     ignore:
-      - dependency-name: "commons-email"
-        versions: [ "3.x" ]
+      - dependency-name: "org.apache.commons:commons-email"
+        versions:
+          - "> 1.3.3"
