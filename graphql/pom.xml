@@ -34,7 +34,7 @@
     <properties>
         <graphql.java.version>14.0</graphql.java.version>
         <graphql.java.annotations.version>8.0</graphql.java.annotations.version>
-        <graphql.java.extended.scalars.version>1.0</graphql.java.extended.scalars.version>
+        <graphql.java.extended.scalars.version>18.1</graphql.java.extended.scalars.version>
         <reactivex.version>2.2.19</reactivex.version>
         <antlr.runtime.version>4.7.1</antlr.runtime.version>
         <java.dataloader.version>2.2.0</java.dataloader.version>
