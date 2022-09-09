@@ -25,7 +25,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <properties>
-        <graphql.java.annotations.version>8.0</graphql.java.annotations.version>
+        <graphql.java.annotations.version>9.1</graphql.java.annotations.version>
     </properties>
 
     <artifactId>samples</artifactId>
