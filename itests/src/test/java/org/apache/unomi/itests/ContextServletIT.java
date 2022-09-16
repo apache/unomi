@@ -551,6 +551,75 @@ public class ContextServletIT extends BaseIT {
     }
 
     @Test
+    public void testScorePersonalizationStrategy_Interests() throws Exception {
+        // Test request before adding interests to current profile.
+        HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
+        request.setEntity(new StringEntity(getValidatedBundleJSON("personalization-score-interests.json", null), ContentType.APPLICATION_JSON));
+        TestUtils.RequestResponse response = TestUtils.executeContextJSONRequest(request);
+        ContextResponse contextResponse = response.getContextResponse();
+        List<String> variants = contextResponse.getPersonalizations().get("perso-by-interest");
+        assertEquals("Invalid response code", 200, response.getStatusCode());
+        assertEquals("Perso should be empty, profile is empty", 0, variants.size());
+
+        // set profile for matching
+        Profile profile = profileService.load(TEST_PROFILE_ID);
+        profile.setProperty("age", 30);
+        profileService.save(profile);
+        keepTrying("Profile " + TEST_PROFILE_ID + " not found in the required time", () -> profileService.load(TEST_PROFILE_ID),
+                savedProfile -> (savedProfile != null && savedProfile.getProperty("age").equals(30)), DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+
+        // check results of the perso now
+        request = new HttpPost(getFullUrl(CONTEXT_URL));
+        request.setEntity(new StringEntity(getValidatedBundleJSON("personalization-score-interests.json", null), ContentType.APPLICATION_JSON));
+        response = TestUtils.executeContextJSONRequest(request);
+        contextResponse = response.getContextResponse();
+        variants = contextResponse.getPersonalizations().get("perso-by-interest");
+        assertEquals("Invalid response code", 200, response.getStatusCode());
+        assertEquals("Perso should contains the good number of variants", 1, variants.size());
+        assertEquals("Variant is not the expected one", "matching-fishing-interests-custom-score-100-variant-expected-score-120", variants.get(0));
+
+        // modify profile to add interests
+        profile = profileService.load(TEST_PROFILE_ID);
+        List<Map<String, Object>> interests = new ArrayList<>();
+        Map<String, Object> interest1 = new HashMap<>();
+        interest1.put("key", "cars");
+        interest1.put("value", 50);
+        interests.add(interest1);
+        Map<String, Object> interest2 = new HashMap<>();
+        interest2.put("key", "football");
+        interest2.put("value", 40);
+        interests.add(interest2);
+        Map<String, Object> interest3 = new HashMap<>();
+        interest3.put("key", "tennis");
+        interest3.put("value", 30);
+        interests.add(interest3);
+        Map<String, Object> interest4 = new HashMap<>();
+        interest4.put("key", "fishing");
+        interest4.put("value", 20);
+        interests.add(interest4);
+        profile.setProperty("interests", interests);
+        profileService.save(profile);
+        keepTrying("Profile " + TEST_PROFILE_ID + " not found in the required time", () -> profileService.load(TEST_PROFILE_ID),
+                savedProfile -> (savedProfile != null && savedProfile.getProperty("interests") != null), DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+
+        // re test now that profiles has interests
+        request = new HttpPost(getFullUrl(CONTEXT_URL));
+        request.setEntity(new StringEntity(getValidatedBundleJSON("personalization-score-interests.json", null), ContentType.APPLICATION_JSON));
+        response = TestUtils.executeContextJSONRequest(request);
+        contextResponse = response.getContextResponse();
+        variants = contextResponse.getPersonalizations().get("perso-by-interest");
+        assertEquals("Invalid response code", 200, response.getStatusCode());
+        assertEquals("Perso should contains the good number of variants", 7, variants.size());
+        assertEquals("Variant is not the expected one", "matching-fishing-interests-custom-score-100-variant-expected-score-120", variants.get(0));
+        assertEquals("Variant is not the expected one", "matching-football-cars-interests-variant-expected-score-91", variants.get(1));
+        assertEquals("Variant is not the expected one", "not-matching-football-cars-interests-variant-expected-score-90", variants.get(2));
+        assertEquals("Variant is not the expected one", "not-matching-tennis-fishing-interests-variant-expected-score-50", variants.get(3));
+        assertEquals("Variant is not the expected one", "matching-football-interests-variant-expected-score-51", variants.get(4));
+        assertEquals("Variant is not the expected one", "matching-tennis-interests-variant-expected-score-31", variants.get(5));
+        assertEquals("Variant is not the expected one", "not-matching-tennis-interests-custom-score-100-variant-expected-score-30", variants.get(6));
+    }
+
+    @Test
     public void testPersonalizationWithControlGroup() throws Exception {
 
         Map<String, String> parameters = new HashMap<>();
