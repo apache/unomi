@@ -49,10 +49,15 @@ public class ScorePersonalizationStrategy implements PersonalizationStrategy {
 
             String interestList = (String) (personalizedContent.getProperties() != null ? personalizedContent.getProperties().get("interests") : null);
             if (interestList != null) {
-                Map<String,Integer> interestValues = (Map<String, Integer>) profile.getProperties().get("interests");
-                for (String interest : interestList.split(" ")) {
-                    if (interestValues != null && interestValues.get(interest) != null) {
-                        score += interestValues.get(interest);
+                List<Map<String, Object>> profileInterests = (List<Map<String, Object>>) profile.getProperties().get("interests");
+                if (profileInterests != null) {
+                    for (String interest : interestList.split(" ")) {
+                        for (Map<String, Object> profileInterest : profileInterests) {
+                            if (profileInterest.get("key").equals(interest)){
+                                score += ((Number) profileInterest.get("value")).intValue();
+                                break;
+                            }
+                        }
                     }
                 }
             }
@@ -74,7 +79,7 @@ public class ScorePersonalizationStrategy implements PersonalizationStrategy {
                     Condition condition = filter.getCondition();
                     if (condition != null && condition.getConditionTypeId() != null) {
                         if (profileService.matchCondition(condition, profile, session)) {
-                            if (filter.getProperties().get("score") != null) {
+                            if (filter.getProperties() != null && filter.getProperties().get("score") != null) {
                                 score += (int) filter.getProperties().get("score");
                             } else {
                                 score += 1;
