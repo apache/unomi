@@ -1,14 +1,14 @@
 {
-  "$id": "https://unomi.apache.org/schemas/json/events/login/1-0-0",
+  "$id": "https://unomi.apache.org/schemas/json/events/click/1-0-0",
   "$schema": "https://json-schema.org/draft/2019-09/schema",
   "self": {
     "vendor": "org.apache.unomi",
     "target": "events",
-    "name": "login",
+    "name": "click",
     "format": "jsonschema",
     "version": "1-0-0"
   },
-  "title": "LoginEvent",
+  "title": "ClickEvent",
   "type": "object",
   "allOf": [
     {
@@ -16,10 +16,12 @@
     }
   ],
   "properties": {
-    "properties": {
-      "type": "object",
-      "maxProperties": 50
+    "source": {
+      "$ref": "https://unomi.apache.org/schemas/json/items/page/1-0-0"
+    },
+    "target": {
+      "$ref": "https://unomi.apache.org/schemas/json/item/1-0-0"
     }
   },
-  "$comment": "WARNING: This schema is open and do not restrict unevaluated properties because it is protected with third-party server key check"
+  "unevaluatedProperties": false
 }
