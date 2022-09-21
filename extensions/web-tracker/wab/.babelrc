@@ -1,0 +1,9 @@
+{
+  "presets": [
+    ["@babel/preset-env", {
+      "targets": {
+        "browsers": ["since 2018"]
+      }
+    }]
+  ]
+}
