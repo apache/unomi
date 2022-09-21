@@ -91,8 +91,8 @@
                     %regex[(?!((?!${project.build.directory}/)[^/]+/)*src/)(.*/)?release\.properties]
                 </exclude>
                 <!-- NodeJS projects -->
-                <exclude>**/extensions/web-tracker/javascript/node/**/*</exclude>
-                <exclude>**/extensions/web-tracker/javascript/node_modules/**/*</exclude>
+                <exclude>**/extensions/web-tracker/wab/node/**/*</exclude>
+                <exclude>**/extensions/web-tracker/wab/node_modules/**/*</exclude>
             </excludes>
         </fileSet>
         <!--  license, readme, etc. calculated at build time  -->
