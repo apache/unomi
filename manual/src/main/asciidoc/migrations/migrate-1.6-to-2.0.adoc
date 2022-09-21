@@ -71,11 +71,12 @@ these scripts are sorted alphabetically and executed sequentially when migration
 In most cases, migration steps consist of an Elasticsearch painless script that will handle the data changes.
 
 Depending of the volume of data, migration can be lengthy. By paying attention to when re-indexation is happening (triggered in the groovy scripts by `MigrationUtils.reIndex()`), 
-you can find the most appropriate time for your scritps to be executed to avoir re-indexing the same indices multiple times.
+you can find the most appropriate time for your scritps to be executed and avoid re-indexing the same indices multiple times.
 
-For example if you wanted to update profiles with custom data (currently migrated by `migrate-2.0.0-10-profileReindex.groovy`), you could create a script in position "09" that would only contain painless scripts 
-(see current painless scripts here: https://github.com/apache/unomi/tree/master/tools/shell-commands/src/main/resources/requestBody/2.0.0[tools/shell-commands/src/main/resources/requestBody/2.0.0]) without a reindexing step. 
+For example if you wanted to update profiles with custom data (currently migrated by `migrate-2.0.0-10-profileReindex.groovy`), you could create a script in position "09" that would only contain painless scripts without a reindexing step. 
 The script in position "10" will introduce its own painless script, then trigger the re-indexation. This way you don't have to re-index the same indices twice.
+
+You can find existing painless scripts in https://github.com/apache/unomi/tree/master/tools/shell-commands/src/main/resources/requestBody/2.0.0[tools/shell-commands/src/main/resources/requestBody/2.0.0]
 
 At runtime, and when starting the migration, Unomi 2.0 will take its own scripts, any additional scripts located in `data/migration/scripts`, will sort the resulting list alphabetically and execute each migration script sequentially.
 
