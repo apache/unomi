@@ -119,6 +119,7 @@ public class UnomiManagementServiceImpl implements UnomiManagementService {
         bundleSymbolicNames.add("org.apache.unomi.router-service");
         bundleSymbolicNames.add("org.apache.unomi.router-rest");
         bundleSymbolicNames.add("org.apache.unomi.shell-dev-commands");
+        bundleSymbolicNames.add("org.apache.unomi.web-tracker-wab");
         bundleSymbolicNames.add("org.apache.unomi.groovy-actions-services");
         bundleSymbolicNames.add("org.apache.unomi.groovy-actions-rest");
 
