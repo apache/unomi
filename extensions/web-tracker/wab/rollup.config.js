@@ -19,20 +19,39 @@ import noderesolve from '@rollup/plugin-node-resolve';
 import nodePolyfills from 'rollup-plugin-polyfill-node';
 import babel from '@rollup/plugin-babel';
 import { terser } from 'rollup-plugin-terser';
+import sourcemaps from 'rollup-plugin-sourcemaps';
 
 // iife (immediately invoked function expression) Used to avoid collision in the browser page with others JS
-export default {
-    input: 'src/javascript/main.js',
-    output: {
-        format: 'iife',
-        file: 'dist/unomi-web-tracker.min.js',
-        name: 'unomiWebTracker'
+export default [
+    {
+        input: 'src/javascript/main.js',
+        output: {
+            format: 'iife',
+            file: 'dist/unomi-web-tracker.min.js',
+            name: 'unomiWebTracker'
+        },
+        plugins: [
+            commonjs(), // handle: require
+            noderesolve(), // resolve modules from node_modules
+            nodePolyfills(), // the apache-unomi-tracker is using Buffer internally (crawler bot detection), it needs to be polyfill for browser usage
+            babel({ babelHelpers: 'bundled' }), // transpilation
+            terser() // minification
+        ]
     },
-    plugins: [
-        commonjs(), // handle: require
-        noderesolve(), // resolve modules from node_modules
-        nodePolyfills(), // the apache-unomi-tracker is using Buffer internally (crawler bot detection), it needs to be polyfill for browser usage
-        babel({ babelHelpers: 'bundled' }), // transpilation
-        terser() // minification
-    ]
-};
+    {
+        input: 'src/javascript/main.js',
+        output: {
+            format: 'iife',
+            file: 'dist/unomi-web-tracker.js',
+            name: 'unomiWebTracker',
+            sourcemap: true
+        },
+        plugins: [
+            sourcemaps(),
+            commonjs(), // handle: require
+            noderesolve(), // resolve modules from node_modules
+            nodePolyfills(), // the apache-unomi-tracker is using Buffer internally (crawler bot detection), it needs to be polyfill for browser usage
+            babel({ babelHelpers: 'bundled' }), // transpilation
+        ]
+    }
+];
