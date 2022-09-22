@@ -1,0 +1,18 @@
+{
+  "$id": "https://unomi.apache.org/schemas/json/events/form/flattenedProperties/1-0-0",
+  "$schema": "https://json-schema.org/draft/2019-09/schema",
+  "self":{
+    "vendor": "org.apache.unomi",
+    "name": "Form flattenedProperties",
+    "format":"jsonschema",
+    "version":"1-0-0"
+  },
+  "title": "Form flattenedProperties",
+  "type": "object",
+  "properties" : {
+    "fields": {
+      "$ref" : "https://unomi.apache.org/schemas/json/events/form/flattenedProperties/fields/1-0-0"
+    }
+  },
+  "unevaluatedProperties" : false
+}
