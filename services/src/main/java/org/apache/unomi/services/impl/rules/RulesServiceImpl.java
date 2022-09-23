@@ -17,7 +17,6 @@
 
 package org.apache.unomi.services.impl.rules;
 
-import org.apache.commons.collections.ListUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.Item;
