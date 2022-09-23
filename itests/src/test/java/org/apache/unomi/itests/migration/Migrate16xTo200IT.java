@@ -99,6 +99,7 @@ public class Migrate16xTo200IT extends BaseIT {
         Assert.assertTrue(HttpUtils.executeGetRequest(httpClient, "http://localhost:9400/context-goal/_mapping", null).contains("\"startEvent\":{\"type\":\"object\",\"enabled\":false}"));
         Assert.assertTrue(HttpUtils.executeGetRequest(httpClient, "http://localhost:9400/context-patch/_mapping", null).contains("\"data\":{\"type\":\"object\",\"enabled\":false}"));
         Assert.assertTrue(HttpUtils.executeGetRequest(httpClient, "http://localhost:9400/context-rule/_mapping", null).contains("\"condition\":{\"type\":\"object\",\"enabled\":false}"));
+        Assert.assertTrue(HttpUtils.executeGetRequest(httpClient, "http://localhost:9400/context-rule/_mapping", null).contains("\"parameterValues\":{\"type\":\"object\",\"enabled\":false}"));
         Assert.assertTrue(HttpUtils.executeGetRequest(httpClient, "http://localhost:9400/context-profile/_mapping", null).contains("\"interests\":{\"type\":\"nested\""));
         for (String eventIndex : MigrationUtils.getIndexesPrefixedBy(httpClient, "http://localhost:9400", "context-event-")) {
             Assert.assertTrue(HttpUtils.executeGetRequest(httpClient, "http://localhost:9400/" + eventIndex + "/_mapping", null).contains("\"flattenedProperties\":{\"type\":\"flattened\"}"));
