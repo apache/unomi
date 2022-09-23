@@ -342,11 +342,8 @@ public abstract class BaseIT {
 
     public void createAndWaitForRule(Rule rule) throws InterruptedException {
         rulesService.setRule(rule);
-        refreshPersistence();
-        keepTrying("Failed waiting for rule to be saved",
-                () -> rulesService.getRule(rule.getMetadata().getId()),
-                Objects::nonNull,
-                3000,
+        keepTrying("Failed waiting for rule to be saved", () -> rulesService.getAllRules(),
+                (rules) -> rules.stream().anyMatch(r -> r.getItemId().equals(rule.getMetadata().getId())), 1000,
                 100);
         rulesService.refreshRules();
     }

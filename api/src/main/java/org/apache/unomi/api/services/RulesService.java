@@ -26,6 +26,7 @@ import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.rules.Rule;
 import org.apache.unomi.api.rules.RuleStatistics;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -56,6 +57,15 @@ public interface RulesService {
      * @return a {@link PartialList} of rule details for the rules matching the specified query
      */
     PartialList<Rule> getRuleDetails(Query query);
+
+    /**
+     * Get all rules available in the system.
+     * (This is not doing a persistence query to retrieve the rules, it's using the internal in memory cache
+     * that is refreshed every second by default but can vary depending on your own configuration)
+     *
+     * @return all rules available.
+     */
+    List<Rule> getAllRules();
 
     /**
      * Retrieves the rule identified by the specified identifier.
