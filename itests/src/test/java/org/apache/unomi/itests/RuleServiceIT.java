@@ -79,8 +79,32 @@ public class RuleServiceIT extends BaseIT {
     }
 
     @Test
-    public void testRuleEventTypeOptimization() throws InterruptedException {
+    public void getAllRulesShouldReturnAllRulesAvailable() throws InterruptedException {
+        String ruleIDBase = "moreThan50RuleTest";
+        int originalRulesNumber = rulesService.getAllRules().size();
+        for (int i = 0; i < 60; i++) {
+            String ruleID = ruleIDBase + "_" + i;
+            Metadata metadata = new Metadata(ruleID);
+            metadata.setName(ruleID);
+            metadata.setDescription(ruleID);
+            metadata.setScope(TEST_SCOPE);
+            Rule nullRule = new Rule(metadata);
+            nullRule.setCondition(null);
+            nullRule.setActions(null);
+            createAndWaitForRule(nullRule);
+        }
+        assertEquals("Expected getAllRules to be able to retrieve all the rules available in the system", originalRulesNumber + 60, rulesService.getAllRules().size());
+        // cleanup
+        for (int i = 0; i < 60; i++) {
+            String ruleID = ruleIDBase + "_" + i;
+            rulesService.removeRule(ruleID);
+        }
+        refreshPersistence();
+        rulesService.refreshRules();
+    }
 
+    @Test
+    public void testRuleEventTypeOptimization() throws InterruptedException {
         ConditionBuilder builder = new ConditionBuilder(definitionsService);
         Rule simpleEventTypeRule = new Rule(new Metadata(TEST_SCOPE, "simple-event-type-rule", "Simple event type rule", "A rule with a simple condition to match an event type"));
         simpleEventTypeRule.setCondition(builder.condition("eventTypeCondition").parameter("eventTypeId", "view").build());

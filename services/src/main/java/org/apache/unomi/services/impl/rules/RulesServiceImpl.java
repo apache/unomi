@@ -268,7 +268,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
         try {
             // we use local variables to make sure we quickly switch the collections since the refresh is called often
             // we want to avoid concurrency issues with the shared collections
-            List<Rule> newAllRules = getAllRules();
+            List<Rule> newAllRules = queryAllRules();
             this.rulesByEventType = getRulesByEventType(newAllRules);
             this.allRules = newAllRules;
         } catch (Throwable t) {
@@ -276,7 +276,11 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
         }
     }
 
-    private List<Rule> getAllRules() {
+    public List<Rule> getAllRules() {
+        return Collections.unmodifiableList(allRules);
+    }
+
+    private List<Rule> queryAllRules() {
         List<Rule> rules = persistenceService.getAllItems(Rule.class, 0, -1, "priority").getList();
         for (Rule rule : rules) {
             // Check rule integrity

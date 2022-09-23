@@ -935,16 +935,17 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
     public void recalculatePastEventConditions() {
         Set<String> segmentOrScoringIdsToReevaluate = new HashSet<>();
         // reevaluate auto generated rules used to store the event occurrence count on the profile
-        for (Metadata metadata : rulesService.getRuleMetadatas()) {
-            Rule rule = rulesService.getRule(metadata.getId());
-            for (Action action : rule.getActions()) {
-                if (action.getActionTypeId().equals("setEventOccurenceCountAction")) {
-                    Condition pastEventCondition = (Condition) action.getParameterValues().get("pastEventCondition");
-                    if (pastEventCondition.containsParameter("numberOfDays")) {
-                        recalculatePastEventOccurrencesOnProfiles(rule.getCondition(), pastEventCondition, true, true);
-                        logger.info("Event occurrence count on profiles updated for rule: {}", rule.getItemId());
-                        if (rule.getLinkedItems() != null && rule.getLinkedItems().size() > 0) {
-                            segmentOrScoringIdsToReevaluate.addAll(rule.getLinkedItems());
+        for (Rule rule : rulesService.getAllRules()) {
+            if (rule.getActions() != null && rule.getActions().size() > 0) {
+                for (Action action : rule.getActions()) {
+                    if (action.getActionTypeId().equals("setEventOccurenceCountAction")) {
+                        Condition pastEventCondition = (Condition) action.getParameterValues().get("pastEventCondition");
+                        if (pastEventCondition.containsParameter("numberOfDays")) {
+                            recalculatePastEventOccurrencesOnProfiles(rule.getCondition(), pastEventCondition, true, true);
+                            logger.info("Event occurrence count on profiles updated for rule: {}", rule.getItemId());
+                            if (rule.getLinkedItems() != null && rule.getLinkedItems().size() > 0) {
+                                segmentOrScoringIdsToReevaluate.addAll(rule.getLinkedItems());
+                            }
                         }
                     }
                 }
