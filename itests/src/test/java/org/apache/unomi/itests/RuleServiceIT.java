@@ -79,8 +79,9 @@ public class RuleServiceIT extends BaseIT {
     }
 
     @Test
-    public void testMoreThan50Rules() throws InterruptedException {
+    public void getAllRulesShouldReturnAllRulesAvailable() throws InterruptedException {
         String ruleIDBase = "moreThan50RuleTest";
+        int originalRulesNumber = rulesService.getAllRules().size();
         for (int i = 0; i < 60; i++) {
             String ruleID = ruleIDBase + "_" + i;
             Metadata metadata = new Metadata(ruleID);
@@ -92,7 +93,8 @@ public class RuleServiceIT extends BaseIT {
             nullRule.setActions(null);
             createAndWaitForRule(nullRule);
         }
-        assertTrue("Expected rule actions to be null", rulesService.getAllRules().size() >= 60);
+        assertEquals("Expected getAllRules to be able to retrieve all the rules available in the system", originalRulesNumber + 60, rulesService.getAllRules().size());
+        // cleanup
         for (int i = 0; i < 60; i++) {
             String ruleID = ruleIDBase + "_" + i;
             rulesService.removeRule(ruleID);
