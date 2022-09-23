@@ -49,6 +49,14 @@
     "condition": {
       "type": "object",
       "enabled": false
+    },
+    "actions": {
+      "properties": {
+        "parameterValues": {
+          "type": "object",
+          "enabled": false
+        }
+      }
     }
   }
 }
