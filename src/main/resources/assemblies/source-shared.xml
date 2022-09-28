@@ -93,6 +93,8 @@
                 <!-- NodeJS projects -->
                 <exclude>**/extensions/web-tracker/wab/node/**/*</exclude>
                 <exclude>**/extensions/web-tracker/wab/node_modules/**/*</exclude>
+                <exclude>**/graphql/graphql-playground/node/**/*</exclude>
+                <exclude>**/graphql/graphql-playground/node_modules/**/*</exclude>
             </excludes>
         </fileSet>
         <!--  license, readme, etc. calculated at build time  -->
