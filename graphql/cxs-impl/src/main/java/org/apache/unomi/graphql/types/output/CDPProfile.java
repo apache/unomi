@@ -47,7 +47,7 @@ public class CDPProfile implements CDPProfileInterface {
 
     public static final String TYPE_NAME = "CDP_Profile";
 
-    private Profile profile;
+    private final Profile profile;
 
     public CDPProfile(Profile profile) {
         this.profile = profile;
@@ -73,7 +73,7 @@ public class CDPProfile implements CDPProfileInterface {
     @Override
     @GraphQLField
     public List<CDPInterest> cdp_interests(final @GraphQLName("views") List<String> viewIds, final DataFetchingEnvironment environment) throws Exception {
-        return new ProfileInterestsDataFetcher(profile).get(environment);
+        return new ProfileInterestsDataFetcher(profile, viewIds).get(environment);
     }
 
     @Override

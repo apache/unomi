@@ -67,11 +67,13 @@ public class SegmentProfileInterestsConditionParser {
         final String comparisonOperator =
                 ComparisonConditionTranslator.translateFromUnomiToGraphQL(condition.getParameter("comparisonOperator").toString());
 
-        final String fieldName = "score_" + comparisonOperator;
-
         final Map<String, Object> tuple = new HashMap<>();
 
-        tuple.put(fieldName, condition.getParameter("propertyValueInteger"));
+        if (!"exists".equals(comparisonOperator)) {
+            final String fieldName = "score_" + comparisonOperator;
+            tuple.put(fieldName, condition.getParameter("propertyValueInteger"));
+        }
+
         tuple.put("topic_equals", condition.getParameter("propertyName").toString().replaceAll("properties.interests.", ""));
 
         return tuple;

@@ -96,7 +96,7 @@ public class CDPPersona implements CDPProfileInterface {
     public List<CDPInterest> cdp_interests(
             final @GraphQLName("views") List<String> viewIds,
             final DataFetchingEnvironment environment) throws Exception {
-        return persona != null ? new ProfileInterestsDataFetcher(persona).get(environment) : null;
+        return persona != null ? new ProfileInterestsDataFetcher(persona, viewIds).get(environment) : null;
     }
 
     @GraphQLField

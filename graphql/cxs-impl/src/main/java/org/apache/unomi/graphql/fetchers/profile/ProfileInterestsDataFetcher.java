@@ -25,26 +25,38 @@ import org.apache.unomi.graphql.types.output.CDPInterest;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 public class ProfileInterestsDataFetcher implements DataFetcher<List<CDPInterest>> {
 
     private final Profile profile;
 
-    public ProfileInterestsDataFetcher(Profile profile) {
+    private final List<String> viewIds;
+
+    public ProfileInterestsDataFetcher(Profile profile, List<String> viewIds) {
         this.profile = profile;
+        this.viewIds = viewIds;
     }
 
     @Override
     @SuppressWarnings("unchecked")
     public List<CDPInterest> get(DataFetchingEnvironment environment) throws Exception {
-        final Map<String, Double> interests = (Map<String, Double>) profile.getProperties().get("interests");
+        final List<Map<String, Object>> interests = (List<Map<String, Object>>) profile.getProperties().get("interests");
         if (interests == null) {
             return Collections.emptyList();
         }
 
-        return interests.entrySet().stream()
-                .map(entry -> new CDPInterest(entry.getKey(), entry.getValue()))
+        return interests.stream()
+                .map(interest -> {
+                    final String topic = interest.get("key").toString();
+                    final Double score = Double.parseDouble(interest.get("value").toString());
+                    if (viewIds != null && !viewIds.isEmpty()) {
+                        return viewIds.contains(topic) ? new CDPInterest(topic, score) : null;
+                    }
+                    return new CDPInterest(topic, score);
+                })
+                .filter(Objects::nonNull)
                 .collect(Collectors.toList());
     }
 }

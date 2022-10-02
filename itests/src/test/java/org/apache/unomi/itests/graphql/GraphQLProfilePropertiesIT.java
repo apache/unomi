@@ -21,19 +21,18 @@ import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.unomi.api.Consent;
 import org.apache.unomi.api.ConsentStatus;
 import org.apache.unomi.api.Profile;
-import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.graphql.utils.DateUtils;
 import org.junit.Assert;
 import org.junit.Test;
-import org.ops4j.pax.exam.util.Filter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.inject.Inject;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
@@ -95,14 +94,16 @@ public class GraphQLProfilePropertiesIT extends BaseGraphQLIT {
         Date revokationDate = DateUtils.toDate(OffsetDateTime.parse("2021-05-14T14:47:28Z"));
         consent.setRevokeDate(revokationDate);
 
-        final Map<String, Double> interestsAsMap = new HashMap<>();
-
-        interestsAsMap.put("interestName", 0.5);
+        final List<Map<String, Object>> interests = new ArrayList<>();
+        Map<String, Object> interest1 = new HashMap<>();
+        interest1.put("key", "interestName");
+        interest1.put("value", 0.5);
+        interests.add(interest1);
 
         final Profile profile = new Profile("profileId_testGetProfile_CDPFields");
 
         profile.setConsent(consent);
-        profile.setProperty("interests", interestsAsMap);
+        profile.setProperty("interests", interests);
 
         profileService.save(profile);
 
