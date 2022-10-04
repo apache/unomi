@@ -26,6 +26,7 @@ mvn -Ddoc.archive=true -Ddoc.source=src/archives/1.3/asciidoc -Ddoc.output.pdf=t
 mvn -Ddoc.archive=true -Ddoc.source=src/archives/1.4/asciidoc -Ddoc.output.pdf=target/generated-docs/pdf/1_4_x -Ddoc.output.html=target/generated-docs/html/1_4_x -Ddoc.version=1_4_x -P sign verify
 mvn -Ddoc.archive=true -Ddoc.source=src/archives/1.5/asciidoc -Ddoc.output.pdf=target/generated-docs/pdf/1_5_x -Ddoc.output.html=target/generated-docs/html/1_5_x -Ddoc.version=1_5_x -P sign verify
 mvn -Ddoc.archive=true -Ddoc.source=src/archives/1.6/asciidoc -Ddoc.output.pdf=target/generated-docs/pdf/1_6_x -Ddoc.output.html=target/generated-docs/html/1_6_x -Ddoc.version=1_6_x -P sign verify
+mvn -Ddoc.archive=true -Ddoc.output.pdf=target/generated-docs/pdf/2_0_x -Ddoc.output.html=target/generated-docs/html/2_0_x -Ddoc.version=2_0_x -P sign install
 mvn  -P sign install
 cd ..
 echo Generating Javadoc...
