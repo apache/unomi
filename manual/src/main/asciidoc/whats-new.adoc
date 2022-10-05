@@ -14,9 +14,14 @@
 === What's new in Apache Unomi 2.0
 
 Apache Unomi 2 is a new release focused on improving core functionalities and robustness of the product.
+
 The introduction of tighter data validation with JSON Schemas required some changes in the product data model, which presented an opportunity for noticeable improvements in the overall performance.
 
 This new release also introduces a first (beta) version of the Unomi GraphQL API.
+
+==== Introducing profiles aliases
+
+Profiles may now have alias IDs, which is a new way to reference profiles using multiple IDs. The Unomi ID still exists, but a new index with aliases can reference a single Unomi profile. This enables more flexible integrations with external systems, as well as provide more flexible and reliable merging mechanisms. A new REST API makes it easy to define, update and remove aliases for profiles.
 
 ==== Scopes declarations are now required
 
@@ -133,15 +138,14 @@ Is replaced by the following in Apache Unomi 2.x:
 ----
 
 If using the default Apache 1.x data model, our Unomi 2 migration process will handle the data model changes for you.
-If you are using custom events/objects, please refer to the detailed migration guide for more details.
 
-==== Removal of the Web Tracker
+If you are using custom events/objects, please refer to the detailed <<_migration_overview,migration guide>> for more details.
 
-[TODO: Add more details about the web tracker]
+==== New Web Tracker
 
-Apache Unomi 2.0 Web Tracker, previously located in `extensions/web-tracker/` has been removed.
-We considered it as outdated and instead recommend implementing your own tracker logic based on your project
-use case.
+Apache Unomi 2.0 Web Tracker, located in `extensions/web-tracker/` has been completely rewritten. It is no longer based on an external library and is fully self-sufficient. It is based on an external contribution that has been used in production on many sites.
+
+You can find more information about the <<_unomi_web_tracking_tutorial,new web tracker here>>.
 
 ==== GraphQL API - beta
 

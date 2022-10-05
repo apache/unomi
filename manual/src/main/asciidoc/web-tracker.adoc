@@ -1,0 +1,220 @@
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+=== Unomi Web Tracker reference
+
+In this section of the documentation, more details are provided about the web tracker provided by Unomi.
+
+==== Custom events
+
+In order to be able to use your own custom events with the web tracker, you must first declare them in Unomi so that they are properly recognized and validated by the `/context.json` or `/eventcollector` endpoints.
+
+===== Declaring JSON schema
+
+The first step is to declare a JSON schema for your custom event type. Here's an example of such a declaration:
+
+[source,json]
+----
+{
+  "$id": "https://unomi.apache.org/schemas/json/events/click/1-0-0",
+  "$schema": "https://json-schema.org/draft/2019-09/schema",
+  "self": {
+    "vendor": "org.apache.unomi",
+    "target": "events",
+    "name": "click",
+    "format": "jsonschema",
+    "version": "1-0-0"
+  },
+  "title": "ClickEvent",
+  "type": "object",
+  "allOf": [
+    {
+      "$ref": "https://unomi.apache.org/schemas/json/event/1-0-0"
+    }
+  ],
+  "properties": {
+    "source": {
+      "$ref": "https://unomi.apache.org/schemas/json/items/page/1-0-0"
+    },
+    "target": {
+      "$ref": "https://unomi.apache.org/schemas/json/item/1-0-0"
+    }
+  },
+  "unevaluatedProperties": false
+}
+----
+
+The above example comes from a built-in event type that is already declared in Unomi but that illustrates the structure of a JSON schema. It is not however the objective of this section of the documentation to go into the details of how to declare a JSON schema, instead, we recommend you go to the <<_json_schemas_2,corresponding section>> of the documentation.
+
+===== Sending event from tracker
+
+In the Unomi web tracker, you can use the following function to send an event to Unomi:
+
+[source,javascript]
+----
+        /**
+         * This function will send an event to Apache Unomi
+         * @param {object} event The event object to send, you can build it using wem.buildEvent(eventType, target, source)
+         * @param {function} successCallback optional, will be executed in case of success
+         * @param {function} errorCallback optional, will be executed in case of error
+         * @return {undefined}
+         */
+        collectEvent: function (event, successCallback = undefined, errorCallback = undefined)
+----
+
+As you can see this function is quite straight forward to use. There are also helper functions to build events, such as :
+
+[source,javascript]
+----
+        /**
+         * This function return the basic structure for an event, it must be adapted to your need
+         *
+         * @param {string} eventType The name of your event
+         * @param {object} [target] The target object for your event can be build with wem.buildTarget(targetId, targetType, targetProperties)
+         * @param {object} [source] The source object for your event can be build with wem.buildSource(sourceId, sourceType, sourceProperties)
+         * @returns {object} the event
+         */
+        buildEvent: function (eventType, target, source)
+
+        /**
+         * This function return an event of type form
+         *
+         * @param {string} formName The HTML name of id of the form to use in the target of the event
+         * @param {HTMLFormElement} form optional HTML form element, if provided will be used to extract the form fields and populate the form event
+         * @returns {object} the form event
+         */
+        buildFormEvent: function (formName, form = undefined)
+
+        /**
+         * This function return the source object for a source of type page
+         *
+         * @returns {object} the target page
+         */
+        buildTargetPage: function ()
+
+        /**
+         * This function return the source object for a source of type page
+         *
+         * @returns {object} the source page
+         */
+        buildSourcePage: function ()
+
+        /**
+         * This function return the basic structure for the target of your event
+         *
+         * @param {string} targetId The ID of the target
+         * @param {string} targetType The type of the target
+         * @param {object} [targetProperties] The optional properties of the target
+         * @returns {object} the target
+         */
+        buildTarget: function (targetId, targetType, targetProperties = undefined)
+
+        /**
+         * This function return the basic structure for the source of your event
+         *
+         * @param {string} sourceId The ID of the source
+         * @param {string} sourceType The type of the source
+         * @param {object} [sourceProperties] The optional properties of the source
+         * @returns {object} the source
+         */
+        buildSource: function (sourceId, sourceType, sourceProperties = undefined)
+
+----
+
+Here's an example of using these helper functions and the `collectEvent` function alltogether:
+
+[source,javascript]
+----
+    var clickEvent = wem.buildEvent('click',
+        wem.buildTarget('buttonId', 'button'),
+        wem.buildSourcePage());
+
+    wem.collectEvent(clickEvent, function (xhr) {
+        console.info('Click event successfully collected.');
+    }, function (xhr) {
+        console.error('Could not send click event.');
+    });
+----
+
+===== Sending multiple events
+
+In some cases, especially when multiple events must be sent fast and the order of the events is critical for rules to be properly executed, it is better to use another function called `collectEvents` that will batch the sending of events to Unomi in a single HTTP request. Here's the signature of this function:
+
+[source,javascript]
+----
+        /**
+         * This function will send the events to Apache Unomi
+         *
+         * @param {object} events Javascript object { events: [event1, event2] }
+         * @param {function} successCallback optional, will be executed in case of success
+         * @param {function} errorCallback optional, will be executed in case of error
+         * @return {undefined}
+         */
+        collectEvents: function (events, successCallback = undefined, errorCallback = undefined)
+----
+
+This function is almost exactly the same as the `collectEvent` method except that it takes an events array instead of a single one. The events in the array may be of any mixture of types.
+
+===== Extending existing events
+
+An alternative to defining custom event types is to extend existing event types. This, for example, can be used to add new properties to the built-in `view` event type.
+
+For more information about event type extensions, please read the <<_extend_an_existing_schema,JSON schema section>> of this documentation.
+
+==== Integrating with tag managers
+
+Integrating with tag managers such as Google Tag Manager is an important part of the way trackers can be added to an existing site. Unomi's web tracker should be pretty easy to integrate with such tools: you simply need to insert the script tag to load the script and then another tag to initialize it and map any tag manager variables you want.
+
+Personalization scripts should however be modified to check for the existence of the tracker object in the page because tag managers might deactivate scripts based on conditions such as GDPR approval, cookie preferences, ...
+
+==== Cookie/session handling
+
+In order to track profiles, an identifier must be stored in the browser so that subsequent requests can keep a reference to the visitor's profile. Also, a session identifier must be generated to group the current visitor interactions.
+
+Unomi's web tracker uses 3 cookies in the tracker by default:
+
+- server profile ID, called `context-profile-id` by default, that is sent from the Unomi server
+- web tracker profile ID, called `web-profile-id` by default (this is a copy of the server profile ID that can be managed by the tracker directly)
+- web tracker session ID, called `wem-session-id` by default
+
+It is possible to change the name of these cookie by passing the following properties to the start's initialization:
+
+[source,javascript]
+----
+    "wemInitConfig": {
+        ...
+        "contextServerCookieName": "context-profile-id",
+        "trackerSessionIdCookieName": "unomi-tracker-test-session-id",
+        "trackerProfileIdCookieName": "unomi-tracker-test-profile-id"
+    }
+----
+
+Please note however that the `contextServerCookieName` will also have to be changed in the server configuration in order for it to work. See the <<_configuration,Configuration>> section for details on how to do this.
+
+For session tracking, it is important to provide a value for the cookie otherwise the tracker will not initialize (a message is displayed in the console that explains that the session cookie is missing). Here is the code excerpt from the initialization code used in the tutorial that creates the initial cookie value.
+
+[source,javascript]
+----
+    // generate a new session
+    if (unomiWebTracker.getCookie(unomiTrackerTestConf.wemInitConfig.trackerSessionIdCookieName) == null) {
+        unomiWebTracker.setCookie(unomiTrackerTestConf.wemInitConfig.trackerSessionIdCookieName, unomiWebTracker.generateGuid(), 1);
+    }
+----
+
+Note that this is just an example, you could very well customize this code to create session IDs another way.
+
+==== JavaScript API
+
+The JavaScript API for the web tracker is directly provided in the source code of the web tracker. You can find it here: https://github.com/apache/unomi-tracker/blob/main/src/apache-unomi-tracker.js
+
+Please note that only the functions that do NOT start with an underscore should be used. The ones that start with an underscore are not considered part of the public API and could change or even be removed at any point in the future.
