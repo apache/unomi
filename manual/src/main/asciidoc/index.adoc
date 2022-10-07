@@ -28,23 +28,33 @@ image::asf_logo_url.png[pdfwidth=35%,align=center]
 
 include::whats-new.adoc[]
 
-== Quick start
+== Discover Unomi
 
 include::5-min-quickstart.adoc[]
 
-== First steps with Apache Unomi
-
 include::getting-started.adoc[]
+
+include::tutorial.adoc[]
+
+== Apache Unomi Recipes and requests
 
 include::recipes.adoc[]
 
 include::request-examples.adoc[]
 
+== Configuration
+
 include::configuration.adoc[]
+
+== JSON schemas
 
 include::jsonSchema/json-schema.adoc[]
 
+== GraphQL API
+
 include::graphql.adoc[]
+
+== Migrations
 
 include::migrations/migrations.adoc[]
 
@@ -85,6 +95,8 @@ include::builtin-condition-types.adoc[]
 include::builtin-action-types.adoc[]
 
 include::updating-events.adoc[]
+
+include::web-tracker.adoc[]
 
 == Integration samples
 

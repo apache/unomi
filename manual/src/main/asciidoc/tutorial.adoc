@@ -1,0 +1,343 @@
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+=== Unomi web tracking tutorial
+
+In this tutorial we will guide through the basic steps of getting started with a web tracking project. You will see how to integrate the built-in web tracker with an existing web site and what this enables.
+
+If you prefer to use existing HTML and Javascript rather than building your own, all the code we feature in this tutorial is extracted from our tracker sample which is available here: https://github.com/apache/unomi/blob/master/extensions/web-tracker/wab/src/main/webapp/index.html . However you will still need to use the REST API calls to create the scope and rule to make it all work.
+
+==== Installing the web tracker in a web page
+
+Using the built-in tracker is pretty simple, simply add the following code to your HTML page :
+
+[source,javascript]
+----
+    <script type="text/javascript" src="/tracker/unomi-web-tracker.min.js"></script>
+----
+
+or you can also use the non-minified version that is available here:
+
+[source,javascript]
+----
+    <script type="text/javascript" src="/tracker/unomi-web-tracker.js"></script>
+----
+
+This will only load the tracker. To initialize it use a snipper like the following code:
+
+[source,javascript]
+----
+    <script type="text/javascript">
+        (function () {
+            const unomiTrackerTestConf = {
+                "scope": "unomi-tracker-test",
+                "site": {
+                    "siteInfo": {
+                        "siteID": "unomi-tracker-test"
+                    }
+                },
+                "page": {
+                    "pageInfo": {
+                        "pageID": "unomi-tracker-test-page",
+                        "pageName": document.title,
+                        "pagePath": document.location.pathname,
+                        "destinationURL": document.location.origin + document.location.pathname,
+                        "language": "en",
+                        "categories": [],
+                        "tags": []
+                    },
+                    "attributes": {},
+                    "consentTypes": []
+                },
+                "events:": [],
+                "wemInitConfig": {
+                    "contextServerUrl": document.location.origin,
+                    "timeoutInMilliseconds": "1500",
+                    "contextServerCookieName": "context-profile-id",
+                    "activateWem": true,
+                    "trackerSessionIdCookieName": "unomi-tracker-test-session-id",
+                    "trackerProfileIdCookieName": "unomi-tracker-test-profile-id"
+                }
+            }
+
+            // generate a new session
+            if (unomiWebTracker.getCookie(unomiTrackerTestConf.wemInitConfig.trackerSessionIdCookieName) == null) {
+                unomiWebTracker.setCookie(unomiTrackerTestConf.wemInitConfig.trackerSessionIdCookieName, unomiWebTracker.generateGuid(), 1);
+            }
+
+            // init tracker with our conf
+            unomiWebTracker.initTracker(unomiTrackerTestConf);
+
+            unomiWebTracker._registerCallback(() => {
+                console.log("Unomi tracker test successfully loaded context", unomiWebTracker.getLoadedContext());
+            }, 'Unomi tracker test callback example');
+
+            // start the tracker
+            unomiWebTracker.startTracker();
+        })();
+    </script>
+----
+
+==== Creating a scope to collect the data
+
+You might notice the `scope` used in the snippet. All events sent to Unomi must be associated with a scope, that must have been created before events are accepted. So in order to make sure the events are collected with the above Javascript code, we must create a scope with the following request.
+
+[source,shell]
+----
+curl --location --request POST 'http://localhost:8181/cxs/scopes' \
+  --header 'Authorization: Basic a2FyYWY6a2FyYWY=' \
+  --header 'Content-Type: application/json' \
+  --data-raw '{
+    "itemId": "unomi-tracker-test",
+    "metadata": {
+      "id": "unomi-tracker-test",
+      "name": "Unomi tracker Test Scope"
+    }
+  }'
+----
+
+The authorization is the default username/password for the REST API, which is `karaf:karaf` and you that should definitely be changed as soon as possible by modifying the `etc/users.properties` file.
+
+==== Using tracker in your own JavaScript projects
+
+The tracker also exists as an NPM library that you can integrate with your own Javascript projects. You can find the library here:
+
+    https://www.npmjs.com/package/apache-unomi-tracker
+
+Here's an example on how to use it:
+
+[source,shell]
+----
+    yarn add apache-unomi-tracker
+----
+
+You can then simply use it in your JS code using something like this:
+
+[source,javascript]
+----
+import {useTracker} from "apache-unomi-tracker";
+
+(function () {
+    const unomiWebTracker = useTracker();
+    const unomiTrackerTestConf = {
+        "scope": "unomi-tracker-test",
+        "site": {
+            "siteInfo": {
+                "siteID": "unomi-tracker-test"
+            }
+        },
+        "page": {
+            "pageInfo": {
+                "pageID": "unomi-tracker-test-page",
+                "pageName": document.title,
+                "pagePath": document.location.pathname,
+                "destinationURL": document.location.origin + document.location.pathname,
+                "language": "en",
+                "categories": [],
+                "tags": []
+            },
+            "attributes": {},
+            "consentTypes": []
+        },
+        "events:": [],
+        "wemInitConfig": {
+            "contextServerUrl": document.location.origin,
+            "timeoutInMilliseconds": "1500",
+            "contextServerCookieName": "context-profile-id",
+            "activateWem": true,
+            "trackerSessionIdCookieName": "unomi-tracker-test-session-id",
+            "trackerProfileIdCookieName": "unomi-tracker-test-profile-id"
+        }
+    }
+
+    // generate a new session
+    if (unomiWebTracker.getCookie(unomiTrackerTestConf.wemInitConfig.trackerSessionIdCookieName) == null) {
+        unomiWebTracker.setCookie(unomiTrackerTestConf.wemInitConfig.trackerSessionIdCookieName, unomiWebTracker.generateGuid(), 1);
+    }
+
+    // init tracker with our conf
+    unomiWebTracker.initTracker(unomiTrackerTestConf);
+
+    unomiWebTracker._registerCallback(() => {
+        console.log("Unomi tracker test successfully loaded context", unomiWebTracker.getLoadedContext());
+    }, 'Unomi tracker test callback example');
+
+    // start the tracker
+    unomiWebTracker.startTracker();
+})();
+----
+
+==== Viewing collected events
+
+There are multiple ways to view the events that were received. For example, you could use the following cURL request:
+
+[source,shell]
+----
+curl --location --request POST 'http://localhost:8181/cxs/events/search' \
+  --header 'Authorization: Basic a2FyYWY6a2FyYWY=' \
+  --header 'Content-Type: application/json' \
+  --data-raw '{
+    "sortby" : "timeStamp:desc",
+    "condition" : {
+      "type" : "matchAllCondition"
+    }
+  }'
+----
+
+Another (powerful) way to look at events is to use the SSH Console. You can connect to it with the following shell command:
+
+[source,shell]
+----
+    ssh -p 8102 karaf@localhost
+----
+
+Using the same username password (karaf:karaf) and then you can use command such as :
+
+- `event-tail` to view in realtime the events as they come in (CTRL+C to stop)
+- `event-list` to view the latest events
+- `event-view EVENT_ID` to view the details of a specific event
+
+==== Viewing the current profile
+
+By default, Unomi uses a cookie called context-profile-id to keep track of the current profile. You can use this the value of this cookie which contains a UUID to lookup the details of the profile. For example with the SSH console you can simply to:
+
+    profile-view PROFILE_UUID
+
+Which will print out the details of the profile with the associated ID.
+Another interesting command is `profile-list` to list all the recently modified profiles
+
+You could also retrieve the profile details using the REST API by using a request such as this one:
+
+[source,shell]
+----
+curl --location --request GET 'http://localhost:8181/cxs/profiles/PROFILE_UUID' \
+--header 'Authorization: Basic a2FyYWY6a2FyYWY=' \
+----
+
+==== Adding a rule
+
+Rules are a powerful ways to react in real-time to incoming events. For example a rule could update a profile when a certain event comes in, either copying values from the event or performing some kind of computation when the event occurs, including accessing remote systems such as a Salesforce CRM (see the Salesforce connector sample).
+
+In this example we will simply setup a basic rule that will react to the `view` event and set a property in the current profile.
+
+[source,shell]
+----
+curl --location --request POST 'http://localhost:8181/cxs/rules' \
+--header 'Authorization: Basic a2FyYWY6a2FyYWY=' \
+--header 'Content-Type: application/json' \
+--data-raw '{
+    "metadata": {
+        "id": "viewEventRule",
+        "name": "View event rule",
+        "description": "Increments a property on a profile to indicate that this rule executed successfully when a view event occurs"
+    },
+    "condition": {
+        "type": "eventTypeCondition",
+        "parameterValues": {
+            "eventTypeId": "view"
+        }
+    },
+    "actions": [
+        {
+            "type": "incrementPropertyAction",
+            "parameterValues": {
+                "propertyName": "pageViewCount"
+            }
+        }
+    ]
+}'
+----
+
+The above rule will execute when a view event is received (which is automatically sent by the tracker when a page is loaded) and increments a property called `pageViewCount` on the user's profile.
+
+You can then reload then page and check with the `profile-view PROFILE_UUID` SSH command that the profile was updated with the new property and that it is incremented on each page reload.
+
+You can also use the `rule-list` command to display all the rules in the system and the `rule-tail` to watch in real-time which rules are executed. The `rule-view RULE_ID` command will let you view the contents of a rule.
+
+==== Adding personalization
+
+The last step is to use the newly added property to the profile to perform some page personalization. In order to do that we will use the tracker's API to register a personalization that will be using a condition that checks if the `pageViewCount` is higher than 5. If it has, `variant1` will be displayed, otherwise the fallback variant `variant2` will be used instead.
+
+[source,javascript]
+----
+            variants = {
+                "var1" : {
+                    content : "variant1",
+                },
+                "var2" : {
+                    content : "variant2",
+                }
+            }
+            unomiWebTracker.registerPersonalizationObject({
+                "id": "testPersonalization",
+                "strategy": "matching-first",
+                "strategyOptions": {"fallback": "var2"},
+                "contents": [{
+                    "id": "var1",
+                    "filters": [{
+                        "condition": {
+                            "type": "profilePropertyCondition",
+                            "parameterValues": {
+                                "propertyName" : "properties.pageViewCount",
+                                "comparisonOperator" : "greaterThan",
+                                "propertyValueInteger" : 5
+                            }
+                        }
+                    }]
+                }, {
+                    "id": "var2"
+                }]
+            }, variants, false, function (successfulFilters, selectedFilter) {
+                if (selectedFilter) {
+                    document.getElementById(selectedFilter.content).style.display = '';
+                }
+            });
+
+----
+
+As you can see in the above code snippet, a `variants` array is created with two objects that associated personalization IDs with content IDs. Then we build the personalization object that contains the two IDs and their associated conditions (only a condition on `var1` is passed in this case) as well as an option to indicate which is the fallback variant in case no conditions are matched.
+
+The HTML part of this example looks like this:
+
+[source,html]
+----
+    <div id="variant1" style="display: none">
+        You have already seen this page 5 times
+    </div>
+    <div id="variant2" style="display: none">
+        Welcome. Please reload this page 5 times until it triggers the personalization change
+    </div>
+----
+
+As you can see we hide the variants by default so that there is no "flashing" effect and then use the callback function to display to variant resolve by Unomi's personalization engine.
+
+==== Conclusion
+
+What have we achieved so far ?
+
+- Installed a tracker in a web page
+- Created a scope in which to collect the data
+- Learned how to use the tracker as an NPM library
+- How to view the collected events
+- How to view the current visitor profile
+- How to add a rule to update a profile property
+- How to personalize a web page's content based on the property updated by the rule
+
+Of course this tutorial is just one example of what could be achieved, and hasn't even yet introduced more advanced notions such as profile segmentation or Groovy action scripting. The system is capable of much more, for example by directly using its actions to integrate with third-party systems (CRM, social networks, etc..)
+
+==== Next steps
+
+- Learn more about the <<_unomi_web_tracker_reference,web tracker, custom events, API, ...>>
+- Learn more about <<_segment,segmentation>>
+- View some more <<_integration_samples,samples>>
+- Continue reading Unomi's user manual to see all that is possible with this technology

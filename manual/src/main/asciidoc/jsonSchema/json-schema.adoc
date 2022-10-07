@@ -11,9 +11,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-
-== JSON schemas
-
 include::introduction.adoc[]
 
 include::json-schema-api.adoc[]

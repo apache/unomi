@@ -11,8 +11,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-== Configuration
-
 === Centralized configuration
 
 Apache Unomi uses a centralized configuration file that contains both system properties and configuration properties.

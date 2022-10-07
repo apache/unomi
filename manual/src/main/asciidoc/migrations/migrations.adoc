@@ -11,7 +11,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-== Migrations
 
 This section contains information and steps to migrate between major Unomi versions.
 

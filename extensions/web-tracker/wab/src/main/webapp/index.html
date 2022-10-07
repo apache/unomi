@@ -69,6 +69,39 @@
                 console.log("Unomi tracker test successfully loaded context", unomiWebTracker.getLoadedContext());
             }, 'Unomi tracker test callback example');
 
+            variants = {
+                "var1" : {
+                    content : "variant1",
+                },
+                "var2" : {
+                    content : "variant2",
+                }
+            }
+            unomiWebTracker.registerPersonalizationObject({
+                "id": "testPersonalization",
+                "strategy": "matching-first",
+                "strategyOptions": {"fallback": "var2"},
+                "contents": [{
+                    "id": "var1",
+                    "filters": [{
+                        "condition": {
+                            "type": "profilePropertyCondition",
+                            "parameterValues": {
+                                "propertyName" : "properties.pageViewCount",
+                                "comparisonOperator" : "greaterThan",
+                                "propertyValueInteger" : 5
+                            }
+                        }
+                    }]
+                }, {
+                    "id": "var2"
+                }]
+            }, variants, false, function (successfulFilters, selectedFilter) {
+                if (selectedFilter) {
+                    document.getElementById(selectedFilter.content).style.display = '';
+                }
+            });
+
             // start the tracker
             unomiWebTracker.startTracker();
         })();
@@ -79,18 +112,20 @@
 
 <p>
     The current page is sending a page view event using the <strong>Unomi web tracker</strong>.<br/><br/>
-    <strong>(Prerequisite: create scope "unomi-tracker-test" for the event to be accepted by the backend)</strong>
-</p>
-<pre>
-        POST /cxs/scopes
 
-        {
-          "itemId" : "unomi-tracker-test",
-          "metadata" : {
-            "id" : "unomi-tracker-test",
-            "name" : "Unomi tracker test"
-          }
-        }
-</pre>
+    <strong>See the <a href="https://unomi.apache.org/manual/latest/index.html#_unomi_web_tracking_tutorial">Unomi tutorial</a> for details on how to use
+        and setup the prerequisites for this code to work properly.</strong>
+</p>
+
+<p>The line below this one will be personalized depending on whether you have been on this page before.
+    Try reload the page to see the changes.</p>
+
+    <div id="variant1" style="display: none">
+        You have already seen this page 5 times
+    </div>
+    <div id="variant2" style="display: none">
+        Welcome. Please reload this page 5 times until it triggers the personalization change
+    </div>
+
 </body>
 </html>
