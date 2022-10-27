@@ -58,7 +58,6 @@
             <cm:property name="aggQueryMaxResponseSizeHttp" value="" />
             <cm:property name="aggQueryThrowOnMissingDocs" value="false" />
             <cm:property name="itemTypeToRefreshPolicy" value="" />
-            <cm:property name="itemClassesToCache" value="" />
             <cm:property name="useBatchingForSave" value="false" />
             <cm:property name="useBatchingForUpdate" value="true" />
 
@@ -74,7 +73,6 @@
     </cm:property-placeholder>
 
     <reference id="metricsService" interface="org.apache.unomi.metrics.MetricsService" />
-    <reference id="hazelcastInstance" interface="com.hazelcast.core.HazelcastInstance" />
     <reference id="scriptExecutor" interface="org.apache.unomi.scripting.ScriptExecutor" />
 
     <service id="elasticSearchPersistenceService" ref="elasticSearchPersistenceServiceImpl">
@@ -137,8 +135,6 @@
         <property name="clientSocketTimeout" value="${es.clientSocketTimeout}" />
 
         <property name="metricsService" ref="metricsService" />
-        <property name="hazelcastInstance" ref="hazelcastInstance" />
-        <property name="itemClassesToCache" value="${es.itemClassesToCache}" />
         <property name="useBatchingForSave" value="${es.useBatchingForSave}" />
         <property name="useBatchingForUpdate" value="${es.useBatchingForUpdate}" />
 
