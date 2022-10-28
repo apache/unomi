@@ -21,7 +21,7 @@ This new release also introduces a first (beta) version of the Unomi GraphQL API
 
 ==== Introducing profiles aliases
 
-Profiles may now have alias IDs, which is a new way to reference profiles using multiple IDs. The Unomi ID still exists, but a new index with aliases can reference a single Unomi profile. This enables more flexible integrations with external systems, as well as provide more flexible and reliable merging mechanisms. A new REST API makes it easy to define, update and remove aliases for profiles.
+Profiles may now have alias IDs, which is a new way to reference profiles using multiple IDs. The Unomi ID still exists, but a new index with aliases can reference a single Unomi profile. This enables more flexible integrations with external systems, as well as provide more flexible and reliable merging mechanisms. A new REST API makes it easy to define, update and remove aliases for profiles. You can read more about <<What profile aliases are and how to use them,profile aliases here>>.
 
 ==== Scopes declarations are now required
 

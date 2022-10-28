@@ -370,6 +370,40 @@ image::profile.png[]
 }
 ----
 
+=== Profile aliases
+
+Profile aliases make it possible to reference profiles using multiple identifiers.
+The profile alias object basically contains a link between the alias ID and the profile ID. The `itemId` of a profile alias is the actual alias ID, which the `profileID` field contains the reference to the aliased profile.
+
+==== Structure definition
+
+Inherits all the fields from: <<Item>>
+
+|===
+| *Field name* | *Type* | *Description*
+
+| profileID | String | The identifier of the profile this aliases points to
+
+| creationTime | DateTime | The date and time of creation of the alias
+
+| modifiedTime | DateTime | The date and time of last modification of the alias
+
+|===
+
+==== Example
+
+In the following example we show an alias ID `facebook_johndoe` for the profile with ID `f72242d2-3145-43b1-8be7-d1d47cf4ad0e`
+
+[source,json]
+----
+    {
+      "profileID": "f72242d2-3145-43b1-8be7-d1d47cf4ad0e",
+      "itemId" : "facebook_johndoe",
+      "creationTime" : "2022-09-16T19:23:51Z",
+      "modifiedTime" : "2022-09-16T19:23:51Z"
+    }
+----
+
 === Persona
 
 A persona is a specialized version of a <<Profile>> object. It basically represents a "typical" profile and can be used
