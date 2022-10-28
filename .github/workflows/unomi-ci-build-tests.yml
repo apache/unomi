@@ -5,7 +5,7 @@ name: Build and run tests
 
 on:
   push:
-    branches: [ master, unomi-1.6.x ]
+    branches: [ master, unomi-1.x ]
   pull_request:
     branches: [ master ]
 
