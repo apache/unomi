@@ -41,7 +41,6 @@ import org.apache.unomi.persistence.elasticsearch.conditions.*;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.aggregate.*;
 import org.elasticsearch.ElasticsearchStatusException;
-import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.DocWriteRequest;
 import org.elasticsearch.action.admin.cluster.health.ClusterHealthRequest;
 import org.elasticsearch.action.admin.cluster.storedscripts.PutStoredScriptRequest;
@@ -742,12 +741,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             protected T execute(Object... args) throws Exception {
                 try {
                     String itemType = Item.getItemType(clazz);
-                    String className = clazz.getName();
-                    if (customItemType != null) {
-                        className = CustomItem.class.getName() + "." + customItemType;
-                        itemType = customItemType;
-                    }
-
                     if (itemsMonthlyIndexed.contains(itemType) && dateHint == null) {
                         return new MetricAdapter<T>(metricsService, ".loadItemWithQuery") {
                             @Override
