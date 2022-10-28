@@ -16,7 +16,9 @@
  */
 package org.apache.unomi.itests;
 
+import org.apache.unomi.api.Event;
 import org.apache.unomi.api.Profile;
+import org.apache.unomi.api.Session;
 import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.persistence.spi.PersistenceService;
@@ -27,6 +29,7 @@ import org.apache.unomi.persistence.elasticsearch.*;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 
+import org.junit.After;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.Before;
@@ -40,8 +43,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
+
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.*;
 
 import javax.inject.Inject;
 
@@ -69,6 +74,11 @@ public class ProfileServiceIT extends BaseIT {
     @Before
     public void setUp() {
         TestUtils.removeAllProfiles(definitionsService, persistenceService);
+    }
+
+    @After
+    public void tearDown() throws InterruptedException {
+        removeItems(Profile.class, Event.class, Session.class);
     }
 
     @Test
@@ -147,5 +157,135 @@ public class ProfileServiceIT extends BaseIT {
         }
     }
 
+    @Test
+    public void testProfilePurge() throws Exception {
+        Date currentDate = new Date();
+        LocalDateTime minus10Days = LocalDateTime.ofInstant(currentDate.toInstant(), ZoneId.systemDefault()).minusDays(10);
+        LocalDateTime minus30Days = LocalDateTime.ofInstant(currentDate.toInstant(), ZoneId.systemDefault()).minusDays(30);
+        Date currentDateMinus10Days = Date.from(minus10Days.atZone(ZoneId.systemDefault()).toInstant());
+        Date currentDateMinus30Days = Date.from(minus30Days.atZone(ZoneId.systemDefault()).toInstant());
 
+        long originalProfilesCount  = persistenceService.getAllItemsCount(Profile.ITEM_TYPE);
+
+        // create inactive profiles since 10 days
+        for (int i = 0; i < 150; i++) {
+            Profile profile = new Profile("inactive-profile-to-be-purge-" + i);
+            profile.setProperty("lastVisit", currentDateMinus10Days);
+            profile.setProperty("firstVisit", currentDateMinus10Days);
+            persistenceService.save(profile);
+        }
+
+        // create active profiles created 30 days ago
+        for (int i = 0; i < 150; i++) {
+            Profile profile = new Profile("old-profile-to-be-purge-" + i);
+            profile.setProperty("lastVisit", currentDate);
+            profile.setProperty("firstVisit", currentDateMinus30Days);
+            persistenceService.save(profile);
+        }
+
+        // create active and recent profile
+        for (int i = 0; i < 150; i++) {
+            Profile profile = new Profile("active-profile" + i);
+            profile.setProperty("lastVisit", currentDate);
+            profile.setProperty("firstVisit", currentDate);
+            persistenceService.save(profile);
+        }
+
+        keepTrying("Failed waiting for all profiles to be available", () -> profileService.getAllProfilesCount(),
+                (count) -> count == (450 + originalProfilesCount), 1000, 100);
+
+        // Try purge with 0 params: should have no effects
+        profileService.purgeProfiles(0, 0);
+        keepTrying("We should still have 450 profiles", () -> profileService.getAllProfilesCount(),
+                (count) -> count == (450 + originalProfilesCount), 1000, 100);
+
+        // Try purge inactive profiles since 20 days, should have no effects there is no such profiles
+        profileService.purgeProfiles(20, 0);
+        keepTrying("We should still have 450 profiles", () -> profileService.getAllProfilesCount(),
+                (count) -> count == (450 + originalProfilesCount), 1000, 100);
+
+        // Try purge inactive profiles since 20 days and/or older than 40 days, should have no effects there is no such profiles
+        profileService.purgeProfiles(20, 40);
+        keepTrying("We should still have 450 profiles", () -> profileService.getAllProfilesCount(),
+                (count) -> count == (450 + originalProfilesCount), 1000, 100);
+
+        // Try purge inactive profiles since 5 days
+        profileService.purgeProfiles(5, 0);
+        keepTrying("Inactive profiles should be purge so we should have 300 profiles now", () -> profileService.getAllProfilesCount(),
+                (count) -> count == (300 + originalProfilesCount), 1000, 100);
+
+        // Try purge inactive profiles since 5 days and/or older than 25 days
+        profileService.purgeProfiles(5, 25);
+        keepTrying("Older profiles should be purge so we should have 150 profiles now", () -> profileService.getAllProfilesCount(),
+                (count) -> count == (150 + originalProfilesCount), 1000, 100);
+    }
+
+    @Test
+    public void testMonthlyIndicesPurge() throws Exception {
+        Date currentDate = new Date();
+        LocalDateTime minus10Months = LocalDateTime.ofInstant(currentDate.toInstant(), ZoneId.systemDefault()).minusMonths(10);
+        LocalDateTime minus30Months = LocalDateTime.ofInstant(currentDate.toInstant(), ZoneId.systemDefault()).minusMonths(30);
+        Date currentDateMinus10Months = Date.from(minus10Months.atZone(ZoneId.systemDefault()).toInstant());
+        Date currentDateMinus30Months = Date.from(minus30Months.atZone(ZoneId.systemDefault()).toInstant());
+
+        long originalSessionsCount  = persistenceService.getAllItemsCount(Session.ITEM_TYPE);
+        long originalEventsCount  = persistenceService.getAllItemsCount(Event.ITEM_TYPE);
+
+        Profile profile = new Profile("dummy-profile-monthly-purge-test");
+        persistenceService.save(profile);
+
+        // create 10 months old items
+        for (int i = 0; i < 150; i++) {
+            Session session = new Session("10months-old-session-" + i, profile, currentDateMinus10Months, "dummy-scope");
+            persistenceService.save(session);
+            persistenceService.save(new Event("10months-old-event-" + i, "view", session, profile, "dummy-scope", null, null, currentDateMinus10Months));
+        }
+
+        // create 30 months old items
+        for (int i = 0; i < 150; i++) {
+            Session session = new Session("30months-old-session-" + i, profile, currentDateMinus30Months, "dummy-scope");
+            persistenceService.save(session);
+            persistenceService.save(new Event("30months-old-event-" + i, "view", session, profile, "dummy-scope", null, null, currentDateMinus30Months));
+        }
+
+        // create 30 months old items
+        for (int i = 0; i < 150; i++) {
+            Session session = new Session("recent-session-" + i, profile, currentDate, "dummy-scope");
+            persistenceService.save(session);
+            persistenceService.save(new Event("recent-event-" + i, "view", session, profile, "dummy-scope", null, null, currentDate));
+        }
+
+        keepTrying("Sessions number should be 450", () -> persistenceService.getAllItemsCount(Session.ITEM_TYPE),
+                (count) -> count == (450 + originalSessionsCount), 1000, 100);
+        keepTrying("Events number should be 450", () -> persistenceService.getAllItemsCount(Event.ITEM_TYPE),
+                (count) -> count == (450 + originalEventsCount), 1000, 100);
+
+        // Should have no effect
+        profileService.purgeMonthlyItems(0);
+        keepTrying("Sessions number should be 450", () -> persistenceService.getAllItemsCount(Session.ITEM_TYPE),
+                (count) -> count == (450 + originalSessionsCount), 1000, 100);
+        keepTrying("Events number should be 450", () -> persistenceService.getAllItemsCount(Event.ITEM_TYPE),
+                (count) -> count == (450 + originalEventsCount), 1000, 100);
+
+        // Should have no effect there is no monthly items older than 40 months
+        profileService.purgeMonthlyItems(40);
+        keepTrying("Sessions number should be 450", () -> persistenceService.getAllItemsCount(Session.ITEM_TYPE),
+                (count) -> count == (450 + originalSessionsCount), 1000, 100);
+        keepTrying("Events number should be 450", () -> persistenceService.getAllItemsCount(Event.ITEM_TYPE),
+                (count) -> count == (450 + originalEventsCount), 1000, 100);
+
+        // Should purge monthly items older than 25 days
+        profileService.purgeMonthlyItems(25);
+        keepTrying("Sessions number should be 300", () -> persistenceService.getAllItemsCount(Session.ITEM_TYPE),
+                (count) -> count == (300 + originalSessionsCount), 1000, 100);
+        keepTrying("Events number should be 300", () -> persistenceService.getAllItemsCount(Event.ITEM_TYPE),
+                (count) -> count == (300 + originalEventsCount), 1000, 100);
+
+        // Should purge monthly items older than 5 days
+        profileService.purgeMonthlyItems(5);
+        keepTrying("Sessions number should be 150", () -> persistenceService.getAllItemsCount(Session.ITEM_TYPE),
+                (count) -> count == (150 + originalSessionsCount), 1000, 100);
+        keepTrying("Events number should be 150", () -> persistenceService.getAllItemsCount(Event.ITEM_TYPE),
+                (count) -> count == (150 + originalEventsCount), 1000, 100);
+    }
 }

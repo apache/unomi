@@ -368,4 +368,23 @@ public interface ProfileService {
      * in specific scenarios such as integration tests.
      */
     void refresh();
+
+    /**
+     * Purge (delete) profiles
+     * example: Purge profile inactive since 10 days only:
+     * purgeProfiles(10, 0);
+     *
+     * example: Purge profile created since 30 days only:
+     * purgeProfiles(0, 30);
+     *
+     * @param inactiveNumberOfDays will purge profiles with no visits since this number of days (0 or negative value, will have no effect)
+     * @param existsNumberOfDays will purge profiles created since this number of days (0 or negative value, will have no effect)
+     */
+    void purgeProfiles(int inactiveNumberOfDays, int existsNumberOfDays);
+
+    /**
+     * Purge (delete) monthly indices by removing old indices
+     * @param existsNumberOfMonths used to remove monthly indices older than this number of months
+     */
+    void purgeMonthlyItems(int existsNumberOfMonths);
 }
