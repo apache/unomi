@@ -19,7 +19,6 @@ package org.apache.unomi.persistence.elasticsearch;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.hazelcast.core.HazelcastInstance;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpHost;
 import org.apache.http.auth.AuthScope;
@@ -49,6 +48,7 @@ import org.apache.unomi.persistence.spi.aggregate.IpRangeAggregate;
 import org.apache.unomi.persistence.spi.aggregate.NumericRangeAggregate;
 import org.apache.unomi.persistence.spi.aggregate.TermsAggregate;
 import org.elasticsearch.ElasticsearchStatusException;
+import org.elasticsearch.action.ActionListener;
 import org.elasticsearch.action.DocWriteRequest;
 import org.elasticsearch.action.admin.cluster.health.ClusterHealthRequest;
 import org.elasticsearch.action.admin.cluster.storedscripts.PutStoredScriptRequest;
@@ -103,8 +103,7 @@ import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.index.IndexNotFoundException;
 import org.elasticsearch.index.query.*;
-import org.elasticsearch.index.reindex.BulkByScrollResponse;
-import org.elasticsearch.index.reindex.UpdateByQueryRequest;
+import org.elasticsearch.index.reindex.*;
 import org.elasticsearch.rest.RestStatus;
 import org.elasticsearch.script.Script;
 import org.elasticsearch.script.ScriptException;
@@ -161,7 +160,6 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.Enumeration;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -215,6 +213,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     private Map<String, String> routingByType;
 
     private Integer defaultQueryLimit = 10;
+    private Integer removeByQueryTimeoutInMinutes = 10;
 
     private String itemsMonthlyIndexedOverride = "event,session";
     private String bulkProcessorConcurrentRequests = "1";
@@ -235,9 +234,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     private int aggregateQueryBucketSize = 5000;
 
     private MetricsService metricsService;
-    private HazelcastInstance hazelcastInstance;
-    private Set<String> itemClassesToCacheSet = new HashSet<>();
-    private String itemClassesToCache;
     private boolean useBatchingForSave = false;
     private boolean useBatchingForUpdate = true;
     private String logLevelRestClient = "ERROR";
@@ -380,23 +376,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     public void setMetricsService(MetricsService metricsService) {
         this.metricsService = metricsService;
-    }
-
-    public void setHazelcastInstance(HazelcastInstance hazelcastInstance) {
-        this.hazelcastInstance = hazelcastInstance;
-    }
-
-    public void setItemClassesToCache(String itemClassesToCache) {
-        this.itemClassesToCache = itemClassesToCache;
-        if (StringUtils.isNotBlank(itemClassesToCache)) {
-            String[] itemClassesToCacheParts = itemClassesToCache.split(",");
-            if (itemClassesToCacheParts != null) {
-                itemClassesToCacheSet.clear();
-                for (String itemClassToCache : itemClassesToCacheParts) {
-                    itemClassesToCacheSet.add(itemClassToCache.trim());
-                }
-            }
-        }
     }
 
     public void setUseBatchingForSave(boolean useBatchingForSave) {
@@ -789,16 +768,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 try {
                     String itemType = Item.getItemType(clazz);
                     String className = clazz.getName();
-                    if (customItemType == null) {
-                        T itemFromCache = getFromCache(itemId, clazz.getName());
-                        if (itemFromCache != null) {
-                            return itemFromCache;
-                        }
-                    } else {
-                        T itemFromCache = getFromCache(itemId, CustomItem.class.getName() + "." + customItemType);
-                        if (itemFromCache != null) {
-                            return itemFromCache;
-                        }
+                    if (customItemType != null) {
                         className = CustomItem.class.getName() + "." + customItemType;
                         itemType = customItemType;
                     }
@@ -828,7 +798,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                             String sourceAsString = response.getSourceAsString();
                             final T value = ESCustomObjectMapper.getObjectMapper().readValue(sourceAsString, clazz);
                             setMetadata(value, response.getId(), response.getVersion(), response.getSeqNo(), response.getPrimaryTerm());
-                            putInCache(itemId, value, className);
                             return value;
                         } else {
                             return null;
@@ -889,7 +858,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         className = CustomItem.class.getName() + "." + itemType;
                     }
                     String itemId = item.getItemId();
-                    putInCache(itemId, item, className);
                     String index = getIndex(itemType, itemsMonthlyIndexed.contains(itemType) ? ((TimestampedItem) item).getTimeStamp() : null);
                     IndexRequest indexRequest = new IndexRequest(index);
                     indexRequest.id(itemId);
@@ -1215,50 +1183,59 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             protected Boolean execute(Object... args) throws Exception {
                 try {
                     String itemType = Item.getItemType(clazz);
+                    final DeleteByQueryRequest deleteByQueryRequest = new DeleteByQueryRequest(getIndexNameForQuery(itemType))
+                            .setQuery(conditionESQueryBuilderDispatcher.getQueryBuilder(query))
+                            // Setting slices to auto will let Elasticsearch choose the number of slices to use.
+                            // This setting will use one slice per shard, up to a certain limit.
+                            // The delete request will be more efficient and faster than no slicing.
+                            .setSlices(AbstractBulkByScrollRequest.AUTO_SLICES)
+                            // Elasticsearch takes a snapshot of the index when you hit delete by query request and uses the _version of the documents to process the request.
+                            // If a document gets updated in the meantime, it will result in a version conflict error and the delete operation will fail.
+                            // So we explicitly set the conflict strategy to proceed in case of version conflict.
+                            .setAbortOnVersionConflict(false)
+                            // Remove by Query is mostly used for purge and cleaning up old data
+                            // It's mostly used in jobs/timed tasks so we don't really care about long request
+                            // So we increase default timeout of 1min to 10min
+                            .setTimeout(TimeValue.timeValueMinutes(removeByQueryTimeoutInMinutes));
 
-                    BulkRequest deleteByScopeBulkRequest = new BulkRequest();
+                    BulkByScrollResponse bulkByScrollResponse = client.deleteByQuery(deleteByQueryRequest, RequestOptions.DEFAULT);
 
-                    final TimeValue keepAlive = TimeValue.timeValueHours(1);
-                    SearchRequest searchRequest = new SearchRequest(getAllIndexForQuery())
-                            .indices(getIndexNameForQuery(itemType))
-                            .scroll(keepAlive);
-                    SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder()
-                            .query(conditionESQueryBuilderDispatcher.getQueryBuilder(query))
-                            .size(100);
-                    searchRequest.source(searchSourceBuilder);
+                    if (bulkByScrollResponse == null) {
+                        logger.error("Remove by query: no response returned for query: {}", query);
+                        return false;
+                    }
 
-                    SearchResponse response = client.search(searchRequest, RequestOptions.DEFAULT);
+                    if (bulkByScrollResponse.isTimedOut()) {
+                        logger.warn("Remove by query: timed out because took more than {} minutes for query: {}", removeByQueryTimeoutInMinutes, query);
+                    }
 
-                    // Scroll until no more hits are returned
-                    while (true) {
+                    if ((bulkByScrollResponse.getSearchFailures() != null && bulkByScrollResponse.getSearchFailures().size() > 0) ||
+                            bulkByScrollResponse.getBulkFailures() != null && bulkByScrollResponse.getBulkFailures().size() > 0) {
+                        logger.warn("Remove by query: we found some failure during the process of query: {}", query);
 
-                        for (SearchHit hit : response.getHits().getHits()) {
-                            // add hit to bulk delete
-                            deleteFromCache(hit.getId(), clazz.getName());
-                            deleteByScopeBulkRequest.add(Requests.deleteRequest(hit.getIndex()).type(hit.getType()).id(hit.getId()));
+                        if (bulkByScrollResponse.getSearchFailures() != null && bulkByScrollResponse.getSearchFailures().size() > 0) {
+                            for (ScrollableHitSource.SearchFailure searchFailure : bulkByScrollResponse.getSearchFailures()) {
+                                logger.warn("Remove by query, search failure: {}", searchFailure.toString());
+                            }
                         }
 
-                        SearchScrollRequest searchScrollRequest = new SearchScrollRequest(response.getScrollId());
-                        searchScrollRequest.scroll(keepAlive);
-                        response = client.scroll(searchScrollRequest, RequestOptions.DEFAULT);
-
-                        // If we have no more hits, exit
-                        if (response.getHits().getHits().length == 0) {
-                            break;
+                        if (bulkByScrollResponse.getBulkFailures() != null && bulkByScrollResponse.getBulkFailures().size() > 0) {
+                            for (BulkItemResponse.Failure bulkFailure : bulkByScrollResponse.getBulkFailures()) {
+                                logger.warn("Remove by query, bulk failure: {}", bulkFailure.toString());
+                            }
                         }
                     }
 
-                    ClearScrollRequest clearScrollRequest = new ClearScrollRequest();
-                    clearScrollRequest.addScrollId(response.getScrollId());
-                    client.clearScroll(clearScrollRequest, RequestOptions.DEFAULT);
-
-                    // we're done with the scrolling, delete now
-                    if (deleteByScopeBulkRequest.numberOfActions() > 0) {
-                        final BulkResponse deleteResponse = client.bulk(deleteByScopeBulkRequest, RequestOptions.DEFAULT);
-                        if (deleteResponse.hasFailures()) {
-                            // do something
-                            logger.warn("Couldn't remove by query " + query + ":\n{}", deleteResponse.buildFailureMessage());
-                        }
+                    if (logger.isDebugEnabled()) {
+                        logger.debug("Remove by query: took {}, deleted docs: {}, batches executed: {}, skipped docs: {}, version conflicts: {}, search retries: {}, bulk retries: {}, for query: {}",
+                                bulkByScrollResponse.getTook().toHumanReadableString(1),
+                                bulkByScrollResponse.getDeleted(),
+                                bulkByScrollResponse.getBatches(),
+                                bulkByScrollResponse.getNoops(),
+                                bulkByScrollResponse.getVersionConflicts(),
+                                bulkByScrollResponse.getSearchRetries(),
+                                bulkByScrollResponse.getBulkRetries(),
+                                query);
                     }
 
                     return true;
@@ -2501,40 +2478,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 System.exit(-1);
             }
         }
-    }
-
-    private <T extends Item> boolean isCacheActiveForClass(String className) {
-        if (itemClassesToCacheSet.contains("*")) {
-            return true;
-        }
-        if (itemClassesToCacheSet.contains(className)) {
-            return true;
-        }
-        return false;
-    }
-
-    private <T extends Item> T getFromCache(String itemId, String className) {
-        if (!isCacheActiveForClass(className)) {
-            return null;
-        }
-        Map<String, T> itemCache = hazelcastInstance.getMap(className);
-        return itemCache.get(itemId);
-    }
-
-    private <T extends Item> T putInCache(String itemId, T item, String className) {
-        if (!isCacheActiveForClass(className)) {
-            return null;
-        }
-        Map<String, T> itemCache = hazelcastInstance.getMap(className);
-        return itemCache.put(itemId, item);
-    }
-
-    private <T extends Item> T deleteFromCache(String itemId, String className) {
-        if (!isCacheActiveForClass(className)) {
-            return null;
-        }
-        Map<String, T> itemCache = hazelcastInstance.getMap(className);
-        return itemCache.remove(itemId);
     }
 
     private String getAllIndexForQuery() {
