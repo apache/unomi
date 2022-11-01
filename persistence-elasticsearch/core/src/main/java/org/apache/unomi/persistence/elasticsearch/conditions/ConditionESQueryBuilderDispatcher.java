@@ -83,12 +83,12 @@ public class ConditionESQueryBuilderDispatcher {
             if (contextualCondition != null) {
                 return queryBuilder.buildQuery(contextualCondition, context, this);
             }
-        }
-
-        // if no matching
-        logger.warn("No matching query builder. See debug log level for more information");
-        if (logger.isDebugEnabled()) {
-            logger.debug("No matching query builder for condition {} and context {}", condition, context);
+        } else {
+            // if no matching
+            logger.warn("No matching query builder. See debug log level for more information");
+            if (logger.isDebugEnabled()) {
+                logger.debug("No matching query builder for condition {} and context {}", condition, context);
+            }
         }
 
         return QueryBuilders.matchAllQuery();
