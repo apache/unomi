@@ -488,3 +488,61 @@ upon successful login using an email, Unomi will look for other profiles that ha
 a single profile. Because of the merge, this should only be done for authenticated profiles, otherwise this could be a
 security issue since it could be a way to load data from other profiles by merging their data !
 
+==== What profile aliases are and how to use them
+
+Profile aliases make it possible to reference profiles using multiple identifiers.
+The profile alias object basically contains a link between the alias ID and the profile ID. The `itemId` of a profile alias is the actual alias ID, which the `profileID` field contains the reference to the aliased profile.
+
+===== What they are
+
+image::profile-alias-overview.png[Profile alias overview]
+
+Profile aliases:
+
+- Make it possible to lookup profiles by main (Unomi) ID or by any other alias ID
+- Aliases are just IDs stored in a dedicated index
+- A profile may have an unlimited number of aliases attached to it.
+
+===== How to use them
+
+image::profile-alias-external-ids.png[Profile with external IDs]
+
+Here are different use cases for profile aliases:
+
+- Connect different systems to Unomi such as a CRM, CMS and native mobile app that all have their own iD for a single customer
+- Merging profiles when a visitor is identified
+- Adding new IDs at a later time
+
+===== Example
+
+Here is an example of multiple external aliases pointing to a single Unomi profile
+
+image::profile-alias-example.png[Profile alias example]
+
+===== Interactions with merging
+
+Profile merges have been modified to use aliases starting Unomi 2
+
+Upon merge:
+
+- Properties are copied to the master profile as before
+- An alias is created for the "master" profile with the ID of the merged profile
+- Merged profiles are now deleted
+- "mergedWith" property is no longer used since we deleted the merged profiles
+
+===== API
+
+/context.json and /eventcollector will now look up profiles by profile ID or aliases from the same cookie (`context-profile-id`) or body parameters (`profileId`)
+
+|===
+| *Verb* | *Path* | *Description*
+
+| GET | /cxs/profiles/PROFILE_ID_OR_ALIAS | Retrieves a profile by ID or Alias ID (useful if an external system wants to get a profile)
+
+| GET | /cxs/profiles/PROFILE_ID/aliases | Get all the aliases for a profile
+
+| POST | /cxs/profiles/PROFILE_ID/aliases/ALIAS_ID | Add an alias to a profile
+
+| DELETE | /cxs/profiles/PROFILE_ID/aliases/ALIAS_ID | Remove an alias from a profile
+
+|===
