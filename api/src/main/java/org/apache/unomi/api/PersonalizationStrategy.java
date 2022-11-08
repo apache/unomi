@@ -32,7 +32,7 @@ public interface PersonalizationStrategy {
      * @param session the session to use for the personalization
      * @param personalizationRequest the request contains the contents to personalizes as well as the parameters for the
      *                               strategy (options)
-     * @return a list of content IDs resulting from the filtering/re-ordering
+     * @return the personalization result that contains the list of content IDs resulting from the filtering/re-ordering
      */
-    List<String> personalizeList(Profile profile, Session session, PersonalizationService.PersonalizationRequest personalizationRequest);
+    PersonalizationResult personalizeList(Profile profile, Session session, PersonalizationService.PersonalizationRequest personalizationRequest);
 }

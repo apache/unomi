@@ -204,11 +204,16 @@ public class ContextJsonEndpoint {
         List<PersonalizationService.PersonalizationRequest> personalizations = contextRequest.getPersonalizations();
         if (personalizations != null) {
             data.setPersonalizations(new HashMap<>());
+            Map<String, PersonalizationResult> personalizationResults = new HashMap<>();
             for (PersonalizationService.PersonalizationRequest personalization : sanitizePersonalizations(personalizations)) {
                 PersonalizationResult personalizationResult = personalizationService.personalizeList(eventsRequestContext.getProfile(), eventsRequestContext.getSession(), personalization);
                 eventsRequestContext.addChanges(personalizationResult.getChangeType());
+
+                // Support for old personalization result in response
                 data.getPersonalizations().put(personalization.getId(), personalizationResult.getContentIds());
+                personalizationResults.put(personalization.getId(), personalizationResult);
             }
+            data.getAdditionalResponseData().put("personalizationResults", personalizationResults);
         }
 
         if (contextRequest.isRequireSegments()) {

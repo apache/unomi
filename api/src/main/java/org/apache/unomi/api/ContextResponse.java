@@ -21,10 +21,7 @@ import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.services.RulesService;
 
 import java.io.Serializable;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /**
  * A context server response resulting from the evaluation of a client's context request. Note that all returned values result of the evaluation of the data provided in the
@@ -59,6 +56,8 @@ public class ContextResponse implements Serializable {
     private boolean anonymousBrowsing;
 
     private Map<String, Consent> consents = new LinkedHashMap<>();
+
+    private Map<String, Object> additionalResponseData = new HashMap<>();
 
     /**
      * Retrieves the profile identifier associated with the profile of the user on behalf of which the client performed the context request.
@@ -198,10 +197,20 @@ public class ContextResponse implements Serializable {
         this.processedEvents = processedEvents;
     }
 
+    /**
+     * @deprecated personalizations results are more complex since 2.1.0 and they are now available under:
+     *             additionalResponseData.personalizationResults
+     */
+    @Deprecated
     public Map<String, List<String>> getPersonalizations() {
         return personalizations;
     }
 
+    /**
+     * @deprecated personalizations results are more complex since 2.1.0 and they are now available under:
+     *             additionalResponseData.personalizationResults
+     */
+    @Deprecated
     public void setPersonalizations(Map<String, List<String>> personalizations) {
         this.personalizations = personalizations;
     }
@@ -265,5 +274,20 @@ public class ContextResponse implements Serializable {
      */
     public void setConsents(Map<String, Consent> consents) {
         this.consents = consents;
+    }
+
+    /**
+     * Useful open map for additional information that could be returned by Unomi during the context request.
+     * @return additional properties
+     */
+    public Map<String, Object> getAdditionalResponseData() {
+        return additionalResponseData;
+    }
+
+    /**
+     * Useful open map for additional information that could be returned by Unomi during the context request.
+     */
+    public void setAdditionalResponseData(Map<String, Object> additionalResponseData) {
+        this.additionalResponseData = additionalResponseData;
     }
 }
