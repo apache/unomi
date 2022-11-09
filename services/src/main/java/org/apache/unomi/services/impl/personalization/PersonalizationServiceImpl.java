@@ -98,10 +98,12 @@ public class PersonalizationServiceImpl implements PersonalizationService {
 
             // Execute the original strategy
             PersonalizationResult originalStrategyResult = strategy.personalizeList(profile, session, personalizationRequest);
-            // even if control group is false, profile or session could have been modified
+            // merge original strategy result with previous controlGroup hook in case it's needed
             if (controlGroupStrategyResult != null) {
                 originalStrategyResult.addChanges(controlGroupStrategyResult.getChangeType());
+                originalStrategyResult.getAdditionalResultInfos().putAll(controlGroupStrategyResult.getAdditionalResultInfos());
             }
+
             return originalStrategyResult;
         }
 

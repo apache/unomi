@@ -1,0 +1,45 @@
+{
+  "source": {
+    "itemId": "CMSServer",
+    "itemType": "custom",
+    "scope": "acme",
+    "properties": {}
+  },
+  "requireSegments": true,
+  "requiredProfileProperties": [
+    "*"
+  ],
+  "requiredSessionProperties": [
+    "*"
+  ],
+  "personalizations": [
+    {
+      "id": "perso-control-group",
+      "strategy": "matching-first",
+      "strategyOptions": {
+      },
+      "contents": [
+        {
+          "id": "first-name-missing",
+          "filters": [
+            {
+              "condition": {
+                "type": "profilePropertyCondition",
+                "parameterValues": {
+                  "propertyName": "properties.firstName",
+                  "comparisonOperator": "missing"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "no-condition",
+          "filters": null
+        }
+      ]
+    }
+  ],
+  "sessionId": "dummy-session",
+  "profileId": "test-profile-id"
+}

@@ -47,7 +47,9 @@ public class ControlGroupPersonalizationStrategy implements PersonalizationStrat
         if (personalizationRequest.getStrategyOptions() != null && personalizationRequest.getStrategyOptions().containsKey(CONTROL_GROUP_CONFIG)) {
             Map<String, Object> controlGroupMap = (Map<String, Object>) personalizationRequest.getStrategyOptions().get(CONTROL_GROUP_CONFIG);
 
-            return controlGroupMap.containsKey(CONTROL_GROUP_CONFIG_STORE_IN_SESSION) ?
+            return controlGroupMap.containsKey(CONTROL_GROUP_CONFIG_STORE_IN_SESSION) &&
+                    controlGroupMap.get(CONTROL_GROUP_CONFIG_STORE_IN_SESSION) instanceof Boolean &&
+                    ((Boolean) controlGroupMap.get(CONTROL_GROUP_CONFIG_STORE_IN_SESSION)) ?
                     getPersonalizationResultForControlGroup(personalizationRequest, session, controlGroupMap, EventService.SESSION_UPDATED) :
                     getPersonalizationResultForControlGroup(personalizationRequest, profile, controlGroupMap, EventService.PROFILE_UPDATED);
         }
