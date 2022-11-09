@@ -20,8 +20,10 @@ package org.apache.unomi.api;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.services.RulesService;
 
+import javax.xml.bind.annotation.XmlTransient;
 import java.io.Serializable;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * A context server response resulting from the evaluation of a client's context request. Note that all returned values result of the evaluation of the data provided in the
@@ -49,15 +51,13 @@ public class ContextResponse implements Serializable {
 
     private int processedEvents;
 
-    private Map<String, List<String>> personalizations;
+    private Map<String, PersonalizationResult> personalizationResults;
 
     private Set<Condition> trackedConditions;
 
     private boolean anonymousBrowsing;
 
     private Map<String, Consent> consents = new LinkedHashMap<>();
-
-    private Map<String, Object> additionalResponseData = new HashMap<>();
 
     /**
      * Retrieves the profile identifier associated with the profile of the user on behalf of which the client performed the context request.
@@ -198,21 +198,38 @@ public class ContextResponse implements Serializable {
     }
 
     /**
-     * @deprecated personalizations results are more complex since 2.1.0 and they are now available under:
-     *             additionalResponseData.personalizationResults
+     * @deprecated personalizations results are more complex since 2.1.0 and they are now available under: getPersonalizationResults()
      */
     @Deprecated
+    @XmlTransient
     public Map<String, List<String>> getPersonalizations() {
-        return personalizations;
+        if (personalizationResults != null) {
+            return personalizationResults.entrySet()
+                    .stream()
+                    .collect(Collectors.toMap(Map.Entry::getKey,
+                            entry -> entry.getValue().getContentIds()));
+        }
+        return null;
     }
 
     /**
-     * @deprecated personalizations results are more complex since 2.1.0 and they are now available under:
-     *             additionalResponseData.personalizationResults
+     * @deprecated personalizations results are more complex since 2.1.0 and they are now available under: setPersonalizationResults(Map<String, PersonalizationResult> personalizationResults)
      */
     @Deprecated
     public void setPersonalizations(Map<String, List<String>> personalizations) {
-        this.personalizations = personalizations;
+        // do nothing, use setPersonalizationResults() instead
+    }
+
+    /**
+     * Get the result of the personalization resolutions done during the context request.
+     * @return a Map key/value pair (key:personalization id, value:the result that contains the matching content ids and additional information)
+     */
+    public Map<String, PersonalizationResult> getPersonalizationResults() {
+        return personalizationResults;
+    }
+
+    public void setPersonalizationResults(Map<String, PersonalizationResult> personalizationResults) {
+        this.personalizationResults = personalizationResults;
     }
 
     /**
@@ -274,20 +291,5 @@ public class ContextResponse implements Serializable {
      */
     public void setConsents(Map<String, Consent> consents) {
         this.consents = consents;
-    }
-
-    /**
-     * Useful open map for additional information that could be returned by Unomi during the context request.
-     * @return additional properties
-     */
-    public Map<String, Object> getAdditionalResponseData() {
-        return additionalResponseData;
-    }
-
-    /**
-     * Useful open map for additional information that could be returned by Unomi during the context request.
-     */
-    public void setAdditionalResponseData(Map<String, Object> additionalResponseData) {
-        this.additionalResponseData = additionalResponseData;
     }
 }

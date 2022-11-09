@@ -38,6 +38,9 @@ public class PersonalizationResult implements Serializable  {
 
     int changeType = EventService.NO_CHANGE;
 
+    public PersonalizationResult() {
+    }
+
     public PersonalizationResult(List<String> contentIds) {
         this.contentIds = contentIds;
     }
@@ -48,6 +51,10 @@ public class PersonalizationResult implements Serializable  {
      */
     public List<String> getContentIds() {
         return contentIds;
+    }
+
+    public void setContentIds(List<String> contentIds) {
+        this.contentIds = contentIds;
     }
 
     /**

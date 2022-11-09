@@ -21,13 +21,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
-import org.apache.unomi.api.ContextRequest;
-import org.apache.unomi.api.ContextResponse;
-import org.apache.unomi.api.Event;
-import org.apache.unomi.api.Metadata;
-import org.apache.unomi.api.Profile;
-import org.apache.unomi.api.Scope;
-import org.apache.unomi.api.Session;
+import org.apache.unomi.api.*;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.segments.Scoring;
 import org.apache.unomi.api.segments.Segment;
@@ -560,6 +554,8 @@ public class ContextServletIT extends BaseIT {
         List<String> variants = contextResponse.getPersonalizations().get("perso-by-interest");
         assertEquals("Invalid response code", 200, response.getStatusCode());
         assertEquals("Perso should be empty, profile is empty", 0, variants.size());
+        variants = contextResponse.getPersonalizationResults().get("perso-by-interest").getContentIds();
+        assertEquals("Perso should be empty, profile is empty", 0, variants.size());
 
         // set profile for matching
         Profile profile = profileService.load(TEST_PROFILE_ID);
@@ -575,6 +571,9 @@ public class ContextServletIT extends BaseIT {
         contextResponse = response.getContextResponse();
         variants = contextResponse.getPersonalizations().get("perso-by-interest");
         assertEquals("Invalid response code", 200, response.getStatusCode());
+        assertEquals("Perso should contains the good number of variants", 1, variants.size());
+        assertEquals("Variant is not the expected one", "matching-fishing-interests-custom-score-100-variant-expected-score-120", variants.get(0));
+        variants = contextResponse.getPersonalizationResults().get("perso-by-interest").getContentIds();
         assertEquals("Perso should contains the good number of variants", 1, variants.size());
         assertEquals("Variant is not the expected one", "matching-fishing-interests-custom-score-100-variant-expected-score-120", variants.get(0));
 
@@ -617,87 +616,15 @@ public class ContextServletIT extends BaseIT {
         assertEquals("Variant is not the expected one", "matching-football-interests-variant-expected-score-51", variants.get(4));
         assertEquals("Variant is not the expected one", "matching-tennis-interests-variant-expected-score-31", variants.get(5));
         assertEquals("Variant is not the expected one", "not-matching-tennis-interests-custom-score-100-variant-expected-score-30", variants.get(6));
-    }
-
-    @Test
-    public void testPersonalizationWithControlGroup() throws Exception {
-
-        Map<String, String> parameters = new HashMap<>();
-        parameters.put("storeInSession", "false");
-        HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
-        request.setEntity(
-                new StringEntity(getValidatedBundleJSON("personalization-controlgroup.json", parameters), ContentType.APPLICATION_JSON));
-        TestUtils.RequestResponse response = TestUtils.executeContextJSONRequest(request);
-        assertEquals("Invalid response code", 200, response.getStatusCode());
-
-        ContextResponse contextResponse = response.getContextResponse();
-
-        Map<String, List<String>> personalizations = contextResponse.getPersonalizations();
-
-        validatePersonalizations(personalizations);
-
-        // let's check that the persisted profile has the control groups;
-        Map<String, Object> profileProperties = contextResponse.getProfileProperties();
-        List<Map<String, Object>> profileControlGroups = (List<Map<String, Object>>) profileProperties.get("unomiControlGroups");
-        assertControlGroups(profileControlGroups);
-
-        String profileId = contextResponse.getProfileId();
-        Profile updatedProfile = keepTrying("Profile not found", () -> profileService.load(profileId), Objects::nonNull,
-                DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
-        profileControlGroups = (List<Map<String, Object>>) updatedProfile.getProperty("unomiControlGroups");
-        assertNotNull("Profile control groups not found in persisted profile", profileControlGroups);
-        assertControlGroups(profileControlGroups);
-
-        // now let's test with session storage
-        parameters.put("storeInSession", "true");
-        request = new HttpPost(getFullUrl(CONTEXT_URL));
-        request.setEntity(
-                new StringEntity(getValidatedBundleJSON("personalization-controlgroup.json", parameters), ContentType.APPLICATION_JSON));
-        response = TestUtils.executeContextJSONRequest(request);
-        assertEquals("Invalid response code", 200, response.getStatusCode());
-        contextResponse = response.getContextResponse();
-
-        personalizations = contextResponse.getPersonalizations();
-
-        validatePersonalizations(personalizations);
-
-        Map<String, Object> sessionProperties = contextResponse.getSessionProperties();
-        List<Map<String, Object>> sessionControlGroups = (List<Map<String, Object>>) sessionProperties.get("unomiControlGroups");
-        assertControlGroups(sessionControlGroups);
-
-        Session updatedSession = profileService.loadSession(contextResponse.getSessionId(), new Date());
-        sessionControlGroups = (List<Map<String, Object>>) updatedSession.getProperty("unomiControlGroups");
-        assertNotNull("Session control groups not found in persisted session", sessionControlGroups);
-        assertControlGroups(sessionControlGroups);
-    }
-
-    private void validatePersonalizations(Map<String, List<String>> personalizations) {
-        assertEquals("Personalizations don't have expected size", 2, personalizations.size());
-
-        List<String> perso1Contents = personalizations.get("perso1");
-        assertEquals("Perso 1 content list size doesn't match", 10, perso1Contents.size());
-        List<String> expectedPerso1Contents = new ArrayList<>();
-        expectedPerso1Contents.add("perso1content1");
-        expectedPerso1Contents.add("perso1content2");
-        expectedPerso1Contents.add("perso1content3");
-        expectedPerso1Contents.add("perso1content4");
-        expectedPerso1Contents.add("perso1content5");
-        expectedPerso1Contents.add("perso1content6");
-        expectedPerso1Contents.add("perso1content7");
-        expectedPerso1Contents.add("perso1content8");
-        expectedPerso1Contents.add("perso1content9");
-        expectedPerso1Contents.add("perso1content10");
-        assertEquals("Perso1 contents do not match", expectedPerso1Contents, perso1Contents);
-    }
-
-    private void assertControlGroups(List<Map<String, Object>> profileControlGroups) {
-        assertNotNull("Couldn't find control groups for profile", profileControlGroups);
-        assertTrue("Control group size should be 1", profileControlGroups.size() == 1);
-        Map<String, Object> controlGroup = profileControlGroups.get(0);
-        assertEquals("Invalid ID for control group", "perso1", controlGroup.get("id"));
-        assertEquals("Invalid path for control group", "/home/perso1.html", controlGroup.get("path"));
-        assertEquals("Invalid displayName for control group", "First perso", controlGroup.get("displayName"));
-        assertNotNull("Null timestamp for control group", controlGroup.get("timeStamp"));
+        variants = contextResponse.getPersonalizationResults().get("perso-by-interest").getContentIds();
+        assertEquals("Perso should contains the good number of variants", 7, variants.size());
+        assertEquals("Variant is not the expected one", "matching-fishing-interests-custom-score-100-variant-expected-score-120", variants.get(0));
+        assertEquals("Variant is not the expected one", "matching-football-cars-interests-variant-expected-score-91", variants.get(1));
+        assertEquals("Variant is not the expected one", "not-matching-football-cars-interests-variant-expected-score-90", variants.get(2));
+        assertEquals("Variant is not the expected one", "not-matching-tennis-fishing-interests-variant-expected-score-50", variants.get(3));
+        assertEquals("Variant is not the expected one", "matching-football-interests-variant-expected-score-51", variants.get(4));
+        assertEquals("Variant is not the expected one", "matching-tennis-interests-variant-expected-score-31", variants.get(5));
+        assertEquals("Variant is not the expected one", "not-matching-tennis-interests-custom-score-100-variant-expected-score-30", variants.get(6));
     }
 
     @Test
