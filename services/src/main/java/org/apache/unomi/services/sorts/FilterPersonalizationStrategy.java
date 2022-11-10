@@ -17,6 +17,7 @@
 
 package org.apache.unomi.services.sorts;
 
+import org.apache.unomi.api.PersonalizationResult;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.Session;
 import org.apache.unomi.api.PersonalizationStrategy;
@@ -39,7 +40,7 @@ public class FilterPersonalizationStrategy implements PersonalizationStrategy {
     }
 
     @Override
-    public List<String> personalizeList(Profile profile, Session session, PersonalizationService.PersonalizationRequest personalizationRequest) {
+    public PersonalizationResult personalizeList(Profile profile, Session session, PersonalizationService.PersonalizationRequest personalizationRequest) {
         List<String> sortedContent = new ArrayList<>();
         for (PersonalizationService.PersonalizedContent personalizedContent : personalizationRequest.getContents()) {
             boolean result = true;
@@ -59,6 +60,6 @@ public class FilterPersonalizationStrategy implements PersonalizationStrategy {
             sortedContent.add(fallback);
         }
 
-        return sortedContent;
+        return new PersonalizationResult(sortedContent);
     }
 }

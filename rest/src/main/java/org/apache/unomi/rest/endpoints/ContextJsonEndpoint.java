@@ -375,12 +375,11 @@ public class ContextJsonEndpoint {
 
         List<PersonalizationService.PersonalizationRequest> personalizations = contextRequest.getPersonalizations();
         if (personalizations != null) {
-            data.setPersonalizations(new HashMap<>());
+            data.setPersonalizationResults(new HashMap<>());
             for (PersonalizationService.PersonalizationRequest personalization : sanitizePersonalizations(personalizations)) {
                 PersonalizationResult personalizationResult = personalizationService.personalizeList(profile, session, personalization);
                 changes.setChangeType(changes.getChangeType() | personalizationResult.getChangeType());
-                data.getPersonalizations()
-                        .put(personalization.getId(), personalizationResult.getContentIds());
+                data.getPersonalizationResults().put(personalization.getId(), personalizationResult);
             }
         }
 

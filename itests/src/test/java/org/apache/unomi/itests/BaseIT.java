@@ -243,7 +243,8 @@ public abstract class BaseIT {
         return options.toArray(new Option[0]);
     }
 
-    protected <T> T keepTrying(String failMessage, Supplier<T> call, Predicate<T> predicate, int timeout, int retries) throws InterruptedException {
+    protected <T> T keepTrying(String failMessage, Supplier<T> call, Predicate<T> predicate, int timeout, int retries)
+            throws InterruptedException {
         int count = 0;
         T value = null;
         while (value == null || !predicate.test(value)) {
@@ -265,10 +266,10 @@ public abstract class BaseIT {
         }
     }
 
-    protected String getValidatedBundleJSON(final String resourcePath, Map<String,String> parameters) throws IOException {
+    protected String getValidatedBundleJSON(final String resourcePath, Map<String, String> parameters) throws IOException {
         String jsonString = bundleResourceAsString(resourcePath);
         if (parameters != null && parameters.size() > 0) {
-            for (Map.Entry<String,String> parameterEntry : parameters.entrySet()) {
+            for (Map.Entry<String, String> parameterEntry : parameters.entrySet()) {
                 jsonString = jsonString.replace("###" + parameterEntry.getKey() + "###", parameterEntry.getValue());
             }
         }
@@ -346,5 +347,9 @@ public abstract class BaseIT {
                 (rules) -> rules.stream().anyMatch(r -> r.getItemId().equals(rule.getMetadata().getId())), 1000,
                 100);
         rulesService.refreshRules();
+    }
+
+    public String getFullUrl(String url) throws Exception {
+        return URL + url;
     }
 }
