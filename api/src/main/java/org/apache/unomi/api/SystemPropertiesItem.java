@@ -14,22 +14,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.unomi.api;
 
-package org.apache.unomi.services.sorts;
+import java.util.Map;
 
-import org.apache.unomi.api.PersonalizationResult;
-import org.apache.unomi.api.Profile;
-import org.apache.unomi.api.Session;
-import org.apache.unomi.api.services.PersonalizationService;
+/**
+ * An Item that is holding system properties.
+ */
+public interface SystemPropertiesItem {
 
-import java.util.Collections;
-
-public class RandomPersonalizationStrategy extends FilterPersonalizationStrategy {
-
-    @Override
-    public PersonalizationResult personalizeList(Profile profile, Session session, PersonalizationService.PersonalizationRequest personalizationRequest) {
-        PersonalizationResult r = super.personalizeList(profile, session, personalizationRequest);
-        Collections.shuffle(r.getContentIds());
-        return r;
-    }
+    /**
+     * Retrieves a Map of system property name - value pairs for this item. System properties can be used by implementations to store non-user visible properties needed for
+     * internal purposes.
+     *
+     * @return a Map of system property name - value pairs for this item
+     */
+    Map<String, Object> getSystemProperties();
 }

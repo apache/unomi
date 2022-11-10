@@ -38,7 +38,7 @@ import java.util.*;
  *
  * @see Segment
  */
-public class Profile extends Item {
+public class Profile extends Item implements SystemPropertiesItem {
 
     /**
      * The Profile ITEM_TYPE
