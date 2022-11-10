@@ -213,7 +213,7 @@ public class ContextResponse implements Serializable {
     }
 
     /**
-     * @deprecated personalizations results are more complex since 2.1.0 and they are now available under: setPersonalizationResults(Map<String, PersonalizationResult> personalizationResults)
+     * @deprecated personalizations results are more complex since 2.1.0 and they are now available under: setPersonalizationResults()
      */
     @Deprecated
     public void setPersonalizations(Map<String, List<String>> personalizations) {
