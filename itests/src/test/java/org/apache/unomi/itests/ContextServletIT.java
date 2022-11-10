@@ -17,6 +17,7 @@
 
 package org.apache.unomi.itests;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
@@ -24,16 +25,12 @@ import org.apache.unomi.api.*;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.segments.Scoring;
 import org.apache.unomi.api.segments.Segment;
-<<<<<<< HEAD
 import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.api.services.SegmentService;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.persistence.spi.PersistenceService;
-=======
-import org.apache.unomi.persistence.spi.CustomObjectMapper;
->>>>>>> 40130ee8d (UNOMI-690, UNOMI-696: refactor control group (#531))
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -41,8 +38,11 @@ import org.junit.runner.RunWith;
 import org.ops4j.pax.exam.junit.PaxExam;
 import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
 import org.ops4j.pax.exam.spi.reactors.PerSuite;
+import org.ops4j.pax.exam.util.Filter;
 
+import javax.inject.Inject;
 import java.io.File;
+import java.io.IOException;
 import java.net.URI;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -50,16 +50,8 @@ import java.time.ZoneOffset;
 import java.util.*;
 
 import static org.hamcrest.core.IsCollectionContaining.hasItem;
-<<<<<<< HEAD
 import static org.junit.Assert.*;
 
-=======
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThat;
->>>>>>> 40130ee8d (UNOMI-690, UNOMI-696: refactor control group (#531))
 
 /**
  * Created by Ron Barabash on 5/4/2020.
@@ -74,18 +66,11 @@ public class ContextServletIT extends BaseIT {
 	private final static String SEGMENT_ID = "test-segment-id";
 	private final static int SEGMENT_NUMBER_OF_DAYS = 30;
 
-<<<<<<< HEAD
+	private final static String TEST_SESSION_ID = "dummy-session";
+	private final static String TEST_PROFILE_ID = "test-profile-id";
+	private final static String TEST_PROFILE_FIRST_NAME = "contextServletIT_profile";
+
 	private ObjectMapper objectMapper = new ObjectMapper();
-=======
-    private final static String THIRD_PARTY_HEADER_NAME = "X-Unomi-Peer";
-    private final static String TEST_EVENT_TYPE = "testEventType";
-    private final static String TEST_EVENT_TYPE_SCHEMA = "schemas/events/test-event-type.json";
-    private final static String FLOAT_PROPERTY_EVENT_TYPE = "floatPropertyType";
-    private final static String FLOAT_PROPERTY_EVENT_TYPE_SCHEMA = "schemas/events/float-property-type.json";
-    private final static String TEST_SESSION_ID = "dummy-session";
-    private final static String TEST_PROFILE_ID = "test-profile-id";
-    private final static String TEST_PROFILE_FIRST_NAME = "contextServletIT_profile";
->>>>>>> 40130ee8d (UNOMI-690, UNOMI-696: refactor control group (#531))
 
 	@Inject
 	@Filter(timeout = 600000)
@@ -107,13 +92,7 @@ public class ContextServletIT extends BaseIT {
 	@Filter(timeout = 600000)
 	protected SegmentService segmentService;
 
-<<<<<<< HEAD
 	private Profile profile;
-=======
-        profile = new Profile(TEST_PROFILE_ID);
-        profile.setProperty("firstName", TEST_PROFILE_FIRST_NAME);
-        profileService.save(profile);
->>>>>>> 40130ee8d (UNOMI-690, UNOMI-696: refactor control group (#531))
 
 	@Before
 	public void setUp() throws InterruptedException {
@@ -131,12 +110,12 @@ public class ContextServletIT extends BaseIT {
 
 		String profileId = "test-profile-id";
 		profile = new Profile(profileId);
+		profile.setProperty("firstName", TEST_PROFILE_FIRST_NAME);
 		profileService.save(profile);
 
 		refreshPersistence();
 	}
 
-<<<<<<< HEAD
 	@After
 	public void tearDown() {
 		TestUtils.removeAllEvents(definitionsService, persistenceService);
@@ -145,16 +124,6 @@ public class ContextServletIT extends BaseIT {
 		profileService.delete(profile.getItemId(), false);
 		segmentService.removeSegmentDefinition(SEGMENT_ID,false);
 	}
-=======
-    @After
-    public void tearDown() throws InterruptedException {
-        TestUtils.removeAllEvents(definitionsService, persistenceService);
-        TestUtils.removeAllSessions(definitionsService, persistenceService);
-        TestUtils.removeAllProfiles(definitionsService, persistenceService);
-        profileService.delete(profile.getItemId(), false);
-        removeItems(Session.class);
-        segmentService.removeSegmentDefinition(SEGMENT_ID, false);
->>>>>>> 40130ee8d (UNOMI-690, UNOMI-696: refactor control group (#531))
 
 	@Test
 	public void testUpdateEventFromContextAuthorizedThirdParty_Success() throws IOException, InterruptedException {
@@ -437,558 +406,6 @@ public class ContextServletIT extends BaseIT {
 	}
 
     @Test
-    public void testPersonalizationWithControlGroup() throws IOException, InterruptedException {
-
-<<<<<<< HEAD
-        Map<String,String> parameters = new HashMap<>();
-        parameters.put("storeInSession", "false");
-        HttpPost request = new HttpPost(URL + CONTEXT_URL);
-        request.setEntity(new StringEntity(getValidatedBundleJSON("personalization-controlgroup.json", parameters), ContentType.create("application/json")));
-        TestUtils.RequestResponse response = TestUtils.executeContextJSONRequest(request);
-        assertEquals("Invalid response code", 200, response.getStatusCode());
-        refreshPersistence();
-        Thread.sleep(2000); //Making sure event is updated in DB
-        ContextResponse contextResponse = response.getContextResponse();
-
-        Map<String,List<String>> personalizations = contextResponse.getPersonalizations();
-
-        validatePersonalizations(personalizations);
-
-        // let's check that the persisted profile has the control groups;
-        Map<String,Object> profileProperties = contextResponse.getProfileProperties();
-        List<Map<String,Object>> profileControlGroups = (List<Map<String,Object>>) profileProperties.get("unomiControlGroups");
-        assertControlGroups(profileControlGroups);
-
-        Profile updatedProfile = profileService.load(contextResponse.getProfileId());
-        profileControlGroups = (List<Map<String,Object>>) updatedProfile.getProperty("unomiControlGroups");
-        assertNotNull("Profile control groups not found in persisted profile", profileControlGroups);
-        assertControlGroups(profileControlGroups);
-
-        // now let's test with session storage
-        parameters.put("storeInSession", "true");
-        request = new HttpPost(URL + CONTEXT_URL);
-        request.setEntity(new StringEntity(getValidatedBundleJSON("personalization-controlgroup.json", parameters), ContentType.create("application/json")));
-        response = TestUtils.executeContextJSONRequest(request);
-        assertEquals("Invalid response code", 200, response.getStatusCode());
-        refreshPersistence();
-        Thread.sleep(2000); //Making sure event is updated in DB
-        contextResponse = response.getContextResponse();
-
-        personalizations = contextResponse.getPersonalizations();
-
-        validatePersonalizations(personalizations);
-
-        Map<String,Object> sessionProperties = contextResponse.getSessionProperties();
-        List<Map<String,Object>> sessionControlGroups = (List<Map<String,Object>>) sessionProperties.get("unomiControlGroups");
-        assertControlGroups(sessionControlGroups);
-
-        Session updatedSession = profileService.loadSession(contextResponse.getSessionId(), new Date());
-        sessionControlGroups = (List<Map<String,Object>>) updatedSession.getProperty("unomiControlGroups");
-        assertNotNull("Session control groups not found in persisted session", sessionControlGroups);
-        assertControlGroups(sessionControlGroups);
-
-    }
-
-    private void validatePersonalizations(Map<String, List<String>> personalizations) {
-        assertEquals("Personalizations don't have expected size", 2, personalizations.size());
-
-        List<String> perso1Contents = personalizations.get("perso1");
-        assertEquals("Perso 1 content list size doesn't match", 10, perso1Contents.size());
-        List<String> expectedPerso1Contents = new ArrayList<>();
-        expectedPerso1Contents.add("perso1content1");
-        expectedPerso1Contents.add("perso1content2");
-        expectedPerso1Contents.add("perso1content3");
-        expectedPerso1Contents.add("perso1content4");
-        expectedPerso1Contents.add("perso1content5");
-        expectedPerso1Contents.add("perso1content6");
-        expectedPerso1Contents.add("perso1content7");
-        expectedPerso1Contents.add("perso1content8");
-        expectedPerso1Contents.add("perso1content9");
-        expectedPerso1Contents.add("perso1content10");
-        assertEquals("Perso1 contents do not match", expectedPerso1Contents, perso1Contents);
-    }
-
-    private void assertControlGroups(List<Map<String, Object>> profileControlGroups) {
-        assertNotNull("Couldn't find control groups for profile", profileControlGroups);
-        assertTrue("Control group size should be 1", profileControlGroups.size() == 1);
-        Map<String,Object> controlGroup = profileControlGroups.get(0);
-        assertEquals("Invalid ID for control group", "perso1", controlGroup.get("id"));
-        assertEquals("Invalid path for control group", "/home/perso1.html", controlGroup.get("path"));
-        assertEquals("Invalid displayName for control group", "First perso", controlGroup.get("displayName"));
-        assertNotNull("Null timestamp for control group", controlGroup.get("timeStamp"));
-=======
-        keepTrying("Profile " + TEST_PROFILE_ID + " not found in the required time", () -> profileService.load(TEST_PROFILE_ID),
-                Objects::nonNull, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
-
-        this.eventService.send(event);
-
-        keepTrying("Event " + eventId + " not updated in the required time", () -> this.eventService.getEvent(eventId),
-                savedEvent -> Objects.nonNull(savedEvent) && eventTypeOriginal.equals(savedEvent.getEventType()), DEFAULT_TRYING_TIMEOUT,
-                DEFAULT_TRYING_TRIES);
-
-        event.setEventType(TEST_EVENT_TYPE); //change the event so we can see the update effect
-
-        //Act
-        ContextRequest contextRequest = new ContextRequest();
-        contextRequest.setSessionId(session.getItemId());
-        contextRequest.setEvents(Arrays.asList(event));
-        HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
-        request.addHeader(THIRD_PARTY_HEADER_NAME, UNOMI_KEY);
-        request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
-        TestUtils.executeContextJSONRequest(request, sessionId);
-
-        event = keepTrying("Event " + eventId + " not updated in the required time", () -> eventService.getEvent(eventId),
-                savedEvent -> Objects.nonNull(savedEvent) && TEST_EVENT_TYPE.equals(savedEvent.getEventType()), DEFAULT_TRYING_TIMEOUT,
-                DEFAULT_TRYING_TRIES);
-        assertEquals(2, event.getVersion().longValue());
-    }
-
-    @Test
-    public void testCallingContextWithSessionCreation() throws Exception {
-        //Arrange
-        String eventId = "test-event-id-" + System.currentTimeMillis();
-        String sessionId = "test-session-id";
-        Profile profile = new Profile(TEST_PROFILE_ID);
-        profileService.save(profile);
-
-        keepTrying("Profile " + TEST_PROFILE_ID + " not found in the required time", () -> profileService.load(TEST_PROFILE_ID),
-                Objects::nonNull, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
-
-        //Act
-        Event event = new Event(TEST_EVENT_TYPE, null, profile, TEST_SCOPE, null, null, new Date());
-
-        ContextRequest contextRequest = new ContextRequest();
-        contextRequest.setSessionId(sessionId);
-        contextRequest.setEvents(Collections.singletonList(event));
-        HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
-        request.addHeader(THIRD_PARTY_HEADER_NAME, UNOMI_KEY);
-        request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
-        TestUtils.executeContextJSONRequest(request, sessionId);
-
-        Session session = keepTrying("Session with the id " + sessionId + " not saved in the required time",
-                () -> profileService.loadSession(sessionId,
-                        null), Objects::nonNull, DEFAULT_TRYING_TIMEOUT,
-                DEFAULT_TRYING_TRIES);
-
-        assertEquals(TEST_EVENT_TYPE, session.getOriginEventTypes().get(0));
-        assertFalse(session.getOriginEventIds().isEmpty());
-    }
-
-    @Test
-    public void testUpdateEventFromContextUnAuthorizedThirdParty_Fail() throws Exception {
-        //Arrange
-        String eventId = "test-event-id-" + System.currentTimeMillis();
-        String sessionId = "test-session-id";
-        String scope = TEST_SCOPE;
-        String eventTypeOriginal = "test-event-type-original";
-        String eventTypeUpdated = TEST_EVENT_TYPE;
-        Profile profile = new Profile(TEST_PROFILE_ID);
-        Session session = new Session(sessionId, profile, new Date(), scope);
-        Event event = new Event(eventId, eventTypeOriginal, session, profile, scope, null, null, new Date());
-        profileService.save(profile);
-
-        keepTrying("Profile " + TEST_PROFILE_ID + " not found in the required time", () -> profileService.load(TEST_PROFILE_ID),
-                Objects::nonNull, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
-
-        this.eventService.send(event);
-
-        keepTrying("Event " + eventId + " not saved in the required time", () -> this.eventService.getEvent(eventId),
-                savedEvent -> Objects.nonNull(savedEvent) && eventTypeOriginal.equals(savedEvent.getEventType()), DEFAULT_TRYING_TIMEOUT,
-                DEFAULT_TRYING_TRIES);
-
-        event.setEventType(eventTypeUpdated); //change the event so we can see the update effect
-
-        //Act
-        ContextRequest contextRequest = new ContextRequest();
-        contextRequest.setSessionId(session.getItemId());
-        contextRequest.setEvents(Arrays.asList(event));
-        HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
-        request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
-        TestUtils.executeContextJSONRequest(request, sessionId);
-
-        // Check event type did not changed
-        event = shouldBeTrueUntilEnd("Event type should not have changed", () -> eventService.getEvent(eventId),
-                (savedEvent) -> eventTypeOriginal.equals(savedEvent.getEventType()), DEFAULT_TRYING_TIMEOUT, 10);
-        assertEquals(1, event.getVersion().longValue());
-    }
-
-    @Test
-    public void testUpdateEventFromContextAuthorizedThirdPartyNoItemID_Fail() throws Exception {
-        //Arrange
-        String eventId = "test-event-id-" + System.currentTimeMillis();
-        String sessionId = "test-session-id";
-        String scope = TEST_SCOPE;
-        String eventTypeOriginal = "test-event-type-original";
-        String eventTypeUpdated = TEST_EVENT_TYPE;
-        Session session = new Session(sessionId, profile, new Date(), scope);
-        Event event = new Event(eventId, eventTypeOriginal, session, profile, scope, null, null, new Date());
-        this.eventService.send(event);
-
-        keepTrying("Event " + eventId + " not saved in the required time", () -> this.eventService.getEvent(eventId),
-                savedEvent -> Objects.nonNull(savedEvent) && eventTypeOriginal.equals(savedEvent.getEventType()), DEFAULT_TRYING_TIMEOUT,
-                DEFAULT_TRYING_TRIES);
-
-        event.setEventType(eventTypeUpdated); //change the event so we can see the update effect
-
-        //Act
-        ContextRequest contextRequest = new ContextRequest();
-        contextRequest.setSessionId(session.getItemId());
-        contextRequest.setEvents(Arrays.asList(event));
-        HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
-        request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
-        TestUtils.executeContextJSONRequest(request, sessionId);
-
-        // Check event type did not changed
-        event = shouldBeTrueUntilEnd("Event type should not have changed", () -> eventService.getEvent(eventId),
-                (savedEvent) -> eventTypeOriginal.equals(savedEvent.getEventType()), DEFAULT_TRYING_TIMEOUT, 10);
-
-        assertEquals(1, event.getVersion().longValue());
-    }
-
-    @Test
-    public void testCreateEventsWithNoTimestampParam_profileAddedToSegment() throws Exception {
-        //Arrange
-        String sessionId = "test-session-id";
-        String scope = TEST_SCOPE;
-        Event event = new Event();
-        event.setEventType(TEST_EVENT_TYPE);
-        event.setScope(scope);
-
-        //Act
-        ContextRequest contextRequest = new ContextRequest();
-        contextRequest.setSessionId(sessionId);
-        contextRequest.setRequireSegments(true);
-        contextRequest.setEvents(Arrays.asList(event));
-        HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
-        request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
-        String cookieHeaderValue = TestUtils.executeContextJSONRequest(request, sessionId).getCookieHeaderValue();
-
-        refreshPersistence();
-
-        //Add the context-profile-id cookie to the second event
-        request.addHeader("Cookie", cookieHeaderValue);
-        ContextResponse response = (TestUtils.executeContextJSONRequest(request, sessionId)).getContextResponse(); //second event
-
-        refreshPersistence();
-
-        //Assert
-        assertEquals(1, response.getProfileSegments().size());
-        assertThat(response.getProfileSegments(), hasItem(SEGMENT_ID));
-
-    }
-
-    @Test
-    public void testCreateEventWithTimestampParam_pastEvent_profileIsNotAddedToSegment() throws Exception {
-        //Arrange
-        String sessionId = "test-session-id";
-        String scope = TEST_SCOPE;
-        Event event = new Event();
-        event.setEventType(TEST_EVENT_TYPE);
-        event.setScope(scope);
-        String regularURI = getFullUrl(CONTEXT_URL);
-        long oldTimestamp = LocalDateTime.now(ZoneId.of("UTC")).minusDays(SEGMENT_NUMBER_OF_DAYS + 1).toInstant(ZoneOffset.UTC)
-                .toEpochMilli();
-        String customTimestampURI = regularURI + "?timestamp=" + oldTimestamp;
-
-        //Act
-        ContextRequest contextRequest = new ContextRequest();
-        contextRequest.setSessionId(sessionId);
-        contextRequest.setRequireSegments(true);
-        contextRequest.setEvents(Arrays.asList(event));
-        HttpPost request = new HttpPost(regularURI);
-        request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
-        //The first event is with a default timestamp (now)
-        String cookieHeaderValue = TestUtils.executeContextJSONRequest(request, sessionId).getCookieHeaderValue();
-        //The second event is with a customized timestamp
-        request.setURI(URI.create(customTimestampURI));
-        request.addHeader("Cookie", cookieHeaderValue);
-        ContextResponse response = (TestUtils.executeContextJSONRequest(request, sessionId)).getContextResponse(); //second event
-
-        shouldBeTrueUntilEnd("Profile " + response.getProfileId() + " not found in the required time",
-                () -> profileService.load(response.getProfileId()),
-                (savedProfile) -> Objects.nonNull(savedProfile) && !savedProfile.getSegments().contains(SEGMENT_ID), DEFAULT_TRYING_TIMEOUT,
-                DEFAULT_TRYING_TRIES);
-    }
-
-    @Test
-    public void testCreateEventWithTimestampParam_futureEvent_profileIsNotAddedToSegment() throws Exception {
-        //Arrange
-        String sessionId = "test-session-id";
-        String scope = TEST_SCOPE;
-        Event event = new Event();
-        event.setEventType(TEST_EVENT_TYPE);
-        event.setScope(scope);
-        String regularURI = getFullUrl(CONTEXT_URL);
-        long futureTimestamp = LocalDateTime.now(ZoneId.of("UTC")).plusDays(1).toInstant(ZoneOffset.UTC).toEpochMilli();
-        String customTimestampURI = regularURI + "?timestamp=" + futureTimestamp;
-
-        //Act
-        ContextRequest contextRequest = new ContextRequest();
-        contextRequest.setSessionId(sessionId);
-        contextRequest.setRequireSegments(true);
-        contextRequest.setEvents(Arrays.asList(event));
-        HttpPost request = new HttpPost(regularURI);
-        request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
-        //The first event is with a default timestamp (now)
-        String cookieHeaderValue = TestUtils.executeContextJSONRequest(request, sessionId).getCookieHeaderValue();
-
-        //The second event is with a customized timestamp
-        request.setURI(URI.create(customTimestampURI));
-        request.addHeader("Cookie", cookieHeaderValue);
-        ContextResponse response = TestUtils.executeContextJSONRequest(request, sessionId).getContextResponse(); //second event
-
-        shouldBeTrueUntilEnd("Profile " + response.getProfileId() + " not found in the required time",
-                () -> profileService.load(response.getProfileId()),
-                (savedProfile) -> Objects.nonNull(savedProfile) && !savedProfile.getSegments().contains(SEGMENT_ID), DEFAULT_TRYING_TIMEOUT,
-                DEFAULT_TRYING_TRIES);
-    }
-
-    @Test
-    public void testCreateEventWithProfileId_Success() throws Exception {
-        //Arrange
-        String eventId = "test-event-id-" + System.currentTimeMillis();
-        String eventType = "test-event-type";
-        Event event = new Event();
-        event.setEventType(eventType);
-        event.setItemId(eventId);
-
-        ContextRequest contextRequest = new ContextRequest();
-        contextRequest.setProfileId(TEST_PROFILE_ID);
-        contextRequest.setEvents(Arrays.asList(event));
-
-        //Act
-        HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
-        request.addHeader(THIRD_PARTY_HEADER_NAME, UNOMI_KEY);
-        request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
-        TestUtils.executeContextJSONRequest(request);
-
-        keepTrying("Profile " + TEST_PROFILE_ID + " not found in the required time", () -> profileService.load(TEST_PROFILE_ID),
-                Objects::nonNull, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
-    }
-
-    @Test
-    public void testCreateEventWithPropertiesValidation_Success() throws Exception {
-        //Arrange
-        String eventId = "valid-event-id-" + System.currentTimeMillis();
-        String profileId = "valid-profile-id";
-        String eventType = FLOAT_PROPERTY_EVENT_TYPE;
-        Event event = new Event();
-        event.setEventType(eventType);
-        event.setItemId(eventId);
-        Map<String, Object> props = new HashMap<>();
-        props.put("floatProperty", 3.14159);
-        event.setProperties(props);
-
-        ContextRequest contextRequest = new ContextRequest();
-        contextRequest.setProfileId(profileId);
-        contextRequest.setEvents(Arrays.asList(event));
-
-        //Act
-        HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
-        request.addHeader(THIRD_PARTY_HEADER_NAME, UNOMI_KEY);
-        request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
-        TestUtils.executeContextJSONRequest(request);
-
-        //Assert
-        event = keepTrying("Event not found", () -> eventService.getEvent(eventId), Objects::nonNull, DEFAULT_TRYING_TIMEOUT,
-                DEFAULT_TRYING_TRIES);
-        assertEquals(eventType, event.getEventType());
-        assertEquals(3.14159, event.getProperty("floatProperty"));
-    }
-
-    @Test
-    public void testCreateEventWithPropertyValueValidation_Failure() throws Exception {
-        //Arrange
-        String eventId = "invalid-event-value-id-" + System.currentTimeMillis();
-        String profileId = "invalid-profile-id";
-        String eventType = FLOAT_PROPERTY_EVENT_TYPE;
-        Event event = new Event();
-        event.setEventType(eventType);
-        event.setItemId(eventId);
-        Map<String, Object> props = new HashMap<>();
-        props.put("floatProperty", "Invalid value");
-        event.setProperties(props);
-
-        ContextRequest contextRequest = new ContextRequest();
-        contextRequest.setProfileId(profileId);
-        contextRequest.setEvents(Arrays.asList(event));
-
-        //Act
-        HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
-        request.addHeader(THIRD_PARTY_HEADER_NAME, UNOMI_KEY);
-        request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
-        TestUtils.executeContextJSONRequest(request);
-
-        //Assert
-        shouldBeTrueUntilEnd("Event should be null", () -> eventService.getEvent(eventId), Objects::isNull, DEFAULT_TRYING_TIMEOUT,
-                DEFAULT_TRYING_TRIES);
-    }
-
-    @Test
-    public void testCreateEventWithPropertyNameValidation_Failure() throws Exception {
-        //Arrange
-        String eventId = "invalid-event-prop-id-" + System.currentTimeMillis();
-        String profileId = "invalid-profile-id";
-        Event event = new Event();
-        event.setEventType(FLOAT_PROPERTY_EVENT_TYPE);
-        event.setItemId(eventId);
-        Map<String, Object> props = new HashMap<>();
-        props.put("ffloatProperty", 3.14159);
-        event.setProperties(props);
-
-        ContextRequest contextRequest = new ContextRequest();
-        contextRequest.setProfileId(profileId);
-        contextRequest.setEvents(Arrays.asList(event));
-
-        //Act
-        HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
-        request.addHeader(THIRD_PARTY_HEADER_NAME, UNOMI_KEY);
-        request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
-        TestUtils.executeContextJSONRequest(request);
-
-        //Assert
-        shouldBeTrueUntilEnd("Event should be null", () -> eventService.getEvent(eventId), Objects::isNull, DEFAULT_TRYING_TIMEOUT,
-                DEFAULT_TRYING_TRIES);
-    }
-
-    @Test
-    public void testOGNLVulnerability() throws Exception {
-
-        File vulnFile = new File("target/vuln-file.txt");
-        if (vulnFile.exists()) {
-            vulnFile.delete();
-        }
-        String vulnFileCanonicalPath = vulnFile.getCanonicalPath();
-        vulnFileCanonicalPath = vulnFileCanonicalPath.replace("\\", "\\\\"); // this is required for Windows support
-
-        Map<String, String> parameters = new HashMap<>();
-        parameters.put("VULN_FILE_PATH", vulnFileCanonicalPath);
-        HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
-        request.setEntity(
-                new StringEntity(getValidatedBundleJSON("security/ognl-payload-1.json", parameters), ContentType.APPLICATION_JSON));
-        TestUtils.executeContextJSONRequest(request);
-
-        shouldBeTrueUntilEnd("Vulnerability successfully executed ! File created at " + vulnFileCanonicalPath, vulnFile::exists,
-                exists -> exists == Boolean.FALSE, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
-    }
-
-    @Test
-    public void testMVELVulnerability() throws Exception {
-
-        File vulnFile = new File("target/vuln-file.txt");
-        if (vulnFile.exists()) {
-            vulnFile.delete();
-        }
-        String vulnFileCanonicalPath = vulnFile.getCanonicalPath();
-        vulnFileCanonicalPath = vulnFileCanonicalPath.replace("\\", "\\\\"); // this is required for Windows support
-
-        Map<String, String> parameters = new HashMap<>();
-        parameters.put("VULN_FILE_PATH", vulnFileCanonicalPath);
-        HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
-        request.setEntity(
-                new StringEntity(getValidatedBundleJSON("security/mvel-payload-1.json", parameters), ContentType.APPLICATION_JSON));
-        TestUtils.executeContextJSONRequest(request);
-
-        shouldBeTrueUntilEnd("Vulnerability successfully executed ! File created at " + vulnFileCanonicalPath, vulnFile::exists,
-                exists -> exists == Boolean.FALSE, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
-    }
-
-    @Test
-    public void testPersonalization() throws Exception {
-
-        Map<String, String> parameters = new HashMap<>();
-        HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
-        request.setEntity(new StringEntity(getValidatedBundleJSON("personalization.json", parameters), ContentType.APPLICATION_JSON));
-        TestUtils.RequestResponse response = TestUtils.executeContextJSONRequest(request);
-        assertEquals("Invalid response code", 200, response.getStatusCode());
-    }
-
-    @Test
-    public void testScorePersonalizationStrategy_Interests() throws Exception {
-        // Test request before adding interests to current profile.
-        HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
-        request.setEntity(new StringEntity(getValidatedBundleJSON("personalization-score-interests.json", null), ContentType.APPLICATION_JSON));
-        TestUtils.RequestResponse response = TestUtils.executeContextJSONRequest(request);
-        ContextResponse contextResponse = response.getContextResponse();
-        List<String> variants = contextResponse.getPersonalizations().get("perso-by-interest");
-        assertEquals("Invalid response code", 200, response.getStatusCode());
-        assertEquals("Perso should be empty, profile is empty", 0, variants.size());
-        variants = contextResponse.getPersonalizationResults().get("perso-by-interest").getContentIds();
-        assertEquals("Perso should be empty, profile is empty", 0, variants.size());
-
-        // set profile for matching
-        Profile profile = profileService.load(TEST_PROFILE_ID);
-        profile.setProperty("age", 30);
-        profileService.save(profile);
-        keepTrying("Profile " + TEST_PROFILE_ID + " not found in the required time", () -> profileService.load(TEST_PROFILE_ID),
-                savedProfile -> (savedProfile != null && savedProfile.getProperty("age").equals(30)), DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
-
-        // check results of the perso now
-        request = new HttpPost(getFullUrl(CONTEXT_URL));
-        request.setEntity(new StringEntity(getValidatedBundleJSON("personalization-score-interests.json", null), ContentType.APPLICATION_JSON));
-        response = TestUtils.executeContextJSONRequest(request);
-        contextResponse = response.getContextResponse();
-        variants = contextResponse.getPersonalizations().get("perso-by-interest");
-        assertEquals("Invalid response code", 200, response.getStatusCode());
-        assertEquals("Perso should contains the good number of variants", 1, variants.size());
-        assertEquals("Variant is not the expected one", "matching-fishing-interests-custom-score-100-variant-expected-score-120", variants.get(0));
-        variants = contextResponse.getPersonalizationResults().get("perso-by-interest").getContentIds();
-        assertEquals("Perso should contains the good number of variants", 1, variants.size());
-        assertEquals("Variant is not the expected one", "matching-fishing-interests-custom-score-100-variant-expected-score-120", variants.get(0));
-
-        // modify profile to add interests
-        profile = profileService.load(TEST_PROFILE_ID);
-        List<Map<String, Object>> interests = new ArrayList<>();
-        Map<String, Object> interest1 = new HashMap<>();
-        interest1.put("key", "cars");
-        interest1.put("value", 50);
-        interests.add(interest1);
-        Map<String, Object> interest2 = new HashMap<>();
-        interest2.put("key", "football");
-        interest2.put("value", 40);
-        interests.add(interest2);
-        Map<String, Object> interest3 = new HashMap<>();
-        interest3.put("key", "tennis");
-        interest3.put("value", 30);
-        interests.add(interest3);
-        Map<String, Object> interest4 = new HashMap<>();
-        interest4.put("key", "fishing");
-        interest4.put("value", 20);
-        interests.add(interest4);
-        profile.setProperty("interests", interests);
-        profileService.save(profile);
-        keepTrying("Profile " + TEST_PROFILE_ID + " not found in the required time", () -> profileService.load(TEST_PROFILE_ID),
-                savedProfile -> (savedProfile != null && savedProfile.getProperty("interests") != null), DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
-
-        // re test now that profiles has interests
-        request = new HttpPost(getFullUrl(CONTEXT_URL));
-        request.setEntity(new StringEntity(getValidatedBundleJSON("personalization-score-interests.json", null), ContentType.APPLICATION_JSON));
-        response = TestUtils.executeContextJSONRequest(request);
-        contextResponse = response.getContextResponse();
-        variants = contextResponse.getPersonalizations().get("perso-by-interest");
-        assertEquals("Invalid response code", 200, response.getStatusCode());
-        assertEquals("Perso should contains the good number of variants", 7, variants.size());
-        assertEquals("Variant is not the expected one", "matching-fishing-interests-custom-score-100-variant-expected-score-120", variants.get(0));
-        assertEquals("Variant is not the expected one", "matching-football-cars-interests-variant-expected-score-91", variants.get(1));
-        assertEquals("Variant is not the expected one", "not-matching-football-cars-interests-variant-expected-score-90", variants.get(2));
-        assertEquals("Variant is not the expected one", "not-matching-tennis-fishing-interests-variant-expected-score-50", variants.get(3));
-        assertEquals("Variant is not the expected one", "matching-football-interests-variant-expected-score-51", variants.get(4));
-        assertEquals("Variant is not the expected one", "matching-tennis-interests-variant-expected-score-31", variants.get(5));
-        assertEquals("Variant is not the expected one", "not-matching-tennis-interests-custom-score-100-variant-expected-score-30", variants.get(6));
-        variants = contextResponse.getPersonalizationResults().get("perso-by-interest").getContentIds();
-        assertEquals("Perso should contains the good number of variants", 7, variants.size());
-        assertEquals("Variant is not the expected one", "matching-fishing-interests-custom-score-100-variant-expected-score-120", variants.get(0));
-        assertEquals("Variant is not the expected one", "matching-football-cars-interests-variant-expected-score-91", variants.get(1));
-        assertEquals("Variant is not the expected one", "not-matching-football-cars-interests-variant-expected-score-90", variants.get(2));
-        assertEquals("Variant is not the expected one", "not-matching-tennis-fishing-interests-variant-expected-score-50", variants.get(3));
-        assertEquals("Variant is not the expected one", "matching-football-interests-variant-expected-score-51", variants.get(4));
-        assertEquals("Variant is not the expected one", "matching-tennis-interests-variant-expected-score-31", variants.get(5));
-        assertEquals("Variant is not the expected one", "not-matching-tennis-interests-custom-score-100-variant-expected-score-30", variants.get(6));
->>>>>>> 40130ee8d (UNOMI-690, UNOMI-696: refactor control group (#531))
-    }
-
-
-    @Test
     public void testRequireScoring() throws IOException, InterruptedException {
 
         Map<String,String> parameters = new HashMap<>();
@@ -1028,8 +445,6 @@ public class ContextServletIT extends BaseIT {
         segmentService.removeScoringDefinition(scoring.getItemId(), false);
     }
 
-<<<<<<< HEAD
-=======
     @Test
     public void test_no_ControlGroup() throws Exception {
         performPersonalizationWithControlGroup(
@@ -1222,12 +637,12 @@ public class ContextServletIT extends BaseIT {
         // Check control group state on profile
         keepTrying("Incorrect control group on profile",
                 () -> profileService.load(TEST_PROFILE_ID), storedProfile -> expectedControlGroupValueInProfile == getPersistedControlGroupStatus(storedProfile, "perso-control-group"),
-                DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+                1000, 10);
 
         // Check control group state on session
         keepTrying("Incorrect control group status on session",
                 () -> persistenceService.load(TEST_SESSION_ID, Session.class), storedSession -> expectedControlGroupValueInSession == getPersistedControlGroupStatus(storedSession, "perso-control-group"),
-                DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+                1000, 10);
     }
 
     private Boolean getPersistedControlGroupStatus(SystemPropertiesItem systemPropertiesItem, String personalizationId) {
@@ -1248,5 +663,4 @@ public class ContextServletIT extends BaseIT {
         controlGroupConfig.put("percentage", percentage);
         return controlGroupConfig;
     }
->>>>>>> 40130ee8d (UNOMI-690, UNOMI-696: refactor control group (#531))
 }
