@@ -17,6 +17,7 @@
 
 package org.apache.unomi.services.sorts;
 
+import org.apache.unomi.api.PersonalizationResult;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.Session;
 import org.apache.unomi.api.PersonalizationStrategy;
@@ -35,7 +36,7 @@ public class ScorePersonalizationStrategy implements PersonalizationStrategy {
     }
 
     @Override
-    public List<String> personalizeList(Profile profile, Session session, PersonalizationService.PersonalizationRequest personalizationRequest) {
+    public PersonalizationResult personalizeList(Profile profile, Session session, PersonalizationService.PersonalizationRequest personalizationRequest) {
         List<String> sortedContent = new ArrayList<>();
         final Map<String,Integer> t = new HashMap<>();
 
@@ -64,7 +65,7 @@ public class ScorePersonalizationStrategy implements PersonalizationStrategy {
 
             String scoringPlanList = (String) (personalizedContent.getProperties() != null ? personalizedContent.getProperties().get("scoringPlans") : null);
             if (scoringPlanList != null) {
-                Map<String,Integer> scoreValues = (Map<String, Integer>) profile.getScores();
+                Map<String,Integer> scoreValues = profile.getScores();
                 for (String scoringPlan : scoringPlanList.split(" ")) {
                     if (scoreValues.get(scoringPlan) != null) {
                         score += scoreValues.get(scoringPlan);
@@ -93,18 +94,14 @@ public class ScorePersonalizationStrategy implements PersonalizationStrategy {
                 sortedContent.add(personalizedContent.getId());
             }
         }
-        Collections.sort(sortedContent, new Comparator<String>() {
-            @Override
-            public int compare(String o1, String o2) {
-                return t.get(o2) - t.get(o1);
-            }
-        });
+
+        sortedContent.sort((o1, o2) -> t.get(o2) - t.get(o1));
 
         String fallback = (String) personalizationRequest.getStrategyOptions().get("fallback");
         if (fallback != null && !sortedContent.contains(fallback)) {
             sortedContent.add(fallback);
         }
 
-        return sortedContent;
+        return new PersonalizationResult(sortedContent);
     }
 }

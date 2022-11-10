@@ -17,28 +17,14 @@
 
 package org.apache.unomi.itests;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
-import org.apache.unomi.api.ContextRequest;
-import org.apache.unomi.api.ContextResponse;
-import org.apache.unomi.api.Event;
-import org.apache.unomi.api.Metadata;
-import org.apache.unomi.api.Profile;
-import org.apache.unomi.api.Scope;
-import org.apache.unomi.api.Session;
+import org.apache.unomi.api.*;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.segments.Scoring;
 import org.apache.unomi.api.segments.Segment;
-import org.apache.unomi.api.services.DefinitionsService;
-import org.apache.unomi.api.services.EventService;
-import org.apache.unomi.api.services.ProfileService;
-import org.apache.unomi.api.services.ScopeService;
-import org.apache.unomi.api.services.SegmentService;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
-import org.apache.unomi.persistence.spi.PersistenceService;
-import org.apache.unomi.schema.api.SchemaService;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -46,11 +32,8 @@ import org.junit.runner.RunWith;
 import org.ops4j.pax.exam.junit.PaxExam;
 import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
 import org.ops4j.pax.exam.spi.reactors.PerSuite;
-import org.ops4j.pax.exam.util.Filter;
 
-import javax.inject.Inject;
 import java.io.File;
-import java.io.IOException;
 import java.net.URI;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -70,7 +53,6 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
 
 /**
  * Created by Ron Barabash on 5/4/2020.
@@ -86,7 +68,9 @@ public class ContextServletIT extends BaseIT {
     private final static String TEST_EVENT_TYPE_SCHEMA = "schemas/events/test-event-type.json";
     private final static String FLOAT_PROPERTY_EVENT_TYPE = "floatPropertyType";
     private final static String FLOAT_PROPERTY_EVENT_TYPE_SCHEMA = "schemas/events/float-property-type.json";
+    private final static String TEST_SESSION_ID = "dummy-session";
     private final static String TEST_PROFILE_ID = "test-profile-id";
+    private final static String TEST_PROFILE_FIRST_NAME = "contextServletIT_profile";
 
     private final static String SEGMENT_ID = "test-segment-id";
     private final static int SEGMENT_NUMBER_OF_DAYS = 30;
@@ -113,6 +97,7 @@ public class ContextServletIT extends BaseIT {
         segmentService.setSegmentDefinition(segment);
 
         profile = new Profile(TEST_PROFILE_ID);
+        profile.setProperty("firstName", TEST_PROFILE_FIRST_NAME);
         profileService.save(profile);
 
         keepTrying("Profile " + TEST_PROFILE_ID + " not found in the required time", () -> profileService.load(TEST_PROFILE_ID),
@@ -138,6 +123,7 @@ public class ContextServletIT extends BaseIT {
         TestUtils.removeAllSessions(definitionsService, persistenceService);
         TestUtils.removeAllProfiles(definitionsService, persistenceService);
         profileService.delete(profile.getItemId(), false);
+        removeItems(Session.class);
         segmentService.removeSegmentDefinition(SEGMENT_ID, false);
 
         // cleanup schemas
@@ -560,6 +546,8 @@ public class ContextServletIT extends BaseIT {
         List<String> variants = contextResponse.getPersonalizations().get("perso-by-interest");
         assertEquals("Invalid response code", 200, response.getStatusCode());
         assertEquals("Perso should be empty, profile is empty", 0, variants.size());
+        variants = contextResponse.getPersonalizationResults().get("perso-by-interest").getContentIds();
+        assertEquals("Perso should be empty, profile is empty", 0, variants.size());
 
         // set profile for matching
         Profile profile = profileService.load(TEST_PROFILE_ID);
@@ -575,6 +563,9 @@ public class ContextServletIT extends BaseIT {
         contextResponse = response.getContextResponse();
         variants = contextResponse.getPersonalizations().get("perso-by-interest");
         assertEquals("Invalid response code", 200, response.getStatusCode());
+        assertEquals("Perso should contains the good number of variants", 1, variants.size());
+        assertEquals("Variant is not the expected one", "matching-fishing-interests-custom-score-100-variant-expected-score-120", variants.get(0));
+        variants = contextResponse.getPersonalizationResults().get("perso-by-interest").getContentIds();
         assertEquals("Perso should contains the good number of variants", 1, variants.size());
         assertEquals("Variant is not the expected one", "matching-fishing-interests-custom-score-100-variant-expected-score-120", variants.get(0));
 
@@ -617,87 +608,15 @@ public class ContextServletIT extends BaseIT {
         assertEquals("Variant is not the expected one", "matching-football-interests-variant-expected-score-51", variants.get(4));
         assertEquals("Variant is not the expected one", "matching-tennis-interests-variant-expected-score-31", variants.get(5));
         assertEquals("Variant is not the expected one", "not-matching-tennis-interests-custom-score-100-variant-expected-score-30", variants.get(6));
-    }
-
-    @Test
-    public void testPersonalizationWithControlGroup() throws Exception {
-
-        Map<String, String> parameters = new HashMap<>();
-        parameters.put("storeInSession", "false");
-        HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
-        request.setEntity(
-                new StringEntity(getValidatedBundleJSON("personalization-controlgroup.json", parameters), ContentType.APPLICATION_JSON));
-        TestUtils.RequestResponse response = TestUtils.executeContextJSONRequest(request);
-        assertEquals("Invalid response code", 200, response.getStatusCode());
-
-        ContextResponse contextResponse = response.getContextResponse();
-
-        Map<String, List<String>> personalizations = contextResponse.getPersonalizations();
-
-        validatePersonalizations(personalizations);
-
-        // let's check that the persisted profile has the control groups;
-        Map<String, Object> profileProperties = contextResponse.getProfileProperties();
-        List<Map<String, Object>> profileControlGroups = (List<Map<String, Object>>) profileProperties.get("unomiControlGroups");
-        assertControlGroups(profileControlGroups);
-
-        String profileId = contextResponse.getProfileId();
-        Profile updatedProfile = keepTrying("Profile not found", () -> profileService.load(profileId), Objects::nonNull,
-                DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
-        profileControlGroups = (List<Map<String, Object>>) updatedProfile.getProperty("unomiControlGroups");
-        assertNotNull("Profile control groups not found in persisted profile", profileControlGroups);
-        assertControlGroups(profileControlGroups);
-
-        // now let's test with session storage
-        parameters.put("storeInSession", "true");
-        request = new HttpPost(getFullUrl(CONTEXT_URL));
-        request.setEntity(
-                new StringEntity(getValidatedBundleJSON("personalization-controlgroup.json", parameters), ContentType.APPLICATION_JSON));
-        response = TestUtils.executeContextJSONRequest(request);
-        assertEquals("Invalid response code", 200, response.getStatusCode());
-        contextResponse = response.getContextResponse();
-
-        personalizations = contextResponse.getPersonalizations();
-
-        validatePersonalizations(personalizations);
-
-        Map<String, Object> sessionProperties = contextResponse.getSessionProperties();
-        List<Map<String, Object>> sessionControlGroups = (List<Map<String, Object>>) sessionProperties.get("unomiControlGroups");
-        assertControlGroups(sessionControlGroups);
-
-        Session updatedSession = profileService.loadSession(contextResponse.getSessionId(), new Date());
-        sessionControlGroups = (List<Map<String, Object>>) updatedSession.getProperty("unomiControlGroups");
-        assertNotNull("Session control groups not found in persisted session", sessionControlGroups);
-        assertControlGroups(sessionControlGroups);
-    }
-
-    private void validatePersonalizations(Map<String, List<String>> personalizations) {
-        assertEquals("Personalizations don't have expected size", 2, personalizations.size());
-
-        List<String> perso1Contents = personalizations.get("perso1");
-        assertEquals("Perso 1 content list size doesn't match", 10, perso1Contents.size());
-        List<String> expectedPerso1Contents = new ArrayList<>();
-        expectedPerso1Contents.add("perso1content1");
-        expectedPerso1Contents.add("perso1content2");
-        expectedPerso1Contents.add("perso1content3");
-        expectedPerso1Contents.add("perso1content4");
-        expectedPerso1Contents.add("perso1content5");
-        expectedPerso1Contents.add("perso1content6");
-        expectedPerso1Contents.add("perso1content7");
-        expectedPerso1Contents.add("perso1content8");
-        expectedPerso1Contents.add("perso1content9");
-        expectedPerso1Contents.add("perso1content10");
-        assertEquals("Perso1 contents do not match", expectedPerso1Contents, perso1Contents);
-    }
-
-    private void assertControlGroups(List<Map<String, Object>> profileControlGroups) {
-        assertNotNull("Couldn't find control groups for profile", profileControlGroups);
-        assertTrue("Control group size should be 1", profileControlGroups.size() == 1);
-        Map<String, Object> controlGroup = profileControlGroups.get(0);
-        assertEquals("Invalid ID for control group", "perso1", controlGroup.get("id"));
-        assertEquals("Invalid path for control group", "/home/perso1.html", controlGroup.get("path"));
-        assertEquals("Invalid displayName for control group", "First perso", controlGroup.get("displayName"));
-        assertNotNull("Null timestamp for control group", controlGroup.get("timeStamp"));
+        variants = contextResponse.getPersonalizationResults().get("perso-by-interest").getContentIds();
+        assertEquals("Perso should contains the good number of variants", 7, variants.size());
+        assertEquals("Variant is not the expected one", "matching-fishing-interests-custom-score-100-variant-expected-score-120", variants.get(0));
+        assertEquals("Variant is not the expected one", "matching-football-cars-interests-variant-expected-score-91", variants.get(1));
+        assertEquals("Variant is not the expected one", "not-matching-football-cars-interests-variant-expected-score-90", variants.get(2));
+        assertEquals("Variant is not the expected one", "not-matching-tennis-fishing-interests-variant-expected-score-50", variants.get(3));
+        assertEquals("Variant is not the expected one", "matching-football-interests-variant-expected-score-51", variants.get(4));
+        assertEquals("Variant is not the expected one", "matching-tennis-interests-variant-expected-score-31", variants.get(5));
+        assertEquals("Variant is not the expected one", "not-matching-tennis-interests-custom-score-100-variant-expected-score-30", variants.get(6));
     }
 
     @Test
@@ -736,5 +655,224 @@ public class ContextServletIT extends BaseIT {
         assertEquals("score1 does not have expected value", 1, scores.get("score1").intValue());
 
         segmentService.removeScoringDefinition(scoring.getItemId(), false);
+    }
+
+    @Test
+    public void test_no_ControlGroup() throws Exception {
+        performPersonalizationWithControlGroup(
+                null,
+                Collections.singletonList("no-condition"),
+                false,
+                false,
+                null,
+                null);
+    }
+
+    @Test
+    public void test_in_ControlGroup_profile_stored() throws Exception {
+        performPersonalizationWithControlGroup(
+                generateControlGroupConfig("false", "100.0"),
+                Arrays.asList("first-name-missing", "no-condition"),
+                true,
+                true,
+                true,
+                null);
+
+        performPersonalizationWithControlGroup(
+                generateControlGroupConfig("false", "0.0"),
+                Arrays.asList("first-name-missing", "no-condition"),
+                true,
+                true,
+                true,
+                null);
+    }
+
+    @Test
+    public void test_in_ControlGroup_session_stored() throws Exception {
+        performPersonalizationWithControlGroup(
+                generateControlGroupConfig("true", "100.0"),
+                Arrays.asList("first-name-missing", "no-condition"),
+                true,
+                true,
+                null,
+                true);
+
+        performPersonalizationWithControlGroup(
+                generateControlGroupConfig("true", "0.0"),
+                Arrays.asList("first-name-missing", "no-condition"),
+                true,
+                true,
+                null,
+                true);
+    }
+
+    @Test
+    public void test_out_ControlGroup_profile_stored() throws Exception {
+        performPersonalizationWithControlGroup(
+                generateControlGroupConfig("false", "0.0"),
+                Collections.singletonList("no-condition"),
+                true,
+                false,
+                false,
+                null);
+
+        performPersonalizationWithControlGroup(
+                generateControlGroupConfig("false", "100.0"),
+                Collections.singletonList("no-condition"),
+                true,
+                false,
+                false,
+                null);
+    }
+
+    @Test
+    public void test_out_ControlGroup_session_stored() throws Exception {
+        performPersonalizationWithControlGroup(
+                generateControlGroupConfig("true", "0.0"),
+                Collections.singletonList("no-condition"),
+                true,
+                false,
+                null,
+                false);
+
+        performPersonalizationWithControlGroup(
+                generateControlGroupConfig("true", "100.0"),
+                Collections.singletonList("no-condition"),
+                true,
+                false,
+                null,
+                false);
+    }
+
+    @Test
+    public void test_advanced_ControlGroup_test() throws Exception {
+        // STEP 1: start with no control group
+        performPersonalizationWithControlGroup(
+                null,
+                Collections.singletonList("no-condition"),
+                false,
+                false,
+                null,
+                null);
+
+        // STEP 2: then enable control group stored in profile
+        performPersonalizationWithControlGroup(
+                generateControlGroupConfig("false", "100.0"),
+                Arrays.asList("first-name-missing", "no-condition"),
+                true,
+                true,
+                true,
+                null);
+
+        // STEP 3: then re disable control group
+        performPersonalizationWithControlGroup(
+                null,
+                Collections.singletonList("no-condition"),
+                false,
+                false,
+                /* We can see we still have old control group check stored in the profile */ true,
+                null);
+
+        // STEP 4: then re-enable control group, but session scoped this time, with a 0 percentage
+        performPersonalizationWithControlGroup(
+                generateControlGroupConfig("true", "0.0"),
+                Collections.singletonList("no-condition"),
+                true,
+                false,
+                /* We can see we still have old control group check stored in the profile */ true,
+                /* And now we also have a status saved in the session */ false);
+
+        // STEP 5: then re-enable control group, but profile scoped this time, with a 0 percentage
+        //         We should be in control group because of the STEP 2, the current profile already contains a persisted status for the perso.
+        //         So even if current config is 0, old check already flagged current profile to be in the control group.
+        performPersonalizationWithControlGroup(
+                generateControlGroupConfig("false", "0.0"),
+                Arrays.asList("first-name-missing", "no-condition"),
+                true,
+                true,
+                /* We can see we still have old control group check stored in the profile */ true,
+                /*  We can see we still have old control group check stored in the session too */ false);
+
+        // STEP 6: then re-enable control group, but session scoped this time, with a 100 percentage
+        //         We should not be in control group because of the STEP 4, the current session already contains a persisted status for the perso.
+        //         So even if current config is 100, old check already flagged current profile to not be in the control group.
+        performPersonalizationWithControlGroup(
+                generateControlGroupConfig("true", "100.0"),
+                Collections.singletonList("no-condition"),
+                true,
+                false,
+                /* We can see we still have old control group check stored in the profile */ true,
+                /*  We can see we still have old control group check stored in the session too */ false);
+
+        // STEP 7: then re disable control group
+        performPersonalizationWithControlGroup(
+                null,
+                Collections.singletonList("no-condition"),
+                false,
+                false,
+                /* We can see we still have old control group check stored in the profile */ true,
+                /*  We can see we still have old control group check stored in the session too */ false);
+    }
+
+    private void performPersonalizationWithControlGroup(Map<String, String> controlGroupConfig, List<String> expectedVariants,
+                                                        boolean expectedControlGroupInfoInPersoResult, boolean expectedControlGroupValueInPersoResult,
+                                                        Boolean expectedControlGroupValueInProfile, Boolean expectedControlGroupValueInSession) throws Exception {
+        // Test normal personalization should not have control group info in response
+
+        HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
+        if (controlGroupConfig != null) {
+            request.setEntity(new StringEntity(getValidatedBundleJSON("personalization-control-group.json", controlGroupConfig), ContentType.APPLICATION_JSON));
+        } else {
+            request.setEntity(new StringEntity(getValidatedBundleJSON("personalization-no-control-group.json", null), ContentType.APPLICATION_JSON));
+        }
+
+        TestUtils.RequestResponse response = TestUtils.executeContextJSONRequest(request);
+        ContextResponse contextResponse = response.getContextResponse();
+
+        // Check variants
+        List<String> variants = contextResponse.getPersonalizations().get("perso-control-group");
+        assertEquals("Invalid response code", 200, response.getStatusCode());
+        assertEquals("Perso should contains the good number of variants", expectedVariants.size(), variants.size());
+        for (int i = 0; i < expectedVariants.size(); i++) {
+            assertEquals("Variant is not the expected one", expectedVariants.get(i), variants.get(i));
+        }
+        PersonalizationResult personalizationResult = contextResponse.getPersonalizationResults().get("perso-control-group");
+        variants = personalizationResult.getContentIds();
+        assertEquals("Perso should contains the good number of variants", expectedVariants.size(), variants.size());
+        for (int i = 0; i < expectedVariants.size(); i++) {
+            assertEquals("Variant is not the expected one", expectedVariants.get(i), variants.get(i));
+        }
+        // Check control group info
+        assertEquals("Perso result should contains control group info", expectedControlGroupInfoInPersoResult, personalizationResult.getAdditionalResultInfos().containsKey(PersonalizationResult.ADDITIONAL_RESULT_INFO_IN_CONTROL_GROUP));
+        assertEquals("Perso should not be in control group then", expectedControlGroupValueInPersoResult, contextResponse.getPersonalizationResults().get("perso-control-group").isInControlGroup());
+
+        // Check control group state on profile
+        keepTrying("Incorrect control group on profile",
+                () -> profileService.load(TEST_PROFILE_ID), storedProfile -> expectedControlGroupValueInProfile == getPersistedControlGroupStatus(storedProfile, "perso-control-group"),
+                DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+
+        // Check control group state on session
+        keepTrying("Incorrect control group status on session",
+                () -> persistenceService.load(TEST_SESSION_ID, Session.class), storedSession -> expectedControlGroupValueInSession == getPersistedControlGroupStatus(storedSession, "perso-control-group"),
+                DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+    }
+
+    private Boolean getPersistedControlGroupStatus(SystemPropertiesItem systemPropertiesItem, String personalizationId) {
+        if(systemPropertiesItem.getSystemProperties() != null && systemPropertiesItem.getSystemProperties().containsKey("personalizationStrategyStatus")) {
+            List<Map<String, Object>> personalizationStrategyStatus = (List<Map<String, Object>>) systemPropertiesItem.getSystemProperties().get("personalizationStrategyStatus");
+            for (Map<String, Object> strategyStatus : personalizationStrategyStatus) {
+                if (personalizationId.equals(strategyStatus.get("personalizationId"))) {
+                    return strategyStatus.containsKey("inControlGroup") && ((boolean) strategyStatus.get("inControlGroup"));
+                }
+            }
+        }
+        return null;
+    }
+
+    private Map<String, String> generateControlGroupConfig(String storeInSession, String percentage) {
+        Map<String, String> controlGroupConfig = new HashMap<>();
+        controlGroupConfig.put("storeInSession", storeInSession);
+        controlGroupConfig.put("percentage", percentage);
+        return controlGroupConfig;
     }
 }
