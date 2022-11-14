@@ -51,6 +51,8 @@ public class ContextResponse implements Serializable {
 
     private int processedEvents;
 
+    private Map<String, List<String>> personalizations;
+
     private Map<String, PersonalizationResult> personalizationResults;
 
     private Set<Condition> trackedConditions;
@@ -209,7 +211,7 @@ public class ContextResponse implements Serializable {
                     .collect(Collectors.toMap(Map.Entry::getKey,
                             entry -> entry.getValue().getContentIds()));
         }
-        return null;
+        return personalizations;
     }
 
     /**
@@ -217,7 +219,7 @@ public class ContextResponse implements Serializable {
      */
     @Deprecated
     public void setPersonalizations(Map<String, List<String>> personalizations) {
-        // do nothing, use setPersonalizationResults() instead
+        this.personalizations = personalizations;
     }
 
     /**
