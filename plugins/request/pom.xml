@@ -31,7 +31,7 @@
     <packaging>bundle</packaging>
 
     <properties>
-        <yauaa.version>5.9</yauaa.version>
+        <yauaa.version>7.8.0</yauaa.version>
         <kryo.version>2.24.0</kryo.version>
         <minlog.version>1.3.1</minlog.version>
         <prefixmap>1.1</prefixmap>
@@ -164,6 +164,13 @@
             <groupId>javax.annotation</groupId>
             <artifactId>javax.annotation-api</artifactId>
             <version>1.3.2</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.ops4j.pax.logging</groupId>
+            <artifactId>pax-logging-api</artifactId>
+            <version>1.11.13</version>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 
