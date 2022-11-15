@@ -17,13 +17,9 @@
 
 package org.apache.unomi.plugins.request.useragent;
 
-import nl.basjes.parse.useragent.AbstractUserAgentAnalyzer;
 import nl.basjes.parse.useragent.UserAgentAnalyzer;
-import org.apache.commons.collections.map.LRUMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.Collections;
 
 /**
  * @author fpapon@apache.org
@@ -32,8 +28,8 @@ public class UserAgentDetectorServiceImpl {
 
     private static final Logger logger = LoggerFactory.getLogger(UserAgentDetectorServiceImpl.class.getName());
 
-    private final static float JAVA_CLASS_VERSION_JDK11 = 55.0f;
-    private final static String JAVA_CLASS_VERSION = "java.class.version";
+    private final static int JDK11 = 11;
+    private final static String JDK_VERSION = "java.version";
 
     private UserAgentAnalyzer userAgentAnalyzer;
 
@@ -45,14 +41,20 @@ public class UserAgentDetectorServiceImpl {
                     .newBuilder()
                     .hideMatcherLoadStats()
                     .immediateInitialization();
-            if (Float.parseFloat(System.getProperty(JAVA_CLASS_VERSION)) < JAVA_CLASS_VERSION_JDK11) {
+            // Check JDK Version
+            // Versions prior to 10 are named 1.x
+            String[] versionElements = System.getProperty(JDK_VERSION).split("\\.");
+            int discard = Integer.parseInt(versionElements[0]);
+            int currentJDK;
+            if (discard == 1) {
+                currentJDK = Integer.parseInt(versionElements[1]);
+            } else {
+                currentJDK = discard;
+            }
+            if (currentJDK < JDK11) {
                 // Use custom cache for jdk8 compatibility
-                userAgentAnalyzerBuilder.withCacheInstantiator(
-                                (AbstractUserAgentAnalyzer.CacheInstantiator) size ->
-                                        Collections.synchronizedMap(new LRUMap(size)))
-                        .withClientHintCacheInstantiator(
-                                (AbstractUserAgentAnalyzer.ClientHintsCacheInstantiator<?>) size ->
-                                        Collections.synchronizedMap(new LRUMap(size)));
+                logger.info("Use JDK8 compliant version of the agent analyzer caching");
+                userAgentAnalyzerBuilder.useJava8CompatibleCaching();
             }
             this.userAgentAnalyzer = userAgentAnalyzerBuilder.withCache(10000)
                     .withField(nl.basjes.parse.useragent.UserAgent.OPERATING_SYSTEM_CLASS)
