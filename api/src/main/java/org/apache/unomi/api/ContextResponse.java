@@ -203,7 +203,6 @@ public class ContextResponse implements Serializable {
      * @deprecated personalizations results are more complex since 2.1.0 and they are now available under: getPersonalizationResults()
      */
     @Deprecated
-    @XmlTransient
     public Map<String, List<String>> getPersonalizations() {
         return personalizations;
     }
