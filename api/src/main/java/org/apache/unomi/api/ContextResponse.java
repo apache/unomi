@@ -203,14 +203,7 @@ public class ContextResponse implements Serializable {
      * @deprecated personalizations results are more complex since 2.1.0 and they are now available under: getPersonalizationResults()
      */
     @Deprecated
-    @XmlTransient
     public Map<String, List<String>> getPersonalizations() {
-        if (personalizationResults != null) {
-            return personalizationResults.entrySet()
-                    .stream()
-                    .collect(Collectors.toMap(Map.Entry::getKey,
-                            entry -> entry.getValue().getContentIds()));
-        }
         return personalizations;
     }
 
