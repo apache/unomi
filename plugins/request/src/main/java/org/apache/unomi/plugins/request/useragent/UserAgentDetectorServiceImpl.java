@@ -17,9 +17,13 @@
 
 package org.apache.unomi.plugins.request.useragent;
 
+import nl.basjes.parse.useragent.AbstractUserAgentAnalyzer;
 import nl.basjes.parse.useragent.UserAgentAnalyzer;
+import org.apache.commons.collections.map.LRUMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.Collections;
 
 /**
  * @author fpapon@apache.org
@@ -37,6 +41,14 @@ public class UserAgentDetectorServiceImpl {
             this.userAgentAnalyzer = UserAgentAnalyzer
                     .newBuilder()
                     .hideMatcherLoadStats()
+                    .immediateInitialization()
+                    // Use custom cache for jdk8 compatibility
+                    .withCacheInstantiator(
+                            (AbstractUserAgentAnalyzer.CacheInstantiator) size ->
+                                    Collections.synchronizedMap(new LRUMap(size)))
+                    .withClientHintCacheInstantiator(
+                            (AbstractUserAgentAnalyzer.ClientHintsCacheInstantiator<?>) size ->
+                                    Collections.synchronizedMap(new LRUMap(size)))
                     .withCache(10000)
                     .withField(nl.basjes.parse.useragent.UserAgent.OPERATING_SYSTEM_CLASS)
                     .withField(nl.basjes.parse.useragent.UserAgent.OPERATING_SYSTEM_NAME)
@@ -46,7 +58,6 @@ public class UserAgentDetectorServiceImpl {
                     .withField(nl.basjes.parse.useragent.UserAgent.DEVICE_NAME)
                     .withField(nl.basjes.parse.useragent.UserAgent.DEVICE_BRAND)
                     .build();
-            this.userAgentAnalyzer.immediateInitialization();
             this.userAgentAnalyzer.initializeMatchers();
         } finally {
             Thread.currentThread().setContextClassLoader(tccl);
