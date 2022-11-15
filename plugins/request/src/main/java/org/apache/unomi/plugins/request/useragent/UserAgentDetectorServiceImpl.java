@@ -32,24 +32,29 @@ public class UserAgentDetectorServiceImpl {
 
     private static final Logger logger = LoggerFactory.getLogger(UserAgentDetectorServiceImpl.class.getName());
 
+    private final static float JAVA_CLASS_VERSION_JDK11 = 55.0f;
+    private final static String JAVA_CLASS_VERSION = "java.class.version";
+
     private UserAgentAnalyzer userAgentAnalyzer;
 
     public void postConstruct() {
         ClassLoader tccl = Thread.currentThread().getContextClassLoader();
         try {
             Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
-            this.userAgentAnalyzer = UserAgentAnalyzer
+            final UserAgentAnalyzer.UserAgentAnalyzerBuilder userAgentAnalyzerBuilder = UserAgentAnalyzer
                     .newBuilder()
                     .hideMatcherLoadStats()
-                    .immediateInitialization()
-                    // Use custom cache for jdk8 compatibility
-                    .withCacheInstantiator(
-                            (AbstractUserAgentAnalyzer.CacheInstantiator) size ->
-                                    Collections.synchronizedMap(new LRUMap(size)))
-                    .withClientHintCacheInstantiator(
-                            (AbstractUserAgentAnalyzer.ClientHintsCacheInstantiator<?>) size ->
-                                    Collections.synchronizedMap(new LRUMap(size)))
-                    .withCache(10000)
+                    .immediateInitialization();
+            if (Float.parseFloat(System.getProperty(JAVA_CLASS_VERSION)) < JAVA_CLASS_VERSION_JDK11) {
+                // Use custom cache for jdk8 compatibility
+                userAgentAnalyzerBuilder.withCacheInstantiator(
+                                (AbstractUserAgentAnalyzer.CacheInstantiator) size ->
+                                        Collections.synchronizedMap(new LRUMap(size)))
+                        .withClientHintCacheInstantiator(
+                                (AbstractUserAgentAnalyzer.ClientHintsCacheInstantiator<?>) size ->
+                                        Collections.synchronizedMap(new LRUMap(size)));
+            }
+            this.userAgentAnalyzer = userAgentAnalyzerBuilder.withCache(10000)
                     .withField(nl.basjes.parse.useragent.UserAgent.OPERATING_SYSTEM_CLASS)
                     .withField(nl.basjes.parse.useragent.UserAgent.OPERATING_SYSTEM_NAME)
                     .withField(nl.basjes.parse.useragent.UserAgent.AGENT_NAME)
