@@ -28,35 +28,16 @@ public class UserAgentDetectorServiceImpl {
 
     private static final Logger logger = LoggerFactory.getLogger(UserAgentDetectorServiceImpl.class.getName());
 
-    private final static int JDK11 = 11;
-    private final static String JDK_VERSION = "java.version";
-
     private UserAgentAnalyzer userAgentAnalyzer;
 
     public void postConstruct() {
         ClassLoader tccl = Thread.currentThread().getContextClassLoader();
         try {
             Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
-            final UserAgentAnalyzer.UserAgentAnalyzerBuilder userAgentAnalyzerBuilder = UserAgentAnalyzer
+            this.userAgentAnalyzer = UserAgentAnalyzer
                     .newBuilder()
                     .hideMatcherLoadStats()
-                    .immediateInitialization();
-            // Check JDK Version
-            // Versions prior to 10 are named 1.x
-            String[] versionElements = System.getProperty(JDK_VERSION).split("\\.");
-            int discard = Integer.parseInt(versionElements[0]);
-            int currentJDK;
-            if (discard == 1) {
-                currentJDK = Integer.parseInt(versionElements[1]);
-            } else {
-                currentJDK = discard;
-            }
-            if (currentJDK < JDK11) {
-                // Use custom cache for jdk8 compatibility
-                logger.info("Use JDK8 compliant version of the agent analyzer caching");
-                userAgentAnalyzerBuilder.useJava8CompatibleCaching();
-            }
-            this.userAgentAnalyzer = userAgentAnalyzerBuilder.withCache(10000)
+                    .withCache(10000)
                     .withField(nl.basjes.parse.useragent.UserAgent.OPERATING_SYSTEM_CLASS)
                     .withField(nl.basjes.parse.useragent.UserAgent.OPERATING_SYSTEM_NAME)
                     .withField(nl.basjes.parse.useragent.UserAgent.AGENT_NAME)
@@ -65,6 +46,7 @@ public class UserAgentDetectorServiceImpl {
                     .withField(nl.basjes.parse.useragent.UserAgent.DEVICE_NAME)
                     .withField(nl.basjes.parse.useragent.UserAgent.DEVICE_BRAND)
                     .build();
+            this.userAgentAnalyzer.immediateInitialization();
             this.userAgentAnalyzer.initializeMatchers();
         } finally {
             Thread.currentThread().setContextClassLoader(tccl);
