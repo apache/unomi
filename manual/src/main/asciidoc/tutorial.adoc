@@ -288,7 +288,7 @@ The last step is to use the newly added property to the profile to perform some 
                         "condition": {
                             "type": "profilePropertyCondition",
                             "parameterValues": {
-                                "propertyName" : "properties.pageViewCount",
+                                "propertyName" : "properties.pageViewCount.<scope>",
                                 "comparisonOperator" : "greaterThan",
                                 "propertyValueInteger" : 5
                             }
