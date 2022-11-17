@@ -44,6 +44,7 @@ import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.PropertyHelper;
 import org.apache.unomi.api.utils.ParserHelper;
+import org.apache.unomi.services.sorts.ControlGroupPersonalizationStrategy;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleEvent;
@@ -1210,16 +1211,34 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
                         }
                     } else if (targetProperty instanceof Collection && sourceProperty.getValue() instanceof Collection) {
                         // merge Collections like "lists"
-                        Collection sourceCollection = (Collection) sourceProperty.getValue();
-                        Collection targetCollection = (Collection) targetProperty;
+                        if (ControlGroupPersonalizationStrategy.PERSONALIZATION_STRATEGY_STATUS.equals(sourceProperty.getKey())) {
+                            // Special handling for personalization strategy statuses
+                            // TODO UNOMI-719: move this in a dedicated extension point to handle this kind of merge strategy in a more generic way
+                            List<Map<String, Object>> sourceStatuses = (List<Map<String, Object>>) sourceProperty.getValue();
+                            List<Map<String, Object>> targetStatuses = (List<Map<String, Object>>) targetProperty;
 
-                        for (Object sourceItem : sourceCollection) {
-                            if (!targetCollection.contains(sourceItem)) {
-                                try {
-                                    targetCollection.add(sourceItem);
+                            for (Map<String, Object> sourceStatus : sourceStatuses) {
+                                if (targetStatuses
+                                        .stream()
+                                        .noneMatch(targetStatus -> targetStatus.get(ControlGroupPersonalizationStrategy.PERSONALIZATION_STRATEGY_STATUS_ID)
+                                                .equals(sourceStatus.get(ControlGroupPersonalizationStrategy.PERSONALIZATION_STRATEGY_STATUS_ID)))) {
+                                    // there is no existing status for the status ID, we can safely add it to master
+                                    targetStatuses.add(sourceStatus);
                                     changed = true;
-                                } catch (Exception e) {
-                                    // may be Collection type issue
+                                }
+                            }
+                        } else {
+                            Collection sourceCollection = (Collection) sourceProperty.getValue();
+                            Collection targetCollection = (Collection) targetProperty;
+
+                            for (Object sourceItem : sourceCollection) {
+                                if (!targetCollection.contains(sourceItem)) {
+                                    try {
+                                        targetCollection.add(sourceItem);
+                                        changed = true;
+                                    } catch (Exception e) {
+                                        // may be Collection type issue
+                                    }
                                 }
                             }
                         }
