@@ -5,9 +5,9 @@ name: Build and run tests
 
 on:
   push:
-    branches: [ master, unomi-1.x ]
+    branches: [ master, unomi-1.x, unomi-1.7.x ]
   pull_request:
-    branches: [ master ]
+    branches: [ master, unomi-1.x, unomi-1.7.x ]
 
 jobs:
   unit-tests:
