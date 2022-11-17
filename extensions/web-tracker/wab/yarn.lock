@@ -1036,10 +1036,10 @@ ansi-styles@^3.2.1:
   dependencies:
     color-convert "^1.9.0"
 
-apache-unomi-tracker@^1.0.1:
-  version "1.0.1"
-  resolved "https://registry.yarnpkg.com/apache-unomi-tracker/-/apache-unomi-tracker-1.0.1.tgz#b69269c996b4e7afe2282dc8b1ea7c8bdc0780f0"
-  integrity sha512-0nxz1FDAswxuQ/mbJdwHR+InRK6SDEg/KXZDROfB5lSWtEpncOFkJQKewdx7WI9GTOijXEV1h4i1Ig20m9qYbg==
+apache-unomi-tracker@^1.1.0:
+  version "1.1.0"
+  resolved "https://registry.yarnpkg.com/apache-unomi-tracker/-/apache-unomi-tracker-1.1.0.tgz#8f7a712bda6d05a1fbadc43320b6118dd1fe9f7e"
+  integrity sha512-cAqikmrDljJibBfMft3WE9Ic1S614wySWClBQvuHASle58GROVNqKyHtYSE5Xio0non+w+KGxLVXIzn0bGjTZg==
   dependencies:
     "@babel/runtime" "^7.18.9"
     es6-crawler-detect "^3.3.0"
