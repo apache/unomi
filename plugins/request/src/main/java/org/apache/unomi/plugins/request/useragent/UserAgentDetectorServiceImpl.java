@@ -17,7 +17,9 @@
 
 package org.apache.unomi.plugins.request.useragent;
 
+import nl.basjes.parse.useragent.PackagedRules;
 import nl.basjes.parse.useragent.UserAgentAnalyzer;
+import nl.basjes.parse.useragent.config.ConfigLoader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -28,52 +30,59 @@ public class UserAgentDetectorServiceImpl {
 
     private static final Logger logger = LoggerFactory.getLogger(UserAgentDetectorServiceImpl.class.getName());
 
-    private final static int JDK11 = 11;
-    private final static String JDK_VERSION = "java.version";
-
     private UserAgentAnalyzer userAgentAnalyzer;
 
     public void postConstruct() {
-        ClassLoader tccl = Thread.currentThread().getContextClassLoader();
-        try {
-            Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
-            final UserAgentAnalyzer.UserAgentAnalyzerBuilder userAgentAnalyzerBuilder = UserAgentAnalyzer
-                    .newBuilder()
-                    .hideMatcherLoadStats()
-                    .immediateInitialization();
-            // Check JDK Version
-            // Versions prior to 10 are named 1.x
-            String[] versionElements = System.getProperty(JDK_VERSION).split("\\.");
-            int discard = Integer.parseInt(versionElements[0]);
-            int currentJDK;
-            if (discard == 1) {
-                currentJDK = Integer.parseInt(versionElements[1]);
-            } else {
-                currentJDK = discard;
+        final UserAgentAnalyzer.UserAgentAnalyzerBuilder userAgentAnalyzerBuilder = UserAgentAnalyzer
+                .newBuilder()
+                .hideMatcherLoadStats()
+                .immediateInitialization();
+
+        // We bypass the default resources lookup that is using some Spring class lookup in pattern:
+        // "classpath*:UserAgents/**/*.yaml" and it's not working on Felix OSGI env
+        userAgentAnalyzerBuilder.dropDefaultResources();
+        for (String ruleFileName : PackagedRules.getRuleFileNames()) {
+            // We don't want test rules
+            if (!ConfigLoader.isTestRulesOnlyFile(ruleFileName)) {
+                userAgentAnalyzerBuilder.addResources("classpath*:" + ruleFileName);
             }
-            if (currentJDK < JDK11) {
-                // Use custom cache for jdk8 compatibility
-                logger.info("Use JDK8 compliant version of the agent analyzer caching");
-                userAgentAnalyzerBuilder.useJava8CompatibleCaching();
-            }
-            this.userAgentAnalyzer = userAgentAnalyzerBuilder.withCache(10000)
-                    .withField(nl.basjes.parse.useragent.UserAgent.OPERATING_SYSTEM_CLASS)
-                    .withField(nl.basjes.parse.useragent.UserAgent.OPERATING_SYSTEM_NAME)
-                    .withField(nl.basjes.parse.useragent.UserAgent.AGENT_NAME)
-                    .withField(nl.basjes.parse.useragent.UserAgent.AGENT_VERSION)
-                    .withField(nl.basjes.parse.useragent.UserAgent.DEVICE_CLASS)
-                    .withField(nl.basjes.parse.useragent.UserAgent.DEVICE_NAME)
-                    .withField(nl.basjes.parse.useragent.UserAgent.DEVICE_BRAND)
-                    .build();
-            this.userAgentAnalyzer.initializeMatchers();
-        } finally {
-            Thread.currentThread().setContextClassLoader(tccl);
         }
+
+        // Use custom cache for jdk8 compatibility
+        if (getCurrentJVMMajorVersion() < 11) {
+            logger.info("Use JVM 8 compliant version of the agent analyzer caching");
+            userAgentAnalyzerBuilder.useJava8CompatibleCaching();
+        }
+
+        this.userAgentAnalyzer = userAgentAnalyzerBuilder.withCache(10000)
+                .withField(nl.basjes.parse.useragent.UserAgent.OPERATING_SYSTEM_CLASS)
+                .withField(nl.basjes.parse.useragent.UserAgent.OPERATING_SYSTEM_NAME)
+                .withField(nl.basjes.parse.useragent.UserAgent.AGENT_NAME)
+                .withField(nl.basjes.parse.useragent.UserAgent.AGENT_VERSION)
+                .withField(nl.basjes.parse.useragent.UserAgent.DEVICE_CLASS)
+                .withField(nl.basjes.parse.useragent.UserAgent.DEVICE_NAME)
+                .withField(nl.basjes.parse.useragent.UserAgent.DEVICE_BRAND)
+                .build();
+        this.userAgentAnalyzer.initializeMatchers();
         logger.info("UserAgentDetector service initialized.");
     }
 
+    private int getCurrentJVMMajorVersion() {
+        String[] versionElements = System.getProperty("java.version").split("\\.");
+        int discard = Integer.parseInt(versionElements[0]);
+        // Versions prior to 10 are named 1.x
+        if (discard == 1) {
+            return Integer.parseInt(versionElements[1]);
+        } else {
+            return discard;
+        }
+    }
+
     public void preDestroy() {
-        userAgentAnalyzer = null;
+        if (userAgentAnalyzer != null) {
+            userAgentAnalyzer.destroy();
+            userAgentAnalyzer = null;
+        }
         logger.info("UserAgentDetector service shutdown.");
     }
 

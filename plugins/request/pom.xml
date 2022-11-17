@@ -30,14 +30,6 @@
     <description>Request reading actions plugin for the Apache Unomi Context Server</description>
     <packaging>bundle</packaging>
 
-    <properties>
-        <yauaa.version>7.8.0</yauaa.version>
-        <kryo.version>2.24.0</kryo.version>
-        <minlog.version>1.3.1</minlog.version>
-        <prefixmap>1.1</prefixmap>
-        <objenesis.version>2.1</objenesis.version>
-    </properties>
-
     <dependencies>
         <dependency>
             <groupId>javax.servlet</groupId>
@@ -46,105 +38,15 @@
         </dependency>
 
         <dependency>
-            <groupId>org.glassfish</groupId>
-            <artifactId>javax.json</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>net.sf.qualitycheck</groupId>
-            <artifactId>quality-check</artifactId>
-            <version>1.3</version>
-        </dependency>
-
-        <dependency>
             <groupId>com.maxmind.geoip2</groupId>
             <artifactId>geoip2</artifactId>
             <version>0.9.0</version>
         </dependency>
 
-        <!-- dependencies of GeoIP 2 -->
-
-        <dependency>
-            <groupId>com.maxmind.db</groupId>
-            <artifactId>maxmind-db</artifactId>
-            <version>0.3.4</version>
-        </dependency>
-
-        <dependency>
-            <groupId>com.google.http-client</groupId>
-            <artifactId>google-http-client</artifactId>
-            <version>1.18.0-rc</version>
-        </dependency>
-
-        <dependency>
-            <groupId>org.apache.httpcomponents</groupId>
-            <artifactId>httpclient-osgi</artifactId>
-            <scope>provided</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>org.apache.httpcomponents</groupId>
-            <artifactId>httpcore-osgi</artifactId>
-            <scope>provided</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>commons-logging</groupId>
-            <artifactId>commons-logging</artifactId>
-            <version>1.1.1</version>
-        </dependency>
-
-        <dependency>
-            <groupId>commons-codec</groupId>
-            <artifactId>commons-codec</artifactId>
-            <version>1.3</version>
-        </dependency>
-
         <dependency>
             <groupId>nl.basjes.parse.useragent</groupId>
             <artifactId>yauaa</artifactId>
-            <version>${yauaa.version}</version>
-        </dependency>
-
-        <dependency>
-            <groupId>com.esotericsoftware.kryo</groupId>
-            <artifactId>kryo</artifactId>
-            <version>${kryo.version}</version>
-        </dependency>
-
-        <dependency>
-            <groupId>com.esotericsoftware</groupId>
-            <artifactId>minlog</artifactId>
-            <version>${minlog.version}</version>
-        </dependency>
-
-        <dependency>
-            <groupId>nl.basjes.collections</groupId>
-            <artifactId>prefixmap</artifactId>
-            <version>1.1</version>
-        </dependency>
-
-        <dependency>
-            <groupId>org.apache.commons</groupId>
-            <artifactId>commons-text</artifactId>
-            <version>1.6</version>
-        </dependency>
-
-        <dependency>
-            <groupId>org.apache.commons</groupId>
-            <artifactId>commons-collections4</artifactId>
-            <version>4.3</version>
-        </dependency>
-
-        <dependency>
-            <groupId>org.apache.commons</groupId>
-            <artifactId>commons-lang3</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>org.objenesis</groupId>
-            <artifactId>objenesis</artifactId>
-            <version>${objenesis.version}</version>
+            <version>7.8.0</version>
         </dependency>
 
         <dependency>
@@ -154,9 +56,21 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-simple</artifactId>
-            <version>1.6.6</version>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-api</artifactId>
+            <version>2.19.0</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-core</artifactId>
+            <version>2.19.0</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-slf4j-impl</artifactId>
+            <version>2.19.0</version>
             <scope>test</scope>
         </dependency>
 
@@ -164,13 +78,6 @@
             <groupId>javax.annotation</groupId>
             <artifactId>javax.annotation-api</artifactId>
             <version>1.3.2</version>
-        </dependency>
-
-        <dependency>
-            <groupId>org.ops4j.pax.logging</groupId>
-            <artifactId>pax-logging-api</artifactId>
-            <version>1.11.13</version>
-            <scope>test</scope>
         </dependency>
     </dependencies>
 
@@ -182,7 +89,15 @@
                 <extensions>true</extensions>
                 <configuration>
                     <instructions>
+                        <!--
+                            _noee is used to avoid BND to set JAVAEE requirement to Java 11
+                            (due to Yauaa internal dependency: "Caffeine" being a Java 11 library),
+                            We explicitly know the differences between Java 8 and Java 11,
+                            and they are already handled in the implementation
+                        -->
+                        <_noee>true</_noee>
                         <Embed-Dependency>*;scope=compile|runtime</Embed-Dependency>
+                        <Embed-Transitive>true</Embed-Transitive>
                         <Import-Package>
                             COM.newmonics.PercClassLoader;resolution:=optional,
                             android.os;resolution:=optional,
@@ -190,14 +105,13 @@
                             org.apache.log;resolution:=optional,
                             org.apache.log4j;resolution:=optional,
                             sun.misc;resolution:=optional,
-                            sun.nio.ch;resolution:=optional,
                             jrockit.vm;resolution:=optional,
-                            kotlin.reflect;resolution:=optional,
-                            kotlin.reflect.jvm;resolution:=optional,
-                            nl.basjes.shaded.com.google.errorprone.annotations;resolution:=optional,
-                            nl.basjes.shaded.com.google.errorprone.annotations.concurrent;resolution:=optional,
-                            org.checkerframework.checker.nullness.qual;resolution:=optional,
                             sun.reflect;resolution:=optional,
+                            com.esotericsoftware.kryo;resolution:=optional,
+                            com.esotericsoftware.kryo.*;resolution:=optional,
+                            kotlin;resolution:=optional,
+                            kotlin.*;resolution:=optional,
+                            org.conscrypt;resolution:=optional,
                             *
                         </Import-Package>
                     </instructions>
@@ -229,6 +143,4 @@
             </plugin>
         </plugins>
     </build>
-
-
 </project>

@@ -21,6 +21,8 @@ import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.logging.Logger;
+
 import org.apache.unomi.plugins.request.useragent.UserAgent;
 import org.apache.unomi.plugins.request.useragent.UserAgentDetectorServiceImpl;
 import org.junit.After;
@@ -28,13 +30,11 @@ import org.junit.Before;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.runners.MethodSorters;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class UserAgentDetectorTest {
-    
-    private static final Logger logger = LoggerFactory.getLogger(UserAgentDetectorTest.class);
+
+    private static final Logger logger = Logger.getLogger(UserAgentDetectorTest.class.getName());
 
     private UserAgentDetectorServiceImpl userAgentDetectorService;
 
@@ -44,7 +44,7 @@ public class UserAgentDetectorTest {
         this.userAgentDetectorService = new UserAgentDetectorServiceImpl();
         this.userAgentDetectorService.postConstruct();
         long end = System.currentTimeMillis();
-        logger.info("Duration starting user agent (in msec) > {}", (end - start));
+        logger.info("Duration starting user agent (in msec) > " + (end - start));
     }
 
     @After
@@ -59,7 +59,7 @@ public class UserAgentDetectorTest {
         long start = System.currentTimeMillis();
         UserAgent agent = this.userAgentDetectorService.parseUserAgent(header);
         long end = System.currentTimeMillis();
-        logger.info("Duration user agent parsing (in msec) > {}", (end - start));
+        logger.info("Duration user agent parsing (in msec) > " + (end - start));
         logger.info(agent.toString());
     }
 
