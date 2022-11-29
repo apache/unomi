@@ -1,0 +1,4 @@
+{
+  "id": "uniqueElementListMergeStrategy",
+  "filter": "(propertyMergeStrategyExecutorId=uniqueElementListPropertyMergeStrategyExecutor)"
+}

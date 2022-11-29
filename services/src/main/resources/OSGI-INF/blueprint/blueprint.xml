@@ -358,6 +358,22 @@
 
     <service interface="org.apache.unomi.api.PropertyMergeStrategyExecutor">
         <service-properties>
+            <entry key="propertyMergeStrategyExecutorId" value="listPropertyMergeStrategyExecutor"/>
+        </service-properties>
+        <bean class="org.apache.unomi.services.mergers.ListPropertyMergeStrategyExecutor">
+        </bean>
+    </service>
+
+    <service interface="org.apache.unomi.api.PropertyMergeStrategyExecutor">
+        <service-properties>
+            <entry key="propertyMergeStrategyExecutorId" value="uniqueElementListPropertyMergeStrategyExecutor"/>
+        </service-properties>
+        <bean class="org.apache.unomi.services.mergers.UniqueElementListPropertyMergeStrategyExecutor">
+        </bean>
+    </service>
+
+    <service interface="org.apache.unomi.api.PropertyMergeStrategyExecutor">
+        <service-properties>
             <entry key="propertyMergeStrategyExecutorId" value="mostRecentPropertyMergeStrategyExecutor"/>
         </service-properties>
         <bean class="org.apache.unomi.services.mergers.MostRecentPropertyMergeStrategyExecutor">
