@@ -17,24 +17,44 @@
 #    limitations under the License.
 #
 ################################################################################
-echo Generating manual...
+if [ $# -ne 2 ]
+  then
+    echo "Illegal number of arguments supplied. Syntax should be generate-site.sh X_X_X X.X.X"
+    echo "Example: ./generate.sh 2_0_x 2.0.1"
+    exit 1
+fi
+echo Setting up environment...
+DIRNAME=`dirname "$0"`
+PROGNAME=`basename "$0"`
+if [ -f "$DIRNAME/setenv.sh" ]; then
+  . "$DIRNAME/setenv.sh"
+fi
+set -e
+# keep track of the last executed command
+trap 'last_command=$current_command; current_command=$BASH_COMMAND' DEBUG
+# echo an error message before exiting
+trap 'echo "\"${last_command}\" command filed with exit code $?."' EXIT
+RELEASE_BRANCH_NAME=$1
+RELEASE_VERSION=$2
+LOCAL_BRANCH_NAME=`git rev-parse --abbrev-ref HEAD`
+echo Git local branch: ${LOCAL_BRANCH_NAME}
+echo Generating manual for branch ${RELEASE_BRANCH_NAME} and version ${RELEASE_VERSION}...
 mvn clean
-cd manual
-mvn -Ddoc.archive=true -Ddoc.source=src/archives/1.1/asciidoc -Ddoc.output.pdf=target/generated-docs/pdf/1_1_x -Ddoc.output.html=target/generated-docs/html/1_1_x -Ddoc.version=1_1_x -P sign verify
-mvn -Ddoc.archive=true -Ddoc.source=src/archives/1.2/asciidoc -Ddoc.output.pdf=target/generated-docs/pdf/1_2_x -Ddoc.output.html=target/generated-docs/html/1_2_x -Ddoc.version=1_2_x -P sign verify
-mvn -Ddoc.archive=true -Ddoc.source=src/archives/1.3/asciidoc -Ddoc.output.pdf=target/generated-docs/pdf/1_3_x -Ddoc.output.html=target/generated-docs/html/1_3_x -Ddoc.version=1_3_x -P sign verify
-mvn -Ddoc.archive=true -Ddoc.source=src/archives/1.4/asciidoc -Ddoc.output.pdf=target/generated-docs/pdf/1_4_x -Ddoc.output.html=target/generated-docs/html/1_4_x -Ddoc.version=1_4_x -P sign verify
-mvn -Ddoc.archive=true -Ddoc.source=src/archives/1.5/asciidoc -Ddoc.output.pdf=target/generated-docs/pdf/1_5_x -Ddoc.output.html=target/generated-docs/html/1_5_x -Ddoc.version=1_5_x -P sign verify
-mvn -Ddoc.archive=true -Ddoc.source=src/archives/1.6/asciidoc -Ddoc.output.pdf=target/generated-docs/pdf/1_6_x -Ddoc.output.html=target/generated-docs/html/1_6_x -Ddoc.version=1_6_x -P sign verify
-mvn -Ddoc.archive=true -Ddoc.output.pdf=target/generated-docs/pdf/2_0_x -Ddoc.output.html=target/generated-docs/html/2_0_x -Ddoc.version=2_0_x -P sign install
-mvn  -P sign install
-cd ..
-echo Generating Javadoc...
-mvn javadoc:aggregate -P integration-tests
-echo Generating REST API...
-cd rest
-mvn package
-cd ..
+pushd manual
+mvn -Ddoc.archive=true -Ddoc.output.pdf=target/generated-docs/pdf/$RELEASE_BRANCH_NAME -Ddoc.output.html=target/generated-docs/html/$RELEASE_BRANCH_NAME -Ddoc.version=$RELEASE_BRANCH_NAME -P sign install
+mvn -P sign install
+# If not on master branch we remove the latest directories
+if [ "$LOCAL_BRANCH_NAME" != "master" ]; then
+  rm -rf target/generated-docs/html/latest
+  rm -rf target/generated-docs/pdf/latest
+fi
+popd
+if [ "$LOCAL_BRANCH_NAME" == "master" ]; then
+  echo Generating Javadoc...
+  mvn javadoc:aggregate -P integration-tests
+else
+  echo Not on master branch, skipping Javadoc generation
+fi
 mkdir -p target/staging/unomi-api
 mkdir -p target/staging/manual
 cp -R target/site/apidocs target/staging/unomi-api
