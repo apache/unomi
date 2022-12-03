@@ -17,35 +17,47 @@
 #    limitations under the License.
 #
 ################################################################################
-if [ $# -ne 2 ]
+if [ $# -ne 4 ]
   then
-    echo "Illegal number of arguments supplied. Syntax should be generate-site-and-upload.sh SVNusername SVNpassword"
+    echo "Illegal number of arguments supplied. Syntax should be generate-site-and-upload.sh X_X_X X.X.X SVNusername SVNpassword "
+    echo "Example: ./generate-site-and-upload.sh 2_0_x 2.0.1 user password"
     exit 1
 fi
-echo Generating manual...
-mvn clean
-cd manual
-mvn -Ddoc.archive=true -Ddoc.source=src/archives/1.1/asciidoc -Ddoc.output.pdf=target/generated-docs/pdf/1_1_x -Ddoc.output.html=target/generated-docs/html/1_1_x -Ddoc.version=1_1_x -P sign verify
-mvn -Ddoc.archive=true -Ddoc.source=src/archives/1.2/asciidoc -Ddoc.output.pdf=target/generated-docs/pdf/1_2_x -Ddoc.output.html=target/generated-docs/html/1_2_x -Ddoc.version=1_2_x -P sign verify
-mvn -Ddoc.archive=true -Ddoc.source=src/archives/1.3/asciidoc -Ddoc.output.pdf=target/generated-docs/pdf/1_3_x -Ddoc.output.html=target/generated-docs/html/1_3_x -Ddoc.version=1_3_x -P sign verify
-mvn -Ddoc.archive=true -Ddoc.source=src/archives/1.4/asciidoc -Ddoc.output.pdf=target/generated-docs/pdf/1_4_x -Ddoc.output.html=target/generated-docs/html/1_4_x -Ddoc.version=1_4_x -P sign verify
-mvn -Ddoc.archive=true -Ddoc.source=src/archives/1.5/asciidoc -Ddoc.output.pdf=target/generated-docs/pdf/1_5_x -Ddoc.output.html=target/generated-docs/html/1_5_x -Ddoc.version=1_5_x -P sign verify
-mvn -Ddoc.archive=true -Ddoc.source=src/archives/1.6/asciidoc -Ddoc.output.pdf=target/generated-docs/pdf/1_6_x -Ddoc.output.html=target/generated-docs/html/1_6_x -Ddoc.version=1_6_x -P sign verify
-mvn -Ddoc.archive=true -Ddoc.output.pdf=target/generated-docs/pdf/2_0_x -Ddoc.output.html=target/generated-docs/html/2_0_x -Ddoc.version=2_0_x -P sign install
-mvn  -P sign install
-cd ..
-echo Generating Javadoc...
-mvn javadoc:aggregate -P integration-tests
-echo Generating REST API...
-cd rest
-mvn package
-cd ..
-mkdir -p target/staging/unomi-api
-mkdir -p target/staging/manual
-cp -R target/site/apidocs target/staging/unomi-api
-cp -Rf manual/target/generated-docs/html/* target/staging/manual
+echo Setting up environment...
+DIRNAME=`dirname "$0"`
+PROGNAME=`basename "$0"`
+if [ -f "$DIRNAME/setenv.sh" ]; then
+  . "$DIRNAME/setenv.sh"
+fi
+set -e
+# keep track of the last executed command
+trap 'last_command=$current_command; current_command=$BASH_COMMAND' DEBUG
+# echo an error message before exiting
+trap 'echo "\"${last_command}\" command filed with exit code $?."' EXIT
+BRANCH_NAME=$1
+VERSION=$2
+SVN_USERNAME=$3
+SVN_PASSWORD=$4
+LOCAL_BRANCH_NAME=`git rev-parse --abbrev-ref HEAD`
+echo Git local branch: ${LOCAL_BRANCH_NAME}
+bash generate-site.sh $BRANCH_NAME $VERSION
 echo Committing documentation to Apache SVN...
-mvn scm-publish:publish-scm -Dscmpublish.pubScmUrl=scm:svn:https://svn.apache.org/repos/asf/unomi/website/manual -Dscmpublish.content=target/staging/manual -Dusername=$1 -Dpassword=$2
-mvn scm-publish:publish-scm -Dscmpublish.pubScmUrl=scm:svn:https://svn.apache.org/repos/asf/unomi/website/unomi-api -Dscmpublish.content=target/staging/unomi-api -Dusername=$1 -Dpassword=$2
-# mvn scm-publish:publish-scm -Dscmpublish.pubScmUrl=scm:svn:https://svn.apache.org/repos/asf/unomi/website/rest-api-doc -Dscmpublish.content=target/staging/rest-api-doc -Dusername=$1 -Dpassword=$2
+mvn scm-publish:publish-scm -Dscmpublish.pubScmUrl=scm:svn:https://svn.apache.org/repos/asf/unomi/website/manual -Dscmpublish.content=target/staging/manual -Dusername=$SVN_USERNAME -Dpassword=$SVN_PASSWORD
+if [ "$LOCAL_BRANCH_NAME" == "master" ]; then
+  mvn scm-publish:publish-scm -Dscmpublish.pubScmUrl=scm:svn:https://svn.apache.org/repos/asf/unomi/website/unomi-api -Dscmpublish.content=target/staging/unomi-api -Dusername=$SVN_USERNAME -Dpassword=$SVN_PASSWORD
+fi
+
+echo "Committing manual to Apache Dist SVN..."
+pushd manual/target
+svn co https://dist.apache.org/repos/dist/release/unomi/$VERSION
+mv unomi-manual-$BRANCH_NAME.pdf $VERSION
+mv unomi-manual-$BRANCH_NAME.pdf.asc $VERSION
+mv unomi-manual-$BRANCH_NAME.zip $VERSION
+mv unomi-manual-$BRANCH_NAME.pdf.sha512 $VERSION
+mv unomi-manual-$BRANCH_NAME.zip.asc $VERSION
+mv unomi-manual-$BRANCH_NAME.zip.sha512 $VERSION
+cd $VERSION
+svn add unomi-manual*
+svn commit -m "Update Unomi manual packages for version ${VERSION}"
+popd
 echo Documentation generation and upload completed.
