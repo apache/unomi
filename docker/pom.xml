@@ -105,12 +105,20 @@
             <plugin>
                 <groupId>io.fabric8</groupId>
                 <artifactId>docker-maven-plugin</artifactId>
-                <version>0.33.0</version>
+                <version>0.40.2</version>
                 <configuration>
                     <images>
                         <image>
                             <alias>unomi</alias>
                             <name>apache/unomi:${project.version}</name>
+                            <build>
+                                <buildx>
+                                    <platforms>
+                                        <platform>linux/amd64</platform>
+                                        <platform>linux/arm64</platform>
+                                    </platforms>
+                                </buildx>
+                            </build>
                             <external>
                                 <type>compose</type>
                                 <basedir>${project.build.directory}/filtered-docker</basedir>

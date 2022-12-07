@@ -15,7 +15,7 @@
 # limitations under the License.
 ################################################################################
 
-FROM openjdk:8-jre
+FROM library/eclipse-temurin:11
 
 # Unomi environment variables
 ENV UNOMI_HOME /opt/apache-unomi
