@@ -57,6 +57,8 @@ else
 fi
 mkdir -p target/staging/unomi-api
 mkdir -p target/staging/manual
-cp -R target/site/apidocs target/staging/unomi-api
+if [ "$LOCAL_BRANCH_NAME" == "master" ]; then
+  cp -R target/site/apidocs target/staging/unomi-api
+fi
 cp -Rf manual/target/generated-docs/html/* target/staging/manual
 echo Documentation generation completed!
