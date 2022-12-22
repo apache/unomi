@@ -16,7 +16,7 @@
 
 ==== Initial Setup
 
-. Install J2SE 8.0 SDK (or later), which can be downloaded from
+. Install J2SE 11 SDK (or later), which can be downloaded from
  http://www.oracle.com/technetwork/java/javase/downloads/index.html[http://www.oracle.com/technetwork/java/javase/downloads/index.html]
 
 . Make sure that your JAVA_HOME environment variable is set to the newly installed
@@ -191,7 +191,7 @@ You can then select the one you want using :
 
 [source]
 ----
-export JAVA_HOME=`/usr/libexec/java_home -v 1.8.0_181`
+export JAVA_HOME=`/usr/libexec/java_home -v 11.0.5`
 ----
 
 and then check that it was correctly referenced using:
@@ -217,7 +217,7 @@ integration tests at least once before using the server to make sure that everyt
 to use these tests is to run them from a continuous integration server such as Jenkins, Apache Gump, Atlassian Bamboo or
  others.
 
-Note : the integration tests require a JDK 8 or more recent !
+Note : the integration tests require a JDK 11 or more recent !
 
 To run the tests simply activate the following profile :
 
