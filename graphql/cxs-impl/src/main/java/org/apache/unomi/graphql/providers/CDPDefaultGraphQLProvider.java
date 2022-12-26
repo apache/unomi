@@ -17,10 +17,7 @@
 package org.apache.unomi.graphql.providers;
 
 import graphql.annotations.processor.typeFunctions.TypeFunction;
-import org.apache.unomi.graphql.scalars.DateFunction;
-import org.apache.unomi.graphql.scalars.DateTimeFunction;
 import org.apache.unomi.graphql.scalars.GeoPointFunction;
-import org.apache.unomi.graphql.scalars.JSONFunction;
 import org.apache.unomi.graphql.types.input.CDPGeoDistanceFilterInput;
 import org.apache.unomi.graphql.types.input.CDPProfileUpdateEventFilterInput;
 import org.apache.unomi.graphql.types.input.CDPProfileUpdateEventInput;
@@ -87,9 +84,6 @@ public class CDPDefaultGraphQLProvider
     public Set<TypeFunction> getTypeFunctions() {
         final Set<TypeFunction> typeFunctions = new HashSet<>();
 
-        typeFunctions.add(new DateTimeFunction());
-        typeFunctions.add(new DateFunction());
-        typeFunctions.add(new JSONFunction());
         typeFunctions.add(new GeoPointFunction());
 
         return typeFunctions;

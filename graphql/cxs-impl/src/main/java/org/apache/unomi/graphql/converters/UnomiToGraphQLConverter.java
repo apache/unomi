@@ -18,12 +18,11 @@
 package org.apache.unomi.graphql.converters;
 
 import graphql.Scalars;
+import graphql.scalars.ExtendedScalars;
 import graphql.schema.GraphQLList;
 import graphql.schema.GraphQLNonNull;
 import graphql.schema.GraphQLType;
-import org.apache.unomi.graphql.scalars.DateTimeFunction;
 import org.apache.unomi.graphql.scalars.GeoPointFunction;
-import org.apache.unomi.graphql.scalars.JSONFunction;
 import org.apache.unomi.graphql.schema.PropertyNameTranslator;
 import org.apache.unomi.graphql.utils.StringUtils;
 
@@ -56,20 +55,20 @@ public interface UnomiToGraphQLConverter {
                 graphQLType = Scalars.GraphQLInt;
                 break;
             case "long":
-                graphQLType = Scalars.GraphQLLong;
+                graphQLType = ExtendedScalars.GraphQLLong;
                 break;
             case "float":
                 graphQLType = Scalars.GraphQLFloat;
                 break;
             case "set":
             case "json":
-                graphQLType = JSONFunction.JSON_SCALAR;
+                graphQLType = ExtendedScalars.Json;
                 break;
             case "geopoint":
                 graphQLType = GeoPointFunction.GEOPOINT_SCALAR;
                 break;
             case "date":
-                graphQLType = DateTimeFunction.DATE_TIME_SCALAR;
+                graphQLType = ExtendedScalars.DateTime;
                 break;
             case "boolean":
                 graphQLType = Scalars.GraphQLBoolean;
