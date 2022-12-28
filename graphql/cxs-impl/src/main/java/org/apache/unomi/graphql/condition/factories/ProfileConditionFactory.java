@@ -153,44 +153,49 @@ public class ProfileConditionFactory extends ConditionFactory {
         return booleanCondition("or", subConditions);
     }
 
-    private Condition interestFilterInputCondition(final CDPInterestFilterInput filterInput) {
-        final List<Condition> rootSubConditions = new ArrayList<>();
+    private Condition buildConditionInterestValue(Double interestValue, String operator) {
+        return integerPropertyCondition("properties.interests.value", operator, interestValue);
+    }
 
-        final String propertyName = "properties.interests." + filterInput.getTopic_equals();
+    private Condition interestFilterInputCondition(final CDPInterestFilterInput filterInput) {
+        final List<Condition> subConditions = new ArrayList<>();
 
         if (filterInput.getTopic_equals() != null) {
-            rootSubConditions.add(propertyCondition(propertyName, "exists", filterInput.getTopic_equals()));
+            subConditions.add(propertyCondition("properties.interests.key", filterInput.getTopic_equals()));
         }
 
         if (filterInput.getScore_equals() != null) {
-            rootSubConditions.add(integerPropertyCondition(propertyName, filterInput.getScore_equals()));
+            subConditions.add(buildConditionInterestValue(filterInput.getScore_equals(), "equals"));
         }
 
         if (filterInput.getScore_gt() != null) {
-            rootSubConditions.add(integerPropertyCondition(propertyName, "greaterThan", filterInput.getScore_gt()));
+            subConditions.add(buildConditionInterestValue(filterInput.getScore_gt(), "greaterThan"));
         }
 
         if (filterInput.getScore_gte() != null) {
-            rootSubConditions.add(integerPropertyCondition(propertyName, "greaterThanOrEqualTo", filterInput.getScore_gte()));
+            subConditions.add(buildConditionInterestValue(filterInput.getScore_gte(), "greaterThanOrEqualTo"));
         }
 
         if (filterInput.getScore_lt() != null) {
-            rootSubConditions.add(integerPropertyCondition(propertyName, "lessThan", filterInput.getScore_lt()));
+            subConditions.add(buildConditionInterestValue(filterInput.getScore_lt(), "lessThan"));
         }
 
         if (filterInput.getScore_lte() != null) {
-            rootSubConditions.add(integerPropertyCondition(propertyName, "lessThanOrEqualTo", filterInput.getScore_lte()));
+            subConditions.add(buildConditionInterestValue(filterInput.getScore_lte(), "lessThanOrEqualTo"));
         }
 
         if (filterInput.getAnd() != null && !filterInput.getAnd().isEmpty()) {
-            rootSubConditions.add(filtersToCondition(filterInput.getOr(), this::interestFilterInputCondition, "and"));
+            subConditions.add(filtersToCondition(filterInput.getOr(), this::interestFilterInputCondition, "and"));
         }
 
         if (filterInput.getOr() != null && !filterInput.getOr().isEmpty()) {
-            rootSubConditions.add(filtersToCondition(filterInput.getOr(), this::interestFilterInputCondition, "or"));
+            subConditions.add(filtersToCondition(filterInput.getOr(), this::interestFilterInputCondition, "or"));
         }
 
-        return booleanCondition("and", rootSubConditions);
+        final Condition nestedCondition = new Condition(definitionsService.getConditionType("nestedCondition"));
+        nestedCondition.setParameter("path", "properties.interests");
+        nestedCondition.setParameter("subCondition", booleanCondition("and", subConditions));
+        return nestedCondition;
     }
 
     @SuppressWarnings("unchecked")
