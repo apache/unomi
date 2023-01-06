@@ -76,6 +76,8 @@ public abstract class BaseIT {
     protected static final String URL = "http://localhost:" + HTTP_PORT;
     protected static final String KARAF_DIR = "target/exam";
     protected static final String UNOMI_KEY = "670c26d1cc413346c3b2fd9ce65dab41";
+    protected static final int DEFAULT_TRYING_TIMEOUT = 2000;
+    protected static final int DEFAULT_TRYING_TRIES = 30;
 
     @Inject
     @Filter(timeout = 600000)
@@ -253,6 +255,31 @@ public abstract class BaseIT {
             }
             Thread.sleep(timeout);
             value = call.get();
+        }
+        return value;
+    }
+
+    protected <T> void waitForNullValue(String failMessage, Supplier<T> call, int timeout, int retries) throws InterruptedException {
+        int count = 0;
+        while (call.get() != null) {
+            if (count++ > retries) {
+                Assert.fail(failMessage);
+            }
+            Thread.sleep(timeout);
+        }
+    }
+
+    protected <T> T shouldBeTrueUntilEnd(String failMessage, Supplier<T> call, Predicate<T> predicate, int timeout, int retries)
+            throws InterruptedException {
+        int count = 0;
+        T value = null;
+        while (count <= retries) {
+            count++;
+            value = call.get();
+            if (!predicate.test(value)) {
+                Assert.fail(failMessage);
+            }
+            Thread.sleep(timeout);
         }
         return value;
     }

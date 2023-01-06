@@ -49,7 +49,8 @@ import org.junit.runners.Suite.SuiteClasses;
         ContextServletIT.class,
         SecurityIT.class,
         RuleServiceIT.class,
-        GroovyActionsServiceIT.class
+        GroovyActionsServiceIT.class,
+        SendEventActionIT.class
 })
 public class AllITs {
 }

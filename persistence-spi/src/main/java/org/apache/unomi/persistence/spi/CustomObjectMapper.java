@@ -70,6 +70,7 @@ public class CustomObjectMapper extends ObjectMapper {
         classes.put(Event.ITEM_TYPE, Event.class);
         classes.put(Goal.ITEM_TYPE, Goal.class);
         classes.put(Persona.ITEM_TYPE, Persona.class);
+        classes.put(Profile.ITEM_TYPE, Profile.class);
         classes.put(Rule.ITEM_TYPE, Rule.class);
         classes.put(Scoring.ITEM_TYPE, Scoring.class);
         classes.put(Segment.ITEM_TYPE, Segment.class);
