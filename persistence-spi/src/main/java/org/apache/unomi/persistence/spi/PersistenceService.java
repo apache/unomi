@@ -125,7 +125,7 @@ public interface PersistenceService {
      * Updates the item of the specified class and identified by the specified identifier with new property values provided as name - value pairs in the specified Map.
      *
      * @param item     the item we want to update
-     * @param dateHint a Date helping in identifying where the item is located
+     * @param dateHint deprecated
      * @param clazz    the Item subclass of the item to update
      * @param source   a Map with entries specifying as key the property name to update and as value its new value
      * @return {@code true} if the update was successful, {@code false} otherwise
@@ -137,7 +137,7 @@ public interface PersistenceService {
      * {@code update(itemId, dateHint, clazz, Collections.singletonMap(propertyName, propertyValue))}
      *
      * @param item          the item we want to update
-     * @param dateHint      a Date helping in identifying where the item is located
+     * @param dateHint deprecated
      * @param clazz         the Item subclass of the item to update
      * @param propertyName  the name of the property to update
      * @param propertyValue the new value of the property
@@ -149,7 +149,7 @@ public interface PersistenceService {
      * Updates the item of the specified class and identified by the specified identifier with new property values provided as name - value pairs in the specified Map.
      *
      * @param item     the item we want to update
-     * @param dateHint a Date helping in identifying where the item is located
+     * @param dateHint deprecated
      * @param clazz    the Item subclass of the item to update
      * @param source   a Map with entries specifying as key the property name to update and as value its new value
      * @param alwaysOverwrite whether to overwrite a document even if we are holding an old item when saving
@@ -162,7 +162,7 @@ public interface PersistenceService {
      * {@code update(itemId, dateHint, clazz, Collections.singletonMap(propertyName, propertyValue))}
      *
      * @param items         A map the consist of item (key) and properties to update (value)
-     * @param dateHint      a Date helping in identifying where the item is located
+     * @param dateHint deprecated
      * @param clazz         the Item subclass of the item to update
      * @return List of failed Items Ids, if all succesful then returns an empty list. if the whole operation failed then will return null
      */
@@ -173,7 +173,7 @@ public interface PersistenceService {
      * {@code update(itemId, dateHint, clazz, Collections.singletonMap(propertyName, propertyValue))}
      *
      * @param item          the item we want to update
-     * @param dateHint      a Date helping in identifying where the item is located
+     * @param dateHint deprecated
      * @param clazz         the Item subclass of the item to update
      * @param script        inline script
      * @param scriptParams  script params
@@ -185,7 +185,7 @@ public interface PersistenceService {
      * Updates the items of the specified class by a query with a new property value for the specified property name
      * based on provided scripts and script parameters
      *
-     * @param dateHint      a Date helping in identifying where the item is located
+     * @param dateHint deprecated
      * @param clazz         the Item subclass of the item to update
      * @param scripts       inline scripts array
      * @param scriptParams  script params array
@@ -198,7 +198,7 @@ public interface PersistenceService {
      * Updates the items of the specified class by a query with a new property value for the specified property name
      * based on provided stored scripts and script parameters
      *
-     * @param dateHint      a Date helping in identifying where the item is located
+     * @param dateHint deprecated
      * @param clazz         the Item subclass of the item to update
      * @param scripts       Stored scripts name
      * @param scriptParams  script params array
@@ -230,7 +230,7 @@ public interface PersistenceService {
      *
      * @param <T>      the type of the Item subclass we want to retrieve
      * @param itemId   the identifier of the item we want to retrieve
-     * @param dateHint a Date helping in identifying where the item is located
+     * @param dateHint deprecated
      * @param clazz    the {@link Item} subclass of the item we want to retrieve
      * @return the item identified with the specified identifier and with the specified Item subclass if it exists, {@code null} otherwise
      */
@@ -239,7 +239,7 @@ public interface PersistenceService {
     /**
      * Load a custom item type identified by an identifier, an optional date hint and the identifier of the custom item type
      * @param itemId the identifier of the custom type we want to retrieve
-     * @param dateHint an optional Date object if the custom item types are stored by date
+     * @param dateHint deprecated
      * @param customItemType an identifier of the custom item type to load
      * @return the CustomItem instance with the specified identifier and the custom item type if it exists, {@code null} otherwise
      */
@@ -610,7 +610,7 @@ public interface PersistenceService {
      * Updates the persistence's engine specific index.
      *
      * @param clazz will use an index by class type
-     * @param dateHint for index with time, can be null
+     * @param dateHint deprecated
      * @param <T> a class that extends Item
      */
     <T extends Item> void refreshIndex(Class<T> clazz, Date dateHint);

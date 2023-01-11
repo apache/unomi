@@ -848,16 +848,7 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
     }
 
     public Session loadSession(String sessionId, Date dateHint) {
-        Session s = persistenceService.load(sessionId, dateHint, Session.class);
-        if (s == null && dateHint != null) {
-            GregorianCalendar gc = new GregorianCalendar();
-            gc.setTime(dateHint);
-            if (gc.get(Calendar.DAY_OF_MONTH) == 1) {
-                gc.add(Calendar.DAY_OF_MONTH, -1);
-                s = persistenceService.load(sessionId, gc.getTime(), Session.class);
-            }
-        }
-        return s;
+        return persistenceService.load(sessionId, null, Session.class);
     }
 
     public Session saveSession(Session session) {
