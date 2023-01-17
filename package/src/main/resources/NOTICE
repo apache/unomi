@@ -1,5 +1,5 @@
 Apache Unomi
-Copyright 2015-2021 The Apache Software Foundation
+Copyright 2015-2023 The Apache Software Foundation
 
 This product includes software developed at
 The Apache Software Foundation (http://www.apache.org/).
@@ -74,7 +74,7 @@ Notice for org.apache.ws.xmlschema
 ---------------------------------------------------------------------------------------------------
 Portions Copyright 2006 International Business Machines Corp.
 
-Portions Copyright (C) World Wide Web Consortium 2006, 2007 and licensed under the 
+Portions Copyright (C) World Wide Web Consortium 2006, 2007 and licensed under the
 three-part BSD license.
 
 
@@ -159,7 +159,7 @@ Apache Felix
 This product includes software developed at
 The OSGi Alliance (http://www.osgi.org/).
 Copyright (c) OSGi Alliance (2000, 2009).
-Licensed under the Apache License 2.0. 
+Licensed under the Apache License 2.0.
 
 
 Notice for org.apache.cxf
@@ -227,7 +227,7 @@ are generated from schema available here:
 (http://java.sun.com/xml/ns/javaee/javaee_5.xsd)
 
 
-This product includes software Copyright University of Southampton IT Innovation Centre, 2009 
+This product includes software Copyright University of Southampton IT Innovation Centre, 2009
 (http://www.it-innovation.soton.ac.uk).
 
 
@@ -283,10 +283,10 @@ Notice for org.apache.geronimo.specs
 This product includes software developed by
 The W3C Consortium (http://www.w3.org/).
 
-Copyright © 1994-2002 World Wide Web Consortium, 
-(Massachusetts Institute of Technology, Institut National 
-de Recherche en Informatique et en Automatique, Keio 
-University). All Rights Reserved. 
+Copyright © 1994-2002 World Wide Web Consortium,
+(Massachusetts Institute of Technology, Institut National
+de Recherche en Informatique et en Automatique, Keio
+University). All Rights Reserved.
 http://www.w3.org/Consortium/Legal/
 
 
