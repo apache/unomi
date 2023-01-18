@@ -529,6 +529,60 @@ curl -X DELETE 'http://localhost:8181/cxs/rules/scriptGroovyActionRule' \
 --user karaf:karaf
 ----
 
+===== Inject an OSGI service in a groovy script
+
+It's possible to use the services provided by unomi directly in the groovy actions.
+
+In the following example, we are going to create a groovy action that displays the number of existing profiles by using the profile service provided by unomi.
+
+----
+import org.osgi.framework.Bundle
+import org.osgi.framework.BundleContext
+import org.osgi.framework.FrameworkUtil
+import org.apache.unomi.groovy.actions.GroovyActionDispatcher
+import org.osgi.framework.ServiceReference
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
+
+final Logger logger = LoggerFactory.getLogger(GroovyActionDispatcher.class.getName());
+
+@Action(id = "displayNumberOfProfilesAction", actionExecutor = "groovy:DisplayNumberOfProfilesAction", description = "Display the number of existing profiles")
+def execute() {
+
+    // Use OSGI function to get the bundleContext
+    Bundle bundle = FrameworkUtil.getBundle(GroovyActionDispatcher.class);
+    BundleContext context = bundle.getBundleContext();
+
+    // Get the service reference
+    ServiceReference<ProfileService> serviceReference = context.getServiceReference(ProfileService.class);
+
+    // Get the service you are looking for
+    ProfileService profileService = context.getService(serviceReference);
+
+    // Example of displaying the number of profile
+    logger.info("Display profile count")
+    logger.info(profileService.getAllProfilesCount().toString())
+
+    return EventService.NO_CHANGE
+}
+----
+
+===== Known limitation
+
+Only the services accessible by the class loader of the GroovyActionDispatcher class can be used in the groovy actions.
+That includes the services in the following packages:
+----
+org.apache.unomi.api.actions
+org.apache.unomi.api.services
+org.apache.unomi.api
+org.apache.unomi.groovy.actions
+org.apache.unomi.groovy.actions.annotations
+org.apache.unomi.groovy.actions.services
+org.apache.unomi.metrics
+org.apache.unomi.persistence.spi
+org.apache.unomi.services.actions;version
+----
+
 ==== Scripting roadmap
 
 Scripting will probably undergo major changes in future versions of Apache Unomi, with the likely retirement of MVEL in favor of Groovy Actions detailed above. 
