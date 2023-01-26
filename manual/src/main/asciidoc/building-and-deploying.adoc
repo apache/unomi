@@ -133,16 +133,15 @@ environment if you intend to re-deploy the context server KAR iteratively.
 Additional requirements:
 * Apache Karaf 4.2.x, http://karaf.apache.org[http://karaf.apache.org]
 
-Before deploying, make sure that you have Apache Karaf properly installed. You will also have to increase the
-default maximum memory size and perm gen size by adjusting the following environment values in the bin/setenv(.bat)
+Before deploying, make sure that you have Apache Karaf properly installed. Depending of your usage, you may also have to increase the
+ memory size by adjusting the following environment values in the bin/setenv(.bat)
 files (at the end of the file):
 
 [source]
 ----
    MY_DIRNAME=`dirname $0`
    MY_KARAF_HOME=`cd "$MY_DIRNAME/.."; pwd`
-   export JAVA_MAX_MEM=3G
-   export JAVA_MAX_PERM_MEM=384M
+   export KARAF_OPTS="$KARAF_OPTS -Xmx3G"
 ----
 
 Install the WAR support, CXF and Karaf Cellar into Karaf by doing the following in the Karaf command line:
