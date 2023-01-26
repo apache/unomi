@@ -58,5 +58,3 @@ MY_KARAF_HOME=`cd "$MY_DIRNAME/.."; pwd`
 # export YOURKIT_AGENTPATH="/home/jahia/install/yourkit/YourKit-JavaProfiler-2017.02/bin/linux-x86-64/libyjpagent.so"
 # Also activate this line to activate the agent on the JVM command line:
 # export KARAF_OPTS="-agentpath:$YOURKIT_AGENTPATH=disablestacktelemetry,exceptions=disable,delay=10000,probe_disable=*"
-
-export JAVA_MAX_MEM=2G
