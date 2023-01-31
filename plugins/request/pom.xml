@@ -46,7 +46,7 @@
         <dependency>
             <groupId>nl.basjes.parse.useragent</groupId>
             <artifactId>yauaa</artifactId>
-            <version>7.8.0</version>
+            <version>7.11.0</version>
         </dependency>
 
         <dependency>
@@ -112,6 +112,7 @@
                             kotlin;resolution:=optional,
                             kotlin.*;resolution:=optional,
                             org.conscrypt;resolution:=optional,
+                            org.brotli.dec;resolution:=optional,
                             *
                         </Import-Package>
                     </instructions>
