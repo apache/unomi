@@ -746,7 +746,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
                 // todo remove profile properties ?
                 persistenceService.remove(previousRule.getItemId(), Rule.class);
             } else {
-                persistenceService.update(previousRule, null, Rule.class, "linkedItems", previousRule.getLinkedItems());
+                persistenceService.update(previousRule, Rule.class, "linkedItems", previousRule.getLinkedItems());
             }
         }
     }
@@ -1094,7 +1094,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
             } else { //send update profile one by one
                 for (Profile profileToUpdate : profiles.getList()) {
                     Map<String, Object> sourceMap = buildPropertiesMapForUpdateSegment(profileToUpdate, segmentId, isAdd);
-                    persistenceService.update(profileToUpdate, null, Profile.class, sourceMap);
+                    persistenceService.update(profileToUpdate, Profile.class, sourceMap);
                 }
             }
             if (sendProfileUpdateEvent)
@@ -1131,7 +1131,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
                         logger.warn("retry updating profile segment {}, profile {}, time {}", segmentId, profileId, new Date());
                         Profile profileToAddUpdated = persistenceService.load(profileId, Profile.class);
                         Map<String, Object> sourceMapToUpdate = buildPropertiesMapForUpdateSegment(profileToAddUpdated, segmentId, isAdd);
-                        boolean isUpdated = persistenceService.update(profileToAddUpdated, null, Profile.class, sourceMapToUpdate);
+                        boolean isUpdated = persistenceService.update(profileToAddUpdated, Profile.class, sourceMapToUpdate);
                         if (isUpdated == false)
                             throw new Exception(String.format("failed retry update profile segment {}, profile {}, time {}", segmentId, profileId, new Date()));
                     });
@@ -1191,7 +1191,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
                 idx++;
             }
         }
-        persistenceService.updateWithQueryAndStoredScript(null, Profile.class, scripts, scriptParams, conditions);
+        persistenceService.updateWithQueryAndStoredScript(Profile.class, scripts, scriptParams, conditions);
         logger.info("Updated scoring for profiles in {}ms", System.currentTimeMillis() - startTime);
     }
 

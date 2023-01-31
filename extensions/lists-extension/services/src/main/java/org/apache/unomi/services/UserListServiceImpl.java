@@ -56,7 +56,7 @@ public class UserListServiceImpl implements UserListService {
     }
 
     public PartialList<Metadata> getListMetadatas(Query query) {
-        if(query.isForceRefresh()){
+        if (query.isForceRefresh()) {
             persistenceService.refresh();
         }
         definitionsService.resolveConditionType(query.getCondition());
@@ -89,12 +89,12 @@ public class UserListServiceImpl implements UserListService {
         Map<String, Object> profileSystemProperties;
         for (Profile p : profiles) {
             profileSystemProperties = p.getSystemProperties();
-            if(profileSystemProperties != null && profileSystemProperties.get("lists") != null) {
+            if (profileSystemProperties != null && profileSystemProperties.get("lists") != null) {
                 int index = ((List) profileSystemProperties.get("lists")).indexOf(listId);
-                if(index != -1){
+                if (index != -1) {
                     ((List) profileSystemProperties.get("lists")).remove(index);
                     profileSystemProperties.put("lastUpdated", new Date());
-                    persistenceService.update(p, null, Profile.class, "systemProperties", profileSystemProperties);
+                    persistenceService.update(p, Profile.class, "systemProperties", profileSystemProperties);
                 }
             }
         }

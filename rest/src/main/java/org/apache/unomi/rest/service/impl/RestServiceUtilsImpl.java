@@ -137,7 +137,7 @@ public class RestServiceUtilsImpl implements RestServiceUtils {
             Profile sessionProfile;
             if (StringUtils.isNotBlank(sessionId) && !invalidateSession) {
 
-                eventsRequestContext.setSession(profileService.loadSession(sessionId, timestamp));
+                eventsRequestContext.setSession(profileService.loadSession(sessionId));
                 if (eventsRequestContext.getSession() != null) {
 
                     sessionProfile = eventsRequestContext.getSession().getProfile();

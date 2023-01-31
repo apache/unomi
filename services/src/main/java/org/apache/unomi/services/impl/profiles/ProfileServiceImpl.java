@@ -144,6 +144,7 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         /**
          * Creates a new instance of this class containing given property types.
          * If property types with the same ID existed before, they will be replaced by the new ones.
+         *
          * @param newProperties list of property types to change
          * @return new instance
          */
@@ -165,13 +166,14 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
 
         /**
          * Creates a new instance of this class containing all property types except the one with given ID.
+         *
          * @param propertyId ID of the property to delete
          * @return new instance
          */
         public PropertyTypes without(String propertyId) {
             List<PropertyType> newPropertyTypes = allPropertyTypes.stream()
-                .filter(property -> !property.getItemId().equals(propertyId))
-                .collect(Collectors.toList());
+                    .filter(property -> !property.getItemId().equals(propertyId))
+                    .collect(Collectors.toList());
 
             return new PropertyTypes(newPropertyTypes);
         }
@@ -847,8 +849,14 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         return null;
     }
 
+    @Override
     public Session loadSession(String sessionId, Date dateHint) {
-        return persistenceService.load(sessionId, null, Session.class);
+        return loadSession(sessionId);
+    }
+
+    @Override
+    public Session loadSession(String sessionId) {
+        return persistenceService.load(sessionId, Session.class);
     }
 
     public Session saveSession(Session session) {

@@ -45,6 +45,7 @@ import org.junit.runner.RunWith;
 
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Date;
 import java.util.UUID;
 import java.util.logging.Logger;
 
@@ -126,7 +127,8 @@ public class ElasticsearchPersistenceTest {
     @Test
     public void testCreateIndex() throws Exception {
         restHighLevelClient.info(RequestOptions.DEFAULT.toBuilder().addHeader("name", "value").build());
-        CreateIndexRequest request = new CreateIndexRequest("unomi-index-1");
+        final String indexName = "unomi-index-" + new Date().getTime();
+        CreateIndexRequest request = new CreateIndexRequest(indexName);
         CreateIndexResponse response = restHighLevelClient.indices().create(request, RequestOptions.DEFAULT);
         if (response.isAcknowledged()) {
             logger.info(">>> Create index :: ok :: name = " + response.index());
@@ -152,7 +154,7 @@ public class ElasticsearchPersistenceTest {
 //        }
 //        Assert.assertNotEquals(actionGet.getStatus(), ClusterHealthStatus.RED);
 
-        IndexRequest indexRequest = new IndexRequest("unomi-index-1");
+        IndexRequest indexRequest = new IndexRequest(indexName);
         indexRequest.id(UUID.randomUUID().toString());
         String type = "{\"type\":\"unomi-type\"}";
         String source = "{\"name\":\"unomi-name\"}";

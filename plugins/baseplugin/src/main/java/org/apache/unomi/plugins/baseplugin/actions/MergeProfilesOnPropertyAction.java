@@ -162,8 +162,7 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
                             // Update current event explicitly, as it might not return from search query if there wasn't a refresh in ES
                             if (!StringUtils.equals(profileId, masterProfileId)) {
                                 if (currentEvent.isPersistent()) {
-                                    // TODO dateHint not supported anymore here
-                                    persistenceService.update(currentEvent, currentEvent.getTimeStamp(), Event.class, "profileId", anonymousBrowsing ? null : masterProfileId);
+                                    persistenceService.update(currentEvent, Event.class, "profileId", anonymousBrowsing ? null : masterProfileId);
                                 }
                             }
 
@@ -179,16 +178,14 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
                                     }
 
                                     for (Session session : sessions) {
-                                        // TODO dateHint not supported anymore here
-                                        persistenceService.update(session, session.getTimeStamp(), Session.class, "profileId", anonymousBrowsing ? null : masterProfileId);
+                                        persistenceService.update(session, Session.class, "profileId", anonymousBrowsing ? null : masterProfileId);
                                     }
 
                                     // TODO consider udpate by query and/or script
                                     List<Event> events = persistenceService.query("profileId", profileId, null, Event.class);
                                     for (Event event : events) {
                                         if (!event.getItemId().equals(currentEvent.getItemId())) {
-                                            // TODO dateHint not supported anymore here
-                                            persistenceService.update(event, event.getTimeStamp(), Event.class, "profileId", anonymousBrowsing ? null : masterProfileId);
+                                            persistenceService.update(event, Event.class, "profileId", anonymousBrowsing ? null : masterProfileId);
                                         }
                                     }
 

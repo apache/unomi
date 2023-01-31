@@ -199,8 +199,7 @@ public class ContextServletIT extends BaseIT {
         TestUtils.executeContextJSONRequest(request, sessionId);
 
         Session session = keepTrying("Session with the id " + sessionId + " not saved in the required time",
-                () -> profileService.loadSession(sessionId,
-                        null), Objects::nonNull, DEFAULT_TRYING_TIMEOUT,
+                () -> profileService.loadSession(sessionId), Objects::nonNull, DEFAULT_TRYING_TIMEOUT,
                 DEFAULT_TRYING_TRIES);
 
         assertEquals(TEST_EVENT_TYPE, session.getOriginEventTypes().get(0));
