@@ -253,7 +253,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     private Map<String, Map<String, Map<String, Object>>> knownMappings = new HashMap<>();
 
-    private static Map<String, String> itemTypeIndexNameMap = new ConcurrentHashMap<>();
+    private static final Map<String, String> itemTypeIndexNameMap = new ConcurrentHashMap<>();
     static {
         // metadata items
         itemTypeIndexNameMap.put("actionType", "item");
@@ -2650,7 +2650,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     }
 
     private QueryBuilder getItemTypeQueryBuilder(String itemType) {
-        return QueryBuilders.termQuery("itemType", itemType);
+        return QueryBuilders.termQuery("itemType", ConditionContextHelper.foldToASCII(itemType));
     }
 
     private boolean isItemTypeSharingIndex(String itemType) {
