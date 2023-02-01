@@ -890,7 +890,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         GetResponse response = client.get(getRequest, RequestOptions.DEFAULT);
                         if (response.isExists()) {
                             String sourceAsString = response.getSourceAsString();
-                            -final T value = ESCustomObjectMapper.getObjectMapper().readValue(sourceAsString, clazz);
+                            final T value = ESCustomObjectMapper.getObjectMapper().readValue(sourceAsString, clazz);
                             setMetadata(value, response.getId(), response.getVersion(), response.getSeqNo(), response.getPrimaryTerm(), response.getIndex());
                             return value;
                         } else {
@@ -2651,14 +2651,9 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     private String getIndexNameForQuery(String itemType) {
         return rolloverIndices.contains(itemType) ? getRolloverIndexForQuery(itemType) : getIndex(itemType);
     }
-
-<<<<<<< Updated upstream
+    
     private String getRolloverIndexForQuery(String itemType) {
         return indexPrefix + "-" + itemType.toLowerCase() + "-*";
-=======
-    private String getMonthlyIndexForQuery(String itemType) {
-        return indexPrefix + "-" + getIndexNameForItemType(itemType) + "-*";
->>>>>>> Stashed changes
     }
 
     private String getIndex(String itemType) {
