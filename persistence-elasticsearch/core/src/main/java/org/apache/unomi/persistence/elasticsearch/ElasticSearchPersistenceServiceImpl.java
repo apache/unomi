@@ -315,7 +315,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Deprecated
     public void setItemsMonthlyIndexedOverride(String itemsMonthlyIndexedOverride) {
-        this.itemsMonthlyIndexedOverride = itemsMonthlyIndexedOverride;
+        this.itemsMonthlyIndexed = StringUtils.isNotEmpty(itemsMonthlyIndexedOverride) ? Arrays.asList(itemsMonthlyIndexedOverride.split(",").clone()) : Collections.emptyList();
     }
 
     public void setNumberOfShards(String numberOfShards) {
@@ -478,14 +478,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         // on startup
         new InClassLoaderExecute<Object>(null, null, this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
             public Object execute(Object... args) throws Exception {
-
-                // Deprecated will be removed in Unomi 3.0.0
-                bulkProcessorConcurrentRequests = System.getProperty(BULK_PROCESSOR_CONCURRENT_REQUESTS, bulkProcessorConcurrentRequests);
-                bulkProcessorBulkActions = System.getProperty(BULK_PROCESSOR_BULK_ACTIONS, bulkProcessorBulkActions);
-                bulkProcessorBulkSize = System.getProperty(BULK_PROCESSOR_BULK_SIZE, bulkProcessorBulkSize);
-                bulkProcessorFlushInterval = System.getProperty(BULK_PROCESSOR_FLUSH_INTERVAL, bulkProcessorFlushInterval);
-                bulkProcessorBackoffPolicy = System.getProperty(BULK_PROCESSOR_BACKOFF_POLICY, bulkProcessorBackoffPolicy);
-                itemsMonthlyIndexed = itemsMonthlyIndexedOverride.equals("none") ? Collections.emptyList() : Arrays.asList(System.getProperty(MONTHLY_INDEX_ITEMS_MONTHLY_INDEXED, itemsMonthlyIndexedOverride).split(",").clone());
 
                 buildClient();
 
