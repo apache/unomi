@@ -133,7 +133,7 @@
         <property name="bulkProcessorFlushInterval" value="${es.bulkProcessor.flushInterval}" />
         <property name="bulkProcessorBackoffPolicy" value="${es.bulkProcessor.backoffPolicy}" />
 
-        <property name="rolloverIndicesOverride" value="${es.rollover.indices}" />
+        <property name="rolloverIndices" value="${es.rollover.indices}" />
         <property name="rolloverMaxSize" value="${es.rollover.maxSize}" />
         <property name="rolloverMaxAge" value="${es.rollover.maxAge}" />
         <property name="rolloverMaxDocs" value="${es.rollover.maxDocs}" />

@@ -175,20 +175,12 @@ import static org.elasticsearch.index.query.QueryBuilders.termQuery;
 @SuppressWarnings("rawtypes")
 public class ElasticSearchPersistenceServiceImpl implements PersistenceService, SynchronousBundleListener {
 
-    public static final String NUMBER_OF_SHARDS = "number_of_shards";
-    public static final String NUMBER_OF_REPLICAS = "number_of_replicas";
-    public static final String CLUSTER_NAME = "cluster.name";
-    public static final String BULK_PROCESSOR_NAME = "bulkProcessor.name";
     public static final String BULK_PROCESSOR_CONCURRENT_REQUESTS = "bulkProcessor.concurrentRequests";
     public static final String BULK_PROCESSOR_BULK_ACTIONS = "bulkProcessor.bulkActions";
     public static final String BULK_PROCESSOR_BULK_SIZE = "bulkProcessor.bulkSize";
     public static final String BULK_PROCESSOR_FLUSH_INTERVAL = "bulkProcessor.flushInterval";
     public static final String BULK_PROCESSOR_BACKOFF_POLICY = "bulkProcessor.backoffPolicy";
     public static final String MONTHLY_INDEX_ITEMS_MONTHLY_INDEXED = "monthlyIndex.itemsMonthlyIndexedOverride";
-    public static final String ROLLOVER_INDICES = "rollover.indicesOverride";
-    public static final String ROLLOVER_MAX_SIZE = "rollover.maxSize";
-    public static final String ROLLOVER_MAX_AGE = "rollover.maxAge";
-    public static final String ROLLOVER_MAX_DOCS = "rollover.maxDocs";
     public static final String INDEX_DATE_PREFIX = "date-";
     public static final String SEQ_NO = "seq_no";
     public static final String PRIMARY_TERM = "primary_term";
@@ -215,7 +207,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     private Map<String, String> mappings = new HashMap<String, String>();
     private ConditionEvaluatorDispatcher conditionEvaluatorDispatcher;
     private ConditionESQueryBuilderDispatcher conditionESQueryBuilderDispatcher;
-    private List<String> rolloverIndices;
+    private List<String> itemsMonthlyIndexed;
     private Map<String, String> routingByType;
 
     private Integer defaultQueryLimit = 10;
@@ -229,10 +221,10 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     private String bulkProcessorBackoffPolicy = "exponential";
 
     // Rollover configuration
+    private List<String> rolloverIndices;
     private String rolloverMaxSize;
     private String rolloverMaxAge;
     private String rolloverMaxDocs;
-    private String rolloverIndicesOverride;
     private String rolloverIndexNumberOfShards;
     private String rolloverIndexNumberOfReplicas;
     private String rolloverIndexMappingTotalFieldsLimit;
@@ -378,8 +370,8 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         this.bulkProcessorBackoffPolicy = bulkProcessorBackoffPolicy;
     }
 
-    public void setRolloverIndicesOverride(String rolloverIndicesOverride) {
-        this.rolloverIndicesOverride = rolloverIndicesOverride;
+    public void setRolloverIndices(String rolloverIndices) {
+        this.rolloverIndices = StringUtils.isNotEmpty(rolloverIndices) ? Arrays.asList(rolloverIndices.split(",").clone()) : null;
     }
 
     public void setRolloverMaxSize(String rolloverMaxSize) {
@@ -487,18 +479,13 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         new InClassLoaderExecute<Object>(null, null, this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
             public Object execute(Object... args) throws Exception {
 
+                // Deprecated will be removed in Unomi 3.0.0
                 bulkProcessorConcurrentRequests = System.getProperty(BULK_PROCESSOR_CONCURRENT_REQUESTS, bulkProcessorConcurrentRequests);
                 bulkProcessorBulkActions = System.getProperty(BULK_PROCESSOR_BULK_ACTIONS, bulkProcessorBulkActions);
                 bulkProcessorBulkSize = System.getProperty(BULK_PROCESSOR_BULK_SIZE, bulkProcessorBulkSize);
                 bulkProcessorFlushInterval = System.getProperty(BULK_PROCESSOR_FLUSH_INTERVAL, bulkProcessorFlushInterval);
                 bulkProcessorBackoffPolicy = System.getProperty(BULK_PROCESSOR_BACKOFF_POLICY, bulkProcessorBackoffPolicy);
-                rolloverMaxAge = System.getProperty(ROLLOVER_MAX_AGE, rolloverMaxAge);
-                rolloverMaxSize = System.getProperty(ROLLOVER_MAX_SIZE, rolloverMaxSize);
-                rolloverMaxDocs = System.getProperty(ROLLOVER_MAX_DOCS, rolloverMaxDocs);
-                // Set rollover indices
-                final String rollOverIndicesEnvValue = StringUtils.defaultIfEmpty(System.getProperty(ROLLOVER_INDICES), System.getProperty(MONTHLY_INDEX_ITEMS_MONTHLY_INDEXED));
-                final String rollOverIndicesConfValue = StringUtils.defaultIfEmpty(rolloverIndicesOverride, itemsMonthlyIndexedOverride);
-                rolloverIndices = rollOverIndicesConfValue.equals("none") ? Collections.emptyList() : Arrays.asList(StringUtils.defaultIfEmpty(rollOverIndicesEnvValue, rollOverIndicesConfValue).split(",").clone());
+                itemsMonthlyIndexed = itemsMonthlyIndexedOverride.equals("none") ? Collections.emptyList() : Arrays.asList(System.getProperty(MONTHLY_INDEX_ITEMS_MONTHLY_INDEXED, itemsMonthlyIndexedOverride).split(",").clone());
 
                 buildClient();
 
@@ -835,7 +822,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         itemType = customItemType;
                     }
 
-                    if (rolloverIndices.contains(itemType)) {
+                    if (isItemTypeRollingOver(itemType)) {
                         return new MetricAdapter<T>(metricsService, ".loadItemWithQuery") {
                             @Override
                             public T execute(Object... args) throws Exception {
@@ -1395,7 +1382,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 Map<String, LifecycleAction> deleteActions = Collections.singletonMap(DeleteAction.NAME, new DeleteAction());
                 phases.put("delete", new Phase("delete", new TimeValue(90, TimeUnit.DAYS), deleteActions));
 
-                LifecyclePolicy policy = new LifecyclePolicy(ROLLOVER_LIFECYCLE_NAME, phases);
+                LifecyclePolicy policy = new LifecyclePolicy(indexPrefix + "-" + ROLLOVER_LIFECYCLE_NAME, phases);
                 PutLifecyclePolicyRequest request = new PutLifecyclePolicyRequest(policy);
                 org.elasticsearch.client.core.AcknowledgedResponse putLifecyclePolicy = client.indexLifecycle().putLifecyclePolicy(request, RequestOptions.DEFAULT);
                 return putLifecyclePolicy.isAcknowledged();
@@ -1417,7 +1404,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 boolean indexExists = client.indices().exists(getIndexRequest, RequestOptions.DEFAULT);
 
                 if (!indexExists) {
-                    if (rolloverIndices.contains(itemType)) {
+                    if (isItemTypeRollingOver(itemType)) {
                         internalCreateRolloverTemplate(itemType);
                         internalCreateRolloverIndex(index);
                     } else {
@@ -1469,7 +1456,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         "        \"number_of_replicas\" : " + StringUtils.defaultIfEmpty(rolloverIndexNumberOfReplicas, monthlyIndexNumberOfReplicas) + ",\n" +
                         "        \"mapping.total_fields.limit\" : " + StringUtils.defaultIfEmpty(rolloverIndexMappingTotalFieldsLimit, monthlyIndexMappingTotalFieldsLimit) + ",\n" +
                         "        \"max_docvalue_fields_search\" : " + StringUtils.defaultIfEmpty(rolloverIndexMaxDocValueFieldsSearch, monthlyIndexMaxDocValueFieldsSearch) + ",\n" +
-                        "        \"lifecycle.name\": \"" + ROLLOVER_LIFECYCLE_NAME + "\",\n" +
+                        "        \"lifecycle.name\": \"" + (indexPrefix + "-" + ROLLOVER_LIFECYCLE_NAME) + "\",\n" +
                         "        \"lifecycle.rollover_alias\": \"" + rolloverAlias + "\"" +
                         "" +
                         "    },\n" +
@@ -2608,7 +2595,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     }
 
     private String getIndexNameForQuery(String itemType) {
-        return rolloverIndices.contains(itemType) ? getRolloverIndexForQuery(itemType) : getIndex(itemType);
+        return isItemTypeRollingOver(itemType) ? getRolloverIndexForQuery(itemType) : getIndex(itemType);
     }
 
     private String getRolloverIndexForQuery(String itemType) {
@@ -2617,6 +2604,10 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     private String getIndex(String indexItemTypePart) {
         return (indexPrefix + "-" + indexItemTypePart).toLowerCase();
+    }
+
+    private boolean isItemTypeRollingOver(String itemType) {
+        return (rolloverIndices != null ? rolloverIndices : itemsMonthlyIndexed).contains(itemType);
     }
 
     private WriteRequest.RefreshPolicy getRefreshPolicy(String itemType) {
