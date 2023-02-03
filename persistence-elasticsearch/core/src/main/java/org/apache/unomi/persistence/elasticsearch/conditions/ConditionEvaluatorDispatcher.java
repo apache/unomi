@@ -22,6 +22,8 @@ import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.metrics.MetricAdapter;
 import org.apache.unomi.metrics.MetricsService;
 import org.apache.unomi.scripting.ScriptExecutor;
+import org.osgi.framework.ServiceReference;
+import org.osgi.service.component.annotations.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -32,28 +34,36 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * Entry point for condition evaluation. Will dispatch to all evaluators.
  */
+@Component(service = ConditionEvaluatorDispatcher.class)
 public class ConditionEvaluatorDispatcher {
     private static final Logger logger = LoggerFactory.getLogger(ConditionEvaluatorDispatcher.class.getName());
 
-    private Map<String, ConditionEvaluator> evaluators = new ConcurrentHashMap<>();
+    private final Map<String, ConditionEvaluator> evaluators = new ConcurrentHashMap<>();
 
     private MetricsService metricsService;
     private ScriptExecutor scriptExecutor;
 
+    @Reference(service = ConditionEvaluator.class, policy = ReferencePolicy.DYNAMIC, policyOption = ReferencePolicyOption.GREEDY,
+            cardinality = ReferenceCardinality.MULTIPLE, unbind = "unbindConditionEvaluator")
+    public void setConditionEvaluators(ConditionEvaluator conditionEvaluator, ServiceReference<ConditionEvaluator> conditionEvaluatorServiceReference) {
+        this.evaluators.put(conditionEvaluatorServiceReference.getProperty("conditionEvaluatorId").toString(), conditionEvaluator);
+    }
+
+    @Reference
     public void setMetricsService(MetricsService metricsService) {
         this.metricsService = metricsService;
     }
 
+    @Reference
     public void setScriptExecutor(ScriptExecutor scriptExecutor) {
         this.scriptExecutor = scriptExecutor;
     }
 
-    public void addEvaluator(String name, ConditionEvaluator evaluator) {
-        evaluators.put(name, evaluator);
-    }
-
-    public void removeEvaluator(String name) {
-        evaluators.remove(name);
+    public void unbindConditionEvaluator(ServiceReference<ConditionEvaluator> conditionEvaluatorServiceReference) {
+        if (conditionEvaluatorServiceReference == null) {
+            return;
+        }
+        evaluators.remove(conditionEvaluatorServiceReference.getProperty("conditionEvaluatorId").toString());
     }
 
     public boolean eval(Condition condition, Item item) {

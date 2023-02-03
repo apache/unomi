@@ -21,34 +21,38 @@ import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.scripting.ScriptExecutor;
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
+import org.osgi.framework.ServiceReference;
+import org.osgi.service.component.annotations.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
+@Component(service = ConditionESQueryBuilderDispatcher.class)
 public class ConditionESQueryBuilderDispatcher {
     private static final Logger logger = LoggerFactory.getLogger(ConditionESQueryBuilderDispatcher.class.getName());
 
-    private Map<String, ConditionESQueryBuilder> queryBuilders = new ConcurrentHashMap<>();
+    private final Map<String, ConditionESQueryBuilder> queryBuilders = new ConcurrentHashMap<>();
     private ScriptExecutor scriptExecutor;
 
-    public ConditionESQueryBuilderDispatcher() {
-    }
-
+    @Reference
     public void setScriptExecutor(ScriptExecutor scriptExecutor) {
         this.scriptExecutor = scriptExecutor;
     }
 
-    public void addQueryBuilder(String name, ConditionESQueryBuilder evaluator) {
-        queryBuilders.put(name, evaluator);
+    @Reference(service = ConditionESQueryBuilder.class, policy = ReferencePolicy.DYNAMIC, policyOption = ReferencePolicyOption.GREEDY,
+            cardinality = ReferenceCardinality.MULTIPLE, unbind = "unbindConditionESQueryBuilder")
+    public void setConditionESQueryBuilders(ConditionESQueryBuilder conditionESQueryBuilder, ServiceReference<ConditionESQueryBuilder> conditionESQueryBuilderServiceReference) {
+        this.queryBuilders.put(conditionESQueryBuilderServiceReference.getProperty("queryBuilderId").toString(), conditionESQueryBuilder);
     }
 
-    public void removeQueryBuilder(String name) {
-        queryBuilders.remove(name);
+    public void unbindConditionESQueryBuilder(ServiceReference<ConditionESQueryBuilder> conditionESQueryBuilderServiceReference) {
+        if (conditionESQueryBuilderServiceReference == null) {
+            return;
+        }
+        queryBuilders.remove(conditionESQueryBuilderServiceReference.getProperty("queryBuilderId").toString());
     }
-
 
     public String getQuery(Condition condition) {
         return "{\"query\": " + getQueryBuilder(condition).toString() + "}";
