@@ -48,10 +48,11 @@ import org.apache.unomi.persistence.spi.aggregate.IpRangeAggregate;
 import org.apache.unomi.persistence.spi.aggregate.NumericRangeAggregate;
 import org.apache.unomi.persistence.spi.aggregate.TermsAggregate;
 import org.elasticsearch.ElasticsearchStatusException;
-import org.elasticsearch.action.ActionListener;
+import org.elasticsearch.Version;
 import org.elasticsearch.action.DocWriteRequest;
 import org.elasticsearch.action.admin.cluster.health.ClusterHealthRequest;
 import org.elasticsearch.action.admin.cluster.storedscripts.PutStoredScriptRequest;
+import org.elasticsearch.action.admin.indices.alias.Alias;
 import org.elasticsearch.action.admin.indices.delete.DeleteIndexRequest;
 import org.elasticsearch.action.admin.indices.refresh.RefreshRequest;
 import org.elasticsearch.action.admin.indices.template.delete.DeleteIndexTemplateRequest;
@@ -83,6 +84,7 @@ import org.elasticsearch.action.update.UpdateResponse;
 import org.elasticsearch.client.core.CountRequest;
 import org.elasticsearch.client.core.CountResponse;
 import org.elasticsearch.client.core.MainResponse;
+import org.elasticsearch.client.indexlifecycle.*;
 import org.elasticsearch.client.indices.CreateIndexRequest;
 import org.elasticsearch.client.indices.CreateIndexResponse;
 import org.elasticsearch.client.indices.GetIndexRequest;
@@ -173,21 +175,18 @@ import static org.elasticsearch.index.query.QueryBuilders.termQuery;
 @SuppressWarnings("rawtypes")
 public class ElasticSearchPersistenceServiceImpl implements PersistenceService, SynchronousBundleListener {
 
-    public static final String NUMBER_OF_SHARDS = "number_of_shards";
-    public static final String NUMBER_OF_REPLICAS = "number_of_replicas";
-    public static final String CLUSTER_NAME = "cluster.name";
-    public static final String BULK_PROCESSOR_NAME = "bulkProcessor.name";
     public static final String BULK_PROCESSOR_CONCURRENT_REQUESTS = "bulkProcessor.concurrentRequests";
     public static final String BULK_PROCESSOR_BULK_ACTIONS = "bulkProcessor.bulkActions";
     public static final String BULK_PROCESSOR_BULK_SIZE = "bulkProcessor.bulkSize";
-    public static final String MONTHLY_INDEX_ITEMS_MONTHLY_INDEXED = "monthlyIndex.itemsMonthlyIndexedOverride";
     public static final String BULK_PROCESSOR_FLUSH_INTERVAL = "bulkProcessor.flushInterval";
     public static final String BULK_PROCESSOR_BACKOFF_POLICY = "bulkProcessor.backoffPolicy";
+    public static final String MONTHLY_INDEX_ITEMS_MONTHLY_INDEXED = "monthlyIndex.itemsMonthlyIndexedOverride";
     public static final String INDEX_DATE_PREFIX = "date-";
     public static final String SEQ_NO = "seq_no";
     public static final String PRIMARY_TERM = "primary_term";
 
     private static final Logger logger = LoggerFactory.getLogger(ElasticSearchPersistenceServiceImpl.class.getName());
+    private static final String ROLLOVER_LIFECYCLE_NAME = "unomi-rollover-policy";
     private boolean throwExceptions = false;
     private RestHighLevelClient client;
     private BulkProcessor bulkProcessor;
@@ -208,19 +207,27 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     private Map<String, String> mappings = new HashMap<String, String>();
     private ConditionEvaluatorDispatcher conditionEvaluatorDispatcher;
     private ConditionESQueryBuilderDispatcher conditionESQueryBuilderDispatcher;
-
     private List<String> itemsMonthlyIndexed;
     private Map<String, String> routingByType;
 
     private Integer defaultQueryLimit = 10;
     private Integer removeByQueryTimeoutInMinutes = 10;
 
-    private String itemsMonthlyIndexedOverride = "event,session";
     private String bulkProcessorConcurrentRequests = "1";
     private String bulkProcessorBulkActions = "1000";
     private String bulkProcessorBulkSize = "5MB";
     private String bulkProcessorFlushInterval = "5s";
     private String bulkProcessorBackoffPolicy = "exponential";
+
+    // Rollover configuration
+    private List<String> rolloverIndices;
+    private String rolloverMaxSize;
+    private String rolloverMaxAge;
+    private String rolloverMaxDocs;
+    private String rolloverIndexNumberOfShards;
+    private String rolloverIndexNumberOfReplicas;
+    private String rolloverIndexMappingTotalFieldsLimit;
+    private String rolloverIndexMaxDocValueFieldsSearch;
 
     private String minimalElasticSearchVersion = "7.0.0";
     private String maximalElasticSearchVersion = "8.0.0";
@@ -265,7 +272,8 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     public void setItemTypeToRefreshPolicy(String itemTypeToRefreshPolicy) throws IOException {
         if (!itemTypeToRefreshPolicy.isEmpty()) {
             this.itemTypeToRefreshPolicy = new ObjectMapper().readValue(itemTypeToRefreshPolicy,
-                        new TypeReference<HashMap<String, WriteRequest.RefreshPolicy>>() {});
+                    new TypeReference<HashMap<String, WriteRequest.RefreshPolicy>>() {
+                    });
         }
     }
 
@@ -284,20 +292,29 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         this.indexPrefix = indexPrefix;
     }
 
+    @Deprecated
     public void setMonthlyIndexNumberOfShards(String monthlyIndexNumberOfShards) {
         this.monthlyIndexNumberOfShards = monthlyIndexNumberOfShards;
     }
 
+    @Deprecated
     public void setMonthlyIndexNumberOfReplicas(String monthlyIndexNumberOfReplicas) {
         this.monthlyIndexNumberOfReplicas = monthlyIndexNumberOfReplicas;
     }
 
+    @Deprecated
     public void setMonthlyIndexMappingTotalFieldsLimit(String monthlyIndexMappingTotalFieldsLimit) {
         this.monthlyIndexMappingTotalFieldsLimit = monthlyIndexMappingTotalFieldsLimit;
     }
 
+    @Deprecated
     public void setMonthlyIndexMaxDocValueFieldsSearch(String monthlyIndexMaxDocValueFieldsSearch) {
         this.monthlyIndexMaxDocValueFieldsSearch = monthlyIndexMaxDocValueFieldsSearch;
+    }
+
+    @Deprecated
+    public void setItemsMonthlyIndexedOverride(String itemsMonthlyIndexedOverride) {
+        this.itemsMonthlyIndexed = StringUtils.isNotEmpty(itemsMonthlyIndexedOverride) ? Arrays.asList(itemsMonthlyIndexedOverride.split(",").clone()) : Collections.emptyList();
     }
 
     public void setNumberOfShards(String numberOfShards) {
@@ -318,10 +335,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     public void setDefaultQueryLimit(Integer defaultQueryLimit) {
         this.defaultQueryLimit = defaultQueryLimit;
-    }
-
-    public void setItemsMonthlyIndexedOverride(String itemsMonthlyIndexedOverride) {
-        this.itemsMonthlyIndexedOverride = itemsMonthlyIndexedOverride;
     }
 
     public void setRoutingByType(Map<String, String> routingByType) {
@@ -354,6 +367,38 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     public void setBulkProcessorBackoffPolicy(String bulkProcessorBackoffPolicy) {
         this.bulkProcessorBackoffPolicy = bulkProcessorBackoffPolicy;
+    }
+
+    public void setRolloverIndices(String rolloverIndices) {
+        this.rolloverIndices = StringUtils.isNotEmpty(rolloverIndices) ? Arrays.asList(rolloverIndices.split(",").clone()) : null;
+    }
+
+    public void setRolloverMaxSize(String rolloverMaxSize) {
+        this.rolloverMaxSize = rolloverMaxSize;
+    }
+
+    public void setRolloverMaxAge(String rolloverMaxAge) {
+        this.rolloverMaxAge = rolloverMaxAge;
+    }
+
+    public void setRolloverMaxDocs(String rolloverMaxDocs) {
+        this.rolloverMaxDocs = rolloverMaxDocs;
+    }
+
+    public void setRolloverIndexNumberOfShards(String rolloverIndexNumberOfShards) {
+        this.rolloverIndexNumberOfShards = rolloverIndexNumberOfShards;
+    }
+
+    public void setRolloverIndexNumberOfReplicas(String rolloverIndexNumberOfReplicas) {
+        this.rolloverIndexNumberOfReplicas = rolloverIndexNumberOfReplicas;
+    }
+
+    public void setRolloverIndexMappingTotalFieldsLimit(String rolloverIndexMappingTotalFieldsLimit) {
+        this.rolloverIndexMappingTotalFieldsLimit = rolloverIndexMappingTotalFieldsLimit;
+    }
+
+    public void setRolloverIndexMaxDocValueFieldsSearch(String rolloverIndexMaxDocValueFieldsSearch) {
+        this.rolloverIndexMaxDocValueFieldsSearch = rolloverIndexMaxDocValueFieldsSearch;
     }
 
     public void setMinimalElasticSearchVersion(String minimalElasticSearchVersion) {
@@ -410,6 +455,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     public void setThrowExceptions(boolean throwExceptions) {
         this.throwExceptions = throwExceptions;
     }
+
     public void setAlwaysOverwrite(boolean alwaysOverwrite) {
         this.alwaysOverwrite = alwaysOverwrite;
     }
@@ -432,25 +478,20 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         new InClassLoaderExecute<Object>(null, null, this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
             public Object execute(Object... args) throws Exception {
 
-                bulkProcessorConcurrentRequests = System.getProperty(BULK_PROCESSOR_CONCURRENT_REQUESTS, bulkProcessorConcurrentRequests);
-                bulkProcessorBulkActions = System.getProperty(BULK_PROCESSOR_BULK_ACTIONS, bulkProcessorBulkActions);
-                bulkProcessorBulkSize = System.getProperty(BULK_PROCESSOR_BULK_SIZE, bulkProcessorBulkSize);
-                bulkProcessorFlushInterval = System.getProperty(BULK_PROCESSOR_FLUSH_INTERVAL, bulkProcessorFlushInterval);
-                bulkProcessorBackoffPolicy = System.getProperty(BULK_PROCESSOR_BACKOFF_POLICY, bulkProcessorBackoffPolicy);
-                itemsMonthlyIndexed = itemsMonthlyIndexedOverride.equals("none") ? Collections.emptyList() : Arrays.asList(System.getProperty(MONTHLY_INDEX_ITEMS_MONTHLY_INDEXED, itemsMonthlyIndexedOverride).split(",").clone());
-
                 buildClient();
 
                 MainResponse response = client.info(RequestOptions.DEFAULT);
-                org.elasticsearch.client.core.MainResponse.Version version = response.getVersion();
-                org.elasticsearch.Version clusterVersion = org.elasticsearch.Version.fromString(version.getNumber());
-                org.elasticsearch.Version minimalVersion = org.elasticsearch.Version.fromString(minimalElasticSearchVersion);
-                org.elasticsearch.Version maximalVersion = org.elasticsearch.Version.fromString(maximalElasticSearchVersion);
+                MainResponse.Version version = response.getVersion();
+                Version clusterVersion = Version.fromString(version.getNumber());
+                Version minimalVersion = Version.fromString(minimalElasticSearchVersion);
+                Version maximalVersion = Version.fromString(maximalElasticSearchVersion);
                 if (clusterVersion.before(minimalVersion) ||
                         clusterVersion.equals(maximalVersion) ||
                         clusterVersion.after(maximalVersion)) {
                     throw new Exception("ElasticSearch version is not within [" + minimalVersion + "," + maximalVersion + "), aborting startup !");
                 }
+
+                registerRolloverLifecyclePolicy();
 
                 loadPredefinedMappings(bundleContext, false);
 
@@ -460,8 +501,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         loadPredefinedMappings(existingBundle.getBundleContext(), false);
                     }
                 }
-
-                createMonthlyIndexTemplate();
 
                 if (client != null && bulkProcessor == null) {
                     bulkProcessor = getBulkProcessor();
@@ -677,7 +716,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         }
     }
 
-    private void loadPredefinedMappings(BundleContext bundleContext, boolean createMapping) {
+    private void loadPredefinedMappings(BundleContext bundleContext, boolean forceUpdateMapping) {
         Enumeration<URL> predefinedMappings = bundleContext.getBundle().findEntries("META-INF/cxs/mappings", "*.json", true);
         if (predefinedMappings == null) {
             return;
@@ -692,14 +731,10 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
                 mappings.put(name, mappingSource);
 
-                String itemIndexName = getIndex(name, new Date());
-                if (!client.indices().exists(new GetIndexRequest(itemIndexName), RequestOptions.DEFAULT)) {
-                    logger.info("{} index doesn't exist yet, creating it...", itemIndexName);
-                    internalCreateIndex(itemIndexName, mappingSource);
-                } else {
-                    logger.info("Found index {}", itemIndexName);
-                    if (createMapping) {
-                        logger.info("Updating mapping for {}", itemIndexName);
+                if (!createIndex(name)) {
+                    logger.info("Found index for type {}", name);
+                    if (forceUpdateMapping) {
+                        logger.info("Updating mapping for {}", name);
                         createMapping(name, mappingSource);
                     }
                 }
@@ -749,31 +784,36 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Override
     public <T extends Item> T load(final String itemId, final Class<T> clazz) {
-        return load(itemId, null, clazz);
+        return load(itemId, clazz, null);
     }
 
     @Override
+    @Deprecated
     public <T extends Item> T load(final String itemId, final Date dateHint, final Class<T> clazz) {
-        return load(itemId, dateHint, clazz, null);
+        return load(itemId, clazz, null);
     }
 
     @Override
+    @Deprecated
     public CustomItem loadCustomItem(final String itemId, final Date dateHint, String customItemType) {
-        return load(itemId, dateHint, CustomItem.class, customItemType);
+        return load(itemId, CustomItem.class, customItemType);
     }
 
-    private <T extends Item> T load(final String itemId, final Date dateHint, final Class<T> clazz, final String customItemType) {
+    @Override
+    public CustomItem loadCustomItem(final String itemId, String customItemType) {
+        return load(itemId, CustomItem.class, customItemType);
+    }
+
+    private <T extends Item> T load(final String itemId, final Class<T> clazz, final String customItemType) {
         return new InClassLoaderExecute<T>(metricsService, this.getClass().getName() + ".loadItem", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
             protected T execute(Object... args) throws Exception {
                 try {
                     String itemType = Item.getItemType(clazz);
-                    String className = clazz.getName();
                     if (customItemType != null) {
-                        className = CustomItem.class.getName() + "." + customItemType;
                         itemType = customItemType;
                     }
 
-                    if (itemsMonthlyIndexed.contains(itemType) && dateHint == null) {
+                    if (isItemTypeRollingOver(itemType)) {
                         return new MetricAdapter<T>(metricsService, ".loadItemWithQuery") {
                             @Override
                             public T execute(Object... args) throws Exception {
@@ -792,12 +832,12 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                             }
                         }.execute();
                     } else {
-                        GetRequest getRequest = new GetRequest(getIndex(itemType, dateHint), itemId);
+                        GetRequest getRequest = new GetRequest(getIndex(itemType), itemId);
                         GetResponse response = client.get(getRequest, RequestOptions.DEFAULT);
                         if (response.isExists()) {
                             String sourceAsString = response.getSourceAsString();
                             final T value = ESCustomObjectMapper.getObjectMapper().readValue(sourceAsString, clazz);
-                            setMetadata(value, response.getId(), response.getVersion(), response.getSeqNo(), response.getPrimaryTerm());
+                            setMetadata(value, response.getId(), response.getVersion(), response.getSeqNo(), response.getPrimaryTerm(), response.getIndex());
                             return value;
                         } else {
                             return null;
@@ -813,18 +853,19 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     // this can happen if we are just testing the existence of the item, it is not always an error.
                     return null;
                 } catch (Exception ex) {
-                    throw new Exception("Error loading itemType=" + clazz.getName() + " customItemType=" + customItemType+ " itemId=" + itemId, ex);
+                    throw new Exception("Error loading itemType=" + clazz.getName() + " customItemType=" + customItemType + " itemId=" + itemId, ex);
                 }
             }
         }.catchingExecuteInClassLoader(true);
 
     }
 
-    private void setMetadata(Item item, String id, long version, long seqNo, long primaryTerm) {
+    private void setMetadata(Item item, String id, long version, long seqNo, long primaryTerm, String index) {
         item.setItemId(id);
         item.setVersion(version);
         item.setSystemMetadata(SEQ_NO, seqNo);
         item.setSystemMetadata(PRIMARY_TERM, primaryTerm);
+        item.setSystemMetadata("index", index);
     }
 
     @Override
@@ -858,20 +899,21 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         className = CustomItem.class.getName() + "." + itemType;
                     }
                     String itemId = item.getItemId();
-                    String index = getIndex(itemType, itemsMonthlyIndexed.contains(itemType) ? ((TimestampedItem) item).getTimeStamp() : null);
+                    String index = item.getSystemMetadata("index") != null ?
+                            (String) item.getSystemMetadata("index") :
+                            getIndex(itemType);
                     IndexRequest indexRequest = new IndexRequest(index);
                     indexRequest.id(itemId);
                     indexRequest.source(source, XContentType.JSON);
 
                     if (!alwaysOverwrite) {
-                        Long seqNo = (Long)item.getSystemMetadata(SEQ_NO);
-                        Long primaryTerm = (Long)item.getSystemMetadata(PRIMARY_TERM);
+                        Long seqNo = (Long) item.getSystemMetadata(SEQ_NO);
+                        Long primaryTerm = (Long) item.getSystemMetadata(PRIMARY_TERM);
 
                         if (seqNo != null && primaryTerm != null) {
                             indexRequest.setIfSeqNo(seqNo);
                             indexRequest.setIfPrimaryTerm(primaryTerm);
-                        }
-                        else {
+                        } else {
                             indexRequest.opType(DocWriteRequest.OpType.CREATE);
                         }
                     }
@@ -884,7 +926,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         if (bulkProcessor == null || !useBatching) {
                             indexRequest.setRefreshPolicy(getRefreshPolicy(itemType));
                             IndexResponse response = client.index(indexRequest, RequestOptions.DEFAULT);
-                            setMetadata(item, response.getId(), response.getVersion(), response.getSeqNo(), response.getPrimaryTerm());
+                            setMetadata(item, response.getId(), response.getVersion(), response.getSeqNo(), response.getPrimaryTerm(), response.getIndex());
                         } else {
                             bulkProcessor.add(indexRequest);
                         }
@@ -908,24 +950,40 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Override
     public boolean update(final Item item, final Date dateHint, final Class clazz, final String propertyName, final Object propertyValue) {
-        return update(item, dateHint, clazz, Collections.singletonMap(propertyName, propertyValue));
+        return update(item, clazz, propertyName, propertyValue);
     }
 
     @Override
     public boolean update(final Item item, final Date dateHint, final Class clazz, final Map source) {
-        return update(item, dateHint, clazz, source, alwaysOverwrite);
+        return update(item, clazz, source);
     }
 
     @Override
     public boolean update(final Item item, final Date dateHint, final Class clazz, final Map source, final boolean alwaysOverwrite) {
+        return update(item, clazz, source, alwaysOverwrite);
+    }
+
+    @Override
+    public boolean update(final Item item, final Class clazz, final String propertyName, final Object propertyValue) {
+        return update(item, clazz, Collections.singletonMap(propertyName, propertyValue), alwaysOverwrite);
+    }
+
+
+    @Override
+    public boolean update(final Item item, final Class clazz, final Map source) {
+        return update(item, clazz, source, alwaysOverwrite);
+    }
+
+    @Override
+    public boolean update(final Item item, final Class clazz, final Map source, final boolean alwaysOverwrite) {
         Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".updateItem", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
             protected Boolean execute(Object... args) throws Exception {
                 try {
-                    UpdateRequest updateRequest = createUpdateRequest(clazz, dateHint, item, source, alwaysOverwrite);
+                    UpdateRequest updateRequest = createUpdateRequest(clazz, item, source, alwaysOverwrite);
 
                     if (bulkProcessor == null || !useBatchingForUpdate) {
                         UpdateResponse response = client.update(updateRequest, RequestOptions.DEFAULT);
-                        setMetadata(item, response.getId(), response.getVersion(), response.getSeqNo(), response.getPrimaryTerm());
+                        setMetadata(item, response.getId(), response.getVersion(), response.getSeqNo(), response.getPrimaryTerm(), response.getIndex());
                     } else {
                         bulkProcessor.add(updateRequest);
                     }
@@ -942,9 +1000,9 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         }
     }
 
-    private UpdateRequest createUpdateRequest(Class clazz, Date dateHint, Item item, Map source, boolean alwaysOverwrite) {
+    private UpdateRequest createUpdateRequest(Class clazz, Item item, Map source, boolean alwaysOverwrite) {
         String itemType = Item.getItemType(clazz);
-        UpdateRequest updateRequest = new UpdateRequest(getIndex(itemType, dateHint), item.getItemId());
+        UpdateRequest updateRequest = new UpdateRequest(getIndex(itemType), item.getItemId());
         updateRequest.doc(source);
 
         if (!alwaysOverwrite) {
@@ -964,13 +1022,13 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         if (items.size() == 0)
             return new ArrayList<>();
 
-        List<String> result = new InClassLoaderExecute<List<String>>(metricsService, this.getClass().getName() + ".updateItems",  this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
+        List<String> result = new InClassLoaderExecute<List<String>>(metricsService, this.getClass().getName() + ".updateItems", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
             protected List<String> execute(Object... args) throws Exception {
                 long batchRequestStartTime = System.currentTimeMillis();
 
                 BulkRequest bulkRequest = new BulkRequest();
                 items.forEach((item, source) -> {
-                    UpdateRequest updateRequest = createUpdateRequest(clazz, dateHint, item, source, alwaysOverwrite);
+                    UpdateRequest updateRequest = createUpdateRequest(clazz, item, source, alwaysOverwrite);
                     bulkRequest.add(updateRequest);
                 });
 
@@ -979,7 +1037,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
                 List<String> failedItemsIds = new ArrayList<>();
 
-                if (bulkResponse.hasFailures()){
+                if (bulkResponse.hasFailures()) {
                     Iterator<BulkItemResponse> iterator = bulkResponse.iterator();
                     iterator.forEachRemaining(bulkItemResponse -> {
                         failedItemsIds.add(bulkItemResponse.getId());
@@ -992,32 +1050,41 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         return result;
     }
 
-
     @Override
     public boolean updateWithQueryAndScript(final Date dateHint, final Class<?> clazz, final String[] scripts, final Map<String, Object>[] scriptParams, final Condition[] conditions) {
+        return updateWithQueryAndScript(clazz, scripts, scriptParams, conditions);
+    }
+
+    @Override
+    public boolean updateWithQueryAndScript(final Class<?> clazz, final String[] scripts, final Map<String, Object>[] scriptParams, final Condition[] conditions) {
         Script[] builtScripts = new Script[scripts.length];
         for (int i = 0; i < scripts.length; i++) {
             builtScripts[i] = new Script(ScriptType.INLINE, "painless", scripts[i], scriptParams[i]);
         }
-        return updateWithQueryAndScript(dateHint, clazz, builtScripts, conditions);
+        return updateWithQueryAndScript(clazz, builtScripts, conditions);
     }
 
     @Override
     public boolean updateWithQueryAndStoredScript(Date dateHint, Class<?> clazz, String[] scripts, Map<String, Object>[] scriptParams, Condition[] conditions) {
+        return updateWithQueryAndStoredScript(clazz, scripts, scriptParams, conditions);
+    }
+
+    @Override
+    public boolean updateWithQueryAndStoredScript(Class<?> clazz, String[] scripts, Map<String, Object>[] scriptParams, Condition[] conditions) {
         Script[] builtScripts = new Script[scripts.length];
         for (int i = 0; i < scripts.length; i++) {
             builtScripts[i] = new Script(ScriptType.STORED, null, scripts[i], scriptParams[i]);
         }
-        return updateWithQueryAndScript(dateHint, clazz, builtScripts, conditions);
+        return updateWithQueryAndScript(clazz, builtScripts, conditions);
     }
 
-    private boolean updateWithQueryAndScript(final Date dateHint, final Class<?> clazz, final Script[] scripts, final Condition[] conditions) {
+    private boolean updateWithQueryAndScript(final Class<?> clazz, final Script[] scripts, final Condition[] conditions) {
         Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".updateWithQueryAndScript", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
             protected Boolean execute(Object... args) throws Exception {
                 try {
                     String itemType = Item.getItemType(clazz);
 
-                    String index = getIndex(itemType, dateHint);
+                    String index = getIndex(itemType);
 
                     for (int i = 0; i < scripts.length; i++) {
                         RefreshRequest refreshRequest = new RefreshRequest(index);
@@ -1103,21 +1170,25 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         }
     }
 
-    @Override
     public boolean updateWithScript(final Item item, final Date dateHint, final Class<?> clazz, final String script, final Map<String, Object> scriptParams) {
+        return updateWithScript(item, clazz, script, scriptParams);
+    }
+
+    @Override
+    public boolean updateWithScript(final Item item, final Class<?> clazz, final String script, final Map<String, Object> scriptParams) {
         Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".updateWithScript", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
             protected Boolean execute(Object... args) throws Exception {
                 try {
                     String itemType = Item.getItemType(clazz);
 
-                    String index = getIndex(itemType, dateHint);
+                    String index = getIndex(itemType);
 
                     Script actualScript = new Script(ScriptType.INLINE, "painless", script, scriptParams);
 
                     UpdateRequest updateRequest = new UpdateRequest(index, item.getItemId());
 
-                    Long seqNo = (Long)item.getSystemMetadata(SEQ_NO);
-                    Long primaryTerm = (Long)item.getSystemMetadata(PRIMARY_TERM);
+                    Long seqNo = (Long) item.getSystemMetadata(SEQ_NO);
+                    Long primaryTerm = (Long) item.getSystemMetadata(PRIMARY_TERM);
 
                     if (seqNo != null && primaryTerm != null) {
                         updateRequest.setIfSeqNo(seqNo);
@@ -1126,7 +1197,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     updateRequest.script(actualScript);
                     if (bulkProcessor == null) {
                         UpdateResponse response = client.update(updateRequest, RequestOptions.DEFAULT);
-                        setMetadata(item, response.getId(), response.getVersion(), response.getSeqNo(), response.getPrimaryTerm());
+                        setMetadata(item, response.getId(), response.getVersion(), response.getSeqNo(), response.getPrimaryTerm(), response.getIndex());
                     } else {
                         bulkProcessor.add(updateRequest);
                     }
@@ -1281,40 +1352,31 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         }
     }
 
-    public boolean createMonthlyIndexTemplate() {
-        Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".createMonthlyIndexTemplate", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
+    public boolean registerRolloverLifecyclePolicy() {
+        Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".createMonthlyIndexLifecyclePolicy", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
             protected Boolean execute(Object... args) throws IOException {
-                boolean executedSuccessfully = true;
-                for (String itemName : itemsMonthlyIndexed) {
-                    PutIndexTemplateRequest putIndexTemplateRequest = new PutIndexTemplateRequest(indexPrefix + "-" + itemName + "-date-template")
-                            .patterns(Collections.singletonList(getMonthlyIndexForQuery(itemName)))
-                            .order(1)
-                            .settings("{\n" +
-                                    "    \"index\" : {\n" +
-                                    "        \"number_of_shards\" : " + monthlyIndexNumberOfShards + ",\n" +
-                                    "        \"number_of_replicas\" : " + monthlyIndexNumberOfReplicas + ",\n" +
-                                    "        \"mapping.total_fields.limit\" : " + monthlyIndexMappingTotalFieldsLimit + ",\n" +
-                                    "        \"max_docvalue_fields_search\" : " + monthlyIndexMaxDocValueFieldsSearch + "\n" +
-                                    "    },\n" +
-                                    "    \"analysis\": {\n" +
-                                    "      \"analyzer\": {\n" +
-                                    "        \"folding\": {\n" +
-                                    "          \"type\":\"custom\",\n" +
-                                    "          \"tokenizer\": \"keyword\",\n" +
-                                    "          \"filter\":  [ \"lowercase\", \"asciifolding\" ]\n" +
-                                    "        }\n" +
-                                    "      }\n" +
-                                    "    }\n" +
-                                    "}\n", XContentType.JSON);
-                    if (mappings.get(itemName) == null) {
-                        logger.warn("Couldn't find mapping for item {}, won't create monthly index template", itemName);
-                        return false;
-                    }
-                    putIndexTemplateRequest.mapping(mappings.get(itemName), XContentType.JSON);
-                    AcknowledgedResponse putIndexTemplateResponse = client.indices().putTemplate(putIndexTemplateRequest, RequestOptions.DEFAULT);
-                    executedSuccessfully &= putIndexTemplateResponse.isAcknowledged();
-                }
-                return executedSuccessfully;
+                // Create the lifecycle policy for monthly indices
+                Map<String, Phase> phases = new HashMap<>();
+                Map<String, LifecycleAction> hotActions = new HashMap<>();
+                final Long maxDocs = StringUtils.isEmpty(rolloverMaxDocs) ? null : Long.parseLong(rolloverMaxDocs);
+                hotActions.put(
+                        RolloverAction.NAME,
+                        new RolloverAction(
+                                StringUtils.isEmpty(rolloverMaxSize) ? null : ByteSizeValue.parseBytesSizeValue(rolloverMaxSize, "rollover.maxSize"),
+                                StringUtils.isEmpty(rolloverMaxAge) ? null : TimeValue.parseTimeValue(rolloverMaxAge, null, "rollover.maxAge"),
+                                maxDocs
+                        )
+                );
+                phases.put("hot", new Phase("hot", TimeValue.ZERO, hotActions));
+
+                // TODO - Handle this with the purge https://issues.apache.org/jira/browse/UNOMI-726
+                Map<String, LifecycleAction> deleteActions = Collections.singletonMap(DeleteAction.NAME, new DeleteAction());
+                phases.put("delete", new Phase("delete", new TimeValue(90, TimeUnit.DAYS), deleteActions));
+
+                LifecyclePolicy policy = new LifecyclePolicy(indexPrefix + "-" + ROLLOVER_LIFECYCLE_NAME, phases);
+                PutLifecyclePolicyRequest request = new PutLifecyclePolicyRequest(policy);
+                org.elasticsearch.client.core.AcknowledgedResponse putLifecyclePolicy = client.indexLifecycle().putLifecyclePolicy(request, RequestOptions.DEFAULT);
+                return putLifecyclePolicy.isAcknowledged();
             }
         }.catchingExecuteInClassLoader(true);
         if (result == null) {
@@ -1325,15 +1387,22 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     }
 
     public boolean createIndex(final String itemType) {
-        String index = getIndex(itemType);
 
         Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".createIndex", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
             protected Boolean execute(Object... args) throws IOException {
+                String index = getIndex(itemType);
                 GetIndexRequest getIndexRequest = new GetIndexRequest(index);
                 boolean indexExists = client.indices().exists(getIndexRequest, RequestOptions.DEFAULT);
+
                 if (!indexExists) {
-                    internalCreateIndex(index, mappings.get(itemType));
+                    if (isItemTypeRollingOver(itemType)) {
+                        internalCreateRolloverTemplate(itemType);
+                        internalCreateRolloverIndex(index);
+                    } else {
+                        internalCreateIndex(index, mappings.get(itemType));
+                    }
                 }
+
                 return !indexExists;
             }
         }.catchingExecuteInClassLoader(true);
@@ -1367,6 +1436,47 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         }
     }
 
+    private void internalCreateRolloverTemplate(String itemName) throws IOException {
+        String rolloverAlias = indexPrefix + "-" + itemName;
+        PutIndexTemplateRequest putIndexTemplateRequest = new PutIndexTemplateRequest(rolloverAlias + "-rollover-template")
+                .patterns(Collections.singletonList(getRolloverIndexForQuery(itemName)))
+                .order(1)
+                .settings("{\n" +
+                        "    \"index\" : {\n" +
+                        "        \"number_of_shards\" : " + StringUtils.defaultIfEmpty(rolloverIndexNumberOfShards, monthlyIndexNumberOfShards) + ",\n" +
+                        "        \"number_of_replicas\" : " + StringUtils.defaultIfEmpty(rolloverIndexNumberOfReplicas, monthlyIndexNumberOfReplicas) + ",\n" +
+                        "        \"mapping.total_fields.limit\" : " + StringUtils.defaultIfEmpty(rolloverIndexMappingTotalFieldsLimit, monthlyIndexMappingTotalFieldsLimit) + ",\n" +
+                        "        \"max_docvalue_fields_search\" : " + StringUtils.defaultIfEmpty(rolloverIndexMaxDocValueFieldsSearch, monthlyIndexMaxDocValueFieldsSearch) + ",\n" +
+                        "        \"lifecycle.name\": \"" + (indexPrefix + "-" + ROLLOVER_LIFECYCLE_NAME) + "\",\n" +
+                        "        \"lifecycle.rollover_alias\": \"" + rolloverAlias + "\"" +
+                        "" +
+                        "    },\n" +
+                        "    \"analysis\": {\n" +
+                        "      \"analyzer\": {\n" +
+                        "        \"folding\": {\n" +
+                        "          \"type\":\"custom\",\n" +
+                        "          \"tokenizer\": \"keyword\",\n" +
+                        "          \"filter\":  [ \"lowercase\", \"asciifolding\" ]\n" +
+                        "        }\n" +
+                        "      }\n" +
+                        "    }\n" +
+                        "}\n", XContentType.JSON);
+        if (mappings.get(itemName) == null) {
+            logger.warn("Couldn't find mapping for item {}, won't create monthly index template", itemName);
+            return;
+        }
+        putIndexTemplateRequest.mapping(mappings.get(itemName), XContentType.JSON);
+        client.indices().putTemplate(putIndexTemplateRequest, RequestOptions.DEFAULT);
+    }
+
+    private void internalCreateRolloverIndex(String indexName) throws IOException {
+        CreateIndexRequest createIndexRequest = new CreateIndexRequest(indexName + "-000001")
+                .alias(new Alias(indexName).writeIndex(true));
+        CreateIndexResponse createIndexResponse = client.indices().create(createIndexRequest, RequestOptions.DEFAULT);
+        logger.info("Index created: [{}], acknowledge: [{}], shards acknowledge: [{}]", createIndexResponse.index(),
+                createIndexResponse.isAcknowledged(), createIndexResponse.isShardsAcknowledged());
+    }
+
     private void internalCreateIndex(String indexName, String mappingSource) throws IOException {
         CreateIndexRequest createIndexRequest = new CreateIndexRequest(indexName);
         createIndexRequest.settings("{\n" +
@@ -1398,16 +1508,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     @Override
     public void createMapping(String type, String source) {
         try {
-            if (itemsMonthlyIndexed.contains(type)) {
-                createMonthlyIndexTemplate();
-                String indexName = getIndex(type, new Date());
-                GetIndexRequest getIndexRequest = new GetIndexRequest(indexName);
-                if (client.indices().exists(getIndexRequest, RequestOptions.DEFAULT)) {
-                    putMapping(source, indexName);
-                }
-            } else {
-                putMapping(source, getIndex(type));
-            }
+            putMapping(source, getIndex(type));
         } catch (IOException ioe) {
             logger.error("Error while creating mapping for type " + type + " and source " + source, ioe);
         }
@@ -1611,7 +1712,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 //Index the query = register it in the percolator
                 try {
                     logger.info("Saving query : " + queryName);
-                    String index = getIndex(".percolator", null);
+                    String index = getIndex(".percolator");
                     IndexRequest indexRequest = new IndexRequest(index);
                     indexRequest.id(queryName);
                     indexRequest.source(query, XContentType.JSON);
@@ -1645,7 +1746,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             protected Boolean execute(Object... args) throws Exception {
                 //Index the query = register it in the percolator
                 try {
-                    String index = getIndex(".percolator", null);
+                    String index = getIndex(".percolator");
                     DeleteRequest deleteRequest = new DeleteRequest(index);
                     deleteRequest.setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
                     client.delete(deleteRequest, RequestOptions.DEFAULT);
@@ -1884,7 +1985,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                                 // add hit to results
                                 String sourceAsString = searchHit.getSourceAsString();
                                 final T value = ESCustomObjectMapper.getObjectMapper().readValue(sourceAsString, clazz);
-                                setMetadata(value, searchHit.getId(), searchHit.getVersion(), searchHit.getSeqNo(), searchHit.getPrimaryTerm());
+                                setMetadata(value, searchHit.getId(), searchHit.getVersion(), searchHit.getSeqNo(), searchHit.getPrimaryTerm(), searchHit.getIndex());
                                 results.add(value);
                             }
 
@@ -1914,7 +2015,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         for (SearchHit searchHit : searchHits) {
                             String sourceAsString = searchHit.getSourceAsString();
                             final T value = ESCustomObjectMapper.getObjectMapper().readValue(sourceAsString, clazz);
-                            setMetadata(value, searchHit.getId(), searchHit.getVersion(), searchHit.getSeqNo(), searchHit.getPrimaryTerm());
+                            setMetadata(value, searchHit.getId(), searchHit.getVersion(), searchHit.getSeqNo(), searchHit.getPrimaryTerm(), searchHit.getIndex());
                             results.add(value);
                         }
                     }
@@ -1960,7 +2061,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                             // add hit to results
                             String sourceAsString = searchHit.getSourceAsString();
                             final T value = ESCustomObjectMapper.getObjectMapper().readValue(sourceAsString, clazz);
-                            setMetadata(value, searchHit.getId(), searchHit.getVersion(), searchHit.getSeqNo(), searchHit.getPrimaryTerm());
+                            setMetadata(value, searchHit.getId(), searchHit.getVersion(), searchHit.getSeqNo(), searchHit.getPrimaryTerm(), searchHit.getIndex());
                             results.add(value);
                         }
                     }
@@ -2001,7 +2102,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                             // add hit to results
                             String sourceAsString = searchHit.getSourceAsString();
                             final CustomItem value = ESCustomObjectMapper.getObjectMapper().readValue(sourceAsString, CustomItem.class);
-                            setMetadata(value, searchHit.getId(), searchHit.getVersion(), searchHit.getSeqNo(), searchHit.getPrimaryTerm());
+                            setMetadata(value, searchHit.getId(), searchHit.getVersion(), searchHit.getSeqNo(), searchHit.getPrimaryTerm(), searchHit.getIndex());
                             results.add(value);
                         }
                     }
@@ -2038,7 +2139,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     }
 
     private Map<String, Long> aggregateQuery(final Condition filter, final BaseAggregate aggregate, final String itemType,
-            final boolean optimizedQuery, int queryBucketSize) {
+                                             final boolean optimizedQuery, int queryBucketSize) {
         return new InClassLoaderExecute<Map<String, Long>>(metricsService, this.getClass().getName() + ".aggregateQuery", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
 
             @Override
@@ -2244,7 +2345,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             protected Boolean execute(Object... args) {
                 try {
                     String itemType = Item.getItemType(clazz);
-                    String index = getIndex(itemType, dateHint);
+                    String index = getIndex(itemType);
                     client.indices().refresh(Requests.refreshRequest(index), RequestOptions.DEFAULT);
                 } catch (IOException e) {
                     e.printStackTrace();//TODO manage ES7
@@ -2485,25 +2586,19 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     }
 
     private String getIndexNameForQuery(String itemType) {
-        return itemsMonthlyIndexed.contains(itemType) ? getMonthlyIndexForQuery(itemType) : getIndex(itemType, null);
+        return isItemTypeRollingOver(itemType) ? getRolloverIndexForQuery(itemType) : getIndex(itemType);
     }
 
-    private String getMonthlyIndexForQuery(String itemType) {
-        return indexPrefix + "-" + itemType.toLowerCase() + "-" + INDEX_DATE_PREFIX + "*";
-    }
-
-    private String getIndex(String itemType, Date dateHint) {
-        String indexItemTypePart = itemsMonthlyIndexed.contains(itemType) && dateHint != null ? itemType + "-" + getMonthlyIndexPart(dateHint) : itemType;
-        return getIndex(indexItemTypePart);
+    private String getRolloverIndexForQuery(String itemType) {
+        return indexPrefix + "-" + itemType.toLowerCase() + "-*";
     }
 
     private String getIndex(String indexItemTypePart) {
         return (indexPrefix + "-" + indexItemTypePart).toLowerCase();
     }
 
-    private String getMonthlyIndexPart(Date date) {
-        String d = new SimpleDateFormat("yyyy-MM").format(date);
-        return INDEX_DATE_PREFIX + d;
+    private boolean isItemTypeRollingOver(String itemType) {
+        return (rolloverIndices != null ? rolloverIndices : itemsMonthlyIndexed).contains(itemType);
     }
 
     private WriteRequest.RefreshPolicy getRefreshPolicy(String itemType) {

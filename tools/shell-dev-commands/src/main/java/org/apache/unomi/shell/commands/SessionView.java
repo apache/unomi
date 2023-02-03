@@ -36,7 +36,7 @@ public class SessionView implements Action {
     String sessionIdentifier;
 
     public Object execute() throws Exception {
-        Session session = profileService.loadSession(sessionIdentifier, null);
+        Session session = profileService.loadSession(sessionIdentifier);
         if (session == null) {
             System.out.println("Couldn't find a session with id=" + sessionIdentifier);
             return null;

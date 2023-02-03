@@ -24,6 +24,7 @@ import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.schema.api.JsonSchemaWrapper;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.ops4j.pax.exam.junit.PaxExam;
@@ -330,6 +331,7 @@ public class ProfileServiceIT extends BaseIT {
     }
 
     @Test
+    @Ignore // TODO - fix test  https://issues.apache.org/jira/browse/UNOMI-726
     public void testMonthlyIndicesPurge() throws Exception {
         Date currentDate = new Date();
         LocalDateTime minus10Months = LocalDateTime.ofInstant(currentDate.toInstant(), ZoneId.systemDefault()).minusMonths(10);

@@ -50,6 +50,15 @@
             <cm:property name="bulkProcessor.flushInterval" value="5s" />
             <cm:property name="bulkProcessor.backoffPolicy" value="exponential" />
 
+            <cm:property name="rollover.indices" value="" />
+            <cm:property name="rollover.maxSize" value="" />
+            <cm:property name="rollover.maxAge" value="365d" />
+            <cm:property name="rollover.maxDocs" value="" />
+            <cm:property name="rollover.numberOfShards" value=""/>
+            <cm:property name="rollover.numberOfReplicas" value=""/>
+            <cm:property name="rollover.indexMappingTotalFieldsLimit" value=""/>
+            <cm:property name="rollover.indexMaxDocValueFieldsSearch" value=""/>
+
             <cm:property name="minimalElasticSearchVersion" value="7.0.0" />
             <cm:property name="maximalElasticSearchVersion" value="8.0.0" />
 
@@ -123,6 +132,15 @@
         <property name="bulkProcessorBulkSize" value="${es.bulkProcessor.bulkSize}" />
         <property name="bulkProcessorFlushInterval" value="${es.bulkProcessor.flushInterval}" />
         <property name="bulkProcessorBackoffPolicy" value="${es.bulkProcessor.backoffPolicy}" />
+
+        <property name="rolloverIndices" value="${es.rollover.indices}" />
+        <property name="rolloverMaxSize" value="${es.rollover.maxSize}" />
+        <property name="rolloverMaxAge" value="${es.rollover.maxAge}" />
+        <property name="rolloverMaxDocs" value="${es.rollover.maxDocs}" />
+        <property name="rolloverIndexNumberOfShards" value="${es.rollover.numberOfShards}"/>
+        <property name="rolloverIndexNumberOfReplicas" value="${es.rollover.numberOfReplicas}"/>
+        <property name="rolloverIndexMappingTotalFieldsLimit" value="${es.rollover.indexMappingTotalFieldsLimit}"/>
+        <property name="rolloverIndexMaxDocValueFieldsSearch" value="${es.rollover.indexMaxDocValueFieldsSearch}"/>
 
         <property name="minimalElasticSearchVersion" value="${es.minimalElasticSearchVersion}" />
         <property name="maximalElasticSearchVersion" value="${es.maximalElasticSearchVersion}" />

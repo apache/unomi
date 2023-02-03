@@ -175,12 +175,24 @@ public interface ProfileService {
 
     /**
      * Retrieves the session identified by the specified identifier.
+     * @deprecated {@code dateHint} is not supported anymore, please use {@link #loadSession(String)}
      *
      * @param sessionId the identifier of the session to be retrieved
      * @param dateHint  a Date helping in identifying where the item is located
      * @return the session identified by the specified identifier
      */
+    @Deprecated
     Session loadSession(String sessionId, Date dateHint);
+
+    /**
+     * Retrieves the session identified by the specified identifier.
+     *
+     * @param sessionId the identifier of the session to be retrieved
+     * @return the session identified by the specified identifier
+     */
+    default Session loadSession(String sessionId) {
+        return loadSession(sessionId, null);
+    };
 
     /**
      * Saves the specified session.

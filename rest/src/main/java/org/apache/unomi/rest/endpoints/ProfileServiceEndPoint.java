@@ -391,16 +391,15 @@ public class ProfileServiceEndPoint {
      * Retrieves the session identified by the specified identifier.
      *
      * @param sessionId the identifier of the session to be retrieved
-     * @param dateHint  a Date helping in identifying where the item is located
      * @return the session identified by the specified identifier
      * @throws ParseException if the date hint cannot be parsed as a proper {@link Date} object
      */
     @GET
     @Path("/sessions/{sessionId}")
-    public Session loadSession(@PathParam("sessionId") String sessionId, @QueryParam("dateHint") String dateHint) throws ParseException {
-        return profileService.loadSession(sessionId, dateHint != null ? new SimpleDateFormat("yyyy-MM").parse(dateHint) : null);
+    public Session loadSession(@PathParam("sessionId") String sessionId) throws ParseException {
+        return profileService.loadSession(sessionId);
     }
-
+    
     /**
      * Saves the specified session.
      *

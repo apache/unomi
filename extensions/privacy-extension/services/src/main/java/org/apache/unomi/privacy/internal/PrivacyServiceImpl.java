@@ -99,7 +99,7 @@ public class PrivacyServiceImpl implements PrivacyService {
         if (profile == null) {
             return false;
         }
-        eventService.send(new Event("profileDeleted", null, profile, null, null, profile,null, new Date(), false));
+        eventService.send(new Event("profileDeleted", null, profile, null, null, profile, null, new Date(), false));
         // we simply overwrite the existing profile with an empty one.
         Profile emptyProfile = new Profile(profileId);
         profileService.save(emptyProfile);
@@ -142,7 +142,7 @@ public class PrivacyServiceImpl implements PrivacyService {
             persistenceService.save(session);
             List<Event> events = eventService.searchEvents(session.getItemId(), new String[0], null, 0, -1, null).getList();
             for (Event event : events) {
-                persistenceService.update(event, event.getTimeStamp(), Event.class, "profileId", newProfile.getItemId());
+                persistenceService.update(event, Event.class, "profileId", newProfile.getItemId());
             }
         }
 
@@ -150,7 +150,7 @@ public class PrivacyServiceImpl implements PrivacyService {
     }
 
     @Override
-    public Boolean deleteProfileData(String profileId,boolean purgeData) {
+    public Boolean deleteProfileData(String profileId, boolean purgeData) {
         if (purgeData) {
             eventService.removeProfileEvents(profileId);
             profileService.removeProfileSessions(profileId);
