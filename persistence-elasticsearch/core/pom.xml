@@ -238,6 +238,7 @@
                 <extensions>true</extensions>
                 <configuration>
                     <instructions>
+                        <_dsannotations>*</_dsannotations>
                         <Import-Package>
                             org.jctools.queues;resolution:=optional,
                             org.apache.logging.log4j.util.internal;resolution:=optional,
