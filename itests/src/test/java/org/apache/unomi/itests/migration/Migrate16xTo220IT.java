@@ -33,7 +33,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-public class Migrate16xTo200IT extends BaseIT {
+public class Migrate16xTo220IT extends BaseIT {
 
     @Override
     @Before
@@ -84,8 +84,16 @@ public class Migrate16xTo200IT extends BaseIT {
         checkViewEventRestructured();
         checkEventTypesNotPersistedAnymore();
         checkForMappingUpdates();
+        checkNewIndexesExists();
     }
 
+    /**
+     * Checks if at least the new index for events and sessions exists.
+     */
+    private void checkNewIndexesExists() throws IOException {
+        Assert.assertTrue(MigrationUtils.indexExists(httpClient, "http://localhost:9400", "context-event-000001"));
+        Assert.assertTrue(MigrationUtils.indexExists(httpClient, "http://localhost:9400", "context-session-000001"));
+    }
     /**
      * Multiple index mappings have been update, check a simple check that after migration those mappings contains the latest modifications.
      */
