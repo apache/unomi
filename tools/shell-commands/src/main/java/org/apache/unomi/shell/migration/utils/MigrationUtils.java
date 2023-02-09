@@ -32,10 +32,7 @@ import org.osgi.framework.BundleContext;
 import java.io.*;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
-import java.util.Collections;
-import java.util.Enumeration;
-import java.util.Set;
-import java.util.StringJoiner;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static org.apache.unomi.shell.migration.service.MigrationConfig.*;
@@ -104,6 +101,26 @@ public class MigrationUtils {
             }
         }
         return Collections.emptySet();
+    }
+
+    public static void cleanAllIndexWithRollover(CloseableHttpClient httpClient, BundleContext bundleContext, String esAddress, String prefix, String indexName) throws IOException {
+        Set<String> indexes = getIndexesPrefixedBy(httpClient, esAddress, prefix + "-" + indexName + "-000");
+        List<String> sortedIndexes = new ArrayList<>(indexes);
+        Collections.sort(sortedIndexes);
+
+        if (!sortedIndexes.isEmpty()) {
+            String lastIndexName = sortedIndexes.remove(sortedIndexes.size() - 1);
+            sortedIndexes.forEach(index -> {
+                try {
+                    deleteIndex(httpClient, esAddress, index);
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            });
+            String matchAllBodyRequest = resourceAsString(bundleContext, "requestBody/2.2.0/match_all_body_request.json");
+
+            HttpUtils.executePostRequest(httpClient, esAddress + "/" + lastIndexName + "/_delete_by_query", matchAllBodyRequest, null);
+        }
     }
 
     public static String extractMappingFromBundles(BundleContext bundleContext, String fileName) throws IOException {

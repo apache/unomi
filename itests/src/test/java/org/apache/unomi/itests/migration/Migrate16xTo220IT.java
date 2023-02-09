@@ -16,6 +16,7 @@
  */
 package org.apache.unomi.itests.migration;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.unomi.api.*;
 import org.apache.unomi.itests.BaseIT;
@@ -35,6 +36,10 @@ import java.util.Objects;
 
 public class Migrate16xTo220IT extends BaseIT {
 
+    private int eventCount = 0;
+    private int sessionCount = 0;
+
+    private static final int NUMBER_DUPLICATE_SESSIONS = 3;
     @Override
     @Before
     public void waitForStartup() throws InterruptedException {
@@ -49,7 +54,9 @@ public class Migrate16xTo220IT extends BaseIT {
                 throw new RuntimeException("Unable to retrieve 1.6.x snapshot for ES restore");
             }
             // Restore the snapshot
-            HttpUtils.executePostRequest(httpClient, "http://localhost:9400/_snapshot/snapshots_repository/snapshot_1.6.x/_restore?wait_for_completion=true", "{}",  null);
+            HttpUtils.executePostRequest(httpClient, "http://localhost:9400/_snapshot/snapshots_repository/snapshot_1.6.x/_restore?wait_for_completion=true", "{}", null);
+            fillNumberEventAndSessionBeforeMigration(httpClient);
+
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -84,16 +91,31 @@ public class Migrate16xTo220IT extends BaseIT {
         checkViewEventRestructured();
         checkEventTypesNotPersistedAnymore();
         checkForMappingUpdates();
-        checkNewIndexesExists();
+        checkEventSessionRollover2_2_0();
     }
 
     /**
      * Checks if at least the new index for events and sessions exists.
      */
-    private void checkNewIndexesExists() throws IOException {
+    private void checkEventSessionRollover2_2_0() throws IOException {
         Assert.assertTrue(MigrationUtils.indexExists(httpClient, "http://localhost:9400", "context-event-000001"));
         Assert.assertTrue(MigrationUtils.indexExists(httpClient, "http://localhost:9400", "context-session-000001"));
+
+        int newEventcount = 0;
+        for (String eventIndex : MigrationUtils.getIndexesPrefixedBy(httpClient, "http://localhost:9400", "context-event-0")) {
+            JsonNode jsonNode = objectMapper.readTree(HttpUtils.executePostRequest(httpClient, "http://localhost:9400" + "/" + eventIndex + "/_count", resourceAsString("migration/match_all_body_request.json"), null));
+            newEventcount += jsonNode.get("count").asInt();
+        }
+
+        int newSessioncount = 0;
+        for (String sessionIndex : MigrationUtils.getIndexesPrefixedBy(httpClient, "http://localhost:9400", "context-session-0")) {
+            JsonNode jsonNode = objectMapper.readTree(HttpUtils.executePostRequest(httpClient, "http://localhost:9400" + "/" + sessionIndex + "/_count", resourceAsString("migration/match_all_body_request.json"), null));
+            newSessioncount += jsonNode.get("count").asInt();
+        }
+        Assert.assertEquals(eventCount, newEventcount);
+        Assert.assertEquals(sessionCount - NUMBER_DUPLICATE_SESSIONS, newSessioncount);
     }
+
     /**
      * Multiple index mappings have been update, check a simple check that after migration those mappings contains the latest modifications.
      */
@@ -273,5 +295,23 @@ public class Migrate16xTo220IT extends BaseIT {
         // Check master profile still exists a no alias have been created for him
         Assert.assertNotNull(persistenceService.load(masterProfile, Profile.class));
         Assert.assertNull(persistenceService.load(masterProfile, ProfileAlias.class));
+    }
+
+    private void fillNumberEventAndSessionBeforeMigration(CloseableHttpClient httpClient) {
+        try {
+            for (String eventIndex : MigrationUtils.getIndexesPrefixedBy(httpClient, "http://localhost:9400", "context-event-date")) {
+                JsonNode jsonNode = objectMapper.readTree(HttpUtils.executePostRequest(httpClient, "http://localhost:9400" + "/" + eventIndex + "/_count", resourceAsString("migration/must_not_match_some_eventype_body.json"), null));
+                eventCount += jsonNode.get("count").asInt();
+            }
+
+            for (String eventIndex : MigrationUtils.getIndexesPrefixedBy(httpClient, "http://localhost:9400", "context-session-date")) {
+                JsonNode jsonNode = objectMapper.readTree(HttpUtils.executePostRequest(httpClient, "http://localhost:9400" + "/" + eventIndex + "/_count", resourceAsString("migration/match_all_body_request.json"), null));
+                sessionCount += jsonNode.get("count").asInt();
+            }
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+
     }
 }
