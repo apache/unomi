@@ -737,6 +737,10 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Override
     public <T extends Item> T load(final String itemId, final Date dateHint, final Class<T> clazz) {
+        if (StringUtils.isEmpty(itemId)) {
+            return null;
+        }
+
         return new InClassLoaderExecute<T>(metricsService, this.getClass().getName() + ".loadItem", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
             protected T execute(Object... args) throws Exception {
                 try {
