@@ -168,6 +168,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 import static org.elasticsearch.index.query.QueryBuilders.termQuery;
@@ -209,6 +210,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     private ConditionESQueryBuilderDispatcher conditionESQueryBuilderDispatcher;
     private List<String> itemsMonthlyIndexed;
     private Map<String, String> routingByType;
+    private final Map<String, String> sessionAffinityCache = new ConcurrentHashMap<>();
 
     private Integer defaultQueryLimit = 10;
     private Integer removeByQueryTimeoutInMinutes = 10;
@@ -817,7 +819,8 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         itemType = customItemType;
                     }
 
-                    if (isItemTypeRollingOver(itemType)) {
+                    String affinityIndex = "session".equals(itemType) && sessionAffinityCache.containsKey(itemId) ? sessionAffinityCache.get(itemId) : null;
+                    if (affinityIndex == null && isItemTypeRollingOver(itemType)) {
                         return new MetricAdapter<T>(metricsService, ".loadItemWithQuery") {
                             @Override
                             public T execute(Object... args) throws Exception {
@@ -836,7 +839,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                             }
                         }.execute();
                     } else {
-                        GetRequest getRequest = new GetRequest(getIndex(itemType), itemId);
+                        GetRequest getRequest = new GetRequest(affinityIndex != null ? affinityIndex : getIndex(itemType), itemId);
                         GetResponse response = client.get(getRequest, RequestOptions.DEFAULT);
                         if (response.isExists()) {
                             String sourceAsString = response.getSourceAsString();
@@ -870,6 +873,9 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         item.setSystemMetadata(SEQ_NO, seqNo);
         item.setSystemMetadata(PRIMARY_TERM, primaryTerm);
         item.setSystemMetadata("index", index);
+        if (item.getItemType().equals("session") && !sessionAffinityCache.containsKey(id)) {
+            sessionAffinityCache.put(id, index);
+        }
     }
 
     @Override
