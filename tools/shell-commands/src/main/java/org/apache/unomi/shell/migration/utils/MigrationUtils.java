@@ -32,9 +32,7 @@ import org.osgi.framework.BundleContext;
 import java.io.*;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
-import java.util.Collections;
-import java.util.Enumeration;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static org.apache.unomi.shell.migration.service.MigrationConfig.*;
@@ -77,8 +75,9 @@ public class MigrationUtils {
             String line;
             StringBuilder value = new StringBuilder();
             while ((line = br.readLine()) != null) {
-                if (!line.startsWith("/*") && !line.startsWith(" *") && !line.startsWith("*/"))
+                if (!line.startsWith("/*") && !line.startsWith(" *") && !line.startsWith("*/")) {
                     value.append(line);
+                }
             }
             in.close();
             return value.toString();
@@ -98,12 +97,30 @@ public class MigrationUtils {
         try (CloseableHttpResponse response = httpClient.execute(new HttpGet(esAddress + "/_aliases"))) {
             if (response.getStatusLine().getStatusCode() == HttpStatus.SC_OK) {
                 JSONObject indexesAsJson = new JSONObject(EntityUtils.toString(response.getEntity()));
-                return indexesAsJson.keySet().stream().
-                        filter(alias -> alias.startsWith(prefix)).
-                        collect(Collectors.toSet());
+                return indexesAsJson.keySet().stream().filter(alias -> alias.startsWith(prefix)).collect(Collectors.toSet());
             }
         }
         return Collections.emptySet();
+    }
+
+    public static void cleanAllIndexWithRollover(CloseableHttpClient httpClient, BundleContext bundleContext, String esAddress, String prefix, String indexName) throws IOException {
+        Set<String> indexes = getIndexesPrefixedBy(httpClient, esAddress, prefix + "-" + indexName + "-000");
+        List<String> sortedIndexes = new ArrayList<>(indexes);
+        Collections.sort(sortedIndexes);
+
+        if (!sortedIndexes.isEmpty()) {
+            String lastIndexName = sortedIndexes.remove(sortedIndexes.size() - 1);
+            sortedIndexes.forEach(index -> {
+                try {
+                    deleteIndex(httpClient, esAddress, index);
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            });
+            String matchAllBodyRequest = resourceAsString(bundleContext, "requestBody/2.2.0/match_all_body_request.json");
+
+            HttpUtils.executePostRequest(httpClient, esAddress + "/" + lastIndexName + "/_delete_by_query", matchAllBodyRequest, null);
+        }
     }
 
     public static String extractMappingFromBundles(BundleContext bundleContext, String fileName) throws IOException {
@@ -131,8 +148,44 @@ public class MigrationUtils {
         return settings.replace("#mappings", mapping);
     }
 
-    public static void reIndex(CloseableHttpClient httpClient, BundleContext bundleContext, String esAddress, String indexName,
-                               String newIndexSettings, String painlessScript, MigrationContext migrationContext) throws Exception {
+    public static String buildIndexCreationRequestWithRollover(String baseIndexSettings, String mapping, MigrationContext context, String lifeCycleName, String rolloverAlias) throws IOException {
+        return buildIndexCreationRequest(baseIndexSettings, mapping, context, false)
+                .replace("#lifecycleName", lifeCycleName)
+                .replace("#lifecycleRolloverAlias", rolloverAlias);
+    }
+
+    public static String buildRolloverPolicyCreationRequest(String baseRequest, MigrationContext migrationContext) throws IOException {
+
+        StringJoiner rolloverHotActions = new StringJoiner(", ");
+
+        String rolloverMaxAge = migrationContext.getConfigString("rolloverMaxAge");
+        String rolloverMaxSize = migrationContext.getConfigString("rolloverMaxSize");
+        String rolloverMaxDocs = migrationContext.getConfigString("rolloverMaxDocs");
+        if (StringUtils.isNotBlank(rolloverMaxAge)) {
+            rolloverHotActions.add("\"max_age\": \"" + rolloverMaxAge + "\"");
+        }
+        if (StringUtils.isNotBlank(rolloverMaxSize)) {
+            rolloverHotActions.add("\"max_size\": \"" + rolloverMaxSize + "\"");
+        }
+        if (StringUtils.isNotBlank(rolloverMaxDocs)) {
+            rolloverHotActions.add("\"max_docs\": \"" + rolloverMaxDocs + "\"");
+        }
+        return baseRequest.replace("#rolloverHotActions", rolloverHotActions.toString());
+    }
+
+    public static void moveToIndex(CloseableHttpClient httpClient, BundleContext bundleContext, String esAddress, String sourceIndexName, String targetIndexName) throws Exception {
+        String reIndexRequest = resourceAsString(bundleContext, "requestBody/2.2.0/base_reindex_request.json").replace("#source", sourceIndexName).replace("#dest", targetIndexName);
+
+        HttpUtils.executePostRequest(httpClient, esAddress + "/_reindex", reIndexRequest, null);
+    }
+
+    public static void deleteIndex(CloseableHttpClient httpClient, String esAddress, String indexName) throws Exception {
+        if (indexExists(httpClient, esAddress, indexName)) {
+            HttpUtils.executeDeleteRequest(httpClient, esAddress + "/" + indexName, null);
+        }
+    }
+
+    public static void reIndex(CloseableHttpClient httpClient, BundleContext bundleContext, String esAddress, String indexName, String newIndexSettings, String painlessScript, MigrationContext migrationContext) throws Exception {
         if (indexName.endsWith("-cloned")) {
             // We should never reIndex a clone ...
             return;
@@ -140,9 +193,7 @@ public class MigrationUtils {
 
         String indexNameCloned = indexName + "-cloned";
 
-        String reIndexRequest = resourceAsString(bundleContext, "requestBody/2.0.0/base_reindex_request.json")
-                .replace("#source", indexNameCloned).replace("#dest", indexName)
-                .replace("#painless", StringUtils.isNotEmpty(painlessScript) ? getScriptPart(painlessScript) : "");
+        String reIndexRequest = resourceAsString(bundleContext, "requestBody/2.0.0/base_reindex_request.json").replace("#source", indexNameCloned).replace("#dest", indexName).replace("#painless", StringUtils.isNotEmpty(painlessScript) ? getScriptPart(painlessScript) : "");
 
         String setIndexReadOnlyRequest = resourceAsString(bundleContext, "requestBody/2.0.0/base_set_index_readonly_request.json");
 
@@ -208,10 +259,7 @@ public class MigrationUtils {
             }
 
             // scroll
-            response = HttpUtils.executePostRequest(httpClient, esAddress + "/_search/scroll", "{\n" +
-                    "  \"scroll_id\": \"" + scrollId + "\",\n" +
-                    "  \"scroll\": \"" + scrollDuration + "\"\n" +
-                    "}", null);
+            response = HttpUtils.executePostRequest(httpClient, esAddress + "/_search/scroll", "{\n" + "  \"scroll_id\": \"" + scrollId + "\",\n" + "  \"scroll\": \"" + scrollDuration + "\"\n" + "}", null);
         }
     }
 
@@ -222,7 +270,7 @@ public class MigrationUtils {
         while (true) {
             final JSONObject status = new JSONObject(HttpUtils.executeGetRequest(httpClient, esAddress + "/_cluster/health?wait_for_status=yellow&timeout=60s", null));
             if (!status.get("timed_out").equals("true")) {
-                migrationContext.printMessage("ES Cluster status is "  + status.get("status"));
+                migrationContext.printMessage("ES Cluster status is " + status.get("status"));
                 break;
             }
             migrationContext.printMessage("Waiting for ES Cluster status to be Yellow, current status is " + status.get("status"));

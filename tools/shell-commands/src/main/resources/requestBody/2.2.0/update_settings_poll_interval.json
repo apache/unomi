@@ -1,0 +1,5 @@
+{
+  "persistent": {
+    "indices.lifecycle.poll_interval": #pollIntervalValue
+  }
+}
