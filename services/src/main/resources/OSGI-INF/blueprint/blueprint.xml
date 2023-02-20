@@ -29,6 +29,8 @@
             <cm:property name="profile.purge.inactiveTime" value="180"/>
             <cm:property name="profile.purge.existTime" value="-1"/>
             <cm:property name="monthly.index.purge.existTime" value="12"/>
+            <cm:property name="session.purge.existTime" value="-1"/>
+            <cm:property name="event.purge.existTime" value="-1"/>
             <cm:property name="segment.update.batchSize" value="1000"/>
             <cm:property name="profile.forceRefreshOnSave" value="false"/>
             <cm:property name="definitions.refresh.interval" value="10000"/>
@@ -235,6 +237,8 @@
         <property name="purgeProfileInactiveTime" value="${services.profile.purge.inactiveTime}"/>
         <property name="purgeProfileExistTime" value="${services.profile.purge.existTime}"/>
         <property name="purgeSessionsAndEventsTime" value="${services.monthly.index.purge.existTime}"/>
+        <property name="purgeSessionExistTime" value="${services.session.purge.existTime}"/>
+        <property name="purgeEventExistTime" value="${services.event.purge.existTime}"/>
         <property name="forceRefreshOnSave" value="${services.profile.forceRefreshOnSave}"/>
         <property name="propertiesRefreshInterval" value="${services.properties.refresh.interval}"/>
         <property name="schedulerService" ref="schedulerServiceImpl"/>

@@ -204,6 +204,8 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
     private Integer purgeProfileExistTime = 0;
     private Integer purgeProfileInactiveTime = 0;
     private Integer purgeSessionsAndEventsTime = 0;
+    private Integer purgeSessionExistTime = 0;
+    private Integer purgeEventExistTime = 0;
     private Integer purgeProfileInterval = 0;
     private TimerTask purgeTask = null;
     private long propertiesRefreshInterval = 10000;
@@ -297,6 +299,14 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
 
     public void setPurgeProfileInterval(Integer purgeProfileInterval) {
         this.purgeProfileInterval = purgeProfileInterval;
+    }
+
+    public void setPurgeSessionExistTime(Integer purgeSessionExistTime) {
+        this.purgeSessionExistTime = purgeSessionExistTime;
+    }
+
+    public void setPurgeEventExistTime(Integer purgeEventExistTime) {
+        this.purgeEventExistTime = purgeEventExistTime;
     }
 
     private void schedulePropertyTypeLoad() {
