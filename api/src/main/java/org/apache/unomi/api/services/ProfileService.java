@@ -417,7 +417,6 @@ public interface ProfileService {
      * Purge (delete) profiles
      * example: Purge profile inactive since 10 days only:
      * purgeProfiles(10, 0);
-     *
      * example: Purge profile created since 30 days only:
      * purgeProfiles(0, 30);
      *
@@ -427,8 +426,14 @@ public interface ProfileService {
     void purgeProfiles(int inactiveNumberOfDays, int existsNumberOfDays);
 
     /**
-     * Purge (delete) monthly indices by removing old indices
-     * @param existsNumberOfMonths used to remove monthly indices older than this number of months
+     * Purge (delete) session items
+     * @param existsNumberOfDays used to remove monthly indices older than this number of days
      */
-    void purgeMonthlyItems(int existsNumberOfMonths);
+    void purgeSessionItems(int existsNumberOfDays);
+
+    /**
+     * Purge (delete) event items
+     * @param existsNumberOfDays used to remove monthly indices older than this number of days
+     */
+    void purgeEventItems(int existsNumberOfDays);
 }

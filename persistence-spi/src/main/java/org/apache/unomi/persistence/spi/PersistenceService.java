@@ -683,6 +683,16 @@ public interface PersistenceService {
     void purge(Date date);
 
     /**
+     * Retrieves the number of document per indexes.
+     * If the index is a rollover index, each rollover index will be return with its own number of document
+     * For example: with "event" as parameter, the indexes named ...-event-000001, ...-event-000002 and so one will be returned
+     *
+     * @param indexes names of the indexes to count the documents
+     * @return Map where the key in the index name and the value is the number of document for this index
+     */
+    Map<String, Long> docCountPerIndex(String... indexes);
+
+    /**
      * Retrieves all items of the specified Item subclass which specified ranged property is within the specified bounds, ordered according to the specified {@code sortBy} String
      * and and paged: only {@code size} of them are retrieved, starting with the {@code offset}-th one.
      *
@@ -732,6 +742,15 @@ public interface PersistenceService {
      * @return {@code true} if the operation was successful, {@code false} otherwise
      */
     boolean removeIndex(final String itemType);
+
+    /**
+     * Removes the index for the specified item type.
+     *
+     * @param itemType the item type
+     * @param addPrefix should add the index prefix to the itemType passed as parameter
+     * @return {@code true} if the operation was successful, {@code false} otherwise
+     */
+    boolean removeIndex(final String itemType, boolean addPrefix);
 
     /**
      * Removes all data associated with the provided scope.

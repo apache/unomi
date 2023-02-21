@@ -20,18 +20,7 @@ package org.apache.unomi.services.impl.profiles;
 import org.apache.commons.beanutils.BeanUtils;
 import org.apache.commons.beanutils.PropertyUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.unomi.api.BatchUpdate;
-import org.apache.unomi.api.Item;
-import org.apache.unomi.api.PartialList;
-import org.apache.unomi.api.Persona;
-import org.apache.unomi.api.PersonaSession;
-import org.apache.unomi.api.PersonaWithSessions;
-import org.apache.unomi.api.Profile;
-import org.apache.unomi.api.ProfileAlias;
-import org.apache.unomi.api.PropertyMergeStrategyExecutor;
-import org.apache.unomi.api.PropertyMergeStrategyType;
-import org.apache.unomi.api.PropertyType;
-import org.apache.unomi.api.Session;
+import org.apache.unomi.api.*;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.api.query.Query;
@@ -56,25 +45,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.Date;
-import java.util.Enumeration;
-import java.util.GregorianCalendar;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import java.util.TimerTask;
-import java.util.TreeSet;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -203,6 +174,11 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
 
     private Integer purgeProfileExistTime = 0;
     private Integer purgeProfileInactiveTime = 0;
+
+    /**
+     * Use purgeSessionExistTime and purgeEventExistTime instead
+     */
+    @Deprecated
     private Integer purgeSessionsAndEventsTime = 0;
     private Integer purgeSessionExistTime = 0;
     private Integer purgeEventExistTime = 0;
@@ -258,6 +234,7 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
             }
         }
         bundleContext.addBundleListener(this);
+        initializeDefaultPurgeValuesIfNecessary();
         initializePurge();
         schedulePropertyTypeLoad();
         logger.info("Profile service initialized.");
@@ -285,6 +262,22 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
     private void processBundleStop(BundleContext bundleContext) {
     }
 
+    /**
+     * Fill purgeEventExistTime and purgeSessionExistTime with the old property purgeSessionsAndEventsTime
+     * if there is no value set for these properties. This is done to allow the using of the old property.
+     * This method should be removed once the purgeSessionsAndEventsTime property is deleted.
+     */
+    private void initializeDefaultPurgeValuesIfNecessary() {
+        if (purgeSessionsAndEventsTime > 0) {
+            if (purgeEventExistTime <= 0) {
+                purgeEventExistTime = purgeSessionsAndEventsTime * 30;
+            }
+            if (purgeSessionExistTime <= 0) {
+                purgeSessionExistTime = purgeSessionsAndEventsTime * 30;
+            }
+        }
+    }
+
     public void setPurgeProfileExistTime(Integer purgeProfileExistTime) {
         this.purgeProfileExistTime = purgeProfileExistTime;
     }
@@ -293,6 +286,7 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         this.purgeProfileInactiveTime = purgeProfileInactiveTime;
     }
 
+    @Deprecated
     public void setPurgeSessionsAndEventsTime(Integer purgeSessionsAndEventsTime) {
         this.purgeSessionsAndEventsTime = purgeSessionsAndEventsTime;
     }
@@ -377,25 +371,76 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
     }
 
     @Override
-    public void purgeMonthlyItems(int existsNumberOfMonths) {
-        if (existsNumberOfMonths > 0) {
-            logger.info("Purging: Monthly items (sessions/events) created before {} months", existsNumberOfMonths);
-            persistenceService.purge(getMonth(-existsNumberOfMonths).getTime());
+    public void purgeSessionItems(int existsNumberOfDays) {
+        if (existsNumberOfDays > 0) {
+            ConditionType propertyConditionType = definitionsService.getConditionType("sessionPropertyCondition");
+            if (propertyConditionType == null) {
+                // definition service not yet fully instantiate
+                return;
+            }
+
+            Condition condition = new Condition(propertyConditionType);
+
+            logger.info("Purging: Session created since more than {} days", existsNumberOfDays);
+            condition.setParameter("propertyName", "timeStamp");
+            condition.setParameter("comparisonOperator", "lessThanOrEqualTo");
+            condition.setParameter("propertyValueDateExpr", "now-" + existsNumberOfDays + "d");
+
+            persistenceService.removeByQuery(condition, Session.class);
+            deleteEmptyRolloverIndex(Session.ITEM_TYPE);
+        }
+    }
+
+    @Override
+    public void purgeEventItems(int existsNumberOfDays) {
+        if (existsNumberOfDays > 0) {
+            ConditionType propertyConditionType = definitionsService.getConditionType("eventPropertyCondition");
+            if (propertyConditionType == null) {
+                // definition service not yet fully instantiate
+                return;
+            }
+
+            Condition condition = new Condition(propertyConditionType);
+
+            logger.info("Purging: Session created since more than {} days", existsNumberOfDays);
+            condition.setParameter("propertyName", "timeStamp");
+            condition.setParameter("comparisonOperator", "lessThanOrEqualTo");
+            condition.setParameter("propertyValueDateExpr", "now-" + existsNumberOfDays + "d");
+
+            persistenceService.removeByQuery(condition, Event.class);
+            deleteEmptyRolloverIndex(Event.ITEM_TYPE);
+        }
+    }
+
+    public void deleteEmptyRolloverIndex(String indexName) {
+        TreeMap<String, Long> countsPerIndex = new TreeMap<>(persistenceService.docCountPerIndex(indexName));
+        if (countsPerIndex.size() >= 1) {
+            // do not check the last index, because it's the one used to write documents
+            countsPerIndex.pollLastEntry();
+            countsPerIndex.forEach((index, count) -> {
+                if (count == 0) {
+                    persistenceService.removeIndex(index, false);
+                }
+            });
         }
     }
 
     private void initializePurge() {
         logger.info("Purge: Initializing");
 
-        if (purgeProfileInactiveTime > 0 || purgeProfileExistTime > 0 || purgeSessionsAndEventsTime > 0) {
+        if (purgeProfileInactiveTime > 0 || purgeProfileExistTime > 0 || purgeSessionsAndEventsTime > 0 || purgeSessionExistTime > 0 || purgeEventExistTime > 0) {
             if (purgeProfileInactiveTime > 0) {
                 logger.info("Purge: Profile with no visits since more than {} days, will be purged", purgeProfileInactiveTime);
             }
             if (purgeProfileExistTime > 0) {
                 logger.info("Purge: Profile created since more than {} days, will be purged", purgeProfileExistTime);
             }
-            if (purgeSessionsAndEventsTime > 0) {
-                logger.info("Purge: Monthly items (sessions/events) created since more than {} months, will be purged", purgeSessionsAndEventsTime);
+
+            if (purgeSessionExistTime > 0) {
+                logger.info("Purge: Session items created since more than {} days, will be purged", purgeSessionExistTime);
+            }
+            if (purgeEventExistTime > 0) {
+                logger.info("Purge: Event items created since more than {} days, will be purged", purgeEventExistTime);
             }
 
             purgeTask = new TimerTask() {
@@ -409,8 +454,8 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
                         purgeProfiles(purgeProfileInactiveTime, purgeProfileExistTime);
 
                         // Monthly items purge
-                        purgeMonthlyItems(purgeSessionsAndEventsTime);
-
+                        purgeSessionItems(purgeSessionExistTime);
+                        purgeEventItems(purgeEventExistTime);
                         logger.info("Purge: executed in {} ms", System.currentTimeMillis() - purgeStartTime);
                     } catch (Throwable t) {
                         logger.error("Error while purging", t);
