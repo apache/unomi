@@ -471,12 +471,6 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         }
     }
 
-    private GregorianCalendar getMonth(int offset) {
-        GregorianCalendar gc = new GregorianCalendar();
-        gc = new GregorianCalendar(gc.get(Calendar.YEAR), gc.get(Calendar.MONTH), 1);
-        gc.add(Calendar.MONTH, offset);
-        return gc;
-    }
 
     public long getAllProfilesCount() {
         return persistenceService.getAllItemsCount(Profile.ITEM_TYPE);

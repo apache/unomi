@@ -372,30 +372,36 @@ public class ProfileServiceIT extends BaseIT {
                 (count) -> count == (450 + originalEventsCount), 1000, 100);
 
         // Should have no effect
-        profileService.purgeMonthlyItems(0);
+        profileService.purgeSessionItems(0);
         keepTrying("Sessions number should be 450", () -> persistenceService.getAllItemsCount(Session.ITEM_TYPE),
                 (count) -> count == (450 + originalSessionsCount), 1000, 100);
+        profileService.purgeEventItems(0);
         keepTrying("Events number should be 450", () -> persistenceService.getAllItemsCount(Event.ITEM_TYPE),
                 (count) -> count == (450 + originalEventsCount), 1000, 100);
 
         // Should have no effect there is no monthly items older than 40 months
-        profileService.purgeMonthlyItems(40);
+        profileService.purgeSessionItems(40);
         keepTrying("Sessions number should be 450", () -> persistenceService.getAllItemsCount(Session.ITEM_TYPE),
                 (count) -> count == (450 + originalSessionsCount), 1000, 100);
+        profileService.purgeEventItems(40);
         keepTrying("Events number should be 450", () -> persistenceService.getAllItemsCount(Event.ITEM_TYPE),
                 (count) -> count == (450 + originalEventsCount), 1000, 100);
 
-        // Should purge monthly items older than 25 days
-        profileService.purgeMonthlyItems(25);
+        // Should purge sessions older than 25 days
+        profileService.purgeSessionItems(25);
         keepTrying("Sessions number should be 300", () -> persistenceService.getAllItemsCount(Session.ITEM_TYPE),
                 (count) -> count == (300 + originalSessionsCount), 1000, 100);
+        // Should purge events older than 25 days
+        profileService.purgeEventItems(25);
         keepTrying("Events number should be 300", () -> persistenceService.getAllItemsCount(Event.ITEM_TYPE),
                 (count) -> count == (300 + originalEventsCount), 1000, 100);
 
-        // Should purge monthly items older than 5 days
-        profileService.purgeMonthlyItems(5);
+        // Should purge sessions older than 5 days
+        profileService.purgeSessionItems(5);
         keepTrying("Sessions number should be 150", () -> persistenceService.getAllItemsCount(Session.ITEM_TYPE),
                 (count) -> count == (150 + originalSessionsCount), 1000, 100);
+        // Should purge events older than 5 days
+        profileService.purgeEventItems(5);
         keepTrying("Events number should be 150", () -> persistenceService.getAllItemsCount(Event.ITEM_TYPE),
                 (count) -> count == (150 + originalEventsCount), 1000, 100);
     }

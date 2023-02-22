@@ -680,6 +680,7 @@ public interface PersistenceService {
      *
      * @param date the date (not included) before which we want to erase all data
      */
+    @Deprecated
     void purge(Date date);
 
     /**

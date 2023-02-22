@@ -87,6 +87,7 @@ public class ClusterServiceEndPoint {
      */
     @GET
     @Path("/purge/{date}")
+    @Deprecated
     public void purge(@PathParam("date") String date) {
         try {
             clusterService.purge(new SimpleDateFormat("yyyy-MM-dd").parse(date));

@@ -148,8 +148,6 @@ import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -2422,38 +2420,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Override
     public void purge(final Date date) {
-        new InClassLoaderExecute<Object>(metricsService, this.getClass().getName() + ".purgeWithDate", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
-            @Override
-            protected Object execute(Object... args) throws Exception {
-
-                GetIndexRequest getIndexRequest = new GetIndexRequest(getAllIndexForQuery());
-                GetIndexResponse getIndexResponse = client.indices().get(getIndexRequest, RequestOptions.DEFAULT);
-                String[] indices = getIndexResponse.getIndices();
-
-                SimpleDateFormat d = new SimpleDateFormat("yyyy-MM");
-
-                List<String> toDelete = new ArrayList<>();
-                for (String currentIndexName : indices) {
-                    int indexDatePrefixPos = currentIndexName.indexOf(INDEX_DATE_PREFIX);
-                    if (indexDatePrefixPos > -1) {
-                        try {
-                            Date indexDate = d.parse(currentIndexName.substring(indexDatePrefixPos + INDEX_DATE_PREFIX.length()));
-
-                            if (indexDate.before(date)) {
-                                toDelete.add(currentIndexName);
-                            }
-                        } catch (ParseException e) {
-                            throw new Exception("Cannot parse index name " + currentIndexName, e);
-                        }
-                    }
-                }
-                if (!toDelete.isEmpty()) {
-                    DeleteIndexRequest deleteIndexRequest = new DeleteIndexRequest(toDelete.toArray(new String[toDelete.size()]));
-                    client.indices().delete(deleteIndexRequest, RequestOptions.DEFAULT);
-                }
-                return null;
-            }
-        }.catchingExecuteInClassLoader(true);
     }
 
     @Override
