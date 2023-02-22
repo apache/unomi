@@ -1405,10 +1405,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 );
                 phases.put("hot", new Phase("hot", TimeValue.ZERO, hotActions));
 
-                // TODO - Handle this with the purge https://issues.apache.org/jira/browse/UNOMI-739
-                Map<String, LifecycleAction> deleteActions = Collections.singletonMap(DeleteAction.NAME, new DeleteAction());
-                phases.put("delete", new Phase("delete", new TimeValue(90, TimeUnit.DAYS), deleteActions));
-
                 LifecyclePolicy policy = new LifecyclePolicy(indexPrefix + "-" + ROLLOVER_LIFECYCLE_NAME, phases);
                 PutLifecyclePolicyRequest request = new PutLifecyclePolicyRequest(policy);
                 org.elasticsearch.client.core.AcknowledgedResponse putLifecyclePolicy = client.indexLifecycle().putLifecyclePolicy(request, RequestOptions.DEFAULT);
