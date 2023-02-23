@@ -70,6 +70,7 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
     private static final Logger logger = LoggerFactory.getLogger(GroovyActionsServiceImpl.class.getName());
 
     private static final String BASE_SCRIPT_NAME = "BaseScript";
+    private static final String GROOVY_SOURCE_CODE_ID_SUFFIX = "-groovySourceCode";
 
     public void setBundleContext(BundleContext bundleContext) {
         this.bundleContext = bundleContext;
@@ -225,13 +226,14 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
         } catch (NoSuchMethodException e) {
             logger.error("Failed to delete the action type for the id {}", id, e);
         }
-        persistenceService.remove(id, GroovyAction.class);
-        groovyCodeSourceMap.remove(id);
+        String groovySourceCodeId = getGroovyCodeSourceIdForActionId(id);
+        persistenceService.remove(groovySourceCodeId, GroovyAction.class);
+        groovyCodeSourceMap.remove(groovySourceCodeId);
     }
 
     @Override
     public GroovyCodeSource getGroovyCodeSource(String id) {
-        return groovyCodeSourceMap.get(id);
+        return groovyCodeSourceMap.get(getGroovyCodeSourceIdForActionId(id));
     }
 
     /**
@@ -245,8 +247,18 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
         return new GroovyCodeSource(groovyScript, actionName, "/groovy/script");
     }
 
-    private void saveScript(String name, String script) {
-        GroovyAction groovyScript = new GroovyAction(name, script);
+    /**
+     * We use a suffix for avoiding id conflict between the actionType and the groovyAction in ElasticSearch
+     * Since those items are now stored in the same ES index
+     * @param actionName name/id of the actionType
+     * @return id of the groovyAction source code for query/save/storage usage.
+     */
+    private String getGroovyCodeSourceIdForActionId(String actionName) {
+        return actionName + GROOVY_SOURCE_CODE_ID_SUFFIX;
+    }
+
+    private void saveScript(String actionName, String script) {
+        GroovyAction groovyScript = new GroovyAction(getGroovyCodeSourceIdForActionId(actionName), script);
         persistenceService.save(groovyScript);
     }
 

@@ -253,29 +253,26 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     private Map<String, Map<String, Map<String, Object>>> knownMappings = new HashMap<>();
 
-    private static final Map<String, String> itemTypeIndexNameMap = new ConcurrentHashMap<>();
+    private static final Map<String, String> itemTypeIndexNameMap = new HashMap<>();
     static {
-        // metadata items
-        itemTypeIndexNameMap.put("actionType", "item");
-        itemTypeIndexNameMap.put("campaign", "item");
-        itemTypeIndexNameMap.put("campaignevent", "item");
-        itemTypeIndexNameMap.put("goal", "item");
-        itemTypeIndexNameMap.put("userList", "item");
-        itemTypeIndexNameMap.put("propertyType", "item");
-        itemTypeIndexNameMap.put("scope", "item");
-        itemTypeIndexNameMap.put("conditionType", "item");
-        itemTypeIndexNameMap.put("rule", "item");
-        itemTypeIndexNameMap.put("scoring", "item");
-        itemTypeIndexNameMap.put("segment", "item");
-        itemTypeIndexNameMap.put("groovyAction", "item");
-
-        // direct item implems
-        itemTypeIndexNameMap.put("topic", "item");
-        itemTypeIndexNameMap.put("patch", "item");
-        itemTypeIndexNameMap.put("jsonSchema", "item");
-        itemTypeIndexNameMap.put("importConfig", "item");
-        itemTypeIndexNameMap.put("exportConfig", "item");
-        itemTypeIndexNameMap.put("rulestats", "item");
+        itemTypeIndexNameMap.put("actionType", "systemItems");
+        itemTypeIndexNameMap.put("campaign", "systemItems");
+        itemTypeIndexNameMap.put("campaignevent", "systemItems");
+        itemTypeIndexNameMap.put("goal", "systemItems");
+        itemTypeIndexNameMap.put("userList", "systemItems");
+        itemTypeIndexNameMap.put("propertyType", "systemItems");
+        itemTypeIndexNameMap.put("scope", "systemItems");
+        itemTypeIndexNameMap.put("conditionType", "systemItems");
+        itemTypeIndexNameMap.put("rule", "systemItems");
+        itemTypeIndexNameMap.put("scoring", "systemItems");
+        itemTypeIndexNameMap.put("segment", "systemItems");
+        itemTypeIndexNameMap.put("groovyAction", "systemItems");
+        itemTypeIndexNameMap.put("topic", "systemItems");
+        itemTypeIndexNameMap.put("patch", "systemItems");
+        itemTypeIndexNameMap.put("jsonSchema", "systemItems");
+        itemTypeIndexNameMap.put("importConfig", "systemItems");
+        itemTypeIndexNameMap.put("exportConfig", "systemItems");
+        itemTypeIndexNameMap.put("rulestats", "systemItems");
 
         itemTypeIndexNameMap.put("profile", "profile");
         itemTypeIndexNameMap.put("persona", "profile");
