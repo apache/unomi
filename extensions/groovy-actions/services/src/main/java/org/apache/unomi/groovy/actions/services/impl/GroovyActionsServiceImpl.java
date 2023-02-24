@@ -70,6 +70,7 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
     private static final Logger logger = LoggerFactory.getLogger(GroovyActionsServiceImpl.class.getName());
 
     private static final String BASE_SCRIPT_NAME = "BaseScript";
+    private static final String GROOVY_SOURCE_CODE_ID_SUFFIX = "-groovySourceCode";
 
     public void setBundleContext(BundleContext bundleContext) {
         this.bundleContext = bundleContext;
@@ -153,9 +154,7 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
             return;
         }
         logger.debug("Found Groovy base script at {}, loading... ", groovyBaseScriptURL.getPath());
-        GroovyCodeSource groovyCodeSource = new GroovyCodeSource(IOUtils.toString(groovyBaseScriptURL.openStream()), BASE_SCRIPT_NAME,
-                "/groovy/script");
-        groovyCodeSourceMap.put(BASE_SCRIPT_NAME, groovyCodeSource);
+        GroovyCodeSource groovyCodeSource = new GroovyCodeSource(IOUtils.toString(groovyBaseScriptURL.openStream()), BASE_SCRIPT_NAME, "/groovy/script");
         groovyScriptEngine.getGroovyClassLoader().parseClass(groovyCodeSource, true);
     }
 
@@ -183,15 +182,10 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
 
     @Override
     public void save(String actionName, String groovyScript) {
-        handleFile(actionName, groovyScript);
-    }
-
-    private void handleFile(String actionName, String groovyScript) {
         GroovyCodeSource groovyCodeSource = buildClassScript(groovyScript, actionName);
         try {
             saveActionType(groovyShell.parse(groovyCodeSource).getClass().getMethod("execute").getAnnotation(Action.class));
             saveScript(actionName, groovyScript);
-            groovyCodeSourceMap.put(actionName, groovyCodeSource);
             logger.info("The script {} has been loaded.", actionName);
         } catch (NoSuchMethodException e) {
             logger.error("Failed to save the script {}", actionName, e);
@@ -219,19 +213,20 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
 
     @Override
     public void remove(String id) {
+        String groovySourceCodeId = getGroovyCodeSourceIdForActionId(id);
         try {
             definitionsService.removeActionType(
-                    groovyShell.parse(groovyCodeSourceMap.get(id)).getClass().getMethod("execute").getAnnotation(Action.class).id());
+                    groovyShell.parse(groovyCodeSourceMap.get(groovySourceCodeId)).getClass().getMethod("execute").getAnnotation(Action.class).id());
         } catch (NoSuchMethodException e) {
             logger.error("Failed to delete the action type for the id {}", id, e);
         }
-        persistenceService.remove(id, GroovyAction.class);
-        groovyCodeSourceMap.remove(id);
+        persistenceService.remove(groovySourceCodeId, GroovyAction.class);
+        groovyCodeSourceMap.remove(groovySourceCodeId);
     }
 
     @Override
     public GroovyCodeSource getGroovyCodeSource(String id) {
-        return groovyCodeSourceMap.get(id);
+        return groovyCodeSourceMap.get(getGroovyCodeSourceIdForActionId(id));
     }
 
     /**
@@ -245,15 +240,23 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
         return new GroovyCodeSource(groovyScript, actionName, "/groovy/script");
     }
 
-    private void saveScript(String name, String script) {
-        GroovyAction groovyScript = new GroovyAction(name, script);
+    /**
+     * We use a suffix for avoiding id conflict between the actionType and the groovyAction in ElasticSearch
+     * Since those items are now stored in the same ES index
+     * @param actionName name/id of the actionType
+     * @return id of the groovyAction source code for query/save/storage usage.
+     */
+    private String getGroovyCodeSourceIdForActionId(String actionName) {
+        return actionName + GROOVY_SOURCE_CODE_ID_SUFFIX;
+    }
+
+    private void saveScript(String actionName, String script) {
+        GroovyAction groovyScript = new GroovyAction(getGroovyCodeSourceIdForActionId(actionName), script);
         persistenceService.save(groovyScript);
     }
 
     private void refreshGroovyActions() {
         Map<String, GroovyCodeSource> refreshedGroovyCodeSourceMap = new HashMap<>();
-        GroovyCodeSource baseScript = groovyCodeSourceMap.get(BASE_SCRIPT_NAME);
-        refreshedGroovyCodeSourceMap.put(BASE_SCRIPT_NAME, baseScript);
         persistenceService.getAllItems(GroovyAction.class).forEach(groovyAction -> refreshedGroovyCodeSourceMap
                 .put(groovyAction.getName(), buildClassScript(groovyAction.getScript(), groovyAction.getName())));
         groovyCodeSourceMap = refreshedGroovyCodeSourceMap;

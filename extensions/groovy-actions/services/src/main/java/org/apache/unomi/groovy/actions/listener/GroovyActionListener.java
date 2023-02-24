@@ -62,7 +62,6 @@ public class GroovyActionListener implements SynchronousBundleListener {
 
     public void postConstruct() {
         logger.debug("postConstruct {}", bundleContext.getBundle());
-        createIndex();
         loadGroovyActions(bundleContext);
         for (Bundle bundle : bundleContext.getBundles()) {
             if (bundle.getBundleContext() != null && bundle.getBundleId() != bundleContext.getBundle().getBundleId()) {
@@ -104,14 +103,6 @@ public class GroovyActionListener implements SynchronousBundleListener {
                     processBundleStop(event.getBundle().getBundleContext());
                 }
                 break;
-        }
-    }
-
-    public void createIndex() {
-        if (persistenceService.createIndex(GroovyAction.ITEM_TYPE)) {
-            logger.info("GroovyAction index created");
-        } else {
-            logger.info("GroovyAction index already exists");
         }
     }
 

@@ -42,10 +42,12 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 public class RulesServiceImpl implements RulesService, EventListenerService, SynchronousBundleListener {
 
     public static final String RULE_QUERY_PREFIX = "rule_";
+    private static final String RULE_STAT_ID_SUFFIX = "-stat";
     public static final String TRACKED_PARAMETER = "trackedConditionParameters";
     private static final Logger logger = LoggerFactory.getLogger(RulesServiceImpl.class.getName());
 
@@ -251,9 +253,10 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
     }
 
     private RuleStatistics getLocalRuleStatistics(Rule rule) {
-        RuleStatistics ruleStatistics = this.allRuleStatistics.get(rule.getItemId());
+        String ruleStatisticsId = getRuleStatisticId(rule.getItemId());
+        RuleStatistics ruleStatistics = this.allRuleStatistics.get(ruleStatisticsId);
         if (ruleStatistics == null) {
-            ruleStatistics = new RuleStatistics(rule.getItemId());
+            ruleStatistics = new RuleStatistics(ruleStatisticsId);
         }
         return ruleStatistics;
     }
@@ -262,6 +265,10 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
         long totalRuleConditionTime = System.currentTimeMillis() - ruleConditionStartTime;
         ruleStatistics.setLocalConditionsTime(ruleStatistics.getLocalConditionsTime() + totalRuleConditionTime);
         allRuleStatistics.put(ruleStatistics.getItemId(), ruleStatistics);
+    }
+
+    private String getRuleStatisticId(String ruleID) {
+        return ruleID + RULE_STAT_ID_SUFFIX;
     }
 
     public void refreshRules() {
@@ -330,21 +337,24 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
             RuleStatistics ruleStatistics = getLocalRuleStatistics(rule);
             ruleStatistics.setLocalExecutionCount(ruleStatistics.getLocalExecutionCount() + 1);
             ruleStatistics.setLocalActionsTime(ruleStatistics.getLocalActionsTime() + totalActionsTime);
-            this.allRuleStatistics.put(rule.getItemId(), ruleStatistics);
+            this.allRuleStatistics.put(ruleStatistics.getItemId(), ruleStatistics);
         }
         return changes;
     }
 
     @Override
     public RuleStatistics getRuleStatistics(String ruleId) {
-        if (allRuleStatistics.containsKey(ruleId)) {
-            return allRuleStatistics.get(ruleId);
+        String ruleStatisticsId = getRuleStatisticId(ruleId);
+        if (allRuleStatistics.containsKey(ruleStatisticsId)) {
+            return allRuleStatistics.get(ruleStatisticsId);
         }
-        return persistenceService.load(ruleId, RuleStatistics.class);
+        return persistenceService.load(ruleStatisticsId, RuleStatistics.class);
     }
 
     public Map<String, RuleStatistics> getAllRuleStatistics() {
-        return allRuleStatistics;
+        return allRuleStatistics.keySet().stream()
+                .collect(Collectors.toMap(key -> key.endsWith(RULE_STAT_ID_SUFFIX) ?
+                        key.substring(0, key.length() - RULE_STAT_ID_SUFFIX.length()) : key, allRuleStatistics::get));
     }
 
     @Override
