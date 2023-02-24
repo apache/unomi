@@ -184,15 +184,10 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
 
     @Override
     public void save(String actionName, String groovyScript) {
-        handleFile(actionName, groovyScript);
-    }
-
-    private void handleFile(String actionName, String groovyScript) {
         GroovyCodeSource groovyCodeSource = buildClassScript(groovyScript, actionName);
         try {
             saveActionType(groovyShell.parse(groovyCodeSource).getClass().getMethod("execute").getAnnotation(Action.class));
             saveScript(actionName, groovyScript);
-            groovyCodeSourceMap.put(actionName, groovyCodeSource);
             logger.info("The script {} has been loaded.", actionName);
         } catch (NoSuchMethodException e) {
             logger.error("Failed to save the script {}", actionName, e);
@@ -220,13 +215,13 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
 
     @Override
     public void remove(String id) {
+        String groovySourceCodeId = getGroovyCodeSourceIdForActionId(id);
         try {
             definitionsService.removeActionType(
-                    groovyShell.parse(groovyCodeSourceMap.get(id)).getClass().getMethod("execute").getAnnotation(Action.class).id());
+                    groovyShell.parse(groovyCodeSourceMap.get(groovySourceCodeId)).getClass().getMethod("execute").getAnnotation(Action.class).id());
         } catch (NoSuchMethodException e) {
             logger.error("Failed to delete the action type for the id {}", id, e);
         }
-        String groovySourceCodeId = getGroovyCodeSourceIdForActionId(id);
         persistenceService.remove(groovySourceCodeId, GroovyAction.class);
         groovyCodeSourceMap.remove(groovySourceCodeId);
     }
