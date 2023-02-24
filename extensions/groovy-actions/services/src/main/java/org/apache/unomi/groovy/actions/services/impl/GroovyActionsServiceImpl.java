@@ -154,9 +154,7 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
             return;
         }
         logger.debug("Found Groovy base script at {}, loading... ", groovyBaseScriptURL.getPath());
-        GroovyCodeSource groovyCodeSource = new GroovyCodeSource(IOUtils.toString(groovyBaseScriptURL.openStream()), BASE_SCRIPT_NAME,
-                "/groovy/script");
-        groovyCodeSourceMap.put(BASE_SCRIPT_NAME, groovyCodeSource);
+        GroovyCodeSource groovyCodeSource = new GroovyCodeSource(IOUtils.toString(groovyBaseScriptURL.openStream()), BASE_SCRIPT_NAME, "/groovy/script");
         groovyScriptEngine.getGroovyClassLoader().parseClass(groovyCodeSource, true);
     }
 
@@ -259,8 +257,6 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
 
     private void refreshGroovyActions() {
         Map<String, GroovyCodeSource> refreshedGroovyCodeSourceMap = new HashMap<>();
-        GroovyCodeSource baseScript = groovyCodeSourceMap.get(BASE_SCRIPT_NAME);
-        refreshedGroovyCodeSourceMap.put(BASE_SCRIPT_NAME, baseScript);
         persistenceService.getAllItems(GroovyAction.class).forEach(groovyAction -> refreshedGroovyCodeSourceMap
                 .put(groovyAction.getName(), buildClassScript(groovyAction.getScript(), groovyAction.getName())));
         groovyCodeSourceMap = refreshedGroovyCodeSourceMap;
