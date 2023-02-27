@@ -120,16 +120,13 @@ public class Migrate16xTo220IT extends BaseIT {
      * Multiple index mappings have been update, check a simple check that after migration those mappings contains the latest modifications.
      */
     private void checkForMappingUpdates() throws IOException {
-        Assert.assertTrue(HttpUtils.executeGetRequest(httpClient, "http://localhost:9400/context-scope/_mapping", null).contains("\"match\":\"*\",\"match_mapping_type\":\"string\",\"mapping\":{\"analyzer\":\"folding\""));
-        Assert.assertTrue(HttpUtils.executeGetRequest(httpClient, "http://localhost:9400/context-profilealias/_mapping", null).contains("\"match\":\"*\",\"match_mapping_type\":\"string\",\"mapping\":{\"analyzer\":\"folding\""));
-        Assert.assertTrue(HttpUtils.executeGetRequest(httpClient, "http://localhost:9400/context-segment/_mapping", null).contains("\"condition\":{\"type\":\"object\",\"enabled\":false}"));
-        Assert.assertTrue(HttpUtils.executeGetRequest(httpClient, "http://localhost:9400/context-scoring/_mapping", null).contains("\"condition\":{\"type\":\"object\",\"enabled\":false}"));
-        Assert.assertTrue(HttpUtils.executeGetRequest(httpClient, "http://localhost:9400/context-campaign/_mapping", null).contains("\"entryCondition\":{\"type\":\"object\",\"enabled\":false}"));
-        Assert.assertTrue(HttpUtils.executeGetRequest(httpClient, "http://localhost:9400/context-conditiontype/_mapping", null).contains("\"parentCondition\":{\"type\":\"object\",\"enabled\":false}"));
-        Assert.assertTrue(HttpUtils.executeGetRequest(httpClient, "http://localhost:9400/context-goal/_mapping", null).contains("\"startEvent\":{\"type\":\"object\",\"enabled\":false}"));
-        Assert.assertTrue(HttpUtils.executeGetRequest(httpClient, "http://localhost:9400/context-patch/_mapping", null).contains("\"data\":{\"type\":\"object\",\"enabled\":false}"));
-        Assert.assertTrue(HttpUtils.executeGetRequest(httpClient, "http://localhost:9400/context-rule/_mapping", null).contains("\"condition\":{\"type\":\"object\",\"enabled\":false}"));
-        Assert.assertTrue(HttpUtils.executeGetRequest(httpClient, "http://localhost:9400/context-rule/_mapping", null).contains("\"parameterValues\":{\"type\":\"object\",\"enabled\":false}"));
+        Assert.assertTrue(HttpUtils.executeGetRequest(httpClient, "http://localhost:9400/context-systemitems/_mapping", null).contains("\"match\":\"*\",\"match_mapping_type\":\"string\",\"mapping\":{\"analyzer\":\"folding\""));
+        Assert.assertTrue(HttpUtils.executeGetRequest(httpClient, "http://localhost:9400/context-systemitems/_mapping", null).contains("\"condition\":{\"type\":\"object\",\"enabled\":false}"));
+        Assert.assertTrue(HttpUtils.executeGetRequest(httpClient, "http://localhost:9400/context-systemitems/_mapping", null).contains("\"entryCondition\":{\"type\":\"object\",\"enabled\":false}"));
+        Assert.assertTrue(HttpUtils.executeGetRequest(httpClient, "http://localhost:9400/context-systemitems/_mapping", null).contains("\"parentCondition\":{\"type\":\"object\",\"enabled\":false}"));
+        Assert.assertTrue(HttpUtils.executeGetRequest(httpClient, "http://localhost:9400/context-systemitems/_mapping", null).contains("\"startEvent\":{\"type\":\"object\",\"enabled\":false}"));
+        Assert.assertTrue(HttpUtils.executeGetRequest(httpClient, "http://localhost:9400/context-systemitems/_mapping", null).contains("\"data\":{\"type\":\"object\",\"enabled\":false}"));
+        Assert.assertTrue(HttpUtils.executeGetRequest(httpClient, "http://localhost:9400/context-systemitems/_mapping", null).contains("\"parameterValues\":{\"type\":\"object\",\"enabled\":false}"));
         Assert.assertTrue(HttpUtils.executeGetRequest(httpClient, "http://localhost:9400/context-profile/_mapping", null).contains("\"interests\":{\"type\":\"nested\""));
         for (String eventIndex : MigrationUtils.getIndexesPrefixedBy(httpClient, "http://localhost:9400", "context-event-")) {
             Assert.assertTrue(HttpUtils.executeGetRequest(httpClient, "http://localhost:9400/" + eventIndex + "/_mapping", null).contains("\"flattenedProperties\":{\"type\":\"flattened\"}"));
