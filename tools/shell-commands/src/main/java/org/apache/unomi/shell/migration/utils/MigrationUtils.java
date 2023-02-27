@@ -173,8 +173,8 @@ public class MigrationUtils {
         return baseRequest.replace("#rolloverHotActions", rolloverHotActions.toString());
     }
 
-    public static void moveToIndex(CloseableHttpClient httpClient, BundleContext bundleContext, String esAddress, String sourceIndexName, String targetIndexName) throws Exception {
-        String reIndexRequest = resourceAsString(bundleContext, "requestBody/2.2.0/base_reindex_request.json").replace("#source", sourceIndexName).replace("#dest", targetIndexName);
+    public static void moveToIndex(CloseableHttpClient httpClient, BundleContext bundleContext, String esAddress, String sourceIndexName, String targetIndexName, String painlessScript) throws Exception {
+        String reIndexRequest = resourceAsString(bundleContext, "requestBody/2.2.0/base_reindex_request.json").replace("#source", sourceIndexName).replace("#dest", targetIndexName).replace("#painless", StringUtils.isNotEmpty(painlessScript) ? getScriptPart(painlessScript) : "");
 
         HttpUtils.executePostRequest(httpClient, esAddress + "/_reindex", reIndexRequest, null);
     }
@@ -225,10 +225,13 @@ public class MigrationUtils {
                 HttpUtils.executeDeleteRequest(httpClient, esAddress + "/" + indexNameCloned, null);
             }
         });
-        // Do a refresh
-        HttpUtils.executePostRequest(httpClient, esAddress + "/" + indexName + "/_refresh", null, null);
 
-        waitForYellowStatus(httpClient, esAddress, migrationContext);
+        migrationContext.performMigrationStep("Reindex step for: " + indexName + " (refresh at the end)", () -> {
+            // Do a refresh
+            HttpUtils.executePostRequest(httpClient, esAddress + "/" + indexName + "/_refresh", null, null);
+
+            waitForYellowStatus(httpClient, esAddress, migrationContext);
+        });
     }
 
     public static void scrollQuery(CloseableHttpClient httpClient, String esAddress, String queryURL, String query, String scrollDuration, ScrollCallback scrollCallback) throws IOException {

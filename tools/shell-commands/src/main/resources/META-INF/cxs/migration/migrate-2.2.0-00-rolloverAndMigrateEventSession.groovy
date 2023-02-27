@@ -58,7 +58,7 @@ Collections.sort(eventSortedIndices)
 context.performMigrationStep("2.2.0-migrate-existing-events", () -> {
     MigrationUtils.cleanAllIndexWithRollover(context.getHttpClient(), bundleContext, esAddress, indexPrefix, "event")
     eventSortedIndices.each { eventIndex ->
-        MigrationUtils.moveToIndex(context.getHttpClient(), bundleContext, esAddress, eventIndex, indexPrefix + "-event")
+        MigrationUtils.moveToIndex(context.getHttpClient(), bundleContext, esAddress, eventIndex, indexPrefix + "-event", null)
         sleep(3000)
     }
 })
@@ -86,7 +86,7 @@ Collections.sort(sessionSortedIndices)
 context.performMigrationStep("2.2.0-migrate-existing-sessions", () -> {
     MigrationUtils.cleanAllIndexWithRollover(context.getHttpClient(), bundleContext, esAddress, indexPrefix, "session")
     sessionSortedIndices.each { sessionIndex ->
-        MigrationUtils.moveToIndex(context.getHttpClient(), bundleContext, esAddress, sessionIndex, indexPrefix + "-session")
+        MigrationUtils.moveToIndex(context.getHttpClient(), bundleContext, esAddress, sessionIndex, indexPrefix + "-session", null)
         sleep(3000)
     }
 })
