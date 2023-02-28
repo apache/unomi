@@ -134,6 +134,12 @@
             <scope>test</scope>
         </dependency>
         <dependency>
+            <groupId>org.apache.unomi</groupId>
+            <artifactId>unomi-groovy-actions-services</artifactId>
+            <version>${project.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
             <groupId>org.codehaus.groovy</groupId>
             <artifactId>groovy</artifactId>
             <version>${groovy.version}</version>
