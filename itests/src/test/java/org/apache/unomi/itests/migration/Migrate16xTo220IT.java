@@ -40,6 +40,7 @@ public class Migrate16xTo220IT extends BaseIT {
     private int sessionCount = 0;
 
     private static final int NUMBER_DUPLICATE_SESSIONS = 3;
+    private static final int NUMBER_PERSONASESSIONS = 2;
     @Override
     @Before
     public void waitForStartup() throws InterruptedException {
@@ -96,6 +97,9 @@ public class Migrate16xTo220IT extends BaseIT {
 
     /**
      * Checks if at least the new index for events and sessions exists.
+     * Also checks:
+     * - duplicated sessions are correctly removed
+     * - persona sessions are now merged in session index due to index reduction in 2_2_0
      */
     private void checkEventSessionRollover2_2_0() throws IOException {
         Assert.assertTrue(MigrationUtils.indexExists(httpClient, "http://localhost:9400", "context-event-000001"));
@@ -113,7 +117,7 @@ public class Migrate16xTo220IT extends BaseIT {
             newSessioncount += jsonNode.get("count").asInt();
         }
         Assert.assertEquals(eventCount, newEventcount);
-        Assert.assertEquals(sessionCount - NUMBER_DUPLICATE_SESSIONS, newSessioncount);
+        Assert.assertEquals(sessionCount - NUMBER_DUPLICATE_SESSIONS - NUMBER_PERSONASESSIONS, newSessioncount);
     }
 
     /**
