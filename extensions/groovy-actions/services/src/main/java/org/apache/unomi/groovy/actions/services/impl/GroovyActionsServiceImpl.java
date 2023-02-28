@@ -252,8 +252,10 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
     }
 
     private void saveScript(String actionName, String script) {
-        GroovyAction groovyScript = new GroovyAction(getGroovyCodeSourceIdForActionId(actionName), script);
+        String groovyName = getGroovyCodeSourceIdForActionId(actionName);
+        GroovyAction groovyScript = new GroovyAction(groovyName, script);
         persistenceService.save(groovyScript);
+        logger.info("The script {} has been persisted.", groovyName);
     }
 
     private void refreshGroovyActions() {
