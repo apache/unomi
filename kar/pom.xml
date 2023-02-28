@@ -126,16 +126,6 @@
         </dependency>
         <dependency>
             <groupId>org.apache.unomi</groupId>
-            <artifactId>unomi-groovy-actions-services</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.unomi</groupId>
-            <artifactId>unomi-groovy-actions-rest</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.unomi</groupId>
             <artifactId>cxs-privacy-extension-services</artifactId>
             <version>${project.version}</version>
         </dependency>

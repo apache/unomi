@@ -16,12 +16,9 @@
  */
 package org.apache.unomi.groovy.actions.listener;
 
-import groovy.util.GroovyScriptEngine;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
-import org.apache.unomi.groovy.actions.GroovyAction;
 import org.apache.unomi.groovy.actions.services.GroovyActionsService;
-import org.apache.unomi.persistence.spi.PersistenceService;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleEvent;
@@ -43,14 +40,9 @@ public class GroovyActionListener implements SynchronousBundleListener {
 
     private static final Logger logger = LoggerFactory.getLogger(GroovyActionListener.class.getName());
     public static final String ENTRIES_LOCATION = "META-INF/cxs/actions";
-    private PersistenceService persistenceService;
 
     private GroovyActionsService groovyActionsService;
     private BundleContext bundleContext;
-
-    public void setPersistenceService(PersistenceService persistenceService) {
-        this.persistenceService = persistenceService;
-    }
 
     public void setGroovyActionsService(GroovyActionsService groovyActionsService) {
         this.groovyActionsService = groovyActionsService;
