@@ -214,14 +214,15 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
     @Override
     public void remove(String id) {
         String groovySourceCodeId = getGroovyCodeSourceIdForActionId(id);
-        try {
-            definitionsService.removeActionType(
-                    groovyShell.parse(groovyCodeSourceMap.get(groovySourceCodeId)).getClass().getMethod("execute").getAnnotation(Action.class).id());
-        } catch (NoSuchMethodException e) {
-            logger.error("Failed to delete the action type for the id {}", id, e);
+        if (groovyCodeSourceMap.containsKey(groovySourceCodeId)) {
+            try {
+                definitionsService.removeActionType(
+                        groovyShell.parse(groovyCodeSourceMap.get(groovySourceCodeId)).getClass().getMethod("execute").getAnnotation(Action.class).id());
+            } catch (NoSuchMethodException e) {
+                logger.error("Failed to delete the action type for the id {}", id, e);
+            }
+            persistenceService.remove(groovySourceCodeId, GroovyAction.class);
         }
-        persistenceService.remove(groovySourceCodeId, GroovyAction.class);
-        groovyCodeSourceMap.remove(groovySourceCodeId);
     }
 
     @Override

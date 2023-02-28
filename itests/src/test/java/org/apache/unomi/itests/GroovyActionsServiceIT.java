@@ -101,10 +101,10 @@ public class GroovyActionsServiceIT extends BaseIT {
         groovyActionsService.save(UPDATE_ADDRESS_ACTION, loadGroovyAction(UPDATE_ADDRESS_ACTION_GROOVY_FILE));
 
         keepTrying("Failed waiting for the creation of the GroovyAction for the trigger action test",
-                () -> groovyActionsService.getGroovyCodeSource(UPDATE_ADDRESS_ACTION), Objects::nonNull, 1000, 100);
+                () -> groovyActionsService.getGroovyCodeSource(UPDATE_ADDRESS_ACTION), Objects::nonNull, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
 
         ActionType actionType = keepTrying("Failed waiting for the creation of the GroovyAction for trigger action test",
-                () -> definitionsService.getActionType(UPDATE_ADDRESS_GROOVY_ACTION), Objects::nonNull, 1000, 100);
+                () -> definitionsService.getActionType(UPDATE_ADDRESS_GROOVY_ACTION), Objects::nonNull, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
 
         Assert.assertNotNull(actionType);
 
@@ -118,7 +118,10 @@ public class GroovyActionsServiceIT extends BaseIT {
         groovyActionsService.save(UPDATE_ADDRESS_ACTION, loadGroovyAction(UPDATE_ADDRESS_ACTION_GROOVY_FILE));
 
         ActionType actionType = keepTrying("Failed waiting for the creation of the GroovyAction for the save test",
-                () -> definitionsService.getActionType(UPDATE_ADDRESS_GROOVY_ACTION), Objects::nonNull, 1000, 100);
+                () -> definitionsService.getActionType(UPDATE_ADDRESS_GROOVY_ACTION), Objects::nonNull, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+
+        GroovyCodeSource groovyCodeSource = keepTrying("Failed waiting for the creation of the GroovyAction for the save test",
+                () -> groovyActionsService.getGroovyCodeSource(UPDATE_ADDRESS_ACTION), Objects::nonNull, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
 
         Assert.assertEquals(UPDATE_ADDRESS_ACTION + "-groovySourceCode", groovyActionsService.getGroovyCodeSource(UPDATE_ADDRESS_ACTION).getName());
 
@@ -137,7 +140,7 @@ public class GroovyActionsServiceIT extends BaseIT {
         groovyActionsService.save(UPDATE_ADDRESS_ACTION, loadGroovyAction(UPDATE_ADDRESS_ACTION_GROOVY_FILE));
 
         GroovyCodeSource groovyCodeSource = keepTrying("Failed waiting for the creation of the GroovyAction for the remove test",
-                () -> groovyActionsService.getGroovyCodeSource(UPDATE_ADDRESS_ACTION), Objects::nonNull, 1000, 100);
+                () -> groovyActionsService.getGroovyCodeSource(UPDATE_ADDRESS_ACTION), Objects::nonNull, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
 
         Assert.assertNotNull(groovyCodeSource);
 
