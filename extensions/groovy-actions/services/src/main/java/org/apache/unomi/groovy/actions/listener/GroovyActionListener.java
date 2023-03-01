@@ -23,6 +23,10 @@ import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleEvent;
 import org.osgi.framework.SynchronousBundleListener;
+import org.osgi.service.component.annotations.Activate;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Deactivate;
+import org.osgi.service.component.annotations.Reference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,6 +40,7 @@ import java.util.Enumeration;
  * The description of the action will be loaded from the ActionDescriptor annotation present in the groovy file.
  * The script will be stored in the ES index groovyAction
  */
+@Component(service = SynchronousBundleListener.class)
 public class GroovyActionListener implements SynchronousBundleListener {
 
     private static final Logger logger = LoggerFactory.getLogger(GroovyActionListener.class.getName());
@@ -44,15 +49,14 @@ public class GroovyActionListener implements SynchronousBundleListener {
     private GroovyActionsService groovyActionsService;
     private BundleContext bundleContext;
 
+    @Reference
     public void setGroovyActionsService(GroovyActionsService groovyActionsService) {
         this.groovyActionsService = groovyActionsService;
     }
 
-    public void setBundleContext(BundleContext bundleContext) {
+    @Activate
+    public void postConstruct(BundleContext bundleContext) {
         this.bundleContext = bundleContext;
-    }
-
-    public void postConstruct() {
         logger.debug("postConstruct {}", bundleContext.getBundle());
         loadGroovyActions(bundleContext);
         for (Bundle bundle : bundleContext.getBundles()) {
@@ -65,6 +69,7 @@ public class GroovyActionListener implements SynchronousBundleListener {
         logger.info("Groovy Action Dispatcher initialized.");
     }
 
+    @Deactivate
     public void preDestroy() {
         processBundleStop(bundleContext);
         bundleContext.removeBundleListener(this);

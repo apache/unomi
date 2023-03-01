@@ -35,7 +35,9 @@ import org.codehaus.groovy.control.CompilerConfiguration;
 import org.codehaus.groovy.control.customizers.ImportCustomizer;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.wiring.BundleWiring;
-import org.osgi.service.component.annotations.Reference;
+import org.osgi.service.component.annotations.*;
+import org.osgi.service.metatype.annotations.Designate;
+import org.osgi.service.metatype.annotations.ObjectClassDefinition;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -55,7 +57,14 @@ import static java.util.Arrays.asList;
 /**
  * Implementation of the GroovyActionService. Allows to create a groovy action from a groovy file
  */
+@Component(service = GroovyActionsService.class, configurationPid = "org.apache.unomi.groovy.actions")
+@Designate(ocd = GroovyActionsServiceImpl.GroovyActionsServiceConfig.class)
 public class GroovyActionsServiceImpl implements GroovyActionsService {
+
+    @ObjectClassDefinition(name = "Groovy actions service config", description = "The configuration for the Groovy actions service")
+    public @interface GroovyActionsServiceConfig {
+        int services_groovy_actions_refresh_interval() default 1000;
+    }
 
     private BundleContext bundleContext;
 
@@ -72,40 +81,28 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
     private static final String BASE_SCRIPT_NAME = "BaseScript";
     private static final String GROOVY_SOURCE_CODE_ID_SUFFIX = "-groovySourceCode";
 
-    public void setBundleContext(BundleContext bundleContext) {
-        this.bundleContext = bundleContext;
-    }
-
-    @Reference
     private DefinitionsService definitionsService;
-
-    @Reference
     private PersistenceService persistenceService;
-
-    @Reference
     private SchedulerService schedulerService;
+    private ActionExecutorDispatcher actionExecutorDispatcher;
+    private GroovyActionsServiceConfig config;
 
     @Reference
-    private ActionExecutorDispatcher actionExecutorDispatcher;
-
-    private Integer groovyActionsRefreshInterval = 1000;
-
     public void setDefinitionsService(DefinitionsService definitionsService) {
         this.definitionsService = definitionsService;
     }
 
+    @Reference
     public void setPersistenceService(PersistenceService persistenceService) {
         this.persistenceService = persistenceService;
     }
 
-    public void setGroovyActionsRefreshInterval(Integer groovyActionsRefreshInterval) {
-        this.groovyActionsRefreshInterval = groovyActionsRefreshInterval;
-    }
-
+    @Reference()
     public void setSchedulerService(SchedulerService schedulerService) {
         this.schedulerService = schedulerService;
     }
 
+    @Reference
     public void setActionExecutorDispatcher(ActionExecutorDispatcher actionExecutorDispatcher) {
         this.actionExecutorDispatcher = actionExecutorDispatcher;
     }
@@ -114,13 +111,17 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
         return groovyShell;
     }
 
-    public void postConstruct() {
+    @Activate
+    public void start(GroovyActionsServiceConfig config, BundleContext bundleContext) {
         logger.debug("postConstruct {}", bundleContext.getBundle());
-        groovyCodeSourceMap = new HashMap<>();
-        GroovyBundleResourceConnector bundleResourceConnector = new GroovyBundleResourceConnector(bundleContext);
 
+        this.config = config;
+        this.bundleContext = bundleContext;
+        this.groovyCodeSourceMap = new HashMap<>();
+
+        GroovyBundleResourceConnector bundleResourceConnector = new GroovyBundleResourceConnector(bundleContext);
         GroovyClassLoader groovyLoader = new GroovyClassLoader(bundleContext.getBundle().adapt(BundleWiring.class).getClassLoader());
-        groovyScriptEngine = new GroovyScriptEngine(bundleResourceConnector, groovyLoader);
+        this.groovyScriptEngine = new GroovyScriptEngine(bundleResourceConnector, groovyLoader);
 
         initializeGroovyShell();
         try {
@@ -132,9 +133,12 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
         logger.info("Groovy action service initialized.");
     }
 
+    @Deactivate
     public void onDestroy() {
         logger.debug("onDestroy Method called");
-        scheduledFuture.cancel(true);
+        if (scheduledFuture != null && !scheduledFuture.isCancelled()) {
+            scheduledFuture.cancel(true);
+        }
     }
 
     /**
@@ -272,7 +276,7 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
                 refreshGroovyActions();
             }
         };
-        scheduledFuture = schedulerService.getScheduleExecutorService().scheduleWithFixedDelay(task, 0, groovyActionsRefreshInterval,
+        scheduledFuture = schedulerService.getScheduleExecutorService().scheduleWithFixedDelay(task, 0, config.services_groovy_actions_refresh_interval(),
                 TimeUnit.MILLISECONDS);
     }
 }

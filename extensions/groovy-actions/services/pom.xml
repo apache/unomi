@@ -104,6 +104,7 @@
                 <extensions>true</extensions>
                 <configuration>
                     <instructions>
+                        <_dsannotations>*</_dsannotations>
                         <Embed-Dependency>*;scope=compile|runtime</Embed-Dependency>
                         <Unomi-Source-Folders>${project.basedir}</Unomi-Source-Folders>
                         <DynamicImport-Package>*</DynamicImport-Package>
