@@ -32,7 +32,7 @@ String scopeIndex = indexPrefix + "-scope"
 context.performMigrationStep("2.0.0-create-scope-index", () -> {
     if (!MigrationUtils.indexExists(context.getHttpClient(), esAddress, scopeIndex)) {
         String baseRequest = MigrationUtils.resourceAsString(bundleContext, "requestBody/2.0.0/base_index_mapping.json")
-        String mapping = MigrationUtils.extractMappingFromBundles(bundleContext, "scope.json")
+        String mapping = MigrationUtils.resourceAsString(bundleContext, "requestBody/2.0.0/mappings/scope.json")
         String newIndexSettings = MigrationUtils.buildIndexCreationRequest(baseRequest, mapping, context, false)
         HttpUtils.executePutRequest(context.getHttpClient(), esAddress + "/" + scopeIndex, newIndexSettings, null)
     }

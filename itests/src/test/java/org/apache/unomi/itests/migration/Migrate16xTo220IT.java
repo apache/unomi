@@ -40,6 +40,7 @@ public class Migrate16xTo220IT extends BaseIT {
     private int sessionCount = 0;
 
     private static final int NUMBER_DUPLICATE_SESSIONS = 3;
+    private static final int NUMBER_PERSONA_SESSIONS = 2;
     @Override
     @Before
     public void waitForStartup() throws InterruptedException {
@@ -96,6 +97,9 @@ public class Migrate16xTo220IT extends BaseIT {
 
     /**
      * Checks if at least the new index for events and sessions exists.
+     * Also checks:
+     * - duplicated sessions are correctly removed (-3 sessions in final count)
+     * - persona sessions are now merged in session index due to index reduction in 2_2_0 (+2 sessions in final count)
      */
     private void checkEventSessionRollover2_2_0() throws IOException {
         Assert.assertTrue(MigrationUtils.indexExists(httpClient, "http://localhost:9400", "context-event-000001"));
@@ -113,23 +117,20 @@ public class Migrate16xTo220IT extends BaseIT {
             newSessioncount += jsonNode.get("count").asInt();
         }
         Assert.assertEquals(eventCount, newEventcount);
-        Assert.assertEquals(sessionCount - NUMBER_DUPLICATE_SESSIONS, newSessioncount);
+        Assert.assertEquals(sessionCount - NUMBER_DUPLICATE_SESSIONS + NUMBER_PERSONA_SESSIONS, newSessioncount);
     }
 
     /**
      * Multiple index mappings have been update, check a simple check that after migration those mappings contains the latest modifications.
      */
     private void checkForMappingUpdates() throws IOException {
-        Assert.assertTrue(HttpUtils.executeGetRequest(httpClient, "http://localhost:9400/context-scope/_mapping", null).contains("\"match\":\"*\",\"match_mapping_type\":\"string\",\"mapping\":{\"analyzer\":\"folding\""));
-        Assert.assertTrue(HttpUtils.executeGetRequest(httpClient, "http://localhost:9400/context-profilealias/_mapping", null).contains("\"match\":\"*\",\"match_mapping_type\":\"string\",\"mapping\":{\"analyzer\":\"folding\""));
-        Assert.assertTrue(HttpUtils.executeGetRequest(httpClient, "http://localhost:9400/context-segment/_mapping", null).contains("\"condition\":{\"type\":\"object\",\"enabled\":false}"));
-        Assert.assertTrue(HttpUtils.executeGetRequest(httpClient, "http://localhost:9400/context-scoring/_mapping", null).contains("\"condition\":{\"type\":\"object\",\"enabled\":false}"));
-        Assert.assertTrue(HttpUtils.executeGetRequest(httpClient, "http://localhost:9400/context-campaign/_mapping", null).contains("\"entryCondition\":{\"type\":\"object\",\"enabled\":false}"));
-        Assert.assertTrue(HttpUtils.executeGetRequest(httpClient, "http://localhost:9400/context-conditiontype/_mapping", null).contains("\"parentCondition\":{\"type\":\"object\",\"enabled\":false}"));
-        Assert.assertTrue(HttpUtils.executeGetRequest(httpClient, "http://localhost:9400/context-goal/_mapping", null).contains("\"startEvent\":{\"type\":\"object\",\"enabled\":false}"));
-        Assert.assertTrue(HttpUtils.executeGetRequest(httpClient, "http://localhost:9400/context-patch/_mapping", null).contains("\"data\":{\"type\":\"object\",\"enabled\":false}"));
-        Assert.assertTrue(HttpUtils.executeGetRequest(httpClient, "http://localhost:9400/context-rule/_mapping", null).contains("\"condition\":{\"type\":\"object\",\"enabled\":false}"));
-        Assert.assertTrue(HttpUtils.executeGetRequest(httpClient, "http://localhost:9400/context-rule/_mapping", null).contains("\"parameterValues\":{\"type\":\"object\",\"enabled\":false}"));
+        Assert.assertTrue(HttpUtils.executeGetRequest(httpClient, "http://localhost:9400/context-systemitems/_mapping", null).contains("\"match\":\"*\",\"match_mapping_type\":\"string\",\"mapping\":{\"analyzer\":\"folding\""));
+        Assert.assertTrue(HttpUtils.executeGetRequest(httpClient, "http://localhost:9400/context-systemitems/_mapping", null).contains("\"condition\":{\"type\":\"object\",\"enabled\":false}"));
+        Assert.assertTrue(HttpUtils.executeGetRequest(httpClient, "http://localhost:9400/context-systemitems/_mapping", null).contains("\"entryCondition\":{\"type\":\"object\",\"enabled\":false}"));
+        Assert.assertTrue(HttpUtils.executeGetRequest(httpClient, "http://localhost:9400/context-systemitems/_mapping", null).contains("\"parentCondition\":{\"type\":\"object\",\"enabled\":false}"));
+        Assert.assertTrue(HttpUtils.executeGetRequest(httpClient, "http://localhost:9400/context-systemitems/_mapping", null).contains("\"startEvent\":{\"type\":\"object\",\"enabled\":false}"));
+        Assert.assertTrue(HttpUtils.executeGetRequest(httpClient, "http://localhost:9400/context-systemitems/_mapping", null).contains("\"data\":{\"type\":\"object\",\"enabled\":false}"));
+        Assert.assertTrue(HttpUtils.executeGetRequest(httpClient, "http://localhost:9400/context-systemitems/_mapping", null).contains("\"parameterValues\":{\"type\":\"object\",\"enabled\":false}"));
         Assert.assertTrue(HttpUtils.executeGetRequest(httpClient, "http://localhost:9400/context-profile/_mapping", null).contains("\"interests\":{\"type\":\"nested\""));
         for (String eventIndex : MigrationUtils.getIndexesPrefixedBy(httpClient, "http://localhost:9400", "context-event-")) {
             Assert.assertTrue(HttpUtils.executeGetRequest(httpClient, "http://localhost:9400/" + eventIndex + "/_mapping", null).contains("\"flattenedProperties\":{\"type\":\"flattened\"}"));

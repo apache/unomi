@@ -16,16 +16,17 @@
  */
 package org.apache.unomi.groovy.actions.listener;
 
-import groovy.util.GroovyScriptEngine;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
-import org.apache.unomi.groovy.actions.GroovyAction;
 import org.apache.unomi.groovy.actions.services.GroovyActionsService;
-import org.apache.unomi.persistence.spi.PersistenceService;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleEvent;
 import org.osgi.framework.SynchronousBundleListener;
+import org.osgi.service.component.annotations.Activate;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Deactivate;
+import org.osgi.service.component.annotations.Reference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,30 +40,24 @@ import java.util.Enumeration;
  * The description of the action will be loaded from the ActionDescriptor annotation present in the groovy file.
  * The script will be stored in the ES index groovyAction
  */
+@Component(service = SynchronousBundleListener.class)
 public class GroovyActionListener implements SynchronousBundleListener {
 
     private static final Logger logger = LoggerFactory.getLogger(GroovyActionListener.class.getName());
     public static final String ENTRIES_LOCATION = "META-INF/cxs/actions";
-    private PersistenceService persistenceService;
 
     private GroovyActionsService groovyActionsService;
     private BundleContext bundleContext;
 
-    public void setPersistenceService(PersistenceService persistenceService) {
-        this.persistenceService = persistenceService;
-    }
-
+    @Reference
     public void setGroovyActionsService(GroovyActionsService groovyActionsService) {
         this.groovyActionsService = groovyActionsService;
     }
 
-    public void setBundleContext(BundleContext bundleContext) {
+    @Activate
+    public void postConstruct(BundleContext bundleContext) {
         this.bundleContext = bundleContext;
-    }
-
-    public void postConstruct() {
         logger.debug("postConstruct {}", bundleContext.getBundle());
-        createIndex();
         loadGroovyActions(bundleContext);
         for (Bundle bundle : bundleContext.getBundles()) {
             if (bundle.getBundleContext() != null && bundle.getBundleId() != bundleContext.getBundle().getBundleId()) {
@@ -74,6 +69,7 @@ public class GroovyActionListener implements SynchronousBundleListener {
         logger.info("Groovy Action Dispatcher initialized.");
     }
 
+    @Deactivate
     public void preDestroy() {
         processBundleStop(bundleContext);
         bundleContext.removeBundleListener(this);
@@ -104,14 +100,6 @@ public class GroovyActionListener implements SynchronousBundleListener {
                     processBundleStop(event.getBundle().getBundleContext());
                 }
                 break;
-        }
-    }
-
-    public void createIndex() {
-        if (persistenceService.createIndex(GroovyAction.ITEM_TYPE)) {
-            logger.info("GroovyAction index created");
-        } else {
-            logger.info("GroovyAction index already exists");
         }
     }
 

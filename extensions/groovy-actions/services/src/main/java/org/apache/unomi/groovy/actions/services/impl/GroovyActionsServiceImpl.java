@@ -35,7 +35,9 @@ import org.codehaus.groovy.control.CompilerConfiguration;
 import org.codehaus.groovy.control.customizers.ImportCustomizer;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.wiring.BundleWiring;
-import org.osgi.service.component.annotations.Reference;
+import org.osgi.service.component.annotations.*;
+import org.osgi.service.metatype.annotations.Designate;
+import org.osgi.service.metatype.annotations.ObjectClassDefinition;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -55,7 +57,14 @@ import static java.util.Arrays.asList;
 /**
  * Implementation of the GroovyActionService. Allows to create a groovy action from a groovy file
  */
+@Component(service = GroovyActionsService.class, configurationPid = "org.apache.unomi.groovy.actions")
+@Designate(ocd = GroovyActionsServiceImpl.GroovyActionsServiceConfig.class)
 public class GroovyActionsServiceImpl implements GroovyActionsService {
+
+    @ObjectClassDefinition(name = "Groovy actions service config", description = "The configuration for the Groovy actions service")
+    public @interface GroovyActionsServiceConfig {
+        int services_groovy_actions_refresh_interval() default 1000;
+    }
 
     private BundleContext bundleContext;
 
@@ -70,41 +79,30 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
     private static final Logger logger = LoggerFactory.getLogger(GroovyActionsServiceImpl.class.getName());
 
     private static final String BASE_SCRIPT_NAME = "BaseScript";
+    private static final String GROOVY_SOURCE_CODE_ID_SUFFIX = "-groovySourceCode";
 
-    public void setBundleContext(BundleContext bundleContext) {
-        this.bundleContext = bundleContext;
-    }
-
-    @Reference
     private DefinitionsService definitionsService;
-
-    @Reference
     private PersistenceService persistenceService;
-
-    @Reference
     private SchedulerService schedulerService;
+    private ActionExecutorDispatcher actionExecutorDispatcher;
+    private GroovyActionsServiceConfig config;
 
     @Reference
-    private ActionExecutorDispatcher actionExecutorDispatcher;
-
-    private Integer groovyActionsRefreshInterval = 1000;
-
     public void setDefinitionsService(DefinitionsService definitionsService) {
         this.definitionsService = definitionsService;
     }
 
+    @Reference
     public void setPersistenceService(PersistenceService persistenceService) {
         this.persistenceService = persistenceService;
     }
 
-    public void setGroovyActionsRefreshInterval(Integer groovyActionsRefreshInterval) {
-        this.groovyActionsRefreshInterval = groovyActionsRefreshInterval;
-    }
-
+    @Reference
     public void setSchedulerService(SchedulerService schedulerService) {
         this.schedulerService = schedulerService;
     }
 
+    @Reference
     public void setActionExecutorDispatcher(ActionExecutorDispatcher actionExecutorDispatcher) {
         this.actionExecutorDispatcher = actionExecutorDispatcher;
     }
@@ -113,13 +111,17 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
         return groovyShell;
     }
 
-    public void postConstruct() {
+    @Activate
+    public void start(GroovyActionsServiceConfig config, BundleContext bundleContext) {
         logger.debug("postConstruct {}", bundleContext.getBundle());
-        groovyCodeSourceMap = new HashMap<>();
-        GroovyBundleResourceConnector bundleResourceConnector = new GroovyBundleResourceConnector(bundleContext);
 
+        this.config = config;
+        this.bundleContext = bundleContext;
+        this.groovyCodeSourceMap = new HashMap<>();
+
+        GroovyBundleResourceConnector bundleResourceConnector = new GroovyBundleResourceConnector(bundleContext);
         GroovyClassLoader groovyLoader = new GroovyClassLoader(bundleContext.getBundle().adapt(BundleWiring.class).getClassLoader());
-        groovyScriptEngine = new GroovyScriptEngine(bundleResourceConnector, groovyLoader);
+        this.groovyScriptEngine = new GroovyScriptEngine(bundleResourceConnector, groovyLoader);
 
         initializeGroovyShell();
         try {
@@ -131,9 +133,12 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
         logger.info("Groovy action service initialized.");
     }
 
+    @Deactivate
     public void onDestroy() {
         logger.debug("onDestroy Method called");
-        scheduledFuture.cancel(true);
+        if (scheduledFuture != null && !scheduledFuture.isCancelled()) {
+            scheduledFuture.cancel(true);
+        }
     }
 
     /**
@@ -153,9 +158,7 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
             return;
         }
         logger.debug("Found Groovy base script at {}, loading... ", groovyBaseScriptURL.getPath());
-        GroovyCodeSource groovyCodeSource = new GroovyCodeSource(IOUtils.toString(groovyBaseScriptURL.openStream()), BASE_SCRIPT_NAME,
-                "/groovy/script");
-        groovyCodeSourceMap.put(BASE_SCRIPT_NAME, groovyCodeSource);
+        GroovyCodeSource groovyCodeSource = new GroovyCodeSource(IOUtils.toString(groovyBaseScriptURL.openStream()), BASE_SCRIPT_NAME, "/groovy/script");
         groovyScriptEngine.getGroovyClassLoader().parseClass(groovyCodeSource, true);
     }
 
@@ -183,15 +186,10 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
 
     @Override
     public void save(String actionName, String groovyScript) {
-        handleFile(actionName, groovyScript);
-    }
-
-    private void handleFile(String actionName, String groovyScript) {
         GroovyCodeSource groovyCodeSource = buildClassScript(groovyScript, actionName);
         try {
             saveActionType(groovyShell.parse(groovyCodeSource).getClass().getMethod("execute").getAnnotation(Action.class));
             saveScript(actionName, groovyScript);
-            groovyCodeSourceMap.put(actionName, groovyCodeSource);
             logger.info("The script {} has been loaded.", actionName);
         } catch (NoSuchMethodException e) {
             logger.error("Failed to save the script {}", actionName, e);
@@ -219,19 +217,21 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
 
     @Override
     public void remove(String id) {
-        try {
-            definitionsService.removeActionType(
-                    groovyShell.parse(groovyCodeSourceMap.get(id)).getClass().getMethod("execute").getAnnotation(Action.class).id());
-        } catch (NoSuchMethodException e) {
-            logger.error("Failed to delete the action type for the id {}", id, e);
+        String groovySourceCodeId = getGroovyCodeSourceIdForActionId(id);
+        if (groovyCodeSourceMap.containsKey(groovySourceCodeId)) {
+            try {
+                definitionsService.removeActionType(
+                        groovyShell.parse(groovyCodeSourceMap.get(groovySourceCodeId)).getClass().getMethod("execute").getAnnotation(Action.class).id());
+            } catch (NoSuchMethodException e) {
+                logger.error("Failed to delete the action type for the id {}", id, e);
+            }
+            persistenceService.remove(groovySourceCodeId, GroovyAction.class);
         }
-        persistenceService.remove(id, GroovyAction.class);
-        groovyCodeSourceMap.remove(id);
     }
 
     @Override
     public GroovyCodeSource getGroovyCodeSource(String id) {
-        return groovyCodeSourceMap.get(id);
+        return groovyCodeSourceMap.get(getGroovyCodeSourceIdForActionId(id));
     }
 
     /**
@@ -245,15 +245,25 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
         return new GroovyCodeSource(groovyScript, actionName, "/groovy/script");
     }
 
-    private void saveScript(String name, String script) {
-        GroovyAction groovyScript = new GroovyAction(name, script);
+    /**
+     * We use a suffix for avoiding id conflict between the actionType and the groovyAction in ElasticSearch
+     * Since those items are now stored in the same ES index
+     * @param actionName name/id of the actionType
+     * @return id of the groovyAction source code for query/save/storage usage.
+     */
+    private String getGroovyCodeSourceIdForActionId(String actionName) {
+        return actionName + GROOVY_SOURCE_CODE_ID_SUFFIX;
+    }
+
+    private void saveScript(String actionName, String script) {
+        String groovyName = getGroovyCodeSourceIdForActionId(actionName);
+        GroovyAction groovyScript = new GroovyAction(groovyName, script);
         persistenceService.save(groovyScript);
+        logger.info("The script {} has been persisted.", groovyName);
     }
 
     private void refreshGroovyActions() {
         Map<String, GroovyCodeSource> refreshedGroovyCodeSourceMap = new HashMap<>();
-        GroovyCodeSource baseScript = groovyCodeSourceMap.get(BASE_SCRIPT_NAME);
-        refreshedGroovyCodeSourceMap.put(BASE_SCRIPT_NAME, baseScript);
         persistenceService.getAllItems(GroovyAction.class).forEach(groovyAction -> refreshedGroovyCodeSourceMap
                 .put(groovyAction.getName(), buildClassScript(groovyAction.getScript(), groovyAction.getName())));
         groovyCodeSourceMap = refreshedGroovyCodeSourceMap;
@@ -266,7 +276,7 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
                 refreshGroovyActions();
             }
         };
-        scheduledFuture = schedulerService.getScheduleExecutorService().scheduleWithFixedDelay(task, 0, groovyActionsRefreshInterval,
+        scheduledFuture = schedulerService.getScheduleExecutorService().scheduleWithFixedDelay(task, 0, config.services_groovy_actions_refresh_interval(),
                 TimeUnit.MILLISECONDS);
     }
 }

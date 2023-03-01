@@ -25,6 +25,8 @@ import org.apache.unomi.api.actions.ActionDispatcher;
 import org.apache.unomi.groovy.actions.services.GroovyActionsService;
 import org.apache.unomi.metrics.MetricAdapter;
 import org.apache.unomi.metrics.MetricsService;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Reference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -32,6 +34,7 @@ import org.slf4j.LoggerFactory;
  * An implementation of an ActionDispatcher for the Groovy language. This dispatcher will load the groovy action script matching to an
  * actionName. If a script if found, it will be executed.
  */
+@Component(service = ActionDispatcher.class)
 public class GroovyActionDispatcher implements ActionDispatcher {
 
     private static final Logger logger = LoggerFactory.getLogger(GroovyActionDispatcher.class.getName());
@@ -39,13 +42,14 @@ public class GroovyActionDispatcher implements ActionDispatcher {
     private static final String GROOVY_PREFIX = "groovy";
 
     private MetricsService metricsService;
-
     private GroovyActionsService groovyActionsService;
 
+    @Reference
     public void setMetricsService(MetricsService metricsService) {
         this.metricsService = metricsService;
     }
 
+    @Reference
     public void setGroovyActionsService(GroovyActionsService groovyActionsService) {
         this.groovyActionsService = groovyActionsService;
     }

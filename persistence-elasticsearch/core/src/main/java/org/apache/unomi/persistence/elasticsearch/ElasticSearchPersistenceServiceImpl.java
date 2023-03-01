@@ -254,6 +254,34 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     private Map<String, Map<String, Map<String, Object>>> knownMappings = new HashMap<>();
 
+    private static final Map<String, String> itemTypeIndexNameMap = new HashMap<>();
+    static {
+        itemTypeIndexNameMap.put("actionType", "systemItems");
+        itemTypeIndexNameMap.put("campaign", "systemItems");
+        itemTypeIndexNameMap.put("campaignevent", "systemItems");
+        itemTypeIndexNameMap.put("goal", "systemItems");
+        itemTypeIndexNameMap.put("userList", "systemItems");
+        itemTypeIndexNameMap.put("propertyType", "systemItems");
+        itemTypeIndexNameMap.put("scope", "systemItems");
+        itemTypeIndexNameMap.put("conditionType", "systemItems");
+        itemTypeIndexNameMap.put("rule", "systemItems");
+        itemTypeIndexNameMap.put("scoring", "systemItems");
+        itemTypeIndexNameMap.put("segment", "systemItems");
+        itemTypeIndexNameMap.put("groovyAction", "systemItems");
+        itemTypeIndexNameMap.put("topic", "systemItems");
+        itemTypeIndexNameMap.put("patch", "systemItems");
+        itemTypeIndexNameMap.put("jsonSchema", "systemItems");
+        itemTypeIndexNameMap.put("importConfig", "systemItems");
+        itemTypeIndexNameMap.put("exportConfig", "systemItems");
+        itemTypeIndexNameMap.put("rulestats", "systemItems");
+
+        itemTypeIndexNameMap.put("profile", "profile");
+        itemTypeIndexNameMap.put("persona", "profile");
+
+        itemTypeIndexNameMap.put("session", "session");
+        itemTypeIndexNameMap.put("personaSession", "session");
+    }
+
     public void setBundleContext(BundleContext bundleContext) {
         this.bundleContext = bundleContext;
     }
@@ -1099,13 +1127,14 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     for (int i = 0; i < scripts.length; i++) {
                         RefreshRequest refreshRequest = new RefreshRequest(index);
                         client.indices().refresh(refreshRequest, RequestOptions.DEFAULT);
+                        QueryBuilder queryBuilder = conditionESQueryBuilderDispatcher.buildFilter(conditions[i]);
 
                         UpdateByQueryRequest updateByQueryRequest = new UpdateByQueryRequest(index);
                         updateByQueryRequest.setConflicts("proceed");
                         updateByQueryRequest.setMaxRetries(1000);
                         updateByQueryRequest.setSlices(2);
                         updateByQueryRequest.setScript(scripts[i]);
-                        updateByQueryRequest.setQuery(conditionESQueryBuilderDispatcher.buildFilter(conditions[i]));
+                        updateByQueryRequest.setQuery(isItemTypeSharingIndex(itemType) ? wrapWithItemTypeQuery(itemType, queryBuilder) : queryBuilder);
 
                         BulkByScrollResponse response = client.updateByQuery(updateByQueryRequest, RequestOptions.DEFAULT);
 
@@ -1264,8 +1293,9 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             protected Boolean execute(Object... args) throws Exception {
                 try {
                     String itemType = Item.getItemType(clazz);
+                    QueryBuilder queryBuilder = conditionESQueryBuilderDispatcher.getQueryBuilder(query);
                     final DeleteByQueryRequest deleteByQueryRequest = new DeleteByQueryRequest(getIndexNameForQuery(itemType))
-                            .setQuery(conditionESQueryBuilderDispatcher.getQueryBuilder(query))
+                            .setQuery(isItemTypeSharingIndex(itemType) ? wrapWithItemTypeQuery(itemType, queryBuilder) : queryBuilder)
                             // Setting slices to auto will let Elasticsearch choose the number of slices to use.
                             // This setting will use one slice per shard, up to a certain limit.
                             // The delete request will be more efficient and faster than no slicing.
@@ -1903,7 +1933,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
                 CountRequest countRequest = new CountRequest(getIndexNameForQuery(itemType));
                 SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
-                searchSourceBuilder.query(filter);
+                searchSourceBuilder.query(isItemTypeSharingIndex(itemType) ? wrapWithItemTypeQuery(itemType, filter) : filter);
                 countRequest.source(searchSourceBuilder);
                 CountResponse response = client.count(countRequest, RequestOptions.DEFAULT);
                 return response.getCount();
@@ -1938,7 +1968,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder()
                             .fetchSource(true)
                             .seqNoAndPrimaryTerm(true)
-                            .query(query)
+                            .query(isItemTypeSharingIndex(itemType) ? wrapWithItemTypeQuery(itemType, query) : query)
                             .size(size < 0 ? defaultQueryLimit : size)
                             .from(offset);
                     if (scrollTimeValidity != null) {
@@ -2159,7 +2189,9 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 SearchRequest searchRequest = new SearchRequest(getIndexNameForQuery(itemType));
                 SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
                 searchSourceBuilder.size(0);
-                searchSourceBuilder.query(QueryBuilders.matchAllQuery());
+                MatchAllQueryBuilder matchAll = QueryBuilders.matchAllQuery();
+                boolean isItemTypeSharingIndex = isItemTypeSharingIndex(itemType);
+                searchSourceBuilder.query(isItemTypeSharingIndex ? getItemTypeQueryBuilder(itemType) : matchAll);
                 List<AggregationBuilder> lastAggregation = new ArrayList<AggregationBuilder>();
 
                 if (aggregate != null) {
@@ -2240,11 +2272,15 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     }
 
                     if (filter != null) {
-                        searchSourceBuilder.query(conditionESQueryBuilderDispatcher.buildFilter(filter));
+                        searchSourceBuilder.query(isItemTypeSharingIndex ?
+                                wrapWithItemTypeQuery(itemType, conditionESQueryBuilderDispatcher.buildFilter(filter)) :
+                                conditionESQueryBuilderDispatcher.buildFilter(filter));
                     }
                 } else {
                     if (filter != null) {
-                        AggregationBuilder filterAggregation = AggregationBuilders.filter("filter", conditionESQueryBuilderDispatcher.buildFilter(filter));
+                        AggregationBuilder filterAggregation = AggregationBuilders.filter("filter", isItemTypeSharingIndex ?
+                                wrapWithItemTypeQuery(itemType, conditionESQueryBuilderDispatcher.buildFilter(filter)) :
+                                conditionESQueryBuilderDispatcher.buildFilter(filter));
                         for (AggregationBuilder aggregationBuilder : lastAggregation) {
                             filterAggregation.subAggregation(aggregationBuilder);
                         }
@@ -2465,7 +2501,8 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 SearchRequest searchRequest = new SearchRequest(getIndexNameForQuery(itemType));
                 SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder()
                         .size(0)
-                        .query(QueryBuilders.matchAllQuery());
+                        .query(isItemTypeSharingIndex(itemType) ? getItemTypeQueryBuilder(itemType) : QueryBuilders.matchAllQuery());
+
                 AggregationBuilder filterAggregation = AggregationBuilders.filter("metrics", conditionESQueryBuilderDispatcher.buildFilter(condition));
 
                 if (metrics != null) {
@@ -2598,13 +2635,32 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     private String getIndexNameForQuery(String itemType) {
         return isItemTypeRollingOver(itemType) ? getRolloverIndexForQuery(itemType) : getIndex(itemType);
     }
-
+    
     private String getRolloverIndexForQuery(String itemType) {
         return indexPrefix + "-" + itemType.toLowerCase() + "-*";
     }
 
-    private String getIndex(String indexItemTypePart) {
-        return (indexPrefix + "-" + indexItemTypePart).toLowerCase();
+    private String getIndex(String itemType) {
+        return (indexPrefix + "-" + getIndexNameForItemType(itemType)).toLowerCase();
+    }
+
+    private String getIndexNameForItemType(String itemType) {
+        return itemTypeIndexNameMap.getOrDefault(itemType, itemType);
+    }
+
+    private QueryBuilder wrapWithItemTypeQuery(String itemType, QueryBuilder originalQuery) {
+        BoolQueryBuilder wrappedQuery = QueryBuilders.boolQuery();
+        wrappedQuery.must(getItemTypeQueryBuilder(itemType));
+        wrappedQuery.must(originalQuery);
+        return wrappedQuery;
+    }
+
+    private QueryBuilder getItemTypeQueryBuilder(String itemType) {
+        return QueryBuilders.termQuery("itemType", ConditionContextHelper.foldToASCII(itemType));
+    }
+
+    private boolean isItemTypeSharingIndex(String itemType) {
+        return itemTypeIndexNameMap.containsKey(itemType);
     }
 
     private boolean isItemTypeRollingOver(String itemType) {

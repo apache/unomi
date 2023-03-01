@@ -296,14 +296,6 @@ public class SchemaServiceImpl implements SchemaService {
         return schema;
     }
 
-    private void initPersistenceIndex() {
-        if (persistenceService.createIndex(JsonSchemaWrapper.ITEM_TYPE)) {
-            logger.info("{} index created", JsonSchemaWrapper.ITEM_TYPE);
-        } else {
-            logger.info("{} index already exists", JsonSchemaWrapper.ITEM_TYPE);
-        }
-    }
-
     private void initTimers() {
         TimerTask task = new TimerTask() {
             @Override
@@ -345,7 +337,6 @@ public class SchemaServiceImpl implements SchemaService {
 
     public void init() {
         scheduler = Executors.newSingleThreadScheduledExecutor();
-        initPersistenceIndex();
         initJsonSchemaFactory();
         initTimers();
         logger.info("Schema service initialized.");
