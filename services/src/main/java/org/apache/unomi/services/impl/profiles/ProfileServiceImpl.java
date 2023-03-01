@@ -370,10 +370,20 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         }
     }
 
-    @Override
-    public void purgeSessionItems(int existsNumberOfDays) {
+    private <T extends Item> void purgeRolloverItems(int existsNumberOfDays, Class<T> clazz) {
         if (existsNumberOfDays > 0) {
-            ConditionType propertyConditionType = definitionsService.getConditionType("sessionPropertyCondition");
+            String conditionType = null;
+            String itemType = null;
+
+            if (clazz.getName().equals(Event.class.getName())) {
+                conditionType = "eventPropertyCondition";
+                itemType = Event.ITEM_TYPE;
+            } else if (clazz.getName().equals(Session.class.getName())) {
+                conditionType = "sessionPropertyCondition";
+                itemType = Session.ITEM_TYPE;
+            }
+
+            ConditionType propertyConditionType = definitionsService.getConditionType(conditionType);
             if (propertyConditionType == null) {
                 // definition service not yet fully instantiate
                 return;
@@ -381,35 +391,34 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
 
             Condition condition = new Condition(propertyConditionType);
 
-            logger.info("Purging: Session created since more than {} days", existsNumberOfDays);
             condition.setParameter("propertyName", "timeStamp");
             condition.setParameter("comparisonOperator", "lessThanOrEqualTo");
             condition.setParameter("propertyValueDateExpr", "now-" + existsNumberOfDays + "d");
+            persistenceService.removeByQuery(condition, clazz);
+            deleteEmptyRolloverIndex(itemType);
+        }
+    }
 
-            persistenceService.removeByQuery(condition, Session.class);
-            deleteEmptyRolloverIndex(Session.ITEM_TYPE);
+    @Override
+    public void purgeSessionItems(int existsNumberOfDays) {
+        if (existsNumberOfDays > 0) {
+            logger.info("Purging: Sessions created since more than {} days", existsNumberOfDays);
+            purgeRolloverItems(existsNumberOfDays, Session.class);
         }
     }
 
     @Override
     public void purgeEventItems(int existsNumberOfDays) {
         if (existsNumberOfDays > 0) {
-            ConditionType propertyConditionType = definitionsService.getConditionType("eventPropertyCondition");
-            if (propertyConditionType == null) {
-                // definition service not yet fully instantiate
-                return;
-            }
-
-            Condition condition = new Condition(propertyConditionType);
-
-            logger.info("Purging: Session created since more than {} days", existsNumberOfDays);
-            condition.setParameter("propertyName", "timeStamp");
-            condition.setParameter("comparisonOperator", "lessThanOrEqualTo");
-            condition.setParameter("propertyValueDateExpr", "now-" + existsNumberOfDays + "d");
-
-            persistenceService.removeByQuery(condition, Event.class);
-            deleteEmptyRolloverIndex(Event.ITEM_TYPE);
+            logger.info("Purging: Events created since more than {} days", existsNumberOfDays);
+            purgeRolloverItems(existsNumberOfDays, Event.class);
         }
+    }
+
+    @Deprecated
+    @Override
+    public void purgeMonthlyItems(int existsNumberOfMonths) {
+
     }
 
     public void deleteEmptyRolloverIndex(String indexName) {
@@ -428,7 +437,7 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
     private void initializePurge() {
         logger.info("Purge: Initializing");
 
-        if (purgeProfileInactiveTime > 0 || purgeProfileExistTime > 0 || purgeSessionsAndEventsTime > 0 || purgeSessionExistTime > 0 || purgeEventExistTime > 0) {
+        if (purgeProfileInactiveTime > 0 || purgeProfileExistTime > 0 || purgeSessionExistTime > 0 || purgeEventExistTime > 0) {
             if (purgeProfileInactiveTime > 0) {
                 logger.info("Purge: Profile with no visits since more than {} days, will be purged", purgeProfileInactiveTime);
             }

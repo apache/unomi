@@ -427,13 +427,20 @@ public interface ProfileService {
 
     /**
      * Purge (delete) session items
-     * @param existsNumberOfDays used to remove monthly indices older than this number of days
+     * @param existsNumberOfDays will purge sessions created since this number of days (0 or negative value, will have no effect)
      */
     void purgeSessionItems(int existsNumberOfDays);
 
     /**
      * Purge (delete) event items
-     * @param existsNumberOfDays used to remove monthly indices older than this number of days
+     * @param existsNumberOfDays will purge events created since this number of days (0 or negative value, will have no effect)
      */
     void purgeEventItems(int existsNumberOfDays);
+
+    /**
+     * Use purgeSessionItems and purgeEventItems to remove rollover items instead
+     * @param existsNumberOfMonths used to remove monthly indices older than this number of months
+     */
+    @Deprecated
+    void purgeMonthlyItems(int existsNumberOfMonths);
 }
