@@ -40,7 +40,7 @@ public class Migrate16xTo220IT extends BaseIT {
     private int sessionCount = 0;
 
     private static final int NUMBER_DUPLICATE_SESSIONS = 3;
-    private static final int NUMBER_PERSONASESSIONS = 2;
+    private static final int NUMBER_PERSONA_SESSIONS = 2;
     @Override
     @Before
     public void waitForStartup() throws InterruptedException {
@@ -117,7 +117,7 @@ public class Migrate16xTo220IT extends BaseIT {
             newSessioncount += jsonNode.get("count").asInt();
         }
         Assert.assertEquals(eventCount, newEventcount);
-        Assert.assertEquals(sessionCount - NUMBER_DUPLICATE_SESSIONS + NUMBER_PERSONASESSIONS, newSessioncount);
+        Assert.assertEquals(sessionCount - NUMBER_DUPLICATE_SESSIONS + NUMBER_PERSONA_SESSIONS, newSessioncount);
     }
 
     /**

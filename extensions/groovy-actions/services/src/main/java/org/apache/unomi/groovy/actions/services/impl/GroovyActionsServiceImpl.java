@@ -97,7 +97,7 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
         this.persistenceService = persistenceService;
     }
 
-    @Reference()
+    @Reference
     public void setSchedulerService(SchedulerService schedulerService) {
         this.schedulerService = schedulerService;
     }
