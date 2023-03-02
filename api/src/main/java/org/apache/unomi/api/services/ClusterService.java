@@ -41,6 +41,7 @@ public interface ClusterService {
      *
      * @param date the Date before which all data needs to be removed
      */
+    @Deprecated
     void purge(final Date date);
 
     /**

@@ -73,13 +73,7 @@ import org.elasticsearch.action.search.SearchScrollRequest;
 import org.elasticsearch.action.support.WriteRequest;
 import org.elasticsearch.action.support.master.AcknowledgedResponse;
 import org.elasticsearch.action.update.UpdateRequest;
-import org.elasticsearch.client.Node;
-import org.elasticsearch.client.RequestOptions;
-import org.elasticsearch.client.Requests;
-import org.elasticsearch.client.HttpAsyncResponseConsumerFactory;
-import org.elasticsearch.client.RestClient;
-import org.elasticsearch.client.RestClientBuilder;
-import org.elasticsearch.client.RestHighLevelClient;
+import org.elasticsearch.client.*;
 import org.elasticsearch.action.update.UpdateResponse;
 import org.elasticsearch.client.core.CountRequest;
 import org.elasticsearch.client.core.CountResponse;
@@ -154,8 +148,6 @@ import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -170,6 +162,8 @@ import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static org.elasticsearch.index.query.QueryBuilders.termQuery;
 
@@ -1409,10 +1403,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 );
                 phases.put("hot", new Phase("hot", TimeValue.ZERO, hotActions));
 
-                // TODO - Handle this with the purge https://issues.apache.org/jira/browse/UNOMI-726
-                Map<String, LifecycleAction> deleteActions = Collections.singletonMap(DeleteAction.NAME, new DeleteAction());
-                phases.put("delete", new Phase("delete", new TimeValue(90, TimeUnit.DAYS), deleteActions));
-
                 LifecyclePolicy policy = new LifecyclePolicy(indexPrefix + "-" + ROLLOVER_LIFECYCLE_NAME, phases);
                 PutLifecyclePolicyRequest request = new PutLifecyclePolicyRequest(policy);
                 org.elasticsearch.client.core.AcknowledgedResponse putLifecyclePolicy = client.indexLifecycle().putLifecyclePolicy(request, RequestOptions.DEFAULT);
@@ -1454,8 +1444,8 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         }
     }
 
-    public boolean removeIndex(final String itemType) {
-        String index = getIndex(itemType);
+    public boolean removeIndex(final String itemType, boolean addPrefix){
+        String index = addPrefix ? getIndex(itemType) : itemType;
 
         Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".removeIndex", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
             protected Boolean execute(Object... args) throws IOException {
@@ -1474,6 +1464,9 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         } else {
             return result;
         }
+    }
+    public boolean removeIndex(final String itemType) {
+        return removeIndex(itemType, true);
     }
 
     private void internalCreateRolloverTemplate(String itemName) throws IOException {
@@ -1923,6 +1916,29 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 return -1;
             }
         }
+    }
+
+    @Override
+    public Map<String, Long> docCountPerIndex(String... indexes) {
+        return new InClassLoaderExecute<Map<String, Long>>(metricsService, this.getClass().getName() + ".docCountPerIndex", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
+            @Override
+            protected Map<String, Long> execute(Object... args) throws IOException {
+                List<String> indexesForQuery = Stream.of(indexes).map(index -> getIndexNameForQuery(index)).collect(Collectors.toList());
+                String[] itemsArray = new String[indexesForQuery.size()];
+                itemsArray = indexesForQuery.toArray(itemsArray);
+                GetIndexRequest request = new GetIndexRequest(itemsArray);
+                GetIndexResponse getIndexResponse = client.indices().get(request, RequestOptions.DEFAULT);
+
+                Map<String, Long> countPerIndex = new HashMap<>();
+
+                for (String index : getIndexResponse.getIndices()) {
+                    CountRequest countRequest = new CountRequest(index);
+                    CountResponse response = client.count(countRequest, RequestOptions.DEFAULT);
+                    countPerIndex.put(index, response.getCount());
+                }
+                return countPerIndex;
+            }
+        }.catchingExecuteInClassLoader(true);
     }
 
     private long queryCount(final QueryBuilder filter, final String itemType) {
@@ -2404,38 +2420,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Override
     public void purge(final Date date) {
-        new InClassLoaderExecute<Object>(metricsService, this.getClass().getName() + ".purgeWithDate", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
-            @Override
-            protected Object execute(Object... args) throws Exception {
-
-                GetIndexRequest getIndexRequest = new GetIndexRequest(getAllIndexForQuery());
-                GetIndexResponse getIndexResponse = client.indices().get(getIndexRequest, RequestOptions.DEFAULT);
-                String[] indices = getIndexResponse.getIndices();
-
-                SimpleDateFormat d = new SimpleDateFormat("yyyy-MM");
-
-                List<String> toDelete = new ArrayList<>();
-                for (String currentIndexName : indices) {
-                    int indexDatePrefixPos = currentIndexName.indexOf(INDEX_DATE_PREFIX);
-                    if (indexDatePrefixPos > -1) {
-                        try {
-                            Date indexDate = d.parse(currentIndexName.substring(indexDatePrefixPos + INDEX_DATE_PREFIX.length()));
-
-                            if (indexDate.before(date)) {
-                                toDelete.add(currentIndexName);
-                            }
-                        } catch (ParseException e) {
-                            throw new Exception("Cannot parse index name " + currentIndexName, e);
-                        }
-                    }
-                }
-                if (!toDelete.isEmpty()) {
-                    DeleteIndexRequest deleteIndexRequest = new DeleteIndexRequest(toDelete.toArray(new String[toDelete.size()]));
-                    client.indices().delete(deleteIndexRequest, RequestOptions.DEFAULT);
-                }
-                return null;
-            }
-        }.catchingExecuteInClassLoader(true);
     }
 
     @Override
