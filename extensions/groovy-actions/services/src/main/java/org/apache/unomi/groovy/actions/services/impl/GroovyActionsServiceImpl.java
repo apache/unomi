@@ -79,7 +79,6 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
     private static final Logger logger = LoggerFactory.getLogger(GroovyActionsServiceImpl.class.getName());
 
     private static final String BASE_SCRIPT_NAME = "BaseScript";
-    private static final String GROOVY_SOURCE_CODE_ID_SUFFIX = "-groovySourceCode";
 
     private DefinitionsService definitionsService;
     private PersistenceService persistenceService;
@@ -217,21 +216,20 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
 
     @Override
     public void remove(String id) {
-        String groovySourceCodeId = getGroovyCodeSourceIdForActionId(id);
-        if (groovyCodeSourceMap.containsKey(groovySourceCodeId)) {
+        if (groovyCodeSourceMap.containsKey(id)) {
             try {
                 definitionsService.removeActionType(
-                        groovyShell.parse(groovyCodeSourceMap.get(groovySourceCodeId)).getClass().getMethod("execute").getAnnotation(Action.class).id());
+                        groovyShell.parse(groovyCodeSourceMap.get(id)).getClass().getMethod("execute").getAnnotation(Action.class).id());
             } catch (NoSuchMethodException e) {
                 logger.error("Failed to delete the action type for the id {}", id, e);
             }
-            persistenceService.remove(groovySourceCodeId, GroovyAction.class);
+            persistenceService.remove(id, GroovyAction.class);
         }
     }
 
     @Override
     public GroovyCodeSource getGroovyCodeSource(String id) {
-        return groovyCodeSourceMap.get(getGroovyCodeSourceIdForActionId(id));
+        return groovyCodeSourceMap.get(id);
     }
 
     /**
@@ -245,21 +243,10 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
         return new GroovyCodeSource(groovyScript, actionName, "/groovy/script");
     }
 
-    /**
-     * We use a suffix for avoiding id conflict between the actionType and the groovyAction in ElasticSearch
-     * Since those items are now stored in the same ES index
-     * @param actionName name/id of the actionType
-     * @return id of the groovyAction source code for query/save/storage usage.
-     */
-    private String getGroovyCodeSourceIdForActionId(String actionName) {
-        return actionName + GROOVY_SOURCE_CODE_ID_SUFFIX;
-    }
-
     private void saveScript(String actionName, String script) {
-        String groovyName = getGroovyCodeSourceIdForActionId(actionName);
-        GroovyAction groovyScript = new GroovyAction(groovyName, script);
+        GroovyAction groovyScript = new GroovyAction(actionName, script);
         persistenceService.save(groovyScript);
-        logger.info("The script {} has been persisted.", groovyName);
+        logger.info("The script {} has been persisted.", actionName);
     }
 
     private void refreshGroovyActions() {

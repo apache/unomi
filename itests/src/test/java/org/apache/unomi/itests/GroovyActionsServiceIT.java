@@ -123,7 +123,7 @@ public class GroovyActionsServiceIT extends BaseIT {
         GroovyCodeSource groovyCodeSource = keepTrying("Failed waiting for the creation of the GroovyAction for the save test",
                 () -> groovyActionsService.getGroovyCodeSource(UPDATE_ADDRESS_ACTION), Objects::nonNull, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
 
-        Assert.assertEquals(UPDATE_ADDRESS_ACTION + "-groovySourceCode", groovyActionsService.getGroovyCodeSource(UPDATE_ADDRESS_ACTION).getName());
+        Assert.assertEquals(UPDATE_ADDRESS_ACTION, groovyActionsService.getGroovyCodeSource(UPDATE_ADDRESS_ACTION).getName());
 
         Assert.assertTrue(actionType.getMetadata().getId().contains(UPDATE_ADDRESS_GROOVY_ACTION));
         Assert.assertEquals(2, actionType.getMetadata().getSystemTags().size());

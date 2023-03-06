@@ -23,6 +23,29 @@ MigrationContext context = migrationContext
 String esAddress = context.getConfigString("esAddress")
 String indexPrefix = context.getConfigString("indexPrefix")
 String baseSettings = MigrationUtils.resourceAsString(bundleContext, "requestBody/2.0.0/base_index_mapping.json")
+def indicesToReduce = [
+        actiontype: [reduceTo: "systemitems", renameId: true],
+        campaign: [reduceTo: "systemitems", renameId: true],
+        campaignevent: [reduceTo: "systemitems", renameId: true],
+        goal: [reduceTo: "systemitems", renameId: true],
+        userlist: [reduceTo: "systemitems", renameId: true],
+        propertytype: [reduceTo: "systemitems", renameId: true],
+        scope: [reduceTo: "systemitems", renameId: true],
+        conditiontype: [reduceTo: "systemitems", renameId: true],
+        rule: [reduceTo: "systemitems", renameId: true],
+        scoring: [reduceTo: "systemitems", renameId: true],
+        segment: [reduceTo: "systemitems", renameId: true],
+        topic: [reduceTo: "systemitems", renameId: true],
+        patch: [reduceTo: "systemitems", renameId: true],
+        jsonschema: [reduceTo: "systemitems", renameId: true],
+        importconfig: [reduceTo: "systemitems", renameId: true],
+        exportconfig: [reduceTo: "systemitems", renameId: true],
+        rulestats: [reduceTo: "systemitems", renameId: true],
+        groovyaction: [reduceTo: "systemitems", renameId: true],
+
+        persona: [reduceTo: "profile", renameId: false],
+        personasession: [reduceTo: "session", renameId: false]
+]
 
 context.performMigrationStep("2.2.0-create-systemItems-index", () -> {
     if (!MigrationUtils.indexExists(context.getHttpClient(), esAddress, "${indexPrefix}-systemitems")) {
@@ -32,44 +55,20 @@ context.performMigrationStep("2.2.0-create-systemItems-index", () -> {
     }
 })
 
-def indicesToReduce = [
-        actiontype: "systemitems",
-        campaign: "systemitems",
-        campaignevent: "systemitems",
-        goal: "systemitems",
-        userlist: "systemitems",
-        propertytype: "systemitems",
-        scope: "systemitems",
-        conditiontype: "systemitems",
-        rule: "systemitems",
-        scoring: "systemitems",
-        segment: "systemitems",
-        topic: "systemitems",
-        patch: "systemitems",
-        jsonschema: "systemitems",
-        importconfig: "systemitems",
-        exportconfig: "systemitems",
-        rulestats: "systemitems",
-        groovyaction: "systemitems",
-        persona: "profile",
-        personasession: "session"
-]
-def indicesToSuffixIds = [
-        rulestats: "-stat",
-        groovyaction: "-groovySourceCode"
-]
 indicesToReduce.each { indexToReduce ->
     context.performMigrationStep("2.2.0-reduce-${indexToReduce.key}", () -> {
         if (MigrationUtils.indexExists(context.getHttpClient(), esAddress, "${indexPrefix}-${indexToReduce.key}")) {
             def painless = null
             // check if we need to update the ids of those items first
-            if (indicesToSuffixIds.containsKey(indexToReduce.key)) {
-                painless = MigrationUtils.getFileWithoutComments(bundleContext, "requestBody/2.2.0/suffix_ids.painless").replace("#ID_SUFFIX", indicesToSuffixIds.get(indexToReduce.key))
+            if (indexToReduce.value.renameId) {
+                painless = MigrationUtils.getFileWithoutComments(bundleContext, "requestBody/2.2.0/suffix_ids.painless").replace("#ID_SUFFIX", "_${indexToReduce.key}")
             }
             // move items
-            MigrationUtils.moveToIndex(context.getHttpClient(), bundleContext, esAddress, "${indexPrefix}-${indexToReduce.key}", "${indexPrefix}-${indexToReduce.value}", painless)
+            def reduceToIndex = "${indexPrefix}-${indexToReduce.value.reduceTo}"
+            MigrationUtils.moveToIndex(context.getHttpClient(), bundleContext, esAddress, "${indexPrefix}-${indexToReduce.key}", reduceToIndex, painless)
             MigrationUtils.deleteIndex(context.getHttpClient(), esAddress, "${indexPrefix}-${indexToReduce.key}")
-            HttpUtils.executePostRequest(context.getHttpClient(), esAddress + "/${indexPrefix}-${indexToReduce.value}/_refresh", null, null);
+
+            HttpUtils.executePostRequest(context.getHttpClient(), esAddress + "/${reduceToIndex}/_refresh", null, null);
             MigrationUtils.waitForYellowStatus(context.getHttpClient(), esAddress, context);
         }
     })

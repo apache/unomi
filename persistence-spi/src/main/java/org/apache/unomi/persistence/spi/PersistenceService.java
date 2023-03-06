@@ -292,6 +292,7 @@ public interface PersistenceService {
     /**
      * @deprecated use {@link #loadCustomItem(String, String)}
      */
+    @Deprecated
     CustomItem loadCustomItem(String itemId, Date dateHint, String customItemType);
 
     /**

@@ -148,18 +148,7 @@ import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Date;
-import java.util.Enumeration;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeSet;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -249,25 +238,13 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     private Map<String, Map<String, Map<String, Object>>> knownMappings = new HashMap<>();
 
     private static final Map<String, String> itemTypeIndexNameMap = new HashMap<>();
+    private static final Collection<String> systemItems = Arrays.asList("actionType", "campaign", "campaignevent", "goal",
+            "userList", "propertyType", "scope", "conditionType", "rule", "scoring", "segment", "groovyAction", "topic",
+            "patch", "jsonSchema", "importConfig", "exportConfig", "rulestats");
     static {
-        itemTypeIndexNameMap.put("actionType", "systemItems");
-        itemTypeIndexNameMap.put("campaign", "systemItems");
-        itemTypeIndexNameMap.put("campaignevent", "systemItems");
-        itemTypeIndexNameMap.put("goal", "systemItems");
-        itemTypeIndexNameMap.put("userList", "systemItems");
-        itemTypeIndexNameMap.put("propertyType", "systemItems");
-        itemTypeIndexNameMap.put("scope", "systemItems");
-        itemTypeIndexNameMap.put("conditionType", "systemItems");
-        itemTypeIndexNameMap.put("rule", "systemItems");
-        itemTypeIndexNameMap.put("scoring", "systemItems");
-        itemTypeIndexNameMap.put("segment", "systemItems");
-        itemTypeIndexNameMap.put("groovyAction", "systemItems");
-        itemTypeIndexNameMap.put("topic", "systemItems");
-        itemTypeIndexNameMap.put("patch", "systemItems");
-        itemTypeIndexNameMap.put("jsonSchema", "systemItems");
-        itemTypeIndexNameMap.put("importConfig", "systemItems");
-        itemTypeIndexNameMap.put("exportConfig", "systemItems");
-        itemTypeIndexNameMap.put("rulestats", "systemItems");
+        for (String systemItem : systemItems) {
+            itemTypeIndexNameMap.put(systemItem, "systemItems");
+        }
 
         itemTypeIndexNameMap.put("profile", "profile");
         itemTypeIndexNameMap.put("persona", "profile");
@@ -840,19 +817,20 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     if (customItemType != null) {
                         itemType = customItemType;
                     }
+                    String documentId = getDocumentIDForItemType(itemId, itemType);
 
-                    String affinityIndex = "session".equals(itemType) && sessionAffinityCache.containsKey(itemId) ? sessionAffinityCache.get(itemId) : null;
+                    String affinityIndex = "session".equals(itemType) && sessionAffinityCache.containsKey(documentId) ? sessionAffinityCache.get(documentId) : null;
                     if (affinityIndex == null && isItemTypeRollingOver(itemType)) {
                         return new MetricAdapter<T>(metricsService, ".loadItemWithQuery") {
                             @Override
                             public T execute(Object... args) throws Exception {
                                 if (customItemType == null) {
-                                    PartialList<T> r = query(QueryBuilders.idsQuery().addIds(itemId), null, clazz, 0, 1, null, null);
+                                    PartialList<T> r = query(QueryBuilders.idsQuery().addIds(documentId), null, clazz, 0, 1, null, null);
                                     if (r.size() > 0) {
                                         return r.get(0);
                                     }
                                 } else {
-                                    PartialList<CustomItem> r = query(QueryBuilders.idsQuery().addIds(itemId), null, customItemType, 0, 1, null, null);
+                                    PartialList<CustomItem> r = query(QueryBuilders.idsQuery().addIds(documentId), null, customItemType, 0, 1, null, null);
                                     if (r.size() > 0) {
                                         return (T) r.get(0);
                                     }
@@ -861,12 +839,12 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                             }
                         }.execute();
                     } else {
-                        GetRequest getRequest = new GetRequest(affinityIndex != null ? affinityIndex : getIndex(itemType), itemId);
+                        GetRequest getRequest = new GetRequest(affinityIndex != null ? affinityIndex : getIndex(itemType), documentId);
                         GetResponse response = client.get(getRequest, RequestOptions.DEFAULT);
                         if (response.isExists()) {
                             String sourceAsString = response.getSourceAsString();
                             final T value = ESCustomObjectMapper.getObjectMapper().readValue(sourceAsString, clazz);
-                            setMetadata(value, response.getId(), response.getVersion(), response.getSeqNo(), response.getPrimaryTerm(), response.getIndex());
+                            setMetadata(value, response.getVersion(), response.getSeqNo(), response.getPrimaryTerm(), response.getIndex());
                             return value;
                         } else {
                             return null;
@@ -889,15 +867,11 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     }
 
-    private void setMetadata(Item item, String id, long version, long seqNo, long primaryTerm, String index) {
-        item.setItemId(id);
+    private void setMetadata(Item item, long version, long seqNo, long primaryTerm, String index) {
         item.setVersion(version);
         item.setSystemMetadata(SEQ_NO, seqNo);
         item.setSystemMetadata(PRIMARY_TERM, primaryTerm);
         item.setSystemMetadata("index", index);
-        if (item.getItemType().equals("session") && !sessionAffinityCache.containsKey(id)) {
-            sessionAffinityCache.put(id, index);
-        }
     }
 
     @Override
@@ -925,17 +899,14 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 try {
                     String source = ESCustomObjectMapper.getObjectMapper().writeValueAsString(item);
                     String itemType = item.getItemType();
-                    String className = item.getClass().getName();
                     if (item instanceof CustomItem) {
                         itemType = ((CustomItem) item).getCustomItemType();
-                        className = CustomItem.class.getName() + "." + itemType;
                     }
-                    String itemId = item.getItemId();
-                    String index = item.getSystemMetadata("index") != null ?
-                            (String) item.getSystemMetadata("index") :
-                            getIndex(itemType);
+                    String documentId = getDocumentIDForItemType(item.getItemId(), itemType);
+                    String index = item.getSystemMetadata("index") != null ? (String) item.getSystemMetadata("index") : getIndex(itemType);
+
                     IndexRequest indexRequest = new IndexRequest(index);
-                    indexRequest.id(itemId);
+                    indexRequest.id(documentId);
                     indexRequest.source(source, XContentType.JSON);
 
                     if (!alwaysOverwrite) {
@@ -958,13 +929,12 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         if (bulkProcessor == null || !useBatching) {
                             indexRequest.setRefreshPolicy(getRefreshPolicy(itemType));
                             IndexResponse response = client.index(indexRequest, RequestOptions.DEFAULT);
-                            setMetadata(item, response.getId(), response.getVersion(), response.getSeqNo(), response.getPrimaryTerm(), response.getIndex());
+                            setMetadata(item, response.getVersion(), response.getSeqNo(), response.getPrimaryTerm(), response.getIndex());
                         } else {
                             bulkProcessor.add(indexRequest);
                         }
                     } catch (IndexNotFoundException e) {
-                        logger.error("Could not find index {}, could not register item type {} with id {} ",
-                                index, itemType, itemId, e);
+                        logger.error("Could not find index {}, could not register item type {} with id {} ", index, itemType, item.getItemId(), e);
                         return false;
                     }
                     return true;
@@ -1015,7 +985,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
                     if (bulkProcessor == null || !useBatchingForUpdate) {
                         UpdateResponse response = client.update(updateRequest, RequestOptions.DEFAULT);
-                        setMetadata(item, response.getId(), response.getVersion(), response.getSeqNo(), response.getPrimaryTerm(), response.getIndex());
+                        setMetadata(item, response.getVersion(), response.getSeqNo(), response.getPrimaryTerm(), response.getIndex());
                     } else {
                         bulkProcessor.add(updateRequest);
                     }
@@ -1034,7 +1004,10 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     private UpdateRequest createUpdateRequest(Class clazz, Item item, Map source, boolean alwaysOverwrite) {
         String itemType = Item.getItemType(clazz);
-        UpdateRequest updateRequest = new UpdateRequest(getIndex(itemType), item.getItemId());
+        String documentId = getDocumentIDForItemType(item.getItemId(), itemType);
+        String index = getIndex(itemType);
+
+        UpdateRequest updateRequest = new UpdateRequest(index, documentId);
         updateRequest.doc(source);
 
         if (!alwaysOverwrite) {
@@ -1115,7 +1088,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             protected Boolean execute(Object... args) throws Exception {
                 try {
                     String itemType = Item.getItemType(clazz);
-
                     String index = getIndex(itemType);
 
                     for (int i = 0; i < scripts.length; i++) {
@@ -1213,12 +1185,12 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             protected Boolean execute(Object... args) throws Exception {
                 try {
                     String itemType = Item.getItemType(clazz);
-
                     String index = getIndex(itemType);
+                    String documentId = getDocumentIDForItemType(item.getItemId(), itemType);
 
                     Script actualScript = new Script(ScriptType.INLINE, "painless", script, scriptParams);
 
-                    UpdateRequest updateRequest = new UpdateRequest(index, item.getItemId());
+                    UpdateRequest updateRequest = new UpdateRequest(index, documentId);
 
                     Long seqNo = (Long) item.getSystemMetadata(SEQ_NO);
                     Long primaryTerm = (Long) item.getSystemMetadata(PRIMARY_TERM);
@@ -1230,7 +1202,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     updateRequest.script(actualScript);
                     if (bulkProcessor == null) {
                         UpdateResponse response = client.update(updateRequest, RequestOptions.DEFAULT);
-                        setMetadata(item, response.getId(), response.getVersion(), response.getSeqNo(), response.getPrimaryTerm(), response.getIndex());
+                        setMetadata(item, response.getVersion(), response.getSeqNo(), response.getPrimaryTerm(), response.getIndex());
                     } else {
                         bulkProcessor.add(updateRequest);
                     }
@@ -1266,8 +1238,10 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     if (customItemType != null) {
                         itemType = customItemType;
                     }
+                    String documentId = getDocumentIDForItemType(itemId, itemType);
+                    String index = getIndexNameForQuery(itemType);
 
-                    DeleteRequest deleteRequest = new DeleteRequest(getIndexNameForQuery(itemType), itemId);
+                    DeleteRequest deleteRequest = new DeleteRequest(index, documentId);
                     client.delete(deleteRequest, RequestOptions.DEFAULT);
                     return true;
                 } catch (Exception e) {
@@ -1830,9 +1804,10 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         try {
             final Class<? extends Item> clazz = item.getClass();
             String itemType = Item.getItemType(clazz);
+            String documentId = getDocumentIDForItemType(item.getItemId(), itemType);
 
             QueryBuilder builder = QueryBuilders.boolQuery()
-                    .must(QueryBuilders.idsQuery().addIds(item.getItemId()))
+                    .must(QueryBuilders.idsQuery().addIds(documentId))
                     .must(conditionESQueryBuilderDispatcher.buildFilter(query));
             return queryCount(builder, itemType) > 0;
         } finally {
@@ -2041,7 +2016,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                                 // add hit to results
                                 String sourceAsString = searchHit.getSourceAsString();
                                 final T value = ESCustomObjectMapper.getObjectMapper().readValue(sourceAsString, clazz);
-                                setMetadata(value, searchHit.getId(), searchHit.getVersion(), searchHit.getSeqNo(), searchHit.getPrimaryTerm(), searchHit.getIndex());
+                                setMetadata(value, searchHit.getVersion(), searchHit.getSeqNo(), searchHit.getPrimaryTerm(), searchHit.getIndex());
                                 results.add(value);
                             }
 
@@ -2071,7 +2046,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         for (SearchHit searchHit : searchHits) {
                             String sourceAsString = searchHit.getSourceAsString();
                             final T value = ESCustomObjectMapper.getObjectMapper().readValue(sourceAsString, clazz);
-                            setMetadata(value, searchHit.getId(), searchHit.getVersion(), searchHit.getSeqNo(), searchHit.getPrimaryTerm(), searchHit.getIndex());
+                            setMetadata(value, searchHit.getVersion(), searchHit.getSeqNo(), searchHit.getPrimaryTerm(), searchHit.getIndex());
                             results.add(value);
                         }
                     }
@@ -2117,7 +2092,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                             // add hit to results
                             String sourceAsString = searchHit.getSourceAsString();
                             final T value = ESCustomObjectMapper.getObjectMapper().readValue(sourceAsString, clazz);
-                            setMetadata(value, searchHit.getId(), searchHit.getVersion(), searchHit.getSeqNo(), searchHit.getPrimaryTerm(), searchHit.getIndex());
+                            setMetadata(value, searchHit.getVersion(), searchHit.getSeqNo(), searchHit.getPrimaryTerm(), searchHit.getIndex());
                             results.add(value);
                         }
                     }
@@ -2158,7 +2133,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                             // add hit to results
                             String sourceAsString = searchHit.getSourceAsString();
                             final CustomItem value = ESCustomObjectMapper.getObjectMapper().readValue(sourceAsString, CustomItem.class);
-                            setMetadata(value, searchHit.getId(), searchHit.getVersion(), searchHit.getSeqNo(), searchHit.getPrimaryTerm(), searchHit.getIndex());
+                            setMetadata(value, searchHit.getVersion(), searchHit.getSeqNo(), searchHit.getPrimaryTerm(), searchHit.getIndex());
                             results.add(value);
                         }
                     }
@@ -2632,6 +2607,10 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         return itemTypeIndexNameMap.getOrDefault(itemType, itemType);
     }
 
+    private String getDocumentIDForItemType(String itemId, String itemType) {
+        return systemItems.contains(itemType) ? (itemId + "_" + itemType.toLowerCase()) : itemId;
+    }
+
     private QueryBuilder wrapWithItemTypeQuery(String itemType, QueryBuilder originalQuery) {
         BoolQueryBuilder wrappedQuery = QueryBuilders.boolQuery();
         wrappedQuery.must(getItemTypeQueryBuilder(itemType));
@@ -2657,5 +2636,4 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         }
         return WriteRequest.RefreshPolicy.NONE;
     }
-
 }
