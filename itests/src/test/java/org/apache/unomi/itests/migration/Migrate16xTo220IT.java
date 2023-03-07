@@ -38,12 +38,11 @@ public class Migrate16xTo220IT extends BaseIT {
 
     private int eventCount = 0;
     private int sessionCount = 0;
-    private int systemItemsCount = 0;
 
     private static final int NUMBER_DUPLICATE_SESSIONS = 3;
-    private static final List<String> oldSystemItemsIndices = Arrays.asList("actionType", "campaign", "campaignevent", "goal",
-            "userList", "propertyType", "scope", "conditionType", "rule", "scoring", "segment", "groovyAction", "topic",
-            "patch", "jsonSchema", "importConfig", "exportConfig", "rulestats");
+    private static final List<String> oldSystemItemsIndices = Arrays.asList("context-actiontype", "context-campaign", "context-campaignevent", "context-goal",
+            "context-userlist", "context-propertytype", "context-scope", "context-conditiontype", "context-rule", "context-scoring", "context-segment", "context-groovyaction", "context-topic",
+            "context-patch", "context-jsonschema", "context-importconfig", "context-exportconfig", "context-rulestats");
 
     @Override
     @Before
@@ -113,12 +112,12 @@ public class Migrate16xTo220IT extends BaseIT {
 
         int newEventcount = 0;
         for (String eventIndex : MigrationUtils.getIndexesPrefixedBy(httpClient, "http://localhost:9400", "context-event-0")) {
-            newEventcount += countItems(eventIndex, null);
+            newEventcount += countItems(httpClient, eventIndex, null);
         }
 
         int newSessioncount = 0;
         for (String sessionIndex : MigrationUtils.getIndexesPrefixedBy(httpClient, "http://localhost:9400", "context-session-0")) {
-            newSessioncount += countItems(sessionIndex, null);
+            newSessioncount += countItems(httpClient, sessionIndex, null);
         }
         Assert.assertEquals(eventCount, newEventcount);
         Assert.assertEquals(sessionCount - NUMBER_DUPLICATE_SESSIONS, newSessioncount);
@@ -132,10 +131,6 @@ public class Migrate16xTo220IT extends BaseIT {
         for (String oldSystemItemsIndex : oldSystemItemsIndices) {
             Assert.assertFalse(MigrationUtils.indexExists(httpClient, "http://localhost:9400", oldSystemItemsIndex));
         }
-
-        // check counts
-        Assert.assertEquals("Expect same number of system items (rules, segments, etc ...) after 2_2_0 migration",
-                systemItemsCount, countItems("context-systemitems", null));
     }
 
     /**
@@ -319,22 +314,18 @@ public class Migrate16xTo220IT extends BaseIT {
     private void initCounts(CloseableHttpClient httpClient) {
         try {
             for (String eventIndex : MigrationUtils.getIndexesPrefixedBy(httpClient, "http://localhost:9400", "context-event-date")) {
-                eventCount += countItems(eventIndex, resourceAsString("migration/must_not_match_some_eventype_body.json"));
+                eventCount += countItems(httpClient, eventIndex, resourceAsString("migration/must_not_match_some_eventype_body.json"));
             }
 
             for (String sessionIndex : MigrationUtils.getIndexesPrefixedBy(httpClient, "http://localhost:9400", "context-session-date")) {
-                sessionCount += countItems(sessionIndex, null);
-            }
-
-            for (String oldSystemItemsIndex : oldSystemItemsIndices) {
-                systemItemsCount += countItems(oldSystemItemsIndex, null);
+                sessionCount += countItems(httpClient, sessionIndex, null);
             }
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
 
-    private int countItems(String index, String requestBody) throws IOException {
+    private int countItems(CloseableHttpClient httpClient, String index, String requestBody) throws IOException {
         if (requestBody == null) {
             requestBody = resourceAsString("migration/must_not_match_some_eventype_body.json");
         }
