@@ -43,8 +43,7 @@ def indicesToReduce = [
         rulestats: [reduceTo: "systemitems", renameId: true],
         groovyaction: [reduceTo: "systemitems", renameId: true],
 
-        persona: [reduceTo: "profile", renameId: false],
-        personasession: [reduceTo: "session", renameId: false]
+        persona: [reduceTo: "profile", renameId: false]
 ]
 
 context.performMigrationStep("2.2.0-create-systemItems-index", () -> {

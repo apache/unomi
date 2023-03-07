@@ -248,9 +248,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
         itemTypeIndexNameMap.put("profile", "profile");
         itemTypeIndexNameMap.put("persona", "profile");
-
-        itemTypeIndexNameMap.put("session", "session");
-        itemTypeIndexNameMap.put("personaSession", "session");
     }
 
     public void setBundleContext(BundleContext bundleContext) {
