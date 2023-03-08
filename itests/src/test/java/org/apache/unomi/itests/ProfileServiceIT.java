@@ -331,7 +331,6 @@ public class ProfileServiceIT extends BaseIT {
     }
 
     @Test
-    @Ignore // TODO - fix test  https://issues.apache.org/jira/browse/UNOMI-726
     public void testMonthlyIndicesPurge() throws Exception {
         Date currentDate = new Date();
         LocalDateTime minus10Months = LocalDateTime.ofInstant(currentDate.toInstant(), ZoneId.systemDefault()).minusMonths(10);

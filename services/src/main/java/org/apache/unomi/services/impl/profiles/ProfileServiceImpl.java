@@ -370,40 +370,11 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         }
     }
 
-    private <T extends Item> void purgeRolloverItems(int existsNumberOfDays, Class<T> clazz) {
-        if (existsNumberOfDays > 0) {
-            String conditionType = null;
-            String itemType = null;
-
-            if (clazz.getName().equals(Event.class.getName())) {
-                conditionType = "eventPropertyCondition";
-                itemType = Event.ITEM_TYPE;
-            } else if (clazz.getName().equals(Session.class.getName())) {
-                conditionType = "sessionPropertyCondition";
-                itemType = Session.ITEM_TYPE;
-            }
-
-            ConditionType propertyConditionType = definitionsService.getConditionType(conditionType);
-            if (propertyConditionType == null) {
-                // definition service not yet fully instantiate
-                return;
-            }
-
-            Condition condition = new Condition(propertyConditionType);
-
-            condition.setParameter("propertyName", "timeStamp");
-            condition.setParameter("comparisonOperator", "lessThanOrEqualTo");
-            condition.setParameter("propertyValueDateExpr", "now-" + existsNumberOfDays + "d");
-            persistenceService.removeByQuery(condition, clazz);
-            deleteEmptyRolloverIndex(itemType);
-        }
-    }
-
     @Override
     public void purgeSessionItems(int existsNumberOfDays) {
         if (existsNumberOfDays > 0) {
             logger.info("Purging: Sessions created since more than {} days", existsNumberOfDays);
-            purgeRolloverItems(existsNumberOfDays, Session.class);
+            persistenceService.purgeTimeBasedItems(existsNumberOfDays, Session.class);
         }
     }
 
@@ -411,7 +382,7 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
     public void purgeEventItems(int existsNumberOfDays) {
         if (existsNumberOfDays > 0) {
             logger.info("Purging: Events created since more than {} days", existsNumberOfDays);
-            purgeRolloverItems(existsNumberOfDays, Event.class);
+            persistenceService.purgeTimeBasedItems(existsNumberOfDays, Event.class);
         }
     }
 
@@ -419,19 +390,6 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
     @Override
     public void purgeMonthlyItems(int existsNumberOfMonths) {
 
-    }
-
-    public void deleteEmptyRolloverIndex(String indexName) {
-        TreeMap<String, Long> countsPerIndex = new TreeMap<>(persistenceService.docCountPerIndex(indexName));
-        if (countsPerIndex.size() >= 1) {
-            // do not check the last index, because it's the one used to write documents
-            countsPerIndex.pollLastEntry();
-            countsPerIndex.forEach((index, count) -> {
-                if (count == 0) {
-                    persistenceService.removeIndex(index, false);
-                }
-            });
-        }
     }
 
     private void initializePurge() {

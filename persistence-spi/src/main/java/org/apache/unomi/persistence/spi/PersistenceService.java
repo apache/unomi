@@ -292,6 +292,7 @@ public interface PersistenceService {
     /**
      * @deprecated use {@link #loadCustomItem(String, String)}
      */
+    @Deprecated
     CustomItem loadCustomItem(String itemId, Date dateHint, String customItemType);
 
     /**
@@ -676,22 +677,19 @@ public interface PersistenceService {
     <T extends Item> void refreshIndex(Class<T> clazz, Date dateHint);
 
     /**
-     * Purges all data in the context server up to the specified date, not included.
-     *
-     * @param date the date (not included) before which we want to erase all data
+     * deprecated: (use: purgeTimeBasedItems instead)
      */
     @Deprecated
     void purge(Date date);
 
     /**
-     * Retrieves the number of document per indexes.
-     * If the index is a rollover index, each rollover index will be return with its own number of document
-     * For example: with "event" as parameter, the indexes named ...-event-000001, ...-event-000002 and so one will be returned
+     * Purges time based data in the context server up to the specified days number of existence.
+     * (This only works for time based data stored in rolling over indices, it have no effect on other types)
      *
-     * @param indexes names of the indexes to count the documents
-     * @return Map where the key in the index name and the value is the number of document for this index
+     * @param existsNumberOfDays the number of days
+     * @param clazz the item type to be purged
      */
-    Map<String, Long> docCountPerIndex(String... indexes);
+    <T extends Item> void purgeTimeBasedItems(int existsNumberOfDays, Class<T> clazz);
 
     /**
      * Retrieves all items of the specified Item subclass which specified ranged property is within the specified bounds, ordered according to the specified {@code sortBy} String
@@ -743,15 +741,6 @@ public interface PersistenceService {
      * @return {@code true} if the operation was successful, {@code false} otherwise
      */
     boolean removeIndex(final String itemType);
-
-    /**
-     * Removes the index for the specified item type.
-     *
-     * @param itemType the item type
-     * @param addPrefix should add the index prefix to the itemType passed as parameter
-     * @return {@code true} if the operation was successful, {@code false} otherwise
-     */
-    boolean removeIndex(final String itemType, boolean addPrefix);
 
     /**
      * Removes all data associated with the provided scope.

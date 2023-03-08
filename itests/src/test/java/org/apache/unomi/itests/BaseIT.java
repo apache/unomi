@@ -214,12 +214,6 @@ public abstract class BaseIT extends KarafTestSupport {
         refreshPersistence();
     }
 
-    protected void recreateIndex(final String itemType) {
-        if (persistenceService.removeIndex(itemType)) {
-            persistenceService.createIndex(itemType);
-        }
-    }
-
     protected void refreshPersistence() throws InterruptedException {
         persistenceService.refresh();
         Thread.sleep(1000);
