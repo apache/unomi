@@ -17,6 +17,7 @@
 package org.apache.unomi.itests.graphql;
 
 import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.unomi.api.Scope;
 import org.apache.unomi.api.services.ScopeService;
 import org.junit.Test;
 import org.ops4j.pax.exam.util.Filter;
@@ -37,7 +38,7 @@ public class GraphQLSourceIT extends BaseGraphQLIT {
             assertNull(context.getValue("data.cdp.createOrUpdateSource.thirdParty"));
         }
 
-        refreshPersistence();
+        refreshPersistence(Scope.class);
 
         try (CloseableHttpResponse response = post("graphql/source/update-source.json")) {
             final ResponseContext context = ResponseContext.parse(response.getEntity());
@@ -46,7 +47,7 @@ public class GraphQLSourceIT extends BaseGraphQLIT {
             assertTrue(context.getValue("data.cdp.createOrUpdateSource.thirdParty"));
         }
 
-        refreshPersistence();
+        refreshPersistence(Scope.class);
 
         try (CloseableHttpResponse response = post("graphql/source/get-sources.json")) {
             final ResponseContext context = ResponseContext.parse(response.getEntity());

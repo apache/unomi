@@ -19,6 +19,7 @@ package org.apache.unomi.itests.graphql;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.services.ProfileService;
+import org.apache.unomi.lists.UserList;
 import org.junit.Assert;
 import org.junit.Test;
 import org.ops4j.pax.exam.util.Filter;
@@ -39,7 +40,7 @@ public class GraphQLListIT extends BaseGraphQLIT {
 
             persistedProfile = profileService.save(profile);
 
-            refreshPersistence();
+            refreshPersistence(Profile.class);
 
             keepTrying("Failed waiting for the creation of the profile",
                     () -> profileService.load(profile.getItemId()), Objects::nonNull, 1000, 100);
@@ -52,7 +53,7 @@ public class GraphQLListIT extends BaseGraphQLIT {
                 Assert.assertEquals("testSite", context.getValue("data.cdp.createOrUpdateList.view.name"));
             }
 
-            refreshPersistence();
+            refreshPersistence(UserList.class);
 
             try (CloseableHttpResponse response = post("graphql/list/update-list.json")) {
                 final ResponseContext context = ResponseContext.parse(response.getEntity());
@@ -62,7 +63,7 @@ public class GraphQLListIT extends BaseGraphQLIT {
                 Assert.assertEquals("testSiteUpdated", context.getValue("data.cdp.createOrUpdateList.view.name"));
             }
 
-            refreshPersistence();
+            refreshPersistence(UserList.class);
 
             try (CloseableHttpResponse response = post("graphql/list/get-list.json")) {
                 final ResponseContext context = ResponseContext.parse(response.getEntity());
@@ -78,7 +79,7 @@ public class GraphQLListIT extends BaseGraphQLIT {
                 Assert.assertEquals("testListId", context.getValue("data.cdp.addProfileToList.id"));
             }
 
-            refreshPersistence();
+            refreshPersistence(UserList.class);
 
             Thread.sleep(6000);
 

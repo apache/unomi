@@ -24,6 +24,7 @@ import org.apache.unomi.api.Metadata;
 import org.apache.unomi.api.PartialList;
 import org.apache.unomi.api.actions.Action;
 import org.apache.unomi.api.conditions.Condition;
+import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.rules.Rule;
 import org.apache.unomi.api.rules.RuleStatistics;
@@ -364,7 +365,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
 
     public PartialList<Metadata> getRuleMetadatas(Query query) {
         if (query.isForceRefresh()) {
-            persistenceService.refresh();
+            persistenceService.refreshIndex(Rule.class);
         }
         definitionsService.resolveConditionType(query.getCondition());
         List<Metadata> descriptions = new LinkedList<>();
@@ -377,7 +378,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
 
     public PartialList<Rule> getRuleDetails(Query query) {
         if (query.isForceRefresh()) {
-            persistenceService.refresh();
+            persistenceService.refreshIndex(Rule.class);
         }
         definitionsService.resolveConditionType(query.getCondition());
         PartialList<Rule> rules = persistenceService.query(query.getCondition(), query.getSortby(), Rule.class, query.getOffset(), query.getLimit());

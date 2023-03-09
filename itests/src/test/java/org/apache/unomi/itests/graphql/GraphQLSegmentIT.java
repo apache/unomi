@@ -53,7 +53,7 @@ public class GraphQLSegmentIT extends BaseGraphQLIT {
             Assert.assertEquals("http://www.domain.com", context.getValue("data.cdp.createOrUpdateSegment.view.name"));
         }
 
-        refreshPersistence();
+        refreshPersistence(Segment.class);
 
         try (CloseableHttpResponse response = post("graphql/segment/get-segment.json")) {
             final ResponseContext context = ResponseContext.parse(response.getEntity());
@@ -80,7 +80,7 @@ public class GraphQLSegmentIT extends BaseGraphQLIT {
         keepTrying("Failed waiting for the creation of the profile for the \"testCreateSegmentAndApplyToProfile\" test",
                 () -> profileService.load(profile.getItemId()), Objects::nonNull, 1000, 100);
 
-        refreshPersistence();
+        refreshPersistence(Segment.class);
 
         try (CloseableHttpResponse response = post("graphql/segment/create-segment-with-properties-filter.json")) {
             final ResponseContext context = ResponseContext.parse(response.getEntity());

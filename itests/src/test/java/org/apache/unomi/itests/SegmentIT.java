@@ -535,18 +535,18 @@ public class SegmentIT extends BaseIT {
         scoringElements.add(scoringElement);
         scoring.setElements(scoringElements);
         segmentService.setScoringDefinition(scoring);
-        refreshPersistence();
+        refreshPersistence(Segment.class);
 
         // Send 2 events that match the scoring plan.
         profile = profileService.load("test_profile_id");
         Event testEvent = new Event("test-event-type", null, profile, null, null, profile, timestampEventInRange);
         testEvent.setPersistent(true);
         eventService.send(testEvent);
-        refreshPersistence();
+        refreshPersistence(Event.class);
         // 2nd event
         testEvent = new Event("test-event-type", null, testEvent.getProfile(), null, null, testEvent.getProfile(), timestampEventInRange);
         eventService.send(testEvent);
-        refreshPersistence();
+        refreshPersistence(Event.class, Profile.class);
 
         // insure the profile is engaged;
         try {
@@ -559,7 +559,7 @@ public class SegmentIT extends BaseIT {
             Assert.fail("Unable to read past event because " + e.getMessage());
         }
         profileService.save(testEvent.getProfile());
-        refreshPersistence();
+        refreshPersistence(Profile.class);
         // recalculate event conditions
         segmentService.recalculatePastEventConditions();
         // insure the profile is still engaged after recalculate;
@@ -588,10 +588,10 @@ public class SegmentIT extends BaseIT {
             Assert.fail("Unable to read past event because " + e.getMessage());
         }
         profileService.save(testEvent.getProfile());
-        refreshPersistence();
+        refreshPersistence(Profile.class);
         // now recalculate the past event conditions
         segmentService.recalculatePastEventConditions();
-        persistenceService.refreshIndex(Profile.class, null);
+        refreshPersistence(Profile.class);
         // As 3 events have match, the profile should not be part of the scoring plan.
         keepTrying("Profile should not be part of the scoring anymore", () -> profileService.load("test_profile_id"), updatedProfile -> {
             try {
@@ -629,7 +629,7 @@ public class SegmentIT extends BaseIT {
         scoringElements.add(scoringElement);
         scoring.setElements(scoringElements);
         segmentService.setScoringDefinition(scoring);
-        refreshPersistence();
+        refreshPersistence(Segment.class);
         // Check linkedItems
         List<Rule> rules = persistenceService.getAllItems(Rule.class);
         Rule scoringRule = rules.stream().filter(rule -> rule.getItemId().equals(pastEventCondition.getParameter("generatedPropertyKey")))
@@ -638,7 +638,7 @@ public class SegmentIT extends BaseIT {
 
         // save the scoring once again
         segmentService.setScoringDefinition(scoring);
-        refreshPersistence();
+        refreshPersistence(Segment.class);
         // Check linkedItems
         rules = persistenceService.getAllItems(Rule.class);
         scoringRule = rules.stream().filter(rule -> rule.getItemId().equals(pastEventCondition.getParameter("generatedPropertyKey")))
@@ -647,7 +647,7 @@ public class SegmentIT extends BaseIT {
 
         // Remove scoring
         segmentService.removeSegmentDefinition(scoring.getItemId(), true);
-        refreshPersistence();
+        refreshPersistence(Segment.class);
         // Check linkedItems
         rules = persistenceService.getAllItems(Rule.class);
         boolean isRule = rules.stream().anyMatch(rule -> rule.getItemId().equals(pastEventCondition.getParameter("generatedPropertyKey")));

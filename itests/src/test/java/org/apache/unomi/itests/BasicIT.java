@@ -166,7 +166,7 @@ public class BasicIT extends BaseIT {
                 new File("data/tmp/testLoginEventCondition.json").toURI().toURL(), ConditionType.class);
         definitionsService.setConditionType(conditionType);
 
-        refreshPersistence();
+        refreshPersistence(ConditionType.class);
         Thread.sleep(2000);
         // Add login rule
         Rule rule = CustomObjectMapper.getObjectMapper().readValue(new File("data/tmp/testLogin.json").toURI().toURL(),
@@ -274,7 +274,7 @@ public class BasicIT extends BaseIT {
         checkVisitor2ResponseProperties(requestResponsePageView4.getContextResponse().getProfileProperties());
         Thread.sleep(1000);
 
-        refreshPersistence();
+        refreshPersistence(Profile.class);
 
         // Check both visitor profile at the end by loading them directly
         Profile profileVisitor1 = profileService.load(profileIdVisitor1);
