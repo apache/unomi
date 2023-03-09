@@ -18,6 +18,7 @@
 package org.apache.unomi.itests;
 
 import org.apache.unomi.api.Item;
+import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.conditions.Condition;
 import org.junit.After;
 import org.junit.Before;
@@ -48,7 +49,7 @@ public class ConditionESQueryBuilderIT extends ConditionEvaluatorIT {
     public void setUp() {
         super.setUp();
         persistenceService.save(item);
-        persistenceService.refresh();
+        persistenceService.refreshIndex(Profile.class, null);
     }
 
     @After

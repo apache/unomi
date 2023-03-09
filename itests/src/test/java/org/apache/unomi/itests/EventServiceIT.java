@@ -78,7 +78,8 @@ public class EventServiceIT extends BaseIT {
         Event event = new Event(eventId, eventType, null, profile, null, null, null, new Date());
         profileService.save(profile);
         eventService.send(event);
-        refreshPersistence();
+        refreshPersistence(Profile.class);
+        persistenceService.refreshIndex(Event.class, new Date());
         Thread.sleep(2000);
         boolean exist = eventService.hasEventAlreadyBeenRaised(event);
         Assert.assertTrue(exist);
@@ -96,7 +97,8 @@ public class EventServiceIT extends BaseIT {
 
         profileService.save(profile);
         eventService.send(event);
-        refreshPersistence();
+        refreshPersistence(Profile.class);
+        persistenceService.refreshIndex(Event.class, new Date());
         Thread.sleep(2000);
 
         Condition eventTypeCondition = new Condition(definitionsService.getConditionType("eventTypeCondition"));
@@ -130,7 +132,8 @@ public class EventServiceIT extends BaseIT {
 
         profileService.save(profile);
         eventService.send(event);
-        refreshPersistence();
+        refreshPersistence(Profile.class);
+        persistenceService.refreshIndex(Event.class, timestamp);
         Thread.sleep(2000);
 
         Condition eventTypeCondition = new Condition(definitionsService.getConditionType("eventTypeCondition"));

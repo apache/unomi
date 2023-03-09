@@ -90,7 +90,7 @@ public class CopyPropertiesActionIT extends BaseIT {
         profileService.save(profileTarget);
         LOGGER.info("Profile saved with ID [{}].", profileTarget.getItemId());
 
-        refreshPersistence();
+        refreshPersistence(Profile.class);
     }
 
     @After
@@ -99,7 +99,7 @@ public class CopyPropertiesActionIT extends BaseIT {
         profileService.delete(EMPTY_PROFILE, false);
         profileService.deletePropertyType(ARRAY_PARAM_NAME);
         profileService.deletePropertyType(SINGLE_PARAM_NAME);
-        refreshPersistence();
+        refreshPersistence(Profile.class);
     }
 
     private void initializePropertyType() {

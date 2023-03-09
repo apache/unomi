@@ -27,6 +27,7 @@ import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.api.services.RulesService;
+import org.apache.unomi.groovy.actions.GroovyAction;
 import org.apache.unomi.groovy.actions.services.GroovyActionsService;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.junit.After;
@@ -85,13 +86,13 @@ public class GroovyActionsServiceIT extends BaseIT {
         profile.setProperty("firstname", "Alexandre");
         profile.setProperty("address", "Address");
         profileService.save(profile);
-        refreshPersistence();
+        refreshPersistence(Profile.class);
     }
 
     @After
     public void cleanUp() throws InterruptedException {
         profileService.delete(PROFILE_ID, false);
-        refreshPersistence();
+        refreshPersistence(Profile.class);
     }
 
     private String loadGroovyAction(String pathname) throws IOException {
@@ -161,7 +162,7 @@ public class GroovyActionsServiceIT extends BaseIT {
         Assert.assertNotNull(groovyCodeSource);
 
         groovyActionsService.remove(UPDATE_ADDRESS_ACTION);
-        refreshPersistence();
+        refreshPersistence(GroovyAction.class);
 
         Thread.sleep(2000);
         groovyCodeSource = groovyActionsService.getGroovyCodeSource(UPDATE_ADDRESS_ACTION);

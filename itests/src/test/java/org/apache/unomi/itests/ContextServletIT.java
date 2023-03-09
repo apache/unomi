@@ -113,7 +113,7 @@ public class ContextServletIT extends BaseIT {
 		profile.setProperty("firstName", TEST_PROFILE_FIRST_NAME);
 		profileService.save(profile);
 
-		refreshPersistence();
+		refreshPersistence(Profile.class);
 	}
 
 	@After
@@ -139,7 +139,8 @@ public class ContextServletIT extends BaseIT {
 		Event event = new Event(eventId, eventTypeOriginal, session, profile, scope, null, null, new Date());
 		profileService.save(profile);
 		this.eventService.send(event);
-		refreshPersistence();
+		refreshPersistence(Profile.class);
+		persistenceService.refreshIndex(Event.class, new Date());
 		Thread.sleep(2000);
 		event.setEventType(eventTypeUpdated); //change the event so we can see the update effect
 
@@ -151,7 +152,7 @@ public class ContextServletIT extends BaseIT {
 		request.addHeader(THIRD_PARTY_HEADER_NAME, UNOMI_KEY);
 		request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.create("application/json")));
 		TestUtils.executeContextJSONRequest(request, sessionId);
-		refreshPersistence();
+		persistenceService.refreshIndex(Event.class, new Date());
 		Thread.sleep(2000); //Making sure event is updated in DB
 
 		//Assert
@@ -174,7 +175,8 @@ public class ContextServletIT extends BaseIT {
 		Event event = new Event(eventId, eventTypeOriginal, session, profile, scope, null, null, new Date());
 		profileService.save(profile);
 		this.eventService.send(event);
-		refreshPersistence();
+		refreshPersistence(Profile.class);
+		persistenceService.refreshIndex(Event.class, new Date());
 		Thread.sleep(2000);
 		event.setEventType(eventTypeUpdated); //change the event so we can see the update effect
 
@@ -185,7 +187,7 @@ public class ContextServletIT extends BaseIT {
 		HttpPost request = new HttpPost(URL + CONTEXT_URL);
 		request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.create("application/json")));
 		TestUtils.executeContextJSONRequest(request, sessionId);
-		refreshPersistence();
+		persistenceService.refreshIndex(Event.class, new Date());
 		Thread.sleep(2000); //Making sure event is updated in DB
 
 		//Assert
@@ -206,7 +208,7 @@ public class ContextServletIT extends BaseIT {
 		Session session = new Session(sessionId, profile, new Date(), scope);
 		Event event = new Event(eventId, eventTypeOriginal, session, profile, scope, null, null, new Date());
 		this.eventService.send(event);
-		refreshPersistence();
+		persistenceService.refreshIndex(Event.class, new Date());
 		Thread.sleep(2000);
 		event.setEventType(eventTypeUpdated); //change the event so we can see the update effect
 
@@ -217,7 +219,7 @@ public class ContextServletIT extends BaseIT {
 		HttpPost request = new HttpPost(URL + CONTEXT_URL);
 		request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.create("application/json")));
 		TestUtils.executeContextJSONRequest(request, sessionId);
-		refreshPersistence();
+		persistenceService.refreshIndex(Event.class, new Date());
 		Thread.sleep(2000); //Making sure event is updated in DB
 
 		//Assert
@@ -243,14 +245,12 @@ public class ContextServletIT extends BaseIT {
 		HttpPost request = new HttpPost(URL + CONTEXT_URL);
 		request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.create("application/json")));
 		String cookieHeaderValue = TestUtils.executeContextJSONRequest(request, sessionId).getCookieHeaderValue();
-		refreshPersistence();
+		persistenceService.refreshIndex(Event.class, new Date());
 		Thread.sleep(1000); //Making sure DB is updated
 
 		//Add the context-profile-id cookie to the second event
 		request.addHeader("Cookie", cookieHeaderValue);
 		ContextResponse response = (TestUtils.executeContextJSONRequest(request, sessionId)).getContextResponse(); //second event
-
-		refreshPersistence();
 
 		//Assert
 		assertEquals(1, response.getProfileSegments().size());
@@ -278,12 +278,12 @@ public class ContextServletIT extends BaseIT {
 		request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.create("application/json")));
 		//The first event is with a default timestamp (now)
 		String cookieHeaderValue = TestUtils.executeContextJSONRequest(request, sessionId).getCookieHeaderValue();
-		refreshPersistence();
+		persistenceService.refreshIndex(Event.class, new Date());
 		//The second event is with a customized timestamp
 		request.setURI(URI.create(customTimestampURI));
 		request.addHeader("Cookie", cookieHeaderValue);
 		ContextResponse response = (TestUtils.executeContextJSONRequest(request, sessionId)).getContextResponse(); //second event
-		refreshPersistence();
+		persistenceService.refreshIndex(Event.class, new Date());
 
 		//Assert
 		assertEquals(0,response.getProfileSegments().size());
@@ -310,12 +310,12 @@ public class ContextServletIT extends BaseIT {
 		request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.create("application/json")));
 		//The first event is with a default timestamp (now)
 		String cookieHeaderValue = TestUtils.executeContextJSONRequest(request, sessionId).getCookieHeaderValue();
-		refreshPersistence();
+		persistenceService.refreshIndex(Event.class, new Date());
 		//The second event is with a customized timestamp
 		request.setURI(URI.create(customTimestampURI));
 		request.addHeader("Cookie", cookieHeaderValue);
 		ContextResponse response = (TestUtils.executeContextJSONRequest(request, sessionId)).getContextResponse(); //second event
-		refreshPersistence();
+		persistenceService.refreshIndex(Event.class, new Date(futureTimestamp));
 
 		//Assert
 		assertEquals(0,response.getProfileSegments().size());
@@ -340,7 +340,7 @@ public class ContextServletIT extends BaseIT {
 		request.addHeader(THIRD_PARTY_HEADER_NAME, UNOMI_KEY);
 		request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.create("application/json")));
 		TestUtils.executeContextJSONRequest(request);
-		refreshPersistence();
+		refreshPersistence(Profile.class);
 		Thread.sleep(2000); //Making sure event is updated in DB
 
 		//Assert
@@ -363,7 +363,6 @@ public class ContextServletIT extends BaseIT {
 		HttpPost request = new HttpPost(URL + CONTEXT_URL);
 		request.setEntity(new StringEntity(getValidatedBundleJSON("security/ognl-payload-1.json", parameters), ContentType.create("application/json")));
 		TestUtils.executeContextJSONRequest(request);
-		refreshPersistence();
 		Thread.sleep(2000); //Making sure event is updated in DB
 
 		assertFalse("Vulnerability successfully executed ! File created at " + vulnFileCanonicalPath, vulnFile.exists());
@@ -385,7 +384,6 @@ public class ContextServletIT extends BaseIT {
 		HttpPost request = new HttpPost(URL + CONTEXT_URL);
 		request.setEntity(new StringEntity(getValidatedBundleJSON("security/mvel-payload-1.json", parameters), ContentType.create("application/json")));
 		TestUtils.executeContextJSONRequest(request);
-		refreshPersistence();
 		Thread.sleep(2000); //Making sure event is updated in DB
 
 		assertFalse("Vulnerability successfully executed ! File created at " + vulnFileCanonicalPath, vulnFile.exists());
@@ -400,9 +398,6 @@ public class ContextServletIT extends BaseIT {
 		request.setEntity(new StringEntity(getValidatedBundleJSON("personalization.json", parameters), ContentType.create("application/json")));
 		TestUtils.RequestResponse response = TestUtils.executeContextJSONRequest(request);
 		assertEquals("Invalid response code", 200, response.getStatusCode());
-		refreshPersistence();
-		Thread.sleep(2000); //Making sure event is updated in DB
-
 	}
 
     @Test
@@ -412,7 +407,7 @@ public class ContextServletIT extends BaseIT {
         String scoringSource = getValidatedBundleJSON("score1.json", parameters);
         Scoring scoring = CustomObjectMapper.getObjectMapper().readValue(scoringSource, Scoring.class);
         segmentService.setScoringDefinition(scoring);
-        refreshPersistence();
+        refreshPersistence(Scoring.class, Profile.class);
 
         // first let's make sure everything works without the requireScoring parameter
         parameters = new HashMap<>();
@@ -420,7 +415,6 @@ public class ContextServletIT extends BaseIT {
         request.setEntity(new StringEntity(getValidatedBundleJSON("withoutRequireScores.json", parameters), ContentType.create("application/json")));
         TestUtils.RequestResponse response = TestUtils.executeContextJSONRequest(request);
         assertEquals("Invalid response code", 200, response.getStatusCode());
-        refreshPersistence();
         Thread.sleep(2000); //Making sure event is updated in DB
 
         assertNotNull("Context response should not be null", response.getContextResponse());
@@ -433,7 +427,6 @@ public class ContextServletIT extends BaseIT {
         request.setEntity(new StringEntity(getValidatedBundleJSON("withRequireScores.json", parameters), ContentType.create("application/json")));
         response = TestUtils.executeContextJSONRequest(request);
         assertEquals("Invalid response code", 200, response.getStatusCode());
-        refreshPersistence();
         Thread.sleep(2000); //Making sure event is updated in DB
 
         assertNotNull("Context response should not be null", response.getContextResponse());

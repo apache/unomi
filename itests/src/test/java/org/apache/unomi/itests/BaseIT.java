@@ -114,11 +114,13 @@ public abstract class BaseIT {
         for (Class<? extends Item> aClass : classes) {
             persistenceService.removeByQuery(condition, aClass);
         }
-        refreshPersistence();
+        refreshPersistence(classes);
     }
 
-    protected void refreshPersistence() throws InterruptedException {
-        persistenceService.refresh();
+    protected void refreshPersistence(final Class<? extends Item>... classes) throws InterruptedException {
+        for (Class<? extends Item> aClass : classes) {
+            persistenceService.refreshIndex(aClass, null);
+        }
         Thread.sleep(1000);
     }
 

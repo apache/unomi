@@ -81,7 +81,7 @@ public class IncrementPropertyIT extends BaseIT {
 
         if (eventCode == EventService.PROFILE_UPDATED) {
             Profile updatedProfile = profileService.save(event.getProfile());
-            refreshPersistence();
+            refreshPersistence(Profile.class);
 
             int value = ((Map<String, Integer>) updatedProfile.getProperty("pageView")).get("acme-space");
             Assert.assertEquals(1, value, 0.0);
@@ -401,7 +401,7 @@ public class IncrementPropertyIT extends BaseIT {
         event.setPersistent(false);
 
         int eventCode = eventService.send(event);
-        refreshPersistence();
+        persistenceService.refreshIndex(Event.class, new Date());
 
         return eventCode;
     }
@@ -427,7 +427,7 @@ public class IncrementPropertyIT extends BaseIT {
         Profile profile = new Profile(UUID.randomUUID().toString());
 
         profileService.save(profile);
-        refreshPersistence();
+        refreshPersistence(Profile.class);
 
         return profile;
     }

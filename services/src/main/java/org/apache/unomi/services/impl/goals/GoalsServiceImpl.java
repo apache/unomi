@@ -549,7 +549,7 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
     @Override
     public PartialList<CampaignEvent> getEvents(Query query) {
         if(query.isForceRefresh()){
-            persistenceService.refresh();
+            persistenceService.refreshIndex(CampaignEvent.class, null);
         }
         definitionsService.resolveConditionType(query.getCondition());
         return persistenceService.query(query.getCondition(), query.getSortby(), CampaignEvent.class, query.getOffset(), query.getLimit());
