@@ -1016,7 +1016,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
 
             if (batch.size() == segmentUpdateBatchSize || (!entryIterator.hasNext() && batch.size() > 0)) {
                 try {
-                    persistenceService.update(batch, null, Profile.class);
+                    persistenceService.update(batch, Profile.class);
                 } catch (Exception e) {
                     logger.error("Error updating {} profiles for past event system properties", batch.size(), e);
                 } finally {
@@ -1115,7 +1115,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
             Map<String, Object> propertiesToUpdate = buildPropertiesMapForUpdateSegment(profileToUpdate, segmentId, isAdd);
             profileToPropertiesMap.put(profileToUpdate, propertiesToUpdate);
         }
-        List<String> failedItemsIds = persistenceService.update(profileToPropertiesMap, null, Profile.class);
+        List<String> failedItemsIds = persistenceService.update(profileToPropertiesMap, Profile.class);
         if (failedItemsIds != null)
             failedItemsIds.forEach(s -> retryFailedSegmentUpdate(s, segmentId, isAdd));
     }

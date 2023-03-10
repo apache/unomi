@@ -16,10 +16,7 @@
  */
 package org.apache.unomi.itests;
 
-import org.apache.unomi.api.Event;
-import org.apache.unomi.api.Metadata;
-import org.apache.unomi.api.Profile;
-import org.apache.unomi.api.ProfileAlias;
+import org.apache.unomi.api.*;
 import org.apache.unomi.api.actions.Action;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.rules.Rule;
@@ -49,14 +46,15 @@ public class ProfileMergeIT extends BaseIT {
     private final static String TEST_PROFILE_ID = "mergeOnPropertyTestProfileId";
 
     @After
-    public void after() {
+    public void after() throws InterruptedException {
         // cleanup created data
         rulesService.removeRule(TEST_RULE_ID);
+        removeItems(Profile.class, ProfileAlias.class, Event.class, Session.class);
     }
 
     @Test
     public void testProfileMergeOnPropertyAction_dont_forceEventProfileAsMaster() throws InterruptedException {
-        createAndWaitForRule(createMergeOnPropertyRule(false));
+        createAndWaitForRule(createMergeOnPropertyRule(false, "j:nodename"));
 
         // A new profile should be created.
         Assert.assertNotEquals(sendEvent().getProfile().getItemId(), TEST_PROFILE_ID);
@@ -64,29 +62,16 @@ public class ProfileMergeIT extends BaseIT {
 
     @Test
     public void testProfileMergeOnPropertyAction_forceEventProfileAsMaster() throws InterruptedException {
-        createAndWaitForRule(createMergeOnPropertyRule(true));
+        createAndWaitForRule(createMergeOnPropertyRule(true, "j:nodename"));
 
         // No new profile should be created, instead the profile of the event should be used.
         Assert.assertEquals(sendEvent().getProfile().getItemId(), TEST_PROFILE_ID);
     }
 
     @Test
-    public void test() throws InterruptedException {
+    public void testProfileMergeOnPropertyAction_simpleMergeAndCheckAlias() throws InterruptedException {
         // create rule
-        Condition condition = new Condition(definitionsService.getConditionType("eventTypeCondition"));
-        condition.setParameter("eventTypeId", TEST_EVENT_TYPE);
-
-        final Action action = new Action(definitionsService.getActionType("mergeProfilesOnPropertyAction"));
-        action.setParameter("mergeProfilePropertyValue", "eventProperty::target.properties(email)");
-        action.setParameter("mergeProfilePropertyName", "mergeIdentifier");
-        action.setParameter("forceEventProfileAsMaster", false);
-
-        Rule rule = new Rule();
-        rule.setMetadata(new Metadata(null, TEST_RULE_ID, TEST_RULE_ID, "Description"));
-        rule.setCondition(condition);
-        rule.setActions(Collections.singletonList(action));
-
-        createAndWaitForRule(rule);
+        createAndWaitForRule(createMergeOnPropertyRule(false, "email"));
 
         // create master profile
         Profile masterProfile = new Profile();
@@ -115,6 +100,14 @@ public class ProfileMergeIT extends BaseIT {
                 () -> persistenceService.getAllItems(ProfileAlias.class), (profileAliases) -> !profileAliases.isEmpty(),
                 DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
 
+        waitForNullValue("Profile with id eventProfileID not removed in the required time",
+                () -> persistenceService.load("eventProfileID", Profile.class),
+                DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+
+        keepTrying("Profile with id eventProfileID should still be accessible due to alias",
+                () -> profileService.load("eventProfileID"), Objects::nonNull,
+                DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+
         List<ProfileAlias> aliases = persistenceService.query("profileID", masterProfile.getItemId(), null, ProfileAlias.class);
 
         Assert.assertFalse(aliases.isEmpty());
@@ -123,6 +116,181 @@ public class ProfileMergeIT extends BaseIT {
         Assert.assertEquals("defaultClientId", aliases.get(0).getClientID());
     }
 
+
+    /**
+     * User switch case, this case can happen when a person (user A) is using the same browser session of a previous logged user (user B).
+     * user A will be using user B profile, but when user A is going to login by send a merge event, then we will detect that the mergeIdentifier is not the same
+     * In this case we will just switch user A profile to:
+     * - a new one, if it's the first time we encounter his own mergeIdentifier (TESTED in this scenario)
+     * - a previous one, if we already have a profile in DB with the same mergeIdentifier.
+     */
+    @Test
+    public void testProfileMergeOnPropertyAction_sessionReassigned_newProfile() throws InterruptedException {
+        // create rule
+        createAndWaitForRule(createMergeOnPropertyRule(false, "email"));
+
+        // create master profile
+        Profile masterProfile = new Profile();
+        masterProfile.setItemId("masterProfileID");
+        masterProfile.setProperty("email", "master@domain.com");
+        masterProfile.setSystemProperty("mergeIdentifier", "master@domain.com");
+        profileService.save(masterProfile);
+
+        keepTrying("Profile with id masterProfileID not found in the required time", () -> profileService.load("masterProfileID"),
+                Objects::nonNull, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+
+        // create event profile
+        Profile eventProfile = new Profile();
+        eventProfile.setItemId("eventProfileID");
+        eventProfile.setProperty("email", "event@domain.com");
+
+        Session simpleSession = new Session("simpleSession", eventProfile, new Date(), null);
+        Event event = new Event(TEST_EVENT_TYPE, simpleSession, masterProfile, null, null, eventProfile, new Date());
+        eventService.send(event);
+
+        // Session should have been reassign and a new profile should have been created ! (We call this user switch case)
+        Assert.assertNotNull(event.getProfile());
+        Assert.assertNotEquals("eventProfileID", event.getProfile().getItemId());
+        Assert.assertNotEquals("eventProfileID", event.getProfileId());
+        Assert.assertNotEquals("eventProfileID", event.getSession().getProfile().getItemId());
+        Assert.assertNotEquals("eventProfileID", event.getSession().getProfileId());
+
+        Assert.assertNotEquals("masterProfileID", event.getProfile().getItemId());
+        Assert.assertNotEquals("masterProfileID", event.getProfileId());
+        Assert.assertNotEquals("masterProfileID", event.getSession().getProfile().getItemId());
+        Assert.assertNotEquals("masterProfileID", event.getSession().getProfileId());
+
+        Assert.assertEquals(event.getSession().getProfileId(), event.getProfileId());
+        Assert.assertEquals("event@domain.com", event.getProfile().getSystemProperties().get("mergeIdentifier"));
+    }
+
+    /**
+     * User switch case, this case can happen when a person (user A) is using the same browser session of a previous logged user (user B).
+     * user A will be using user B profile, but when user A is going to login by send a merge event, then we will detect that the mergeIdentifier is not the same
+     * In this case we will just switch user A profile to:
+     * - a new one, if it's the first time we encounter his own mergeIdentifier
+     * - a previous one, if we already have a profile in DB with the same mergeIdentifier. (TESTED in this scenario)
+     */
+    @Test
+    public void testProfileMergeOnPropertyAction_sessionReassigned_existingProfile() throws InterruptedException {
+        // create rule
+        createAndWaitForRule(createMergeOnPropertyRule(false, "email"));
+
+        // create master profile
+        Profile masterProfile = new Profile();
+        masterProfile.setItemId("masterProfileID");
+        masterProfile.setProperty("email", "master@domain.com");
+        masterProfile.setSystemProperty("mergeIdentifier", "master@domain.com");
+        profileService.save(masterProfile);
+
+        // create a previous existing profile with same mergeIdentifier
+        Profile previousProfile = new Profile();
+        previousProfile.setItemId("previousProfileID");
+        previousProfile.setProperty("email", "event@domain.com");
+        previousProfile.setSystemProperty("mergeIdentifier", "event@domain.com");
+        profileService.save(previousProfile);
+
+        keepTrying("Profile with id masterProfileID not found in the required time", () -> profileService.load("masterProfileID"),
+                Objects::nonNull, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+        keepTrying("Profile with id previousProfileID not found in the required time", () -> profileService.load("previousProfileID"),
+                Objects::nonNull, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+
+        // create event profile
+        Profile eventProfile = new Profile();
+        eventProfile.setItemId("eventProfileID");
+        eventProfile.setProperty("email", "event@domain.com");
+
+        Session simpleSession = new Session("simpleSession", eventProfile, new Date(), null);
+        Event event = new Event(TEST_EVENT_TYPE, simpleSession, masterProfile, null, null, eventProfile, new Date());
+        eventService.send(event);
+
+        // Session should have been reassign and the previous existing profile for mergeIdentifier: event@domain.com should have been reuse
+        // Session should have been reassign and a new profile should have been created ! (We call this user switch case)
+        Assert.assertNotNull(event.getProfile());
+        Assert.assertEquals("previousProfileID", event.getProfile().getItemId());
+        Assert.assertEquals("previousProfileID", event.getProfileId());
+        Assert.assertEquals("previousProfileID", event.getSession().getProfile().getItemId());
+        Assert.assertEquals("previousProfileID", event.getSession().getProfileId());
+
+        Assert.assertEquals(event.getSession().getProfileId(), event.getProfileId());
+        Assert.assertEquals("event@domain.com", event.getProfile().getSystemProperties().get("mergeIdentifier"));
+    }
+
+    /**
+     * In case of merge, existing sessions/events from previous profileId should be rewritten to use the new master profileId
+     */
+    @Test
+    public void testProfileMergeOnPropertyAction_simpleMergeRewriteExistingSessionsEvents() throws InterruptedException {
+        Condition matchAll = new Condition(definitionsService.getConditionType("matchAllCondition"));
+        // create rule
+        createAndWaitForRule(createMergeOnPropertyRule(false, "email"));
+
+        // create master profile
+        Profile masterProfile = new Profile();
+        masterProfile.setItemId("masterProfileID");
+        masterProfile.setProperty("email", "username@domain.com");
+        masterProfile.setSystemProperty("mergeIdentifier", "username@domain.com");
+        profileService.save(masterProfile);
+
+        Profile eventProfile = new Profile();
+        eventProfile.setItemId("eventProfileID");
+        eventProfile.setProperty("email", "username@domain.com");
+        profileService.save(eventProfile);
+
+        // create 5 sessions and 5 events for master profile.
+        List<Session> sessionsToBeRewritten = new ArrayList<>();
+        List<Event> eventsToBeRewritten = new ArrayList<>();
+        for (int i = 1; i <= 5; i++) {
+            Session sessionToBeRewritten = new Session("simpleSession_"+ i, eventProfile, new Date(), null);
+            sessionsToBeRewritten.add(sessionToBeRewritten);
+            Event eventToBeRewritten = new Event("view", sessionToBeRewritten, eventProfile, null, null, null, new Date());
+            eventsToBeRewritten.add(eventToBeRewritten);
+
+
+            persistenceService.save(sessionToBeRewritten);
+            persistenceService.save(eventToBeRewritten);
+        }
+        keepTrying("Wait for sessions and events to be persisted", () -> persistenceService.queryCount(matchAll, Session.ITEM_TYPE) + persistenceService.queryCount(matchAll, Event.ITEM_TYPE),
+                (count) -> count == 10, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+        keepTrying("Profile with id masterProfileID not found in the required time", () -> profileService.load("masterProfileID"),
+                Objects::nonNull, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+        keepTrying("Profile with id eventProfileID not found in the required time", () -> profileService.load("eventProfileID"),
+                Objects::nonNull, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+
+        // Trigger the merge
+        Session simpleSession = new Session("simpleSession", eventProfile, new Date(), null);
+        Event mergeEvent = new Event(TEST_EVENT_TYPE, simpleSession, eventProfile, null, null, eventProfile, new Date());
+        eventService.send(mergeEvent);
+
+        // Check that master profile is now used:
+        Assert.assertNotNull(mergeEvent.getProfile());
+        Assert.assertEquals("masterProfileID", mergeEvent.getProfile().getItemId());
+        Assert.assertEquals("masterProfileID", mergeEvent.getProfileId());
+        Assert.assertEquals("masterProfileID", mergeEvent.getSession().getProfile().getItemId());
+        Assert.assertEquals("masterProfileID", mergeEvent.getSession().getProfileId());
+        Assert.assertEquals(mergeEvent.getSession().getProfileId(), mergeEvent.getProfileId());
+        Assert.assertEquals("username@domain.com", mergeEvent.getProfile().getSystemProperties().get("mergeIdentifier"));
+
+        // TODO (UNOMI-748): force the bulk processor to push requests
+        persistenceService.refresh();
+
+        // Check sessions/events are correctly rewritten
+        for (Event event : eventsToBeRewritten) {
+            keepTrying("Wait for event: " + event.getItemId() + " profileId to be rewritten for masterProfileID",
+                    () -> persistenceService.load(event.getItemId(), Event.class),
+                    (loadedEvent) -> loadedEvent.getProfileId().equals("masterProfileID"), DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+        }
+        for (Session session : sessionsToBeRewritten) {
+            keepTrying("Wait for session: " + session.getItemId() + " profileId to be rewritten for masterProfileID",
+                    () -> persistenceService.load(session.getItemId(), Session.class),
+                    (loadedSession) -> loadedSession.getProfileId().equals("masterProfileID"), DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+        }
+    }
+
+    /**
+     * Personalization strategy have a specific handling during the merge of two profiles
+     * This test is here to ensure this specific behavior is correctly working.
+     */
     @Test
     public void testPersonalizationStrategyStatusMerge() {
         // create some statuses for the tests:
@@ -208,7 +376,7 @@ public class ProfileMergeIT extends BaseIT {
         return testEvent;
     }
 
-    private Rule createMergeOnPropertyRule(boolean forceEventProfileAsMaster) throws InterruptedException {
+    private Rule createMergeOnPropertyRule(boolean forceEventProfileAsMaster, String eventProperty) throws InterruptedException {
         Rule mergeOnPropertyTestRule = new Rule();
         mergeOnPropertyTestRule
                 .setMetadata(new Metadata(null, TEST_RULE_ID, TEST_RULE_ID, "Test rule for testing MergeProfilesOnPropertyAction"));
@@ -218,7 +386,7 @@ public class ProfileMergeIT extends BaseIT {
         mergeOnPropertyTestRule.setCondition(condition);
 
         final Action mergeProfilesOnPropertyAction = new Action(definitionsService.getActionType("mergeProfilesOnPropertyAction"));
-        mergeProfilesOnPropertyAction.setParameter("mergeProfilePropertyValue", "eventProperty::target.properties(j:nodename)");
+        mergeProfilesOnPropertyAction.setParameter("mergeProfilePropertyValue", "eventProperty::target.properties(" + eventProperty + ")");
         mergeProfilesOnPropertyAction.setParameter("mergeProfilePropertyName", "mergeIdentifier");
         mergeProfilesOnPropertyAction.setParameter("forceEventProfileAsMaster", forceEventProfileAsMaster);
         mergeOnPropertyTestRule.setActions(Collections.singletonList(mergeProfilesOnPropertyAction));

@@ -30,9 +30,7 @@ import org.apache.unomi.persistence.spi.PersistenceService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 public class MergeProfilesOnPropertyAction implements ActionExecutor {
@@ -119,7 +117,10 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
                     String profileToBeMergeId = profileToBeMerge.getItemId();
                     if (!StringUtils.equals(profileToBeMergeId, mergedProfileId)) {
 
-                        // todo move in update by query + script
+                        // TODO (UNOMI-748): the following updates are asynchron due to usage of bulk processor in ElasticSearch persistence service update function.
+                        //  We could consider replacing those updates(one item at a time) by updateByQueryAndScript to avoid loading all the sessions/events in memory,
+                        //  but we would loose the asynchronous nature (By doing that request may take longer than before,
+                        //  and could potentially break client side timeouts on requests)
                         List<Session> oldSessions = persistenceService.query("profileId", profileToBeMergeId, null, Session.class);
                         for (Session oldSession : oldSessions) {
                             if (!oldSession.getItemId().equals(event.getSession().getItemId())) {
@@ -127,7 +128,6 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
                             }
                         }
 
-                        // todo move in update by query + script
                         List<Event> oldEvents = persistenceService.query("profileId", profileToBeMergeId, null, Event.class);
                         for (Event oldEvent : oldEvents) {
                             if (!oldEvent.getItemId().equals(event.getItemId())) {
@@ -188,22 +188,6 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
             eventService.send(new Event("sessionReassigned", eventSession, eventProfile, event.getScope(), event, eventSession,
                     null, event.getTimeStamp(), false));
         }
-    }
-
-    private void updateAllSessionsForProfile(String newProfileId, String oldProfileId) {
-        String[] scripts = new String[]{"updateProfileId"};
-
-        Map<String, Object>[] scriptParams = new HashMap[1];
-        scriptParams[0] = new HashMap<>();
-        scriptParams[0].put("profileId", newProfileId);
-
-        Condition[] conditions = new Condition[1];
-        conditions[0] = new Condition();
-        conditions[0].setConditionType(definitionsService.getConditionType("sessionPropertyCondition"));
-        conditions[0].setParameter("propertyName", "profileId");
-        conditions[0].setParameter("comparisonOperator", "equals");
-        conditions[0].setParameter("propertyValue", oldProfileId);
-        persistenceService.updateWithQueryAndStoredScript(Session.class, scripts, scriptParams, conditions);
     }
 
     public void setProfileService(ProfileService profileService) {
