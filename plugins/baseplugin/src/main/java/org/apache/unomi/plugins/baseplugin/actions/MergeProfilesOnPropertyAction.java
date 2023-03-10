@@ -121,17 +121,19 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
                         //  We could consider replacing those updates(one item at a time) by updateByQueryAndScript to avoid loading all the sessions/events in memory,
                         //  but we would loose the asynchronous nature (By doing that request may take longer than before,
                         //  and could potentially break client side timeouts on requests)
-                        List<Session> oldSessions = persistenceService.query("profileId", profileToBeMergeId, null, Session.class);
-                        for (Session oldSession : oldSessions) {
-                            if (!oldSession.getItemId().equals(event.getSession().getItemId())) {
-                                persistenceService.update(oldSession, Session.class, "profileId", anonymousBrowsing ? null : mergedProfileId);
-                            }
-                        }
-
                         List<Event> oldEvents = persistenceService.query("profileId", profileToBeMergeId, null, Event.class);
                         for (Event oldEvent : oldEvents) {
                             if (!oldEvent.getItemId().equals(event.getItemId())) {
                                 persistenceService.update(oldEvent, Event.class, "profileId", anonymousBrowsing ? null : mergedProfileId);
+                            }
+                        }
+
+                        // TODO (UNOMI-749): this is creating inconsistent sessions, they still contains old profile.
+                        //  And due to deserialization of sessions the profileId property will always be the one from profile stored in the session
+                        List<Session> oldSessions = persistenceService.query("profileId", profileToBeMergeId, null, Session.class);
+                        for (Session oldSession : oldSessions) {
+                            if (!oldSession.getItemId().equals(event.getSession().getItemId())) {
+                                persistenceService.update(oldSession, Session.class, "profileId", anonymousBrowsing ? null : mergedProfileId);
                             }
                         }
 
