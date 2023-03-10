@@ -544,28 +544,24 @@ public class SegmentIT extends BaseIT {
         scoringElements.add(scoringElement);
         scoring.setElements(scoringElements);
         segmentService.setScoringDefinition(scoring);
-        refreshPersistence();
+        refreshPersistence(Scoring.class);
 
         // Send 2 events that match the scoring plan.
         profile = profileService.load("test_profile_id");
         Event testEvent = new Event("test-event-type", null, profile, null, null, profile, timestampEventInRange);
         testEvent.setPersistent(true);
         eventService.send(testEvent);
-        refreshPersistence();
+        persistenceService.refreshIndex(Event.class, timestampEventInRange);
         // 2nd event
         testEvent = new Event("test-event-type", null, testEvent.getProfile(), null, null, testEvent.getProfile(), timestampEventInRange);
         eventService.send(testEvent);
-        refreshPersistence();
+        persistenceService.refreshIndex(Event.class, timestampEventInRange);
 
         // insure the profile is engaged;
-        try {
-            Assert.assertTrue("Profile should have 2 events in the scoring",  (Long) ((Map) testEvent.getProfile().getSystemProperties().get("pastEvents")).get(pastEventCondition.getParameterValues().get("generatedPropertyKey")) == 2);
-            Assert.assertTrue("Profile is engaged",  testEvent.getProfile().getScores().containsKey("past-event-scoring-test") && testEvent.getProfile().getScores().get("past-event-scoring-test") == 50);
-        } catch (Exception e) {
-            Assert.fail("Unable to read past event because " + e.getMessage());
-        }
+        Assert.assertTrue("Profile should have 2 events in the scoring",  (Long) ((Map) testEvent.getProfile().getSystemProperties().get("pastEvents")).get(pastEventCondition.getParameterValues().get("generatedPropertyKey")) == 2);
+        Assert.assertTrue("Profile is engaged",  testEvent.getProfile().getScores().containsKey("past-event-scoring-test") && testEvent.getProfile().getScores().get("past-event-scoring-test") == 50);
         profileService.save(testEvent.getProfile());
-        refreshPersistence();
+        refreshPersistence(Profile.class);
         // recalculate event conditions
         segmentService.recalculatePastEventConditions();
         // insure the profile is still engaged after recalculate;
@@ -595,10 +591,10 @@ public class SegmentIT extends BaseIT {
             Assert.fail("Unable to read past event because " + e.getMessage());
         }
         profileService.save(testEvent.getProfile());
-        refreshPersistence();
+        refreshPersistence(Profile.class);
         // now recalculate the past event conditions
         segmentService.recalculatePastEventConditions();
-        persistenceService.refreshIndex(Profile.class, null);
+        refreshPersistence(Profile.class);
         // As 3 events have match, the profile should not be part of the scoring plan.
         keepTrying("Profile should not be part of the scoring anymore",
                 () -> profileService.load("test_profile_id"),
@@ -638,7 +634,7 @@ public class SegmentIT extends BaseIT {
         scoringElements.add(scoringElement);
         scoring.setElements(scoringElements);
         segmentService.setScoringDefinition(scoring);
-        refreshPersistence();
+        refreshPersistence(Segment.class);
         // Check linkedItems
         List<Rule> rules = persistenceService.getAllItems(Rule.class);
         Rule scoringRule = rules.stream().filter(rule -> rule.getItemId().equals(pastEventCondition.getParameter("generatedPropertyKey"))).findFirst().get();
@@ -646,7 +642,7 @@ public class SegmentIT extends BaseIT {
 
         // save the scoring once again
         segmentService.setScoringDefinition(scoring);
-        refreshPersistence();
+        refreshPersistence(Segment.class);
         // Check linkedItems
         rules = persistenceService.getAllItems(Rule.class);
         scoringRule = rules.stream().filter(rule -> rule.getItemId().equals(pastEventCondition.getParameter("generatedPropertyKey"))).findFirst().get();
@@ -654,7 +650,7 @@ public class SegmentIT extends BaseIT {
 
         // Remove scoring
         segmentService.removeSegmentDefinition(scoring.getItemId(), true);
-        refreshPersistence();
+        refreshPersistence(Segment.class);
         // Check linkedItems
         rules = persistenceService.getAllItems(Rule.class);
         boolean isRule = rules.stream().anyMatch(rule -> rule.getItemId().equals(pastEventCondition.getParameter("generatedPropertyKey")));

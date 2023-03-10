@@ -369,7 +369,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
 
     public PartialList<Metadata> getRuleMetadatas(Query query) {
         if (query.isForceRefresh()) {
-            persistenceService.refresh();
+            persistenceService.refreshIndex(Rule.class, null);
         }
         definitionsService.resolveConditionType(query.getCondition());
         List<Metadata> descriptions = new LinkedList<>();
@@ -382,7 +382,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
 
     public PartialList<Rule> getRuleDetails(Query query) {
         if (query.isForceRefresh()) {
-            persistenceService.refresh();
+            persistenceService.refreshIndex(Rule.class, null);
         }
         definitionsService.resolveConditionType(query.getCondition());
         PartialList<Rule> rules = persistenceService.query(query.getCondition(), query.getSortby(), Rule.class, query.getOffset(), query.getLimit());

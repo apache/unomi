@@ -82,7 +82,7 @@ public class RuleServiceIT extends BaseIT {
         assertNull("Expected rule condition to be null", nullRule.getCondition());
         assertEquals("Invalid rule name", TEST_RULE_ID + "_name", nullRule.getMetadata().getName());
         rulesService.removeRule(TEST_RULE_ID);
-        refreshPersistence();
+        refreshPersistence(Rule.class);
         rulesService.refreshRules();
     }
 
@@ -107,7 +107,7 @@ public class RuleServiceIT extends BaseIT {
             String ruleID = ruleIDBase + "_" + i;
             rulesService.removeRule(ruleID);
         }
-        refreshPersistence();
+        refreshPersistence(Rule.class);
         rulesService.refreshRules();
     }
 
@@ -152,7 +152,7 @@ public class RuleServiceIT extends BaseIT {
         rulesService.removeRule(simpleEventTypeRule.getItemId());
         rulesService.removeRule(complexEventTypeRule.getItemId());
         rulesService.removeRule(noEventTypeRule.getItemId());
-        refreshPersistence();
+        refreshPersistence(Rule.class);
         rulesService.refreshRules();
     }
 
@@ -224,7 +224,7 @@ public class RuleServiceIT extends BaseIT {
             ConditionType conditionType = CustomObjectMapper.getObjectMapper().readValue(
                     new File("data/tmp/testClickEventCondition.json").toURI().toURL(), ConditionType.class);
             definitionsService.setConditionType(conditionType);
-            refreshPersistence();
+            refreshPersistence(Rule.class);
             rulesService.refreshRules();
             // Test tracked parameter
             // Add rule that has a trackParameter condition that matches

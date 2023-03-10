@@ -79,7 +79,7 @@ public class PropertiesUpdateActionIT extends BaseIT {
         profileService.save(profileTarget);
         LOGGER.info("Profile saved with ID [{}].", profileTarget.getItemId());
 
-        refreshPersistence();
+        refreshPersistence(Profile.class);
     }
 
     @Test
@@ -145,7 +145,7 @@ public class PropertiesUpdateActionIT extends BaseIT {
         updateProperties.setProperty(UpdatePropertiesAction.TARGET_TYPE_KEY, "profile");
         eventService.send(updateProperties);
         profileService.save(profile);
-        refreshPersistence();
+        refreshPersistence(Profile.class);
 
         profile = profileService.load(PROFILE_TEST_ID);
         Assert.assertEquals("Props_to_add should set the prop if it's missing", "New property 1", profile.getProperty("prop1"));
@@ -171,7 +171,7 @@ public class PropertiesUpdateActionIT extends BaseIT {
         updateProperties.setProperty(UpdatePropertiesAction.TARGET_TYPE_KEY, "profile");
         eventService.send(updateProperties);
         profileService.save(profile);
-        refreshPersistence();
+        refreshPersistence(Profile.class);
 
         profile = profileService.load(PROFILE_TEST_ID);
         Assert.assertEquals("New property 1", profile.getProperty("prop1"));
@@ -190,7 +190,7 @@ public class PropertiesUpdateActionIT extends BaseIT {
         updateProperties.setProperty(UpdatePropertiesAction.TARGET_TYPE_KEY, "profile");
         eventService.send(updateProperties);
         profileService.save(profile);
-        refreshPersistence();
+        refreshPersistence(Profile.class);
 
         profile = profileService.load(PROFILE_TEST_ID);
         Assert.assertEquals(2, ((List<String>) profile.getProperty("prop1")).size());
@@ -217,7 +217,7 @@ public class PropertiesUpdateActionIT extends BaseIT {
         updateProperties.setProperty(UpdatePropertiesAction.TARGET_TYPE_KEY, "profile");
         eventService.send(updateProperties);
         profileService.save(profile);
-        refreshPersistence();
+        refreshPersistence(Profile.class);
 
         profile = profileService.load(PROFILE_TEST_ID);
         Assert.assertEquals("New property 1", profile.getProperty("prop1"));
@@ -237,7 +237,7 @@ public class PropertiesUpdateActionIT extends BaseIT {
 
         eventService.send(updateProperties);
         profileService.save(profile);
-        refreshPersistence();
+        refreshPersistence(Profile.class);
 
         profile = profileService.load(PROFILE_TEST_ID);
         Assert.assertNull(profile.getProperty("prop1bis"));
@@ -260,7 +260,7 @@ public class PropertiesUpdateActionIT extends BaseIT {
         sessionReassigned.setPersistent(false);
         eventService.send(sessionReassigned);
         profileService.save(profile);
-        refreshPersistence();
+        refreshPersistence(Profile.class);
         profile = profileService.load(PROFILE_TEST_ID);
         Assert.assertEquals("lastVisit should be updated", eventTimeStamp1, profile.getProperty("lastVisit"));
         Assert.assertEquals("firstVisit should be updated", eventTimeStamp1, profile.getProperty("firstVisit"));
@@ -276,7 +276,7 @@ public class PropertiesUpdateActionIT extends BaseIT {
         sessionReassigned.setPersistent(false);
         eventService.send(sessionReassigned);
         profileService.save(profile);
-        refreshPersistence();
+        refreshPersistence(Profile.class);
         profile = profileService.load(PROFILE_TEST_ID);
         Assert.assertEquals("lastVisit should not be updated", eventTimeStamp1, profile.getProperty("lastVisit"));
         Assert.assertEquals("firstVisit should be updated", eventTimeStamp2, profile.getProperty("firstVisit"));
@@ -292,7 +292,7 @@ public class PropertiesUpdateActionIT extends BaseIT {
         sessionReassigned.setPersistent(false);
         eventService.send(sessionReassigned);
         profileService.save(profile);
-        refreshPersistence();
+        refreshPersistence(Profile.class);
         profile = profileService.load(PROFILE_TEST_ID);
         Assert.assertEquals("lastVisit should be updated", eventTimeStamp3, profile.getProperty("lastVisit"));
         Assert.assertEquals("firstVisit should not be updated", eventTimeStamp2, profile.getProperty("firstVisit"));
@@ -308,7 +308,7 @@ public class PropertiesUpdateActionIT extends BaseIT {
         sessionReassigned.setPersistent(false);
         eventService.send(sessionReassigned);
         profileService.save(profile);
-        refreshPersistence();
+        refreshPersistence(Profile.class);
         profile = profileService.load(PROFILE_TEST_ID);
         Assert.assertEquals("lastVisit should not be updated", eventTimeStamp3, profile.getProperty("lastVisit"));
         Assert.assertEquals("firstVisit should not be updated", eventTimeStamp2, profile.getProperty("firstVisit"));
@@ -333,7 +333,7 @@ public class PropertiesUpdateActionIT extends BaseIT {
             Thread.sleep(4000); // small sleep to create time dif between eventTimeStamp and current system date
             eventService.send(sessionReassigned);
             profileService.save(profile);
-            refreshPersistence();
+            refreshPersistence(Profile.class);
             profile = profileService.load(PROFILE_TEST_ID);
             Assert.assertEquals("currentEventTimeStamp should be the exact date of the event timestamp", eventTimeStamp1, profile.getProperty("currentEventTimeStamp"));
             Assert.assertNotEquals("currentDate should be the current system date", eventTimeStamp1, profile.getProperty("currentDate"));
