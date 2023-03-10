@@ -75,7 +75,7 @@ public class GraphQLProfileIT extends BaseGraphQLIT {
         final Profile profile = new Profile("FindProfiles_ProfileId1");
         profile.setProperty("firstName", "FindProfiles_Username1");
         profileService.save(profile);
-        refreshPersistence();
+        refreshPersistence(Profile.class);
 
         try (CloseableHttpResponse response = post("graphql/profile/find-profiles.json")) {
             final ResponseContext context = ResponseContext.parse(response.getEntity());
@@ -89,7 +89,7 @@ public class GraphQLProfileIT extends BaseGraphQLIT {
         final Profile profile = new Profile("profileId_deleteAllPersonalDataTest");
         profile.setProperty("firstName", "FirstName");
         profileService.save(profile);
-        refreshPersistence();
+        refreshPersistence(Profile.class);
 
         try (CloseableHttpResponse response = post("graphql/profile/delete-all-personal-data.json")) {
             final ResponseContext context = ResponseContext.parse(response.getEntity());

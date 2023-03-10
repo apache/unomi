@@ -317,7 +317,7 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
     public void reloadPropertyTypes(boolean refresh) {
         try {
             if (refresh) {
-                persistenceService.refresh();
+                persistenceService.refreshIndex(PropertyType.class);
             }
             loadPropertyTypesFromPersistence();
         } catch (Throwable t) {

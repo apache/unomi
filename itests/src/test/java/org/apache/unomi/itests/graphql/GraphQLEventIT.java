@@ -60,7 +60,7 @@ public class GraphQLEventIT extends BaseGraphQLIT {
     @Test
     public void testGetEvent() throws Exception {
         final Event event = createEvent(eventID, profile);
-        refreshPersistence();
+        refreshPersistence(Event.class);
 
         try (CloseableHttpResponse response = post("graphql/event/get-event.json")) {
             final ResponseContext context = ResponseContext.parse(response.getEntity());
@@ -77,7 +77,7 @@ public class GraphQLEventIT extends BaseGraphQLIT {
         createEvent("event-2", profile);
         final Profile profile2 = new Profile("profile-2");
         createEvent("event-3", profile2);
-        refreshPersistence();
+        refreshPersistence(Event.class);
 
         try (CloseableHttpResponse response = post("graphql/event/find-events.json")) {
             final ResponseContext context = ResponseContext.parse(response.getEntity());

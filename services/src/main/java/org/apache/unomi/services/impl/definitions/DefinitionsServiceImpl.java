@@ -118,7 +118,8 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
     public void reloadTypes(boolean refresh) {
         try {
             if (refresh) {
-                persistenceService.refresh();
+                persistenceService.refreshIndex(ConditionType.class);
+                persistenceService.refreshIndex(ActionType.class);
             }
             loadConditionTypesFromPersistence();
             loadActionTypesFromPersistence();

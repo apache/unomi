@@ -49,7 +49,7 @@ public class GraphQLViewIT
         final Topic topic = createTopic();
         final Segment segment = createSegment();
 
-        persistenceService.refresh();
+        persistenceService.refreshIndex(Segment.class);
 
         // test
         try (CloseableHttpResponse response = post( "graphql/views/get-views.json" ))

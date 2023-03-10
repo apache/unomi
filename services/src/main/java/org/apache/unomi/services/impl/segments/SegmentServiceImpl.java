@@ -873,7 +873,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
         }
 
         if (forceRefresh && updatedProfileCount > 0) {
-            persistenceService.refreshIndex(Profile.class, null);
+            persistenceService.refreshIndex(Profile.class);
         }
 
         logger.info("{} profiles updated for past event condition in {}ms", updatedProfileCount, System.currentTimeMillis() - t);

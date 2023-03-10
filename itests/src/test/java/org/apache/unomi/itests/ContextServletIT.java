@@ -295,13 +295,11 @@ public class ContextServletIT extends BaseIT {
         request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
         String cookieHeaderValue = TestUtils.executeContextJSONRequest(request, sessionId).getCookieHeaderValue();
 
-        refreshPersistence();
+        refreshPersistence(Event.class);
 
         //Add the context-profile-id cookie to the second event
         request.addHeader("Cookie", cookieHeaderValue);
         ContextResponse response = (TestUtils.executeContextJSONRequest(request, sessionId)).getContextResponse(); //second event
-
-        refreshPersistence();
 
         //Assert
         assertEquals(1, response.getProfileSegments().size());

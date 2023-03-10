@@ -17,6 +17,7 @@
 package org.apache.unomi.itests.graphql;
 
 import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.unomi.api.Topic;
 import org.apache.unomi.api.services.TopicService;
 import org.junit.Assert;
 import org.junit.Test;
@@ -35,7 +36,7 @@ public class GraphQLTopicIT extends BaseGraphQLIT {
             Assert.assertEquals("testTopic", context.getValue("data.cdp.createOrUpdateTopic.id"));
         }
 
-        refreshPersistence();
+        refreshPersistence(Topic.class);
 
         try (CloseableHttpResponse response = post("graphql/topic/update-topic.json")) {
             final ResponseContext context = ResponseContext.parse(response.getEntity());
@@ -45,7 +46,7 @@ public class GraphQLTopicIT extends BaseGraphQLIT {
             Assert.assertEquals("testTopicView", context.getValue("data.cdp.createOrUpdateTopic.view.name"));
         }
 
-        refreshPersistence();
+        refreshPersistence(Topic.class);
 
         try (CloseableHttpResponse response = post("graphql/topic/get-topic.json")) {
             final ResponseContext context = ResponseContext.parse(response.getEntity());
@@ -68,7 +69,7 @@ public class GraphQLTopicIT extends BaseGraphQLIT {
             Assert.assertTrue(context.getValue("data.cdp.deleteTopic"));
         }
 
-        refreshPersistence();
+        refreshPersistence(Topic.class);
 
         try (CloseableHttpResponse response = post("graphql/topic/get-topic.json")) {
             final ResponseContext context = ResponseContext.parse(response.getEntity());
