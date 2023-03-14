@@ -18,33 +18,26 @@ package org.apache.unomi.itests;
 
 import org.apache.unomi.api.*;
 import org.apache.unomi.api.query.Query;
-import org.apache.unomi.api.services.DefinitionsService;
-import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.persistence.spi.PersistenceService;
-import org.apache.unomi.schema.api.JsonSchemaWrapper;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.ops4j.pax.exam.junit.PaxExam;
 import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
 import org.ops4j.pax.exam.spi.reactors.PerSuite;
-import org.ops4j.pax.exam.util.Filter;
 import org.osgi.service.cm.Configuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.inject.Inject;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.*;
 import java.util.stream.IntStream;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
 
 /**
  * An integration test for the profile service
@@ -86,6 +79,26 @@ public class ProfileServiceIT extends BaseIT {
         profileService.delete(TEST_PROFILE_ID, false);
 
         waitForNullValue("Profile still present after deletion", () -> profileService.load(TEST_PROFILE_ALIAS), DEFAULT_TRYING_TIMEOUT,
+                DEFAULT_TRYING_TRIES);
+
+        LOGGER.info("Profile deleted successfully.");
+    }
+
+    @Test
+    public void testProfileWithoutItemId() throws Exception {
+        Profile profile = new Profile();
+        profile.setProperty("name", "testProfileWithoutItemId");
+        profileService.saveOrMerge(profile);
+
+        Profile testProfile = keepTrying("Profile not found in the required time", () -> profileService.findProfilesByPropertyValue("properties.name", "testProfileWithoutItemId", 0, 10, null), Objects::nonNull,
+                DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES).get(0);
+        LOGGER.info("Ensure an itemId as been set...");
+        Assert.assertNotNull(testProfile.getItemId());
+
+        LOGGER.info("Delete profile...");
+        profileService.delete(testProfile.getItemId(), false);
+
+        waitForNullValue("Profile still present after deletion", () -> profileService.load(testProfile.getItemId()), DEFAULT_TRYING_TIMEOUT,
                 DEFAULT_TRYING_TRIES);
 
         LOGGER.info("Profile deleted successfully.");
