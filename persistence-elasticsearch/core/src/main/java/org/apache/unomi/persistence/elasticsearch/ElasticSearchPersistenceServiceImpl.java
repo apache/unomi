@@ -35,18 +35,9 @@ import org.apache.unomi.api.query.IpRange;
 import org.apache.unomi.api.query.NumericRange;
 import org.apache.unomi.metrics.MetricAdapter;
 import org.apache.unomi.metrics.MetricsService;
-import org.apache.unomi.persistence.elasticsearch.conditions.ConditionContextHelper;
-import org.apache.unomi.persistence.elasticsearch.conditions.ConditionESQueryBuilder;
-import org.apache.unomi.persistence.elasticsearch.conditions.ConditionESQueryBuilderDispatcher;
-import org.apache.unomi.persistence.elasticsearch.conditions.ConditionEvaluator;
-import org.apache.unomi.persistence.elasticsearch.conditions.ConditionEvaluatorDispatcher;
+import org.apache.unomi.persistence.elasticsearch.conditions.*;
 import org.apache.unomi.persistence.spi.PersistenceService;
-import org.apache.unomi.persistence.spi.aggregate.BaseAggregate;
-import org.apache.unomi.persistence.spi.aggregate.DateAggregate;
-import org.apache.unomi.persistence.spi.aggregate.DateRangeAggregate;
-import org.apache.unomi.persistence.spi.aggregate.IpRangeAggregate;
-import org.apache.unomi.persistence.spi.aggregate.NumericRangeAggregate;
-import org.apache.unomi.persistence.spi.aggregate.TermsAggregate;
+import org.apache.unomi.persistence.spi.aggregate.*;
 import org.elasticsearch.ElasticsearchStatusException;
 import org.elasticsearch.Version;
 import org.elasticsearch.action.DocWriteRequest;
@@ -58,11 +49,7 @@ import org.elasticsearch.action.admin.indices.alias.get.GetAliasesRequest;
 import org.elasticsearch.action.admin.indices.delete.DeleteIndexRequest;
 import org.elasticsearch.action.admin.indices.refresh.RefreshRequest;
 import org.elasticsearch.action.admin.indices.template.delete.DeleteIndexTemplateRequest;
-import org.elasticsearch.action.bulk.BackoffPolicy;
-import org.elasticsearch.action.bulk.BulkItemResponse;
-import org.elasticsearch.action.bulk.BulkProcessor;
-import org.elasticsearch.action.bulk.BulkRequest;
-import org.elasticsearch.action.bulk.BulkResponse;
+import org.elasticsearch.action.bulk.*;
 import org.elasticsearch.action.delete.DeleteRequest;
 import org.elasticsearch.action.get.GetRequest;
 import org.elasticsearch.action.get.GetResponse;
@@ -75,21 +62,13 @@ import org.elasticsearch.action.search.SearchScrollRequest;
 import org.elasticsearch.action.support.WriteRequest;
 import org.elasticsearch.action.support.master.AcknowledgedResponse;
 import org.elasticsearch.action.update.UpdateRequest;
-import org.elasticsearch.client.*;
 import org.elasticsearch.action.update.UpdateResponse;
+import org.elasticsearch.client.*;
 import org.elasticsearch.client.core.CountRequest;
 import org.elasticsearch.client.core.CountResponse;
 import org.elasticsearch.client.core.MainResponse;
 import org.elasticsearch.client.indexlifecycle.*;
-import org.elasticsearch.client.indices.CreateIndexRequest;
-import org.elasticsearch.client.indices.CreateIndexResponse;
-import org.elasticsearch.client.indices.GetIndexRequest;
-import org.elasticsearch.client.indices.GetIndexResponse;
-import org.elasticsearch.client.indices.GetMappingsRequest;
-import org.elasticsearch.client.indices.GetMappingsResponse;
-import org.elasticsearch.client.indices.IndexTemplatesExistRequest;
-import org.elasticsearch.client.indices.PutIndexTemplateRequest;
-import org.elasticsearch.client.indices.PutMappingRequest;
+import org.elasticsearch.client.indices.*;
 import org.elasticsearch.cluster.metadata.AliasMetaData;
 import org.elasticsearch.cluster.metadata.MappingMetaData;
 import org.elasticsearch.common.bytes.BytesReference;
@@ -109,11 +88,7 @@ import org.elasticsearch.script.ScriptException;
 import org.elasticsearch.script.ScriptType;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
-import org.elasticsearch.search.aggregations.Aggregation;
-import org.elasticsearch.search.aggregations.AggregationBuilder;
-import org.elasticsearch.search.aggregations.AggregationBuilders;
-import org.elasticsearch.search.aggregations.Aggregations;
-import org.elasticsearch.search.aggregations.HasAggregations;
+import org.elasticsearch.search.aggregations.*;
 import org.elasticsearch.search.aggregations.bucket.MultiBucketsAggregation;
 import org.elasticsearch.search.aggregations.bucket.SingleBucketAggregation;
 import org.elasticsearch.search.aggregations.bucket.filter.Filter;
@@ -132,11 +107,7 @@ import org.elasticsearch.search.builder.SearchSourceBuilder;
 import org.elasticsearch.search.sort.GeoDistanceSortBuilder;
 import org.elasticsearch.search.sort.SortBuilders;
 import org.elasticsearch.search.sort.SortOrder;
-import org.osgi.framework.Bundle;
-import org.osgi.framework.BundleContext;
-import org.osgi.framework.BundleEvent;
-import org.osgi.framework.ServiceReference;
-import org.osgi.framework.SynchronousBundleListener;
+import org.osgi.framework.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -851,7 +822,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         if (response.isExists()) {
                             String sourceAsString = response.getSourceAsString();
                             final T value = ESCustomObjectMapper.getObjectMapper().readValue(sourceAsString, clazz);
-                            setMetadata(value, response.getVersion(), response.getSeqNo(), response.getPrimaryTerm(), response.getIndex());
+                            setMetadata(value, response.getId(), response.getVersion(), response.getSeqNo(), response.getPrimaryTerm(), response.getIndex());
                             return value;
                         } else {
                             return null;
@@ -873,8 +844,11 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         }.catchingExecuteInClassLoader(true);
 
     }
-
-    private void setMetadata(Item item, long version, long seqNo, long primaryTerm, String index) {
+    
+    private void setMetadata(Item item, String itemId, long version, long seqNo, long primaryTerm, String index) {
+        if (!systemItems.contains(item.getItemType()) && item.getItemId() == null) {
+            item.setItemId(itemId);
+        }
         item.setVersion(version);
         item.setSystemMetadata(SEQ_NO, seqNo);
         item.setSystemMetadata(PRIMARY_TERM, primaryTerm);
@@ -937,7 +911,8 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                             indexRequest.setRefreshPolicy(getRefreshPolicy(itemType));
                             IndexResponse response = client.index(indexRequest, RequestOptions.DEFAULT);
                             String responseIndex = response.getIndex();
-                            setMetadata(item, response.getVersion(), response.getSeqNo(), response.getPrimaryTerm(), responseIndex);
+                            String itemId = response.getId();
+                            setMetadata(item, itemId, response.getVersion(), response.getSeqNo(), response.getPrimaryTerm(), responseIndex);
 
                             // Special handling for session, in case of new session we check that a rollover happen or not to update the latest available index
                             if (Session.ITEM_TYPE.equals(itemType) &&
@@ -1001,7 +976,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
                     if (bulkProcessor == null || !useBatchingForUpdate) {
                         UpdateResponse response = client.update(updateRequest, RequestOptions.DEFAULT);
-                        setMetadata(item, response.getVersion(), response.getSeqNo(), response.getPrimaryTerm(), response.getIndex());
+                        setMetadata(item, response.getId(), response.getVersion(), response.getSeqNo(), response.getPrimaryTerm(), response.getIndex());
                     } else {
                         bulkProcessor.add(updateRequest);
                     }
@@ -1218,7 +1193,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     updateRequest.script(actualScript);
                     if (bulkProcessor == null) {
                         UpdateResponse response = client.update(updateRequest, RequestOptions.DEFAULT);
-                        setMetadata(item, response.getVersion(), response.getSeqNo(), response.getPrimaryTerm(), response.getIndex());
+                        setMetadata(item, response.getId(), response.getVersion(), response.getSeqNo(), response.getPrimaryTerm(), response.getIndex());
                     } else {
                         bulkProcessor.add(updateRequest);
                     }
@@ -2009,7 +1984,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                                 // add hit to results
                                 String sourceAsString = searchHit.getSourceAsString();
                                 final T value = ESCustomObjectMapper.getObjectMapper().readValue(sourceAsString, clazz);
-                                setMetadata(value, searchHit.getVersion(), searchHit.getSeqNo(), searchHit.getPrimaryTerm(), searchHit.getIndex());
+                                setMetadata(value, searchHit.getId(), searchHit.getVersion(), searchHit.getSeqNo(), searchHit.getPrimaryTerm(), searchHit.getIndex());
                                 results.add(value);
                             }
 
@@ -2039,7 +2014,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         for (SearchHit searchHit : searchHits) {
                             String sourceAsString = searchHit.getSourceAsString();
                             final T value = ESCustomObjectMapper.getObjectMapper().readValue(sourceAsString, clazz);
-                            setMetadata(value, searchHit.getVersion(), searchHit.getSeqNo(), searchHit.getPrimaryTerm(), searchHit.getIndex());
+                            setMetadata(value, searchHit.getId(), searchHit.getVersion(), searchHit.getSeqNo(), searchHit.getPrimaryTerm(), searchHit.getIndex());
                             results.add(value);
                         }
                     }
@@ -2085,7 +2060,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                             // add hit to results
                             String sourceAsString = searchHit.getSourceAsString();
                             final T value = ESCustomObjectMapper.getObjectMapper().readValue(sourceAsString, clazz);
-                            setMetadata(value, searchHit.getVersion(), searchHit.getSeqNo(), searchHit.getPrimaryTerm(), searchHit.getIndex());
+                            setMetadata(value, searchHit.getId(), searchHit.getVersion(), searchHit.getSeqNo(), searchHit.getPrimaryTerm(), searchHit.getIndex());
                             results.add(value);
                         }
                     }
@@ -2126,7 +2101,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                             // add hit to results
                             String sourceAsString = searchHit.getSourceAsString();
                             final CustomItem value = ESCustomObjectMapper.getObjectMapper().readValue(sourceAsString, CustomItem.class);
-                            setMetadata(value, searchHit.getVersion(), searchHit.getSeqNo(), searchHit.getPrimaryTerm(), searchHit.getIndex());
+                            setMetadata(value, searchHit.getId(), searchHit.getVersion(), searchHit.getSeqNo(), searchHit.getPrimaryTerm(), searchHit.getIndex());
                             results.add(value);
                         }
                     }
