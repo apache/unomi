@@ -1,3 +1,4 @@
+import org.apache.unomi.shell.migration.MigrationException
 import org.apache.unomi.shell.migration.service.MigrationContext
 import org.apache.unomi.shell.migration.utils.HttpUtils
 import org.apache.unomi.shell.migration.utils.MigrationUtils
@@ -27,6 +28,19 @@ String rolloverPolicyName = indexPrefix + "-unomi-rollover-policy"
 String rolloverEventAlias = indexPrefix + "-event"
 String newSessionIndex = indexPrefix + "-session-000001"
 String rolloverSessionAlias = indexPrefix + "-session"
+
+def mewIndicesAndAliases = ["session-000001":"Index", "event-000001":"Index", "session":"Alias", "event":"Alias"]
+
+// Check env is ready for migration
+context.performMigrationStep("2.2.0-check-env-ready-for-migrate-event-session", () -> {
+    def currentIndex
+    if (mewIndicesAndAliases.any{index -> {
+        currentIndex = index
+        return MigrationUtils.indexExists(context.getHttpClient(), esAddress, "${indexPrefix}-${currentIndex.key}")
+    }}) {
+        throw new MigrationException("${currentIndex.value} ${indexPrefix}-${currentIndex.key} must be removed before perfoming migration")
+    }
+})
 
 context.performMigrationStep("2.2.0-update-lifecyle-poll-interval", () -> {
     String updatePollIntervalBody = MigrationUtils.resourceAsString(bundleContext, "requestBody/2.2.0/update_settings_poll_interval.json")

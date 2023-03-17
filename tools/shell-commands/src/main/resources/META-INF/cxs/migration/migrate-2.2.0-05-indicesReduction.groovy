@@ -46,11 +46,12 @@ def indicesToReduce = [
         persona: [reduceTo: "profile", renameId: false]
 ]
 
-def mewIndicesAndAliases = ["systemitems":"Index", "session-000001":"Index", "event-000001":"Index", "session":"Alias", "event":"Alias"]
+
+def mewIndicesAndAliases = ["systemitems":"Index"]
 
 // Check env is ready for migration
-context.performMigrationStep("2.2.0-check-env-status", () -> {
-    def currentIndex = new MapEntry();
+context.performMigrationStep("2.2.0-check-env-ready-for-migrate-systemitems", () -> {
+    def currentIndex
     if (mewIndicesAndAliases.any{index -> {
         currentIndex = index
         return MigrationUtils.indexExists(context.getHttpClient(), esAddress, "${indexPrefix}-${currentIndex.key}")
