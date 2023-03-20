@@ -42,7 +42,6 @@ def indicesToReduce = [
         exportconfig: [reduceTo: "systemitems", renameId: true],
         rulestats: [reduceTo: "systemitems", renameId: true],
         groovyaction: [reduceTo: "systemitems", renameId: true],
-
         persona: [reduceTo: "profile", renameId: false]
 ]
 

@@ -199,6 +199,19 @@ public class MigrationContext {
     }
 
     /**
+     * Same as above without stacktrace
+     * @param msg the message to print out with a newline
+     */
+    public void printException(String msg) {
+        if (session == null) {
+            logger.error(msg);
+        } else {
+            PrintStream writer = session.getConsole();
+            writer.println(msg);
+        }
+    }
+
+    /**
      * Get config for property name, in case the property doesn't exist on file system config file
      * Best effort will be made to prompt question in karaf shell to get the needed information
      *

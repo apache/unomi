@@ -26,6 +26,7 @@ import org.apache.http.client.CredentialsProvider;
 import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.karaf.shell.api.console.Session;
+import org.apache.unomi.shell.migration.MigrationException;
 import org.apache.unomi.shell.migration.MigrationService;
 import org.apache.unomi.shell.migration.utils.HttpUtils;
 import org.osgi.framework.Bundle;
@@ -128,6 +129,9 @@ public class MigrationServiceImpl implements MigrationService {
                 context.printMessage("Starting execution of: " + migrateScript);
                 try {
                     migrateScript.getCompiledScript().run();
+                } catch (MigrationException e) {
+                    context.printException("Error executing: " + migrateScript);
+                    throw e;
                 } catch (Exception e) {
                     context.printException("Error executing: " + migrateScript, e);
                     throw e;
