@@ -19,6 +19,8 @@ package org.apache.unomi.persistence.elasticsearch;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpHost;
 import org.apache.http.auth.AuthScope;
@@ -116,8 +118,10 @@ import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
@@ -460,11 +464,13 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 registerRolloverLifecyclePolicy();
 
                 loadPredefinedMappings(bundleContext, false);
+                loadPainlessScripts(bundleContext);
 
                 // load predefined mappings and condition dispatchers of any bundles that were started before this one.
                 for (Bundle existingBundle : bundleContext.getBundles()) {
                     if (existingBundle.getBundleContext() != null) {
                         loadPredefinedMappings(existingBundle.getBundleContext(), false);
+                        loadPainlessScripts(existingBundle.getBundleContext());
                     }
                 }
 
@@ -690,6 +696,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         switch (event.getType()) {
             case BundleEvent.STARTING:
                 loadPredefinedMappings(event.getBundle().getBundleContext(), true);
+                loadPainlessScripts(event.getBundle().getBundleContext());
                 break;
         }
     }
@@ -720,6 +727,29 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 logger.error("Error while loading mapping definition " + predefinedMappingURL, e);
             }
         }
+    }
+
+    private void loadPainlessScripts(BundleContext bundleContext) {
+        Enumeration<URL> scriptsURL = bundleContext.getBundle().findEntries("META-INF/cxs/painless", "*.painless", true);
+        if (scriptsURL == null) {
+            return;
+        }
+
+        Map<String, String> scriptsById = new HashMap<>();
+        while (scriptsURL.hasMoreElements()) {
+            URL scriptURL = scriptsURL.nextElement();
+            logger.info("Found painless script at " + scriptURL + ", loading... ");
+            try (InputStream in = scriptURL.openStream()) {
+                String script = IOUtils.toString(in, StandardCharsets.UTF_8);
+                String scriptId = FilenameUtils.getBaseName(scriptURL.getPath());
+                scriptsById.put(scriptId, script);
+            } catch (Exception e) {
+                logger.error("Error while loading painless script " + scriptURL, e);
+            }
+
+        }
+
+        storeScripts(scriptsById);
     }
 
     private String loadMappingFile(URL predefinedMappingURL) throws IOException {

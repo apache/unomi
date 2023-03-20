@@ -287,12 +287,11 @@ public class ProfileMergeIT extends BaseIT {
                 () -> persistenceService.queryCount(sessionProfileIDRewrittenCondition, Session.ITEM_TYPE),
                 (count) -> count == 5, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
 
-        // TODO uncomment this when UNOMI-749 is fixed, currently session loaded are inconsistent
-        /* for (Session session : sessionsToBeRewritten) {
+        for (Session session : sessionsToBeRewritten) {
             keepTrying("Wait for session: " + session.getItemId() + " profileId to be rewritten for masterProfileID",
                     () -> persistenceService.load(session.getItemId(), Session.class),
                     (loadedSession) -> loadedSession.getProfileId().equals("masterProfileID"), DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
-        } */
+        }
     }
 
     /**
