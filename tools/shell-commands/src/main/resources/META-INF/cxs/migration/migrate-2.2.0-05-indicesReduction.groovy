@@ -1,4 +1,3 @@
-import org.apache.unomi.shell.migration.MigrationException
 import org.apache.unomi.shell.migration.service.MigrationContext
 import org.apache.unomi.shell.migration.utils.HttpUtils
 import org.apache.unomi.shell.migration.utils.MigrationUtils
@@ -45,20 +44,6 @@ def indicesToReduce = [
         groovyaction: [reduceTo: "systemitems", renameId: true],
         persona: [reduceTo: "profile", renameId: false]
 ]
-
-
-def mewIndicesAndAliases = ["systemitems":"Index"]
-
-// Check env is ready for migration
-context.performMigrationStep("2.2.0-check-env-ready-for-migrate-systemitems", () -> {
-    def currentIndex
-    if (mewIndicesAndAliases.any{index -> {
-        currentIndex = index
-        return MigrationUtils.indexExists(context.getHttpClient(), esAddress, "${indexPrefix}-${currentIndex.key}")
-    }}) {
-        throw new MigrationException("${currentIndex.value} ${indexPrefix}-${currentIndex.key} must be removed before perfoming migration")
-    }
-})
 
 context.performMigrationStep("2.2.0-create-systemItems-index", () -> {
     if (!MigrationUtils.indexExists(context.getHttpClient(), esAddress, "${indexPrefix}-systemitems")) {
