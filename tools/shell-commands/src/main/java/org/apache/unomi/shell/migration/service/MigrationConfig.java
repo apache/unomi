@@ -67,8 +67,8 @@ public class MigrationConfig {
         m.put(MONTHLY_TOTAL_FIELDS_LIMIT, new MigrationConfigProperty("Enter ElasticSearch monthly index (event, session) mapping configuration: mapping.total_fields.limit (default: 1000): ", "1000"));
         m.put(MONTHLY_MAX_DOC_VALUE_FIELDS_SEARCH, new MigrationConfigProperty("Enter ElasticSearch monthly index (event, session) mapping configuration: max_docvalue_fields_search (default: 1000): ", "1000"));
         m.put(MIGRATION_HISTORY_RECOVER, new MigrationConfigProperty("We found an existing migration attempt, should we restart from it ? (this will avoid redoing steps already completed successfully) (yes/no)", null));
-        m.put(ROLLOVER_MAX_AGE, new MigrationConfigProperty("Enter ElasticSearch index rollover configuration: max_age (default: 365d): ", "365d"));
-        m.put(ROLLOVER_MAX_SIZE, new MigrationConfigProperty("Enter ElasticSearch index rollover configuration: max_size (default: null): ", null));
+        m.put(ROLLOVER_MAX_AGE, new MigrationConfigProperty("Enter ElasticSearch index rollover configuration: max_age (default: null): ", null));
+        m.put(ROLLOVER_MAX_SIZE, new MigrationConfigProperty("Enter ElasticSearch index rollover configuration: max_size (default: 30gb): ", "30gb"));
         m.put(ROLLOVER_MAX_DOCS, new MigrationConfigProperty("Enter ElasticSearch index rollover configuration: max_docs (default: null): ", null));
 
         configProperties = Collections.unmodifiableMap(m);
