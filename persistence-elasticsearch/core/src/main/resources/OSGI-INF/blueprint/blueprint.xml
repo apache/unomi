@@ -51,8 +51,8 @@
             <cm:property name="bulkProcessor.backoffPolicy" value="exponential" />
 
             <cm:property name="rollover.indices" value="" />
-            <cm:property name="rollover.maxSize" value="" />
-            <cm:property name="rollover.maxAge" value="365d" />
+            <cm:property name="rollover.maxSize" value="30gb" />
+            <cm:property name="rollover.maxAge" value="" />
             <cm:property name="rollover.maxDocs" value="" />
             <cm:property name="rollover.numberOfShards" value=""/>
             <cm:property name="rollover.numberOfReplicas" value=""/>
