@@ -21,7 +21,7 @@ import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
 import org.apache.unomi.rest.exception.InvalidRequestException;
 import org.apache.unomi.schema.api.JsonSchemaWrapper;
 import org.apache.unomi.schema.api.SchemaService;
-import org.apache.unomi.schema.api.ValidationMessageWrapper;
+import org.apache.unomi.schema.api.ValidationError;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 import org.slf4j.Logger;
@@ -126,7 +126,7 @@ public class JsonSchemaEndPoint {
     @Produces(MediaType.APPLICATION_JSON + ";charset=UTF-8")
     @Consumes({ MediaType.TEXT_PLAIN, MediaType.APPLICATION_JSON })
     @Path("/validateEvent")
-    public Collection<ValidationMessageWrapper> validateEvent(String event) {
+    public Collection<ValidationError> validateEvent(String event) {
         try {
             return schemaService.validateEvent(event);
         } catch (Exception e) {

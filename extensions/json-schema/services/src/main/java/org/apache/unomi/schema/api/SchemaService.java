@@ -61,7 +61,7 @@ public interface SchemaService {
      * @return true is the event is valid
      * @throws ValidationException in case something goes wrong and validation could not be performed.
      */
-    Set<ValidationMessageWrapper> validateEvent(String event) throws ValidationException;
+    Set<ValidationError> validateEvent(String event) throws ValidationException;
 
     /**
      * Get the list of installed Json Schema Ids

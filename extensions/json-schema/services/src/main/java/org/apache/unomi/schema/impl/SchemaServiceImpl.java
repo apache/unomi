@@ -32,7 +32,7 @@ import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.schema.api.JsonSchemaWrapper;
 import org.apache.unomi.schema.api.SchemaService;
 import org.apache.unomi.schema.api.ValidationException;
-import org.apache.unomi.schema.api.ValidationMessageWrapper;
+import org.apache.unomi.schema.api.ValidationError;
 import org.apache.unomi.schema.keyword.ScopeKeyword;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -110,7 +110,7 @@ public class SchemaServiceImpl implements SchemaService {
     }
 
     @Override
-    public Set<ValidationMessageWrapper> validateEvent(String event) throws ValidationException {
+    public Set<ValidationError> validateEvent(String event) throws ValidationException {
         JsonNode jsonEvent = parseData(event);
         String eventType = extractEventType(jsonEvent);
         JsonSchemaWrapper eventSchema = getSchemaForEventType(eventType);
@@ -186,7 +186,7 @@ public class SchemaServiceImpl implements SchemaService {
         return predefinedUnomiJSONSchemaById.remove(schemaId) != null;
     }
 
-    private Set<ValidationMessageWrapper> validate(JsonNode jsonNode, JsonSchema jsonSchema) throws ValidationException {
+    private Set<ValidationError> validate(JsonNode jsonNode, JsonSchema jsonSchema) throws ValidationException {
         try {
             Set<ValidationMessage> validationMessages = jsonSchema.validate(jsonNode);
 
@@ -199,7 +199,7 @@ public class SchemaServiceImpl implements SchemaService {
 
             return validationMessages != null ?
                     validationMessages.stream()
-                            .map(ValidationMessageWrapper::new)
+                            .map(ValidationError::new)
                             .collect(Collectors.toSet()) :
                     Collections.emptySet();
         } catch (Exception e) {

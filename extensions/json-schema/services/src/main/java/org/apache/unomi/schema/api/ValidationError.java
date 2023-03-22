@@ -23,13 +23,13 @@ import java.io.Serializable;
 
 /**
  * Just a bean wrapping JSON Schema validation messages to avoid exposing the lib classes to other OSGI bundles.
- * (It allows keeping control on the underlying validation system)
+ * (It allows keeping control on the underlying validation system, but also on share valuable error info)
  */
-public class ValidationMessageWrapper implements Serializable {
+public class ValidationError implements Serializable {
 
     private transient final ValidationMessage validationMessage;
 
-    public ValidationMessageWrapper(ValidationMessage validationMessage) {
+    public ValidationError(ValidationMessage validationMessage) {
         this.validationMessage = validationMessage;
     }
 
