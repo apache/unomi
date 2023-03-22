@@ -544,7 +544,7 @@ public class SegmentIT extends BaseIT {
         scoringElements.add(scoringElement);
         scoring.setElements(scoringElements);
         segmentService.setScoringDefinition(scoring);
-        refreshPersistence(Scoring.class);
+        refreshPersistence(Scoring.class, Profile.class);
 
         // Send 2 events that match the scoring plan.
         profile = profileService.load("test_profile_id");

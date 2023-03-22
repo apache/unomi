@@ -162,7 +162,7 @@ public class GroovyActionsServiceIT extends BaseIT {
         Assert.assertNotNull(groovyCodeSource);
 
         groovyActionsService.remove(UPDATE_ADDRESS_ACTION);
-        refreshPersistence(GroovyAction.class);
+        refreshPersistence(GroovyAction.class, ActionType.class);
 
         Thread.sleep(2000);
         groovyCodeSource = groovyActionsService.getGroovyCodeSource(UPDATE_ADDRESS_ACTION);
