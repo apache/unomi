@@ -21,6 +21,7 @@ import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
 import org.apache.unomi.rest.exception.InvalidRequestException;
 import org.apache.unomi.schema.api.JsonSchemaWrapper;
 import org.apache.unomi.schema.api.SchemaService;
+import org.apache.unomi.schema.api.ValidationMessageWrapper;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 import org.slf4j.Logger;
@@ -35,6 +36,7 @@ import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import java.util.Collection;
 import java.util.Set;
 
 @WebService
@@ -113,5 +115,23 @@ public class JsonSchemaEndPoint {
     @Path("/delete")
     public boolean remove(String id) {
         return schemaService.deleteSchema(id);
+    }
+
+    /**
+     * Being able to validate a given event is useful when you want to develop custom events and associated schemas
+     * @param event the event to be validated
+     * @return Validation error messages if there is some
+     */
+    @POST
+    @Produces(MediaType.APPLICATION_JSON + ";charset=UTF-8")
+    @Consumes({ MediaType.TEXT_PLAIN, MediaType.APPLICATION_JSON })
+    @Path("/validateEvent")
+    public Collection<ValidationMessageWrapper> validateEvent(String event) {
+        try {
+            return schemaService.validateEvent(event);
+        } catch (Exception e) {
+            String errorMessage = "Unable to validate event: " + e.getMessage();
+            throw new InvalidRequestException(errorMessage, errorMessage);
+        }
     }
 }

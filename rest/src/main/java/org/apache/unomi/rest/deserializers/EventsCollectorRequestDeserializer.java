@@ -63,7 +63,7 @@ public class EventsCollectorRequestDeserializer extends StdDeserializer<EventsCo
         final JsonNode eventsNode = node.get("events");
         if (eventsNode instanceof ArrayNode) {
             for (JsonNode event : eventsNode) {
-                if (schemaService.isEventValid(event.toString(), event.get("eventType").textValue())) {
+                if (schemaService.isEventValid(event.toString())) {
                     filteredEvents.add(jsonParser.getCodec().treeToValue(event, Event.class));
                 } else {
                     logger.error("An event was rejected - switch to DEBUG log level for more information");

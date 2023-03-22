@@ -29,21 +29,39 @@ public interface SchemaService {
 
     /**
      * Verify if a jsonNode is valid against a schema
+     * (This method is fail safe, if unexpected errors happens it will returns false)
      *
      * @param data   to validate
      * @param schemaId id of the schema used for the validation
-     * @return true is the object is valid
+     * @return true is the object is valid, false otherwise, false also in case of unexpected errors !
      */
     boolean isValid(String data, String schemaId);
 
     /**
-     * Verify if the event is valid
-     *
-     * @param event   to validate
-     * @param eventType The type of the event
-     * @return true is the event is valid
+     * Deprecate (since 2.2.0).
+     * the eventType is now directly extracted from the event source
+     * You can directly use sibling function: isEventValid(String event)
      */
+    @Deprecated
     boolean isEventValid(String event, String eventType);
+
+    /**
+     * Verify if the event is valid
+     * (This method is fail safe, if unexpected errors happens it will returns false)
+     *
+     * @param event the event to check validity
+     * @return true is the event is valid, false otherwise, false also in case of unexpected errors !
+     */
+    boolean isEventValid(String event);
+
+    /**
+     * perform a validation on the given event
+     *
+     * @param event the event to validate
+     * @return true is the event is valid
+     * @throws ValidationException in case something goes wrong and validation could not be performed.
+     */
+    Set<ValidationMessageWrapper> validateEvent(String event) throws ValidationException;
 
     /**
      * Get the list of installed Json Schema Ids
@@ -74,7 +92,7 @@ public interface SchemaService {
      * @param eventType the eventType
      * @return The JSON Schema able to validate the given event type or null if not found.
      */
-    JsonSchemaWrapper getSchemaForEventType(String eventType);
+    JsonSchemaWrapper getSchemaForEventType(String eventType) throws ValidationException;
 
     /**
      * Save a new schema or update a schema
