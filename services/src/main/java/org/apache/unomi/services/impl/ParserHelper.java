@@ -190,7 +190,7 @@ public class ParserHelper {
                         eventTypeIds.add(eventTypeId);
                     }
                 }
-            } else if (condition.getConditionType().getParentCondition() != null) {
+            } else if (condition.getConditionType() != null && condition.getConditionType().getParentCondition() != null) {
                 visitConditions(condition.getConditionType().getParentCondition(), this);
             }
         }
