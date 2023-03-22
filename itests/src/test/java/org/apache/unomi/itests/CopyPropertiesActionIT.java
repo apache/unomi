@@ -126,7 +126,7 @@ public class CopyPropertiesActionIT extends BaseIT {
         profileService.setPropertyType(propertyType2);
     }
 
-    private void initializePropertyTypeWithMapping() {
+    private void initializePropertyTypeWithMapping() throws InterruptedException {
         Metadata metadata = new Metadata();
         metadata.setId(MAPPED_PROPERTY);
         metadata.setName("single parameter");
@@ -140,9 +140,10 @@ public class CopyPropertiesActionIT extends BaseIT {
 
         propertyType1.setAutomaticMappingsFrom(new HashSet<>(Arrays.asList(PROPERTY_TO_MAP)));
         profileService.setPropertyType(propertyType1);
+        refreshPersistence(PropertyType.class);
     }
 
-    private void initializePropertyTypeWithDifferentSystemTag() {
+    private void initializePropertyTypeWithDifferentSystemTag() throws InterruptedException {
         Metadata metadata = new Metadata();
         metadata.setSystemTags(new HashSet<>(Arrays.asList("shouldBeAbsent")));
         metadata.setId(ARRAY_PARAM_NAME);
@@ -156,6 +157,7 @@ public class CopyPropertiesActionIT extends BaseIT {
         propertyType1.setMultivalued(true);
 
         profileService.setPropertyType(propertyType1);
+        refreshPersistence(PropertyType.class);
     }
 
     private void createRule(String filename) throws IOException, InterruptedException {
@@ -296,6 +298,6 @@ public class CopyPropertiesActionIT extends BaseIT {
 
         Event event = sendCopyPropertyEvent(properties, EMPTY_PROFILE);
 
-        Assert.assertTrue(event.getProfile().getProperty(ARRAY_PARAM_NAME) == null);
+        Assert.assertNull(event.getProfile().getProperty(ARRAY_PARAM_NAME));
     }
 }
