@@ -90,7 +90,7 @@ public class ContextRequestDeserializer extends StdDeserializer<ContextRequest> 
             ArrayNode events = (ArrayNode) eventsNode;
             List<Event> filteredEvents = new ArrayList<>();
             for (JsonNode event : events) {
-                if (schemaService.isEventValid(event.toString(), event.get("eventType").textValue())) {
+                if (schemaService.isEventValid(event.toString())) {
                     filteredEvents.add(jsonParser.getCodec().treeToValue(event, Event.class));
                 } else {
                     logger.error("An event was rejected - switch to DEBUG log level for more information");

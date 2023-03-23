@@ -85,35 +85,30 @@ public class JSONSchemaIT extends BaseIT {
     @Test
     public void testValidation_SaveDeleteSchemas() throws InterruptedException, IOException {
         // check that event is not valid at first
-        assertFalse(schemaService
-                .isEventValid(resourceAsString("schemas/event-dummy-valid.json"), "dummy"));
+        assertFalse(schemaService.isEventValid(resourceAsString("schemas/event-dummy-valid.json")));
 
         // Push schemas
         schemaService.saveSchema(resourceAsString("schemas/schema-dummy.json"));
         schemaService.saveSchema(resourceAsString("schemas/schema-dummy-properties.json"));
         keepTrying("Event should be valid", () -> schemaService
-                        .isEventValid(resourceAsString("schemas/event-dummy-valid.json"), "dummy"),
+                        .isEventValid(resourceAsString("schemas/event-dummy-valid.json")),
                 isValid -> isValid, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
 
         // Test multiple invalid event:
         // unevaluated property at root:
-        assertFalse(schemaService.isEventValid(resourceAsString("schemas/event-dummy-invalid-1.json"),
-                "dummy"));
+        assertFalse(schemaService.isEventValid(resourceAsString("schemas/event-dummy-invalid-1.json")));
         // unevaluated property in properties:
-        assertFalse(schemaService.isEventValid(resourceAsString("schemas/event-dummy-invalid-2.json"),
-                "dummy"));
+        assertFalse(schemaService.isEventValid(resourceAsString("schemas/event-dummy-invalid-2.json")));
         // bad type number but should be string:
-        assertFalse(schemaService.isEventValid(resourceAsString("schemas/event-dummy-invalid-3.json"),
-                "dummy"));
+        assertFalse(schemaService.isEventValid(resourceAsString("schemas/event-dummy-invalid-3.json")));
 
         // Event with unexisting scope:
-        assertFalse(schemaService.isEventValid(resourceAsString("schemas/event-dummy-invalid-4.json"),
-                "dummy"));
+        assertFalse(schemaService.isEventValid(resourceAsString("schemas/event-dummy-invalid-4.json")));
 
         // remove one of the schema:
         assertTrue(schemaService.deleteSchema("https://vendor.test.com/schemas/json/events/dummy/properties/1-0-0"));
         keepTrying("Event should be invalid since of the schema have been deleted", () -> schemaService
-                        .isEventValid(resourceAsString("schemas/event-dummy-valid.json"), "dummy"),
+                        .isEventValid(resourceAsString("schemas/event-dummy-valid.json")),
                 isValid -> !isValid, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
     }
 
@@ -121,24 +116,22 @@ public class JSONSchemaIT extends BaseIT {
     public void testValidation_UpdateSchema() throws InterruptedException, IOException {
         // check that event is not valid at first
         assertFalse(schemaService
-                .isEventValid(resourceAsString("schemas/event-dummy-valid.json"), "dummy"));
+                .isEventValid(resourceAsString("schemas/event-dummy-valid.json")));
 
         // Push schemas
         schemaService.saveSchema(resourceAsString("schemas/schema-dummy.json"));
         schemaService.saveSchema(resourceAsString("schemas/schema-dummy-properties.json"));
         keepTrying("Event should be valid", () -> schemaService
-                        .isEventValid(resourceAsString("schemas/event-dummy-valid.json"), "dummy"),
+                        .isEventValid(resourceAsString("schemas/event-dummy-valid.json")),
                 isValid -> isValid, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
 
         // Test the invalid event, that use the new prop "invalidPropName" in properties:
-        assertFalse(schemaService.isEventValid(resourceAsString("schemas/event-dummy-invalid-2.json"),
-                "dummy"));
+        assertFalse(schemaService.isEventValid(resourceAsString("schemas/event-dummy-invalid-2.json")));
 
         // update the schema to allow "invalidPropName":
         schemaService.saveSchema(resourceAsString("schemas/schema-dummy-properties-updated.json"));
         keepTrying("Event should be valid since of the schema have been updated", () -> schemaService
-                        .isEventValid(resourceAsString("schemas/event-dummy-invalid-2.json"),
-                                "dummy"), isValid -> isValid, DEFAULT_TRYING_TIMEOUT,
+                        .isEventValid(resourceAsString("schemas/event-dummy-invalid-2.json")), isValid -> isValid, DEFAULT_TRYING_TIMEOUT,
                 DEFAULT_TRYING_TRIES);
     }
 
@@ -148,24 +141,23 @@ public class JSONSchemaIT extends BaseIT {
         schemaService.saveSchema(resourceAsString("schemas/schema-dummy.json"));
         schemaService.saveSchema(resourceAsString("schemas/schema-dummy-properties.json"));
         keepTrying("Event should be valid", () -> schemaService
-                        .isEventValid(resourceAsString("schemas/event-dummy-valid.json"), "dummy"),
+                        .isEventValid(resourceAsString("schemas/event-dummy-valid.json")),
                 isValid -> isValid, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
 
         // check that extended event is not valid at first
-        assertFalse(schemaService.isEventValid(resourceAsString("schemas/event-dummy-extended.json"),
-                "dummy"));
+        assertFalse(schemaService.isEventValid(resourceAsString("schemas/event-dummy-extended.json")));
 
         // register both extensions (for root event and the properties level)
         schemaService.saveSchema(resourceAsString("schemas/schema-dummy-extension.json"));
         schemaService.saveSchema(resourceAsString("schemas/schema-dummy-properties-extension.json"));
         keepTrying("Extended event should be valid since of the extensions have been deployed", () -> schemaService
-                        .isEventValid(resourceAsString("schemas/event-dummy-extended.json"), "dummy"),
+                        .isEventValid(resourceAsString("schemas/event-dummy-extended.json")),
                 isValid -> isValid, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
 
         // delete one of the extension
         schemaService.deleteSchema("https://vendor.test.com/schemas/json/events/dummy/properties/extension/1-0-0");
         keepTrying("Extended event should be invalid again, one necessary extension have been removed", () -> schemaService
-                        .isEventValid(resourceAsString("schemas/event-dummy-extended.json"), "dummy"),
+                        .isEventValid(resourceAsString("schemas/event-dummy-extended.json")),
                 isValid -> !isValid, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
     }
 
@@ -175,29 +167,26 @@ public class JSONSchemaIT extends BaseIT {
         schemaService.saveSchema(resourceAsString("schemas/schema-dummy.json"));
         schemaService.saveSchema(resourceAsString("schemas/schema-dummy-properties.json"));
         keepTrying("Event should be valid", () -> schemaService
-                        .isEventValid(resourceAsString("schemas/event-dummy-valid.json"), "dummy"),
+                        .isEventValid(resourceAsString("schemas/event-dummy-valid.json")),
                 isValid -> isValid, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
 
         // check that extended event is not valid at first
-        assertFalse(schemaService.isEventValid(resourceAsString("schemas/event-dummy-extended.json"),
-                "dummy"));
+        assertFalse(schemaService.isEventValid(resourceAsString("schemas/event-dummy-extended.json")));
 
         // register both extensions (for root event and the properties level)
         schemaService.saveSchema(resourceAsString("schemas/schema-dummy-extension.json"));
         schemaService.saveSchema(resourceAsString("schemas/schema-dummy-properties-extension.json"));
         keepTrying("Extended event should be valid since of the extensions have been deployed", () -> schemaService
-                        .isEventValid(resourceAsString("schemas/event-dummy-extended.json"), "dummy"),
+                        .isEventValid(resourceAsString("schemas/event-dummy-extended.json")),
                 isValid -> isValid, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
 
         // check that extended event 2 is not valid due to usage of unevaluatedProperty not bring by schemas or extensions
-        assertFalse(schemaService.isEventValid(resourceAsString("schemas/event-dummy-extended-2.json"),
-                "dummy"));
+        assertFalse(schemaService.isEventValid(resourceAsString("schemas/event-dummy-extended-2.json")));
 
         // Update extensions to allow the extended event 2
         schemaService.saveSchema(resourceAsString("schemas/schema-dummy-properties-extension-2.json"));
         keepTrying("Extended event 2 should be valid since of the extensions have been updated", () -> schemaService
-                        .isEventValid(resourceAsString("schemas/event-dummy-extended-2.json"),
-                                "dummy"), isValid -> isValid, DEFAULT_TRYING_TIMEOUT,
+                        .isEventValid(resourceAsString("schemas/event-dummy-extended-2.json")), isValid -> isValid, DEFAULT_TRYING_TIMEOUT,
                 DEFAULT_TRYING_TRIES);
     }
 
@@ -260,7 +249,7 @@ public class JSONSchemaIT extends BaseIT {
         assertNull(schemaService.getSchema("https://vendor.test.com/schemas/json/events/flattened/properties/interests/1-0-0"));
 
         // Test that at first the flattened event is not valid.
-        assertFalse(schemaService.isEventValid(resourceAsString("schemas/event-flattened-valid.json"), "flattened"));
+        assertFalse(schemaService.isEventValid(resourceAsString("schemas/event-flattened-valid.json")));
 
         // save schemas and check the event pass the validation
         schemaService.saveSchema(resourceAsString("schemas/schema-flattened.json"));
@@ -268,7 +257,7 @@ public class JSONSchemaIT extends BaseIT {
         schemaService.saveSchema(resourceAsString("schemas/schema-flattened-flattenedProperties-interests.json"));
         schemaService.saveSchema(resourceAsString("schemas/schema-flattened-properties.json"));
         keepTrying("Event should be valid now",
-                () -> schemaService.isEventValid(resourceAsString("schemas/event-flattened-valid.json"), "flattened"),
+                () -> schemaService.isEventValid(resourceAsString("schemas/event-flattened-valid.json")),
                 isValid -> isValid, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
 
         // insure event is correctly indexed when send to /cxs/eventCollector
@@ -295,9 +284,9 @@ public class JSONSchemaIT extends BaseIT {
         assertEquals(events.get(0).getItemId(), event.getItemId());
 
         // Bonus: Check that other invalid flattened events are correctly rejected by schema service:
-        assertFalse(schemaService.isEventValid(resourceAsString("schemas/event-flattened-invalid-1.json"), "flattened"));
-        assertFalse(schemaService.isEventValid(resourceAsString("schemas/event-flattened-invalid-2.json"), "flattened"));
-        assertFalse(schemaService.isEventValid(resourceAsString("schemas/event-flattened-invalid-3.json"), "flattened"));
+        assertFalse(schemaService.isEventValid(resourceAsString("schemas/event-flattened-invalid-1.json")));
+        assertFalse(schemaService.isEventValid(resourceAsString("schemas/event-flattened-invalid-2.json")));
+        assertFalse(schemaService.isEventValid(resourceAsString("schemas/event-flattened-invalid-3.json")));
     }
 
     @Test

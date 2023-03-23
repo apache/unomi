@@ -31,6 +31,8 @@ import org.apache.unomi.api.services.ScopeService;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.schema.api.JsonSchemaWrapper;
 import org.apache.unomi.schema.api.SchemaService;
+import org.apache.unomi.schema.api.ValidationException;
+import org.apache.unomi.schema.api.ValidationError;
 import org.apache.unomi.schema.keyword.ScopeKeyword;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -76,46 +78,15 @@ public class SchemaServiceImpl implements SchemaService {
     private ScheduledExecutorService scheduler;
     //private SchedulerService schedulerService;
 
-
     @Override
     public boolean isValid(String data, String schemaId) {
-        JsonSchema jsonSchema;
-        JsonNode jsonNode;
-
         try {
-            jsonNode = objectMapper.readTree(data);
-            jsonSchema = jsonSchemaFactory.getSchema(new URI(schemaId));
-        } catch (Exception e) {
-            logger.debug("Schema validation failed", e);
-            return false;
-        }
-
-        if (jsonNode == null) {
-            logger.debug("Schema validation failed because: no data to validate");
-            return false;
-        }
-
-        if (jsonSchema == null) {
-            logger.debug("Schema validation failed because: Schema not found {}", schemaId);
-            return false;
-        }
-
-        Set<ValidationMessage> validationMessages;
-        try {
-            validationMessages = jsonSchema.validate(jsonNode);
-        } catch (Exception e) {
-            logger.debug("Schema validation failed", e);
-            return false;
-        }
-
-        if (validationMessages == null || validationMessages.isEmpty()) {
-            return true;
-        } else {
+            JsonNode jsonNode = parseData(data);
+            JsonSchema jsonSchema = getJsonSchema(schemaId);
+            return validate(jsonNode, jsonSchema).size() == 0;
+        } catch (ValidationException e) {
             if (logger.isDebugEnabled()) {
-                logger.debug("Schema validation found {} errors while validating against schema: {}", validationMessages.size(), schemaId);
-                for (ValidationMessage validationMessage : validationMessages) {
-                    logger.debug("Validation error: {}", validationMessage);
-                }
+                logger.debug(e.getMessage(), e);
             }
             return false;
         }
@@ -123,13 +94,29 @@ public class SchemaServiceImpl implements SchemaService {
 
     @Override
     public boolean isEventValid(String event, String eventType) {
-        JsonSchemaWrapper eventSchema = getSchemaForEventType(eventType);
-        if (eventSchema != null) {
-            return isValid(event, eventSchema.getItemId());
-        }
+        return isEventValid(event);
+    }
 
-        // Event schema not found
+    @Override
+    public boolean isEventValid(String event) {
+        try {
+            return validateEvent(event).size() == 0;
+        } catch (ValidationException e) {
+            if (logger.isDebugEnabled()) {
+                logger.debug(e.getMessage(), e);
+            }
+        }
         return false;
+    }
+
+    @Override
+    public Set<ValidationError> validateEvent(String event) throws ValidationException {
+        JsonNode jsonEvent = parseData(event);
+        String eventType = extractEventType(jsonEvent);
+        JsonSchemaWrapper eventSchema = getSchemaForEventType(eventType);
+        JsonSchema jsonSchema = getJsonSchema(eventSchema.getItemId());
+
+        return validate(jsonEvent, jsonSchema);
     }
 
     @Override
@@ -150,9 +137,9 @@ public class SchemaServiceImpl implements SchemaService {
     }
 
     @Override
-    public JsonSchemaWrapper getSchemaForEventType(String eventType) {
+    public JsonSchemaWrapper getSchemaForEventType(String eventType) throws ValidationException {
         if (StringUtils.isEmpty(eventType)) {
-            return null;
+            throw new ValidationException("eventType missing");
         }
 
         return schemasById.values().stream()
@@ -162,7 +149,7 @@ public class SchemaServiceImpl implements SchemaService {
                         jsonSchemaWrapper.getName() != null &&
                         jsonSchemaWrapper.getName().equals(eventType))
                 .findFirst()
-                .orElse(null);
+                .orElseThrow(() -> new ValidationException("Schema not found for event type: " + eventType));
     }
 
     @Override
@@ -197,6 +184,62 @@ public class SchemaServiceImpl implements SchemaService {
         JsonNode schemaNode = jsonSchemaFactory.getSchema(schemaStream).getSchemaNode();
         String schemaId = schemaNode.get("$id").asText();
         return predefinedUnomiJSONSchemaById.remove(schemaId) != null;
+    }
+
+    private Set<ValidationError> validate(JsonNode jsonNode, JsonSchema jsonSchema) throws ValidationException {
+        try {
+            Set<ValidationMessage> validationMessages = jsonSchema.validate(jsonNode);
+
+            if (logger.isDebugEnabled() && validationMessages.size() > 0) {
+                logger.debug("Schema validation found {} errors while validating against schema: {}", validationMessages.size(), jsonSchema.getCurrentUri());
+                for (ValidationMessage validationMessage : validationMessages) {
+                    logger.debug("Validation error: {}", validationMessage);
+                }
+            }
+
+            return validationMessages != null ?
+                    validationMessages.stream()
+                            .map(ValidationError::new)
+                            .collect(Collectors.toSet()) :
+                    Collections.emptySet();
+        } catch (Exception e) {
+            throw new ValidationException("Unexpected error while validating", e);
+        }
+    }
+
+    private JsonNode parseData(String data) throws ValidationException {
+        if (StringUtils.isEmpty(data)) {
+            throw new ValidationException("Empty data, nothing to validate");
+        }
+
+        try {
+            return objectMapper.readTree(data);
+        } catch (Exception e) {
+            throw new ValidationException("Unexpected error while parsing the data to validate", e);
+        }
+    }
+
+    private JsonSchema getJsonSchema(String schemaId) throws ValidationException {
+        try {
+            JsonSchema jsonSchema = jsonSchemaFactory.getSchema(new URI(schemaId));
+            if (jsonSchema != null) {
+                return jsonSchema;
+            } else {
+                throw new ValidationException("Json schema not found: " + schemaId);
+            }
+        } catch (Exception e) {
+            throw new ValidationException("Unexpected error while loading json schema: " + schemaId, e);
+        }
+    }
+
+    private String extractEventType(JsonNode jsonEvent) throws ValidationException {
+        if (jsonEvent.hasNonNull("eventType")) {
+            String eventType = jsonEvent.get("eventType").textValue();
+            if (StringUtils.isNotBlank(eventType)) {
+                return eventType;
+            }
+        }
+        throw new ValidationException("eventType property is either missing/empty/invalid in event source");
     }
 
     private JsonSchemaWrapper buildJsonSchemaWrapper(String schema) {
@@ -303,7 +346,7 @@ public class SchemaServiceImpl implements SchemaService {
                 try {
                     refreshJSONSchemas();
                 } catch (Exception e) {
-                    logger.error("Error while refreshing JSON Schemas", e);
+                    logger.error("Unexpected error while refreshing JSON Schemas", e);
                 }
             }
         };

@@ -97,7 +97,7 @@ public class InputValidationIT extends BaseIT {
         schemaService.saveSchema(resourceAsString("schemas/schema-dummy.json"));
         schemaService.saveSchema(resourceAsString("schemas/schema-dummy-properties.json"));
         keepTrying("Event should be valid",
-                () -> schemaService.isEventValid(resourceAsString("schemas/event-dummy-valid.json"), "dummy"),
+                () -> schemaService.isEventValid(resourceAsString("schemas/event-dummy-valid.json")),
                 isValid -> isValid,
                 DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
 
@@ -108,7 +108,7 @@ public class InputValidationIT extends BaseIT {
         schemaService.deleteSchema("https://vendor.test.com/schemas/json/events/dummy/1-0-0");
         schemaService.deleteSchema("https://vendor.test.com/schemas/json/events/dummy/properties/1-0-0");
         keepTrying("Event should be invalid",
-                () -> schemaService.isEventValid(resourceAsString("schemas/event-dummy-valid.json"), "dummy"),
+                () -> schemaService.isEventValid(resourceAsString("schemas/event-dummy-valid.json")),
                 isValid -> !isValid,
                 DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
     }
@@ -143,7 +143,7 @@ public class InputValidationIT extends BaseIT {
         schemaService.saveSchema(resourceAsString("schemas/schema-dummy.json"));
         schemaService.saveSchema(resourceAsString("schemas/schema-dummy-properties.json"));
         keepTrying("Event should be valid",
-                () -> schemaService.isEventValid(resourceAsString("schemas/event-dummy-valid.json"), "dummy"),
+                () -> schemaService.isEventValid(resourceAsString("schemas/event-dummy-valid.json")),
                 isValid -> isValid,
                 DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
 
@@ -154,7 +154,7 @@ public class InputValidationIT extends BaseIT {
         schemaService.deleteSchema("https://vendor.test.com/schemas/json/events/dummy/1-0-0");
         schemaService.deleteSchema("https://vendor.test.com/schemas/json/events/dummy/properties/1-0-0");
         keepTrying("Event should be invalid",
-                () -> schemaService.isEventValid(resourceAsString("schemas/event-dummy-valid.json"), "dummy"),
+                () -> schemaService.isEventValid(resourceAsString("schemas/event-dummy-valid.json")),
                 isValid -> !isValid,
                 DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
     }
