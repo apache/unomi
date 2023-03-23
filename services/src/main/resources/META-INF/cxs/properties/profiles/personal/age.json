@@ -8,7 +8,7 @@
       "personalProfileProperties"
     ]
   },
-  "type": "long",
+  "type": "integer",
   "defaultValue": "",
   "numericRanges": [
     {"key":"*_10", "to" : 10 },

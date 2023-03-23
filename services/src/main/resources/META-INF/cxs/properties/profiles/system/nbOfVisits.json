@@ -8,7 +8,7 @@
         "systemProfileProperties"
       ]
     },
-    "type": "long",
+    "type": "integer",
     "defaultValue": "",
     "automaticMappingsFrom": [ ],
     "numericRanges": [
