@@ -58,7 +58,7 @@ public interface SchemaService {
      * perform a validation on the given event
      *
      * @param event the event to validate
-     * @return true is the event is valid
+     * @return The list of validation errors in case there is some, empty list otherwise
      * @throws ValidationException in case something goes wrong and validation could not be performed.
      */
     Set<ValidationError> validateEvent(String event) throws ValidationException;
