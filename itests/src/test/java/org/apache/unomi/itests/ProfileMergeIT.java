@@ -220,7 +220,7 @@ public class ProfileMergeIT extends BaseIT {
      * In case of merge, existing sessions/events from previous profileId should be rewritten to use the new master profileId
      */
     @Test
-    public void testProfileMergeOnPropertyAction_simpleMergeRewriteExistingSessionsEvents() throws InterruptedException {
+    public void testProfileMergeOnPropertyAction_rewriteExistingSessionsEvents() throws InterruptedException {
         Condition matchAll = new Condition(definitionsService.getConditionType("matchAllCondition"));
         // create rule
         createAndWaitForRule(createMergeOnPropertyRule(false, "email"));
@@ -237,7 +237,7 @@ public class ProfileMergeIT extends BaseIT {
         eventProfile.setProperty("email", "username@domain.com");
         profileService.save(eventProfile);
 
-        // create 5 sessions and 5 events for master profile.
+        // create 5 past sessions and 5 past events.
         List<Session> sessionsToBeRewritten = new ArrayList<>();
         List<Event> eventsToBeRewritten = new ArrayList<>();
         for (int i = 1; i <= 5; i++) {
@@ -250,8 +250,16 @@ public class ProfileMergeIT extends BaseIT {
             persistenceService.save(sessionToBeRewritten);
             persistenceService.save(eventToBeRewritten);
         }
-        keepTrying("Wait for sessions and events to be persisted", () -> persistenceService.queryCount(matchAll, Session.ITEM_TYPE) + persistenceService.queryCount(matchAll, Event.ITEM_TYPE),
-                (count) -> count == 10, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+        for (Session session : sessionsToBeRewritten) {
+            keepTrying("Wait for session: " + session.getItemId() + " to be indexed",
+                    () -> persistenceService.query("itemId", session.getItemId(), null, Session.class),
+                    (list) -> list.size() == 1, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+        }
+        for (Event event : eventsToBeRewritten) {
+            keepTrying("Wait for event: " + event.getItemId() + " to be indexed",
+                    () -> persistenceService.query("itemId", event.getItemId(), null, Event.class),
+                    (list) -> list.size() == 1, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+        }
         keepTrying("Profile with id masterProfileID not found in the required time", () -> profileService.load("masterProfileID"),
                 Objects::nonNull, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
         keepTrying("Profile with id eventProfileID not found in the required time", () -> profileService.load("eventProfileID"),
@@ -287,12 +295,90 @@ public class ProfileMergeIT extends BaseIT {
                 () -> persistenceService.queryCount(sessionProfileIDRewrittenCondition, Session.ITEM_TYPE),
                 (count) -> count == 5, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
 
-        // TODO uncomment this when UNOMI-749 is fixed, currently session loaded are inconsistent
-        /* for (Session session : sessionsToBeRewritten) {
+        for (Session session : sessionsToBeRewritten) {
             keepTrying("Wait for session: " + session.getItemId() + " profileId to be rewritten for masterProfileID",
                     () -> persistenceService.load(session.getItemId(), Session.class),
                     (loadedSession) -> loadedSession.getProfileId().equals("masterProfileID"), DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
-        } */
+        }
+    }
+
+    /**
+     * If master profile is flagged as anonymous profile, then after the merge all past sessions/events should be anonymized
+     */
+    @Test
+    public void testProfileMergeOnPropertyAction_rewriteExistingSessionsEventsAnonymous() throws InterruptedException {
+        Condition matchAll = new Condition(definitionsService.getConditionType("matchAllCondition"));
+        // create rule
+        createAndWaitForRule(createMergeOnPropertyRule(false, "email"));
+
+        // create master profile
+        Profile masterProfile = new Profile();
+        masterProfile.setItemId("masterProfileID");
+        masterProfile.setProperty("email", "username@domain.com");
+        masterProfile.setSystemProperty("mergeIdentifier", "username@domain.com");
+        profileService.save(masterProfile);
+        privacyService.setRequireAnonymousBrowsing(masterProfile.getItemId(), true, null);
+
+        Profile eventProfile = new Profile();
+        eventProfile.setItemId("eventProfileID");
+        eventProfile.setProperty("email", "username@domain.com");
+        profileService.save(eventProfile);
+
+        // create 5 sessions and 5 events for master profile.
+        List<Session> sessionsToBeRewritten = new ArrayList<>();
+        List<Event> eventsToBeRewritten = new ArrayList<>();
+        for (int i = 1; i <= 5; i++) {
+            Session sessionToBeRewritten = new Session("simpleSession_"+ i, eventProfile, new Date(), null);
+            sessionsToBeRewritten.add(sessionToBeRewritten);
+            Event eventToBeRewritten = new Event("view", sessionToBeRewritten, eventProfile, null, null, null, new Date());
+            eventsToBeRewritten.add(eventToBeRewritten);
+
+            persistenceService.save(sessionToBeRewritten);
+            persistenceService.save(eventToBeRewritten);
+        }
+        for (Session session : sessionsToBeRewritten) {
+            keepTrying("Wait for session: " + session.getItemId() + " to be indexed",
+                    () -> persistenceService.query("itemId", session.getItemId(), null, Session.class),
+                    (list) -> list.size() == 1, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+        }
+        for (Event event : eventsToBeRewritten) {
+            keepTrying("Wait for event: " + event.getItemId() + " to be indexed",
+                    () -> persistenceService.query("itemId", event.getItemId(), null, Event.class),
+                    (list) -> list.size() == 1, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+        }
+        keepTrying("Profile with id masterProfileID (should required anonymous browsing) not found in the required time",
+                () -> profileService.load("masterProfileID"),
+                profile -> profile != null && privacyService.isRequireAnonymousBrowsing(profile), DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+        keepTrying("Profile with id eventProfileID not found in the required time", () -> profileService.load("eventProfileID"),
+                Objects::nonNull, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+
+        // Trigger the merge
+        Session simpleSession = new Session("simpleSession", eventProfile, new Date(), null);
+        Event mergeEvent = new Event(TEST_EVENT_TYPE, simpleSession, eventProfile, null, null, eventProfile, new Date());
+        eventService.send(mergeEvent);
+
+        // Check that master profile is now used, but anonymous browsing is respected:
+        Assert.assertNotNull(mergeEvent.getProfile());
+        Assert.assertEquals("masterProfileID", mergeEvent.getProfile().getItemId()); // We still have profile in the event
+        Assert.assertNull(mergeEvent.getProfileId()); // But profileId prop is null due to anonymous browsing
+        Assert.assertNull(mergeEvent.getSession().getProfile().getItemId()); // Same for the event session
+        Assert.assertNull(mergeEvent.getSession().getProfileId());
+        Assert.assertEquals(mergeEvent.getSession().getProfileId(), mergeEvent.getProfileId());
+        Assert.assertEquals("username@domain.com", mergeEvent.getProfile().getSystemProperties().get("mergeIdentifier"));
+
+        // Check events are correctly rewritten (Anonymous !)
+        for (Event event : eventsToBeRewritten) {
+            keepTrying("Wait for event: " + event.getItemId() + " profileId to be rewritten for NULL due to anonymous browsing",
+                    () -> persistenceService.load(event.getItemId(), Event.class),
+                    (loadedEvent) -> loadedEvent.getProfileId() == null, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+        }
+
+        // Check sessions are correctly rewritten (Anonymous !)
+        for (Session session : sessionsToBeRewritten) {
+            keepTrying("Wait for session: " + session.getItemId() + " profileId to be rewritten for NULL due to anonymous browsing",
+                    () -> persistenceService.load(session.getItemId(), Session.class),
+                    (loadedSession) -> loadedSession.getProfileId() == null, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+        }
     }
 
     /**

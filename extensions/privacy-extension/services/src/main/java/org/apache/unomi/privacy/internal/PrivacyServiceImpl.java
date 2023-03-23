@@ -127,11 +127,6 @@ public class PrivacyServiceImpl implements PrivacyService {
 
     @Override
     public Boolean anonymizeBrowsingData(String profileId) {
-        Profile profile = profileService.load(profileId);
-        if (profile == null) {
-            return false;
-        }
-
         List<Session> sessions = profileService.getProfileSessions(profileId, null, 0, -1, null).getList();
         if (sessions.isEmpty()) {
             return false;

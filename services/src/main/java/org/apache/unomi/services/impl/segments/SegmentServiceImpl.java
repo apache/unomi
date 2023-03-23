@@ -20,9 +20,6 @@ package org.apache.unomi.services.impl.segments;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import net.jodah.failsafe.Failsafe;
 import net.jodah.failsafe.RetryPolicy;
-import org.apache.commons.io.FilenameUtils;
-import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang3.CharEncoding;
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.Item;
 import org.apache.unomi.api.Metadata;
@@ -52,9 +49,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.URL;
-import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.time.Duration;
 import java.time.ZoneOffset;
@@ -163,7 +158,6 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
         }
         bundleContext.addBundleListener(this);
         initializeTimer();
-        loadScripts();
         logger.info("Segment service initialized.");
     }
 
@@ -1237,25 +1231,6 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
             }
         };
         schedulerService.getScheduleExecutorService().scheduleAtFixedRate(task, 0, segmentRefreshInterval, TimeUnit.MILLISECONDS);
-    }
-
-    private void loadScripts() throws IOException {
-        Enumeration<URL> scriptsURL = bundleContext.getBundle().findEntries("META-INF/cxs/painless", "*.painless", true);
-        if (scriptsURL == null) {
-            return;
-        }
-
-        Map<String, String> scriptsById = new HashMap<>();
-        while (scriptsURL.hasMoreElements()) {
-            URL scriptURL = scriptsURL.nextElement();
-            logger.debug("Found painless script at " + scriptURL + ", loading... ");
-            try (InputStream in = scriptURL.openStream()) {
-                String script = IOUtils.toString(in, StandardCharsets.UTF_8);
-                String scriptId = FilenameUtils.getBaseName(scriptURL.getPath());
-                scriptsById.put(scriptId, script);
-            }
-        }
-        persistenceService.storeScripts(scriptsById);
     }
 
     public void setTaskExecutionPeriod(long taskExecutionPeriod) {

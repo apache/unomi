@@ -43,6 +43,7 @@
     <reference id="persistenceService" interface="org.apache.unomi.persistence.spi.PersistenceService"/>
     <reference id="profileService" interface="org.apache.unomi.api.services.ProfileService"/>
     <reference id="privacyService" interface="org.apache.unomi.api.services.PrivacyService"/>
+    <reference id="schedulerService" interface="org.apache.unomi.api.services.SchedulerService"/>
     <reference id="segmentService" interface="org.apache.unomi.api.services.SegmentService"/>
     <reference id="eventService" interface="org.apache.unomi.api.services.EventService"/>
     <reference id="configSharingService" interface="org.apache.unomi.api.services.ConfigSharingService"/>
@@ -315,6 +316,7 @@
             <property name="persistenceService" ref="persistenceService"/>
             <property name="definitionsService" ref="definitionsService"/>
             <property name="privacyService" ref="privacyService"/>
+            <property name="schedulerService" ref="schedulerService"/>
             <property name="maxProfilesInOneMerge" value="${base.maxProfilesInOneMerge}"/>
         </bean>
     </service>
