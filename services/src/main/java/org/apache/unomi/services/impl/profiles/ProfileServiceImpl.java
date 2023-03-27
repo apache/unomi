@@ -475,13 +475,15 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         PropertyType previousProperty = persistenceService.load(property.getItemId(), PropertyType.class);
         boolean result = false;
         if (previousProperty == null) {
+            persistenceService.setPropertyMapping(property, Profile.ITEM_TYPE);
             result = persistenceService.save(property);
             propertyTypes = propertyTypes.with(property);
         } else if (merge(previousProperty, property)) {
+            persistenceService.setPropertyMapping(previousProperty, Profile.ITEM_TYPE);
             result = persistenceService.save(previousProperty);
             propertyTypes = propertyTypes.with(previousProperty);
         }
-        persistenceService.setPropertyMapping(property, Profile.ITEM_TYPE);
+
         return result;
     }
 

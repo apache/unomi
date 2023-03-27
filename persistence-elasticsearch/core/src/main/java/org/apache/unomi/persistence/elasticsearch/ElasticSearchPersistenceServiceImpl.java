@@ -1544,17 +1544,22 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     public void setPropertyMapping(final PropertyType property, final String itemType) {
         try {
-            Map<String, Object> propertyMapping = createPropertyMapping(property);
-            if (propertyMapping.isEmpty()) {
-                return;
-            }
-
             Map<String, Map<String, Object>> mappings = getPropertiesMapping(itemType);
             if (mappings == null) {
                 mappings = new HashMap<>();
             }
             Map<String, Object> subMappings = mappings.computeIfAbsent("properties", k -> new HashMap<>());
             Map<String, Object> subSubMappings = (Map<String, Object>) subMappings.computeIfAbsent("properties", k -> new HashMap<>());
+
+            if (subSubMappings.containsKey(property.getItemId())) {
+                logger.warn("Mapping already exists for type " + itemType + " and property " + property.getItemId());
+                return;
+            }
+
+            Map<String, Object> propertyMapping = createPropertyMapping(property);
+            if (propertyMapping.isEmpty()) {
+                return;
+            }
 
             mergePropertiesMapping(subSubMappings, propertyMapping);
 
@@ -1621,16 +1626,31 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 return "date";
             case "string":
             case "id":
+            case "email": // TODO Consider supporting email mapping in ES, right now will be map to text to avoid warning in logs
                 return "text";
             default:
                 return null;
         }
     }
 
-    private void putMapping(final String source, final String indexName) throws IOException {
-        PutMappingRequest putMappingRequest = new PutMappingRequest(indexName);
-        putMappingRequest.source(source, XContentType.JSON);
-        client.indices().putMapping(putMappingRequest, RequestOptions.DEFAULT);
+    private boolean putMapping(final String source, final String indexName) throws IOException {
+        Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".putMapping", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
+            protected Boolean execute(Object... args) throws Exception {
+                try {
+                    PutMappingRequest putMappingRequest = new PutMappingRequest(indexName);
+                    putMappingRequest.source(source, XContentType.JSON);
+                    AcknowledgedResponse response = client.indices().putMapping(putMappingRequest, RequestOptions.DEFAULT);
+                    return response.isAcknowledged();
+                } catch (Exception e) {
+                    throw new Exception("Cannot create/update mapping", e);
+                }
+            }
+        }.catchingExecuteInClassLoader(true);
+        if (result == null) {
+            return false;
+        } else {
+            return result;
+        }
     }
 
     @Override
