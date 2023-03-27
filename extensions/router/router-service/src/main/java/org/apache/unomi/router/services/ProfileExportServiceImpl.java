@@ -21,10 +21,13 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.PropertyType;
 import org.apache.unomi.api.services.ConfigSharingService;
+import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.router.api.ExportConfiguration;
 import org.apache.unomi.router.api.RouterConstants;
 import org.apache.unomi.router.api.RouterUtils;
 import org.apache.unomi.router.api.services.ProfileExportService;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Reference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,10 +36,14 @@ import java.util.*;
 /**
  * Created by amidani on 30/06/2017.
  */
-public class ProfileExportServiceImpl extends AbstractCustomServiceImpl implements ProfileExportService {
+@Component(immediate = true, service = ProfileExportService.class)
+public class ProfileExportServiceImpl implements ProfileExportService {
 
     private static final Logger logger = LoggerFactory.getLogger(ProfileExportServiceImpl.class.getName());
 
+    @Reference
+    private PersistenceService persistenceService;
+    @Reference
     private ConfigSharingService configSharingService;
 
     public String extractProfilesBySegment(ExportConfiguration exportConfiguration) {
@@ -102,10 +109,6 @@ public class ProfileExportServiceImpl extends AbstractCustomServiceImpl implemen
             }
         }
         return lineToWrite;
-    }
-
-    public void setConfigSharingService(ConfigSharingService configSharingService) {
-        this.configSharingService = configSharingService;
     }
 
 }

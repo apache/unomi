@@ -16,21 +16,36 @@
  */
 package org.apache.unomi.router.services;
 
+import org.apache.unomi.api.services.SchedulerService;
+import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.router.api.ExportConfiguration;
 import org.apache.unomi.router.api.IRouterCamelContext;
 import org.apache.unomi.router.api.services.ImportExportConfigurationService;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Reference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
+import java.util.TimerTask;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 /**
+ * Service to manage Configuration of Item to export
  * Created by amidani on 28/04/2017.
  */
-public class ExportConfigurationServiceImpl extends AbstractConfigurationServiceImpl implements ImportExportConfigurationService<ExportConfiguration> {
+@Component(immediate = true, property = "configDiscriminator=EXPORT", service = ImportExportConfigurationService.class)
+public class ExportConfigurationServiceImpl implements ImportExportConfigurationService<ExportConfiguration> {
 
     private static final Logger logger = LoggerFactory.getLogger(ExportConfigurationServiceImpl.class.getName());
+
+    @Reference
+    private PersistenceService persistenceService;
+    @Reference
+    private SchedulerService schedulerService;
+
+    private IRouterCamelContext routerCamelContext;
 
     public ExportConfigurationServiceImpl() {
         logger.info("Initializing export configuration service...");
@@ -51,12 +66,19 @@ public class ExportConfigurationServiceImpl extends AbstractConfigurationService
         if (exportConfiguration.getItemId() == null) {
             exportConfiguration.setItemId(UUID.randomUUID().toString());
         }
-        if(updateRunningRoute) {
-            try {
-                routerCamelContext.updateProfileReaderRoute(exportConfiguration, true);
-            } catch (Exception e) {
-                logger.error("Error when trying to save/update running Apache Camel Route: {}", exportConfiguration.getItemId());
-            }
+        if (updateRunningRoute) {
+            TimerTask updateRoute = new TimerTask() {
+                @Override
+                public void run() {
+                    try {
+                        routerCamelContext.updateProfileReaderRoute(exportConfiguration, true);
+                    } catch (Exception e) {
+                        logger.error("Error when trying to save/update running Apache Camel Route: {}", exportConfiguration.getItemId());
+                    }
+                }
+            };
+            // Defer config update.
+            schedulerService.getScheduleExecutorService().schedule(updateRoute, 0, TimeUnit.MILLISECONDS);
         }
         persistenceService.save(exportConfiguration);
         return persistenceService.load(exportConfiguration.getItemId(), ExportConfiguration.class);
@@ -74,6 +96,11 @@ public class ExportConfigurationServiceImpl extends AbstractConfigurationService
 
     @Override
     public void setRouterCamelContext(IRouterCamelContext routerCamelContext) {
-        super.setRouterCamelContext(routerCamelContext);
+        this.routerCamelContext = routerCamelContext;
+    }
+
+    @Override
+    public IRouterCamelContext getRouterCamelContext() {
+        return routerCamelContext;
     }
 }
