@@ -62,7 +62,10 @@ context.performMigrationStep("2.0.0-create-scopes-from-existing-events", () -> {
                     }
 
                     if (!scopeAlreadyExists) {
+                        context.printMessage("Scope: " + bucket.key + " will be created")
                         bulkSaveRequest.append(saveScopeRequestBulk.replace("##scope##", bucket.key))
+                    } else {
+                        context.printMessage("Scope: " + bucket.key + " already exists, won't be created")
                     }
                 }
             }
