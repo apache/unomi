@@ -82,7 +82,7 @@
 
 
     <bean id="camelContext" class="org.apache.unomi.router.core.context.RouterCamelContext"
-          init-method="initCamelContext" destroy-method="preDestroy">
+          init-method="init" destroy-method="destroy">
         <property name="configType" value="${router.config.type}"/>
         <property name="allowedEndpoints" value="${config.allowedEndpoints}"/>
         <property name="uploadDir" value="${import.oneshot.uploadDir}"/>

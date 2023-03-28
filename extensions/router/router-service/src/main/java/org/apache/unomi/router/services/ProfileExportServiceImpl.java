@@ -26,8 +26,6 @@ import org.apache.unomi.router.api.ExportConfiguration;
 import org.apache.unomi.router.api.RouterConstants;
 import org.apache.unomi.router.api.RouterUtils;
 import org.apache.unomi.router.api.services.ProfileExportService;
-import org.osgi.service.component.annotations.Component;
-import org.osgi.service.component.annotations.Reference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,15 +34,21 @@ import java.util.*;
 /**
  * Created by amidani on 30/06/2017.
  */
-@Component(immediate = true, service = ProfileExportService.class)
 public class ProfileExportServiceImpl implements ProfileExportService {
 
     private static final Logger logger = LoggerFactory.getLogger(ProfileExportServiceImpl.class.getName());
 
-    @Reference
+
     private PersistenceService persistenceService;
-    @Reference
     private ConfigSharingService configSharingService;
+
+    public void setPersistenceService(PersistenceService persistenceService) {
+        this.persistenceService = persistenceService;
+    }
+
+    public void setConfigSharingService(ConfigSharingService configSharingService) {
+        this.configSharingService = configSharingService;
+    }
 
     public String extractProfilesBySegment(ExportConfiguration exportConfiguration) {
         List<Profile> profileList = persistenceService.query("segments", (String) exportConfiguration.getProperty("segment"), null, Profile.class);

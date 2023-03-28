@@ -52,6 +52,7 @@ import org.apache.unomi.lifecycle.BundleWatcher;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.router.api.ExportConfiguration;
+import org.apache.unomi.router.api.IRouterCamelContext;
 import org.apache.unomi.router.api.ImportConfiguration;
 import org.apache.unomi.router.api.services.ImportExportConfigurationService;
 import org.apache.unomi.schema.api.SchemaService;
@@ -150,6 +151,7 @@ public abstract class BaseIT extends KarafTestSupport {
     protected PatchService patchService;
     protected ImportExportConfigurationService<ImportConfiguration> importConfigurationService;
     protected ImportExportConfigurationService<ExportConfiguration> exportConfigurationService;
+    protected IRouterCamelContext routerCamelContext;
     protected UserListService userListService;
     protected TopicService topicService;
 
@@ -194,9 +196,9 @@ public abstract class BaseIT extends KarafTestSupport {
         patchService = getOsgiService(PatchService.class, 600000);
         userListService = getOsgiService(UserListService.class, 600000);
         topicService = getOsgiService(TopicService.class, 600000);
-        patchService = getOsgiService(PatchService.class, 600000);
         importConfigurationService = getOsgiService(ImportExportConfigurationService.class, "(configDiscriminator=IMPORT)", 600000);
         exportConfigurationService = getOsgiService(ImportExportConfigurationService.class, "(configDiscriminator=EXPORT)", 600000);
+        routerCamelContext = getOsgiService(IRouterCamelContext.class, 600000);
 
         // init httpClient
         httpClient = initHttpClient();

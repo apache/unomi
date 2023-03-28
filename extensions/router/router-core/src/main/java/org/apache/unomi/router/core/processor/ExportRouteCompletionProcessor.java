@@ -40,13 +40,14 @@ public class ExportRouteCompletionProcessor implements Processor {
 
     @Override
     public void process(Exchange exchange) throws Exception {
-        ExportConfiguration exportConfig = (ExportConfiguration) exchange.getIn().getHeader(RouterConstants.HEADER_EXPORT_CONFIG);
+        ExportConfiguration exportConfiguration = exportConfigurationService.load(exchange.getFromRouteId());
+        if (exportConfiguration == null) {
+            logger.warn("Unable to complete export, config cannot not found: {}", exchange.getFromRouteId());
+        }
 
         Map execution = new HashMap();
         execution.put(RouterConstants.KEY_EXECS_DATE, ((Date) exchange.getProperty("CamelCreatedTimestamp")).getTime());
         execution.put(RouterConstants.KEY_EXECS_EXTRACTED, exchange.getProperty("CamelSplitSize"));
-
-        ExportConfiguration exportConfiguration = exportConfigurationService.load(exportConfig.getItemId());
 
         exportConfiguration = (ExportConfiguration) RouterUtils.addExecutionEntry(exportConfiguration, execution, executionsHistorySize);
         exportConfiguration.setStatus(RouterConstants.CONFIG_STATUS_COMPLETE_SUCCESS);

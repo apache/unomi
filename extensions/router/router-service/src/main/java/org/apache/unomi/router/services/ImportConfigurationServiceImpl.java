@@ -16,36 +16,31 @@
  */
 package org.apache.unomi.router.services;
 
-import org.apache.unomi.api.services.SchedulerService;
 import org.apache.unomi.persistence.spi.PersistenceService;
-import org.apache.unomi.router.api.IRouterCamelContext;
 import org.apache.unomi.router.api.ImportConfiguration;
+import org.apache.unomi.router.api.RouterConstants;
 import org.apache.unomi.router.api.services.ImportExportConfigurationService;
-import org.osgi.service.component.annotations.Component;
-import org.osgi.service.component.annotations.Reference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.List;
-import java.util.TimerTask;
-import java.util.UUID;
-import java.util.concurrent.TimeUnit;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Service to manage Configuration of object to import
  * Created by amidani on 28/04/2017.
  */
-@Component(immediate = true, property = "configDiscriminator=IMPORT", service = ImportExportConfigurationService.class)
 public class ImportConfigurationServiceImpl implements ImportExportConfigurationService<ImportConfiguration> {
 
     private static final Logger logger = LoggerFactory.getLogger(ImportConfigurationServiceImpl.class.getName());
 
-    @Reference
     private PersistenceService persistenceService;
-    @Reference
-    private SchedulerService schedulerService;
 
-    private IRouterCamelContext routerCamelContext;
+    public void setPersistenceService(PersistenceService persistenceService) {
+        this.persistenceService = persistenceService;
+    }
+
+    private final Map<String, RouterConstants.CONFIG_CAMEL_REFRESH> camelConfigsToRefresh = new ConcurrentHashMap<>();
 
     public ImportConfigurationServiceImpl() {
         logger.info("Initializing import configuration service...");
@@ -67,18 +62,7 @@ public class ImportConfigurationServiceImpl implements ImportExportConfiguration
             importConfiguration.setItemId(UUID.randomUUID().toString());
         }
         if (updateRunningRoute) {
-            TimerTask updateRoute = new TimerTask() {
-                @Override
-                public void run() {
-                    try {
-                        routerCamelContext.updateProfileReaderRoute(importConfiguration, true);
-                    } catch (Exception e) {
-                        logger.error("Error when trying to save/update running Apache Camel Route: {}", importConfiguration.getItemId());
-                    }
-                }
-            };
-            // Defer config update.
-            schedulerService.getScheduleExecutorService().schedule(updateRoute, 0, TimeUnit.MILLISECONDS);
+            camelConfigsToRefresh.put(importConfiguration.getItemId(), RouterConstants.CONFIG_CAMEL_REFRESH.UPDATED);
         }
         persistenceService.save(importConfiguration);
         return persistenceService.load(importConfiguration.getItemId(), ImportConfiguration.class);
@@ -86,21 +70,14 @@ public class ImportConfigurationServiceImpl implements ImportExportConfiguration
 
     @Override
     public void delete(String configId) {
-        try {
-            routerCamelContext.killExistingRoute(configId, true);
-        } catch (Exception e) {
-            logger.error("Error when trying to delete running Apache Camel Route: {}", configId);
-        }
         persistenceService.remove(configId, ImportConfiguration.class);
+        camelConfigsToRefresh.put(configId, RouterConstants.CONFIG_CAMEL_REFRESH.REMOVED);
     }
 
     @Override
-    public void setRouterCamelContext(IRouterCamelContext routerCamelContext) {
-        this.routerCamelContext = routerCamelContext;
-    }
-
-    @Override
-    public IRouterCamelContext getRouterCamelContext() {
-        return routerCamelContext;
+    public Map<String, RouterConstants.CONFIG_CAMEL_REFRESH> consumeConfigsToBeRefresh() {
+        Map<String, RouterConstants.CONFIG_CAMEL_REFRESH> result = new HashMap<>(camelConfigsToRefresh);
+        camelConfigsToRefresh.clear();
+        return result;
     }
 }
