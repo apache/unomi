@@ -37,10 +37,7 @@ import org.apache.unomi.router.core.processor.ImportConfigByFileNameProcessor;
 import org.apache.unomi.router.core.processor.ImportRouteCompletionProcessor;
 import org.apache.unomi.router.core.processor.UnomiStorageProcessor;
 import org.apache.unomi.router.core.route.*;
-import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
-import org.osgi.framework.BundleEvent;
-import org.osgi.framework.SynchronousBundleListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,7 +47,7 @@ import java.util.Map;
 /**
  * Created by amidani on 04/05/2017.
  */
-public class RouterCamelContext implements SynchronousBundleListener, IRouterCamelContext {
+public class RouterCamelContext implements IRouterCamelContext {
 
     private Logger logger = LoggerFactory.getLogger(RouterCamelContext.class.getName());
     private CamelContext camelContext;
@@ -162,14 +159,6 @@ public class RouterCamelContext implements SynchronousBundleListener, IRouterCam
         camelContext.start();
 
         logger.debug("postConstruct {" + bundleContext.getBundle() + "}");
-
-        processBundleStartup(bundleContext);
-        for (Bundle bundle : bundleContext.getBundles()) {
-            if (bundle.getBundleContext() != null) {
-                processBundleStartup(bundle.getBundleContext());
-            }
-        }
-        bundleContext.addBundleListener(this);
 
         importConfigurationService.setRouterCamelContext(this);
         exportConfigurationService.setRouterCamelContext(this);
@@ -305,21 +294,9 @@ public class RouterCamelContext implements SynchronousBundleListener, IRouterCam
     }
 
     public void preDestroy() throws Exception {
-        bundleContext.removeBundleListener(this);
         //This is to shutdown Camel context
         //(will stop all routes/components/endpoints etc and clear internal state/cache)
         this.camelContext.stop();
         logger.info("Camel context for profile import is shutdown.");
-    }
-
-    private void processBundleStartup(BundleContext bundleContext) {
-        if (bundleContext == null) {
-            return;
-        }
-    }
-
-    @Override
-    public void bundleChanged(BundleEvent bundleEvent) {
-
     }
 }
