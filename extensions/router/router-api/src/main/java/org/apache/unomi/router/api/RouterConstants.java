@@ -44,6 +44,7 @@ public interface RouterConstants {
 
     String HEADER_CONFIG_TYPE = "configType";
 
+    String HEADER_EXPORT_CONFIG = "exportConfig";
     String HEADER_FAILED_MESSAGE = "failedMessage";
     String HEADER_IMPORT_CONFIG_ONESHOT = "importConfigOneShot";
 

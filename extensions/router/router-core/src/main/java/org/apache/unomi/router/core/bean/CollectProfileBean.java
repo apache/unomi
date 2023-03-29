@@ -29,6 +29,7 @@ public class CollectProfileBean {
     private PersistenceService persistenceService;
 
     public List<Profile> extractProfileBySegment(String segment) {
+        // TODO: UNOMI-759 avoid loading all profiles in RAM here
         return persistenceService.query("segments", segment,null, Profile.class);
     }
 

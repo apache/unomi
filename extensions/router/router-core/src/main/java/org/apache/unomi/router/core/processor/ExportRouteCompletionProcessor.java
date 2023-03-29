@@ -40,9 +40,11 @@ public class ExportRouteCompletionProcessor implements Processor {
 
     @Override
     public void process(Exchange exchange) throws Exception {
+        // We load the conf from ES because we are going to increment the execution number
         ExportConfiguration exportConfiguration = exportConfigurationService.load(exchange.getFromRouteId());
         if (exportConfiguration == null) {
             logger.warn("Unable to complete export, config cannot not found: {}", exchange.getFromRouteId());
+            return;
         }
 
         Map execution = new HashMap();

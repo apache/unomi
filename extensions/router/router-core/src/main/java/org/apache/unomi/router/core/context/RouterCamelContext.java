@@ -43,6 +43,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Map;
 import java.util.TimerTask;
 import java.util.concurrent.Executors;
@@ -267,7 +268,6 @@ public class RouterCamelContext implements IRouterCamelContext {
 
             if (fireEvent) {
                 UpdateCamelRouteEvent event = new UpdateCamelRouteEvent(EVENT_ID_IMPORT);
-                event.setConfiguration(importConfiguration);
                 clusterService.sendEvent(event);
             }
         }
@@ -284,7 +284,7 @@ public class RouterCamelContext implements IRouterCamelContext {
 
         if (RouterConstants.IMPORT_EXPORT_CONFIG_TYPE_RECURRENT.equals(exportConfiguration.getConfigType())) {
             ProfileExportCollectRouteBuilder profileExportCollectRouteBuilder = new ProfileExportCollectRouteBuilder(kafkaProps, configType);
-            profileExportCollectRouteBuilder.setExportConfigurationList(Arrays.asList(exportConfiguration));
+            profileExportCollectRouteBuilder.setExportConfigurationList(Collections.singletonList(exportConfiguration));
             profileExportCollectRouteBuilder.setPersistenceService(persistenceService);
             profileExportCollectRouteBuilder.setAllowedEndpoints(allowedEndpoints);
             profileExportCollectRouteBuilder.setJacksonDataFormat(jacksonDataFormat);
@@ -293,7 +293,6 @@ public class RouterCamelContext implements IRouterCamelContext {
 
             if (fireEvent) {
                 UpdateCamelRouteEvent event = new UpdateCamelRouteEvent(EVENT_ID_EXPORT);
-                event.setConfiguration(exportConfiguration);
                 clusterService.sendEvent(event);
             }
         }

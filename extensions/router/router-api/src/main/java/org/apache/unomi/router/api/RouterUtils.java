@@ -18,6 +18,7 @@ package org.apache.unomi.router.api;
 
 import org.apache.unomi.api.PropertyType;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Map;
 
@@ -27,6 +28,9 @@ import java.util.Map;
 public class RouterUtils {
 
     public static ImportExportConfiguration addExecutionEntry(ImportExportConfiguration configuration, Map execution, int executionsHistorySize) {
+        if (configuration.getExecutions() == null) {
+            configuration.setExecutions(new ArrayList<>());
+        }
         if (configuration.getExecutions().size() >= executionsHistorySize) {
             int oldestExecIndex = 0;
             long oldestExecDate = (Long) configuration.getExecutions().get(0).get(RouterConstants.KEY_EXECS_DATE);

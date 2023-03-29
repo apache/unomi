@@ -70,6 +70,7 @@ public class ProfileExportServiceImpl implements ProfileExportService {
     }
 
     public String convertProfileToCSVLine(Profile profile, ExportConfiguration exportConfiguration) {
+        // TODO: UNOMI-759 querying this everytimes
         Collection<PropertyType> propertiesDef = persistenceService.query("target", "profiles", null, PropertyType.class);
         Map<String, String> mapping = (Map<String, String>) exportConfiguration.getProperty("mapping");
         String lineToWrite = "";

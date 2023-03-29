@@ -59,10 +59,8 @@ public class ProfileExportProducerRouteBuilder extends RouterAbstractRouteBuilde
             rtDef = from((String) getEndpointURI(RouterConstants.DIRECTION_TO, RouterConstants.DIRECT_EXPORT_DEPOSIT_BUFFER));
         }
 
-        LineBuildProcessor processor = new LineBuildProcessor(profileExportService);
-
-        rtDef.unmarshal(jacksonDataFormat)
-                .process(processor)
+        rtDef.unmarshal(jacksonDataFormat) // TODO: UNOMI-759 avoid unnecessary marshalling
+                .process(new LineBuildProcessor(profileExportService))
                 .aggregate(constant(true), new StringLinesAggregationStrategy())
                 .completionPredicate(exchangeProperty("CamelSplitSize").isEqualTo(exchangeProperty("CamelAggregatedSize")))
                 .eagerCheckCompletion()

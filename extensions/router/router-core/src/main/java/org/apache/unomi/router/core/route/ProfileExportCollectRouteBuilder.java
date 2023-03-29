@@ -73,8 +73,9 @@ public class ProfileExportCollectRouteBuilder extends RouterAbstractRouteBuilder
                                 .autoStartup(exportConfiguration.isActive())
                                 .bean(collectProfileBean, "extractProfileBySegment(" + exportConfiguration.getProperties().get("segment") + ")")
                                 .split(body())
-                                .marshal(jacksonDataFormat)
+                                .marshal(jacksonDataFormat) // TODO: UNOMI-759 avoid unnecessary marshalling
                                 .convertBodyTo(String.class)
+                                .setHeader(RouterConstants.HEADER_EXPORT_CONFIG, constant(exportConfiguration))
                                 .log(LoggingLevel.DEBUG, "BODY : ${body}");
                         if (RouterConstants.CONFIG_TYPE_KAFKA.equals(configType)) {
                             prDef.to((KafkaEndpoint) getEndpointURI(RouterConstants.DIRECTION_FROM, RouterConstants.DIRECT_EXPORT_DEPOSIT_BUFFER));
