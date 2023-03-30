@@ -22,6 +22,7 @@
 
     <reference id="persistenceService" interface="org.apache.unomi.persistence.spi.PersistenceService"/>
     <reference id="configSharingService" interface="org.apache.unomi.api.services.ConfigSharingService"/>
+    <reference id="definitionsService" interface="org.apache.unomi.api.services.DefinitionsService"/>
 
     <bean id="importConfigurationServiceImpl" class="org.apache.unomi.router.services.ImportConfigurationServiceImpl">
         <property name="persistenceService" ref="persistenceService"/>
@@ -59,6 +60,7 @@
     <bean id="profileExportServiceImpl" class="org.apache.unomi.router.services.ProfileExportServiceImpl">
         <property name="persistenceService" ref="persistenceService"/>
         <property name="configSharingService" ref="configSharingService" />
+        <property name="definitionsService" ref="definitionsService" />
     </bean>
     <service id="profileExportService" ref="profileExportServiceImpl">
         <interfaces>

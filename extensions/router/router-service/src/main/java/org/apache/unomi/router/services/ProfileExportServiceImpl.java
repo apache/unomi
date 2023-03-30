@@ -18,9 +18,12 @@ package org.apache.unomi.router.services;
 
 import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.unomi.api.PartialList;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.PropertyType;
+import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.services.ConfigSharingService;
+import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.router.api.ExportConfiguration;
 import org.apache.unomi.router.api.RouterConstants;
@@ -40,10 +43,15 @@ public class ProfileExportServiceImpl implements ProfileExportService {
 
 
     private PersistenceService persistenceService;
+    private DefinitionsService definitionsService;
     private ConfigSharingService configSharingService;
 
     public void setPersistenceService(PersistenceService persistenceService) {
         this.persistenceService = persistenceService;
+    }
+
+    public void setDefinitionsService(DefinitionsService definitionsService) {
+        this.definitionsService = definitionsService;
     }
 
     public void setConfigSharingService(ConfigSharingService configSharingService) {
@@ -51,17 +59,29 @@ public class ProfileExportServiceImpl implements ProfileExportService {
     }
 
     public String extractProfilesBySegment(ExportConfiguration exportConfiguration) {
-        List<Profile> profileList = persistenceService.query("segments", (String) exportConfiguration.getProperty("segment"), null, Profile.class);
+        Collection<PropertyType> propertiesDef = persistenceService.query("target", "profiles", null, PropertyType.class);
+
+        Condition segmentCondition = new Condition();
+        segmentCondition.setConditionType(definitionsService.getConditionType("profileSegmentCondition"));
+        segmentCondition.setParameter("segments", Collections.singletonList((String) exportConfiguration.getProperty("segment")));
+        segmentCondition.setParameter("matchType", "in");
+
         StringBuilder csvContent = new StringBuilder();
-        for (Profile profile : profileList) {
-            csvContent.append(convertProfileToCSVLine(profile, exportConfiguration));
-            csvContent.append(RouterUtils.getCharFromLineSeparator(exportConfiguration.getLineSeparator()));
+        PartialList<Profile> profiles = persistenceService.query(segmentCondition, null, Profile.class, 0, 1000, "10m");
+        int counter = 0;
+        while (profiles != null && profiles.getList().size() > 0) {
+            List<Profile> scrolledProfiles = profiles.getList();
+            for (Profile profile : scrolledProfiles) {
+                csvContent.append(convertProfileToCSVLine(profile, exportConfiguration, propertiesDef));
+                csvContent.append(RouterUtils.getCharFromLineSeparator(exportConfiguration.getLineSeparator()));
+            }
+            counter += scrolledProfiles.size();
+            profiles = persistenceService.continueScrollQuery(Profile.class, profiles.getScrollIdentifier(), profiles.getScrollTimeValidity());
         }
-        logger.debug("Exporting {} extracted profiles.", profileList.size());
 
         Map execution = new HashMap();
         execution.put(RouterConstants.KEY_EXECS_DATE, new Date().getTime());
-        execution.put(RouterConstants.KEY_EXECS_EXTRACTED, profileList.size());
+        execution.put(RouterConstants.KEY_EXECS_EXTRACTED, counter);
 
         exportConfiguration = (ExportConfiguration) RouterUtils.addExecutionEntry(exportConfiguration, execution, Integer.parseInt((String) configSharingService.getProperty(RouterConstants.KEY_HISTORY_SIZE)));
         persistenceService.save(exportConfiguration);
@@ -72,6 +92,10 @@ public class ProfileExportServiceImpl implements ProfileExportService {
     public String convertProfileToCSVLine(Profile profile, ExportConfiguration exportConfiguration) {
         // TODO: UNOMI-759 querying this everytimes
         Collection<PropertyType> propertiesDef = persistenceService.query("target", "profiles", null, PropertyType.class);
+        return convertProfileToCSVLine(profile, exportConfiguration, propertiesDef);
+    }
+
+    public String convertProfileToCSVLine(Profile profile, ExportConfiguration exportConfiguration, Collection<PropertyType> propertiesDef) {
         Map<String, String> mapping = (Map<String, String>) exportConfiguration.getProperty("mapping");
         String lineToWrite = "";
         for (int i = 0; i < mapping.size(); i++) {
