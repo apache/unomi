@@ -23,7 +23,6 @@ import org.apache.karaf.cellar.core.event.Event;
  */
 public class UpdateCamelRouteEvent extends Event {
     private String routeId;
-    private Object configuration;
 
     public UpdateCamelRouteEvent(String id) {
         super(id);
@@ -35,13 +34,5 @@ public class UpdateCamelRouteEvent extends Event {
 
     public void setRouteId(String routeId) {
         this.routeId = routeId;
-    }
-
-    public Object getConfiguration() {
-        return configuration;
-    }
-
-    public void setConfiguration(Object configuration) {
-        this.configuration = configuration;
     }
 }

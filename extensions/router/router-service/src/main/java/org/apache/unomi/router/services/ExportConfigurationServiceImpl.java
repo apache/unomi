@@ -16,21 +16,32 @@
  */
 package org.apache.unomi.router.services;
 
+import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.router.api.ExportConfiguration;
-import org.apache.unomi.router.api.IRouterCamelContext;
+import org.apache.unomi.router.api.RouterConstants;
 import org.apache.unomi.router.api.services.ImportExportConfigurationService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
+ * Service to manage Configuration of Item to export
  * Created by amidani on 28/04/2017.
  */
-public class ExportConfigurationServiceImpl extends AbstractConfigurationServiceImpl implements ImportExportConfigurationService<ExportConfiguration> {
+public class ExportConfigurationServiceImpl implements ImportExportConfigurationService<ExportConfiguration> {
 
     private static final Logger logger = LoggerFactory.getLogger(ExportConfigurationServiceImpl.class.getName());
+
+
+    private PersistenceService persistenceService;
+
+    public void setPersistenceService(PersistenceService persistenceService) {
+        this.persistenceService = persistenceService;
+    }
+
+    private final Map<String, RouterConstants.CONFIG_CAMEL_REFRESH> camelConfigsToRefresh = new ConcurrentHashMap<>();
 
     public ExportConfigurationServiceImpl() {
         logger.info("Initializing export configuration service...");
@@ -51,29 +62,25 @@ public class ExportConfigurationServiceImpl extends AbstractConfigurationService
         if (exportConfiguration.getItemId() == null) {
             exportConfiguration.setItemId(UUID.randomUUID().toString());
         }
-        if(updateRunningRoute) {
-            try {
-                routerCamelContext.updateProfileReaderRoute(exportConfiguration, true);
-            } catch (Exception e) {
-                logger.error("Error when trying to save/update running Apache Camel Route: {}", exportConfiguration.getItemId());
-            }
-        }
         persistenceService.save(exportConfiguration);
+
+        if (updateRunningRoute) {
+            camelConfigsToRefresh.put(exportConfiguration.getItemId(), RouterConstants.CONFIG_CAMEL_REFRESH.UPDATED);
+        }
+
         return persistenceService.load(exportConfiguration.getItemId(), ExportConfiguration.class);
     }
 
     @Override
     public void delete(String configId) {
-        try {
-            routerCamelContext.killExistingRoute(configId, true);
-        } catch (Exception e) {
-            logger.error("Error when trying to delete running Apache Camel Route: {}", configId);
-        }
         persistenceService.remove(configId, ExportConfiguration.class);
+        camelConfigsToRefresh.put(configId, RouterConstants.CONFIG_CAMEL_REFRESH.REMOVED);
     }
 
     @Override
-    public void setRouterCamelContext(IRouterCamelContext routerCamelContext) {
-        super.setRouterCamelContext(routerCamelContext);
+    public Map<String, RouterConstants.CONFIG_CAMEL_REFRESH> consumeConfigsToBeRefresh() {
+        Map<String, RouterConstants.CONFIG_CAMEL_REFRESH> result = new HashMap<>(camelConfigsToRefresh);
+        camelConfigsToRefresh.clear();
+        return result;
     }
 }

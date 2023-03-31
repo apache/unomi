@@ -20,6 +20,10 @@ package org.apache.unomi.router.api;
  * Created by amidani on 13/06/2017.
  */
 public interface RouterConstants {
+    enum CONFIG_CAMEL_REFRESH {
+        UPDATED,
+        REMOVED
+    }
 
     String CONFIG_TYPE_NOBROKER = "nobroker";
     String CONFIG_TYPE_KAFKA = "kafka";
