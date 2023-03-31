@@ -24,6 +24,7 @@ import org.apache.camel.model.RouteDefinition;
 import org.apache.unomi.api.services.ClusterService;
 import org.apache.unomi.api.services.ConfigSharingService;
 import org.apache.unomi.api.services.ProfileService;
+import org.apache.unomi.api.services.SchedulerService;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.router.api.ExportConfiguration;
 import org.apache.unomi.router.api.IRouterCamelContext;
@@ -37,20 +38,23 @@ import org.apache.unomi.router.core.processor.ImportConfigByFileNameProcessor;
 import org.apache.unomi.router.core.processor.ImportRouteCompletionProcessor;
 import org.apache.unomi.router.core.processor.UnomiStorageProcessor;
 import org.apache.unomi.router.core.route.*;
-import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
-import org.osgi.framework.BundleEvent;
-import org.osgi.framework.SynchronousBundleListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Map;
+import java.util.TimerTask;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Created by amidani on 04/05/2017.
  */
-public class RouterCamelContext implements SynchronousBundleListener, IRouterCamelContext {
+public class RouterCamelContext implements IRouterCamelContext {
 
     private Logger logger = LoggerFactory.getLogger(RouterCamelContext.class.getName());
     private CamelContext camelContext;
@@ -73,6 +77,11 @@ public class RouterCamelContext implements SynchronousBundleListener, IRouterCam
     private BundleContext bundleContext;
     private ConfigSharingService configSharingService;
     private ClusterService clusterService;
+
+    // TODO UNOMI-572: when fixing UNOMI-572 please remove the usage of the custom ScheduledExecutorService and re-introduce the Unomi Scheduler Service
+    private ScheduledExecutorService scheduler;
+    private Integer configsRefreshInterval = 1000;
+    private ScheduledFuture<?> scheduledFuture;
 
     public static String EVENT_ID_REMOVE = "org.apache.unomi.router.event.remove";
     public static String EVENT_ID_IMPORT = "org.apache.unomi.router.event.import";
@@ -102,12 +111,71 @@ public class RouterCamelContext implements SynchronousBundleListener, IRouterCam
         camelContext.setTracing(true);
     }
 
-    public void initCamelContext() throws Exception {
+    public void init() throws Exception {
         logger.info("Initialize Camel Context...");
+        scheduler = Executors.newSingleThreadScheduledExecutor();
 
         configSharingService.setProperty(RouterConstants.IMPORT_ONESHOT_UPLOAD_DIR, uploadDir);
         configSharingService.setProperty(RouterConstants.KEY_HISTORY_SIZE, execHistorySize);
 
+        initCamel();
+
+        initTimers();
+        logger.info("Camel Context initialized successfully.");
+    }
+
+    public void destroy() throws Exception {
+        scheduledFuture.cancel(true);
+        if (scheduler != null) {
+            scheduler.shutdown();
+        }
+        //This is to shutdown Camel context
+        //(will stop all routes/components/endpoints etc and clear internal state/cache)
+        this.camelContext.stop();
+        logger.info("Camel context for profile import is shutdown.");
+    }
+
+    private void initTimers() {
+        TimerTask task = new TimerTask() {
+            @Override
+            public void run() {
+                try {
+                    Map<String, RouterConstants.CONFIG_CAMEL_REFRESH> importConfigsToRefresh = importConfigurationService.consumeConfigsToBeRefresh();
+                    Map<String, RouterConstants.CONFIG_CAMEL_REFRESH> exportConfigsToRefresh = exportConfigurationService.consumeConfigsToBeRefresh();
+
+                    for (Map.Entry<String, RouterConstants.CONFIG_CAMEL_REFRESH> importConfigToRefresh : importConfigsToRefresh.entrySet()) {
+                        try {
+                            if (importConfigToRefresh.getValue().equals(RouterConstants.CONFIG_CAMEL_REFRESH.UPDATED)) {
+                                updateProfileImportReaderRoute(importConfigToRefresh.getKey(), true);
+                            } else if (importConfigToRefresh.getValue().equals(RouterConstants.CONFIG_CAMEL_REFRESH.REMOVED)) {
+                                killExistingRoute(importConfigToRefresh.getKey(), true);
+                            }
+                        } catch (Exception e) {
+                            logger.error("Unexpected error while refreshing(" + importConfigToRefresh.getValue() + ") camel route: " + importConfigToRefresh.getKey(), e);
+                        }
+                    }
+
+
+                    for (Map.Entry<String, RouterConstants.CONFIG_CAMEL_REFRESH> exportConfigToRefresh : exportConfigsToRefresh.entrySet()) {
+                        try {
+                            if (exportConfigToRefresh.getValue().equals(RouterConstants.CONFIG_CAMEL_REFRESH.UPDATED)) {
+                                updateProfileExportReaderRoute(exportConfigToRefresh.getKey(), true);
+                            } else if (exportConfigToRefresh.getValue().equals(RouterConstants.CONFIG_CAMEL_REFRESH.REMOVED)) {
+                                killExistingRoute(exportConfigToRefresh.getKey(), true);
+                            }
+                        } catch (Exception e) {
+                            logger.error("Unexpected error while refreshing(" + exportConfigToRefresh.getValue() + ") camel route: " + exportConfigToRefresh.getKey(), e);
+                        }
+                    }
+                } catch (Exception e) {
+                    logger.error("Unexpected error while refreshing import/export camel routes", e);
+                }
+            }
+        };
+        scheduledFuture = scheduler.scheduleWithFixedDelay(task, 0, configsRefreshInterval, TimeUnit.MILLISECONDS);
+    }
+
+    private void initCamel() throws Exception {
         camelContext = new OsgiDefaultCamelContext(bundleContext);
 
         //--IMPORT ROUTES
@@ -142,7 +210,7 @@ public class RouterCamelContext implements SynchronousBundleListener, IRouterCam
 
         //Profiles collect
         ProfileExportCollectRouteBuilder profileExportCollectRouteBuilder = new ProfileExportCollectRouteBuilder(kafkaProps, configType);
-        profileExportCollectRouteBuilder.setExportConfigurationService(exportConfigurationService);
+        profileExportCollectRouteBuilder.setExportConfigurationList(exportConfigurationService.getAll());
         profileExportCollectRouteBuilder.setPersistenceService(persistenceService);
         profileExportCollectRouteBuilder.setAllowedEndpoints(allowedEndpoints);
         profileExportCollectRouteBuilder.setJacksonDataFormat(jacksonDataFormat);
@@ -160,21 +228,6 @@ public class RouterCamelContext implements SynchronousBundleListener, IRouterCam
         camelContext.addRoutes(profileExportProducerRouteBuilder);
 
         camelContext.start();
-
-        logger.debug("postConstruct {" + bundleContext.getBundle() + "}");
-
-        processBundleStartup(bundleContext);
-        for (Bundle bundle : bundleContext.getBundles()) {
-            if (bundle.getBundleContext() != null) {
-                processBundleStartup(bundle.getBundleContext());
-            }
-        }
-        bundleContext.addBundleListener(this);
-
-        importConfigurationService.setRouterCamelContext(this);
-        exportConfigurationService.setRouterCamelContext(this);
-
-        logger.info("Camel Context {} initialized successfully.");
     }
 
     public void killExistingRoute(String routeId, boolean fireEvent) throws Exception {
@@ -194,17 +247,15 @@ public class RouterCamelContext implements SynchronousBundleListener, IRouterCam
         }
     }
 
-    public void updateProfileReaderRoute(Object configuration, boolean fireEvent) throws Exception {
-        if (configuration instanceof ImportConfiguration) {
-            updateProfileImportReaderRoute((ImportConfiguration) configuration, fireEvent);
-        } else {
-            updateProfileExportReaderRoute((ExportConfiguration) configuration, fireEvent);
-        }
-    }
+    public void updateProfileImportReaderRoute(String configId, boolean fireEvent) throws Exception {
+        killExistingRoute(configId, false);
 
-    private void updateProfileImportReaderRoute(ImportConfiguration importConfiguration, boolean fireEvent) throws Exception {
-        killExistingRoute(importConfiguration.getItemId(), false);
-        //Handle transforming an import config oneshot <--> recurrent
+        ImportConfiguration importConfiguration = importConfigurationService.load(configId);
+        if (importConfiguration == null) {
+            logger.warn("Cannot update profile import reader route, config: {} not found", configId);
+            return;
+        }
+
         if (RouterConstants.IMPORT_EXPORT_CONFIG_TYPE_RECURRENT.equals(importConfiguration.getConfigType())) {
             ProfileImportFromSourceRouteBuilder builder = new ProfileImportFromSourceRouteBuilder(kafkaProps, configType);
             builder.setImportConfigurationList(Arrays.asList(importConfiguration));
@@ -217,19 +268,23 @@ public class RouterCamelContext implements SynchronousBundleListener, IRouterCam
 
             if (fireEvent) {
                 UpdateCamelRouteEvent event = new UpdateCamelRouteEvent(EVENT_ID_IMPORT);
-                event.setConfiguration(importConfiguration);
                 clusterService.sendEvent(event);
             }
         }
     }
 
-    private void updateProfileExportReaderRoute(ExportConfiguration exportConfiguration, boolean fireEvent) throws Exception {
-        killExistingRoute(exportConfiguration.getItemId(), false);
-        //Handle transforming an import config oneshot <--> recurrent
+    public void updateProfileExportReaderRoute(String configId, boolean fireEvent) throws Exception {
+        killExistingRoute(configId, false);
+
+        ExportConfiguration exportConfiguration = exportConfigurationService.load(configId);
+        if (exportConfiguration == null) {
+            logger.warn("Cannot update profile export reader route, config: {} not found", configId);
+            return;
+        }
+
         if (RouterConstants.IMPORT_EXPORT_CONFIG_TYPE_RECURRENT.equals(exportConfiguration.getConfigType())) {
             ProfileExportCollectRouteBuilder profileExportCollectRouteBuilder = new ProfileExportCollectRouteBuilder(kafkaProps, configType);
-            profileExportCollectRouteBuilder.setExportConfigurationList(Arrays.asList(exportConfiguration));
-            profileExportCollectRouteBuilder.setExportConfigurationService(exportConfigurationService);
+            profileExportCollectRouteBuilder.setExportConfigurationList(Collections.singletonList(exportConfiguration));
             profileExportCollectRouteBuilder.setPersistenceService(persistenceService);
             profileExportCollectRouteBuilder.setAllowedEndpoints(allowedEndpoints);
             profileExportCollectRouteBuilder.setJacksonDataFormat(jacksonDataFormat);
@@ -238,7 +293,6 @@ public class RouterCamelContext implements SynchronousBundleListener, IRouterCam
 
             if (fireEvent) {
                 UpdateCamelRouteEvent event = new UpdateCamelRouteEvent(EVENT_ID_EXPORT);
-                event.setConfiguration(exportConfiguration);
                 clusterService.sendEvent(event);
             }
         }
@@ -302,24 +356,5 @@ public class RouterCamelContext implements SynchronousBundleListener, IRouterCam
 
     public void setAllowedEndpoints(String allowedEndpoints) {
         this.allowedEndpoints = allowedEndpoints;
-    }
-
-    public void preDestroy() throws Exception {
-        bundleContext.removeBundleListener(this);
-        //This is to shutdown Camel context
-        //(will stop all routes/components/endpoints etc and clear internal state/cache)
-        this.camelContext.stop();
-        logger.info("Camel context for profile import is shutdown.");
-    }
-
-    private void processBundleStartup(BundleContext bundleContext) {
-        if (bundleContext == null) {
-            return;
-        }
-    }
-
-    @Override
-    public void bundleChanged(BundleEvent bundleEvent) {
-
     }
 }

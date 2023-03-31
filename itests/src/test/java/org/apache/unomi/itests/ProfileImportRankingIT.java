@@ -21,6 +21,7 @@ import org.apache.unomi.api.PartialList;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.PropertyType;
 import org.apache.unomi.api.services.ProfileService;
+import org.apache.unomi.router.api.IRouterCamelContext;
 import org.apache.unomi.router.api.ImportConfiguration;
 import org.apache.unomi.router.api.RouterConstants;
 import org.apache.unomi.router.api.services.ImportExportConfigurationService;
@@ -51,11 +52,13 @@ public class ProfileImportRankingIT extends BaseIT {
     protected ImportExportConfigurationService<ImportConfiguration> importConfigurationService;
     @Inject @Filter(timeout = 600000)
     protected ProfileService profileService;
+    @Inject @Filter(timeout = 600000)
+    protected IRouterCamelContext routerCamelContext;
 
     @Test
     public void testImportRanking() throws InterruptedException {
 
-        importConfigurationService.getRouterCamelContext().setTracing(true);
+        routerCamelContext.setTracing(true);
 
         /*** Create Missing Properties ***/
         PropertyType propertyTypeUciId = new PropertyType(new Metadata("integration", "uciId", "UCI ID", "UCI ID"));

@@ -17,10 +17,11 @@
 package org.apache.unomi.router.api.services;
 
 import org.apache.unomi.router.api.ExportConfiguration;
-import org.apache.unomi.router.api.IRouterCamelContext;
 import org.apache.unomi.router.api.ImportConfiguration;
+import org.apache.unomi.router.api.RouterConstants;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * A service to access and operate on {@link ImportConfiguration}s / {@link ExportConfiguration}s.
@@ -60,15 +61,8 @@ public interface ImportExportConfigurationService<T> {
     void delete(String configId);
 
     /**
-     * Set the router camel context to share
-     *
-     * @param routerCamelContext the router Camel context to use for all operations
+     * Used by camel route system to get the latest changes on configs and reflect changes on camel routes if necessary
+     * @return map of configId per operation to be done in camel
      */
-    void setRouterCamelContext(IRouterCamelContext routerCamelContext);
-
-    /**
-     * Retrieve the configured router camel context
-     * @return the configured instance, or null if not configured
-     */
-    IRouterCamelContext getRouterCamelContext();
+    Map<String, RouterConstants.CONFIG_CAMEL_REFRESH> consumeConfigsToBeRefresh();
 }
