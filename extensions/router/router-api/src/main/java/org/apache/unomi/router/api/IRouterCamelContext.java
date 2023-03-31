@@ -23,7 +23,9 @@ public interface IRouterCamelContext {
 
     void killExistingRoute(String routeId, boolean fireEvent) throws Exception;
 
-    void updateProfileReaderRoute(Object configuration, boolean fireEvent) throws Exception;
+    void updateProfileImportReaderRoute(String configId, boolean fireEvent) throws Exception;
+
+    void updateProfileExportReaderRoute(String configId, boolean fireEvent) throws Exception;
 
     void setTracing(boolean tracing);
 }

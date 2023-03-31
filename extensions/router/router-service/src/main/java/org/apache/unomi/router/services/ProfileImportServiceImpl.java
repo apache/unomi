@@ -18,6 +18,7 @@ package org.apache.unomi.router.services;
 
 import org.apache.commons.beanutils.BeanUtils;
 import org.apache.unomi.api.Profile;
+import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.router.api.ProfileToImport;
 import org.apache.unomi.router.api.services.ProfileImportService;
 import org.slf4j.Logger;
@@ -29,9 +30,15 @@ import java.util.List;
 /**
  * Created by amidani on 18/05/2017.
  */
-public class ProfileImportServiceImpl extends AbstractCustomServiceImpl implements ProfileImportService {
+public class ProfileImportServiceImpl implements ProfileImportService {
 
     private static final Logger logger = LoggerFactory.getLogger(ProfileImportServiceImpl.class.getName());
+
+    private PersistenceService persistenceService;
+
+    public void setPersistenceService(PersistenceService persistenceService) {
+        this.persistenceService = persistenceService;
+    }
 
     public boolean saveMergeDeleteImportedProfile(ProfileToImport profileToImport) throws InvocationTargetException, IllegalAccessException {
         logger.debug("Importing profile with ID : {}", profileToImport.getItemId());

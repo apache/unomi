@@ -39,7 +39,6 @@ public class ProfileExportCollectRouteBuilder extends RouterAbstractRouteBuilder
     private static final Logger logger = LoggerFactory.getLogger(ProfileExportCollectRouteBuilder.class);
 
     private List<ExportConfiguration> exportConfigurationList;
-    private ImportExportConfigurationService<ExportConfiguration> exportConfigurationService;
     private PersistenceService persistenceService;
 
     public ProfileExportCollectRouteBuilder(Map<String, String> kafkaProps, String configType) {
@@ -48,15 +47,15 @@ public class ProfileExportCollectRouteBuilder extends RouterAbstractRouteBuilder
 
     @Override
     public void configure() throws Exception {
-        logger.info("Configure Recurrent Route 'Export :: Collect Data'");
-
-        if (exportConfigurationList == null) {
-            exportConfigurationList = exportConfigurationService.getAll();
+        if (exportConfigurationList == null || exportConfigurationList.isEmpty()) {
+            // Nothing to configure
+            return;
         }
+
+        logger.info("Configure Recurrent Route 'Export :: Collect Data'");
 
         CollectProfileBean collectProfileBean = new CollectProfileBean();
         collectProfileBean.setPersistenceService(persistenceService);
-
 
         //Loop on multiple export configuration
         for (final ExportConfiguration exportConfiguration : exportConfigurationList) {
@@ -74,7 +73,7 @@ public class ProfileExportCollectRouteBuilder extends RouterAbstractRouteBuilder
                                 .autoStartup(exportConfiguration.isActive())
                                 .bean(collectProfileBean, "extractProfileBySegment(" + exportConfiguration.getProperties().get("segment") + ")")
                                 .split(body())
-                                .marshal(jacksonDataFormat)
+                                .marshal(jacksonDataFormat) // TODO: UNOMI-759 avoid unnecessary marshalling
                                 .convertBodyTo(String.class)
                                 .setHeader(RouterConstants.HEADER_EXPORT_CONFIG, constant(exportConfiguration))
                                 .log(LoggingLevel.DEBUG, "BODY : ${body}");
@@ -99,12 +98,7 @@ public class ProfileExportCollectRouteBuilder extends RouterAbstractRouteBuilder
         this.exportConfigurationList = exportConfigurationList;
     }
 
-    public void setExportConfigurationService(ImportExportConfigurationService<ExportConfiguration> exportConfigurationService) {
-        this.exportConfigurationService = exportConfigurationService;
-    }
-
     public void setPersistenceService(PersistenceService persistenceService) {
         this.persistenceService = persistenceService;
     }
-
 }
