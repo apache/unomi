@@ -14,9 +14,9 @@
 
 === Develop with Unomi and JSON Schemas
 
-Schemas can be complex to develop, and sometimes, understading why an event is rejected can be challenging.
+Schemas can be complex to develop, and sometimes, understanding why an event is rejected can be challenging.
 
-This section of the documentation defails mechanisms put in place to faciliate the development when working around JSON Schemas (when creating a new schema, when 
+This section of the documentation defails mechanisms put in place to facilitate the development when working around JSON Schemas (when creating a new schema, when 
 modifying an existing event, ...etc).
 
 ==== Logs in debug mode
