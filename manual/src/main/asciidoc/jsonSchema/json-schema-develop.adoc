@@ -1,0 +1,81 @@
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+=== Develop with Unomi and JSON Schemas
+
+Schemas can be complex to develop, and sometimes, understading why an event is rejected can be challenging.
+
+This section of the documentation defails mechanisms put in place to faciliate the development when working around JSON Schemas (when creating a new schema, when 
+modifying an existing event, ...etc).
+
+==== Logs in debug mode
+
+Running Apache Unomi with the logs in debug level will add to the logs the reason why events are rejected.
+You can set the log level of the class validating the events to debug by using the following karaf command:
+
+[source]
+----
+log:set DEBUG org.apache.unomi.schema.impl.SchemaServiceImpl
+----
+
+Doing so will output logs similar to this:
+
+[source]
+----
+08:55:28.128 DEBUG [qtp1422628821-128] Schema validation found 2 errors while validating against schema: https://unomi.apache.org/schemas/json/events/view/1-0-0
+08:55:28.138 DEBUG [qtp1422628821-128] Validation error: There are unevaluated properties at following paths $.source.properties
+08:55:28.140 DEBUG [qtp1422628821-128] Validation error: There are unevaluated properties at following paths $.source.itemId, $.source.itemType, $.source.scope, $.source.properties
+08:55:28.142 ERROR [qtp1422628821-128] An event was rejected - switch to DEBUG log level for more information
+----
+
+==== validateEvent endpoint
+
+A dedicated Admin endpoint (requires authentication), accessible at: `cxs/jsonSchema/validateEvent`, was created to validate events against JSON Schemas loaded in Apache Unomi.
+
+For example, sending an event not matching a schema:
+[source]
+----
+curl --request POST \
+  --url http://localhost:8181/cxs/jsonSchema/validateEvent \
+  --user karaf:karaf \  
+  --header 'Authorization: Basic a2FyYWY6amN1c3RvbWVyUEA1NQ==' \
+  --header 'Content-Type: application/json' \
+  --data '{
+    "eventType": "no-event",
+    "scope": "unknown_scope",
+    "properties": {
+        "workspace": "no_workspace",
+        "path": "some/path"
+    }
+}'
+----
+
+Would return the following:
+
+[source]
+----
+Request rejected by the server because: Unable to validate event: Schema not found for event type: no-event
+----
+
+And if we were to submit a valid event type but make a typo in one of the properties name, the endpoint will point us
+towards the incorrect property:
+
+[source]
+----
+[
+	{
+		"error": "There are unevaluated properties at following paths $.source.scopee"
+	}
+]
+----
