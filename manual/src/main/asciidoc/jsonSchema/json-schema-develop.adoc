@@ -49,7 +49,6 @@ For example, sending an event not matching a schema:
 curl --request POST \
   --url http://localhost:8181/cxs/jsonSchema/validateEvent \
   --user karaf:karaf \  
-  --header 'Authorization: Basic a2FyYWY6amN1c3RvbWVyUEA1NQ==' \
   --header 'Content-Type: application/json' \
   --data '{
     "eventType": "no-event",
