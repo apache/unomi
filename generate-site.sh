@@ -20,7 +20,8 @@
 if [ $# -ne 2 ]
   then
     echo "Illegal number of arguments supplied. Syntax should be generate-site.sh X_X_X X.X.X"
-    echo "Example: ./generate.sh 2_0_x 2.0.1"
+    echo "Where X_X_X is either the release branch name or master"
+    echo "Example: ./generate-site.sh 2_0_x 2.0.1 or ./generate-site.sh master 2.3.0-SNAPSHOT for updating the master snapshot version"
     exit 1
 fi
 echo Setting up environment...
@@ -41,7 +42,9 @@ echo Git local branch: ${LOCAL_BRANCH_NAME}
 echo Generating manual for branch ${RELEASE_BRANCH_NAME} and version ${RELEASE_VERSION}...
 mvn clean
 pushd manual
-mvn -Ddoc.archive=true -Ddoc.output.pdf=target/generated-docs/pdf/$RELEASE_BRANCH_NAME -Ddoc.output.html=target/generated-docs/html/$RELEASE_BRANCH_NAME -Ddoc.version=$RELEASE_BRANCH_NAME -P sign install
+if [ "$RELEASE_BRANCH_NAME" != "master" ]; then
+  mvn -Ddoc.archive=true -Ddoc.output.pdf=target/generated-docs/pdf/$RELEASE_BRANCH_NAME -Ddoc.output.html=target/generated-docs/html/$RELEASE_BRANCH_NAME -Ddoc.version=$RELEASE_BRANCH_NAME -P sign install
+fi
 mvn -P sign install
 # If not on master branch we remove the latest directories
 if [ "$LOCAL_BRANCH_NAME" != "master" ]; then

@@ -19,8 +19,9 @@
 ################################################################################
 if [ $# -ne 4 ]
   then
-    echo "Illegal number of arguments supplied. Syntax should be generate-site-and-upload.sh X_X_X X.X.X SVNusername SVNpassword "
-    echo "Example: ./generate-site-and-upload.sh 2_0_x 2.0.1 user password"
+    echo "Illegal number of arguments supplied. Syntax should be generate-site-and-upload.sh X_X_X X.X.X SVNusername SVNpassword"
+    echo "Where X_X_X is either the release branch name or master"
+    echo "Example: ./generate-site-and-upload.sh 2_0_x 2.0.1 user password ./generate-site.sh master 2.3.0-SNAPSHOT user password for updating the master snapshot version"
     exit 1
 fi
 echo Setting up environment...
@@ -45,19 +46,19 @@ echo Committing documentation to Apache SVN...
 mvn scm-publish:publish-scm -Dscmpublish.pubScmUrl=scm:svn:https://svn.apache.org/repos/asf/unomi/website/manual -Dscmpublish.content=target/staging/manual -Dusername=$SVN_USERNAME -Dpassword=$SVN_PASSWORD
 if [ "$LOCAL_BRANCH_NAME" == "master" ]; then
   mvn scm-publish:publish-scm -Dscmpublish.pubScmUrl=scm:svn:https://svn.apache.org/repos/asf/unomi/website/unomi-api -Dscmpublish.content=target/staging/unomi-api -Dusername=$SVN_USERNAME -Dpassword=$SVN_PASSWORD
+else
+  echo "Committing manual to Apache Dist SVN..."
+  pushd manual/target
+  svn co https://dist.apache.org/repos/dist/release/unomi/$VERSION
+  mv unomi-manual-$BRANCH_NAME.pdf $VERSION
+  mv unomi-manual-$BRANCH_NAME.pdf.asc $VERSION
+  mv unomi-manual-$BRANCH_NAME.zip $VERSION
+  mv unomi-manual-$BRANCH_NAME.pdf.sha512 $VERSION
+  mv unomi-manual-$BRANCH_NAME.zip.asc $VERSION
+  mv unomi-manual-$BRANCH_NAME.zip.sha512 $VERSION
+  cd $VERSION
+  svn add unomi-manual*
+  svn commit -m "Update Unomi manual packages for version ${VERSION}"
+  popd
 fi
-
-echo "Committing manual to Apache Dist SVN..."
-pushd manual/target
-svn co https://dist.apache.org/repos/dist/release/unomi/$VERSION
-mv unomi-manual-$BRANCH_NAME.pdf $VERSION
-mv unomi-manual-$BRANCH_NAME.pdf.asc $VERSION
-mv unomi-manual-$BRANCH_NAME.zip $VERSION
-mv unomi-manual-$BRANCH_NAME.pdf.sha512 $VERSION
-mv unomi-manual-$BRANCH_NAME.zip.asc $VERSION
-mv unomi-manual-$BRANCH_NAME.zip.sha512 $VERSION
-cd $VERSION
-svn add unomi-manual*
-svn commit -m "Update Unomi manual packages for version ${VERSION}"
-popd
 echo Documentation generation and upload completed.
