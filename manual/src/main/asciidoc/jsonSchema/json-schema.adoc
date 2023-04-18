@@ -15,4 +15,6 @@ include::introduction.adoc[]
 
 include::json-schema-api.adoc[]
 
+include::json-schema-develop.adoc[]
+
 include::extend-an-existing-schema.adoc[]
