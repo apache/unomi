@@ -20,6 +20,7 @@ package org.apache.unomi.schema.api;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -62,6 +63,15 @@ public interface SchemaService {
      * @throws ValidationException in case something goes wrong and validation could not be performed.
      */
     Set<ValidationError> validateEvent(String event) throws ValidationException;
+
+    /**
+     * perform a validation of a list of the given events
+     *
+     * @param events the events to validate
+     * @return The Map of validation errors group per event type in case there is some, empty map otherwise
+     * @throws ValidationException in case something goes wrong and validation could not be performed.
+     */
+    Map<String,Set<ValidationError>> validateEvents(String events) throws ValidationException;
 
     /**
      * Get the list of installed Json Schema Ids

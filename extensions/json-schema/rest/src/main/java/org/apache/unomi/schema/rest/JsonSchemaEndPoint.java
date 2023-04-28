@@ -36,8 +36,7 @@ import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import java.util.Collection;
-import java.util.Set;
+import java.util.*;
 
 @WebService
 @Produces(MediaType.APPLICATION_JSON + ";charset=UTF-8")
@@ -95,7 +94,7 @@ public class JsonSchemaEndPoint {
      */
     @POST
     @Path("/")
-    @Consumes({ MediaType.TEXT_PLAIN, MediaType.APPLICATION_JSON })
+    @Consumes({MediaType.TEXT_PLAIN, MediaType.APPLICATION_JSON})
     @Produces(MediaType.APPLICATION_JSON)
     public Response save(String jsonSchema) {
         try {
@@ -119,16 +118,36 @@ public class JsonSchemaEndPoint {
 
     /**
      * Being able to validate a given event is useful when you want to develop custom events and associated schemas
+     *
      * @param event the event to be validated
      * @return Validation error messages if there is some
      */
     @POST
     @Produces(MediaType.APPLICATION_JSON + ";charset=UTF-8")
-    @Consumes({ MediaType.TEXT_PLAIN, MediaType.APPLICATION_JSON })
+    @Consumes({MediaType.TEXT_PLAIN, MediaType.APPLICATION_JSON})
     @Path("/validateEvent")
     public Collection<ValidationError> validateEvent(String event) {
         try {
             return schemaService.validateEvent(event);
+        } catch (Exception e) {
+            String errorMessage = "Unable to validate event: " + e.getMessage();
+            throw new InvalidRequestException(errorMessage, errorMessage);
+        }
+    }
+
+    /**
+     * Being able to validate a given list of event is useful when you want to develop custom events and associated schemas
+     *
+     * @param events the events to be validated
+     * @return Validation error messages if there is some grouped per event type
+     */
+    @POST
+    @Produces(MediaType.APPLICATION_JSON + ";charset=UTF-8")
+    @Consumes({MediaType.TEXT_PLAIN, MediaType.APPLICATION_JSON})
+    @Path("/validateEvents")
+    public Map<String, Set<ValidationError>> validateEvents(String events) {
+        try {
+            return schemaService.validateEvents(events);
         } catch (Exception e) {
             String errorMessage = "Unable to validate event: " + e.getMessage();
             throw new InvalidRequestException(errorMessage, errorMessage);
