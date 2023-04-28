@@ -78,3 +78,63 @@ towards the incorrect property:
 	}
 ]
 ----
+
+==== validateEvents endpoint
+
+A dedicated Admin endpoint (requires authentication), accessible at: `cxs/jsonSchema/validateEvents`, was created to validate a list of event at once against JSON Schemas loaded in Apache Unomi.
+
+For example, sending a list of event not matching a schema:
+[source]
+----
+curl --request POST \
+  --url http://localhost:8181/cxs/jsonSchema/validateEvents \
+  --user karaf:karaf \
+  --header 'Content-Type: application/json' \
+  --data '[{
+    "eventType": "view",
+    "scope": "scope",
+    "properties": {
+        "workspace": "no_workspace",
+        "path": "some/path",
+        "unknowProperty": "not valid"
+    }, {
+    "eventType": "view",
+    "scope": "scope",
+    "properties": {
+        "workspace": "no_workspace",
+        "path": "some/path",
+        "unknowProperty": "not valid",
+        "secondUnknowProperty": "also not valid"
+    }, {
+    "eventType": "notKnownEvent",
+    "scope": "scope",
+    "properties": {
+        "workspace": "no_workspace",
+        "path": "some/path"
+    }
+}]'
+----
+
+Would return the errors grouped by event type as the following:
+
+[source]
+----
+{
+    "view": [
+        {
+            "error": "There are unevaluated properties at following paths $.properties.unknowProperty"
+        },
+        {
+            "error": "There are unevaluated properties at following paths $.properties.secondUnknowProperty"
+        }
+    ],
+    "notKnownEvent": [
+        {
+            "error": "No Schema found for this event type"
+        }
+    ]
+}
+----
+
+If several events have the same issue, only one message is returned for this issue.
+
