@@ -42,7 +42,8 @@ public class ValidationError implements Serializable {
     }
 
     public boolean equals(Object o) {
-        return validationMessage.equals(o);
+        ValidationError other = (ValidationError) o;
+        return validationMessage.equals(other.validationMessage);
     }
 
     public int hashCode() {
