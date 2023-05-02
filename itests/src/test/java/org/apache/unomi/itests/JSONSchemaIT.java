@@ -269,7 +269,7 @@ public class JSONSchemaIT extends BaseIT {
         keepTrying("No error should have been detected",
                 () -> {
                     try {
-                        return schemaService.validateEvents(listEvents.toString()).get("flattened").isEmpty();
+                        return schemaService.validateEvents(listEvents.toString()).isEmpty();
                     } catch (Exception e) {
                         return false;
                     }

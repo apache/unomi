@@ -124,10 +124,14 @@ public class SchemaServiceImpl implements SchemaService {
         Map<String, Set<ValidationError>> errorsPerEventType = new HashMap<>();
         JsonNode eventsNodes = parseData(events);
         eventsNodes.forEach(event -> {
+            String eventType = null;
             try {
-                Set<ValidationError> errors = validateNodeEvent(event);
+                eventType = extractEventType(event);
+                JsonSchemaWrapper eventSchema = getSchemaForEventType(eventType);
+                JsonSchema jsonSchema = getJsonSchema(eventSchema.getItemId());
+
+                Set<ValidationError> errors = validate(event, jsonSchema);
                 if (!errors.isEmpty()) {
-                    String eventType = event.get("eventType").asText();
                     if (errorsPerEventType.containsKey(eventType)) {
                         errorsPerEventType.get(eventType).addAll(errors);
                     } else {
@@ -136,11 +140,11 @@ public class SchemaServiceImpl implements SchemaService {
                 }
             } catch (ValidationException e) {
                 Set<ValidationError> errors = buildCustomErrorMessage(e.getMessage());
-                String eventType = e.getEventType() != null ? e.getEventType() : GENERIC_ERROR_KEY;
-                if (errorsPerEventType.containsKey(eventType)) {
-                    errorsPerEventType.get(eventType).addAll(errors);
+                String eventTypeOrErrorKey = eventType != null ? eventType : GENERIC_ERROR_KEY;
+                if (errorsPerEventType.containsKey(eventTypeOrErrorKey)) {
+                    errorsPerEventType.get(eventTypeOrErrorKey).addAll(errors);
                 } else {
-                    errorsPerEventType.put(eventType, errors);
+                    errorsPerEventType.put(eventTypeOrErrorKey, errors);
                 }
             }
         });
@@ -152,14 +156,6 @@ public class SchemaServiceImpl implements SchemaService {
         Set<ValidationError> errors = new HashSet<>();
         errors.add(error);
         return errors;
-    }
-
-    private Set<ValidationError> validateNodeEvent(JsonNode event) throws ValidationException {
-        String eventType = extractEventType(event);
-        JsonSchemaWrapper eventSchema = getSchemaForEventType(eventType);
-        JsonSchema jsonSchema = getJsonSchema(eventSchema.getItemId());
-
-        return validate(event, jsonSchema);
     }
 
     @Override
@@ -182,7 +178,7 @@ public class SchemaServiceImpl implements SchemaService {
     @Override
     public JsonSchemaWrapper getSchemaForEventType(String eventType) throws ValidationException {
         if (StringUtils.isEmpty(eventType)) {
-            throw new ValidationException("eventType missing", eventType);
+            throw new ValidationException("eventType missing");
         }
 
         return schemasById.values().stream()
@@ -192,7 +188,7 @@ public class SchemaServiceImpl implements SchemaService {
                                 jsonSchemaWrapper.getName() != null &&
                                 jsonSchemaWrapper.getName().equals(eventType))
                 .findFirst()
-                .orElseThrow(() -> new ValidationException("Schema not found for event type: " + eventType, eventType));
+                .orElseThrow(() -> new ValidationException("Schema not found for event type: " + eventType));
     }
 
     @Override
