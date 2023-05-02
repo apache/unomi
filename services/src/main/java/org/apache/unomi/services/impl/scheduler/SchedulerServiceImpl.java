@@ -64,11 +64,10 @@ public class SchedulerServiceImpl implements SchedulerService {
 
     public static long getTimeDiffInSeconds(int hourInUtc, ZonedDateTime now) {
         ZonedDateTime nextRun = now.withHour(hourInUtc).withMinute(0).withSecond(0);
-        if(now.compareTo(nextRun) > 0)
+        if(now.compareTo(nextRun) > 0) {
             nextRun = nextRun.plusDays(1);
+        }
 
-        Duration duration = Duration.between(now, nextRun);
-        long initialDelay = duration.getSeconds();
-        return initialDelay;
+        return Duration.between(now, nextRun).getSeconds();
     }
 }
