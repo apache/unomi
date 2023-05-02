@@ -52,6 +52,8 @@ public class SchemaServiceImpl implements SchemaService {
     private static final Logger logger = LoggerFactory.getLogger(SchemaServiceImpl.class.getName());
     private static final String TARGET_EVENTS = "events";
 
+    private static final String GENERIC_ERROR_KEY = "error";
+
     ObjectMapper objectMapper = new ObjectMapper();
 
     /**
@@ -120,33 +122,31 @@ public class SchemaServiceImpl implements SchemaService {
         Map<String, Set<ValidationError>> errorsPerEventType = new HashMap<>();
         JsonNode eventsNodes = parseData(events);
         eventsNodes.forEach(event -> {
-            String eventType = event.get("eventType").asText();
             try {
                 Set<ValidationError> errors = validateNodeEvent(event);
-                if (errorsPerEventType.containsKey(eventType)) {
-                    errorsPerEventType.get(eventType).addAll(errors);
-                } else {
-                    errorsPerEventType.put(eventType, errors);
+                if (!errors.isEmpty()) {
+                    String eventType = event.get("eventType").asText();
+                    if (errorsPerEventType.containsKey(eventType)) {
+                        errorsPerEventType.get(eventType).addAll(errors);
+                    } else {
+                        errorsPerEventType.put(eventType, errors);
+                    }
                 }
             } catch (ValidationException e) {
-                Set<ValidationError> errors = buildCustomErrorMessage();
+                Set<ValidationError> errors = buildCustomErrorMessage(e.getMessage());
+                String eventType = e.getEventType() != null ? e.getEventType() : GENERIC_ERROR_KEY;
                 if (errorsPerEventType.containsKey(eventType)) {
                     errorsPerEventType.get(eventType).addAll(errors);
                 } else {
                     errorsPerEventType.put(eventType, errors);
                 }
-                errorsPerEventType.put(eventType, errors);
-
-                logger.debug(e.getMessage());
             }
         });
         return errorsPerEventType;
     }
 
-    private Set<ValidationError> buildCustomErrorMessage() {
-        ValidationMessage.Builder builder = new ValidationMessage.Builder();
-        builder.customMessage("No Schema found for this event type").format(new MessageFormat("Not used pattern. Message format is required"));
-        ValidationError error = new ValidationError(builder.build());
+    private Set<ValidationError> buildCustomErrorMessage(String errorMessage) {
+        ValidationError error = new ValidationError(errorMessage);
         Set<ValidationError> errors = new HashSet<>();
         errors.add(error);
         return errors;
@@ -180,7 +180,7 @@ public class SchemaServiceImpl implements SchemaService {
     @Override
     public JsonSchemaWrapper getSchemaForEventType(String eventType) throws ValidationException {
         if (StringUtils.isEmpty(eventType)) {
-            throw new ValidationException("eventType missing");
+            throw new ValidationException("eventType missing", eventType);
         }
 
         return schemasById.values().stream()
@@ -190,7 +190,7 @@ public class SchemaServiceImpl implements SchemaService {
                                 jsonSchemaWrapper.getName() != null &&
                                 jsonSchemaWrapper.getName().equals(eventType))
                 .findFirst()
-                .orElseThrow(() -> new ValidationException("Schema not found for event type: " + eventType));
+                .orElseThrow(() -> new ValidationException("Schema not found for event type: " + eventType, eventType));
     }
 
     @Override
@@ -240,7 +240,7 @@ public class SchemaServiceImpl implements SchemaService {
 
             return validationMessages != null ?
                     validationMessages.stream()
-                            .map(ValidationError::new)
+                            .map(validationMessage -> new ValidationError(validationMessage.getMessage()))
                             .collect(Collectors.toSet()) :
                     Collections.emptySet();
         } catch (Exception e) {

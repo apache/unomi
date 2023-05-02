@@ -149,7 +149,7 @@ public class JsonSchemaEndPoint {
         try {
             return schemaService.validateEvents(events);
         } catch (Exception e) {
-            String errorMessage = "Unable to validate event: " + e.getMessage();
+            String errorMessage = "Unable to validate events: " + e.getMessage();
             throw new InvalidRequestException(errorMessage, errorMessage);
         }
     }

@@ -22,8 +22,16 @@ package org.apache.unomi.schema.api;
  * Or when we can't perform the validation due to missing data or invalid required data
  */
 public class ValidationException extends Exception {
+
+    private String eventType;
+
     public ValidationException(String message) {
         super(message);
+    }
+
+    public ValidationException(String message, String eventType) {
+        super(message);
+        this.eventType = eventType;
     }
 
     public ValidationException(Throwable throwable) {
@@ -32,5 +40,13 @@ public class ValidationException extends Exception {
 
     public ValidationException(String message, Throwable throwable) {
         super(message, throwable);
+    }
+
+    public void setEventType(String eventType) {
+        this.eventType = eventType;
+    }
+
+    public String getEventType() {
+        return eventType;
     }
 }
