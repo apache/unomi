@@ -114,7 +114,9 @@ public class SchemaServiceImpl implements SchemaService {
 
     @Override
     public Set<ValidationError> validateEvent(String event) throws ValidationException {
-        return validateNodeEvent(parseData(event));
+        return validateEvents("[" + event + "]").values().stream()
+                .flatMap(Set::stream)
+                .collect(Collectors.toSet());
     }
 
     @Override
