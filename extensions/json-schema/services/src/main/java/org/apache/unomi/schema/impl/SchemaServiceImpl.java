@@ -40,6 +40,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
+import java.text.MessageFormat;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.stream.Collectors;
@@ -51,10 +52,12 @@ public class SchemaServiceImpl implements SchemaService {
     private static final Logger logger = LoggerFactory.getLogger(SchemaServiceImpl.class.getName());
     private static final String TARGET_EVENTS = "events";
 
+    private static final String GENERIC_ERROR_KEY = "error";
+
     ObjectMapper objectMapper = new ObjectMapper();
 
     /**
-     *  Schemas provided by Unomi runtime bundles in /META-INF/cxs/schemas/...
+     * Schemas provided by Unomi runtime bundles in /META-INF/cxs/schemas/...
      */
     private final ConcurrentMap<String, JsonSchemaWrapper> predefinedUnomiJSONSchemaById = new ConcurrentHashMap<>();
     /**
@@ -111,12 +114,48 @@ public class SchemaServiceImpl implements SchemaService {
 
     @Override
     public Set<ValidationError> validateEvent(String event) throws ValidationException {
-        JsonNode jsonEvent = parseData(event);
-        String eventType = extractEventType(jsonEvent);
-        JsonSchemaWrapper eventSchema = getSchemaForEventType(eventType);
-        JsonSchema jsonSchema = getJsonSchema(eventSchema.getItemId());
+        return validateEvents("[" + event + "]").values().stream()
+                .flatMap(Set::stream)
+                .collect(Collectors.toSet());
+    }
 
-        return validate(jsonEvent, jsonSchema);
+    @Override
+    public Map<String, Set<ValidationError>> validateEvents(String events) throws ValidationException {
+        Map<String, Set<ValidationError>> errorsPerEventType = new HashMap<>();
+        JsonNode eventsNodes = parseData(events);
+        eventsNodes.forEach(event -> {
+            String eventType = null;
+            try {
+                eventType = extractEventType(event);
+                JsonSchemaWrapper eventSchema = getSchemaForEventType(eventType);
+                JsonSchema jsonSchema = getJsonSchema(eventSchema.getItemId());
+
+                Set<ValidationError> errors = validate(event, jsonSchema);
+                if (!errors.isEmpty()) {
+                    if (errorsPerEventType.containsKey(eventType)) {
+                        errorsPerEventType.get(eventType).addAll(errors);
+                    } else {
+                        errorsPerEventType.put(eventType, errors);
+                    }
+                }
+            } catch (ValidationException e) {
+                Set<ValidationError> errors = buildCustomErrorMessage(e.getMessage());
+                String eventTypeOrErrorKey = eventType != null ? eventType : GENERIC_ERROR_KEY;
+                if (errorsPerEventType.containsKey(eventTypeOrErrorKey)) {
+                    errorsPerEventType.get(eventTypeOrErrorKey).addAll(errors);
+                } else {
+                    errorsPerEventType.put(eventTypeOrErrorKey, errors);
+                }
+            }
+        });
+        return errorsPerEventType;
+    }
+
+    private Set<ValidationError> buildCustomErrorMessage(String errorMessage) {
+        ValidationError error = new ValidationError(errorMessage);
+        Set<ValidationError> errors = new HashSet<>();
+        errors.add(error);
+        return errors;
     }
 
     @Override
@@ -145,9 +184,9 @@ public class SchemaServiceImpl implements SchemaService {
         return schemasById.values().stream()
                 .filter(jsonSchemaWrapper ->
                         jsonSchemaWrapper.getTarget() != null &&
-                        jsonSchemaWrapper.getTarget().equals(TARGET_EVENTS) &&
-                        jsonSchemaWrapper.getName() != null &&
-                        jsonSchemaWrapper.getName().equals(eventType))
+                                jsonSchemaWrapper.getTarget().equals(TARGET_EVENTS) &&
+                                jsonSchemaWrapper.getName() != null &&
+                                jsonSchemaWrapper.getName().equals(eventType))
                 .findFirst()
                 .orElseThrow(() -> new ValidationException("Schema not found for event type: " + eventType));
     }
@@ -199,7 +238,7 @@ public class SchemaServiceImpl implements SchemaService {
 
             return validationMessages != null ?
                     validationMessages.stream()
-                            .map(ValidationError::new)
+                            .map(validationMessage -> new ValidationError(validationMessage.getMessage()))
                             .collect(Collectors.toSet()) :
                     Collections.emptySet();
         } catch (Exception e) {
@@ -211,7 +250,6 @@ public class SchemaServiceImpl implements SchemaService {
         if (StringUtils.isEmpty(data)) {
             throw new ValidationException("Empty data, nothing to validate");
         }
-
         try {
             return objectMapper.readTree(data);
         } catch (Exception e) {
@@ -318,7 +356,7 @@ public class SchemaServiceImpl implements SchemaService {
             ArrayNode allOf;
             if (jsonSchema.at("/allOf") instanceof MissingNode) {
                 allOf = objectMapper.createArrayNode();
-            } else if (jsonSchema.at("/allOf") instanceof ArrayNode){
+            } else if (jsonSchema.at("/allOf") instanceof ArrayNode) {
                 allOf = (ArrayNode) jsonSchema.at("/allOf");
             } else {
                 logger.warn("Cannot extends schema allOf property, it should be an Array, please fix your schema definition for schema: {}", id);

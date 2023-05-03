@@ -27,22 +27,19 @@ import java.io.Serializable;
  */
 public class ValidationError implements Serializable {
 
-    private transient final ValidationMessage validationMessage;
+    private transient final String validationMessage;
 
-    public ValidationError(ValidationMessage validationMessage) {
+    public ValidationError(String validationMessage) {
         this.validationMessage = validationMessage;
     }
 
     public String getError() {
-        return validationMessage.getMessage();
-    }
-
-    public String toString() {
-        return validationMessage.toString();
+        return validationMessage;
     }
 
     public boolean equals(Object o) {
-        return validationMessage.equals(o);
+        ValidationError other = (ValidationError) o;
+        return validationMessage.equals(other.getError());
     }
 
     public int hashCode() {

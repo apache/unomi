@@ -22,6 +22,7 @@ package org.apache.unomi.schema.api;
  * Or when we can't perform the validation due to missing data or invalid required data
  */
 public class ValidationException extends Exception {
+
     public ValidationException(String message) {
         super(message);
     }

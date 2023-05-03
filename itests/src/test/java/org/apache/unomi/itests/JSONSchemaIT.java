@@ -30,6 +30,7 @@ import org.apache.unomi.api.services.ScopeService;
 import org.apache.unomi.itests.tools.httpclient.HttpClientThatWaitsForUnomi;
 import org.apache.unomi.schema.api.JsonSchemaWrapper;
 import org.apache.unomi.schema.api.SchemaService;
+import org.apache.unomi.schema.api.ValidationError;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -46,6 +47,8 @@ import java.io.IOException;
 import java.util.*;
 
 import static org.junit.Assert.*;
+
+import java.util.stream.Collectors;
 
 /**
  * Class to tests the JSON schema features
@@ -67,7 +70,7 @@ public class JSONSchemaIT extends BaseIT {
                 DEFAULT_TRYING_TRIES);
 
         TestUtils.createScope(DUMMY_SCOPE, "Dummy scope", scopeService);
-        keepTrying("Scope "+ DUMMY_SCOPE +" not found in the required time", () -> scopeService.getScope(DUMMY_SCOPE),
+        keepTrying("Scope " + DUMMY_SCOPE + " not found in the required time", () -> scopeService.getScope(DUMMY_SCOPE),
                 Objects::nonNull, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
     }
 
@@ -243,6 +246,53 @@ public class JSONSchemaIT extends BaseIT {
     }
 
     @Test
+    public void testValidateEvents_valid() throws Exception {
+        assertNull(schemaService.getSchema("https://vendor.test.com/schemas/json/events/flattened/1-0-0"));
+        assertNull(schemaService.getSchema("https://vendor.test.com/schemas/json/events/flattened/properties/1-0-0"));
+        assertNull(schemaService.getSchema("https://vendor.test.com/schemas/json/events/flattened/properties/interests/1-0-0"));
+
+        // Test that at first the flattened event is not valid.
+        assertFalse(schemaService.isEventValid(resourceAsString("schemas/event-flattened-valid.json")));
+
+        // save schemas and check the event pass the validation
+        schemaService.saveSchema(resourceAsString("schemas/schema-flattened.json"));
+        schemaService.saveSchema(resourceAsString("schemas/schema-flattened-flattenedProperties.json"));
+        schemaService.saveSchema(resourceAsString("schemas/schema-flattened-flattenedProperties-interests.json"));
+        schemaService.saveSchema(resourceAsString("schemas/schema-flattened-properties.json"));
+
+        StringBuilder listEvents = new StringBuilder("");
+        listEvents
+                .append("[")
+                .append(resourceAsString("schemas/event-flattened-valid.json"))
+                .append("]");
+
+        keepTrying("No error should have been detected",
+                () -> {
+                    try {
+                        return schemaService.validateEvents(listEvents.toString()).isEmpty();
+                    } catch (Exception e) {
+                        return false;
+                    }
+                },
+                isValid -> isValid, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+
+        StringBuilder listInvalidEvents = new StringBuilder("");
+        listInvalidEvents
+                .append("[")
+                .append(resourceAsString("schemas/event-flattened-invalid-1.json")).append(",")
+                .append(resourceAsString("schemas/event-flattened-invalid-2.json")).append(",")
+                .append(resourceAsString("schemas/event-flattened-invalid-3.json")).append(",")
+                .append(resourceAsString("schemas/event-flattened-invalid-3.json"))
+                .append("]");
+        Map<String, Set<ValidationError>> errors = schemaService.validateEvents(listInvalidEvents.toString());
+
+        assertEquals(9, errors.get("flattened").size());
+        // Verify that error on interests.football appear only once even if two events have the issue
+        assertEquals(1, errors.get("flattened").stream().filter(validationError -> validationError.getError().startsWith("$.flattenedProperties.interests.football")).collect(Collectors.toList()).size());
+    }
+
+
+    @Test
     public void testFlattenedProperties() throws Exception {
         assertNull(schemaService.getSchema("https://vendor.test.com/schemas/json/events/flattened/1-0-0"));
         assertNull(schemaService.getSchema("https://vendor.test.com/schemas/json/events/flattened/properties/1-0-0"));
@@ -269,15 +319,15 @@ public class JSONSchemaIT extends BaseIT {
 
         // check that range query is not working on flattened props:
         Condition condition = new Condition(definitionsService.getConditionType("eventPropertyCondition"));
-        condition.setParameter("propertyName","flattenedProperties.interests.cars");
-        condition.setParameter("comparisonOperator","greaterThan");
+        condition.setParameter("propertyName", "flattenedProperties.interests.cars");
+        condition.setParameter("comparisonOperator", "greaterThan");
         condition.setParameter("propertyValueInteger", 2);
         assertNull(persistenceService.query(condition, null, Event.class, 0, -1));
 
         // check that term query is working on flattened props:
         condition = new Condition(definitionsService.getConditionType("eventPropertyCondition"));
-        condition.setParameter("propertyName","flattenedProperties.interests.cars");
-        condition.setParameter("comparisonOperator","equals");
+        condition.setParameter("propertyName", "flattenedProperties.interests.cars");
+        condition.setParameter("comparisonOperator", "equals");
         condition.setParameter("propertyValueInteger", 15);
         List<Event> events = persistenceService.query(condition, null, Event.class, 0, -1).getList();
         assertEquals(1, events.size());
@@ -325,8 +375,8 @@ public class JSONSchemaIT extends BaseIT {
 
         // wait for the event to be indexed
         Condition condition = new Condition(definitionsService.getConditionType("eventPropertyCondition"));
-        condition.setParameter("propertyName","properties.marker.keyword");
-        condition.setParameter("comparisonOperator","equals");
+        condition.setParameter("propertyName", "properties.marker.keyword");
+        condition.setParameter("comparisonOperator", "equals");
         condition.setParameter("propertyValue", eventMarker);
         List<Event> events = keepTrying("The event should have been persisted",
                 () -> persistenceService.query(condition, null, Event.class), results -> results.size() == 1,
