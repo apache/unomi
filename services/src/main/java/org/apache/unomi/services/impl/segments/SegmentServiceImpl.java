@@ -1232,8 +1232,10 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
             }
         };
         long initialDelay = SchedulerServiceImpl.getTimeDiffInSeconds(dailyDateExprEvaluationHourUtc, ZonedDateTime.now(ZoneOffset.UTC));
-        logger.info("daily recalculation job for segments and scoring that contains date relative conditions will run at fixed rate, initialDelay={}, taskExecutionPeriod={}", initialDelay, TimeUnit.DAYS.toSeconds(1));
-        schedulerService.getScheduleExecutorService().scheduleAtFixedRate(task, initialDelay, taskExecutionPeriod, TimeUnit.DAYS);
+        long period = TimeUnit.DAYS.toSeconds(taskExecutionPeriod);
+        logger.info("daily recalculation job for segments and scoring that contains date relative conditions will run at fixed rate, " +
+                "initialDelay={}, taskExecutionPeriod={} in seconds", initialDelay, period);
+        schedulerService.getScheduleExecutorService().scheduleAtFixedRate(task, initialDelay, period, TimeUnit.SECONDS);
 
         task = new TimerTask() {
             @Override
