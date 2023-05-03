@@ -33,7 +33,7 @@ String baseSettings = MigrationUtils.resourceAsString(bundleContext, "requestBod
 String reIndexScript = MigrationUtils.getFileWithoutComments(bundleContext, "requestBody/2.0.0/event_migrate.painless");
 String mapping = MigrationUtils.extractMappingFromBundles(bundleContext, "event.json")
 String newIndexSettings = MigrationUtils.buildIndexCreationRequest(baseSettings, mapping, context, true)
-Set<String> eventIndices = MigrationUtils.getIndexesPrefixedBy(context.getHttpClient(), esAddress, "${indexPrefix}-event-")
+Set<String> eventIndices = MigrationUtils.getIndexesPrefixedBy(context.getHttpClient(), esAddress, "${indexPrefix}-event-date-")
 eventIndices.each { eventIndex ->
     MigrationUtils.reIndex(context.getHttpClient(), bundleContext, esAddress, eventIndex, newIndexSettings, reIndexScript, context)
 }
