@@ -43,7 +43,8 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
     private DefinitionsService definitionsService;
     private PrivacyService privacyService;
     private SchedulerService schedulerService;
-    private int maxProfilesInOneMerge = -1;
+    // TODO we can remove this limit after dealing with: UNOMI-776 (50 is completely arbitrary and it's used to bypass the auto-scroll done by the persistence Service)
+    private int maxProfilesInOneMerge = 50;
 
     public int execute(Action action, Event event) {
 
