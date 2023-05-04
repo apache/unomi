@@ -26,7 +26,7 @@
         <cm:default-properties>
             <cm:property name="useEventToUpdateProfile" value="false" />
             <cm:property name="usePropertyConditionOptimizations" value="true" />
-            <cm:property name="maxProfilesInOneMerge" value="-1"/>
+            <cm:property name="maxProfilesInOneMerge" value="50"/>
         </cm:default-properties>
     </cm:property-placeholder>
 
@@ -43,9 +43,10 @@
     <reference id="persistenceService" interface="org.apache.unomi.persistence.spi.PersistenceService"/>
     <reference id="profileService" interface="org.apache.unomi.api.services.ProfileService"/>
     <reference id="privacyService" interface="org.apache.unomi.api.services.PrivacyService"/>
+    <reference id="schedulerService" interface="org.apache.unomi.api.services.SchedulerService"/>
     <reference id="segmentService" interface="org.apache.unomi.api.services.SegmentService"/>
     <reference id="eventService" interface="org.apache.unomi.api.services.EventService"/>
-    <reference id="configSharingService" interface="org.apache.unomi.api.services.ConfigSharingService" />
+    <reference id="configSharingService" interface="org.apache.unomi.api.services.ConfigSharingService"/>
     <reference id="scriptExecutor" interface="org.apache.unomi.scripting.ScriptExecutor"/>
 
     <service
@@ -115,7 +116,7 @@
             <property name="definitionsService" ref="definitionsService"/>
             <property name="persistenceService" ref="persistenceService"/>
             <property name="segmentService" ref="segmentService"/>
-            <property name="scriptExecutor" ref="scriptExecutor" />
+            <property name="scriptExecutor" ref="scriptExecutor"/>
             <property name="maximumIdsQueryCount" value="${es.maximumIdsQueryCount}"/>
             <property name="pastEventsDisablePartitions" value="${es.pastEventsDisablePartitions}"/>
             <property name="aggregateQueryBucketSize" value="${es.aggregateQueryBucketSize}"/>
@@ -298,6 +299,7 @@
             <property name="definitionsService" ref="definitionsService"/>
             <property name="privacyService" ref="privacyService"/>
             <property name="configSharingService" ref="configSharingService" />
+            <property name="schedulerService" ref="schedulerService"/>
             <property name="maxProfilesInOneMerge" value="${base.maxProfilesInOneMerge}"/>
         </bean>
     </service>
