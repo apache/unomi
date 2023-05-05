@@ -49,6 +49,12 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
+            <groupId>com.fasterxml.jackson.dataformat</groupId>
+            <artifactId>jackson-dataformat-yaml</artifactId>
+            <version>${version.jackson.core}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
             <groupId>org.osgi</groupId>
             <artifactId>osgi.core</artifactId>
             <scope>provided</scope>

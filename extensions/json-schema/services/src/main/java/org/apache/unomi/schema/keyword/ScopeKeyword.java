@@ -25,7 +25,7 @@ import org.apache.unomi.api.services.ScopeService;
 
 public class ScopeKeyword extends AbstractKeyword {
 
-    private ScopeService scopeService;
+    private final ScopeService scopeService;
 
     public ScopeKeyword(ScopeService scopeService) {
         super("validateScope");
@@ -34,7 +34,7 @@ public class ScopeKeyword extends AbstractKeyword {
 
     @Override
     public JsonValidator newValidator(String schemaPath, JsonNode schemaNode, JsonSchema parentSchema,
-            ValidationContext validationContext) {
-        return new ScopeValidator(scopeService);
+                                      ValidationContext validationContext) {
+        return new ScopeValidator(schemaPath, schemaNode, parentSchema, validationContext, scopeService);
     }
 }
