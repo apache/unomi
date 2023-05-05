@@ -5,8 +5,7 @@
     "description": "",
     "systemTags": [
       "profileTags",
-      "demographic",
-      "availableToEndUser"
+      "demographic"
     ],
     "readOnly": true
   },
