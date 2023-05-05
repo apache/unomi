@@ -17,9 +17,7 @@
 package org.apache.unomi.schema.keyword;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.networknt.schema.AbstractJsonValidator;
-import com.networknt.schema.CustomErrorMessageType;
-import com.networknt.schema.ValidationMessage;
+import com.networknt.schema.*;
 import org.apache.unomi.api.services.ScopeService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,13 +26,13 @@ import java.text.MessageFormat;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
-public class ScopeValidator extends AbstractJsonValidator {
+public class ScopeValidator extends BaseJsonValidator implements JsonValidator {
     private static final Logger logger = LoggerFactory.getLogger(ScopeValidator.class);
 
     private ScopeService scopeService;
 
-    public ScopeValidator(ScopeService scopeService) {
-        super("validateScope");
+    public ScopeValidator(String schemaPath, JsonNode schemaNode, JsonSchema parentSchema, ValidationContext validationContext, ScopeService scopeService) {
+        super(schemaPath, schemaNode, parentSchema, null, validationContext);
         this.scopeService = scopeService;
     }
 
@@ -43,11 +41,11 @@ public class ScopeValidator extends AbstractJsonValidator {
         if (logger.isDebugEnabled()) {
             logger.debug("validate( {}, {}, {})", node, rootNode, at);
         }
-        Set<ValidationMessage> errors = new LinkedHashSet();
+        Set<ValidationMessage> errors = new LinkedHashSet<>();
         if (scopeService.getScope(node.textValue()) == null) {
-            errors.add(this.buildValidationMessage(
-                    CustomErrorMessageType.of("1100", new MessageFormat("Unknown scope value at \"{0}\" for value {1}")), at,
-                    node.textValue()));
+            ValidationMessage.Builder builder = new ValidationMessage.Builder();
+            builder.customMessage("Unknown scope value at " + at + " for value " + node.textValue()).format(new MessageFormat("Not used pattern. Message format is required"));
+            errors.add(builder.build());
         }
         return errors;
     }
