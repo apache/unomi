@@ -64,6 +64,5 @@
     "sameDomainReferrer": {
       "type": ["null", "boolean"]
     }
-  },
-  "unevaluatedProperties" : false
+  }
 }

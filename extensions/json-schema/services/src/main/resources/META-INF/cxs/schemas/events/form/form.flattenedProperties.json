@@ -13,6 +13,5 @@
     "fields": {
       "$ref" : "https://unomi.apache.org/schemas/json/events/form/flattenedProperties/fields/1-0-0"
     }
-  },
-  "unevaluatedProperties" : false
+  }
 }
