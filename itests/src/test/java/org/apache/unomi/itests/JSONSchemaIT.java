@@ -286,7 +286,7 @@ public class JSONSchemaIT extends BaseIT {
                 .append("]");
         Map<String, Set<ValidationError>> errors = schemaService.validateEvents(listInvalidEvents.toString());
 
-        assertEquals(9, errors.get("flattened").size());
+        assertEquals(6, errors.get("flattened").size());
         // Verify that error on interests.football appear only once even if two events have the issue
         assertEquals(1, errors.get("flattened").stream().filter(validationError -> validationError.getError().startsWith("$.flattenedProperties.interests.football")).collect(Collectors.toList()).size());
     }

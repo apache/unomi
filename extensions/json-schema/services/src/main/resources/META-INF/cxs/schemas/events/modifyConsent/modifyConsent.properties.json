@@ -13,6 +13,5 @@
       "consent" : {
         "$ref" : "https://unomi.apache.org/schemas/json/consent/1-0-0"
       }
-  },
-  "unevaluatedProperties": false
+  }
 }

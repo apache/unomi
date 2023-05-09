@@ -13,6 +13,5 @@
     "action": {
       "type": "string"
     }
-  },
-  "unevaluatedProperties": false
+  }
 }

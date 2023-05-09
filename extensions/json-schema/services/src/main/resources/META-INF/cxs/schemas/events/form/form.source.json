@@ -9,6 +9,5 @@
   },
   "title": "FormSource",
   "type": "object",
-  "allOf": [{ "$ref": "https://unomi.apache.org/schemas/json/item/1-0-0" }],
-  "unevaluatedProperties" : false
+  "allOf": [{ "$ref": "https://unomi.apache.org/schemas/json/item/1-0-0" }]
 }

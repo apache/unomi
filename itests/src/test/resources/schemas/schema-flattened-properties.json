@@ -13,6 +13,5 @@
     "marker": {
       "type": "string"
     }
-  },
-  "unevaluatedProperties": false
+  }
 }

@@ -14,6 +14,5 @@
     "properties": {
       "$ref": "https://unomi.apache.org/schemas/json/events/video/target/properties/1-0-0"
     }
-  },
-  "unevaluatedProperties": false
+  }
 }
