@@ -313,11 +313,14 @@ public class EventServiceImpl implements EventService {
 
     @Override
     public PartialList<Event> search(Query query) {
+        if (query.getScrollIdentifier() != null) {
+            return persistenceService.continueScrollQuery(Event.class, query.getScrollIdentifier(), query.getScrollTimeValidity());
+        }
         if (query.getCondition() != null && definitionsService.resolveConditionType(query.getCondition())) {
             if (StringUtils.isNotBlank(query.getText())) {
                 return persistenceService.queryFullText(query.getText(), query.getCondition(), query.getSortby(), Event.class, query.getOffset(), query.getLimit());
             } else {
-                return persistenceService.query(query.getCondition(), query.getSortby(), Event.class, query.getOffset(), query.getLimit());
+                return persistenceService.query(query.getCondition(), query.getSortby(), Event.class, query.getOffset(), query.getLimit(), query.getScrollTimeValidity());
             }
         } else {
             if (StringUtils.isNotBlank(query.getText())) {
