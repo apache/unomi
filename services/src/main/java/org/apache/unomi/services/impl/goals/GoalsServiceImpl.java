@@ -123,13 +123,9 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
                 if (goal.getMetadata().getScope() == null) {
                     goal.getMetadata().setScope("systemscope");
                 }
-                // Register only if goal does not exist yet
-                if (getGoal(goal.getMetadata().getId()) == null) {
-                    setGoal(goal);
-                    logger.info("Predefined goal with id {} registered", goal.getMetadata().getId());
-                } else {
-                    logger.info("The predefined goal with id {} is already registered, this goal will be skipped", goal.getMetadata().getId());
-                }
+
+                setGoal(goal);
+                logger.info("Predefined goal with id {} registered", goal.getMetadata().getId());
             } catch (IOException e) {
                 logger.error("Error while loading segment definition " + predefinedGoalURL, e);
             }
@@ -277,13 +273,8 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
 
             try {
                 Campaign campaign = CustomObjectMapper.getObjectMapper().readValue(predefinedCampaignURL, Campaign.class);
-                // Register only if campaign does not exist yet
-                if (getCampaign(campaign.getMetadata().getId()) == null) {
-                    setCampaign(campaign);
-                    logger.info("Predefined campaign with id {} registered", campaign.getMetadata().getId());
-                } else {
-                    logger.info("The predefined campaign with id {} is already registered, this campaign will be skipped", campaign.getMetadata().getId());
-                }
+                setCampaign(campaign);
+                logger.info("Predefined campaign with id {} registered", campaign.getMetadata().getId());
             } catch (IOException e) {
                 logger.error("Error while loading segment definition " + predefinedCampaignURL, e);
             }

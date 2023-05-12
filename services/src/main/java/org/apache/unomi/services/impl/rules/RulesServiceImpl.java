@@ -152,13 +152,8 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
 
             try {
                 Rule rule = CustomObjectMapper.getObjectMapper().readValue(predefinedRuleURL, Rule.class);
-                // Register only if rule does not exist yet
-                if (getRule(rule.getMetadata().getId()) == null) {
-                    setRule(rule);
-                    logger.info("Predefined rule with id {} registered", rule.getMetadata().getId());
-                } else {
-                    logger.info("The predefined rule with id {} is already registered, this rule will be skipped", rule.getMetadata().getId());
-                }
+                setRule(rule);
+                logger.info("Predefined rule with id {} registered", rule.getMetadata().getId());
             } catch (IOException e) {
                 logger.error("Error while loading rule definition " + predefinedRuleURL, e);
             }

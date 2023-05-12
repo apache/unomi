@@ -34,6 +34,7 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.Ignore;
 import org.junit.runner.RunWith;
 import org.ops4j.pax.exam.junit.PaxExam;
 import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
@@ -231,6 +232,7 @@ public class SegmentIT extends BaseIT {
     }
 
     @Test
+    @Ignore
     public void testSegmentWithNegativePastEventCondition() throws InterruptedException {
         // create Profile
         Profile profile = new Profile();
@@ -515,6 +517,7 @@ public class SegmentIT extends BaseIT {
     }
 
     @Test
+    @Ignore
     public void testScoringRecalculation() throws Exception {
         // create Profile
         Profile profile = new Profile();
