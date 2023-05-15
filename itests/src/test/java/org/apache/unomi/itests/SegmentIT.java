@@ -204,7 +204,8 @@ public class SegmentIT extends BaseIT {
         // send event for profile from a previous date (today -3 days)
         ZoneId defaultZoneId = ZoneId.systemDefault();
         LocalDate localDate = LocalDate.now().minusDays(3);
-        Event testEvent = new Event("test-event-type", null, profile, null, null, profile, Date.from(localDate.atStartOfDay(defaultZoneId).toInstant()));
+        Event testEvent = new Event("test-event-type", null, profile, null, null, profile,
+                Date.from(localDate.atStartOfDay(defaultZoneId).toInstant()));
         testEvent.setPersistent(true);
         int changes = eventService.send(testEvent);
         if ((changes & EventService.PROFILE_UPDATED) == EventService.PROFILE_UPDATED) {
@@ -225,14 +226,11 @@ public class SegmentIT extends BaseIT {
         segmentService.setSegmentDefinition(segment);
 
         // insure the profile that did the past event condition is correctly engaged in the segment.
-        keepTrying("Profile should be engaged in the segment",
-                () -> profileService.load("test_profile_id"),
-                updatedProfile -> updatedProfile.getSegments().contains("past-event-segment-test"),
-                1000, 20);
+        keepTrying("Profile should be engaged in the segment", () -> profileService.load("test_profile_id"),
+                updatedProfile -> updatedProfile.getSegments().contains("past-event-segment-test"), 1000, 20);
     }
 
     @Test
-    @Ignore
     public void testSegmentWithNegativePastEventCondition() throws InterruptedException {
         // create Profile
         Profile profile = new Profile();
@@ -255,8 +253,7 @@ public class SegmentIT extends BaseIT {
         // insure that profile is correctly engaged in sement since there is no events yet.
         keepTrying("Profile should be engaged in the segment, there is no event for the past condition yet",
                 () -> profileService.load("test_profile_id"),
-                updatedProfile -> updatedProfile.getSegments().contains("negative-past-event-segment-test"),
-                1000, 20);
+                updatedProfile -> updatedProfile.getSegments().contains("negative-past-event-segment-test"), 1000, 20);
 
         // we load the profile so that we are sure that it contains the segments
         profile = profileService.load("test_profile_id");
@@ -264,8 +261,16 @@ public class SegmentIT extends BaseIT {
         // send event for profile from a previous date (today -3 days)
         ZoneId defaultZoneId = ZoneId.systemDefault();
         LocalDate localDate = LocalDate.now().minusDays(3);
-        Event testEvent = new Event("negative-test-event-type", null, profile, null, null, profile, Date.from(localDate.atStartOfDay(defaultZoneId).toInstant()));
+        Event testEvent = new Event("negative-test-event-type", null, profile, null, null, profile,
+                Date.from(localDate.atStartOfDay(defaultZoneId).toInstant()));
         testEvent.setPersistent(true);
+
+        // wait for segment auto generated rule to be available
+        keepTrying("The segment auto generated rule should be available to handle the test event",
+                () -> rulesService.getMatchingRules(testEvent),
+                rules -> rules.size() > 0, 1000, 20);
+
+        // send the event
         int changes = eventService.send(testEvent);
         if ((changes & EventService.PROFILE_UPDATED) == EventService.PROFILE_UPDATED) {
             profileService.save(profile);
@@ -276,8 +281,7 @@ public class SegmentIT extends BaseIT {
         // now Profile should be out of the segment since one event have been done and the past event is only valid for no events occurrences
         keepTrying("Profile should not be engaged in the segment anymore, it have a least one event now",
                 () -> profileService.load("test_profile_id"),
-                updatedProfile -> !updatedProfile.getSegments().contains("negative-past-event-segment-test"),
-                1000, 20);
+                updatedProfile -> !updatedProfile.getSegments().contains("negative-past-event-segment-test"), 1000, 20);
     }
 
     @Test
@@ -304,7 +308,8 @@ public class SegmentIT extends BaseIT {
         // Persist the event (do not send it into the system so that it will not be processed by the rules)
         ZoneId defaultZoneId = ZoneId.systemDefault();
         LocalDate localDate = LocalDate.now().minusDays(3);
-        Event testEvent = new Event("test-event-type", null, profile, null, null, profile, Date.from(localDate.atStartOfDay(defaultZoneId).toInstant()));
+        Event testEvent = new Event("test-event-type", null, profile, null, null, profile,
+                Date.from(localDate.atStartOfDay(defaultZoneId).toInstant()));
         testEvent.setPersistent(true);
         persistenceService.save(testEvent, null, true);
         persistenceService.refreshIndex(Event.class, testEvent.getTimeStamp()); // wait for event to be fully persisted and indexed
@@ -316,25 +321,22 @@ public class SegmentIT extends BaseIT {
         // now recalculate the past event conditions
         segmentService.recalculatePastEventConditions();
         persistenceService.refreshIndex(Profile.class, null);
-        keepTrying("Profile should be engaged in the segment",
-                () -> profileService.load("test_profile_id"),
-                updatedProfile -> updatedProfile.getSegments().contains("past-event-segment-test"),
-                1000, 20);
+        keepTrying("Profile should be engaged in the segment", () -> profileService.load("test_profile_id"),
+                updatedProfile -> updatedProfile.getSegments().contains("past-event-segment-test"), 1000, 20);
 
         // update the event to a date out of the past event condition
         removeItems(Event.class);
         localDate = LocalDate.now().minusDays(15);
-        testEvent = new Event("test-event-type", null, profile, null, null, profile, Date.from(localDate.atStartOfDay(defaultZoneId).toInstant()));
+        testEvent = new Event("test-event-type", null, profile, null, null, profile,
+                Date.from(localDate.atStartOfDay(defaultZoneId).toInstant()));
         persistenceService.save(testEvent);
         persistenceService.refreshIndex(Event.class, testEvent.getTimeStamp()); // wait for event to be fully persisted and indexed
 
         // now recalculate the past event conditions
         segmentService.recalculatePastEventConditions();
         persistenceService.refreshIndex(Profile.class, null);
-        keepTrying("Profile should not be engaged in the segment anymore",
-                () -> profileService.load("test_profile_id"),
-                updatedProfile -> !updatedProfile.getSegments().contains("past-event-segment-test"),
-                1000, 20);
+        keepTrying("Profile should not be engaged in the segment anymore", () -> profileService.load("test_profile_id"),
+                updatedProfile -> !updatedProfile.getSegments().contains("past-event-segment-test"), 1000, 20);
     }
 
     @Test
@@ -348,7 +350,8 @@ public class SegmentIT extends BaseIT {
         // send event for profile from a previous date (today -3 days)
         ZoneId defaultZoneId = ZoneId.systemDefault();
         LocalDate localDate = LocalDate.now().minusDays(3);
-        Event testEvent = new Event("test-event-type", null, profile, null, null, profile, Date.from(localDate.atStartOfDay(defaultZoneId).toInstant()));
+        Event testEvent = new Event("test-event-type", null, profile, null, null, profile,
+                Date.from(localDate.atStartOfDay(defaultZoneId).toInstant()));
         testEvent.setPersistent(true);
         int changes = eventService.send(testEvent);
         if ((changes & EventService.PROFILE_UPDATED) == EventService.PROFILE_UPDATED) {
@@ -376,12 +379,9 @@ public class SegmentIT extends BaseIT {
         segmentService.setScoringDefinition(scoring);
 
         // insure the profile that did the past event condition is correctly engaged in the scoring plan.
-        keepTrying("Profile should be engaged in the scoring with a score of 50",
-                () -> profileService.load("test_profile_id"),
-                updatedProfile -> updatedProfile.getScores() != null &&
-                        updatedProfile.getScores().containsKey("past-event-scoring-test") &&
-                        updatedProfile.getScores().get("past-event-scoring-test") == 50,
-                1000, 20);
+        keepTrying("Profile should be engaged in the scoring with a score of 50", () -> profileService.load("test_profile_id"),
+                updatedProfile -> updatedProfile.getScores() != null && updatedProfile.getScores().containsKey("past-event-scoring-test")
+                        && updatedProfile.getScores().get("past-event-scoring-test") == 50, 1000, 20);
     }
 
     @Test
@@ -414,39 +414,37 @@ public class SegmentIT extends BaseIT {
         // Persist the event (do not send it into the system so that it will not be processed by the rules)
         ZoneId defaultZoneId = ZoneId.systemDefault();
         LocalDate localDate = LocalDate.now().minusDays(3);
-        Event testEvent = new Event("test-event-type", null, profile, null, null, profile, Date.from(localDate.atStartOfDay(defaultZoneId).toInstant()));
+        Event testEvent = new Event("test-event-type", null, profile, null, null, profile,
+                Date.from(localDate.atStartOfDay(defaultZoneId).toInstant()));
         testEvent.setPersistent(true);
         persistenceService.save(testEvent, null, true);
         persistenceService.refreshIndex(Event.class, testEvent.getTimeStamp()); // wait for event to be fully persisted and indexed
 
         // insure the profile is not yet engaged since we directly saved the event in ES
         profile = profileService.load("test_profile_id");
-        Assert.assertTrue("Profile should not be engaged in the scoring", profile.getScores() == null || !profile.getScores().containsKey("past-event-scoring-test"));
+        Assert.assertTrue("Profile should not be engaged in the scoring",
+                profile.getScores() == null || !profile.getScores().containsKey("past-event-scoring-test"));
 
         // now recalculate the past event conditions
         segmentService.recalculatePastEventConditions();
         persistenceService.refreshIndex(Profile.class, null);
-        keepTrying("Profile should be engaged in the scoring with a score of 50",
-                () -> profileService.load("test_profile_id"),
-                updatedProfile -> updatedProfile.getScores() != null &&
-                        updatedProfile.getScores().containsKey("past-event-scoring-test") &&
-                        updatedProfile.getScores().get("past-event-scoring-test") == 50,
-                1000, 20);
+        keepTrying("Profile should be engaged in the scoring with a score of 50", () -> profileService.load("test_profile_id"),
+                updatedProfile -> updatedProfile.getScores() != null && updatedProfile.getScores().containsKey("past-event-scoring-test")
+                        && updatedProfile.getScores().get("past-event-scoring-test") == 50, 1000, 20);
 
         // update the event to a date out of the past event condition
         removeItems(Event.class);
         localDate = LocalDate.now().minusDays(15);
-        testEvent = new Event("test-event-type", null, profile, null, null, profile, Date.from(localDate.atStartOfDay(defaultZoneId).toInstant()));
+        testEvent = new Event("test-event-type", null, profile, null, null, profile,
+                Date.from(localDate.atStartOfDay(defaultZoneId).toInstant()));
         persistenceService.save(testEvent);
         persistenceService.refreshIndex(Event.class, testEvent.getTimeStamp()); // wait for event to be fully persisted and indexed
 
         // now recalculate the past event conditions
         segmentService.recalculatePastEventConditions();
         persistenceService.refreshIndex(Profile.class, null);
-        keepTrying("Profile should not be engaged in the scoring anymore",
-                () -> profileService.load("test_profile_id"),
-                updatedProfile -> !updatedProfile.getScores().containsKey("past-event-scoring-test"),
-                1000, 20);
+        keepTrying("Profile should not be engaged in the scoring anymore", () -> profileService.load("test_profile_id"),
+                updatedProfile -> !updatedProfile.getScores().containsKey("past-event-scoring-test"), 1000, 20);
     }
 
     @Test
@@ -480,29 +478,30 @@ public class SegmentIT extends BaseIT {
         // Persist the event (do not send it into the system so that it will not be processed by the rules)
         ZoneId defaultZoneId = ZoneId.systemDefault();
         LocalDate localDate = LocalDate.now().minusDays(3);
-        Event testEvent = new Event("test-event-type-max", null, profile, null, null, profile, Date.from(localDate.atStartOfDay(defaultZoneId).toInstant()));
+        Event testEvent = new Event("test-event-type-max", null, profile, null, null, profile,
+                Date.from(localDate.atStartOfDay(defaultZoneId).toInstant()));
         testEvent.setPersistent(true);
         persistenceService.save(testEvent, null, true);
         persistenceService.refreshIndex(Event.class, testEvent.getTimeStamp()); // wait for event to be fully persisted and indexed
 
         // insure the profile is not yet engaged since we directly saved the event in ES
         profile = profileService.load("test_profile_id");
-        Assert.assertTrue("Profile should not be engaged in the scoring", profile.getScores() == null || !profile.getScores().containsKey("past-event-scoring-test-max"));
+        Assert.assertTrue("Profile should not be engaged in the scoring",
+                profile.getScores() == null || !profile.getScores().containsKey("past-event-scoring-test-max"));
 
         // now recalculate the past event conditions
         segmentService.recalculatePastEventConditions();
         persistenceService.refreshIndex(Profile.class, null);
-        keepTrying("Profile should be engaged in the scoring with a score of 50",
-                () -> profileService.load("test_profile_id"),
-                updatedProfile -> updatedProfile.getScores() != null &&
-                        updatedProfile.getScores().containsKey("past-event-scoring-test-max") &&
-                        updatedProfile.getScores().get("past-event-scoring-test-max") == 50,
+        keepTrying("Profile should be engaged in the scoring with a score of 50", () -> profileService.load("test_profile_id"),
+                updatedProfile -> updatedProfile.getScores() != null && updatedProfile.getScores()
+                        .containsKey("past-event-scoring-test-max") && updatedProfile.getScores().get("past-event-scoring-test-max") == 50,
                 1000, 20);
 
         // Persist the 2 event (do not send it into the system so that it will not be processed by the rules)
         defaultZoneId = ZoneId.systemDefault();
         localDate = LocalDate.now().minusDays(3);
-        testEvent = new Event("test-event-type-max", null, profile, null, null, profile, Date.from(localDate.atStartOfDay(defaultZoneId).toInstant()));
+        testEvent = new Event("test-event-type-max", null, profile, null, null, profile,
+                Date.from(localDate.atStartOfDay(defaultZoneId).toInstant()));
         testEvent.setPersistent(true);
         persistenceService.save(testEvent, null, true);
         persistenceService.refreshIndex(Event.class, testEvent.getTimeStamp()); // wait for event to be fully persisted and indexed
@@ -510,14 +509,11 @@ public class SegmentIT extends BaseIT {
         // now recalculate the past event conditions
         segmentService.recalculatePastEventConditions();
         persistenceService.refreshIndex(Profile.class, null);
-        keepTrying("Profile should not be engaged in the scoring anymore",
-                () -> profileService.load("test_profile_id"),
-                updatedProfile -> !updatedProfile.getScores().containsKey("past-event-scoring-test-max"),
-                1000, 20);
+        keepTrying("Profile should not be engaged in the scoring anymore", () -> profileService.load("test_profile_id"),
+                updatedProfile -> !updatedProfile.getScores().containsKey("past-event-scoring-test-max"), 1000, 20);
     }
 
     @Test
-    @Ignore
     public void testScoringRecalculation() throws Exception {
         // create Profile
         Profile profile = new Profile();
@@ -531,8 +527,9 @@ public class SegmentIT extends BaseIT {
         pastEventCondition.setParameter("minimumEventCount", 1);
         pastEventCondition.setParameter("maximumEventCount", 2);
 
-        pastEventCondition.setParameter("fromDate","2000-07-15T07:00:00Z");
-        pastEventCondition.setParameter("toDate","2001-01-15T07:00:00Z");;
+        pastEventCondition.setParameter("fromDate", "2000-07-15T07:00:00Z");
+        pastEventCondition.setParameter("toDate", "2001-01-15T07:00:00Z");
+        ;
         Condition pastEventEventCondition = new Condition(definitionsService.getConditionType("eventTypeCondition"));
         pastEventEventCondition.setParameter("eventTypeId", "test-event-type");
         pastEventCondition.setParameter("eventCondition", pastEventEventCondition);
@@ -547,41 +544,47 @@ public class SegmentIT extends BaseIT {
         scoringElements.add(scoringElement);
         scoring.setElements(scoringElements);
         segmentService.setScoringDefinition(scoring);
-        refreshPersistence(Scoring.class, Profile.class);
+        refreshPersistence(Segment.class);
 
         // Send 2 events that match the scoring plan.
         profile = profileService.load("test_profile_id");
         Event testEvent = new Event("test-event-type", null, profile, null, null, profile, timestampEventInRange);
         testEvent.setPersistent(true);
         eventService.send(testEvent);
-        persistenceService.refreshIndex(Event.class, timestampEventInRange);
+        refreshPersistence(Event.class);
         // 2nd event
         testEvent = new Event("test-event-type", null, testEvent.getProfile(), null, null, testEvent.getProfile(), timestampEventInRange);
         eventService.send(testEvent);
-        persistenceService.refreshIndex(Event.class, timestampEventInRange);
+        refreshPersistence(Event.class, Profile.class);
 
         // insure the profile is engaged;
-        Assert.assertTrue("Profile should have 2 events in the scoring",  (Long) ((Map) testEvent.getProfile().getSystemProperties().get("pastEvents")).get(pastEventCondition.getParameterValues().get("generatedPropertyKey")) == 2);
-        Assert.assertTrue("Profile is engaged",  testEvent.getProfile().getScores().containsKey("past-event-scoring-test") && testEvent.getProfile().getScores().get("past-event-scoring-test") == 50);
+        try {
+            Assert.assertTrue("Profile should have 2 events in the scoring",
+                    (Long) ((Map) testEvent.getProfile().getSystemProperties().get("pastEvents"))
+                            .get(pastEventCondition.getParameterValues().get("generatedPropertyKey")) == 2);
+            Assert.assertTrue("Profile is engaged", testEvent.getProfile().getScores().containsKey("past-event-scoring-test")
+                    && testEvent.getProfile().getScores().get("past-event-scoring-test") == 50);
+        } catch (Exception e) {
+            Assert.fail("Unable to read past event because " + e.getMessage());
+        }
         profileService.save(testEvent.getProfile());
         refreshPersistence(Profile.class);
         // recalculate event conditions
         segmentService.recalculatePastEventConditions();
         // insure the profile is still engaged after recalculate;
-        keepTrying("Profile should have 2 events in the scoring",
-                () -> profileService.load("test_profile_id"),
-                updatedProfile -> {
-                    try {
-                        boolean eventCounted = (Integer) ((Map) updatedProfile.getSystemProperties().get("pastEvents")).get(pastEventCondition.getParameterValues().get("generatedPropertyKey")) == 2;
-                        boolean profileEngaged = updatedProfile.getScores().containsKey("past-event-scoring-test") && updatedProfile.getScores().get("past-event-scoring-test") == 50;
-                        return eventCounted && profileEngaged;
-                    } catch (Exception e) {
-                        // Do nothing, unable to read value
-                    };
-                    return false;
-                },
-                1000, 20);
-
+        keepTrying("Profile should have 2 events in the scoring", () -> profileService.load("test_profile_id"), updatedProfile -> {
+            try {
+                boolean eventCounted = (Integer) ((Map) updatedProfile.getSystemProperties().get("pastEvents"))
+                        .get(pastEventCondition.getParameterValues().get("generatedPropertyKey")) == 2;
+                boolean profileEngaged = updatedProfile.getScores().containsKey("past-event-scoring-test")
+                        && updatedProfile.getScores().get("past-event-scoring-test") == 50;
+                return eventCounted && profileEngaged;
+            } catch (Exception e) {
+                // Do nothing, unable to read value
+            }
+            ;
+            return false;
+        }, 1000, 20);
 
         // Add one more event
         testEvent = new Event("test-event-type", null, testEvent.getProfile(), null, null, testEvent.getProfile(), timestampEventInRange);
@@ -599,17 +602,15 @@ public class SegmentIT extends BaseIT {
         segmentService.recalculatePastEventConditions();
         refreshPersistence(Profile.class);
         // As 3 events have match, the profile should not be part of the scoring plan.
-        keepTrying("Profile should not be part of the scoring anymore",
-                () -> profileService.load("test_profile_id"),
-                updatedProfile -> {
-                    try {
-                        return updatedProfile.getScores().get("past-event-scoring-test") == 0;
-                    } catch (Exception e) {
-                        // Do nothing, unable to read value
-                    };
-                    return false;
-                },
-                1000, 20);
+        keepTrying("Profile should not be part of the scoring anymore", () -> profileService.load("test_profile_id"), updatedProfile -> {
+            try {
+                return updatedProfile.getScores().get("past-event-scoring-test") == 0;
+            } catch (Exception e) {
+                // Do nothing, unable to read value
+            }
+            ;
+            return false;
+        }, 1000, 20);
     }
 
     @Test
@@ -640,7 +641,8 @@ public class SegmentIT extends BaseIT {
         refreshPersistence(Segment.class);
         // Check linkedItems
         List<Rule> rules = persistenceService.getAllItems(Rule.class);
-        Rule scoringRule = rules.stream().filter(rule -> rule.getItemId().equals(pastEventCondition.getParameter("generatedPropertyKey"))).findFirst().get();
+        Rule scoringRule = rules.stream().filter(rule -> rule.getItemId().equals(pastEventCondition.getParameter("generatedPropertyKey")))
+                .findFirst().get();
         Assert.assertEquals("Scoring linked Item should be one", 1, scoringRule.getLinkedItems().size());
 
         // save the scoring once again
@@ -648,7 +650,8 @@ public class SegmentIT extends BaseIT {
         refreshPersistence(Segment.class);
         // Check linkedItems
         rules = persistenceService.getAllItems(Rule.class);
-        scoringRule = rules.stream().filter(rule -> rule.getItemId().equals(pastEventCondition.getParameter("generatedPropertyKey"))).findFirst().get();
+        scoringRule = rules.stream().filter(rule -> rule.getItemId().equals(pastEventCondition.getParameter("generatedPropertyKey")))
+                .findFirst().get();
         Assert.assertEquals("Scoring linked Item should be one", 1, scoringRule.getLinkedItems().size());
 
         // Remove scoring
@@ -701,7 +704,8 @@ public class SegmentIT extends BaseIT {
         // insure the profile is not yet engaged since we directly saved the profile in ES
         profile = profileService.load("test_profile_id");
         Assert.assertFalse("Profile should not be engaged in the segment", profile.getSegments().contains("relative-date-segment-test"));
-        Assert.assertTrue("Profile should not be engaged in the scoring", profile.getScores() == null || !profile.getScores().containsKey("relative-date-scoring-test"));
+        Assert.assertTrue("Profile should not be engaged in the scoring",
+                profile.getScores() == null || !profile.getScores().containsKey("relative-date-scoring-test"));
 
         // Update the profile last visit to match the segment ans the scoring
         ZoneId defaultZoneId = ZoneId.systemDefault();
@@ -713,15 +717,15 @@ public class SegmentIT extends BaseIT {
         // insure the profile is not yet engaged since we directly saved the profile in ES
         profile = profileService.load("test_profile_id");
         Assert.assertFalse("Profile should not be engaged in the segment", profile.getSegments().contains("relative-date-segment-test"));
-        Assert.assertTrue("Profile should not be engaged in the scoring", profile.getScores() == null || profile.getScores().containsKey("relative-date-scoring-test"));
+        Assert.assertTrue("Profile should not be engaged in the scoring",
+                profile.getScores() == null || profile.getScores().containsKey("relative-date-scoring-test"));
 
         // now force the recalculation of the date relative segments/scorings
         segmentService.recalculatePastEventConditions();
         persistenceService.refreshIndex(Profile.class, null);
-        keepTrying("Profile should be engaged in the segment and scoring",
-                () -> profileService.load("test_profile_id"),
-                updatedProfile -> updatedProfile.getSegments().contains("relative-date-segment-test") && updatedProfile.getScores() != null && updatedProfile.getScores().get("relative-date-scoring-test") == 5,
-                1000, 20);
+        keepTrying("Profile should be engaged in the segment and scoring", () -> profileService.load("test_profile_id"),
+                updatedProfile -> updatedProfile.getSegments().contains("relative-date-segment-test") && updatedProfile.getScores() != null
+                        && updatedProfile.getScores().get("relative-date-scoring-test") == 5, 1000, 20);
 
         // update the profile to a date out of date expression
         localDate = LocalDate.now().minusDays(15);
@@ -732,9 +736,9 @@ public class SegmentIT extends BaseIT {
         // now force the recalculation of the date relative segments/scorings
         segmentService.recalculatePastEventConditions();
         persistenceService.refreshIndex(Profile.class, null);
-        keepTrying("Profile should not be engaged in the segment and scoring anymore",
-                () -> profileService.load("test_profile_id"),
-                updatedProfile -> !updatedProfile.getSegments().contains("relative-date-segment-test") && (updatedProfile.getScores() == null || !updatedProfile.getScores().containsKey("relative-date-scoring-test")),
-                1000, 20);
+        keepTrying("Profile should not be engaged in the segment and scoring anymore", () -> profileService.load("test_profile_id"),
+                updatedProfile -> !updatedProfile.getSegments().contains("relative-date-segment-test") && (
+                        updatedProfile.getScores() == null || !updatedProfile.getScores().containsKey("relative-date-scoring-test")), 1000,
+                20);
     }
 }
