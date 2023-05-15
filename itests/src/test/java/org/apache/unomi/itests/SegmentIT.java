@@ -573,7 +573,6 @@ public class SegmentIT extends BaseIT {
             } catch (Exception e) {
                 // Do nothing, unable to read value
             }
-            ;
             return false;
         }, 1000, 20);
 
@@ -614,7 +613,6 @@ public class SegmentIT extends BaseIT {
 
         pastEventCondition.setParameter("fromDate", "2000-07-15T07:00:00Z");
         pastEventCondition.setParameter("toDate", "2001-01-15T07:00:00Z");
-        ;
         Condition pastEventEventCondition = new Condition(definitionsService.getConditionType("eventTypeCondition"));
         pastEventEventCondition.setParameter("eventTypeId", "test-event-type");
         pastEventCondition.setParameter("eventCondition", pastEventEventCondition);
