@@ -63,7 +63,7 @@
             <cm:property name="maximalElasticSearchVersion" value="8.0.0" />
 
             <cm:property name="aggregateQueryBucketSize" value="5000" />
-            <cm:property name="clientSocketTimeout" value="" />
+            <cm:property name="clientSocketTimeout" value="180000" />
             <cm:property name="aggQueryMaxResponseSizeHttp" value="" />
             <cm:property name="aggQueryThrowOnMissingDocs" value="false" />
             <cm:property name="itemTypeToRefreshPolicy" value="" />

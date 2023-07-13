@@ -93,12 +93,7 @@ import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Dictionary;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
@@ -381,13 +376,23 @@ public abstract class BaseIT extends KarafTestSupport {
         persistenceService = getService(PersistenceService.class);
         definitionsService = getService(DefinitionsService.class);
         rulesService = getService(RulesService.class);
+        segmentService = getService(SegmentService.class);
     }
 
     public void updateConfiguration(String serviceName, String configPid, String propName, Object propValue)
             throws InterruptedException, IOException {
+        Map<String, Object> props = new HashMap<>();
+        props.put(propName, propValue);
+        updateConfiguration(serviceName, configPid, props);
+    }
+
+    public void updateConfiguration(String serviceName, String configPid, Map<String, Object> propsToSet)
+            throws InterruptedException, IOException {
         org.osgi.service.cm.Configuration cfg = configurationAdmin.getConfiguration(configPid);
         Dictionary<String, Object> props = cfg.getProperties();
-        props.put(propName, propValue);
+        for (Map.Entry<String, Object> propToSet : propsToSet.entrySet()) {
+            props.put(propToSet.getKey(), propToSet.getValue());
+        }
 
         waitForReRegistration(serviceName, () -> {
             try {

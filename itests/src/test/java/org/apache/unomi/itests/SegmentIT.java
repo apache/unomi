@@ -39,6 +39,7 @@ import org.ops4j.pax.exam.junit.PaxExam;
 import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
 import org.ops4j.pax.exam.spi.reactors.PerSuite;
 import org.ops4j.pax.exam.util.Filter;
+import org.osgi.service.cm.Configuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -46,11 +47,7 @@ import javax.inject.Inject;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.ZoneId;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @RunWith(PaxExam.class)
 @ExamReactorStrategy(PerSuite.class)
@@ -729,5 +726,77 @@ public class SegmentIT extends BaseIT {
                 updatedProfile -> !updatedProfile.getSegments().contains("relative-date-segment-test") && (
                         updatedProfile.getScores() == null || !updatedProfile.getScores().containsKey("relative-date-scoring-test")), 1000,
                 20);
+    }
+
+
+    @Test
+    public void testScoringRecalculationTimeout() throws Exception {
+        Configuration elasticSearchConfiguration = configurationAdmin.getConfiguration("org.apache.unomi.persistence.elasticsearch");
+        String currentClientSocketTimeout = (String) elasticSearchConfiguration.getProperties().get("clientSocketTimeout");
+
+        // create a lot of profiles
+        for (int i = 0; i <= 100000; i++) {
+            String profileId = "test_profile_id_" + i;
+
+            LOGGER.info("Creating profile: " + profileId);
+            Profile profile = new Profile();
+            profile.setSystemProperty("lastUpdated", new Date());
+            profile.setItemId(profileId);
+
+            persistenceService.save(profile, true);
+
+            // save events for the profiles
+            Date timestampEventInRange = new SimpleDateFormat("yyyy-MM-dd").parse("2000-10-30");
+            persistenceService.save(new Event("test-event-type", null, profile, null, null, profile, timestampEventInRange), true);
+        }
+        refreshPersistence(Event.class, Profile.class);
+
+        // create the past event condition
+        Condition pastEventCondition = new Condition(definitionsService.getConditionType("pastEventCondition"));
+        pastEventCondition.setParameter("minimumEventCount", 1);
+        pastEventCondition.setParameter("maximumEventCount", 2);
+
+        pastEventCondition.setParameter("fromDate", "2000-07-15T07:00:00Z");
+        pastEventCondition.setParameter("toDate", "2001-01-15T07:00:00Z");
+        ;
+        Condition pastEventEventCondition = new Condition(definitionsService.getConditionType("eventTypeCondition"));
+        pastEventEventCondition.setParameter("eventTypeId", "test-event-type");
+        pastEventCondition.setParameter("eventCondition", pastEventEventCondition);
+
+        // create the scoring
+        Metadata scoringMetadata = new Metadata("scoring-recalculation-socket-timeout");
+        Scoring scoring = new Scoring(scoringMetadata);
+        List<ScoringElement> scoringElements = new ArrayList<>();
+        ScoringElement scoringElement = new ScoringElement();
+        scoringElement.setCondition(pastEventCondition);
+        scoringElement.setValue(50);
+        scoringElements.add(scoringElement);
+        scoring.setElements(scoringElements);
+
+        Map<String, Object> configUpdate = new HashMap<>();
+        configUpdate.put("clientSocketTimeout", "50");
+        configUpdate.put("throwExceptions", true);
+        updateConfiguration(PersistenceService.class.getName(), "org.apache.unomi.persistence.elasticsearch", configUpdate);
+
+        boolean exceptionTriggered = false;
+        try {
+            segmentService.setScoringDefinition(scoring);
+        } catch (Exception e) {
+            // This is expected since we reduce the SocketTimeout to be really short.
+            exceptionTriggered = true;
+        } finally {
+            configUpdate.put("clientSocketTimeout", currentClientSocketTimeout);
+            configUpdate.put("throwExceptions", false);
+            updateConfiguration(PersistenceService.class.getName(), "org.apache.unomi.persistence.elasticsearch", configUpdate);
+        }
+
+        Assert.assertTrue("We should have a SocketTimeoutException due to reduce timeout", exceptionTriggered);
+        keepTrying("Check that profiles are correctly updated even in case of SocketTimeoutException", () -> {
+                    Condition condition = new Condition(definitionsService.getConditionType("scoringCondition"));
+                    condition.setParameter("scoringPlanId", "scoring-recalculation-socket-timeout");
+                    condition.setParameter("scoreValue", 50);
+                    return persistenceService.queryCount(condition, Profile.ITEM_TYPE);
+                },
+                count -> count == 100001, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
     }
 }
