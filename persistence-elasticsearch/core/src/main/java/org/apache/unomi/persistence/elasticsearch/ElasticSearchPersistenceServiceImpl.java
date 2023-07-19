@@ -64,13 +64,14 @@ import org.elasticsearch.action.search.SearchScrollRequest;
 import org.elasticsearch.action.support.WriteRequest;
 import org.elasticsearch.action.support.master.AcknowledgedResponse;
 import org.elasticsearch.action.update.UpdateRequest;
-import org.elasticsearch.action.update.UpdateResponse;
 import org.elasticsearch.client.*;
+import org.elasticsearch.action.update.UpdateResponse;
 import org.elasticsearch.client.core.CountRequest;
 import org.elasticsearch.client.core.CountResponse;
 import org.elasticsearch.client.core.MainResponse;
 import org.elasticsearch.client.indexlifecycle.*;
 import org.elasticsearch.client.indices.*;
+import org.elasticsearch.client.tasks.TaskSubmissionResponse;
 import org.elasticsearch.cluster.metadata.AliasMetaData;
 import org.elasticsearch.cluster.metadata.MappingMetaData;
 import org.elasticsearch.common.bytes.BytesReference;
@@ -78,9 +79,7 @@ import org.elasticsearch.common.unit.ByteSizeUnit;
 import org.elasticsearch.common.unit.ByteSizeValue;
 import org.elasticsearch.common.unit.DistanceUnit;
 import org.elasticsearch.common.unit.TimeValue;
-import org.elasticsearch.common.xcontent.XContentBuilder;
-import org.elasticsearch.common.xcontent.XContentFactory;
-import org.elasticsearch.common.xcontent.XContentType;
+import org.elasticsearch.common.xcontent.*;
 import org.elasticsearch.index.IndexNotFoundException;
 import org.elasticsearch.index.query.*;
 import org.elasticsearch.index.reindex.*;
@@ -145,6 +144,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     private boolean throwExceptions = false;
     private RestHighLevelClient client;
+    private SubmitRestHighLevelClientWrapper submitClient;
     private BulkProcessor bulkProcessor;
     private String elasticSearchAddresses;
     private List<String> elasticSearchAddressList = new ArrayList<>();
@@ -505,7 +505,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         logger.info(this.getClass().getName() + " service started successfully.");
     }
 
-    private void buildClient() {
+    private void buildClient() throws NoSuchFieldException, IllegalAccessException {
         List<Node> nodeList = new ArrayList<>();
         for (String elasticSearchAddress : elasticSearchAddressList) {
             String[] elasticSearchAddressParts = elasticSearchAddress.split(":");
@@ -561,6 +561,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
         logger.info("Connecting to ElasticSearch persistence backend using cluster name " + clusterName + " and index prefix " + indexPrefix + "...");
         client = new RestHighLevelClient(clientBuilder);
+        submitClient = new SubmitRestHighLevelClientWrapper(client);
     }
 
     public BulkProcessor getBulkProcessor() {
@@ -1123,23 +1124,15 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         updateByQueryRequest.setScript(scripts[i]);
                         updateByQueryRequest.setQuery(isItemTypeSharingIndex(itemType) ? wrapWithItemTypeQuery(itemType, queryBuilder) : queryBuilder);
 
-                        BulkByScrollResponse response = client.updateByQuery(updateByQueryRequest, RequestOptions.DEFAULT);
+                        TaskSubmissionResponse taskResponse = submitClient.updateByQuery(updateByQueryRequest, RequestOptions.DEFAULT);
 
-                        if (response.getBulkFailures().size() > 0) {
-                            for (BulkItemResponse.Failure failure : response.getBulkFailures()) {
-                                logger.error("Failure : cause={} , message={}", failure.getCause(), failure.getMessage());
-                            }
-                        } else {
-                            logger.info("Update with query and script processed {} entries in {}.", response.getUpdated(), response.getTook().toString());
+                        if (taskResponse == null) {
+                            logger.error("update with query and script: no response returned for query: {}", queryBuilder);
+                            return false;
                         }
-                        if (response.isTimedOut()) {
-                            logger.error("Update with query and script ended with timeout!");
-                        }
-                        if (response.getVersionConflicts() > 0) {
-                            logger.warn("Update with query and script ended with {} version conflicts!", response.getVersionConflicts());
-                        }
-                        if (response.getNoops() > 0) {
-                            logger.warn("Update Bwith query and script ended with {} noops!", response.getNoops());
+
+                        if (logger.isDebugEnabled()) {
+                            logger.debug("update with query and script: handled by task id {}, query = {}",taskResponse.getTask(), queryBuilder);
                         }
                     }
                     return true;
@@ -1309,44 +1302,15 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     // So we increase default timeout of 1min to 10min
                     .setTimeout(TimeValue.timeValueMinutes(removeByQueryTimeoutInMinutes));
 
-            BulkByScrollResponse bulkByScrollResponse = client.deleteByQuery(deleteByQueryRequest, RequestOptions.DEFAULT);
+            TaskSubmissionResponse taskResponse = submitClient.deleteByQuery(deleteByQueryRequest, RequestOptions.DEFAULT);
 
-            if (bulkByScrollResponse == null) {
+            if (taskResponse == null) {
                 logger.error("Remove by query: no response returned for query: {}", queryBuilder);
                 return false;
             }
 
-            if (bulkByScrollResponse.isTimedOut()) {
-                logger.warn("Remove by query: timed out because took more than {} minutes for query: {}", removeByQueryTimeoutInMinutes, queryBuilder);
-            }
-
-            if ((bulkByScrollResponse.getSearchFailures() != null && bulkByScrollResponse.getSearchFailures().size() > 0) ||
-                    bulkByScrollResponse.getBulkFailures() != null && bulkByScrollResponse.getBulkFailures().size() > 0) {
-                logger.warn("Remove by query: we found some failure during the process of query: {}", queryBuilder);
-
-                if (bulkByScrollResponse.getSearchFailures() != null && bulkByScrollResponse.getSearchFailures().size() > 0) {
-                    for (ScrollableHitSource.SearchFailure searchFailure : bulkByScrollResponse.getSearchFailures()) {
-                        logger.warn("Remove by query, search failure: {}", searchFailure.toString());
-                    }
-                }
-
-                if (bulkByScrollResponse.getBulkFailures() != null && bulkByScrollResponse.getBulkFailures().size() > 0) {
-                    for (BulkItemResponse.Failure bulkFailure : bulkByScrollResponse.getBulkFailures()) {
-                        logger.warn("Remove by query, bulk failure: {}", bulkFailure.toString());
-                    }
-                }
-            }
-
             if (logger.isDebugEnabled()) {
-                logger.debug("Remove by query: took {}, deleted docs: {}, batches executed: {}, skipped docs: {}, version conflicts: {}, search retries: {}, bulk retries: {}, for query: {}",
-                        bulkByScrollResponse.getTook().toHumanReadableString(1),
-                        bulkByScrollResponse.getDeleted(),
-                        bulkByScrollResponse.getBatches(),
-                        bulkByScrollResponse.getNoops(),
-                        bulkByScrollResponse.getVersionConflicts(),
-                        bulkByScrollResponse.getSearchRetries(),
-                        bulkByScrollResponse.getBulkRetries(),
-                        queryBuilder);
+                logger.debug("Remove by query: handled by task id {}, query = {}",taskResponse.getTask(), queryBuilder);
             }
 
             return true;

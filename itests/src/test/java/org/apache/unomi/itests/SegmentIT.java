@@ -778,20 +778,15 @@ public class SegmentIT extends BaseIT {
         configUpdate.put("throwExceptions", true);
         updateConfiguration(PersistenceService.class.getName(), "org.apache.unomi.persistence.elasticsearch", configUpdate);
 
-        boolean exceptionTriggered = false;
         try {
             segmentService.setScoringDefinition(scoring);
-        } catch (Exception e) {
-            // This is expected since we reduce the SocketTimeout to be really short.
-            exceptionTriggered = true;
         } finally {
             configUpdate.put("clientSocketTimeout", currentClientSocketTimeout);
             configUpdate.put("throwExceptions", false);
             updateConfiguration(PersistenceService.class.getName(), "org.apache.unomi.persistence.elasticsearch", configUpdate);
         }
 
-        Assert.assertTrue("We should have a SocketTimeoutException due to reduce timeout", exceptionTriggered);
-        keepTrying("Check that profiles are correctly updated even in case of SocketTimeoutException", () -> {
+        keepTrying("Check that profiles are correctly updated by the ES task", () -> {
                     Condition condition = new Condition(definitionsService.getConditionType("scoringCondition"));
                     condition.setParameter("scoringPlanId", "scoring-recalculation-socket-timeout");
                     condition.setParameter("scoreValue", 50);
