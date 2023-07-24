@@ -45,7 +45,7 @@ public class CustomRestHighLevelClient extends RestHighLevelClient {
      * @param options              the request options (e.g. headers), use {@link RequestOptions#DEFAULT} if nothing needs to be customized
      * @return the response
      */
-    public final TaskSubmissionResponse deleteByQueryTask(DeleteByQueryRequest deleteByQueryRequest, RequestOptions options) throws IOException {
+    public final TaskSubmissionResponse submitDeleteByQuery(DeleteByQueryRequest deleteByQueryRequest, RequestOptions options) throws IOException {
         return performRequestAndParseEntity(
                 deleteByQueryRequest, innerDeleteByQueryRequest -> {
                     Request request = RequestConverters.deleteByQuery(innerDeleteByQueryRequest);
@@ -64,7 +64,7 @@ public class CustomRestHighLevelClient extends RestHighLevelClient {
      * @param options              the request options (e.g. headers), use {@link RequestOptions#DEFAULT} if nothing needs to be customized
      * @return the response
      */
-    public final TaskSubmissionResponse updateByQueryTask(UpdateByQueryRequest updateByQueryRequest, RequestOptions options) throws IOException {
+    public final TaskSubmissionResponse submitUpdateByQuery(UpdateByQueryRequest updateByQueryRequest, RequestOptions options) throws IOException {
         return performRequestAndParseEntity(
                 updateByQueryRequest, innerUpdateByQueryRequest -> {
                     Request request = RequestConverters.updateByQuery(updateByQueryRequest);

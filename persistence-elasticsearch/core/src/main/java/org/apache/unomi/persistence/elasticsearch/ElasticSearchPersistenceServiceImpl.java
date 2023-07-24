@@ -45,6 +45,7 @@ import org.elasticsearch.Version;
 import org.elasticsearch.action.DocWriteRequest;
 import org.elasticsearch.action.DocWriteResponse;
 import org.elasticsearch.action.admin.cluster.health.ClusterHealthRequest;
+import org.elasticsearch.action.admin.cluster.node.tasks.list.ListTasksRequest;
 import org.elasticsearch.action.admin.cluster.storedscripts.PutStoredScriptRequest;
 import org.elasticsearch.action.admin.indices.alias.Alias;
 import org.elasticsearch.action.admin.indices.alias.get.GetAliasesRequest;
@@ -53,6 +54,7 @@ import org.elasticsearch.action.admin.indices.refresh.RefreshRequest;
 import org.elasticsearch.action.admin.indices.template.delete.DeleteIndexTemplateRequest;
 import org.elasticsearch.action.bulk.*;
 import org.elasticsearch.action.delete.DeleteRequest;
+import org.elasticsearch.action.delete.DeleteResponse;
 import org.elasticsearch.action.get.GetRequest;
 import org.elasticsearch.action.get.GetResponse;
 import org.elasticsearch.action.index.IndexRequest;
@@ -71,6 +73,8 @@ import org.elasticsearch.client.core.CountResponse;
 import org.elasticsearch.client.core.MainResponse;
 import org.elasticsearch.client.indexlifecycle.*;
 import org.elasticsearch.client.indices.*;
+import org.elasticsearch.client.tasks.GetTaskRequest;
+import org.elasticsearch.client.tasks.GetTaskResponse;
 import org.elasticsearch.client.tasks.TaskSubmissionResponse;
 import org.elasticsearch.cluster.metadata.AliasMetaData;
 import org.elasticsearch.cluster.metadata.MappingMetaData;
@@ -108,6 +112,8 @@ import org.elasticsearch.search.builder.SearchSourceBuilder;
 import org.elasticsearch.search.sort.GeoDistanceSortBuilder;
 import org.elasticsearch.search.sort.SortBuilders;
 import org.elasticsearch.search.sort.SortOrder;
+import org.elasticsearch.tasks.RawTaskStatus;
+import org.elasticsearch.tasks.TaskId;
 import org.osgi.framework.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -1122,15 +1128,11 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         updateByQueryRequest.setScript(scripts[i]);
                         updateByQueryRequest.setQuery(isItemTypeSharingIndex(itemType) ? wrapWithItemTypeQuery(itemType, queryBuilder) : queryBuilder);
 
-                        TaskSubmissionResponse taskResponse = client.updateByQueryTask(updateByQueryRequest, RequestOptions.DEFAULT);
-
+                        TaskSubmissionResponse taskResponse = client.submitUpdateByQuery(updateByQueryRequest, RequestOptions.DEFAULT);
                         if (taskResponse == null) {
                             logger.error("update with query and script: no response returned for query: {}", queryBuilder);
-                            return false;
-                        }
-
-                        if (logger.isDebugEnabled()) {
-                            logger.debug("update with query and script: handled by task id {}, query = {}",taskResponse.getTask(), queryBuilder);
+                        } else {
+                            startTaskTracker(updateByQueryRequest, taskResponse);
                         }
                     }
                     return true;
@@ -1146,6 +1148,45 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             return false;
         } else {
             return result;
+        }
+    }
+
+    private void startTaskTracker(AbstractBulkByScrollRequest request, TaskSubmissionResponse response) {
+        logger.info("Start tracking submitted task: [{}]. See debug log level for more information", response.getTask());
+        if (logger.isDebugEnabled()) {
+            logger.debug("Tracking task [{}]: [{}] using query: [{}]", response.getTask(), request.toString(), request.getSearchRequest().source().query());
+        }
+        new InClassLoaderExecute<Void>(metricsService, this.getClass().getName() + ".taskTracker", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
+            protected Void execute(Object... args) throws Exception {
+                trackTask(new TaskId(response.getTask()));
+                return null;
+            }
+        }.catchingExecuteInClassLoader(true);
+    }
+
+    private void trackTask(TaskId taskId) throws IOException, InterruptedException {
+        Optional<GetTaskResponse> getTaskResponseOptional = client.tasks().get(new GetTaskRequest(taskId.getNodeId(), taskId.getId()), RequestOptions.DEFAULT);
+        if (getTaskResponseOptional.isPresent()) {
+            GetTaskResponse getTaskResponse = getTaskResponseOptional.get();
+            if (getTaskResponse.isCompleted()) {
+                long millis = getTaskResponse.getTaskInfo().getRunningTimeNanos() / 1_000_000;
+                long seconds = millis / 1000;
+
+                logger.info("Tracking task [{}]: Finished in {} {}", taskId,
+                        seconds >= 1 ? seconds : millis,
+                        seconds >= 1 ? "seconds" : "milliseconds");
+
+                // Cleanup .tasks index
+                DeleteRequest deleteRequest = new DeleteRequest();
+                deleteRequest.index(".tasks");
+                deleteRequest.id(taskId.toString());
+                client.delete(deleteRequest, RequestOptions.DEFAULT);
+            } else {
+                Thread.sleep(1000);
+                trackTask(taskId);
+            }
+        } else {
+            logger.error("Tracking task [{}]: No task found", taskId);
         }
     }
 
@@ -1300,16 +1341,14 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     // So we increase default timeout of 1min to 10min
                     .setTimeout(TimeValue.timeValueMinutes(removeByQueryTimeoutInMinutes));
 
-            TaskSubmissionResponse taskResponse = client.deleteByQueryTask(deleteByQueryRequest, RequestOptions.DEFAULT);
+            TaskSubmissionResponse taskResponse = client.submitDeleteByQuery(deleteByQueryRequest, RequestOptions.DEFAULT);
 
             if (taskResponse == null) {
                 logger.error("Remove by query: no response returned for query: {}", queryBuilder);
                 return false;
             }
 
-            if (logger.isDebugEnabled()) {
-                logger.debug("Remove by query: handled by task id {}, query = {}",taskResponse.getTask(), queryBuilder);
-            }
+            startTaskTracker(deleteByQueryRequest, taskResponse);
 
             return true;
         } catch (Exception e) {
