@@ -143,8 +143,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     private static final String ROLLOVER_LIFECYCLE_NAME = "unomi-rollover-policy";
 
     private boolean throwExceptions = false;
-    private RestHighLevelClient client;
-    private SubmitRestHighLevelClientWrapper submitClient;
+    private CustomRestHighLevelClient client;
     private BulkProcessor bulkProcessor;
     private String elasticSearchAddresses;
     private List<String> elasticSearchAddressList = new ArrayList<>();
@@ -560,8 +559,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         });
 
         logger.info("Connecting to ElasticSearch persistence backend using cluster name " + clusterName + " and index prefix " + indexPrefix + "...");
-        client = new RestHighLevelClient(clientBuilder);
-        submitClient = new SubmitRestHighLevelClientWrapper(client);
+        client = new CustomRestHighLevelClient(clientBuilder);
     }
 
     public BulkProcessor getBulkProcessor() {
@@ -1124,7 +1122,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         updateByQueryRequest.setScript(scripts[i]);
                         updateByQueryRequest.setQuery(isItemTypeSharingIndex(itemType) ? wrapWithItemTypeQuery(itemType, queryBuilder) : queryBuilder);
 
-                        TaskSubmissionResponse taskResponse = submitClient.updateByQuery(updateByQueryRequest, RequestOptions.DEFAULT);
+                        TaskSubmissionResponse taskResponse = client.updateByQueryTask(updateByQueryRequest, RequestOptions.DEFAULT);
 
                         if (taskResponse == null) {
                             logger.error("update with query and script: no response returned for query: {}", queryBuilder);
@@ -1302,7 +1300,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     // So we increase default timeout of 1min to 10min
                     .setTimeout(TimeValue.timeValueMinutes(removeByQueryTimeoutInMinutes));
 
-            TaskSubmissionResponse taskResponse = submitClient.deleteByQuery(deleteByQueryRequest, RequestOptions.DEFAULT);
+            TaskSubmissionResponse taskResponse = client.deleteByQueryTask(deleteByQueryRequest, RequestOptions.DEFAULT);
 
             if (taskResponse == null) {
                 logger.error("Remove by query: no response returned for query: {}", queryBuilder);
