@@ -133,6 +133,7 @@ import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import static org.elasticsearch.index.query.QueryBuilders.termQuery;
 
@@ -1092,41 +1093,46 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         for (int i = 0; i < scripts.length; i++) {
             builtScripts[i] = new Script(ScriptType.INLINE, "painless", scripts[i], scriptParams[i]);
         }
-        return updateWithQueryAndScript(clazz, builtScripts, conditions);
+        return updateWithQueryAndScript(new Class<?>[]{clazz}, builtScripts, conditions);
     }
 
     @Override
     public boolean updateWithQueryAndStoredScript(Date dateHint, Class<?> clazz, String[] scripts, Map<String, Object>[] scriptParams, Condition[] conditions) {
-        return updateWithQueryAndStoredScript(clazz, scripts, scriptParams, conditions);
+        return updateWithQueryAndStoredScript(new Class<?>[]{clazz}, scripts, scriptParams, conditions);
     }
 
     @Override
     public boolean updateWithQueryAndStoredScript(Class<?> clazz, String[] scripts, Map<String, Object>[] scriptParams, Condition[] conditions) {
+        return updateWithQueryAndStoredScript(new Class<?>[]{clazz}, scripts, scriptParams, conditions);
+    }
+
+    @Override
+    public boolean updateWithQueryAndStoredScript(Class<?>[] classes, String[] scripts, Map<String, Object>[] scriptParams, Condition[] conditions) {
         Script[] builtScripts = new Script[scripts.length];
         for (int i = 0; i < scripts.length; i++) {
             builtScripts[i] = new Script(ScriptType.STORED, null, scripts[i], scriptParams[i]);
         }
-        return updateWithQueryAndScript(clazz, builtScripts, conditions);
+        return updateWithQueryAndScript(classes, builtScripts, conditions);
     }
 
-    private boolean updateWithQueryAndScript(final Class<?> clazz, final Script[] scripts, final Condition[] conditions) {
+    private boolean updateWithQueryAndScript(final Class<?>[] classes, final Script[] scripts, final Condition[] conditions) {
         Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".updateWithQueryAndScript", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
             protected Boolean execute(Object... args) throws Exception {
+                String[] itemTypes = Arrays.stream(classes).map(Item::getItemType).toArray(String[]::new);
+                String[] indices = Arrays.stream(itemTypes).map(itemType -> getIndexNameForQuery(itemType)).toArray(String[]::new);
+
                 try {
-                    String itemType = Item.getItemType(clazz);
-                    String index = getIndex(itemType);
-
                     for (int i = 0; i < scripts.length; i++) {
-                        RefreshRequest refreshRequest = new RefreshRequest(index);
+                        RefreshRequest refreshRequest = new RefreshRequest(indices);
                         client.indices().refresh(refreshRequest, RequestOptions.DEFAULT);
-                        QueryBuilder queryBuilder = conditionESQueryBuilderDispatcher.buildFilter(conditions[i]);
 
-                        UpdateByQueryRequest updateByQueryRequest = new UpdateByQueryRequest(index);
+                        QueryBuilder queryBuilder = conditionESQueryBuilderDispatcher.buildFilter(conditions[i]);
+                        UpdateByQueryRequest updateByQueryRequest = new UpdateByQueryRequest(indices);
                         updateByQueryRequest.setConflicts("proceed");
                         updateByQueryRequest.setMaxRetries(1000);
                         updateByQueryRequest.setSlices(2);
                         updateByQueryRequest.setScript(scripts[i]);
-                        updateByQueryRequest.setQuery(isItemTypeSharingIndex(itemType) ? wrapWithItemTypeQuery(itemType, queryBuilder) : queryBuilder);
+                        updateByQueryRequest.setQuery(wrapWithItemsTypeQuery(itemTypes, queryBuilder));
 
                         TaskSubmissionResponse taskResponse = client.submitUpdateByQuery(updateByQueryRequest, RequestOptions.DEFAULT);
                         if (taskResponse == null) {
@@ -1137,7 +1143,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     }
                     return true;
                 } catch (IndexNotFoundException e) {
-                    throw new Exception("No index found for itemType=" + clazz.getName(), e);
+                    throw new Exception("No index found for itemTypes=" + String.join(",", itemTypes), e);
                 } catch (ScriptException e) {
                     logger.error("Error in the update script : {}\n{}\n{}", e.getScript(), e.getDetailedMessage(), e.getScriptStack());
                     throw new Exception("Error in the update script");
@@ -1158,36 +1164,36 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         }
         new InClassLoaderExecute<Void>(metricsService, this.getClass().getName() + ".taskTracker", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
             protected Void execute(Object... args) throws Exception {
-                trackTask(new TaskId(response.getTask()));
+
+                TaskId taskId = new TaskId(response.getTask());
+                while (true){
+                    Optional<GetTaskResponse> getTaskResponseOptional = client.tasks().get(new GetTaskRequest(taskId.getNodeId(), taskId.getId()), RequestOptions.DEFAULT);
+                    if (getTaskResponseOptional.isPresent()) {
+                        GetTaskResponse getTaskResponse = getTaskResponseOptional.get();
+                        if (getTaskResponse.isCompleted()) {
+                            long millis = getTaskResponse.getTaskInfo().getRunningTimeNanos() / 1_000_000;
+                            long seconds = millis / 1000;
+
+                            logger.info("Tracking task [{}]: Finished in {} {}", taskId,
+                                    seconds >= 1 ? seconds : millis,
+                                    seconds >= 1 ? "seconds" : "milliseconds");
+                            break;
+                        } else {
+                            try {
+                                Thread.sleep(1000);
+                            } catch (InterruptedException e) {
+                                Thread.currentThread().interrupt();
+                                throw new IllegalStateException("Tracking task [{}]: interrupted");
+                            }
+                        }
+                    } else {
+                        logger.error("Tracking task [{}]: No task found", taskId);
+                        break;
+                    }
+                }
                 return null;
             }
         }.catchingExecuteInClassLoader(true);
-    }
-
-    private void trackTask(TaskId taskId) throws IOException, InterruptedException {
-        Optional<GetTaskResponse> getTaskResponseOptional = client.tasks().get(new GetTaskRequest(taskId.getNodeId(), taskId.getId()), RequestOptions.DEFAULT);
-        if (getTaskResponseOptional.isPresent()) {
-            GetTaskResponse getTaskResponse = getTaskResponseOptional.get();
-            if (getTaskResponse.isCompleted()) {
-                long millis = getTaskResponse.getTaskInfo().getRunningTimeNanos() / 1_000_000;
-                long seconds = millis / 1000;
-
-                logger.info("Tracking task [{}]: Finished in {} {}", taskId,
-                        seconds >= 1 ? seconds : millis,
-                        seconds >= 1 ? "seconds" : "milliseconds");
-
-                // Cleanup .tasks index
-                DeleteRequest deleteRequest = new DeleteRequest();
-                deleteRequest.index(".tasks");
-                deleteRequest.id(taskId.toString());
-                client.delete(deleteRequest, RequestOptions.DEFAULT);
-            } else {
-                Thread.sleep(1000);
-                trackTask(taskId);
-            }
-        } else {
-            logger.error("Tracking task [{}]: No task found", taskId);
-        }
     }
 
     @Override
@@ -1327,7 +1333,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         try {
             String itemType = Item.getItemType(clazz);
             final DeleteByQueryRequest deleteByQueryRequest = new DeleteByQueryRequest(getIndexNameForQuery(itemType))
-                    .setQuery(isItemTypeSharingIndex(itemType) ? wrapWithItemTypeQuery(itemType, queryBuilder) : queryBuilder)
+                    .setQuery(wrapWithItemTypeQuery(itemType, queryBuilder))
                     // Setting slices to auto will let Elasticsearch choose the number of slices to use.
                     // This setting will use one slice per shard, up to a certain limit.
                     // The delete request will be more efficient and faster than no slicing.
@@ -1943,7 +1949,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
                 CountRequest countRequest = new CountRequest(getIndexNameForQuery(itemType));
                 SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
-                searchSourceBuilder.query(isItemTypeSharingIndex(itemType) ? wrapWithItemTypeQuery(itemType, filter) : filter);
+                searchSourceBuilder.query(wrapWithItemTypeQuery(itemType, filter));
                 countRequest.source(searchSourceBuilder);
                 CountResponse response = client.count(countRequest, RequestOptions.DEFAULT);
                 return response.getCount();
@@ -1978,7 +1984,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder()
                             .fetchSource(true)
                             .seqNoAndPrimaryTerm(true)
-                            .query(isItemTypeSharingIndex(itemType) ? wrapWithItemTypeQuery(itemType, query) : query)
+                            .query(wrapWithItemTypeQuery(itemType, query))
                             .size(size < 0 ? defaultQueryLimit : size)
                             .from(offset);
                     if (scrollTimeValidity != null) {
@@ -2282,15 +2288,12 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     }
 
                     if (filter != null) {
-                        searchSourceBuilder.query(isItemTypeSharingIndex ?
-                                wrapWithItemTypeQuery(itemType, conditionESQueryBuilderDispatcher.buildFilter(filter)) :
-                                conditionESQueryBuilderDispatcher.buildFilter(filter));
+                        searchSourceBuilder.query(wrapWithItemTypeQuery(itemType, conditionESQueryBuilderDispatcher.buildFilter(filter)));
                     }
                 } else {
                     if (filter != null) {
-                        AggregationBuilder filterAggregation = AggregationBuilders.filter("filter", isItemTypeSharingIndex ?
-                                wrapWithItemTypeQuery(itemType, conditionESQueryBuilderDispatcher.buildFilter(filter)) :
-                                conditionESQueryBuilderDispatcher.buildFilter(filter));
+                        AggregationBuilder filterAggregation = AggregationBuilders.filter("filter",
+                                wrapWithItemTypeQuery(itemType, conditionESQueryBuilderDispatcher.buildFilter(filter)));
                         for (AggregationBuilder aggregationBuilder : lastAggregation) {
                             filterAggregation.subAggregation(aggregationBuilder);
                         }
@@ -2667,10 +2670,33 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     }
 
     private QueryBuilder wrapWithItemTypeQuery(String itemType, QueryBuilder originalQuery) {
-        BoolQueryBuilder wrappedQuery = QueryBuilders.boolQuery();
-        wrappedQuery.must(getItemTypeQueryBuilder(itemType));
-        wrappedQuery.must(originalQuery);
-        return wrappedQuery;
+        if (isItemTypeSharingIndex(itemType)) {
+            BoolQueryBuilder wrappedQuery = QueryBuilders.boolQuery();
+            wrappedQuery.must(getItemTypeQueryBuilder(itemType));
+            wrappedQuery.must(originalQuery);
+            return wrappedQuery;
+        }
+        return originalQuery;
+    }
+
+    private QueryBuilder wrapWithItemsTypeQuery(String[] itemTypes, QueryBuilder originalQuery) {
+        if (itemTypes.length == 1) {
+            return wrapWithItemTypeQuery(itemTypes[0], originalQuery);
+        }
+
+        if (Arrays.stream(itemTypes).anyMatch(this::isItemTypeSharingIndex)) {
+            BoolQueryBuilder itemTypeQuery = QueryBuilders.boolQuery();
+            itemTypeQuery.minimumShouldMatch(1);
+            for (String itemType : itemTypes) {
+                itemTypeQuery.should(getItemTypeQueryBuilder(itemType));
+            }
+
+            BoolQueryBuilder wrappedQuery = QueryBuilders.boolQuery();
+            wrappedQuery.filter(itemTypeQuery);
+            wrappedQuery.must(originalQuery);
+            return wrappedQuery;
+        }
+        return originalQuery;
     }
 
     private QueryBuilder getItemTypeQueryBuilder(String itemType) {

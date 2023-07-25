@@ -775,14 +775,12 @@ public class SegmentIT extends BaseIT {
 
         Map<String, Object> configUpdate = new HashMap<>();
         configUpdate.put("clientSocketTimeout", "50");
-        configUpdate.put("throwExceptions", true);
         updateConfiguration(PersistenceService.class.getName(), "org.apache.unomi.persistence.elasticsearch", configUpdate);
 
         try {
             segmentService.setScoringDefinition(scoring);
         } finally {
             configUpdate.put("clientSocketTimeout", currentClientSocketTimeout);
-            configUpdate.put("throwExceptions", false);
             updateConfiguration(PersistenceService.class.getName(), "org.apache.unomi.persistence.elasticsearch", configUpdate);
         }
 

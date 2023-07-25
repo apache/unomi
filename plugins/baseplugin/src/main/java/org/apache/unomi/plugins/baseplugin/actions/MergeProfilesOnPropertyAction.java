@@ -167,8 +167,7 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
                     Map<String, Object>[] scriptParams = new Map[]{Collections.singletonMap("profileId", masterProfileId)};
                     Condition[] conditions = new Condition[]{profileIdsCondition};
 
-                    persistenceService.updateWithQueryAndStoredScript(Session.class, scripts, scriptParams, conditions);
-                    persistenceService.updateWithQueryAndStoredScript(Event.class, scripts, scriptParams, conditions);
+                    persistenceService.updateWithQueryAndStoredScript(new Class[]{Session.class, Event.class}, scripts, scriptParams, conditions);
                 } else {
                     for (String mergedProfileId : mergedProfileIds) {
                         privacyService.anonymizeBrowsingData(mergedProfileId);

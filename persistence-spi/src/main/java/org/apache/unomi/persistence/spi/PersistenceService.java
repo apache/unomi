@@ -249,6 +249,19 @@ public interface PersistenceService {
     }
 
     /**
+     * Updates the items of the specified class by a query with a new property value for the specified property name
+     * based on provided stored scripts and script parameters,
+     * This one is able to perform an update on multiple types in a single run, be careful with your query as it will be performed on all of them.
+     *
+     * @param classes      classes of items to update, be careful all of them will be submitted to update for all scripts/conditions
+     * @param scripts      Stored scripts name
+     * @param scriptParams script params array
+     * @param conditions   conditions array
+     * @return {@code true} if the update was successful, {@code false} otherwise
+     */
+    boolean updateWithQueryAndStoredScript(Class<?>[] classes, String[] scripts, Map<String, Object>[] scriptParams, Condition[] conditions);
+
+    /**
      * @deprecated use {@link #updateWithQueryAndStoredScript(Class, String[], Map[], Condition[])}
      */
     @Deprecated
