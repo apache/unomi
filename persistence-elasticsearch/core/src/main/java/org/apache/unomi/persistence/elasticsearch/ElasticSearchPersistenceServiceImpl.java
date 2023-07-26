@@ -45,7 +45,6 @@ import org.elasticsearch.Version;
 import org.elasticsearch.action.DocWriteRequest;
 import org.elasticsearch.action.DocWriteResponse;
 import org.elasticsearch.action.admin.cluster.health.ClusterHealthRequest;
-import org.elasticsearch.action.admin.cluster.node.tasks.list.ListTasksRequest;
 import org.elasticsearch.action.admin.cluster.storedscripts.PutStoredScriptRequest;
 import org.elasticsearch.action.admin.indices.alias.Alias;
 import org.elasticsearch.action.admin.indices.alias.get.GetAliasesRequest;
@@ -54,7 +53,6 @@ import org.elasticsearch.action.admin.indices.refresh.RefreshRequest;
 import org.elasticsearch.action.admin.indices.template.delete.DeleteIndexTemplateRequest;
 import org.elasticsearch.action.bulk.*;
 import org.elasticsearch.action.delete.DeleteRequest;
-import org.elasticsearch.action.delete.DeleteResponse;
 import org.elasticsearch.action.get.GetRequest;
 import org.elasticsearch.action.get.GetResponse;
 import org.elasticsearch.action.index.IndexRequest;
@@ -112,7 +110,6 @@ import org.elasticsearch.search.builder.SearchSourceBuilder;
 import org.elasticsearch.search.sort.GeoDistanceSortBuilder;
 import org.elasticsearch.search.sort.SortBuilders;
 import org.elasticsearch.search.sort.SortOrder;
-import org.elasticsearch.tasks.RawTaskStatus;
 import org.elasticsearch.tasks.TaskId;
 import org.osgi.framework.*;
 import org.slf4j.Logger;
@@ -133,7 +130,6 @@ import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 import static org.elasticsearch.index.query.QueryBuilders.termQuery;
 
@@ -174,6 +170,8 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     private Integer defaultQueryLimit = 10;
     private Integer removeByQueryTimeoutInMinutes = 10;
+    private Integer taskWaitingTimeout = 3600000;
+    private Integer taskWaitingPollingInterval = 1000;
 
     private String bulkProcessorConcurrentRequests = "1";
     private String bulkProcessorBulkActions = "1000";
@@ -438,6 +436,18 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     public void setLogLevelRestClient(String logLevelRestClient) {
         this.logLevelRestClient = logLevelRestClient;
+    }
+
+    public void setTaskWaitingTimeout(String taskWaitingTimeout) {
+        if (StringUtils.isNumeric(taskWaitingTimeout)) {
+            this.taskWaitingTimeout = Integer.parseInt(taskWaitingTimeout);
+        }
+    }
+
+    public void setTaskWaitingPollingInterval(String taskWaitingPollingInterval) {
+        if (StringUtils.isNumeric(taskWaitingPollingInterval)) {
+            this.taskWaitingPollingInterval = Integer.parseInt(taskWaitingPollingInterval);
+        }
     }
 
     public void start() throws Exception {
@@ -1138,7 +1148,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         if (taskResponse == null) {
                             logger.error("update with query and script: no response returned for query: {}", queryBuilder);
                         } else {
-                            startTaskTracker(updateByQueryRequest, taskResponse);
+                            waitForTaskComplete(updateByQueryRequest, taskResponse);
                         }
                     }
                     return true;
@@ -1157,12 +1167,13 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         }
     }
 
-    private void startTaskTracker(AbstractBulkByScrollRequest request, TaskSubmissionResponse response) {
-        logger.info("Start tracking submitted task: [{}]. See debug log level for more information", response.getTask());
+    private void waitForTaskComplete(AbstractBulkByScrollRequest request, TaskSubmissionResponse response) {
         if (logger.isDebugEnabled()) {
-            logger.debug("Tracking task [{}]: [{}] using query: [{}]", response.getTask(), request.toString(), request.getSearchRequest().source().query());
+            logger.debug("Waiting task [{}]: [{}] using query: [{}], polling every {}ms with a timeout configured to {}ms",
+                    response.getTask(), request.toString(), request.getSearchRequest().source().query(), taskWaitingPollingInterval, taskWaitingTimeout);
         }
-        new InClassLoaderExecute<Void>(metricsService, this.getClass().getName() + ".taskTracker", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
+        long start = System.currentTimeMillis();
+        new InClassLoaderExecute<Void>(metricsService, this.getClass().getName() + ".waitForTask", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
             protected Void execute(Object... args) throws Exception {
 
                 TaskId taskId = new TaskId(response.getTask());
@@ -1174,20 +1185,25 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                             long millis = getTaskResponse.getTaskInfo().getRunningTimeNanos() / 1_000_000;
                             long seconds = millis / 1000;
 
-                            logger.info("Tracking task [{}]: Finished in {} {}", taskId,
+                            logger.info("Waiting task [{}]: Finished in {} {}", taskId,
                                     seconds >= 1 ? seconds : millis,
                                     seconds >= 1 ? "seconds" : "milliseconds");
                             break;
                         } else {
+                            if ((start + taskWaitingTimeout) < System.currentTimeMillis()) {
+                                logger.error("Waiting task [{}]: Exceeded configured timeout ({}ms), aborting wait process", taskId, taskWaitingTimeout);
+                                break;
+                            }
+
                             try {
-                                Thread.sleep(1000);
+                                Thread.sleep(taskWaitingPollingInterval);
                             } catch (InterruptedException e) {
                                 Thread.currentThread().interrupt();
-                                throw new IllegalStateException("Tracking task [{}]: interrupted");
+                                throw new IllegalStateException("Waiting task [{}]: interrupted");
                             }
                         }
                     } else {
-                        logger.error("Tracking task [{}]: No task found", taskId);
+                        logger.error("Waiting task [{}]: No task found", taskId);
                         break;
                     }
                 }
@@ -1354,7 +1370,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 return false;
             }
 
-            startTaskTracker(deleteByQueryRequest, taskResponse);
+            waitForTaskComplete(deleteByQueryRequest, taskResponse);
 
             return true;
         } catch (Exception e) {
