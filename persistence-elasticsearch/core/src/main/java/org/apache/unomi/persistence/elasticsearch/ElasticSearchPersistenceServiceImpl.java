@@ -1182,12 +1182,14 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     if (getTaskResponseOptional.isPresent()) {
                         GetTaskResponse getTaskResponse = getTaskResponseOptional.get();
                         if (getTaskResponse.isCompleted()) {
-                            long millis = getTaskResponse.getTaskInfo().getRunningTimeNanos() / 1_000_000;
-                            long seconds = millis / 1000;
+                            if (logger.isDebugEnabled()) {
+                                long millis = getTaskResponse.getTaskInfo().getRunningTimeNanos() / 1_000_000;
+                                long seconds = millis / 1000;
 
-                            logger.info("Waiting task [{}]: Finished in {} {}", taskId,
-                                    seconds >= 1 ? seconds : millis,
-                                    seconds >= 1 ? "seconds" : "milliseconds");
+                                logger.debug("Waiting task [{}]: Finished in {} {}", taskId,
+                                        seconds >= 1 ? seconds : millis,
+                                        seconds >= 1 ? "seconds" : "milliseconds");
+                            }
                             break;
                         } else {
                             if ((start + taskWaitingTimeout) < System.currentTimeMillis()) {
