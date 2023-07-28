@@ -50,14 +50,7 @@ import javax.ws.rs.*;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 @WebService
 @Consumes(MediaType.APPLICATION_JSON)
@@ -232,7 +225,14 @@ public class ContextJsonEndpoint {
                         // Session user has been switched, profile id in cookie is not up to date
                         // We must reload the profile with the session ID as some properties could be missing from the session profile
                         // #personalIdentifier
-                        profile = profileService.load(sessionProfile.getItemId());
+                        Profile persistedProfile = profileService.load(sessionProfile.getItemId());
+                        if (persistedProfile == null){
+                            logger.error("Profile with id {} stored in session {} not existing anymore in profile index. A new profile will be created", sessionProfile.getItemId(), session.getItemId());
+                            profile = createNewProfile(null, timestamp);
+                            profileCreated = true;
+                        } else {
+                            profile = persistedProfile;
+                        }
                     }
 
                     // Handle anonymous situation
