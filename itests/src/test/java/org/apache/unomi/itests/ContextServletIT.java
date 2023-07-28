@@ -595,6 +595,57 @@ public class ContextServletIT extends BaseIT {
                 /*  We can see we still have old control group check stored in the session too */ false);
     }
 
+	@Test()
+	public void testEventSessionWithNotExistingProfile_Success() throws IOException, InterruptedException {
+
+		//Arrange
+		String profileId = "profile-to-be-removed";
+		Profile profile = new Profile(profileId);
+		profileService.save(profile);
+
+		String sessionWithDeletedProfileId = "session-with-delete-profile";
+		String scope = "test-scope";
+		Session session = new Session(sessionWithDeletedProfileId, profile, new Date(), scope);
+		profileService.saveSession(session);
+
+		refreshPersistence(Profile.class, Session.class);
+		keepTrying("Profile not saved in time",
+				() -> persistenceService.load(profileId, Profile.class), Objects::nonNull,
+				1000, 10);
+		keepTrying("Session not saved in time",
+				() -> persistenceService.load(sessionWithDeletedProfileId, Session.class), Objects::nonNull,
+				1000, 10);
+
+		profileService.delete(profileId, false);
+		refreshPersistence(Profile.class);
+		waitForNullValue("Profile not deleted in time",
+				() -> persistenceService.load(profileId, Profile.class),
+				1000, 10);
+
+		String eventId = "test-event-id-" + System.currentTimeMillis();
+		String eventType = "test-event-type";
+		Event event = new Event();
+		event.setEventType(eventType);
+		event.setItemId(eventId);
+		event.setSessionId(sessionWithDeletedProfileId);
+
+		ContextRequest contextRequest = new ContextRequest();
+		contextRequest.setEvents(Arrays.asList(event));
+		contextRequest.setSessionId(sessionWithDeletedProfileId);
+
+		HttpPost request = new HttpPost(URL + CONTEXT_URL);
+		request.addHeader(THIRD_PARTY_HEADER_NAME, UNOMI_KEY);
+		request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.create("application/json")));
+		TestUtils.executeContextJSONRequest(request);
+		refreshPersistence(Profile.class, Session.class);
+		Thread.sleep(2000); //Making sure event is updated in DB
+
+		//Assert
+		keepTrying("Session should not the deleted profile",
+				() -> persistenceService.load(sessionWithDeletedProfileId, Session.class), persistedSession -> !persistedSession.getProfileId().equals(profileId),
+				1000, 10);
+	}
+
     private void performPersonalizationWithControlGroup(Map<String, String> controlGroupConfig, List<String> expectedVariants,
                                                         boolean expectedControlGroupInfoInPersoResult, boolean expectedControlGroupValueInPersoResult,
                                                         Boolean expectedControlGroupValueInProfile, Boolean expectedControlGroupValueInSession) throws Exception {
