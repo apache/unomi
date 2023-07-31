@@ -1103,29 +1103,29 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         for (int i = 0; i < scripts.length; i++) {
             builtScripts[i] = new Script(ScriptType.INLINE, "painless", scripts[i], scriptParams[i]);
         }
-        return updateWithQueryAndScript(new Class<?>[]{clazz}, builtScripts, conditions);
+        return updateWithQueryAndScript(new Class<?>[]{clazz}, builtScripts, conditions, false);
     }
 
     @Override
     public boolean updateWithQueryAndStoredScript(Date dateHint, Class<?> clazz, String[] scripts, Map<String, Object>[] scriptParams, Condition[] conditions) {
-        return updateWithQueryAndStoredScript(new Class<?>[]{clazz}, scripts, scriptParams, conditions);
+        return updateWithQueryAndStoredScript(new Class<?>[]{clazz}, scripts, scriptParams, conditions, true);
     }
 
     @Override
     public boolean updateWithQueryAndStoredScript(Class<?> clazz, String[] scripts, Map<String, Object>[] scriptParams, Condition[] conditions) {
-        return updateWithQueryAndStoredScript(new Class<?>[]{clazz}, scripts, scriptParams, conditions);
+        return updateWithQueryAndStoredScript(new Class<?>[]{clazz}, scripts, scriptParams, conditions, true);
     }
 
     @Override
-    public boolean updateWithQueryAndStoredScript(Class<?>[] classes, String[] scripts, Map<String, Object>[] scriptParams, Condition[] conditions) {
+    public boolean updateWithQueryAndStoredScript(Class<?>[] classes, String[] scripts, Map<String, Object>[] scriptParams, Condition[] conditions, boolean waitForComplete) {
         Script[] builtScripts = new Script[scripts.length];
         for (int i = 0; i < scripts.length; i++) {
             builtScripts[i] = new Script(ScriptType.STORED, null, scripts[i], scriptParams[i]);
         }
-        return updateWithQueryAndScript(classes, builtScripts, conditions);
+        return updateWithQueryAndScript(classes, builtScripts, conditions, waitForComplete);
     }
 
-    private boolean updateWithQueryAndScript(final Class<?>[] classes, final Script[] scripts, final Condition[] conditions) {
+    private boolean updateWithQueryAndScript(final Class<?>[] classes, final Script[] scripts, final Condition[] conditions, boolean waitForComplete) {
         Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".updateWithQueryAndScript", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
             protected Boolean execute(Object... args) throws Exception {
                 String[] itemTypes = Arrays.stream(classes).map(Item::getItemType).toArray(String[]::new);
@@ -1147,8 +1147,10 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         TaskSubmissionResponse taskResponse = client.submitUpdateByQuery(updateByQueryRequest, RequestOptions.DEFAULT);
                         if (taskResponse == null) {
                             logger.error("update with query and script: no response returned for query: {}", queryBuilder);
-                        } else {
+                        } else if (waitForComplete) {
                             waitForTaskComplete(updateByQueryRequest, taskResponse);
+                        } else {
+                            logger.debug("ES task started {}", taskResponse.getTask());
                         }
                     }
                     return true;

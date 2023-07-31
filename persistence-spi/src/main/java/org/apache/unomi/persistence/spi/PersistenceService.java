@@ -257,9 +257,10 @@ public interface PersistenceService {
      * @param scripts      Stored scripts name
      * @param scriptParams script params array
      * @param conditions   conditions array
+     * @param waitForComplete if true, wait for the ES execution to be complete
      * @return {@code true} if the update was successful, {@code false} otherwise
      */
-    boolean updateWithQueryAndStoredScript(Class<?>[] classes, String[] scripts, Map<String, Object>[] scriptParams, Condition[] conditions);
+    boolean updateWithQueryAndStoredScript(Class<?>[] classes, String[] scripts, Map<String, Object>[] scriptParams, Condition[] conditions, boolean waitForComplete);
 
     /**
      * @deprecated use {@link #updateWithQueryAndStoredScript(Class, String[], Map[], Condition[])}
