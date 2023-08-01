@@ -1103,7 +1103,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         for (int i = 0; i < scripts.length; i++) {
             builtScripts[i] = new Script(ScriptType.INLINE, "painless", scripts[i], scriptParams[i]);
         }
-        return updateWithQueryAndScript(new Class<?>[]{clazz}, builtScripts, conditions, false);
+        return updateWithQueryAndScript(new Class<?>[]{clazz}, builtScripts, conditions, true);
     }
 
     @Override

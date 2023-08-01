@@ -251,6 +251,7 @@ public abstract class BaseIT extends KarafTestSupport {
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.graphql.feature.activated", "true"),
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.elasticsearch.cluster.name", "contextElasticSearchITests"),
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.elasticsearch.addresses", "localhost:9400"),
+                editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.elasticsearch.taskWaitingPollingInterval", "50"),
 
                 systemProperty("org.ops4j.pax.exam.rbc.rmi.port").value("1199"),
                 systemProperty("org.apache.unomi.hazelcast.group.name").value("cellar"),
