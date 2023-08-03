@@ -63,7 +63,9 @@
             <cm:property name="maximalElasticSearchVersion" value="8.0.0" />
 
             <cm:property name="aggregateQueryBucketSize" value="5000" />
-            <cm:property name="clientSocketTimeout" value="" />
+            <cm:property name="clientSocketTimeout" value="-1" />
+            <cm:property name="taskWaitingTimeout" value="3600000" />
+            <cm:property name="taskWaitingPollingInterval" value="1000" />
             <cm:property name="aggQueryMaxResponseSizeHttp" value="" />
             <cm:property name="aggQueryThrowOnMissingDocs" value="false" />
             <cm:property name="itemTypeToRefreshPolicy" value="" />
@@ -151,6 +153,8 @@
         <property name="itemTypeToRefreshPolicy" value="${es.itemTypeToRefreshPolicy}" />
 
         <property name="clientSocketTimeout" value="${es.clientSocketTimeout}" />
+        <property name="taskWaitingTimeout" value="${es.taskWaitingTimeout}" />
+        <property name="taskWaitingPollingInterval" value="${es.taskWaitingPollingInterval}" />
 
         <property name="metricsService" ref="metricsService" />
         <property name="useBatchingForSave" value="${es.useBatchingForSave}" />
