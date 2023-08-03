@@ -134,8 +134,17 @@ public class ProfileServiceIT extends BaseIT {
     public void testGetProfileWithWrongScrollerIdThrowException() throws InterruptedException, NoSuchFieldException, IllegalAccessException, IOException {
         boolean throwExceptionCurrent = false;
         Configuration elasticSearchConfiguration = configurationAdmin.getConfiguration("org.apache.unomi.persistence.elasticsearch");
-        if (elasticSearchConfiguration != null) {
-            throwExceptionCurrent = Boolean.getBoolean((String) elasticSearchConfiguration.getProperties().get("throwExceptions"));
+        if (elasticSearchConfiguration != null && elasticSearchConfiguration.getProperties().get("throwExceptions") != null) {
+            try {
+                if (elasticSearchConfiguration.getProperties().get("throwExceptions") instanceof String) {
+                    throwExceptionCurrent = Boolean.parseBoolean((String) elasticSearchConfiguration.getProperties().get("throwExceptions"));
+                } else {
+                    // already a boolean
+                    throwExceptionCurrent = (Boolean) elasticSearchConfiguration.getProperties().get("throwExceptions");
+                }
+            } catch (Throwable e) {
+                // Not able to cast the property
+            }
         }
 
         updateConfiguration(PersistenceService.class.getName(), "org.apache.unomi.persistence.elasticsearch", "throwExceptions", true);

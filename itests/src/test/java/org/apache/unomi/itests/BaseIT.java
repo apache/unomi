@@ -175,6 +175,7 @@ public abstract class BaseIT {
                 editConfigurationFilePut("etc/org.apache.karaf.features.cfg", "serviceRequirements", "disable"),
 //                editConfigurationFilePut("etc/org.ops4j.pax.web.cfg", "org.osgi.service.http.port", HTTP_PORT),
 //                systemProperty("org.osgi.service.http.port").value(HTTP_PORT),
+                editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.elasticsearch.taskWaitingPollingInterval", "50"),
                 systemProperty("org.ops4j.pax.exam.rbc.rmi.port").value("1199"),
                 systemProperty("org.apache.unomi.itests.elasticsearch.transport.port").value("9500"),
                 systemProperty("org.apache.unomi.itests.elasticsearch.cluster.name").value("contextElasticSearchITests"),
