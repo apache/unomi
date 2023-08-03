@@ -62,27 +62,22 @@ import org.elasticsearch.action.search.SearchScrollRequest;
 import org.elasticsearch.action.support.WriteRequest;
 import org.elasticsearch.action.support.master.AcknowledgedResponse;
 import org.elasticsearch.action.update.UpdateRequest;
-import org.elasticsearch.client.Node;
-import org.elasticsearch.client.RequestOptions;
-import org.elasticsearch.client.Requests;
-import org.elasticsearch.client.HttpAsyncResponseConsumerFactory;
-import org.elasticsearch.client.RestClient;
-import org.elasticsearch.client.RestClientBuilder;
-import org.elasticsearch.client.RestHighLevelClient;
+import org.elasticsearch.client.*;
 import org.elasticsearch.action.update.UpdateResponse;
 import org.elasticsearch.client.core.CountRequest;
 import org.elasticsearch.client.core.CountResponse;
 import org.elasticsearch.client.core.MainResponse;
 import org.elasticsearch.client.indices.*;
+import org.elasticsearch.client.tasks.GetTaskRequest;
+import org.elasticsearch.client.tasks.GetTaskResponse;
+import org.elasticsearch.client.tasks.TaskSubmissionResponse;
 import org.elasticsearch.cluster.metadata.MappingMetaData;
 import org.elasticsearch.common.bytes.BytesReference;
 import org.elasticsearch.common.unit.ByteSizeUnit;
 import org.elasticsearch.common.unit.ByteSizeValue;
 import org.elasticsearch.common.unit.DistanceUnit;
 import org.elasticsearch.common.unit.TimeValue;
-import org.elasticsearch.common.xcontent.XContentBuilder;
-import org.elasticsearch.common.xcontent.XContentFactory;
-import org.elasticsearch.common.xcontent.XContentType;
+import org.elasticsearch.common.xcontent.*;
 import org.elasticsearch.index.IndexNotFoundException;
 import org.elasticsearch.index.query.*;
 import org.elasticsearch.index.reindex.*;
@@ -111,6 +106,7 @@ import org.elasticsearch.search.builder.SearchSourceBuilder;
 import org.elasticsearch.search.sort.GeoDistanceSortBuilder;
 import org.elasticsearch.search.sort.SortBuilders;
 import org.elasticsearch.search.sort.SortOrder;
+import org.elasticsearch.tasks.TaskId;
 import org.osgi.framework.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -130,18 +126,7 @@ import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Date;
-import java.util.Enumeration;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeSet;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 import static org.elasticsearch.index.query.QueryBuilders.termQuery;
@@ -165,7 +150,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     private static final Logger logger = LoggerFactory.getLogger(ElasticSearchPersistenceServiceImpl.class.getName());
     private boolean throwExceptions = false;
-    private RestHighLevelClient client;
+    private CustomRestHighLevelClient client;
     private BulkProcessor bulkProcessor;
     private String elasticSearchAddresses;
     private List<String> elasticSearchAddressList = new ArrayList<>();
@@ -190,6 +175,8 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     private Integer defaultQueryLimit = 10;
     private Integer removeByQueryTimeoutInMinutes = 10;
+    private Integer taskWaitingTimeout = 3600000;
+    private Integer taskWaitingPollingInterval = 1000;
 
     private String itemsMonthlyIndexedOverride = "event,session";
     private String bulkProcessorConcurrentRequests = "1";
@@ -394,6 +381,18 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         this.logLevelRestClient = logLevelRestClient;
     }
 
+    public void setTaskWaitingTimeout(String taskWaitingTimeout) {
+        if (StringUtils.isNumeric(taskWaitingTimeout)) {
+            this.taskWaitingTimeout = Integer.parseInt(taskWaitingTimeout);
+        }
+    }
+
+    public void setTaskWaitingPollingInterval(String taskWaitingPollingInterval) {
+        if (StringUtils.isNumeric(taskWaitingPollingInterval)) {
+            this.taskWaitingPollingInterval = Integer.parseInt(taskWaitingPollingInterval);
+        }
+    }
+
     public void start() throws Exception {
 
         // Work around to avoid ES Logs regarding the deprecated [ignore_throttled] parameter
@@ -471,7 +470,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         logger.info(this.getClass().getName() + " service started successfully.");
     }
 
-    private void buildClient() {
+    private void buildClient() throws NoSuchFieldException, IllegalAccessException {
         List<Node> nodeList = new ArrayList<>();
         for (String elasticSearchAddress : elasticSearchAddressList) {
             String[] elasticSearchAddressParts = elasticSearchAddress.split(":");
@@ -526,7 +525,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         });
 
         logger.info("Connecting to ElasticSearch persistence backend using cluster name " + clusterName + " and index prefix " + indexPrefix + "...");
-        client = new RestHighLevelClient(clientBuilder);
+        client = new CustomRestHighLevelClient(clientBuilder);
     }
 
     public BulkProcessor getBulkProcessor() {
@@ -989,59 +988,55 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         for (int i = 0; i < scripts.length; i++) {
             builtScripts[i] = new Script(ScriptType.INLINE, "painless", scripts[i], scriptParams[i]);
         }
-        return updateWithQueryAndScript(dateHint, clazz, builtScripts, conditions);
+
+        return updateWithQueryAndScript(dateHint, new Class<?>[]{clazz}, builtScripts, conditions, true);
     }
 
     @Override
     public boolean updateWithQueryAndStoredScript(Date dateHint, Class<?> clazz, String[] scripts, Map<String, Object>[] scriptParams, Condition[] conditions) {
+        return updateWithQueryAndStoredScript(dateHint, new Class<?>[]{clazz}, scripts, scriptParams, conditions, true);
+    }
+
+    @Override
+    public boolean updateWithQueryAndStoredScript(Date dateHint, Class<?>[] classes, String[] scripts, Map<String, Object>[] scriptParams, Condition[] conditions, boolean waitForComplete) {
         Script[] builtScripts = new Script[scripts.length];
         for (int i = 0; i < scripts.length; i++) {
             builtScripts[i] = new Script(ScriptType.STORED, null, scripts[i], scriptParams[i]);
         }
-        return updateWithQueryAndScript(dateHint, clazz, builtScripts, conditions);
+        return updateWithQueryAndScript(dateHint, classes, builtScripts, conditions, waitForComplete);
     }
 
-    private boolean updateWithQueryAndScript(final Date dateHint, final Class<?> clazz, final Script[] scripts, final Condition[] conditions) {
+    private boolean updateWithQueryAndScript(final Date dateHint, final Class<?>[] classes, final Script[] scripts, final Condition[] conditions, boolean waitForComplete) {
         Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".updateWithQueryAndScript", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
             protected Boolean execute(Object... args) throws Exception {
+                String[] itemTypes = Arrays.stream(classes).map(Item::getItemType).toArray(String[]::new);
+                String[] indices = Arrays.stream(itemTypes).map(itemType -> getIndexNameForQuery(itemType)).toArray(String[]::new);
+
                 try {
-                    String itemType = Item.getItemType(clazz);
-
-                    String index = getIndexNameForQuery(itemType);
-
                     for (int i = 0; i < scripts.length; i++) {
-                        RefreshRequest refreshRequest = new RefreshRequest(index);
+                        RefreshRequest refreshRequest = new RefreshRequest(indices);
                         client.indices().refresh(refreshRequest, RequestOptions.DEFAULT);
 
-                        UpdateByQueryRequest updateByQueryRequest = new UpdateByQueryRequest(index);
+                        QueryBuilder queryBuilder = conditionESQueryBuilderDispatcher.buildFilter(conditions[i]);
+                        UpdateByQueryRequest updateByQueryRequest = new UpdateByQueryRequest(indices);
                         updateByQueryRequest.setConflicts("proceed");
                         updateByQueryRequest.setMaxRetries(1000);
                         updateByQueryRequest.setSlices(2);
                         updateByQueryRequest.setScript(scripts[i]);
-                        updateByQueryRequest.setQuery(conditionESQueryBuilderDispatcher.buildFilter(conditions[i]));
+                        updateByQueryRequest.setQuery(queryBuilder);
 
-                        BulkByScrollResponse response = client.updateByQuery(updateByQueryRequest, RequestOptions.DEFAULT);
-
-                        if (response.getBulkFailures().size() > 0) {
-                            for (BulkItemResponse.Failure failure : response.getBulkFailures()) {
-                                logger.error("Failure : cause={} , message={}", failure.getCause(), failure.getMessage());
-                            }
+                        TaskSubmissionResponse taskResponse = client.submitUpdateByQuery(updateByQueryRequest, RequestOptions.DEFAULT);
+                        if (taskResponse == null) {
+                            logger.error("update with query and script: no response returned for query: {}", queryBuilder);
+                        } else if (waitForComplete) {
+                            waitForTaskComplete(updateByQueryRequest, taskResponse);
                         } else {
-                            logger.info("Update with query and script processed {} entries in {}.", response.getUpdated(), response.getTook().toString());
-                        }
-                        if (response.isTimedOut()) {
-                            logger.error("Update with query and script ended with timeout!");
-                        }
-                        if (response.getVersionConflicts() > 0) {
-                            logger.warn("Update with query and script ended with {} version conflicts!", response.getVersionConflicts());
-                        }
-                        if (response.getNoops() > 0) {
-                            logger.warn("Update Bwith query and script ended with {} noops!", response.getNoops());
+                            logger.debug("ES task started {}", taskResponse.getTask());
                         }
                     }
                     return true;
                 } catch (IndexNotFoundException e) {
-                    throw new Exception("No index found for itemType=" + clazz.getName(), e);
+                    throw new Exception("No index found for itemTypes=" + String.join(",", itemTypes), e);
                 } catch (ScriptException e) {
                     logger.error("Error in the update script : {}\n{}\n{}", e.getScript(), e.getDetailedMessage(), e.getScriptStack());
                     throw new Exception("Error in the update script");
@@ -1053,6 +1048,53 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         } else {
             return result;
         }
+    }
+
+    private void waitForTaskComplete(AbstractBulkByScrollRequest request, TaskSubmissionResponse response) {
+        if (logger.isDebugEnabled()) {
+            logger.debug("Waiting task [{}]: [{}] using query: [{}], polling every {}ms with a timeout configured to {}ms",
+                    response.getTask(), request.toString(), request.getSearchRequest().source().query(), taskWaitingPollingInterval, taskWaitingTimeout);
+        }
+        long start = System.currentTimeMillis();
+        new InClassLoaderExecute<Void>(metricsService, this.getClass().getName() + ".waitForTask", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
+            protected Void execute(Object... args) throws Exception {
+
+                TaskId taskId = new TaskId(response.getTask());
+                while (true){
+                    Optional<GetTaskResponse> getTaskResponseOptional = client.tasks().get(new GetTaskRequest(taskId.getNodeId(), taskId.getId()), RequestOptions.DEFAULT);
+                    if (getTaskResponseOptional.isPresent()) {
+                        GetTaskResponse getTaskResponse = getTaskResponseOptional.get();
+                        if (getTaskResponse.isCompleted()) {
+                            if (logger.isDebugEnabled()) {
+                                long millis = getTaskResponse.getTaskInfo().getRunningTimeNanos() / 1_000_000;
+                                long seconds = millis / 1000;
+
+                                logger.debug("Waiting task [{}]: Finished in {} {}", taskId,
+                                        seconds >= 1 ? seconds : millis,
+                                        seconds >= 1 ? "seconds" : "milliseconds");
+                            }
+                            break;
+                        } else {
+                            if ((start + taskWaitingTimeout) < System.currentTimeMillis()) {
+                                logger.error("Waiting task [{}]: Exceeded configured timeout ({}ms), aborting wait process", taskId, taskWaitingTimeout);
+                                break;
+                            }
+
+                            try {
+                                Thread.sleep(taskWaitingPollingInterval);
+                            } catch (InterruptedException e) {
+                                Thread.currentThread().interrupt();
+                                throw new IllegalStateException("Waiting task [{}]: interrupted");
+                            }
+                        }
+                    } else {
+                        logger.error("Waiting task [{}]: No task found", taskId);
+                        break;
+                    }
+                }
+                return null;
+            }
+        }.catchingExecuteInClassLoader(true);
     }
 
     @Override
@@ -1161,8 +1203,9 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             protected Boolean execute(Object... args) throws Exception {
                 try {
                     String itemType = Item.getItemType(clazz);
+                    QueryBuilder queryBuilder = conditionESQueryBuilderDispatcher.getQueryBuilder(query);
                     final DeleteByQueryRequest deleteByQueryRequest = new DeleteByQueryRequest(getIndexNameForQuery(itemType))
-                            .setQuery(conditionESQueryBuilderDispatcher.getQueryBuilder(query))
+                            .setQuery(queryBuilder)
                             // Setting slices to auto will let Elasticsearch choose the number of slices to use.
                             // This setting will use one slice per shard, up to a certain limit.
                             // The delete request will be more efficient and faster than no slicing.
@@ -1176,46 +1219,14 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                             // So we increase default timeout of 1min to 10min
                             .setTimeout(TimeValue.timeValueMinutes(removeByQueryTimeoutInMinutes));
 
-                    BulkByScrollResponse bulkByScrollResponse = client.deleteByQuery(deleteByQueryRequest, RequestOptions.DEFAULT);
+                    TaskSubmissionResponse taskResponse = client.submitDeleteByQuery(deleteByQueryRequest, RequestOptions.DEFAULT);
 
-                    if (bulkByScrollResponse == null) {
-                        logger.error("Remove by query: no response returned for query: {}", query);
+                    if (taskResponse == null) {
+                        logger.error("Remove by query: no response returned for query: {}", queryBuilder);
                         return false;
                     }
 
-                    if (bulkByScrollResponse.isTimedOut()) {
-                        logger.warn("Remove by query: timed out because took more than {} minutes for query: {}", removeByQueryTimeoutInMinutes, query);
-                    }
-
-                    if ((bulkByScrollResponse.getSearchFailures() != null && bulkByScrollResponse.getSearchFailures().size() > 0) ||
-                            bulkByScrollResponse.getBulkFailures() != null && bulkByScrollResponse.getBulkFailures().size() > 0) {
-                        logger.warn("Remove by query: we found some failure during the process of query: {}", query);
-
-
-                        if (bulkByScrollResponse.getSearchFailures() != null && bulkByScrollResponse.getSearchFailures().size() > 0) {
-                            for (ScrollableHitSource.SearchFailure searchFailure : bulkByScrollResponse.getSearchFailures()) {
-                                logger.warn("Remove by query, search failure: {}", searchFailure.toString());
-                            }
-                        }
-
-                        if (bulkByScrollResponse.getBulkFailures() != null && bulkByScrollResponse.getBulkFailures().size() > 0) {
-                            for (BulkItemResponse.Failure bulkFailure : bulkByScrollResponse.getBulkFailures()) {
-                                logger.warn("Remove by query, bulk failure: {}", bulkFailure.toString());
-                            }
-                        }
-                    }
-
-                    if (logger.isDebugEnabled()) {
-                        logger.debug("Remove by query: took {}, deleted docs: {}, batches executed: {}, skipped docs: {}, version conflicts: {}, search retries: {}, bulk retries: {}, for query: {}",
-                                bulkByScrollResponse.getTook().toHumanReadableString(1),
-                                bulkByScrollResponse.getDeleted(),
-                                bulkByScrollResponse.getBatches(),
-                                bulkByScrollResponse.getNoops(),
-                                bulkByScrollResponse.getVersionConflicts(),
-                                bulkByScrollResponse.getSearchRetries(),
-                                bulkByScrollResponse.getBulkRetries(),
-                                query);
-                    }
+                    waitForTaskComplete(deleteByQueryRequest, taskResponse);
 
                     return true;
                 } catch (Exception e) {
@@ -1229,7 +1240,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             return result;
         }
     }
-
 
     public boolean indexTemplateExists(final String templateName) {
         Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".indexTemplateExists", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
