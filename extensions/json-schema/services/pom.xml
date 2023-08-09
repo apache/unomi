@@ -31,7 +31,7 @@
     <packaging>bundle</packaging>
 
     <properties>
-        <version.schema>1.0.81</version.schema>
+        <version.schema>1.0.86</version.schema>
         <version.schema.jackson>2.14.2</version.schema.jackson>
         <version.schema.itu>1.7.0</version.schema.itu>
     </properties>
