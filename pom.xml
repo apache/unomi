@@ -35,7 +35,7 @@
         event tracking server.
     </description>
     <url>https://unomi.apache.org</url>
-    <version>1.9.0</version>
+    <version>1.9.1-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <licenses>

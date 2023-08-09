@@ -5,7 +5,7 @@ name: Unomi CI - Documentation and deployment
 
 on:
   push:
-    branches: [ master, unomi-1.x, unomi-1.7.x ]
+    branches: [ master, unomi-1.x, unomi-1.7.x, unomi-1.9.x ]
 
 jobs:
   docs-and-deploy:
