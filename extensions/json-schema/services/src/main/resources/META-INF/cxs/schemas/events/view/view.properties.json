@@ -9,5 +9,6 @@
   },
   "title": "ViewProperties",
   "type": "object",
-  "properties" : {}
+  "properties" : {},
+  "unevaluatedProperties" : false
 }

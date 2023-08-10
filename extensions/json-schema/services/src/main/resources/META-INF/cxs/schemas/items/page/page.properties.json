@@ -22,5 +22,6 @@
         "$ref" : "https://unomi.apache.org/schemas/json/consentType/1-0-0"
       }
     }
-  }
+  },
+  "unevaluatedProperties" : false
 }

@@ -22,5 +22,6 @@
     "description" : {
       "type" : ["null", "string"]
     }
-  }
+  },
+  "unevaluatedProperties": false
 }

@@ -19,5 +19,6 @@
     "invalidPropName": {
       "type": "string"
     }
-  }
+  },
+  "unevaluatedProperties": false
 }

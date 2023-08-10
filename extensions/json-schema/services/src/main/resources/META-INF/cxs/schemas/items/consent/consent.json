@@ -28,5 +28,6 @@
       "type" : "string",
       "format" : "date-time"
     }
-  }
+  },
+  "unevaluatedProperties": false
 }
