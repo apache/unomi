@@ -49,6 +49,14 @@ public class JSONTypeFactory {
     }
 
     List<JSONType> getTypes(Map<String, Object> schemaTree) {
+        if (schemaTree.containsKey("anyOf")) {
+            List<JSONType> result = new ArrayList<>();
+            List<Map<String, Object>> anyOf = (List<Map<String, Object>>) schemaTree.get("anyOf");
+            for (Map<String, Object> any : anyOf) {
+                result.addAll(getTypes(any));
+            }
+            return result;
+        }
         if (schemaTree.containsKey("$ref")) {
             String schemaId = (String) schemaTree.get("$ref");
             JsonSchemaWrapper refSchema = schemaService.getSchema(schemaId);
