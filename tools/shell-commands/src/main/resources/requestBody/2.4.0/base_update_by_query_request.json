@@ -15,6 +15,11 @@
           "match": {
             "eventType": "view"
           }
+        },
+        {
+          "exists": {
+            "field": "target.properties.path"
+          }
         }
       ]
     }

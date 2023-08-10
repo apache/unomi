@@ -16,8 +16,9 @@
  */
 
 if (ctx._source.target != null && ctx._source.target.properties != null && ctx._source.target.properties.path != null) {
-    if (ctx._source.target.properties.pageInfo != null) {
-        ctx._source.target.properties.pageInfo.pagePath = ctx._source.target.properties.path
-        ctx._source.target.properties.remove('path')
+    if (ctx._source.target.properties.pageInfo == null) {
+        ctx._source.target.properties.put('pageInfo', new HashMap());
     }
+    ctx._source.target.properties.pageInfo.put('pagePath', ctx._source.target.properties.path);
+    ctx._source.target.properties.remove('path');
 }
