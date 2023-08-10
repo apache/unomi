@@ -1,0 +1,33 @@
+{
+  "eventType": "view",
+  "scope": "dummy_scope",
+  "target": {
+    "scope": "dummy_scope",
+    "itemId": "829a9d87-acd3-46a3-98e1-951f3cdfbd03",
+    "itemType": "page",
+    "properties": {
+      "pageInfo": {
+        "pageID": "829a9d87-acd3-46a3-98e1-951f3cdfbd03",
+        "nodeType": "jnt:page",
+        "pageName": "Accueil",
+        "pagePath": "/sites/digitall/home",
+        "templateName": "home",
+        "destinationURL": "http://localhost:8080/fr/sites/digitall/home.html",
+        "destinationSearch": "",
+        "referringURL": ###REFERRING_URL###,
+        "language": "fr",
+        "categories": [],
+        "tags": [],
+        "sameDomainReferrer": false
+      },
+      "attributes": {},
+      "consentTypes": []
+    }
+  },
+  "source": {
+    "scope": "dummy_scope",
+    "itemId": "36ed9435-638a-4076-9e4e-1445a886a2f2",
+    "itemType": "site"
+  },
+  "flattenedProperties": {}
+}

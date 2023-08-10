@@ -286,11 +286,34 @@ public class JSONSchemaIT extends BaseIT {
                 .append("]");
         Map<String, Set<ValidationError>> errors = schemaService.validateEvents(listInvalidEvents.toString());
 
-        assertEquals(9, errors.get("flattened").size());
+        assertEquals(6, errors.get("flattened").size());
         // Verify that error on interests.football appear only once even if two events have the issue
         assertEquals(1, errors.get("flattened").stream().filter(validationError -> validationError.getError().startsWith("$.flattenedProperties.interests.football")).collect(Collectors.toList()).size());
     }
 
+    @Test
+    public void testValidateEvents_referringURL() throws Exception {
+        Map<String, Boolean> URIs = new HashMap<>();
+        URIs.put("null", true);
+        URIs.put("\"\"", true);
+        URIs.put("\"http://example.com:8080/path/to/resource\"", true);
+        URIs.put("\"http://helloworld.com/\"", true);
+        URIs.put("\"file:///private/var/containers/Bundle/Application/8F7EE2C0-7167-4AB3-8090-7A4D34E49668/stable.app/restore_session.html#targetUrl=https%3A%2F%2Fwww.ducks.org%2Fillinois%2Fillinois-du-calendar-gun-giveaway\"", true);
+        URIs.put("\"://helloworld.com/\"", false);
+        URIs.put("\"nullsrcdoc\"", false);
+
+        for (Map.Entry<String, Boolean> uri : URIs.entrySet()) {
+            HashMap<String, String> replacements = new HashMap<>();
+            replacements.put("REFERRING_URL", uri.getKey());
+            String events = "[" + getValidatedBundleJSON("schemas/event-view.json", replacements) + "]";
+            Map<String, Set<ValidationError>> errors = schemaService.validateEvents(events);
+            if (uri.getValue()) {
+                assertTrue("URI: " + uri.getKey() + " as referringURL should be allowed", errors.isEmpty());
+            } else {
+                assertEquals("URI: " + uri.getKey() + " as referringURL should not be allowed",1,  errors.size());
+            }
+        }
+    }
 
     @Test
     public void testFlattenedProperties() throws Exception {

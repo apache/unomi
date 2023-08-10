@@ -43,8 +43,16 @@
       "type": ["null", "string"]
     },
     "referringURL": {
-      "type": ["null", "string"],
-      "format": "uri"
+      "anyOf": [
+        {
+          "type": ["null", "string"],
+          "format": "uri"
+        },
+        {
+          "type": ["string"],
+          "maxLength": 0
+        }
+      ]
     },
     "referrerQuery": {
       "type": ["null", "string"]
