@@ -9,5 +9,7 @@
   },
   "title": "Page Attributes",
   "type": ["null", "object"],
-  "properties": {}
+  "properties": {
+  },
+  "unevaluatedProperties" : false
 }

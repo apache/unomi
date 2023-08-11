@@ -21,5 +21,6 @@
       "type": "string",
       "maxLength": 20000
     }
-  }
+  },
+  "unevaluatedProperties": false
 }

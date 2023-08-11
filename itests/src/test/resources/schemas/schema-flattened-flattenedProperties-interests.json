@@ -14,5 +14,6 @@
       "type": "number"
     }
   },
-  "maxProperties": 4
+  "maxProperties": 4,
+  "unevaluatedProperties": false
 }

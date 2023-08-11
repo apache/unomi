@@ -16,5 +16,6 @@
     "URLParameters": {
       "$ref": "https://unomi.apache.org/schemas/json/URLParameters/1-0-0"
     }
-  }
+  },
+  "unevaluatedProperties" : false
 }

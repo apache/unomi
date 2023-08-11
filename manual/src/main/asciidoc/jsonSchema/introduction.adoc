@@ -184,7 +184,6 @@ The *unevaluatedProperties* keyword is useful for schema composition as well as 
 This keyword is similar to *additionalProperties* except that it can recognize properties declared in sub schemas.
 When setting the *unevaluatedProperties* value to *false*, the properties which are not present in the properties part and are not present in the sub schemas will be considered as invalid.
 
-The *unevaluatedProperties* keyword should only be set on the root schema. Otherwise it could leads to less readable messages when validating events.
 Example with the following schema:
 
 [source]
