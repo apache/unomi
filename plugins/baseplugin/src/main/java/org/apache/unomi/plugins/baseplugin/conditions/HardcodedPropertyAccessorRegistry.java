@@ -134,10 +134,6 @@ public class HardcodedPropertyAccessorRegistry {
                 }
             }
         }
-        logger.warn("Couldn't find any property access for class {}. See debug log level for more information", object.getClass().getName());
-        if (logger.isDebugEnabled()) {
-            logger.debug("Couldn't find any property access for class {} and expression {}", object.getClass().getName(), expression);
-        }
         return HardcodedPropertyAccessor.PROPERTY_NOT_FOUND_MARKER;
     }
 
