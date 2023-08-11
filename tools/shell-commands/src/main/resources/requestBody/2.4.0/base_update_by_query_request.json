@@ -1,0 +1,27 @@
+{
+  "script": {
+    "source": "#painless",
+    "lang": "painless"
+  },
+  "query": {
+    "bool": {
+      "must": [
+        {
+          "match": {
+            "itemType": "event"
+          }
+        },
+        {
+          "match": {
+            "eventType": "view"
+          }
+        },
+        {
+          "exists": {
+            "field": "target.properties.path"
+          }
+        }
+      ]
+    }
+  }
+}

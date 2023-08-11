@@ -98,6 +98,7 @@ public class Migrate16xTo220IT extends BaseIT {
         checkForMappingUpdates();
         checkEventSessionRollover2_2_0();
         checkIndexReductions2_2_0();
+        checkPagePathForEventView();
     }
 
     /**
@@ -331,5 +332,14 @@ public class Migrate16xTo220IT extends BaseIT {
         }
         JsonNode jsonNode = objectMapper.readTree(HttpUtils.executePostRequest(httpClient, "http://localhost:9400" + "/" + index + "/_count", requestBody, null));
         return jsonNode.get("count").asInt();
+    }
+
+    /**
+     * Data set contains 2 events that had a value in properties.path:
+     * The properties.path should have been moved to properties.pageInfo.pagePath
+     */
+    private void checkPagePathForEventView() {
+        Assert.assertEquals(2, persistenceService.query("target.properties.pageInfo.pagePath", "/path/to/migrate/to/pageInfo", null, Event.class).size());
+        Assert.assertEquals(0, persistenceService.query("properties.path", "/path/to/migrate/to/pageInfo", null, Event.class).size());
     }
 }
