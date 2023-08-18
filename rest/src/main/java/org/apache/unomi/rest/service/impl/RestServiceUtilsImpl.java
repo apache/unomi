@@ -110,7 +110,7 @@ public class RestServiceUtilsImpl implements RestServiceUtils {
         }
 
         if (profileId == null && sessionId == null && personaId == null) {
-            logger.error("Couldn't find profileId, sessionId or personaId in incoming request! Stopped processing request. See debug level for more information");
+            logger.warn("Couldn't find profileId, sessionId or personaId in incoming request! Stopped processing request. See debug level for more information");
             if (logger.isDebugEnabled()) {
                 logger.debug("Request dump: {}", HttpUtils.dumpRequestInfo(request));
             }
