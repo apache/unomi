@@ -69,6 +69,12 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
         this.expressionFilterFactory = expressionFilterFactory;
     }
 
+    public void init() {
+        if (!useOGNLScripting) {
+            logger.info("OGNL Script disabled, properties using OGNL won't be evaluated");
+        }
+    }
+
     private int compare(Object actualValue, String expectedValue, Object expectedValueDate, Object expectedValueInteger, Object expectedValueDateExpr, Object expectedValueDouble) {
         if (expectedValue == null && expectedValueDate == null && expectedValueInteger == null && getDate(expectedValueDateExpr) == null && expectedValueDouble == null) {
             return actualValue == null ? 0 : 1;
@@ -318,13 +324,8 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
         }
         if (useOGNLScripting) {
             return getOGNLPropertyValue(item, expression);
-        } else {
-            logger.warn("OGNL Off. Expression not evaluated on item {}. See debug log level for more information", item.getClass().getName());
-            if (logger.isDebugEnabled()) {
-                logger.debug("OGNL Off. Expression not evaluated on item {}: {}", item.getClass().getName(), expression);
-            }
-            return null;
         }
+        return null;
     }
 
     protected Object getHardcodedPropertyValue(Item item, String expression) {

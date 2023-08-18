@@ -155,7 +155,7 @@
         <bean class="org.apache.unomi.plugins.baseplugin.conditions.NotConditionEvaluator"/>
     </service>
 
-    <bean id="propertyConditionEvaluator" class="org.apache.unomi.plugins.baseplugin.conditions.PropertyConditionEvaluator">
+    <bean id="propertyConditionEvaluator" class="org.apache.unomi.plugins.baseplugin.conditions.PropertyConditionEvaluator" init-method="init">
         <property name="usePropertyConditionOptimizations" value="${base.usePropertyConditionOptimizations}"/>
     </bean>
     <service  interface="org.apache.unomi.persistence.elasticsearch.conditions.ConditionEvaluator" ref="propertyConditionEvaluator">
