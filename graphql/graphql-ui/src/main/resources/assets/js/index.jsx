@@ -15,16 +15,28 @@
  * limitations under the License.
  */
 
-import React from 'react';
-import ReactDOM from 'react-dom';
-import {Provider} from 'react-redux';
-import {Playground, store} from 'graphql-playground-react';
+import {GraphiQL} from 'graphiql';
+import {createGraphiQLFetcher} from '@graphiql/toolkit';
+import * as React from 'react';
+import * as ReactDOM from 'react-dom';
+import {createClient} from 'graphql-ws';
 
-document.addEventListener('DOMContentLoaded', function() {
-    ReactDOM.render(
-        <Provider store={store}>
-            <Playground endpoint='http://localhost:8181/graphql'/>
-        </Provider>,
-        document.getElementById('root')
-    )
+function createFetcher() {
+    return createGraphiQLFetcher({
+        url: `http://localhost:8181/graphql`,
+        wsClient: createClient(
+            {
+                url: `ws://localhost:8181/graphql`,
+            }),
+    });
+}
+
+function QueryPlayground() {
+    return (
+        <GraphiQL fetcher={createFetcher()}></GraphiQL>
+    );
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    ReactDOM.render(<QueryPlayground/>, document.getElementById('root'));
 }, false);

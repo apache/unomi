@@ -39,11 +39,11 @@ environment variable (if using Docker for example).
 
 Two endpoints were introduced for Apache Unomi 2 GraphQL API:
 * `/graphql` is the primary endpoint for interacting programatically with the API and aims at receiving POST requests.
-* `/graphql-ui` provides access to the GraphQL Playground UI and aims at being accessed by a Web Browser.
+* `/graphql-ui` provides access to the GraphQL UI and aims at being accessed by a Web Browser.
 
 === GraphQL Schema
 
 Thanks to GraphQL introspection, there is no dedicated documentation per-se as the Schema itself serves as documentation. 
 
 You can easily view the schema by navigrating to `/graphql-ui`, depending on your setup (localhost, public host, ...), 
-you might need to adjust the URL to point GraphQL Playground to the `/graphql` endpoint.
+you might need to adjust the URL to point GraphQL UI to the `/graphql` endpoint.
