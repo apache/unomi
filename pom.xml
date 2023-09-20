@@ -509,6 +509,7 @@
                                 <exclude>**/keystore</exclude>
                                 <!--manual resources -->
                                 <exclude>**/*.css</exclude>
+                                <exclude>**/*.less</exclude>
                                 <exclude>**/*.ssp</exclude>
                                 <exclude>**/*.conf</exclude>
                                 <exclude>**/*.min.js</exclude>
