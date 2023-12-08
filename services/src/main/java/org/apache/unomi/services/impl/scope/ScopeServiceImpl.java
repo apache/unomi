@@ -21,6 +21,8 @@ import org.apache.unomi.api.Scope;
 import org.apache.unomi.api.services.SchedulerService;
 import org.apache.unomi.api.services.ScopeService;
 import org.apache.unomi.persistence.spi.PersistenceService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -32,6 +34,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 public class ScopeServiceImpl implements ScopeService {
+    private Logger logger = LoggerFactory.getLogger(ScopeServiceImpl.class);
 
     private PersistenceService persistenceService;
 
@@ -57,6 +60,7 @@ public class ScopeServiceImpl implements ScopeService {
 
     public void postConstruct() {
         initializeTimers();
+        logger.info("Scope service initialized");
     }
 
     public void preDestroy() {
@@ -84,6 +88,7 @@ public class ScopeServiceImpl implements ScopeService {
     }
 
     private void initializeTimers() {
+        logger.info("Init scope refresh {}ms", scopesRefreshInterval);
         TimerTask task = new TimerTask() {
             @Override
             public void run() {

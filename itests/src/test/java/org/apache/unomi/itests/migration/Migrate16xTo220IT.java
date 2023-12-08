@@ -27,6 +27,8 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -35,6 +37,8 @@ import java.util.Map;
 import java.util.Objects;
 
 public class Migrate16xTo220IT extends BaseIT {
+
+    private Logger logger = LoggerFactory.getLogger(Migrate16xTo220IT.class);
 
     private int eventCount = 0;
     private int sessionCount = 0;
@@ -260,9 +264,15 @@ public class Migrate16xTo220IT extends BaseIT {
     private void checkScopeHaveBeenCreated() {
         // check that the scope mySite have been created based on the previous existings events
         Map<String, Long> existingScopesFromEvents = persistenceService.aggregateWithOptimizedQuery(null, new TermsAggregate("scope"), Event.ITEM_TYPE);
+        // Log stored scopes
+        persistenceService.getAllItems(Scope.class).forEach(scope -> logger.info("Persisted scope : {} (itemId {})", scope.getScope(), scope.getItemId()));
+        // Log registered scopes
+        scopeService.getScopes().forEach(scope -> logger.info("Loaded scope : {} (itemId {})", scope.getScope(), scope.getItemId()));
+
         for (String scopeFromEvents : existingScopesFromEvents.keySet()) {
             if (!Objects.equals(scopeFromEvents, "_filtered")) {
                 Scope scope = scopeService.getScope(scopeFromEvents);
+                // Display all scopes
                 Assert.assertNotNull(String.format("Unable to find registered scope %s", scopeFromEvents), scope);
             }
         }
