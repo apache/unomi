@@ -21,6 +21,7 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.unomi.api.*;
 import org.apache.unomi.itests.BaseIT;
 import org.apache.unomi.persistence.spi.aggregate.TermsAggregate;
+import org.apache.unomi.services.impl.scope.ScopeServiceImpl;
 import org.apache.unomi.shell.migration.utils.HttpUtils;
 import org.apache.unomi.shell.migration.utils.MigrationUtils;
 import org.junit.After;
@@ -76,7 +77,8 @@ public class Migrate16xTo220IT extends BaseIT {
         // Prin the resulted output in the karaf shell directly
         System.out.println("Migration command output results:");
         System.out.println(commandResults);
-
+        // Wait for ES to be ready
+        Thread.sleep(5000);
         // Call super for starting Unomi and wait for the complete startup
         super.waitForStartup();
     }
@@ -94,7 +96,6 @@ public class Migrate16xTo220IT extends BaseIT {
     public void checkMigratedData() throws Exception {
         checkMergedProfilesAliases();
         checkProfileInterests();
-        checkScopeHaveBeenCreated();
         checkLoginEventWithScope();
         checkFormEventRestructured();
         checkViewEventRestructured();
@@ -103,6 +104,7 @@ public class Migrate16xTo220IT extends BaseIT {
         checkEventSessionRollover2_2_0();
         checkIndexReductions2_2_0();
         checkPagePathForEventView();
+        checkScopeHaveBeenCreated();
     }
 
     /**
@@ -261,19 +263,15 @@ public class Migrate16xTo220IT extends BaseIT {
      * Data set contains multiple events, this test is generic enough to ensure all existing events have the scope created correctly
      * So the data set can contain multiple different scope it's not a problem.
      */
-    private void checkScopeHaveBeenCreated() {
+    private void checkScopeHaveBeenCreated() throws InterruptedException {
         // check that the scope mySite have been created based on the previous existings events
         Map<String, Long> existingScopesFromEvents = persistenceService.aggregateWithOptimizedQuery(null, new TermsAggregate("scope"), Event.ITEM_TYPE);
         // Log stored scopes
-        persistenceService.getAllItems(Scope.class).forEach(scope -> logger.info("Persisted scope : {} (itemId {})", scope.getScope(), scope.getItemId()));
-        // Log registered scopes
-        scopeService.getScopes().forEach(scope -> logger.info("Loaded scope : {} (itemId {})", scope.getScope(), scope.getItemId()));
 
         for (String scopeFromEvents : existingScopesFromEvents.keySet()) {
             if (!Objects.equals(scopeFromEvents, "_filtered")) {
-                Scope scope = scopeService.getScope(scopeFromEvents);
-                // Display all scopes
-                Assert.assertNotNull(String.format("Unable to find registered scope %s", scopeFromEvents), scope);
+                keepTrying("Scope " + scopeFromEvents + " not found in the required time", () -> scopeService.getScope(scopeFromEvents),
+                        Objects::nonNull, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
             }
         }
     }
