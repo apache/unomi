@@ -70,7 +70,7 @@ public class InputValidationIT extends BaseIT {
 
     @After
     public void tearDown() throws InterruptedException {
-        removeItems(Scope.class);
+        scopeService.delete(DUMMY_SCOPE);
     }
 
     @Test

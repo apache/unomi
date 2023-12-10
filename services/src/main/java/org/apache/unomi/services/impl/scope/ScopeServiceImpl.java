@@ -99,5 +99,6 @@ public class ScopeServiceImpl implements ScopeService {
 
     public void refreshScopes() {
         scopes = persistenceService.getAllItems(Scope.class).stream().collect(Collectors.toConcurrentMap(Item::getItemId, scope -> scope));
+        logger.info("Scope refreshed, found {} scopes", scopes.size());
     }
 }

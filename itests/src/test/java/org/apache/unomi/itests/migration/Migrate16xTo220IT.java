@@ -89,7 +89,7 @@ public class Migrate16xTo220IT extends BaseIT {
         removeItems(ProfileAlias.class);
         removeItems(Session.class);
         removeItems(Event.class);
-        removeItems(Scope.class);
+        // removeItems(Scope.class);
     }
 
     @Test
@@ -265,11 +265,15 @@ public class Migrate16xTo220IT extends BaseIT {
      */
     private void checkScopeHaveBeenCreated() throws InterruptedException {
         // check that the scope mySite have been created based on the previous existings events
+        refreshPersistence(Scope.class);
         Map<String, Long> existingScopesFromEvents = persistenceService.aggregateWithOptimizedQuery(null, new TermsAggregate("scope"), Event.ITEM_TYPE);
         // Log stored scopes
 
         for (String scopeFromEvents : existingScopesFromEvents.keySet()) {
             if (!Objects.equals(scopeFromEvents, "_filtered")) {
+                // Look for scope in index
+                Scope s = persistenceService.load(scopeFromEvents, Scope.class);
+                System.out.println(scopeFromEvents + " stored as " +  s.getItemId());
                 keepTrying("Scope " + scopeFromEvents + " not found in the required time", () -> scopeService.getScope(scopeFromEvents),
                         Objects::nonNull, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
             }
