@@ -42,7 +42,7 @@ jobs:
           java-version: ${{ matrix.java }}
           cache: maven
       - name: Integration tests
-        run: mvn -ntp clean install -Pintegration-tests
+        run: mvn -ntp clean install -Pintegration-tests -Dit.test=org.apache.unomi.itests.migration.Migrate16xTo220IT
       - name: Archive code coverage logs
         uses: actions/upload-artifact@v3
         if: false # UNOMI-746 Reactivate if necessary

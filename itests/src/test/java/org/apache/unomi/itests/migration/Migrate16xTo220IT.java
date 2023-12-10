@@ -85,10 +85,10 @@ public class Migrate16xTo220IT extends BaseIT {
 
     @After
     public void cleanup() throws InterruptedException {
-        removeItems(Profile.class);
-        removeItems(ProfileAlias.class);
-        removeItems(Session.class);
-        removeItems(Event.class);
+        //removeItems(Profile.class);
+        //removeItems(ProfileAlias.class);
+        //removeItems(Session.class);
+        //removeItems(Event.class);
         // removeItems(Scope.class);
     }
 
