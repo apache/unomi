@@ -57,16 +57,22 @@ indicesToReduce.each { indexToReduce ->
     context.performMigrationStep("2.2.0-reduce-${indexToReduce.key}", () -> {
         if (MigrationUtils.indexExists(context.getHttpClient(), esAddress, "${indexPrefix}-${indexToReduce.key}")) {
             def painless = null
+            System.out.println("start reduce ${indexToReduce.key}")
             // check if we need to update the ids of those items first
             if (indexToReduce.value.renameId) {
+                System.out.println("rename Id to  ${indexToReduce.value.renameId}")
                 painless = MigrationUtils.getFileWithoutComments(bundleContext, "requestBody/2.2.0/suffix_ids.painless").replace("#ID_SUFFIX", "_${indexToReduce.key}")
             }
             // move items
             def reduceToIndex = "${indexPrefix}-${indexToReduce.value.reduceTo}"
             MigrationUtils.moveToIndex(context.getHttpClient(), bundleContext, esAddress, "${indexPrefix}-${indexToReduce.key}", reduceToIndex, painless)
+            System.out.println("Move performed with data  ${painless}")
             MigrationUtils.deleteIndex(context.getHttpClient(), esAddress, "${indexPrefix}-${indexToReduce.key}")
 
             HttpUtils.executePostRequest(context.getHttpClient(), esAddress + "/${reduceToIndex}/_refresh", null, null);
+            String searchScopesRequest = MigrationUtils.resourceAsString(bundleContext,"requestBody/2.2.0/scope_search.json")
+            def resp = HttpUtils.executePostRequest(context.getHttpClient(), esAddress + "/" + reduceToIndex + "/_search", searchScopesRequest, null)
+            System.out.println(resp)
             MigrationUtils.waitForYellowStatus(context.getHttpClient(), esAddress, context);
         }
     })
