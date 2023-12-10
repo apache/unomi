@@ -176,7 +176,10 @@ public class MigrationUtils {
     public static void moveToIndex(CloseableHttpClient httpClient, BundleContext bundleContext, String esAddress, String sourceIndexName, String targetIndexName, String painlessScript) throws Exception {
         String reIndexRequest = resourceAsString(bundleContext, "requestBody/2.2.0/base_reindex_request.json").replace("#source", sourceIndexName).replace("#dest", targetIndexName).replace("#painless", StringUtils.isNotEmpty(painlessScript) ? getScriptPart(painlessScript) : "");
 
-        HttpUtils.executePostRequest(httpClient, esAddress + "/_reindex", reIndexRequest, null);
+        String resp = HttpUtils.executePostRequest(httpClient, esAddress + "/_reindex", reIndexRequest, null);
+        if (sourceIndexName.contains("scope")) {
+            System.out.println(resp);
+        }
     }
 
     public static void deleteIndex(CloseableHttpClient httpClient, String esAddress, String indexName) throws Exception {

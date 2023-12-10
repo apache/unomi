@@ -65,14 +65,20 @@ indicesToReduce.each { indexToReduce ->
             }
             // move items
             def reduceToIndex = "${indexPrefix}-${indexToReduce.value.reduceTo}"
+            if (indexToReduce.key.equals("scope")) {
+                def resp = HttpUtils.executePostRequest(context.getHttpClient(), esAddress + "/${indexPrefix}-${indexToReduce.key}/_search", "{\n" +
+                        "    \"query\": {\n" +
+                        "        \"match_all\": {}\n" +
+                        "    }\n" +
+                        "}", null)
+                System.out.println("Current Scope index : " + resp)
+            }
             MigrationUtils.moveToIndex(context.getHttpClient(), bundleContext, esAddress, "${indexPrefix}-${indexToReduce.key}", reduceToIndex, painless)
             System.out.println("Move performed with data  ${painless}")
             MigrationUtils.deleteIndex(context.getHttpClient(), esAddress, "${indexPrefix}-${indexToReduce.key}")
 
             HttpUtils.executePostRequest(context.getHttpClient(), esAddress + "/${reduceToIndex}/_refresh", null, null);
             String searchScopesRequest = MigrationUtils.resourceAsString(bundleContext,"requestBody/2.2.0/scope_search.json")
-            def resp = HttpUtils.executePostRequest(context.getHttpClient(), esAddress + "/" + reduceToIndex + "/_search", searchScopesRequest, null)
-            System.out.println(resp)
             MigrationUtils.waitForYellowStatus(context.getHttpClient(), esAddress, context);
         }
     })
