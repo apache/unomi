@@ -75,6 +75,7 @@ context.performMigrationStep("2.0.0-create-scopes-from-existing-events", () -> {
 
             def resp = HttpUtils.executePostRequest(context.getHttpClient(), esAddress + "/" + scopeIndex + "/_bulk", bulkSaveRequest.toString(), null)
             System.out.println("Scope created : " + resp)
+            HttpUtils.executePostRequest(context.getHttpClient(), esAddress + "/${scopeIndex}/_refresh", null, null);
             resp = HttpUtils.executePostRequest(context.getHttpClient(), esAddress + "/" + scopeIndex + "/_search", "{\n" +
                     "    \"query\": {\n" +
                     "        \"match_all\": {}\n" +

@@ -24,25 +24,25 @@ String esAddress = context.getConfigString("esAddress")
 String indexPrefix = context.getConfigString("indexPrefix")
 String baseSettings = MigrationUtils.resourceAsString(bundleContext, "requestBody/2.0.0/base_index_mapping.json")
 def indicesToReduce = [
-        actiontype: [reduceTo: "systemitems", renameId: true],
-        campaign: [reduceTo: "systemitems", renameId: true],
+        actiontype   : [reduceTo: "systemitems", renameId: true],
+        campaign     : [reduceTo: "systemitems", renameId: true],
         campaignevent: [reduceTo: "systemitems", renameId: true],
-        goal: [reduceTo: "systemitems", renameId: true],
-        userlist: [reduceTo: "systemitems", renameId: true],
-        propertytype: [reduceTo: "systemitems", renameId: true],
-        scope: [reduceTo: "systemitems", renameId: true],
+        goal         : [reduceTo: "systemitems", renameId: true],
+        userlist     : [reduceTo: "systemitems", renameId: true],
+        propertytype : [reduceTo: "systemitems", renameId: true],
+        scope        : [reduceTo: "systemitems", renameId: true],
         conditiontype: [reduceTo: "systemitems", renameId: true],
-        rule: [reduceTo: "systemitems", renameId: true],
-        scoring: [reduceTo: "systemitems", renameId: true],
-        segment: [reduceTo: "systemitems", renameId: true],
-        topic: [reduceTo: "systemitems", renameId: true],
-        patch: [reduceTo: "systemitems", renameId: true],
-        jsonschema: [reduceTo: "systemitems", renameId: true],
-        importconfig: [reduceTo: "systemitems", renameId: true],
-        exportconfig: [reduceTo: "systemitems", renameId: true],
-        rulestats: [reduceTo: "systemitems", renameId: true],
-        groovyaction: [reduceTo: "systemitems", renameId: true],
-        persona: [reduceTo: "profile", renameId: false]
+        rule         : [reduceTo: "systemitems", renameId: true],
+        scoring      : [reduceTo: "systemitems", renameId: true],
+        segment      : [reduceTo: "systemitems", renameId: true],
+        topic        : [reduceTo: "systemitems", renameId: true],
+        patch        : [reduceTo: "systemitems", renameId: true],
+        jsonschema   : [reduceTo: "systemitems", renameId: true],
+        importconfig : [reduceTo: "systemitems", renameId: true],
+        exportconfig : [reduceTo: "systemitems", renameId: true],
+        rulestats    : [reduceTo: "systemitems", renameId: true],
+        groovyaction : [reduceTo: "systemitems", renameId: true],
+        persona      : [reduceTo: "profile", renameId: false]
 ]
 
 context.performMigrationStep("2.2.0-create-systemItems-index", () -> {
@@ -55,6 +55,12 @@ context.performMigrationStep("2.2.0-create-systemItems-index", () -> {
 
 indicesToReduce.each { indexToReduce ->
     context.performMigrationStep("2.2.0-reduce-${indexToReduce.key}", () -> {
+        def resp = HttpUtils.executePostRequest(context.getHttpClient(), esAddress + "/${indexPrefix}-scope/_search", "{\n" +
+                "    \"query\": {\n" +
+                "        \"match_all\": {}\n" +
+                "    }\n" +
+                "}", null)
+        System.out.println("Current Scope index : " + resp)
         if (MigrationUtils.indexExists(context.getHttpClient(), esAddress, "${indexPrefix}-${indexToReduce.key}")) {
             def painless = null
             System.out.println("start reduce ${indexToReduce.key}")
@@ -65,20 +71,13 @@ indicesToReduce.each { indexToReduce ->
             }
             // move items
             def reduceToIndex = "${indexPrefix}-${indexToReduce.value.reduceTo}"
-            if (indexToReduce.key.equals("scope")) {
-                def resp = HttpUtils.executePostRequest(context.getHttpClient(), esAddress + "/${indexPrefix}-${indexToReduce.key}/_search", "{\n" +
-                        "    \"query\": {\n" +
-                        "        \"match_all\": {}\n" +
-                        "    }\n" +
-                        "}", null)
-                System.out.println("Current Scope index : " + resp)
-            }
             MigrationUtils.moveToIndex(context.getHttpClient(), bundleContext, esAddress, "${indexPrefix}-${indexToReduce.key}", reduceToIndex, painless)
-            System.out.println("Move performed with data  ${painless}")
-            MigrationUtils.deleteIndex(context.getHttpClient(), esAddress, "${indexPrefix}-${indexToReduce.key}")
+            if (!indexToReduce.key.equals("scope")) {
+                MigrationUtils.deleteIndex(context.getHttpClient(), esAddress, "${indexPrefix}-${indexToReduce.key}")
+            }
 
             HttpUtils.executePostRequest(context.getHttpClient(), esAddress + "/${reduceToIndex}/_refresh", null, null);
-            String searchScopesRequest = MigrationUtils.resourceAsString(bundleContext,"requestBody/2.2.0/scope_search.json")
+            String searchScopesRequest = MigrationUtils.resourceAsString(bundleContext, "requestBody/2.2.0/scope_search.json")
             MigrationUtils.waitForYellowStatus(context.getHttpClient(), esAddress, context);
         }
     })
