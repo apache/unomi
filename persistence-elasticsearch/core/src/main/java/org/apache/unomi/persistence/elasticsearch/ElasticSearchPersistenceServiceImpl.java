@@ -890,7 +890,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         }.catchingExecuteInClassLoader(true);
 
     }
-    
+
     private void setMetadata(Item item, String itemId, long version, long seqNo, long primaryTerm, String index) {
         if (!systemItems.contains(item.getItemType()) && item.getItemId() == null) {
             item.setItemId(itemId);
@@ -970,6 +970,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         } else {
                             bulkProcessor.add(indexRequest);
                         }
+                        logMetadataItemOperation("saved", item);
                     } catch (IndexNotFoundException e) {
                         logger.error("Could not find index {}, could not register item type {} with id {} ", index, itemType, item.getItemId(), e);
                         return false;
@@ -1026,6 +1027,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     } else {
                         bulkProcessor.add(updateRequest);
                     }
+                    logMetadataItemOperation("updated", item);
                     return true;
                 } catch (IndexNotFoundException e) {
                     throw new Exception("No index found for itemType=" + clazz.getName() + "itemId=" + item.getItemId(), e);
@@ -1322,6 +1324,9 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
                     DeleteRequest deleteRequest = new DeleteRequest(index, documentId);
                     client.delete(deleteRequest, RequestOptions.DEFAULT);
+                    if (MetadataItem.class.isAssignableFrom(clazz)) {
+                        logger.info("Item of type {} with ID {} has been removed", customItemType != null ? customItemType : clazz.getSimpleName(), itemId);
+                    }
                     return true;
                 } catch (Exception e) {
                     throw new Exception("Cannot remove", e);
@@ -1352,6 +1357,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     public <T extends Item> boolean removeByQuery(QueryBuilder queryBuilder, final Class<T> clazz) throws Exception {
         try {
             String itemType = Item.getItemType(clazz);
+            logger.debug("Remove item of type {} using a query", itemType);
             final DeleteByQueryRequest deleteByQueryRequest = new DeleteByQueryRequest(getIndexNameForQuery(itemType))
                     .setQuery(wrapWithItemTypeQuery(itemType, queryBuilder))
                     // Setting slices to auto will let Elasticsearch choose the number of slices to use.
@@ -1442,7 +1448,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     }
 
     public boolean createIndex(final String itemType) {
-
+        logger.debug("Create index {}", itemType);
         Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".createIndex", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
             protected Boolean execute(Object... args) throws IOException {
                 String index = getIndex(itemType);
@@ -2477,6 +2483,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Override
     public void purge(final String scope) {
+        logger.debug("Purge scope {}", scope);
         new InClassLoaderExecute<Void>(metricsService, this.getClass().getName() + ".purgeWithScope", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
             @Override
             protected Void execute(Object... args) throws IOException {
@@ -2672,7 +2679,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     private String getIndexNameForQuery(String itemType) {
         return isItemTypeRollingOver(itemType) ? getRolloverIndexForQuery(itemType) : getIndex(itemType);
     }
-    
+
     private String getRolloverIndexForQuery(String itemType) {
         return indexPrefix + "-" + itemType.toLowerCase() + "-*";
     }
@@ -2736,5 +2743,11 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             return itemTypeToRefreshPolicy.get(itemType);
         }
         return WriteRequest.RefreshPolicy.NONE;
+    }
+
+    private void logMetadataItemOperation (String operation, Item item) {
+        if (item instanceof MetadataItem) {
+            logger.info("Item of type {} with ID {} has been {}", item.getItemType(), item.getItemId(), operation);
+        }
     }
 }

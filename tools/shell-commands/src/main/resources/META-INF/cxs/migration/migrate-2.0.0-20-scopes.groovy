@@ -73,6 +73,8 @@ context.performMigrationStep("2.0.0-create-scopes-from-existing-events", () -> {
 
         if (bulkSaveRequest.length() > 0) {
             HttpUtils.executePostRequest(context.getHttpClient(), esAddress + "/" + scopeIndex + "/_bulk", bulkSaveRequest.toString(), null)
+            // Refresh index
+            HttpUtils.executeGetRequest(context.getHttpClient(), esAddress + "/" + scopeIndex + "/_refresh", null)
         }
     }
 })
