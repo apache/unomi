@@ -44,7 +44,6 @@ import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
-import java.util.Arrays;
 import java.util.Map;
 
 /**
@@ -181,6 +180,7 @@ public class HttpUtils {
 
         String stringResponse = EntityUtils.toString(entity);
         EntityUtils.consumeQuietly(entity);
+
 
         return stringResponse;
     }
