@@ -26,6 +26,7 @@ import org.apache.unomi.api.Event;
 import org.apache.unomi.api.EventsCollectorRequest;
 import org.apache.unomi.rest.exception.InvalidRequestException;
 import org.apache.unomi.schema.api.SchemaService;
+import org.apache.unomi.utils.HttpUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -62,13 +63,7 @@ public class EventsCollectorRequestDeserializer extends StdDeserializer<EventsCo
         List<Event> filteredEvents = new ArrayList<>();
         final JsonNode eventsNode = node.get("events");
         if (eventsNode instanceof ArrayNode) {
-            for (JsonNode event : eventsNode) {
-                if (schemaService.isEventValid(event.toString())) {
-                    filteredEvents.add(jsonParser.getCodec().treeToValue(event, Event.class));
-                } else {
-                    logger.error("An event was rejected - switch to DEBUG log level for more information");
-                }
-            }
+            filteredEvents.addAll(HttpUtils.filterValidEvents((ArrayNode) eventsNode, schemaService, jsonParser));
         }
         EventsCollectorRequest eventsCollectorRequest = new EventsCollectorRequest();
         final JsonNode sessionId = node.get("sessionId");

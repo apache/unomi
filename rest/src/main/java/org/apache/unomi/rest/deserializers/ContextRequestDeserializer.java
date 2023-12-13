@@ -23,12 +23,12 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.deser.std.StdDeserializer;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import org.apache.unomi.api.ContextRequest;
-import org.apache.unomi.api.Event;
 import org.apache.unomi.api.Item;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.services.PersonalizationService;
 import org.apache.unomi.rest.exception.InvalidRequestException;
 import org.apache.unomi.schema.api.SchemaService;
+import org.apache.unomi.utils.HttpUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -87,16 +87,7 @@ public class ContextRequestDeserializer extends StdDeserializer<ContextRequest> 
         }
         final JsonNode eventsNode = node.get("events");
         if (eventsNode instanceof ArrayNode) {
-            ArrayNode events = (ArrayNode) eventsNode;
-            List<Event> filteredEvents = new ArrayList<>();
-            for (JsonNode event : events) {
-                if (schemaService.isEventValid(event.toString())) {
-                    filteredEvents.add(jsonParser.getCodec().treeToValue(event, Event.class));
-                } else {
-                    logger.error("An event was rejected - switch to DEBUG log level for more information");
-                }
-            }
-            cr.setEvents(filteredEvents);
+            cr.setEvents(HttpUtils.filterValidEvents((ArrayNode) eventsNode, schemaService, jsonParser));
         }
         final JsonNode filtersNode = node.get("filters");
         if (filtersNode instanceof ArrayNode) {
