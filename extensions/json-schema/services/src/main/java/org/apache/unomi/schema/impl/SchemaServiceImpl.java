@@ -139,6 +139,7 @@ public class SchemaServiceImpl implements SchemaService {
                     }
                 }
             } catch (ValidationException e) {
+                logger.debug("Validation error : {}", e.getMessage());
                 Set<ValidationError> errors = buildCustomErrorMessage(e.getMessage());
                 String eventTypeOrErrorKey = eventType != null ? eventType : GENERIC_ERROR_KEY;
                 if (errorsPerEventType.containsKey(eventTypeOrErrorKey)) {
