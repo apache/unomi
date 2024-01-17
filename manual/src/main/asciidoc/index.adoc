@@ -54,6 +54,8 @@ include::jsonSchema/json-schema.adoc[]
 
 include::graphql.adoc[]
 
+include::graphql-examples.adoc[]
+
 == Migrations
 
 include::migrations/migrations.adoc[]
