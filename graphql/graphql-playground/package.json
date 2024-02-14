@@ -2,7 +2,7 @@
   "name": "unomi-graphql-ui",
   "version": "2.0.0",
   "description": "The Apache Unomi GraphQL UI integration.",
-  "main": "target/javascript/unomi-graphql-ui.js",
+  "main": "target/assets/js/index.js",
   "keywords": [
     "unomi",
     "graphql-playground",
