@@ -30,7 +30,7 @@ You can then access the GraphQL endpoint at the following URL:
 
     http://localhost:8181/graphql
 
-The Graphql Playground is available at the following URL:
+The GraphQL UI is available at the following URL:
 
     http://localhost:8181/graphql-ui
 
