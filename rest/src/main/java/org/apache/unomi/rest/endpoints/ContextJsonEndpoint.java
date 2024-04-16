@@ -42,13 +42,8 @@ import javax.ws.rs.*;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @WebService
 @Consumes(MediaType.APPLICATION_JSON)
@@ -78,6 +73,8 @@ public class ContextJsonEndpoint {
     private RestServiceUtils restServiceUtils;
     @Reference
     private SchemaService schemaService;
+    @Reference
+    private ProfileService profileService;
 
     @OPTIONS
     @Path("/context.js")
@@ -224,6 +221,12 @@ public class ContextJsonEndpoint {
             Map<String, Object> profileProperties = new HashMap<>(eventsRequestContext.getProfile().getProperties());
             if (!contextRequest.getRequiredProfileProperties().contains("*")) {
                 profileProperties.keySet().retainAll(contextRequest.getRequiredProfileProperties());
+            } else {
+                // get public properties + explicit properties
+                Set<String> concealedProperties = profileService.getPropertyTypeBySystemTag("concealed").stream().map(Item::getItemId).collect(Collectors.toSet());
+                // remove requested properties from the filtered properties
+                concealedProperties.removeAll(contextRequest.getRequiredProfileProperties().stream().filter(p -> !p.equals("*")).collect(Collectors.toList()));
+                profileProperties.keySet().removeAll(concealedProperties);
             }
             data.setProfileProperties(profileProperties);
         }
