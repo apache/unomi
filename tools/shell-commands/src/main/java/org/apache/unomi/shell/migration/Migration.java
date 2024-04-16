@@ -16,9 +16,6 @@
  */
 package org.apache.unomi.shell.migration;
 
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.karaf.shell.api.console.Session;
-import org.apache.unomi.shell.migration.service.MigrationConfig;
 import org.apache.unomi.shell.migration.service.MigrationContext;
 import org.osgi.framework.BundleContext;
 
