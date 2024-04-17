@@ -854,6 +854,54 @@ public class ContextServletIT extends BaseIT {
                 DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
     }
 
+    @Test
+    public void testConcealedProperties() throws Exception {
+        String sessionId = "test-concealed-property-session-id";
+        // Add custom profile property type
+        PropertyType customPropertyType = new PropertyType(new Metadata("customProperty"));
+        customPropertyType.setValueTypeId("text");
+        profileService.setPropertyType(customPropertyType);
+        // New profile with the custom property type
+        Profile profile = new Profile("test-profile-id" + System.currentTimeMillis());
+        profile.setProperty("customProperty", "concealedValue");
+        profileService.save(profile);
+
+        Thread.sleep(2000);
+        // Get it from all properties
+        ContextRequest contextRequest = new ContextRequest();
+        contextRequest.setRequiredProfileProperties(Arrays.asList("*"));
+        contextRequest.setProfileId(profile.getItemId());
+        contextRequest.setSessionId(sessionId);
+        HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
+        request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
+        assertEquals(TestUtils.executeContextJSONRequest(request, sessionId).getContextResponse().getProfileProperties().get("customProperty"), ("concealedValue"));
+        // set the property as  concealed
+        customPropertyType.getMetadata().getSystemTags().add("concealed");
+        profileService.deletePropertyType(customPropertyType.getItemId());
+        profileService.setPropertyType(customPropertyType);
+        // Not in all properties
+        request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
+        assertNull(TestUtils.executeContextJSONRequest(request, sessionId).getContextResponse().getProfileProperties().get("customProperty"));
+        // Got it explicitly
+        contextRequest.setRequiredProfileProperties(Arrays.asList("customProperty"));
+        request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
+        assertEquals(TestUtils.executeContextJSONRequest(request, sessionId).getContextResponse().getProfileProperties().get("customProperty"), ("concealedValue"));
+        // Got it with all
+        contextRequest.setRequiredProfileProperties(Arrays.asList("*", "customProperty"));
+        request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
+        assertEquals(TestUtils.executeContextJSONRequest(request, sessionId).getContextResponse().getProfileProperties().get("customProperty"), ("concealedValue"));
+
+        // remove the concealed tag on the property type
+        customPropertyType.getMetadata().getSystemTags().remove("concealed");
+        profileService.deletePropertyType(customPropertyType.getItemId());
+        profileService.setPropertyType(customPropertyType);
+
+        // Got it from all properties
+        contextRequest.setRequiredProfileProperties(Arrays.asList("*"));
+        request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
+        assertEquals(TestUtils.executeContextJSONRequest(request, sessionId).getContextResponse().getProfileProperties().get("customProperty"), ("concealedValue"));
+    }
+
     private Boolean getPersistedControlGroupStatus(SystemPropertiesItem systemPropertiesItem, String personalizationId) {
         if(systemPropertiesItem.getSystemProperties() != null && systemPropertiesItem.getSystemProperties().containsKey("personalizationStrategyStatus")) {
             List<Map<String, Object>> personalizationStrategyStatus = (List<Map<String, Object>>) systemPropertiesItem.getSystemProperties().get("personalizationStrategyStatus");
