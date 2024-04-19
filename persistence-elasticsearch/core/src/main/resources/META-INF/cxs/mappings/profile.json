@@ -40,6 +40,13 @@
         }
       }
     },
+    "systemProperties": {
+      "properties": {
+        "pastEvents": {
+          "type": "flattened"
+        }
+      }
+    },
     "consents": {
       "properties": {
         "statusDate": {
