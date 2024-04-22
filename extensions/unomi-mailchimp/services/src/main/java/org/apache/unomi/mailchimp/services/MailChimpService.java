@@ -20,7 +20,6 @@ package org.apache.unomi.mailchimp.services;
 
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.actions.Action;
-import org.json.JSONObject;
 
 import java.util.HashMap;
 import java.util.List;
