@@ -31,6 +31,7 @@ import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.log4j.Level;
 import org.apache.lucene.search.TotalHits;
 import org.apache.unomi.api.Item;
+import org.apache.unomi.api.MetadataItem;
 import org.apache.unomi.api.PartialList;
 import org.apache.unomi.api.TimestampedItem;
 import org.apache.unomi.api.conditions.Condition;
@@ -877,6 +878,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         } else {
                             bulkProcessor.add(indexRequest);
                         }
+                        logMetadataItemOperation("saved", item);
                     } catch (IndexNotFoundException e) {
                         logger.error("Could not find index {}, could not register item type {} with id {} ",
                                 index, itemType, itemId, e);
@@ -918,6 +920,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     } else {
                         bulkProcessor.add(updateRequest);
                     }
+                    logMetadataItemOperation("update", item);
                     return true;
                 } catch (IndexNotFoundException e) {
                     throw new Exception("No index found for itemType=" + clazz.getName() + "itemId=" + item.getItemId(), e);
@@ -1185,6 +1188,9 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
                     DeleteRequest deleteRequest = new DeleteRequest(getIndexNameForQuery(itemType), itemId);
                     client.delete(deleteRequest, RequestOptions.DEFAULT);
+                    if (MetadataItem.class.isAssignableFrom(clazz)) {
+                        logger.info("Item of type {} with ID {} has been removed", clazz.getSimpleName(), itemId);
+                    }
                     return true;
                 } catch (Exception e) {
                     throw new Exception("Cannot remove", e);
@@ -1203,6 +1209,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             protected Boolean execute(Object... args) throws Exception {
                 try {
                     String itemType = Item.getItemType(clazz);
+                    logger.debug("Remove item of type {} using a query", itemType);
                     QueryBuilder queryBuilder = conditionESQueryBuilderDispatcher.getQueryBuilder(query);
                     final DeleteByQueryRequest deleteByQueryRequest = new DeleteByQueryRequest(getIndexNameForQuery(itemType))
                             .setQuery(queryBuilder)
@@ -1311,7 +1318,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     public boolean createIndex(final String itemType) {
         String index = getIndex(itemType);
-
+        logger.debug("Create index {}", itemType);
         Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".createIndex", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
             protected Boolean execute(Object... args) throws IOException {
                 GetIndexRequest getIndexRequest = new GetIndexRequest(index);
@@ -2132,6 +2139,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Override
     public void purge(final String scope) {
+        logger.debug("Purge scope {}", scope);
         new InClassLoaderExecute<Void>(metricsService, this.getClass().getName() + ".purgeWithScope", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
             @Override
             protected Void execute(Object... args) throws IOException {
@@ -2351,6 +2359,12 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             return itemTypeToRefreshPolicy.get(itemType);
         }
         return WriteRequest.RefreshPolicy.NONE;
+    }
+
+    private void logMetadataItemOperation (String operation, Item item) {
+        if (item instanceof MetadataItem) {
+            logger.info("Item of type {} with ID {} has been {}", item.getItemType(), item.getItemId(), operation);
+        }
     }
 
 }
