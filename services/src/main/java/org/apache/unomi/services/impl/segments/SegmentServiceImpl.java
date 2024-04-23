@@ -801,7 +801,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
     private void recalculatePastEventOccurrencesOnProfiles(Condition eventCondition, Condition parentCondition,
                                                            boolean forceRefresh, boolean resetExistingProfilesNotMatching) {
         long t = System.currentTimeMillis();
-        List<Condition> l = new ArrayList<Condition>();
+        List<Condition> l = new ArrayList<>();
         Condition andCondition = new Condition();
         andCondition.setConditionType(definitionsService.getConditionType("booleanCondition"));
         andCondition.setParameter("operator", "and");
@@ -881,10 +881,25 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
      */
     private Set<String> getExistingProfilesWithPastEventOccurrenceCount(String generatedPropertyKey) {
         Condition countExistsCondition = new Condition();
-        countExistsCondition.setConditionType(definitionsService.getConditionType("profilePropertyCondition"));
-        countExistsCondition.setParameter("propertyName", "systemProperties.pastEvents." + generatedPropertyKey);
-        countExistsCondition.setParameter("comparisonOperator", "greaterThan");
-        countExistsCondition.setParameter("propertyValueInteger", 0);
+
+        countExistsCondition.setConditionType(definitionsService.getConditionType("nestedCondition"));
+        countExistsCondition.setParameter("path", "systemProperties.pastEvents");
+
+        Condition subConditionCount = new Condition(definitionsService.getConditionType("profilePropertyCondition"));
+        subConditionCount.setParameter("propertyName", "systemProperties.pastEvents.count");
+        subConditionCount.setParameter("comparisonOperator", "greaterThan");
+        subConditionCount.setParameter("propertyValueInteger", 0);
+
+        Condition subConditionKey = new Condition(definitionsService.getConditionType("profilePropertyCondition"));
+        subConditionKey.setParameter("propertyName", "systemProperties.pastEvents.key");
+        subConditionKey.setParameter("comparisonOperator", "equals");
+        subConditionKey.setParameter("propertyValue", generatedPropertyKey);
+
+        Condition booleanCondition = new Condition(definitionsService.getConditionType("booleanCondition"));
+        booleanCondition.setParameter("operator", "and");
+        booleanCondition.setParameter("subConditions", Arrays.asList(subConditionCount, subConditionKey));
+
+        countExistsCondition.setParameter("subCondition", booleanCondition);
 
         Set<String> profileIds = new HashSet<>();
         if (pastEventsDisablePartitions) {
@@ -996,19 +1011,26 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
             Map.Entry<String, Long> entry = entryIterator.next();
             String profileId = entry.getKey();
             if (!profileId.startsWith("_")) {
-                Map<String, Long> pastEventCounts = new HashMap<>();
-                pastEventCounts.put(propertyKey, entry.getValue());
-                Map<String, Object> systemProperties = new HashMap<>();
-                systemProperties.put("pastEvents", pastEventCounts);
-                systemProperties.put("lastUpdated", new Date());
+                Profile storedProfile = persistenceService.load(profileId, Profile.class);
+                if (storedProfile != null) {
+                    List<Map<String, Object>> pastEvents = new ArrayList<>();
+                    Map<String, Object> systemProperties = storedProfile.getSystemProperties() != null ? storedProfile.getSystemProperties() : new HashMap<>();
+                    if (systemProperties.containsKey("pastEvents")) {
+                        pastEvents = (ArrayList<Map<String, Object>>) storedProfile.getSystemProperties().get("pastEvents");
+                        pastEvents.removeIf(map -> map.get("key").equals(propertyKey));
+                    }
+                    pastEvents.add(Map.of("key", propertyKey, "count", entry.getValue()));
+                    systemProperties.put("pastEvents", pastEvents);
+                    systemProperties.put("lastUpdated", new Date());
 
-                Profile profile = new Profile();
-                profile.setItemId(profileId);
-                batch.put(profile, Collections.singletonMap("systemProperties", systemProperties));
-                profilesUpdated.add(profileId);
+                    Profile profile = new Profile();
+                    profile.setItemId(profileId);
+                    batch.put(profile, Collections.singletonMap("systemProperties", systemProperties));
+                    profilesUpdated.add(profileId);
+                }
             }
 
-            if (batch.size() == segmentUpdateBatchSize || (!entryIterator.hasNext() && batch.size() > 0)) {
+            if (batch.size() == segmentUpdateBatchSize || (!entryIterator.hasNext() && !batch.isEmpty())) {
                 try {
                     persistenceService.update(batch, Profile.class);
                 } catch (Exception e) {

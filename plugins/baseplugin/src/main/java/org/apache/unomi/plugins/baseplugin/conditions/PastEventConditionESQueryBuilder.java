@@ -131,33 +131,52 @@ public class PastEventConditionESQueryBuilder implements ConditionESQueryBuilder
     }
 
     private Condition getProfileConditionForCounter(String generatedPropertyKey, Integer minimumEventCount, Integer maximumEventCount, boolean eventsOccurred) {
-        String generatedPropertyName = "systemProperties.pastEvents." + generatedPropertyKey;
+        Condition countCondition = new Condition();
+
+        countCondition.setConditionType(definitionsService.getConditionType("nestedCondition"));
+        countCondition.setParameter("path", "systemProperties.pastEvents");
+
+        Condition subConditionCount = new Condition(definitionsService.getConditionType("profilePropertyCondition"));
+
+        Condition subConditionKey = new Condition(definitionsService.getConditionType("profilePropertyCondition"));
+        subConditionKey.setParameter("propertyName", "systemProperties.pastEvents.key");
+        subConditionKey.setParameter("comparisonOperator", "equals");
+        subConditionKey.setParameter("propertyValue", generatedPropertyKey);
+
         ConditionType profilePropertyConditionType = definitionsService.getConditionType("profilePropertyCondition");
         if (eventsOccurred) {
-            Condition counterIsBetweenBoundaries = new Condition();
-            counterIsBetweenBoundaries.setConditionType(profilePropertyConditionType);
-            counterIsBetweenBoundaries.setParameter("propertyName", generatedPropertyName);
-            counterIsBetweenBoundaries.setParameter("comparisonOperator", "between");
-            counterIsBetweenBoundaries.setParameter("propertyValuesInteger", Arrays.asList(minimumEventCount, maximumEventCount));
-            return counterIsBetweenBoundaries;
-        } else {
-            Condition counterMissing = new Condition();
-            counterMissing.setConditionType(profilePropertyConditionType);
-            counterMissing.setParameter("propertyName", generatedPropertyName);
-            counterMissing.setParameter("comparisonOperator", "missing");
+            subConditionCount.setParameter("propertyName", "systemProperties.pastEvents.count");
+            subConditionCount.setParameter("comparisonOperator", "between");
+            subConditionCount.setParameter("propertyValuesInteger", Arrays.asList(minimumEventCount, maximumEventCount));
 
-            Condition counterZero = new Condition();
-            counterZero.setConditionType(profilePropertyConditionType);
-            counterZero.setParameter("propertyName", generatedPropertyName);
+            Condition booleanCondition = new Condition(definitionsService.getConditionType("booleanCondition"));
+            booleanCondition.setParameter("operator", "and");
+            booleanCondition.setParameter("subConditions", Arrays.asList(subConditionCount, subConditionKey));
+
+            countCondition.setParameter("subCondition", booleanCondition);
+        } else {
+            Condition keyMissing = new Condition(profilePropertyConditionType);
+            keyMissing.setParameter("propertyName", "systemProperties.pastEvents.key");
+            keyMissing.setParameter("comparisonOperator", "missing");
+            keyMissing.setParameter("propertyValue", generatedPropertyKey);
+
+            Condition counterZero = new Condition(profilePropertyConditionType);
+            counterZero.setParameter("propertyName", "systemProperties.pastEvents.count");
             counterZero.setParameter("comparisonOperator", "equals");
             counterZero.setParameter("propertyValueInteger", 0);
+
+            Condition keyExistsAndCounterZero = new Condition(definitionsService.getConditionType("booleanCondition"));
+            keyExistsAndCounterZero.setParameter("operator", "and");
+            keyExistsAndCounterZero.setParameter("subConditions", Arrays.asList(subConditionKey, counterZero));
 
             Condition counterCondition = new Condition();
             counterCondition.setConditionType(definitionsService.getConditionType("booleanCondition"));
             counterCondition.setParameter("operator", "or");
-            counterCondition.setParameter("subConditions", Arrays.asList(counterMissing, counterZero));
-            return counterCondition;
+            counterCondition.setParameter("subConditions", Arrays.asList(keyMissing, keyExistsAndCounterZero));
+
+            countCondition.setParameter("subCondition", counterCondition);
         }
+        return countCondition;
     }
 
     private Set<String> getProfileIdsMatchingEventCount(Condition eventCondition, int minimumEventCount, int maximumEventCount) {

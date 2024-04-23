@@ -29,10 +29,7 @@ import org.apache.unomi.persistence.spi.PropertyHelper;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.LinkedHashMap;
-import java.util.Map;
+import java.util.*;
 
 import javax.xml.bind.DatatypeConverter;
 
@@ -123,12 +120,24 @@ public class SetEventOccurenceCountAction implements ActionExecutor {
             count++;
         }
 
-        String generatedPropertyKey = (String) pastEventCondition.getParameter("generatedPropertyKey");
-        if (PropertyHelper.setProperty(event.getProfile(), "systemProperties.pastEvents." + generatedPropertyKey, count, "alwaysSet")) {
+        if (updatePastEvents(event, (String) pastEventCondition.getParameter("generatedPropertyKey"), count)) {
             return EventService.PROFILE_UPDATED;
         }
 
         return EventService.NO_CHANGE;
+    }
+
+    private boolean updatePastEvents(Event event, String generatedPropertyKey, long count) {
+        ArrayList<Map<String, Object>> pastEvents =  (ArrayList<Map<String, Object>>) event.getProfile().getSystemProperties().get("pastEvents");
+        if (pastEvents == null) {
+            pastEvents = new ArrayList<>();
+        }
+        pastEvents.removeIf(pastEvent -> pastEvent.get("key").equals(generatedPropertyKey));
+        Map<String, Object> pastEvent = new HashMap<>();
+        pastEvent.put("key", generatedPropertyKey);
+        pastEvent.put("count", count);
+        pastEvents.add(pastEvent);
+        return PropertyHelper.setProperty(event.getProfile(), "systemProperties.pastEvents", pastEvents, "alwaysSet");
     }
 
     private boolean inTimeRange(LocalDateTime eventTime, Integer numberOfDays, LocalDateTime fromDate, LocalDateTime toDate) {

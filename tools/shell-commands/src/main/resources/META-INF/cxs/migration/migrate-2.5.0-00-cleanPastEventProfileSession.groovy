@@ -29,9 +29,10 @@ String rolloverEventAlias = indexPrefix + "-session"
 
 context.performMigrationStep("2.5.0-clean-profile-mapping", () -> {
     String baseSettings = MigrationUtils.resourceAsString(bundleContext, "requestBody/2.0.0/base_index_mapping.json")
+    String updatePastEventScript = MigrationUtils.getFileWithoutComments(bundleContext, "requestBody/2.5.0/update_pastEvents_profile.painless")
     String mapping = MigrationUtils.extractMappingFromBundles(bundleContext, "profile.json")
     String newIndexSettings = MigrationUtils.buildIndexCreationRequest(baseSettings, mapping, context, false)
-    MigrationUtils.reIndex(context.getHttpClient(), bundleContext, esAddress, indexPrefix + "-profile", newIndexSettings, "", context)
+    MigrationUtils.reIndex(context.getHttpClient(), bundleContext, esAddress, indexPrefix + "-profile", newIndexSettings, updatePastEventScript, context)
 })
 
 context.performMigrationStep("2.5.0-clean-session-mapping", () -> {

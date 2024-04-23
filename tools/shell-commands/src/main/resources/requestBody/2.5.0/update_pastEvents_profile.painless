@@ -15,8 +15,14 @@
  * limitations under the License.
  */
 
-if (ctx._source.profile != null) {
-    if (ctx._source.profile.systemProperties != null && ctx._source.profile.systemProperties.pastEvents != null) {
-         ctx._source.profile.systemProperties.remove('pastEvents');
+if (ctx._source.systemProperties != null && ctx._source.systemProperties.pastEvents != null && ctx._source.systemProperties.pastEvents instanceof Map) {
+    Map updatedPastEvents = new HashMap();
+    List listOfPastEvent = new ArrayList();
+    for (pastEventKey in ctx._source.systemProperties.pastEvents.keySet()) {
+        Map pastEvent = new HashMap();
+        pastEvent.put('key', pastEventKey);
+        pastEvent.put('count', ctx._source.systemProperties.pastEvents.get(pastEventKey));
+        listOfPastEvent.add(pastEvent);
     }
+    ctx._source.systemProperties.pastEvents = listOfPastEvent;
 }
