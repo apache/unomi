@@ -30,6 +30,7 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.*;
+import java.util.stream.Collectors;
 
 import javax.xml.bind.DatatypeConverter;
 
@@ -128,11 +129,12 @@ public class SetEventOccurenceCountAction implements ActionExecutor {
     }
 
     private boolean updatePastEvents(Event event, String generatedPropertyKey, long count) {
-        ArrayList<Map<String, Object>> pastEvents =  (ArrayList<Map<String, Object>>) event.getProfile().getSystemProperties().get("pastEvents");
-        if (pastEvents == null) {
-            pastEvents = new ArrayList<>();
+        ArrayList<Map<String, Object>> pastEvents = new ArrayList<>();
+        ArrayList<Map<String, Object>> existingPastEvents = (ArrayList<Map<String, Object>>) event.getProfile().getSystemProperties().get("pastEvents");
+        if (existingPastEvents != null) {
+            pastEvents.addAll(existingPastEvents.stream().filter(pastEvent -> !pastEvent.get("key").equals(generatedPropertyKey)).collect(Collectors.toList()));
         }
-        pastEvents.removeIf(pastEvent -> pastEvent.get("key").equals(generatedPropertyKey));
+
         Map<String, Object> pastEvent = new HashMap<>();
         pastEvent.put("key", generatedPropertyKey);
         pastEvent.put("count", count);
