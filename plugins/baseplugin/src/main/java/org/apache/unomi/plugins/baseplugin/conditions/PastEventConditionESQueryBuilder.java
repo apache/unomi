@@ -23,6 +23,7 @@ import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.SegmentService;
+import org.apache.unomi.api.utils.ConditionHelper;
 import org.apache.unomi.persistence.elasticsearch.conditions.ConditionContextHelper;
 import org.apache.unomi.persistence.elasticsearch.conditions.ConditionESQueryBuilder;
 import org.apache.unomi.persistence.elasticsearch.conditions.ConditionESQueryBuilderDispatcher;
@@ -44,6 +45,8 @@ public class PastEventConditionESQueryBuilder implements ConditionESQueryBuilder
     private int maximumIdsQueryCount = 5000;
     private int aggregateQueryBucketSize = 5000;
     private boolean pastEventsDisablePartitions = false;
+
+    private ConditionHelper conditionHelper;
 
     public void setDefinitionsService(DefinitionsService definitionsService) {
         this.definitionsService = definitionsService;
@@ -73,6 +76,9 @@ public class PastEventConditionESQueryBuilder implements ConditionESQueryBuilder
         this.segmentService = segmentService;
     }
 
+    public void init(){
+        conditionHelper = new ConditionHelper(definitionsService);
+    }
     @Override
     public QueryBuilder buildQuery(Condition condition, Map<String, Object> context, ConditionESQueryBuilderDispatcher dispatcher) {
         boolean eventsOccurred = getStrategyFromOperator((String) condition.getParameter("operator"));
@@ -88,7 +94,7 @@ public class PastEventConditionESQueryBuilder implements ConditionESQueryBuilder
             // TODO see for deprecation, this should not happen anymore each past event condition should have a generatedPropertyKey
             Condition eventCondition = getEventCondition(condition, context, null, definitionsService, scriptExecutor);
             Set<String> ids = getProfileIdsMatchingEventCount(eventCondition, minimumEventCount, maximumEventCount);
-            return dispatcher.buildFilter(getProfileIdsCondition(ids, eventsOccurred), context);
+            return dispatcher.buildFilter(conditionHelper.createProfileIdsCondition(ids, eventsOccurred), context);
         }
     }
 
@@ -111,7 +117,7 @@ public class PastEventConditionESQueryBuilder implements ConditionESQueryBuilder
             }
 
             Set<String> profileIds = getProfileIdsMatchingEventCount(eventCondition, minimumEventCount, maximumEventCount);
-            return eventsOccurred ? profileIds.size() : persistenceService.queryCount(getProfileIdsCondition(profileIds, false), Profile.ITEM_TYPE);
+            return eventsOccurred ? profileIds.size() : persistenceService.queryCount(conditionHelper.createProfileIdsCondition(profileIds, false), Profile.ITEM_TYPE);
         }
     }
 
@@ -122,84 +128,40 @@ public class PastEventConditionESQueryBuilder implements ConditionESQueryBuilder
         return operator == null || operator.equals("eventsOccurred");
     }
 
-    private Condition getProfileIdsCondition(Set<String> ids, boolean shouldMatch) {
-        Condition idsCondition = new Condition();
-        idsCondition.setConditionType(definitionsService.getConditionType("idsCondition"));
-        idsCondition.setParameter("ids", ids);
-        idsCondition.setParameter("match", shouldMatch);
-        return idsCondition;
-    }
-
     private Condition getProfileConditionForCounter(String generatedPropertyKey, Integer minimumEventCount, Integer maximumEventCount, boolean eventsOccurred) {
-        Condition countCondition = new Condition();
-
-        countCondition.setConditionType(definitionsService.getConditionType("nestedCondition"));
-        countCondition.setParameter("path", "systemProperties.pastEvents");
-
-        Condition subConditionCount = new Condition(definitionsService.getConditionType("profilePropertyCondition"));
-
-        Condition subConditionKey = getKeyEqualsCondition(generatedPropertyKey);
-
-        ConditionType profilePropertyConditionType = definitionsService.getConditionType("profilePropertyCondition");
         if (eventsOccurred) {
-            subConditionCount.setParameter("propertyName", "systemProperties.pastEvents.count");
-            subConditionCount.setParameter("comparisonOperator", "between");
-            subConditionCount.setParameter("propertyValuesInteger", Arrays.asList(minimumEventCount, maximumEventCount));
-
-            Condition booleanCondition = new Condition(definitionsService.getConditionType("booleanCondition"));
-            booleanCondition.setParameter("operator", "and");
-            booleanCondition.setParameter("subConditions", Arrays.asList(subConditionCount, subConditionKey));
-
-            countCondition.setParameter("subCondition", booleanCondition);
-            return countCondition;
-
+            return createEventOccurredCondition(generatedPropertyKey, minimumEventCount, maximumEventCount);
         } else {
-
-            // 1. Key not present in profile
-            Condition keyNestedCondition = new Condition();
-            keyNestedCondition.setConditionType(definitionsService.getConditionType("nestedCondition"));
-            keyNestedCondition.setParameter("path", "systemProperties.pastEvents");
-
-            Condition keyEquals = new Condition(profilePropertyConditionType);
-            keyEquals.setParameter("propertyName", "systemProperties.pastEvents.key");
-            keyEquals.setParameter("comparisonOperator", "equals");
-            keyEquals.setParameter("propertyValue", generatedPropertyKey);
-
-            keyNestedCondition.setParameter("subCondition", keyEquals);
-
-            Condition mustNotExist = new Condition(definitionsService.getConditionType("notCondition"));
-            mustNotExist.setParameter("subCondition", keyNestedCondition);
-
-            // 2. Key present in profile but value equals to 0
-            Condition counterZero = new Condition(profilePropertyConditionType);
-            counterZero.setParameter("propertyName", "systemProperties.pastEvents.count");
-            counterZero.setParameter("comparisonOperator", "equals");
-            counterZero.setParameter("propertyValueInteger", 0);
-
-            Condition keyExistsAndCounterZero = new Condition(definitionsService.getConditionType("booleanCondition"));
-            keyExistsAndCounterZero.setParameter("operator", "and");
-            keyExistsAndCounterZero.setParameter("subConditions", Arrays.asList(subConditionKey, counterZero));
-
-            Condition nestedKeyExistsAndCounterZero = new Condition();
-            nestedKeyExistsAndCounterZero.setConditionType(definitionsService.getConditionType("nestedCondition"));
-            nestedKeyExistsAndCounterZero.setParameter("path", "systemProperties.pastEvents");
-            nestedKeyExistsAndCounterZero.setParameter("subCondition", keyExistsAndCounterZero);
-
-            Condition counterCondition = new Condition();
-            counterCondition.setConditionType(definitionsService.getConditionType("booleanCondition"));
-            counterCondition.setParameter("operator", "or");
-            counterCondition.setParameter("subConditions", Arrays.asList(mustNotExist, nestedKeyExistsAndCounterZero));
-
-            return counterCondition;
+            return createEventNotOccurredCondition(generatedPropertyKey);
         }
     }
 
-    private Condition getKeyEqualsCondition(String generatedPropertyKey) {
-        Condition subConditionKey = new Condition(definitionsService.getConditionType("profilePropertyCondition"));
-        subConditionKey.setParameter("propertyName", "systemProperties.pastEvents.key");
-        subConditionKey.setParameter("comparisonOperator", "equals");
-        subConditionKey.setParameter("propertyValue", generatedPropertyKey);
-        return subConditionKey;
+    private Condition createEventOccurredCondition(String generatedPropertyKey, Integer minimumEventCount, Integer maximumEventCount) {
+        Condition subConditionCount = conditionHelper.createProfilePropertyCondition("systemProperties.pastEvents.count", "between", Arrays.asList(minimumEventCount, maximumEventCount), "propertyValuesInteger");
+        Condition subConditionKey = conditionHelper.createProfilePropertyCondition("systemProperties.pastEvents.key", "equals", generatedPropertyKey, "propertyValue");
+
+        Condition booleanCondition = conditionHelper.createBooleanCondition("and", Arrays.asList(subConditionCount, subConditionKey));
+        return conditionHelper.createNestedCondition("systemProperties.pastEvents", booleanCondition);
+    }
+
+    private Condition createEventNotOccurredCondition(String generatedPropertyKey) {
+        Condition pastEventsNotExist = createPastEventMustNotExistCondition(generatedPropertyKey);
+        Condition counterZero = conditionHelper.createProfilePropertyCondition("systemProperties.pastEvents.count", "equals", 0, "propertyValueInteger");
+        Condition keyEquals = conditionHelper.createProfilePropertyCondition("systemProperties.pastEvents.key", "equals", generatedPropertyKey, "propertyValue");
+        Condition keyExistsAndCounterZero = conditionHelper.createBooleanCondition("and", Arrays.asList(keyEquals, counterZero));
+        Condition nestedKeyExistsAndCounterZero = conditionHelper.createNestedCondition("systemProperties.pastEvents", keyExistsAndCounterZero);
+
+        return conditionHelper.createBooleanCondition("or", Arrays.asList(pastEventsNotExist, nestedKeyExistsAndCounterZero));
+    }
+
+    private Condition createPastEventMustNotExistCondition(String generatedPropertyKey) {
+        Condition keyEquals = conditionHelper.createProfilePropertyCondition("systemProperties.pastEvents.key", "equals", generatedPropertyKey, "propertyValue");
+
+        Condition keyNestedCondition = conditionHelper.createNestedCondition("systemProperties.pastEvents", keyEquals);
+
+        Condition mustNotExist = new Condition(definitionsService.getConditionType("notCondition"));
+        mustNotExist.setParameter("subCondition", keyNestedCondition);
+        return mustNotExist;
     }
 
     private Set<String> getProfileIdsMatchingEventCount(Condition eventCondition, int minimumEventCount, int maximumEventCount) {

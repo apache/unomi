@@ -20,11 +20,7 @@ package org.apache.unomi.services.impl.segments;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import net.jodah.failsafe.Failsafe;
 import net.jodah.failsafe.RetryPolicy;
-import org.apache.unomi.api.Event;
-import org.apache.unomi.api.Item;
-import org.apache.unomi.api.Metadata;
-import org.apache.unomi.api.PartialList;
-import org.apache.unomi.api.Profile;
+import org.apache.unomi.api.*;
 import org.apache.unomi.api.actions.Action;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.conditions.ConditionType;
@@ -35,6 +31,7 @@ import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.api.services.RulesService;
 import org.apache.unomi.api.services.SchedulerService;
 import org.apache.unomi.api.services.SegmentService;
+import org.apache.unomi.api.utils.ConditionHelper;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.persistence.spi.aggregate.TermsAggregate;
 import org.apache.unomi.services.impl.AbstractServiceImpl;
@@ -85,6 +82,9 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
     private int maximumIdsQueryCount = 5000;
     private boolean pastEventsDisablePartitions = false;
     private int dailyDateExprEvaluationHourUtc = 5;
+
+    private ConditionHelper conditionHelper;
+
 
     public SegmentServiceImpl() {
         logger.info("Initializing segment service...");
@@ -158,6 +158,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
         }
         bundleContext.addBundleListener(this);
         initializeTimer();
+        conditionHelper = new ConditionHelper(definitionsService);
         logger.info("Segment service initialized.");
     }
 
@@ -877,40 +878,24 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
      * Return the list of profile ids, for profiles that already have an event count matching the generated property key
      *
      * @param generatedPropertyKey the generated property key of the generated rule for the given past event condition.
-     * @return the list of profile ids.
+     * @return the set of profile ids.
      */
     private Set<String> getExistingProfilesWithPastEventOccurrenceCount(String generatedPropertyKey) {
-        Condition countExistsCondition = new Condition();
-
-        countExistsCondition.setConditionType(definitionsService.getConditionType("nestedCondition"));
-        countExistsCondition.setParameter("path", "systemProperties.pastEvents");
-
-        Condition subConditionCount = new Condition(definitionsService.getConditionType("profilePropertyCondition"));
-        subConditionCount.setParameter("propertyName", "systemProperties.pastEvents.count");
-        subConditionCount.setParameter("comparisonOperator", "greaterThan");
-        subConditionCount.setParameter("propertyValueInteger", 0);
-
-        Condition subConditionKey = new Condition(definitionsService.getConditionType("profilePropertyCondition"));
-        subConditionKey.setParameter("propertyName", "systemProperties.pastEvents.key");
-        subConditionKey.setParameter("comparisonOperator", "equals");
-        subConditionKey.setParameter("propertyValue", generatedPropertyKey);
-
-        Condition booleanCondition = new Condition(definitionsService.getConditionType("booleanCondition"));
-        booleanCondition.setParameter("operator", "and");
-        booleanCondition.setParameter("subConditions", Arrays.asList(subConditionCount, subConditionKey));
-
-        countExistsCondition.setParameter("subCondition", booleanCondition);
+        Condition subConditionCount = conditionHelper.createProfilePropertyCondition("systemProperties.pastEvents.count", "greaterThan", 0, "propertyValueInteger");
+        Condition subConditionKey = conditionHelper.createProfilePropertyCondition("systemProperties.pastEvents.key", "equals", generatedPropertyKey, "propertyValue");
+        Condition booleanCondition = conditionHelper.createBooleanCondition("and", Arrays.asList(subConditionCount, subConditionKey));
+        Condition condition = conditionHelper.createNestedCondition("systemProperties.pastEvents", booleanCondition);
 
         Set<String> profileIds = new HashSet<>();
         if (pastEventsDisablePartitions) {
-            profileIds.addAll(persistenceService.aggregateWithOptimizedQuery(countExistsCondition, new TermsAggregate("itemId"),
+            profileIds.addAll(persistenceService.aggregateWithOptimizedQuery(condition, new TermsAggregate("itemId"),
                     Profile.ITEM_TYPE, maximumIdsQueryCount).keySet());
         } else {
-            Map<String, Double> m = persistenceService.getSingleValuesMetrics(countExistsCondition, new String[]{"card"}, "itemId.keyword", Profile.ITEM_TYPE);
+            Map<String, Double> m = persistenceService.getSingleValuesMetrics(condition, new String[]{"card"}, "itemId.keyword", Profile.ITEM_TYPE);
             long card = m.get("_card").longValue();
             int numParts = (int) (card / aggregateQueryBucketSize) + 2;
             for (int i = 0; i < numParts; i++) {
-                profileIds.addAll(persistenceService.aggregateWithOptimizedQuery(countExistsCondition, new TermsAggregate("itemId", i, numParts),
+                profileIds.addAll(persistenceService.aggregateWithOptimizedQuery(condition, new TermsAggregate("itemId", i, numParts),
                         Profile.ITEM_TYPE).keySet());
             }
         }
@@ -1001,38 +986,35 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
      *
      * @param eventCountByProfile the events count per profileId map
      * @param propertyKey         the generate property key for this past event condition, to keep track of the count in the profile
-     * @return the list of profiles for witch the count of event occurrences have been updated.
+     * @return the set of profiles for witch the count of event occurrences have been updated.
      */
     private Set<String> updatePastEventOccurrencesOnProfiles(Map<String, Long> eventCountByProfile, String propertyKey) {
         Set<String> profilesUpdated = new HashSet<>();
-        Map<Item, Map> batch = new HashMap<>();
+        Map<String, Map[]> batch = new HashMap<>();
         Iterator<Map.Entry<String, Long>> entryIterator = eventCountByProfile.entrySet().iterator();
+
         while (entryIterator.hasNext()) {
             Map.Entry<String, Long> entry = entryIterator.next();
             String profileId = entry.getKey();
             if (!profileId.startsWith("_")) {
-                Profile storedProfile = persistenceService.load(profileId, Profile.class);
-                if (storedProfile != null) {
-                    List<Map<String, Object>> pastEvents = new ArrayList<>();
-                    Map<String, Object> systemProperties = storedProfile.getSystemProperties() != null ? storedProfile.getSystemProperties() : new HashMap<>();
-                    if (systemProperties.containsKey("pastEvents")) {
-                        pastEvents = (ArrayList<Map<String, Object>>) storedProfile.getSystemProperties().get("pastEvents");
-                        pastEvents.removeIf(map -> map.get("key").equals(propertyKey));
-                    }
-                    pastEvents.add(Map.of("key", propertyKey, "count", entry.getValue()));
-                    systemProperties.put("pastEvents", pastEvents);
-                    systemProperties.put("lastUpdated", new Date());
-
-                    Profile profile = new Profile();
-                    profile.setItemId(profileId);
-                    batch.put(profile, Collections.singletonMap("systemProperties", systemProperties));
-                    profilesUpdated.add(profileId);
-                }
+                Map<String, Object> scriptParams = new HashMap<>();
+                scriptParams.put("pastEventKey", propertyKey);
+                scriptParams.put("valueToAdd", entry.getValue());
+                Map<String, Object>[] params = new Map[]{scriptParams};
+                batch.put(profileId, params);
+                profilesUpdated.add(profileId);
             }
+
+
+
 
             if (batch.size() == segmentUpdateBatchSize || (!entryIterator.hasNext() && !batch.isEmpty())) {
                 try {
-                    persistenceService.update(batch, Profile.class);
+                    batch.forEach((id, params) -> {
+                        Condition profileIdCondition = conditionHelper.createProfilePropertyCondition("itemId", "equals", id, "propertyValue");
+                        Condition[] conditions = new Condition[]{profileIdCondition};
+                        persistenceService.updateWithQueryAndStoredScript(Profile.class, new String[]{"updatePastEventOccurences"}, params, conditions);
+                    });
                 } catch (Exception e) {
                     logger.error("Error updating {} profiles for past event system properties", batch.size(), e);
                 } finally {

@@ -57,15 +57,14 @@ public class PastEventConditionEvaluator implements ConditionEvaluator {
         if (parameters.containsKey("generatedPropertyKey")) {
             String key = (String) parameters.get("generatedPropertyKey");
             Profile profile = (Profile) item;
-            Object rawPastEvents =  profile.getSystemProperties().get("pastEvents");
-            if (rawPastEvents != null) {
-                List<Map<String, Object>> pastEvents = (ArrayList<Map<String, Object>>) rawPastEvents;
-                    Number l = (Number) pastEvents
-                            .stream()
-                            .filter(pastEvent -> pastEvent.get("key").equals(key))
-                            .findFirst()
-                            .map(pastEvent -> pastEvent.get("count")).orElse(0L);
-                    count = l.longValue();
+            List<Map<String, Object>> pastEvents =  (ArrayList<Map<String, Object>>) profile.getSystemProperties().get("pastEvents");
+            if (pastEvents != null) {
+                Number l = (Number) pastEvents
+                        .stream()
+                        .filter(pastEvent -> pastEvent.get("key").equals(key))
+                        .findFirst()
+                        .map(pastEvent -> pastEvent.get("count")).orElse(0L);
+                count = l.longValue();
             } else {
                 count = 0;
             }

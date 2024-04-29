@@ -129,17 +129,28 @@ public class SetEventOccurenceCountAction implements ActionExecutor {
     }
 
     private boolean updatePastEvents(Event event, String generatedPropertyKey, long count) {
-        ArrayList<Map<String, Object>> pastEvents = new ArrayList<>();
-        ArrayList<Map<String, Object>> existingPastEvents = (ArrayList<Map<String, Object>>) event.getProfile().getSystemProperties().get("pastEvents");
-        if (existingPastEvents != null) {
-            pastEvents.addAll(existingPastEvents.stream().filter(pastEvent -> !pastEvent.get("key").equals(generatedPropertyKey)).collect(Collectors.toList()));
+        List<Map<String, Object>> existingPastEvents = (List<Map<String, Object>>) event.getProfile().getSystemProperties().get("pastEvents");
+        if (existingPastEvents == null) {
+            existingPastEvents = new ArrayList<>();
+            event.getProfile().getSystemProperties().put("pastEvents", existingPastEvents);
         }
 
-        Map<String, Object> pastEvent = new HashMap<>();
-        pastEvent.put("key", generatedPropertyKey);
-        pastEvent.put("count", count);
-        pastEvents.add(pastEvent);
-        return PropertyHelper.setProperty(event.getProfile(), "systemProperties.pastEvents", pastEvents, "alwaysSet");
+        for (Map<String, Object> pastEvent : existingPastEvents) {
+            if (generatedPropertyKey.equals(pastEvent.get("key"))) {
+                pastEvent.put("count", count);
+                return true;
+            }
+        }
+
+        return addNewPastEvent(existingPastEvents, generatedPropertyKey, count);
+    }
+
+    private boolean addNewPastEvent(List<Map<String, Object>> existingPastEvents, String key, long count) {
+        Map<String, Object> newPastEvent = new HashMap<>();
+        newPastEvent.put("key", key);
+        newPastEvent.put("count", count);
+        existingPastEvents.add(newPastEvent);
+        return true;  // New event added
     }
 
     private boolean inTimeRange(LocalDateTime eventTime, Integer numberOfDays, LocalDateTime fromDate, LocalDateTime toDate) {
