@@ -76,7 +76,7 @@
         <elasticsearch.test.version>7.11.0</elasticsearch.test.version>
         <lucene.version>8.2.0</lucene.version>
         <groovy.version>3.0.3</groovy.version>
-        <networknt.version>1.0.49</networknt.version>
+        <networknt.version>1.4.0</networknt.version>
         <bean.validation.version>1.1.0.Final</bean.validation.version>
         <hibernate.validator.version>5.4.3.Final</hibernate.validator.version>
 
@@ -87,7 +87,6 @@
         <scala.version>2.12.6</scala.version>
         <encoding>UTF-8</encoding>
 
-        <gatling.version>2.1.2</gatling.version>
         <scala-maven-plugin.version>4.3.0</scala-maven-plugin.version>
 
         <!-- Librairies for Karaf packaging -->
@@ -953,21 +952,6 @@
                 <scope>test</scope>
             </dependency>
 
-            <dependency>
-                <groupId>io.gatling</groupId>
-                <artifactId>gatling-app</artifactId>
-                <version>${gatling.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>io.gatling</groupId>
-                <artifactId>gatling-recorder</artifactId>
-                <version>${gatling.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>io.gatling.highcharts</groupId>
-                <artifactId>gatling-charts-highcharts</artifactId>
-                <version>${gatling.version}</version>
-            </dependency>
             <dependency>
                 <groupId>org.scala-lang</groupId>
                 <artifactId>scala-library</artifactId>

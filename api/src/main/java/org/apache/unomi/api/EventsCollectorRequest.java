@@ -17,10 +17,6 @@
 
 package org.apache.unomi.api;
 
-import org.apache.unomi.api.utils.ValidationPattern;
-import org.hibernate.validator.constraints.NotEmpty;
-
-import javax.validation.constraints.Pattern;
 import java.util.List;
 
 /**
@@ -28,13 +24,10 @@ import java.util.List;
  */
 public class EventsCollectorRequest {
 
-    @NotEmpty
     private List<Event> events;
 
-    @Pattern(regexp = ValidationPattern.TEXT_VALID_CHARACTERS_PATTERN)
     private String sessionId;
 
-    @Pattern(regexp = ValidationPattern.TEXT_VALID_CHARACTERS_PATTERN)
     private String profileId;
 
     /**
