@@ -335,7 +335,6 @@
                 <configuration>
                     <installedFeatures>
                         <feature>wrapper</feature>
-                        <feature>hibernate-validator</feature>
                         <feature>cxf-commands</feature>
                     </installedFeatures>
                     <startupFeatures>
