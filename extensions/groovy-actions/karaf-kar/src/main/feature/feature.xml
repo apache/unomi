@@ -20,9 +20,9 @@
         <details>${project.description}</details>
         <feature>wrap</feature>
         <feature>unomi-kar</feature>
-        <bundle start-level="85">mvn:org.codehaus.groovy/groovy/${groovy.version}</bundle>
-        <bundle start-level="85">mvn:org.codehaus.groovy/groovy-xml/${groovy.version}</bundle>
-        <bundle start-level="85">mvn:org.codehaus.groovy/groovy-json/${groovy.version}</bundle>
+        <bundle start-level="85">mvn:org.apache.groovy/groovy/${groovy.version}</bundle>
+        <bundle start-level="85">mvn:org.apache.groovy/groovy-xml/${groovy.version}</bundle>
+        <bundle start-level="85">mvn:org.apache.groovy/groovy-json/${groovy.version}</bundle>
         <bundle start-level="85">wrap:mvn:io.github.http-builder-ng/http-builder-ng-core/1.0.4</bundle>
         <bundle start-level="85">mvn:org.jsoup/jsoup/1.13.1</bundle>
         <bundle start-level="85">mvn:com.sun.activation/javax.activation/1.2.0</bundle>

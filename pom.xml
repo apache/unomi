@@ -75,7 +75,7 @@
         <elasticsearch.version>7.4.2</elasticsearch.version>
         <elasticsearch.test.version>7.11.0</elasticsearch.test.version>
         <lucene.version>8.2.0</lucene.version>
-        <groovy.version>3.0.3</groovy.version>
+        <groovy.version>4.0.21</groovy.version>
         <networknt.version>1.4.0</networknt.version>
         <bean.validation.version>1.1.0.Final</bean.validation.version>
 
