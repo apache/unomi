@@ -116,8 +116,6 @@ include::connectors/connectors.adoc[]
 
 include::connectors/salesforce-connector.adoc[]
 
-include::connectors/mailchimp-connector.adoc[]
-
 == Developers
 
 include::building-and-deploying.adoc[]

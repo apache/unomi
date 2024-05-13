@@ -17,8 +17,6 @@ Apache Unomi provides the following connectors:
 
 * <<Salesforce Connector,Salesforce CRM connector>>
 
-* <<MailChimp Connector,Mailchimp connector>>
-
 ==== Call for contributors
 
 We are looking for help with the development of additional connectors. Any contribution (large or small) is more than
