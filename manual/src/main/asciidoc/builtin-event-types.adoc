@@ -570,7 +570,7 @@ Based on the structure of the following object: Event
 ===== Example
 
 In this example, a user-generated a consent modification when visiting the home page, possibly by interacting with a consent form that captured his preferences.
-Different consent types were present on the page and he decided to GRANT the “mailchimp” consent.
+Different consent types were present on the page and he decided to GRANT the “tracking” consent.
 
 image::modify-consent-event-type.png[]
 
@@ -606,12 +606,6 @@ image::modify-consent-event-type.png[]
                     "description": "If approved we are allowed to track the visitor"
                 },
                 {
-                    "typeIdentifier": "mailchimp",
-                    "activated": true,
-                    "title": "Mailchimp",
-                    "description": "desc"
-                },
-                {
                     "typeIdentifier": "newsletter1",
                     "activated": true,
                     "title": "Newsletter 1",
@@ -635,12 +629,12 @@ image::modify-consent-event-type.png[]
     "target": {
         "itemType": "consent",
         "scope": "digitall",
-        "itemId": "mailchimp"
+        "itemId": "tracking"
     },
     "properties": {
         "consent": {
             "scope": "digitall",
-            "typeIdentifier": "mailchimp",
+            "typeIdentifier": "tracking",
             "status": "GRANTED",
             "statusDate": "2020-01-31T20:10:00.463Z",
             "revokeDate": "2022-01-30T20:10:00.463Z"
