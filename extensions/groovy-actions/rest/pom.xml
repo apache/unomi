@@ -16,7 +16,8 @@
   ~ limitations under the License.
   -->
 
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <parent>
         <groupId>org.apache.unomi</groupId>
         <artifactId>unomi-groovy-actions-root</artifactId>
@@ -26,7 +27,8 @@
 
     <artifactId>unomi-groovy-actions-rest</artifactId>
     <name>Apache Unomi :: Extensions :: Groovy Actions :: REST API</name>
-    <description>REST API for the Apache Unomi Context Server extension that integrates with groovy actions</description>
+    <description>REST API for the Apache Unomi Context Server extension that integrates with groovy actions
+    </description>
     <packaging>bundle</packaging>
 
     <dependencies>

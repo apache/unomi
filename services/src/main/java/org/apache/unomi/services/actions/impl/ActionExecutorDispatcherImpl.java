@@ -17,8 +17,6 @@
 
 package org.apache.unomi.services.actions.impl;
 
-import org.apache.commons.beanutils.PropertyUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.actions.Action;
 import org.apache.unomi.api.actions.ActionDispatcher;

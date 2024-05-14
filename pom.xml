@@ -55,11 +55,6 @@
         <url>https://issues.apache.org/jira/browse/UNOMI</url>
     </issueManagement>
 
-    <ciManagement>
-        <system>Jenkins</system>
-        <url>https://builds.apache.org/job/unomi-master</url>
-    </ciManagement>
-
     <inceptionYear>2014</inceptionYear>
 
     <properties>
@@ -78,15 +73,16 @@
         <groovy.version>4.0.21</groovy.version>
         <networknt.version>1.4.0</networknt.version>
         <bean.validation.version>1.1.0.Final</bean.validation.version>
+        <apache.commons.io.version>2.16.1</apache.commons.io.version>
+        <apache.commons.lang3.version>3.3.2</apache.commons.lang3.version>
+        <apache.commons.beanutils.version>1.9.4</apache.commons.beanutils.version>
+        <apache.commons.collections.version>3.2.2</apache.commons.collections.version>
 
-        <java.version>1.8</java.version>
+        <java.version>11</java.version>
 
         <maven.compiler.source>${java.version}</maven.compiler.source>
         <maven.compiler.target>${java.version}</maven.compiler.target>
-        <scala.version>2.12.6</scala.version>
         <encoding>UTF-8</encoding>
-
-        <scala-maven-plugin.version>4.3.0</scala-maven-plugin.version>
 
         <!-- Librairies for Karaf packaging -->
         <xerces.version>2.11.0_1</xerces.version>
@@ -677,7 +673,6 @@
 
     <dependencyManagement>
         <dependencies>
-
             <dependency>
                 <groupId>org.osgi</groupId>
                 <artifactId>osgi.core</artifactId>
@@ -775,12 +770,12 @@
             <dependency>
                 <groupId>commons-beanutils</groupId>
                 <artifactId>commons-beanutils</artifactId>
-                <version>1.9.4</version>
+                <version>${apache.commons.beanutils.version}</version>
             </dependency>
             <dependency>
                 <groupId>commons-collections</groupId>
                 <artifactId>commons-collections</artifactId>
-                <version>3.2.2</version>
+                <version>${apache.commons.collections.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.commons</groupId>
@@ -943,13 +938,6 @@
                 <version>1.4.181</version>
                 <scope>test</scope>
             </dependency>
-
-            <dependency>
-                <groupId>org.scala-lang</groupId>
-                <artifactId>scala-library</artifactId>
-                <version>${scala.version}</version>
-            </dependency>
-
             <dependency>
                 <groupId>org.apache.servicemix.bundles</groupId>
                 <artifactId>org.apache.servicemix.bundles.jakarta-regexp</artifactId>
