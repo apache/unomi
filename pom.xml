@@ -93,8 +93,8 @@
         <xalan.bundle.version>2.7.2_3</xalan.bundle.version>
         <xalan-serializer.bundle.version>2.7.2_1</xalan-serializer.bundle.version>
         <jna.version>4.5.0</jna.version>
-        <httpclient-osgi.version>4.5.5</httpclient-osgi.version>
-        <httpcore-osgi.version>4.4.9</httpcore-osgi.version>
+        <httpclient-osgi.version>4.5.14</httpclient-osgi.version>
+        <httpcore-osgi.version>4.4.16</httpcore-osgi.version>
 
         <node.version>v16.20.2</node.version>
         <yarn.version>v1.22.19</yarn.version>
