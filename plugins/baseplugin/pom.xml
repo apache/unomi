@@ -72,10 +72,6 @@
             <artifactId>ognl</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.javassist</groupId>
-            <artifactId>javassist</artifactId>
-        </dependency>
-        <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
             <scope>provided</scope>
@@ -121,7 +117,6 @@
                         <Import-Package>
                             jdk.internal.module;resolution:=optional,
                             com.sun.tools.attach;resolution:=optional,
-                            javassist;resolution:=optional,
                             !com.sun.jdi*,
                             *
                         </Import-Package>

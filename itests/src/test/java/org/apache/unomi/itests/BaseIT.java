@@ -70,12 +70,16 @@ import org.ops4j.pax.exam.options.MavenArtifactUrlReference;
 import org.ops4j.pax.exam.options.extra.VMOption;
 import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
 import org.ops4j.pax.exam.spi.reactors.PerSuite;
+import org.ops4j.pax.exam.util.Filter;
+import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceEvent;
 import org.osgi.framework.ServiceListener;
 import org.osgi.framework.ServiceReference;
+import org.osgi.service.cm.ConfigurationAdmin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.inject.Inject;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
@@ -145,6 +149,13 @@ public abstract class BaseIT extends KarafTestSupport {
     protected IRouterCamelContext routerCamelContext;
     protected UserListService userListService;
     protected TopicService topicService;
+
+    @Inject
+    protected BundleContext bundleContext;
+
+    @Inject
+    @Filter(timeout = 600000)
+    protected ConfigurationAdmin configurationAdmin;
 
     protected CloseableHttpClient httpClient;
 
