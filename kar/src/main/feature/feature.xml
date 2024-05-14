@@ -59,7 +59,7 @@
         <bundle start-level="75">mvn:com.fasterxml.jackson.jaxrs/jackson-jaxrs-json-provider/${version.jackson.core}</bundle>
         <bundle start-level="75">mvn:org.yaml/snakeyaml/1.33</bundle>
         <bundle start-level="75">mvn:com.fasterxml.jackson.dataformat/jackson-dataformat-yaml/${version.jackson.core}</bundle>
-        <bundle start-level="75">mvn:org.apache.servicemix.bundles/org.apache.servicemix.bundles.joda-time/2.3_1</bundle>
+        <bundle start-level="75">mvn:joda-time/joda-time/${joda-time.version}</bundle>
         <bundle start-level="75">mvn:org.apache.servicemix.specs/org.apache.servicemix.specs.jaxws-api-2.2/2.9.0</bundle>
         <bundle start-level="75">mvn:javax.annotation/javax.annotation-api/1.3.2</bundle>
         <bundle start-level="75">mvn:org.apache.servicemix.bundles/org.apache.servicemix.bundles.jsr305/${jsr305.bundle.version}</bundle>
