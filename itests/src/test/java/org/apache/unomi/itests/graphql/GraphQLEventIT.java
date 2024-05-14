@@ -19,16 +19,9 @@ package org.apache.unomi.itests.graphql;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.Profile;
-import org.apache.unomi.api.services.DefinitionsService;
-import org.apache.unomi.api.services.EventService;
-import org.apache.unomi.persistence.spi.PersistenceService;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.ops4j.pax.exam.util.Filter;
-
-import javax.inject.Inject;
-import java.io.IOException;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;

@@ -124,6 +124,7 @@
                             org.apache.unomi.api.segments,
                             org.apache.unomi.api.rules,
                             org.apache.unomi.api.query,
+                            sun.nio.ch;resolution:=optional,
                             *
                         </Import-Package>
                         <Web-ContextPath>/</Web-ContextPath>

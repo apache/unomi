@@ -19,13 +19,9 @@ package org.apache.unomi.itests.graphql;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.ProfileAlias;
-import org.apache.unomi.api.services.ProfileService;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.ops4j.pax.exam.util.Filter;
-
-import javax.inject.Inject;
 
 public class GraphQLProfileAliasesIT extends BaseGraphQLIT {
 

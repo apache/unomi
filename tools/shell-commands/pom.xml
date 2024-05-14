@@ -116,6 +116,10 @@
                 <artifactId>maven-bundle-plugin</artifactId>
                 <configuration>
                     <instructions>
+                        <Import-Package>
+                            sun.nio.ch;resolution:=optional,
+                            *
+                        </Import-Package>
                         <Export-Package>
                             org.apache.unomi.shell.migration.utils,
                             org.apache.unomi.shell.migration.service,

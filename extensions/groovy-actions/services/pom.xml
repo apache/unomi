@@ -104,6 +104,10 @@
                 <extensions>true</extensions>
                 <configuration>
                     <instructions>
+                        <Import-Package>
+                            sun.nio.ch;resolution:=optional,
+                            *
+                        </Import-Package>
                         <_dsannotations>*</_dsannotations>
                         <Embed-Dependency>*;scope=compile|runtime</Embed-Dependency>
                         <Unomi-Source-Folders>${project.basedir}</Unomi-Source-Folders>

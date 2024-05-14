@@ -137,6 +137,7 @@
                             org.jcodings.specific;resolution:=optional,
                             org.joni;resolution:=optional,
                             org.joni.exception;resolution:=optional,
+                            sun.nio.ch;resolution:=optional,
                             *
                         </Import-Package>
                     </instructions>

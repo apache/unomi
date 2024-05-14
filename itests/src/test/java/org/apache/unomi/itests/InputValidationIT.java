@@ -23,26 +23,18 @@ import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.util.EntityUtils;
-import org.apache.unomi.api.Event;
-import org.apache.unomi.api.Metadata;
 import org.apache.unomi.api.Scope;
-import org.apache.unomi.api.services.ScopeService;
 import org.apache.unomi.itests.tools.httpclient.HttpClientThatWaitsForUnomi;
-import org.apache.unomi.schema.api.JsonSchemaWrapper;
-import org.apache.unomi.schema.api.SchemaService;
 import org.junit.*;
 import org.junit.runner.RunWith;
 import org.ops4j.pax.exam.junit.PaxExam;
 import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
 import org.ops4j.pax.exam.spi.reactors.PerSuite;
-import org.ops4j.pax.exam.util.Filter;
 
-import javax.inject.Inject;
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
@@ -55,7 +47,6 @@ public class InputValidationIT extends BaseIT {
     private final static String EVENT_COLLECTOR_URL = "/eventcollector";
     private final static String CONTEXT_JS_URL = "/context.js";
     private final static String CONTEXT_JSON_URL = "/context.json";
-    private final static String DUMMY_EVENT_TYPE_SCHEMA = "dummy-event-type.json";
 
     private final static String ERROR_MESSAGE_REQUEST_SIZE_LIMIT_EXCEEDED = "Request rejected by the server because: Request size exceed the limit";
     private final static String ERROR_MESSAGE_INVALID_DATA_RECEIVED = "Request rejected by the server because: Invalid received data";
