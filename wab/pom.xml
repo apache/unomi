@@ -100,11 +100,6 @@
             <artifactId>pax-web-api</artifactId>
             <scope>provided</scope>
         </dependency>
-        <dependency>
-            <groupId>org.glassfish</groupId>
-            <artifactId>javax.json</artifactId>
-        </dependency>
-
     </dependencies>
 
     <build>
