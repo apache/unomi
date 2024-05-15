@@ -118,6 +118,7 @@
                             jdk.internal.module;resolution:=optional,
                             com.sun.tools.attach;resolution:=optional,
                             !com.sun.jdi*,
+                            javassist;resolution:=optional,
                             *
                         </Import-Package>
                     </instructions>

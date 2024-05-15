@@ -61,9 +61,9 @@
         <karaf.version>4.2.15</karaf.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <cxf.version>3.3.11</cxf.version>
-        <version.jackson.core>2.10.5</version.jackson.core>
-        <version.jackson.databind>2.10.5.1</version.jackson.databind>
-        <version.jackson.jaxb>2.10.5</version.jackson.jaxb>
+        <version.jackson.core>2.11.4</version.jackson.core>
+        <version.jackson.databind>2.11.4</version.jackson.databind>
+        <version.jackson.jaxb>2.11.4</version.jackson.jaxb>
         <version.karaf>4.2.15</version.karaf>
         <version.karaf.cellar>4.2.1</version.karaf.cellar>
         <version.pax.exam>4.13.5</version.pax.exam>
@@ -81,6 +81,7 @@
         <slf4j.version>1.7.36</slf4j.version>
         <joda-time.version>2.12.7</joda-time.version>
         <st4.version>4.3.4</st4.version>
+        <json-patch.version>1.9</json-patch.version>
 
         <java.version>11</java.version>
 
@@ -1016,10 +1017,11 @@
                 <plugin>
                     <groupId>org.apache.felix</groupId>
                     <artifactId>maven-bundle-plugin</artifactId>
-                    <version>5.1.9</version>
+                    <version>4.2.1</version>
                     <extensions>true</extensions>
                     <configuration>
                         <instructions>
+                            <_noimportjava>true</_noimportjava>
                             <Embed-Dependency>*;scope=compile|runtime</Embed-Dependency>
                         </instructions>
                     </configuration>
