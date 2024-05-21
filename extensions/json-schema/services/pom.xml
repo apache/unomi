@@ -32,8 +32,7 @@
 
     <properties>
         <version.schema>1.0.86</version.schema>
-        <version.schema.jackson>2.14.2</version.schema.jackson>
-        <version.schema.itu>1.7.0</version.schema.itu>
+        <version.schema.jackson>2.17.1</version.schema.jackson>
     </properties>
 
     <dependencies>
@@ -81,12 +80,6 @@
             </exclusions>
         </dependency>
         <dependency>
-            <groupId>com.ethlo.time</groupId>
-            <artifactId>itu</artifactId>
-            <version>${version.schema.itu}</version>
-            <scope>compile</scope>
-        </dependency>
-        <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-core</artifactId>
             <version>${version.schema.jackson}</version>
@@ -108,12 +101,6 @@
             <groupId>com.fasterxml.jackson.dataformat</groupId>
             <artifactId>jackson-dataformat-yaml</artifactId>
             <version>${version.schema.jackson}</version>
-            <scope>compile</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.yaml</groupId>
-            <artifactId>snakeyaml</artifactId>
-            <version>1.33</version>
             <scope>compile</scope>
         </dependency>
     </dependencies>
