@@ -19,7 +19,6 @@
     <feature name="cdp-graphql-feature" description="Apache Unomi :: GraphQL API :: Karaf Feature"
              version="${project.version}">
         <feature>unomi-kar</feature>
-        <bundle start-level="80">mvn:com.google.guava/guava/24.1.1-jre</bundle>
         <bundle start-level="80">wrap:mvn:com.google.code.findbugs/jsr305/1.3.9</bundle>
         <bundle start-level="80">wrap:mvn:org.checkerframework/checker-compat-qual/2.0.0</bundle>
         <bundle start-level="80">wrap:mvn:com.google.errorprone/error_prone_annotations/2.1.3</bundle>

@@ -298,7 +298,7 @@ public class SchemaServiceImpl implements SchemaService {
         return new JsonSchemaWrapper(schemaId, schema, target, name, extendsSchemaId, new Date());
     }
 
-    private void refreshJSONSchemas() {
+    public void refreshJSONSchemas() {
         // use local variable to avoid concurrency issues.
         Map<String, JsonSchemaWrapper> schemasByIdReloaded = new HashMap<>();
         schemasByIdReloaded.putAll(predefinedUnomiJSONSchemaById);

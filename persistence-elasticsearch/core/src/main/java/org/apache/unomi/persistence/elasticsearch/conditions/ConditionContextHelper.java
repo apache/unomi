@@ -17,9 +17,6 @@
 
 package org.apache.unomi.persistence.elasticsearch.conditions;
 
-import com.google.common.base.Function;
-import com.google.common.collect.Collections2;
-import com.google.common.collect.Lists;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.core.util.IOUtils;
 import org.apache.lucene.analysis.charfilter.MappingCharFilterFactory;
@@ -33,6 +30,7 @@ import java.io.IOException;
 import java.io.Reader;
 import java.io.StringReader;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class ConditionContextHelper {
     private static final Logger logger = LoggerFactory.getLogger(ConditionContextHelper.class);
@@ -142,15 +140,12 @@ public class ConditionContextHelper {
 
     public static <T> Collection<T> foldToASCII(Collection<T> s) {
         if (s != null) {
-            return Collections2.transform(s, new Function<T, T>() {
-                @Override
-                public T apply(T o) {
-                    if (o instanceof String) {
-                        return (T) ConditionContextHelper.foldToASCII((String) o);
-                    }
-                    return o;
+            return s.stream().map(o -> {
+                if (o instanceof String) {
+                    return (T) ConditionContextHelper.foldToASCII((String) o);
                 }
-            });
+                return o;
+            }).collect(Collectors.toCollection(ArrayList::new));
         }
         return null;
     }

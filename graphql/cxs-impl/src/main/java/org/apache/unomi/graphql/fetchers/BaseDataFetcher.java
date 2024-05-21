@@ -17,7 +17,7 @@
 
 package org.apache.unomi.graphql.fetchers;
 
-import com.google.common.base.Strings;
+import org.apache.commons.lang3.StringUtils;
 import graphql.schema.DataFetcher;
 import graphql.schema.DataFetchingEnvironment;
 import org.apache.unomi.graphql.utils.GraphQLObjectMapper;
@@ -48,7 +48,7 @@ public abstract class BaseDataFetcher<T> implements DataFetcher<T> {
     protected Date parseDateParam(final String name, final DataFetchingEnvironment environment) {
         final String paramValue = environment.getArgument(name);
         Date param = null;
-        if (!Strings.isNullOrEmpty(paramValue)) {
+        if (StringUtils.isNotEmpty(paramValue)) {
             try {
                 param = DateFormat.getInstance().parse(paramValue);
             } catch (ParseException e) {

@@ -17,7 +17,6 @@
 
 package org.apache.unomi.graphql.providers;
 
-import com.google.common.collect.Lists;
 import graphql.schema.GraphQLFieldDefinition;
 import graphql.schema.GraphQLFieldsContainer;
 import graphql.schema.GraphQLInputFieldsContainer;
@@ -25,6 +24,7 @@ import graphql.schema.GraphQLInputObjectField;
 import graphql.schema.GraphQLNamedSchemaElement;
 import graphql.schema.visibility.GraphqlFieldVisibility;
 
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
@@ -44,12 +44,12 @@ public class CompositeGraphQLFieldVisibility implements GraphqlFieldVisibility {
     @Override
     public List<GraphQLFieldDefinition> getFieldDefinitions(GraphQLFieldsContainer fieldsContainer) {
         if (providers == null) {
-            return Lists.newArrayList();
+            return new ArrayList<>();
         }
         return providers.stream().
                 map(provider -> provider.getGraphQLFieldVisibility().getFieldDefinitions(fieldsContainer)).
                 reduce(CompositeGraphQLFieldVisibility::intersect).
-                orElse(Lists.newArrayList());
+                orElse(new ArrayList<>());
     }
 
     @Override
@@ -67,12 +67,12 @@ public class CompositeGraphQLFieldVisibility implements GraphqlFieldVisibility {
     @Override
     public List<GraphQLInputObjectField> getFieldDefinitions(GraphQLInputFieldsContainer fieldsContainer) {
         if (providers == null) {
-            return Lists.newArrayList();
+            return new ArrayList<>();
         }
         return providers.stream().
                 map(provider -> provider.getGraphQLFieldVisibility().getFieldDefinitions(fieldsContainer)).
                 reduce(CompositeGraphQLFieldVisibility::intersect).
-                orElse(Lists.newArrayList());
+                orElse(new ArrayList<>());
     }
 
     @Override

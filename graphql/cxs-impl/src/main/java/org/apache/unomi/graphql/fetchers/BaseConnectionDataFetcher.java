@@ -17,8 +17,8 @@
 
 package org.apache.unomi.graphql.fetchers;
 
-import com.google.common.base.Strings;
 import graphql.schema.DataFetchingEnvironment;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.query.Query;
 import org.apache.unomi.graphql.types.input.CDPOrderByInput;
@@ -53,7 +53,7 @@ public abstract class BaseConnectionDataFetcher<T> extends BaseDataFetcher<T> {
                     .map(CDPOrderByInput::asString)
                     .collect(Collectors.joining(","));
 
-            if (!Strings.isNullOrEmpty(sortBy)) {
+            if (StringUtils.isNotEmpty(sortBy)) {
                 query.setSortby(sortBy);
             }
         }

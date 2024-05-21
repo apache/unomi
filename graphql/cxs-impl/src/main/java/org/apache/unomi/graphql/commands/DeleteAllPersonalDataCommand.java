@@ -16,7 +16,7 @@
  */
 package org.apache.unomi.graphql.commands;
 
-import com.google.common.base.Strings;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.services.PrivacyService;
 import org.apache.unomi.api.services.ProfileService;
@@ -67,7 +67,7 @@ public class DeleteAllPersonalDataCommand extends BaseCommand<Boolean> {
 
             final String personaId = (String) cdpProfileIDInput.get("id");
 
-            if (Strings.isNullOrEmpty(personaId)) {
+            if (StringUtils.isEmpty(personaId)) {
                 throw new IllegalArgumentException("The \"id\" variable can not be null or empty");
             }
         }
