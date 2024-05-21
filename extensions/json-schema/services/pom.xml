@@ -125,6 +125,7 @@
                             org.joni;resolution:=optional,
                             org.joni.exception;resolution:=optional,
                             sun.nio.ch;resolution:=optional,
+                            com.ethlo.time;resolution:=optional,
                             *
                         </Import-Package>
                     </instructions>
