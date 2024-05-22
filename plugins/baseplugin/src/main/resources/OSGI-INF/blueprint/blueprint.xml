@@ -113,7 +113,7 @@
         <service-properties>
             <entry key="queryBuilderId" value="pastEventConditionESQueryBuilder"/>
         </service-properties>
-        <bean class="org.apache.unomi.plugins.baseplugin.conditions.PastEventConditionESQueryBuilder" init-method="init">
+        <bean class="org.apache.unomi.plugins.baseplugin.conditions.PastEventConditionESQueryBuilder">
             <property name="definitionsService" ref="definitionsService"/>
             <property name="persistenceService" ref="persistenceService"/>
             <property name="segmentService" ref="segmentService"/>

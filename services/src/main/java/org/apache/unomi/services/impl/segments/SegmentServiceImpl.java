@@ -31,7 +31,7 @@ import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.api.services.RulesService;
 import org.apache.unomi.api.services.SchedulerService;
 import org.apache.unomi.api.services.SegmentService;
-import org.apache.unomi.api.utils.ConditionHelper;
+import org.apache.unomi.api.utils.ConditionBuilder;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.persistence.spi.aggregate.TermsAggregate;
 import org.apache.unomi.services.impl.AbstractServiceImpl;
@@ -82,9 +82,6 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
     private int maximumIdsQueryCount = 5000;
     private boolean pastEventsDisablePartitions = false;
     private int dailyDateExprEvaluationHourUtc = 5;
-
-    private ConditionHelper conditionHelper;
-
 
     public SegmentServiceImpl() {
         logger.info("Initializing segment service...");
@@ -158,7 +155,6 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
         }
         bundleContext.addBundleListener(this);
         initializeTimer();
-        conditionHelper = new ConditionHelper(definitionsService);
         logger.info("Segment service initialized.");
     }
 
@@ -881,10 +877,11 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
      * @return the set of profile ids.
      */
     private Set<String> getExistingProfilesWithPastEventOccurrenceCount(String generatedPropertyKey) {
-        Condition subConditionCount = conditionHelper.createProfilePropertyCondition("systemProperties.pastEvents.count", "greaterThan", 0, "propertyValueInteger");
-        Condition subConditionKey = conditionHelper.createProfilePropertyCondition("systemProperties.pastEvents.key", "equals", generatedPropertyKey, "propertyValue");
-        Condition booleanCondition = conditionHelper.createBooleanCondition("and", Arrays.asList(subConditionCount, subConditionKey));
-        Condition condition = conditionHelper.createNestedCondition("systemProperties.pastEvents", booleanCondition);
+        ConditionBuilder conditionBuilder = definitionsService.getConditionBuilder();
+        ConditionBuilder.ConditionItem subConditionCount = conditionBuilder.profileProperty("systemProperties.pastEvents.count").greaterThan(0);
+        ConditionBuilder.ConditionItem subConditionKey = conditionBuilder.profileProperty("systemProperties.pastEvents.key").equalTo(generatedPropertyKey);
+        ConditionBuilder.ConditionItem booleanCondition = conditionBuilder.and(subConditionCount, subConditionKey);
+        Condition condition = conditionBuilder.nested(booleanCondition, "systemProperties.pastEvents").build();
 
         Set<String> profileIds = new HashSet<>();
         if (pastEventsDisablePartitions) {
@@ -1011,7 +1008,8 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
             if (batch.size() == segmentUpdateBatchSize || (!entryIterator.hasNext() && !batch.isEmpty())) {
                 try {
                     batch.forEach((id, params) -> {
-                        Condition profileIdCondition = conditionHelper.createProfilePropertyCondition("itemId", "equals", id, "propertyValue");
+                        ConditionBuilder conditionBuilder = definitionsService.getConditionBuilder();
+                        Condition profileIdCondition = conditionBuilder.profileProperty("itemId").equalTo(id).build();
                         Condition[] conditions = new Condition[]{profileIdCondition};
                         persistenceService.updateWithQueryAndStoredScript(Profile.class, new String[]{"updatePastEventOccurences"}, params, conditions);
                     });

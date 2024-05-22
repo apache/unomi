@@ -22,6 +22,7 @@ import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.api.rules.Rule;
 import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.api.services.RulesService;
+import org.apache.unomi.api.utils.ConditionBuilder;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.junit.Assert;
 import org.junit.Before;
@@ -105,7 +106,7 @@ public class RuleServiceIT extends BaseIT {
 
     @Test
     public void testRuleEventTypeOptimization() throws InterruptedException {
-        ConditionBuilder builder = new ConditionBuilder(definitionsService);
+        ConditionBuilder builder = definitionsService.getConditionBuilder();
         Rule simpleEventTypeRule = new Rule(new Metadata(TEST_SCOPE, "simple-event-type-rule", "Simple event type rule", "A rule with a simple condition to match an event type"));
         simpleEventTypeRule.setCondition(builder.condition("eventTypeCondition").parameter("eventTypeId", "view").build());
         createAndWaitForRule(simpleEventTypeRule);

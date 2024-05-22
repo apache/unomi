@@ -12,34 +12,33 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
- * limitations under the License
+ * limitations under the License.
  */
-
-package org.apache.unomi.itests;
+package org.apache.unomi.api.utils;
 
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.services.DefinitionsService;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Date;
+import java.util.*;
 
 /**
- * Utility class for building conditions
- *
- * @author Sergiy Shyrkov
+ * Utility class for creating various types of {@link Condition} objects.
+ * This class provides methods to easily construct conditions used for querying data based on specific criteria.
  */
 public class ConditionBuilder {
 
     private DefinitionsService definitionsService;
 
     /**
-     * Initializes an instance of this class.
+     * Constructs a new Builder with a specified DefinitionsService.
      *
-     * @param definitionsService an instance of the {@link DefinitionsService}
+     * @param definitionsService the DefinitionsService to use for obtaining condition types.
      */
     public ConditionBuilder(DefinitionsService definitionsService) {
-        super();
+        this.definitionsService = definitionsService;
+    }
+
+    public void setDefinitionsService(DefinitionsService definitionsService) {
         this.definitionsService = definitionsService;
     }
 
@@ -53,6 +52,10 @@ public class ConditionBuilder {
 
     public CompoundCondition or(ConditionItem condition1, ConditionItem condition2) {
         return new CompoundCondition(condition1, condition2, "or");
+    }
+
+    public NestedCondition nested(ConditionItem subCondition, String path) {
+        return new NestedCondition(subCondition, path);
     }
 
     public PropertyCondition profileProperty(String propertyName) {
@@ -315,6 +318,14 @@ public class ConditionBuilder {
         }
     }
 
+    public class NestedCondition extends ConditionItem {
+        NestedCondition(ConditionItem subCondition, String path) {
+            super("nestedCondition", subCondition.definitionsService);
+            parameter("path", path);
+            parameter("subCondition", subCondition.build());
+        }
+    }
+
     public class ConditionItem {
 
         protected Condition condition;
@@ -359,4 +370,5 @@ public class ConditionBuilder {
         }
 
     }
+
 }

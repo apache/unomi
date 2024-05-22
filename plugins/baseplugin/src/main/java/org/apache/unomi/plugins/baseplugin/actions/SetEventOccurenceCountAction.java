@@ -137,20 +137,19 @@ public class SetEventOccurenceCountAction implements ActionExecutor {
 
         for (Map<String, Object> pastEvent : existingPastEvents) {
             if (generatedPropertyKey.equals(pastEvent.get("key"))) {
+                if (pastEvent.get("count").equals(count)) {
+                    return false;
+                }
                 pastEvent.put("count", count);
                 return true;
             }
         }
 
-        return addNewPastEvent(existingPastEvents, generatedPropertyKey, count);
-    }
-
-    private boolean addNewPastEvent(List<Map<String, Object>> existingPastEvents, String key, long count) {
         Map<String, Object> newPastEvent = new HashMap<>();
-        newPastEvent.put("key", key);
+        newPastEvent.put("key", generatedPropertyKey);
         newPastEvent.put("count", count);
         existingPastEvents.add(newPastEvent);
-        return true;  // New event added
+        return true;
     }
 
     private boolean inTimeRange(LocalDateTime eventTime, Integer numberOfDays, LocalDateTime fromDate, LocalDateTime toDate) {

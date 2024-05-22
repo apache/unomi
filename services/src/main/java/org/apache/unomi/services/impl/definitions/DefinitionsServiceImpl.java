@@ -25,6 +25,7 @@ import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.SchedulerService;
+import org.apache.unomi.api.utils.ConditionBuilder;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.api.utils.ParserHelper;
@@ -67,6 +68,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
 
     private long definitionsRefreshInterval = 10000;
 
+    private ConditionBuilder conditionBuilder;
     private BundleContext bundleContext;
     public DefinitionsServiceImpl() {
     }
@@ -101,6 +103,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
 
         bundleContext.addBundleListener(this);
         scheduleTypeReloads();
+        conditionBuilder = new ConditionBuilder(this);
         logger.info("Definitions service initialized.");
     }
 
@@ -523,4 +526,10 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
     public void refresh() {
         reloadTypes(true);
     }
+
+    @Override
+    public ConditionBuilder getConditionBuilder() {
+        return conditionBuilder;
+    }
+
 }
