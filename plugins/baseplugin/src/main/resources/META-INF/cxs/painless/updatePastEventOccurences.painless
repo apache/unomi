@@ -15,27 +15,33 @@
  * limitations under the License.
  */
 
-if (ctx._source.systemProperties == null) {
-    ctx._source.systemProperties = new HashMap();
-}
+if (params.containsKey(ctx._source.itemId)) {
+    Map pastEventKeyValue = params.get(ctx._source.itemId);
+    String pastEventKey = pastEventKeyValue.get('pastEventKey');
+    Long valueToAdd = (Long) pastEventKeyValue.get('valueToAdd');
 
-if (ctx._source.systemProperties.pastEvents == null) {
-    ctx._source.systemProperties.pastEvents = new ArrayList();
-}
-
-boolean exists = false;
-for (pastEvent in ctx._source.systemProperties.pastEvents) {
-    if (pastEvent.get("key") == params.pastEventKey) {
-        pastEvent.put("count", params.valueToAdd);
-        exists = true
+    if (ctx._source.systemProperties == null) {
+        ctx._source.systemProperties = new HashMap();
     }
-}
 
-if (!exists) {
-    Map newPastEvent = new HashMap();
-    newPastEvent.put('key', params.pastEventKey);
-    newPastEvent.put('count', params.valueToAdd);
-    ctx._source.systemProperties.pastEvents.add(newPastEvent);
-}
+    if (ctx._source.systemProperties.pastEvents == null) {
+        ctx._source.systemProperties.pastEvents = new ArrayList();
+    }
 
-ctx._source.systemProperties.put("lastUpdated", new Date());
+    boolean exists = false;
+    for (pastEvent in ctx._source.systemProperties.pastEvents) {
+        if (pastEvent.get('key') == pastEventKey) {
+            pastEvent.put('count', valueToAdd);
+            exists = true;
+        }
+    }
+
+    if (!exists) {
+        Map newPastEvent = new HashMap();
+        newPastEvent.put('key', pastEventKey);
+        newPastEvent.put('count', valueToAdd);
+        ctx._source.systemProperties.pastEvents.add(newPastEvent);
+    }
+
+    ctx._source.systemProperties.put('lastUpdated', new Date());
+}

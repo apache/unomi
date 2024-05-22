@@ -48,6 +48,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.net.URL;
 import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
@@ -987,36 +988,31 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
      */
     private Set<String> updatePastEventOccurrencesOnProfiles(Map<String, Long> eventCountByProfile, String propertyKey) {
         Set<String> profilesUpdated = new HashSet<>();
-        Map<String, Map[]> batch = new HashMap<>();
+        Set<String> batchProfilesToUpdate = new HashSet<>();
         Iterator<Map.Entry<String, Long>> entryIterator = eventCountByProfile.entrySet().iterator();
+        Map<String, Map<String, Object>> paramPerProfile = new HashMap<>();
 
         while (entryIterator.hasNext()) {
             Map.Entry<String, Long> entry = entryIterator.next();
             String profileId = entry.getKey();
             if (!profileId.startsWith("_")) {
-                Map<String, Object> scriptParams = new HashMap<>();
-                scriptParams.put("pastEventKey", propertyKey);
-                scriptParams.put("valueToAdd", entry.getValue());
-                Map<String, Object>[] params = new Map[]{scriptParams};
-                batch.put(profileId, params);
+                Map<String, Object> pastEventKeyValue = new HashMap<>();
+                pastEventKeyValue.put("pastEventKey", propertyKey);
+                pastEventKeyValue.put("valueToAdd", entry.getValue());
+                paramPerProfile.put(profileId, pastEventKeyValue);
                 profilesUpdated.add(profileId);
+                batchProfilesToUpdate.add(profileId);
             }
 
-
-
-
-            if (batch.size() == segmentUpdateBatchSize || (!entryIterator.hasNext() && !batch.isEmpty())) {
+            if (batchProfilesToUpdate.size() == segmentUpdateBatchSize || (!entryIterator.hasNext() && !batchProfilesToUpdate.isEmpty())) {
                 try {
-                    batch.forEach((id, params) -> {
-                        ConditionBuilder conditionBuilder = definitionsService.getConditionBuilder();
-                        Condition profileIdCondition = conditionBuilder.profileProperty("itemId").equalTo(id).build();
-                        Condition[] conditions = new Condition[]{profileIdCondition};
-                        persistenceService.updateWithQueryAndStoredScript(Profile.class, new String[]{"updatePastEventOccurences"}, params, conditions);
-                    });
+                    Condition profileIdCondition = definitionsService.getConditionBuilder().condition("idsCondition").parameter("ids", batchProfilesToUpdate).parameter("match", true).build();
+                    persistenceService.updateWithQueryAndStoredScript(Profile.class, new String[]{"updatePastEventOccurences"}, new Map[]{paramPerProfile}, new Condition[]{profileIdCondition});
                 } catch (Exception e) {
-                    logger.error("Error updating {} profiles for past event system properties", batch.size(), e);
+                    logger.error("Error updating {} profiles for past event system properties", paramPerProfile.size(), e);
                 } finally {
-                    batch.clear();
+                    paramPerProfile.clear();
+                    batchProfilesToUpdate.clear();
                 }
             }
         }
@@ -1032,7 +1028,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
                 sb.append(Integer.toHexString((array[i] & 0xFF) | 0x100).substring(1, 3));
             }
             return sb.toString();
-        } catch (java.security.NoSuchAlgorithmException e) {
+        } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException(e);
         }
     }
