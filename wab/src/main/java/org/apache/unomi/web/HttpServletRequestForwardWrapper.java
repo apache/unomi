@@ -28,12 +28,12 @@ import java.util.Collections;
 import java.util.Enumeration;
 
 /**
- * Http wrapper that force the content type to be "application/json"
+ * Http wrapper that force the content type to be "application/json;charset=UTF-8"
  */
 class HttpServletRequestForwardWrapper extends HttpServletRequestWrapper {
 
     private static final Logger logger = LoggerFactory.getLogger(HttpServletRequestForwardWrapper.class.getName());
-    private static final String JSON_CONTENT_TYPE = "application/json";
+    private static final String JSON_CONTENT_TYPE_UTF8 = "application/json;charset=UTF-8";
 
     public HttpServletRequestForwardWrapper(HttpServletRequest request) {
         super(request);
@@ -61,7 +61,7 @@ class HttpServletRequestForwardWrapper extends HttpServletRequestWrapper {
     @Override
     public String getHeader(String name) {
         if ("Content-Type".equals(name) || "content-type".equals(name)) {
-            return JSON_CONTENT_TYPE;
+            return JSON_CONTENT_TYPE_UTF8;
         }
         return super.getHeader(name);
     }
@@ -69,14 +69,14 @@ class HttpServletRequestForwardWrapper extends HttpServletRequestWrapper {
     @Override
     public Enumeration<String> getHeaders(String name) {
         if ("Content-Type".equals(name) || "content-type".equals(name)) {
-            return Collections.enumeration(Collections.singleton(JSON_CONTENT_TYPE));
+            return Collections.enumeration(Collections.singleton(JSON_CONTENT_TYPE_UTF8));
         }
         return super.getHeaders(name);
     }
 
     @Override
     public String getContentType() {
-        return JSON_CONTENT_TYPE;
+        return JSON_CONTENT_TYPE_UTF8;
     }
 
     @Override
