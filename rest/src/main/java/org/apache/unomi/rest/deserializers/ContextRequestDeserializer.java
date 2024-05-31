@@ -33,6 +33,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -57,6 +58,20 @@ public class ContextRequestDeserializer extends StdDeserializer<ContextRequest> 
 
     @Override
     public ContextRequest deserialize(JsonParser jsonParser, DeserializationContext context) throws IOException {
+        Charset defaultCharset = Charset.defaultCharset();
+
+        // Print the default charset
+        System.out.println("Default Charset: " + defaultCharset);
+
+        logger.info("Default Charset: " + defaultCharset);
+        // Print the name of the default charset
+        System.out.println("Default Charset Name: " + defaultCharset.name());
+        logger.info("Default Charset Name: " + defaultCharset.name());
+
+        // Print the display name of the default charset
+        System.out.println("Default Charset Display Name: " + defaultCharset.displayName());
+        logger.info("Default Charset Display Name: " + defaultCharset.displayName());
+
         JsonNode node = jsonParser.getCodec().readTree(jsonParser);
         // Validate schema on it
         if (!schemaService.isValid(node.toString(), "https://unomi.apache.org/schemas/json/rest/requestIds/1-0-0")) {
