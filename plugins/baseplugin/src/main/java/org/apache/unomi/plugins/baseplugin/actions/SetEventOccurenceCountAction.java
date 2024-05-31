@@ -137,7 +137,7 @@ public class SetEventOccurenceCountAction implements ActionExecutor {
 
         for (Map<String, Object> pastEvent : existingPastEvents) {
             if (generatedPropertyKey.equals(pastEvent.get("key"))) {
-                if (pastEvent.get("count").equals(count)) {
+                if (pastEvent.containsKey("count") && pastEvent.get("count").equals(count)) {
                     return false;
                 }
                 pastEvent.put("count", count);
