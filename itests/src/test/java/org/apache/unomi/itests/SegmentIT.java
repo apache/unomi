@@ -547,9 +547,8 @@ public class SegmentIT extends BaseIT {
 
         // insure the profile is engaged;
         try {
-            Assert.assertTrue("Profile should have 2 events in the scoring",
-                    (Long) ((Map) testEvent.getProfile().getSystemProperties().get("pastEvents"))
-                            .get(pastEventCondition.getParameterValues().get("generatedPropertyKey")) == 2);
+            Map<String, Object> pastEvent = ((List<Map<String, Object>>)testEvent.getProfile().getSystemProperties().get("pastEvents")).stream().filter(profilePastEvent -> profilePastEvent.get("key").equals(pastEventCondition.getParameterValues().get("generatedPropertyKey"))).findFirst().get();
+            Assert.assertEquals("Profile should have 2 events in the scoring", 2, (long) pastEvent.get("count"));
             Assert.assertTrue("Profile is engaged", testEvent.getProfile().getScores().containsKey("past-event-scoring-test")
                     && testEvent.getProfile().getScores().get("past-event-scoring-test") == 50);
         } catch (Exception e) {
@@ -562,8 +561,9 @@ public class SegmentIT extends BaseIT {
         // insure the profile is still engaged after recalculate;
         keepTrying("Profile should have 2 events in the scoring", () -> profileService.load("test_profile_id"), updatedProfile -> {
             try {
-                boolean eventCounted = (Integer) ((Map) updatedProfile.getSystemProperties().get("pastEvents"))
-                        .get(pastEventCondition.getParameterValues().get("generatedPropertyKey")) == 2;
+                Map<String, Object> pastEvent = ((List<Map<String, Object>>)updatedProfile.getSystemProperties().get("pastEvents")).stream().filter(profilePastEvent -> profilePastEvent.get("key").equals(pastEventCondition.getParameterValues().get("generatedPropertyKey"))).findFirst().get();
+
+                boolean eventCounted = (Integer) pastEvent.get("count") == 2;
                 boolean profileEngaged = updatedProfile.getScores().containsKey("past-event-scoring-test")
                         && updatedProfile.getScores().get("past-event-scoring-test") == 50;
                 return eventCounted && profileEngaged;

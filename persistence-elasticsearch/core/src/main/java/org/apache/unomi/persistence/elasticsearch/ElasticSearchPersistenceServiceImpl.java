@@ -1063,7 +1063,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Override
     public List<String> update(final Map<Item, Map> items, final Date dateHint, final Class clazz) {
-        if (items.size() == 0)
+        if (items.isEmpty())
             return new ArrayList<>();
 
         List<String> result = new InClassLoaderExecute<List<String>>(metricsService, this.getClass().getName() + ".updateItems", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {

@@ -27,6 +27,8 @@ import org.apache.unomi.persistence.elasticsearch.conditions.ConditionEvaluatorD
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.scripting.ScriptExecutor;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 public class PastEventConditionEvaluator implements ConditionEvaluator {
@@ -55,10 +57,14 @@ public class PastEventConditionEvaluator implements ConditionEvaluator {
         if (parameters.containsKey("generatedPropertyKey")) {
             String key = (String) parameters.get("generatedPropertyKey");
             Profile profile = (Profile) item;
-            Map<String,Object> pastEvents = (Map<String, Object>) profile.getSystemProperties().get("pastEvents");
+            List<Map<String, Object>> pastEvents =  (ArrayList<Map<String, Object>>) profile.getSystemProperties().get("pastEvents");
             if (pastEvents != null) {
-                Number l = (Number) pastEvents.get(key);
-                count = l != null ? l.longValue() : 0L;
+                Number l = (Number) pastEvents
+                        .stream()
+                        .filter(pastEvent -> pastEvent.get("key").equals(key))
+                        .findFirst()
+                        .map(pastEvent -> pastEvent.get("count")).orElse(0L);
+                count = l.longValue();
             } else {
                 count = 0;
             }

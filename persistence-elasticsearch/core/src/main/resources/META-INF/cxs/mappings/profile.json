@@ -40,6 +40,13 @@
         }
       }
     },
+    "systemProperties": {
+      "properties": {
+        "pastEvents": {
+          "type": "nested"
+        }
+      }
+    },
     "consents": {
       "properties": {
         "statusDate": {

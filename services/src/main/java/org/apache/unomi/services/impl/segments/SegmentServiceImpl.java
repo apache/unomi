@@ -20,11 +20,7 @@ package org.apache.unomi.services.impl.segments;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import net.jodah.failsafe.Failsafe;
 import net.jodah.failsafe.RetryPolicy;
-import org.apache.unomi.api.Event;
-import org.apache.unomi.api.Item;
-import org.apache.unomi.api.Metadata;
-import org.apache.unomi.api.PartialList;
-import org.apache.unomi.api.Profile;
+import org.apache.unomi.api.*;
 import org.apache.unomi.api.actions.Action;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.conditions.ConditionType;
@@ -35,6 +31,7 @@ import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.api.services.RulesService;
 import org.apache.unomi.api.services.SchedulerService;
 import org.apache.unomi.api.services.SegmentService;
+import org.apache.unomi.api.utils.ConditionBuilder;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.persistence.spi.aggregate.TermsAggregate;
 import org.apache.unomi.services.impl.AbstractServiceImpl;
@@ -51,6 +48,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.net.URL;
 import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
@@ -801,7 +799,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
     private void recalculatePastEventOccurrencesOnProfiles(Condition eventCondition, Condition parentCondition,
                                                            boolean forceRefresh, boolean resetExistingProfilesNotMatching) {
         long t = System.currentTimeMillis();
-        List<Condition> l = new ArrayList<Condition>();
+        List<Condition> l = new ArrayList<>();
         Condition andCondition = new Condition();
         andCondition.setConditionType(definitionsService.getConditionType("booleanCondition"));
         andCondition.setParameter("operator", "and");
@@ -877,25 +875,25 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
      * Return the list of profile ids, for profiles that already have an event count matching the generated property key
      *
      * @param generatedPropertyKey the generated property key of the generated rule for the given past event condition.
-     * @return the list of profile ids.
+     * @return the set of profile ids.
      */
     private Set<String> getExistingProfilesWithPastEventOccurrenceCount(String generatedPropertyKey) {
-        Condition countExistsCondition = new Condition();
-        countExistsCondition.setConditionType(definitionsService.getConditionType("profilePropertyCondition"));
-        countExistsCondition.setParameter("propertyName", "systemProperties.pastEvents." + generatedPropertyKey);
-        countExistsCondition.setParameter("comparisonOperator", "greaterThan");
-        countExistsCondition.setParameter("propertyValueInteger", 0);
+        ConditionBuilder conditionBuilder = definitionsService.getConditionBuilder();
+        ConditionBuilder.ConditionItem subConditionCount = conditionBuilder.profileProperty("systemProperties.pastEvents.count").greaterThan(0);
+        ConditionBuilder.ConditionItem subConditionKey = conditionBuilder.profileProperty("systemProperties.pastEvents.key").equalTo(generatedPropertyKey);
+        ConditionBuilder.ConditionItem booleanCondition = conditionBuilder.and(subConditionCount, subConditionKey);
+        Condition condition = conditionBuilder.nested(booleanCondition, "systemProperties.pastEvents").build();
 
         Set<String> profileIds = new HashSet<>();
         if (pastEventsDisablePartitions) {
-            profileIds.addAll(persistenceService.aggregateWithOptimizedQuery(countExistsCondition, new TermsAggregate("itemId"),
+            profileIds.addAll(persistenceService.aggregateWithOptimizedQuery(condition, new TermsAggregate("itemId"),
                     Profile.ITEM_TYPE, maximumIdsQueryCount).keySet());
         } else {
-            Map<String, Double> m = persistenceService.getSingleValuesMetrics(countExistsCondition, new String[]{"card"}, "itemId.keyword", Profile.ITEM_TYPE);
+            Map<String, Double> m = persistenceService.getSingleValuesMetrics(condition, new String[]{"card"}, "itemId.keyword", Profile.ITEM_TYPE);
             long card = m.get("_card").longValue();
             int numParts = (int) (card / aggregateQueryBucketSize) + 2;
             for (int i = 0; i < numParts; i++) {
-                profileIds.addAll(persistenceService.aggregateWithOptimizedQuery(countExistsCondition, new TermsAggregate("itemId", i, numParts),
+                profileIds.addAll(persistenceService.aggregateWithOptimizedQuery(condition, new TermsAggregate("itemId", i, numParts),
                         Profile.ITEM_TYPE).keySet());
             }
         }
@@ -986,35 +984,35 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
      *
      * @param eventCountByProfile the events count per profileId map
      * @param propertyKey         the generate property key for this past event condition, to keep track of the count in the profile
-     * @return the list of profiles for witch the count of event occurrences have been updated.
+     * @return the set of profiles for witch the count of event occurrences have been updated.
      */
     private Set<String> updatePastEventOccurrencesOnProfiles(Map<String, Long> eventCountByProfile, String propertyKey) {
         Set<String> profilesUpdated = new HashSet<>();
-        Map<Item, Map> batch = new HashMap<>();
+        Set<String> batchProfilesToUpdate = new HashSet<>();
         Iterator<Map.Entry<String, Long>> entryIterator = eventCountByProfile.entrySet().iterator();
+        Map<String, Map<String, Object>> paramPerProfile = new HashMap<>();
+
         while (entryIterator.hasNext()) {
             Map.Entry<String, Long> entry = entryIterator.next();
             String profileId = entry.getKey();
             if (!profileId.startsWith("_")) {
-                Map<String, Long> pastEventCounts = new HashMap<>();
-                pastEventCounts.put(propertyKey, entry.getValue());
-                Map<String, Object> systemProperties = new HashMap<>();
-                systemProperties.put("pastEvents", pastEventCounts);
-                systemProperties.put("lastUpdated", new Date());
-
-                Profile profile = new Profile();
-                profile.setItemId(profileId);
-                batch.put(profile, Collections.singletonMap("systemProperties", systemProperties));
+                Map<String, Object> pastEventKeyValue = new HashMap<>();
+                pastEventKeyValue.put("pastEventKey", propertyKey);
+                pastEventKeyValue.put("valueToAdd", entry.getValue());
+                paramPerProfile.put(profileId, pastEventKeyValue);
                 profilesUpdated.add(profileId);
+                batchProfilesToUpdate.add(profileId);
             }
 
-            if (batch.size() == segmentUpdateBatchSize || (!entryIterator.hasNext() && batch.size() > 0)) {
+            if (batchProfilesToUpdate.size() == segmentUpdateBatchSize || (!entryIterator.hasNext() && !batchProfilesToUpdate.isEmpty())) {
                 try {
-                    persistenceService.update(batch, Profile.class);
+                    Condition profileIdCondition = definitionsService.getConditionBuilder().condition("idsCondition").parameter("ids", batchProfilesToUpdate).parameter("match", true).build();
+                    persistenceService.updateWithQueryAndStoredScript(Profile.class, new String[]{"updatePastEventOccurences"}, new Map[]{paramPerProfile}, new Condition[]{profileIdCondition});
                 } catch (Exception e) {
-                    logger.error("Error updating {} profiles for past event system properties", batch.size(), e);
+                    logger.error("Error updating {} profiles for past event system properties", paramPerProfile.size(), e);
                 } finally {
-                    batch.clear();
+                    paramPerProfile.clear();
+                    batchProfilesToUpdate.clear();
                 }
             }
         }
@@ -1030,7 +1028,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
                 sb.append(Integer.toHexString((array[i] & 0xFF) | 0x100).substring(1, 3));
             }
             return sb.toString();
-        } catch (java.security.NoSuchAlgorithmException e) {
+        } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException(e);
         }
     }

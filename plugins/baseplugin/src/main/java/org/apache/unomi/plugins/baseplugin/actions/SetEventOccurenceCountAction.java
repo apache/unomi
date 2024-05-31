@@ -29,10 +29,8 @@ import org.apache.unomi.persistence.spi.PropertyHelper;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.LinkedHashMap;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
 import javax.xml.bind.DatatypeConverter;
 
@@ -123,12 +121,35 @@ public class SetEventOccurenceCountAction implements ActionExecutor {
             count++;
         }
 
-        String generatedPropertyKey = (String) pastEventCondition.getParameter("generatedPropertyKey");
-        if (PropertyHelper.setProperty(event.getProfile(), "systemProperties.pastEvents." + generatedPropertyKey, count, "alwaysSet")) {
+        if (updatePastEvents(event, (String) pastEventCondition.getParameter("generatedPropertyKey"), count)) {
             return EventService.PROFILE_UPDATED;
         }
 
         return EventService.NO_CHANGE;
+    }
+
+    private boolean updatePastEvents(Event event, String generatedPropertyKey, long count) {
+        List<Map<String, Object>> existingPastEvents = (List<Map<String, Object>>) event.getProfile().getSystemProperties().get("pastEvents");
+        if (existingPastEvents == null) {
+            existingPastEvents = new ArrayList<>();
+            event.getProfile().getSystemProperties().put("pastEvents", existingPastEvents);
+        }
+
+        for (Map<String, Object> pastEvent : existingPastEvents) {
+            if (generatedPropertyKey.equals(pastEvent.get("key"))) {
+                if (pastEvent.containsKey("count") && pastEvent.get("count").equals(count)) {
+                    return false;
+                }
+                pastEvent.put("count", count);
+                return true;
+            }
+        }
+
+        Map<String, Object> newPastEvent = new HashMap<>();
+        newPastEvent.put("key", generatedPropertyKey);
+        newPastEvent.put("count", count);
+        existingPastEvents.add(newPastEvent);
+        return true;
     }
 
     private boolean inTimeRange(LocalDateTime eventTime, Integer numberOfDays, LocalDateTime fromDate, LocalDateTime toDate) {

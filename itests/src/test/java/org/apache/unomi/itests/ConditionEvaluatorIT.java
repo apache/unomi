@@ -21,8 +21,7 @@ import org.apache.commons.lang3.time.DateUtils;
 import org.apache.unomi.api.Item;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.conditions.Condition;
-import org.apache.unomi.api.services.DefinitionsService;
-import org.apache.unomi.persistence.spi.PersistenceService;
+import org.apache.unomi.api.utils.ConditionBuilder;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -62,7 +61,7 @@ public class ConditionEvaluatorIT extends BaseIT {
     public void setUp() {
         assertNotNull("Definition service should be available", definitionsService);
         assertNotNull("Persistence service should be available", persistenceService);
-        builder = new ConditionBuilder(definitionsService);
+        builder = definitionsService.getConditionBuilder();
 
         lastVisit = new GregorianCalendar(2015, Calendar.FEBRUARY,1,20,30,0).getTime();
 

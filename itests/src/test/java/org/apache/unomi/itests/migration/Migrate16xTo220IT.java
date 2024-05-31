@@ -99,6 +99,7 @@ public class Migrate16xTo220IT extends BaseIT {
         checkEventSessionRollover2_2_0();
         checkIndexReductions2_2_0();
         checkPagePathForEventView();
+        checkPastEvents();
     }
 
     /**
@@ -341,5 +342,18 @@ public class Migrate16xTo220IT extends BaseIT {
     private void checkPagePathForEventView() {
         Assert.assertEquals(2, persistenceService.query("target.properties.pageInfo.pagePath", "/path/to/migrate/to/pageInfo", null, Event.class).size());
         Assert.assertEquals(0, persistenceService.query("properties.path", "/path/to/migrate/to/pageInfo", null, Event.class).size());
+    }
+
+
+    /**
+     * Data set contains a profile (id: 164adad8-6885-45b6-8e9d-512bf4a7d10d) with a system property pastEvents that contains 5 events with key eventTriggeredabcdefgh
+     * This test ensures that the pastEvents have been migrated to the new data structure
+     */
+    private void checkPastEvents() {
+        Profile profile = persistenceService.load("164adad8-6885-45b6-8e9d-512bf4a7d10d", Profile.class);
+        List<Map<String, Object>> pastEvents = ((List<Map<String, Object>>)profile.getSystemProperties().get("pastEvents"));
+        Assert.assertEquals(1, pastEvents.size());
+        Assert.assertEquals("eventTriggeredabcdefgh", pastEvents.get(0).get("key"));
+        Assert.assertEquals(5, (int) pastEvents.get(0).get("count"));
     }
 }

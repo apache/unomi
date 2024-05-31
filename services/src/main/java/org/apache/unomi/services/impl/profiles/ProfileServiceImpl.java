@@ -881,8 +881,13 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         if (session.getItemId() == null) {
             return null;
         }
-        if (session.getProfile() != null && session.getProfile().getProperties() != null) {
-            session.getProfile().setProperties(removePersonalIdentifiersFromSessionProfile(session.getProfile().getProperties()));
+        if (session.getProfile() != null) {
+            if (session.getProfile().getProperties() != null){
+                session.getProfile().setProperties(removePersonalIdentifiersFromSessionProfile(session.getProfile().getProperties()));
+            }
+            if (session.getProfile().getSystemProperties() != null){
+                session.getProfile().getSystemProperties().entrySet().removeIf(entry -> entry.getKey().equals("pastEvents"));
+            }
         }
         return persistenceService.save(session) ? session : null;
     }
