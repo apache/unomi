@@ -71,7 +71,6 @@ public class ContextRequestDeserializer extends StdDeserializer<ContextRequest> 
         // Print the display name of the default charset
         System.out.println("Default Charset Display Name: " + defaultCharset.displayName());
         logger.info("Default Charset Display Name: " + defaultCharset.displayName());
-
         JsonNode node = jsonParser.getCodec().readTree(jsonParser);
         // Validate schema on it
         if (!schemaService.isValid(node.toString(), "https://unomi.apache.org/schemas/json/rest/requestIds/1-0-0")) {

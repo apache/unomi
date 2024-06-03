@@ -397,6 +397,31 @@ public class ContextServletIT extends BaseIT {
     }
 
     @Test
+    public void testCreateEventWithProfileId_Success2() throws Exception {
+        //Arrange
+        String eventId = "test-event-id-" + System.currentTimeMillis();
+        String eventType = "test-event-type";
+        Event event = new Event();
+        event.setEventType(eventType);
+        event.setItemId(eventId);
+        Map<String, Object> flattened = new HashMap<>();
+        flattened.put("testProperty", "@&é'(§è!ç");
+        event.setFlattenedProperties(flattened);
+        ContextRequest contextRequest = new ContextRequest();
+        contextRequest.setProfileId(TEST_PROFILE_ID);
+        contextRequest.setEvents(Arrays.asList(event));
+
+        //Act
+        HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
+        request.addHeader(THIRD_PARTY_HEADER_NAME, UNOMI_KEY);
+        request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
+        TestUtils.executeContextJSONRequest(request);
+
+        keepTrying("Profile " + TEST_PROFILE_ID + " not found in the required time", () -> profileService.load(TEST_PROFILE_ID),
+                Objects::nonNull, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+    }
+
+    @Test
     public void testCreateEventWithPropertiesValidation_Success() throws Exception {
         //Arrange
         String eventId = "valid-event-id-" + System.currentTimeMillis();
