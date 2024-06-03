@@ -340,15 +340,17 @@ public class Migrate16xTo220IT extends BaseIT {
     }
 
     private void getScopeFromEvents(CloseableHttpClient httpClient, String eventIndex) throws IOException {
-        JsonNode jsonNode = objectMapper.readTree(HttpUtils.executeGetRequest(httpClient, "http://localhost:9400" + "/" + eventIndex + "/_search", null));
-        if (jsonNode.has("hits") && jsonNode.get("hits").has("hits")) {
-            jsonNode.get("hits").get("hits").forEach(event -> {
-                if (event.get("_source").has("scope")) {
-                    if (event.get("_source").get("scope") == null) {
+        String requestBody = resourceAsString("migration/match_all_login_event_request.json");
+        JsonNode jsonNode = objectMapper.readTree(HttpUtils.executePostRequest(httpClient, "http://localhost:9400" + "/" + eventIndex + "/_search", requestBody, null));
+        if (jsonNode.has("hits") && jsonNode.get("hits").has("hits") && !jsonNode.get("hits").get("hits").isEmpty()) {
+            jsonNode.get("hits").get("hits").forEach(doc -> {
+                JsonNode event = doc.get("_source");
+                if (event.has("scope")) {
+                    if (event.get("scope") == null) {
                         String[] initialScope = {event.get("itemId").asText(), null};
                         initialScopes.add(initialScope);
                     } else {
-                        String[] initialScope = {event.get("itemId").asText(), event.get("_source").get("scope").asText()};
+                        String[] initialScope = {event.get("itemId").asText(), event.get("scope").asText()};
                         initialScopes.add(initialScope);
                     }
                 } else {
