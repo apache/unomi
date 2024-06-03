@@ -172,6 +172,12 @@ This snapshot has been done on Unomi 1.6.x using ElasticSearch 7.11.0.
 So we will set up locally those servers in the exact same versions.
 (For now just download them and do not start them yet.)
 
+To ease the migration, you can run the docker image of ElasticSearch 7.11.0 with the following command:
+
+    ddocker run -p 9200:9200 -e path.repo="/tmp/esBackup/snapshots_repository"  -e discovery.type=single-node docker.elastic.co/elasticsearch/elasticsearch:7.11.0
+
+Note that the path.repo is set to `/tmp/esBackup/snapshots_repository` so you can use this path to store the snapshot repository.
+
 First we need to extract the zip of the snapshot repository from the test resources:
 
     /src/test/resources/migration/snapshots_repository.zip

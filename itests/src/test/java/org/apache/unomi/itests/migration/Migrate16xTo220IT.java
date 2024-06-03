@@ -19,7 +19,6 @@ package org.apache.unomi.itests.migration;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.unomi.api.*;
-import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.itests.BaseIT;
 import org.apache.unomi.persistence.spi.aggregate.TermsAggregate;
 import org.apache.unomi.shell.migration.utils.HttpUtils;
@@ -156,23 +155,23 @@ public class Migrate16xTo220IT extends BaseIT {
     /**
      * Data set contains a form event (id: 7b55b4fd-5ff0-4a85-9dc4-ffde322a1de6) with this data:
      * {
-     * "properties": {
-     * "pets": "cat",
-     * "firstname": "foo",
-     * "sports": [
-     * "football",
-     * "tennis"
-     * ],
-     * "city": "Berlin",
-     * "age": "15",
-     * "email": "foo@bar.fr",
-     * "drone": "dewey",
-     * "lastname": "bar",
-     * "contactMethod": [
-     * "postalMethod",
-     * "phoneMethod"
-     * ]
-     * }
+     *   "properties": {
+     *     "pets": "cat",
+     *     "firstname": "foo",
+     *     "sports": [
+     *       "football",
+     *       "tennis"
+     *     ],
+     *     "city": "Berlin",
+     *     "age": "15",
+     *     "email": "foo@bar.fr",
+     *     "drone": "dewey",
+     *     "lastname": "bar",
+     *     "contactMethod": [
+     *       "postalMethod",
+     *       "phoneMethod"
+     *     ]
+     *   }
      * }
      */
     private void checkFormEventRestructured() {
@@ -342,20 +341,22 @@ public class Migrate16xTo220IT extends BaseIT {
 
     private void getScopeFromEvents(CloseableHttpClient httpClient, String eventIndex) throws IOException {
         JsonNode jsonNode = objectMapper.readTree(HttpUtils.executeGetRequest(httpClient, "http://localhost:9400" + "/" + eventIndex + "/_search", null));
-        jsonNode.get("hits").get("hits").forEach(event -> {
-            if (event.get("_source").has("scope")) {
-                if (event.get("_source").get("scope") == null) {
-                    String[] initialScope = {event.get("itemId").asText(), null};
-                    initialScopes.add(initialScope);
+        if (jsonNode.has("hits") && jsonNode.get("hits").has("hits")) {
+            jsonNode.get("hits").get("hits").forEach(event -> {
+                if (event.get("_source").has("scope")) {
+                    if (event.get("_source").get("scope") == null) {
+                        String[] initialScope = {event.get("itemId").asText(), null};
+                        initialScopes.add(initialScope);
+                    } else {
+                        String[] initialScope = {event.get("itemId").asText(), event.get("_source").get("scope").asText()};
+                        initialScopes.add(initialScope);
+                    }
                 } else {
-                    String[] initialScope = {event.get("itemId").asText(), event.get("_source").get("scope").asText()};
+                    String[] initialScope = {event.get("itemId").asText(), SCOPE_NOT_EXIST};
                     initialScopes.add(initialScope);
                 }
-            } else {
-                String[] initialScope = {event.get("itemId").asText(), SCOPE_NOT_EXIST};
-                initialScopes.add(initialScope);
-            }
-        });
+            });
+        }
     }
 
         private int countItems (CloseableHttpClient httpClient, String index, String requestBody) throws IOException {
