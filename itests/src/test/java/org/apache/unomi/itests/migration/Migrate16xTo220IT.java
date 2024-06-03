@@ -19,6 +19,7 @@ package org.apache.unomi.itests.migration;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.unomi.api.*;
+import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.itests.BaseIT;
 import org.apache.unomi.persistence.spi.aggregate.TermsAggregate;
 import org.apache.unomi.shell.migration.utils.HttpUtils;
@@ -29,16 +30,15 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 
 public class Migrate16xTo220IT extends BaseIT {
 
     private int eventCount = 0;
     private int sessionCount = 0;
+    private Set<String[]> initialScopes = new HashSet<>();
 
+    private static final String SCOPE_NOT_EXIST = "SCOPE_NOT_EXIST";
     private static final int NUMBER_DUPLICATE_SESSIONS = 3;
     private static final List<String> oldSystemItemsIndices = Arrays.asList("context-actiontype", "context-campaign", "context-campaignevent", "context-goal",
             "context-userlist", "context-propertytype", "context-scope", "context-conditiontype", "context-rule", "context-scoring", "context-segment", "context-groovyaction", "context-topic",
@@ -100,6 +100,7 @@ public class Migrate16xTo220IT extends BaseIT {
         checkIndexReductions2_2_0();
         checkPagePathForEventView();
         checkPastEvents();
+        checkScopeEventHaveBeenUpdated();
     }
 
     /**
@@ -155,23 +156,23 @@ public class Migrate16xTo220IT extends BaseIT {
     /**
      * Data set contains a form event (id: 7b55b4fd-5ff0-4a85-9dc4-ffde322a1de6) with this data:
      * {
-     *   "properties": {
-     *     "pets": "cat",
-     *     "firstname": "foo",
-     *     "sports": [
-     *       "football",
-     *       "tennis"
-     *     ],
-     *     "city": "Berlin",
-     *     "age": "15",
-     *     "email": "foo@bar.fr",
-     *     "drone": "dewey",
-     *     "lastname": "bar",
-     *     "contactMethod": [
-     *       "postalMethod",
-     *       "phoneMethod"
-     *     ]
-     *   }
+     * "properties": {
+     * "pets": "cat",
+     * "firstname": "foo",
+     * "sports": [
+     * "football",
+     * "tennis"
+     * ],
+     * "city": "Berlin",
+     * "age": "15",
+     * "email": "foo@bar.fr",
+     * "drone": "dewey",
+     * "lastname": "bar",
+     * "contactMethod": [
+     * "postalMethod",
+     * "phoneMethod"
+     * ]
+     * }
      * }
      */
     private void checkFormEventRestructured() {
@@ -269,6 +270,17 @@ public class Migrate16xTo220IT extends BaseIT {
         }
     }
 
+    private void checkScopeEventHaveBeenUpdated() {
+        for (String[] loginEvent : initialScopes) {
+            Event event = eventService.getEvent(loginEvent[0]);
+            if ("digitall".equals(loginEvent[1])) {
+                Assert.assertEquals(event.getScope(), "digitall");
+            } else {
+                Assert.assertEquals(event.getScope(), "systemsite");
+            }
+        }
+    }
+
     /**
      * Data set contains a profile (id: e67ecc69-a7b3-47f1-b91f-5d6e7b90276e) with two interests: football:50 and basketball:30
      * Also it's first name is test_profile
@@ -316,6 +328,7 @@ public class Migrate16xTo220IT extends BaseIT {
     private void initCounts(CloseableHttpClient httpClient) {
         try {
             for (String eventIndex : MigrationUtils.getIndexesPrefixedBy(httpClient, "http://localhost:9400", "context-event-date")) {
+                getScopeFromEvents(httpClient, eventIndex);
                 eventCount += countItems(httpClient, eventIndex, resourceAsString("migration/must_not_match_some_eventype_body.json"));
             }
 
@@ -327,33 +340,51 @@ public class Migrate16xTo220IT extends BaseIT {
         }
     }
 
-    private int countItems(CloseableHttpClient httpClient, String index, String requestBody) throws IOException {
-        if (requestBody == null) {
-            requestBody = resourceAsString("migration/must_not_match_some_eventype_body.json");
+    private void getScopeFromEvents(CloseableHttpClient httpClient, String eventIndex) throws IOException {
+        JsonNode jsonNode = objectMapper.readTree(HttpUtils.executeGetRequest(httpClient, "http://localhost:9400" + "/" + eventIndex + "/_search", null));
+        jsonNode.get("hits").get("hits").forEach(event -> {
+            if (event.get("_source").has("scope")) {
+                if (event.get("_source").get("scope") == null) {
+                    String[] initialScope = {event.get("itemId").asText(), null};
+                    initialScopes.add(initialScope);
+                } else {
+                    String[] initialScope = {event.get("itemId").asText(), event.get("_source").get("scope").asText()};
+                    initialScopes.add(initialScope);
+                }
+            } else {
+                String[] initialScope = {event.get("itemId").asText(), SCOPE_NOT_EXIST};
+                initialScopes.add(initialScope);
+            }
+        });
+    }
+
+        private int countItems (CloseableHttpClient httpClient, String index, String requestBody) throws IOException {
+            if (requestBody == null) {
+                requestBody = resourceAsString("migration/must_not_match_some_eventype_body.json");
+            }
+            JsonNode jsonNode = objectMapper.readTree(HttpUtils.executePostRequest(httpClient, "http://localhost:9400" + "/" + index + "/_count", requestBody, null));
+            return jsonNode.get("count").asInt();
         }
-        JsonNode jsonNode = objectMapper.readTree(HttpUtils.executePostRequest(httpClient, "http://localhost:9400" + "/" + index + "/_count", requestBody, null));
-        return jsonNode.get("count").asInt();
-    }
 
-    /**
-     * Data set contains 2 events that had a value in properties.path:
-     * The properties.path should have been moved to properties.pageInfo.pagePath
-     */
-    private void checkPagePathForEventView() {
-        Assert.assertEquals(2, persistenceService.query("target.properties.pageInfo.pagePath", "/path/to/migrate/to/pageInfo", null, Event.class).size());
-        Assert.assertEquals(0, persistenceService.query("properties.path", "/path/to/migrate/to/pageInfo", null, Event.class).size());
-    }
+        /**
+         * Data set contains 2 events that had a value in properties.path:
+         * The properties.path should have been moved to properties.pageInfo.pagePath
+         */
+        private void checkPagePathForEventView () {
+            Assert.assertEquals(2, persistenceService.query("target.properties.pageInfo.pagePath", "/path/to/migrate/to/pageInfo", null, Event.class).size());
+            Assert.assertEquals(0, persistenceService.query("properties.path", "/path/to/migrate/to/pageInfo", null, Event.class).size());
+        }
 
 
-    /**
-     * Data set contains a profile (id: 164adad8-6885-45b6-8e9d-512bf4a7d10d) with a system property pastEvents that contains 5 events with key eventTriggeredabcdefgh
-     * This test ensures that the pastEvents have been migrated to the new data structure
-     */
-    private void checkPastEvents() {
-        Profile profile = persistenceService.load("164adad8-6885-45b6-8e9d-512bf4a7d10d", Profile.class);
-        List<Map<String, Object>> pastEvents = ((List<Map<String, Object>>)profile.getSystemProperties().get("pastEvents"));
-        Assert.assertEquals(1, pastEvents.size());
-        Assert.assertEquals("eventTriggeredabcdefgh", pastEvents.get(0).get("key"));
-        Assert.assertEquals(5, (int) pastEvents.get(0).get("count"));
+        /**
+         * Data set contains a profile (id: 164adad8-6885-45b6-8e9d-512bf4a7d10d) with a system property pastEvents that contains 5 events with key eventTriggeredabcdefgh
+         * This test ensures that the pastEvents have been migrated to the new data structure
+         */
+        private void checkPastEvents () {
+            Profile profile = persistenceService.load("164adad8-6885-45b6-8e9d-512bf4a7d10d", Profile.class);
+            List<Map<String, Object>> pastEvents = ((List<Map<String, Object>>) profile.getSystemProperties().get("pastEvents"));
+            Assert.assertEquals(1, pastEvents.size());
+            Assert.assertEquals("eventTriggeredabcdefgh", pastEvents.get(0).get("key"));
+            Assert.assertEquals(5, (int) pastEvents.get(0).get("count"));
+        }
     }
-}

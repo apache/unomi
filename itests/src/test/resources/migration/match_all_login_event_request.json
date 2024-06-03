@@ -1,0 +1,10 @@
+{
+  "query": {
+    "term": {
+      "eventType": {
+        "value": "login",
+        "boost": 1.0
+      }
+    }
+  }
+}
