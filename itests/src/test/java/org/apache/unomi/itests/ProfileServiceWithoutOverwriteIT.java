@@ -17,9 +17,6 @@
 package org.apache.unomi.itests;
 
 import org.apache.unomi.api.Profile;
-import org.apache.unomi.api.services.DefinitionsService;
-import org.apache.unomi.api.services.ProfileService;
-import org.apache.unomi.persistence.spi.PersistenceService;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -28,13 +25,10 @@ import org.ops4j.pax.exam.Option;
 import org.ops4j.pax.exam.junit.PaxExam;
 import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
 import org.ops4j.pax.exam.spi.reactors.PerSuite;
-import org.ops4j.pax.exam.util.Filter;
 
-import javax.inject.Inject;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Objects;
 
 import static org.junit.Assert.assertEquals;
 import static org.ops4j.pax.exam.CoreOptions.systemProperty;

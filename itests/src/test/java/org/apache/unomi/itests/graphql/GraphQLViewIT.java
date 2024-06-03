@@ -19,22 +19,14 @@ package org.apache.unomi.itests.graphql;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-
-import javax.inject.Inject;
-
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.unomi.api.Metadata;
 import org.apache.unomi.api.Topic;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.segments.Segment;
-import org.apache.unomi.api.services.DefinitionsService;
-import org.apache.unomi.api.services.SegmentService;
-import org.apache.unomi.api.services.TopicService;
 import org.apache.unomi.lists.UserList;
-import org.apache.unomi.services.UserListService;
 import org.junit.Assert;
 import org.junit.Test;
-import org.ops4j.pax.exam.util.Filter;
 
 public class GraphQLViewIT
     extends BaseGraphQLIT

@@ -16,7 +16,7 @@
  */
 package org.apache.unomi.graphql.types.output.property;
 
-import com.google.common.base.Strings;
+import org.apache.commons.lang3.StringUtils;
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
 import org.apache.unomi.api.PropertyType;
@@ -43,6 +43,6 @@ public class CDPDatePropertyType extends CDPPropertyType implements CDPPropertyI
             return null;
         }
         final String defaultValue = type.getDefaultValue();
-        return !Strings.isNullOrEmpty(defaultValue) ? OffsetDateTime.parse(defaultValue) : null;
+        return StringUtils.isNotEmpty(defaultValue) ? OffsetDateTime.parse(defaultValue) : null;
     }
 }

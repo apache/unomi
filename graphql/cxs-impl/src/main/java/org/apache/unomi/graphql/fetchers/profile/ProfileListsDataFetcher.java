@@ -17,7 +17,6 @@
 
 package org.apache.unomi.graphql.fetchers.profile;
 
-import com.google.common.collect.Iterables;
 import graphql.schema.DataFetchingEnvironment;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.lists.UserList;
@@ -67,7 +66,7 @@ public class ProfileListsDataFetcher extends BaseDataFetcher<List<CDPList>> {
         }
 
         return stream.map(viewId -> {
-            final UserList list = Iterables.tryFind(userLists, userList -> viewId.equals(userList.getItemId())).orNull();
+            final UserList list =  userLists.stream().filter(userList -> viewId.equals(userList.getItemId())).findFirst().orElse(null);
             return list != null ? new CDPList(list) : null;
         }).filter(Objects::nonNull).collect(Collectors.toList());
     }

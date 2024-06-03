@@ -16,7 +16,7 @@
  */
 package org.apache.unomi.graphql.commands.list;
 
-import com.google.common.base.Strings;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.unomi.api.Metadata;
 import org.apache.unomi.graphql.commands.BaseCommand;
 import org.apache.unomi.graphql.converters.UserListConverter;
@@ -41,7 +41,7 @@ public class CreateOrUpdateListCommand extends BaseCommand<CDPList> {
     public CDPList execute() {
         final UserListService userListService = serviceManager.getService(UserListService.class);
 
-        final String listId = Strings.isNullOrEmpty(listInput.getId())
+        final String listId = StringUtils.isEmpty(listInput.getId())
                 ? listInput.getName()
                 : listInput.getId();
 

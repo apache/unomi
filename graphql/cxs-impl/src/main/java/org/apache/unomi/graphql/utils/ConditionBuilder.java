@@ -16,7 +16,7 @@
  */
 package org.apache.unomi.graphql.utils;
 
-import com.google.common.base.Strings;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.conditions.ConditionType;
 
@@ -113,13 +113,13 @@ public class ConditionBuilder {
     public Condition build() {
         final Condition condition = new Condition(conditionType);
 
-        if (!Strings.isNullOrEmpty(propertyName)) {
+        if (StringUtils.isNotEmpty(propertyName)) {
             condition.setParameter("propertyName", propertyName);
         }
-        if (!Strings.isNullOrEmpty(comparisonOperator)) {
+        if (StringUtils.isNotEmpty(comparisonOperator)) {
             condition.setParameter("comparisonOperator", comparisonOperator);
         }
-        if (!Strings.isNullOrEmpty(propertyValue)) {
+        if (StringUtils.isNotEmpty(propertyValue)) {
             condition.setParameter("propertyValue", propertyValue);
         }
         if (propertyValueDate != null) {

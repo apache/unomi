@@ -16,9 +16,9 @@
  */
 package org.apache.unomi.graphql.types.input;
 
-import com.google.common.base.Strings;
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.unomi.graphql.types.output.CDPSortOrder;
 
 @GraphQLName("CDP_OrderByInput")
@@ -46,7 +46,7 @@ public class CDPOrderByInput {
     }
 
     public String asString() {
-        if (Strings.isNullOrEmpty(fieldName)) {
+        if (StringUtils.isEmpty(fieldName)) {
             return null;
         } else if (sortOrder == null || CDPSortOrder.UNSPECIFIED == sortOrder) {
             return fieldName;

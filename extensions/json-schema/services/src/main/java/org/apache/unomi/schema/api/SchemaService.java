@@ -32,7 +32,7 @@ public interface SchemaService {
      * Verify if a jsonNode is valid against a schema
      * (This method is fail safe, if unexpected errors happens it will returns false)
      *
-     * @param data   to validate
+     * @param data     to validate
      * @param schemaId id of the schema used for the validation
      * @return true is the object is valid, false otherwise, false also in case of unexpected errors !
      */
@@ -71,7 +71,7 @@ public interface SchemaService {
      * @return The Map of validation errors group per event type in case there is some, empty map otherwise
      * @throws ValidationException in case something goes wrong and validation could not be performed.
      */
-    Map<String,Set<ValidationError>> validateEvents(String events) throws ValidationException;
+    Map<String, Set<ValidationError>> validateEvents(String events) throws ValidationException;
 
     /**
      * Get the list of installed Json Schema Ids
@@ -133,4 +133,9 @@ public interface SchemaService {
      * @return true if the schema has been deleted
      */
     boolean unloadPredefinedSchema(InputStream schemaStream);
+
+    /**
+     * Refresh the JSON schemas
+     */
+    void refreshJSONSchemas();
 }

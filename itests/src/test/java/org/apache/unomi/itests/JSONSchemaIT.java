@@ -23,13 +23,10 @@ import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.util.EntityUtils;
 import org.apache.unomi.api.Event;
-import org.apache.unomi.api.Metadata;
 import org.apache.unomi.api.Scope;
 import org.apache.unomi.api.conditions.Condition;
-import org.apache.unomi.api.services.ScopeService;
 import org.apache.unomi.itests.tools.httpclient.HttpClientThatWaitsForUnomi;
 import org.apache.unomi.schema.api.JsonSchemaWrapper;
-import org.apache.unomi.schema.api.SchemaService;
 import org.apache.unomi.schema.api.ValidationError;
 import org.junit.After;
 import org.junit.Before;
@@ -38,11 +35,9 @@ import org.junit.runner.RunWith;
 import org.ops4j.pax.exam.junit.PaxExam;
 import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
 import org.ops4j.pax.exam.spi.reactors.PerSuite;
-import org.ops4j.pax.exam.util.Filter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.inject.Inject;
 import java.io.IOException;
 import java.util.*;
 

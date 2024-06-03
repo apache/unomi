@@ -18,13 +18,7 @@ package org.apache.unomi.itests.graphql;
 
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.unomi.api.Scope;
-import org.apache.unomi.api.services.ScopeService;
 import org.junit.Test;
-import org.ops4j.pax.exam.util.Filter;
-
-import javax.inject.Inject;
-import java.io.IOException;
-
 import static org.junit.Assert.*;
 
 public class GraphQLSourceIT extends BaseGraphQLIT {

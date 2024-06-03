@@ -16,7 +16,7 @@
  */
 package org.apache.unomi.sfdc.services;
 
-import org.apache.cxf.common.util.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.unomi.api.Item;
 
 import java.util.HashMap;
@@ -176,13 +176,13 @@ public class SFDCConfiguration extends Item {
     }
 
     public boolean isComplete() {
-        return (!StringUtils.isEmpty(sfdcLoginEndpoint) &&
-                !StringUtils.isEmpty(sfdcUserUsername) &&
-                !StringUtils.isEmpty(sfdcUserPassword) &&
-                !StringUtils.isEmpty(sfdcUserSecurityToken) &&
-                !StringUtils.isEmpty(sfdcConsumerKey) &&
-                !StringUtils.isEmpty(sfdcConsumerSecret) &&
-                !StringUtils.isEmpty(sfdcFieldMappingsIdentifier));
+        return (StringUtils.isNotEmpty(sfdcLoginEndpoint) &&
+                StringUtils.isNotEmpty(sfdcUserUsername) &&
+                StringUtils.isNotEmpty(sfdcUserPassword) &&
+                StringUtils.isNotEmpty(sfdcUserSecurityToken) &&
+                StringUtils.isNotEmpty(sfdcConsumerKey) &&
+                StringUtils.isNotEmpty(sfdcConsumerSecret) &&
+                StringUtils.isNotEmpty(sfdcFieldMappingsIdentifier));
     }
 
 }

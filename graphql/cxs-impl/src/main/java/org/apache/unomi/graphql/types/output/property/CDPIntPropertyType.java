@@ -16,9 +16,9 @@
  */
 package org.apache.unomi.graphql.types.output.property;
 
-import com.google.common.base.Strings;
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.unomi.api.PropertyType;
 import org.apache.unomi.api.query.NumericRange;
 import org.apache.unomi.graphql.types.output.CDPPropertyInterface;
@@ -59,6 +59,6 @@ public class CDPIntPropertyType extends CDPPropertyType implements CDPPropertyIn
             return null;
         }
         final String defaultValue = type.getDefaultValue();
-        return !Strings.isNullOrEmpty(defaultValue) ? Integer.valueOf(defaultValue) : null;
+        return StringUtils.isNotEmpty(defaultValue) ? Integer.valueOf(defaultValue) : null;
     }
 }

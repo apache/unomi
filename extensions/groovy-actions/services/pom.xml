@@ -79,13 +79,13 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>org.codehaus.groovy</groupId>
+            <groupId>org.apache.groovy</groupId>
             <artifactId>groovy</artifactId>
             <version>${groovy.version}</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>org.codehaus.groovy</groupId>
+            <groupId>org.apache.groovy</groupId>
             <artifactId>groovy-json</artifactId>
             <version>${groovy.version}</version>
             <scope>provided</scope>
@@ -104,6 +104,10 @@
                 <extensions>true</extensions>
                 <configuration>
                     <instructions>
+                        <Import-Package>
+                            sun.nio.ch;resolution:=optional,
+                            *
+                        </Import-Package>
                         <_dsannotations>*</_dsannotations>
                         <Embed-Dependency>*;scope=compile|runtime</Embed-Dependency>
                         <Unomi-Source-Folders>${project.basedir}</Unomi-Source-Folders>

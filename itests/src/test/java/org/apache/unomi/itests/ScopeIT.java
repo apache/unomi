@@ -20,8 +20,6 @@ package org.apache.unomi.itests;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.entity.ContentType;
 import org.apache.unomi.api.Scope;
-import org.apache.unomi.api.services.ScopeService;
-import org.apache.unomi.persistence.spi.PersistenceService;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -29,9 +27,7 @@ import org.junit.runner.RunWith;
 import org.ops4j.pax.exam.junit.PaxExam;
 import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
 import org.ops4j.pax.exam.spi.reactors.PerSuite;
-import org.ops4j.pax.exam.util.Filter;
 
-import javax.inject.Inject;
 import java.util.List;
 import java.util.Objects;
 

@@ -20,23 +20,16 @@ import org.apache.unomi.api.Patch;
 import org.apache.unomi.api.PropertyType;
 import org.apache.unomi.api.actions.ActionType;
 import org.apache.unomi.api.conditions.ConditionType;
-import org.apache.unomi.api.services.DefinitionsService;
-import org.apache.unomi.api.services.PatchService;
-import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
-import org.apache.unomi.persistence.spi.PersistenceService;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.ops4j.pax.exam.junit.PaxExam;
 import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
 import org.ops4j.pax.exam.spi.reactors.PerSuite;
-import org.ops4j.pax.exam.util.Filter;
-import org.osgi.framework.BundleContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.inject.Inject;
 import java.io.IOException;
 
 @RunWith(PaxExam.class)

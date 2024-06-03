@@ -375,16 +375,16 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
     private OgnlContext getOgnlContext(ClassLoader classLoader) {
         return (OgnlContext) Ognl.createDefaultContext(null, new MemberAccess() {
                     @Override
-                    public Object setup(Map context, Object target, Member member, String propertyName) {
+                    public Object setup(OgnlContext ognlContext, Object target, Member member, String propertyName) {
                         return null;
                     }
 
                     @Override
-                    public void restore(Map context, Object target, Member member, String propertyName, Object state) {
+                    public void restore(OgnlContext ognlContext, Object target, Member member, String propertyName, Object state) {
                     }
 
                     @Override
-                    public boolean isAccessible(Map context, Object target, Member member, String propertyName) {
+                    public boolean isAccessible(OgnlContext ognlContext, Object target, Member member, String propertyName) {
                         int modifiers = member.getModifiers();
                         boolean accessible = false;
                         if (target instanceof Item && !"getClass".equals(member.getName())) {

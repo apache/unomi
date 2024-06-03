@@ -16,7 +16,7 @@
  */
 package org.apache.unomi.graphql.commands.segments;
 
-import com.google.common.base.Strings;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.unomi.api.Metadata;
 import org.apache.unomi.api.segments.Segment;
 import org.apache.unomi.api.services.SegmentService;
@@ -36,7 +36,7 @@ public abstract class BaseCreateOrUpdateSegmentCommand<INPUT extends BaseSegment
     protected Segment preparedSegmentWithoutCondition(final INPUT segmentInput) {
         final SegmentService segmentService = serviceManager.getService(SegmentService.class);
 
-        final String segmentId = Strings.isNullOrEmpty(segmentInput.getId())
+        final String segmentId = StringUtils.isEmpty(segmentInput.getId())
                 ? segmentInput.getName()
                 : segmentInput.getId();
 
@@ -90,10 +90,10 @@ public abstract class BaseCreateOrUpdateSegmentCommand<INPUT extends BaseSegment
             if (segmentInput == null) {
                 throw new IllegalArgumentException();
             }
-            if (Strings.isNullOrEmpty(segmentInput.getName())) {
+            if (StringUtils.isEmpty(segmentInput.getName())) {
                 throw new IllegalArgumentException();
             }
-            if (Strings.isNullOrEmpty(segmentInput.getView())) {
+            if (StringUtils.isEmpty(segmentInput.getView())) {
                 throw new IllegalArgumentException();
             }
         }

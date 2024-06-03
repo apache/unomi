@@ -16,7 +16,7 @@
  */
 package org.apache.unomi.graphql.commands.segments;
 
-import com.google.common.base.Strings;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.unomi.api.segments.DependentMetadata;
 import org.apache.unomi.api.services.SegmentService;
 import org.apache.unomi.graphql.commands.BaseCommand;
@@ -54,7 +54,7 @@ public class DeleteSegmentCommand extends BaseCommand<Boolean> {
         public void validate() {
             super.validate();
 
-            if (Strings.isNullOrEmpty(segmentId)) {
+            if (StringUtils.isEmpty(segmentId)) {
                 throw new IllegalArgumentException("The \"segmentID\" variable can not be null or empty");
             }
         }

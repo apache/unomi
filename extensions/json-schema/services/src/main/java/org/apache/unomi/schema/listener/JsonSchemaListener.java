@@ -61,6 +61,7 @@ public class JsonSchemaListener implements SynchronousBundleListener {
                 loadPredefinedSchemas(bundle.getBundleContext(), true);
             }
         }
+        schemaService.refreshJSONSchemas();
 
         bundleContext.addBundleListener(this);
         logger.info("JSON schema listener initialized.");

@@ -39,11 +39,6 @@
         </dependency>
         <dependency>
             <groupId>org.apache.unomi</groupId>
-            <artifactId>unomi-persistence-spi</artifactId>
-            <version>${project.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.unomi</groupId>
             <artifactId>unomi-json-schema-services</artifactId>
             <version>${project.version}</version>
             <scope>provided</scope>
@@ -86,10 +81,6 @@
             <groupId>org.apache.cxf</groupId>
             <artifactId>cxf-rt-transports-http</artifactId>
             <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.cxf</groupId>
-            <artifactId>cxf-rt-rs-security-cors</artifactId>
         </dependency>
         <dependency>
             <groupId>com.fasterxml.jackson.jaxrs</groupId>
@@ -137,13 +128,6 @@
         <dependency>
             <groupId>org.apache.cxf</groupId>
             <artifactId>cxf-rt-rs-security-cors</artifactId>
-            <version>${cxf.version}</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.cxf</groupId>
-            <artifactId>cxf-rt-frontend-jaxrs</artifactId>
-            <version>${cxf.version}</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
@@ -156,10 +140,6 @@
             <artifactId>commons-beanutils</artifactId>
         </dependency>
         <dependency>
-            <groupId>commons-collections</groupId>
-            <artifactId>commons-collections</artifactId>
-        </dependency>
-        <dependency>
             <groupId>org.apache.karaf.jaas</groupId>
             <artifactId>org.apache.karaf.jaas.boot</artifactId>
             <version>${version.karaf}</version>
@@ -168,11 +148,6 @@
         <dependency>
             <groupId>javax.validation</groupId>
             <artifactId>validation-api</artifactId>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.hibernate</groupId>
-            <artifactId>hibernate-validator</artifactId>
             <scope>provided</scope>
         </dependency>
     </dependencies>

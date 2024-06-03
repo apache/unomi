@@ -20,7 +20,6 @@
 
     <repository>mvn:org.apache.cxf.karaf/apache-cxf/${cxf.version}/xml/features</repository>
     <repository>mvn:org.apache.karaf.cellar/apache-karaf-cellar/${version.karaf.cellar}/xml/features</repository>
-    <repository>mvn:org.hibernate/hibernate-validator-osgi-karaf-features/${hibernate.validator.version}/xml/features</repository>
 
     <feature description="unomi-kar" version="${project.version}" name="unomi-kar"
              start-level="70">
@@ -35,7 +34,6 @@
         <feature>eventadmin</feature>
         <feature>feature</feature>
         <feature>shell-compat</feature>
-        <feature version="${hibernate.validator.version}">hibernate-validator</feature>
         <configfile finalname="/etc/org.apache.unomi.web.cfg">mvn:org.apache.unomi/unomi-wab/${project.version}/cfg/unomicfg</configfile>
         <configfile finalname="/etc/org.apache.unomi.persistence.elasticsearch.cfg">mvn:org.apache.unomi/unomi-persistence-elasticsearch-core/${project.version}/cfg/elasticsearchcfg</configfile>
         <configfile finalname="/etc/org.apache.unomi.plugins.request.cfg">mvn:org.apache.unomi/unomi-plugins-request/${project.version}/cfg/requestcfg</configfile>
@@ -47,7 +45,7 @@
         <configfile finalname="/etc/org.apache.unomi.geonames.cfg">mvn:org.apache.unomi/cxs-geonames-services/${project.version}/cfg/geonamescfg</configfile>
         <configfile finalname="/etc/org.apache.unomi.groovy.actions.cfg">mvn:org.apache.unomi/unomi-groovy-actions-services/${project.version}/cfg/groovyactionscfg</configfile>
         <configfile finalname="/etc/org.apache.unomi.schema.cfg">mvn:org.apache.unomi/unomi-json-schema-services/${project.version}/cfg/schemacfg</configfile>
-        <bundle start-level="75">mvn:commons-io/commons-io/2.4</bundle>
+        <bundle start-level="75">mvn:commons-io/commons-io/${apache.commons.io.version}</bundle>
         <bundle start-level="75">mvn:com.fasterxml.jackson.core/jackson-core/${version.jackson.core}</bundle>
         <bundle start-level="75">mvn:com.github.fge/btf/1.2</bundle>
         <bundle start-level="75">mvn:com.github.fge/msg-simple/1.1</bundle>
@@ -59,13 +57,13 @@
         <bundle start-level="75">mvn:com.fasterxml.jackson.jaxrs/jackson-jaxrs-base/${version.jackson.core}</bundle>
         <bundle start-level="75">mvn:com.fasterxml.jackson.module/jackson-module-jaxb-annotations/${version.jackson.jaxb}</bundle>
         <bundle start-level="75">mvn:com.fasterxml.jackson.jaxrs/jackson-jaxrs-json-provider/${version.jackson.core}</bundle>
+        <bundle start-level="75">mvn:org.yaml/snakeyaml/1.33</bundle>
         <bundle start-level="75">mvn:com.fasterxml.jackson.dataformat/jackson-dataformat-yaml/${version.jackson.core}</bundle>
-        <bundle start-level="75">mvn:org.apache.servicemix.bundles/org.apache.servicemix.bundles.jakarta-regexp/1.4_1</bundle>
-        <bundle start-level="75">mvn:org.apache.servicemix.bundles/org.apache.servicemix.bundles.joda-time/2.3_1</bundle>
+        <bundle start-level="75">mvn:joda-time/joda-time/${joda-time.version}</bundle>
         <bundle start-level="75">mvn:org.apache.servicemix.specs/org.apache.servicemix.specs.jaxws-api-2.2/2.9.0</bundle>
         <bundle start-level="75">mvn:javax.annotation/javax.annotation-api/1.3.2</bundle>
         <bundle start-level="75">mvn:org.apache.servicemix.bundles/org.apache.servicemix.bundles.jsr305/${jsr305.bundle.version}</bundle>
-
+        <bundle start-level="75">mvn:commons-collections/commons-collections/${apache.commons.collections.version}</bundle>
         <bundle start-level="70" start="false">mvn:org.apache.unomi/unomi-lifecycle-watcher/${project.version}</bundle>
         <bundle start-level="75" start="false">mvn:org.apache.unomi/unomi-api/${project.version}</bundle>
         <bundle start-level="75" start="false">mvn:org.apache.unomi/unomi-common/${project.version}</bundle>

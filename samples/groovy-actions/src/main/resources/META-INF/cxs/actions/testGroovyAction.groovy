@@ -21,7 +21,7 @@ import org.jsoup.nodes.Document
 import static groovyx.net.http.HttpBuilder.configure
 
 Document page = configure {
-    request.uri = 'https://mvnrepository.com/artifact/org.codehaus.groovy/groovy-all'
+    request.uri = 'https://mvnrepository.com/artifact/org.apache.groovy/groovy-all'
 }.get()
 
 String license = page.select('span.b.lic').collect { it.text() }.join(', ')

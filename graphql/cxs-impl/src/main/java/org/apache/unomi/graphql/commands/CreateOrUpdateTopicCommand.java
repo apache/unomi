@@ -16,7 +16,7 @@
  */
 package org.apache.unomi.graphql.commands;
 
-import com.google.common.base.Strings;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.unomi.api.Topic;
 import org.apache.unomi.api.services.TopicService;
 import org.apache.unomi.graphql.types.input.CDPTopicInput;
@@ -44,7 +44,7 @@ public class CreateOrUpdateTopicCommand extends BaseCommand<CDPTopic> {
             topic = new Topic();
         }
 
-        final String topicId = Strings.isNullOrEmpty(topicInput.getId())
+        final String topicId = StringUtils.isEmpty(topicInput.getId())
                 ? topicInput.getName()
                 : topicInput.getId();
 

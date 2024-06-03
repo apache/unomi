@@ -16,7 +16,7 @@
  */
 package org.apache.unomi.graphql.types.output.property;
 
-import com.google.common.base.Strings;
+import org.apache.commons.lang3.StringUtils;
 import graphql.annotations.annotationTypes.GraphQLField;
 import graphql.annotations.annotationTypes.GraphQLName;
 import org.apache.unomi.api.PropertyType;
@@ -38,6 +38,6 @@ public class CDPBooleanPropertyType extends CDPPropertyType implements CDPProper
     @GraphQLField
     public Boolean defaultValue() {
         final String defaultValue = type.getDefaultValue();
-        return !Strings.isNullOrEmpty(defaultValue) ? Boolean.valueOf(defaultValue) : null;
+        return StringUtils.isNotEmpty(defaultValue) ? Boolean.valueOf(defaultValue) : null;
     }
 }
