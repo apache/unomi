@@ -30,7 +30,7 @@
 
     <properties>
         <camel.version>2.23.1</camel.version>
-        <kafka.client.version>0.10.2.2</kafka.client.version>
+        <kafka.client.version>0.11.0.3</kafka.client.version>
     </properties>
 
     <build>
