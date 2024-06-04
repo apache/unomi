@@ -51,11 +51,16 @@
         <dependency>
             <groupId>org.apache.camel</groupId>
             <artifactId>camel-core-osgi</artifactId>
-            <version>${camel.version}</version>
+            <version>${camel-core-osgi.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.camel</groupId>
             <artifactId>camel-blueprint</artifactId>
+            <version>${camel-blueprint.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.camel</groupId>
+            <artifactId>camel-core-xml</artifactId>
             <version>${camel.version}</version>
         </dependency>
         <dependency>

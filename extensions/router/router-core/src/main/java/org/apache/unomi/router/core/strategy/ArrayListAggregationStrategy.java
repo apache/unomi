@@ -16,8 +16,8 @@
  */
 package org.apache.unomi.router.core.strategy;
 
+import org.apache.camel.AggregationStrategy;
 import org.apache.camel.Exchange;
-import org.apache.camel.processor.aggregate.AggregationStrategy;
 
 import java.util.ArrayList;
 

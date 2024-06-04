@@ -24,8 +24,9 @@
         <bundle start-level="90">mvn:commons-net/commons-net/${commons-net.version}</bundle>
         <bundle start-level="90">wrap:mvn:org.apache.kafka/kafka-clients/${kafka.client.version}</bundle>
         <bundle start-level="90">mvn:org.apache.camel/camel-core/${camel.version}</bundle>
-        <bundle start-level="90">mvn:org.apache.camel/camel-core-osgi/${camel.version}</bundle>
-        <bundle start-level="90">mvn:org.apache.camel/camel-blueprint/${camel.version}</bundle>
+        <bundle start-level="90">mvn:org.apache.camel/camel-core-osgi/${camel-core-osgi.version}</bundle>
+        <bundle start-level="90">mvn:org.apache.camel/camel-blueprint/${camel-blueprint.version}</bundle>
+        <bundle start-level="90">mvn:org.apache.camel/camel-core-xml/${camel.version}</bundle>
         <bundle start-level="90">mvn:org.apache.camel/camel-jackson/${camel.version}</bundle>
         <bundle start-level="90">mvn:org.apache.camel/camel-http-common/${camel.version}</bundle>
         <bundle start-level="90">mvn:org.apache.camel/camel-servlet/${camel.version}</bundle>

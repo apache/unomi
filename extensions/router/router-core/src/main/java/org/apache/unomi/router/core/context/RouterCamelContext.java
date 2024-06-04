@@ -20,6 +20,7 @@ import org.apache.camel.CamelContext;
 import org.apache.camel.Route;
 import org.apache.camel.component.jackson.JacksonDataFormat;
 import org.apache.camel.core.osgi.OsgiDefaultCamelContext;
+import org.apache.camel.model.ModelCamelContext;
 import org.apache.camel.model.RouteDefinition;
 import org.apache.unomi.api.services.ClusterService;
 import org.apache.unomi.api.services.ConfigSharingService;
@@ -234,10 +235,7 @@ public class RouterCamelContext implements IRouterCamelContext {
         //Active routes
         Route route = camelContext.getRoute(routeId);
         if (route != null) {
-            RouteDefinition routeDefinition = camelContext.getRouteDefinition(routeId);
-            if (routeDefinition != null) {
-                camelContext.removeRouteDefinition(routeDefinition);
-            }
+            camelContext.getRouteController().suspendRoute(routeId);
         }
 
         if (fireEvent) {
