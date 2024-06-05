@@ -18,7 +18,7 @@
 /* Handle login events */
 if ('login' == ctx._source.eventType) {
     /* Look for empty scope */
-    if (ctx._source.scope == '' || ctx._source.scope == null) {
+    if (ctx._source.scope == '') {
          ctx._source.put('scope', 'systemsite');
          if (ctx._source.source != null) {
             ctx._source.source.put('scope', 'systemsite');

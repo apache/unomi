@@ -1,0 +1,29 @@
+{
+  "script": {
+    "source": "#painless",
+    "lang": "painless"
+  },
+  "query": {
+    "bool": {
+      "must": [
+        {
+          "match": {
+            "itemType": "event"
+          }
+        },
+        {
+          "match": {
+            "eventType": "login"
+          }
+        }
+      ],
+      "must_not": [
+        {
+          "exists": {
+            "field": "scope"
+          }
+        }
+      ]
+    }
+  }
+}
