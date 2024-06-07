@@ -60,7 +60,7 @@
     <properties>
         <karaf.version>4.2.15</karaf.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <cxf.version>3.3.11</cxf.version>
+        <cxf.version>3.4.0</cxf.version>
         <version.jackson.core>2.11.4</version.jackson.core>
         <version.jackson.databind>2.11.4</version.jackson.databind>
         <version.jackson.jaxb>2.11.4</version.jackson.jaxb>
@@ -82,6 +82,7 @@
         <joda-time.version>2.12.7</joda-time.version>
         <st4.version>4.3.4</st4.version>
         <json-patch.version>1.9</json-patch.version>
+        <jakarta.jws.version>2.1.0</jakarta.jws.version>
 
         <java.version>11</java.version>
 
@@ -697,6 +698,12 @@
                 <version>3.0.1</version>
             </dependency>
 
+            <dependency>
+                <groupId>jakarta.jws</groupId>
+                <artifactId>jakarta.jws-api</artifactId>
+                <version>${jakarta.jws.version}</version>
+            </dependency>
+
             <!-- Apache CXF dependencies -->
             <dependency>
                 <groupId>org.apache.cxf</groupId>
@@ -726,7 +733,22 @@
                 <classifier>features</classifier>
                 <type>xml</type>
                 <scope>runtime</scope>
+                <exclusions>
+                    <exclusion>
+                        <groupId>org.apache.cxf.services.sts</groupId>
+                        <artifactId>cxf-services-sts-core</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>org.apache.cxf</groupId>
+                        <artifactId>cxf-rt-ws-rm</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>org.apache.cxf</groupId>
+                        <artifactId>cxf-rt-ws-security</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
+
             <!-- End of Apache CXF dependencies -->
 
             <!-- Jackson dependencies -->
@@ -1021,7 +1043,6 @@
                     <extensions>true</extensions>
                     <configuration>
                         <instructions>
-                            <_noimportjava>true</_noimportjava>
                             <Embed-Dependency>*;scope=compile|runtime</Embed-Dependency>
                         </instructions>
                     </configuration>
