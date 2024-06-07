@@ -172,13 +172,26 @@ This snapshot has been done on Unomi 1.6.x using ElasticSearch 7.11.0.
 So we will set up locally those servers in the exact same versions.
 (For now just download them and do not start them yet.)
 
+To ease the migration, you can run the docker image of ElasticSearch 7.11.0 with the following command:
+
+    docker run -p 9200:9200 -e path.repo="/tmp/snapshots_repository"  -e discovery.type=single-node docker.elastic.co/elasticsearch/elasticsearch:7.11.0
+
+Note that the path.repo is set to `/tmp/snapshots_repository` so you can use this path to store the snapshot repository.
+
 First we need to extract the zip of the snapshot repository from the test resources:
 
     /src/test/resources/migration/snapshots_repository.zip
+    
+>    If you use docker, you can copy the zip file to the docker container using the following command:
+>    docker cp src/test/resources/migration/snapshots_repository.zip <container_id>:/tmp/snapshots_repository.zip
+
+Then unzip it to the path you want to use as snapshot repository.
 
 In my case I unzip it to:
 
     /servers/elasticsearch-7.11.0/
+
+>   For docker unzip in the `/tmp` folder.
 
 So I have the following folders structure:
 
@@ -189,6 +202,8 @@ Now we need to configure our ElasticSearch server to allow this path as repo, ed
     path:
         repo:
             - /servers/elasticsearch-7.11.0/snapshots_repository
+
+> This step is not required for docker.
 
 Start ElasticSearch server.
 Now we have to add the snapshot repository, do the following request on your ElasticSearch instance:
@@ -241,5 +256,7 @@ And the final step is, zipping the new version of the snapshot repository and re
 
     zip -r snapshots_repository.zip /servers/elasticsearch-7.11.0/snapshots_repository
     cp /servers/elasticsearch-7.11.0/snapshots_repository.zip src/test/resources/migration/snapshots_repository.zip
+
+> In case you are using docker, do zip in the container and use `docker cp` to get the zip file from the docker container.
 
 Now you can modify the migration test class to test that your added data in 1.6.x is correctly migrated in 2.0.0
