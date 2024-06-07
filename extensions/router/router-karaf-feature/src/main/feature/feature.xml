@@ -33,6 +33,7 @@
         <bundle start-level="90">mvn:org.apache.camel/camel-stream/${camel.version}</bundle>
         <bundle start-level="90">mvn:org.apache.camel/camel-kafka/${camel.version}</bundle>
         <bundle start-level="90">mvn:org.apache.cxf/cxf-rt-rs-security-cors/${cxf.version}</bundle>
+        <bundle start-level="80">mvn:javax.validation/validation-api/${bean.validation.version}</bundle>
         <bundle start-level="90" start="false">mvn:org.apache.unomi/unomi-router-api/${project.version}</bundle>
         <bundle start-level="90" start="false">mvn:org.apache.unomi/unomi-router-core/${project.version}</bundle>
         <bundle start-level="90" start="false">mvn:org.apache.unomi/unomi-router-service/${project.version}</bundle>
