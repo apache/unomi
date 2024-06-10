@@ -52,6 +52,7 @@
         <bundle start-level="75">mvn:com.google.guava/guava/16.0.1</bundle>
         <bundle start-level="75">mvn:com.github.fge/jackson-coreutils/1.8</bundle>
         <bundle start-level="75">mvn:com.github.fge/json-patch/1.9</bundle>
+        <bundle start-level="75">mvn:org.json/json/${org.json.version}</bundle>
         <bundle start-level="75">mvn:com.fasterxml.jackson.core/jackson-databind/${version.jackson.databind}</bundle>
         <bundle start-level="75">mvn:com.fasterxml.jackson.core/jackson-annotations/${version.jackson.core}</bundle>
         <bundle start-level="75">mvn:com.fasterxml.jackson.jaxrs/jackson-jaxrs-base/${version.jackson.core}</bundle>
