@@ -50,6 +50,6 @@
         <bundle start-level="80">mvn:org.eclipse.jetty/jetty-server/${jetty.websocket.version}</bundle>
         <bundle start-level="80">mvn:org.eclipse.jetty/jetty-http/${jetty.websocket.version}</bundle>
         <bundle start-level="80">mvn:org.apache.unomi/cdp-graphql-api-impl/${project.version}</bundle>
-        <bundle start-level="80">mvn:org.apache.unomi/unomi-graphql-playground/${project.version}</bundle>
+        <bundle start-level="80">mvn:org.apache.unomi/unomi-graphql-ui/${project.version}</bundle>
     </feature>
 </features>
