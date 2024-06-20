@@ -14,18 +14,25 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const path = require('path');
 
 module.exports = (env, argv) => {
-    const config = {
-        mode: 'development',
-        entry: './src/javascript/index.jsx',
+    const isProd = argv.mode === 'production';
+
+    return {
+        context: path.join(__dirname, '/src/main/resources/assets'),
+        mode: isProd ? 'production' : 'development',
+        devtool: isProd ? false : 'source-map',
+        entry: {
+            'js/index': './js/index.jsx',
+            'css/index': './styles/index.less',
+        },
         output: {
-            path: path.resolve(__dirname, 'target/javascript'),
-            filename: 'unomi-graphql-playground.js',
+            path: path.join(__dirname, '/target/assets'),
         },
         resolve: {
-            extensions: ['*', '.js', '.jsx']
+            extensions: ['.js', '.jsx', '.less', '.css'],
         },
         module: {
             rules: [
@@ -41,17 +48,21 @@ module.exports = (env, argv) => {
                     ],
                 },
                 {
-                    test: /\.css$/,
+                    test: /\.less$/,
                     use: [
-                        'style-loader',
-                        'css-loader',
-                    ],
+                        {loader: MiniCssExtractPlugin.loader, options: {publicPath: '../'}},
+                        {loader: 'css-loader', options: {sourceMap: !isProd, importLoaders: 1}},
+                        {loader: 'postcss-loader', options: {sourceMap: !isProd}},
+                        {loader: 'less-loader', options: {sourceMap: !isProd}},
+                    ]
                 },
             ]
-        }
+        },
+        plugins: [
+            new MiniCssExtractPlugin({
+                filename: '[name].css',
+                chunkFilename: './css/[id].css'
+            }),
+        ],
     };
-
-    config.devtool = (argv.mode === 'production') ? 'source-map' : 'eval-source-map';
-
-    return config;
 };
