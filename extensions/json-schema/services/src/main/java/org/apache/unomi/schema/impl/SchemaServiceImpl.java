@@ -85,9 +85,9 @@ public class SchemaServiceImpl implements SchemaService {
         try {
             JsonNode jsonNode = parseData(data);
             JsonSchema jsonSchema = getJsonSchema(schemaId);
-            return validate(jsonNode, jsonSchema).size() == 0;
+            return validate(jsonNode, jsonSchema).isEmpty();
         } catch (ValidationException e) {
-            LOGGER.debug("{}", e.getMessage(), e);
+            LOGGER.warn("{}", e.getMessage(), e);
         }
         return false;
     }
@@ -102,7 +102,7 @@ public class SchemaServiceImpl implements SchemaService {
         try {
             return validateEvent(event).isEmpty();
         } catch (ValidationException e) {
-            LOGGER.debug("{}", e.getMessage(), e);
+            LOGGER.warn("{}", e.getMessage(), e);
         }
         return false;
     }
@@ -134,6 +134,7 @@ public class SchemaServiceImpl implements SchemaService {
                     }
                 }
             } catch (ValidationException e) {
+                LOGGER.warn("An error occurred during the validation of your event - switch to DEBUG log level for more information.");
                 LOGGER.debug("Validation error : {}", e.getMessage());
                 Set<ValidationError> errors = buildCustomErrorMessage(e.getMessage());
                 String eventTypeOrErrorKey = eventType != null ? eventType : GENERIC_ERROR_KEY;
@@ -225,10 +226,10 @@ public class SchemaServiceImpl implements SchemaService {
         try {
             Set<ValidationMessage> validationMessages = jsonSchema.validate(jsonNode);
 
-            if (LOGGER.isDebugEnabled() && !validationMessages.isEmpty()) {
-                LOGGER.debug("Schema validation found {} errors while validating against schema: {}", validationMessages.size(), jsonSchema.getCurrentUri());
+            if (!validationMessages.isEmpty()) {
+                LOGGER.warn("Schema validation found {} errors while validating against schema: {}", validationMessages.size(), jsonSchema.getCurrentUri());
                 for (ValidationMessage validationMessage : validationMessages) {
-                    LOGGER.debug("Validation error: {}", validationMessage);
+                    LOGGER.warn("Validation error: {}", validationMessage);
                 }
             }
 
