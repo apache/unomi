@@ -87,6 +87,7 @@ public class SchemaServiceImpl implements SchemaService {
             JsonSchema jsonSchema = getJsonSchema(schemaId);
             return validate(jsonNode, jsonSchema).size() == 0;
         } catch (ValidationException e) {
+            LOGGER.warn("An event was not valid - switch to DEBUG log level for more information.");
             LOGGER.debug("{}", e.getMessage(), e);
         }
         return false;
@@ -102,7 +103,7 @@ public class SchemaServiceImpl implements SchemaService {
         try {
             return validateEvent(event).isEmpty();
         } catch (ValidationException e) {
-            LOGGER.debug("{}", e.getMessage(), e);
+            LOGGER.warn("{}", e.getMessage(), e);
         }
         return false;
     }
@@ -134,6 +135,7 @@ public class SchemaServiceImpl implements SchemaService {
                     }
                 }
             } catch (ValidationException e) {
+                LOGGER.warn("An event was not valid - switch to DEBUG log level for more information.");
                 LOGGER.debug("Validation error : {}", e.getMessage());
                 Set<ValidationError> errors = buildCustomErrorMessage(e.getMessage());
                 String eventTypeOrErrorKey = eventType != null ? eventType : GENERIC_ERROR_KEY;
@@ -226,9 +228,9 @@ public class SchemaServiceImpl implements SchemaService {
             Set<ValidationMessage> validationMessages = jsonSchema.validate(jsonNode);
 
             if (LOGGER.isDebugEnabled() && !validationMessages.isEmpty()) {
-                LOGGER.debug("Schema validation found {} errors while validating against schema: {}", validationMessages.size(), jsonSchema.getCurrentUri());
+                LOGGER.warn("Schema validation found {} errors while validating against schema: {}", validationMessages.size(), jsonSchema.getCurrentUri());
                 for (ValidationMessage validationMessage : validationMessages) {
-                    LOGGER.debug("Validation error: {}", validationMessage);
+                    LOGGER.warn("Validation error: {}", validationMessage);
                 }
             }
 
