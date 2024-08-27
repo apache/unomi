@@ -459,7 +459,7 @@ Note that when a groovy action is deleted by the API, the action type associated
 
 In this short example, we’re going to create a Groovy Action that will be adding “Hello world!” to the logs whenever a new view event is triggered.
 
-The first step consists in creating the groovy script on your filesystem, start by creating the file `hello-world.groovy`:
+The first step consists in creating the groovy script on your filesystem, start by creating the file `helloWorldGroovyAction.groovy`:
 
 [source,groovy]
 ----
@@ -474,13 +474,15 @@ def execute() {
 
 As the last instruction of the script is `EventService.NO_CHANGE`, data will not be persisted. 
 
-Once the action has been created you need to submit it to Unomi (from the same folder as `hello-world.groovy`).
+Once the action has been created you need to submit it to Unomi (from the same folder as `helloWorldGroovyAction.groovy`).
 [source,bash]
 ----
 curl -X POST 'http://localhost:8181/cxs/groovyActions' \
 --user karaf:karaf \
---form 'file=@hello-world.groovy'
+--form 'file=@helloWorldGroovyAction.groovy'
 ----
+
+Important: A bug ( https://issues.apache.org/jira/browse/UNOMI-847[UNOMI-847] ) in Apache Unomi 2.5 and lower requires the filename of a Groovy file being submitted to be the same than the id of the Groovy action (as per the example above).
 
 Finally, register a rule to trigger execution of the groovy action:
 [source,bash]
