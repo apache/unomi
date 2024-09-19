@@ -5,11 +5,15 @@
         "systemTags": [
             "properties",
             "profileProperties",
-            "contactProfileProperties"
+            "contactProfileProperties",
+            "profileTags",
+            "autocompleted"
         ]
     },
     "type": "string",
     "defaultValue": "",
-    "automaticMappingsFrom": [ ],
+    "automaticMappingsFrom": [
+        "j:city"
+    ],
     "rank": "304.0"
 }

@@ -17,6 +17,7 @@
 
 package org.apache.unomi.api.services;
 
+import org.apache.unomi.api.Event;
 import org.apache.unomi.api.Item;
 import org.apache.unomi.api.Metadata;
 import org.apache.unomi.api.PartialList;
@@ -25,6 +26,7 @@ import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.rules.Rule;
 import org.apache.unomi.api.rules.RuleStatistics;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -55,6 +57,15 @@ public interface RulesService {
      * @return a {@link PartialList} of rule details for the rules matching the specified query
      */
     PartialList<Rule> getRuleDetails(Query query);
+
+    /**
+     * Get all rules available in the system.
+     * (This is not doing a persistence query to retrieve the rules, it's using the internal in memory cache
+     * that is refreshed every second by default but can vary depending on your own configuration)
+     *
+     * @return all rules available.
+     */
+    List<Rule> getAllRules();
 
     /**
      * Retrieves the rule identified by the specified identifier.
@@ -104,4 +115,17 @@ public interface RulesService {
      * @return the Set of tracked conditions for the specified item
      */
     Set<Condition> getTrackedConditions(Item item);
+
+    /**
+     * Retrieves all the matching rules for a specific event
+     * @param event the event we want to retrieve all the matching rules for
+     * @return a set of rules that match the event passed in the parameters
+     */
+    public Set<Rule> getMatchingRules(Event event);
+
+    /**
+     * Refresh the rules for this instance by reloading them from the persistence backend
+     */
+    public void refreshRules();
+
 }

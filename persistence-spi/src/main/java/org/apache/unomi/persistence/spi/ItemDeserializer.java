@@ -42,6 +42,10 @@ public class ItemDeserializer extends StdDeserializer<Item> {
         classes.put(type, clazz);
     }
 
+    public void unregisterMapping(String type) {
+        classes.remove(type);
+    }
+
     @Override
     public Item deserialize(JsonParser jp, DeserializationContext ctxt) throws IOException {
         ObjectCodec codec = jp.getCodec();
@@ -55,6 +59,9 @@ public class ItemDeserializer extends StdDeserializer<Item> {
         }
         Item item = codec.treeToValue(treeNode, objectClass);
         item.setItemId(treeNode.get("itemId").asText());
+        if (item instanceof CustomItem) {
+            ((CustomItem) item).setCustomItemType(type);
+        }
         return item;
     }
 }

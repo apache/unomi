@@ -4,6 +4,8 @@
     "name": "newVisitorCondition",
     "description": "",
     "systemTags": [
+      "availableToEndUser",
+      "visitBased",
       "profileTags",
       "event",
       "condition",

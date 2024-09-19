@@ -55,7 +55,7 @@ public abstract class AbstractServiceImpl {
 
     protected <T extends MetadataItem> PartialList<Metadata> getMetadatas(Query query, Class<T> clazz) {
         if (query.isForceRefresh()) {
-            persistenceService.refresh();
+            persistenceService.refreshIndex(clazz);
         }
         definitionsService.resolveConditionType(query.getCondition());
         PartialList<T> items = persistenceService.query(query.getCondition(), query.getSortby(), clazz, query.getOffset(), query.getLimit());

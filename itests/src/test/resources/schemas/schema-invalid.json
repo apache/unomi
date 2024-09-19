@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2019-09/schema",
+  "self":{
+    "vendor":"com.vendor.test",
+    "name":"invalid",
+    "format":"jsonschema",
+    "version":"1-0-0"
+  },
+  "invalidEntry": "An invalid entry",
+  "title": "TestEvent",
+  "type": "object",
+  "allOf": [{ "$ref": "https://unomi.apache.org/schemas/json/event/1-0-0" }]
+}

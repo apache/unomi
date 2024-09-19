@@ -1,0 +1,7 @@
+{
+  "operationName": "deleteSource",
+  "variables": {
+    "sourceID": "testSourceId"
+  },
+  "query": "mutation deleteSource($sourceID: ID!) {\n  cdp {\n    deleteSource(sourceID: $sourceID)\n  }\n}\n"
+}

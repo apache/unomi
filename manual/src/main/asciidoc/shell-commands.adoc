@@ -41,15 +41,21 @@ karaf@root()> help unomi:migrate
 DESCRIPTION
         unomi:migrate
 
-    This will Migrate your date in ES to be compliant with current version
+    This will Migrate your date in ES to be compliant with current version.
+    It's possible to configure the migration using OSGI configuration file: org.apache.unomi.migration.cfg,
+    if no configuration is provided then questions will be prompted during the migration process.
 
 SYNTAX
-        unomi:migrate [fromVersionWithoutSuffix]
+        unomi:migrate [fromVersionWithoutSuffix] [skipConfirmation]
 
 ARGUMENTS
         fromVersionWithoutSuffix
                 Origin version without suffix/qualifier (e.g: 1.2.0)
                 (defaults to 1.2.0)
+        skipConfirmation
+                Should the confirmation before starting the migration process be skipped ?
+                (defaults to false)
+
 ```
 ==== Lifecycle commands
 
@@ -120,9 +126,9 @@ created, EXECUTE means the rule's actions are being executed.
 |event-id
 |Dumps a single event in JSON. The `event-id` can be retrieved from the event-tail command output.
 |event-list
-|[max-entries] [--csv]
+|[max-entries] [event-type] [--csv]
 |List the last events processed by Apache Unomi. The `max-entries` parameter can be used to control how many events are
-displayed (default is 100). The `--csv` argument is used to output the list as a CSV list instead of an ASCII table.
+displayed (default is 100). The `event-type` makes it possible to filter the list by event type. The `--csv` argument is used to output the list as a CSV list instead of an ASCII table.
 |event-search
 |profile-id [event-type] [max-entries]
 |This command makes it possible to search for the last events by `profile-id` and by `event-type`. A `max-entries`

@@ -1,0 +1,12 @@
+{
+  "operationName": "deleteAllPersonalData",
+  "variables": {
+    "profileID": {
+      "client": {
+        "id": "defaultClientId"
+      },
+      "id": "profileId_deleteAllPersonalDataTest"
+    }
+  },
+  "query": "mutation deleteAllPersonalData($profileID: CDP_ProfileIDInput!) {\n  cdp {\n    deleteAllPersonalData(profileID: $profileID)\n  }\n}\n"
+}

@@ -1,0 +1,16 @@
+{
+  "_source": false,
+  "size": 0,
+  "aggs": {
+    "scopes": {
+      "terms": {
+        "field": "scope.keyword"
+      }
+    },
+    "bucketInfos": {
+      "stats_bucket": {
+        "buckets_path": "scopes._count"
+      }
+    }
+  }
+}

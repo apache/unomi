@@ -18,10 +18,9 @@
 package org.apache.unomi.services.impl.segments;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import org.apache.unomi.api.Event;
-import org.apache.unomi.api.Metadata;
-import org.apache.unomi.api.PartialList;
-import org.apache.unomi.api.Profile;
+import net.jodah.failsafe.Failsafe;
+import net.jodah.failsafe.RetryPolicy;
+import org.apache.unomi.api.*;
 import org.apache.unomi.api.actions.Action;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.conditions.ConditionType;
@@ -32,10 +31,13 @@ import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.api.services.RulesService;
 import org.apache.unomi.api.services.SchedulerService;
 import org.apache.unomi.api.services.SegmentService;
+import org.apache.unomi.api.utils.ConditionBuilder;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.persistence.spi.aggregate.TermsAggregate;
 import org.apache.unomi.services.impl.AbstractServiceImpl;
-import org.apache.unomi.services.impl.ParserHelper;
+import org.apache.unomi.services.impl.scheduler.SchedulerServiceImpl;
+import org.apache.unomi.api.utils.ParserHelper;
+import org.apache.unomi.api.exceptions.BadSegmentConditionException;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleEvent;
@@ -46,12 +48,21 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.net.URL;
 import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.time.Duration;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentService, SynchronousBundleListener {
 
     private static final Logger logger = LoggerFactory.getLogger(SegmentServiceImpl.class.getName());
+
+    private static final String VALIDATION_PROFILE_ID = "validation-profile-id";
+    private static final String RESET_SCORING_SCRIPT = "resetScoringPlan";
+    private static final String EVALUATE_SCORING_ELEMENT_SCRIPT = "evaluateScoringPlanElement";
 
     private BundleContext bundleContext;
 
@@ -65,6 +76,13 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
     private int segmentUpdateBatchSize = 1000;
     private long segmentRefreshInterval = 1000;
     private int aggregateQueryBucketSize = 5000;
+    private int maxRetriesForUpdateProfileSegment = 0;
+    private long secondsDelayForRetryUpdateProfileSegment = 1;
+    private boolean batchSegmentProfileUpdate = false;
+    private boolean sendProfileUpdateEventForSegmentUpdate = true;
+    private int maximumIdsQueryCount = 5000;
+    private boolean pastEventsDisablePartitions = false;
+    private int dailyDateExprEvaluationHourUtc = 5;
 
     public SegmentServiceImpl() {
         logger.info("Initializing segment service...");
@@ -94,11 +112,39 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
         this.aggregateQueryBucketSize = aggregateQueryBucketSize;
     }
 
+    public void setMaximumIdsQueryCount(int maximumIdsQueryCount) {
+        this.maximumIdsQueryCount = maximumIdsQueryCount;
+    }
+
+    public void setPastEventsDisablePartitions(boolean pastEventsDisablePartitions) {
+        this.pastEventsDisablePartitions = pastEventsDisablePartitions;
+    }
+
     public void setSegmentRefreshInterval(long segmentRefreshInterval) {
         this.segmentRefreshInterval = segmentRefreshInterval;
     }
 
-    public void postConstruct() {
+    public void setMaxRetriesForUpdateProfileSegment(int maxRetriesForUpdateProfileSegment) {
+        this.maxRetriesForUpdateProfileSegment = maxRetriesForUpdateProfileSegment;
+    }
+
+    public void setSecondsDelayForRetryUpdateProfileSegment(long secondsDelayForRetryUpdateProfileSegment) {
+        this.secondsDelayForRetryUpdateProfileSegment = secondsDelayForRetryUpdateProfileSegment;
+    }
+
+    public void setBatchSegmentProfileUpdate(boolean batchSegmentProfileUpdate) {
+        this.batchSegmentProfileUpdate = batchSegmentProfileUpdate;
+    }
+
+    public void setSendProfileUpdateEventForSegmentUpdate(boolean sendProfileUpdateEventForSegmentUpdate) {
+        this.sendProfileUpdateEventForSegmentUpdate = sendProfileUpdateEventForSegmentUpdate;
+    }
+
+    public void setDailyDateExprEvaluationHourUtc(int dailyDateExprEvaluationHourUtc) {
+        this.dailyDateExprEvaluationHourUtc = dailyDateExprEvaluationHourUtc;
+    }
+
+    public void postConstruct() throws IOException {
         logger.debug("postConstruct {" + bundleContext.getBundle() + "}");
         loadPredefinedSegments(bundleContext);
         loadPredefinedScorings(bundleContext);
@@ -147,13 +193,8 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
                 if (segment.getMetadata().getScope() == null) {
                     segment.getMetadata().setScope("systemscope");
                 }
-                // Register only if segment does not exist yet
-                if (getSegmentDefinition(segment.getMetadata().getId()) == null) {
-                    setSegmentDefinition(segment);
-                    logger.info("Predefined segment with id {} registered", segment.getMetadata().getId());
-                } else {
-                    logger.info("The predefined segment with id {} is already registered, this segment will be skipped", segment.getMetadata().getId());
-                }
+                setSegmentDefinition(segment);
+                logger.info("Predefined segment with id {} registered", segment.getMetadata().getId());
             } catch (IOException e) {
                 logger.error("Error while loading segment definition " + predefinedSegmentURL, e);
             }
@@ -175,13 +216,8 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
                 if (scoring.getMetadata().getScope() == null) {
                     scoring.getMetadata().setScope("systemscope");
                 }
-                // Register only if scoring plan does not exist yet
-                if (getScoringDefinition(scoring.getMetadata().getId()) == null) {
-                    setScoringDefinition(scoring);
-                    logger.info("Predefined scoring with id {} registered", scoring.getMetadata().getId());
-                } else {
-                    logger.info("The predefined scoring with id {} is already registered, this scoring will be skipped", scoring.getMetadata().getId());
-                }
+                setScoringDefinition(scoring);
+                logger.info("Predefined scoring with id {} registered", scoring.getMetadata().getId());
             } catch (IOException e) {
                 logger.error("Error while loading segment definition " + predefinedScoringURL, e);
             }
@@ -208,34 +244,40 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
     private List<Segment> getAllSegmentDefinitions() {
         List<Segment> allItems = persistenceService.getAllItems(Segment.class);
         for (Segment segment : allItems) {
-            ParserHelper.resolveConditionType(definitionsService, segment.getCondition());
+            if (segment.getMetadata().isEnabled()) {
+                ParserHelper.resolveConditionType(definitionsService, segment.getCondition(), "segment " + segment.getItemId());
+            }
         }
         return allItems;
     }
 
     public Segment getSegmentDefinition(String segmentId) {
         Segment definition = persistenceService.load(segmentId, Segment.class);
-        if (definition != null) {
-            ParserHelper.resolveConditionType(definitionsService, definition.getCondition());
+        if (definition != null && definition.getMetadata().isEnabled()) {
+            ParserHelper.resolveConditionType(definitionsService, definition.getCondition(), "segment " + segmentId);
         }
         return definition;
     }
 
     public void setSegmentDefinition(Segment segment) {
-        ParserHelper.resolveConditionType(definitionsService, segment.getCondition());
-        if (segment.getMetadata().isEnabled() && !segment.getMetadata().isMissingPlugins()) {
-            updateAutoGeneratedRules(segment.getMetadata(), segment.getCondition());
+        if (segment.getMetadata().isEnabled()) {
+            ParserHelper.resolveConditionType(definitionsService, segment.getCondition(), "segment " + segment.getItemId());
+            if (!persistenceService.isValidCondition(segment.getCondition(), new Profile(VALIDATION_PROFILE_ID))) {
+                throw new BadSegmentConditionException();
+            }
+            if (!segment.getMetadata().isMissingPlugins()) {
+                updateAutoGeneratedRules(segment.getMetadata(), segment.getCondition());
+            }
         }
-        // make sure we update the name and description metadata that might not match, so first we remove the entry from the map
-        persistenceService.save(segment);
 
+        // make sure we update the name and description metadata that might not match, so first we remove the entry from the map
+        persistenceService.save(segment, null, true);
         updateExistingProfilesForSegment(segment);
     }
 
     private boolean checkSegmentDeletionImpact(Condition condition, String segmentToDeleteId) {
         if (condition != null) {
-            @SuppressWarnings("unchecked")
-            final List<Condition> subConditions = (List<Condition>) condition.getParameter("subConditions");
+            @SuppressWarnings("unchecked") final List<Condition> subConditions = (List<Condition>) condition.getParameter("subConditions");
             if (subConditions != null) {
                 for (Condition subCondition : subConditions) {
                     if (checkSegmentDeletionImpact(subCondition, segmentToDeleteId)) {
@@ -243,8 +285,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
                     }
                 }
             } else if ("profileSegmentCondition".equals(condition.getConditionTypeId())) {
-                @SuppressWarnings("unchecked")
-                final List<String> referencedSegmentIds = (List<String>) condition.getParameter("segments");
+                @SuppressWarnings("unchecked") final List<String> referencedSegmentIds = (List<String>) condition.getParameter("segments");
 
                 if (referencedSegmentIds.indexOf(segmentToDeleteId) >= 0) {
                     return true;
@@ -265,8 +306,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
      */
     private Condition updateSegmentDependentCondition(Condition condition, String segmentId) {
         if ("booleanCondition".equals(condition.getConditionTypeId())) {
-            @SuppressWarnings("unchecked")
-            final List<Condition> subConditions = (List<Condition>) condition.getParameter("subConditions");
+            @SuppressWarnings("unchecked") final List<Condition> subConditions = (List<Condition>) condition.getParameter("subConditions");
             List<Condition> updatedSubConditions = new LinkedList<>();
             for (Condition subCondition : subConditions) {
                 Condition updatedCondition = updateSegmentDependentCondition(subCondition, segmentId);
@@ -285,8 +325,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
                 return null;
             }
         } else if ("profileSegmentCondition".equals(condition.getConditionTypeId())) {
-            @SuppressWarnings("unchecked")
-            final List<String> referencedSegmentIds = (List<String>) condition.getParameter("segments");
+            @SuppressWarnings("unchecked") final List<String> referencedSegmentIds = (List<String>) condition.getParameter("segments");
             if (referencedSegmentIds.indexOf(segmentId) >= 0) {
                 referencedSegmentIds.remove(segmentId);
                 if (referencedSegmentIds.isEmpty()) {
@@ -344,12 +383,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
             segmentCondition.setParameter("propertyName", "segments");
             segmentCondition.setParameter("comparisonOperator", "equals");
             segmentCondition.setParameter("propertyValue", segmentId);
-
-            List<Profile> previousProfiles = persistenceService.query(segmentCondition, null, Profile.class);
-            for (Profile profileToRemove : previousProfiles) {
-                profileToRemove.getSegments().remove(segmentId);
-                persistenceService.update(profileToRemove.getItemId(), null, Profile.class, "segments", profileToRemove.getSegments());
-            }
+            updateProfilesSegment(segmentCondition, segmentId, false, false);
 
             // update impacted segments
             for (Segment segment : impactedSegments) {
@@ -395,7 +429,6 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
         }
         return new DependentMetadata(segments, scorings);
     }
-
 
     public PartialList<Profile> getMatchingIndividuals(String segmentID, int offset, int size, String sortBy) {
         Segment segment = getSegmentDefinition(segmentID);
@@ -466,7 +499,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
 
         List<Segment> allSegments = this.allSegments;
         for (Segment segment : allSegments) {
-            if (persistenceService.testMatch(segment.getCondition(), profile)) {
+            if (segment.getMetadata().isEnabled() && persistenceService.testMatch(segment.getCondition(), profile)) {
                 metadatas.add(segment.getMetadata());
             }
         }
@@ -485,8 +518,10 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
     private List<Scoring> getAllScoringDefinitions() {
         List<Scoring> allItems = persistenceService.getAllItems(Scoring.class);
         for (Scoring scoring : allItems) {
-            for (ScoringElement element : scoring.getElements()) {
-                ParserHelper.resolveConditionType(definitionsService, element.getCondition());
+            if (scoring.getMetadata().isEnabled()) {
+                for (ScoringElement element : scoring.getElements()) {
+                    ParserHelper.resolveConditionType(definitionsService, element.getCondition(), "scoring " + scoring.getItemId());
+                }
             }
         }
         return allItems;
@@ -494,40 +529,40 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
 
     public Scoring getScoringDefinition(String scoringId) {
         Scoring definition = persistenceService.load(scoringId, Scoring.class);
-        if (definition != null) {
+        if (definition != null && definition.getMetadata().isEnabled()) {
             for (ScoringElement element : definition.getElements()) {
-                ParserHelper.resolveConditionType(definitionsService, element.getCondition());
+                ParserHelper.resolveConditionType(definitionsService, element.getCondition(), "scoring " + scoringId);
             }
         }
         return definition;
     }
 
     public void setScoringDefinition(Scoring scoring) {
-        for (ScoringElement element : scoring.getElements()) {
-            ParserHelper.resolveConditionType(definitionsService, element.getCondition());
-        }
-        for (ScoringElement element : scoring.getElements()) {
-            if (scoring.getMetadata().isEnabled() && !scoring.getMetadata().isMissingPlugins()) {
-                updateAutoGeneratedRules(scoring.getMetadata(), element.getCondition());
+        if (scoring.getMetadata().isEnabled()) {
+            for (ScoringElement element : scoring.getElements()) {
+                ParserHelper.resolveConditionType(definitionsService, element.getCondition(), "scoring " + scoring.getItemId() + " element ");
+                if (!scoring.getMetadata().isMissingPlugins()) {
+                    updateAutoGeneratedRules(scoring.getMetadata(), element.getCondition());
+                }
             }
         }
         // make sure we update the name and description metadata that might not match, so first we remove the entry from the map
         persistenceService.save(scoring);
 
         persistenceService.createMapping(Profile.ITEM_TYPE, String.format(
-                    "{\n" +
-                    "  \"properties\": {\n" +
-                    "    \"scores\": {\n" +
-                    "      \"properties\": {\n" +
-                    "        \"%s\": {\n" +
-                    "          \"type\":\"long\"\n" +
-                    "        }\n" +
-                    "      }\n" +
-                    "    }\n" +
-                    "  }\n" +
-                    "}", scoring.getItemId()));
+                "{\n" +
+                        "  \"properties\": {\n" +
+                        "    \"scores\": {\n" +
+                        "      \"properties\": {\n" +
+                        "        \"%s\": {\n" +
+                        "          \"type\":\"long\"\n" +
+                        "        }\n" +
+                        "      }\n" +
+                        "    }\n" +
+                        "  }\n" +
+                        "}", scoring.getItemId()));
 
-        updateExistingProfilesForScoring(scoring);
+        updateExistingProfilesForScoring(scoring.getItemId(), scoring.getElements(), scoring.getMetadata().isEnabled());
     }
 
     public void createScoringDefinition(String scope, String scoringId, String name, String description) {
@@ -544,8 +579,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
 
     private boolean checkScoringDeletionImpact(Condition condition, String scoringToDeleteId) {
         if (condition != null) {
-            @SuppressWarnings("unchecked")
-            final List<Condition> subConditions = (List<Condition>) condition.getParameter("subConditions");
+            @SuppressWarnings("unchecked") final List<Condition> subConditions = (List<Condition>) condition.getParameter("subConditions");
             if (subConditions != null) {
                 for (Condition subCondition : subConditions) {
                     if (checkScoringDeletionImpact(subCondition, scoringToDeleteId)) {
@@ -572,8 +606,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
      */
     private Condition updateScoringDependentCondition(Condition condition, String scoringId) {
         if ("booleanCondition".equals(condition.getConditionTypeId())) {
-            @SuppressWarnings("unchecked")
-            final List<Condition> subConditions = (List<Condition>) condition.getParameter("subConditions");
+            @SuppressWarnings("unchecked") final List<Condition> subConditions = (List<Condition>) condition.getParameter("subConditions");
             List<Condition> updatedSubConditions = new LinkedList<>();
             for (Condition subCondition : subConditions) {
                 Condition updatedCondition = updateScoringDependentCondition(subCondition, scoringId);
@@ -638,7 +671,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
         Set<Scoring> impactedScorings = getScoringDependentScorings(scoringId);
         if (!validate || (impactedSegments.isEmpty() && impactedScorings.isEmpty())) {
             // update profiles
-            updateExistingProfilesForRemovedScoring(scoringId);
+            updateExistingProfilesForScoring(scoringId, Collections.emptyList(), false);
 
             // update impacted segments
             for (Segment segment : impactedSegments) {
@@ -700,12 +733,12 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
 
     private void clearAutoGeneratedRules(List<Rule> rules, String idWithScope) {
         for (Rule previousRule : rules) {
-            previousRule.getLinkedItems().remove(idWithScope);
+            previousRule.getLinkedItems().removeAll(Collections.singleton(idWithScope));
             if (previousRule.getLinkedItems().isEmpty()) {
                 // todo remove profile properties ?
                 persistenceService.remove(previousRule.getItemId(), Rule.class);
             } else {
-                persistenceService.update(previousRule.getItemId(), null, Rule.class, "linkedItems", previousRule.getLinkedItems());
+                persistenceService.update(previousRule, Rule.class, "linkedItems", previousRule.getLinkedItems());
             }
         }
     }
@@ -727,13 +760,14 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
 
                     rule.setActions(Arrays.asList(action));
                     rule.setLinkedItems(Arrays.asList(metadata.getId()));
-                    rules.add(rule);
 
-                    updateExistingProfilesForPastEventCondition(condition, parentCondition);
-                } else {
+                    // it's a new generated rules to keep track of the event count, we should update all the profile that match this past event
+                    // it will update the count of event occurrence on the profile directly
+                    recalculatePastEventOccurrencesOnProfiles(condition, parentCondition, true, false);
+                } else if (!rule.getLinkedItems().contains(metadata.getId())) {
                     rule.getLinkedItems().add(metadata.getId());
-                    rules.add(rule);
                 }
+                rules.add(rule);
             }
         } else {
             Collection<Object> values = new ArrayList<>(condition.getParameterValues().values());
@@ -751,9 +785,21 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
         }
     }
 
-    private void updateExistingProfilesForPastEventCondition(Condition eventCondition, Condition parentCondition) {
+    /**
+     * This will recalculate the event counts on the profiles that match the given past event condition
+     *
+     * @param eventCondition                   the real condition
+     * @param parentCondition                  the past event condition
+     * @param forceRefresh                     will refresh the Profile index in case it's true
+     * @param resetExistingProfilesNotMatching if true, will reset existing profiles having a count to 0, in case they do not have events matching anymore
+     *                                         ("false" can be useful when you know that no existing profiles already exist because it's a new rule for example,
+     *                                         in that case setting this to "false" allow to skip profiles queries and speedup this process.
+     *                                         Otherwise use "true" here to be sure the count is reset to 0 on profiles that need to be reset)
+     */
+    private void recalculatePastEventOccurrencesOnProfiles(Condition eventCondition, Condition parentCondition,
+                                                           boolean forceRefresh, boolean resetExistingProfilesNotMatching) {
         long t = System.currentTimeMillis();
-        List<Condition> l = new ArrayList<Condition>();
+        List<Condition> l = new ArrayList<>();
         Condition andCondition = new Condition();
         andCondition.setConditionType(definitionsService.getConditionType("booleanCondition"));
         andCondition.setParameter("operator", "and");
@@ -762,6 +808,9 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
         l.add(eventCondition);
 
         Integer numberOfDays = (Integer) parentCondition.getParameter("numberOfDays");
+        String fromDate = (String) parentCondition.getParameter("fromDate");
+        String toDate = (String) parentCondition.getParameter("toDate");
+
         if (numberOfDays != null) {
             Condition numberOfDaysCondition = new Condition();
             numberOfDaysCondition.setConditionType(definitionsService.getConditionType("sessionPropertyCondition"));
@@ -770,31 +819,85 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
             numberOfDaysCondition.setParameter("propertyValue", "now-" + numberOfDays + "d");
             l.add(numberOfDaysCondition);
         }
+        if (fromDate != null) {
+            Condition startDateCondition = new Condition();
+            startDateCondition.setConditionType(definitionsService.getConditionType("sessionPropertyCondition"));
+            startDateCondition.setParameter("propertyName", "timeStamp");
+            startDateCondition.setParameter("comparisonOperator", "greaterThanOrEqualTo");
+            startDateCondition.setParameter("propertyValueDate", fromDate);
+            l.add(startDateCondition);
+        }
+        if (toDate != null) {
+            Condition endDateCondition = new Condition();
+            endDateCondition.setConditionType(definitionsService.getConditionType("sessionPropertyCondition"));
+            endDateCondition.setParameter("propertyName", "timeStamp");
+            endDateCondition.setParameter("comparisonOperator", "lessThanOrEqualTo");
+            endDateCondition.setParameter("propertyValueDate", toDate);
+            l.add(endDateCondition);
+        }
+
         String propertyKey = (String) parentCondition.getParameter("generatedPropertyKey");
+        Set<String> existingProfilesWithCounts = resetExistingProfilesNotMatching ? getExistingProfilesWithPastEventOccurrenceCount(propertyKey) : Collections.emptySet();
 
-        Map<String, Double> m = persistenceService.getSingleValuesMetrics(andCondition, new String[]{"card"}, "profileId.keyword", Event.ITEM_TYPE);
-        long card = m.get("_card").longValue();
-
-        int numParts = (int) (card / aggregateQueryBucketSize) + 2;
-        for (int i = 0; i < numParts; i++) {
-            Map<String, Long> eventCountByProfile = persistenceService.aggregateWithOptimizedQuery(andCondition, new TermsAggregate("profileId", i, numParts), Event.ITEM_TYPE);
-            for (Map.Entry<String, Long> entry : eventCountByProfile.entrySet()) {
-                String profileId = entry.getKey();
-                if (!profileId.startsWith("_")) {
-                    Map<String, Long> pastEventCounts = new HashMap<>();
-                    pastEventCounts.put(propertyKey, entry.getValue());
-                    Map<String, Object> systemProperties = new HashMap<>();
-                    systemProperties.put("pastEvents", pastEventCounts);
-                    try {
-                        persistenceService.update(profileId, null, Profile.class, "systemProperties", systemProperties);
-                    } catch (Exception e) {
-                        logger.error("Error updating profile {} past event system properties", profileId, e);
-                    }
-                }
+        int updatedProfileCount = 0;
+        if (pastEventsDisablePartitions) {
+            Map<String, Long> eventCountByProfile = persistenceService.aggregateWithOptimizedQuery(eventCondition, new TermsAggregate("profileId"), Event.ITEM_TYPE, maximumIdsQueryCount);
+            Set<String> updatedProfiles = updatePastEventOccurrencesOnProfiles(eventCountByProfile, propertyKey);
+            existingProfilesWithCounts.removeAll(updatedProfiles);
+            updatedProfileCount = updatedProfiles.size();
+        } else {
+            Map<String, Double> m = persistenceService.getSingleValuesMetrics(andCondition, new String[]{"card"}, "profileId.keyword", Event.ITEM_TYPE);
+            long card = m.get("_card").longValue();
+            int numParts = (int) (card / aggregateQueryBucketSize) + 2;
+            for (int i = 0; i < numParts; i++) {
+                Map<String, Long> eventCountByProfile = persistenceService.aggregateWithOptimizedQuery(andCondition, new TermsAggregate("profileId", i, numParts), Event.ITEM_TYPE);
+                Set<String> updatedProfiles = updatePastEventOccurrencesOnProfiles(eventCountByProfile, propertyKey);
+                existingProfilesWithCounts.removeAll(updatedProfiles);
+                updatedProfileCount += updatedProfiles.size();
             }
         }
 
-        logger.info("Profiles past condition updated in {}ms", System.currentTimeMillis() - t);
+        // remaining existing profiles with counts should be reset to 0 since they have not been updated it means
+        // that they do not have matching events anymore in the time based condition
+        if (!existingProfilesWithCounts.isEmpty()) {
+            updatedProfileCount += updatePastEventOccurrencesOnProfiles(
+                    existingProfilesWithCounts.stream().collect(Collectors.toMap(key -> key, value -> 0L)), propertyKey).size();
+        }
+
+        if (forceRefresh && updatedProfileCount > 0) {
+            persistenceService.refreshIndex(Profile.class);
+        }
+
+        logger.info("{} profiles updated for past event condition in {}ms", updatedProfileCount, System.currentTimeMillis() - t);
+    }
+
+    /**
+     * Return the list of profile ids, for profiles that already have an event count matching the generated property key
+     *
+     * @param generatedPropertyKey the generated property key of the generated rule for the given past event condition.
+     * @return the set of profile ids.
+     */
+    private Set<String> getExistingProfilesWithPastEventOccurrenceCount(String generatedPropertyKey) {
+        ConditionBuilder conditionBuilder = definitionsService.getConditionBuilder();
+        ConditionBuilder.ConditionItem subConditionCount = conditionBuilder.profileProperty("systemProperties.pastEvents.count").greaterThan(0);
+        ConditionBuilder.ConditionItem subConditionKey = conditionBuilder.profileProperty("systemProperties.pastEvents.key").equalTo(generatedPropertyKey);
+        ConditionBuilder.ConditionItem booleanCondition = conditionBuilder.and(subConditionCount, subConditionKey);
+        Condition condition = conditionBuilder.nested(booleanCondition, "systemProperties.pastEvents").build();
+
+        Set<String> profileIds = new HashSet<>();
+        if (pastEventsDisablePartitions) {
+            profileIds.addAll(persistenceService.aggregateWithOptimizedQuery(condition, new TermsAggregate("itemId"),
+                    Profile.ITEM_TYPE, maximumIdsQueryCount).keySet());
+        } else {
+            Map<String, Double> m = persistenceService.getSingleValuesMetrics(condition, new String[]{"card"}, "itemId.keyword", Profile.ITEM_TYPE);
+            long card = m.get("_card").longValue();
+            int numParts = (int) (card / aggregateQueryBucketSize) + 2;
+            for (int i = 0; i < numParts; i++) {
+                profileIds.addAll(persistenceService.aggregateWithOptimizedQuery(condition, new TermsAggregate("itemId", i, numParts),
+                        Profile.ITEM_TYPE).keySet());
+            }
+        }
+        return profileIds;
     }
 
     public String getGeneratedPropertyKey(Condition condition, Condition parentCondition) {
@@ -802,12 +905,118 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
             Map<String, Object> m = new HashMap<>();
             m.put("condition", condition);
             m.put("numberOfDays", parentCondition.getParameter("numberOfDays"));
+            // Put fromDate and toDate only if exist - for backward compatibility
+            Object fromDate = parentCondition.getParameter("fromDate");
+            if (fromDate != null) {
+                m.put("fromDate", parentCondition.getParameter("fromDate"));
+            }
+            Object toDate = parentCondition.getParameter("toDate");
+            if (toDate != null) {
+                m.put("fromDate", parentCondition.getParameter("toDate"));
+            }
+
             String key = CustomObjectMapper.getObjectMapper().writeValueAsString(m);
             return "eventTriggered" + getMD5(key);
         } catch (JsonProcessingException e) {
-            logger.error("Cannot generate key",e);
+            logger.error("Cannot generate key", e);
             return null;
         }
+    }
+
+    @Override
+    public void recalculatePastEventConditions() {
+        Set<String> segmentOrScoringIdsToReevaluate = new HashSet<>();
+        // reevaluate auto generated rules used to store the event occurrence count on the profile
+        for (Rule rule : rulesService.getAllRules()) {
+            if (rule.getActions() != null && rule.getActions().size() > 0) {
+                for (Action action : rule.getActions()) {
+                    if (action.getActionTypeId().equals("setEventOccurenceCountAction")) {
+                        Condition pastEventCondition = (Condition) action.getParameterValues().get("pastEventCondition");
+                        if (pastEventCondition.containsParameter("numberOfDays")) {
+                            recalculatePastEventOccurrencesOnProfiles(rule.getCondition(), pastEventCondition, true, true);
+                            logger.info("Event occurrence count on profiles updated for rule: {}", rule.getItemId());
+                            if (rule.getLinkedItems() != null && rule.getLinkedItems().size() > 0) {
+                                segmentOrScoringIdsToReevaluate.addAll(rule.getLinkedItems());
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        int pastEventSegmentsAndScoringsSize = segmentOrScoringIdsToReevaluate.size();
+        logger.info("Found {} segments or scoring plans containing pastEventCondition conditions", pastEventSegmentsAndScoringsSize);
+
+        // get Segments and Scoring that contains relative date expressions
+        segmentOrScoringIdsToReevaluate.addAll(allSegments.stream()
+                .filter(segment -> segment.getCondition() != null && segment.getCondition().toString().contains("propertyValueDateExpr"))
+                .map(Item::getItemId)
+                .collect(Collectors.toList()));
+
+        segmentOrScoringIdsToReevaluate.addAll(allScoring.stream()
+                .filter(scoring -> scoring.getElements() != null && scoring.getElements().size() > 0 && scoring.getElements().stream()
+                        .anyMatch(scoringElement -> scoringElement != null && scoringElement.getCondition() != null && scoringElement.getCondition().toString().contains("propertyValueDateExpr")))
+                .map(Item::getItemId)
+                .collect(Collectors.toList()));
+        logger.info("Found {} segments or scoring plans containing date relative expressions", segmentOrScoringIdsToReevaluate.size() - pastEventSegmentsAndScoringsSize);
+
+        // reevaluate segments and scoring.
+        if (segmentOrScoringIdsToReevaluate.size() > 0) {
+            persistenceService.refreshIndex(Profile.class, null);
+            for (String linkedItem : segmentOrScoringIdsToReevaluate) {
+                Segment linkedSegment = getSegmentDefinition(linkedItem);
+                if (linkedSegment != null) {
+                    logger.info("Start segment recalculation for segment: {} - {}", linkedSegment.getItemId(), linkedSegment.getMetadata().getName());
+                    updateExistingProfilesForSegment(linkedSegment);
+                    continue;
+                }
+
+                Scoring linkedScoring = getScoringDefinition(linkedItem);
+                if (linkedScoring != null) {
+                    logger.info("Start scoring plan recalculation for scoring plan: {} - {}", linkedScoring.getItemId(), linkedScoring.getMetadata().getName());
+                    updateExistingProfilesForScoring(linkedScoring.getItemId(), linkedScoring.getElements(), linkedScoring.getMetadata().isEnabled());
+                }
+            }
+        }
+    }
+
+    /**
+     * This will update all the profiles in the given map with the according new count occurrence for the given propertyKey
+     *
+     * @param eventCountByProfile the events count per profileId map
+     * @param propertyKey         the generate property key for this past event condition, to keep track of the count in the profile
+     * @return the set of profiles for witch the count of event occurrences have been updated.
+     */
+    private Set<String> updatePastEventOccurrencesOnProfiles(Map<String, Long> eventCountByProfile, String propertyKey) {
+        Set<String> profilesUpdated = new HashSet<>();
+        Set<String> batchProfilesToUpdate = new HashSet<>();
+        Iterator<Map.Entry<String, Long>> entryIterator = eventCountByProfile.entrySet().iterator();
+        Map<String, Map<String, Object>> paramPerProfile = new HashMap<>();
+
+        while (entryIterator.hasNext()) {
+            Map.Entry<String, Long> entry = entryIterator.next();
+            String profileId = entry.getKey();
+            if (!profileId.startsWith("_")) {
+                Map<String, Object> pastEventKeyValue = new HashMap<>();
+                pastEventKeyValue.put("pastEventKey", propertyKey);
+                pastEventKeyValue.put("valueToAdd", entry.getValue());
+                paramPerProfile.put(profileId, pastEventKeyValue);
+                profilesUpdated.add(profileId);
+                batchProfilesToUpdate.add(profileId);
+            }
+
+            if (batchProfilesToUpdate.size() == segmentUpdateBatchSize || (!entryIterator.hasNext() && !batchProfilesToUpdate.isEmpty())) {
+                try {
+                    Condition profileIdCondition = definitionsService.getConditionBuilder().condition("idsCondition").parameter("ids", batchProfilesToUpdate).parameter("match", true).build();
+                    persistenceService.updateWithQueryAndStoredScript(Profile.class, new String[]{"updatePastEventOccurences"}, new Map[]{paramPerProfile}, new Condition[]{profileIdCondition});
+                } catch (Exception e) {
+                    logger.error("Error updating {} profiles for past event system properties", paramPerProfile.size(), e);
+                } finally {
+                    paramPerProfile.clear();
+                    batchProfilesToUpdate.clear();
+                }
+            }
+        }
+        return profilesUpdated;
     }
 
     private String getMD5(String md5) {
@@ -819,21 +1028,21 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
                 sb.append(Integer.toHexString((array[i] & 0xFF) | 0x100).substring(1, 3));
             }
             return sb.toString();
-        } catch (java.security.NoSuchAlgorithmException e) {
+        } catch (NoSuchAlgorithmException e) {
             throw new RuntimeException(e);
         }
     }
 
     private void updateExistingProfilesForSegment(Segment segment) {
-        long t = System.currentTimeMillis();
-        Condition segmentCondition = new Condition();
-
+        long updateProfilesForSegmentStartTime = System.currentTimeMillis();
         long updatedProfileCount = 0;
+        final String segmentId = segment.getItemId();
 
+        Condition segmentCondition = new Condition();
         segmentCondition.setConditionType(definitionsService.getConditionType("profilePropertyCondition"));
         segmentCondition.setParameter("propertyName", "segments");
         segmentCondition.setParameter("comparisonOperator", "equals");
-        segmentCondition.setParameter("propertyValue", segment.getItemId());
+        segmentCondition.setParameter("propertyValue", segmentId);
 
         if (segment.getMetadata().isEnabled()) {
 
@@ -858,111 +1067,124 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
             profilesToRemoveSubConditions.add(notNewSegmentCondition);
             profilesToRemoveCondition.setParameter("subConditions", profilesToRemoveSubConditions);
 
-            PartialList<Profile> profilesToRemove = persistenceService.query(profilesToRemoveCondition, null, Profile.class, 0, segmentUpdateBatchSize, "10m");
-            PartialList<Profile> profilesToAdd = persistenceService.query(profilesToAddCondition, null, Profile.class, 0, segmentUpdateBatchSize, "10m");
-
-            while (profilesToAdd.getList().size() > 0) {
-                long t2= System.currentTimeMillis();
-                for (Profile profileToAdd : profilesToAdd.getList()) {
-                    profileToAdd.getSegments().add(segment.getItemId());
-                    persistenceService.update(profileToAdd.getItemId(), null, Profile.class, "segments", profileToAdd.getSegments());
-                    Event profileUpdated = new Event("profileUpdated", null, profileToAdd, null, null, profileToAdd, new Date());
-                    profileUpdated.setPersistent(false);
-                    eventService.send(profileUpdated);
-                    updatedProfileCount++;
-                }
-                logger.info("{} profiles added in segment in {}ms", profilesToAdd.size(), System.currentTimeMillis() - t2);
-                profilesToAdd = persistenceService.continueScrollQuery(Profile.class, profilesToAdd.getScrollIdentifier(), profilesToAdd.getScrollTimeValidity());
-                if (profilesToAdd == null || profilesToAdd.getList().size() == 0) {
-                    break;
-                }
-            }
-            while (profilesToRemove.getList().size() > 0) {
-                long t2= System.currentTimeMillis();
-                for (Profile profileToRemove : profilesToRemove.getList()) {
-                    profileToRemove.getSegments().remove(segment.getItemId());
-                    persistenceService.update(profileToRemove.getItemId(), null, Profile.class, "segments", profileToRemove.getSegments());
-                    Event profileUpdated = new Event("profileUpdated", null, profileToRemove, null, null, profileToRemove, new Date());
-                    profileUpdated.setPersistent(false);
-                    eventService.send(profileUpdated);
-                    updatedProfileCount++;
-                }
-                logger.info("{} profiles removed from segment in {}ms", profilesToRemove.size(), System.currentTimeMillis() - t2);
-                profilesToRemove = persistenceService.continueScrollQuery(Profile.class, profilesToRemove.getScrollIdentifier(), profilesToRemove.getScrollTimeValidity());
-                if (profilesToRemove == null || profilesToRemove.getList().size() == 0) {
-                    break;
-                }
-            }
-
+            updatedProfileCount += updateProfilesSegment(profilesToAddCondition, segmentId, true, sendProfileUpdateEventForSegmentUpdate);
+            updatedProfileCount += updateProfilesSegment(profilesToRemoveCondition, segmentId, false, sendProfileUpdateEventForSegmentUpdate);
         } else {
-            PartialList<Profile> profilesToRemove = persistenceService.query(segmentCondition, null, Profile.class, 0, 200, "10m");
-            while (profilesToRemove.getList().size() > 0) {
-                for (Profile profileToRemove : profilesToRemove.getList()) {
-                    profileToRemove.getSegments().remove(segment.getItemId());
-                    persistenceService.update(profileToRemove.getItemId(), null, Profile.class, "segments", profileToRemove.getSegments());
-                    updatedProfileCount++;
-                }
-                profilesToRemove = persistenceService.continueScrollQuery(Profile.class, profilesToRemove.getScrollIdentifier(), profilesToRemove.getScrollTimeValidity());
-                if (profilesToRemove == null || profilesToRemove.getList().size() == 0) {
-                    break;
-                }
-            }
+            updatedProfileCount += updateProfilesSegment(segmentCondition, segmentId, false, sendProfileUpdateEventForSegmentUpdate);
         }
-        logger.info("{} profiles updated in {}ms", updatedProfileCount, System.currentTimeMillis() - t);
+        logger.info("{} profiles updated in {}ms", updatedProfileCount, System.currentTimeMillis() - updateProfilesForSegmentStartTime);
     }
 
-    private void updateExistingProfilesForScoring(Scoring scoring) {
-        long t = System.currentTimeMillis();
-        Condition scoringCondition = new Condition();
-        scoringCondition.setConditionType(definitionsService.getConditionType("profilePropertyCondition"));
-        scoringCondition.setParameter("propertyName", "scores." + scoring.getItemId());
-        scoringCondition.setParameter("comparisonOperator", "exists");
+    private long updateProfilesSegment(Condition profilesToUpdateCondition, String segmentId, boolean isAdd, boolean sendProfileUpdateEvent) {
+        long updatedProfileCount = 0;
+        PartialList<Profile> profiles = persistenceService.query(profilesToUpdateCondition, null, Profile.class, 0, segmentUpdateBatchSize, "10m");
 
-        String[] scripts = new String[scoring.getElements().size() + 1];
-        HashMap<String, Object>[] scriptParams = new HashMap[scoring.getElements().size() + 1];
-        Condition[] conditions = new Condition[scoring.getElements().size() + 1];
+        while (profiles != null && profiles.getList().size() > 0) {
+            long startTime = System.currentTimeMillis();
+            if (batchSegmentProfileUpdate) {
+                batchUpdateProfilesSegment(segmentId, profiles.getList(), isAdd);
+            } else { //send update profile one by one
+                for (Profile profileToUpdate : profiles.getList()) {
+                    Map<String, Object> sourceMap = buildPropertiesMapForUpdateSegment(profileToUpdate, segmentId, isAdd);
+                    persistenceService.update(profileToUpdate, Profile.class, sourceMap);
+                }
+            }
+            if (sendProfileUpdateEvent)
+                sendProfileUpdatedEvent(profiles.getList());
 
-        scriptParams[0] = new HashMap<String, Object>();
-        scriptParams[0].put("scoringId", scoring.getItemId());
-        scripts[0] = "if( ctx._source.containsKey(\"systemProperties\") && ctx._source.systemProperties.containsKey(\"scoreModifiers\") && ctx._source.systemProperties.scoreModifiers.containsKey(params.scoringId) ) { ctx._source.scores.put(params.scoringId, ctx._source.systemProperties.scoreModifiers.get(params.scoringId)) } else { ctx._source.scores.remove(params.scoringId) }";
-        conditions[0] = scoringCondition;
+            updatedProfileCount += profiles.size();
+            logger.info("{} profiles {} to segment {} in {}ms", profiles.size(), isAdd ? "added" : "removed", segmentId, System.currentTimeMillis() - startTime);
 
-        if (scoring.getMetadata().isEnabled()) {
-            String scriptToAdd = "if( !ctx._source.containsKey(\"scores\") ){ ctx._source.put(\"scores\", [:])} if( ctx._source.scores.containsKey(params.scoringId) ) { ctx._source.scores.put(params.scoringId, ctx._source.scores.get(params.scoringId)+params.scoringValue) } else { ctx._source.scores.put(params.scoringId, params.scoringValue) }";
+            profiles = persistenceService.continueScrollQuery(Profile.class, profiles.getScrollIdentifier(), profiles.getScrollTimeValidity());
+        }
+
+        return updatedProfileCount;
+    }
+
+    private void batchUpdateProfilesSegment(String segmentId, List<Profile> profiles, boolean isAdd) {
+        Map<Item, Map> profileToPropertiesMap = new HashMap<>();
+        for (Profile profileToUpdate : profiles) {
+            Map<String, Object> propertiesToUpdate = buildPropertiesMapForUpdateSegment(profileToUpdate, segmentId, isAdd);
+            profileToPropertiesMap.put(profileToUpdate, propertiesToUpdate);
+        }
+        List<String> failedItemsIds = persistenceService.update(profileToPropertiesMap, Profile.class);
+        if (failedItemsIds != null)
+            failedItemsIds.forEach(s -> retryFailedSegmentUpdate(s, segmentId, isAdd));
+    }
+
+    private void retryFailedSegmentUpdate(String profileId, String segmentId, boolean isAdd) {
+        if (maxRetriesForUpdateProfileSegment > 0) {
+            RetryPolicy retryPolicy = new RetryPolicy()
+                    .withDelay(Duration.ofSeconds(secondsDelayForRetryUpdateProfileSegment))
+                    .withMaxRetries(maxRetriesForUpdateProfileSegment);
+
+            Failsafe.with(retryPolicy).
+                    run(executionContext -> {
+                        logger.warn("retry updating profile segment {}, profile {}, time {}", segmentId, profileId, new Date());
+                        Profile profileToAddUpdated = persistenceService.load(profileId, Profile.class);
+                        Map<String, Object> sourceMapToUpdate = buildPropertiesMapForUpdateSegment(profileToAddUpdated, segmentId, isAdd);
+                        boolean isUpdated = persistenceService.update(profileToAddUpdated, Profile.class, sourceMapToUpdate);
+                        if (isUpdated == false)
+                            throw new Exception(String.format("failed retry update profile segment {}, profile {}, time {}", segmentId, profileId, new Date()));
+                    });
+        }
+    }
+
+    private void sendProfileUpdatedEvent(List<Profile> profiles) {
+        for (Profile profileToAdd : profiles) {
+            sendProfileUpdatedEvent(profileToAdd);
+        }
+    }
+
+    private void sendProfileUpdatedEvent(Profile profile) {
+        Event profileUpdated = new Event("profileUpdated", null, profile, null, null, profile, new Date());
+        profileUpdated.setPersistent(false);
+        eventService.send(profileUpdated);
+    }
+
+    private Map<String, Object> buildPropertiesMapForUpdateSegment(Profile profile, String segmentId, boolean isAdd) {
+        if (isAdd)
+            profile.getSegments().add(segmentId);
+        else
+            profile.getSegments().remove(segmentId);
+
+        Map<String, Object> sourceMap = new HashMap<>();
+        sourceMap.put("segments", profile.getSegments());
+        profile.setSystemProperty("lastUpdated", new Date());
+        sourceMap.put("systemProperties", profile.getSystemProperties());
+        return sourceMap;
+    }
+
+    private void updateExistingProfilesForScoring(String scoringId, List<ScoringElement> scoringElements, boolean isEnabled) {
+        long startTime = System.currentTimeMillis();
+
+        String[] scripts = new String[scoringElements.size() + 1];
+        Map<String, Object>[] scriptParams = new HashMap[scoringElements.size() + 1];
+        Condition[] conditions = new Condition[scoringElements.size() + 1];
+
+        // reset Score
+        scriptParams[0] = new HashMap<>();
+        scriptParams[0].put("scoringId", scoringId);
+        scripts[0] = RESET_SCORING_SCRIPT;
+        conditions[0] = new Condition();
+        conditions[0].setConditionType(definitionsService.getConditionType("profilePropertyCondition"));
+        conditions[0].setParameter("propertyName", "scores." + scoringId);
+        conditions[0].setParameter("comparisonOperator", "exists");
+
+        // evaluate each elements of the scoring
+        if (isEnabled) {
             int idx = 1;
-            for (ScoringElement element : scoring.getElements()) {
+            for (ScoringElement element : scoringElements) {
                 scriptParams[idx] = new HashMap<>();
-                scriptParams[idx].put("scoringId", scoring.getItemId());
+                scriptParams[idx].put("scoringId", scoringId);
                 scriptParams[idx].put("scoringValue", element.getValue());
-                scripts[idx] = scriptToAdd;
+                scripts[idx] = EVALUATE_SCORING_ELEMENT_SCRIPT;
                 conditions[idx] = element.getCondition();
                 idx++;
             }
         }
-
-        persistenceService.updateWithQueryAndScript(null, Profile.class, scripts, scriptParams, conditions);
-        logger.info("Profiles updated in {}ms", System.currentTimeMillis() - t);
-    }
-
-    private void updateExistingProfilesForRemovedScoring(String scoringId) {
-        long t = System.currentTimeMillis();
-        Condition scoringCondition = new Condition();
-        scoringCondition.setConditionType(definitionsService.getConditionType("profilePropertyCondition"));
-        scoringCondition.setParameter("propertyName", "scores." + scoringId);
-        scoringCondition.setParameter("comparisonOperator", "exists");
-        Condition[] conditions = new Condition[1];
-        conditions[0] = scoringCondition;
-
-        HashMap<String, Object>[] scriptParams = new HashMap[1];
-        scriptParams[0] = new HashMap<String, Object>();
-        scriptParams[0].put("scoringId", scoringId);
-
-        String[] script = new String[1];
-        script[0] = "ctx._source.scores.remove(params.scoringId)";
-
-        persistenceService.updateWithQueryAndScript(null, Profile.class, script, scriptParams, conditions);
-
-        logger.info("Profiles updated in {}ms", System.currentTimeMillis() - t);
+        persistenceService.updateWithQueryAndStoredScript(Profile.class, scripts, scriptParams, conditions);
+        logger.info("Updated scoring for profiles in {}ms", System.currentTimeMillis() - startTime);
     }
 
     public void bundleChanged(BundleEvent event) {
@@ -977,27 +1199,25 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
     }
 
     private void initializeTimer() {
+
         TimerTask task = new TimerTask() {
             @Override
             public void run() {
                 try {
-                    for (Metadata metadata : rulesService.getRuleMetadatas()) {
-                        Rule rule = rulesService.getRule(metadata.getId());
-                        for (Action action : rule.getActions()) {
-                            if (action.getActionTypeId().equals("setEventOccurenceCountAction")) {
-                                Condition pastEventCondition = (Condition) action.getParameterValues().get("pastEventCondition");
-                                if (pastEventCondition.containsParameter("numberOfDays")) {
-                                    updateExistingProfilesForPastEventCondition(rule.getCondition(), pastEventCondition);
-                                }
-                            }
-                        }
-                    }
+                    long currentTimeMillis = System.currentTimeMillis();
+                    logger.info("running scheduled task to recalculate segments and scoring that contains date relative conditions");
+                    recalculatePastEventConditions();
+                    logger.info("finished recalculate segments and scoring that contains date relative conditions in {}ms. ", System.currentTimeMillis() - currentTimeMillis);
                 } catch (Throwable t) {
-                    logger.error("Error while updating profiles for past event conditions", t);
+                    logger.error("Error while updating profiles for segments and scoring that contains date relative conditions", t);
                 }
             }
         };
-        schedulerService.getScheduleExecutorService().scheduleAtFixedRate(task, 1, taskExecutionPeriod, TimeUnit.DAYS);
+        long initialDelay = SchedulerServiceImpl.getTimeDiffInSeconds(dailyDateExprEvaluationHourUtc, ZonedDateTime.now(ZoneOffset.UTC));
+        long period = TimeUnit.DAYS.toSeconds(taskExecutionPeriod);
+        logger.info("daily recalculation job for segments and scoring that contains date relative conditions will run at fixed rate, " +
+                "initialDelay={}, taskExecutionPeriod={} in seconds", initialDelay, period);
+        schedulerService.getScheduleExecutorService().scheduleAtFixedRate(task, initialDelay, period, TimeUnit.SECONDS);
 
         task = new TimerTask() {
             @Override
@@ -1016,5 +1236,4 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
     public void setTaskExecutionPeriod(long taskExecutionPeriod) {
         this.taskExecutionPeriod = taskExecutionPeriod;
     }
-
 }

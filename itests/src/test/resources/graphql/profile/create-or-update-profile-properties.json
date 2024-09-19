@@ -1,0 +1,35 @@
+{
+  "operationName": "createOrUpdateProfileProperties",
+  "variables": {
+    "properties": [
+      {
+        "set": {
+          "name": "testProperty",
+          "properties": [
+            {
+              "string": {
+                "name": "testStringProperty"
+              }
+            },
+            {
+              "long": {
+                "name": "testLongProperty",
+                "defaultValue": 9007199254740991
+              }
+            },
+            {
+              "json": {
+                "name": "testJsonProperty",
+                "defaultValue": {
+                  "default": true,
+                  "value": 0
+                }
+              }
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "query": "mutation createOrUpdateProfileProperties($properties: [CDP_PropertyInput]) {\n  cdp {\n    createOrUpdateProfileProperties(properties: $properties)\n  }\n}\n"
+}

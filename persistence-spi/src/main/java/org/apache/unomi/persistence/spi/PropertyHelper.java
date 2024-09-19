@@ -21,14 +21,13 @@ import org.apache.commons.beanutils.BeanUtils;
 import org.apache.commons.beanutils.NestedNullException;
 import org.apache.commons.beanutils.PropertyUtils;
 import org.apache.commons.beanutils.expression.DefaultResolver;
+import org.apache.unomi.api.Profile;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.lang.reflect.InvocationTargetException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Helper method for properties
@@ -40,6 +39,7 @@ public class PropertyHelper {
 
     public static boolean setProperty(Object target, String propertyName, Object propertyValue, String setPropertyStrategy) {
         try {
+            // Handle remove
             String parentPropertyName;
             if (setPropertyStrategy != null && setPropertyStrategy.equals("remove")) {
                 if (resolver.hasNested(propertyName)) {
@@ -62,6 +62,13 @@ public class PropertyHelper {
                 }
                 return false;
             }
+
+            // Leave now, next strategies require a propertyValue, if no propertyValue, nothing to update.
+            if (propertyValue == null) {
+                return false;
+            }
+
+            // Resolve propertyName
             while (resolver.hasNested(propertyName)) {
                 Object v = PropertyUtils.getProperty(target, resolver.next(propertyName));
                 if (v == null) {
@@ -72,24 +79,32 @@ public class PropertyHelper {
                 target = v;
             }
 
-            if (setPropertyStrategy != null && setPropertyStrategy.equals("addValue")) {
-                Object previousValue = PropertyUtils.getProperty(target, propertyName);
-                List<Object> values = new ArrayList<>();
-                if (previousValue != null && previousValue instanceof List) {
-                    values.addAll((List) previousValue);
-                } else if (previousValue != null) {
-                    values.add(previousValue);
-                }
-                if (!values.contains(propertyValue)) {
-                    values.add(propertyValue);
-                    BeanUtils.setProperty(target, propertyName, values);
+            // Get previous value
+            Object previousValue = PropertyUtils.getProperty(target, propertyName);
+
+            // Handle strategies
+            if (setPropertyStrategy == null ||
+                    setPropertyStrategy.equals("alwaysSet") ||
+                    (setPropertyStrategy.equals("setIfMissing") && previousValue == null)) {
+                if (!compareValues(propertyValue, previousValue)) {
+                    BeanUtils.setProperty(target, propertyName, propertyValue);
                     return true;
                 }
-            } else if (propertyValue != null && !compareValues(propertyValue, BeanUtils.getProperty(target, propertyName))) {
-                if (setPropertyStrategy == null ||
-                        setPropertyStrategy.equals("alwaysSet") ||
-                        (setPropertyStrategy.equals("setIfMissing") && BeanUtils.getProperty(target, propertyName) == null)) {
-                    BeanUtils.setProperty(target, propertyName, propertyValue);
+            } else if (setPropertyStrategy.equals("addValue") || setPropertyStrategy.equals("addValues")) {
+                List<Object> newValuesList = convertToList(propertyValue);
+                List<Object> previousValueList = convertToList(previousValue);
+
+                newValuesList.addAll(previousValueList);
+                Set<Object> newValuesSet = new HashSet<>(newValuesList);
+                if (newValuesSet.size() != previousValueList.size()) {
+                    BeanUtils.setProperty(target, propertyName, Arrays.asList(newValuesSet.toArray()));
+                    return true;
+                }
+            } else if (setPropertyStrategy.equals("removeValue") || setPropertyStrategy.equals("removeValues")) {
+                List<Object> previousValueList = convertToList(previousValue);
+
+                if (previousValueList.removeAll(convertToList(propertyValue))) {
+                    BeanUtils.setProperty(target, propertyName, previousValueList);
                     return true;
                 }
             }
@@ -99,12 +114,48 @@ public class PropertyHelper {
         return false;
     }
 
+    public static List<Object> convertToList(Object value) {
+        List<Object> convertedList = new ArrayList<>();
+        if (value != null && value instanceof List) {
+            convertedList.addAll((List) value);
+        } else if (value != null) {
+            convertedList.add(value);
+        }
+        return convertedList;
+    }
+
     public static Integer getInteger(Object value) {
         if (value instanceof Number) {
             return ((Number) value).intValue();
         } else {
             try {
                 return Integer.parseInt(value.toString());
+            } catch (NumberFormatException e) {
+                // Not a number
+            }
+        }
+        return null;
+    }
+
+    public static Long getLong(Object value) {
+        if (value instanceof Number) {
+            return ((Number) value).longValue();
+        } else {
+            try {
+                return Long.parseLong(value.toString());
+            } catch (NumberFormatException e) {
+                // Not a number
+            }
+        }
+        return null;
+    }
+
+    public static Double getDouble(Object value) {
+        if (value instanceof Number) {
+            return ((Number) value).doubleValue();
+        } else {
+            try {
+                return Double.parseDouble(value.toString());
             } catch (NumberFormatException e) {
                 // Not a number
             }
@@ -151,6 +202,8 @@ public class PropertyHelper {
         }
         if (propertyValue instanceof Integer) {
             return propertyValue.equals(getInteger(beanPropertyValue));
+        } if (propertyValue instanceof Long) {
+            return propertyValue.equals(getLong(beanPropertyValue));
         } else if (propertyValue instanceof Boolean) {
             return propertyValue.equals(getBooleanValue(beanPropertyValue));
         } else {
@@ -158,5 +211,31 @@ public class PropertyHelper {
         }
     }
 
+    public static Map<String, Object> flatten(Map<String, Object> in) {
+        return in.entrySet().stream()
+                .filter(entry -> entry.getValue() != null)
+                .flatMap(entry -> flatten(entry).entrySet().stream())
+                .collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        Map.Entry::getValue));
+    }
+
+    private static Map<String, Object> flatten(Map.Entry<String, Object> in) {
+        // for other then Map objects return them
+        if (!Map.class.isInstance(in.getValue())) {
+            return Collections.singletonMap(in.getKey(), in.getValue());
+        }
+        // extract the key prefix for nested objects
+        String prefix = in.getKey();
+        Map<String, Object> values = (Map<String, Object>) in.getValue();
+        // create a new Map, with prefix added to each key
+        Map<String, Object> flattenMap = new HashMap<>();
+        values.keySet().forEach(key -> {
+            // use a dot as a joining char
+            flattenMap.put(prefix + "." + key, values.get(key));
+        });
+        // use recursion to flatten the structure deeper
+        return flatten(flattenMap);
+    }
 
 }

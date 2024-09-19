@@ -71,7 +71,7 @@ public class ClusterSystemStatisticsEventHandler extends CellarSupport implement
 
         // check if the group is local
         if (!groupManager.isLocalGroup(event.getSourceGroup().getName())) {
-            logger.debug("CELLAR SYSTEM STATS: node is not part of the event cluster group {}",event.getSourceGroup().getName());
+            logger.info("CELLAR SYSTEM STATS: node is not part of the event cluster group {}",event.getSourceGroup().getName());
             return;
         }
 

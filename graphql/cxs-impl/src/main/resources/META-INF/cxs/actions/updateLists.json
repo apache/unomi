@@ -1,0 +1,25 @@
+{
+  "metadata": {
+    "id": "updateListsEventAction",
+    "name": "updateListsEventAction",
+    "description": "",
+    "systemTags": [
+      "profileTags",
+      "demographic"
+    ],
+    "readOnly": true
+  },
+  "actionExecutor": "updateLists",
+  "parameters": [
+    {
+      "id": "join_lists",
+      "type": "string",
+      "multivalued": true
+    },
+    {
+      "id": "leave_lists",
+      "type": "string",
+      "multivalued": true
+    }
+  ]
+}

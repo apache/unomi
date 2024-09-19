@@ -23,6 +23,7 @@ import org.apache.unomi.api.ValueType;
 import org.apache.unomi.api.actions.ActionType;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.conditions.ConditionType;
+import org.apache.unomi.api.utils.ConditionBuilder;
 
 import java.util.Collection;
 import java.util.List;
@@ -210,4 +211,12 @@ public interface DefinitionsService {
      * so it is recommended to use this in specific cases such as for example in integration tests.
      */
     void refresh();
+
+
+    /**
+     * Retrieves a new instance of a ConditionBuilder to help to build conditions.
+     *
+     * @return a new instance of a ConditionBuilder
+     */
+    ConditionBuilder getConditionBuilder();
 }

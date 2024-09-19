@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<!--
+  ~ Licensed to the Apache Software Foundation (ASF) under one or more
+  ~ contributor license agreements.  See the NOTICE file distributed with
+  ~ this work for additional information regarding copyright ownership.
+  ~ The ASF licenses this file to You under the Apache License, Version 2.0
+  ~ (the "License"); you may not use this file except in compliance with
+  ~ the License.  You may obtain a copy of the License at
+  ~
+  ~      http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+<features xmlns="http://karaf.apache.org/xmlns/features/v1.6.0" name="cdp-graphql-features">
+    <feature name="cdp-graphql-feature" description="Apache Unomi :: GraphQL API :: Karaf Feature"
+             version="${project.version}">
+        <feature>unomi-kar</feature>
+        <bundle start-level="80">wrap:mvn:com.google.code.findbugs/jsr305/1.3.9</bundle>
+        <bundle start-level="80">wrap:mvn:org.checkerframework/checker-compat-qual/2.0.0</bundle>
+        <bundle start-level="80">wrap:mvn:com.google.errorprone/error_prone_annotations/2.1.3</bundle>
+        <bundle start-level="80">wrap:mvn:com.google.j2objc/j2objc-annotations/1.1</bundle>
+        <bundle start-level="80">wrap:mvn:org.codehaus.mojo/animal-sniffer-annotations/1.14</bundle>
+        <bundle start-level="80">mvn:commons-fileupload/commons-fileupload/1.3.1</bundle>
+        <bundle start-level="80">mvn:org.antlr/antlr4-runtime/${antlr.runtime.version}</bundle>
+        <bundle start-level="80">wrap:mvn:com.graphql-java/java-dataloader/${java.dataloader.version}</bundle>
+        <bundle start-level="80">mvn:org.reactivestreams/reactive-streams/1.0.2</bundle>
+        <bundle start-level="80">mvn:com.graphql-java/graphql-java/${graphql.java.version}</bundle>
+        <bundle start-level="80">mvn:io.github.graphql-java/graphql-java-annotations/${graphql.java.annotations.version}</bundle>
+        <bundle start-level="80">mvn:javax.validation/validation-api/${bean.validation.version}</bundle>
+        <bundle start-level="80">wrap:mvn:com.graphql-java/graphql-java-extended-scalars/${graphql.java.extended.scalars.version}</bundle>
+        <bundle start-level="80">wrap:mvn:com.squareup.okhttp3/okhttp/3.2.0</bundle>
+        <bundle start-level="80">wrap:mvn:com.squareup.okio/okio/1.6.0</bundle>
+        <bundle start-level="80">mvn:io.reactivex.rxjava2/rxjava/2.2.19</bundle>
+        <bundle start-level="80">mvn:org.eclipse.jetty.websocket/websocket-server/${jetty.websocket.version}</bundle>
+        <bundle start-level="80">mvn:org.eclipse.jetty.websocket/websocket-common/${jetty.websocket.version}</bundle>
+        <bundle start-level="80">mvn:org.eclipse.jetty.websocket/websocket-api/${jetty.websocket.version}</bundle>
+        <bundle start-level="80">mvn:org.eclipse.jetty/jetty-util/${jetty.websocket.version}</bundle>
+        <bundle start-level="80">mvn:org.eclipse.jetty/jetty-io/${jetty.websocket.version}</bundle>
+        <bundle start-level="80">mvn:org.eclipse.jetty.websocket/websocket-client/${jetty.websocket.version}</bundle>
+        <bundle start-level="80">mvn:org.eclipse.jetty/jetty-client/${jetty.websocket.version}</bundle>
+        <bundle start-level="80">mvn:org.eclipse.jetty/jetty-xml/${jetty.websocket.version}</bundle>
+        <bundle start-level="80">mvn:org.eclipse.jetty.websocket/websocket-servlet/${jetty.websocket.version}</bundle>
+        <bundle start-level="80">mvn:javax.servlet/javax.servlet-api/3.0.1</bundle>
+        <bundle start-level="80">mvn:org.eclipse.jetty/jetty-servlet/${jetty.websocket.version}</bundle>
+        <bundle start-level="80">mvn:org.eclipse.jetty/jetty-security/${jetty.websocket.version}</bundle>
+        <bundle start-level="80">mvn:org.eclipse.jetty/jetty-server/${jetty.websocket.version}</bundle>
+        <bundle start-level="80">mvn:org.eclipse.jetty/jetty-http/${jetty.websocket.version}</bundle>
+        <bundle start-level="80">mvn:org.apache.unomi/cdp-graphql-api-impl/${project.version}</bundle>
+        <bundle start-level="80">mvn:org.apache.unomi/unomi-graphql-playground/${project.version}</bundle>
+    </feature>
+</features>

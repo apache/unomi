@@ -1,3 +1,4 @@
 node_modules
+node
+dist
 yarn-error.log
-src/main/webapp/dist

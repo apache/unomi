@@ -22,7 +22,7 @@
     <parent>
         <groupId>org.apache.unomi</groupId>
         <artifactId>unomi-persistence-elasticsearch</artifactId>
-        <version>1.5.0-SNAPSHOT</version>
+        <version>2.6.0-SNAPSHOT</version>
     </parent>
 
     <artifactId>unomi-persistence-elasticsearch-core</artifactId>
@@ -33,12 +33,12 @@
     <dependencies>
         <dependency>
             <groupId>org.osgi</groupId>
-            <artifactId>org.osgi.core</artifactId>
+            <artifactId>osgi.core</artifactId>
             <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.osgi</groupId>
-            <artifactId>org.osgi.compendium</artifactId>
+            <artifactId>osgi.cmpn</artifactId>
             <scope>provided</scope>
         </dependency>
 
@@ -50,14 +50,15 @@
         </dependency>
         <dependency>
             <groupId>org.apache.unomi</groupId>
-            <artifactId>unomi-persistence-spi</artifactId>
+            <artifactId>unomi-common</artifactId>
             <version>${project.version}</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>com.google.guava</groupId>
-            <artifactId>guava</artifactId>
-            <version>20.0</version>
+            <groupId>org.apache.unomi</groupId>
+            <artifactId>unomi-persistence-spi</artifactId>
+            <version>${project.version}</version>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.elasticsearch.client</groupId>
@@ -106,25 +107,20 @@
         <dependency>
             <groupId>org.apache.lucene</groupId>
             <artifactId>lucene-test-framework</artifactId>
-            <version>8.2.0</version>
+            <version>${lucene.version}</version>
             <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.logging.log4j</groupId>
-            <artifactId>log4j-core</artifactId>
-            <version>2.12.1</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.logging.log4j</groupId>
-            <artifactId>log4j-api</artifactId>
-            <version>2.12.1</version>
-            <scope>test</scope>
+            <exclusions>
+                <exclusion>
+                    <!-- internal dep that is scoped "compile", ending up to be embedded and conflicting with ES Rest client internal deps -->
+                    <groupId>org.apache.lucene</groupId>
+                    <artifactId>lucene-core</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
             <artifactId>log4j-slf4j-impl</artifactId>
-            <version>2.12.1</version>
+            <version>2.17.0</version>
             <scope>test</scope>
         </dependency>
 
@@ -133,14 +129,14 @@
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
             <artifactId>log4j-api</artifactId>
-            <version>2.12.1</version>
+            <version>2.17.0</version>
             <scope>compile</scope>
             <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
             <artifactId>log4j-core</artifactId>
-            <version>2.12.1</version>
+            <version>2.17.0</version>
             <scope>compile</scope>
             <exclusions>
                 <exclusion>
@@ -153,7 +149,7 @@
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
             <artifactId>log4j-1.2-api</artifactId>
-            <version>2.12.1</version>
+            <version>2.17.0</version>
             <scope>compile</scope>
             <exclusions>
                 <exclusion>
@@ -180,12 +176,8 @@
             <artifactId>commons-lang3</artifactId>
         </dependency>
         <dependency>
-            <groupId>commons-collections</groupId>
-            <artifactId>commons-collections</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.mvel</groupId>
-            <artifactId>mvel2</artifactId>
+            <groupId>commons-io</groupId>
+            <artifactId>commons-io</artifactId>
         </dependency>
 
         <dependency>
@@ -201,14 +193,16 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>commons-io</groupId>
-            <artifactId>commons-io</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
             <groupId>com.hazelcast</groupId>
             <artifactId>hazelcast-all</artifactId>
-            <version>3.4.2</version>
+            <version>3.12.8</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.unomi</groupId>
+            <artifactId>unomi-scripting</artifactId>
+            <version>${project.version}</version>
             <scope>provided</scope>
         </dependency>
 
@@ -232,7 +226,7 @@
                             com.google.apphosting.api;resolution:=optional,
                             com.google.common.geometry;resolution:=optional,
                             com.google.errorprone.annotations.concurrent;resolution:=optional,
-                            com.hazelcast.core;version="[3.4,4)";resolution:=optional,
+                            com.hazelcast.core;version="[3.12,4)";resolution:=optional,
                             com.lmax.disruptor;resolution:=optional,
                             com.lmax.disruptor.dsl;resolution:=optional,
                             com.sun.management;resolution:=optional,
@@ -274,12 +268,12 @@
                             org.apache.commons.csv;resolution:=optional,
                             org.apache.kafka.clients.producer;resolution:=optional,
                             org.apache.log;resolution:=optional,
-                            org.apache.unomi.api.conditions;version="[1.5,2)",
-                            org.apache.unomi.api.query;version="[1.5,2)",
-                            org.apache.unomi.api;version="[1.5,2)",
-                            org.apache.unomi.metrics;version="[1.5,2)",
-                            org.apache.unomi.persistence.spi.aggregate;version="[1.5,2)",
-                            org.apache.unomi.persistence.spi;version="[1.5,2)",
+                            org.apache.unomi.api.conditions,
+                            org.apache.unomi.api.query,
+                            org.apache.unomi.api,
+                            org.apache.unomi.metrics,
+                            org.apache.unomi.persistence.spi.aggregate,
+                            org.apache.unomi.persistence.spi,
                             org.codehaus.stax2;resolution:=optional,
                             org.elasticsearch.*;resolution:=optional,
                             org.ietf.jgss;resolution:=optional,
@@ -296,11 +290,13 @@
                             org.xml.sax.helpers;resolution:=optional,
                             org.zeromq;resolution:=optional,
                             sun.misc;resolution:=optional,
+                            sun.nio.ch;resolution:=optional,
                             *
                         </Import-Package>
                         <Export-Package>
                             org.elasticsearch.*;version="${elasticsearch.version}",
                             org.elasticsearch.index.query.*;version="${elasticsearch.version}",
+                            org.apache.lucene.search.join.*;version="${lucene.version}",
                             org.apache.unomi.persistence.elasticsearch.conditions;version="${project.version}"
                         </Export-Package>
                         <Embed-Dependency>*;scope=compile|runtime</Embed-Dependency>

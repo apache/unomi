@@ -1,0 +1,13 @@
+{
+  "operationName": "removeAliasFromProfile",
+  "variables": {
+    "alias": "myAlias",
+    "profileID": {
+      "id": "f6c1c5a0-eff3-42b7-b375-44da5d01f2a6",
+      "client": {
+        "id": "facebook"
+      }
+    }
+  },
+  "query": "mutation removeAliasFromProfile($alias: ID!, $profileID: CDP_ProfileIDInput!) {\n  cdp {\n    removeAliasFromProfile(alias: $alias, profileID: $profileID) {\n      alias\n      creationTime\n      modifiedTime\n      profileID {\n        id\n        client {\n          ID\n          title\n        }\n      }\n    }\n  }\n}\n"
+}

@@ -29,14 +29,15 @@ public class GeoLocationByPointSessionConditionESQueryBuilder implements Conditi
     @Override
     public QueryBuilder buildQuery(Condition condition, Map<String, Object> context, ConditionESQueryBuilderDispatcher dispatcher) {
         String type = (String) condition.getParameter("type");
+        String name = condition.getParameter("name") == null ? "location" : (String) condition.getParameter("name");
 
         if("circle".equals(type)) {
-            Double circleLatitude = (Double) condition.getParameter("circleLatitude");
-            Double circleLongitude = (Double) condition.getParameter("circleLongitude");
+            Double circleLatitude = ((Number) condition.getParameter("circleLatitude")).doubleValue();
+            Double circleLongitude = ((Number) condition.getParameter("circleLongitude")).doubleValue();
             String distance = condition.getParameter("distance").toString();
 
             if(circleLatitude != null && circleLongitude != null && distance != null) {
-                return QueryBuilders.geoDistanceQuery("location")
+                return QueryBuilders.geoDistanceQuery(name)
                         .point(circleLatitude, circleLongitude)
                         .distance(distance);
             }
@@ -47,7 +48,7 @@ public class GeoLocationByPointSessionConditionESQueryBuilder implements Conditi
             Double rectLongitudeSW = (Double) condition.getParameter("rectLongitudeSW");
 
             if(rectLatitudeNE != null && rectLongitudeNE != null && rectLatitudeSW != null && rectLongitudeSW != null) {
-                return QueryBuilders.geoBoundingBoxQuery("location")
+                return QueryBuilders.geoBoundingBoxQuery(name)
                         .setCorners(rectLatitudeNE, rectLongitudeNE,rectLatitudeSW, rectLongitudeSW);
             }
         }

@@ -42,12 +42,12 @@ If you are using the packaged version of Unomi (as opposed to deploying it to yo
 
 [source]
 ----
-cp target/tweet-button-plugin-1.5.0-SNAPSHOT.jar ../../package/target/unomi-1.5.0-SNAPSHOT/deploy
+cp target/tweet-button-plugin-2.0.0-SNAPSHOT.jar ../../package/target/unomi-2.0.0-SNAPSHOT/deploy
 ----
 
 ===== Testing the samples
 
-You can now go to http://localhost:8181/index.html[http://localhost:8181/index.html] to test the samples code. The page is very simple, you will see a Twitter button, which, once clicked, will open a new window to tweet about the current page. The original page should be updated with the new values of the properties coming from Unomi. Additionnally, the raw JSON response is displayed.
+You can now go to http://localhost:8181/twitter/index.html[http://localhost:8181/twitter/index.html] to test the samples code. The page is very simple, you will see a Twitter button, which, once clicked, will open a new window to tweet about the current page. The original page should be updated with the new values of the properties coming from Unomi. Additionnally, the raw JSON response is displayed.
 
 We will now explain in greater details some concepts and see how the example works.
 
@@ -63,7 +63,7 @@ For simplicity's sake, this document will focus solely on the first use case and
 
 ==== Retrieving context information from Unomi using the context servlet
 
-Unomi provides two ways to retrieve context: either as a pure JSON object containing strictly context information or as a couple of JSON objects augmented with javascript functions that can be used to interact with the Unomi server using the `&lt;context server base URL&gt;/context.json` or `&lt;context server base URL&gt;/context.js` URLs, respectively.
+Unomi provides two ways to retrieve context: either as a pure JSON object containing strictly context information or as a couple of JSON objects augmented with javascript functions that can be used to interact with the Unomi server using the `&lt;context server base URL&gt;/cxs/context.json` or `&lt;context server base URL&gt;/context.js` URLs, respectively.
 
 Below is an example of asynchronously loading the initial context using the javascript version, assuming a default Unomi install running on `http://localhost:8181`:
 
@@ -75,7 +75,7 @@ Below is an example of asynchronously loading the initial context using the java
     if (document.getElementById(id)) return;
     js = document.createElement(elementToCreate);
     js.id = id;
-    js.src = 'http://localhost:8181/context.js';
+    js.src = 'http://localhost:8181/cxs/context.js';
     fjs.parentNode.insertBefore(js, fjs);
 }(document, 'script', 'context'));
 
@@ -88,7 +88,7 @@ http://www.w3.org/2013/12/ceddl-201312.pdf[Customer Experience Digital Data Laye
 
 On the other hand, the `cxs` top level object contains interesting contextual information about the current user:
 
-[source,json]
+[source]
 ----
 {
   "profileId":<identifier of the profile associated with the current user>,
@@ -96,7 +96,8 @@ On the other hand, the `cxs` top level object contains interesting contextual in
   "profileProperties":<requested profile properties, if any>,
   "sessionProperties":<requested session properties, if any>,
   "profileSegments":<segments the profile is part of if requested>,
-  "filteringResults":<result of the evaluation of personalization filters>,
+  "filteringResults":<result of the evaluation of content filters>,
+  "personalizations":<result of the evaluation of personalization filters>,
   "trackedConditions":<tracked conditions in the source page, if any>
 }
 ----
@@ -121,7 +122,7 @@ function contextRequest(successCallback, errorCallback, payload) {
     var data = JSON.stringify(payload);
     // if we don't already have a session id, generate one
     var sessionId = cxs.sessionId || generateUUID();
-    var url = 'http://localhost:8181/context.json?sessionId=' + sessionId;
+    var url = 'http://localhost:8181/cxs/context.json?sessionId=' + sessionId;
     var xhr = new XMLHttpRequest();
     var isGet = data.length < 100;
     if (isGet) {
@@ -165,7 +166,7 @@ There are a couple of things to note here:
 * If we specify a payload, it is expected to use the JSON format so we `stringify` it and encode it if passed as a URL parameter in a `GET` request.
 * We need to make a https://developer.mozilla.org/en-US/docs/Web/HTTP/Access_control_CORS[`CORS`] request since the Unomi server is most likely not running on the same host than the one from which the request originates. The specific details are fairly standard and we will not explain them here.
 * We need to either retrieve (from the initial context we retrieved previously using `cxs.sessionId`) or generate a session identifier for our request since Unomi currently requires one.
-* We're calling the `ContextServlet` using the default install URI, specifying the session identifier: `http://localhost:8181/context.json?sessionId=&#39; + sessionId`. This URI requests context from Unomi, resulting in an updated `cxs` object in the javascript global scope. The context server can reply to this request either by returning a JSON-only object containing solely the context information as is the case when the requested URI is `context.json`. However, if the client requests `context.js` then useful functions to interact with Unomi are added to the `cxs` object in addition to the context information as depicted above.
+* We're calling the `ContextServlet` using the default install URI, specifying the session identifier: `http://localhost:8181/cxs/context.json?sessionId=sessionId`. This URI requests context from Unomi, resulting in an updated `cxs` object in the javascript global scope. The context server can reply to this request either by returning a JSON-only object containing solely the context information as is the case when the requested URI is `context.json`. However, if the client requests `context.js` then useful functions to interact with Unomi are added to the `cxs` object in addition to the context information as depicted above.
 * We don't need to provide any authentication at all to interact with this part of Unomi since we only have access to read-only data (as well as providing events as we shall see later on). If we had been using the REST API, we would have needed to provide authentication information as well.
 
 ===== Context request and response structure
@@ -174,20 +175,22 @@ The interesting part, though, is the payload. This is where we provide Unomi wit
 
 Let's look at the context request structure:
 
-[source,json]
+[source]
 ----
 {
-    source: <Item source of the context request>,
-    events: <optional array of triggered events>,
-    requiredProfileProperties: <optional array of property identifiers>,
-    requiredSessionProperties: <optional array of property identifiers>,
+    "sessionId" : <optional session identifier>,
+    "source": <Item source of the context request>,
+    "events": <optional array of events to trigger>,
+    "requiredProfileProperties": <optional array of property identifiers>,
+    "requiredSessionProperties": <optional array of property identifiers>,
     filters: <optional array of filters to evaluate>,
-    profileOverrides: <optional profile containing segments,scores or profile properties to override>,
-            - segments: <optional array of segment identifiers>,
-            - profileProperties: <optional map of property name / value pairs>,
-            - scores: <optional map of score id / value pairs>
-    sessionPropertiesOverrides: <optional map of property name / value pairs>,
-    requireSegments: <boolean, whether to return the associated segments>
+    "personalitations": <optional array of personalizations to evaluate>,
+    "profileOverrides": <optional profile containing segments,scores or profile properties to override>,
+        - segments: <optional array of segment identifiers>,
+        - profileProperties: <optional map of property name / value pairs>,
+        - scores: <optional map of score id / value pairs>
+    "sessionPropertiesOverrides": <optional map of property name / value pairs>,
+    "requireSegments": <boolean, whether to return the associated segments>
 }
 ----
 
@@ -199,7 +202,186 @@ A context request payload needs to at least specify some information about the s
 
 ====== Filters
 
-A client wishing to perform content personalization might also specify filtering conditions to be evaluated by the context server so that it can tell the client whether the content associated with the filter should be activated for this profile/session. This is accomplished by providing a list of filter definitions to be evaluated by the context server via the `filters` field of the payload. If provided, the evaluation results will be provided in the `filteringResults` field of the resulting `cxs` object the context server will send.
+A client wishing to perform content personalization might also specify filtering conditions to be evaluated by the
+context server so that it can tell the client whether the content associated with the filter should be activated for
+this profile/session. This is accomplished by providing a list of filter definitions to be evaluated by the context
+server via the `filters` field of the payload. If provided, the evaluation results will be provided in the
+`filteringResults` field of the resulting `cxs` object the context server will send.
+
+Here is an example of a filter request:
+
+[source]
+----
+curl --location --request POST 'http://localhost:8181/cxs/context.json' \
+--header 'Content-Type: application/json' \
+--header 'Cookie: JSESSIONID=48C8AFB3E18B8E3C93C2F4D5B7BD43B7; context-profile-id=01060c4c-a055-4c8f-9692-8a699d0c434a' \
+--data-raw '{
+    "source": null,
+    "requireSegments": false,
+    "requiredProfileProperties": null,
+    "requiredSessionProperties": null,
+    "events": null,
+    "filters": [
+    	{
+    		"id" : "filter1",
+    		"filters" : [
+    			{
+    				"condition": {
+                    "parameterValues": {
+                        "propertyName": "properties.gender",
+                        "comparisonOperator": "equals",
+                        "propertyValue": "male"
+                    },
+                    "type": "profilePropertyCondition"
+                }
+    			}
+    		]
+    	}
+    ],
+    "personalizations": null,
+    "profileOverrides": null,
+    "sessionPropertiesOverrides": null,
+    "sessionId": "demo-session-id"
+}'
+----
+
+And here's the result:
+
+[source,json]
+----
+{
+    "profileId": "01060c4c-a055-4c8f-9692-8a699d0c434a",
+    "sessionId": "demo-session-id",
+    "profileProperties": null,
+    "sessionProperties": null,
+    "profileSegments": null,
+    "filteringResults": {
+        "filter1": false
+    },
+    "processedEvents": 0,
+    "personalizations": null,
+    "trackedConditions": [],
+    "anonymousBrowsing": false,
+    "consents": {}
+}
+----
+
+As we can see, the `filter1` filter we sent in our request, in this example, evaluated to false for the current profile,
+so we can use that result to perform any customization for the current profile, in this case use the fact that he is
+male.
+
+====== Personalizations
+
+Filters make it possible to evaluate conditions against a profile in real-time, but for true personalization it is needed
+to have a more powerful mechanism: strategies. Sometimes we want to provide multiple variants that each have their own
+conditions and we want to know which is the best variant to use for the current profile. This can be achieved with the
+`personalizations` structure in the ContextRequest.
+
+Here is an example of a `personalizations` request:
+
+[source]
+----
+curl --location --request POST 'http://localhost:8181/cxs/context.json' \
+--header 'Content-Type: application/json' \
+--header 'Cookie: JSESSIONID=48C8AFB3E18B8E3C93C2F4D5B7BD43B7; context-profile-id=01060c4c-a055-4c8f-9692-8a699d0c434a' \
+--data-raw '{
+    "source": null,
+    "requireSegments": false,
+    "requiredProfileProperties": null,
+    "requiredSessionProperties": [ "unomiControlGroups" ],
+    "events": null,
+    "filters": null,
+    "personalizations": [
+        {
+            "id": "gender-test",
+            "strategy": "matching-first",
+            "strategyOptions": {
+                "fallback": "var2",
+                "controlGroup" : {
+                  "percentage" : 10.0,
+                  "displayName" : "Gender test control group",
+                  "path" : "/gender-test",
+                  "storeInSession" : true
+                }
+            },
+            "contents": [
+                {
+                    "id": "var1",
+                    "filters": [
+                        {
+                            "appliesOn": null,
+                            "condition": {
+                                "parameterValues": {
+                                    "propertyName": "properties.gender",
+                                    "comparisonOperator": "equals",
+                                    "propertyValue": "male"
+                                },
+                                "type": "profilePropertyCondition"
+                            },
+                            "properties": null
+                        }
+                    ],
+                    "properties": null
+                },
+                {
+                    "id": "var2",
+                    "filters": null,
+                    "properties": null
+                }
+            ]
+        }
+    ],
+    "profileOverrides": null,
+    "sessionPropertiesOverrides": null,
+    "sessionId": "demo-session-id"
+}'
+----
+
+In the above example, we basically setup two variants : `var1` and `var2` and setup the `var2` to be the fallback variant
+in case no variant is matched. We could of course specify more than a variant. The `strategy` indicates to the
+personalization service how to calculate the "winning" variant. In this case the strategy `matching-first` will return variants that match the current profile. We also use the `controlGroups` option to specify that we want to have a control group for this personalization. The `10.0` percentage value represents 10% (0.0 to 100.0) of traffic that will be assigned randomly to the control group. The control group will be stored in the profile and the session of the visitors if they were assigned to it. We also specify that we store the control group in the session (by default it is stored in the profile)
+
+Currently the following strategies are available:
+
+- `matching-first`: will return the variant IDs that match the current profile (using the initial content order)
+- `random`: will return a shuffled list of variant IDs (ignoring any conditions)
+- `score-sorted`: allows to sort the variants based on scores associated with the filtering conditions, effectively
+sorting them by the highest scoring condition first.
+
+Here is the result of the above example:
+
+[source,json]
+----
+{
+    "profileId": "01060c4c-a055-4c8f-9692-8a699d0c434a",
+    "sessionId": "demo-session-id",
+    "profileProperties": null,
+    "sessionProperties": {
+        "unomiControlGroups": [
+            {
+                "id": "previousPerso",
+                "displayName": "Previous perso",
+                "path": "/home/previousPerso.html",
+                "timeStamp": "2021-12-15T13:52:38Z"
+            }
+        ]
+    },
+    "profileSegments": null,
+    "filteringResults": null,
+    "processedEvents": 0,
+    "personalizations": {
+        "gender-test": [
+            "var2"
+        ]
+    },
+    "trackedConditions": [
+    ],
+    "anonymousBrowsing": false,
+    "consents": {}
+}
+----
+
+In the above example we can see the profile and session were assigned to other control groups but not the current one (the ids are different).
 
 ====== Overrides
 

@@ -46,7 +46,9 @@ public abstract class MetadataItem extends Item {
     }
 
     public void setMetadata(Metadata metadata) {
-        this.itemId = metadata.getId();
+        if (metadata != null) {
+            this.itemId = metadata.getId();
+        }
         this.metadata = metadata;
     }
 

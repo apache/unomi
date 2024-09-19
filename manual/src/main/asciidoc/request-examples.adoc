@@ -19,7 +19,7 @@ You can retrieve a context using curl like this :
 
 [source]
 ----
-curl http://localhost:8181/context.js?sessionId=1234
+curl http://localhost:8181/cxs/context.js?sessionId=1234
 ----
 
 This will retrieve a JavaScript script that contains a `cxs` object that contains the context with the current user
@@ -32,7 +32,7 @@ If you prefer to retrieve a pure JSON object, you can simply use a request forme
 
 [source]
 ----
-curl http://localhost:8181/context.json?sessionId=1234
+curl http://localhost:8181/cxs/context.json?sessionId=1234
 ----
 
 ==== Accessing profile properties in a context
@@ -41,11 +41,12 @@ By default, in order to optimize the amount of data sent over the network, Apach
 the profile or session properties. If you need this data, you must send a JSON object to configure the resulting output
 of the context.js(on) servlet.
 
-Here is an example that will retrieve all the session and profile properties.
+Here is an example that will retrieve all the session and profile properties, as well as the profile's segments and
+scores
 
 [source]
 ----
-curl -X POST http://localhost:8181/context.json?sessionId=1234 \
+curl -X POST http://localhost:8181/cxs/context.json?sessionId=1234 \
 -H "Content-Type: application/json" \
 -d @- <<'EOF'
 {
@@ -56,7 +57,8 @@ curl -X POST http://localhost:8181/context.json?sessionId=1234 \
     },
     "requiredProfileProperties":["*"],
     "requiredSessionProperties":["*"],
-    "requireSegments":true
+    "requireSegments":true,
+    "requireScores":true
 }
 EOF
 ----
@@ -73,7 +75,7 @@ illustrated in the following example:
 
 [source]
 ----
-curl -X POST http://localhost:8181/context.json?sessionId=1234 \
+curl -X POST http://localhost:8181/cxs/context.json?sessionId=1234 \
 -H "Content-Type: application/json" \
 -d @- <<'EOF'
 {
@@ -97,7 +99,7 @@ curl -X POST http://localhost:8181/context.json?sessionId=1234 \
                 "itemId":"homepage",
                 "properties":{
                     "pageInfo":{
-                        "referringURL":""
+                        "referringURL":"https://apache.org/"
                     }
                 }
             }
@@ -119,7 +121,7 @@ respond quickly and minimize network traffic. Here is an example of using this s
 
 [source]
 ----
-curl -X POST http://localhost:8181/eventcollector \
+curl -X POST http://localhost:8181/cxs/eventcollector \
 -H "Content-Type: application/json" \
 -d @- <<'EOF'
 {
@@ -139,7 +141,7 @@ curl -X POST http://localhost:8181/eventcollector \
                 "itemId":"homepage",
                 "properties":{
                     "pageInfo":{
-                        "referringURL":""
+                        "referringURL":"https://apache.org/"
                     }
                 }
             }
@@ -154,6 +156,5 @@ to send additional events.
 
 ==== Where to go from here
 
-* You can find more <<_useful_apache_unomi_urls,useful Apache Unomi URLs>> that can be used in the same way as the above examples.
-* You may want to know integrate the provided <<_web_tracker,web tracker>> into your web site.
-* Read the <<_twitter_sample,Twitter sample>> documentation that contains a detailed example of how to integrate with Apache Unomi.
+* You can find more <<Useful Apache Unomi URLs,useful Apache Unomi URLs>> that can be used in the same way as the above examples.
+* Read the <<Twitter sample,Twitter sample>> documentation that contains a detailed example of how to integrate with Apache Unomi.

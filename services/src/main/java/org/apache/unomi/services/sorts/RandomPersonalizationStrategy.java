@@ -17,19 +17,19 @@
 
 package org.apache.unomi.services.sorts;
 
+import org.apache.unomi.api.PersonalizationResult;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.Session;
 import org.apache.unomi.api.services.PersonalizationService;
 
 import java.util.Collections;
-import java.util.List;
 
 public class RandomPersonalizationStrategy extends FilterPersonalizationStrategy {
 
     @Override
-    public List<String> personalizeList(Profile profile, Session session, PersonalizationService.PersonalizationRequest personalizationRequest) {
-        List<String> r = super.personalizeList(profile, session, personalizationRequest);
-        Collections.shuffle(r);
+    public PersonalizationResult personalizeList(Profile profile, Session session, PersonalizationService.PersonalizationRequest personalizationRequest) {
+        PersonalizationResult r = super.personalizeList(profile, session, personalizationRequest);
+        Collections.shuffle(r.getContentIds());
         return r;
     }
 }

@@ -1,0 +1,20 @@
+{
+  "metadata": {
+    "id": "updateConsent",
+    "name": "Update profile/persona consents",
+    "description": "Update profile/persona consents",
+    "readOnly": true
+  },
+  "condition": {
+    "type": "updateConsentEventCondition",
+    "parameterValues": {
+    }
+  },
+  "actions": [
+    {
+      "type": "updateConsentEventAction",
+      "parameterValues": {
+      }
+    }
+  ]
+}

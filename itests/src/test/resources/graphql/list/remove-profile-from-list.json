@@ -1,0 +1,13 @@
+{
+  "operationName": "removeProfileFromList",
+  "variables": {
+    "listID": "testListId",
+    "profileID": {
+      "id": "test_profile_id",
+      "client": {
+        "id": "client"
+      }
+    }
+  },
+  "query": "mutation removeProfileFromList($listID: ID, $profileID: CDP_ProfileIDInput) {\n  cdp {\n    removeProfileFromList(listID: $listID, profileID: $profileID)\n  }\n}\n"
+}

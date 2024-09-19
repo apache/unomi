@@ -17,6 +17,7 @@
 package org.apache.unomi.shell.migration.utils;
 
 import org.apache.http.HttpEntity;
+import org.apache.http.client.CredentialsProvider;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.*;
 import org.apache.http.config.Registry;
@@ -43,7 +44,6 @@ import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
-import java.util.Arrays;
 import java.util.Map;
 
 /**
@@ -52,14 +52,13 @@ import java.util.Map;
 public class HttpUtils {
     private static final Logger logger = LoggerFactory.getLogger(HttpUtils.class);
 
-    public static CloseableHttpClient initHttpClient(Session session) throws IOException {
-        String confirmation = ConsoleUtils.askUserWithAuthorizedAnswer(session,"We need to initialize a HttpClient, do we need to trust all certificates? (yes/no): ", Arrays.asList("yes", "no"));
-        boolean trustAllCertificates = confirmation.equalsIgnoreCase("yes");
-
+    public static CloseableHttpClient initHttpClient(boolean trustAllCertificates, CredentialsProvider credentialsProvider) throws IOException {
         long requestStartTime = System.currentTimeMillis();
 
         HttpClientBuilder httpClientBuilder = HttpClients.custom().useSystemProperties();
-
+        if (credentialsProvider != null) {
+            httpClientBuilder.setDefaultCredentialsProvider(credentialsProvider);
+        }
         if (trustAllCertificates) {
             try {
                 SSLContext sslContext = SSLContext.getInstance("SSL");
@@ -181,6 +180,7 @@ public class HttpUtils {
 
         String stringResponse = EntityUtils.toString(entity);
         EntityUtils.consumeQuietly(entity);
+
 
         return stringResponse;
     }

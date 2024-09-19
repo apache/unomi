@@ -1,0 +1,253 @@
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+=== Graphql request examples
+
+You can use embedded GraphiQL interface available at http://localhost:8181/graphql-ui or use any other GraphQL client using that url for requests.
+
+==== Retrieving your first profile
+
+Profile can be retrieved using `getProfile` query
+
+[source,graphql]
+----
+query($profileID: CDP_ProfileIDInput!, $createIfMissing: Boolean) {
+  cdp {
+    getProfile(profileID: $profileID, createIfMissing: $createIfMissing) {
+      firstName
+      lastName
+      gender
+      cdp_profileIDs {
+        client {
+          ID
+          title
+        }
+        id
+      }
+    }
+  }
+}
+----
+
+This query accepts two variables that need to be provided in the `Query variables` section:
+
+[source,json]
+----
+{
+  "profileID": {
+    "client":{
+      "id": "defaultClientId"
+    },
+    "id": 1001
+  },
+  "createIfMissing": true
+}
+----
+
+NOTE: If you don't want profile to be created if missing, set `createIfMissing` to `false`.
+
+The response will look like this:
+
+[source,json]
+----
+{
+  "data": {
+    "cdp": {
+      "getProfile": {
+        "firstName": null,
+        "lastName": null,
+        "gender": null,
+        "cdp_profileIDs": [
+          {
+            "client": {
+              "ID": "defaultClientId",
+              "title": "Default Client"
+            },
+            "id": "1001"
+          }
+        ]
+      }
+    }
+  }
+}
+----
+
+==== Updating profile
+
+Now let's update our profile with some data.
+It can be done using `processEvents` mutation:
+
+[source,graphql]
+----
+mutation($events: [CDP_EventInput]!) {
+  cdp {
+    processEvents(events: $events)
+  }
+}
+----
+
+This mutation accepts one variable that needs to be provided in the `Query variables` section:
+
+[source,json]
+----
+{
+  "events": [
+    {
+      "cdp_objectID": 1001,
+      "cdp_profileID": {
+        "client": {
+          "id": "defaultClientId"
+        },
+        "id": 1001
+      },
+      "cdp_profileUpdateEvent": {
+        "firstName": "John",
+        "lastName": "Doe",
+        "gender": "Male"
+      }
+    }
+  ]
+}
+----
+
+The response will have the number of processed events:
+
+[source,json]
+----
+{
+  "data": {
+    "cdp": {
+      "processEvents": 1
+    }
+  }
+}
+----
+
+NOTE: `processEvents` accepts a number of other event types that are listed on `CDP_EventInput` type.
+
+If you run the `getProfile` query again, you will see that the profile has been updated.
+
+==== Restricted methods
+
+Some methods are restricted to authenticated users only.
+One example is `findProfiles` query:
+
+[source,graphql]
+----
+query {
+  cdp {
+    findProfiles {
+      totalCount
+       edges {
+        node {
+          cdp_profileIDs {
+            client{
+              title
+              ID
+            }
+            id
+          }
+        }
+      }
+    }
+  }
+}
+----
+
+And if you run it now, you will get an error.
+
+To make this query work you need to supply authorization token in the `HTTP headers` section:
+
+[source,json]
+----
+{
+  "authorization": "Basic a2FyYWY6a2FyYWY="
+}
+----
+
+The above header adds `Basic` authorization scheme with base64 encoded `karaf:karaf` value to the request.
+
+The result will now show the list of profiles:
+
+[source,json]
+----
+{
+  "data": {
+    "cdp": {
+      "findProfiles": {
+        "totalCount": 1,
+        "edges": [
+          {
+            "node": {
+              "cdp_profileIDs": [
+                {
+                  "client": {
+                    "title": "Default Client",
+                    "ID": "defaultClientId"
+                  },
+                  "id": "1001"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  }
+}
+----
+
+==== Deleting profile
+
+Profile can be deleted using `deleteProfile` mutation:
+
+[source,graphql]
+----
+mutation($profileID: CDP_ProfileIDInput!) {
+  cdp {
+    deleteProfile(profileID: $profileID)
+  }
+}
+----
+
+This mutation accepts one variable that needs to be provided in the `Query variables` section:
+
+[source,json]
+----
+{
+  "profileID": {
+    "client":{
+      "id": "defaultClientId"
+    },
+    "id": 1001
+  }
+}
+----
+
+The response will show the result of the operation:
+
+[source,json]
+----
+{
+  "data": {
+    "cdp": {
+      "deleteProfile": true
+    }
+  }
+}
+----
+
+==== Where to go from here
+
+* You can find more <<Useful Apache Unomi URLs,useful Apache Unomi URLs>> that can be used in the same way as the above examples.
+* Read https://graphql.org/learn/[GraphQL documentation] to learn more about GraphQL syntax.

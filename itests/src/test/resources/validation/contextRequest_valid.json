@@ -1,0 +1,11 @@
+{
+  "source": {
+    "itemId": "CMSServer",
+    "itemType": "custom",
+    "scope": "acme",
+    "version": null,
+    "properties": {}
+  },
+  "sessionId": "dummy-session.id",
+  "profileId": "dummy-profile.id"
+}

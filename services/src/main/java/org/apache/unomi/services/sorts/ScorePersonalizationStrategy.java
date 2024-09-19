@@ -17,6 +17,7 @@
 
 package org.apache.unomi.services.sorts;
 
+import org.apache.unomi.api.PersonalizationResult;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.Session;
 import org.apache.unomi.api.PersonalizationStrategy;
@@ -35,7 +36,7 @@ public class ScorePersonalizationStrategy implements PersonalizationStrategy {
     }
 
     @Override
-    public List<String> personalizeList(Profile profile, Session session, PersonalizationService.PersonalizationRequest personalizationRequest) {
+    public PersonalizationResult personalizeList(Profile profile, Session session, PersonalizationService.PersonalizationRequest personalizationRequest) {
         List<String> sortedContent = new ArrayList<>();
         final Map<String,Integer> t = new HashMap<>();
 
@@ -49,17 +50,22 @@ public class ScorePersonalizationStrategy implements PersonalizationStrategy {
 
             String interestList = (String) (personalizedContent.getProperties() != null ? personalizedContent.getProperties().get("interests") : null);
             if (interestList != null) {
-                Map<String,Integer> interestValues = (Map<String, Integer>) profile.getProperties().get("interests");
-                for (String interest : interestList.split(" ")) {
-                    if (interestValues.get(interest) != null) {
-                        score += interestValues.get(interest);
+                List<Map<String, Object>> profileInterests = (List<Map<String, Object>>) profile.getProperties().get("interests");
+                if (profileInterests != null) {
+                    for (String interest : interestList.split(" ")) {
+                        for (Map<String, Object> profileInterest : profileInterests) {
+                            if (profileInterest.get("key").equals(interest)){
+                                score += ((Number) profileInterest.get("value")).intValue();
+                                break;
+                            }
+                        }
                     }
                 }
             }
 
             String scoringPlanList = (String) (personalizedContent.getProperties() != null ? personalizedContent.getProperties().get("scoringPlans") : null);
             if (scoringPlanList != null) {
-                Map<String,Integer> scoreValues = (Map<String, Integer>) profile.getScores();
+                Map<String,Integer> scoreValues = profile.getScores();
                 for (String scoringPlan : scoringPlanList.split(" ")) {
                     if (scoreValues.get(scoringPlan) != null) {
                         score += scoreValues.get(scoringPlan);
@@ -74,7 +80,7 @@ public class ScorePersonalizationStrategy implements PersonalizationStrategy {
                     Condition condition = filter.getCondition();
                     if (condition != null && condition.getConditionTypeId() != null) {
                         if (profileService.matchCondition(condition, profile, session)) {
-                            if (filter.getProperties().get("score") != null) {
+                            if (filter.getProperties() != null && filter.getProperties().get("score") != null) {
                                 score += (int) filter.getProperties().get("score");
                             } else {
                                 score += 1;
@@ -88,18 +94,14 @@ public class ScorePersonalizationStrategy implements PersonalizationStrategy {
                 sortedContent.add(personalizedContent.getId());
             }
         }
-        Collections.sort(sortedContent, new Comparator<String>() {
-            @Override
-            public int compare(String o1, String o2) {
-                return t.get(o2) - t.get(o1);
-            }
-        });
+
+        sortedContent.sort((o1, o2) -> t.get(o2) - t.get(o1));
 
         String fallback = (String) personalizationRequest.getStrategyOptions().get("fallback");
         if (fallback != null && !sortedContent.contains(fallback)) {
             sortedContent.add(fallback);
         }
 
-        return sortedContent;
+        return new PersonalizationResult(sortedContent);
     }
 }

@@ -120,7 +120,7 @@ public class SetRemoteHostInfoAction implements ActionExecutor {
         }
         String remoteAddrParameter = httpServletRequest.getParameter("remoteAddr");
         if (logger.isDebugEnabled()) {
-            logger.debug("Remote address param is " + remoteAddr);
+            logger.debug("Remote address param is " + remoteAddrParameter);
         }
         String xff = httpServletRequest.getHeader("X-Forwarded-For");
         if (logger.isDebugEnabled()) {
@@ -232,7 +232,10 @@ public class SetRemoteHostInfoAction implements ActionExecutor {
             }
             return true;
         } catch (IOException | GeoIp2Exception e) {
-            logger.debug("Cannot resolve IP", e);
+            logger.warn("Cannot resolve IP, enable debug log level for complete stacktrace");
+            if (logger.isDebugEnabled()) {
+                logger.debug("Cannot resolve IP: {}", remoteAddr, e);
+            }
         }
         return false;
     }
@@ -243,7 +246,10 @@ public class SetRemoteHostInfoAction implements ActionExecutor {
             try {
                 addr = InetAddress.getByName(remoteAddr);
             } catch (UnknownHostException e) {
-                logger.debug("Cannot resolve IP", e);
+                logger.warn("Cannot resolve IP, enable debug log level for complete stacktrace");
+                if (logger.isDebugEnabled()) {
+                    logger.debug("Cannot resolve IP: {}", remoteAddr, e);
+                }
                 return false;
             }
             // Check if the address is a valid special local or loop back

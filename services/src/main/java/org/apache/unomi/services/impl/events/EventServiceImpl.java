@@ -17,33 +17,45 @@
 
 package org.apache.unomi.services.impl.events;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import inet.ipaddr.IPAddress;
 import inet.ipaddr.IPAddressString;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.EventProperty;
+import org.apache.unomi.api.Metadata;
 import org.apache.unomi.api.PartialList;
+import org.apache.unomi.api.PropertyType;
 import org.apache.unomi.api.Session;
+import org.apache.unomi.api.ValueType;
 import org.apache.unomi.api.actions.ActionPostExecutor;
 import org.apache.unomi.api.conditions.Condition;
-import org.apache.unomi.api.services.DefinitionsService;
-import org.apache.unomi.api.services.EventListenerService;
-import org.apache.unomi.api.services.EventService;
+import org.apache.unomi.api.query.Query;
+import org.apache.unomi.api.services.*;
+import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.aggregate.TermsAggregate;
-import org.apache.unomi.services.impl.ParserHelper;
+import org.apache.unomi.api.utils.ParserHelper;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceReference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 public class EventServiceImpl implements EventService {
     private static final Logger logger = LoggerFactory.getLogger(EventServiceImpl.class.getName());
     private static final int MAX_RECURSION_DEPTH = 10;
 
-    private List<EventListenerService> eventListeners = new ArrayList<EventListenerService>();
+    private List<EventListenerService> eventListeners = new CopyOnWriteArrayList<EventListenerService>();
 
     private PersistenceService persistenceService;
 
@@ -57,15 +69,7 @@ public class EventServiceImpl implements EventService {
 
     private Map<String, ThirdPartyServer> thirdPartyServers = new HashMap<>();
 
-    public void init() {
-        logger.info("Event service initialized.");
-    }
-
-    public void destroy() {
-        logger.info("Event service shutdown.");
-    }
-
-    public void setThirdPartyConfiguration(Map<String,String> thirdPartyConfiguration) {
+    public void setThirdPartyConfiguration(Map<String, String> thirdPartyConfiguration) {
         this.thirdPartyServers = new HashMap<>();
         for (Map.Entry<String, String> entry : thirdPartyConfiguration.entrySet()) {
             String[] keys = StringUtils.split(entry.getKey(),'.');
@@ -133,7 +137,7 @@ public class EventServiceImpl implements EventService {
                     }
                 }
             }
-            logger.debug("Could not authenticate any third party servers");
+            logger.warn("Could not authenticate any third party servers for key: {}", key);
         }
         return null;
     }
@@ -148,38 +152,44 @@ public class EventServiceImpl implements EventService {
             return NO_CHANGE;
         }
 
+        boolean saveSucceeded = true;
         if (event.isPersistent()) {
-            persistenceService.save(event);
+            saveSucceeded = persistenceService.save(event, null, true);
         }
 
-        int changes = NO_CHANGE;
+        int changes;
 
-        final Session session = event.getSession();
-        if (event.isPersistent() && session != null) {
-            session.setLastEventDate(event.getTimeStamp());
-        }
+        if (saveSucceeded) {
+            changes = NO_CHANGE;
+            final Session session = event.getSession();
+            if (event.isPersistent() && session != null) {
+                session.setLastEventDate(event.getTimeStamp());
+            }
 
-        if (event.getProfile() != null) {
-            for (EventListenerService eventListenerService : eventListeners) {
-                if (eventListenerService.canHandle(event)) {
-                    changes |= eventListenerService.onEvent(event);
+            if (event.getProfile() != null) {
+                for (EventListenerService eventListenerService : eventListeners) {
+                    if (eventListenerService.canHandle(event)) {
+                        changes |= eventListenerService.onEvent(event);
+                    }
+                }
+                // At the end of the processing event execute the post executor actions
+                for (ActionPostExecutor actionPostExecutor : event.getActionPostExecutors()) {
+                    changes |= actionPostExecutor.execute() ? changes : NO_CHANGE;
+                }
+
+                if ((changes & PROFILE_UPDATED) == PROFILE_UPDATED) {
+                    Event profileUpdated = new Event("profileUpdated", session, event.getProfile(), event.getScope(), event.getSource(), event.getProfile(), event.getTimeStamp());
+                    profileUpdated.setPersistent(false);
+                    profileUpdated.getAttributes().putAll(event.getAttributes());
+                    changes |= send(profileUpdated, depth + 1);
+                    if (session != null && session.getProfileId() != null) {
+                        changes |= SESSION_UPDATED;
+                        session.setProfile(event.getProfile());
+                    }
                 }
             }
-            // At the end of the processing event execute the post executor actions
-            for (ActionPostExecutor actionPostExecutor : event.getActionPostExecutors()) {
-                changes |= actionPostExecutor.execute() ? changes : NO_CHANGE;
-            }
-
-            if ((changes & PROFILE_UPDATED) == PROFILE_UPDATED) {
-                Event profileUpdated = new Event("profileUpdated", session, event.getProfile(), event.getScope(), event.getSource(), event.getProfile(), event.getTimeStamp());
-                profileUpdated.setPersistent(false);
-                profileUpdated.getAttributes().putAll(event.getAttributes());
-                changes |= send(profileUpdated, depth + 1);
-                if (session != null && session.getProfileId() != null) {
-                    changes |= SESSION_UPDATED;
-                    session.setProfile(event.getProfile());
-                }
-            }
+        } else {
+            changes = ERROR;
         }
         return changes;
     }
@@ -203,16 +213,67 @@ public class EventServiceImpl implements EventService {
         }
     }
 
+    private List<PropertyType> getEventPropertyTypes() {
+        Map<String, Map<String, Object>> mappings = persistenceService.getPropertiesMapping(Event.ITEM_TYPE);
+        return new ArrayList<>(getEventPropertyTypes(mappings));
+    }
+
+    @SuppressWarnings("unchecked")
+    private Set<PropertyType> getEventPropertyTypes(Map<String, Map<String, Object>> mappings) {
+        Set<PropertyType> properties = new LinkedHashSet<>();
+        for (Map.Entry<String, Map<String, Object>> e : mappings.entrySet()) {
+            Set<PropertyType> childProperties = null;
+            Metadata propertyMetadata = new Metadata(null, e.getKey(), e.getKey(), null);
+            Set<String> systemTags = new HashSet<>();
+            propertyMetadata.setSystemTags(systemTags);
+            PropertyType propertyType = new PropertyType(propertyMetadata);
+            propertyType.setTarget("event");
+            ValueType valueType = null;
+            if (e.getValue().get("properties") != null) {
+                childProperties = getEventPropertyTypes((Map<String, Map<String, Object>>) e.getValue().get("properties"));
+                valueType = definitionsService.getValueType("set");
+                if (childProperties != null && childProperties.size() > 0) {
+                    propertyType.setChildPropertyTypes(childProperties);
+                }
+            } else {
+                valueType = mappingTypeToValueType( (String) e.getValue().get("type"));
+            }
+            propertyType.setValueTypeId(valueType.getId());
+            propertyType.setValueType(valueType);
+            properties.add(propertyType);
+        }
+        return properties;
+    }
+
+    private ValueType mappingTypeToValueType(String mappingType) {
+        if ("text".equals(mappingType)) {
+            return definitionsService.getValueType("string");
+        } else if ("date".equals(mappingType)) {
+            return definitionsService.getValueType("date");
+        } else if ("long".equals(mappingType)) {
+            return definitionsService.getValueType("integer");
+        } else if ("boolean".equals(mappingType)) {
+            return definitionsService.getValueType("boolean");
+        } else if ("set".equals(mappingType)) {
+            return definitionsService.getValueType("set");
+        } else if ("object".equals(mappingType)) {
+            return definitionsService.getValueType("set");
+        } else {
+            return definitionsService.getValueType("unknown");
+        }
+    }
+
     public Set<String> getEventTypeIds() {
         Map<String, Long> dynamicEventTypeIds = persistenceService.aggregateWithOptimizedQuery(null, new TermsAggregate("eventType"), Event.ITEM_TYPE);
         Set<String> eventTypeIds = new LinkedHashSet<String>(predefinedEventTypeIds);
         eventTypeIds.addAll(dynamicEventTypeIds.keySet());
+        eventTypeIds.remove("_filtered");
         return eventTypeIds;
     }
 
     @Override
     public PartialList<Event> searchEvents(Condition condition, int offset, int size) {
-        ParserHelper.resolveConditionType(definitionsService, condition);
+        ParserHelper.resolveConditionType(definitionsService, condition, "event search");
         return persistenceService.query(condition, "timeStamp", Event.class, offset, size);
     }
 
@@ -248,6 +309,42 @@ public class EventServiceImpl implements EventService {
         } else {
             return persistenceService.query(condition, sortBy, Event.class, offset, size);
         }
+    }
+
+    @Override
+    public PartialList<Event> search(Query query) {
+        if (query.getScrollIdentifier() != null) {
+            return persistenceService.continueScrollQuery(Event.class, query.getScrollIdentifier(), query.getScrollTimeValidity());
+        }
+        if (query.getCondition() != null && definitionsService.resolveConditionType(query.getCondition())) {
+            if (StringUtils.isNotBlank(query.getText())) {
+                return persistenceService.queryFullText(query.getText(), query.getCondition(), query.getSortby(), Event.class, query.getOffset(), query.getLimit());
+            } else {
+                return persistenceService.query(query.getCondition(), query.getSortby(), Event.class, query.getOffset(), query.getLimit(), query.getScrollTimeValidity());
+            }
+        } else {
+            if (StringUtils.isNotBlank(query.getText())) {
+                return persistenceService.queryFullText(query.getText(), query.getSortby(), Event.class, query.getOffset(), query.getLimit());
+            } else {
+                return persistenceService.getAllItems(Event.class, query.getOffset(), query.getLimit(), query.getSortby());
+            }
+        }
+    }
+
+    @Override
+    public Event getEvent(String id) {
+        return persistenceService.load(id, Event.class);
+    }
+
+    public boolean hasEventAlreadyBeenRaised(Event event) {
+        Event pastEvent = this.persistenceService.load(event.getItemId(), Event.class);
+        if (pastEvent != null && pastEvent.getVersion() >= 1) {
+            if ((pastEvent.getSessionId() != null && pastEvent.getSessionId().equals(event.getSessionId())) ||
+                    (pastEvent.getProfileId() != null && pastEvent.getProfileId().equals(event.getProfileId())))  {
+                return true;
+            }
+        }
+        return false;
     }
 
     public boolean hasEventAlreadyBeenRaised(Event event, boolean session) {
@@ -289,7 +386,6 @@ public class EventServiceImpl implements EventService {
         return size > 0;
     }
 
-
     public void bind(ServiceReference<EventListenerService> serviceReference) {
         EventListenerService eventListenerService = bundleContext.getService(serviceReference);
         eventListeners.add(eventListenerService);
@@ -300,5 +396,15 @@ public class EventServiceImpl implements EventService {
             EventListenerService eventListenerService = bundleContext.getService(serviceReference);
             eventListeners.remove(eventListenerService);
         }
+    }
+
+    public void removeProfileEvents(String profileId){
+        Condition profileCondition = new Condition();
+        profileCondition.setConditionType(definitionsService.getConditionType("eventPropertyCondition"));
+        profileCondition.setParameter("propertyName", "profileId");
+        profileCondition.setParameter("comparisonOperator", "equals");
+        profileCondition.setParameter("propertyValue", profileId);
+
+        persistenceService.removeByQuery(profileCondition,Event.class);
     }
 }

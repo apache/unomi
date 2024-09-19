@@ -17,15 +17,17 @@
 
 package org.apache.unomi.api;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
  * A time-bounded interaction between a user (via their associated {@link Profile}) and a unomi-enabled application. A session represents a sequence of operations the user
  * performed during its duration. In the context of web applications, sessions are usually linked to HTTP sessions.
  */
-public class Session extends Item implements TimestampedItem {
+public class Session extends Item implements TimestampedItem, SystemPropertiesItem {
 
     /**
      * The Session ITEM_TYPE.
@@ -51,6 +53,9 @@ public class Session extends Item implements TimestampedItem {
     private int size = 0;
 
     private int duration = 0;
+
+    private List<String> originEventTypes = new ArrayList<>();
+    private List<String> originEventIds = new ArrayList<>();
 
     /**
      * Instantiates a new Session.
@@ -223,5 +228,41 @@ public class Session extends Item implements TimestampedItem {
 
     public void setScope(String scope) {
         this.scope = scope;
+    }
+
+    /**
+     * Get the events types which causes the session creation
+     *
+     * @return List of event types
+     */
+    public List<String> getOriginEventTypes() {
+        return originEventTypes;
+    }
+
+    /**
+     * Set the events types which causes the session creation
+     *
+     * @param originEventTypes List of event types
+     */
+    public void setOriginEventTypes(List<String> originEventTypes) {
+        this.originEventTypes = originEventTypes;
+    }
+
+    /**
+     * Get the events ids which causes the session creation
+     *
+     * @return event ids
+     */
+    public List<String> getOriginEventIds() {
+        return originEventIds;
+    }
+
+    /**
+     * Set the events ids which causes the session creation
+     *
+     * @param originEventIds List of event ids
+     */
+    public void setOriginEventIds(List<String> originEventIds) {
+        this.originEventIds = originEventIds;
     }
 }

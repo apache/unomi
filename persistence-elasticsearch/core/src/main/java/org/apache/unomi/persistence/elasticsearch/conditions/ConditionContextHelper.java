@@ -17,33 +17,23 @@
 
 package org.apache.unomi.persistence.elasticsearch.conditions;
 
-import com.google.common.base.Function;
-import com.google.common.collect.Lists;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.logging.log4j.core.util.IOUtils;
 import org.apache.lucene.analysis.charfilter.MappingCharFilterFactory;
 import org.apache.lucene.analysis.util.ClasspathResourceLoader;
 import org.apache.unomi.api.conditions.Condition;
-import org.mvel2.MVEL;
-import org.mvel2.ParserConfiguration;
-import org.mvel2.ParserContext;
+import org.apache.unomi.scripting.ScriptExecutor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.Reader;
-import java.io.Serializable;
 import java.io.StringReader;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.*;
+import java.util.stream.Collectors;
 
 public class ConditionContextHelper {
     private static final Logger logger = LoggerFactory.getLogger(ConditionContextHelper.class);
-
-    private static Map<String,Serializable> mvelExpressions = new ConcurrentHashMap<>();
 
     private static MappingCharFilterFactory mappingCharFilterFactory;
     static {
@@ -57,12 +47,12 @@ public class ConditionContextHelper {
         }
     }
 
-    public static Condition getContextualCondition(Condition condition, Map<String, Object> context) {
+    public static Condition getContextualCondition(Condition condition, Map<String, Object> context, ScriptExecutor scriptExecutor) {
         if (!hasContextualParameter(condition.getParameterValues())) {
             return condition;
         }
         @SuppressWarnings("unchecked")
-        Map<String, Object> values = (Map<String, Object>) parseParameter(context, condition.getParameterValues());
+        Map<String, Object> values = (Map<String, Object>) parseParameter(context, condition.getParameterValues(), scriptExecutor);
         if (values == null) {
             return null;
         }
@@ -72,7 +62,7 @@ public class ConditionContextHelper {
     }
 
     @SuppressWarnings("unchecked")
-    private static Object parseParameter(Map<String, Object> context, Object value) {
+    private static Object parseParameter(Map<String, Object> context, Object value, ScriptExecutor scriptExecutor) {
         if (value instanceof String) {
             if (((String) value).startsWith("parameter::") || ((String) value).startsWith("script::")) {
                 String s = (String) value;
@@ -80,18 +70,13 @@ public class ConditionContextHelper {
                     return context.get(StringUtils.substringAfter(s, "parameter::"));
                 } else if (s.startsWith("script::")) {
                     String script = StringUtils.substringAfter(s, "script::");
-                    if (!mvelExpressions.containsKey(script)) {
-                        ParserConfiguration parserConfiguration = new ParserConfiguration();
-                        parserConfiguration.setClassLoader(ConditionContextHelper.class.getClassLoader());
-                        mvelExpressions.put(script,MVEL.compileExpression(script, new ParserContext(parserConfiguration)));
-                    }
-                    return MVEL.executeExpression(mvelExpressions.get(script), context);
+                    return scriptExecutor.execute(script, context);
                 }
             }
         } else if (value instanceof Map) {
             Map<String, Object> values = new HashMap<String, Object>();
             for (Map.Entry<String, Object> entry : ((Map<String, Object>) value).entrySet()) {
-                Object parameter = parseParameter(context, entry.getValue());
+                Object parameter = parseParameter(context, entry.getValue(), scriptExecutor);
                 if (parameter == null) {
                     return null;
                 }
@@ -101,7 +86,7 @@ public class ConditionContextHelper {
         } else if (value instanceof List) {
             List<Object> values = new ArrayList<Object>();
             for (Object o : ((List<?>) value)) {
-                Object parameter = parseParameter(context, o);
+                Object parameter = parseParameter(context, o, scriptExecutor);
                 if (parameter != null) {
                     values.add(parameter);
                 }
@@ -144,9 +129,7 @@ public class ConditionContextHelper {
     public static String foldToASCII(String s) {
         if (s != null) {
             s = s.toLowerCase();
-            StringReader stringReader = new StringReader(s);
-            Reader foldedStringReader = mappingCharFilterFactory.create(stringReader);
-            try {
+            try (StringReader stringReader = new StringReader(s); Reader foldedStringReader = mappingCharFilterFactory.create(stringReader)) {
                 return IOUtils.toString(foldedStringReader);
             } catch (IOException e) {
                 logger.error("Error folding to ASCII string " + s, e);
@@ -155,17 +138,14 @@ public class ConditionContextHelper {
         return null;
     }
 
-    public static <T> List<T> foldToASCII(List<T> s) {
+    public static <T> Collection<T> foldToASCII(Collection<T> s) {
         if (s != null) {
-            return Lists.transform(s, new Function<T, T>() {
-                @Override
-                public T apply(T o) {
-                    if (o instanceof String) {
-                        return (T) ConditionContextHelper.foldToASCII((String) o);
-                    }
-                    return o;
+            return s.stream().map(o -> {
+                if (o instanceof String) {
+                    return (T) ConditionContextHelper.foldToASCII((String) o);
                 }
-            });
+                return o;
+            }).collect(Collectors.toCollection(ArrayList::new));
         }
         return null;
     }

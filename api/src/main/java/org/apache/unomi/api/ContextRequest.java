@@ -24,7 +24,6 @@ import org.apache.unomi.api.services.EventListenerService;
 import org.apache.unomi.api.services.PersonalizationService;
 import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.api.services.RulesService;
-
 import java.util.List;
 import java.util.Map;
 
@@ -48,12 +47,14 @@ import java.util.Map;
  * @see ContextResponse
  * @see Event
  */
+
 public class ContextRequest {
 
     private Item source;
     private boolean requireSegments;
     private List<String> requiredProfileProperties;
     private List<String> requiredSessionProperties;
+    private boolean requireScores;
     private List<Event> events;
     private List<PersonalizationService.PersonalizedContent> filters;
     private List<PersonalizationService.PersonalizationRequest> personalizations;
@@ -63,7 +64,12 @@ public class ContextRequest {
     // test different filter results.
     private Profile profileOverrides;
     private Map<String, Object> sessionPropertiesOverrides;
+
     private String sessionId;
+
+    private String profileId;
+
+    private String clientId;
 
     /**
      * Retrieves the source of the context request.
@@ -138,6 +144,23 @@ public class ContextRequest {
      */
     public void setRequiredSessionProperties(List<String> requiredSessionProperties) {
         this.requiredSessionProperties = requiredSessionProperties;
+    }
+
+    /**
+     * Specifies whether the profiles scores should be part of the ContextResponse.
+     * @return a boolean indicating if the scores should be part of the response.
+     */
+    public boolean isRequireScores() {
+        return requireScores;
+    }
+
+    /**
+     * Setting this value to true indicates that the profile scores should be included in the response. By default this
+     * value is false.
+     * @param requireScores set to true if you want the scores to be part of the context response
+     */
+    public void setRequireScores(boolean requireScores) {
+        this.requireScores = requireScores;
     }
 
     /**
@@ -228,6 +251,7 @@ public class ContextRequest {
     /**
      * Retrieve the sessionId passed along with the request. All events will be processed with this sessionId as a
      * default
+     *
      * @return the identifier for the session
      */
     public String getSessionId() {
@@ -237,9 +261,37 @@ public class ContextRequest {
     /**
      * Sets the sessionId in the request. This is the preferred method of passing along a session identifier with the
      * request, as passing it along in the URL can lead to potential security vulnerabilities.
+     *
      * @param sessionId an unique identifier for the session
      */
     public void setSessionId(String sessionId) {
         this.sessionId = sessionId;
+    }
+
+    /**
+     * Retrieve the profileId passed along with the request. All events will be processed with this profileId as a
+     * default
+     *
+     * @return the identifier for the profile
+     */
+    public String getProfileId() {
+        return profileId;
+    }
+
+    /**
+     * Sets the profileId in the request.
+     *
+     * @param profileId an unique identifier for the profile
+     */
+    public void setProfileId(String profileId) {
+        this.profileId = profileId;
+    }
+
+    public String getClientId() {
+        return clientId;
+    }
+
+    public void setClientId(String clientId) {
+        this.clientId = clientId;
     }
 }

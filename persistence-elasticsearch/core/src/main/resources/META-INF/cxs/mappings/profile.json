@@ -20,8 +20,8 @@
   "properties": {
     "properties": {
       "properties": {
-        "age" : {
-          "type" : "long"
+        "age": {
+          "type": "long"
         },
         "firstVisit": {
           "type": "date"
@@ -34,6 +34,26 @@
         },
         "nbOfVisits": {
           "type": "long"
+        },
+        "interests": {
+          "type": "nested"
+        }
+      }
+    },
+    "systemProperties": {
+      "properties": {
+        "pastEvents": {
+          "type": "nested"
+        }
+      }
+    },
+    "consents": {
+      "properties": {
+        "statusDate": {
+          "type": "date"
+        },
+        "revokeDate": {
+          "type": "date"
         }
       }
     }

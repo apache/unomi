@@ -23,8 +23,12 @@ import java.util.List;
  * A request for events to be processed.
  */
 public class EventsCollectorRequest {
+
     private List<Event> events;
+
     private String sessionId;
+
+    private String profileId;
 
     /**
      * Retrieves the events to be processed.
@@ -42,6 +46,7 @@ public class EventsCollectorRequest {
     /**
      * Retrieve the sessionId passed along with the request. All events will be processed with this sessionId as a
      * default
+     *
      * @return the identifier for the session
      */
     public String getSessionId() {
@@ -51,10 +56,29 @@ public class EventsCollectorRequest {
     /**
      * Sets the sessionId in the request. This is the preferred method of passing along a session identifier with the
      * request, as passing it along in the URL can lead to potential security vulnerabilities.
+     *
      * @param sessionId an unique identifier for the session
      */
     public void setSessionId(String sessionId) {
         this.sessionId = sessionId;
     }
 
+    /**
+     * Retrieve the profileId passed along with the request. All events will be processed with this profileId as a
+     * default
+     *
+     * @return the identifier for the profile
+     */
+    public String getProfileId() {
+        return profileId;
+    }
+
+    /**
+     * Sets the profileId in the request.
+     *
+     * @param profileId an unique identifier for the profile
+     */
+    public void setProfileId(String profileId) {
+        this.profileId = profileId;
+    }
 }

@@ -17,11 +17,13 @@
 
 package org.apache.unomi.geonames.rest;
 
-import org.apache.cxf.common.util.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
 import org.apache.unomi.api.PartialList;
 import org.apache.unomi.geonames.services.GeonameEntry;
 import org.apache.unomi.geonames.services.GeonamesService;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Reference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -40,10 +42,13 @@ import java.util.Locale;
         allowAllOrigins = true,
         allowCredentials = true
 )
+@Path("/geonames")
+@Component(service=GeonamesEndPoint.class,property = "osgi.jaxrs.resource=true")
 public class GeonamesEndPoint {
 
     private static final Logger logger = LoggerFactory.getLogger(GeonamesEndPoint.class.getName());
 
+    @Reference
     private GeonamesService geonamesService;
 
     public GeonamesEndPoint() {
@@ -108,7 +113,7 @@ public class GeonamesEndPoint {
         for (GeonameEntry entry : l) {
             if (GeonamesService.COUNTRY_FEATURE_CODES.contains(entry.getFeatureCode())) {
                 String name = new Locale("", entry.getCountryCode()).getDisplayCountry(locale);
-                if (!StringUtils.isEmpty(name) && !name.equals(entry.getCountryCode())) {
+                if (StringUtils.isNotEmpty(name) && !name.equals(entry.getCountryCode())) {
                     entry.setName(name);
                 }
             }

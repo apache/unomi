@@ -24,8 +24,9 @@
     <cm:property-placeholder persistent-id="org.apache.unomi.plugins.base"
                              update-strategy="reload" placeholder-prefix="${base.">
         <cm:default-properties>
-            <cm:property name="useEventToUpdateProfile" value="false" />
-            <cm:property name="usePropertyConditionOptimizations" value="true" />
+            <cm:property name="useEventToUpdateProfile" value="false"/>
+            <cm:property name="usePropertyConditionOptimizations" value="true"/>
+            <cm:property name="maxProfilesInOneMerge" value="50"/>
         </cm:default-properties>
     </cm:property-placeholder>
 
@@ -34,6 +35,7 @@
         <cm:default-properties>
             <cm:property name="maximumIdsQueryCount" value="5000"/>
             <cm:property name="aggregateQueryBucketSize" value="5000"/>
+            <cm:property name="pastEventsDisablePartitions" value="false"/>
         </cm:default-properties>
     </cm:property-placeholder>
 
@@ -41,9 +43,22 @@
     <reference id="persistenceService" interface="org.apache.unomi.persistence.spi.PersistenceService"/>
     <reference id="profileService" interface="org.apache.unomi.api.services.ProfileService"/>
     <reference id="privacyService" interface="org.apache.unomi.api.services.PrivacyService"/>
+    <reference id="schedulerService" interface="org.apache.unomi.api.services.SchedulerService"/>
     <reference id="segmentService" interface="org.apache.unomi.api.services.SegmentService"/>
     <reference id="eventService" interface="org.apache.unomi.api.services.EventService"/>
-    <reference id="configSharingService" interface="org.apache.unomi.api.services.ConfigSharingService" />
+    <reference id="configSharingService" interface="org.apache.unomi.api.services.ConfigSharingService"/>
+    <reference id="scriptExecutor" interface="org.apache.unomi.scripting.ScriptExecutor"/>
+    <reference id="topicService" interface="org.apache.unomi.api.services.TopicService"/>
+
+    <service
+            interface="org.apache.unomi.persistence.elasticsearch.conditions.ConditionESQueryBuilder">
+        <service-properties>
+            <entry key="queryBuilderId" value="idsConditionESQueryBuilder"/>
+        </service-properties>
+        <bean class="org.apache.unomi.plugins.baseplugin.conditions.IdsConditionESQueryBuilder">
+            <property name="maximumIdsQueryCount" value="${es.maximumIdsQueryCount}"/>
+        </bean>
+    </service>
 
     <service
             interface="org.apache.unomi.persistence.elasticsearch.conditions.ConditionESQueryBuilder">
@@ -102,9 +117,19 @@
             <property name="definitionsService" ref="definitionsService"/>
             <property name="persistenceService" ref="persistenceService"/>
             <property name="segmentService" ref="segmentService"/>
+            <property name="scriptExecutor" ref="scriptExecutor"/>
             <property name="maximumIdsQueryCount" value="${es.maximumIdsQueryCount}"/>
+            <property name="pastEventsDisablePartitions" value="${es.pastEventsDisablePartitions}"/>
             <property name="aggregateQueryBucketSize" value="${es.aggregateQueryBucketSize}"/>
         </bean>
+    </service>
+
+    <service
+            interface="org.apache.unomi.persistence.elasticsearch.conditions.ConditionESQueryBuilder">
+        <service-properties>
+            <entry key="queryBuilderId" value="nestedConditionESQueryBuilder"/>
+        </service-properties>
+        <bean class="org.apache.unomi.plugins.baseplugin.conditions.NestedConditionESQueryBuilder"/>
     </service>
 
 
@@ -118,18 +143,25 @@
 
     <service interface="org.apache.unomi.persistence.elasticsearch.conditions.ConditionEvaluator">
         <service-properties>
+            <entry key="conditionEvaluatorId" value="idsConditionEvaluator"/>
+        </service-properties>
+        <bean class="org.apache.unomi.plugins.baseplugin.conditions.IdsConditionEvaluator"/>
+    </service>
+
+    <service interface="org.apache.unomi.persistence.elasticsearch.conditions.ConditionEvaluator">
+        <service-properties>
             <entry key="conditionEvaluatorId" value="notConditionEvaluator"/>
         </service-properties>
         <bean class="org.apache.unomi.plugins.baseplugin.conditions.NotConditionEvaluator"/>
     </service>
 
-    <service interface="org.apache.unomi.persistence.elasticsearch.conditions.ConditionEvaluator">
+    <bean id="propertyConditionEvaluator" class="org.apache.unomi.plugins.baseplugin.conditions.PropertyConditionEvaluator" init-method="init">
+        <property name="usePropertyConditionOptimizations" value="${base.usePropertyConditionOptimizations}"/>
+    </bean>
+    <service  interface="org.apache.unomi.persistence.elasticsearch.conditions.ConditionEvaluator" ref="propertyConditionEvaluator">
         <service-properties>
             <entry key="conditionEvaluatorId" value="propertyConditionEvaluator"/>
         </service-properties>
-        <bean class="org.apache.unomi.plugins.baseplugin.conditions.PropertyConditionEvaluator">
-            <property name="usePropertyConditionOptimizations" value="${base.usePropertyConditionOptimizations}" />
-        </bean>
     </service>
 
     <service interface="org.apache.unomi.persistence.elasticsearch.conditions.ConditionEvaluator">
@@ -163,8 +195,19 @@
         <bean class="org.apache.unomi.plugins.baseplugin.conditions.PastEventConditionEvaluator">
             <property name="definitionsService" ref="definitionsService"/>
             <property name="persistenceService" ref="persistenceService"/>
+            <property name="scriptExecutor" ref="scriptExecutor"/>
         </bean>
     </service>
+
+    <service interface="org.apache.unomi.persistence.elasticsearch.conditions.ConditionEvaluator">
+        <service-properties>
+            <entry key="conditionEvaluatorId" value="nestedConditionEvaluator"/>
+        </service-properties>
+        <bean class="org.apache.unomi.plugins.baseplugin.conditions.NestedConditionEvaluator">
+            <property name="propertyConditionEvaluator" ref="propertyConditionEvaluator"/>
+        </bean>
+    </service>
+
 
     <!-- Action executors -->
 
@@ -173,6 +216,15 @@
             <entry key="actionExecutorId" value="allEventToProfileProperties"/>
         </service-properties>
         <bean class="org.apache.unomi.plugins.baseplugin.actions.AllEventToProfilePropertiesAction">
+            <property name="profileService" ref="profileService"/>
+        </bean>
+    </service>
+
+    <service interface="org.apache.unomi.api.actions.ActionExecutor">
+        <service-properties>
+            <entry key="actionExecutorId" value="copyProperties"/>
+        </service-properties>
+        <bean class="org.apache.unomi.plugins.baseplugin.actions.CopyPropertiesAction">
             <property name="profileService" ref="profileService"/>
         </bean>
     </service>
@@ -190,8 +242,15 @@
         </service-properties>
         <bean class="org.apache.unomi.plugins.baseplugin.actions.SetPropertyAction">
             <property name="eventService" ref="eventService"/>
-            <property name="useEventToUpdateProfile" value="${base.useEventToUpdateProfile}" />
+            <property name="useEventToUpdateProfile" value="${base.useEventToUpdateProfile}"/>
         </bean>
+    </service>
+
+    <service interface="org.apache.unomi.api.actions.ActionExecutor">
+        <service-properties>
+            <entry key="actionExecutorId" value="evaluateVisitProperties"/>
+        </service-properties>
+        <bean class="org.apache.unomi.plugins.baseplugin.actions.EvaluateVisitPropertiesAction"/>
     </service>
 
     <service interface="org.apache.unomi.api.actions.ActionExecutor">
@@ -257,8 +316,15 @@
             <property name="persistenceService" ref="persistenceService"/>
             <property name="definitionsService" ref="definitionsService"/>
             <property name="privacyService" ref="privacyService"/>
-            <property name="configSharingService" ref="configSharingService" />
+            <property name="schedulerService" ref="schedulerService"/>
+            <property name="maxProfilesInOneMerge" value="${base.maxProfilesInOneMerge}"/>
         </bean>
     </service>
 
+    <service interface="org.apache.unomi.api.actions.ActionExecutor">
+        <service-properties>
+            <entry key="actionExecutorId" value="incrementProperty"/>
+        </service-properties>
+        <bean class="org.apache.unomi.plugins.baseplugin.actions.IncrementPropertyAction"/>
+    </service>
 </blueprint>

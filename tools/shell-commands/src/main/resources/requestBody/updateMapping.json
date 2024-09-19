@@ -1,0 +1,14 @@
+{
+  "properties": {
+    "sourceId": {
+      "analyzer": "folding",
+      "type": "text",
+      "fields": {
+        "keyword": {
+          "type": "keyword",
+          "ignore_above": 256
+        }
+      }
+    }
+  }
+}

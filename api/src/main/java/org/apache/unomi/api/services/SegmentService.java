@@ -223,7 +223,20 @@ public interface SegmentService {
      * Get generated property key for past event condition
      * @param condition The event condition
      * @param parentCondition The past event condition
-     * @return
+     * @return a String representing the condition and parent condition uniquelly
      */
     String getGeneratedPropertyKey(Condition condition, Condition parentCondition);
+
+    /**
+     * This will recalculate the past event conditions from existing rules
+     * It will also recalculate date relative Segments and Scorings (when they contains date expression conditions for example)
+     * This operation can be heavy and take time, it will:
+     * - browse existing rules to extract the past event condition,
+     * - query the matching events for those conditions,
+     * - update the corresponding profiles
+     * - reevaluate segments/scorings linked to this rules to engaged/disengaged profiles after the occurrences have been updated
+     * - reevaluate segments/scoring that contains date expressions
+     * So use it carefully or execute this method in a dedicated thread.
+     */
+    void recalculatePastEventConditions();
 }

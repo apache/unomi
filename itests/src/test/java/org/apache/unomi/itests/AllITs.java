@@ -17,17 +17,22 @@
 
 package org.apache.unomi.itests;
 
+import org.apache.unomi.itests.migration.Migrate16xTo220IT;
+import org.apache.unomi.itests.graphql.*;
+import org.apache.unomi.itests.migration.MigrationIT;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 import org.junit.runners.Suite.SuiteClasses;
 
 /**
  * Defines suite of test classes to run.
- * 
+ *
  * @author Sergiy Shyrkov
  */
 @RunWith(Suite.class)
 @SuiteClasses({
+        Migrate16xTo220IT.class,
+        MigrationIT.class,
         BasicIT.class,
         ConditionEvaluatorIT.class,
         ConditionESQueryBuilderIT.class,
@@ -38,9 +43,28 @@ import org.junit.runners.Suite.SuiteClasses;
         ProfileImportRankingIT.class,
         ProfileImportActorsIT.class,
         ProfileExportIT.class,
+        ProfileMergeIT.class,
+        EventServiceIT.class,
         PropertiesUpdateActionIT.class,
+        CopyPropertiesActionIT.class,
+        IncrementPropertyIT.class,
+        InputValidationIT.class,
         ModifyConsentIT.class,
-        PatchIT.class
+        PatchIT.class,
+        ContextServletIT.class,
+        SecurityIT.class,
+        RuleServiceIT.class,
+        PrivacyServiceIT.class,
+        GroovyActionsServiceIT.class,
+        GraphQLEventIT.class,
+        GraphQLListIT.class,
+        GraphQLProfileIT.class,
+        GraphQLProfilePropertiesIT.class,
+        GraphQLSegmentIT.class,
+        GraphQLWebSocketIT.class,
+        JSONSchemaIT.class,
+        GraphQLProfileAliasesIT.class,
+        SendEventActionIT.class
 })
 public class AllITs {
 }

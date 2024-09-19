@@ -18,21 +18,17 @@ package org.apache.unomi.itests;
 
 import org.apache.unomi.api.PartialList;
 import org.apache.unomi.api.Profile;
-import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.router.api.ImportConfiguration;
 import org.apache.unomi.router.api.RouterConstants;
-import org.apache.unomi.router.api.services.ImportExportConfigurationService;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.ops4j.pax.exam.junit.PaxExam;
 import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
 import org.ops4j.pax.exam.spi.reactors.PerSuite;
-import org.ops4j.pax.exam.util.Filter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.inject.Inject;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -48,11 +44,6 @@ import java.util.Map;
 @ExamReactorStrategy(PerSuite.class)
 public class ProfileImportBasicIT extends BaseIT {
     private Logger logger = LoggerFactory.getLogger(ProfileImportBasicIT.class);
-    
-    @Inject @Filter(value="(configDiscriminator=IMPORT)", timeout = 600000)
-    protected ImportExportConfigurationService<ImportConfiguration> importConfigurationService;
-    @Inject @Filter(timeout = 600000)
-    protected ProfileService profileService;
 
     @Test
     public void testImportBasic() throws IOException, InterruptedException {

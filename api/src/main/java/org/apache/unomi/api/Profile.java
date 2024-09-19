@@ -17,6 +17,7 @@
 
 package org.apache.unomi.api;
 
+import org.apache.commons.lang3.StringUtils;
 import org.apache.unomi.api.segments.Scoring;
 import org.apache.unomi.api.segments.Segment;
 
@@ -37,7 +38,7 @@ import java.util.*;
  *
  * @see Segment
  */
-public class Profile extends Item {
+public class Profile extends Item implements SystemPropertiesItem {
 
     /**
      * The Profile ITEM_TYPE
@@ -54,6 +55,10 @@ public class Profile extends Item {
 
     private Map<String, Integer> scores;
 
+    /**
+     * @deprecated since 2.0.0 merge mechanism is now based on profile aliases, and this property is not used anymore
+     */
+    @Deprecated
     private String mergedWith;
 
     private Map<String, Consent> consents = new LinkedHashMap<>();
@@ -95,6 +100,30 @@ public class Profile extends Item {
     }
 
     /**
+     * Retrieves the value of the nested property identified by the specified name.
+     *
+     * @param name the name of the property to be retrieved, splited in the nested properties with "."
+     * @return the value of the property identified by the specified name
+     */
+    public Object getNestedProperty(String name) {
+        if (!name.contains(".")) {
+            return getProperty(name);
+        }
+
+        Map properties = this.properties;
+        String[] propertyPath = StringUtils.substringBeforeLast(name, ".").split("\\.");
+        String propertyName = StringUtils.substringAfterLast(name, ".");
+
+        for (String property: propertyPath) {
+            properties = (Map) properties.get(property);
+            if (properties == null) {
+                return null;
+            }
+        }
+        return properties.get(propertyName);
+    }
+
+    /**
      * Retrieves a Map of all property name - value pairs for this profile.
      *
      * @return a Map of all property name - value pairs for this profile
@@ -132,6 +161,20 @@ public class Profile extends Item {
     }
 
     /**
+     * Sets a system property, overwriting an existing one if it existed. This call will also created the system
+     * properties hash map if it didn't exist.
+     * @param key the key for the system property hash map
+     * @param value the value for the system property hash map
+     * @return the previous value object if it existing.
+     */
+    public Object setSystemProperty(String key, Object value) {
+        if (this.systemProperties == null) {
+            this.systemProperties = new LinkedHashMap<>();
+        }
+        return this.systemProperties.put(key, value);
+    }
+
+    /**
      * {@inheritDoc}
      *
      * Note that Profiles are always in the shared system scope ({@link Metadata#SYSTEM_SCOPE}).
@@ -162,18 +205,17 @@ public class Profile extends Item {
     }
 
     /**
-     * Retrieves the identifier of the profile this profile is merged with if any.
-     *
-     * @return the identifier of the profile this profile is merged with if any, {@code null} otherwise
+     * @deprecated since 2.0.0 merge mechanism is now based on profile aliases, and this property is not used anymore
      */
+    @Deprecated
     public String getMergedWith() {
         return mergedWith;
     }
 
     /**
-     * TODO: should be removed from the API
-     * @param mergedWith new value for mergedWith
+     * @deprecated since 2.0.0 merge mechanism is now based on profile aliases, and this property is not used anymore
      */
+    @Deprecated
     public void setMergedWith(String mergedWith) {
         this.mergedWith = mergedWith;
     }
@@ -223,9 +265,16 @@ public class Profile extends Item {
     @XmlTransient
     public boolean setConsent(Consent consent) {
         if (ConsentStatus.REVOKED.equals(consent.getStatus())) {
-            if (consents.containsKey(consent.getTypeIdentifier())) {
-                consents.remove(consent.getTypeIdentifier());
-                return true;
+            if (consent.getScope() != null) {
+                if (consents.containsKey(consent.getScope() + "/" + consent.getTypeIdentifier())) {
+                    consents.remove(consent.getScope() + "/" + consent.getTypeIdentifier());
+                    return true;
+                }
+            } else {
+                if (consents.containsKey(consent.getTypeIdentifier())) {
+                    consents.remove(consent.getTypeIdentifier());
+                    return true;
+                }
             }
             return false;
         }
@@ -244,7 +293,6 @@ public class Profile extends Item {
         sb.append(", systemProperties=").append(systemProperties);
         sb.append(", segments=").append(segments);
         sb.append(", scores=").append(scores);
-        sb.append(", mergedWith='").append(mergedWith).append('\'');
         sb.append(", consents=").append(consents);
         sb.append(", itemId='").append(itemId).append('\'');
         sb.append(", itemType='").append(itemType).append('\'');

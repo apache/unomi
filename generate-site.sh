@@ -17,25 +17,51 @@
 #    limitations under the License.
 #
 ################################################################################
-echo Generating documentation...
+if [ $# -ne 2 ]
+  then
+    echo "Illegal number of arguments supplied. Syntax should be generate-site.sh X_X_X X.X.X"
+    echo "Where X_X_X is either the release branch name or master"
+    echo "Example: ./generate-site.sh 2_0_x 2.0.1 or ./generate-site.sh master 2.3.0-SNAPSHOT for updating the master snapshot version"
+    exit 1
+fi
+echo Setting up environment...
+DIRNAME=`dirname "$0"`
+PROGNAME=`basename "$0"`
+if [ -f "$DIRNAME/setenv.sh" ]; then
+  . "$DIRNAME/setenv.sh"
+fi
+set -e
+# keep track of the last executed command
+trap 'last_command=$current_command; current_command=$BASH_COMMAND' DEBUG
+# echo an error message before exiting
+trap 'echo "\"${last_command}\" command filed with exit code $?."' EXIT
+RELEASE_BRANCH_NAME=$1
+RELEASE_VERSION=$2
+LOCAL_BRANCH_NAME=`git rev-parse --abbrev-ref HEAD`
+echo Git local branch: ${LOCAL_BRANCH_NAME}
+echo Generating manual for branch ${RELEASE_BRANCH_NAME} and version ${RELEASE_VERSION}...
 mvn clean
-cd manual
-mvn -Phtml -Ddoc.source=src/archives/1.1/asciidoc -Ddoc.output.html=target/generated-html/1_1_x
-mvn -Ppdf -Ddoc.source=src/archives/1.1/asciidoc -Ddoc.output.pdf=target/generated-pdf/1_1_x
-mvn -Phtml -Ddoc.source=src/archives/1.2/asciidoc -Ddoc.output.html=target/generated-html/1_2_x
-mvn -Ppdf -Ddoc.source=src/archives/1.2/asciidoc -Ddoc.output.pdf=target/generated-pdf/1_2_x
-mvn -Phtml -Ddoc.source=src/archives/1.3/asciidoc -Ddoc.output.html=target/generated-html/1_3_x
-mvn -Ppdf -Ddoc.source=src/archives/1.3/asciidoc -Ddoc.output.pdf=target/generated-pdf/1_3_x
-mvn -Phtml
-mvn -Ppdf
-cd ..
-echo Generating Javadoc...
-mvn javadoc:aggregate -P integration-tests
-cd rest
-mvn package
-cd ..
-mkdir target/staging/unomi-api
-mkdir target/staging/manual
-cp -R target/site/apidocs target/staging/unomi-api
-cp -Rf manual/target/generated-html/* target/staging/manual
+pushd manual
+if [ "$RELEASE_BRANCH_NAME" != "master" ]; then
+  mvn -Ddoc.archive=true -Ddoc.output.pdf=target/generated-docs/pdf/$RELEASE_BRANCH_NAME -Ddoc.output.html=target/generated-docs/html/$RELEASE_BRANCH_NAME -Ddoc.version=$RELEASE_BRANCH_NAME -P sign install
+fi
+mvn -P sign install
+# If not on master branch we remove the latest directories
+if [ "$LOCAL_BRANCH_NAME" != "master" ]; then
+  rm -rf target/generated-docs/html/latest
+  rm -rf target/generated-docs/pdf/latest
+fi
+popd
+if [ "$LOCAL_BRANCH_NAME" == "master" ]; then
+  echo Generating Javadoc...
+  mvn javadoc:aggregate -P integration-tests
+else
+  echo Not on master branch, skipping Javadoc generation
+fi
+mkdir -p target/staging/unomi-api
+mkdir -p target/staging/manual
+if [ "$LOCAL_BRANCH_NAME" == "master" ]; then
+  cp -R target/site/apidocs target/staging/unomi-api
+fi
+cp -Rf manual/target/generated-docs/html/* target/staging/manual
 echo Documentation generation completed!

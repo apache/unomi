@@ -28,11 +28,21 @@ import java.util.List;
 public interface PrivacyService {
 
     /**
-     * Retrieves the server information, including the name and version of the server, the event types
-     * if recognizes as well as the capabilities supported by the system.
+     * Retrieves the default base Apache Unomi server information, including the name and version of the server, build
+     * time information and the event types
+     * if recognizes as well as the capabilities supported by the system. For more detailed information about the system
+     * and extensions use the getServerInfos method.
      * @return a ServerInfo object with all the server information
      */
     ServerInfo getServerInfo();
+
+    /**
+     * Retrieves the list of the server information objects, that include extensions. Each object includes the
+     * name and version of the server, build time information and the event types
+     * if recognizes as well as the capabilities supported by the system.
+     * @return a list of ServerInfo objects with all the server information
+     */
+    List<ServerInfo> getServerInfos();
 
     /**
      * Deletes the current profile (but has no effect on sessions and events). This will delete the
@@ -66,9 +76,10 @@ public interface PrivacyService {
      * This method will perform two operations, first it will call the anonymizeBrowsingData method on the
      * specified profile, and then it will delete the profile from the persistence service.
      * @param profileId the identifier of the profile
+     * @param purgeData flag that indicates whether to purge the profile's data
      * @return true if the operation was successful, false otherwise
      */
-    Boolean deleteProfileData(String profileId);
+    Boolean deleteProfileData(String profileId,boolean purgeData);
 
     /**
      * Controls the activation/deactivation of anonymous browsing. This method will simply set a system

@@ -16,7 +16,7 @@
 
 ==== Initial Setup
 
-. Install J2SE 8.0 SDK (or later), which can be downloaded from
+. Install J2SE 11 SDK (or later), which can be downloaded from
  http://www.oracle.com/technetwork/java/javase/downloads/index.html[http://www.oracle.com/technetwork/java/javase/downloads/index.html]
 
 . Make sure that your JAVA_HOME environment variable is set to the newly installed
@@ -43,12 +43,25 @@ This will compile Apache Unomi and run all of the tests in the
 +
 [source]
 ----
-     $> mvn -P \!integration-tests,\!performance-tests clean install
+     $> mvn -P \!integration-tests clean install
 ----
 +
 This will compile Apache Unomi without running the tests and takes less
  time to build.
-
++
+TIP: On a non-English Windows env, the Asciidoctor Maven Plugin may fail to
+     generate manuals due to an encoding conversion issue.
+     To solve this issue, we recommend setting the *file.encoding* system property
+     to _UTF-8_ like the following examples before issuing the commands shown above.
++
+[source]
+----
+     > set MAVEN_OPTS=-Dfile.encoding=UTF-8
+     or
+     > set MAVEN_OPTS=-Dfile.encoding=UTF-8 -Xmx2048m
+     ...
+----
++
 . The distributions will be available under "package/target" directory.
 
 ==== Installing an ElasticSearch server
@@ -82,7 +95,7 @@ bin\elasticsearch.bat (Windows)
 
 Check that the ElasticSearch is up and running by accessing the following URL :
 
-http://localhost:9200[http://localhost:9200] 
+http://localhost:9200[http://localhost:9200]
 
 ==== Deploying the generated binary package
 
@@ -90,14 +103,14 @@ The "package" sub-project generates a pre-configured Apache Karaf installation t
 Simply uncompress the package/target/unomi-VERSION.tar.gz (for Linux or Mac OS X) or
  package/target/unomi-VERSION.zip (for Windows) archive into the directory of your choice.
 
-You can then start the server simply by using the command on UNIX/Linux/MacOS X : 
+You can then start the server simply by using the command on UNIX/Linux/MacOS X :
 
 [source]
 ----
-./bin/karaf    
+./bin/karaf
 ----
 
-or on Windows shell : 
+or on Windows shell :
 
 [source]
 ----
@@ -109,7 +122,7 @@ shell command:
 
 [source]
 ----
-unomi:start        
+unomi:start
 ----
 
 ==== Deploying into an existing Karaf server
@@ -118,26 +131,25 @@ This is only needed if you didn't use the generated package. Also, this is the p
 environment if you intend to re-deploy the context server KAR iteratively.
 
 Additional requirements:
-* Apache Karaf 3.x, http://karaf.apache.org[http://karaf.apache.org]
+* Apache Karaf 4.2.x, http://karaf.apache.org[http://karaf.apache.org]
 
-Before deploying, make sure that you have Apache Karaf properly installed. You will also have to increase the
-default maximum memory size and perm gen size by adjusting the following environment values in the bin/setenv(.bat)
+Before deploying, make sure that you have Apache Karaf properly installed. Depending of your usage, you may also have to increase the
+ memory size by adjusting the following environment values in the bin/setenv(.bat)
 files (at the end of the file):
 
 [source]
 ----
    MY_DIRNAME=`dirname $0`
    MY_KARAF_HOME=`cd "$MY_DIRNAME/.."; pwd`
-   export JAVA_MAX_MEM=3G
-   export JAVA_MAX_PERM_MEM=384M
+   export KARAF_OPTS="$KARAF_OPTS -Xmx3G"
 ----
 
 Install the WAR support, CXF and Karaf Cellar into Karaf by doing the following in the Karaf command line:
 
 [source]
 ----
-   feature:repo-add cxf 3.0.2
-   feature:repo-add cellar 3.0.3
+   feature:repo-add cxf-jaxrs 3.3.4
+   feature:repo-add cellar 4.1.3
    feature:repo-add mvn:org.apache.unomi/unomi-kar/VERSION/xml/features
    feature:install unomi-kar
 ----
@@ -155,48 +167,46 @@ If all went smoothly, you should be able to access the context script here : htt
 ==== JDK Selection on Mac OS X
 
 You might need to select the JDK to run the tests in the itests subproject. In order to do so you can list the
-installed JDKs with the following command : 
+installed JDKs with the following command :
 
 [source]
 ----
 /usr/libexec/java_home -V
 ----
 
-which will output something like this : 
+which will output something like this :
 
 [source]
 ----
-Matching Java Virtual Machines (7):
-    1.7.0_51, x86_64:   "Java SE 7"   /Library/Java/JavaVirtualMachines/jdk1.7.0_51.jdk/Contents/Home
-    1.7.0_45, x86_64:   "Java SE 7"   /Library/Java/JavaVirtualMachines/jdk1.7.0_45.jdk/Contents/Home
-    1.7.0_25, x86_64:   "Java SE 7"   /Library/Java/JavaVirtualMachines/jdk1.7.0_25.jdk/Contents/Home
-    1.6.0_65-b14-462, x86_64:   "Java SE 6"   /Library/Java/JavaVirtualMachines/1.6.0_65-b14-462.jdk/Contents/Home
-    1.6.0_65-b14-462, i386: "Java SE 6" /Library/Java/JavaVirtualMachines/1.6.0_65-b14-462.jdk/Contents/Home
-    1.6.0_65-b14-462, x86_64:   "Java SE 6"   /System/Library/Java/JavaVirtualMachines/1.6.0.jdk/Contents/Home
-    1.6.0_65-b14-462, i386: "Java SE 6" /System/Library/Java/JavaVirtualMachines/1.6.0.jdk/Contents/Home
+Matching Java Virtual Machines (3):
+    11.0.5, x86_64:	"OpenJDK 11.0.5"	/Library/Java/JavaVirtualMachines/openjdk-11.jdk/Contents/Home
+    1.8.0_181, x86_64:	"Java SE 8"	/Library/Java/JavaVirtualMachines/jdk1.8.0_181.jdk/Contents/Home
+    1.7.0_80, x86_64:	"Java SE 7"	/Library/Java/JavaVirtualMachines/jdk1.7.0_80.jdk/Contents/Home
+
+/Library/Java/JavaVirtualMachines/openjdk-11.jdk/Contents/Home
 ----
 
-You can then select the one you want using : 
+You can then select the one you want using :
 
 [source]
 ----
-export JAVA_HOME=`/usr/libexec/java_home -v 1.7.0_51`
+export JAVA_HOME=`/usr/libexec/java_home -v 11.0.5`
 ----
 
-and then check that it was correctly referenced using: 
+and then check that it was correctly referenced using:
 
 [source]
 ----
 java -version
 ----
 
-which should give you a result such as this: 
+which should give you a result such as this:
 
 [source]
 ----
-java version "1.7.0_51"
-Java(TM) SE Runtime Environment (build 1.7.0_51-b13)
-Java HotSpot(TM) 64-Bit Server VM (build 24.51-b03, mixed mode)
+openjdk version "11.0.5" 2019-10-15
+OpenJDK Runtime Environment (build 11.0.5+10)
+OpenJDK 64-Bit Server VM (build 11.0.5+10, mixed mode)
 ----
 
 ==== Running the integration tests
@@ -204,34 +214,16 @@ Java HotSpot(TM) 64-Bit Server VM (build 24.51-b03, mixed mode)
 The integration tests are not executed by default to make build time minimal, but it is recommended to run the
 integration tests at least once before using the server to make sure that everything is ok in the build. Another way
 to use these tests is to run them from a continuous integration server such as Jenkins, Apache Gump, Atlassian Bamboo or
- others. 
+ others.
 
-Note : the integration tests require a JDK 7 or more recent !
+Note : the integration tests require a JDK 11 or more recent !
 
-To run the tests simply activate the following profile : 
+To run the tests simply activate the following profile :
 
 [source]
 ----
 mvn -P integration-tests clean install
 ----
-
-==== Running the performance tests
-
-Performance tests are based on Gatling. You need to have a running context server or cluster of servers before
-executing the tests.
-
-Test parameteres are editable in the performance-tests/src/test/scala/unomi/Parameters.scala file. baseUrls should
-contains the URLs of all your cluster nodes
-
-Run the test by using the gatling.conf file in performance-tests/src/test/resources :
-
-[source]
-----
-    export GATLING_CONF=<path>/performance-tests/src/test/resources
-    gatling.sh
-----
-
-Reports are generated in performance-tests/target/results.
 
 ==== Testing with an example page
 
@@ -242,6 +234,6 @@ A default test page is provided at the following URL:
    http://localhost:8181/index.html
 ----
 
-This test page will trigger the loading of the /context.js script, which will try to retrieving the user context
+This test page will trigger the loading of the /cxs/context.js script, which will try to retrieving the user context
 or create a new one if it doesn't exist yet. It also contains an experimental integration with Facebook Login, but it
 doesn't yet save the context back to the context server.

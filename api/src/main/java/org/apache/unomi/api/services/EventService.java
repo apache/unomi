@@ -23,6 +23,7 @@ import org.apache.unomi.api.PartialList;
 import org.apache.unomi.api.Session;
 import org.apache.unomi.api.actions.ActionPostExecutor;
 import org.apache.unomi.api.conditions.Condition;
+import org.apache.unomi.api.query.Query;
 
 import java.util.List;
 import java.util.Set;
@@ -37,13 +38,17 @@ public interface EventService {
      */
     int NO_CHANGE = 0;
     /**
+     * An error occurred while processing the event.
+     */
+    int ERROR = 1;
+    /**
      * The associated session was updated following an event being handled.
      */
-    int SESSION_UPDATED = 1;
+    int SESSION_UPDATED = 2;
     /**
      * The associated profile was updated following an event being handled.
      */
-    int PROFILE_UPDATED = 2;
+    int PROFILE_UPDATED = 4;
 
     /**
      * Propagates the specified event in the context server, notifying
@@ -57,7 +62,8 @@ public interface EventService {
 
     /**
      * Check if the sender is allowed to sent the speecified event. Restricted event must be explicitely allowed for a sender.
-     * @param event event to test
+     *
+     * @param event        event to test
      * @param thirdPartyId third party id
      * @return true if the event is allowed
      */
@@ -65,8 +71,9 @@ public interface EventService {
 
     /**
      * Get the third party server name, if the request is originated from a known peer
+     *
      * @param key the key
-     * @param ip the ip
+     * @param ip  the ip
      * @return server name
      */
     String authenticateThirdPartyServer(String key, String ip);
@@ -75,6 +82,7 @@ public interface EventService {
      * Retrieves the list of available event properties.
      *
      * @return a list of available event properties
+     * @deprecated use event types instead
      */
     List<EventProperty> getEventProperties();
 
@@ -114,6 +122,23 @@ public interface EventService {
     PartialList<Event> searchEvents(String sessionId, String[] eventTypes, String query, int offset, int size, String sortBy);
 
     /**
+     * Retrieves {@link Event}s matching the specified {@link Query}.
+     *
+     * @param query a {@link Query} specifying which Events to retrieve
+     * @return a {@link PartialList} of {@code Event} instances matching the specified query
+     */
+    PartialList<Event> search(Query query);
+
+
+    /**
+     * Retrieves the {@link Event} by its identifier.
+     *
+     * @param id the identifier of the {@link Event} to retrieve
+     * @return the {@link Event} identified by the specified identifier or {@code null} if no such profile exists
+     */
+    Event getEvent(final String id);
+
+    /**
      * Checks whether the specified event has already been raised either for the associated session or profile depending on the specified {@code session} parameter.
      *
      * @param event   the event we want to check
@@ -122,4 +147,18 @@ public interface EventService {
      * @return {@code true} if the event has already been raised, {@code false} otherwise
      */
     boolean hasEventAlreadyBeenRaised(Event event, boolean session);
+    /**
+     * Checks whether the specified event has already been raised with the same itemId.
+     *
+     * @param event   the event we want to check
+     * @return {@code true} if the event has already been raised, {@code false} otherwise
+     */
+    boolean hasEventAlreadyBeenRaised(Event event);
+
+    /**
+     * Removes all events of the specified profile
+     *
+     * @param profileId identifier of the profile that we want to remove it's events
+     */
+    void removeProfileEvents(String profileId);
 }

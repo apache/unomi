@@ -5,11 +5,15 @@
         "systemTags": [
             "properties",
             "profileProperties",
-            "workProfileProperties"
+            "workProfileProperties",
+            "profileTags",
+            "autocompleted"
         ]
     },
     "type": "string",
     "defaultValue": "",
-    "automaticMappingsFrom": [ ],
+    "automaticMappingsFrom": [
+        "j:function"
+    ],
     "rank": "602.0"
 }

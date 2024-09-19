@@ -8,7 +8,6 @@
       "event",
       "condition",
       "eventCondition",
-      "usableInPastEventCondition",
       "trackedCondition"
     ],
     "readOnly": true

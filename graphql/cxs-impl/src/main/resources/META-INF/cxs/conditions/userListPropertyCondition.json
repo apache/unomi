@@ -1,0 +1,36 @@
+{
+  "metadata": {
+    "id": "userListPropertyCondition",
+    "name": "userListPropertyCondition",
+    "description": "",
+    "systemTags": [
+      "userLists",
+      "condition"
+    ],
+    "readOnly": true
+  },
+  "conditionEvaluator": "propertyConditionEvaluator",
+  "queryBuilder": "propertyConditionESQueryBuilder",
+  "parameters": [
+    {
+      "id": "propertyName",
+      "type": "string",
+      "multivalued": false
+    },
+    {
+      "id": "comparisonOperator",
+      "type": "comparisonOperator",
+      "multivalued": false
+    },
+    {
+      "id": "propertyValue",
+      "type": "string",
+      "multivalued": false
+    },
+    {
+      "id": "propertyValues",
+      "type": "string",
+      "multivalued": true
+    }
+  ]
+}

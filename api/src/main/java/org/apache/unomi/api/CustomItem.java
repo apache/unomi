@@ -30,6 +30,7 @@ public class CustomItem extends Item {
      */
     public static final String ITEM_TYPE = "custom";
     private static final long serialVersionUID = -7178914125308851922L;
+    private String customItemType;
     private Map<String,Object> properties = new HashMap<String,Object>();
 
     /**
@@ -65,5 +66,13 @@ public class CustomItem extends Item {
      */
     public void setProperties(Map<String, Object> properties) {
         this.properties = properties;
+    }
+
+    public String getCustomItemType() {
+        return customItemType;
+    }
+
+    public void setCustomItemType(String customItemType) {
+        this.customItemType = customItemType;
     }
 }

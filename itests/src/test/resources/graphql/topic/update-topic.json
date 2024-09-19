@@ -1,0 +1,11 @@
+{
+  "operationName": "createOrUpdateTopic",
+  "variables": {
+    "topic": {
+      "id": "testTopic",
+      "name": "testTopicName Updated",
+      "view": "testTopicView"
+    }
+  },
+  "query": "mutation createOrUpdateTopic($topic: CDP_TopicInput) {\n  cdp {\n    createOrUpdateTopic(topic: $topic) {\n      id\n      name\n      view {\n        name\n      }\n    }\n  }\n}\n"
+}

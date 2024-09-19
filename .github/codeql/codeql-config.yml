@@ -1,0 +1,4 @@
+name: "Unomi CodeQL config"
+
+paths-ignore:
+  - itests

@@ -17,18 +17,18 @@
 
 package org.apache.unomi.services.impl.personalization;
 
-import org.apache.unomi.api.PersonalizationStrategy;
-import org.apache.unomi.api.Profile;
-import org.apache.unomi.api.Session;
+import org.apache.unomi.api.*;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.services.PersonalizationService;
 import org.apache.unomi.api.services.ProfileService;
+import org.apache.unomi.services.sorts.ControlGroupPersonalizationStrategy;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceReference;
 
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+
+import static org.apache.unomi.services.sorts.ControlGroupPersonalizationStrategy.CONTROL_GROUP_CONFIG;
 
 public class PersonalizationServiceImpl implements PersonalizationService {
 
@@ -36,6 +36,8 @@ public class PersonalizationServiceImpl implements PersonalizationService {
     private ProfileService profileService;
 
     private Map<String, PersonalizationStrategy> personalizationStrategies = new ConcurrentHashMap<>();
+    private final PersonalizationStrategy controlGroupStrategy = new ControlGroupPersonalizationStrategy();
+
 
     public void setProfileService(ProfileService profileService) {
         this.profileService = profileService;
@@ -73,19 +75,36 @@ public class PersonalizationServiceImpl implements PersonalizationService {
 
     @Override
     public String bestMatch(Profile profile, Session session, PersonalizationRequest personalizationRequest) {
-        List<String> sorted = personalizeList(profile,session,personalizationRequest);
-        if (sorted.size() > 0) {
-            return sorted.get(0);
+        PersonalizationResult result = personalizeList(profile,session,personalizationRequest);
+        if (result.getContentIds().size() > 0) {
+            return result.getContentIds().get(0);
         }
         return null;
     }
 
     @Override
-    public List<String> personalizeList(Profile profile, Session session, PersonalizationRequest personalizationRequest) {
+    public PersonalizationResult personalizeList(Profile profile, Session session, PersonalizationRequest personalizationRequest) {
         PersonalizationStrategy strategy = personalizationStrategies.get(personalizationRequest.getStrategy());
 
         if (strategy != null) {
-            return strategy.personalizeList(profile, session, personalizationRequest);
+            // hook on control group if necessary
+            PersonalizationResult controlGroupStrategyResult = null;
+            if (personalizationRequest.getStrategyOptions() != null && personalizationRequest.getStrategyOptions().containsKey(CONTROL_GROUP_CONFIG)) {
+                controlGroupStrategyResult = controlGroupStrategy.personalizeList(profile, session, personalizationRequest);
+                if (controlGroupStrategyResult.isInControlGroup()) {
+                    return controlGroupStrategyResult;
+                }
+            }
+
+            // Execute the original strategy
+            PersonalizationResult originalStrategyResult = strategy.personalizeList(profile, session, personalizationRequest);
+            // merge original strategy result with previous controlGroup hook in case it's needed
+            if (controlGroupStrategyResult != null) {
+                originalStrategyResult.addChanges(controlGroupStrategyResult.getChangeType());
+                originalStrategyResult.getAdditionalResultInfos().putAll(controlGroupStrategyResult.getAdditionalResultInfos());
+            }
+
+            return originalStrategyResult;
         }
 
         throw new IllegalArgumentException("Unknown strategy : "+ personalizationRequest.getStrategy());

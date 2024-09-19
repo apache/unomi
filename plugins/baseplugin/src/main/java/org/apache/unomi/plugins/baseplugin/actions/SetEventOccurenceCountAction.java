@@ -24,10 +24,15 @@ import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.persistence.spi.PersistenceService;
+import org.apache.unomi.persistence.spi.PropertyHelper;
 
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.Map;
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.*;
+import java.util.stream.Collectors;
+
+import javax.xml.bind.DatatypeConverter;
 
 public class SetEventOccurenceCountAction implements ActionExecutor {
     private DefinitionsService definitionsService;
@@ -60,28 +65,113 @@ public class SetEventOccurenceCountAction implements ActionExecutor {
         c.setParameter("propertyValue", event.getProfileId());
         conditions.add(c);
 
-        if (pastEventCondition.getParameter("numberOfDays") != null) {
-            int i = (Integer) pastEventCondition.getParameter("numberOfDays");
+        // may be current event is already persisted and indexed, in that case we filter it from the count to increment it manually at the end
+        Condition eventIdFilter = new Condition(definitionsService.getConditionType("eventPropertyCondition"));
+        eventIdFilter.setParameter("propertyName", "itemId");
+        eventIdFilter.setParameter("comparisonOperator", "notEquals");
+        eventIdFilter.setParameter("propertyValue", event.getItemId());
+        conditions.add(eventIdFilter);
 
-            Condition timeCondition = new Condition(definitionsService.getConditionType("eventPropertyCondition"));
-            timeCondition.setParameter("propertyName", "timeStamp");
-            timeCondition.setParameter("comparisonOperator", "greaterThan");
-            timeCondition.setParameter("propertyValueDateExpr", "now-" + i + "d");
+        Integer numberOfDays = (Integer) pastEventCondition.getParameter("numberOfDays");
+        String fromDate = (String) pastEventCondition.getParameter("fromDate");
+        String toDate = (String) pastEventCondition.getParameter("toDate");
 
-            conditions.add(timeCondition);
+        if (numberOfDays != null) {
+            Condition numberOfDaysCondition = new Condition(definitionsService.getConditionType("eventPropertyCondition"));
+            numberOfDaysCondition.setParameter("propertyName", "timeStamp");
+            numberOfDaysCondition.setParameter("comparisonOperator", "greaterThan");
+            numberOfDaysCondition.setParameter("propertyValueDateExpr", "now-" + numberOfDays + "d");
+            conditions.add(numberOfDaysCondition);
+        }
+        if (fromDate != null)  {
+            Condition startDateCondition = new Condition();
+            startDateCondition.setConditionType(definitionsService.getConditionType("eventPropertyCondition"));
+            startDateCondition.setParameter("propertyName", "timeStamp");
+            startDateCondition.setParameter("comparisonOperator", "greaterThanOrEqualTo");
+            startDateCondition.setParameter("propertyValueDate", fromDate);
+            conditions.add(startDateCondition);
+        }
+        if (toDate != null)  {
+            Condition endDateCondition = new Condition();
+            endDateCondition.setConditionType(definitionsService.getConditionType("eventPropertyCondition"));
+            endDateCondition.setParameter("propertyName", "timeStamp");
+            endDateCondition.setParameter("comparisonOperator", "lessThanOrEqualTo");
+            endDateCondition.setParameter("propertyValueDate", toDate);
+            conditions.add(endDateCondition);
         }
 
         andCondition.setParameter("subConditions", conditions);
 
         long count = persistenceService.queryCount(andCondition, Event.ITEM_TYPE);
 
-        Map<String, Object> pastEvents = (Map<String, Object>) event.getProfile().getSystemProperties().get("pastEvents");
-        if (pastEvents == null) {
-            pastEvents = new LinkedHashMap<>();
-            event.getProfile().getSystemProperties().put("pastEvents", pastEvents);
+        LocalDateTime fromDateTime = null;
+        if (fromDate != null) {
+            Calendar fromDateCalendar = DatatypeConverter.parseDateTime(fromDate);
+            fromDateTime = LocalDateTime.ofInstant(fromDateCalendar.toInstant(), ZoneId.of("UTC"));
         }
-        pastEvents.put((String) pastEventCondition.getParameter("generatedPropertyKey"), count + 1);
+        LocalDateTime toDateTime = null;
+        if (toDate != null) {
+            Calendar toDateCalendar = DatatypeConverter.parseDateTime(toDate);
+            toDateTime = LocalDateTime.ofInstant(toDateCalendar.toInstant(), ZoneId.of("UTC"));
+        }
 
-        return EventService.PROFILE_UPDATED;
+        LocalDateTime eventTime = LocalDateTime.ofInstant(event.getTimeStamp().toInstant(),ZoneId.of("UTC"));
+
+        if (inTimeRange(eventTime, numberOfDays, fromDateTime, toDateTime)) {
+            count++;
+        }
+
+        if (updatePastEvents(event, (String) pastEventCondition.getParameter("generatedPropertyKey"), count)) {
+            return EventService.PROFILE_UPDATED;
+        }
+
+        return EventService.NO_CHANGE;
+    }
+
+    private boolean updatePastEvents(Event event, String generatedPropertyKey, long count) {
+        List<Map<String, Object>> existingPastEvents = (List<Map<String, Object>>) event.getProfile().getSystemProperties().get("pastEvents");
+        if (existingPastEvents == null) {
+            existingPastEvents = new ArrayList<>();
+            event.getProfile().getSystemProperties().put("pastEvents", existingPastEvents);
+        }
+
+        for (Map<String, Object> pastEvent : existingPastEvents) {
+            if (generatedPropertyKey.equals(pastEvent.get("key"))) {
+                if (pastEvent.containsKey("count") && pastEvent.get("count").equals(count)) {
+                    return false;
+                }
+                pastEvent.put("count", count);
+                return true;
+            }
+        }
+
+        Map<String, Object> newPastEvent = new HashMap<>();
+        newPastEvent.put("key", generatedPropertyKey);
+        newPastEvent.put("count", count);
+        existingPastEvents.add(newPastEvent);
+        return true;
+    }
+
+    private boolean inTimeRange(LocalDateTime eventTime, Integer numberOfDays, LocalDateTime fromDate, LocalDateTime toDate) {
+        boolean inTimeRange = true;
+
+        if (numberOfDays != null) {
+            LocalDateTime now = LocalDateTime.now(ZoneId.of("UTC"));
+            if (eventTime.isAfter(now)) {
+                inTimeRange = false;
+            }
+            long daysDiff = Duration.between(eventTime, now).toDays();
+            if (daysDiff > numberOfDays) {
+                inTimeRange = false;
+            }
+        }
+        if (fromDate != null && fromDate.isAfter(eventTime)) {
+            inTimeRange = false;
+        }
+        if (toDate != null && toDate.isBefore(eventTime)) {
+            inTimeRange = false;
+        }
+
+        return inTimeRange;
     }
 }

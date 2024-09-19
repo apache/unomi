@@ -18,6 +18,7 @@
 package org.apache.unomi.persistence.elasticsearch.conditions;
 
 import org.apache.unomi.api.conditions.Condition;
+import org.apache.unomi.scripting.ScriptExecutor;
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 import org.slf4j.Logger;
@@ -31,8 +32,13 @@ public class ConditionESQueryBuilderDispatcher {
     private static final Logger logger = LoggerFactory.getLogger(ConditionESQueryBuilderDispatcher.class.getName());
 
     private Map<String, ConditionESQueryBuilder> queryBuilders = new ConcurrentHashMap<>();
+    private ScriptExecutor scriptExecutor;
 
     public ConditionESQueryBuilderDispatcher() {
+    }
+
+    public void setScriptExecutor(ScriptExecutor scriptExecutor) {
+        this.scriptExecutor = scriptExecutor;
     }
 
     public void addQueryBuilder(String name, ConditionESQueryBuilder evaluator) {
@@ -73,16 +79,18 @@ public class ConditionESQueryBuilderDispatcher {
 
         if (queryBuilders.containsKey(queryBuilderKey)) {
             ConditionESQueryBuilder queryBuilder = queryBuilders.get(queryBuilderKey);
-            Condition contextualCondition = ConditionContextHelper.getContextualCondition(condition, context);
+            Condition contextualCondition = ConditionContextHelper.getContextualCondition(condition, context, scriptExecutor);
             if (contextualCondition != null) {
                 return queryBuilder.buildQuery(contextualCondition, context, this);
             }
+        } else {
+            // if no matching
+            logger.warn("No matching query builder. See debug log level for more information");
+            if (logger.isDebugEnabled()) {
+                logger.debug("No matching query builder for condition {} and context {}", condition, context);
+            }
         }
 
-        // if no matching
-        if (logger.isDebugEnabled()) {
-            logger.debug("No matching query builder for condition {} and context {}", condition, context);
-        }
         return QueryBuilders.matchAllQuery();
     }
 
@@ -107,13 +115,14 @@ public class ConditionESQueryBuilderDispatcher {
 
         if (queryBuilders.containsKey(queryBuilderKey)) {
             ConditionESQueryBuilder queryBuilder = queryBuilders.get(queryBuilderKey);
-            Condition contextualCondition = ConditionContextHelper.getContextualCondition(condition, context);
+            Condition contextualCondition = ConditionContextHelper.getContextualCondition(condition, context, scriptExecutor);
             if (contextualCondition != null) {
                 return queryBuilder.count(contextualCondition, context, this);
             }
         }
 
         // if no matching
+        logger.warn("No matching query builder. See debug log level for more information");
         if (logger.isDebugEnabled()) {
             logger.debug("No matching query builder for condition {} and context {}", condition, context);
         }

@@ -1,0 +1,13 @@
+[
+  "\\Q'systemProperties.goals.'+goalId+'TargetReached'\\E",
+  "\\Q'now-'+since+'d'\\E",
+  "\\Q'scores.'+scoringPlanId\\E",
+  "\\QminimumDuration*1000\\E",
+  "\\QmaximumDuration*1000\\E",
+  "\\Qprofile.properties.?nbOfVisits != null ? (profile.properties.nbOfVisits + 1) : 1\\E",
+  "\\Qsession != null ? session.size + 1 : 0\\E",
+  "\\Q'properties.optimizationTest_'+event.target.itemId\\E",
+  "\\Qevent.target.properties.variantId\\E",
+  "\\Qprofile.properties.?systemProperties.goals.\\E[\\w\\_]*\\QReached != null ? (profile.properties.systemProperties.goals.\\E[\\w\\_]*\\QReached) : 'now'\\E",
+  "\\Qprofile.properties.?systemProperties.campaigns.\\E[\\w\\_]*\\QEngaged != null ? (profile.properties.systemProperties.campaigns.\\E[\\w\\_]*\\QEngaged) : 'now'\\E"
+]

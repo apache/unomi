@@ -1,0 +1,19 @@
+{
+  "metadata": {
+    "id": "scriptGroovyActionRule",
+    "name": "Call groovy action",
+    "description": "Rule to call a groovy action",
+    "readOnly": true
+  },
+  "condition": {
+    "type": "eventTypeCondition",
+    "parameterValues": {
+      "eventTypeId": "updateAddress"
+    }
+  },
+  "actions": [
+    {
+      "type": "updateAddressGroovyAction"
+    }
+  ]
+}

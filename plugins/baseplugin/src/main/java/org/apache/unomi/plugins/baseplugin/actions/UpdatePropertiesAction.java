@@ -37,6 +37,7 @@ public class UpdatePropertiesAction implements ActionExecutor {
     public static final String PROPS_TO_ADD = "add";
     public static final String PROPS_TO_UPDATE = "update";
     public static final String PROPS_TO_DELETE = "delete";
+    public static final String PROPS_TO_ADD_TO_SET  = "addToSet";
 
     public static final String TARGET_ID_KEY = "targetId";
     public static final String TARGET_TYPE_KEY = "targetType";
@@ -74,6 +75,11 @@ public class UpdatePropertiesAction implements ActionExecutor {
         Map<String, Object> propsToUpdate = (HashMap<String, Object>) event.getProperties().get(PROPS_TO_UPDATE);
         if (propsToUpdate != null) {
             isProfileOrPersonaUpdated |= processProperties(target, propsToUpdate, "alwaysSet");
+        }
+
+        Map<String, Object> propsToAddToSet = (HashMap<String, Object>) event.getProperties().get(PROPS_TO_ADD_TO_SET);
+        if (propsToAddToSet != null) {
+            isProfileOrPersonaUpdated |= processProperties(target, propsToAddToSet, "addValues");
         }
 
         List<String> propsToDelete = (List<String>) event.getProperties().get(PROPS_TO_DELETE);
@@ -119,7 +125,7 @@ public class UpdatePropertiesAction implements ActionExecutor {
                 }
             }
             if (propType != null) {
-                isProfileOrPersonaUpdated |= PropertyHelper.setProperty(target, prop, PropertyHelper.getValueByTypeId(propsMap.get(prop), propType.getValueTypeId()), "alwaysSet");
+                isProfileOrPersonaUpdated |= PropertyHelper.setProperty(target, prop, PropertyHelper.getValueByTypeId(propsMap.get(prop), propType.getValueTypeId()), strategy);
             } else {
                 isProfileOrPersonaUpdated |= PropertyHelper.setProperty(target, prop, propsMap.get(prop), strategy);
             }

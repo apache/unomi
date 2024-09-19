@@ -32,8 +32,14 @@ import org.apache.unomi.api.services.SegmentService;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.PropertyHelper;
-import org.apache.unomi.services.impl.ParserHelper;
-import org.osgi.framework.*;
+import org.apache.unomi.api.utils.ParserHelper;
+import org.apache.unomi.services.sorts.ControlGroupPersonalizationStrategy;
+import org.osgi.framework.Bundle;
+import org.osgi.framework.BundleContext;
+import org.osgi.framework.BundleEvent;
+import org.osgi.framework.InvalidSyntaxException;
+import org.osgi.framework.ServiceReference;
+import org.osgi.framework.SynchronousBundleListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -109,6 +115,7 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         /**
          * Creates a new instance of this class containing given property types.
          * If property types with the same ID existed before, they will be replaced by the new ones.
+         *
          * @param newProperties list of property types to change
          * @return new instance
          */
@@ -130,13 +137,14 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
 
         /**
          * Creates a new instance of this class containing all property types except the one with given ID.
+         *
          * @param propertyId ID of the property to delete
          * @return new instance
          */
         public PropertyTypes without(String propertyId) {
             List<PropertyType> newPropertyTypes = allPropertyTypes.stream()
-                .filter(property -> property.getItemId().equals(propertyId))
-                .collect(Collectors.toList());
+                    .filter(property -> !property.getItemId().equals(propertyId))
+                    .collect(Collectors.toList());
 
             return new PropertyTypes(newPropertyTypes);
         }
@@ -164,14 +172,22 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
 
     private SegmentService segmentService;
 
-    private Condition purgeProfileQuery;
     private Integer purgeProfileExistTime = 0;
     private Integer purgeProfileInactiveTime = 0;
+
+    /**
+     * Use purgeSessionExistTime and purgeEventExistTime instead
+     */
+    @Deprecated
     private Integer purgeSessionsAndEventsTime = 0;
+    private Integer purgeSessionExistTime = 0;
+    private Integer purgeEventExistTime = 0;
     private Integer purgeProfileInterval = 0;
+    private TimerTask purgeTask = null;
     private long propertiesRefreshInterval = 10000;
 
     private PropertyTypes propertyTypes;
+    private TimerTask propertyTypeLoadTask = null;
 
     private boolean forceRefreshOnSave = false;
 
@@ -218,12 +234,19 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
             }
         }
         bundleContext.addBundleListener(this);
+        initializeDefaultPurgeValuesIfNecessary();
         initializePurge();
         schedulePropertyTypeLoad();
         logger.info("Profile service initialized.");
     }
 
     public void preDestroy() {
+        if (purgeTask != null) {
+            purgeTask.cancel();
+        }
+        if (propertyTypeLoadTask != null) {
+            propertyTypeLoadTask.cancel();
+        }
         bundleContext.removeBundleListener(this);
         logger.info("Profile service shutdown.");
     }
@@ -239,6 +262,22 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
     private void processBundleStop(BundleContext bundleContext) {
     }
 
+    /**
+     * Fill purgeEventExistTime and purgeSessionExistTime with the old property purgeSessionsAndEventsTime
+     * if there is no value set for these properties. This is done to allow the using of the old property.
+     * This method should be removed once the purgeSessionsAndEventsTime property is deleted.
+     */
+    private void initializeDefaultPurgeValuesIfNecessary() {
+        if (purgeSessionsAndEventsTime > 0) {
+            if (purgeEventExistTime <= 0) {
+                purgeEventExistTime = purgeSessionsAndEventsTime * 30;
+            }
+            if (purgeSessionExistTime <= 0) {
+                purgeSessionExistTime = purgeSessionsAndEventsTime * 30;
+            }
+        }
+    }
+
     public void setPurgeProfileExistTime(Integer purgeProfileExistTime) {
         this.purgeProfileExistTime = purgeProfileExistTime;
     }
@@ -247,6 +286,7 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         this.purgeProfileInactiveTime = purgeProfileInactiveTime;
     }
 
+    @Deprecated
     public void setPurgeSessionsAndEventsTime(Integer purgeSessionsAndEventsTime) {
         this.purgeSessionsAndEventsTime = purgeSessionsAndEventsTime;
     }
@@ -255,21 +295,29 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         this.purgeProfileInterval = purgeProfileInterval;
     }
 
+    public void setPurgeSessionExistTime(Integer purgeSessionExistTime) {
+        this.purgeSessionExistTime = purgeSessionExistTime;
+    }
+
+    public void setPurgeEventExistTime(Integer purgeEventExistTime) {
+        this.purgeEventExistTime = purgeEventExistTime;
+    }
+
     private void schedulePropertyTypeLoad() {
-        TimerTask task = new TimerTask() {
+        propertyTypeLoadTask = new TimerTask() {
             @Override
             public void run() {
                 reloadPropertyTypes(false);
             }
         };
-        schedulerService.getScheduleExecutorService().scheduleAtFixedRate(task, 10000, propertiesRefreshInterval, TimeUnit.MILLISECONDS);
+        schedulerService.getScheduleExecutorService().scheduleAtFixedRate(propertyTypeLoadTask, 10000, propertiesRefreshInterval, TimeUnit.MILLISECONDS);
         logger.info("Scheduled task for property type loading each 10s");
     }
 
     public void reloadPropertyTypes(boolean refresh) {
         try {
             if (refresh) {
-                persistenceService.refresh();
+                persistenceService.refreshIndex(PropertyType.class);
             }
             loadPropertyTypesFromPersistence();
         } catch (Throwable t) {
@@ -285,81 +333,111 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         }
     }
 
-    private void initializePurge() {
-        logger.info("Profile purge: Initializing");
+    @Override
+    public void purgeProfiles(int inactiveNumberOfDays, int existsNumberOfDays) {
+        if (inactiveNumberOfDays > 0 || existsNumberOfDays > 0) {
+            ConditionType profilePropertyConditionType = definitionsService.getConditionType("profilePropertyCondition");
+            ConditionType booleanCondition = definitionsService.getConditionType("booleanCondition");
+            if (profilePropertyConditionType == null || booleanCondition == null) {
+                // definition service not yet fully instantiate
+                return;
+            }
 
-        if (purgeProfileInactiveTime > 0 || purgeProfileExistTime > 0 || purgeSessionsAndEventsTime > 0) {
+            Condition purgeProfileQuery = new Condition(booleanCondition);
+            purgeProfileQuery.setParameter("operator", "or");
+            List<Condition> subConditions = new ArrayList<>();
+
+            if (inactiveNumberOfDays > 0) {
+                logger.info("Purging: Profile with no visits since {} days", inactiveNumberOfDays);
+                Condition inactiveTimeCondition = new Condition(profilePropertyConditionType);
+                inactiveTimeCondition.setParameter("propertyName", "properties.lastVisit");
+                inactiveTimeCondition.setParameter("comparisonOperator", "lessThanOrEqualTo");
+                inactiveTimeCondition.setParameter("propertyValueDateExpr", "now-" + inactiveNumberOfDays + "d");
+                subConditions.add(inactiveTimeCondition);
+            }
+
+            if (existsNumberOfDays > 0) {
+                Condition existTimeCondition = new Condition(profilePropertyConditionType);
+                logger.info("Purging: Profile created since more than {} days", existsNumberOfDays);
+                existTimeCondition.setParameter("propertyName", "properties.firstVisit");
+                existTimeCondition.setParameter("comparisonOperator", "lessThanOrEqualTo");
+                existTimeCondition.setParameter("propertyValueDateExpr", "now-" + existsNumberOfDays + "d");
+                subConditions.add(existTimeCondition);
+            }
+
+            purgeProfileQuery.setParameter("subConditions", subConditions);
+            persistenceService.removeByQuery(purgeProfileQuery, Profile.class);
+        }
+    }
+
+    @Override
+    public void purgeSessionItems(int existsNumberOfDays) {
+        if (existsNumberOfDays > 0) {
+            logger.info("Purging: Sessions created since more than {} days", existsNumberOfDays);
+            persistenceService.purgeTimeBasedItems(existsNumberOfDays, Session.class);
+        }
+    }
+
+    @Override
+    public void purgeEventItems(int existsNumberOfDays) {
+        if (existsNumberOfDays > 0) {
+            logger.info("Purging: Events created since more than {} days", existsNumberOfDays);
+            persistenceService.purgeTimeBasedItems(existsNumberOfDays, Event.class);
+        }
+    }
+
+    @Deprecated
+    @Override
+    public void purgeMonthlyItems(int existsNumberOfMonths) {
+
+    }
+
+    private void initializePurge() {
+        logger.info("Purge: Initializing");
+
+        if (purgeProfileInactiveTime > 0 || purgeProfileExistTime > 0 || purgeSessionExistTime > 0 || purgeEventExistTime > 0) {
             if (purgeProfileInactiveTime > 0) {
-                logger.info("Profile purge: Profile with no visits since {} days, will be purged", purgeProfileInactiveTime);
+                logger.info("Purge: Profile with no visits since more than {} days, will be purged", purgeProfileInactiveTime);
             }
             if (purgeProfileExistTime > 0) {
-                logger.info("Profile purge: Profile created since {} days, will be purged", purgeProfileExistTime);
+                logger.info("Purge: Profile created since more than {} days, will be purged", purgeProfileExistTime);
             }
 
-            TimerTask task = new TimerTask() {
+            if (purgeSessionExistTime > 0) {
+                logger.info("Purge: Session items created since more than {} days, will be purged", purgeSessionExistTime);
+            }
+            if (purgeEventExistTime > 0) {
+                logger.info("Purge: Event items created since more than {} days, will be purged", purgeEventExistTime);
+            }
+
+            purgeTask = new TimerTask() {
                 @Override
                 public void run() {
                     try {
                         long purgeStartTime = System.currentTimeMillis();
-                        logger.debug("Profile purge: Purge triggered");
+                        logger.info("Purge: triggered");
 
-                        if (purgeProfileQuery == null) {
-                            ConditionType profilePropertyConditionType = definitionsService.getConditionType("profilePropertyCondition");
-                            ConditionType booleanCondition = definitionsService.getConditionType("booleanCondition");
-                            if (profilePropertyConditionType == null || booleanCondition == null) {
-                                // definition service not yet fully instantiate
-                                return;
-                            }
+                        // Profile purge
+                        purgeProfiles(purgeProfileInactiveTime, purgeProfileExistTime);
 
-                            purgeProfileQuery = new Condition(booleanCondition);
-                            purgeProfileQuery.setParameter("operator", "or");
-                            List<Condition> subConditions = new ArrayList<>();
-
-                            if (purgeProfileInactiveTime > 0) {
-                                Condition inactiveTimeCondition = new Condition(profilePropertyConditionType);
-                                inactiveTimeCondition.setParameter("propertyName", "lastVisit");
-                                inactiveTimeCondition.setParameter("comparisonOperator", "lessThanOrEqualTo");
-                                inactiveTimeCondition.setParameter("propertyValueDateExpr", "now-" + purgeProfileInactiveTime + "d");
-                                subConditions.add(inactiveTimeCondition);
-                            }
-
-                            if (purgeProfileExistTime > 0) {
-                                Condition existTimeCondition = new Condition(profilePropertyConditionType);
-                                existTimeCondition.setParameter("propertyName", "firstVisit");
-                                existTimeCondition.setParameter("comparisonOperator", "lessThanOrEqualTo");
-                                existTimeCondition.setParameter("propertyValueDateExpr", "now-" + purgeProfileExistTime + "d");
-                                subConditions.add(existTimeCondition);
-                            }
-
-                            purgeProfileQuery.setParameter("subConditions", subConditions);
-                        }
-
-                        persistenceService.removeByQuery(purgeProfileQuery, Profile.class);
-
-                        if (purgeSessionsAndEventsTime > 0) {
-                            persistenceService.purge(getMonth(-purgeSessionsAndEventsTime).getTime());
-                        }
-
-                        logger.info("Profile purge: purge executed in {} ms", System.currentTimeMillis() - purgeStartTime);
+                        // Monthly items purge
+                        purgeSessionItems(purgeSessionExistTime);
+                        purgeEventItems(purgeEventExistTime);
+                        logger.info("Purge: executed in {} ms", System.currentTimeMillis() - purgeStartTime);
                     } catch (Throwable t) {
-                        logger.error("Error while purging profiles", t);
+                        logger.error("Error while purging", t);
                     }
                 }
             };
-            schedulerService.getScheduleExecutorService().scheduleAtFixedRate(task, 1, purgeProfileInterval, TimeUnit.DAYS);
 
-            logger.info("Profile purge: purge scheduled with an interval of {} days", purgeProfileInterval);
+            schedulerService.getScheduleExecutorService().scheduleAtFixedRate(purgeTask, 1, purgeProfileInterval, TimeUnit.DAYS);
+
+            logger.info("Purge: purge scheduled with an interval of {} days", purgeProfileInterval);
         } else {
-            logger.info("Profile purge: No purge scheduled");
+            logger.info("Purge: No purge scheduled");
         }
     }
 
-    private GregorianCalendar getMonth(int offset) {
-        GregorianCalendar gc = new GregorianCalendar();
-        gc = new GregorianCalendar(gc.get(Calendar.YEAR), gc.get(Calendar.MONTH), 1);
-        gc.add(Calendar.MONTH, offset);
-        return gc;
-    }
 
     public long getAllProfilesCount() {
         return persistenceService.getAllItemsCount(Profile.ITEM_TYPE);
@@ -374,17 +452,20 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
     }
 
     private <T extends Item> PartialList<T> doSearch(Query query, Class<T> clazz) {
+        if (query.getScrollIdentifier() != null) {
+            return persistenceService.continueScrollQuery(clazz, query.getScrollIdentifier(), query.getScrollTimeValidity());
+        }
         if (query.getCondition() != null && definitionsService.resolveConditionType(query.getCondition())) {
             if (StringUtils.isNotBlank(query.getText())) {
                 return persistenceService.queryFullText(query.getText(), query.getCondition(), query.getSortby(), clazz, query.getOffset(), query.getLimit());
             } else {
-                return persistenceService.query(query.getCondition(), query.getSortby(), clazz, query.getOffset(), query.getLimit());
+                return persistenceService.query(query.getCondition(), query.getSortby(), clazz, query.getOffset(), query.getLimit(), query.getScrollTimeValidity());
             }
         } else {
             if (StringUtils.isNotBlank(query.getText())) {
                 return persistenceService.queryFullText(query.getText(), query.getSortby(), clazz, query.getOffset(), query.getLimit());
             } else {
-                return persistenceService.getAllItems(clazz, query.getOffset(), query.getLimit(), query.getSortby());
+                return persistenceService.getAllItems(clazz, query.getOffset(), query.getLimit(), query.getSortby(), query.getScrollTimeValidity());
             }
         }
     }
@@ -394,12 +475,15 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         PropertyType previousProperty = persistenceService.load(property.getItemId(), PropertyType.class);
         boolean result = false;
         if (previousProperty == null) {
+            persistenceService.setPropertyMapping(property, Profile.ITEM_TYPE);
             result = persistenceService.save(property);
             propertyTypes = propertyTypes.with(property);
         } else if (merge(previousProperty, property)) {
+            persistenceService.setPropertyMapping(previousProperty, Profile.ITEM_TYPE);
             result = persistenceService.save(previousProperty);
             propertyTypes = propertyTypes.with(previousProperty);
         }
+
         return result;
     }
 
@@ -510,6 +594,10 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
     }
 
     public Profile load(String profileId) {
+        ProfileAlias profileAlias = persistenceService.load(profileId, ProfileAlias.class);
+        if (profileAlias != null) {
+            profileId = profileAlias.getProfileID();
+        }
         return persistenceService.load(profileId, Profile.class);
     }
 
@@ -517,23 +605,95 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         return save(profile, forceRefreshOnSave);
     }
 
+    @Override
+    public void addAliasToProfile(String profileID, String alias, String clientID) {
+        if (Objects.equals(alias, profileID)) {
+            throw new IllegalArgumentException("Alias cannot be created on itself, please use an alias different from the profile ID");
+        }
+
+        ProfileAlias profileAlias = persistenceService.load(alias, ProfileAlias.class);
+        if (profileAlias != null && !Objects.equals(profileAlias.getProfileID(), profileID)) {
+            throw new IllegalArgumentException("Alias \"" + alias + "\" already used by profile with ID = \"" + profileAlias.getProfileID() + "\"");
+        }
+
+        if (profileAlias == null) {
+            profileAlias = new ProfileAlias();
+
+            profileAlias.setItemId(alias);
+            profileAlias.setItemType(ProfileAlias.ITEM_TYPE);
+            profileAlias.setProfileID(profileID);
+            profileAlias.setClientID(clientID);
+
+            Date creationTime = new Date();
+            profileAlias.setCreationTime(creationTime);
+            profileAlias.setModifiedTime(creationTime);
+
+            persistenceService.save(profileAlias);
+        }
+    }
+
+    @Override
+    public ProfileAlias removeAliasFromProfile(String profileID, String alias, String clientID) {
+        Condition profileIDCondition = new Condition(definitionsService.getConditionType("profileAliasesPropertyCondition"));
+        profileIDCondition.setParameter("propertyName", "profileID.keyword");
+        profileIDCondition.setParameter("comparisonOperator", "equals");
+        profileIDCondition.setParameter("propertyValue", profileID);
+
+        Condition clientIDCondition = new Condition(definitionsService.getConditionType("profileAliasesPropertyCondition"));
+        clientIDCondition.setParameter("propertyName", "clientID.keyword");
+        clientIDCondition.setParameter("comparisonOperator", "equals");
+        clientIDCondition.setParameter("propertyValue", clientID);
+
+        Condition aliasCondition = new Condition(definitionsService.getConditionType("profileAliasesPropertyCondition"));
+        aliasCondition.setParameter("propertyName", "itemId");
+        aliasCondition.setParameter("comparisonOperator", "equals");
+        aliasCondition.setParameter("propertyValue", alias);
+
+        List<Condition> conditions = new ArrayList<>();
+        conditions.add(profileIDCondition);
+        conditions.add(clientIDCondition);
+        conditions.add(aliasCondition);
+
+        Condition condition = new Condition(definitionsService.getConditionType("booleanCondition"));
+        condition.setParameter("operator", "and");
+        condition.setParameter("subConditions", conditions);
+
+        List<ProfileAlias> profileAliases = persistenceService.query(condition, null, ProfileAlias.class);
+
+        if (profileAliases.size() == 1 && persistenceService.removeByQuery(condition, ProfileAlias.class)) {
+            return profileAliases.get(0);
+        }
+
+        return null;
+    }
+
+    @Override
+    public PartialList<ProfileAlias> findProfileAliases(String profileId, int offset, int size, String sortBy) {
+        Condition condition = new Condition(definitionsService.getConditionType("profileAliasesPropertyCondition"));
+        condition.setParameter("propertyName", "profileID.keyword");
+        condition.setParameter("comparisonOperator", "equals");
+        condition.setParameter("propertyValue", profileId);
+
+        return persistenceService.query(condition, sortBy, ProfileAlias.class, offset, size);
+    }
+
     private Profile save(Profile profile, boolean forceRefresh) {
         if (profile.getItemId() == null) {
             return null;
         }
+        profile.setSystemProperty("lastUpdated", new Date());
         if (persistenceService.save(profile)) {
             if (forceRefresh) {
-                // triggering a load will force an in-place refresh, that may be expensive in performance but will make data immediately available.
-                return persistenceService.load(profile.getItemId(), Profile.class);
-            } else {
-                return profile;
+                persistenceService.refreshIndex(Profile.class, null);
             }
+            return profile;
         }
         return null;
     }
 
     public Profile saveOrMerge(Profile profile) {
         Profile previousProfile = persistenceService.load(profile.getItemId(), Profile.class);
+        profile.setSystemProperty("lastUpdated", new Date());
         if (previousProfile == null) {
             if (persistenceService.save(profile)) {
                 return profile;
@@ -551,6 +711,7 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
     }
 
     public Persona savePersona(Persona profile) {
+        profile.setSystemProperty("lastUpdated", new Date());
         if (persistenceService.load(profile.getItemId(), Persona.class) == null) {
             Session session = new PersonaSession(UUID.randomUUID().toString(), profile, new Date());
             persistenceService.save(profile);
@@ -566,11 +727,11 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         if (persona) {
             persistenceService.remove(profileId, Persona.class);
         } else {
-            Condition mergeCondition = new Condition(definitionsService.getConditionType("profilePropertyCondition"));
-            mergeCondition.setParameter("propertyName", "mergedWith");
-            mergeCondition.setParameter("comparisonOperator", "equals");
-            mergeCondition.setParameter("propertyValue", profileId);
-            persistenceService.removeByQuery(mergeCondition, Profile.class);
+            Condition removeAliasesCondition = new Condition(definitionsService.getConditionType("profileAliasesPropertyCondition"));
+            removeAliasesCondition.setParameter("propertyName", "profileID");
+            removeAliasesCondition.setParameter("comparisonOperator", "equals");
+            removeAliasesCondition.setParameter("propertyValue", profileId);
+            persistenceService.removeByQuery(removeAliasesCondition, ProfileAlias.class);
 
             persistenceService.remove(profileId, Profile.class);
         }
@@ -595,7 +756,8 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
 
         Set<String> allProfileProperties = new LinkedHashSet<>();
         for (Profile profile : profilesToMerge) {
-            allProfileProperties.addAll(profile.getProperties().keySet());
+            final Set<String> flatNestedPropertiesKeys = PropertyHelper.flatten(profile.getProperties()).keySet();
+            allProfileProperties.addAll(flatNestedPropertiesKeys);
         }
 
         Collection<PropertyType> profilePropertyTypes = getTargetPropertyTypes("profiles");
@@ -664,12 +826,12 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         // we now have to merge the profile's consents
         for (Profile profile : profilesToMerge) {
             if (profile.getConsents() != null && profile.getConsents().size() > 0) {
-                for(String consentId : profile.getConsents().keySet()) {
-                    if(masterProfile.getConsents().containsKey(consentId)) {
-                        if(masterProfile.getConsents().get(consentId).getRevokeDate().before(new Date())) {
+                for (String consentId : profile.getConsents().keySet()) {
+                    if (masterProfile.getConsents().containsKey(consentId)) {
+                        if (masterProfile.getConsents().get(consentId).getRevokeDate().before(new Date())) {
                             masterProfile.getConsents().remove(consentId);
                             masterProfileChanged = true;
-                        } else if(masterProfile.getConsents().get(consentId).getStatusDate().before(profile.getConsents().get(consentId).getStatusDate())) {
+                        } else if (masterProfile.getConsents().get(consentId).getStatusDate().before(profile.getConsents().get(consentId).getStatusDate())) {
                             masterProfile.getConsents().replace(consentId, profile.getConsents().get(consentId));
                             masterProfileChanged = true;
                         }
@@ -705,25 +867,27 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         return null;
     }
 
+    @Override
     public Session loadSession(String sessionId, Date dateHint) {
-        Session s = persistenceService.load(sessionId, dateHint, Session.class);
-        if (s == null && dateHint != null) {
-            GregorianCalendar gc = new GregorianCalendar();
-            gc.setTime(dateHint);
-            if (gc.get(Calendar.DAY_OF_MONTH) == 1) {
-                gc.add(Calendar.DAY_OF_MONTH, -1);
-                s = persistenceService.load(sessionId, gc.getTime(), Session.class);
-            }
-        }
-        return s;
+        return loadSession(sessionId);
+    }
+
+    @Override
+    public Session loadSession(String sessionId) {
+        return persistenceService.load(sessionId, Session.class);
     }
 
     public Session saveSession(Session session) {
         if (session.getItemId() == null) {
             return null;
         }
-        if (session.getProfile() != null && session.getProfile().getProperties() != null) {
-            session.getProfile().setProperties(removePersonalIdentifiersFromSessionProfile(session.getProfile().getProperties()));
+        if (session.getProfile() != null) {
+            if (session.getProfile().getProperties() != null){
+                session.getProfile().setProperties(removePersonalIdentifiersFromSessionProfile(session.getProfile().getProperties()));
+            }
+            if (session.getProfile().getSystemProperties() != null){
+                session.getProfile().getSystemProperties().entrySet().removeIf(entry -> entry.getKey().equals("pastEvents"));
+            }
         }
         return persistenceService.save(session) ? session : null;
     }
@@ -746,9 +910,19 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         return persistenceService.query("profileId", profileId, "timeStamp:desc", Session.class, 0, 50);
     }
 
+    public void removeProfileSessions(String profileId) {
+        Condition profileCondition = new Condition();
+        profileCondition.setConditionType(definitionsService.getConditionType("sessionPropertyCondition"));
+        profileCondition.setParameter("propertyName", "profileId");
+        profileCondition.setParameter("comparisonOperator", "equals");
+        profileCondition.setParameter("propertyValue", profileId);
+
+        persistenceService.removeByQuery(profileCondition, Session.class);
+    }
+
     @Override
     public boolean matchCondition(Condition condition, Profile profile, Session session) {
-        ParserHelper.resolveConditionType(definitionsService, condition);
+        ParserHelper.resolveConditionType(definitionsService, condition, "profile " + profile.getItemId() + " matching");
 
         if (condition.getConditionTypeId().equals("booleanCondition")) {
             List<Condition> subConditions = (List<Condition>) condition.getParameter("subConditions");
@@ -773,14 +947,25 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
     }
 
     public void batchProfilesUpdate(BatchUpdate update) {
-        ParserHelper.resolveConditionType(definitionsService, update.getCondition());
-        List<Profile> profiles = persistenceService.query(update.getCondition(), null, Profile.class);
+        logger.info("Starting batch profiles update");
+        long startTime = System.currentTimeMillis();
+        long updatedCount = 0;
 
-        for (Profile profile : profiles) {
-            if (PropertyHelper.setProperty(profile, update.getPropertyName(), update.getPropertyValue(), update.getStrategy())) {
-                save(profile);
+        ParserHelper.resolveConditionType(definitionsService, update.getCondition(), "batch update on property " + update.getPropertyName());
+        PartialList<Profile> profiles = persistenceService.query(update.getCondition(), null, Profile.class, 0,update.getScrollBatchSize(), update.getScrollTimeValidity());
+
+        while (profiles != null && profiles.getList().size() > 0) {
+            for (Profile profile : profiles.getList()) {
+                if (PropertyHelper.setProperty(profile, update.getPropertyName(), update.getPropertyValue(), update.getStrategy())) {
+                    save(profile);
+                    updatedCount += 1;
+                }
             }
+            profiles = persistenceService.continueScrollQuery(Profile.class, profiles.getScrollIdentifier(), profiles.getScrollTimeValidity());
         }
+
+        long totalTime = System.currentTimeMillis() - startTime;
+        logger.info("Batch profiles updated: {} profiles in {}ms", updatedCount, totalTime);
     }
 
     public Persona loadPersona(String personaId) {
@@ -924,19 +1109,14 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
                 PersonaWithSessions persona = getObjectMapper().readValue(predefinedPersonaURL, PersonaWithSessions.class);
 
                 String itemId = persona.getPersona().getItemId();
-                // Register only if persona does not exist yet
-                if (persistenceService.load(itemId, Persona.class) == null) {
-                    persistenceService.save(persona.getPersona());
+                persistenceService.save(persona.getPersona());
 
-                    List<PersonaSession> sessions = persona.getSessions();
-                    for (PersonaSession session : sessions) {
-                        session.setProfile(persona.getPersona());
-                        persistenceService.save(session);
-                    }
-                    logger.info("Predefined persona with id {} registered", itemId);
-                } else {
-                    logger.info("The predefined persona with id {} is already registered, this persona will be skipped", itemId);
+                List<PersonaSession> sessions = persona.getSessions();
+                for (PersonaSession session : sessions) {
+                    session.setProfile(persona.getPersona());
+                    persistenceService.save(session);
                 }
+                logger.info("Predefined persona with id {} registered", itemId);
             } catch (IOException e) {
                 logger.error("Error while loading persona " + predefinedPersonaURL, e);
             }
@@ -956,17 +1136,12 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
 
             try {
                 PropertyType propertyType = CustomObjectMapper.getObjectMapper().readValue(predefinedPropertyTypeURL, PropertyType.class);
-                // Register only if property type does not exist yet
-                if (getPropertyType(propertyType.getMetadata().getId()) == null) {
 
-                    setPropertyTypeTarget(predefinedPropertyTypeURL, propertyType);
+                setPropertyTypeTarget(predefinedPropertyTypeURL, propertyType);
 
-                    persistenceService.save(propertyType);
-                    bundlePropertyTypes.add(propertyType);
-                    logger.info("Predefined property type with id {} registered", propertyType.getMetadata().getId());
-                } else {
-                    logger.info("The predefined property type with id {} is already registered, this property type will be skipped", propertyType.getMetadata().getId());
-                }
+                persistenceService.save(propertyType);
+                bundlePropertyTypes.add(propertyType);
+                logger.info("Predefined property type with id {} registered", propertyType.getMetadata().getId());
             } catch (IOException e) {
                 logger.error("Error while loading properties " + predefinedPropertyTypeURL, e);
             }
@@ -1023,6 +1198,9 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
                         target.put(newEntry.getKey(), newEntry.getValue());
                         changed = true;
                     }
+                } else if (newEntry.getValue().getClass().isEnum()) {
+                    target.put(newEntry.getKey(), newEntry.getValue());
+                    changed = true;
                 } else {
                     if (target.get(newEntry.getKey()) != null) {
                         changed |= merge(target.get(newEntry.getKey()), newEntry.getValue());
@@ -1066,16 +1244,34 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
                         }
                     } else if (targetProperty instanceof Collection && sourceProperty.getValue() instanceof Collection) {
                         // merge Collections like "lists"
-                        Collection sourceCollection = (Collection) sourceProperty.getValue();
-                        Collection targetCollection = (Collection) targetProperty;
+                        if (ControlGroupPersonalizationStrategy.PERSONALIZATION_STRATEGY_STATUS.equals(sourceProperty.getKey())) {
+                            // Special handling for personalization strategy statuses
+                            // TODO UNOMI-719: move this in a dedicated extension point to handle this kind of merge strategy in a more generic way
+                            List<Map<String, Object>> sourceStatuses = (List<Map<String, Object>>) sourceProperty.getValue();
+                            List<Map<String, Object>> targetStatuses = (List<Map<String, Object>>) targetProperty;
 
-                        for (Object sourceItem : sourceCollection) {
-                            if (!targetCollection.contains(sourceItem)) {
-                                try {
-                                    targetCollection.add(sourceItem);
+                            for (Map<String, Object> sourceStatus : sourceStatuses) {
+                                if (targetStatuses
+                                        .stream()
+                                        .noneMatch(targetStatus -> targetStatus.get(ControlGroupPersonalizationStrategy.PERSONALIZATION_STRATEGY_STATUS_ID)
+                                                .equals(sourceStatus.get(ControlGroupPersonalizationStrategy.PERSONALIZATION_STRATEGY_STATUS_ID)))) {
+                                    // there is no existing status for the status ID, we can safely add it to master
+                                    targetStatuses.add(sourceStatus);
                                     changed = true;
-                                } catch (Exception e) {
-                                    // may be Collection type issue
+                                }
+                            }
+                        } else {
+                            Collection sourceCollection = (Collection) sourceProperty.getValue();
+                            Collection targetCollection = (Collection) targetProperty;
+
+                            for (Object sourceItem : sourceCollection) {
+                                if (!targetCollection.contains(sourceItem)) {
+                                    try {
+                                        targetCollection.add(sourceItem);
+                                        changed = true;
+                                    } catch (Exception e) {
+                                        // may be Collection type issue
+                                    }
                                 }
                             }
                         }

@@ -12,7 +12,7 @@
 // limitations under the License.
 //
 
-= Apache Unomi 1.x - Documentation
+= Apache Unomi 2.x - Documentation
 Apache Software Foundation
 :doctype: article
 :toc: left
@@ -24,29 +24,41 @@ Apache Software Foundation
 
 image::asf_logo_url.png[pdfwidth=35%,align=center]
 
-== Quick start
+== What's new
+
+include::whats-new.adoc[]
+
+== Discover Unomi
 
 include::5-min-quickstart.adoc[]
 
-== Concepts
-
-include::concepts.adoc[]
-
-== First steps with Apache Unomi
-
 include::getting-started.adoc[]
+
+include::tutorial.adoc[]
+
+== Apache Unomi Recipes and requests
 
 include::recipes.adoc[]
 
 include::request-examples.adoc[]
 
-include::web-tracker.adoc[]
+== Configuration
 
 include::configuration.adoc[]
 
-include::useful-unomi-urls.adoc[]
+== JSON schemas
 
-include::how-profile-tracking-works.adoc[]
+include::jsonSchema/json-schema.adoc[]
+
+== GraphQL API
+
+include::graphql.adoc[]
+
+include::graphql-examples.adoc[]
+
+== Migrations
+
+include::migrations/migrations.adoc[]
 
 == Queries and aggregations
 
@@ -70,9 +82,23 @@ include::clustering.adoc[]
 
 == Reference
 
-include::conditions.adoc[]
+include::useful-unomi-urls.adoc[]
 
-include::actions.adoc[]
+include::how-profile-tracking-works.adoc[]
+
+include::context-request-flow.adoc[]
+
+include::datamodel.adoc[]
+
+include::builtin-event-types.adoc[]
+
+include::builtin-condition-types.adoc[]
+
+include::builtin-action-types.adoc[]
+
+include::updating-events.adoc[]
+
+include::web-tracker.adoc[]
 
 == Integration samples
 
@@ -90,18 +116,12 @@ include::connectors/connectors.adoc[]
 
 include::connectors/salesforce-connector.adoc[]
 
-include::connectors/mailchimp-connector.adoc[]
-
 == Developers
 
 include::building-and-deploying.adoc[]
 
 include::shell-commands.adoc[]
 
-include::extending-plugins.adoc[]
-
-include::custom-extensions.adoc[]
+include::writing-plugins.adoc[]
 
 include::patches.adoc[]
-
-include::new-data-model.adoc[]

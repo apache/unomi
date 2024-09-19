@@ -1,0 +1,47 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+if (params.containsKey(ctx._source.itemId)) {
+    Map pastEventKeyValue = params.get(ctx._source.itemId);
+    String pastEventKey = pastEventKeyValue.get('pastEventKey');
+    Long valueToAdd = (Long) pastEventKeyValue.get('valueToAdd');
+
+    if (ctx._source.systemProperties == null) {
+        ctx._source.systemProperties = new HashMap();
+    }
+
+    if (ctx._source.systemProperties.pastEvents == null) {
+        ctx._source.systemProperties.pastEvents = new ArrayList();
+    }
+
+    boolean exists = false;
+    for (pastEvent in ctx._source.systemProperties.pastEvents) {
+        if (pastEvent.get('key') == pastEventKey) {
+            pastEvent.put('count', valueToAdd);
+            exists = true;
+        }
+    }
+
+    if (!exists) {
+        Map newPastEvent = new HashMap();
+        newPastEvent.put('key', pastEventKey);
+        newPastEvent.put('count', valueToAdd);
+        ctx._source.systemProperties.pastEvents.add(newPastEvent);
+    }
+
+    ctx._source.systemProperties.put('lastUpdated', new Date());
+}

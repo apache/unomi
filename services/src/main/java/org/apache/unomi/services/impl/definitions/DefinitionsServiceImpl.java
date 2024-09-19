@@ -25,9 +25,10 @@ import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.SchedulerService;
+import org.apache.unomi.api.utils.ConditionBuilder;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.persistence.spi.PersistenceService;
-import org.apache.unomi.services.impl.ParserHelper;
+import org.apache.unomi.api.utils.ParserHelper;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleEvent;
@@ -37,7 +38,17 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.URL;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TimerTask;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
@@ -57,9 +68,9 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
 
     private long definitionsRefreshInterval = 10000;
 
+    private ConditionBuilder conditionBuilder;
     private BundleContext bundleContext;
     public DefinitionsServiceImpl() {
-
     }
 
     public void setBundleContext(BundleContext bundleContext) {
@@ -92,6 +103,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
 
         bundleContext.addBundleListener(this);
         scheduleTypeReloads();
+        conditionBuilder = new ConditionBuilder(this);
         logger.info("Definitions service initialized.");
     }
 
@@ -109,7 +121,8 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
     public void reloadTypes(boolean refresh) {
         try {
             if (refresh) {
-                persistenceService.refresh();
+                persistenceService.refreshIndex(ConditionType.class);
+                persistenceService.refreshIndex(ActionType.class);
             }
             loadConditionTypesFromPersistence();
             loadActionTypesFromPersistence();
@@ -160,7 +173,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
         if (bundleContext == null) {
             return;
         }
-        List<PluginType> types = pluginTypes.get(bundleContext.getBundle().getBundleId());
+        List<PluginType> types = pluginTypes.remove(bundleContext.getBundle().getBundleId());
         if (types != null) {
             for (PluginType type : types) {
                 if (type instanceof ValueType) {
@@ -193,13 +206,8 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
 
             try {
                 ConditionType conditionType = CustomObjectMapper.getObjectMapper().readValue(predefinedConditionURL, ConditionType.class);
-                // Register only if condition type does not exist yet
-                if (getConditionType(conditionType.getMetadata().getId()) == null) {
-                    setConditionType(conditionType);
-                    logger.info("Predefined condition type with id {} registered", conditionType.getMetadata().getId());
-                } else {
-                    logger.info("The predefined condition type with id {} is already registered, this condition type will be skipped", conditionType.getMetadata().getId());
-                }
+                setConditionType(conditionType);
+                logger.info("Predefined condition type with id {} registered", conditionType.getMetadata().getId());
             } catch (IOException e) {
                 logger.error("Error while loading condition definition " + predefinedConditionURL, e);
             }
@@ -219,13 +227,8 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
 
             try {
                 ActionType actionType = CustomObjectMapper.getObjectMapper().readValue(predefinedActionURL, ActionType.class);
-                // Register only if action type does not exist yet
-                if (getActionType(actionType.getMetadata().getId()) == null) {
-                    setActionType(actionType);
-                    logger.info("Predefined action type with id {} registered", actionType.getMetadata().getId());
-                } else {
-                    logger.info("The predefined action type with id {} is already registered, this action type will be skipped", actionType.getMetadata().getId());
-                }
+                setActionType(actionType);
+                logger.info("Predefined action type with id {} registered", actionType.getMetadata().getId());
             } catch (Exception e) {
                 logger.error("Error while loading action definition " + predefinedActionURL, e);
             }
@@ -259,7 +262,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
                         valueTypeByTag.put(tag, valueTypes);
                     } else {
                         // we found a tag that is not defined, we will define it automatically
-                        logger.debug("Unknown tag " + tag + " used in property type definition " + predefinedPropertyURL);
+                        logger.warn("Unknown tag {} used in property type definition {}", tag, predefinedPropertyURL);
                     }
                 }
             } catch (Exception e) {
@@ -277,7 +280,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
         Collection<ConditionType> all = persistenceService.getAllItems(ConditionType.class);
         for (ConditionType type : all) {
             if (type != null && type.getParentCondition() != null) {
-                ParserHelper.resolveConditionType(this, type.getParentCondition());
+                ParserHelper.resolveConditionType(this, type.getParentCondition(), "condition type " + type.getItemId());
             }
         }
         return all;
@@ -296,7 +299,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
         List<ConditionType> directConditionTypes = persistenceService.query(fieldName, fieldValue,null, ConditionType.class);
         for (ConditionType type : directConditionTypes) {
             if (type.getParentCondition() != null) {
-                ParserHelper.resolveConditionType(this, type.getParentCondition());
+                ParserHelper.resolveConditionType(this, type.getParentCondition(), "condition type " + type.getItemId());
             }
         }
         conditionTypes.addAll(directConditionTypes);
@@ -316,7 +319,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
             }
         }
         if (type != null && type.getParentCondition() != null) {
-            ParserHelper.resolveConditionType(this, type.getParentCondition());
+            ParserHelper.resolveConditionType(this, type.getParentCondition(), "condition type " + type.getItemId());
         }
         return type;
     }
@@ -516,11 +519,17 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
 
     @Override
     public boolean resolveConditionType(Condition rootCondition) {
-        return ParserHelper.resolveConditionType(this, rootCondition);
+        return ParserHelper.resolveConditionType(this, rootCondition, (rootCondition != null ? "condition type " + rootCondition.getConditionTypeId() : "unknown"));
     }
 
     @Override
     public void refresh() {
         reloadTypes(true);
     }
+
+    @Override
+    public ConditionBuilder getConditionBuilder() {
+        return conditionBuilder;
+    }
+
 }

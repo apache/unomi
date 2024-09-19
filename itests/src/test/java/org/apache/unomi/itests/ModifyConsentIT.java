@@ -22,7 +22,6 @@ import org.apache.unomi.api.ConsentStatus;
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.services.EventService;
-import org.apache.unomi.api.services.ProfileService;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -30,13 +29,11 @@ import org.junit.runner.RunWith;
 import org.ops4j.pax.exam.junit.PaxExam;
 import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
 import org.ops4j.pax.exam.spi.reactors.PerSuite;
-import org.ops4j.pax.exam.util.Filter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.inject.Inject;
-import java.io.IOException;
 import java.util.Date;
+import java.util.Objects;
 
 /**
  * An integration test for consent modifications using Apache Unomi @Event
@@ -48,16 +45,13 @@ public class ModifyConsentIT extends BaseIT {
 
     private final static String PROFILE_TEST_ID = "profile-consent";
 
-    @Inject @Filter(timeout = 600000)
-    protected ProfileService profileService;
-    @Inject @Filter(timeout = 600000)
-    protected EventService eventService;
-
     @Before
-    public void setUp() throws IOException {
+    public void setUp() throws InterruptedException {
         Profile profile = new Profile();
         profile.setItemId(PROFILE_TEST_ID);
         profileService.save(profile);
+        keepTrying("Profile " + PROFILE_TEST_ID + " not found in the required time", () -> profileService.load(PROFILE_TEST_ID),
+                Objects::nonNull, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
         LOGGER.info("Profile saved with ID [{}].", profile.getItemId());
     }
 
@@ -67,7 +61,7 @@ public class ModifyConsentIT extends BaseIT {
         Assert.assertNotNull(profile);
         Assert.assertEquals(0, profile.getConsents().size());
 
-        Event modifyConsentEvent = new Event("modifyConsent", null, profile, null, null, profile, new Date());
+        Event modifyConsentEvent = new Event("modifyConsent", null, profile, null, null, null, new Date());
         modifyConsentEvent.setPersistent(false);
 
         ISO8601DateFormat dateFormat = new ISO8601DateFormat();
@@ -86,12 +80,7 @@ public class ModifyConsentIT extends BaseIT {
 
         Assert.assertTrue(changes > 0);
 
-        //Wait for data to be processed
-        Thread.sleep(10000);
-
-        profile = profileService.load(PROFILE_TEST_ID);
-
-        Assert.assertEquals(2, profile.getConsents().size());
-
+        keepTrying("Profile " + PROFILE_TEST_ID + " not found in the required time", () -> profileService.load(PROFILE_TEST_ID),
+                loadedProfile -> loadedProfile.getConsents().size() == 2, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
     }
 }

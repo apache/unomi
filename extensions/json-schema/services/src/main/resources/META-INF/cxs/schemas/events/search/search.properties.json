@@ -1,0 +1,28 @@
+{
+  "$id": "https://unomi.apache.org/schemas/json/events/search/properties/1-0-0",
+  "$schema": "https://json-schema.org/draft/2019-09/schema",
+  "self": {
+    "vendor": "org.apache.unomi",
+    "name": "searchProperties",
+    "format": "jsonschema",
+    "version": "1-0-0"
+  },
+  "title": "searchProperties",
+  "type": "object",
+  "properties": {
+    "originForm": {
+      "type": "string"
+    },
+    "language": {
+      "type": "string",
+      "maxLength": 5
+    },
+    "keyword": {
+      "type": "string"
+    },
+    "origin": {
+      "type": "string"
+    }
+  },
+  "unevaluatedProperties": false
+}

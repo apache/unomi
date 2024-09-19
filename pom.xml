@@ -23,7 +23,7 @@
     <parent>
         <groupId>org.apache</groupId>
         <artifactId>apache</artifactId>
-        <version>21</version>
+        <version>23</version>
         <relativePath />
     </parent>
 
@@ -35,7 +35,7 @@
         event tracking server.
     </description>
     <url>https://unomi.apache.org</url>
-    <version>1.5.0-SNAPSHOT</version>
+    <version>2.6.0-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <licenses>
@@ -55,33 +55,41 @@
         <url>https://issues.apache.org/jira/browse/UNOMI</url>
     </issueManagement>
 
-    <ciManagement>
-        <system>Jenkins</system>
-        <url>https://builds.apache.org/job/unomi-master</url>
-    </ciManagement>
-
     <inceptionYear>2014</inceptionYear>
 
     <properties>
+        <karaf.version>4.2.15</karaf.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <cxf.version>3.3.4</cxf.version>
-        <version.jackson.core>2.10.2</version.jackson.core>
-        <version.jackson.databind>2.9.10.1</version.jackson.databind>
-        <version.jackson.jaxb>2.9.10</version.jackson.jaxb>
-        <version.karaf>4.2.7</version.karaf>
-        <version.karaf.cellar>4.1.3</version.karaf.cellar>
-        <version.pax.exam>4.13.1</version.pax.exam>
-        <elasticsearch.version>7.4.2</elasticsearch.version>
 
-        <java.version>1.8</java.version>
+        <cxf.version>3.3.11</cxf.version>
+        <version.jackson.core>2.11.4</version.jackson.core>
+        <version.jackson.databind>2.11.4</version.jackson.databind>
+        <version.jackson.jaxb>2.11.4</version.jackson.jaxb>
+        <version.karaf>4.2.15</version.karaf>
+        <version.karaf.cellar>4.2.1</version.karaf.cellar>
+        <version.pax.exam>4.13.5</version.pax.exam>
+        <elasticsearch.version>7.4.2</elasticsearch.version>
+        <elasticsearch.test.version>7.11.0</elasticsearch.test.version>
+        <lucene.version>8.2.0</lucene.version>
+        <groovy.version>4.0.21</groovy.version>
+        <networknt.version>1.4.0</networknt.version>
+        <bean.validation.version>1.1.0.Final</bean.validation.version>
+        <apache.commons.io.version>2.16.1</apache.commons.io.version>
+        <apache.commons.lang3.version>3.3.2</apache.commons.lang3.version>
+        <apache.commons.beanutils.version>1.9.4</apache.commons.beanutils.version>
+        <apache.commons.collections.version>3.2.2</apache.commons.collections.version>
+        <apache.commons.email.version>1.3.3</apache.commons.email.version>
+        <slf4j.version>1.7.36</slf4j.version>
+        <joda-time.version>2.12.7</joda-time.version>
+        <st4.version>4.3.4</st4.version>
+        <json-patch.version>1.9</json-patch.version>
+        <org.json.version>20240303</org.json.version>
+
+        <java.version>11</java.version>
 
         <maven.compiler.source>${java.version}</maven.compiler.source>
         <maven.compiler.target>${java.version}</maven.compiler.target>
-        <scala.version>2.12.6</scala.version>
         <encoding>UTF-8</encoding>
-
-        <gatling.version>2.1.2</gatling.version>
-        <scala-maven-plugin.version>4.3.0</scala-maven-plugin.version>
 
         <!-- Librairies for Karaf packaging -->
         <xerces.version>2.11.0_1</xerces.version>
@@ -90,8 +98,11 @@
         <xalan.bundle.version>2.7.2_3</xalan.bundle.version>
         <xalan-serializer.bundle.version>2.7.2_1</xalan-serializer.bundle.version>
         <jna.version>4.5.0</jna.version>
-        <httpclient-osgi.version>4.5.5</httpclient-osgi.version>
-        <httpcore-osgi.version>4.4.9</httpcore-osgi.version>
+        <httpclient-osgi.version>4.5.14</httpclient-osgi.version>
+        <httpcore-osgi.version>4.4.16</httpcore-osgi.version>
+
+        <node.version>v16.20.2</node.version>
+        <yarn.version>v1.22.19</yarn.version>
 
         <release.arguments>-Papache-release,integration-tests</release.arguments>
 
@@ -351,16 +362,6 @@
         </profile>
 
         <profile>
-            <id>performance-tests</id>
-            <activation>
-                <activeByDefault>false</activeByDefault>
-            </activation>
-            <modules>
-                <module>performance-tests</module>
-            </modules>
-        </profile>
-
-        <profile>
             <id>checkstyle</id>
             <activation>
                 <activeByDefault>false</activeByDefault>
@@ -480,6 +481,8 @@
                                 <exclude>**/NOTICE-generated</exclude>
                                 <exclude>**/DEPENDENCIES</exclude>
                                 <exclude>**/target/**/*</exclude>
+                                <!-- Github configuration files -->
+                                <exclude>**/.github/**/*</exclude>
                                 <!-- GIT files -->
                                 <exclude>**/.git/**/*</exclude>
                                 <!-- IDEA files -->
@@ -514,6 +517,8 @@
                                 <exclude>**/*.mf</exclude>
                                 <!-- test json files -->
                                 <exclude>**/*.json</exclude>
+                                <!-- nd json files -->
+                                <exclude>**/*.ndjson</exclude>
                                 <!-- SSH keys -->
                                 <exclude>**/*.key</exclude>
                                 <!-- For Jenkins, ignore the .repository -->
@@ -528,6 +533,7 @@
                                 <exclude>**/*.log</exclude>
                                 <!-- exclude node_modules directories and JS package manager files -->
                                 <exclude>**/node_modules/**/*</exclude>
+                                <exclude>**/node/**/*</exclude>
                                 <exclude>**/yarn.lock</exclude>
                                 <exclude>**/*.js.map</exclude>
                             </excludes>
@@ -633,21 +639,57 @@
                 </plugins>
             </reporting>
         </profile>
+        <profile>
+            <id>apache-release</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-assembly-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>source-release-assembly</id>
+                                <phase>none</phase>
+                            </execution>
+                            <execution>
+                                <id>unomi-source-release-assembly</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>single</goal>
+                                </goals>
+                                <configuration>
+                                    <runOnlyAtExecutionRoot>true</runOnlyAtExecutionRoot>
+                                    <descriptors>
+                                        <descriptor>src/main/resources/assemblies/source-release.xml</descriptor>
+                                    </descriptors>
+                                    <tarLongFileMode>posix</tarLongFileMode>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
+            <id>docker</id>
+            <modules>
+                <module>docker</module>
+            </modules>
+        </profile>
     </profiles>
 
     <dependencyManagement>
         <dependencies>
-
             <dependency>
                 <groupId>org.osgi</groupId>
-                <artifactId>org.osgi.core</artifactId>
-                <version>4.3.1</version>
+                <artifactId>osgi.core</artifactId>
+                <version>6.0.0</version>
                 <scope>provided</scope>
             </dependency>
             <dependency>
                 <groupId>org.osgi</groupId>
-                <artifactId>org.osgi.compendium</artifactId>
-                <version>4.3.1</version>
+                <artifactId>osgi.cmpn</artifactId>
+                <version>6.0.0</version>
                 <scope>provided</scope>
             </dependency>
 
@@ -704,7 +746,7 @@
             <dependency>
                 <groupId>com.fasterxml.jackson.core</groupId>
                 <artifactId>jackson-databind</artifactId>
-                <version>${version.jackson.core}</version>
+                <version>${version.jackson.databind}</version>
                 <scope>provided</scope>
             </dependency>
             <dependency>
@@ -725,27 +767,28 @@
             <dependency>
                 <groupId>commons-io</groupId>
                 <artifactId>commons-io</artifactId>
-                <version>2.4</version>
+                <version>${apache.commons.io.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.commons</groupId>
                 <artifactId>commons-lang3</artifactId>
-                <version>3.3.2</version>
+                <version>${apache.commons.lang3.version}</version>
             </dependency>
             <dependency>
                 <groupId>commons-beanutils</groupId>
                 <artifactId>commons-beanutils</artifactId>
-                <version>1.9.2</version>
+                <version>${apache.commons.beanutils.version}</version>
             </dependency>
             <dependency>
                 <groupId>commons-collections</groupId>
                 <artifactId>commons-collections</artifactId>
-                <version>3.2.2</version>
+                <version>${apache.commons.collections.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.commons</groupId>
                 <artifactId>commons-email</artifactId>
-                <version>1.3.3</version>
+                <version>${apache.commons.email.version}</version>
+                <!-- This is the latest version we can use right now because of the javax.mail dependency that is still on 1.3 provided by pax-web, standard and cxf features -->
             </dependency>
             <!-- End of Apache Commons dependencies -->
 
@@ -825,7 +868,7 @@
             <dependency>
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-api</artifactId>
-                <version>1.6.6</version>
+                <version>${slf4j.version}</version>
                 <scope>provided</scope>
             </dependency>
             <dependency>
@@ -838,6 +881,11 @@
                 <artifactId>httpclient-osgi</artifactId>
                 <version>${httpclient-osgi.version}</version>
                 <type>bundle</type>
+            </dependency>
+            <dependency>
+                <groupId>commons-codec</groupId>
+                <artifactId>commons-codec</artifactId>
+                <version>1.17.0</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.httpcomponents</groupId>
@@ -867,9 +915,10 @@
             <dependency>
                 <groupId>org.ops4j.pax.url</groupId>
                 <artifactId>pax-url-aether</artifactId>
-                <version>1.6.0</version>
+                <version>2.6.14</version>
                 <scope>test</scope>
             </dependency>
+            <!-- TODO check if can be removed -->
             <dependency>
                 <groupId>javax.inject</groupId>
                 <artifactId>javax.inject</artifactId>
@@ -877,107 +926,62 @@
                 <scope>test</scope>
             </dependency>
 
+            <!-- dependencies for bean validation -->
+            <dependency>
+                <groupId>javax.validation</groupId>
+                <artifactId>validation-api</artifactId>
+                <version>${bean.validation.version}</version>
+                <scope>provided</scope>
+            </dependency>
             <dependency>
                 <groupId>junit</groupId>
                 <artifactId>junit</artifactId>
-                <version>4.12</version>
+                <version>4.13.2</version>
                 <scope>test</scope>
             </dependency>
             <dependency>
-                <groupId>com.carrotsearch</groupId>
-                <artifactId>junit-benchmarks</artifactId>
-                <version>0.7.2</version>
-                <scope>test</scope>
+                <groupId>joda-time</groupId>
+                <artifactId>joda-time</artifactId>
+                <version>${joda-time.version}</version>
             </dependency>
-            <dependency>
-                <groupId>com.h2database</groupId>
-                <artifactId>h2</artifactId>
-                <version>1.4.181</version>
-                <scope>test</scope>
-            </dependency>
-
-            <dependency>
-                <groupId>io.gatling</groupId>
-                <artifactId>gatling-app</artifactId>
-                <version>${gatling.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>io.gatling</groupId>
-                <artifactId>gatling-recorder</artifactId>
-                <version>${gatling.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>io.gatling.highcharts</groupId>
-                <artifactId>gatling-charts-highcharts</artifactId>
-                <version>${gatling.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.scala-lang</groupId>
-                <artifactId>scala-library</artifactId>
-                <version>${scala.version}</version>
-            </dependency>
-
-            <dependency>
-                <groupId>org.apache.servicemix.bundles</groupId>
-                <artifactId>org.apache.servicemix.bundles.jakarta-regexp</artifactId>
-                <version>1.4_1</version>
-            </dependency>
-            <dependency>
-                <groupId>org.apache.servicemix.bundles</groupId>
-                <artifactId>org.apache.servicemix.bundles.joda-time</artifactId>
-                <version>2.3_1</version>
-                <scope>provided</scope>
-            </dependency>
-
             <dependency>
                 <groupId>ognl</groupId>
                 <artifactId>ognl</artifactId>
-                <version>3.2.11</version>
-            </dependency>
-            <dependency>
-                <groupId>org.javassist</groupId>
-                <artifactId>javassist</artifactId>
-                <version>3.24.1-GA</version>
+                <version>3.4.3</version>
             </dependency>
             <dependency>
                 <groupId>org.antlr</groupId>
                 <artifactId>ST4</artifactId>
-                <version>4.0.8</version>
-                <classifier>complete</classifier>
+                <version>${st4.version}</version>
             </dependency>
-            <dependency>
-                <groupId>org.glassfish</groupId>
-                <artifactId>javax.json</artifactId>
-                <version>1.0.4</version>
-            </dependency>
-
             <dependency>
                 <groupId>org.apache.geronimo.specs</groupId>
                 <artifactId>geronimo-jcdi_1.0_spec</artifactId>
                 <version>1.0</version>
                 <scope>provided</scope>
             </dependency>
-
             <dependency>
                 <groupId>org.apache.geronimo.specs</groupId>
                 <artifactId>geronimo-atinject_1.0_spec</artifactId>
                 <version>1.0</version>
                 <scope>provided</scope>
             </dependency>
-
             <dependency>
                 <groupId>org.apache.geronimo.specs</groupId>
                 <artifactId>geronimo-annotation_1.1_spec</artifactId>
                 <version>1.0.1</version>
                 <scope>provided</scope>
             </dependency>
-
             <dependency>
                 <groupId>org.mvel</groupId>
                 <artifactId>mvel2</artifactId>
-                <version>2.3.1.Final</version>
+                <version>2.5.2.Final</version>
             </dependency>
-
+            <dependency>
+                <groupId>org.json</groupId>
+                <artifactId>json</artifactId>
+                <version>${org.json.version}</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
 
@@ -985,26 +989,28 @@
         <module>api</module>
         <module>common</module>
         <module>metrics</module>
+        <module>scripting</module>
         <module>persistence-spi</module>
         <module>lifecycle-watcher</module>
         <module>persistence-elasticsearch</module>
         <module>services</module>
         <module>rest</module>
+        <module>graphql</module>
         <module>wab</module>
         <module>plugins</module>
         <module>extensions</module>
         <module>tools</module>
+        <module>manual</module>
         <module>kar</module>
         <module>samples</module>
         <module>package</module>
-        <module>manual</module>
     </modules>
 
     <dependencies>
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
-            <version>1.7.1</version>
+            <version>1.7.36</version>
             <scope>provided</scope>
         </dependency>
     </dependencies>
@@ -1019,6 +1025,7 @@
                     <extensions>true</extensions>
                     <configuration>
                         <instructions>
+                            <_noimportjava>true</_noimportjava>
                             <Embed-Dependency>*;scope=compile|runtime</Embed-Dependency>
                         </instructions>
                     </configuration>
@@ -1049,7 +1056,21 @@
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-javadoc-plugin</artifactId>
-                    <version>2.10.4</version>
+                    <version>3.2.0</version>
+                    <configuration>
+                        <additionalDependencies>
+                            <additionalDependency>
+                                <groupId>org.eclipse.jetty</groupId>
+                                <artifactId>jetty-client</artifactId>
+                                <version>7.4.4.v20110707</version>
+                            </additionalDependency>
+                            <additionalDependency>
+                                <groupId>org.eclipse.jetty</groupId>
+                                <artifactId>jetty-util</artifactId>
+                                <version>7.4.4.v20110707</version>
+                            </additionalDependency>
+                        </additionalDependencies>
+                    </configuration>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.servicemix.tooling</groupId>
@@ -1113,17 +1134,6 @@
                 <artifactId>maven-bundle-plugin</artifactId>
                 <extensions>true</extensions>
             </plugin>
-            <!--
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-scm-publish-plugin</artifactId>
-                <version>1.1</version>
-                <configuration>
-                    <checkinComment>[scm-publish] Updating Unomi website</checkinComment>
-                    <pubScmUrl>scm:svn:https://svn.apache.org/repos/asf/incubator/unomi/website/</pubScmUrl>
-                </configuration>
-            </plugin>
-            -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-site-plugin</artifactId>
@@ -1146,40 +1156,6 @@
                 <groupId>org.apache.rat</groupId>
                 <artifactId>apache-rat-plugin</artifactId>
                 <version>0.11</version>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-javadoc-plugin</artifactId>
-                <version>2.10.4</version>
-                <configuration>
-                    <tags>
-                        <tag>
-                            <name>summary</name>
-                            <placement>a</placement>
-                            <head>MireDot summary (resource title)</head>
-                        </tag>
-                        <tag>
-                            <name>title</name>
-                            <placement>a</placement>
-                            <head>MireDot title (resource title)</head>
-                        </tag>
-                        <tag>
-                            <name>servicetag</name>
-                            <placement>a</placement>
-                            <head>MireDot resource tag (label)</head>
-                        </tag>
-                        <tag>
-                            <name>statuscode</name>
-                            <placement>a</placement>
-                            <head>MireDot resource status code(s)</head>
-                        </tag>
-                        <tag>
-                            <name>responseheader</name>
-                            <placement>a</placement>
-                            <head>MireDot response header</head>
-                        </tag>
-                    </tags>
-                </configuration>
             </plugin>
             <plugin>
                 <groupId>external.atlassian.jgitflow</groupId>

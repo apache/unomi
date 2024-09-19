@@ -1,0 +1,5 @@
+{
+  "operationName": null,
+  "variables": {},
+  "query": "{\n  cdp {\n    getProfileAlias(alias: \"myAlias\") {\n      alias\n      creationTime\n      modifiedTime\n      profileID {\n        id\n      }\n    }\n  }\n}\n"
+}

@@ -21,6 +21,8 @@ import org.apache.unomi.api.services.SchedulerService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.Duration;
+import java.time.ZonedDateTime;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
@@ -31,18 +33,41 @@ public class SchedulerServiceImpl implements SchedulerService {
     private static final Logger logger = LoggerFactory.getLogger(SchedulerServiceImpl.class.getName());
 
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
+    private ScheduledExecutorService sharedScheduler;
+    private int threadPoolSize;
 
     public void postConstruct() {
+        sharedScheduler = Executors.newScheduledThreadPool(threadPoolSize);
         logger.info("Scheduler service initialized.");
     }
 
     public void preDestroy() {
+        sharedScheduler.shutdown();
         scheduler.shutdown();
         logger.info("Scheduler service shutdown.");
+    }
+
+    public void setThreadPoolSize(int threadPoolSize) {
+        this.threadPoolSize = threadPoolSize;
     }
 
     @Override
     public ScheduledExecutorService getScheduleExecutorService() {
         return scheduler;
+    }
+
+
+    @Override
+    public ScheduledExecutorService getSharedScheduleExecutorService() {
+        return sharedScheduler;
+    }
+
+    public static long getTimeDiffInSeconds(int hourInUtc, ZonedDateTime now) {
+        ZonedDateTime nextRun = now.withHour(hourInUtc).withMinute(0).withSecond(0);
+        if(now.compareTo(nextRun) > 0) {
+            nextRun = nextRun.plusDays(1);
+        }
+
+        return Duration.between(now, nextRun).getSeconds();
     }
 }

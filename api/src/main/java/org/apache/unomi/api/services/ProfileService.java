@@ -109,6 +109,38 @@ public interface ProfileService {
     Profile save(Profile profile);
 
     /**
+     * Adds the alias to the profile.
+     *
+     * @param profileID the identifier of the profile
+     * @param alias     the alias which should be linked with of the profile
+     * @param clientID  the identifier of the client
+     */
+    void addAliasToProfile(String profileID, String alias, String clientID);
+
+    /**
+     * Removes the alias from the profile.
+     *
+     * @param profileID the identifier of the profile
+     * @param alias     the alias which should be unlinked from the profile
+     * @param clientID  the identifier of the client
+     */
+    ProfileAlias removeAliasFromProfile(String profileID, String alias, String clientID);
+
+    /**
+     * Find profile aliases which have the specified property with the specified value, ordered according to the specified {@code sortBy} String and paged: only
+     * {@code size} of them are retrieved, starting with the {@code offset}-th one.
+     *
+     * @param profileId the identifier of the profile
+     * @param offset    zero or a positive integer specifying the position of the first profile in the total ordered collection of matching profiles
+     * @param size      a positive integer specifying how many matching profiles should be retrieved or {@code -1} if all of them should be retrieved
+     * @param sortBy    an optional ({@code null} if no sorting is required) String of comma ({@code ,}) separated property names on which ordering should be performed, ordering elements according to  the property order in
+     *                  the String, considering each in turn and moving on to the next one in case of equality of all preceding ones. Each property name is optionally
+     *                  followed by a column ({@code :}) and an order specifier: {@code asc} or {@code desc}.
+     * @return a {@link PartialList} of matching profiles
+     */
+    PartialList<ProfileAlias> findProfileAliases(String profileId, int offset, int size, String sortBy);
+
+    /**
      * Merge the specified profile properties in an existing profile,or save new profile if it does not exist yet
      *
      * @param profile the profile to be saved
@@ -143,12 +175,24 @@ public interface ProfileService {
 
     /**
      * Retrieves the session identified by the specified identifier.
+     * @deprecated {@code dateHint} is not supported anymore, please use {@link #loadSession(String)}
      *
      * @param sessionId the identifier of the session to be retrieved
      * @param dateHint  a Date helping in identifying where the item is located
      * @return the session identified by the specified identifier
      */
+    @Deprecated
     Session loadSession(String sessionId, Date dateHint);
+
+    /**
+     * Retrieves the session identified by the specified identifier.
+     *
+     * @param sessionId the identifier of the session to be retrieved
+     * @return the session identified by the specified identifier
+     */
+    default Session loadSession(String sessionId) {
+        return loadSession(sessionId, null);
+    };
 
     /**
      * Saves the specified session.
@@ -165,6 +209,13 @@ public interface ProfileService {
      * @return a {@link PartialList} of the profile's sessions
      */
     PartialList<Session> findProfileSessions(String profileId);
+
+    /**
+     * Removes all sessions of the specified profile
+     *
+     * @param profileId identifier of the profile that we want to remove it's sessions
+     */
+    void removeProfileSessions(String profileId);
 
     /**
      * Checks whether the specified profile and/or session satisfy the specified condition.
@@ -315,8 +366,9 @@ public interface ProfileService {
     /**
      * This function will try to set the target on the property type if not set already, based on the file URL
      *
-     * @param predefinedPropertyTypeURL
-     * @param propertyType
+     * @param predefinedPropertyTypeURL the URL to extract the target from if the target is not yet. By default it will
+     *                                  use the 5's part after a "/" character
+     * @param propertyType the property type to register
      */
     void setPropertyTypeTarget(URL predefinedPropertyTypeURL, PropertyType propertyType);
 
@@ -360,4 +412,35 @@ public interface ProfileService {
      * in specific scenarios such as integration tests.
      */
     void refresh();
+
+    /**
+     * Purge (delete) profiles
+     * example: Purge profile inactive since 10 days only:
+     * purgeProfiles(10, 0);
+     * example: Purge profile created since 30 days only:
+     * purgeProfiles(0, 30);
+     *
+     * @param inactiveNumberOfDays will purge profiles with no visits since this number of days (0 or negative value, will have no effect)
+     * @param existsNumberOfDays will purge profiles created since this number of days (0 or negative value, will have no effect)
+     */
+    void purgeProfiles(int inactiveNumberOfDays, int existsNumberOfDays);
+
+    /**
+     * Purge (delete) session items
+     * @param existsNumberOfDays will purge sessions created since this number of days (0 or negative value, will have no effect)
+     */
+    void purgeSessionItems(int existsNumberOfDays);
+
+    /**
+     * Purge (delete) event items
+     * @param existsNumberOfDays will purge events created since this number of days (0 or negative value, will have no effect)
+     */
+    void purgeEventItems(int existsNumberOfDays);
+
+    /**
+     * Use purgeSessionItems and purgeEventItems to remove rollover items instead
+     * @param existsNumberOfMonths used to remove monthly indices older than this number of months
+     */
+    @Deprecated
+    void purgeMonthlyItems(int existsNumberOfMonths);
 }

@@ -17,6 +17,7 @@
 
 package org.apache.unomi.services.sorts;
 
+import org.apache.unomi.api.PersonalizationResult;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.Session;
 import org.apache.unomi.api.PersonalizationStrategy;
@@ -27,6 +28,9 @@ import org.apache.unomi.api.services.ProfileService;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * This strategy will use filters to only keep the contents that match all their associated filters
+ */
 public class FilterPersonalizationStrategy implements PersonalizationStrategy {
 
     private ProfileService profileService;
@@ -36,7 +40,7 @@ public class FilterPersonalizationStrategy implements PersonalizationStrategy {
     }
 
     @Override
-    public List<String> personalizeList(Profile profile, Session session, PersonalizationService.PersonalizationRequest personalizationRequest) {
+    public PersonalizationResult personalizeList(Profile profile, Session session, PersonalizationService.PersonalizationRequest personalizationRequest) {
         List<String> sortedContent = new ArrayList<>();
         for (PersonalizationService.PersonalizedContent personalizedContent : personalizationRequest.getContents()) {
             boolean result = true;
@@ -56,6 +60,6 @@ public class FilterPersonalizationStrategy implements PersonalizationStrategy {
             sortedContent.add(fallback);
         }
 
-        return sortedContent;
+        return new PersonalizationResult(sortedContent);
     }
 }

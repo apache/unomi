@@ -20,11 +20,10 @@ package org.apache.unomi.api;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.services.RulesService;
 
+import javax.xml.bind.annotation.XmlTransient;
 import java.io.Serializable;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * A context server response resulting from the evaluation of a client's context request. Note that all returned values result of the evaluation of the data provided in the
@@ -46,9 +45,15 @@ public class ContextResponse implements Serializable {
 
     private Set<String> profileSegments;
 
+    private Map<String,Integer> profileScores;
+
     private Map<String, Boolean> filteringResults;
 
+    private int processedEvents;
+
     private Map<String, List<String>> personalizations;
+
+    private Map<String, PersonalizationResult> personalizationResults;
 
     private Set<Condition> trackedConditions;
 
@@ -151,6 +156,22 @@ public class ContextResponse implements Serializable {
     }
 
     /**
+     * Retrieve the current scores for the profile if they were requested in the request using the requireScores boolean.
+     * @return a map that contains the score identifier as the key and the score value as the value
+     */
+    public Map<String, Integer> getProfileScores() {
+        return profileScores;
+    }
+
+    /**
+     * Stores the scores for the current profile if requested using the requireScores boolean in the request.
+     * @param profileScores a map that contains the score identifier as the key and the score value as the value
+     */
+    public void setProfileScores(Map<String, Integer> profileScores) {
+        this.profileScores = profileScores;
+    }
+
+    /**
      * Retrieves the results of the evaluation content filtering definitions and whether individual definitions match with the associated profile (potentially modified by
      * overridden values).
      *
@@ -169,12 +190,41 @@ public class ContextResponse implements Serializable {
         this.filteringResults = filteringResults;
     }
 
+
+    public int getProcessedEvents() {
+        return processedEvents;
+    }
+
+    public void setProcessedEvents(int processedEvents) {
+        this.processedEvents = processedEvents;
+    }
+
+    /**
+     * @deprecated personalizations results are more complex since 2.1.0 and they are now available under: getPersonalizationResults()
+     */
+    @Deprecated
     public Map<String, List<String>> getPersonalizations() {
         return personalizations;
     }
 
+    /**
+     * @deprecated personalizations results are more complex since 2.1.0 and they are now available under: setPersonalizationResults()
+     */
+    @Deprecated
     public void setPersonalizations(Map<String, List<String>> personalizations) {
         this.personalizations = personalizations;
+    }
+
+    /**
+     * Get the result of the personalization resolutions done during the context request.
+     * @return a Map key/value pair (key:personalization id, value:the result that contains the matching content ids and additional information)
+     */
+    public Map<String, PersonalizationResult> getPersonalizationResults() {
+        return personalizationResults;
+    }
+
+    public void setPersonalizationResults(Map<String, PersonalizationResult> personalizationResults) {
+        this.personalizationResults = personalizationResults;
     }
 
     /**

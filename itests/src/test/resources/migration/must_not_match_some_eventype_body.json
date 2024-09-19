@@ -1,0 +1,18 @@
+{
+  "query": {
+    "bool": {
+      "must_not": [
+        {
+          "match": {
+            "eventType": "sessionCreated"
+          }
+        },
+        {
+          "match": {
+            "eventType": "updateProperties"
+          }
+        }
+      ]
+    }
+  }
+}

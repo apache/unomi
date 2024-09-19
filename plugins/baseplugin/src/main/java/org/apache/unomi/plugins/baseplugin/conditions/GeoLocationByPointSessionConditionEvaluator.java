@@ -37,8 +37,11 @@ public class GeoLocationByPointSessionConditionEvaluator implements ConditionEva
     public boolean eval(Condition condition, Item item, Map<String, Object> context, ConditionEvaluatorDispatcher dispatcher) {
         try {
             String type = (String) condition.getParameter("type");
-            Double latitudeProperty = Double.parseDouble(BeanUtils.getProperty(item, "properties.location.lat"));
-            Double longitudeProperty = Double.parseDouble(BeanUtils.getProperty(item, "properties.location.lon"));
+            String name = condition.getParameter("name") == null ? "properties.location" : (String) condition.getParameter("name");
+
+            Double latitudeProperty = Double.parseDouble(BeanUtils.getProperty(item, name + ".lat"));
+            Double longitudeProperty = Double.parseDouble(BeanUtils.getProperty(item, name + ".lon"));
+
 
             if("circle".equals(type)) {
                 Double circleLatitude = (Double) condition.getParameter("circleLatitude");
@@ -61,7 +64,10 @@ public class GeoLocationByPointSessionConditionEvaluator implements ConditionEva
                 }
             }
         } catch (Exception e) {
-            logger.debug("Cannot get properties", e);
+            logger.warn("Cannot evaluate condition, properties 'properties.location.lat' or 'properties.location.lon' not found, enable debug log level to see full stacktrace");
+            if (logger.isDebugEnabled()) {
+                logger.debug("Cannot evaluate condition", e);
+            }
         }
         return false;
     }

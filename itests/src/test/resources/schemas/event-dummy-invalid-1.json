@@ -1,0 +1,9 @@
+{
+  "eventType":"dummy",
+  "scope":"dummy_scope",
+  "invalidPropName": "This is for sure an unknown property !!!!!",
+  "properties": {
+    "workspace": "dummy_workspace",
+    "path": "dummy/path"
+  }
+}

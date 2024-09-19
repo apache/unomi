@@ -33,10 +33,7 @@ import org.apache.unomi.router.api.exceptions.BadProfileDataFormatException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 /**
  * Created by amidani on 29/12/2016.
@@ -56,7 +53,7 @@ public class LineSplitProcessor implements Processor {
     private String multiValueSeparator;
     private String multiValueDelimiter;
 
-    private ProfileService profileService;
+    private Collection<PropertyType> profilePropertyTypes;
 
     @Override
     public void process(Exchange exchange) throws Exception {
@@ -103,7 +100,7 @@ public class LineSplitProcessor implements Processor {
             logger.debug("$$$$ : LineSplitProcessor : MAPPING : " + fieldsMapping.keySet());
             Map<String, Object> properties = new HashMap<>();
             for (String fieldMappingKey : fieldsMapping.keySet()) {
-                PropertyType propertyType = RouterUtils.getPropertyTypeById(profileService.getTargetPropertyTypes("profiles"), fieldMappingKey);
+                PropertyType propertyType = RouterUtils.getPropertyTypeById(profilePropertyTypes, fieldMappingKey);
 
                 if (fieldMappingKey != null && fieldsMapping.get(fieldMappingKey) != null && profileData != null && profileData[fieldsMapping.get(fieldMappingKey)] != null) {
                     logger.debug("$$$$ : LineSplitProcessor : PropType value : {}", profileData[fieldsMapping.get(fieldMappingKey)].trim());
@@ -145,6 +142,8 @@ public class LineSplitProcessor implements Processor {
                             properties.put(fieldMappingKey, new Boolean(profileData[fieldsMapping.get(fieldMappingKey)].trim()));
                         } else if (propertyType.getValueTypeId().equals("integer")) {
                             properties.put(fieldMappingKey, new Integer(profileData[fieldsMapping.get(fieldMappingKey)].trim()));
+                        } else if (propertyType.getValueTypeId().equals("long")) {
+                            properties.put(fieldMappingKey, new Long(profileData[fieldsMapping.get(fieldMappingKey)].trim()));
                         }
                     } catch (Throwable t) {
                         logger.error("Error converting profileData", t);
@@ -237,12 +236,10 @@ public class LineSplitProcessor implements Processor {
     }
 
     /**
-     * Sets the Profile service.
-     *
-     * @param profileService Profile service
+     * Sets the profile property types to use for the field mappings
+     * @param profilePropertyTypes the collection of property types to use
      */
-    public void setProfileService(ProfileService profileService) {
-        this.profileService = profileService;
+    public void setProfilePropertyTypes(Collection<PropertyType> profilePropertyTypes) {
+        this.profilePropertyTypes = profilePropertyTypes;
     }
-
 }

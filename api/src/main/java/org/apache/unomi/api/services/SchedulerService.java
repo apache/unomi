@@ -17,6 +17,7 @@
 
 package org.apache.unomi.api.services;
 
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
 
 /**
@@ -33,4 +34,11 @@ public interface SchedulerService {
      * @return {@link ScheduledExecutorService}
      */
     ScheduledExecutorService getScheduleExecutorService();
+
+    /**
+     * Same as getScheduleExecutorService but use a shared pool of ScheduledExecutor instead of single one.
+     * Use this service is your tasks can be run in parallel of the others.
+     * @return {@link ScheduledExecutorService}
+     */
+    ScheduledExecutorService getSharedScheduleExecutorService();
 }

@@ -1,0 +1,13 @@
+{
+  "operationName": "getProfile",
+  "variables": {
+    "profileID": {
+      "client": {
+        "id": "defaultClientId"
+      },
+      "id": "profileId_createOrUpdateProfilePropertiesTest"
+    },
+    "createIfMissing": true
+  },
+  "query": "query getProfile($profileID: CDP_ProfileIDInput!) {\n  cdp {\n    getProfile(profileID: $profileID, createIfMissing: false) {\n      cdp_profileIDs {\n        id\n      }\n      firstName\n      lastName\n      testProperty {\n        testStringProperty\n        testLongProperty\n        testJsonProperty\n      }\n    }\n  }\n}\n"
+}

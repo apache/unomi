@@ -22,7 +22,7 @@
     <parent>
         <groupId>org.apache.unomi</groupId>
         <artifactId>unomi-root</artifactId>
-        <version>1.5.0-SNAPSHOT</version>
+        <version>2.6.0-SNAPSHOT</version>
     </parent>
 
     <artifactId>unomi</artifactId>
@@ -108,7 +108,16 @@
 
         <dependency>
             <groupId>org.apache.unomi</groupId>
-            <artifactId>unomi-web-tracker-karaf-kar</artifactId>
+            <artifactId>unomi-groovy-actions</artifactId>
+            <version>${project.version}</version>
+            <classifier>features</classifier>
+            <type>xml</type>
+            <scope>runtime</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.unomi</groupId>
+            <artifactId>cdp-graphql-feature</artifactId>
             <version>${project.version}</version>
             <classifier>features</classifier>
             <type>xml</type>
@@ -229,6 +238,28 @@
                                 </artifactItem>
                                 <artifactItem>
                                     <groupId>org.apache.unomi</groupId>
+                                    <artifactId>unomi-plugins-base</artifactId>
+                                    <version>${project.version}</version>
+                                    <classifier>pluginsbasecfg</classifier>
+                                    <type>cfg</type>
+                                    <outputDirectory>
+                                        ${project.build.directory}/assembly/etc
+                                    </outputDirectory>
+                                    <destFileName>org.apache.unomi.plugins.base.cfg</destFileName>
+                                </artifactItem>
+                                <artifactItem>
+                                    <groupId>org.apache.unomi</groupId>
+                                    <artifactId>unomi-groovy-actions-services</artifactId>
+                                    <version>${project.version}</version>
+                                    <classifier>groovyactionscfg</classifier>
+                                    <type>cfg</type>
+                                    <outputDirectory>
+                                        ${project.build.directory}/assembly/etc
+                                    </outputDirectory>
+                                    <destFileName>org.apache.unomi.groovy.actions.cfg</destFileName>
+                                </artifactItem>
+                                <artifactItem>
+                                    <groupId>org.apache.unomi</groupId>
                                     <artifactId>unomi-plugins-mail</artifactId>
                                     <version>${project.version}</version>
                                     <classifier>mailcfg</classifier>
@@ -304,6 +335,7 @@
                 <configuration>
                     <installedFeatures>
                         <feature>wrapper</feature>
+                        <feature>cxf-commands</feature>
                     </installedFeatures>
                     <startupFeatures>
                         <feature>eventadmin</feature>
@@ -314,7 +346,6 @@
                         <feature>feature</feature>
                         <feature>jaas</feature>
                         <feature>ssh</feature>
-                        <feature>management</feature>
                         <feature>bundle</feature>
                         <feature>config</feature>
                         <feature>deployer</feature>
@@ -333,7 +364,8 @@
                         <feature>shell-compat</feature>
                         <feature>unomi-kar</feature>
                         <feature>unomi-router-karaf-feature</feature>
-                        <feature>unomi-web-tracker-karaf-kar</feature>
+                        <feature>unomi-groovy-actions</feature>
+                        <feature>unomi-rest-ui</feature>
                     </bootFeatures>
                     <!--
                     <libraries>
@@ -359,6 +391,36 @@
                     <javase>1.8</javase>
                 </configuration>
             </plugin>
+            <plugin>
+                <groupId>net.nicoulaj.maven.plugins</groupId>
+                <artifactId>checksum-maven-plugin</artifactId>
+                <version>1.7</version>
+                <executions>
+                    <execution>
+                        <id>package-release-checksum</id>
+                        <goals>
+                            <goal>files</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <algorithms>
+                        <algorithm>SHA-512</algorithm>
+                    </algorithms>
+                    <csvSummary>false</csvSummary>
+                    <fileSets>
+                        <fileSet>
+                            <directory>${project.build.directory}</directory>
+                            <includes>
+                                <include>${project.artifactId}-${project.version}.zip</include>
+                                <include>${project.artifactId}-${project.version}.tar*</include>
+                            </includes>
+                        </fileSet>
+                    </fileSets>
+                    <failIfNoFiles>false</failIfNoFiles><!-- usually, no file to do checksum: don't consider error -->
+                </configuration>
+            </plugin>
+
         </plugins>
     </build>
 

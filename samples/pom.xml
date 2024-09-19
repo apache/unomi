@@ -19,9 +19,13 @@
     <parent>
         <artifactId>unomi-root</artifactId>
         <groupId>org.apache.unomi</groupId>
-        <version>1.5.0-SNAPSHOT</version>
+        <version>2.6.0-SNAPSHOT</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
+
+    <properties>
+        <graphql.java.annotations.version>8.0</graphql.java.annotations.version>
+    </properties>
 
     <artifactId>samples</artifactId>
     <name>Apache Unomi :: Samples</name>
@@ -30,6 +34,9 @@
         <module>tweet-button-plugin</module>
         <module>login-integration</module>
         <module>groovy-actions</module>
+        <module>trainingplugin</module>
+        <module>graphql-providers</module>
+        <module>graphql-providers-feature</module>
     </modules>
 
 </project>

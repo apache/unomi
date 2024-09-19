@@ -22,16 +22,23 @@ import org.apache.unomi.api.actions.Action;
 import org.apache.unomi.api.actions.ActionExecutor;
 import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.persistence.spi.PropertyHelper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.TimeZone;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class SetPropertyAction implements ActionExecutor {
+    private static final Logger logger = LoggerFactory.getLogger(SetPropertyAction.class.getName());
 
     private EventService eventService;
+    // TODO Temporary solution that should be handle by: https://issues.apache.org/jira/browse/UNOMI-630 (Implement a global solution to avoid multiple same log pollution.)
+    private static final AtomicLong nowDeprecatedLogTimestamp = new AtomicLong();
 
     private boolean useEventToUpdateProfile = false;
 
@@ -41,33 +48,12 @@ public class SetPropertyAction implements ActionExecutor {
 
     public int execute(Action action, Event event) {
         boolean storeInSession = Boolean.TRUE.equals(action.getParameterValues().get("storeInSession"));
+        if (storeInSession && event.getSession() == null) {
+            return EventService.NO_CHANGE;
+        }
 
         String propertyName = (String) action.getParameterValues().get("setPropertyName");
-
-        Object propertyValue = action.getParameterValues().get("setPropertyValue");
-        if (propertyValue == null) {
-            propertyValue = action.getParameterValues().get("setPropertyValueMultiple");
-        }
-        Object propertyValueInteger = action.getParameterValues().get("setPropertyValueInteger");
-        Object setPropertyValueMultiple = action.getParameterValues().get("setPropertyValueMultiple");
-        Object setPropertyValueBoolean = action.getParameterValues().get("setPropertyValueBoolean");
-
-        if (propertyValue == null) {
-            if (propertyValueInteger != null) {
-                propertyValue = PropertyHelper.getInteger(propertyValueInteger);
-            }
-            if (setPropertyValueMultiple != null) {
-                propertyValue = setPropertyValueMultiple;
-            }
-            if (setPropertyValueBoolean != null) {
-                propertyValue = PropertyHelper.getBooleanValue(setPropertyValueBoolean);
-            }
-        }
-        if (propertyValue != null && propertyValue.equals("now")) {
-            SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
-            format.setTimeZone(TimeZone.getTimeZone("UTC"));
-            propertyValue = format.format(event.getTimeStamp());
-        }
+        Object propertyValue = getPropertyValue(action, event);
 
         if (storeInSession) {
             // in the case of session storage we directly update the session
@@ -80,7 +66,7 @@ public class SetPropertyAction implements ActionExecutor {
                 Map<String, Object> propertyToUpdate = new HashMap<>();
                 propertyToUpdate.put(propertyName, propertyValue);
 
-                Event updateProperties = new Event("updateProperties", event.getSession(), event.getProfile(), event.getScope(), null, event.getProfile(), new Date());
+                Event updateProperties = new Event("updateProperties", event.getSession(), event.getProfile(), event.getScope(), null, null, new Date());
                 updateProperties.setPersistent(false);
 
                 updateProperties.setProperty(UpdatePropertiesAction.PROPS_TO_UPDATE, propertyToUpdate);
@@ -101,6 +87,55 @@ public class SetPropertyAction implements ActionExecutor {
 
     public void setEventService(EventService eventService) {
         this.eventService = eventService;
+    }
+
+    private Object getPropertyValue(Action action, Event event) {
+        Object propertyValue = action.getParameterValues().get("setPropertyValue");
+        if (propertyValue == null) {
+            propertyValue = action.getParameterValues().get("setPropertyValueMultiple");
+        }
+        Object propertyValueInteger = action.getParameterValues().get("setPropertyValueInteger");
+        Object setPropertyValueMultiple = action.getParameterValues().get("setPropertyValueMultiple");
+        Object setPropertyValueBoolean = action.getParameterValues().get("setPropertyValueBoolean");
+        Object setPropertyValueCurrentEventTimestamp = action.getParameterValues().get("setPropertyValueCurrentEventTimestamp");
+        Object setPropertyValueCurrentDate = action.getParameterValues().get("setPropertyValueCurrentDate");
+
+        SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
+        format.setTimeZone(TimeZone.getTimeZone("UTC"));
+
+        if (propertyValue == null) {
+            if (propertyValueInteger != null) {
+                propertyValue = PropertyHelper.getInteger(propertyValueInteger);
+            }
+            if (setPropertyValueMultiple != null) {
+                propertyValue = setPropertyValueMultiple;
+            }
+            if (setPropertyValueBoolean != null) {
+                propertyValue = PropertyHelper.getBooleanValue(setPropertyValueBoolean);
+            }
+            if (setPropertyValueCurrentEventTimestamp != null && PropertyHelper.getBooleanValue(setPropertyValueCurrentEventTimestamp)) {
+                propertyValue = format.format(event.getTimeStamp());
+            }
+            if (setPropertyValueCurrentDate != null && PropertyHelper.getBooleanValue(setPropertyValueCurrentDate)) {
+                propertyValue = format.format(new Date());
+            }
+        }
+
+        if (propertyValue != null && propertyValue.equals("now")) {
+            // TODO Temporary solution that should be handle by: https://issues.apache.org/jira/browse/UNOMI-630 (Implement a global solution to avoid multiple same log pollution.)
+            // warn every 6 hours to avoid log pollution
+            long timeStamp = nowDeprecatedLogTimestamp.get();
+            long currentTimeStamp = new Date().getTime();
+            if (timeStamp == 0 || (timeStamp + TimeUnit.HOURS.toMillis(6) < currentTimeStamp)) {
+                logger.warn("SetPropertyAction with setPropertyValue: 'now' is deprecated, " +
+                        "please use 'setPropertyValueCurrentEventTimestamp' or 'setPropertyValueCurrentDate' instead of 'setPropertyValue'");
+                nowDeprecatedLogTimestamp.set(currentTimeStamp);
+            }
+
+            propertyValue = format.format(event.getTimeStamp());
+        }
+
+        return propertyValue;
     }
 
 }

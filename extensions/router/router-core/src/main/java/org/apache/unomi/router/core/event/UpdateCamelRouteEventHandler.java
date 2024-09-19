@@ -49,8 +49,10 @@ public class UpdateCamelRouteEventHandler extends CellarSupport implements Event
                 logger.debug("Event id is {}", event.getId());
                 if (event.getId().equals(RouterCamelContext.EVENT_ID_REMOVE) && StringUtils.isNotBlank(event.getRouteId())) {
                     routerCamelContext.killExistingRoute(event.getRouteId(), false);
-                } else if ((event.getId().equals(RouterCamelContext.EVENT_ID_IMPORT) || event.getId().equals(RouterCamelContext.EVENT_ID_EXPORT)) && event.getConfiguration() != null) {
-                    routerCamelContext.updateProfileReaderRoute(event.getConfiguration(), false);
+                } else if ((event.getId().equals(RouterCamelContext.EVENT_ID_IMPORT))) {
+                    routerCamelContext.updateProfileImportReaderRoute(event.getRouteId(), false);
+                } else if (event.getId().equals(RouterCamelContext.EVENT_ID_EXPORT)) {
+                    routerCamelContext.updateProfileExportReaderRoute(event.getRouteId(), false);
                 }
             } catch (Exception e) {
                 logger.error("Error when executing event", e);

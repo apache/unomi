@@ -64,4 +64,13 @@ public class DataTableTest {
         dataTable.sort(new DataTable.SortCriteria(4, DataTable.SortOrder.DESCENDING));
         assertEquals("Row 1 should be first", "Row1", dataTable.getRows().get(0).getData(0));
     }
+
+    @Test
+    public void testToString() {
+        DataTable dataTable = new DataTable();
+        dataTable.addRow("Row1", 1, 2, 1);
+        dataTable.addRow("Row2", 3, 2, 2);
+        dataTable.addRow("Row3", 2, 1, 1);
+        assertEquals("[[[[Row1, 1, 2, 1]], [[Row2, 3, 2, 2]], [[Row3, 2, 1, 1]]]]", dataTable.toString());
+    }
 }

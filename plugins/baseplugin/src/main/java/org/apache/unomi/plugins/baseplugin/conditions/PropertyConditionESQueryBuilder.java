@@ -22,6 +22,8 @@ import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.persistence.elasticsearch.conditions.ConditionContextHelper;
 import org.apache.unomi.persistence.elasticsearch.conditions.ConditionESQueryBuilder;
 import org.apache.unomi.persistence.elasticsearch.conditions.ConditionESQueryBuilderDispatcher;
+import org.elasticsearch.common.geo.GeoPoint;
+import org.elasticsearch.common.unit.DistanceUnit;
 import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
@@ -29,10 +31,9 @@ import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormatter;
 import org.joda.time.format.ISODateTimeFormat;
 
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+
+import static org.apache.unomi.plugins.baseplugin.conditions.PropertyConditionEvaluator.getDate;
 
 public class PropertyConditionESQueryBuilder implements ConditionESQueryBuilder {
 
@@ -53,17 +54,19 @@ public class PropertyConditionESQueryBuilder implements ConditionESQueryBuilder 
 
         String expectedValue = ConditionContextHelper.foldToASCII((String) condition.getParameter("propertyValue"));
         Object expectedValueInteger = condition.getParameter("propertyValueInteger");
+        Object expectedValueDouble = condition.getParameter("propertyValueDouble");
         Object expectedValueDate = convertDateToISO(condition.getParameter("propertyValueDate"));
         Object expectedValueDateExpr = condition.getParameter("propertyValueDateExpr");
 
-        List<?> expectedValues = ConditionContextHelper.foldToASCII((List<?>) condition.getParameter("propertyValues"));
-        List<?> expectedValuesInteger = (List<?>) condition.getParameter("propertyValuesInteger");
-        List<?> expectedValuesDate = convertDatesToISO((List<?>) condition.getParameter("propertyValuesDate"));
-        List<?> expectedValuesDateExpr = (List<?>) condition.getParameter("propertyValuesDateExpr");
+        Collection<?> expectedValues = ConditionContextHelper.foldToASCII((Collection<?>) condition.getParameter("propertyValues"));
+        Collection<?> expectedValuesInteger = (Collection<?>) condition.getParameter("propertyValuesInteger");
+        Collection<?> expectedValuesDouble = (Collection<?>) condition.getParameter("propertyValuesDouble");
+        Collection<?> expectedValuesDate = convertDatesToISO((Collection<?>) condition.getParameter("propertyValuesDate"));
+        Collection<?> expectedValuesDateExpr = (Collection<?>) condition.getParameter("propertyValuesDateExpr");
 
-        Object value = ObjectUtils.firstNonNull(expectedValue, expectedValueInteger, expectedValueDate, expectedValueDateExpr);
+        Object value = ObjectUtils.firstNonNull(expectedValue, expectedValueInteger, expectedValueDouble, expectedValueDate, expectedValueDateExpr);
         @SuppressWarnings("unchecked")
-        List<?> values = ObjectUtils.firstNonNull(expectedValues, expectedValuesInteger, expectedValuesDate, expectedValuesDateExpr);
+        Collection<?> values = ObjectUtils.firstNonNull(expectedValues, expectedValuesInteger, expectedValuesDouble, expectedValuesDate, expectedValuesDateExpr);
 
         switch (comparisonOperator) {
             case "equals":
@@ -86,7 +89,8 @@ public class PropertyConditionESQueryBuilder implements ConditionESQueryBuilder 
                 return QueryBuilders.rangeQuery(name).lte(value);
             case "between":
                 checkRequiredValuesSize(values, name, comparisonOperator, 2);
-                return QueryBuilders.rangeQuery(name).gte(values.get(0)).lte(values.get(1));
+                Iterator<?> iterator = values.iterator();
+                return QueryBuilders.rangeQuery(name).gte(iterator.next()).lte(iterator.next());
             case "exists":
                 return QueryBuilders.existsQuery(name);
             case "missing":
@@ -142,15 +146,36 @@ public class PropertyConditionESQueryBuilder implements ConditionESQueryBuilder 
                 return boolQueryBuilder;
             case "isDay":
                 checkRequiredValue(value, name, comparisonOperator, false);
-                return getIsSameDayRange(value, name);
+                return getIsSameDayRange(getDate(value), name);
             case "isNotDay":
                 checkRequiredValue(value, name, comparisonOperator, false);
-                return QueryBuilders.boolQuery().mustNot(getIsSameDayRange(value, name));
+                return QueryBuilders.boolQuery().mustNot(getIsSameDayRange(getDate(value), name));
+            case "distance":
+                final String unitString = (String) condition.getParameter("unit");
+                final Object centerObj = condition.getParameter("center");
+                final Double distance = (Double) condition.getParameter("distance");
+
+                if (centerObj != null && distance != null) {
+                    String centerString;
+                    if (centerObj instanceof org.apache.unomi.api.GeoPoint) {
+                        centerString = ((org.apache.unomi.api.GeoPoint) centerObj).asString();
+                    } else if (centerObj instanceof String) {
+                        centerString = (String) centerObj;
+                    } else {
+                        centerString = centerObj.toString();
+                    }
+                    DistanceUnit unit = unitString != null ? DistanceUnit.fromString(unitString) : DistanceUnit.DEFAULT;
+
+                    return QueryBuilders.geoDistanceQuery(name)
+                            .ignoreUnmapped(true)
+                            .distance(distance, unit)
+                            .point(new GeoPoint(centerString));
+                }
         }
         return null;
     }
 
-    private void checkRequiredValuesSize(List<?> values, String name, String operator, int expectedSize) {
+    private void checkRequiredValuesSize(Collection<?> values, String name, String operator, int expectedSize) {
         if (values == null || values.size() != expectedSize) {
             throw new IllegalArgumentException("Impossible to build ES filter, missing " + expectedSize + " values for a condition using comparisonOperator: " + operator + ", and propertyName: " + name);
         }
@@ -180,7 +205,7 @@ public class PropertyConditionESQueryBuilder implements ConditionESQueryBuilder 
         }
     }
 
-    private List<?> convertDatesToISO(List<?> datesValues) {
+    private Collection<?> convertDatesToISO(Collection<?> datesValues) {
         List<Object> results = new ArrayList<>();
         if (datesValues == null) {
             return null;

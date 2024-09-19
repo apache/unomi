@@ -1,0 +1,17 @@
+{
+  "itemId" : "score1",
+  "metadata" : {
+    "id" : "score1",
+    "name" : "Score 1",
+    "enabled" : true
+  },
+  "elements" : [
+    {
+      "condition" : {
+        "type" : "matchAllCondition",
+        "parameterValues" : {}
+      },
+      "value" : 1
+    }
+  ]
+}

@@ -20,23 +20,16 @@ import org.apache.unomi.api.Patch;
 import org.apache.unomi.api.PropertyType;
 import org.apache.unomi.api.actions.ActionType;
 import org.apache.unomi.api.conditions.ConditionType;
-import org.apache.unomi.api.services.DefinitionsService;
-import org.apache.unomi.api.services.PatchService;
-import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
-import org.apache.unomi.persistence.spi.PersistenceService;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.ops4j.pax.exam.junit.PaxExam;
 import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
 import org.ops4j.pax.exam.spi.reactors.PerSuite;
-import org.ops4j.pax.exam.util.Filter;
-import org.osgi.framework.BundleContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.inject.Inject;
 import java.io.IOException;
 
 @RunWith(PaxExam.class)
@@ -44,27 +37,8 @@ import java.io.IOException;
 public class PatchIT extends BaseIT {
     private Logger logger = LoggerFactory.getLogger(PatchIT.class);
 
-    @Inject
-    @Filter(timeout = 600000)
-    protected PatchService patchService;
-
-    @Inject
-    @Filter(timeout = 600000)
-    protected ProfileService profileService;
-
-    @Inject
-    @Filter(timeout = 600000)
-    protected DefinitionsService definitionsService;
-
-    @Inject
-    @Filter(timeout = 600000)
-    protected PersistenceService persistenceService;
-
-    @Inject
-    protected BundleContext bundleContext;
-
     @Test
-    public void testPatch() throws IOException, InterruptedException {
+    public void testPatch() throws IOException {
         PropertyType company = profileService.getPropertyType("company");
 
         try {
@@ -83,7 +57,7 @@ public class PatchIT extends BaseIT {
     }
 
     @Test
-    public void testOverride() throws IOException, InterruptedException {
+    public void testOverride() throws IOException {
         PropertyType gender = profileService.getPropertyType("gender");
 
         try {
@@ -122,7 +96,7 @@ public class PatchIT extends BaseIT {
     @Test
     public void testPatchOnConditionType() throws IOException, InterruptedException {
         ConditionType formCondition = definitionsService.getConditionType("formEventCondition");
-        Assert.assertTrue(formCondition.getMetadata().getSystemTags().contains("usableInPastEventCondition"));
+        Assert.assertTrue(formCondition.getMetadata().getSystemTags().contains("profileTags"));
 
         try {
             Patch patch = CustomObjectMapper.getObjectMapper().readValue(bundleContext.getBundle().getResource("patch4.json"), Patch.class);
@@ -132,7 +106,7 @@ public class PatchIT extends BaseIT {
             definitionsService.refresh();
 
             ConditionType newFormCondition = definitionsService.getConditionType("formEventCondition");
-            Assert.assertFalse(newFormCondition.getMetadata().getSystemTags().contains("usableInPastEventCondition"));
+            Assert.assertFalse(newFormCondition.getMetadata().getSystemTags().contains("profileTags"));
         } finally {
             definitionsService.setConditionType(formCondition);
         }

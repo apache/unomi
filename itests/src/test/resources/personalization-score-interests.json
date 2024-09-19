@@ -1,0 +1,178 @@
+{
+  "source": {
+    "itemId": "CMSServer",
+    "itemType": "custom",
+    "scope": "acme",
+    "properties": {}
+  },
+  "requireSegments": true,
+  "requiredProfileProperties": [
+    "*"
+  ],
+  "requiredSessionProperties": [
+    "*"
+  ],
+  "personalizations": [
+    {
+      "id": "perso-by-interest",
+      "strategy": "score-sorted",
+      "strategyOptions": {
+        "threshold": 25
+      },
+      "contents": [
+        {
+          "id": "matching-football-cars-interests-variant-expected-score-91",
+          "filters": [
+            {
+              "condition": {
+                "type": "profilePropertyCondition",
+                "parameterValues": {
+                  "propertyName": "properties.age",
+                  "propertyValueInteger": "25",
+                  "comparisonOperator": "greaterThan"
+                }
+              }
+            }
+          ],
+          "properties": {
+            "interests": "football cars"
+          }
+        },
+        {
+          "id": "not-matching-football-cars-interests-variant-expected-score-90",
+          "filters": [
+            {
+              "condition": {
+                "type": "profilePropertyCondition",
+                "parameterValues": {
+                  "propertyName": "properties.age",
+                  "propertyValueInteger": "35",
+                  "comparisonOperator": "greaterThan"
+                }
+              }
+            }
+          ],
+          "properties": {
+            "interests": "football cars"
+          }
+        },
+        {
+          "id": "matching-football-interests-variant-expected-score-51",
+          "filters": [
+            {
+              "condition": {
+                "type": "profilePropertyCondition",
+                "parameterValues": {
+                  "propertyName": "properties.age",
+                  "propertyValueInteger": "25",
+                  "comparisonOperator": "greaterThan"
+                }
+              }
+            }
+          ],
+          "properties": {
+            "interests": "football"
+          }
+        },
+        {
+          "id": "less-threshold-fishing-interests-variant-expected-score-21",
+          "filters": [
+            {
+              "condition": {
+                "type": "profilePropertyCondition",
+                "parameterValues": {
+                  "propertyName": "properties.age",
+                  "propertyValueInteger": "25",
+                  "comparisonOperator": "greaterThan"
+                }
+              }
+            }
+          ],
+          "properties": {
+            "interests": "fishing"
+          }
+        },
+        {
+          "id": "matching-tennis-interests-variant-expected-score-31",
+          "filters": [
+            {
+              "condition": {
+                "type": "profilePropertyCondition",
+                "parameterValues": {
+                  "propertyName": "properties.age",
+                  "propertyValueInteger": "25",
+                  "comparisonOperator": "greaterThan"
+                }
+              }
+            }
+          ],
+          "properties": {
+            "interests": "tennis"
+          }
+        },
+        {
+          "id": "not-matching-tennis-fishing-interests-variant-expected-score-50",
+          "filters": [
+            {
+              "condition": {
+                "type": "profilePropertyCondition",
+                "parameterValues": {
+                  "propertyName": "properties.age",
+                  "propertyValueInteger": "35",
+                  "comparisonOperator": "greaterThan"
+                }
+              }
+            }
+          ],
+          "properties": {
+            "interests": "tennis fishing"
+          }
+        },
+        {
+          "id": "not-matching-tennis-interests-custom-score-100-variant-expected-score-30",
+          "filters": [
+            {
+              "condition": {
+                "type": "profilePropertyCondition",
+                "parameterValues": {
+                  "propertyName": "properties.age",
+                  "propertyValueInteger": "35",
+                  "comparisonOperator": "greaterThan"
+                }
+              },
+              "properties": {
+                "score": 100
+              }
+            }
+          ],
+          "properties": {
+            "interests": "tennis"
+          }
+        },
+        {
+          "id": "matching-fishing-interests-custom-score-100-variant-expected-score-120",
+          "filters": [
+            {
+              "condition": {
+                "type": "profilePropertyCondition",
+                "parameterValues": {
+                  "propertyName": "properties.age",
+                  "propertyValueInteger": "25",
+                  "comparisonOperator": "greaterThan"
+                }
+              },
+              "properties": {
+                "score": 100
+              }
+            }
+          ],
+          "properties": {
+            "interests": "fishing"
+          }
+        }
+      ]
+    }
+  ],
+  "sessionId": "dummy-session",
+  "profileId": "test-profile-id"
+}

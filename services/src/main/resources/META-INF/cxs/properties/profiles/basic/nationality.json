@@ -5,11 +5,13 @@
         "systemTags": [
             "properties",
             "profileProperties",
-            "basicProfileProperties"
+            "basicProfileProperties",
+            "profileTags",
+            "autocompleted"
         ]
     },
     "type": "string",
     "defaultValue": "",
-    "automaticMappingsFrom": [ ],
+    "automaticMappingsFrom": [],
     "rank": "103.0"
 }

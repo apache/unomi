@@ -1,0 +1,13 @@
+{
+  "policy": {
+    "phases": {
+      "hot": {
+        "actions": {
+          "rollover": {
+            #rolloverHotActions
+          }
+        }
+      }
+    }
+  }
+}

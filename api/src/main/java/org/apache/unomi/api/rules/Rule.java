@@ -22,6 +22,7 @@ import org.apache.unomi.api.actions.Action;
 import org.apache.unomi.api.conditions.Condition;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * A conditional set of actions to be executed in response to incoming events. Triggering of rules is guarded by a condition: the rule is only triggered if the associated
@@ -51,6 +52,8 @@ public class Rule extends MetadataItem {
     private boolean raiseEventOnlyOnceForProfile = false;
 
     private boolean raiseEventOnlyOnceForSession = false;
+
+    private boolean raiseEventOnlyOnce = false;
 
     private int priority;
 
@@ -120,7 +123,7 @@ public class Rule extends MetadataItem {
      * @param linkedItems the linked items
      */
     public void setLinkedItems(List<String> linkedItems) {
-        this.linkedItems = linkedItems;
+        this.linkedItems = linkedItems == null ? null : linkedItems.stream().distinct().collect(Collectors.toList());
     }
 
     /**
@@ -130,6 +133,15 @@ public class Rule extends MetadataItem {
      */
     public boolean isRaiseEventOnlyOnceForProfile() {
         return raiseEventOnlyOnceForProfile;
+    }
+
+    /**
+     * Determines whether the event raised when the rule is triggered should only be raised once
+     *
+     * @return {@code true} if the rule-triggered event should only be raised once per profile
+     */
+    public boolean isRaiseEventOnlyOnce() {
+        return raiseEventOnlyOnce;
     }
 
     /**
@@ -157,6 +169,15 @@ public class Rule extends MetadataItem {
      */
     public void setRaiseEventOnlyOnceForSession(boolean raiseEventOnlyOnceForSession) {
         this.raiseEventOnlyOnceForSession = raiseEventOnlyOnceForSession;
+    }
+
+    /**
+     * Specifies whether the event raised when the rule is triggered should only be raised once per {@link Event}.
+     *
+     * @param raiseEventOnlyOnce {@code true} if the rule-triggered event should only be raised once per event, {@code false} otherwise
+     */
+    public void setRaiseEventOnlyOnce(boolean raiseEventOnlyOnce) {
+        this.raiseEventOnlyOnce = raiseEventOnlyOnce;
     }
 
     /**

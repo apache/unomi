@@ -4,6 +4,7 @@
     "name": "profileUserListCondition",
     "description": "",
     "systemTags": [
+      "availableToEndUser",
       "profileTags",
       "aggregated",
       "condition",

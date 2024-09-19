@@ -1,0 +1,13 @@
+{
+    "eventType": "flattened",
+    "scope": "dummy_scope",
+    "flattenedProperties": {
+        "interests": {
+            "cars": 15,
+            "football": 59
+        }
+    },
+    "properties": {
+        "marker": "###EVENT_MARKER###"
+    }
+}

@@ -98,7 +98,7 @@ public class GeonamesServiceImpl implements GeonamesService {
         }
         final File f = new File(pathToGeonamesDatabase);
         if (f.exists()) {
-            schedulerService.getScheduleExecutorService().schedule(new TimerTask() {
+            schedulerService.getSharedScheduleExecutorService().schedule(new TimerTask() {
                 @Override
                 public void run() {
                     importGeoNameDatabase(f);
@@ -111,7 +111,7 @@ public class GeonamesServiceImpl implements GeonamesService {
         Map<String,Map<String,Object>> typeMappings = persistenceService.getPropertiesMapping(GeonameEntry.ITEM_TYPE);
         if (typeMappings == null || typeMappings.size() == 0) {
             logger.warn("Type mappings for type {} are not yet installed, delaying import until they are ready!", GeonameEntry.ITEM_TYPE);
-            schedulerService.getScheduleExecutorService().schedule(new TimerTask() {
+            schedulerService.getSharedScheduleExecutorService().schedule(new TimerTask() {
                 @Override
                 public void run() {
                     importGeoNameDatabase(f);
@@ -196,10 +196,10 @@ public class GeonamesServiceImpl implements GeonamesService {
 
         PartialList<GeonameEntry> country = buildHierarchy(andCondition, featureCodeCondition, "countryCode", entry.getCountryCode(), COUNTRY_FEATURE_CODES, 0, 1);
 
-        if (!StringUtils.isEmpty(entry.getAdmin1Code())) {
+        if (StringUtils.isNotEmpty(entry.getAdmin1Code())) {
             PartialList<GeonameEntry> adm1 = buildHierarchy(andCondition, featureCodeCondition, "admin1Code", entry.getAdmin1Code(), ADM1_FEATURE_CODES, 0, 1);
 
-            if (!StringUtils.isEmpty(entry.getAdmin2Code())) {
+            if (StringUtils.isNotEmpty(entry.getAdmin2Code())) {
                 PartialList<GeonameEntry> adm2 = buildHierarchy(andCondition, featureCodeCondition, "admin2Code", entry.getAdmin2Code(), ADM2_FEATURE_CODES, 0, 1);
 
                 if (!adm2.getList().isEmpty()) {

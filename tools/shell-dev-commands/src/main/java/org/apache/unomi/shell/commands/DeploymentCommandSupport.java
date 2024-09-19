@@ -73,6 +73,7 @@ public abstract class DeploymentCommandSupport implements Action {
     public static final String VALUE_DEFINITION_TYPE = "values";
     public static final String MERGER_DEFINITION_TYPE = "mergers";
     public static final String MAPPING_DEFINITION_TYPE = "mappings";
+    public static final String JSON_SCHEMA_DEFINITION_TYPE = "jsonschema";
 
     protected final static List<String> definitionTypes = Arrays.asList(
             CONDITION_DEFINITION_TYPE,
@@ -87,7 +88,8 @@ public abstract class DeploymentCommandSupport implements Action {
             PATCH_DEFINITION_TYPE,
             VALUE_DEFINITION_TYPE,
             MERGER_DEFINITION_TYPE,
-            MAPPING_DEFINITION_TYPE);
+            MAPPING_DEFINITION_TYPE,
+            JSON_SCHEMA_DEFINITION_TYPE);
 
     @Argument(index = 0, name = "bundleId", description = "The bundle identifier where to find the definition", multiValued = false)
     Long bundleIdentifier;

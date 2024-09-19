@@ -17,14 +17,17 @@
 
 package org.apache.unomi.persistence.spi;
 
+import org.apache.unomi.api.CustomItem;
 import org.apache.unomi.api.Item;
 import org.apache.unomi.api.PartialList;
+import org.apache.unomi.api.PropertyType;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.persistence.spi.aggregate.BaseAggregate;
 
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 
 /**
  * A service to provide persistence and retrieval of context server entities.
@@ -44,7 +47,7 @@ public interface PersistenceService {
     /**
      * Retrieves all known items of the specified class, ordered according to the specified {@code sortBy} String and and paged: only {@code size} of them are retrieved,
      * starting with the {@code offset}-th one.
-     *
+     * <p>
      * TODO: use a Query object instead of distinct parameters?
      *
      * @param <T>    the type of the {@link Item}s we want to retrieve
@@ -60,6 +63,34 @@ public interface PersistenceService {
     <T extends Item> PartialList<T> getAllItems(Class<T> clazz, int offset, int size, String sortBy);
 
     /**
+     * Retrieves all known items of the specified class, ordered according to the specified {@code sortBy} String and and paged: only {@code size} of them are retrieved,
+     * starting with the {@code offset}-th one.
+     * <p>
+     * TODO: use a Query object instead of distinct parameters?
+     *
+     * @param <T>                the type of the {@link Item}s we want to retrieve
+     * @param clazz              the {@link Item} subclass of entities we want to retrieve
+     * @param offset             zero or a positive integer specifying the position of the first item in the total ordered collection of matching items
+     * @param size               a positive integer specifying how many matching items should be retrieved or {@code -1} if all of them should be retrieved
+     * @param sortBy             an optional ({@code null} if no sorting is required) String of comma ({@code ,}) separated property names on which ordering should be performed, ordering
+     *                           elements according to the property order in the
+     *                           String, considering each in turn and moving on to the next one in case of equality of all preceding ones. Each property name is optionally followed by
+     *                           a column ({@code :}) and an order specifier: {@code asc} or {@code desc}.
+     * @param scrollTimeValidity the time the scrolling query should stay valid. This must contain a time unit value such as the ones supported by ElasticSearch, such as
+     *                           *                     the ones declared here : https://www.elastic.co/guide/en/elasticsearch/reference/current/common-options.html#time-units
+     * @return a {@link PartialList} of pages items with the given type
+     */
+    <T extends Item> PartialList<T> getAllItems(final Class<T> clazz, int offset, int size, String sortBy, String scrollTimeValidity);
+
+    /**
+     * Return true if the item which is saved in the persistence service is consistent
+     *
+     * @param item the item to the check if consistent
+     * @return {@code true} if the item is consistent, false otherwise
+     */
+    boolean isConsistent(Item item);
+
+    /**
      * Persists the specified Item in the context server.
      *
      * @param item the item to persist
@@ -70,62 +101,180 @@ public interface PersistenceService {
     /**
      * Persists the specified Item in the context server.
      *
-     * @param item the item to persist
+     * @param item        the item to persist
      * @param useBatching whether to use batching or not for saving the item. If activating there may be a delay between
-     *                 the call to this method and the actual saving in the persistence backend.
-     *
+     *                    the call to this method and the actual saving in the persistence backend.
      * @return {@code true} if the item was properly persisted, {@code false} otherwise
      */
     boolean save(Item item, boolean useBatching);
 
     /**
+     * Persists the specified Item in the context server.
+     *
+     * @param item            the item to persist
+     * @param useBatching     whether to use batching or not for saving the item. If activating there may be a delay between
+     *                        the call to this method and the actual saving in the persistence backend
+     * @param alwaysOverwrite whether to overwrite a document even if we are holding an old item when saving
+     * @return {@code true} if the item was properly persisted, {@code false} otherwise
+     */
+    boolean save(Item item, Boolean useBatching, Boolean alwaysOverwrite);
+
+    /**
      * Updates the item of the specified class and identified by the specified identifier with new property values provided as name - value pairs in the specified Map.
      *
-     * @param itemId   the identifier of the item we want to update
-     * @param dateHint a Date helping in identifying where the item is located
-     * @param clazz    the Item subclass of the item to update
-     * @param source   a Map with entries specifying as key the property name to update and as value its new value
+     * @param item   the item we want to update
+     * @param clazz  the Item subclass of the item to update
+     * @param source a Map with entries specifying as key the property name to update and as value its new value
      * @return {@code true} if the update was successful, {@code false} otherwise
      */
-    boolean update(String itemId, Date dateHint, Class<?> clazz, Map<?, ?> source);
+    default boolean update(Item item, Class<?> clazz, Map<?, ?> source) {
+        return update(item, null, clazz, source);
+    }
+
+    /**
+     * @deprecated use {@link #update(Item, Class, Map)}
+     */
+    @Deprecated
+    boolean update(Item item, Date dateHint, Class<?> clazz, Map<?, ?> source);
 
     /**
      * Updates the item of the specified class and identified by the specified identifier with a new property value for the specified property name. Same as
-     * {@code update(itemId, dateHint, clazz, Collections.singletonMap(propertyName, propertyValue))}
+     * {@code update(itemId, clazz, Collections.singletonMap(propertyName, propertyValue))}
      *
-     * @param itemId        the identifier of the item we want to update
-     * @param dateHint      a Date helping in identifying where the item is located
+     * @param item          the item we want to update
      * @param clazz         the Item subclass of the item to update
      * @param propertyName  the name of the property to update
      * @param propertyValue the new value of the property
      * @return {@code true} if the update was successful, {@code false} otherwise
      */
-    boolean update(String itemId, Date dateHint, Class<?> clazz, String propertyName, Object propertyValue);
+    default boolean update(Item item, Class<?> clazz, String propertyName, Object propertyValue) {
+        return update(item, null, clazz, propertyName, propertyValue);
+    }
+
+    /**
+     * @deprecated use {@link #update(Item, Class, String, Object)}
+     */
+    @Deprecated
+    boolean update(Item item, Date dateHint, Class<?> clazz, String propertyName, Object propertyValue);
+
+    /**
+     * Updates the item of the specified class and identified by the specified identifier with new property values provided as name - value pairs in the specified Map.
+     *
+     * @param item            the item we want to update
+     * @param clazz           the Item subclass of the item to update
+     * @param source          a Map with entries specifying as key the property name to update and as value its new value
+     * @param alwaysOverwrite whether to overwrite a document even if we are holding an old item when saving
+     * @return {@code true} if the update was successful, {@code false} otherwise
+     */
+    default boolean update(Item item, Class<?> clazz, Map<?, ?> source, final boolean alwaysOverwrite) {
+        return update(item, null, clazz, source, alwaysOverwrite);
+    }
+
+    /**
+     * @deprecated use {@link #update(Item, Class, Map, boolean)}
+     */
+    @Deprecated
+    boolean update(Item item, Date dateHint, Class<?> clazz, Map<?, ?> source, final boolean alwaysOverwrite);
+
+    /**
+     * Updates Map of items of the specified class and identified by the specified identifier with a new property value for the specified property name. Same as
+     * {@code update(itemId, clazz, Collections.singletonMap(propertyName, propertyValue))}
+     *
+     * @param items A map the consist of item (key) and properties to update (value)
+     * @param clazz the Item subclass of the item to update
+     * @return List of failed Items Ids, if all succesful then returns an empty list. if the whole operation failed then will return null
+     */
+    default List<String> update(Map<Item, Map> items, Class clazz) {
+        return update(items, null, clazz);
+    }
+
+    /**
+     * @deprecated use {@link #update(Map, Class)}
+     */
+    @Deprecated
+    List<String> update(Map<Item, Map> items, Date dateHint, Class clazz);
 
     /**
      * Updates the item of the specified class and identified by the specified identifier with a new property value for the specified property name. Same as
-     * {@code update(itemId, dateHint, clazz, Collections.singletonMap(propertyName, propertyValue))}
+     * {@code update(itemId, clazz, Collections.singletonMap(propertyName, propertyValue))}
      *
-     * @param itemId        the identifier of the item we want to update
-     * @param dateHint      a Date helping in identifying where the item is located
-     * @param clazz         the Item subclass of the item to update
-     * @param script        inline script
-     * @param scriptParams  script params
+     * @param item         the item we want to update
+     * @param clazz        the Item subclass of the item to update
+     * @param script       inline script
+     * @param scriptParams script params
      * @return {@code true} if the update was successful, {@code false} otherwise
      */
-    boolean updateWithScript(String itemId, Date dateHint, Class<?> clazz, String script, Map<String, Object> scriptParams);
+    default boolean updateWithScript(Item item, Class<?> clazz, String script, Map<String, Object> scriptParams) {
+        return updateWithScript(item, null, clazz, script, scriptParams);
+    }
 
     /**
-     * Updates the items of the specified class by a query with a new property value for the specified property name based on a provided script.
+     * @deprecated use {@link #updateWithScript(Item, Class, String, Map)}
+     */
+    @Deprecated
+    boolean updateWithScript(Item item, Date dateHint, Class<?> clazz, String script, Map<String, Object> scriptParams);
+
+    /**
+     * Updates the items of the specified class by a query with a new property value for the specified property name
+     * based on provided scripts and script parameters
      *
-     * @param dateHint      a Date helping in identifying where the item is located
-     * @param clazz         the Item subclass of the item to update
-     * @param scripts       inline scripts array
-     * @param scriptParams  script params array
-     * @param conditions    conditions array
+     * @param clazz        the Item subclass of the item to update
+     * @param scripts      inline scripts array
+     * @param scriptParams script params array
+     * @param conditions   conditions array
      * @return {@code true} if the update was successful, {@code false} otherwise
      */
+    default boolean updateWithQueryAndScript(Class<?> clazz, String[] scripts, Map<String, Object>[] scriptParams, Condition[] conditions) {
+        return updateWithQueryAndScript(null, clazz, scripts, scriptParams, conditions);
+    }
+
+    /**
+     * @deprecated use {@link #updateWithQueryAndScript(Class, String[], Map[], Condition[])}
+     */
+    @Deprecated
     boolean updateWithQueryAndScript(Date dateHint, Class<?> clazz, String[] scripts, Map<String, Object>[] scriptParams, Condition[] conditions);
+
+    /**
+     * Updates the items of the specified class by a query with a new property value for the specified property name
+     * based on provided stored scripts and script parameters
+     *
+     * @param clazz        the Item subclass of the item to update
+     * @param scripts      Stored scripts name
+     * @param scriptParams script params array
+     * @param conditions   conditions array
+     * @return {@code true} if the update was successful, {@code false} otherwise
+     */
+    default boolean updateWithQueryAndStoredScript(Class<?> clazz, String[] scripts, Map<String, Object>[] scriptParams, Condition[] conditions) {
+        return updateWithQueryAndStoredScript(null, clazz, scripts, scriptParams, conditions);
+    }
+
+    /**
+     * Updates the items of the specified class by a query with a new property value for the specified property name
+     * based on provided stored scripts and script parameters,
+     * This one is able to perform an update on multiple types in a single run, be careful with your query as it will be performed on all of them.
+     *
+     * @param classes      classes of items to update, be careful all of them will be submitted to update for all scripts/conditions
+     * @param scripts      Stored scripts name
+     * @param scriptParams script params array
+     * @param conditions   conditions array
+     * @param waitForComplete if true, wait for the ES execution to be complete
+     * @return {@code true} if the update was successful, {@code false} otherwise
+     */
+    boolean updateWithQueryAndStoredScript(Class<?>[] classes, String[] scripts, Map<String, Object>[] scriptParams, Condition[] conditions, boolean waitForComplete);
+
+    /**
+     * @deprecated use {@link #updateWithQueryAndStoredScript(Class, String[], Map[], Condition[])}
+     */
+    @Deprecated
+    boolean updateWithQueryAndStoredScript(Date dateHint, Class<?> clazz, String[] scripts, Map<String, Object>[] scriptParams, Condition[] conditions);
+
+    /**
+     * Store script in the Database for later usage with updateWithQueryAndStoredScript function for example.
+     *
+     * @param scripts inline scripts map indexed by id
+     * @return {@code true} if the update was successful, {@code false} otherwise
+     */
+    boolean storeScripts(Map<String, String> scripts);
 
     /**
      * Retrieves the item identified with the specified identifier and with the specified Item subclass if it exists.
@@ -138,15 +287,27 @@ public interface PersistenceService {
     <T extends Item> T load(String itemId, Class<T> clazz);
 
     /**
-     * Retrieves the item identified with the specified identifier and with the specified Item subclass if it exists.
-     *
-     * @param <T>      the type of the Item subclass we want to retrieve
-     * @param itemId   the identifier of the item we want to retrieve
-     * @param dateHint a Date helping in identifying where the item is located
-     * @param clazz    the {@link Item} subclass of the item we want to retrieve
-     * @return the item identified with the specified identifier and with the specified Item subclass if it exists, {@code null} otherwise
+     * @deprecated use {@link #load(String, Class)}
      */
+    @Deprecated
     <T extends Item> T load(String itemId, Date dateHint, Class<T> clazz);
+
+    /**
+     * Load a custom item type identified by an identifier, an optional date hint and the identifier of the custom item type
+     *
+     * @param itemId         the identifier of the custom type we want to retrieve
+     * @param customItemType an identifier of the custom item type to load
+     * @return the CustomItem instance with the specified identifier and the custom item type if it exists, {@code null} otherwise
+     */
+    default CustomItem loadCustomItem(String itemId, String customItemType) {
+        return loadCustomItem(itemId, null, customItemType);
+    }
+
+    /**
+     * @deprecated use {@link #loadCustomItem(String, String)}
+     */
+    @Deprecated
+    CustomItem loadCustomItem(String itemId, Date dateHint, String customItemType);
 
     /**
      * Deletes the item identified with the specified identifier and with the specified Item subclass if it exists.
@@ -157,6 +318,15 @@ public interface PersistenceService {
      * @return {@code true} if the deletion was successful, {@code false} otherwise
      */
     <T extends Item> boolean remove(String itemId, Class<T> clazz);
+
+    /**
+     * Remove a custom item identified by the custom item identifier and the custom item type identifier
+     *
+     * @param itemId         the identifier of the custom item to be removed
+     * @param customItemType the name of the custom item type
+     * @return {@code true} if the deletion was successful, {@code false} otherwise
+     */
+    boolean removeCustomItem(String itemId, String customItemType);
 
     /**
      * Deletes items with the specified Item subclass matching the specified {@link Condition}.
@@ -188,7 +358,7 @@ public interface PersistenceService {
     /**
      * Retrieve the type mappings for a given itemType. This method queries the persistence service implementation
      * to retrieve any type mappings it may have for the specified itemType.
-     *
+     * <p>
      * This method may not return any results if the implementation doesn't support property type mappings
      *
      * @param itemType the itemType we want to retrieve the mappings for
@@ -205,17 +375,25 @@ public interface PersistenceService {
      */
     Map<String, Object> getPropertyMapping(String property, String itemType);
 
+    /**
+     * Create the persistence mapping for specific property for a given type.
+     *
+     * @param property the PropertyType to create mapping for
+     * @param itemType the itemType we want to retrieve the mappings for
+     */
+    void setPropertyMapping(PropertyType property, String itemType);
 
     /**
      * Create mapping
-     * @param type the type
+     *
+     * @param type   the type
      * @param source the source
      */
     void createMapping(String type, String source);
 
     /**
      * Checks whether the specified item satisfies the provided condition.
-     *
+     * <p>
      * TODO: rename to isMatching?
      *
      * @param query the condition we're testing the specified item against
@@ -225,18 +403,27 @@ public interface PersistenceService {
     boolean testMatch(Condition query, Item item);
 
     /**
+     * validates if a condition throws exception at query build.
+     *
+     * @param condition the condition we're testing the specified item against
+     * @param item      the item we're checking against the specified condition
+     * @return {@code true} if the item satisfies the condition, {@code false} otherwise
+     */
+    boolean isValidCondition(Condition condition, Item item);
+
+    /**
      * Same as {@code query(fieldName, fieldValue, sortBy, clazz, 0, -1).getList()}
      *
-     * @see #query(Condition, String, Class, int, int)
-     * @param <T>         the type of the Item subclass we want to retrieve
-     * @param fieldName   the name of the field which we want items to have the specified values
-     * @param fieldValue  the value the items to retrieve should have for the specified field
-     * @param sortBy      an optional ({@code null} if no sorting is required) String of comma ({@code ,}) separated property names on which ordering should be performed, ordering
-     *                    elements according to the property order in the
-     *                    String, considering each in turn and moving on to the next one in case of equality of all preceding ones. Each property name is optionally followed by
-     *                    a column ({@code :}) and an order specifier: {@code asc} or {@code desc}.
-     * @param clazz       the {@link Item} subclass of the items we want to retrieve
+     * @param <T>        the type of the Item subclass we want to retrieve
+     * @param fieldName  the name of the field which we want items to have the specified values
+     * @param fieldValue the value the items to retrieve should have for the specified field
+     * @param sortBy     an optional ({@code null} if no sorting is required) String of comma ({@code ,}) separated property names on which ordering should be performed, ordering
+     *                   elements according to the property order in the
+     *                   String, considering each in turn and moving on to the next one in case of equality of all preceding ones. Each property name is optionally followed by
+     *                   a column ({@code :}) and an order specifier: {@code asc} or {@code desc}.
+     * @param clazz      the {@link Item} subclass of the items we want to retrieve
      * @return a list of items matching the specified criteria
+     * @see #query(Condition, String, Class, int, int)
      */
     <T extends Item> List<T> query(String fieldName, String fieldValue, String sortBy, Class<T> clazz);
 
@@ -345,16 +532,16 @@ public interface PersistenceService {
      * are retrieved, starting with the {@code offset}-th one. If a scroll identifier and time validity are specified, they will be used to perform a scrolling query, meaning
      * that only partial results will be returned, but the scrolling can be continued.
      *
-     * @param <T>    the type of the Item subclass we want to retrieve
-     * @param query  the {@link Condition} the items must satisfy to be retrieved
-     * @param sortBy an optional ({@code null} if no sorting is required) String of comma ({@code ,}) separated property names on which ordering should be performed, ordering
-     *               elements according to the property order in the
-     *               String, considering each in turn and moving on to the next one in case of equality of all preceding ones. Each property name is optionally followed by
-     *               a column ({@code :}) and an order specifier: {@code asc} or {@code desc}.
-     * @param clazz  the {@link Item} subclass of the items we want to retrieve
-     * @param offset zero or a positive integer specifying the position of the first item in the total ordered collection of matching items
-     * @param size   a positive integer specifying how many matching items should be retrieved or {@code -1} if all of them should be retrieved. In the case of a scroll query
-     *               this will be used as the scrolling window size.
+     * @param <T>                the type of the Item subclass we want to retrieve
+     * @param query              the {@link Condition} the items must satisfy to be retrieved
+     * @param sortBy             an optional ({@code null} if no sorting is required) String of comma ({@code ,}) separated property names on which ordering should be performed, ordering
+     *                           elements according to the property order in the
+     *                           String, considering each in turn and moving on to the next one in case of equality of all preceding ones. Each property name is optionally followed by
+     *                           a column ({@code :}) and an order specifier: {@code asc} or {@code desc}.
+     * @param clazz              the {@link Item} subclass of the items we want to retrieve
+     * @param offset             zero or a positive integer specifying the position of the first item in the total ordered collection of matching items
+     * @param size               a positive integer specifying how many matching items should be retrieved or {@code -1} if all of them should be retrieved. In the case of a scroll query
+     *                           this will be used as the scrolling window size.
      * @param scrollTimeValidity the time the scrolling query should stay valid. This must contain a time unit value such as the ones supported by ElasticSearch, such as
      *                           the ones declared here : https://www.elastic.co/guide/en/elasticsearch/reference/current/common-options.html#time-units
      * @return a {@link PartialList} of items matching the specified criteria, with an scroll identifier and the scroll validity used if a scroll query was requested.
@@ -363,15 +550,49 @@ public interface PersistenceService {
 
     /**
      * Continues the execution of a scroll query, to retrieve the next results. If there are no more results the scroll query is also cleared.
-     * @param clazz  the {@link Item} subclass of the items we want to retrieve
-     * @param scrollIdentifier a scroll identifier obtained by the execution of a first query and returned in the {@link PartialList} object
+     *
+     * @param clazz              the {@link Item} subclass of the items we want to retrieve
+     * @param scrollIdentifier   a scroll identifier obtained by the execution of a first query and returned in the {@link PartialList} object
      * @param scrollTimeValidity a scroll time validity value for the scroll query to stay valid. This must contain a time unit value such as the ones supported by ElasticSearch, such as
      *                           the ones declared here : https://www.elastic.co/guide/en/elasticsearch/reference/current/common-options.html#time-units
-     * @param <T>    the type of the Item subclass we want to retrieve
+     * @param <T>                the type of the Item subclass we want to retrieve
      * @return a {@link PartialList} of items matching the specified criteria, with an scroll identifier and the scroll validity used if a scroll query was requested. Note that if
      * there are no more results the list will be empty but not null.
      */
     <T extends Item> PartialList<T> continueScrollQuery(Class<T> clazz, String scrollIdentifier, String scrollTimeValidity);
+
+    /**
+     * Retrieves a list of items satisfying the specified {@link Condition}, ordered according to the specified
+     * {@code sortBy} String and paged: only {@code size} of them are retrieved, starting with the
+     * {@code offset}-th one. If a scroll identifier and time validity are specified, they will be used to perform a
+     * scrolling query, meaning that only partial results will be returned, but the scrolling can be continued.
+     *
+     * @param query              the {@link Condition} the items must satisfy to be retrieved
+     * @param sortBy             an optional ({@code null} if no sorting is required) String of comma ({@code ,}) separated property names on which ordering should be performed, ordering
+     *                           elements according to the property order in the
+     *                           String, considering each in turn and moving on to the next one in case of equality of all preceding ones. Each property name is optionally followed by
+     *                           a column ({@code :}) and an order specifier: {@code asc} or {@code desc}.
+     * @param customItemType     the identifier of the custom item type we want to query
+     * @param offset             zero or a positive integer specifying the position of the first item in the total ordered collection of matching items
+     * @param size               a positive integer specifying how many matching items should be retrieved or {@code -1} if all of them should be retrieved. In the case of a scroll query
+     *                           this will be used as the scrolling window size.
+     * @param scrollTimeValidity the time the scrolling query should stay valid. This must contain a time unit value such as the ones supported by ElasticSearch, such as
+     *                           the ones declared here : https://www.elastic.co/guide/en/elasticsearch/reference/current/common-options.html#time-units
+     * @return a {@link PartialList} of items matching the specified criteria, with an scroll identifier and the scroll validity used if a scroll query was requested.
+     */
+    PartialList<CustomItem> queryCustomItem(Condition query, String sortBy, String customItemType, int offset, int size, String scrollTimeValidity);
+
+    /**
+     * Continues the execution of a scroll query, to retrieve the next results. If there are no more results the scroll query is also cleared.
+     *
+     * @param customItemType     the identifier of the custom item type we want to continue querying
+     * @param scrollIdentifier   a scroll identifier obtained by the execution of a first query and returned in the {@link PartialList} object
+     * @param scrollTimeValidity a scroll time validity value for the scroll query to stay valid. This must contain a time unit value such as the ones supported by ElasticSearch, such as
+     *                           the ones declared here : https://www.elastic.co/guide/en/elasticsearch/reference/current/common-options.html#time-units
+     * @return a {@link PartialList} of items matching the specified criteria, with an scroll identifier and the scroll validity used if a scroll query was requested. Note that if
+     * there are no more results the list will be empty but not null.
+     */
+    PartialList<CustomItem> continueCustomItemScrollQuery(String customItemType, String scrollIdentifier, String scrollTimeValidity);
 
     /**
      * Retrieves the same items as {@code query(query, sortBy, clazz, 0, -1)} with the added constraints that the matching elements must also have at least a field matching the
@@ -437,16 +658,52 @@ public interface PersistenceService {
     Map<String, Long> aggregateWithOptimizedQuery(Condition filter, BaseAggregate aggregate, String itemType);
 
     /**
+     * Retrieves the number of items with the specified type as defined by the Item subclass public field {@code ITEM_TYPE} matching the optional specified condition and
+     * aggregated according to the specified {@link BaseAggregate}.
+     *
+     * @param filter    the condition the items must match or {@code null} if no filtering is needed
+     * @param aggregate an aggregate specifying how matching items must be bundled
+     * @param itemType  the String representation of the item type we want to retrieve the count of, as defined by its class' {@code ITEM_TYPE} field
+     * @param size      size of returned buckets in the response
+     * @return a Map associating aggregation dimension name as key and cardinality for that dimension as value
+     */
+    Map<String, Long> aggregateWithOptimizedQuery(Condition filter, BaseAggregate aggregate, String itemType, int size);
+
+    /**
      * Updates the persistence's engine indices if needed.
      */
     void refresh();
 
     /**
-     * Purges all data in the context server up to the specified date, not included.
+     * Updates the persistence's engine specific index.
      *
-     * @param date the date (not included) before which we want to erase all data
+     * @param clazz    will use an index by class type
+     * @param <T>      a class that extends Item
      */
+    default <T extends Item> void refreshIndex(Class<T> clazz) {
+        refreshIndex(clazz, null);
+    }
+
+    /**
+     * @deprecated use {@link #refreshIndex(Class)}
+     */
+    @Deprecated
+    <T extends Item> void refreshIndex(Class<T> clazz, Date dateHint);
+
+    /**
+     * deprecated: (use: purgeTimeBasedItems instead)
+     */
+    @Deprecated
     void purge(Date date);
+
+    /**
+     * Purges time based data in the context server up to the specified days number of existence.
+     * (This only works for time based data stored in rolling over indices, it have no effect on other types)
+     *
+     * @param existsNumberOfDays the number of days
+     * @param clazz the item type to be purged
+     */
+    <T extends Item> void purgeTimeBasedItems(int existsNumberOfDays, Class<T> clazz);
 
     /**
      * Retrieves all items of the specified Item subclass which specified ranged property is within the specified bounds, ordered according to the specified {@code sortBy} String
@@ -481,7 +738,7 @@ public interface PersistenceService {
 
     /**
      * Creates an index with for the specified item type in the persistence engine.
-     *
+     * <p>
      * TODO: remove from API?
      *
      * @param itemType the item type
@@ -491,7 +748,7 @@ public interface PersistenceService {
 
     /**
      * Removes the index for the specified item type.
-     *
+     * <p>
      * TODO: remove from API?
      *
      * @param itemType the item type

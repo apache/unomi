@@ -11,325 +11,210 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-=== Web Tracker
+=== Unomi Web Tracker reference
 
-This extension is providing the web tracker to start collecting visitors data on your website.
-The tracker is implemented as an integration of https://github.com/segmentio/analytics.js[analytics.js] for Unomi.
+In this section of the documentation, more details are provided about the web tracker provided by Unomi.
 
-==== Getting started
+==== Custom events
 
-Extension can be tested at : `http://localhost:8181/tracker/index.html`
+In order to be able to use your own custom events with the web tracker, you must first declare them in Unomi so that they are properly recognized and validated by the `/context.json` or `/eventcollector` endpoints.
 
-In your page include unomiOptions and include code snippet from `snippet.min.js` :
+===== Declaring JSON schema
 
-[source]
+The first step is to declare a JSON schema for your custom event type. Here's an example of such a declaration:
+
+[source,json]
 ----
-<script type="text/javascript">
-        var unomiOption = {
-            scope: 'realEstateManager',
-            url: 'http://localhost:8181'
-        };
-        window.unomiTracker||(window.unomiTracker={}),function(){function e(e){for(unomiTracker.initialize({"Apache Unomi":unomiOption});n.length>0;){var r=n.shift(),t=r.shift();unomiTracker[t]&&unomiTracker[t].apply(unomiTracker,r)}}for(var n=[],r=["trackSubmit","trackClick","trackLink","trackForm","initialize","pageview","identify","reset","group","track","ready","alias","debug","page","once","off","on","personalize"],t=0;t<r.length;t++){var i=r[t];window.unomiTracker[i]=function(e){return function(){var r=Array.prototype.slice.call(arguments);return r.unshift(e),n.push(r),window.unomiTracker}}(i)}unomiTracker.load=function(){var n=document.createElement("script");n.type="text/javascript",n.async=!0,n.src=unomiOption.url+"/tracker/unomi-tracker.min.js",n.addEventListener?n.addEventListener("load",function(n){"function"==typeof e&&e(n)},!1):n.onreadystatechange=function(){"complete"!==this.readyState&&"loaded"!==this.readyState||e(window.event)};var r=document.getElementsByTagName("script")[0];r.parentNode.insertBefore(n,r)},document.addEventListener("DOMContentLoaded",unomiTracker.load),unomiTracker.page()}();
-</script>
-----
-
-`window.unomiTracker` can be used to send additional events when needed.
-
-Check analytics.js API https://segment.com/docs/sources/website/analytics.js/[here].
-All methods can be used on `unomiTracker` object, although not all event types are supported by Unomi intergation.
-
-==== How to contribute
-
-The source code is in the folder javascript with a package.json, the file to update is `analytics.js-integration-apache-unomi.js` apply your modification in this file then use the command `yarn build` to compile a new JS file.
-Then you can use the test page to try your changes `http://localhost:8181/tracker/index.html`.
-
-==== Tracking page views
-
-By default the script will track page views, but maybe you want to take control over this mechanism of add page views
-to a single page application. In order to generate a page view programmatically from Javascript you can use code similar
-to this :
-
-[source]
-----
-    <script type="text/javascript">
-        // This is an example of how to provide more details page properties to the view event. This can be useful
-        // in the case of an SPA that wants to provide information about a view that has metadata such as categories,
-        // tags or interests.
-        path = location.pathname + location.hash;
-        properties = {
-            path: path,
-            pageInfo: {
-                destinationURL: location.href,
-                tags : [ "tag1", "tag2", "tag3"],
-                categories : ["category1", "category2", "category3"],
-            },
-            interests : {
-                "interest1" : 1,
-                "interest2" : 2,
-                "interest3" : 3
-            }
-        };
-        console.log(properties);
-        // this will trigger a second page view for the same page (the first page view is in the tracker snippet).
-        window.unomiTracker.page(properties);
-    </script>
+{
+  "$id": "https://unomi.apache.org/schemas/json/events/click/1-0-0",
+  "$schema": "https://json-schema.org/draft/2019-09/schema",
+  "self": {
+    "vendor": "org.apache.unomi",
+    "target": "events",
+    "name": "click",
+    "format": "jsonschema",
+    "version": "1-0-0"
+  },
+  "title": "ClickEvent",
+  "type": "object",
+  "allOf": [
+    {
+      "$ref": "https://unomi.apache.org/schemas/json/event/1-0-0"
+    }
+  ],
+  "properties": {
+    "source": {
+      "$ref": "https://unomi.apache.org/schemas/json/items/page/1-0-0"
+    },
+    "target": {
+      "$ref": "https://unomi.apache.org/schemas/json/item/1-0-0"
+    }
+  },
+  "unevaluatedProperties": false
+}
 ----
 
-Here is a more detail view of what you may include in the pageInfo object :
+The above example comes from a built-in event type that is already declared in Unomi but that illustrates the structure of a JSON schema. It is not however the objective of this section of the documentation to go into the details of how to declare a JSON schema, instead, we recommend you go to the <<_json_schemas_2,corresponding section>> of the documentation.
 
-.PageInfo Properties
-|===
-|Name|Description
+===== Sending event from tracker
 
-|pageID
-|A unique identifier in string format for the page. Default value : page path
+In the Unomi web tracker, you can use the following function to send an event to Unomi:
 
-|pageName
-|A user-displayed name for the page. Default value : page title
-
-|pagePath
-|The path of the page, stored by Unomi. This value should be the same as the one passed in the `page` property of the
-object passed to the unomiTracker call. Default value : page path
-
-|destinationURL
-|The full URL for the page view. This doesn't have to be a real existing URL it could be an internal SPA route. Default value : page URL
-
-|referringURL
-|The referringURL also known as the previous URL of the page/screen viewed. Default value : page referrer URL
-
-|tags
-|A String array of tag identifiers. For example `['tag1', 'tag2', 'tag3']`
-
-|categories
-|A String array of category identifiers. For example `['category1', 'category2', 'category3']`
-
-|===
-
-The `interests` object is basically list of interests with "weights" attached to them. These interests will be accumulated
-in Apache Unomi on profiles to indicate growing interest over time for specific topics. These are freely defined and
-will be accepted by Apache Unomi without needing to declare them previously anywhere (the same is true for tags and
-categories).
-
-==== Tracking form submissions
-
-Using the web tracker you can also track form submissions. In order to do this a few steps are required to get a form's
-submission to be tracked and then its form values to be sent as events to Apache Unomi. Finally setting up a rule to
-react to the incoming event will help use the form values to perform any action that is desired.
-
-Let's look at a concrete example. Before we get started you should know that this example is already available to
-directly test in Apache Unomi at the following URL :
-
-    http://localhost:8181/tracker
-
-Simply modify the form values and click submit and it will perform all the steps we are describing below.
-
-So here is the form we want to track :
-
-[source]
+[source,javascript]
 ----
-<form id="testFormTracking" action="#" name="testFormTracking">
-    <label for="firstName">First name</label>
-    <input type="text" id="firstName" name="firstName" value="John"/>
-
-    <label for="lastName">Last name</label>
-    <input type="text" id="lastName" name="lastName" value="Doe"/>
-
-    <label for="email">Email</label>
-    <input type="email" id="email" name="email" value="johndoe@acme.com"/>
-
-    <input type="submit" name="submitButton" value="Submit"/>
-</form>
+        /**
+         * This function will send an event to Apache Unomi
+         * @param {object} event The event object to send, you can build it using wem.buildEvent(eventType, target, source)
+         * @param {function} successCallback optional, will be executed in case of success
+         * @param {function} errorCallback optional, will be executed in case of error
+         * @return {undefined}
+         */
+        collectEvent: function (event, successCallback = undefined, errorCallback = undefined)
 ----
 
-As you can see it's composed of three fields - firstName, lastName and email - as well as a submit button. In order to
-track it we can add directly under the following snippet :
+As you can see this function is quite straight forward to use. There are also helper functions to build events, such as :
 
-[source]
+[source,javascript]
 ----
-<script type="text/javascript">
-    window.addEventListener("load", function () {
-        var form = document.getElementById('testFormTracking');
-        unomiTracker.trackForm(form, 'formSubmitted', {formName: form.name});
+        /**
+         * This function return the basic structure for an event, it must be adapted to your need
+         *
+         * @param {string} eventType The name of your event
+         * @param {object} [target] The target object for your event can be build with wem.buildTarget(targetId, targetType, targetProperties)
+         * @param {object} [source] The source object for your event can be build with wem.buildSource(sourceId, sourceType, sourceProperties)
+         * @returns {object} the event
+         */
+        buildEvent: function (eventType, target, source)
+
+        /**
+         * This function return an event of type form
+         *
+         * @param {string} formName The HTML name of id of the form to use in the target of the event
+         * @param {HTMLFormElement} form optional HTML form element, if provided will be used to extract the form fields and populate the form event
+         * @returns {object} the form event
+         */
+        buildFormEvent: function (formName, form = undefined)
+
+        /**
+         * This function return the source object for a source of type page
+         *
+         * @returns {object} the target page
+         */
+        buildTargetPage: function ()
+
+        /**
+         * This function return the source object for a source of type page
+         *
+         * @returns {object} the source page
+         */
+        buildSourcePage: function ()
+
+        /**
+         * This function return the basic structure for the target of your event
+         *
+         * @param {string} targetId The ID of the target
+         * @param {string} targetType The type of the target
+         * @param {object} [targetProperties] The optional properties of the target
+         * @returns {object} the target
+         */
+        buildTarget: function (targetId, targetType, targetProperties = undefined)
+
+        /**
+         * This function return the basic structure for the source of your event
+         *
+         * @param {string} sourceId The ID of the source
+         * @param {string} sourceType The type of the source
+         * @param {object} [sourceProperties] The optional properties of the source
+         * @returns {object} the source
+         */
+        buildSource: function (sourceId, sourceType, sourceProperties = undefined)
+
+----
+
+Here's an example of using these helper functions and the `collectEvent` function alltogether:
+
+[source,javascript]
+----
+    var clickEvent = wem.buildEvent('click',
+        wem.buildTarget('buttonId', 'button'),
+        wem.buildSourcePage());
+
+    wem.collectEvent(clickEvent, function (xhr) {
+        console.info('Click event successfully collected.');
+    }, function (xhr) {
+        console.error('Could not send click event.');
     });
-</script>
 ----
 
-What this snippet does is retrieve the form using its element ID and then uses the unomiTracker to track form submissions.
-Be careful to always use in the form event name a string that starts with `form` in order for the event to be sent back
-to Unomi. Also the form name is also a mandatory parameter that will be passed to Unomi inside a event of type `form` under
-the `target.itemId` property name.
+===== Sending multiple events
 
-Here is an example of the event that gets sent back to Apache Unomi:
+In some cases, especially when multiple events must be sent fast and the order of the events is critical for rules to be properly executed, it is better to use another function called `collectEvents` that will batch the sending of events to Unomi in a single HTTP request. Here's the signature of this function:
 
-[source]
+[source,javascript]
 ----
-{
-  "itemId" : "cd627012-963e-4bb5-97f0-480990b41254",
-  "itemType" : "event",
-  "scope" : "realEstateManager",
-  "version" : 1,
-  "eventType" : "form",
-  "sessionId" : "aaad09aa-88c2-67bd-b106-5a47ded43ead",
-  "profileId" : "48563fd0-6319-4260-8dba-ae421beba26f",
-  "timeStamp" : "2018-11-23T16:32:26Z",
-  "properties" : {
-    "firstName" : "John",
-    "lastName" : "Doe",
-    "email" : "johndoe@acme.com",
-    "submitButton" : "Submit"
-  },
-  "source" : {
-    "itemId" : "/tracker/",
-    "itemType" : "page",
-    "scope" : "realEstateManager",
-    "version" : null,
-    "properties" : {
-      "pageInfo" : {
-        "destinationURL" : "http://localhost:8181/tracker/?firstName=Bill&lastName=Gates&email=bgates%40microsoft.com",
-        "pageID" : "/tracker/",
-        "pagePath" : "/tracker/",
-        "pageName" : "Apache Unomi Web Tracker Test Page",
-        "referringURL" : "http://localhost:8181/tracker/?firstName=John&lastName=Doe&email=johndoe%40acme.com"
-      },
-      "attributes" : [ ],
-      "consentTypes" : [ ],
-      "interests" : { }
+        /**
+         * This function will send the events to Apache Unomi
+         *
+         * @param {object} events Javascript object { events: [event1, event2] }
+         * @param {function} successCallback optional, will be executed in case of success
+         * @param {function} errorCallback optional, will be executed in case of error
+         * @return {undefined}
+         */
+        collectEvents: function (events, successCallback = undefined, errorCallback = undefined)
+----
+
+This function is almost exactly the same as the `collectEvent` method except that it takes an events array instead of a single one. The events in the array may be of any mixture of types.
+
+===== Extending existing events
+
+An alternative to defining custom event types is to extend existing event types. This, for example, can be used to add new properties to the built-in `view` event type.
+
+For more information about event type extensions, please read the <<_extend_an_existing_schema,JSON schema section>> of this documentation.
+
+==== Integrating with tag managers
+
+Integrating with tag managers such as Google Tag Manager is an important part of the way trackers can be added to an existing site. Unomi's web tracker should be pretty easy to integrate with such tools: you simply need to insert the script tag to load the script and then another tag to initialize it and map any tag manager variables you want.
+
+Personalization scripts should however be modified to check for the existence of the tracker object in the page because tag managers might deactivate scripts based on conditions such as GDPR approval, cookie preferences, ...
+
+==== Cookie/session handling
+
+In order to track profiles, an identifier must be stored in the browser so that subsequent requests can keep a reference to the visitor's profile. Also, a session identifier must be generated to group the current visitor interactions.
+
+Unomi's web tracker uses 3 cookies in the tracker by default:
+
+- server profile ID, called `context-profile-id` by default, that is sent from the Unomi server
+- web tracker profile ID, called `web-profile-id` by default (this is a copy of the server profile ID that can be managed by the tracker directly)
+- web tracker session ID, called `wem-session-id` by default
+
+It is possible to change the name of these cookie by passing the following properties to the start's initialization:
+
+[source,javascript]
+----
+    "wemInitConfig": {
+        ...
+        "contextServerCookieName": "context-profile-id",
+        "trackerSessionIdCookieName": "unomi-tracker-test-session-id",
+        "trackerProfileIdCookieName": "unomi-tracker-test-profile-id"
     }
-  },
-  "target" : {
-    "itemId" : "testFormTracking",
-    "itemType" : "form",
-    "scope" : "realEstateManager",
-    "version" : null,
-    "properties" : { }
-  },
-  "persistent" : true
-}
 ----
 
-You can see in this event that the form values are sent as properties of the event itself, while the form name is sent
-as the `target.itemId`
+Please note however that the `contextServerCookieName` will also have to be changed in the server configuration in order for it to work. See the <<_configuration,Configuration>> section for details on how to do this.
 
-While setting up form tracking, it can be very useful to use the Apache Unomi Karaf SSH shell commands : `event-tail`
-and `event-view` to check if you are properly receiving the form submission events and that they contain the expected
-data. If not, check your tracking code for any errors.
+For session tracking, it is important to provide a value for the cookie otherwise the tracker will not initialize (a message is displayed in the console that explains that the session cookie is missing). Here is the code excerpt from the initialization code used in the tutorial that creates the initial cookie value.
 
-Now that the data is properly sent using an event to Apache Unomi, we must still use it to perform some kind of actions.
-Using rules, we could do anything from updating the profile to sending the data to a third-party server (using a custom-
-developped action of course). In this example we will illustrate how to update the profile.
-
-In order to do so we will deploy a rule that will copy data coming from the event into a profile. But we will need to
-map the form field names to profile names, and this can be done using the `setPropertyAction` that's available out of the
-box in the Apache Unomi server.
-
-There are two ways to register rules : either by building a custom OSGi bundle plugin or using the REST API to directly
-send a JSON representation of the rule to be saved. We will in this example use the CURL shell command to make a call to
-the REST API.
-
-[source]
+[source,javascript]
 ----
-curl -X POST -k -u karaf:karaf https://localhost:9443/cxs/rules \
-  --header "Content-Type: application/json" \
--d @- << EOF
-{
-  "itemId": "form-mapping-example",
-  "itemType": "rule",
-  "linkedItems": null,
-  "raiseEventOnlyOnceForProfile": false,
-  "raiseEventOnlyOnceForSession": false,
-  "priority": -1,
-  "metadata": {
-    "id": "form-mapping-example",
-    "name": "Example Form Mapping",
-    "description": "An example of how to map event properties to profile properties",
-    "scope": "realEstateManager",
-    "tags": [],
-    "enabled": true,
-    "missingPlugins": false,
-    "hidden": false,
-    "readOnly": false
-  },
-  "condition": {
-    "type": "formEventCondition",
-    "parameterValues": {
-      "formId": "testFormTracking",
-      "pagePath" : "/tracker/"
+    // generate a new session
+    if (unomiWebTracker.getCookie(unomiTrackerTestConf.wemInitConfig.trackerSessionIdCookieName) == null) {
+        unomiWebTracker.setCookie(unomiTrackerTestConf.wemInitConfig.trackerSessionIdCookieName, unomiWebTracker.generateGuid(), 1);
     }
-  },
-  "actions": [
-    {
-      "type": "setPropertyAction",
-      "parameterValues": {
-        "setPropertyName": "properties(firstName)",
-        "setPropertyValue": "eventProperty::properties(firstName)",
-        "setPropertyStrategy": "alwaysSet"
-      }
-    },
-    {
-      "type": "setPropertyAction",
-      "parameterValues": {
-        "setPropertyName": "properties(lastName)",
-        "setPropertyValue": "eventProperty::properties(lastName)",
-        "setPropertyStrategy": "alwaysSet"
-      }
-    },
-    {
-      "type": "setPropertyAction",
-      "parameterValues": {
-        "setPropertyName": "properties(email)",
-        "setPropertyValue": "eventProperty::properties(email)",
-        "setPropertyStrategy": "alwaysSet"
-      }
-    }
-  ]
-}
-EOF
 ----
 
-As you can see in this request, we have a few parameters that need explaining:
+Note that this is just an example, you could very well customize this code to create session IDs another way.
 
-- `-k` is used to accept any certificate as we are in this example using a default Apache Unomi server configuration that
-comes with its predefined HTTPS certificates
-- `-u karaf:karaf` is the default username/password for authenticating to the REST API. To change this value you should
-edit the `etc/users.properties`file and it is required to modify this login before going to production.
+==== JavaScript API
 
-Finally the rule itself should be pretty self-explanatory but there are a few important things to note :
+The JavaScript API for the web tracker is directly provided in the source code of the web tracker. You can find it here: https://github.com/apache/unomi-tracker/blob/main/src/apache-unomi-tracker.js
 
-- the `itemId` and `metadata.id` values should be the same
-- the `scope` should be the same as the scope that was setup in the tracker initialization
-- the `formId` parameter must have the form name value
-- the `pagePath` should be the pagePath passed through the event (if you're not sure of its value, you could either using
-network debugging in the browser or use the `event-tail` and `event-view` commands in the Apache Unomi Karaf SSH shell).
-- the setPropertyAction may be repeated as many times as desired to copy the values from the event to the profile. Note that
-the `setPropertyName` will define the property to set on the profile and the `setPropertyValue` will define where the
-value is coming from. In this example the name and the value are the same but that is no way a requirement. It could
-even be possible to using multiple `setPropertyAction` instances to copy the same event property into different profile
-properties.
-
-To check if your rule is properly deployed you can use the following SSH shell command :
-
-`unomi:rule-view form-mapping-example`
-
-The parameter is the `itemId` of the rule. If you want to see all the rules deployed in the system you can use the
-command :
-
-`unomi:rule-list 1000`
-
-The `1000` parameter is the limit of number of objects to retrieve. As the number of rules can grow quickly in an Apache
-Unomi instance, it is recommended to put this value a bit high to make sure you get the full list of rules.
-
-Once the rule is in place, try submitting the form with some values and check that the profile is properly updated. One
-recommend way of doing this is to use the `event-tail` command that will output something like this :
-
-[source]
-----
-ID                                  |Type          |Session                             |Profile                             |Timestamp                    |Scope          |Persi|
-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-cef09b89-6b99-4e4f-a99c-a4159a66b42b|form          |aaad09aa-88c2-67bd-b106-5a47ded43ead|48563fd0-6319-4260-8dba-ae421beba26f|Fri Nov 23 17:52:33 CET 2018 |realEstateManag|true |
-----
-
-You can directly see the profile that is being used, so you can then simply use the
-
-`unomi:profile-view 48563fd0-6319-4260-8dba-ae421beba26f`
-
-command to see a JSON dump of the profile and check that the form values have been properly positioned.
+Please note that only the functions that do NOT start with an underscore should be used. The ones that start with an underscore are not considered part of the public API and could change or even be removed at any point in the future.

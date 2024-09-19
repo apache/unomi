@@ -1,0 +1,5 @@
+{
+  "operationName": "getSources",
+  "variables": {},
+  "query": "query getSources {\n  cdp {\n    getSources {\n      id\n      thirdParty\n    }\n  }\n}\n"
+}

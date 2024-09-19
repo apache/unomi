@@ -1,0 +1,33 @@
+{
+  "$id": "https://unomi.apache.org/schemas/json/events/search/1-0-0",
+  "$schema": "https://json-schema.org/draft/2019-09/schema",
+  "self": {
+    "vendor": "org.apache.unomi",
+    "target": "events",
+    "name": "search",
+    "format": "jsonschema",
+    "version": "1-0-0"
+  },
+  "title": "SearchEvent",
+  "type": "object",
+  "allOf": [
+    {
+      "$ref": "https://unomi.apache.org/schemas/json/event/1-0-0"
+    }
+  ],
+  "properties": {
+    "properties": {
+      "$ref": "https://unomi.apache.org/schemas/json/events/search/properties/1-0-0"
+    },
+    "source": {
+      "$ref": "https://unomi.apache.org/schemas/json/items/page/1-0-0"
+    },
+    "target": {
+      "$ref": "https://unomi.apache.org/schemas/json/item/1-0-0"
+    },
+    "flattenedProperties": {
+      "$ref": "https://unomi.apache.org/schemas/json/events/form/flattenedProperties/1-0-0"
+    }
+  },
+  "unevaluatedProperties": false
+}

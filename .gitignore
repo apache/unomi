@@ -4,14 +4,15 @@ target
 .classpath
 .project
 node_modules
+node
 /src/main/webapp/META-INF/MANIFEST.MF
 /**/.idea
 *.iml
 .DS_Store
-/performance-tests/.cache
 maven-metadata-local.xml
 GeoLite2-City.mmdb
 allCountries.zip
 rest/.miredot-offline.json
 /extensions/salesforce-connector/test.properties
 **/*.versionsBackup
+itests/src/main

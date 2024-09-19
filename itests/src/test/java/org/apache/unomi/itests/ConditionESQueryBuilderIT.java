@@ -18,6 +18,7 @@
 package org.apache.unomi.itests;
 
 import org.apache.unomi.api.Item;
+import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.conditions.Condition;
 import org.junit.After;
 import org.junit.Before;
@@ -44,16 +45,24 @@ public class ConditionESQueryBuilderIT extends ConditionEvaluatorIT {
         return list.contains(item);
     }
 
+    @Override
+    protected boolean evalEmpty(Condition c) {
+        @SuppressWarnings("unchecked")
+        List<Item> list = persistenceService.query(c,null,(Class<Item>) emptyItem.getClass());
+        return list.contains(emptyItem);
+    }
+
     @Before
     public void setUp() {
         super.setUp();
         persistenceService.save(item);
-        persistenceService.refresh();
+        persistenceService.save(emptyItem);
+        persistenceService.refreshIndex(Profile.class);
     }
 
     @After
     public void tearDown() {
         persistenceService.remove(item.getItemId(), item.getClass());
+        persistenceService.remove(emptyItem.getItemId(), emptyItem.getClass());
     }
-
 }

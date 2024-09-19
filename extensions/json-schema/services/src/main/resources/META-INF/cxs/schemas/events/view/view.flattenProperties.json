@@ -1,0 +1,21 @@
+{
+  "$id": "https://unomi.apache.org/schemas/json/events/view/flattenProperties/1-0-0",
+  "$schema": "https://json-schema.org/draft/2019-09/schema",
+  "self":{
+    "vendor":"org.apache.unomi",
+    "name": "viewFlattenProperties",
+    "format":"jsonschema",
+    "version":"1-0-0"
+  },
+  "title": "ViewFlattenProperties",
+  "type": "object",
+  "properties" : {
+    "interests": {
+      "$ref" : "https://unomi.apache.org/schemas/json/interests/1-0-0"
+    },
+    "URLParameters": {
+      "$ref": "https://unomi.apache.org/schemas/json/URLParameters/1-0-0"
+    }
+  },
+  "unevaluatedProperties" : false
+}

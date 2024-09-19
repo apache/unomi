@@ -1,0 +1,31 @@
+{
+  "metadata": {
+    "id": "testSetPropertyAction",
+    "name": "testSetPropertyAction",
+    "description": ""
+  },
+  "condition": {
+    "type": "eventTypeCondition",
+    "parameterValues": {
+      "eventTypeId": "sessionReassigned"
+    }
+  },
+  "actions": [
+    {
+      "parameterValues": {
+        "setPropertyName": "properties.currentEventTimeStamp",
+        "setPropertyValueCurrentEventTimestamp": true,
+        "storeInSession": false
+      },
+      "type": "setPropertyAction"
+    },
+    {
+      "parameterValues": {
+        "setPropertyName": "properties.currentDate",
+        "setPropertyValueCurrentDate": true,
+        "storeInSession": false
+      },
+      "type": "setPropertyAction"
+    }
+  ]
+}

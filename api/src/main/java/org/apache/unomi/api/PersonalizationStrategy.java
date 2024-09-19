@@ -21,8 +21,18 @@ import org.apache.unomi.api.services.PersonalizationService;
 import java.util.List;
 
 /**
- *
+ * Interface for personalization strategies. Will filter and reorder the content list according to the strategy
+ * implementation
  */
 public interface PersonalizationStrategy {
-    List<String> personalizeList(Profile profile, Session session, PersonalizationService.PersonalizationRequest personalizationRequest);
+
+    /**
+     * Filters and personalizes the list of contents passed as a parameter using the strategy's implementation.
+     * @param profile the profile to use for the personalization
+     * @param session the session to use for the personalization
+     * @param personalizationRequest the request contains the contents to personalizes as well as the parameters for the
+     *                               strategy (options)
+     * @return the personalization result that contains the list of content IDs resulting from the filtering/re-ordering
+     */
+    PersonalizationResult personalizeList(Profile profile, Session session, PersonalizationService.PersonalizationRequest personalizationRequest);
 }
