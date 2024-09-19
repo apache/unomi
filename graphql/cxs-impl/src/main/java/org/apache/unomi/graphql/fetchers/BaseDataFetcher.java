@@ -31,7 +31,7 @@ import java.util.Optional;
 
 public abstract class BaseDataFetcher<T> implements DataFetcher<T> {
 
-    private static final Logger logger = LoggerFactory.getLogger(BaseDataFetcher.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(BaseDataFetcher.class);
 
     protected <E> E parseObjectParam(String name, Class<E> clazz, DataFetchingEnvironment environment) {
         final Object param = environment.getArgument(name);
@@ -52,7 +52,7 @@ public abstract class BaseDataFetcher<T> implements DataFetcher<T> {
             try {
                 param = DateFormat.getInstance().parse(paramValue);
             } catch (ParseException e) {
-                logger.warn(String.format("Invalid date format for field '%s': %s", name, paramValue));
+                LOGGER.warn("Invalid date format for field '{}': {}", name, paramValue);
             }
         }
         return param;

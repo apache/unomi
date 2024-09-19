@@ -34,7 +34,7 @@ import org.junit.runners.MethodSorters;
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class UserAgentDetectorTest {
 
-    private static final Logger logger = Logger.getLogger(UserAgentDetectorTest.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(UserAgentDetectorTest.class.getName());
 
     private UserAgentDetectorServiceImpl userAgentDetectorService;
 
@@ -44,7 +44,7 @@ public class UserAgentDetectorTest {
         this.userAgentDetectorService = new UserAgentDetectorServiceImpl();
         this.userAgentDetectorService.postConstruct();
         long end = System.currentTimeMillis();
-        logger.info("Duration starting user agent (in msec) > " + (end - start));
+        LOGGER.info("Duration starting user agent (in msec) > " + (end - start));
     }
 
     @After
@@ -59,8 +59,8 @@ public class UserAgentDetectorTest {
         long start = System.currentTimeMillis();
         UserAgent agent = this.userAgentDetectorService.parseUserAgent(header);
         long end = System.currentTimeMillis();
-        logger.info("Duration user agent parsing (in msec) > " + (end - start));
-        logger.info(agent.toString());
+        LOGGER.info("Duration user agent parsing (in msec) > " + (end - start));
+        LOGGER.info(agent.toString());
     }
 
     @Test
@@ -69,7 +69,7 @@ public class UserAgentDetectorTest {
         ExecutorService executorService = Executors.newFixedThreadPool(3000);
 
         for (int cpt = 1; cpt < 6; cpt++) {
-            logger.info("Execution " + cpt + "/5");
+            LOGGER.info("Execution " + cpt + "/5");
             executeWorker(executorService, workerCount);
         }
     }
@@ -82,7 +82,7 @@ public class UserAgentDetectorTest {
         }
         executorService.invokeAll(callables);
         long totalTime = System.currentTimeMillis() - startTime;
-        logger.info("AgentWorker workers completed execution in " + totalTime + "ms");
+        LOGGER.info("AgentWorker workers completed execution in " + totalTime + "ms");
     }
 
     private class AgentWorker implements Callable<Object> {

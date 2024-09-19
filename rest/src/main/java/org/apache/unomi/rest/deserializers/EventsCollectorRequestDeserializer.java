@@ -27,8 +27,6 @@ import org.apache.unomi.api.EventsCollectorRequest;
 import org.apache.unomi.rest.exception.InvalidRequestException;
 import org.apache.unomi.schema.api.SchemaService;
 import org.apache.unomi.utils.HttpUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -38,8 +36,6 @@ import java.util.List;
  * Custom deserializer for EventCollectorRequest that do validate the events using JSon Schema
  */
 public class EventsCollectorRequestDeserializer extends StdDeserializer<EventsCollectorRequest> {
-
-    private static final Logger logger = LoggerFactory.getLogger(EventsCollectorRequestDeserializer.class);
 
     private final SchemaService schemaService;
 

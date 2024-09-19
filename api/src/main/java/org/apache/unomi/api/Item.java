@@ -37,7 +37,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * defines a built-in scope ({@link Metadata#SYSTEM_SCOPE}) that clients can use to share data across scopes.
  */
 public abstract class Item implements Serializable {
-    private static final Logger logger = LoggerFactory.getLogger(Item.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(Item.class.getName());
 
     private static final long serialVersionUID = 7446061538573517071L;
 
@@ -53,9 +53,9 @@ public abstract class Item implements Serializable {
             itemTypeCache.put(clazz, itemType);
             return itemType;
         } catch (NoSuchFieldException e) {
-            logger.error("Class " + clazz.getName() + " doesn't define a publicly accessible ITEM_TYPE field", e);
+            LOGGER.error("Class " + clazz.getName() + " doesn't define a publicly accessible ITEM_TYPE field", e);
         } catch (IllegalAccessException e) {
-            logger.error("Error resolving itemType for class " + clazz.getName(), e);
+            LOGGER.error("Error resolving itemType for class " + clazz.getName(), e);
         }
         return null;
     }
@@ -69,7 +69,7 @@ public abstract class Item implements Serializable {
     public Item() {
         this.itemType = getItemType(this.getClass());
         if (itemType == null) {
-            logger.error("Item implementations must provide a public String constant named ITEM_TYPE to uniquely identify this Item for the persistence service.");
+            LOGGER.error("Item implementations must provide a public String constant named ITEM_TYPE to uniquely identify this Item for the persistence service.");
         }
     }
 

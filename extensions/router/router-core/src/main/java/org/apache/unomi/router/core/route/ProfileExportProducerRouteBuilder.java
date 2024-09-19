@@ -33,7 +33,7 @@ import java.util.Map;
  */
 public class ProfileExportProducerRouteBuilder extends RouterAbstractRouteBuilder {
 
-    private static final Logger logger = LoggerFactory.getLogger(ProfileExportProducerRouteBuilder.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(ProfileExportProducerRouteBuilder.class);
 
     private ExportRouteCompletionProcessor exportRouteCompletionProcessor;
 
@@ -50,7 +50,7 @@ public class ProfileExportProducerRouteBuilder extends RouterAbstractRouteBuilde
     @Override
     public void configure() throws Exception {
 
-        logger.info("Configure Recurrent Route 'Export :: Data Producer'");
+        LOGGER.info("Configure Recurrent Route 'Export :: Data Producer'");
 
         RouteDefinition rtDef;
         if (RouterConstants.CONFIG_TYPE_KAFKA.equals(configType)) {

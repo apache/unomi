@@ -35,7 +35,7 @@ import java.util.Dictionary;
  */
 public class GroovyBundleResourceConnector implements ResourceConnector {
 
-    private static final Logger logger = LoggerFactory.getLogger(GroovyBundleResourceConnector.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(GroovyBundleResourceConnector.class.getName());
 
     private BundleContext bundleContext;
 
@@ -57,10 +57,10 @@ public class GroovyBundleResourceConnector implements ResourceConnector {
                     File resourceFile = new File(resourcesSourceFolder, resourcePath);
                     if (resourceFile.exists()) {
                         try {
-                            logger.info("Loading file {} from module source !", resourcePath);
+                            LOGGER.info("Loading file {} from module source !", resourcePath);
                             resourceURL = resourceFile.toURI().toURL();
                         } catch (MalformedURLException e) {
-                            logger.warn("Error loading file "+resourcePath+" from module source code", e);
+                            LOGGER.warn("Error loading file {} from module source code", resourcePath, e);
                         }
                     }
                 }

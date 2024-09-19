@@ -31,7 +31,7 @@ import java.util.Map;
 
 public class JSONTypeFactory {
 
-    private static final Logger logger = LoggerFactory.getLogger(JSONTypeFactory.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(JSONTypeFactory.class);
 
     Map<String, Class<? extends JSONType>> jsonTypes = new HashMap<>();
 
@@ -96,7 +96,7 @@ public class JSONTypeFactory {
                 constructor = typeClass.getConstructor(Map.class, JSONTypeFactory.class);
                 resultJsonTypes.add(constructor.newInstance(schemaTree, this));
             } catch (NoSuchMethodException | InvocationTargetException | InstantiationException | IllegalAccessException e) {
-                logger.error("Error while building object type", e);
+                LOGGER.error("Error while building object type", e);
             }
         }
         return resultJsonTypes;

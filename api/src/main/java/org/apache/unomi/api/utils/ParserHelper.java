@@ -39,7 +39,7 @@ import java.util.*;
  */
 public class ParserHelper {
 
-    private static final Logger logger = LoggerFactory.getLogger(ParserHelper.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(ParserHelper.class);
 
     private static final Set<String> unresolvedActionTypes = new HashSet<>();
     private static final Set<String> unresolvedConditionTypes = new HashSet<>();
@@ -69,7 +69,7 @@ public class ParserHelper {
 
     public static boolean resolveConditionType(final DefinitionsService definitionsService, Condition rootCondition, String contextObjectName) {
         if (rootCondition == null) {
-            logger.warn("Couldn't resolve null condition for {}", contextObjectName);
+            LOGGER.warn("Couldn't resolve null condition for {}", contextObjectName);
             return false;
         }
         final List<String> result = new ArrayList<String>();
@@ -85,7 +85,7 @@ public class ParserHelper {
                         result.add(condition.getConditionTypeId());
                         if (!unresolvedConditionTypes.contains(condition.getConditionTypeId())) {
                             unresolvedConditionTypes.add(condition.getConditionTypeId());
-                            logger.warn("Couldn't resolve condition type: {} for {}", condition.getConditionTypeId(), contextObjectName);
+                            LOGGER.warn("Couldn't resolve condition type: {} for {}", condition.getConditionTypeId(), contextObjectName);
                         }
                     }
                 }
@@ -138,13 +138,13 @@ public class ParserHelper {
         boolean result = true;
         if (rule.getActions() == null) {
             if (!ignoreErrors) {
-                logger.warn("Rule {}:{} has null actions", rule.getItemId(), rule.getMetadata().getName());
+                LOGGER.warn("Rule {}:{} has null actions", rule.getItemId(), rule.getMetadata().getName());
             }
             return false;
         }
         if (rule.getActions().isEmpty()) {
             if (!ignoreErrors) {
-                logger.warn("Rule {}:{} has empty actions", rule.getItemId(), rule.getMetadata().getName());
+                LOGGER.warn("Rule {}:{} has empty actions", rule.getItemId(), rule.getMetadata().getName());
             }
             return false;
         }
@@ -165,7 +165,7 @@ public class ParserHelper {
                 action.setActionType(actionType);
             } else {
                 if (!unresolvedActionTypes.contains(action.getActionTypeId())) {
-                    logger.warn("Couldn't resolve action type : " + action.getActionTypeId());
+                    LOGGER.warn("Couldn't resolve action type : {}", action.getActionTypeId());
                     unresolvedActionTypes.add(action.getActionTypeId());
                 }
                 return false;
@@ -203,11 +203,11 @@ public class ParserHelper {
             if ("eventTypeCondition".equals(condition.getConditionTypeId())) {
                 String eventTypeId = (String) condition.getParameter("eventTypeId");
                 if (eventTypeId == null) {
-                    logger.warn("Null eventTypeId found!");
+                    LOGGER.warn("Null eventTypeId found!");
                 } else {
                     // we must now check the stack to see how many notConditions we have in the parent stack
                     if (conditionTypeStack.contains("notCondition")) {
-                        logger.warn("Found complex negative event type condition, will always evaluate rule");
+                        LOGGER.warn("Found complex negative event type condition, will always evaluate rule");
                         eventTypeIds.add("*");
                     } else {
                         eventTypeIds.add(eventTypeId);

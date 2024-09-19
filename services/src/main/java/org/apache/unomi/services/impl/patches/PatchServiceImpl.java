@@ -37,7 +37,7 @@ import java.util.*;
 
 public class PatchServiceImpl implements PatchService, SynchronousBundleListener {
 
-    private static final Logger logger = LoggerFactory.getLogger(PatchServiceImpl.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(PatchServiceImpl.class.getName());
 
     private BundleContext bundleContext;
 
@@ -52,7 +52,7 @@ public class PatchServiceImpl implements PatchService, SynchronousBundleListener
     }
 
     public void postConstruct() {
-        logger.debug("postConstruct {" + bundleContext.getBundle() + "}");
+        LOGGER.debug("postConstruct {{}}", bundleContext.getBundle());
 
         processBundleStartup(bundleContext);
         for (Bundle bundle : bundleContext.getBundles()) {
@@ -61,20 +61,18 @@ public class PatchServiceImpl implements PatchService, SynchronousBundleListener
             }
         }
         bundleContext.addBundleListener(this);
-        logger.info("Patch service initialized.");
+        LOGGER.info("Patch service initialized.");
     }
 
     public void preDestroy() {
         bundleContext.removeBundleListener(this);
-        logger.info("Patch service shutdown.");
+        LOGGER.info("Patch service shutdown.");
     }
 
     @Override
     public void bundleChanged(BundleEvent event) {
-        switch (event.getType()) {
-            case BundleEvent.STARTED:
-                processBundleStartup(event.getBundle().getBundleContext());
-                break;
+        if (event.getType() == BundleEvent.STARTED) {
+            processBundleStartup(event.getBundle().getBundleContext());
         }
     }
 
@@ -107,7 +105,7 @@ public class PatchServiceImpl implements PatchService, SynchronousBundleListener
                         patch(patch);
                     }
                 } catch (IOException e) {
-                    logger.error("Error while loading patch " + patchUrl, e);
+                    LOGGER.error("Error while loading patch {}", patchUrl, e);
                 }
             }
         }
@@ -128,7 +126,7 @@ public class PatchServiceImpl implements PatchService, SynchronousBundleListener
         Item item = persistenceService.load(patch.getPatchedItemId(), type);
 
         if (item != null && patch.getOperation() != null) {
-            logger.info("Applying patch " + patch.getItemId());
+            LOGGER.info("Applying patch {}", patch.getItemId());
 
             switch (patch.getOperation()) {
                 case "override":
@@ -143,7 +141,7 @@ public class PatchServiceImpl implements PatchService, SynchronousBundleListener
                         item = CustomObjectMapper.getObjectMapper().convertValue(converted, type);
                         persistenceService.save(item);
                     } catch (JsonPatchException e) {
-                        logger.error("Cannot apply patch",e);
+                        LOGGER.error("Cannot apply patch",e);
                     }
                     break;
                 case "remove":

@@ -39,7 +39,7 @@ import java.util.*;
  */
 public class ProfileExportServiceImpl implements ProfileExportService {
 
-    private static final Logger logger = LoggerFactory.getLogger(ProfileExportServiceImpl.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(ProfileExportServiceImpl.class.getName());
 
 
     private PersistenceService persistenceService;
@@ -101,7 +101,7 @@ public class ProfileExportServiceImpl implements ProfileExportService {
         for (int i = 0; i < mapping.size(); i++) {
             String propertyName = mapping.get(String.valueOf(i));
             if (propertyName == null) {
-                logger.error("No index {} found in the provided mapping!", i);
+                LOGGER.error("No index {} found in the provided mapping!", i);
                 return "";
             }
             PropertyType propType = RouterUtils.getPropertyTypeById(propertiesDef, propertyName);

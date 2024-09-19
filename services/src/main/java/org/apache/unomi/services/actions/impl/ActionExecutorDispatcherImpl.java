@@ -38,11 +38,11 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class ActionExecutorDispatcherImpl implements ActionExecutorDispatcher {
-    private static final Logger logger = LoggerFactory.getLogger(ActionExecutorDispatcherImpl.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(ActionExecutorDispatcherImpl.class.getName());
     private final Map<String, ParserHelper.ValueExtractor> valueExtractors = new HashMap<>(11);
-    private Map<String, ActionExecutor> executors = new ConcurrentHashMap<>();
+    private final Map<String, ActionExecutor> executors = new ConcurrentHashMap<>();
     private MetricsService metricsService;
-    private Map<String, ActionDispatcher> actionDispatchers = new ConcurrentHashMap<>();
+    private final Map<String, ActionDispatcher> actionDispatchers = new ConcurrentHashMap<>();
     private BundleContext bundleContext;
     private ScriptExecutor scriptExecutor;
 
@@ -96,7 +96,7 @@ public class ActionExecutorDispatcherImpl implements ActionExecutorDispatcher {
             String actionName = actionKey.substring(colonPos + 1);
             ActionDispatcher actionDispatcher = actionDispatchers.get(actionPrefix);
             if (actionDispatcher == null) {
-                logger.warn("Couldn't find any action dispatcher for prefix '{}', action {} won't execute !", actionPrefix, actionKey);
+                LOGGER.warn("Couldn't find any action dispatcher for prefix '{}', action {} won't execute !", actionPrefix, actionKey);
             }
             return actionDispatcher.execute(action, event, actionName);
         } else if (executors.containsKey(actionKey)) {
@@ -109,7 +109,7 @@ public class ActionExecutorDispatcherImpl implements ActionExecutorDispatcher {
                     }
                 }.runWithTimer();
             } catch (Exception e) {
-                logger.error("Error executing action with key=" + actionKey, e);
+                LOGGER.error("Error executing action with key={}", actionKey, e);
             }
         }
         return EventService.NO_CHANGE;

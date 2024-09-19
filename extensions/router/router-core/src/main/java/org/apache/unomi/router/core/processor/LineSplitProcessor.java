@@ -24,7 +24,6 @@ import org.apache.camel.component.kafka.KafkaConstants;
 import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.unomi.api.PropertyType;
-import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.router.api.ImportConfiguration;
 import org.apache.unomi.router.api.ProfileToImport;
 import org.apache.unomi.router.api.RouterConstants;
@@ -40,7 +39,7 @@ import java.util.*;
  */
 public class LineSplitProcessor implements Processor {
 
-    private static final Logger logger = LoggerFactory.getLogger(LineSplitProcessor.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(LineSplitProcessor.class.getName());
 
     private Map<String, Integer> fieldsMapping;
     private List<String> propertiesToOverwrite;
@@ -82,7 +81,7 @@ public class LineSplitProcessor implements Processor {
                 .withSeparator(columnSeparator.charAt(0))
                 .build();
 
-        logger.debug("$$$$ : LineSplitProcessor : BODY : " + (String) exchange.getIn().getBody());
+        LOGGER.debug("$$$$ : LineSplitProcessor : BODY : " + (String) exchange.getIn().getBody());
 
         String[] profileData = rfc4180Parser.parseLine(((String) exchange.getIn().getBody()));
 
@@ -97,24 +96,24 @@ public class LineSplitProcessor implements Processor {
                     ) {
                 throw new BadProfileDataFormatException("The mapping does not match the number of column : line [" + ((Integer) exchange.getProperty("CamelSplitIndex") + 1) + "]", new Throwable("MAPPING_COLUMN_MATCH"));
             }
-            logger.debug("$$$$ : LineSplitProcessor : MAPPING : " + fieldsMapping.keySet());
+            LOGGER.debug("$$$$ : LineSplitProcessor : MAPPING : {}", fieldsMapping.keySet());
             Map<String, Object> properties = new HashMap<>();
             for (String fieldMappingKey : fieldsMapping.keySet()) {
                 PropertyType propertyType = RouterUtils.getPropertyTypeById(profilePropertyTypes, fieldMappingKey);
 
                 if (fieldMappingKey != null && fieldsMapping.get(fieldMappingKey) != null && profileData != null && profileData[fieldsMapping.get(fieldMappingKey)] != null) {
-                    logger.debug("$$$$ : LineSplitProcessor : PropType value : {}", profileData[fieldsMapping.get(fieldMappingKey)].trim());
+                    LOGGER.debug("$$$$ : LineSplitProcessor : PropType value : {}", profileData[fieldsMapping.get(fieldMappingKey)].trim());
                 } else {
-                    logger.debug("$$$$ : LineSplitProcessor : no profileData found for fieldMappingKey=" + fieldMappingKey);
+                    LOGGER.debug("$$$$ : LineSplitProcessor : no profileData found for fieldMappingKey={}", fieldMappingKey);
                 }
 
                 if (profileData.length > fieldsMapping.get(fieldMappingKey)) {
                     try {
                         if (propertyType == null) {
-                            logger.error("No valid property type found for propertyTypeId=" + fieldMappingKey);
+                            LOGGER.error("No valid property type found for propertyTypeId={}", fieldMappingKey);
                         } else {
                             if (propertyType.getValueTypeId() == null) {
-                                logger.error("No value type id found for property type " + propertyType.getItemId());
+                                LOGGER.error("No value type id found for property type {}", propertyType.getItemId());
                             }
                         }
                         if (propertyType.getValueTypeId().equals("string") || propertyType.getValueTypeId().equals("email") ||
@@ -139,14 +138,14 @@ public class LineSplitProcessor implements Processor {
                                 properties.put(fieldMappingKey, singleValue);
                             }
                         } else if (propertyType.getValueTypeId().equals("boolean")) {
-                            properties.put(fieldMappingKey, new Boolean(profileData[fieldsMapping.get(fieldMappingKey)].trim()));
+                            properties.put(fieldMappingKey, Boolean.valueOf(profileData[fieldsMapping.get(fieldMappingKey)].trim()));
                         } else if (propertyType.getValueTypeId().equals("integer")) {
-                            properties.put(fieldMappingKey, new Integer(profileData[fieldsMapping.get(fieldMappingKey)].trim()));
+                            properties.put(fieldMappingKey, Integer.valueOf(profileData[fieldsMapping.get(fieldMappingKey)].trim()));
                         } else if (propertyType.getValueTypeId().equals("long")) {
-                            properties.put(fieldMappingKey, new Long(profileData[fieldsMapping.get(fieldMappingKey)].trim()));
+                            properties.put(fieldMappingKey, Long.valueOf(profileData[fieldsMapping.get(fieldMappingKey)].trim()));
                         }
                     } catch (Throwable t) {
-                        logger.error("Error converting profileData", t);
+                        LOGGER.error("Error converting profileData", t);
                         if (fieldMappingKey != null && fieldsMapping.get(fieldMappingKey) != null && profileData != null && profileData[fieldsMapping.get(fieldMappingKey)] != null) {
                             throw new BadProfileDataFormatException("Unable to convert '" + profileData[fieldsMapping.get(fieldMappingKey)].trim() + "' to " + propertyType!=null?propertyType.getValueTypeId():"Null propertyType ", new Throwable("DATA_TYPE"));
                         } else {

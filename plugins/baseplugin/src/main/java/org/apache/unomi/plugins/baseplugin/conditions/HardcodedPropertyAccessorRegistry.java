@@ -21,8 +21,6 @@ import org.apache.unomi.api.campaigns.Campaign;
 import org.apache.unomi.api.goals.Goal;
 import org.apache.unomi.api.rules.Rule;
 import org.apache.unomi.plugins.baseplugin.conditions.accessors.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -32,8 +30,6 @@ import java.util.stream.Collectors;
  * For the moment this list of accessors is hardcoded, but in a future update it could be made dynamic.
  */
 public class HardcodedPropertyAccessorRegistry {
-
-    private static final Logger logger = LoggerFactory.getLogger(HardcodedPropertyAccessorRegistry.class.getName());
 
     protected Map<Class<?>, HardcodedPropertyAccessor> propertyAccessors = new HashMap<>();
     protected Map<Class<?>, List<Class<?>>> cachedClassAncestors = new HashMap<>();

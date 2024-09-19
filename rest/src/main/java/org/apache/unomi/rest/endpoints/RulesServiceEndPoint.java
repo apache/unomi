@@ -50,13 +50,13 @@ import java.util.Set;
 @Component(service=RulesServiceEndPoint.class,property = "osgi.jaxrs.resource=true")
 public class RulesServiceEndPoint {
 
-    private static final Logger logger = LoggerFactory.getLogger(RulesServiceEndPoint.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(RulesServiceEndPoint.class.getName());
 
     @Reference
     private RulesService rulesService;
 
     public RulesServiceEndPoint() {
-        logger.info("Initializing rule service endpoint...");
+        LOGGER.info("Initializing rule service endpoint...");
     }
 
     @WebMethod(exclude=true)

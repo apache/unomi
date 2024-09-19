@@ -33,7 +33,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * Entry point for condition evaluation. Will dispatch to all evaluators.
  */
 public class ConditionEvaluatorDispatcher {
-    private static final Logger logger = LoggerFactory.getLogger(ConditionEvaluatorDispatcher.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(ConditionEvaluatorDispatcher.class.getName());
 
     private Map<String, ConditionEvaluator> evaluators = new ConcurrentHashMap<>();
 
@@ -87,7 +87,7 @@ public class ConditionEvaluatorDispatcher {
                     }
                 }.runWithTimer();
             } catch (Exception e) {
-                logger.error("Error executing condition evaluator with key=" + conditionEvaluatorKey, e);
+                LOGGER.error("Error executing condition evaluator with key={}", conditionEvaluatorKey, e);
             }
         }
 

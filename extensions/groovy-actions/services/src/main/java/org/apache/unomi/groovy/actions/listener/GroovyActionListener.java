@@ -43,7 +43,7 @@ import java.util.Enumeration;
 @Component(service = SynchronousBundleListener.class)
 public class GroovyActionListener implements SynchronousBundleListener {
 
-    private static final Logger logger = LoggerFactory.getLogger(GroovyActionListener.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(GroovyActionListener.class.getName());
     public static final String ENTRIES_LOCATION = "META-INF/cxs/actions";
 
     private GroovyActionsService groovyActionsService;
@@ -57,7 +57,7 @@ public class GroovyActionListener implements SynchronousBundleListener {
     @Activate
     public void postConstruct(BundleContext bundleContext) {
         this.bundleContext = bundleContext;
-        logger.debug("postConstruct {}", bundleContext.getBundle());
+        LOGGER.debug("postConstruct {}", bundleContext.getBundle());
         loadGroovyActions(bundleContext);
         for (Bundle bundle : bundleContext.getBundles()) {
             if (bundle.getBundleContext() != null && bundle.getBundleId() != bundleContext.getBundle().getBundleId()) {
@@ -66,14 +66,14 @@ public class GroovyActionListener implements SynchronousBundleListener {
         }
 
         bundleContext.addBundleListener(this);
-        logger.info("Groovy Action Dispatcher initialized.");
+        LOGGER.info("Groovy Action Dispatcher initialized.");
     }
 
     @Deactivate
     public void preDestroy() {
         processBundleStop(bundleContext);
         bundleContext.removeBundleListener(this);
-        logger.info("Groovy Action Dispatcher shutdown.");
+        LOGGER.info("Groovy Action Dispatcher shutdown.");
     }
 
     private void processBundleStartup(BundleContext bundleContext) {
@@ -108,14 +108,14 @@ public class GroovyActionListener implements SynchronousBundleListener {
             groovyActionsService.save(FilenameUtils.getName(groovyActionURL.getPath()).replace(".groovy", ""),
                     IOUtils.toString(groovyActionURL.openStream()));
         } catch (IOException e) {
-            logger.error("Failed to load the groovy action {}", groovyActionURL.getPath(), e);
+            LOGGER.error("Failed to load the groovy action {}", groovyActionURL.getPath(), e);
         }
     }
 
     private void removeGroovyAction(URL groovyActionURL) {
         String actionName = FilenameUtils.getName(groovyActionURL.getPath()).replace(".groovy", "");
         groovyActionsService.remove(actionName);
-        logger.info("The script {} has been removed.", actionName);
+        LOGGER.info("The script {} has been removed.", actionName);
     }
 
     private void loadGroovyActions(BundleContext bundleContext) {
@@ -125,7 +125,7 @@ public class GroovyActionListener implements SynchronousBundleListener {
         }
         while (bundleGroovyActions.hasMoreElements()) {
             URL groovyActionURL = bundleGroovyActions.nextElement();
-            logger.debug("Found Groovy action at {}, loading... ", groovyActionURL.getPath());
+            LOGGER.debug("Found Groovy action at {}, loading... ", groovyActionURL.getPath());
             addGroovyAction(groovyActionURL);
         }
     }
@@ -138,7 +138,7 @@ public class GroovyActionListener implements SynchronousBundleListener {
 
         while (bundleGroovyActions.hasMoreElements()) {
             URL groovyActionURL = bundleGroovyActions.nextElement();
-            logger.debug("Found Groovy action at {}, loading... ", groovyActionURL.getPath());
+            LOGGER.debug("Found Groovy action at {}, loading... ", groovyActionURL.getPath());
             removeGroovyAction(groovyActionURL);
         }
     }

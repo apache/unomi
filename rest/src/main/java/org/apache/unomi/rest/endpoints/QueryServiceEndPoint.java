@@ -50,7 +50,7 @@ import java.util.Map;
 @Path("/query")
 @Component(service=QueryServiceEndPoint.class,property = "osgi.jaxrs.resource=true")
 public class QueryServiceEndPoint {
-    private static final Logger logger = LoggerFactory.getLogger(QueryServiceEndPoint.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(QueryServiceEndPoint.class.getName());
 
     @Reference
     private QueryService queryService;
@@ -149,7 +149,7 @@ public class QueryServiceEndPoint {
             count = queryService.getQueryCount(type, condition);
         } catch (IllegalArgumentException e) {
             if(validate == null || validate) {
-                logger.error(e.getMessage(), e);
+                LOGGER.error("{}", e.getMessage(), e);
                 response.setStatus(Response.Status.BAD_REQUEST.getStatusCode());
             }
         }

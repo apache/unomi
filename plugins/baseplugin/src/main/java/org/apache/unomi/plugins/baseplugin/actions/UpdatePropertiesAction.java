@@ -44,7 +44,7 @@ public class UpdatePropertiesAction implements ActionExecutor {
 
     public static final String TARGET_TYPE_PROFILE = "profile";
 
-    Logger logger = LoggerFactory.getLogger(UpdatePropertiesAction.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(UpdatePropertiesAction.class.getName());
 
     private ProfileService profileService;
     private EventService eventService;
@@ -59,7 +59,7 @@ public class UpdatePropertiesAction implements ActionExecutor {
         if (StringUtils.isNotBlank(targetId) && event.getProfile() != null && !targetId.equals(event.getProfile().getItemId())) {
             target = TARGET_TYPE_PROFILE.equals(targetType) ? profileService.load(targetId) : profileService.loadPersona(targetId);
             if (target == null) {
-                logger.warn("No profile found with Id : {}. Update skipped.", targetId);
+                LOGGER.warn("No profile found with Id : {}. Update skipped.", targetId);
                 return EventService.NO_CHANGE;
             }
         }

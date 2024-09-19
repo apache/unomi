@@ -26,8 +26,8 @@ import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.rest.exception.InvalidRequestException;
 import org.apache.unomi.rest.service.RestServiceUtils;
 import org.apache.unomi.schema.api.SchemaService;
-import org.apache.unomi.utils.HttpUtils;
 import org.apache.unomi.utils.EventsRequestContext;
+import org.apache.unomi.utils.HttpUtils;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 import org.slf4j.Logger;
@@ -40,14 +40,13 @@ import javax.ws.rs.BadRequestException;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 @Component(service = RestServiceUtils.class)
 public class RestServiceUtilsImpl implements RestServiceUtils {
 
     private static final String DEFAULT_CLIENT_ID = "defaultClientId";
 
-    private static final Logger logger = LoggerFactory.getLogger(RestServiceUtilsImpl.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(RestServiceUtilsImpl.class.getName());
 
     @Reference
     private ConfigSharingService configSharingService;
@@ -97,7 +96,7 @@ public class RestServiceUtilsImpl implements RestServiceUtils {
         if (personaId != null) {
             PersonaWithSessions personaWithSessions = profileService.loadPersonaWithSessions(personaId);
             if (personaWithSessions == null) {
-                logger.error("Couldn't find persona, please check your personaId parameter");
+                LOGGER.error("Couldn't find persona, please check your personaId parameter");
             } else {
                 eventsRequestContext.setProfile(personaWithSessions.getPersona());
                 eventsRequestContext.setSession(personaWithSessions.getLastSession());
@@ -110,10 +109,8 @@ public class RestServiceUtilsImpl implements RestServiceUtils {
         }
 
         if (profileId == null && sessionId == null && personaId == null) {
-            logger.warn("Couldn't find profileId, sessionId or personaId in incoming request! Stopped processing request. See debug level for more information");
-            if (logger.isDebugEnabled()) {
-                logger.debug("Request dump: {}", HttpUtils.dumpRequestInfo(request));
-            }
+            LOGGER.warn("Couldn't find profileId, sessionId or personaId in incoming request! Stopped processing request. See debug level for more information");
+            LOGGER.debug("Request dump: {}", HttpUtils.dumpRequestInfo(request));
             throw new BadRequestException("Couldn't find profileId, sessionId or personaId in incoming request!");
         }
 
@@ -196,10 +193,8 @@ public class RestServiceUtilsImpl implements RestServiceUtils {
                     }
                     event.getAttributes().put(Event.HTTP_REQUEST_ATTRIBUTE, request);
                     event.getAttributes().put(Event.HTTP_RESPONSE_ATTRIBUTE, response);
-                    if (logger.isDebugEnabled()) {
-                        logger.debug("Received event {} for profile={} session={} target={} timestamp={}", event.getEventType(),
-                                eventsRequestContext.getProfile().getItemId(), eventsRequestContext.getSession().getItemId(), event.getTarget(), timestamp);
-                    }
+                    LOGGER.debug("Received event {} for profile={} session={} target={} timestamp={}", event.getEventType(),
+                            eventsRequestContext.getProfile().getItemId(), eventsRequestContext.getSession().getItemId(), event.getTarget(), timestamp);
                     eventsRequestContext.addChanges(eventService.send(event));
                 }
             }
@@ -215,12 +210,10 @@ public class RestServiceUtilsImpl implements RestServiceUtils {
                 profileUpdated.getAttributes().put(Event.HTTP_RESPONSE_ATTRIBUTE, response);
                 profileUpdated.getAttributes().put(Event.CLIENT_ID_ATTRIBUTE, DEFAULT_CLIENT_ID);
 
-                if (logger.isDebugEnabled()) {
-                    logger.debug("Received event {} for profile={} {} target={} timestamp={}", profileUpdated.getEventType(),
-                            eventsRequestContext.getProfile().getItemId(),
-                            " session=" + (eventsRequestContext.getSession() != null ? eventsRequestContext.getSession().getItemId() : null),
-                            profileUpdated.getTarget(), timestamp);
-                }
+                LOGGER.debug("Received event {} for profile={} {} target={} timestamp={}", profileUpdated.getEventType(),
+                        eventsRequestContext.getProfile().getItemId(),
+                        " session=" + (eventsRequestContext.getSession() != null ? eventsRequestContext.getSession().getItemId() : null),
+                        profileUpdated.getTarget(), timestamp);
                 eventsRequestContext.addChanges(eventService.send(profileUpdated));
             }
         }
@@ -247,7 +240,7 @@ public class RestServiceUtilsImpl implements RestServiceUtils {
                             event.getTarget(), event.getProperties(), eventsRequestContext.getTimestamp(), event.isPersistent());
                     eventToSend.setFlattenedProperties(event.getFlattenedProperties());
                     if (!eventService.isEventAllowed(event, thirdPartyId)) {
-                        logger.warn("Event is not allowed : {}", event.getEventType());
+                        LOGGER.warn("Event is not allowed : {}", event.getEventType());
                         continue;
                     }
                     if (thirdPartyId != null && event.getItemId() != null) {
@@ -256,7 +249,7 @@ public class RestServiceUtilsImpl implements RestServiceUtils {
                         eventToSend.setFlattenedProperties(event.getFlattenedProperties());
                     }
                     if (filteredEventTypes != null && filteredEventTypes.contains(event.getEventType())) {
-                        logger.debug("Profile is filtering event type {}", event.getEventType());
+                        LOGGER.debug("Profile is filtering event type {}", event.getEventType());
                         continue;
                     }
                     if (eventsRequestContext.getProfile().isAnonymousProfile()) {
@@ -266,9 +259,10 @@ public class RestServiceUtilsImpl implements RestServiceUtils {
 
                     eventToSend.getAttributes().put(Event.HTTP_REQUEST_ATTRIBUTE, eventsRequestContext.getRequest());
                     eventToSend.getAttributes().put(Event.HTTP_RESPONSE_ATTRIBUTE, eventsRequestContext.getResponse());
-                    logger.debug("Received event " + event.getEventType() + " for profile=" + eventsRequestContext.getProfile().getItemId() + " session=" + (
-                            eventsRequestContext.getSession() != null ? eventsRequestContext.getSession().getItemId() : null) +
-                            " target=" + event.getTarget() + " timestamp=" + eventsRequestContext.getTimestamp());
+                    LOGGER.debug("Received event {} for profile={} session={} target={} timestamp={}", event.getEventType(),
+                            eventsRequestContext.getProfile().getItemId(),
+                            eventsRequestContext.getSession() != null ? eventsRequestContext.getSession().getItemId() : null,
+                            event.getTarget(), eventsRequestContext.getTimestamp());
                     eventsRequestContext.addChanges(eventService.send(eventToSend));
                     // If the event execution changes the profile we need to update it so the next event use the right profile
                     if ((eventsRequestContext.getChanges() & EventService.PROFILE_UPDATED) == EventService.PROFILE_UPDATED) {
@@ -281,7 +275,7 @@ public class RestServiceUtilsImpl implements RestServiceUtils {
                     if ((eventsRequestContext.getChanges() & EventService.ERROR) == EventService.ERROR) {
                         //Don't count the event that failed
                         eventsRequestContext.setProcessedItems(eventsRequestContext.getProcessedItems() - 1);
-                        logger.error("Error processing events. Total number of processed events: {}/{}", eventsRequestContext.getProcessedItems(), eventsRequestContext.getTotalItems());
+                        LOGGER.error("Error processing events. Total number of processed events: {}/{}", eventsRequestContext.getProcessedItems(), eventsRequestContext.getTotalItems());
                         break;
                     }
                 }

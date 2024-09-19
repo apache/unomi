@@ -33,7 +33,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class ConfigSharingServiceImpl implements ConfigSharingService, SynchronousBundleListener {
 
-    private static final Logger logger = LoggerFactory.getLogger(ConfigSharingServiceImpl.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(ConfigSharingServiceImpl.class);
 
     private BundleContext bundleContext;
     private Map<String,Object> configProperties = new ConcurrentHashMap<String,Object>();
@@ -53,10 +53,7 @@ public class ConfigSharingServiceImpl implements ConfigSharingService, Synchrono
 
     @Override
     public Object setProperty(String name, Object newValue) {
-        boolean existed = false;
-        if (configProperties.containsKey(name)) {
-            existed = true;
-        }
+        boolean existed = configProperties.containsKey(name);
         Object oldValue = configProperties.put(name, newValue);
         if (existed) {
             firePropertyUpdatedEvent(name, oldValue, newValue);
@@ -73,10 +70,7 @@ public class ConfigSharingServiceImpl implements ConfigSharingService, Synchrono
 
     @Override
     public Object removeProperty(String name) {
-        boolean existed = false;
-        if (configProperties.containsKey(name)) {
-            existed = true;
-        }
+        boolean existed = configProperties.containsKey(name);
         Object oldValue = configProperties.remove(name);
         if (existed) {
             firePropertyRemovedEvent(name, oldValue);
@@ -91,7 +85,7 @@ public class ConfigSharingServiceImpl implements ConfigSharingService, Synchrono
 
     public void preDestroy() throws Exception {
         bundleContext.removeBundleListener(this);
-        logger.info("Config sharing service for Service is shutdown.");
+        LOGGER.info("Config sharing service for Service is shutdown.");
     }
 
     private void processBundleStartup(BundleContext bundleContext) {
@@ -142,7 +136,7 @@ public class ConfigSharingServiceImpl implements ConfigSharingService, Synchrono
                 }
             }
         } catch (InvalidSyntaxException e) {
-            logger.error("Error retrieving listeners", e);
+            LOGGER.error("Error retrieving listeners", e);
             return listeners;
         }
         return listeners;

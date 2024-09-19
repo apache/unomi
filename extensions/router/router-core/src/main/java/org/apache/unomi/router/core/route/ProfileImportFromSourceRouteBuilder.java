@@ -42,7 +42,7 @@ import java.util.Map;
 
 public class ProfileImportFromSourceRouteBuilder extends RouterAbstractRouteBuilder {
 
-    private static final Logger logger = LoggerFactory.getLogger(ProfileImportFromSourceRouteBuilder.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(ProfileImportFromSourceRouteBuilder.class.getName());
 
     private List<ImportConfiguration> importConfigurationList;
     private ImportExportConfigurationService<ImportConfiguration> importConfigurationService;
@@ -54,7 +54,7 @@ public class ProfileImportFromSourceRouteBuilder extends RouterAbstractRouteBuil
     @Override
     public void configure() throws Exception {
 
-        logger.info("Configure Recurrent Route 'From Source'");
+        LOGGER.info("Configure Recurrent Route 'From Source'");
 
         if (importConfigurationList == null) {
             importConfigurationList = importConfigurationService.getAll();
@@ -126,7 +126,7 @@ public class ProfileImportFromSourceRouteBuilder extends RouterAbstractRouteBuil
                         prDef.to((String) getEndpointURI(RouterConstants.DIRECTION_FROM, RouterConstants.DIRECT_IMPORT_DEPOSIT_BUFFER));
                     }
                 } else {
-                    logger.error("Endpoint scheme {} is not allowed, route {} will be skipped.", endpoint.substring(0, endpoint.indexOf(':')), importConfiguration.getItemId());
+                    LOGGER.error("Endpoint scheme {} is not allowed, route {} will be skipped.", endpoint.substring(0, endpoint.indexOf(':')), importConfiguration.getItemId());
                 }
             }
         }

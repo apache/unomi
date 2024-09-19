@@ -57,7 +57,7 @@ import java.util.stream.Collectors;
  */
 public class BundleWatcherImpl implements SynchronousBundleListener, ServiceListener, BundleWatcher {
 
-    private static final Logger logger = LoggerFactory.getLogger(BundleWatcherImpl.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(BundleWatcherImpl.class.getName());
 
     private static final String CDP_GRAPHQL_FEATURE = "cdp-graphql-feature";
 
@@ -99,7 +99,7 @@ public class BundleWatcherImpl implements SynchronousBundleListener, ServiceList
             try {
                 requiredServicesFilters.add(bundleContext.createFilter(requiredService.trim()));
             } catch (InvalidSyntaxException e) {
-                logger.error("Error creating require service filter {}", requiredService.trim(), e);
+                LOGGER.error("Error creating require service filter {}", requiredService.trim(), e);
             }
         }
     }
@@ -120,7 +120,7 @@ public class BundleWatcherImpl implements SynchronousBundleListener, ServiceList
         bundleContext.addServiceListener(this);
         startupTime = System.currentTimeMillis();
         System.out.println("Initializing Unomi...");
-        logger.info("Bundle watcher initialized.");
+        LOGGER.info("Bundle watcher initialized.");
     }
 
     @Override
@@ -138,7 +138,7 @@ public class BundleWatcherImpl implements SynchronousBundleListener, ServiceList
     }
 
     private void displayLogsForInactiveBundles(Map<String, Boolean> bundles) {
-        getInactiveBundles(bundles).forEach(inactiveBundle -> logger
+        getInactiveBundles(bundles).forEach(inactiveBundle -> LOGGER
                 .warn("The bundle {} is in not active, some errors could happen when using the application", inactiveBundle));
     }
 
@@ -152,7 +152,7 @@ public class BundleWatcherImpl implements SynchronousBundleListener, ServiceList
         if (scheduledFuture != null) {
             scheduledFuture.cancel(true);
         }
-        logger.info("Bundle watcher shutdown.");
+        LOGGER.info("Bundle watcher shutdown.");
     }
 
     public void checkExistingBundles() {
@@ -184,7 +184,7 @@ public class BundleWatcherImpl implements SynchronousBundleListener, ServiceList
 
     private void managedBundleEvent(Bundle bundle, Map<String, Boolean> bundles, Boolean start) {
         if (bundle.getSymbolicName().startsWith("org.apache.unomi") && bundles.containsKey(bundle.getSymbolicName())) {
-            logger.info("Bundle {} was {}.", bundle.getSymbolicName(), start ? "started" : "stopped");
+            LOGGER.info("Bundle {} was {}.", bundle.getSymbolicName(), start ? "started" : "stopped");
             bundles.put(bundle.getSymbolicName(), start);
             if (start) {
                 checkStartupComplete();
@@ -245,7 +245,7 @@ public class BundleWatcherImpl implements SynchronousBundleListener, ServiceList
                 matchedRequiredServicesCount--;
                 if (!shutdownMessageAlreadyDisplayed) {
                     System.out.println("Apache Unomi shutting down...");
-                    logger.info("Apache Unomi no longer available, as required service {} is shutdown !", serviceReference);
+                    LOGGER.info("Apache Unomi no longer available, as required service {} is shutdown !", serviceReference);
                     shutdownMessageAlreadyDisplayed = true;
                 }
                 startupMessageAlreadyDisplayed = false;
@@ -260,10 +260,10 @@ public class BundleWatcherImpl implements SynchronousBundleListener, ServiceList
             try {
                 serviceReference = bundleContext.getServiceReferences((String) null, filterToString);
             } catch (InvalidSyntaxException e) {
-                logger.error("Failed to get the service reference for {}", filterToString, e);
+                LOGGER.error("Failed to get the service reference for {}", filterToString, e);
             }
             if (serviceReference == null) {
-                logger.warn("No service found for the filter {}, some errors could happen when using the application", filterToString);
+                LOGGER.warn("No service found for the filter {}, some errors could happen when using the application", filterToString);
             }
         });
     }
@@ -289,11 +289,11 @@ public class BundleWatcherImpl implements SynchronousBundleListener, ServiceList
                     System.out.println("Installing feature " + value);
                     featuresService.installFeature(value, EnumSet.of(FeaturesService.Option.NoAutoRefreshManagedBundles,
                             FeaturesService.Option.NoAutoRefreshUnmanagedBundles, FeaturesService.Option.NoAutoRefreshBundles));
-                    logger.info("Feature {} successfully installed in {} ms", value, System.currentTimeMillis() - featureStartupTime);
+                    LOGGER.info("Feature {} successfully installed in {} ms", value, (System.currentTimeMillis() - featureStartupTime));
                 }
                 installedFeatures.add(value);
             } catch (Exception e) {
-                logger.error("Error when installing {} feature", value, e);
+                LOGGER.error("Error when installing {} feature", value, e);
             }
         });
         installedFeatures.forEach(value -> featuresToInstall.remove(value));
@@ -366,12 +366,12 @@ public class BundleWatcherImpl implements SynchronousBundleListener, ServiceList
                         serverInfo.getServerBuildDate(), serverInfo.getServerTimestamp(), serverInfo.getServerScmBranch(),
                         serverInfo.getServerBuildNumber());
                 System.out.println(versionMessage);
-                logger.info(versionMessage);
+                LOGGER.info(versionMessage);
             });
             System.out.println("--------------------------------------------------------------------------------------------");
             System.out.println("Server successfully started " + requiredBundles.size() + " bundles and " + requiredServicesFilters.size()
                     + " required " + "services in " + totalStartupTime + " ms");
-            logger.info("Server successfully started {} bundles and {} required services in {} ms", requiredBundles.size(),
+            LOGGER.info("Server successfully started {} bundles and {} required services in {} ms", requiredBundles.size(),
                     requiredServicesFilters.size(), totalStartupTime);
             startupMessageAlreadyDisplayed = true;
             shutdownMessageAlreadyDisplayed = false;
@@ -398,7 +398,7 @@ public class BundleWatcherImpl implements SynchronousBundleListener, ServiceList
                 }
                 return logoLines;
             } catch (IOException e) {
-                logger.error("Error loading logo lines", e);
+                LOGGER.error("Error loading logo lines", e);
             } finally {
                 if (bufferedReader != null) {
                     try {

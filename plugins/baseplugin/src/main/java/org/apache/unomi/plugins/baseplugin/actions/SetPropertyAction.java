@@ -34,7 +34,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class SetPropertyAction implements ActionExecutor {
-    private static final Logger logger = LoggerFactory.getLogger(SetPropertyAction.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(SetPropertyAction.class.getName());
 
     private EventService eventService;
     // TODO Temporary solution that should be handle by: https://issues.apache.org/jira/browse/UNOMI-630 (Implement a global solution to avoid multiple same log pollution.)
@@ -127,7 +127,7 @@ public class SetPropertyAction implements ActionExecutor {
             long timeStamp = nowDeprecatedLogTimestamp.get();
             long currentTimeStamp = new Date().getTime();
             if (timeStamp == 0 || (timeStamp + TimeUnit.HOURS.toMillis(6) < currentTimeStamp)) {
-                logger.warn("SetPropertyAction with setPropertyValue: 'now' is deprecated, " +
+                LOGGER.warn("SetPropertyAction with setPropertyValue: 'now' is deprecated, " +
                         "please use 'setPropertyValueCurrentEventTimestamp' or 'setPropertyValueCurrentDate' instead of 'setPropertyValue'");
                 nowDeprecatedLogTimestamp.set(currentTimeStamp);
             }

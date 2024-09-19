@@ -31,7 +31,7 @@ import java.util.*;
 
 public class NestedConditionEvaluator implements ConditionEvaluator {
 
-    private static final Logger logger = LoggerFactory.getLogger(NestedConditionEvaluator.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(NestedConditionEvaluator.class.getName());
 
     PropertyConditionEvaluator propertyConditionEvaluator;
 
@@ -67,7 +67,7 @@ public class NestedConditionEvaluator implements ConditionEvaluator {
                 }
             }
         } catch (Exception e) {
-            logger.error("Failed to evaluated nested condition", e);
+            LOGGER.error("Failed to evaluated nested condition", e);
             return false;
         }
         return false;

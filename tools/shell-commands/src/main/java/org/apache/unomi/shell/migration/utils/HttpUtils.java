@@ -32,7 +32,6 @@ import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.apache.http.util.EntityUtils;
-import org.apache.karaf.shell.api.console.Session;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,7 +49,7 @@ import java.util.Map;
  * @author dgaillard
  */
 public class HttpUtils {
-    private static final Logger logger = LoggerFactory.getLogger(HttpUtils.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(HttpUtils.class);
 
     public static CloseableHttpClient initHttpClient(boolean trustAllCertificates, CredentialsProvider credentialsProvider) throws IOException {
         long requestStartTime = System.currentTimeMillis();
@@ -85,7 +84,7 @@ public class HttpUtils {
                         .setConnectionManager(new PoolingHttpClientConnectionManager(socketFactoryRegistry));
 
             } catch (NoSuchAlgorithmException | KeyManagementException e) {
-                logger.error("Error creating SSL Context", e);
+                LOGGER.error("Error creating SSL Context", e);
             }
         } else {
             httpClientBuilder.setConnectionManager(new PoolingHttpClientConnectionManager());
@@ -94,10 +93,7 @@ public class HttpUtils {
         RequestConfig requestConfig = RequestConfig.custom().build();
         httpClientBuilder.setDefaultRequestConfig(requestConfig);
 
-        if (logger.isDebugEnabled()) {
-            long totalRequestTime = System.currentTimeMillis() - requestStartTime;
-            logger.debug("Init HttpClient executed in " + totalRequestTime + "ms");
-        }
+        LOGGER.debug("Init HttpClient executed in {}ms", (System.currentTimeMillis() - requestStartTime));
 
         return httpClientBuilder.build();
     }
@@ -164,15 +160,8 @@ public class HttpUtils {
             throw new HttpRequestException("Couldn't execute " + httpRequestBase + " response: " + ((entity != null) ? EntityUtils.toString(entity) : "n/a"), statusCode);
         }
 
-        if (logger.isDebugEnabled()) {
-            if (entity !=null) {
-                entity = new BufferedHttpEntity(response.getEntity());
-            }
-            logger.debug("Request " + httpRequestBase + " executed with code: " + statusCode + " and message: " + (entity!=null?EntityUtils.toString(entity):null));
-
-            long totalRequestTime = System.currentTimeMillis() - requestStartTime;
-            logger.debug("Request to Apache Unomi url: " + url + " executed in " + totalRequestTime + "ms");
-        }
+        LOGGER.debug("Request {} executed with code: {} and message: {}", httpRequestBase, statusCode, (entity!=null?EntityUtils.toString(new BufferedHttpEntity(response.getEntity())):null));
+        LOGGER.debug("Request to Apache Unomi url: {} executed in {}ms", url, (System.currentTimeMillis() - requestStartTime));
 
         if (entity == null) {
             return null;
@@ -180,8 +169,6 @@ public class HttpUtils {
 
         String stringResponse = EntityUtils.toString(entity);
         EntityUtils.consumeQuietly(entity);
-
-
         return stringResponse;
     }
 }

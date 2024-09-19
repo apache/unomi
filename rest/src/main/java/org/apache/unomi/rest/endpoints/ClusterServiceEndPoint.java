@@ -47,7 +47,7 @@ import java.util.List;
 @Path("/cluster")
 @Component(service=ClusterServiceEndPoint.class,property = "osgi.jaxrs.resource=true")
 public class ClusterServiceEndPoint {
-    private static final Logger logger = LoggerFactory.getLogger(ClusterServiceEndPoint.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(ClusterServiceEndPoint.class.getName());
 
     @Context
     private MessageContext messageContext;
@@ -56,7 +56,7 @@ public class ClusterServiceEndPoint {
     private ClusterService clusterService;
 
     public ClusterServiceEndPoint() {
-        logger.info("Initializing cluster service endpoint...");
+        LOGGER.info("Initializing cluster service endpoint...");
     }
 
     @WebMethod(exclude = true)
@@ -92,10 +92,8 @@ public class ClusterServiceEndPoint {
         try {
             clusterService.purge(new SimpleDateFormat("yyyy-MM-dd").parse(date));
         } catch (ParseException e) {
-            logger.error("Cannot parse date, expected format is: yyyy-MM-dd. See debug log level for more information");
-            if (logger.isDebugEnabled()) {
-                logger.debug("Cannot parse date: {}", date, e);
-            }
+            LOGGER.error("Cannot parse date, expected format is: yyyy-MM-dd. See debug log level for more information");
+            LOGGER.debug("Cannot parse date: {}", date, e);
         }
     }
 

@@ -28,7 +28,7 @@ import org.slf4j.LoggerFactory;
  */
 public class UserAgentDetectorServiceImpl {
 
-    private static final Logger logger = LoggerFactory.getLogger(UserAgentDetectorServiceImpl.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(UserAgentDetectorServiceImpl.class.getName());
 
     private UserAgentAnalyzer userAgentAnalyzer;
 
@@ -50,7 +50,7 @@ public class UserAgentDetectorServiceImpl {
 
         // Use custom cache for jdk8 compatibility
         if (getCurrentJVMMajorVersion() < 11) {
-            logger.info("Use JVM 8 compliant version of the agent analyzer caching");
+            LOGGER.info("Use JVM 8 compliant version of the agent analyzer caching");
             userAgentAnalyzerBuilder.useJava8CompatibleCaching();
         }
 
@@ -64,7 +64,7 @@ public class UserAgentDetectorServiceImpl {
                 .withField(nl.basjes.parse.useragent.UserAgent.DEVICE_BRAND)
                 .build();
         this.userAgentAnalyzer.initializeMatchers();
-        logger.info("UserAgentDetector service initialized.");
+        LOGGER.info("UserAgentDetector service initialized.");
     }
 
     private int getCurrentJVMMajorVersion() {
@@ -83,7 +83,7 @@ public class UserAgentDetectorServiceImpl {
             userAgentAnalyzer.destroy();
             userAgentAnalyzer = null;
         }
-        logger.info("UserAgentDetector service shutdown.");
+        LOGGER.info("UserAgentDetector service shutdown.");
     }
 
     public UserAgent parseUserAgent(String header) {
@@ -98,9 +98,7 @@ public class UserAgentDetectorServiceImpl {
         userAgent.setUserAgentName(yauaaAgent.getValue(nl.basjes.parse.useragent.UserAgent.AGENT_NAME));
         userAgent.setUserAgentVersion(yauaaAgent.getValue(nl.basjes.parse.useragent.UserAgent.AGENT_VERSION));
 
-        if (logger.isDebugEnabled()) {
-            logger.debug(userAgent.toString());
-        }
+        LOGGER.debug(userAgent.toString());
 
         return userAgent;
     }

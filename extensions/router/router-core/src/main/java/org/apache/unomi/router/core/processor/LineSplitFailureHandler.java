@@ -29,10 +29,10 @@ import org.slf4j.LoggerFactory;
  */
 public class LineSplitFailureHandler implements Processor {
 
-    private static final Logger logger = LoggerFactory.getLogger(LineSplitFailureHandler.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(LineSplitFailureHandler.class.getName());
 
     public void process(Exchange exchange) throws Exception {
-        logger.error("Route: {}, Error: {}", exchange.getProperty(Exchange.FAILURE_ROUTE_ID), exchange.getProperty(Exchange.EXCEPTION_CAUGHT));
+        LOGGER.error("Route: {}, Error: {}", exchange.getProperty(Exchange.FAILURE_ROUTE_ID), exchange.getProperty(Exchange.EXCEPTION_CAUGHT));
         ImportLineError importLineError = new ImportLineError();
         if (exchange.getProperty(Exchange.EXCEPTION_CAUGHT) instanceof BadProfileDataFormatException) {
             importLineError.setErrorCode(((BadProfileDataFormatException) exchange.getProperty(Exchange.EXCEPTION_CAUGHT)).getCause().getMessage());
@@ -47,7 +47,7 @@ public class LineSplitFailureHandler implements Processor {
         }
         importLineError.setLineContent(exchange.getIn().getBody(String.class));
         importLineError.setLineNb(((Integer) exchange.getProperty("CamelSplitIndex") + 1));
-        exchange.getIn().setHeader(RouterConstants.HEADER_FAILED_MESSAGE, new Boolean(true));
+        exchange.getIn().setHeader(RouterConstants.HEADER_FAILED_MESSAGE, Boolean.TRUE);
         exchange.getIn().setBody(importLineError, ImportLineError.class);
     }
 }

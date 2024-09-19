@@ -47,13 +47,13 @@ import javax.ws.rs.core.MediaType;
 @Component(service=UserListServiceEndPoint.class,property = "osgi.jaxrs.resource=true")
 public class UserListServiceEndPoint {
 
-    private static final Logger logger = LoggerFactory.getLogger(UserListServiceEndPoint.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(UserListServiceEndPoint.class.getName());
 
     @Reference
     private UserListService userListService;
 
     public UserListServiceEndPoint() {
-        logger.info("Initializing user list service endpoint...");
+        LOGGER.info("Initializing user list service endpoint...");
     }
 
     @WebMethod(exclude = true)

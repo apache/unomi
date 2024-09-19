@@ -30,7 +30,7 @@ import org.slf4j.LoggerFactory;
 import java.util.Map;
 
 public class QueryServiceImpl implements QueryService {
-    private static final Logger logger = LoggerFactory.getLogger(QueryServiceImpl.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(QueryServiceImpl.class.getName());
 
     private PersistenceService persistenceService;
 
@@ -45,11 +45,11 @@ public class QueryServiceImpl implements QueryService {
     }
 
     public void postConstruct() {
-        logger.info("Query service initialized.");
+        LOGGER.info("Query service initialized.");
     }
 
     public void preDestroy() {
-        logger.info("Query service shutdown.");
+        LOGGER.info("Query service shutdown.");
     }
 
     @Override
@@ -102,12 +102,15 @@ public class QueryServiceImpl implements QueryService {
                         String interval = (String) query.getAggregate().getParameters().get("interval");
                         String format = (String) query.getAggregate().getParameters().get("format");
                         baseAggregate = new DateAggregate(property, interval, format);
-                    } else if (aggregateType.equals("dateRange") && query.getAggregate().getDateRanges() != null && query.getAggregate().getDateRanges().size() > 0) {
+                    } else if (aggregateType.equals("dateRange") && query.getAggregate().getDateRanges() != null && !query.getAggregate()
+                            .getDateRanges().isEmpty()) {
                         String format = (String) query.getAggregate().getParameters().get("format");
                         baseAggregate = new DateRangeAggregate(query.getAggregate().getProperty(), format, query.getAggregate().getDateRanges());
-                    } else if (aggregateType.equals("numericRange") && query.getAggregate().getNumericRanges() != null && query.getAggregate().getNumericRanges().size() > 0) {
+                    } else if (aggregateType.equals("numericRange") && query.getAggregate().getNumericRanges() != null && !query.getAggregate()
+                            .getNumericRanges().isEmpty()) {
                         baseAggregate = new NumericRangeAggregate(query.getAggregate().getProperty(), query.getAggregate().getNumericRanges());
-                    } else if (aggregateType.equals("ipRange") && query.getAggregate().ipRanges() != null && query.getAggregate().ipRanges().size() > 0) {
+                    } else if (aggregateType.equals("ipRange") && query.getAggregate().ipRanges() != null && !query.getAggregate()
+                            .ipRanges().isEmpty()) {
                         baseAggregate = new IpRangeAggregate(query.getAggregate().getProperty(), query.getAggregate().ipRanges());
                     }
                 }

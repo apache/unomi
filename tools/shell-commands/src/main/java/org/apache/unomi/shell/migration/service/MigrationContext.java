@@ -49,7 +49,7 @@ import static org.apache.unomi.shell.migration.service.MigrationServiceImpl.MIGR
  * (not supported in case direct OSGI service usage)
  */
 public class MigrationContext {
-    private static final Logger logger = LoggerFactory.getLogger(MigrationContext.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(MigrationContext.class);
 
     private static final Path MIGRATION_FS_HISTORY_FILE = Paths.get(System.getProperty( "karaf.data" ), MIGRATION_FS_ROOT_FOLDER, "history.json");
 
@@ -176,7 +176,7 @@ public class MigrationContext {
      */
     public void printMessage(String msg) {
         if (session == null) {
-            logger.info(msg);
+            LOGGER.info("{}: {}", new Date(), msg);
         } else {
             PrintStream writer = session.getConsole();
             writer.printf("%s: %s%n",new Date(), msg);
@@ -190,7 +190,7 @@ public class MigrationContext {
      */
     public void printException(String msg, Throwable t) {
         if (session == null) {
-            logger.error(msg, t);
+            LOGGER.error("{}", msg, t);
         } else {
             PrintStream writer = session.getConsole();
             writer.println(msg);
@@ -204,7 +204,7 @@ public class MigrationContext {
      */
     public void printException(String msg) {
         if (session == null) {
-            logger.error(msg);
+            LOGGER.error("{}", msg);
         } else {
             PrintStream writer = session.getConsole();
             writer.println(msg);
