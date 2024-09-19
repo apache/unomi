@@ -53,9 +53,9 @@ public abstract class Item implements Serializable {
             itemTypeCache.put(clazz, itemType);
             return itemType;
         } catch (NoSuchFieldException e) {
-            LOGGER.error("Class " + clazz.getName() + " doesn't define a publicly accessible ITEM_TYPE field", e);
+            LOGGER.error("Class {} doesn't define a publicly accessible ITEM_TYPE field", clazz.getName(), e);
         } catch (IllegalAccessException e) {
-            LOGGER.error("Error resolving itemType for class " + clazz.getName(), e);
+            LOGGER.error("Error resolving itemType for class {}", clazz.getName(), e);
         }
         return null;
     }
