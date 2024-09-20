@@ -98,7 +98,7 @@ public class UserAgentDetectorServiceImpl {
         userAgent.setUserAgentName(yauaaAgent.getValue(nl.basjes.parse.useragent.UserAgent.AGENT_NAME));
         userAgent.setUserAgentVersion(yauaaAgent.getValue(nl.basjes.parse.useragent.UserAgent.AGENT_VERSION));
 
-        LOGGER.debug(userAgent.toString());
+        LOGGER.debug("{}", userAgent);
 
         return userAgent;
     }

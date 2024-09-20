@@ -61,7 +61,7 @@ public class BooleanConditionESQueryBuilder implements ConditionESQueryBuilder {
                     }
                 } else {
                     LOGGER.warn("Null filter for boolean AND sub condition. See debug log level for more information");
-                    LOGGER.debug("Null filter for boolean AND sub condition {}", conditions.get(i));
+                    if (LOGGER.isDebugEnabled()) LOGGER.debug("Null filter for boolean AND sub condition {}", conditions.get(i));
                 }
             } else {
                 QueryBuilder orFilter = dispatcher.buildFilter(conditions.get(i), context);
@@ -69,7 +69,7 @@ public class BooleanConditionESQueryBuilder implements ConditionESQueryBuilder {
                     boolQueryBuilder.should(orFilter);
                 } else {
                     LOGGER.warn("Null filter for boolean OR sub condition. See debug log level for more information");
-                    LOGGER.debug("Null filter for boolean OR sub condition {}", conditions.get(i));
+                    if (LOGGER.isDebugEnabled()) LOGGER.debug("Null filter for boolean OR sub condition {}", conditions.get(i));
                 }
             }
         }

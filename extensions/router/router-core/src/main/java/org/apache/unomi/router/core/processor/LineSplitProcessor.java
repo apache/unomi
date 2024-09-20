@@ -81,7 +81,7 @@ public class LineSplitProcessor implements Processor {
                 .withSeparator(columnSeparator.charAt(0))
                 .build();
 
-        LOGGER.debug("$$$$ : LineSplitProcessor : BODY : " + (String) exchange.getIn().getBody());
+        LOGGER.debug("$$$$ : LineSplitProcessor : BODY : {}", exchange.getIn().getBody());
 
         String[] profileData = rfc4180Parser.parseLine(((String) exchange.getIn().getBody()));
 

@@ -110,7 +110,7 @@ public class RestServiceUtilsImpl implements RestServiceUtils {
 
         if (profileId == null && sessionId == null && personaId == null) {
             LOGGER.warn("Couldn't find profileId, sessionId or personaId in incoming request! Stopped processing request. See debug level for more information");
-            LOGGER.debug("Request dump: {}", HttpUtils.dumpRequestInfo(request));
+            if (LOGGER.isDebugEnabled()) LOGGER.debug("Request dump: {}", HttpUtils.dumpRequestInfo(request));
             throw new BadRequestException("Couldn't find profileId, sessionId or personaId in incoming request!");
         }
 
@@ -193,7 +193,7 @@ public class RestServiceUtilsImpl implements RestServiceUtils {
                     }
                     event.getAttributes().put(Event.HTTP_REQUEST_ATTRIBUTE, request);
                     event.getAttributes().put(Event.HTTP_RESPONSE_ATTRIBUTE, response);
-                    LOGGER.debug("Received event {} for profile={} session={} target={} timestamp={}", event.getEventType(),
+                    if (LOGGER.isDebugEnabled()) LOGGER.debug("Received event {} for profile={} session={} target={} timestamp={}", event.getEventType(),
                             eventsRequestContext.getProfile().getItemId(), eventsRequestContext.getSession().getItemId(), event.getTarget(), timestamp);
                     eventsRequestContext.addChanges(eventService.send(event));
                 }
@@ -210,7 +210,7 @@ public class RestServiceUtilsImpl implements RestServiceUtils {
                 profileUpdated.getAttributes().put(Event.HTTP_RESPONSE_ATTRIBUTE, response);
                 profileUpdated.getAttributes().put(Event.CLIENT_ID_ATTRIBUTE, DEFAULT_CLIENT_ID);
 
-                LOGGER.debug("Received event {} for profile={} {} target={} timestamp={}", profileUpdated.getEventType(),
+                if (LOGGER.isDebugEnabled()) LOGGER.debug("Received event {} for profile={} {} target={} timestamp={}", profileUpdated.getEventType(),
                         eventsRequestContext.getProfile().getItemId(),
                         " session=" + (eventsRequestContext.getSession() != null ? eventsRequestContext.getSession().getItemId() : null),
                         profileUpdated.getTarget(), timestamp);

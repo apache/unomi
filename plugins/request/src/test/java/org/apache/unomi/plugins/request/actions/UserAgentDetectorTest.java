@@ -82,7 +82,7 @@ public class UserAgentDetectorTest {
         }
         executorService.invokeAll(callables);
         long totalTime = System.currentTimeMillis() - startTime;
-        LOGGER.info("AgentWorker workers completed execution in " + totalTime + "ms");
+        LOGGER.info("AgentWorker workers completed execution in {}" + totalTime + "ms");
     }
 
     private class AgentWorker implements Callable<Object> {

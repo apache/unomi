@@ -87,11 +87,9 @@ public class SchemaServiceImpl implements SchemaService {
             JsonSchema jsonSchema = getJsonSchema(schemaId);
             return validate(jsonNode, jsonSchema).size() == 0;
         } catch (ValidationException e) {
-            if (LOGGER.isDebugEnabled()) {
-                LOGGER.debug("{}", e.getMessage(), e);
-            }
-            return false;
+            LOGGER.debug("{}", e.getMessage(), e);
         }
+        return false;
     }
 
     @Override
@@ -104,9 +102,7 @@ public class SchemaServiceImpl implements SchemaService {
         try {
             return validateEvent(event).isEmpty();
         } catch (ValidationException e) {
-            if (LOGGER.isDebugEnabled()) {
-                LOGGER.debug("{}", e.getMessage(), e);
-            }
+            LOGGER.debug("{}", e.getMessage(), e);
         }
         return false;
     }

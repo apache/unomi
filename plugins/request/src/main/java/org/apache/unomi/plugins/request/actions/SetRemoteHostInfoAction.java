@@ -120,17 +120,15 @@ public class SetRemoteHostInfoAction implements ActionExecutor {
         LOGGER.debug("Remote address param is {}", remoteAddrParameter);
         String xff = httpServletRequest.getHeader("X-Forwarded-For");
         LOGGER.debug("X-Forwarded-For is {}", xff);
-        if (remoteAddrParameter != null && remoteAddrParameter.length() > 0) {
+        if (remoteAddrParameter != null && !remoteAddrParameter.isEmpty()) {
             remoteAddr = remoteAddrParameter;
-        } else if (xff != null && !xff.equals("")) {
+        } else if (xff != null && !xff.isEmpty()) {
             if (xff.indexOf(',') > -1) {
                 xff = xff.substring(0, xff.indexOf(','));
             }
             remoteAddr = xff;
         }
-        if (LOGGER.isDebugEnabled()) {
-            LOGGER.debug("Remote address used to localized is " + remoteAddr);
-        }
+        LOGGER.debug("Remote address used to localized is {}", remoteAddr);
 
         try {
             if (isAValidIPAddress(remoteAddr)) {
@@ -207,7 +205,7 @@ public class SetRemoteHostInfoAction implements ActionExecutor {
                 session.setProperty("sessionCityId", cityResponse.getCity().getGeoNameId());
             }
 
-            if (cityResponse.getSubdivisions().size() > 0) {
+            if (!cityResponse.getSubdivisions().isEmpty()) {
                 session.setProperty("sessionAdminSubDiv1", cityResponse.getSubdivisions().get(0).getGeoNameId());
             }
             if (cityResponse.getSubdivisions().size() > 1) {

@@ -197,7 +197,7 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
                         || (!StringUtils.startsWith(e.getMessage(),
                         "source is null for getProperty(null"))) {
                     LOGGER.warn("Error evaluating value for {} {}. See debug level for more information", item.getClass().getName(), name);
-                    LOGGER.debug("Error evaluating value for {} {}", item.getClass().getName(), name, e);
+                    if (LOGGER.isDebugEnabled()) LOGGER.debug("Error evaluating value for {} {}", item.getClass().getName(), name, e);
                 }
                 actualValue = null;
             }
@@ -335,9 +335,7 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
     protected Object getOGNLPropertyValue(Item item, String expression) throws Exception {
         if (expressionFilterFactory.getExpressionFilter("ognl").filter(expression) == null) {
             LOGGER.warn("OGNL expression filtered because not allowed on item: {}. See debug log level for more information", item.getClass().getName());
-            if (LOGGER.isDebugEnabled()) {
-                LOGGER.debug("OGNL expression filtered because not allowed: {}", expression);
-            }
+            LOGGER.debug("OGNL expression filtered because not allowed: {}", expression);
             return null;
         }
         OgnlContext ognlContext = getOgnlContext(secureFilteringClassLoader);
@@ -347,8 +345,7 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
                 return accessor.get(ognlContext, item);
             } catch (Throwable t) {
                 LOGGER.error("Error evaluating expression on item {}. See debug level for more information", item.getClass().getName());
-                LOGGER.debug("Error evaluating expression {} on item {}.", expression, item.getClass().getName(), t);
-
+                if (LOGGER.isDebugEnabled()) LOGGER.debug("Error evaluating expression {} on item {}.", expression, item.getClass().getName(), t);
                 return null;
             }
         }
@@ -420,8 +417,11 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
             if (accessor != null) {
                 expressions.put(expression, accessor);
             } else {
-                LOGGER.warn("Unable to compile expression for {}. See debug log level for more information", clazz);
-                LOGGER.debug("Unable to compile expression: {} for: {}", expression, clazz);
+                if (LOGGER.isDebugEnabled()) {
+                    LOGGER.debug("Unable to compile expression: {} for: {}", expression, clazz);
+                } else {
+                    LOGGER.warn("Unable to compile expression for {}. See debug log level for more information", clazz);
+                }
             }
             if (LOGGER.isDebugEnabled()) {
                 LOGGER.debug("Expression compilation for item={} expression={} took {}", item.getClass().getName(), expression, (System.nanoTime() - time) / 1000000L);

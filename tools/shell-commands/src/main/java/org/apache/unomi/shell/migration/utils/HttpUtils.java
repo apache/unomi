@@ -93,7 +93,7 @@ public class HttpUtils {
         RequestConfig requestConfig = RequestConfig.custom().build();
         httpClientBuilder.setDefaultRequestConfig(requestConfig);
 
-        LOGGER.debug("Init HttpClient executed in {}ms", (System.currentTimeMillis() - requestStartTime));
+        if (LOGGER.isDebugEnabled()) LOGGER.debug("Init HttpClient executed in {}ms", (System.currentTimeMillis() - requestStartTime));
 
         return httpClientBuilder.build();
     }
@@ -160,8 +160,13 @@ public class HttpUtils {
             throw new HttpRequestException("Couldn't execute " + httpRequestBase + " response: " + ((entity != null) ? EntityUtils.toString(entity) : "n/a"), statusCode);
         }
 
-        LOGGER.debug("Request {} executed with code: {} and message: {}", httpRequestBase, statusCode, (entity!=null?EntityUtils.toString(new BufferedHttpEntity(response.getEntity())):null));
-        LOGGER.debug("Request to Apache Unomi url: {} executed in {}ms", url, (System.currentTimeMillis() - requestStartTime));
+        if (LOGGER.isDebugEnabled()) {
+            if (entity !=null) {
+                entity = new BufferedHttpEntity(response.getEntity());
+            }
+            LOGGER.debug("Request {} executed with code: {} and message: {}", httpRequestBase, statusCode, entity != null ? EntityUtils.toString(entity) : null);
+            LOGGER.debug("Request to Apache Unomi url: {} executed in {}ms", url, (System.currentTimeMillis() - requestStartTime));
+        }
 
         if (entity == null) {
             return null;

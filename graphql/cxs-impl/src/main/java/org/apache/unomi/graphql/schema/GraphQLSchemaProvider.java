@@ -677,7 +677,7 @@ public class GraphQLSchemaProvider {
             final String typeName = UnomiToGraphQLConverter.convertEventType(eventType.getName());
             final GraphQLInputType eventInputType = (GraphQLInputType) getFromTypeRegistry(typeName + "Input");
             if (eventInputType == null) {
-                LOGGER.warn("Couldn't find event input type {}", typeName + "Input, will not add it as a field.");
+                LOGGER.warn("Couldn't find event input type {}Input, will not add it as a field.", typeName);
                 return;
             }
 

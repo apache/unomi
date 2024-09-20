@@ -34,8 +34,8 @@ public class ValidationExceptionMapper implements ExceptionMapper<ConstraintViol
     @Override
     public Response toResponse(ConstraintViolationException exception) {
         exception.getConstraintViolations().forEach(constraintViolation -> {
-            LOGGER.error("{} {}. {}", constraintViolation.getPropertyPath().toString(), constraintViolation.getMessage(), (LOGGER.isDebugEnabled())?"":"Enable debug log level for more information about the invalid value received");
-            LOGGER.debug(String.format("value %s from %s %s", constraintViolation.getInvalidValue(), constraintViolation.getPropertyPath().toString(), constraintViolation.getMessage()), exception);
+            LOGGER.error("{} {}. {}", constraintViolation.getPropertyPath(), constraintViolation.getMessage(), (LOGGER.isDebugEnabled())?"":"Enable debug log level for more information about the invalid value received");
+            if (LOGGER.isDebugEnabled()) LOGGER.debug("value {} from {} {}", constraintViolation.getInvalidValue(), constraintViolation.getPropertyPath(), constraintViolation.getMessage(), exception);
         });
 
         return Response.status(Response.Status.BAD_REQUEST).header("Content-Type", MediaType.TEXT_PLAIN)

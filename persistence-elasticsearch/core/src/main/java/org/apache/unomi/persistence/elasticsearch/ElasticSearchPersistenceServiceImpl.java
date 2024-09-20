@@ -1185,7 +1185,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                             if (LOGGER.isDebugEnabled()) {
                                 long millis = getTaskResponse.getTaskInfo().getRunningTimeNanos() / 1_000_000;
                                 long seconds = millis / 1000;
-
                                 LOGGER.debug("Waiting task [{}]: Finished in {} {}", taskId,
                                         seconds >= 1 ? seconds : millis,
                                         seconds >= 1 ? "seconds" : "milliseconds");
@@ -1798,10 +1797,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     .must(conditionESQueryBuilderDispatcher.buildFilter(condition));
         } catch (Exception e) {
             LOGGER.error("Failed to validate condition. See debug log level for more information");
-            if (LOGGER.isDebugEnabled()) {
-                LOGGER.debug("Failed to validate condition, condition={}", condition, e);
-            }
-
+            LOGGER.debug("Failed to validate condition, condition={}", condition, e);
             return false;
         }
         return true;
@@ -2362,7 +2358,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 try {
                     client.indices().refresh(Requests.refreshRequest(), RequestOptions.DEFAULT);
                 } catch (IOException e) {
-                    LOGGER.error("{}", e.getMessage(), e); //TODO manage ES7
+                    e.printStackTrace(); //TODO manage ES7
                 }
                 return true;
             }
@@ -2378,7 +2374,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     String index = getIndex(itemType);
                     client.indices().refresh(Requests.refreshRequest(index), RequestOptions.DEFAULT);
                 } catch (IOException e) {
-                    LOGGER.error("{}", e.getMessage(), e); //TODO manage ES7
+                    e.printStackTrace(); //TODO manage ES7
                 }
                 return true;
             }
