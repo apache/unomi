@@ -39,7 +39,9 @@ import org.apache.logging.log4j.util.Strings;
  */
 @Plugin(
         name = "SafeExtendedThrowablePatternConverter",
-        category = PatternConverter.CATEGORY
+        category = PatternConverter.CATEGORY,
+        elementType = "converter",
+        printObject = true
 )
 @ConverterKeys({ "sxEx", "sxThrowable", "sxException" })
 public final class SafeExtendedThrowablePatternConverter extends ThrowablePatternConverter {
@@ -180,7 +182,7 @@ public final class SafeExtendedThrowablePatternConverter extends ThrowablePatter
         return -1;
     }
 
-    private static StringBuilder replaceCRLF(StringBuilder toAppendTo, int start, int end) {
+    private static void replaceCRLF(StringBuilder toAppendTo, int start, int end) {
         for (int i = end - 1; i >= start; i--) {
             final char c = toAppendTo.charAt(i);
             switch (c) {
@@ -196,7 +198,6 @@ public final class SafeExtendedThrowablePatternConverter extends ThrowablePatter
                     break;
             }
         }
-        return toAppendTo;
     }
 
 }

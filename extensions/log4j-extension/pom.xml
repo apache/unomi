@@ -32,6 +32,12 @@
     <name>Apache Unomi :: Extensions :: Log4j Extension</name>
     <description>Apache Unomi log4j extensions</description>
 
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <maven.compiler.source>1.8</maven.compiler.source>
+        <maven.compiler.target>1.8</maven.compiler.target>
+    </properties>
+
     <dependencies>
         <!-- Apache Commons -->
         <dependency>
@@ -76,7 +82,9 @@
                 <configuration>
                     <instructions>
                         <Fragment-Host>org.ops4j.pax.logging.pax-logging-log4j2</Fragment-Host>
-                        <Export-Package>!*</Export-Package>
+                        <Export-Package>
+                            org.apache.unomi.extensions.log4j
+                        </Export-Package>
                         <Import-Package>
                             org.osgi.framework;version="[1.8,2.0)",
                             org.apache.logging.log4j*;version="[2,3)";resolution:=optional,
