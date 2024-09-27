@@ -345,7 +345,7 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
                 return accessor.get(ognlContext, item);
             } catch (Throwable t) {
                 LOGGER.error("Error evaluating expression on item {}. See debug level for more information", item.getClass().getName());
-                if (LOGGER.isDebugEnabled()) LOGGER.debug("Error evaluating expression {} on item {}.", expression, item.getClass().getName(), t);
+                LOGGER.debug("Error evaluating expression {} on item {}.", expression, item.getClass().getName(), t);
                 return null;
             }
         }

@@ -36,6 +36,9 @@ import org.apache.logging.log4j.util.Strings;
  * <p>
  * If the message of the throwable contains a carriage return or line feed character, it gets encoded
  * to prevent log injection.
+ *
+ * Originally written by Benjamin Papez (Jahia) benjamin.papez@jahia.com
+ * Contributed to Apache Unomi by Jahia Solutions Group SA
  */
 @Plugin(
         name = "SafeExtendedThrowablePatternConverter",
@@ -89,13 +92,13 @@ public final class SafeExtendedThrowablePatternConverter extends ThrowablePatter
             if (len > 0 && !Character.isWhitespace(toAppendTo.charAt(len - 1))) {
                 toAppendTo.append(' ');
             }
-            this.appendExtendedStackTrace(toAppendTo, extStackTrace, options.allLines(), options.getSeparator(), options.getLines());
+            this.appendExtendedStackTrace(toAppendTo, extStackTrace);
         }
     }
 
-    private void appendExtendedStackTrace(final StringBuilder toAppendTo, final String extStackTrace, boolean allLines, String separator, int maxLines) {
-        if (!allLines || !Strings.LINE_SEPARATOR.equals(separator)) {
-            toAppendTo.append(replaceLineSeparator(extStackTrace, separator, maxLines));
+    private void appendExtendedStackTrace(final StringBuilder toAppendTo, final String extStackTrace) {
+        if (!options.allLines() || !Strings.LINE_SEPARATOR.equals(options.getSeparator())) {
+            toAppendTo.append(replaceLineSeparator(extStackTrace));
         } else {
             int firstMessageWithCRLFIndex = indexOfMessageWithCRLF(extStackTrace);
             if (firstMessageWithCRLFIndex != -1) {
@@ -106,12 +109,12 @@ public final class SafeExtendedThrowablePatternConverter extends ThrowablePatter
         }
     }
 
-    private static String replaceLineSeparator(String extStackTrace, String separator, int maxLines) {
+    private String replaceLineSeparator(String extStackTrace) {
         String[] array = extStackTrace.split(Strings.LINE_SEPARATOR);
-        return StringUtils.join(array, separator, 0, Math.min(maxLines, array.length)) + separator; // we want a separator at the end
+        return StringUtils.join(array, options.getSeparator(), 0, options.minLines(array.length));
     }
 
-    private static int indexOfMessageWithCRLF(String extStackTrace) {
+    private int indexOfMessageWithCRLF(String extStackTrace) {
         int messageStartIndex = 0;
         int stackTraceStartIndex;
         do {
@@ -130,17 +133,17 @@ public final class SafeExtendedThrowablePatternConverter extends ThrowablePatter
         return -1;
     }
 
-    private static int getNextNestedMessageIndex(String extStackTrace, int stackTraceStartIndex) {
+    private int getNextNestedMessageIndex(String extStackTrace, int stackTraceStartIndex) {
         return getNextIndex(extStackTrace.indexOf("Caused by:", stackTraceStartIndex),
                 extStackTrace.indexOf("Suppressed:", stackTraceStartIndex));
     }
 
-    private static int getNextNestedMessageIndex(StringBuilder extStackTrace, int stackTraceStartIndex) {
+    private int getNextNestedMessageIndex(StringBuilder extStackTrace, int stackTraceStartIndex) {
         return getNextIndex(extStackTrace.indexOf("Caused by:", stackTraceStartIndex),
                 extStackTrace.indexOf("Suppressed:", stackTraceStartIndex));
     }
 
-    private static int getNextIndex(int firstIndex, int secondIndex) {
+    private int getNextIndex(int firstIndex, int secondIndex) {
         if (secondIndex == -1) {
             return firstIndex;
         } else if (firstIndex == -1) {
@@ -150,7 +153,7 @@ public final class SafeExtendedThrowablePatternConverter extends ThrowablePatter
         }
     }
 
-    private static String replaceLineSeparatorInMessages(String extStackTrace, int messageWithCRLFIndex) {
+    private String replaceLineSeparatorInMessages(String extStackTrace, int messageWithCRLFIndex) {
         final StringBuilder sb = new StringBuilder(extStackTrace);
         do {
             int beginningOfStackTrace = getNextIndex(sb.indexOf(STACKTRACE_LINE_START, messageWithCRLFIndex),
@@ -161,7 +164,7 @@ public final class SafeExtendedThrowablePatternConverter extends ThrowablePatter
         return sb.toString();
     }
 
-    private static int indexOfNestedExceptionMessageWithCRLF(StringBuilder extStackTrace, int startIndex) {
+    private int indexOfNestedExceptionMessageWithCRLF(StringBuilder extStackTrace, int startIndex) {
         int stackTraceStartIndex;
         do {
             startIndex = getNextNestedMessageIndex(extStackTrace, startIndex);
@@ -182,7 +185,7 @@ public final class SafeExtendedThrowablePatternConverter extends ThrowablePatter
         return -1;
     }
 
-    private static void replaceCRLF(StringBuilder toAppendTo, int start, int end) {
+    private void replaceCRLF(StringBuilder toAppendTo, int start, int end) {
         for (int i = end - 1; i >= start; i--) {
             final char c = toAppendTo.charAt(i);
             switch (c) {

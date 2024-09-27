@@ -78,7 +78,7 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
     }
 
     public void postConstruct() {
-        LOGGER.debug("postConstruct {" + bundleContext.getBundle() + "}");
+        LOGGER.debug("postConstruct {{}}", bundleContext.getBundle());
 
         loadPredefinedGoals(bundleContext);
         loadPredefinedCampaigns(bundleContext);

@@ -33,7 +33,8 @@ import java.util.Date;
 import java.util.List;
 
 /**
- * @author Jerome Blanchard
+ * Test the effect of SafeExtendedThrowablePatternConverter on log injection by trying to simulate such an attack.
+ * Check into the log that no new line is injected.
  */
 @RunWith(PaxExam.class)
 @ExamReactorStrategy(PerSuite.class)
