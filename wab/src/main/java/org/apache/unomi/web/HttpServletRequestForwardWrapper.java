@@ -32,7 +32,7 @@ import java.util.Enumeration;
  */
 class HttpServletRequestForwardWrapper extends HttpServletRequestWrapper {
 
-    private static final Logger logger = LoggerFactory.getLogger(HttpServletRequestForwardWrapper.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(HttpServletRequestForwardWrapper.class.getName());
     private static final String JSON_CONTENT_TYPE_UTF8 = "application/json;charset=UTF-8";
 
     public HttpServletRequestForwardWrapper(HttpServletRequest request) {
@@ -53,7 +53,7 @@ class HttpServletRequestForwardWrapper extends HttpServletRequestWrapper {
                     .getRequestDispatcher("/cxs" + request.getRequestURI())
                     .forward(requestWrapper, response);
         } catch (Throwable t) { // Here in order to return generic message instead of the whole stack trace in case of not caught exception
-            logger.error("HttpServletRequestForwardWrapper failed to forward the request", t);
+            LOGGER.error("HttpServletRequestForwardWrapper failed to forward the request", t);
             response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Internal server error");
         }
     }

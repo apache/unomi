@@ -30,7 +30,7 @@ import org.slf4j.LoggerFactory;
  */
 public class ImportConfigByFileNameProcessor implements Processor {
 
-    private static final Logger logger = LoggerFactory.getLogger(ImportConfigByFileNameProcessor.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(ImportConfigByFileNameProcessor.class.getName());
 
     private ImportExportConfigurationService<ImportConfiguration> importConfigurationService;
 
@@ -41,10 +41,10 @@ public class ImportConfigByFileNameProcessor implements Processor {
         String importConfigId = fileName.substring(0, fileName.indexOf('.'));
         ImportConfiguration importConfiguration = importConfigurationService.load(importConfigId);
         if(importConfiguration != null) {
-            logger.debug("Set a header with import configuration found for ID : {}", importConfigId);
+            LOGGER.debug("Set a header with import configuration found for ID : {}", importConfigId);
             exchange.getIn().setHeader(RouterConstants.HEADER_IMPORT_CONFIG_ONESHOT, importConfiguration);
         } else {
-            logger.warn("No import configuration found with ID : {}", importConfigId);
+            LOGGER.warn("No import configuration found with ID : {}", importConfigId);
             exchange.setProperty(Exchange.ROUTE_STOP, Boolean.TRUE);
         }
     }

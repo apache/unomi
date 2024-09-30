@@ -54,7 +54,7 @@ import java.util.concurrent.TimeUnit;
 
 public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBundleListener {
 
-    private static final Logger logger = LoggerFactory.getLogger(DefinitionsServiceImpl.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(DefinitionsServiceImpl.class.getName());
 
     private PersistenceService persistenceService;
     private SchedulerService schedulerService;
@@ -90,7 +90,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
     }
 
     public void postConstruct() {
-        logger.debug("postConstruct {" + bundleContext.getBundle() + "}");
+        LOGGER.debug("postConstruct {{}}", bundleContext.getBundle());
 
         processBundleStartup(bundleContext);
 
@@ -104,7 +104,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
         bundleContext.addBundleListener(this);
         scheduleTypeReloads();
         conditionBuilder = new ConditionBuilder(this);
-        logger.info("Definitions service initialized.");
+        LOGGER.info("Definitions service initialized.");
     }
 
     private void scheduleTypeReloads() {
@@ -115,7 +115,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
             }
         };
         schedulerService.getScheduleExecutorService().scheduleAtFixedRate(task, 10000, definitionsRefreshInterval, TimeUnit.MILLISECONDS);
-        logger.info("Scheduled task for condition type loading each 10s");
+        LOGGER.info("Scheduled task for condition type loading each 10s");
     }
 
     public void reloadTypes(boolean refresh) {
@@ -127,7 +127,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
             loadConditionTypesFromPersistence();
             loadActionTypesFromPersistence();
         } catch (Throwable t) {
-            logger.error("Error loading definitions from persistence back-end", t);
+            LOGGER.error("Error loading definitions from persistence back-end", t);
         }
     }
 
@@ -139,7 +139,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
             }
             this.conditionTypeById = newConditionTypesById;
         } catch (Exception e) {
-            logger.error("Error loading condition types from persistence service", e);
+            LOGGER.error("Error loading condition types from persistence service", e);
         }
     }
 
@@ -151,7 +151,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
             }
             this.actionTypeById = newActionTypesById;
         } catch (Exception e) {
-            logger.error("Error loading action types from persistence service", e);
+            LOGGER.error("Error loading action types from persistence service", e);
         }
     }
 
@@ -191,7 +191,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
 
     public void preDestroy() {
         bundleContext.removeBundleListener(this);
-        logger.info("Definitions service shutdown.");
+        LOGGER.info("Definitions service shutdown.");
     }
 
     private void loadPredefinedConditionTypes(BundleContext bundleContext) {
@@ -202,14 +202,14 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
 
         while (predefinedConditionEntries.hasMoreElements()) {
             URL predefinedConditionURL = predefinedConditionEntries.nextElement();
-            logger.debug("Found predefined condition at " + predefinedConditionURL + ", loading... ");
+            LOGGER.debug("Found predefined condition at {}, loading... ", predefinedConditionURL);
 
             try {
                 ConditionType conditionType = CustomObjectMapper.getObjectMapper().readValue(predefinedConditionURL, ConditionType.class);
                 setConditionType(conditionType);
-                logger.info("Predefined condition type with id {} registered", conditionType.getMetadata().getId());
+                LOGGER.info("Predefined condition type with id {} registered", conditionType.getMetadata().getId());
             } catch (IOException e) {
-                logger.error("Error while loading condition definition " + predefinedConditionURL, e);
+                LOGGER.error("Error while loading condition definition {}", predefinedConditionURL, e);
             }
         }
     }
@@ -223,14 +223,14 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
         ArrayList<PluginType> pluginTypeArrayList = (ArrayList<PluginType>) pluginTypes.get(bundleContext.getBundle().getBundleId());
         while (predefinedActionsEntries.hasMoreElements()) {
             URL predefinedActionURL = predefinedActionsEntries.nextElement();
-            logger.debug("Found predefined action at " + predefinedActionURL + ", loading... ");
+            LOGGER.debug("Found predefined action at {}, loading... ", predefinedActionURL);
 
             try {
                 ActionType actionType = CustomObjectMapper.getObjectMapper().readValue(predefinedActionURL, ActionType.class);
                 setActionType(actionType);
-                logger.info("Predefined action type with id {} registered", actionType.getMetadata().getId());
+                LOGGER.info("Predefined action type with id {} registered", actionType.getMetadata().getId());
             } catch (Exception e) {
-                logger.error("Error while loading action definition " + predefinedActionURL, e);
+                LOGGER.error("Error while loading action definition {}", predefinedActionURL, e);
             }
         }
 
@@ -244,7 +244,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
         ArrayList<PluginType> pluginTypeArrayList = (ArrayList<PluginType>) pluginTypes.get(bundleContext.getBundle().getBundleId());
         while (predefinedPropertiesEntries.hasMoreElements()) {
             URL predefinedPropertyURL = predefinedPropertiesEntries.nextElement();
-            logger.debug("Found predefined value type at " + predefinedPropertyURL + ", loading... ");
+            LOGGER.debug("Found predefined value type at {}, loading... ", predefinedPropertyURL);
 
             try {
                 ValueType valueType = CustomObjectMapper.getObjectMapper().readValue(predefinedPropertyURL, ValueType.class);
@@ -262,11 +262,11 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
                         valueTypeByTag.put(tag, valueTypes);
                     } else {
                         // we found a tag that is not defined, we will define it automatically
-                        logger.warn("Unknown tag {} used in property type definition {}", tag, predefinedPropertyURL);
+                        LOGGER.warn("Unknown tag {} used in property type definition {}", tag, predefinedPropertyURL);
                     }
                 }
             } catch (Exception e) {
-                logger.error("Error while loading property type definition " + predefinedPropertyURL, e);
+                LOGGER.error("Error while loading property type definition {}", predefinedPropertyURL, e);
             }
         }
 
@@ -411,7 +411,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
         ArrayList<PluginType> pluginTypeArrayList = (ArrayList<PluginType>) pluginTypes.get(bundleContext.getBundle().getBundleId());
         while (predefinedPropertyMergeStrategyEntries.hasMoreElements()) {
             URL predefinedPropertyMergeStrategyURL = predefinedPropertyMergeStrategyEntries.nextElement();
-            logger.debug("Found predefined property merge strategy type at " + predefinedPropertyMergeStrategyURL + ", loading... ");
+            LOGGER.debug("Found predefined property merge strategy type at " + predefinedPropertyMergeStrategyURL + ", loading... ");
 
             try {
                 PropertyMergeStrategyType propertyMergeStrategyType = CustomObjectMapper.getObjectMapper().readValue(predefinedPropertyMergeStrategyURL, PropertyMergeStrategyType.class);
@@ -419,7 +419,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
                 propertyMergeStrategyTypeById.put(propertyMergeStrategyType.getId(), propertyMergeStrategyType);
                 pluginTypeArrayList.add(propertyMergeStrategyType);
             } catch (Exception e) {
-                logger.error("Error while loading property type definition " + predefinedPropertyMergeStrategyURL, e);
+                LOGGER.error("Error while loading property type definition " + predefinedPropertyMergeStrategyURL, e);
             }
         }
 

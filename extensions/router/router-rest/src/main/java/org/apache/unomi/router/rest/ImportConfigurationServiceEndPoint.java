@@ -58,7 +58,7 @@ import java.security.NoSuchAlgorithmException;
 @Component(service=ImportConfigurationServiceEndPoint.class,property = "osgi.jaxrs.resource=true")
 public class ImportConfigurationServiceEndPoint extends AbstractConfigurationServiceEndpoint<ImportConfiguration> {
 
-    private static final Logger logger = LoggerFactory.getLogger(ImportConfigurationServiceEndPoint.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(ImportConfigurationServiceEndPoint.class.getName());
 
     @Reference
     protected ConfigSharingService configSharingService;
@@ -69,7 +69,7 @@ public class ImportConfigurationServiceEndPoint extends AbstractConfigurationSer
     }
 
     public ImportConfigurationServiceEndPoint() throws KeyStoreException, NoSuchAlgorithmException, KeyManagementException {
-        logger.info("Initializing import configuration service endpoint...");
+        LOGGER.info("Initializing import configuration service endpoint...");
     }
 
     @WebMethod(exclude = true)
@@ -118,7 +118,7 @@ public class ImportConfigurationServiceEndPoint extends AbstractConfigurationSer
             Files.copy(in, path);
 
         } catch (IOException e) {
-            logger.error("Error processing one shot configuration CSV", e);
+            LOGGER.error("Error processing one shot configuration CSV", e);
             return Response.serverError().build();
         }
         return Response.ok().build();

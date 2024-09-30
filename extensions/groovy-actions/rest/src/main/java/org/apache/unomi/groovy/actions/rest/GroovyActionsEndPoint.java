@@ -46,13 +46,13 @@ import java.io.IOException;
 @Component(service = GroovyActionsEndPoint.class, property = "osgi.jaxrs.resource=true")
 public class GroovyActionsEndPoint {
 
-    private static final Logger logger = LoggerFactory.getLogger(GroovyActionsEndPoint.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(GroovyActionsEndPoint.class.getName());
 
     @Reference
     private GroovyActionsService groovyActionsService;
 
     public GroovyActionsEndPoint() {
-        logger.info("Initializing groovy actions service endpoint...");
+        LOGGER.info("Initializing groovy actions service endpoint...");
     }
 
     @WebMethod(exclude = true)
@@ -75,7 +75,7 @@ public class GroovyActionsEndPoint {
             groovyActionsService
                     .save(file.getContentDisposition().getFilename().replace(".groovy", ""), IOUtils.toString(file.getDataHandler().getInputStream()));
         } catch (IOException e) {
-            logger.error("Error while processing groovy file", e);
+            LOGGER.error("Error while processing groovy file", e);
             return Response.serverError().build();
         }
         return Response.ok().build();

@@ -37,7 +37,7 @@ import java.util.TimeZone;
  * Depending on the event timestamp it will adjust one or multiples of this properties accordingly to the logical chronology.
  */
 public class EvaluateVisitPropertiesAction implements ActionExecutor {
-    private static final Logger logger = LoggerFactory.getLogger(EvaluateVisitPropertiesAction.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(EvaluateVisitPropertiesAction.class.getName());
 
     public int execute(Action action, Event event) {
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
@@ -88,10 +88,8 @@ public class EvaluateVisitPropertiesAction implements ActionExecutor {
                 }
             }
         } catch (ParseException e) {
-            logger.error("Error parsing {} date property. See debug log level for more information", propertyName);
-            if (logger.isDebugEnabled()) {
-                logger.debug("Error parsing date: {}, on profile: {}", property, profile.getItemId(), e);
-            }
+            LOGGER.error("Error parsing {} date property. See debug log level for more information", propertyName);
+            LOGGER.debug("Error parsing date: {}, on profile: {}", property, profile.getItemId(), e);
         }
 
         return date;

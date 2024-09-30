@@ -17,7 +17,6 @@
 package org.apache.unomi.graphql.schema;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.networknt.schema.JsonSchema;
 import graphql.annotations.AnnotationsSchemaCreator;
 import graphql.annotations.processor.GraphQLAnnotations;
 import graphql.annotations.processor.ProcessingElementsContainer;
@@ -89,7 +88,7 @@ import static graphql.schema.GraphQLObjectType.newObject;
 
 public class GraphQLSchemaProvider {
 
-    private static final Logger logger = LoggerFactory.getLogger(GraphQLSchemaProvider.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(GraphQLSchemaProvider.class.getName());
 
     private final ProfileService profileService;
 
@@ -165,7 +164,7 @@ public class GraphQLSchemaProvider {
             if (firstNonNullType.isPresent()) {
                 this.firstNonNullType = firstNonNullType.get();
             } else {
-                logger.warn("Couldn't find non null type for {} and types {}", name, jsonTypes);
+                LOGGER.warn("Couldn't find non null type for {} and types {}", name, jsonTypes);
             }
         }
 
@@ -543,7 +542,7 @@ public class GraphQLSchemaProvider {
                                                           final boolean isEvent,
                                                           Deque<String> typeStack) {
         if (typeStack.contains(name)) {
-            logger.error("Loop detected when creating dynamic input types {} !" , typeStack);
+            LOGGER.error("Loop detected when creating dynamic input types {} !" , typeStack);
             return null;
         }
         typeStack.push(name);
@@ -678,7 +677,7 @@ public class GraphQLSchemaProvider {
             final String typeName = UnomiToGraphQLConverter.convertEventType(eventType.getName());
             final GraphQLInputType eventInputType = (GraphQLInputType) getFromTypeRegistry(typeName + "Input");
             if (eventInputType == null) {
-                logger.warn("Couldn't find event input type {}", typeName + "Input, will not add it as a field.");
+                LOGGER.warn("Couldn't find event input type {}Input, will not add it as a field.", typeName);
                 return;
             }
 
@@ -696,7 +695,7 @@ public class GraphQLSchemaProvider {
         try {
             schemaMap = GraphQLObjectMapper.getInstance().readValue(jsonSchemaWrapper.getSchema(), Map.class);
         } catch (JsonProcessingException e) {
-            logger.error("Failed to process Json object, e");
+            LOGGER.error("Failed to process Json object", e);
             schemaMap = Collections.emptyMap();
         }
         return new JSONSchema(schemaMap, new JSONTypeFactory(schemaService));

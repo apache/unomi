@@ -333,6 +333,9 @@
                     </execution>
                 </executions>
                 <configuration>
+                    <startupBundles>
+                        <bundle>mvn:org.apache.unomi/log4j-extension/2.6.0-SNAPSHOT</bundle>
+                    </startupBundles>
                     <installedFeatures>
                         <feature>wrapper</feature>
                         <feature>cxf-commands</feature>

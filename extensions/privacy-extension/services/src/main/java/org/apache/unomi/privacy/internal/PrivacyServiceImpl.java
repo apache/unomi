@@ -24,7 +24,6 @@ import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.lifecycle.BundleWatcher;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.aggregate.TermsAggregate;
-import org.osgi.framework.BundleContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,7 +34,7 @@ import java.util.*;
  */
 public class PrivacyServiceImpl implements PrivacyService {
 
-    private static final Logger logger = LoggerFactory.getLogger(PrivacyServiceImpl.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(PrivacyServiceImpl.class);
 
     private PersistenceService persistenceService;
     private ProfileService profileService;
@@ -43,7 +42,7 @@ public class PrivacyServiceImpl implements PrivacyService {
     private BundleWatcher bundleWatcher;
 
     public PrivacyServiceImpl() {
-        logger.info("Initializing privacy service...");
+        LOGGER.info("Initializing privacy service...");
     }
 
     public void setPersistenceService(PersistenceService persistenceService) {

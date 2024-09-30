@@ -39,7 +39,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class ClusterSystemStatisticsEventHandler extends CellarSupport implements EventHandler<ClusterSystemStatisticsEvent> {
 
     public static final String SWITCH_ID = "org.apache.unomi.cluster.system.statistics.handler";
-    private static final Logger logger = LoggerFactory.getLogger(ClusterSystemStatisticsEventHandler.class.getName());
+    private static final Logger LLOGGER = LoggerFactory.getLogger(ClusterSystemStatisticsEventHandler.class.getName());
     private final Switch eventSwitch = new BasicSwitch(SWITCH_ID);
     private ClusterServiceImpl clusterServiceImpl;
 
@@ -59,19 +59,19 @@ public class ClusterSystemStatisticsEventHandler extends CellarSupport implement
     public void handle(ClusterSystemStatisticsEvent event) {
         // check if the handler is ON
         if (this.getSwitch().getStatus().equals(SwitchStatus.OFF)) {
-            logger.debug("CELLAR SYSTEM STATS: {} switch is OFF, cluster event not handled", SWITCH_ID);
+            LLOGGER.debug("CELLAR SYSTEM STATS: {} switch is OFF, cluster event not handled", SWITCH_ID);
             return;
         }
 
         if (groupManager == null) {
             //in rare cases for example right after installation this happens!
-            logger.error("CELLAR SYSTEM STATS: retrieved event {} while groupManager is not available yet!", event);
+            LLOGGER.error("CELLAR SYSTEM STATS: retrieved event {} while groupManager is not available yet!", event);
             return;
         }
 
         // check if the group is local
         if (!groupManager.isLocalGroup(event.getSourceGroup().getName())) {
-            logger.info("CELLAR SYSTEM STATS: node is not part of the event cluster group {}",event.getSourceGroup().getName());
+            LLOGGER.info("CELLAR SYSTEM STATS: node is not part of the event cluster group {}",event.getSourceGroup().getName());
             return;
         }
 
@@ -84,7 +84,7 @@ public class ClusterSystemStatisticsEventHandler extends CellarSupport implement
 
             // check if it's not a "local" event
             if (event.getSourceNode() != null && event.getSourceNode().getId().equalsIgnoreCase(clusterManager.getNode().getId())) {
-                logger.trace("CELLAR SYSTEM STATS: cluster event is local (coming from local synchronizer or listener)");
+                LLOGGER.trace("CELLAR SYSTEM STATS: cluster event is local (coming from local synchronizer or listener)");
                 return;
             }
 

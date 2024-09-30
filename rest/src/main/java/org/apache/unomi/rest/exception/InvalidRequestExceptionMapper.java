@@ -28,12 +28,12 @@ import javax.ws.rs.ext.Provider;
 @Provider
 @Component(service = ExceptionMapper.class)
 public class InvalidRequestExceptionMapper implements ExceptionMapper<InvalidRequestException> {
-    private static final Logger logger = LoggerFactory.getLogger(InvalidRequestExceptionMapper.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(InvalidRequestExceptionMapper.class.getName());
 
     @Override
     public Response toResponse(InvalidRequestException exception) {
-        logger.error("{} - set InvalidRequestExceptionMapper to debug level to get full error", exception.getMessage());
-        logger.debug("error", exception);
+        LOGGER.error("{} - set InvalidRequestExceptionMapper to debug level to get full error", exception.getMessage());
+        LOGGER.debug("error", exception);
 
         return Response.status(Response.Status.BAD_REQUEST).header("Content-Type", MediaType.TEXT_PLAIN)
                 .entity("Request rejected by the server because: " + exception.getResponseMessage()).build();

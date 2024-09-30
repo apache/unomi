@@ -36,7 +36,7 @@ import java.util.regex.Pattern;
 
 public class ExpressionFilterFactoryImpl implements ExpressionFilterFactory,BundleListener {
 
-    private static final Logger logger = LoggerFactory.getLogger(ExpressionFilterFactoryImpl.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(ExpressionFilterFactoryImpl.class.getName());
 
     private final Map<Bundle,Map<String,Set<Pattern>>> allowedExpressionPatternsByBundle = new HashMap<>();
 
@@ -87,7 +87,7 @@ public class ExpressionFilterFactoryImpl implements ExpressionFilterFactory,Bund
                     patterns.add(Pattern.compile(jsonPattern.asText()));
                 }
             } catch (IOException e) {
-                logger.error("Error while loading expressions definition from " + propertyKey, e);
+                LOGGER.error("Error while loading expressions definition from {}", propertyKey, e);
             }
             return patterns;
         }
@@ -135,7 +135,7 @@ public class ExpressionFilterFactoryImpl implements ExpressionFilterFactory,Bund
 
         while (predefinedAllowedExpressions.hasMoreElements()) {
             URL predefinedAllowedExpressionsURL = predefinedAllowedExpressions.nextElement();
-            logger.debug("Found predefined allowed expressions at " + predefinedAllowedExpressionsURL + ", loading... ");
+            LOGGER.debug("Found predefined allowed expressions at {}, loading... ", predefinedAllowedExpressionsURL);
             try {
                 JsonNode predefinedAllowedExpressionsNode = objectMapper.readTree(predefinedAllowedExpressionsURL);
                 Set<Pattern> bundleAllowedExpressions = new HashSet<>();
@@ -151,7 +151,7 @@ public class ExpressionFilterFactoryImpl implements ExpressionFilterFactory,Bund
                 existingAllowedExpressions.addAll(bundleAllowedExpressions);
                 allowedExpressionPatternsByCollection.put(collection, existingAllowedExpressions);
             } catch (IOException e) {
-                logger.error("Error while loading expressions definition " + predefinedAllowedExpressionsURL, e);
+                LOGGER.error("Error while loading expressions definition {}", predefinedAllowedExpressionsURL, e);
             }
         }
 

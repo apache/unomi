@@ -24,7 +24,6 @@ import org.apache.camel.model.RouteDefinition;
 import org.apache.unomi.api.services.ClusterService;
 import org.apache.unomi.api.services.ConfigSharingService;
 import org.apache.unomi.api.services.ProfileService;
-import org.apache.unomi.api.services.SchedulerService;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.router.api.ExportConfiguration;
 import org.apache.unomi.router.api.IRouterCamelContext;
@@ -56,7 +55,7 @@ import java.util.concurrent.TimeUnit;
  */
 public class RouterCamelContext implements IRouterCamelContext {
 
-    private Logger logger = LoggerFactory.getLogger(RouterCamelContext.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(RouterCamelContext.class.getName());
     private CamelContext camelContext;
     private UnomiStorageProcessor unomiStorageProcessor;
     private ImportRouteCompletionProcessor importRouteCompletionProcessor;
@@ -112,7 +111,7 @@ public class RouterCamelContext implements IRouterCamelContext {
     }
 
     public void init() throws Exception {
-        logger.info("Initialize Camel Context...");
+        LOGGER.info("Initialize Camel Context...");
         scheduler = Executors.newSingleThreadScheduledExecutor();
 
         configSharingService.setProperty(RouterConstants.IMPORT_ONESHOT_UPLOAD_DIR, uploadDir);
@@ -121,7 +120,7 @@ public class RouterCamelContext implements IRouterCamelContext {
         initCamel();
 
         initTimers();
-        logger.info("Camel Context initialized successfully.");
+        LOGGER.info("Camel Context initialized successfully.");
     }
 
     public void destroy() throws Exception {
@@ -132,7 +131,7 @@ public class RouterCamelContext implements IRouterCamelContext {
         //This is to shutdown Camel context
         //(will stop all routes/components/endpoints etc and clear internal state/cache)
         this.camelContext.stop();
-        logger.info("Camel context for profile import is shutdown.");
+        LOGGER.info("Camel context for profile import is shutdown.");
     }
 
     private void initTimers() {
@@ -151,7 +150,8 @@ public class RouterCamelContext implements IRouterCamelContext {
                                 killExistingRoute(importConfigToRefresh.getKey(), true);
                             }
                         } catch (Exception e) {
-                            logger.error("Unexpected error while refreshing(" + importConfigToRefresh.getValue() + ") camel route: " + importConfigToRefresh.getKey(), e);
+                            LOGGER.error("Unexpected error while refreshing({}) camel route: {}", importConfigToRefresh.getValue(),
+                                    importConfigToRefresh.getKey(), e);
                         }
                     }
 
@@ -164,11 +164,12 @@ public class RouterCamelContext implements IRouterCamelContext {
                                 killExistingRoute(exportConfigToRefresh.getKey(), true);
                             }
                         } catch (Exception e) {
-                            logger.error("Unexpected error while refreshing(" + exportConfigToRefresh.getValue() + ") camel route: " + exportConfigToRefresh.getKey(), e);
+                            LOGGER.error("Unexpected error while refreshing({}) camel route: {}", exportConfigToRefresh.getValue(),
+                                    exportConfigToRefresh.getKey(), e);
                         }
                     }
                 } catch (Exception e) {
-                    logger.error("Unexpected error while refreshing import/export camel routes", e);
+                    LOGGER.error("Unexpected error while refreshing import/export camel routes", e);
                 }
             }
         };
@@ -252,7 +253,7 @@ public class RouterCamelContext implements IRouterCamelContext {
 
         ImportConfiguration importConfiguration = importConfigurationService.load(configId);
         if (importConfiguration == null) {
-            logger.warn("Cannot update profile import reader route, config: {} not found", configId);
+            LOGGER.warn("Cannot update profile import reader route, config: {} not found", configId);
             return;
         }
 
@@ -278,7 +279,7 @@ public class RouterCamelContext implements IRouterCamelContext {
 
         ExportConfiguration exportConfiguration = exportConfigurationService.load(configId);
         if (exportConfiguration == null) {
-            logger.warn("Cannot update profile export reader route, config: {} not found", configId);
+            LOGGER.warn("Cannot update profile export reader route, config: {} not found", configId);
             return;
         }
 

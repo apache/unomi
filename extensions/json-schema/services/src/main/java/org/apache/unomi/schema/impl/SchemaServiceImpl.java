@@ -31,8 +31,8 @@ import org.apache.unomi.api.services.ScopeService;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.schema.api.JsonSchemaWrapper;
 import org.apache.unomi.schema.api.SchemaService;
-import org.apache.unomi.schema.api.ValidationException;
 import org.apache.unomi.schema.api.ValidationError;
+import org.apache.unomi.schema.api.ValidationException;
 import org.apache.unomi.schema.keyword.ScopeKeyword;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,7 +40,6 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
-import java.text.MessageFormat;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.stream.Collectors;
@@ -49,7 +48,7 @@ public class SchemaServiceImpl implements SchemaService {
 
     private static final String URI = "https://json-schema.org/draft/2019-09/schema";
 
-    private static final Logger logger = LoggerFactory.getLogger(SchemaServiceImpl.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(SchemaServiceImpl.class.getName());
     private static final String TARGET_EVENTS = "events";
 
     private static final String GENERIC_ERROR_KEY = "error";
@@ -88,11 +87,9 @@ public class SchemaServiceImpl implements SchemaService {
             JsonSchema jsonSchema = getJsonSchema(schemaId);
             return validate(jsonNode, jsonSchema).size() == 0;
         } catch (ValidationException e) {
-            if (logger.isDebugEnabled()) {
-                logger.debug(e.getMessage(), e);
-            }
-            return false;
+            LOGGER.debug("{}", e.getMessage(), e);
         }
+        return false;
     }
 
     @Override
@@ -103,11 +100,9 @@ public class SchemaServiceImpl implements SchemaService {
     @Override
     public boolean isEventValid(String event) {
         try {
-            return validateEvent(event).size() == 0;
+            return validateEvent(event).isEmpty();
         } catch (ValidationException e) {
-            if (logger.isDebugEnabled()) {
-                logger.debug(e.getMessage(), e);
-            }
+            LOGGER.debug("{}", e.getMessage(), e);
         }
         return false;
     }
@@ -139,7 +134,7 @@ public class SchemaServiceImpl implements SchemaService {
                     }
                 }
             } catch (ValidationException e) {
-                logger.debug("Validation error : {}", e.getMessage());
+                LOGGER.debug("Validation error : {}", e.getMessage());
                 Set<ValidationError> errors = buildCustomErrorMessage(e.getMessage());
                 String eventTypeOrErrorKey = eventType != null ? eventType : GENERIC_ERROR_KEY;
                 if (errorsPerEventType.containsKey(eventTypeOrErrorKey)) {
@@ -230,10 +225,10 @@ public class SchemaServiceImpl implements SchemaService {
         try {
             Set<ValidationMessage> validationMessages = jsonSchema.validate(jsonNode);
 
-            if (logger.isDebugEnabled() && validationMessages.size() > 0) {
-                logger.debug("Schema validation found {} errors while validating against schema: {}", validationMessages.size(), jsonSchema.getCurrentUri());
+            if (LOGGER.isDebugEnabled() && !validationMessages.isEmpty()) {
+                LOGGER.debug("Schema validation found {} errors while validating against schema: {}", validationMessages.size(), jsonSchema.getCurrentUri());
                 for (ValidationMessage validationMessage : validationMessages) {
-                    logger.debug("Validation error: {}", validationMessage);
+                    LOGGER.debug("Validation error: {}", validationMessage);
                 }
             }
 
@@ -342,7 +337,7 @@ public class SchemaServiceImpl implements SchemaService {
                 }
                 extensionsReloaded.get(extendedSchemaId).add(extension.getItemId());
             } else {
-                logger.warn("A schema cannot extends himself, please fix your schema definition for schema: {}", extendedSchemaId);
+                LOGGER.warn("A schema cannot extends himself, please fix your schema definition for schema: {}", extendedSchemaId);
             }
         }
 
@@ -360,7 +355,7 @@ public class SchemaServiceImpl implements SchemaService {
             } else if (jsonSchema.at("/allOf") instanceof ArrayNode) {
                 allOf = (ArrayNode) jsonSchema.at("/allOf");
             } else {
-                logger.warn("Cannot extends schema allOf property, it should be an Array, please fix your schema definition for schema: {}", id);
+                LOGGER.warn("Cannot extends schema allOf property, it should be an Array, please fix your schema definition for schema: {}", id);
                 return schema;
             }
 
@@ -385,7 +380,7 @@ public class SchemaServiceImpl implements SchemaService {
                 try {
                     refreshJSONSchemas();
                 } catch (Exception e) {
-                    logger.error("Unexpected error while refreshing JSON Schemas", e);
+                    LOGGER.error("Unexpected error while refreshing JSON Schemas", e);
                 }
             }
         };
@@ -400,11 +395,11 @@ public class SchemaServiceImpl implements SchemaService {
                         .build())
                 .defaultMetaSchemaURI(URI)
                 .uriFetcher(uri -> {
-                    logger.debug("Fetching schema {}", uri);
+                    LOGGER.debug("Fetching schema {}", uri);
                     String schemaId = uri.toString();
                     JsonSchemaWrapper jsonSchemaWrapper = getSchema(schemaId);
                     if (jsonSchemaWrapper == null) {
-                        logger.error("Couldn't find schema {}", uri);
+                        LOGGER.error("Couldn't find schema {}", uri);
                         return null;
                     }
 
@@ -421,7 +416,7 @@ public class SchemaServiceImpl implements SchemaService {
         scheduler = Executors.newSingleThreadScheduledExecutor();
         initJsonSchemaFactory();
         initTimers();
-        logger.info("Schema service initialized.");
+        LOGGER.info("Schema service initialized.");
     }
 
     public void destroy() {
@@ -429,7 +424,7 @@ public class SchemaServiceImpl implements SchemaService {
         if (scheduler != null) {
             scheduler.shutdown();
         }
-        logger.info("Schema service shutdown.");
+        LOGGER.info("Schema service shutdown.");
     }
 
     public void setPersistenceService(PersistenceService persistenceService) {

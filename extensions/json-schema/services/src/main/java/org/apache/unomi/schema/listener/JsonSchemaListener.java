@@ -36,7 +36,7 @@ import java.util.Enumeration;
  */
 public class JsonSchemaListener implements SynchronousBundleListener {
 
-    private static final Logger logger = LoggerFactory.getLogger(JsonSchemaListener.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(JsonSchemaListener.class.getName());
     public static final String ENTRIES_LOCATION = "META-INF/cxs/schemas";
 
     private SchemaService schemaService;
@@ -51,8 +51,8 @@ public class JsonSchemaListener implements SynchronousBundleListener {
     }
 
     public void postConstruct() {
-        logger.info("JSON schema listener initializing...");
-        logger.debug("postConstruct {}", bundleContext.getBundle());
+        LOGGER.info("JSON schema listener initializing...");
+        LOGGER.debug("postConstruct {}", bundleContext.getBundle());
 
         loadPredefinedSchemas(bundleContext, true);
 
@@ -64,12 +64,12 @@ public class JsonSchemaListener implements SynchronousBundleListener {
         schemaService.refreshJSONSchemas();
 
         bundleContext.addBundleListener(this);
-        logger.info("JSON schema listener initialized.");
+        LOGGER.info("JSON schema listener initialized.");
     }
 
     public void preDestroy() {
         bundleContext.removeBundleListener(this);
-        logger.info("JSON schema listener shutdown.");
+        LOGGER.info("JSON schema listener shutdown.");
     }
 
     private void processBundleStartup(BundleContext bundleContext) {
@@ -107,7 +107,7 @@ public class JsonSchemaListener implements SynchronousBundleListener {
 
         while (predefinedSchemas.hasMoreElements()) {
             URL predefinedSchemaURL = predefinedSchemas.nextElement();
-            logger.debug("Found predefined JSON schema at {}, {}... ", predefinedSchemaURL, load ? "loading" : "unloading");
+            LOGGER.debug("Found predefined JSON schema at {}, {}... ", predefinedSchemaURL, load ? "loading" : "unloading");
             try (InputStream schemaInputStream = predefinedSchemaURL.openStream()) {
                 if (load) {
                     schemaService.loadPredefinedSchema(schemaInputStream);
@@ -115,7 +115,7 @@ public class JsonSchemaListener implements SynchronousBundleListener {
                     schemaService.unloadPredefinedSchema(schemaInputStream);
                 }
             } catch (Exception e) {
-                logger.error("Error while {} schema definition {}", load ? "loading" : "unloading", predefinedSchemaURL, e);
+                LOGGER.error("Error while {} schema definition {}", load ? "loading" : "unloading", predefinedSchemaURL, e);
             }
         }
     }

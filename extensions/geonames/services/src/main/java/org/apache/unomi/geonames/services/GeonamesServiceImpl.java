@@ -39,7 +39,7 @@ import java.util.zip.ZipInputStream;
 
 public class GeonamesServiceImpl implements GeonamesService {
     public static final String GEOCODING_MAX_DISTANCE = "100km";
-    private static final Logger logger = LoggerFactory.getLogger(GeonamesServiceImpl.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(GeonamesServiceImpl.class.getName());
     private DefinitionsService definitionsService;
     private PersistenceService persistenceService;
     private SchedulerService schedulerService;
@@ -84,16 +84,16 @@ public class GeonamesServiceImpl implements GeonamesService {
             if (forceDbImport) {
                 persistenceService.removeIndex(GeonameEntry.ITEM_TYPE);
                 persistenceService.createIndex(GeonameEntry.ITEM_TYPE);
-                logger.info("Geonames index removed and recreated");
+                LOGGER.info("Geonames index removed and recreated");
             } else if (persistenceService.getAllItemsCount(GeonameEntry.ITEM_TYPE) > 0) {
                 return;
             }
         } else {
-            logger.info("Geonames index created");
+            LOGGER.info("Geonames index created");
         }
 
         if (pathToGeonamesDatabase == null) {
-            logger.info("No geonames DB provided");
+            LOGGER.info("No geonames DB provided");
             return;
         }
         final File f = new File(pathToGeonamesDatabase);
@@ -110,7 +110,7 @@ public class GeonamesServiceImpl implements GeonamesService {
     private void importGeoNameDatabase(final File f) {
         Map<String,Map<String,Object>> typeMappings = persistenceService.getPropertiesMapping(GeonameEntry.ITEM_TYPE);
         if (typeMappings == null || typeMappings.size() == 0) {
-            logger.warn("Type mappings for type {} are not yet installed, delaying import until they are ready!", GeonameEntry.ITEM_TYPE);
+            LOGGER.warn("Type mappings for type {} are not yet installed, delaying import until they are ready!", GeonameEntry.ITEM_TYPE);
             schedulerService.getSharedScheduleExecutorService().schedule(new TimerTask() {
                 @Override
                 public void run() {
@@ -130,7 +130,7 @@ public class GeonamesServiceImpl implements GeonamesService {
 
             SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
             String line;
-            logger.info("Starting to import geonames database from file {}...", f);
+            LOGGER.info("Starting to import geonames database from file {}...", f);
             long charCount = 0;
             double lastCompletionPourcentage = 0.0;
             long lastCharCount = 0;
@@ -157,20 +157,20 @@ public class GeonamesServiceImpl implements GeonamesService {
                     double completionPourcentage = 100.0 * charCount / fileSize;
                     if (completionPourcentage - lastCompletionPourcentage > 1.0) {
                         int roundedPourcentage = (int) completionPourcentage;
-                        logger.info("{}% imported from file {}", roundedPourcentage, f);
+                        LOGGER.info("{}% imported from file {}", roundedPourcentage, f);
                         lastCompletionPourcentage = completionPourcentage;
                     }
                 } else {
                     if (charCount - lastCharCount > (100*1024*1024)) {
-                        logger.info("{}MB imported from file {}", charCount / (1024*1024), f);
+                        LOGGER.info("{}MB imported from file {}", charCount / (1024*1024), f);
                         lastCharCount = charCount;
                     }
                 }
             }
             long totalTimeMillis = System.currentTimeMillis()-importStartTime;
-            logger.info("{} characters from Geonames database file {} imported in {}ms. Speed={}MB/s", charCount, f, totalTimeMillis, charCount / (1024*1024) / (totalTimeMillis / 1000));
+            LOGGER.info("{} characters from Geonames database file {} imported in {}ms. Speed={}MB/s", charCount, f, totalTimeMillis, charCount / (1024*1024) / (totalTimeMillis / 1000));
         } catch (Exception e) {
-            logger.error(e.getMessage(), e);
+            LOGGER.error(e.getMessage(), e);
         }
     }
 

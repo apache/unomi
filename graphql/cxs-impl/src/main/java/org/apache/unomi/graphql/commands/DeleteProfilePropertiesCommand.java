@@ -29,7 +29,7 @@ import java.util.stream.Collectors;
 
 public class DeleteProfilePropertiesCommand extends BaseCommand<Boolean> {
 
-    private static final Logger LOG = LoggerFactory.getLogger(DeleteProfilePropertiesCommand.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(DeleteProfilePropertiesCommand.class);
 
     private final List<String> propertyNames;
 
@@ -58,12 +58,12 @@ public class DeleteProfilePropertiesCommand extends BaseCommand<Boolean> {
                 boolean deleted = profileService.deletePropertyType(propertyName);
 
                 if (deleted) {
-                    LOG.info("The property \"{}\" of profile was deleted successfully", propertyName);
+                    LOGGER.info("The property \"{}\" of profile was deleted successfully", propertyName);
                 } else {
-                    LOG.info("The property \"{}\" of profile was not deleted", propertyName);
+                    LOGGER.info("The property \"{}\" of profile was not deleted", propertyName);
                 }
             } catch (Exception e) {
-                LOG.error("The delete property \"{}\" is failed", propertyName, e);
+                LOGGER.error("The delete property \"{}\" is failed", propertyName, e);
             }
         }
 

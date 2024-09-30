@@ -35,7 +35,7 @@ import java.util.Map;
 
 public class CopyPropertiesAction implements ActionExecutor {
 
-    private static final Logger logger = LoggerFactory.getLogger(CopyPropertiesAction.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(CopyPropertiesAction.class);
     private ProfileService profileService;
 
     public void setProfileService(ProfileService profileService) {
@@ -71,11 +71,8 @@ public class CopyPropertiesAction implements ActionExecutor {
                 if (multipleIsExpected) {
                     changed = PropertyHelper.setProperty(event.getProfile(), propertyName, entry.getValue(), "addValues");
                 } else if (entry.getValue() instanceof List) {
-                    logger.error(
-                            "Impossible to copy the property of type List to the profile, either a single value already exist on the profile or the property type is declared as a single value property. Enable debug log level for more information");
-                    if (logger.isDebugEnabled()) {
-                        logger.debug("cannot copy property {}, because it's a List", mappedProperty);
-                    }
+                    LOGGER.error("Impossible to copy the property of type List to the profile, either a single value already exist on the profile or the property type is declared as a single value property. Enable debug log level for more information");
+                    LOGGER.debug("cannot copy property {}, because it's a List", mappedProperty);
                 } else {
                     changed = PropertyHelper.setProperty(event.getProfile(), propertyName, entry.getValue(), singleValueStrategy);
                 }
@@ -108,8 +105,7 @@ public class CopyPropertiesAction implements ActionExecutor {
                 propsToCopy.putAll((Map) targetProperties);
             }
         } catch (Exception e) {
-            logger.error("Unable to extract properties to be copied from the event to the profile using root property: {}", rootProperty,
-                    e);
+            LOGGER.error("Unable to extract properties to be copied from the event to the profile using root property: {}", rootProperty, e);
         }
 
         return propsToCopy;

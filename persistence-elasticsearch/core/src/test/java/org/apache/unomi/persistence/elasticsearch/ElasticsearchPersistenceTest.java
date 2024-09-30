@@ -53,7 +53,7 @@ import java.util.logging.Logger;
 @ThreadLeakScope(value = ThreadLeakScope.Scope.NONE)
 public class ElasticsearchPersistenceTest {
 
-    private static final Logger logger = Logger.getLogger(ElasticsearchPersistenceTest.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(ElasticsearchPersistenceTest.class.getName());
 
     private static final String CLUSTER_NAME = "unomi-cluster-test";
     private static final String NODE_NAME = "unomi-node-test";
@@ -119,9 +119,9 @@ public class ElasticsearchPersistenceTest {
     @Test
     public void testGetClusterInfo() throws Exception {
         MainResponse response = restHighLevelClient.info(RequestOptions.DEFAULT);
-        logger.info("Cluster getMinimumIndexCompatibilityVersion: " + response.getVersion().getMinimumIndexCompatibilityVersion());
-        logger.info("Cluster getMinimumWireCompatibilityVersion: " + response.getVersion().getMinimumWireCompatibilityVersion());
-        logger.info("Cluster number: " + response.getVersion().getNumber());
+        LOGGER.info("Cluster getMinimumIndexCompatibilityVersion: " + response.getVersion().getMinimumIndexCompatibilityVersion());
+        LOGGER.info("Cluster getMinimumWireCompatibilityVersion: " + response.getVersion().getMinimumWireCompatibilityVersion());
+        LOGGER.info("Cluster number: " + response.getVersion().getNumber());
     }
 
     @Test
@@ -131,9 +131,9 @@ public class ElasticsearchPersistenceTest {
         CreateIndexRequest request = new CreateIndexRequest(indexName);
         CreateIndexResponse response = restHighLevelClient.indices().create(request, RequestOptions.DEFAULT);
         if (response.isAcknowledged()) {
-            logger.info(">>> Create index :: ok :: name = " + response.index());
+            LOGGER.info(">>> Create index :: ok :: name = " + response.index());
         } else {
-            logger.info(">>> Create index :: not acknowledged");
+            LOGGER.info(">>> Create index :: not acknowledged");
         }
 
 //        ClusterHealthResponse actionGet = restHighLevelClient.cluster()
@@ -165,9 +165,9 @@ public class ElasticsearchPersistenceTest {
         IndexResponse indexResponse = restHighLevelClient.index(indexRequest, RequestOptions.DEFAULT);
         Assert.assertNotNull(indexResponse);
         if (indexResponse.status() == RestStatus.CREATED) {
-            logger.info(">>> Insert data created");
+            LOGGER.info(">>> Insert data created");
         } else {
-            logger.info(">>> Insert data ko :: " + indexResponse.status().name());
+            LOGGER.info(">>> Insert data ko :: " + indexResponse.status().name());
         }
         Assert.assertEquals(indexResponse.status(), RestStatus.CREATED);
     }

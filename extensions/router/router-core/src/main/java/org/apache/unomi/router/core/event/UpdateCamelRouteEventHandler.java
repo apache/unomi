@@ -30,23 +30,23 @@ import org.slf4j.LoggerFactory;
  * @author dgaillard
  */
 public class UpdateCamelRouteEventHandler extends CellarSupport implements EventHandler<UpdateCamelRouteEvent> {
-    private static final Logger logger = LoggerFactory.getLogger(UpdateCamelRouteEventHandler.class.getName());
+    private static final Logger LLOGGER = LoggerFactory.getLogger(UpdateCamelRouteEventHandler.class.getName());
 
     private RouterCamelContext routerCamelContext;
 
     @Override
     public void handle(UpdateCamelRouteEvent event) {
-        logger.debug("Handle event");
+        LLOGGER.debug("Handle event");
         if (isAllowed(event.getSourceGroup(), Constants.CATEGORY, event.getId(), EventType.INBOUND)) {
-            logger.debug("Event is allowed");
+            LLOGGER.debug("Event is allowed");
             // check if it's not a "local" event
             if (event.getSourceNode() != null && event.getSourceNode().getId().equalsIgnoreCase(clusterManager.getNode().getId())) {
-                logger.debug("Cluster event is local (coming from local synchronizer or listener)");
+                LLOGGER.debug("Cluster event is local (coming from local synchronizer or listener)");
                 return;
             }
 
             try {
-                logger.debug("Event id is {}", event.getId());
+                LLOGGER.debug("Event id is {}", event.getId());
                 if (event.getId().equals(RouterCamelContext.EVENT_ID_REMOVE) && StringUtils.isNotBlank(event.getRouteId())) {
                     routerCamelContext.killExistingRoute(event.getRouteId(), false);
                 } else if ((event.getId().equals(RouterCamelContext.EVENT_ID_IMPORT))) {
@@ -55,7 +55,7 @@ public class UpdateCamelRouteEventHandler extends CellarSupport implements Event
                     routerCamelContext.updateProfileExportReaderRoute(event.getRouteId(), false);
                 }
             } catch (Exception e) {
-                logger.error("Error when executing event", e);
+                LLOGGER.error("Error when executing event", e);
             }
         }
     }

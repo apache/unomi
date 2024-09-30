@@ -29,7 +29,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class ConditionESQueryBuilderDispatcher {
-    private static final Logger logger = LoggerFactory.getLogger(ConditionESQueryBuilderDispatcher.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(ConditionESQueryBuilderDispatcher.class.getName());
 
     private Map<String, ConditionESQueryBuilder> queryBuilders = new ConcurrentHashMap<>();
     private ScriptExecutor scriptExecutor;
@@ -85,10 +85,8 @@ public class ConditionESQueryBuilderDispatcher {
             }
         } else {
             // if no matching
-            logger.warn("No matching query builder. See debug log level for more information");
-            if (logger.isDebugEnabled()) {
-                logger.debug("No matching query builder for condition {} and context {}", condition, context);
-            }
+            LOGGER.warn("No matching query builder. See debug log level for more information");
+            LOGGER.debug("No matching query builder for condition {} and context {}", condition, context);
         }
 
         return QueryBuilders.matchAllQuery();
@@ -122,10 +120,8 @@ public class ConditionESQueryBuilderDispatcher {
         }
 
         // if no matching
-        logger.warn("No matching query builder. See debug log level for more information");
-        if (logger.isDebugEnabled()) {
-            logger.debug("No matching query builder for condition {} and context {}", condition, context);
-        }
+        LOGGER.warn("No matching query builder. See debug log level for more information");
+        LOGGER.debug("No matching query builder for condition {} and context {}", condition, context);
         throw new UnsupportedOperationException();
     }
 }

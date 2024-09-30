@@ -31,7 +31,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class IncrementPropertyAction implements ActionExecutor {
-    private static final Logger logger = LoggerFactory.getLogger(IncrementPropertyAction.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(IncrementPropertyAction.class.getName());
 
     @Override
     public int execute(final Action action, final Event event) {
@@ -51,15 +51,11 @@ public class IncrementPropertyAction implements ActionExecutor {
                 return storeInSession ? EventService.SESSION_UPDATED : EventService.PROFILE_UPDATED;
             }
         } catch (IllegalAccessException | NoSuchMethodException | InvocationTargetException e) {
-            logger.warn("Error resolving nested property of object. See debug log level for more information");
-            if (logger.isDebugEnabled()) {
-                logger.debug("Error resolving nested property of item: {}", storeInSession ? session : profile, e);
-            }
+            LOGGER.warn("Error resolving nested property of object. See debug log level for more information");
+            LOGGER.debug("Error resolving nested property of item: {}", storeInSession ? session : profile, e);
         } catch (IllegalStateException ee) {
-            logger.warn("Error increment existing property, because existing property doesn't have expected type. See debug log level for more information");
-            if (logger.isDebugEnabled()) {
-                logger.debug(ee.getMessage(), ee);
-            }
+            LOGGER.warn("Error increment existing property, because existing property doesn't have expected type. See debug log level for more information");
+            LOGGER.debug("{}", ee.getMessage(), ee);
         }
 
         return EventService.NO_CHANGE;

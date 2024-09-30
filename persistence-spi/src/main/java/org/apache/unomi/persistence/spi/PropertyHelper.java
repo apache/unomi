@@ -21,7 +21,6 @@ import org.apache.commons.beanutils.BeanUtils;
 import org.apache.commons.beanutils.NestedNullException;
 import org.apache.commons.beanutils.PropertyUtils;
 import org.apache.commons.beanutils.expression.DefaultResolver;
-import org.apache.unomi.api.Profile;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,7 +33,7 @@ import java.util.stream.Collectors;
  */
 public class PropertyHelper {
 
-    private static final Logger logger = LoggerFactory.getLogger(PropertyHelper.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(PropertyHelper.class.getName());
     private static DefaultResolver resolver = new DefaultResolver();
 
     public static boolean setProperty(Object target, String propertyName, Object propertyValue, String setPropertyStrategy) {
@@ -109,7 +108,7 @@ public class PropertyHelper {
                 }
             }
         } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
-            logger.error("Cannot set property", e);
+            LOGGER.error("Cannot set property", e);
         }
         return false;
     }
@@ -169,16 +168,16 @@ public class PropertyHelper {
             return ((Boolean) setPropertyValueBoolean);
         } else if (setPropertyValueBoolean instanceof Number) {
             if (((Number) setPropertyValueBoolean).intValue() >= 1) {
-                return new Boolean(true);
+                return Boolean.TRUE;
             } else {
-                return new Boolean(false);
+                return Boolean.FALSE;
             }
         } else {
             if (((String) setPropertyValueBoolean).equalsIgnoreCase("true") || ((String) setPropertyValueBoolean).equalsIgnoreCase("on") ||
                     ((String) setPropertyValueBoolean).equalsIgnoreCase("yes") || ((String) setPropertyValueBoolean).equalsIgnoreCase("1")) {
-                return new Boolean(true);
+                return Boolean.TRUE;
             } else {
-                return new Boolean(false);
+                return Boolean.FALSE;
             }
         }
 

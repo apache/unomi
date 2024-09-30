@@ -58,7 +58,7 @@ import java.util.stream.Collectors;
 
 public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentService, SynchronousBundleListener {
 
-    private static final Logger logger = LoggerFactory.getLogger(SegmentServiceImpl.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(SegmentServiceImpl.class.getName());
 
     private static final String VALIDATION_PROFILE_ID = "validation-profile-id";
     private static final String RESET_SCORING_SCRIPT = "resetScoringPlan";
@@ -85,7 +85,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
     private int dailyDateExprEvaluationHourUtc = 5;
 
     public SegmentServiceImpl() {
-        logger.info("Initializing segment service...");
+        LOGGER.info("Initializing segment service...");
     }
 
     public void setBundleContext(BundleContext bundleContext) {
@@ -145,7 +145,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
     }
 
     public void postConstruct() throws IOException {
-        logger.debug("postConstruct {" + bundleContext.getBundle() + "}");
+        LOGGER.debug("postConstruct {{}}", bundleContext.getBundle());
         loadPredefinedSegments(bundleContext);
         loadPredefinedScorings(bundleContext);
         for (Bundle bundle : bundleContext.getBundles()) {
@@ -156,12 +156,12 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
         }
         bundleContext.addBundleListener(this);
         initializeTimer();
-        logger.info("Segment service initialized.");
+        LOGGER.info("Segment service initialized.");
     }
 
     public void preDestroy() {
         bundleContext.removeBundleListener(this);
-        logger.info("Segment service shutdown.");
+        LOGGER.info("Segment service shutdown.");
     }
 
     private void processBundleStartup(BundleContext bundleContext) {
@@ -186,7 +186,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
 
         while (predefinedSegmentEntries.hasMoreElements()) {
             URL predefinedSegmentURL = predefinedSegmentEntries.nextElement();
-            logger.debug("Found predefined segment at " + predefinedSegmentURL + ", loading... ");
+            LOGGER.debug("Found predefined segment at {}, loading... ", predefinedSegmentURL);
 
             try {
                 Segment segment = CustomObjectMapper.getObjectMapper().readValue(predefinedSegmentURL, Segment.class);
@@ -194,9 +194,9 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
                     segment.getMetadata().setScope("systemscope");
                 }
                 setSegmentDefinition(segment);
-                logger.info("Predefined segment with id {} registered", segment.getMetadata().getId());
+                LOGGER.info("Predefined segment with id {} registered", segment.getMetadata().getId());
             } catch (IOException e) {
-                logger.error("Error while loading segment definition " + predefinedSegmentURL, e);
+                LOGGER.error("Error while loading segment definition {}", predefinedSegmentURL, e);
             }
         }
     }
@@ -209,7 +209,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
 
         while (predefinedScoringEntries.hasMoreElements()) {
             URL predefinedScoringURL = predefinedScoringEntries.nextElement();
-            logger.debug("Found predefined scoring at " + predefinedScoringURL + ", loading... ");
+            LOGGER.debug("Found predefined scoring at {}, loading... ", predefinedScoringURL);
 
             try {
                 Scoring scoring = CustomObjectMapper.getObjectMapper().readValue(predefinedScoringURL, Scoring.class);
@@ -217,9 +217,9 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
                     scoring.getMetadata().setScope("systemscope");
                 }
                 setScoringDefinition(scoring);
-                logger.info("Predefined scoring with id {} registered", scoring.getMetadata().getId());
+                LOGGER.info("Predefined scoring with id {} registered", scoring.getMetadata().getId());
             } catch (IOException e) {
-                logger.error("Error while loading segment definition " + predefinedScoringURL, e);
+                LOGGER.error("Error while loading segment definition {}", predefinedScoringURL, e);
             }
         }
     }
@@ -286,10 +286,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
                 }
             } else if ("profileSegmentCondition".equals(condition.getConditionTypeId())) {
                 @SuppressWarnings("unchecked") final List<String> referencedSegmentIds = (List<String>) condition.getParameter("segments");
-
-                if (referencedSegmentIds.indexOf(segmentToDeleteId) >= 0) {
-                    return true;
-                }
+                return referencedSegmentIds.contains(segmentToDeleteId);
             }
         }
         return false;
@@ -326,7 +323,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
             }
         } else if ("profileSegmentCondition".equals(condition.getConditionTypeId())) {
             @SuppressWarnings("unchecked") final List<String> referencedSegmentIds = (List<String>) condition.getParameter("segments");
-            if (referencedSegmentIds.indexOf(segmentId) >= 0) {
+            if (referencedSegmentIds.contains(segmentId)) {
                 referencedSegmentIds.remove(segmentId);
                 if (referencedSegmentIds.isEmpty()) {
                     return null;
@@ -758,8 +755,8 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
                     action.setActionType(definitionsService.getActionType("setEventOccurenceCountAction"));
                     action.setParameter("pastEventCondition", parentCondition);
 
-                    rule.setActions(Arrays.asList(action));
-                    rule.setLinkedItems(Arrays.asList(metadata.getId()));
+                    rule.setActions(List.of(action));
+                    rule.setLinkedItems(List.of(metadata.getId()));
 
                     // it's a new generated rules to keep track of the event count, we should update all the profile that match this past event
                     // it will update the count of event occurrence on the profile directly
@@ -868,7 +865,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
             persistenceService.refreshIndex(Profile.class);
         }
 
-        logger.info("{} profiles updated for past event condition in {}ms", updatedProfileCount, System.currentTimeMillis() - t);
+        LOGGER.info("{} profiles updated for past event condition in {}ms", updatedProfileCount, System.currentTimeMillis() - t);
     }
 
     /**
@@ -918,7 +915,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
             String key = CustomObjectMapper.getObjectMapper().writeValueAsString(m);
             return "eventTriggered" + getMD5(key);
         } catch (JsonProcessingException e) {
-            logger.error("Cannot generate key", e);
+            LOGGER.error("Cannot generate key", e);
             return null;
         }
     }
@@ -928,13 +925,13 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
         Set<String> segmentOrScoringIdsToReevaluate = new HashSet<>();
         // reevaluate auto generated rules used to store the event occurrence count on the profile
         for (Rule rule : rulesService.getAllRules()) {
-            if (rule.getActions() != null && rule.getActions().size() > 0) {
+            if (rule.getActions() != null && !rule.getActions().isEmpty()) {
                 for (Action action : rule.getActions()) {
                     if (action.getActionTypeId().equals("setEventOccurenceCountAction")) {
                         Condition pastEventCondition = (Condition) action.getParameterValues().get("pastEventCondition");
                         if (pastEventCondition.containsParameter("numberOfDays")) {
                             recalculatePastEventOccurrencesOnProfiles(rule.getCondition(), pastEventCondition, true, true);
-                            logger.info("Event occurrence count on profiles updated for rule: {}", rule.getItemId());
+                            LOGGER.info("Event occurrence count on profiles updated for rule: {}", rule.getItemId());
                             if (rule.getLinkedItems() != null && rule.getLinkedItems().size() > 0) {
                                 segmentOrScoringIdsToReevaluate.addAll(rule.getLinkedItems());
                             }
@@ -944,7 +941,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
             }
         }
         int pastEventSegmentsAndScoringsSize = segmentOrScoringIdsToReevaluate.size();
-        logger.info("Found {} segments or scoring plans containing pastEventCondition conditions", pastEventSegmentsAndScoringsSize);
+        LOGGER.info("Found {} segments or scoring plans containing pastEventCondition conditions", pastEventSegmentsAndScoringsSize);
 
         // get Segments and Scoring that contains relative date expressions
         segmentOrScoringIdsToReevaluate.addAll(allSegments.stream()
@@ -953,26 +950,26 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
                 .collect(Collectors.toList()));
 
         segmentOrScoringIdsToReevaluate.addAll(allScoring.stream()
-                .filter(scoring -> scoring.getElements() != null && scoring.getElements().size() > 0 && scoring.getElements().stream()
+                .filter(scoring -> scoring.getElements() != null && !scoring.getElements().isEmpty() && scoring.getElements().stream()
                         .anyMatch(scoringElement -> scoringElement != null && scoringElement.getCondition() != null && scoringElement.getCondition().toString().contains("propertyValueDateExpr")))
                 .map(Item::getItemId)
                 .collect(Collectors.toList()));
-        logger.info("Found {} segments or scoring plans containing date relative expressions", segmentOrScoringIdsToReevaluate.size() - pastEventSegmentsAndScoringsSize);
+        LOGGER.info("Found {} segments or scoring plans containing date relative expressions", segmentOrScoringIdsToReevaluate.size() - pastEventSegmentsAndScoringsSize);
 
         // reevaluate segments and scoring.
-        if (segmentOrScoringIdsToReevaluate.size() > 0) {
+        if (!segmentOrScoringIdsToReevaluate.isEmpty()) {
             persistenceService.refreshIndex(Profile.class, null);
             for (String linkedItem : segmentOrScoringIdsToReevaluate) {
                 Segment linkedSegment = getSegmentDefinition(linkedItem);
                 if (linkedSegment != null) {
-                    logger.info("Start segment recalculation for segment: {} - {}", linkedSegment.getItemId(), linkedSegment.getMetadata().getName());
+                    LOGGER.info("Start segment recalculation for segment: {} - {}", linkedSegment.getItemId(), linkedSegment.getMetadata().getName());
                     updateExistingProfilesForSegment(linkedSegment);
                     continue;
                 }
 
                 Scoring linkedScoring = getScoringDefinition(linkedItem);
                 if (linkedScoring != null) {
-                    logger.info("Start scoring plan recalculation for scoring plan: {} - {}", linkedScoring.getItemId(), linkedScoring.getMetadata().getName());
+                    LOGGER.info("Start scoring plan recalculation for scoring plan: {} - {}", linkedScoring.getItemId(), linkedScoring.getMetadata().getName());
                     updateExistingProfilesForScoring(linkedScoring.getItemId(), linkedScoring.getElements(), linkedScoring.getMetadata().isEnabled());
                 }
             }
@@ -1009,7 +1006,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
                     Condition profileIdCondition = definitionsService.getConditionBuilder().condition("idsCondition").parameter("ids", batchProfilesToUpdate).parameter("match", true).build();
                     persistenceService.updateWithQueryAndStoredScript(Profile.class, new String[]{"updatePastEventOccurences"}, new Map[]{paramPerProfile}, new Condition[]{profileIdCondition});
                 } catch (Exception e) {
-                    logger.error("Error updating {} profiles for past event system properties", paramPerProfile.size(), e);
+                    LOGGER.error("Error updating {} profiles for past event system properties", paramPerProfile.size(), e);
                 } finally {
                     paramPerProfile.clear();
                     batchProfilesToUpdate.clear();
@@ -1072,14 +1069,14 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
         } else {
             updatedProfileCount += updateProfilesSegment(segmentCondition, segmentId, false, sendProfileUpdateEventForSegmentUpdate);
         }
-        logger.info("{} profiles updated in {}ms", updatedProfileCount, System.currentTimeMillis() - updateProfilesForSegmentStartTime);
+        LOGGER.info("{} profiles updated in {}ms", updatedProfileCount, System.currentTimeMillis() - updateProfilesForSegmentStartTime);
     }
 
     private long updateProfilesSegment(Condition profilesToUpdateCondition, String segmentId, boolean isAdd, boolean sendProfileUpdateEvent) {
         long updatedProfileCount = 0;
         PartialList<Profile> profiles = persistenceService.query(profilesToUpdateCondition, null, Profile.class, 0, segmentUpdateBatchSize, "10m");
 
-        while (profiles != null && profiles.getList().size() > 0) {
+        while (profiles != null && !profiles.getList().isEmpty()) {
             long startTime = System.currentTimeMillis();
             if (batchSegmentProfileUpdate) {
                 batchUpdateProfilesSegment(segmentId, profiles.getList(), isAdd);
@@ -1093,7 +1090,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
                 sendProfileUpdatedEvent(profiles.getList());
 
             updatedProfileCount += profiles.size();
-            logger.info("{} profiles {} to segment {} in {}ms", profiles.size(), isAdd ? "added" : "removed", segmentId, System.currentTimeMillis() - startTime);
+            LOGGER.info("{} profiles {} to segment {} in {}ms", profiles.size(), isAdd ? "added" : "removed", segmentId, System.currentTimeMillis() - startTime);
 
             profiles = persistenceService.continueScrollQuery(Profile.class, profiles.getScrollIdentifier(), profiles.getScrollTimeValidity());
         }
@@ -1120,11 +1117,11 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
 
             Failsafe.with(retryPolicy).
                     run(executionContext -> {
-                        logger.warn("retry updating profile segment {}, profile {}, time {}", segmentId, profileId, new Date());
+                        LOGGER.warn("retry updating profile segment {}, profile {}, time {}", segmentId, profileId, new Date());
                         Profile profileToAddUpdated = persistenceService.load(profileId, Profile.class);
                         Map<String, Object> sourceMapToUpdate = buildPropertiesMapForUpdateSegment(profileToAddUpdated, segmentId, isAdd);
                         boolean isUpdated = persistenceService.update(profileToAddUpdated, Profile.class, sourceMapToUpdate);
-                        if (isUpdated == false)
+                        if (!isUpdated)
                             throw new Exception(String.format("failed retry update profile segment {}, profile {}, time {}", segmentId, profileId, new Date()));
                     });
         }
@@ -1184,7 +1181,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
             }
         }
         persistenceService.updateWithQueryAndStoredScript(Profile.class, scripts, scriptParams, conditions);
-        logger.info("Updated scoring for profiles in {}ms", System.currentTimeMillis() - startTime);
+        LOGGER.info("Updated scoring for profiles in {}ms", System.currentTimeMillis() - startTime);
     }
 
     public void bundleChanged(BundleEvent event) {
@@ -1205,17 +1202,17 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
             public void run() {
                 try {
                     long currentTimeMillis = System.currentTimeMillis();
-                    logger.info("running scheduled task to recalculate segments and scoring that contains date relative conditions");
+                    LOGGER.info("running scheduled task to recalculate segments and scoring that contains date relative conditions");
                     recalculatePastEventConditions();
-                    logger.info("finished recalculate segments and scoring that contains date relative conditions in {}ms. ", System.currentTimeMillis() - currentTimeMillis);
+                    LOGGER.info("finished recalculate segments and scoring that contains date relative conditions in {}ms. ", System.currentTimeMillis() - currentTimeMillis);
                 } catch (Throwable t) {
-                    logger.error("Error while updating profiles for segments and scoring that contains date relative conditions", t);
+                    LOGGER.error("Error while updating profiles for segments and scoring that contains date relative conditions", t);
                 }
             }
         };
         long initialDelay = SchedulerServiceImpl.getTimeDiffInSeconds(dailyDateExprEvaluationHourUtc, ZonedDateTime.now(ZoneOffset.UTC));
         long period = TimeUnit.DAYS.toSeconds(taskExecutionPeriod);
-        logger.info("daily recalculation job for segments and scoring that contains date relative conditions will run at fixed rate, " +
+        LOGGER.info("daily recalculation job for segments and scoring that contains date relative conditions will run at fixed rate, " +
                 "initialDelay={}, taskExecutionPeriod={} in seconds", initialDelay, period);
         schedulerService.getScheduleExecutorService().scheduleAtFixedRate(task, initialDelay, period, TimeUnit.SECONDS);
 
@@ -1226,7 +1223,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
                     allSegments = getAllSegmentDefinitions();
                     allScoring = getAllScoringDefinitions();
                 } catch (Throwable t) {
-                    logger.error("Error while loading segments and scoring definitions from persistence back-end", t);
+                    LOGGER.error("Error while loading segments and scoring definitions from persistence back-end", t);
                 }
             }
         };

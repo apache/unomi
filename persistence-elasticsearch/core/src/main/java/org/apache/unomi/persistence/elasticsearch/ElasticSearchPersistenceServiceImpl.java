@@ -142,7 +142,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     public static final String SEQ_NO = "seq_no";
     public static final String PRIMARY_TERM = "primary_term";
 
-    private static final Logger logger = LoggerFactory.getLogger(ElasticSearchPersistenceServiceImpl.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(ElasticSearchPersistenceServiceImpl.class.getName());
     private static final String ROLLOVER_LIFECYCLE_NAME = "unomi-rollover-policy";
 
     private boolean throwExceptions = false;
@@ -495,18 +495,18 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 }
 
                 // Wait for green
-                logger.info("Waiting for GREEN cluster status...");
+                LOGGER.info("Waiting for GREEN cluster status...");
                 client.cluster().health(new ClusterHealthRequest().waitForGreenStatus(), RequestOptions.DEFAULT);
-                logger.info("Cluster status is GREEN");
+                LOGGER.info("Cluster status is GREEN");
 
                 // We keep in memory the latest available session index to be able to load session using direct GET access on ES
                 if (isItemTypeRollingOver(Session.ITEM_TYPE)) {
-                    logger.info("Sessions are using rollover indices, loading latest session index available ...");
+                    LOGGER.info("Sessions are using rollover indices, loading latest session index available ...");
                     GetAliasesResponse sessionAliasResponse = client.indices().getAlias(new GetAliasesRequest(getIndex(Session.ITEM_TYPE)), RequestOptions.DEFAULT);
                     Map<String, Set<AliasMetaData>> aliases = sessionAliasResponse.getAliases();
                     if (!aliases.isEmpty()) {
                         sessionLatestIndex = new TreeSet<>(aliases.keySet()).last();
-                        logger.info("Latest available session index found is: {}", sessionLatestIndex);
+                        LOGGER.info("Latest available session index found is: {}", sessionLatestIndex);
                     } else {
                         throw new IllegalStateException("No index found for sessions");
                     }
@@ -518,7 +518,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
         bundleContext.addBundleListener(this);
 
-        logger.info(this.getClass().getName() + " service started successfully.");
+        LOGGER.info("{} service started successfully.", this.getClass().getName());
     }
 
     private void buildClient() throws NoSuchFieldException, IllegalAccessException {
@@ -561,7 +561,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
                     httpClientBuilder.setSSLContext(sslContext).setSSLHostnameVerifier(new NoopHostnameVerifier());
                 } catch (NoSuchAlgorithmException | KeyManagementException e) {
-                    logger.error("Error creating SSL Context for trust all certificates", e);
+                    LOGGER.error("Error creating SSL Context for trust all certificates", e);
                 }
             }
 
@@ -575,7 +575,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             return httpClientBuilder;
         });
 
-        logger.info("Connecting to ElasticSearch persistence backend using cluster name " + clusterName + " and index prefix " + indexPrefix + "...");
+        LOGGER.info("Connecting to ElasticSearch persistence backend using cluster name {} and index prefix {}...", clusterName, indexPrefix);
         client = new CustomRestHighLevelClient(clientBuilder);
     }
 
@@ -587,21 +587,21 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             @Override
             public void beforeBulk(long executionId,
                                    BulkRequest request) {
-                logger.debug("Before Bulk");
+                LOGGER.debug("Before Bulk");
             }
 
             @Override
             public void afterBulk(long executionId,
                                   BulkRequest request,
                                   BulkResponse response) {
-                logger.debug("After Bulk");
+                LOGGER.debug("After Bulk");
             }
 
             @Override
             public void afterBulk(long executionId,
                                   BulkRequest request,
                                   Throwable failure) {
-                logger.error("After Bulk (failure)", failure);
+                LOGGER.error("After Bulk (failure)", failure);
             }
         };
         BulkProcessor.Builder bulkProcessorBuilder = BulkProcessor.builder(
@@ -665,12 +665,12 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
         new InClassLoaderExecute<Object>(null, null, this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
             protected Object execute(Object... args) throws IOException {
-                logger.info("Closing ElasticSearch persistence backend...");
+                LOGGER.info("Closing ElasticSearch persistence backend...");
                 if (bulkProcessor != null) {
                     try {
                         bulkProcessor.awaitClose(2, TimeUnit.MINUTES);
                     } catch (InterruptedException e) {
-                        logger.error("Error waiting for bulk operations to flush !", e);
+                        LOGGER.error("Error waiting for bulk operations to flush !", e);
                     }
                 }
                 if (client != null) {
@@ -724,7 +724,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         }
         while (predefinedMappings.hasMoreElements()) {
             URL predefinedMappingURL = predefinedMappings.nextElement();
-            logger.info("Found mapping at " + predefinedMappingURL + ", loading... ");
+            LOGGER.info("Found mapping at {}, loading... ", predefinedMappingURL);
             try {
                 final String path = predefinedMappingURL.getPath();
                 String name = path.substring(path.lastIndexOf('/') + 1, path.lastIndexOf('.'));
@@ -733,14 +733,14 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 mappings.put(name, mappingSource);
 
                 if (!createIndex(name)) {
-                    logger.info("Found index for type {}", name);
+                    LOGGER.info("Found index for type {}", name);
                     if (forceUpdateMapping) {
-                        logger.info("Updating mapping for {}", name);
+                        LOGGER.info("Updating mapping for {}", name);
                         createMapping(name, mappingSource);
                     }
                 }
             } catch (Exception e) {
-                logger.error("Error while loading mapping definition " + predefinedMappingURL, e);
+                LOGGER.error("Error while loading mapping definition {}", predefinedMappingURL, e);
             }
         }
     }
@@ -754,13 +754,13 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         Map<String, String> scriptsById = new HashMap<>();
         while (scriptsURL.hasMoreElements()) {
             URL scriptURL = scriptsURL.nextElement();
-            logger.info("Found painless script at " + scriptURL + ", loading... ");
+            LOGGER.info("Found painless script at {}, loading... ", scriptURL);
             try (InputStream in = scriptURL.openStream()) {
                 String script = IOUtils.toString(in, StandardCharsets.UTF_8);
                 String scriptId = FilenameUtils.getBaseName(scriptURL.getPath());
                 scriptsById.put(scriptId, script);
             } catch (Exception e) {
-                logger.error("Error while loading painless script " + scriptURL, e);
+                LOGGER.error("Error while loading painless script {}", scriptURL, e);
             }
 
         }
@@ -972,7 +972,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         }
                         logMetadataItemOperation("saved", item);
                     } catch (IndexNotFoundException e) {
-                        logger.error("Could not find index {}, could not register item type {} with id {} ", index, itemType, item.getItemId(), e);
+                        LOGGER.error("Could not find index {}, could not register item type {} with id {} ", index, itemType, item.getItemId(), e);
                         return false;
                     }
                     return true;
@@ -1034,11 +1034,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 }
             }
         }.catchingExecuteInClassLoader(true);
-        if (result == null) {
-            return false;
-        } else {
-            return result;
-        }
+        return Objects.requireNonNullElse(result, false);
     }
 
     private UpdateRequest createUpdateRequest(Class clazz, Item item, Map source, boolean alwaysOverwrite) {
@@ -1077,7 +1073,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 });
 
                 BulkResponse bulkResponse = client.bulk(bulkRequest, RequestOptions.DEFAULT);
-                logger.debug("{} profiles updated with bulk segment in {}ms", bulkRequest.numberOfActions(), System.currentTimeMillis() - batchRequestStartTime);
+                LOGGER.debug("{} profiles updated with bulk segment in {}ms", bulkRequest.numberOfActions(), System.currentTimeMillis() - batchRequestStartTime);
 
                 List<String> failedItemsIds = new ArrayList<>();
 
@@ -1148,18 +1144,18 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
                         TaskSubmissionResponse taskResponse = client.submitUpdateByQuery(updateByQueryRequest, RequestOptions.DEFAULT);
                         if (taskResponse == null) {
-                            logger.error("update with query and script: no response returned for query: {}", queryBuilder);
+                            LOGGER.error("update with query and script: no response returned for query: {}", queryBuilder);
                         } else if (waitForComplete) {
                             waitForTaskComplete(updateByQueryRequest, taskResponse);
                         } else {
-                            logger.debug("ES task started {}", taskResponse.getTask());
+                            LOGGER.debug("ES task started {}", taskResponse.getTask());
                         }
                     }
                     return true;
                 } catch (IndexNotFoundException e) {
                     throw new Exception("No index found for itemTypes=" + String.join(",", itemTypes), e);
                 } catch (ScriptException e) {
-                    logger.error("Error in the update script : {}\n{}\n{}", e.getScript(), e.getDetailedMessage(), e.getScriptStack());
+                    LOGGER.error("Error in the update script : {}\n{}\n{}", e.getScript(), e.getDetailedMessage(), e.getScriptStack());
                     throw new Exception("Error in the update script");
                 }
             }
@@ -1172,8 +1168,8 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     }
 
     private void waitForTaskComplete(AbstractBulkByScrollRequest request, TaskSubmissionResponse response) {
-        if (logger.isDebugEnabled()) {
-            logger.debug("Waiting task [{}]: [{}] using query: [{}], polling every {}ms with a timeout configured to {}ms",
+        if (LOGGER.isDebugEnabled()) {
+            LOGGER.debug("Waiting task [{}]: [{}] using query: [{}], polling every {}ms with a timeout configured to {}ms",
                     response.getTask(), request.toString(), request.getSearchRequest().source().query(), taskWaitingPollingInterval, taskWaitingTimeout);
         }
         long start = System.currentTimeMillis();
@@ -1186,18 +1182,17 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     if (getTaskResponseOptional.isPresent()) {
                         GetTaskResponse getTaskResponse = getTaskResponseOptional.get();
                         if (getTaskResponse.isCompleted()) {
-                            if (logger.isDebugEnabled()) {
+                            if (LOGGER.isDebugEnabled()) {
                                 long millis = getTaskResponse.getTaskInfo().getRunningTimeNanos() / 1_000_000;
                                 long seconds = millis / 1000;
-
-                                logger.debug("Waiting task [{}]: Finished in {} {}", taskId,
+                                LOGGER.debug("Waiting task [{}]: Finished in {} {}", taskId,
                                         seconds >= 1 ? seconds : millis,
                                         seconds >= 1 ? "seconds" : "milliseconds");
                             }
                             break;
                         } else {
                             if ((start + taskWaitingTimeout) < System.currentTimeMillis()) {
-                                logger.error("Waiting task [{}]: Exceeded configured timeout ({}ms), aborting wait process", taskId, taskWaitingTimeout);
+                                LOGGER.error("Waiting task [{}]: Exceeded configured timeout ({}ms), aborting wait process", taskId, taskWaitingTimeout);
                                 break;
                             }
 
@@ -1205,11 +1200,11 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                                 Thread.sleep(taskWaitingPollingInterval);
                             } catch (InterruptedException e) {
                                 Thread.currentThread().interrupt();
-                                throw new IllegalStateException("Waiting task [{}]: interrupted");
+                                throw new IllegalStateException("Waiting task [" + taskId + "]: interrupted");
                             }
                         }
                     } else {
-                        logger.error("Waiting task [{}]: No task found", taskId);
+                        LOGGER.error("Waiting task [{}]: No task found", taskId);
                         break;
                     }
                 }
@@ -1241,19 +1236,15 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     AcknowledgedResponse response = client.putScript(putStoredScriptRequest, RequestOptions.DEFAULT);
                     executedSuccessfully &= response.isAcknowledged();
                     if (response.isAcknowledged()) {
-                        logger.info("Successfully stored painless script: {}", script.getKey());
+                        LOGGER.info("Successfully stored painless script: {}", script.getKey());
                     } else {
-                        logger.error("Failed to store painless script: {}", script.getKey());
+                        LOGGER.error("Failed to store painless script: {}", script.getKey());
                     }
                 }
                 return executedSuccessfully;
             }
         }.catchingExecuteInClassLoader(true);
-        if (result == null) {
-            return false;
-        } else {
-            return result;
-        }
+        return Objects.requireNonNullElse(result, false);
     }
 
     public boolean updateWithScript(final Item item, final Date dateHint, final Class<?> clazz, final String script, final Map<String, Object> scriptParams) {
@@ -1294,11 +1285,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 }
             }
         }.catchingExecuteInClassLoader(true);
-        if (result == null) {
-            return false;
-        } else {
-            return result;
-        }
+        return Objects.requireNonNullElse(result, false);
     }
 
     @Override
@@ -1325,7 +1312,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     DeleteRequest deleteRequest = new DeleteRequest(index, documentId);
                     client.delete(deleteRequest, RequestOptions.DEFAULT);
                     if (MetadataItem.class.isAssignableFrom(clazz)) {
-                        logger.info("Item of type {} with ID {} has been removed", customItemType != null ? customItemType : clazz.getSimpleName(), itemId);
+                        LOGGER.info("Item of type {} with ID {} has been removed", customItemType != null ? customItemType : clazz.getSimpleName(), itemId);
                     }
                     return true;
                 } catch (Exception e) {
@@ -1333,11 +1320,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 }
             }
         }.catchingExecuteInClassLoader(true);
-        if (result == null) {
-            return false;
-        } else {
-            return result;
-        }
+        return Objects.requireNonNullElse(result, false);
     }
 
     public <T extends Item> boolean removeByQuery(final Condition query, final Class<T> clazz) {
@@ -1347,17 +1330,13 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 return removeByQuery(queryBuilder, clazz);
             }
         }.catchingExecuteInClassLoader(true);
-        if (result == null) {
-            return false;
-        } else {
-            return result;
-        }
+        return Objects.requireNonNullElse(result, false);
     }
 
     public <T extends Item> boolean removeByQuery(QueryBuilder queryBuilder, final Class<T> clazz) throws Exception {
         try {
             String itemType = Item.getItemType(clazz);
-            logger.debug("Remove item of type {} using a query", itemType);
+            LOGGER.debug("Remove item of type {} using a query", itemType);
             final DeleteByQueryRequest deleteByQueryRequest = new DeleteByQueryRequest(getIndexNameForQuery(itemType))
                     .setQuery(wrapWithItemTypeQuery(itemType, queryBuilder))
                     // Setting slices to auto will let Elasticsearch choose the number of slices to use.
@@ -1376,7 +1355,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             TaskSubmissionResponse taskResponse = client.submitDeleteByQuery(deleteByQueryRequest, RequestOptions.DEFAULT);
 
             if (taskResponse == null) {
-                logger.error("Remove by query: no response returned for query: {}", queryBuilder);
+                LOGGER.error("Remove by query: no response returned for query: {}", queryBuilder);
                 return false;
             }
 
@@ -1395,11 +1374,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 return client.indices().existsTemplate(indexTemplatesExistRequest, RequestOptions.DEFAULT);
             }
         }.catchingExecuteInClassLoader(true);
-        if (result == null) {
-            return false;
-        } else {
-            return result;
-        }
+        return Objects.requireNonNullElse(result, false);
     }
 
     public boolean removeIndexTemplate(final String templateName) {
@@ -1410,11 +1385,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 return deleteIndexTemplateResponse.isAcknowledged();
             }
         }.catchingExecuteInClassLoader(true);
-        if (result == null) {
-            return false;
-        } else {
-            return result;
-        }
+        return Objects.requireNonNullElse(result, false);
     }
 
     public boolean registerRolloverLifecyclePolicy() {
@@ -1440,15 +1411,11 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 return putLifecyclePolicy.isAcknowledged();
             }
         }.catchingExecuteInClassLoader(true);
-        if (result == null) {
-            return false;
-        } else {
-            return result;
-        }
+        return Objects.requireNonNullElse(result, false);
     }
 
     public boolean createIndex(final String itemType) {
-        logger.debug("Create index {}", itemType);
+        LOGGER.debug("Create index {}", itemType);
         Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".createIndex", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
             protected Boolean execute(Object... args) throws IOException {
                 String index = getIndex(itemType);
@@ -1467,12 +1434,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 return !indexExists;
             }
         }.catchingExecuteInClassLoader(true);
-
-        if (result == null) {
-            return false;
-        } else {
-            return result;
-        }
+        return Objects.requireNonNullElse(result, false);
     }
 
     public boolean removeIndex(final String itemType) {
@@ -1489,12 +1451,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 return indexExists;
             }
         }.catchingExecuteInClassLoader(true);
-
-        if (result == null) {
-            return false;
-        } else {
-            return result;
-        }
+        return Objects.requireNonNullElse(result, false);
     }
 
     private void internalCreateRolloverTemplate(String itemName) throws IOException {
@@ -1523,7 +1480,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         "    }\n" +
                         "}\n", XContentType.JSON);
         if (mappings.get(itemName) == null) {
-            logger.warn("Couldn't find mapping for item {}, won't create monthly index template", itemName);
+            LOGGER.warn("Couldn't find mapping for item {}, won't create monthly index template", itemName);
             return;
         }
         putIndexTemplateRequest.mapping(mappings.get(itemName), XContentType.JSON);
@@ -1534,7 +1491,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         CreateIndexRequest createIndexRequest = new CreateIndexRequest(indexName + "-000001")
                 .alias(new Alias(indexName).writeIndex(true));
         CreateIndexResponse createIndexResponse = client.indices().create(createIndexRequest, RequestOptions.DEFAULT);
-        logger.info("Index created: [{}], acknowledge: [{}], shards acknowledge: [{}]", createIndexResponse.index(),
+        LOGGER.info("Index created: [{}], acknowledge: [{}], shards acknowledge: [{}]", createIndexResponse.index(),
                 createIndexResponse.isAcknowledged(), createIndexResponse.isShardsAcknowledged());
     }
 
@@ -1562,7 +1519,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             createIndexRequest.mapping(mappingSource, XContentType.JSON);
         }
         CreateIndexResponse createIndexResponse = client.indices().create(createIndexRequest, RequestOptions.DEFAULT);
-        logger.info("Index created: [{}], acknowledge: [{}], shards acknowledge: [{}]", createIndexResponse.index(),
+        LOGGER.info("Index created: [{}], acknowledge: [{}], shards acknowledge: [{}]", createIndexResponse.index(),
                 createIndexResponse.isAcknowledged(), createIndexResponse.isShardsAcknowledged());
     }
 
@@ -1571,7 +1528,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         try {
             putMapping(source, getIndex(type));
         } catch (IOException ioe) {
-            logger.error("Error while creating mapping for type " + type + " and source " + source, ioe);
+            LOGGER.error("Error while creating mapping for type {} and source {}", type, source, ioe);
         }
     }
 
@@ -1585,7 +1542,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             Map<String, Object> subSubMappings = (Map<String, Object>) subMappings.computeIfAbsent("properties", k -> new HashMap<>());
 
             if (subSubMappings.containsKey(property.getItemId())) {
-                logger.warn("Mapping already exists for type " + itemType + " and property " + property.getItemId());
+                LOGGER.warn("Mapping already exists for type {} and property {}", itemType, property.getItemId());
                 return;
             }
 
@@ -1602,7 +1559,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
             putMapping(mappingsSource, getIndex(itemType));
         } catch (IOException ioe) {
-            logger.error("Error while creating mapping for type " + itemType + " and property " + property.getValueTypeId(), ioe);
+            LOGGER.error("Error while creating mapping for type {} and property {}", itemType, property.getValueTypeId(), ioe);
         }
     }
 
@@ -1611,7 +1568,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         final HashMap<String, Object> definition = new HashMap<>();
 
         if (esType == null) {
-            logger.warn("No predefined type found for property[{}], no mapping will be created", property.getValueTypeId());
+            LOGGER.warn("No predefined type found for property[{}], no mapping will be created", property.getValueTypeId());
             return Collections.emptyMap();
         } else {
             definition.put("type", esType);
@@ -1679,11 +1636,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 }
             }
         }.catchingExecuteInClassLoader(true);
-        if (result == null) {
-            return false;
-        } else {
-            return result;
-        }
+        return Objects.requireNonNullElse(result, false);
     }
 
     @Override
@@ -1778,8 +1731,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         if (propertyMapping == null) {
             return null;
         }
-        if (propertyMapping != null
-                && "text".equals(propertyMapping.get("type"))
+        if ("text".equals(propertyMapping.get("type"))
                 && propertyMapping.containsKey("fields")
                 && ((Map) propertyMapping.get("fields")).containsKey("keyword")) {
             name += ".keyword";
@@ -1792,7 +1744,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             protected Boolean execute(Object... args) throws Exception {
                 //Index the query = register it in the percolator
                 try {
-                    logger.info("Saving query : " + queryName);
+                    LOGGER.info("Saving query : {}", queryName);
                     String index = getIndex(".percolator");
                     IndexRequest indexRequest = new IndexRequest(index);
                     indexRequest.id(queryName);
@@ -1805,11 +1757,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 }
             }
         }.catchingExecuteInClassLoader(true);
-        if (result == null) {
-            return false;
-        } else {
-            return result;
-        }
+        return Objects.requireNonNullElse(result, false);
     }
 
     @Override
@@ -1837,11 +1785,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 }
             }
         }.catchingExecuteInClassLoader(true);
-        if (result == null) {
-            return false;
-        } else {
-            return result;
-        }
+        return Objects.requireNonNullElse(result, false);
     }
 
     @Override
@@ -1852,11 +1796,8 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     .must(QueryBuilders.idsQuery().addIds(item.getItemId()))
                     .must(conditionESQueryBuilderDispatcher.buildFilter(condition));
         } catch (Exception e) {
-            logger.error("Failed to validate condition. See debug log level for more information");
-            if (logger.isDebugEnabled()) {
-                logger.debug("Failed to validate condition, condition={}", condition, e);
-            }
-
+            LOGGER.error("Failed to validate condition. See debug log level for more information");
+            LOGGER.debug("Failed to validate condition, condition={}", condition, e);
             return false;
         }
         return true;
@@ -1868,7 +1809,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         try {
             return conditionEvaluatorDispatcher.eval(query, item);
         } catch (UnsupportedOperationException e) {
-            logger.error("Eval not supported, continue with query", e);
+            LOGGER.error("Eval not supported, continue with query", e);
         } finally {
             if (metricsService != null && metricsService.isActivated()) {
                 metricsService.updateTimer(this.getClass().getName() + ".testMatchLocally", startTime);
@@ -2417,7 +2358,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 try {
                     client.indices().refresh(Requests.refreshRequest(), RequestOptions.DEFAULT);
                 } catch (IOException e) {
-                    e.printStackTrace();//TODO manage ES7
+                    e.printStackTrace(); //TODO manage ES7
                 }
                 return true;
             }
@@ -2433,7 +2374,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     String index = getIndex(itemType);
                     client.indices().refresh(Requests.refreshRequest(index), RequestOptions.DEFAULT);
                 } catch (IOException e) {
-                    e.printStackTrace();//TODO manage ES7
+                    e.printStackTrace(); //TODO manage ES7
                 }
                 return true;
             }
@@ -2483,7 +2424,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Override
     public void purge(final String scope) {
-        logger.debug("Purge scope {}", scope);
+        LOGGER.debug("Purge scope {}", scope);
         new InClassLoaderExecute<Void>(metricsService, this.getClass().getName() + ".purgeWithScope", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
             @Override
             protected Void execute(Object... args) throws IOException {
@@ -2526,7 +2467,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     final BulkResponse deleteResponse = client.bulk(deleteByScopeBulkRequest, RequestOptions.DEFAULT);
                     if (deleteResponse.hasFailures()) {
                         // do something
-                        logger.warn("Couldn't delete from scope " + scope + ":\n{}", deleteResponse.buildFailureMessage());
+                        LOGGER.warn("Couldn't delete from scope {}:\n{}", scope, deleteResponse.buildFailureMessage());
                     }
                 }
                 return null;
@@ -2655,7 +2596,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
         private void handleError(Throwable t, boolean logError) {
             if (logError) {
-                logger.error("Error while executing in class loader", t);
+                LOGGER.error("Error while executing in class loader", t);
             }
             if (throwExceptions) {
                 throw new RuntimeException(t);
@@ -2663,7 +2604,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         }
 
         private void handleFatalStateError() {
-            logger.error("Fatal state error occurred - stopping application");
+            LOGGER.error("Fatal state error occurred - stopping application");
             try {
                 this.bundleContext.getBundle(0).stop();
             } catch (Throwable tInner) { // Stopping system bundle failed - force exit
@@ -2747,7 +2688,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     private void logMetadataItemOperation (String operation, Item item) {
         if (item instanceof MetadataItem) {
-            logger.info("Item of type {} with ID {} has been {}", item.getItemType(), item.getItemId(), operation);
+            LOGGER.info("Item of type {} with ID {} has been {}", item.getItemType(), item.getItemId(), operation);
         }
     }
 }

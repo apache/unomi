@@ -24,7 +24,6 @@ import org.apache.unomi.api.Metadata;
 import org.apache.unomi.api.PartialList;
 import org.apache.unomi.api.actions.Action;
 import org.apache.unomi.api.conditions.Condition;
-import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.rules.Rule;
 import org.apache.unomi.api.rules.RuleStatistics;
@@ -43,12 +42,11 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 public class RulesServiceImpl implements RulesService, EventListenerService, SynchronousBundleListener {
 
     public static final String TRACKED_PARAMETER = "trackedConditionParameters";
-    private static final Logger logger = LoggerFactory.getLogger(RulesServiceImpl.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(RulesServiceImpl.class.getName());
 
     private BundleContext bundleContext;
 
@@ -61,12 +59,12 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
     private List<Rule> allRules;
     private final Set<String> invalidRulesId = new HashSet<>();
 
-    private Map<String, RuleStatistics> allRuleStatistics = new ConcurrentHashMap<>();
+    private final Map<String, RuleStatistics> allRuleStatistics = new ConcurrentHashMap<>();
 
     private Integer rulesRefreshInterval = 1000;
     private Integer rulesStatisticsRefreshInterval = 10000;
 
-    private List<RuleListenerService> ruleListeners = new CopyOnWriteArrayList<RuleListenerService>();
+    private final List<RuleListenerService> ruleListeners = new CopyOnWriteArrayList<RuleListenerService>();
 
     private Map<String, Set<Rule>> rulesByEventType = new HashMap<>();
     private Boolean optimizedRulesActivated = true;
@@ -108,7 +106,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
     }
 
     public void postConstruct() {
-        logger.debug("postConstruct {" + bundleContext.getBundle() + "}");
+        LOGGER.debug("postConstruct {{}}", bundleContext.getBundle());
 
         loadPredefinedRules(bundleContext);
         for (Bundle bundle : bundleContext.getBundles()) {
@@ -120,12 +118,12 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
         bundleContext.addBundleListener(this);
 
         initializeTimers();
-        logger.info("Rule service initialized.");
+        LOGGER.info("Rule service initialized.");
     }
 
     public void preDestroy() {
         bundleContext.removeBundleListener(this);
-        logger.info("Rule service shutdown.");
+        LOGGER.info("Rule service shutdown.");
     }
 
     private void processBundleStartup(BundleContext bundleContext) {
@@ -149,14 +147,14 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
 
         while (predefinedRuleEntries.hasMoreElements()) {
             URL predefinedRuleURL = predefinedRuleEntries.nextElement();
-            logger.debug("Found predefined rule at " + predefinedRuleURL + ", loading... ");
+            LOGGER.debug("Found predefined rule at {}, loading... ", predefinedRuleURL);
 
             try {
                 Rule rule = CustomObjectMapper.getObjectMapper().readValue(predefinedRuleURL, Rule.class);
                 setRule(rule);
-                logger.info("Predefined rule with id {} registered", rule.getMetadata().getId());
+                LOGGER.info("Predefined rule with id {} registered", rule.getMetadata().getId());
             } catch (IOException e) {
-                logger.error("Error while loading rule definition " + predefinedRuleURL, e);
+                LOGGER.error("Error while loading rule definition {}", predefinedRuleURL, e);
             }
         }
     }
@@ -273,7 +271,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
             this.rulesByEventType = getRulesByEventType(newAllRules);
             this.allRules = newAllRules;
         } catch (Throwable t) {
-            logger.error("Error loading rules from persistence back-end", t);
+            LOGGER.error("Error loading rules from persistence back-end", t);
         }
     }
 
@@ -315,7 +313,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
 
         int changes = EventService.NO_CHANGE;
         for (Rule rule : rules) {
-            logger.debug("Fired rule " + rule.getMetadata().getId() + " for " + event.getEventType() + " - " + event.getItemId());
+            LOGGER.debug("Fired rule {} for {} - {}", rule.getMetadata().getId(), event.getEventType(), event.getItemId());
             fireExecuteActions(rule, event);
 
             long actionsStartTime = System.currentTimeMillis();
@@ -428,8 +426,8 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
                     }
                 } else if (
                         trackedCondition.getConditionType() != null &&
-                                trackedCondition.getConditionType().getParameters() != null &&
-                                trackedCondition.getConditionType().getParameters().size() > 0
+                                trackedCondition.getConditionType().getParameters() != null && !trackedCondition.getConditionType()
+                                .getParameters().isEmpty()
                 ) {
                     // lookup for track parameters
                     Map<String, Object> trackedParameters = new HashMap<>();
@@ -442,10 +440,10 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
                                 });
                             }
                         } catch (Exception e) {
-                            logger.warn("Unable to parse tracked parameter from {} for condition type {}", parameter, trackedCondition.getConditionType().getItemId());
+                            LOGGER.warn("Unable to parse tracked parameter from {} for condition type {}", parameter, trackedCondition.getConditionType().getItemId());
                         }
                     });
-                    if (trackedParameters.size() > 0) {
+                    if (!trackedParameters.isEmpty()) {
                         evalCondition = new Condition(definitionsService.getConditionType("booleanCondition"));
                         evalCondition.setParameter("operator", "and");
                         ArrayList<Condition> conditions = new ArrayList<>();
@@ -488,7 +486,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
                 try {
                     syncRuleStatistics();
                 } catch (Throwable t) {
-                    logger.error("Error synching rule statistics between memory and persistence back-end", t);
+                    LOGGER.error("Error synching rule statistics between memory and persistence back-end", t);
                 }
             }
         };

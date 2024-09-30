@@ -30,7 +30,6 @@ import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.message.BasicNameValuePair;
-import org.apache.http.ssl.SSLContexts;
 import org.apache.http.util.EntityUtils;
 import org.apache.unomi.api.Consent;
 import org.apache.unomi.api.Profile;
@@ -64,7 +63,7 @@ import java.util.*;
  * Implementation of the Salesforce connector interface
  */
 public class SFDCServiceImpl implements SFDCService {
-    private static final Logger logger = LoggerFactory.getLogger(SFDCServiceImpl.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(SFDCServiceImpl.class.getName());
 
     private static final String REST_ENDPOINT_URI = "/services/data/v38.0";
     private static final String STREAMING_ENDPOINT_URI = "/cometd/38.0";
@@ -118,15 +117,12 @@ public class SFDCServiceImpl implements SFDCService {
                 if (login(sfdcConfiguration)) {
                     return true;
                 }
-            } catch (HttpException e) {
-                logger.warn("Error trying to login with new configuration {}", sfdcConfiguration, e);
-                result = false;
-            } catch (IOException e) {
-                logger.warn("Error trying to login with new configuration {}", sfdcConfiguration, e);
+            } catch (HttpException | IOException e) {
+                LOGGER.warn("Error trying to login with new configuration {}", sfdcConfiguration, e);
                 result = false;
             }
         } else {
-            logger.error("Error trying to save new Salesforce connection configuration !");
+            LOGGER.error("Error trying to save new Salesforce connection configuration !");
         }
         return result;
     }
@@ -149,14 +145,12 @@ public class SFDCServiceImpl implements SFDCService {
                 }
                 sfdcLeadMandatoryFields = getLeadMandatoryFields();
                 // setupPushTopics(SFDCSession.getEndPoint(), SFDCSession.getSessionId());
-                logger.info("Salesforce connector initialized successfully.");
+                LOGGER.info("Salesforce connector initialized successfully.");
             } else {
-                logger.warn("Salesforce connector is not yet configured.");
+                LOGGER.warn("Salesforce connector is not yet configured.");
             }
-        } catch (HttpException | IOException e) {
-            logger.error("Failed to init SFDCService properly", e);
         } catch (Exception e) {
-            logger.error("Failed to init SFDCService properly", e);
+            LOGGER.error("Failed to init SFDCService properly", e);
         }
     }
 
@@ -175,12 +169,12 @@ public class SFDCServiceImpl implements SFDCService {
         try {
             Object responseObject = handleRequest(getRecentLeads);
             if (responseObject == null) {
-                logger.warn("Couldn't retrieve recent leads");
+                LOGGER.warn("Couldn't retrieve recent leads");
                 return null;
             }
             Map<String, Object> queryResponse = (Map<String, Object>) responseObject;
             if (queryResponse.containsKey("recentItems")) {
-                logger.debug("Response received from Salesforce: {}", queryResponse);
+                LOGGER.debug("Response received from Salesforce: {}", queryResponse);
                 Object[] recentItems = (Object[]) queryResponse.get("recentItems");
                 for (Object recentItem : recentItems) {
                     Map<String, String> recentItemMap = (Map<String, String>) recentItem;
@@ -188,10 +182,8 @@ public class SFDCServiceImpl implements SFDCService {
                 }
             }
 
-        } catch (IOException e) {
-            logger.error("Error getting recent leads", e);
-        } catch (HttpException e) {
-            logger.error("Error getting recent leads", e);
+        } catch (IOException | HttpException e) {
+            LOGGER.error("Error getting recent leads", e);
         }
 
         return recentLeadIds;
@@ -209,19 +201,17 @@ public class SFDCServiceImpl implements SFDCService {
         try {
             Object responseObject = handleRequest(getSObject);
             if (responseObject == null) {
-                logger.warn("Couldn't retrieve sobject {} with id {}", sobjectName, objectId);
+                LOGGER.warn("Couldn't retrieve sobject {} with id {}", sobjectName, objectId);
                 return null;
             }
             Map<String, Object> queryResponse = (Map<String, Object>) responseObject;
             if (queryResponse != null) {
-                logger.debug("Response received from Salesforce: {}", queryResponse);
+                LOGGER.debug("Response received from Salesforce: {}", queryResponse);
                 sobjectMap = new LinkedHashMap<>(queryResponse);
             }
 
-        } catch (IOException e) {
-            logger.error("Error getting sobject {} with id {}", sobjectName, objectId, e);
-        } catch (HttpException e) {
-            logger.error("Error getting sobject {} with id {}", sobjectName, objectId, e);
+        } catch (IOException | HttpException e) {
+            LOGGER.error("Error getting sobject {} with id {}", sobjectName, objectId, e);
         }
         return sobjectMap;
     }
@@ -238,19 +228,17 @@ public class SFDCServiceImpl implements SFDCService {
         try {
             Object responseObject = handleRequest(getSObjectDescribe);
             if (responseObject == null) {
-                logger.warn("Couldn't retrieve sobject {} describe", sobjectName);
+                LOGGER.warn("Couldn't retrieve sobject {} describe", sobjectName);
                 return null;
             }
             Map<String, Object> queryResponse = (Map<String, Object>) responseObject;
             if (queryResponse != null) {
-                logger.debug("Response received from Salesforce: {}", queryResponse);
+                LOGGER.debug("Response received from Salesforce: {}", queryResponse);
                 sobjectDescribe = new LinkedHashMap<>(queryResponse);
             }
 
-        } catch (IOException e) {
-            logger.error("Error getting sobject {}", sobjectName, e);
-        } catch (HttpException e) {
-            logger.error("Error getting sobject {}", sobjectName, e);
+        } catch (IOException | HttpException e) {
+            LOGGER.error("Error getting sobject {}", sobjectName, e);
         }
         return sobjectDescribe;
     }
@@ -301,10 +289,8 @@ public class SFDCServiceImpl implements SFDCService {
         HttpDelete deleteLead = new HttpDelete(baseUrl);
         try {
             Object responseObject = handleRequest(deleteLead);
-        } catch (IOException e) {
-            logger.error("Error deleting lead {}", leadId, e);
-        } catch (HttpException e) {
-            logger.error("Error deleting lead {}", leadId, e);
+        } catch (IOException | HttpException e) {
+            LOGGER.error("Error deleting lead {}", leadId, e);
         }
         return true;
     }
@@ -341,15 +327,13 @@ public class SFDCServiceImpl implements SFDCService {
 
     private boolean isProfileInContacts(String identifierFieldValue) {
         if (sfdcConfiguration.isSfdcCheckIfContactExistBeforeLeadCreation()) {
-            logger.info("Checking if we have a contact for identifier value {}...", identifierFieldValue);
+            LOGGER.info("Checking if we have a contact for identifier value {}...", identifierFieldValue);
             Object response;
             Set<String> queryResult = new LinkedHashSet<>();
             response = query("SELECT Id FROM Contact WHERE " + sfdcConfiguration.getSfdcIdentifierField() +
                     "='" + identifierFieldValue + "'");
             queryResult = mappingResponse(response, queryResult);
-            if (queryResult.size() > 0) {
-                return true;
-            }
+            return !queryResult.isEmpty();
         }
         return false;
     }
@@ -359,21 +343,20 @@ public class SFDCServiceImpl implements SFDCService {
         String mappingConsentsString = sfdcConfiguration.getSfdcFieldsConsents();
         if (!mappingConsentsString.isEmpty()) {
             String[] mappingConsents = mappingConsentsString.split(",");
-            if (mappingConsents.length > 0) {
-                for (String mappingConsent : mappingConsents) {
-                    String[] mappingConsentArray = mappingConsent.split("<=>");
-                    if (mappingConsentArray.length <= 0) {
-                        logger.error("Error with the mapping for field {}, this field will not be mapped please check the cfg file", mappingConsentsString);
+            for (String mappingConsent : mappingConsents) {
+                String[] mappingConsentArray = mappingConsent.split("<=>");
+                if (mappingConsentArray.length <= 0) {
+                    LOGGER.error("Error with the mapping for field {}, this field will not be mapped please check the cfg file",
+                            mappingConsentsString);
+                } else {
+                    String consentUnomiId = mappingConsentArray[0];
+                    if (consents.containsKey(consentUnomiId)) {
+                        String consentSfdcId = mappingConsentArray[1];
+                        String consentValue = consents.get(consentUnomiId).getStatus().toString();
+                        sfdcLeadFields.put(consentSfdcId, consentValue);
+                        LOGGER.debug("Consent {} with value {} was mapped with {}", consentUnomiId, consentValue, consentSfdcId);
                     } else {
-                        String consentUnomiId = mappingConsentArray[0];
-                        if (consents.containsKey(consentUnomiId)) {
-                            String consentSfdcId = mappingConsentArray[1];
-                            String consentValue = consents.get(consentUnomiId).getStatus().toString();
-                            sfdcLeadFields.put(consentSfdcId, consentValue);
-                            logger.debug("Consent {} with value {} was mapped with {}", consentUnomiId, consentValue, consentSfdcId);
-                        } else {
-                            logger.warn("Consent {} not found in current profile or not answered yet", consentUnomiId);
-                        }
+                        LOGGER.warn("Consent {} not found in current profile or not answered yet", consentUnomiId);
                     }
                 }
             }
@@ -388,12 +371,12 @@ public class SFDCServiceImpl implements SFDCService {
         // first we must check if an existing contact exists for the profile.
         String unomiIdentifierValue = (String) profile.getProperty(sfdcConfiguration.getUnomiIdentifierField());
         if (isProfileInContacts(unomiIdentifierValue)) {
-            logger.info("Contact {}  found in SFDC... No SFDC field value to send, will not send anything to " +
+            LOGGER.info("Contact {}  found in SFDC... No SFDC field value to send, will not send anything to " +
                     "Salesforce. ", unomiIdentifierValue);
             return null;
         }
         // then we must check if an existing lead exists for the profile.
-        logger.info("Checking if we have a lead for identifier value {}...", unomiIdentifierValue);
+        LOGGER.info("Checking if we have a lead for identifier value {}...", unomiIdentifierValue);
         Set<String> foundExistingSfdcLeadIds = findLeadIdsByIdentifierValue(unomiIdentifierValue);
 
         Map<String, Object> sfdcLeadFields = new HashMap<>();
@@ -402,23 +385,23 @@ public class SFDCServiceImpl implements SFDCService {
 
         if (foundExistingSfdcLeadIds.size() > 1) {
             // we found multiple leads matching the identifier value !
-            logger.warn("Found multiple matching leads for identifier value {}, will use first matching one !",
+            LOGGER.warn("Found multiple matching leads for identifier value {}, will use first matching one !",
                     unomiIdentifierValue);
         }
 
-        if (foundExistingSfdcLeadIds.size() > 0) {
-            logger.info("Found an existing lead, attempting to update it...");
+        if (!foundExistingSfdcLeadIds.isEmpty()) {
+            LOGGER.info("Found an existing lead, attempting to update it...");
             // we found an existing lead we must update it
             existingSfdcLeadFields = getLead(foundExistingSfdcLeadIds.iterator().next());
             if (existingSfdcLeadFields.get("LastModifiedDate") != null) {
                 try {
                     sfdcLastModified = iso8601DateFormat.parse((String) existingSfdcLeadFields.get("LastModifiedDate"));
                 } catch (ParseException e) {
-                    logger.error("Error parsing date {}", existingSfdcLeadFields.get("LastModifiedDate"), e);
+                    LOGGER.error("Error parsing date {}", existingSfdcLeadFields.get("LastModifiedDate"), e);
                 }
             }
         } else {
-            logger.info("No existing lead found.");
+            LOGGER.info("No existing lead found.");
         }
 
         for (String profilePropertyKey : profile.getProperties().keySet()) {
@@ -430,35 +413,35 @@ public class SFDCServiceImpl implements SFDCService {
             Object unomiPropertyValue = profile.getProperties().get(profilePropertyKey);
             if (existingSfdcLeadFields.get(sfdcFieldName) == null) {
                 // we only set the field if it didn't have a value.
-                logger.info("Setting SFDC field {} value to {}", sfdcFieldName, unomiPropertyValue);
+                LOGGER.info("Setting SFDC field {} value to {}", sfdcFieldName, unomiPropertyValue);
                 sfdcLeadFields.put(sfdcFieldName, unomiPropertyValue);
             } else {
                 // current strategy : Unomi field value wins if different from Salesforce value
                 // @todo we should probably improve this by tracking last modification dates on profile/lead properties
                 Object sfdcLeadFieldValue = existingSfdcLeadFields.get(sfdcFieldName);
                 if (!unomiPropertyValue.equals(sfdcLeadFieldValue)) {
-                    logger.info("Overwriting SFDC field {} value to {}", sfdcFieldName, unomiPropertyValue);
+                    LOGGER.info("Overwriting SFDC field {} value to {}", sfdcFieldName, unomiPropertyValue);
                     sfdcLeadFields.put(sfdcFieldName, unomiPropertyValue);
                 }
             }
         }
         addConsents(profile, sfdcLeadFields);
 
-        if (sfdcLeadFields.size() == 0) {
-            logger.info("No SFDC field value to send, will not send anything to Salesforce.");
-            if (foundExistingSfdcLeadIds.size() == 0) {
+        if (sfdcLeadFields.isEmpty()) {
+            LOGGER.info("No SFDC field value to send, will not send anything to Salesforce.");
+            if (foundExistingSfdcLeadIds.isEmpty()) {
                 return null;
             } else {
                 return foundExistingSfdcLeadIds.iterator().next();
             }
         }
 
-        if (existingSfdcLeadFields.size() == 0) {
+        if (existingSfdcLeadFields.isEmpty()) {
             // if we are creating a lead, let's make sure we have all the mandatory fields before sending the request
             boolean missingMandatoryFields = false;
             for (String leadMandatoryFieldName : sfdcLeadMandatoryFields) {
                 if (sfdcLeadFields.get(leadMandatoryFieldName) == null) {
-                    logger.warn("Missing mandatory field {}, aborting sending to Salesforce", leadMandatoryFieldName);
+                    LOGGER.warn("Missing mandatory field {}, aborting sending to Salesforce", leadMandatoryFieldName);
                     missingMandatoryFields = true;
                 }
             }
@@ -469,7 +452,7 @@ public class SFDCServiceImpl implements SFDCService {
 
         String baseUrl = sfdcSession.getEndPoint() + REST_ENDPOINT_URI + "/sobjects/Lead";
         HttpEntityEnclosingRequestBase request = new HttpPost(baseUrl);
-        if (foundExistingSfdcLeadIds.size() > 0) {
+        if (!foundExistingSfdcLeadIds.isEmpty()) {
             baseUrl = sfdcSession.getEndPoint() + REST_ENDPOINT_URI + "/sobjects/Lead/" + foundExistingSfdcLeadIds
                     .iterator().next();
             sfdcLeadFields.remove("Id");
@@ -490,18 +473,16 @@ public class SFDCServiceImpl implements SFDCService {
                 Map<String, Object> responseData = (Map<String, Object>) responseObject;
                 if (responseData.get("id") != null) {
                     String sfdcId = (String) responseData.get("id");
-                    logger.info("Lead successfully created/updated in Salesforce. sfdcId={}", sfdcId);
+                    LOGGER.info("Lead successfully created/updated in Salesforce. sfdcId={}", sfdcId);
                     return sfdcId;
                 }
             }
-            logger.info("Response received from Salesforce: {}", responseObject);
-        } catch (IOException e) {
-            logger.error("Error creating or updating lead for profile {}", profile, e);
-        } catch (HttpException e) {
-            logger.error("Error creating or updating lead for profile {}", profile, e);
+            LOGGER.info("Response received from Salesforce: {}", responseObject);
+        } catch (IOException | HttpException e) {
+            LOGGER.error("Error creating or updating lead for profile {}", profile, e);
         }
 
-        if (foundExistingSfdcLeadIds.size() == 0) {
+        if (foundExistingSfdcLeadIds.isEmpty()) {
             return null;
         } else {
             return foundExistingSfdcLeadIds.iterator().next();
@@ -515,19 +496,19 @@ public class SFDCServiceImpl implements SFDCService {
         }
         String unomiIdentifierValue = (String) profile.getProperty(sfdcConfiguration.getUnomiIdentifierField());
         Set<String> foundSfdcLeadIds = findLeadIdsByIdentifierValue(unomiIdentifierValue);
-        if (foundSfdcLeadIds.size() == 0) {
-            logger.info("No lead found in Salesforce corresponding to profile {}", profile);
+        if (foundSfdcLeadIds.isEmpty()) {
+            LOGGER.info("No lead found in Salesforce corresponding to profile {}", profile);
             // we didn't find a corresponding lead in salesforce.
             return false;
         } else if (foundSfdcLeadIds.size() > 1) {
-            logger.warn("Found multiple leads in Salesforce for identifier value {}, will use first one.",
+            LOGGER.warn("Found multiple leads in Salesforce for identifier value {}, will use first one.",
                     foundSfdcLeadIds);
         } else {
-            logger.info("Found corresponding lead with identifier value {}", unomiIdentifierValue);
+            LOGGER.info("Found corresponding lead with identifier value {}", unomiIdentifierValue);
         }
         Map<String, Object> sfdcLead = getLead(foundSfdcLeadIds.iterator().next());
         if (sfdcLead == null) {
-            logger.error("Error retrieving lead {} from Salesforce", foundSfdcLeadIds);
+            LOGGER.error("Error retrieving lead {} from Salesforce", foundSfdcLeadIds);
             return false;
         }
         boolean profileUpdated = false;
@@ -543,7 +524,7 @@ public class SFDCServiceImpl implements SFDCService {
                 }
             }
         }
-        logger.info("Updated profile {} from Salesforce lead {}", profile, sfdcLead);
+        LOGGER.info("Updated profile {} from Salesforce lead {}", profile, sfdcLead);
         return profileUpdated;
     }
 
@@ -558,28 +539,14 @@ public class SFDCServiceImpl implements SFDCService {
         try {
             baseUrl = sfdcSession.getEndPoint() + REST_ENDPOINT_URI + "/query?q=" + URLEncoder.encode(query, "UTF-8");
             HttpGet get = new HttpGet(baseUrl);
-
             Object responseObject = handleRequest(get);
-            if (responseObject == null) {
-                return null;
-            }
-            if (responseObject != null && responseObject instanceof Map) {
+            if (responseObject instanceof Map) {
                 return (Map<String, Object>) responseObject;
             }
-            return null;
-        } catch (UnsupportedEncodingException e) {
-            logger.error("Error executing query {}", query, e);
-            return null;
-        } catch (ClientProtocolException e) {
-            logger.error("Error executing query {}", query, e);
-            return null;
-        } catch (IOException e) {
-            logger.error("Error executing query {}", query, e);
-            return null;
-        } catch (HttpException e) {
-            logger.error("Error executing query {}", query, e);
-            return null;
+        } catch (IOException | HttpException e) {
+            LOGGER.error("Error executing query {}", query, e);
         }
+        return null;
     }
 
     @Override
@@ -591,29 +558,14 @@ public class SFDCServiceImpl implements SFDCService {
         try {
             baseUrl = sfdcSession.getEndPoint() + REST_ENDPOINT_URI + "/limits";
             HttpGet get = new HttpGet(baseUrl);
-
             Object responseObject = handleRequest(get);
-            if (responseObject == null) {
-                return null;
-            }
-
             if (responseObject instanceof Map) {
                 return (Map<String, Object>) responseObject;
             }
-            return null;
-        } catch (UnsupportedEncodingException e) {
-            logger.error("Error retrieving Salesforce API Limits", e);
-            return null;
-        } catch (ClientProtocolException e) {
-            logger.error("Error retrieving Salesforce API Limits", e);
-            return null;
-        } catch (IOException e) {
-            logger.error("Error retrieving Salesforce API Limits", e);
-            return null;
-        } catch (HttpException e) {
-            logger.error("Error retrieving Salesforce API Limits", e);
-            return null;
+        } catch (IOException | HttpException e) {
+            LOGGER.error("Error retrieving Salesforce API Limits", e);
         }
+        return null;
     }
 
     private BayeuxClient makeClient() throws Exception {
@@ -623,11 +575,10 @@ public class SFDCServiceImpl implements SFDCService {
         httpClient.start();
 
         if (sfdcSession == null) {
-            logger.error("Invalid session !");
+            LOGGER.error("Invalid session !");
             return null;
         }
-        logger.info("Login successful!\nServer URL: " + sfdcSession.getEndPoint()
-                + "\nSession ID=" + sfdcSession.getSessionId());
+        LOGGER.info("Login successful!\nServer URL: {}\nSession ID={}", sfdcSession.getEndPoint(), sfdcSession.getSessionId());
 
         Map<String, Object> options = new HashMap<String, Object>();
         options.put(ClientTransport.MAX_NETWORK_DELAY_OPTION, READ_TIMEOUT);
@@ -659,18 +610,18 @@ public class SFDCServiceImpl implements SFDCService {
                     @Override
                     public void onMessage(ClientSessionChannel channel, Message message) {
 
-                        logger.info("[CHANNEL:META_HANDSHAKE]: " + message);
+                        LOGGER.info("[CHANNEL:META_HANDSHAKE]: {}", message);
 
                         boolean success = message.isSuccessful();
                         if (!success) {
                             String error = (String) message.get("error");
                             if (error != null) {
-                                logger.error("Error during HANDSHAKE: " + error);
+                                LOGGER.error("Error during HANDSHAKE: {}", error);
                             }
 
                             Exception exception = (Exception) message.get("exception");
                             if (exception != null) {
-                                logger.error("Exception during HANDSHAKE: ", exception);
+                                LOGGER.error("Exception during HANDSHAKE: ", exception);
                             }
                         }
                     }
@@ -681,13 +632,13 @@ public class SFDCServiceImpl implements SFDCService {
                 new ClientSessionChannel.MessageListener() {
                     public void onMessage(ClientSessionChannel channel, Message message) {
 
-                        logger.info("[CHANNEL:META_CONNECT]: " + message);
+                        LOGGER.info("[CHANNEL:META_CONNECT]: {}", message);
 
                         boolean success = message.isSuccessful();
                         if (!success) {
                             String error = (String) message.get("error");
                             if (error != null) {
-                                logger.error("Error during CONNECT: " + error);
+                                LOGGER.error("Error during CONNECT: {}", error);
                             }
                         }
                     }
@@ -699,26 +650,26 @@ public class SFDCServiceImpl implements SFDCService {
 
                     public void onMessage(ClientSessionChannel channel, Message message) {
 
-                        logger.debug("[CHANNEL:META_SUBSCRIBE]: " + message);
+                        LOGGER.debug("[CHANNEL:META_SUBSCRIBE]: {}", message);
                         boolean success = message.isSuccessful();
                         if (!success) {
                             String error = (String) message.get("error");
                             if (error != null) {
-                                logger.error("Error during SUBSCRIBE: " + error);
+                                LOGGER.error("Error during SUBSCRIBE: {}", error);
                             }
                         }
                     }
                 });
 
         client.handshake();
-        logger.debug("Waiting for handshake");
+        LOGGER.debug("Waiting for handshake");
 
         boolean handshaken = client.waitFor(10 * 1000, BayeuxClient.State.CONNECTED);
         if (!handshaken) {
-            logger.error("Failed to handshake: " + client);
+            LOGGER.error("Failed to handshake: {}", client);
         }
 
-        logger.info("Subscribing for channel: " + channelName);
+        LOGGER.info("Subscribing for channel: {}", channelName);
 
         client.getChannel(channelName).subscribe(messageListener);
 
@@ -737,7 +688,7 @@ public class SFDCServiceImpl implements SFDCService {
         Map<String, String> queryResponse = (Map<String, String>) handleRequest(get);
 
         if (queryResponse != null && queryResponse.containsKey("count")) {
-            logger.info("Push topics setup successfully");
+            LOGGER.info("Push topics setup successfully");
         }
     }
 
@@ -784,11 +735,8 @@ public class SFDCServiceImpl implements SFDCService {
             if (loginSuccessful && sfdcSession != null) {
                 return sfdcSession;
             }
-        } catch (HttpException e) {
-            logger.error("Error logging in", e);
-            return null;
-        } catch (IOException e) {
-            logger.error("Error logging in", e);
+        } catch (HttpException | IOException e) {
+            LOGGER.error("Error logging in", e);
             return null;
         }
         return null;
@@ -798,10 +746,7 @@ public class SFDCServiceImpl implements SFDCService {
         if (sfdcSession == null) {
             return false;
         }
-        if (sfdcSession.isExpired()) {
-            return false;
-        }
-        return true;
+        return !sfdcSession.isExpired();
     }
 
     private Object handleRequest(HttpUriRequest request) throws IOException, HttpException {
@@ -814,11 +759,11 @@ public class SFDCServiceImpl implements SFDCService {
         if (addAuthorizationHeader) {
             SFDCSession sfdcSession = getValidSession();
             if (sfdcSession == null) {
-                logger.error("Couldn't get a valid session !");
+                LOGGER.error("Couldn't get a valid session !");
                 return null;
             }
             if (request.containsHeader("Authorization")) {
-                logger.debug("Replacing existing authorization header with an updated one.");
+                LOGGER.debug("Replacing existing authorization header with an updated one.");
                 Header[] authorizationHeaders = request.getHeaders("Authorization");
                 for (Header authorizationHeader : authorizationHeaders) {
                     request.removeHeader(authorizationHeader);
@@ -832,19 +777,19 @@ public class SFDCServiceImpl implements SFDCService {
             if ((response.getStatusLine().getStatusCode() == 401 || response.getStatusLine().getStatusCode() == 403)
                     && retryCount > 0) {
                 // probably the session has expired, let's try to login again
-                logger.warn("Unauthorized request, attempting to login again...");
+                LOGGER.warn("Unauthorized request, attempting to login again...");
                 boolean loginSuccessful = login(sfdcConfiguration);
                 if (!loginSuccessful) {
-                    logger.error("Login failed, cannot execute request {}", request);
+                    LOGGER.error("Login failed, cannot execute request {}", request);
                     return null;
                 }
-                logger.warn("Retrying request {} once again...", request);
+                LOGGER.warn("Retrying request {} once again...", request);
                 return handleRequest(request, 0, true);
             } else {
-                logger.error("Error executing request {}: {}-{}", request, response.getStatusLine().getStatusCode(),
+                LOGGER.error("Error executing request {}: {}-{}", request, response.getStatusLine().getStatusCode(),
                         response.getStatusLine().getReasonPhrase());
                 if (response.getEntity() != null) {
-                    logger.error("Entity={}", EntityUtils.toString(response.getEntity()));
+                    LOGGER.error("Entity={}", EntityUtils.toString(response.getEntity()));
                 }
             }
             return null;
@@ -857,7 +802,7 @@ public class SFDCServiceImpl implements SFDCService {
 
     public boolean isConfigured() {
         if (!sfdcConfiguration.isComplete()) {
-            logger.warn("Connection to Salesforce is not properly configured !");
+            LOGGER.warn("Connection to Salesforce is not properly configured !");
             return false;
         }
         return true;
@@ -868,11 +813,11 @@ public class SFDCServiceImpl implements SFDCService {
             return false;
         }
         if (sfdcSession == null) {
-            logger.warn("Not connected to SalesForce, operation will not execute.");
+            LOGGER.warn("Not connected to SalesForce, operation will not execute.");
             return false;
         } else {
             if (sfdcSession.isExpired()) {
-                logger.warn("Connection to Salesforce has expired, will reconnect on next request");
+                LOGGER.warn("Connection to Salesforce has expired, will reconnect on next request");
                 return true;
             }
         }

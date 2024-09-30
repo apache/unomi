@@ -17,7 +17,6 @@
 
 package org.apache.unomi.services.impl.events;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import inet.ipaddr.IPAddress;
 import inet.ipaddr.IPAddressString;
 import org.apache.commons.lang3.StringUtils;
@@ -32,7 +31,6 @@ import org.apache.unomi.api.actions.ActionPostExecutor;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.services.*;
-import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.aggregate.TermsAggregate;
 import org.apache.unomi.api.utils.ParserHelper;
@@ -52,7 +50,7 @@ import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 public class EventServiceImpl implements EventService {
-    private static final Logger logger = LoggerFactory.getLogger(EventServiceImpl.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(EventServiceImpl.class.getName());
     private static final int MAX_RECURSION_DEPTH = 10;
 
     private List<EventListenerService> eventListeners = new CopyOnWriteArrayList<EventListenerService>();
@@ -124,7 +122,7 @@ public class EventServiceImpl implements EventService {
     }
 
     public String authenticateThirdPartyServer(String key, String ip) {
-        logger.debug("Authenticating third party server with key: " + key + " and IP: " + ip);
+        LOGGER.debug("Authenticating third party server with key: {} and IP: {}", key, ip);
         if (key != null) {
             for (Map.Entry<String, ThirdPartyServer> entry : thirdPartyServers.entrySet()) {
                 ThirdPartyServer server = entry.getValue();
@@ -137,7 +135,7 @@ public class EventServiceImpl implements EventService {
                     }
                 }
             }
-            logger.warn("Could not authenticate any third party servers for key: {}", key);
+            LOGGER.warn("Could not authenticate any third party servers for key: {}", key);
         }
         return null;
     }
@@ -148,7 +146,7 @@ public class EventServiceImpl implements EventService {
 
     private int send(Event event, int depth) {
         if (depth > MAX_RECURSION_DEPTH) {
-            logger.warn("Max recursion depth reached");
+            LOGGER.warn("Max recursion depth reached");
             return NO_CHANGE;
         }
 

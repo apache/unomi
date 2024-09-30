@@ -34,7 +34,7 @@ import java.util.Map;
  */
 public class ExportRouteCompletionProcessor implements Processor {
 
-    private static final Logger logger = LoggerFactory.getLogger(ExportRouteCompletionProcessor.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(ExportRouteCompletionProcessor.class.getName());
     private ImportExportConfigurationService<ExportConfiguration> exportConfigurationService;
     private int executionsHistorySize;
 
@@ -43,7 +43,7 @@ public class ExportRouteCompletionProcessor implements Processor {
         // We load the conf from ES because we are going to increment the execution number
         ExportConfiguration exportConfiguration = exportConfigurationService.load(exchange.getFromRouteId());
         if (exportConfiguration == null) {
-            logger.warn("Unable to complete export, config cannot not found: {}", exchange.getFromRouteId());
+            LOGGER.warn("Unable to complete export, config cannot not found: {}", exchange.getFromRouteId());
             return;
         }
 
@@ -56,7 +56,7 @@ public class ExportRouteCompletionProcessor implements Processor {
 
         exportConfigurationService.save(exportConfiguration, false);
 
-        logger.info("Processing route {} completed.", exchange.getFromRouteId());
+        LOGGER.info("Processing route {} completed.", exchange.getFromRouteId());
     }
 
     public void setExportConfigurationService(ImportExportConfigurationService<ExportConfiguration> exportConfigurationService) {

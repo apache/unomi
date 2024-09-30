@@ -51,7 +51,7 @@ import java.util.stream.Collectors;
 @Path("/")
 @Component(service = ContextJsonEndpoint.class, property = "osgi.jaxrs.resource=true")
 public class ContextJsonEndpoint {
-    private static final Logger logger = LoggerFactory.getLogger(ContextJsonEndpoint.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(ContextJsonEndpoint.class.getName());
 
     private final boolean sanitizeConditions = Boolean
             .parseBoolean(System.getProperty("org.apache.unomi.security.personalization.sanitizeConditions", "true"));
@@ -282,7 +282,7 @@ public class ContextJsonEndpoint {
     }
 
     public void destroy() {
-        logger.info("Context servlet shutdown.");
+        LOGGER.info("Context servlet shutdown.");
     }
 
     private List<PersonalizationService.PersonalizedContent> sanitizePersonalizedContentObjects(
@@ -342,10 +342,8 @@ public class ContextJsonEndpoint {
         if (value instanceof String) {
             String stringValue = (String) value;
             if (stringValue.startsWith("script::") || stringValue.startsWith("parameter::")) {
-                logger.warn("Scripting detected in context request, filtering out. See debug level for more information");
-                if (logger.isDebugEnabled()) {
-                    logger.debug("Scripting detected in context request with value {}, filtering out...", value);
-                }
+                LOGGER.warn("Scripting detected in context request, filtering out. See debug level for more information");
+                LOGGER.debug("Scripting detected in context request with value {}, filtering out...", value);
                 return null;
             } else {
                 return stringValue;

@@ -33,18 +33,18 @@ import java.io.IOException;
 @Deprecated
 public class EventsCollectorServlet extends HttpServlet {
     private static final long serialVersionUID = 2008054804885122957L;
-    private static final Logger logger = LoggerFactory.getLogger(EventsCollectorServlet.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(EventsCollectorServlet.class.getName());
 
     @Override
     public void init(ServletConfig config) throws ServletException {
         super.init(config);
-        logger.info("Event collector servlet initialized.");
+        LOGGER.info("Event collector servlet initialized.");
     }
 
     @Override
     public void destroy() {
         super.destroy();
-        logger.info("Event collector servlet shutdown.");
+        LOGGER.info("Event collector servlet shutdown.");
     }
 
     @Override

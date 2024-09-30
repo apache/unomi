@@ -35,7 +35,7 @@ import java.util.List;
  */
 public class UserListServiceImpl extends AbstractServiceImpl implements UserListService, SynchronousBundleListener {
 
-    private static final Logger logger = LoggerFactory.getLogger(UserListServiceImpl.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(UserListServiceImpl.class.getName());
 
     private BundleContext bundleContext;
 
@@ -44,14 +44,14 @@ public class UserListServiceImpl extends AbstractServiceImpl implements UserList
     }
 
     public void postConstruct() {
-        logger.debug("postConstruct {" + bundleContext.getBundle() + "}");
+        LOGGER.debug("postConstruct {{}}", bundleContext.getBundle());
         bundleContext.addBundleListener(this);
-        logger.info("User list service initialized.");
+        LOGGER.info("User list service initialized.");
     }
 
     public void preDestroy() {
         bundleContext.removeBundleListener(this);
-        logger.info("User list service shutdown.");
+        LOGGER.info("User list service shutdown.");
     }
 
     public List<UserList> getAllUserLists() {

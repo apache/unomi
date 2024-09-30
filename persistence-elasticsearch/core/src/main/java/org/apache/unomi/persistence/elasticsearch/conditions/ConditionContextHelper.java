@@ -33,7 +33,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public class ConditionContextHelper {
-    private static final Logger logger = LoggerFactory.getLogger(ConditionContextHelper.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(ConditionContextHelper.class);
 
     private static MappingCharFilterFactory mappingCharFilterFactory;
     static {
@@ -132,7 +132,7 @@ public class ConditionContextHelper {
             try (StringReader stringReader = new StringReader(s); Reader foldedStringReader = mappingCharFilterFactory.create(stringReader)) {
                 return IOUtils.toString(foldedStringReader);
             } catch (IOException e) {
-                logger.error("Error folding to ASCII string " + s, e);
+                LOGGER.error("Error folding to ASCII string {}", s, e);
             }
         }
         return null;

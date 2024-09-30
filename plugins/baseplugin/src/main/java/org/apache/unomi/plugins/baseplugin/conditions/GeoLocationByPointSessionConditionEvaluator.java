@@ -31,7 +31,7 @@ import java.util.Map;
 
 public class GeoLocationByPointSessionConditionEvaluator implements ConditionEvaluator {
 
-    private static final Logger logger = LoggerFactory.getLogger(GeoLocationByPointSessionConditionEvaluator.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(GeoLocationByPointSessionConditionEvaluator.class.getName());
 
     @Override
     public boolean eval(Condition condition, Item item, Map<String, Object> context, ConditionEvaluatorDispatcher dispatcher) {
@@ -39,8 +39,8 @@ public class GeoLocationByPointSessionConditionEvaluator implements ConditionEva
             String type = (String) condition.getParameter("type");
             String name = condition.getParameter("name") == null ? "properties.location" : (String) condition.getParameter("name");
 
-            Double latitudeProperty = Double.parseDouble(BeanUtils.getProperty(item, name + ".lat"));
-            Double longitudeProperty = Double.parseDouble(BeanUtils.getProperty(item, name + ".lon"));
+            double latitudeProperty = Double.parseDouble(BeanUtils.getProperty(item, name + ".lat"));
+            double longitudeProperty = Double.parseDouble(BeanUtils.getProperty(item, name + ".lon"));
 
 
             if("circle".equals(type)) {
@@ -64,10 +64,8 @@ public class GeoLocationByPointSessionConditionEvaluator implements ConditionEva
                 }
             }
         } catch (Exception e) {
-            logger.warn("Cannot evaluate condition, properties 'properties.location.lat' or 'properties.location.lon' not found, enable debug log level to see full stacktrace");
-            if (logger.isDebugEnabled()) {
-                logger.debug("Cannot evaluate condition", e);
-            }
+            LOGGER.warn("Cannot evaluate condition, properties 'properties.location.lat' or 'properties.location.lon' not found, enable debug log level to see full stacktrace");
+            LOGGER.debug("Cannot evaluate condition", e);
         }
         return false;
     }

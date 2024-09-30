@@ -19,6 +19,7 @@ package org.apache.unomi.itests;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.module.jaxb.JaxbAnnotationModule;
 import org.apache.commons.io.IOUtils;
@@ -546,7 +547,9 @@ public abstract class BaseIT extends KarafTestSupport {
     protected String resourceAsString(final String resource) {
         final java.net.URL url = bundleContext.getBundle().getResource(resource);
         try (InputStream stream = url.openStream()) {
-            return objectMapper.writeValueAsString(objectMapper.readTree(stream));
+            JsonNode node = objectMapper.readTree(stream);
+            String value = objectMapper.writeValueAsString(node);
+            return value;
         } catch (final Exception e) {
             throw new RuntimeException(e);
         }

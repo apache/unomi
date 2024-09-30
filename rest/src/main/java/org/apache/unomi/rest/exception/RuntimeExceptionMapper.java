@@ -31,19 +31,19 @@ import java.util.HashMap;
 @Provider
 @Component(service=ExceptionMapper.class)
 public class RuntimeExceptionMapper implements ExceptionMapper<RuntimeException> {
-    private static final Logger logger = LoggerFactory.getLogger(RuntimeExceptionMapper.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(RuntimeExceptionMapper.class.getName());
 
     @Override
     public Response toResponse(RuntimeException exception) {
         HashMap<String, Object> body = new HashMap<>();
         body.put("errorMessage", "internalServerError");
-        logger.error(
+        LOGGER.error(
                 "Internal server error {}: {} in {} (Set RuntimeExceptionMapper in debug to get the full stacktrace)",
                 exception.getMessage(),
                 exception,
                 ArrayUtils.isEmpty(exception.getStackTrace()) ? "Stack not available" : exception.getStackTrace()[0]
         );
-        logger.debug("{}", exception.getMessage(), exception);
+        LOGGER.debug("{}", exception.getMessage(), exception);
         return Response.status(Response.Status.INTERNAL_SERVER_ERROR).header("Content-Type", MediaType.APPLICATION_JSON).entity(body).build();
     }
 }

@@ -60,7 +60,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 @Component
 public class RestServer {
 
-    private static final Logger logger = LoggerFactory.getLogger(RestServer.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(RestServer.class.getName());
 
     private Server server;
     private BundleContext bundleContext;
@@ -124,15 +124,15 @@ public class RestServer {
             public Object addingService(ServiceReference reference) {
                 Object serviceBean = bundleContext.getService(reference);
                 while (serviceBean == null) {
-                    logger.info("Waiting for service " + reference.getProperty("objectClass") + " to become available...");
+                    LOGGER.info("Waiting for service {} to become available...", reference.getProperty("objectClass"));
                     serviceBean = bundleContext.getService(reference);
                     try {
                         Thread.sleep(100);
                     } catch (InterruptedException e) {
-                        logger.warn("Interrupted thread exception", e);
+                        LOGGER.warn("Interrupted thread exception", e);
                     }
                 }
-                logger.info("Registering JAX RS service " + serviceBean.getClass().getName());
+                LOGGER.info("Registering JAX RS service {}", serviceBean.getClass().getName());
                 serviceBeans.add(serviceBean);
                 timeOfLastUpdate = System.currentTimeMillis();
                 refreshServer();
@@ -141,14 +141,14 @@ public class RestServer {
 
             @Override
             public void modifiedService(ServiceReference reference, Object service) {
-                logger.info("Refreshing JAX RS server because service " + service.getClass().getName() + " was modified.");
+                LOGGER.info("Refreshing JAX RS server because service {} was modified.", service.getClass().getName());
                 timeOfLastUpdate = System.currentTimeMillis();
                 refreshServer();
             }
 
             @Override
             public void removedService(ServiceReference reference, Object service) {
-                logger.info("Removing JAX RS service " + service.getClass().getName());
+                LOGGER.info("Removing JAX RS service {}", service.getClass().getName());
                 serviceBeans.remove(service);
                 timeOfLastUpdate = System.currentTimeMillis();
                 refreshServer();
@@ -167,7 +167,7 @@ public class RestServer {
 
     private synchronized void refreshServer() {
         long now = System.currentTimeMillis();
-        logger.info("Time (millis) since last update: {}", now - timeOfLastUpdate);
+        LOGGER.info("Time (millis) since last update: {}", now - timeOfLastUpdate);
         if (now - timeOfLastUpdate < startupDelay) {
             if (refreshTimer != null) {
                 return;
@@ -176,8 +176,7 @@ public class RestServer {
                 public void run() {
                     refreshTimer = null;
                     refreshServer();
-                    logger.info(
-                            "Refreshed server task performed on: " + new Date() + " Thread's name: " + Thread.currentThread().getName());
+                    LOGGER.info("Refreshed server task performed on: {} Thread's name: {}", new Date(), Thread.currentThread().getName());
                 }
             };
             refreshTimer = new Timer("Timer-Refresh-REST-API");
@@ -187,16 +186,16 @@ public class RestServer {
         }
 
         if (server != null) {
-            logger.info("JAX RS Server: Shutting down server...");
+            LOGGER.info("JAX RS Server: Shutting down server...");
             server.destroy();
         }
 
         if (serviceBeans.isEmpty()) {
-            logger.info("JAX RS Server: Server not started because no JAX RS EndPoint registered yet");
+            LOGGER.info("JAX RS Server: Server not started because no JAX RS EndPoint registered yet");
             return;
         }
 
-        logger.info("JAX RS Server: Configuring server...");
+        LOGGER.info("JAX RS Server: Configuring server...");
 
         List<Interceptor<? extends Message>> inInterceptors = new ArrayList<>();
         List<Interceptor<? extends Message>> outInterceptors = new ArrayList<>();
@@ -249,7 +248,7 @@ public class RestServer {
         jaxrsServerFactoryBean.setOutInterceptors(outInterceptors);
         jaxrsServerFactoryBean.setServiceBeans(serviceBeans);
 
-        logger.info("JAX RS Server: Starting server with {} JAX RS EndPoints registered", serviceBeans.size());
+        LOGGER.info("JAX RS Server: Starting server with {} JAX RS EndPoints registered", serviceBeans.size());
         server = jaxrsServerFactoryBean.create();
         server.getEndpoint().getEndpointInfo().setName(UNOMI_REST_SERVER_END_POINT_NAME);
     }
