@@ -41,6 +41,7 @@
         <module>groovy-actions</module>
         <module>json-schema</module>
         <module>log4j-extension</module>
+        <module>healthcheck</module>
     </modules>
 
 </project>
