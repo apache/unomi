@@ -19,7 +19,7 @@ package org.apache.unomi.healthcheck.provider;
 
 import org.apache.unomi.api.PropertyType;
 import org.apache.unomi.healthcheck.HealthCheckResponse;
-import org.apache.unomi.healthcheck.HealthProvider;
+import org.apache.unomi.healthcheck.HealthCheckProvider;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
@@ -31,16 +31,16 @@ import org.slf4j.LoggerFactory;
 /**
  * @author Jerome Blanchard
  */
-@Component(service = HealthProvider.class, immediate = true)
-public class PersistenceHealthProvider implements HealthProvider {
+@Component(service = HealthCheckProvider.class, immediate = true)
+public class PersistenceHealthCheckProvider implements HealthCheckProvider {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(PersistenceHealthProvider.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(PersistenceHealthCheckProvider.class.getName());
     public static final String NAME = "persistence";
 
     @Reference(service = PersistenceService.class, cardinality = ReferenceCardinality.OPTIONAL, policy = ReferencePolicy.DYNAMIC, bind = "bind", unbind = "unbind")
     private volatile PersistenceService service;
 
-    public PersistenceHealthProvider() {
+    public PersistenceHealthCheckProvider() {
         LOGGER.info("Building persistence health provider service...");
     }
 
