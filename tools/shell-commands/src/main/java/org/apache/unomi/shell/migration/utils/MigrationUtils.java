@@ -129,7 +129,7 @@ public class MigrationUtils {
             if (predefinedMappings == null) {
                 continue;
             }
-            while (predefinedMappings.hasMoreElements()) {
+            if (predefinedMappings.hasMoreElements()) {
                 URL predefinedMappingURL = predefinedMappings.nextElement();
                 return IOUtils.toString(predefinedMappingURL);
             }
@@ -216,7 +216,9 @@ public class MigrationUtils {
             // Recreate the original index with new mappings
             HttpUtils.executePutRequest(httpClient, esAddress + "/" + indexName, newIndexSettings, null);
             // Reindex data from clone
-            HttpUtils.executePostRequest(httpClient, esAddress + "/_reindex", reIndexRequest, null);
+            JSONObject task = new JSONObject(HttpUtils.executePostRequest(httpClient, esAddress + "/_reindex?wait_for_completion=false", reIndexRequest, null));
+            //Wait for the reindex task to finish
+            waitForTaskToFinish(httpClient, esAddress, task.getString("task"), migrationContext);
         });
 
         migrationContext.performMigrationStep("Reindex step for: " + indexName + " (delete clone)", () -> {
@@ -249,7 +251,7 @@ public class MigrationUtils {
             }
 
             // no more results, delete scroll
-            if (hits.length() == 0) {
+            if (hits.isEmpty()) {
                 if (scrollId != null) {
                     HttpUtils.executeDeleteRequest(httpClient, esAddress + "/_search/scroll/" + scrollId, null);
                 }
@@ -279,6 +281,19 @@ public class MigrationUtils {
             migrationContext.printMessage("Waiting for ES Cluster status to be Yellow, current status is " + status.get("status"));
         }
 
+    }
+
+    public static void waitForTaskToFinish(CloseableHttpClient httpClient, String esAddress, String taskId, MigrationContext migrationContext) throws IOException {
+        while (true) {
+            final JSONObject status = new JSONObject(
+                    HttpUtils.executeGetRequest(httpClient, esAddress + "/_tasks/" + taskId + "wait_for_completion=true&timeout=10s",
+                            null));
+            if (status.get("completed").equals("true")) {
+                migrationContext.printMessage("Task is completed");
+                break;
+            }
+            migrationContext.printMessage("Waiting for Task to complete, current status is " + status.get("status"));
+        }
     }
 
     public interface ScrollCallback {
