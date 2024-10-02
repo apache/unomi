@@ -17,22 +17,25 @@
 
 package org.apache.unomi.healthcheck.provider;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpEntity;
+import org.apache.http.auth.AuthScope;
+import org.apache.http.auth.UsernamePasswordCredentials;
+import org.apache.http.client.CredentialsProvider;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
+import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
-import org.apache.unomi.api.PropertyType;
+import org.apache.unomi.healthcheck.HealthCheckConfig;
 import org.apache.unomi.healthcheck.HealthCheckResponse;
-import org.apache.unomi.healthcheck.HealthProvider;
-import org.apache.unomi.persistence.spi.PersistenceService;
+import org.apache.unomi.healthcheck.HealthCheckProvider;
+import org.apache.unomi.shell.migration.utils.HttpUtils;
+import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
-import org.osgi.service.component.annotations.ReferencePolicy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,17 +44,42 @@ import java.io.IOException;
 /**
  * @author Jerome Blanchard
  */
-@Component(service = HealthProvider.class, immediate = true)
-public class ElasticSearchHealthProvider implements HealthProvider {
+@Component(service = HealthCheckProvider.class, immediate = true)
+public class ElasticSearchHealthCheckProvider implements HealthCheckProvider {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(ElasticSearchHealthProvider.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(ElasticSearchHealthCheckProvider.class.getName());
     public static final String NAME = "elasticsearch";
+
+    @Reference(cardinality = ReferenceCardinality.MANDATORY)
+    private HealthCheckConfig config;
 
     private CloseableHttpClient httpClient;
 
-    public ElasticSearchHealthProvider() {
+    public ElasticSearchHealthCheckProvider() {
         LOGGER.info("Building elasticsearch health provider service...");
-        httpClient = HttpClients.createDefault();
+    }
+
+    @Activate
+    public void activate() {
+        LOGGER.info("Activating elasticsearch health provider service...");
+        CredentialsProvider credentialsProvider = null;
+        String login = config.get(HealthCheckConfig.CONFIG_ES_LOGIN);
+        if (StringUtils.isNotEmpty(login)) {
+            credentialsProvider = new BasicCredentialsProvider();
+            UsernamePasswordCredentials credentials
+                    = new UsernamePasswordCredentials(login, config.get(HealthCheckConfig.CONFIG_ES_PASSWORD));
+            credentialsProvider.setCredentials(AuthScope.ANY, credentials);
+        }
+        try {
+            httpClient = HttpUtils.initHttpClient(
+                    Boolean.parseBoolean(config.get(HealthCheckConfig.CONFIG_TRUST_ALL_CERTIFICATES)), credentialsProvider);
+        } catch (IOException e) {
+            LOGGER.error("Unable to initialize http client", e);
+        }
+    }
+
+    public void setConfig(HealthCheckConfig config) {
+        this.config = config;
     }
 
     @Override public String name() {
@@ -62,11 +90,12 @@ public class ElasticSearchHealthProvider implements HealthProvider {
         LOGGER.debug("Health check elasticsearch");
         HealthCheckResponse.Builder builder = new HealthCheckResponse.Builder();
         builder.name(NAME).down();
-        //TODO Parse addresses from configuration
-        HttpGet httpGet = new HttpGet("http://localhost:9200/_cluster/health");
+        String url = (config.get(HealthCheckConfig.CONFIG_ES_SSL_ENABLED).equals("true") ? "https://" : "http://")
+                        .concat(config.get(HealthCheckConfig.CONFIG_ES_ADDRESSES).split(",")[0].trim())
+                        .concat("/_cluster/health");
         CloseableHttpResponse response = null;
         try {
-            response = httpClient.execute(httpGet);
+            response = httpClient.execute(new HttpGet(url));
             if (response != null && response.getStatusLine().getStatusCode() == 200) {
                 builder.up();
                 HttpEntity entity = response.getEntity();

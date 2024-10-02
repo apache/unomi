@@ -20,7 +20,7 @@ package org.apache.unomi.healthcheck;
 /**
  * @author Jerome Blanchard
  */
-public interface HealthProvider {
+public interface HealthCheckProvider {
 
     String name();
 
