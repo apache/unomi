@@ -21,8 +21,7 @@
     <repository>mvn:org.apache.cxf.karaf/apache-cxf/${cxf.version}/xml/features</repository>
     <repository>mvn:org.apache.karaf.cellar/apache-karaf-cellar/${version.karaf.cellar}/xml/features</repository>
 
-    <feature description="unomi-kar" version="${project.version}" name="unomi-kar"
-             start-level="70">
+    <feature description="unomi-kar" version="${project.version}" name="unomi-kar" start-level="70">
         <feature prerequisite="true">wrap</feature>
         <feature prerequisite="true">aries-blueprint</feature>
         <feature prerequisite="true">war</feature>
@@ -93,6 +92,7 @@
 
         <configfile finalname="/etc/org.apache.unomi.migration.cfg">mvn:org.apache.unomi/shell-commands/${project.version}/cfg/migration</configfile>
         <bundle start-level="99">mvn:org.apache.unomi/shell-commands/${project.version}</bundle>
+        <bundle start-level="99">mvn:org.apache.unomi/healthcheck/${project.version}</bundle>
     </feature>
 
     <feature name="unomi-documentation" description="Documentation of Unomi in HTML" version="${project.version}">
