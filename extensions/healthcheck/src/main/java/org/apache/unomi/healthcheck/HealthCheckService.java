@@ -17,15 +17,13 @@
 
 package org.apache.unomi.healthcheck;
 
-import org.osgi.service.component.annotations.Component;
-import org.osgi.service.component.annotations.Reference;
-import org.osgi.service.component.annotations.ReferenceCardinality;
-import org.osgi.service.component.annotations.ReferencePolicy;
+import org.osgi.service.component.annotations.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.*;
 
 /**
  * @author Jerome Blanchard
@@ -35,19 +33,32 @@ public class HealthCheckService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(HealthCheckService.class.getName());
 
-    private final List<HealthProvider> providers = new ArrayList<>();
+    private final List<HealthCheckProvider> providers = new ArrayList<>();
+    private ExecutorService executor;
 
     public HealthCheckService() {
         LOGGER.info("Building healthcheck service...");
     }
 
-    @Reference(service = HealthProvider.class, cardinality = ReferenceCardinality.MULTIPLE, policy = ReferencePolicy.DYNAMIC, unbind = "unbind")
-    protected void bind(HealthProvider provider) {
+    @Activate
+    public void activate() {
+        LOGGER.info("Activating healthcheck service...");
+        executor = Executors.newSingleThreadExecutor();
+    }
+
+    @Deactivate
+    public void deactivate() {
+        LOGGER.info("Deactivating healthcheck service...");
+        executor.shutdown();
+    }
+
+    @Reference(service = HealthCheckProvider.class, cardinality = ReferenceCardinality.MULTIPLE, policy = ReferencePolicy.DYNAMIC, unbind = "unbind")
+    protected void bind(HealthCheckProvider provider) {
         LOGGER.info("Binding provider {}", provider.name());
         providers.add(provider);
     }
 
-    protected void unbind(HealthProvider provider) {
+    protected void unbind(HealthCheckProvider provider) {
         LOGGER.info("Unbinding provider {}", provider.name());
         providers.remove(provider);
     }
@@ -56,8 +67,17 @@ public class HealthCheckService {
         LOGGER.info("Health check");
         List<HealthCheckResponse> health = new ArrayList<>();
         health.add(HealthCheckResponse.live("karaf"));
-        providers.forEach(provider -> health.add(provider.execute()));
+        for (HealthCheckProvider provider : providers) {
+            Future<HealthCheckResponse> future = executor.submit(provider::execute);
+            try {
+                HealthCheckResponse response = future.get(500, TimeUnit.MILLISECONDS);
+                health.add(response);
+            } catch (TimeoutException e) {
+                future.cancel(true);
+            } catch (Exception e) {
+                // handle other exceptions
+            }
+        }
         return health;
     }
-
 }

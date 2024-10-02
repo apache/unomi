@@ -92,6 +92,7 @@
 
         <configfile finalname="/etc/org.apache.unomi.migration.cfg">mvn:org.apache.unomi/shell-commands/${project.version}/cfg/migration</configfile>
         <bundle start-level="99">mvn:org.apache.unomi/shell-commands/${project.version}</bundle>
+        <configfile finalname="/etc/org.apache.unomi.healthcheck.cfg">mvn:org.apache.unomi/healthcheck/${project.version}/cfg/healthcheck</configfile>
         <bundle start-level="99">mvn:org.apache.unomi/healthcheck/${project.version}</bundle>
     </feature>
 

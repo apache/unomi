@@ -49,6 +49,12 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
+            <groupId>org.apache.unomi</groupId>
+            <artifactId>shell-commands</artifactId>
+            <version>${project.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
             <groupId>javax.servlet</groupId>
             <artifactId>javax.servlet-api</artifactId>
             <scope>provided</scope>
@@ -98,6 +104,30 @@
                         </_dsannotations>
                     </instructions>
                 </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>attach-artifacts</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>attach-artifact</goal>
+                        </goals>
+                        <configuration>
+                            <artifacts>
+                                <artifact>
+                                    <file>
+                                        src/main/resources/org.apache.unomi.healthcheck.cfg
+                                    </file>
+                                    <type>cfg</type>
+                                    <classifier>healthcheck</classifier>
+                                </artifact>
+                            </artifacts>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>
