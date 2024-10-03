@@ -79,6 +79,12 @@
             <artifactId>jackson-jaxrs-json-provider</artifactId>
             <scope>provided</scope>
         </dependency>
+        <dependency>
+            <groupId>org.apache.karaf.jaas</groupId>
+            <artifactId>org.apache.karaf.jaas.boot</artifactId>
+            <version>${karaf.version}</version>
+            <scope>provided</scope>
+        </dependency>
     </dependencies>
 
     <build>
@@ -95,7 +101,8 @@
                             *
                         </Import-Package>
                         <Export-Package>
-                            org.apache.unomi.healthcheck;version=${project.version}
+                            org.apache.unomi.healthcheck;version=${project.version},
+                            org.osgi.service.useradmin;version=1.1.0
                         </Export-Package>
                         <_dsannotations>
                             org.apache.unomi.healthcheck.*,
