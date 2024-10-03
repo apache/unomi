@@ -637,7 +637,7 @@ highly recommended that you design your client applications to use the HTTPS por
 The user accounts to access the REST API are actually routed through Karaf's JAAS support, which you may find the
 documentation for here :
 
-* http://karaf.apache.org/manual/latest/users-guide/security.html[http://karaf.apache.org/manual/latest/users-guide/security.html]
+* https://karaf.apache.org/manual/latest/#_security_2[https://karaf.apache.org/manual/latest/#_security_2]
 
 The default username/password is
 
