@@ -39,6 +39,7 @@ public class HealthCheckConfig {
     public static final String CONFIG_ES_LOGIN = "esLogin";
     public static final String CONFIG_ES_PASSWORD = "esPassword";
     public static final String CONFIG_TRUST_ALL_CERTIFICATES = "httpClient.trustAllCertificates";
+    public static final String CONFIG_AUTH_REALM = "authentication.realm";
 
     private Map<String, String> config = new HashMap<>();
 

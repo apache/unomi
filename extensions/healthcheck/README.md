@@ -17,13 +17,22 @@
 
 # Health Check Extension
 
-The Health Check extension provides a simple health check endpoint that can be used to determine if the server is up and running. The health check endpoint is available at `/healthcheck` and returns a simple JSON response.  
+The Health Check extension provides a simple health check endpoint that can be used to determine if the server is up and running.  
+The health check endpoint is available at 
+
+```
+/health/check
+``` 
+and returns a simple JSON response that includes all health check provider responses.  
+
+Basic Http Authentication is enabled by default for the health check endpoint. The user needs to have the role `health` to access the endpoint. Users and roles can be configured in the etc/users.properties file. By default a user health/health is configured. 
+
 The healthcheck is available even if unomi is not started. It gives health information about :   
-  - Karaf
-  - Elasticsearch (cluster health)
-  - Unomi (bundles started or not)
-  - Persistence
-  - Cluster health (if unomi is in cluster mode)
+  - Karaf (as soon as the karaf container is started)
+  - Elasticsearch (connection to elasticsearch cluster and its health)
+  - Unomi (unomi bundles status)
+  - Persistence (unomi to elasticsearch binding)
+  - Cluster health (unomi cluster status and nodes information)
 
 All healthcheck can have a status :
   - DOWN (service is not available)
@@ -31,9 +40,9 @@ All healthcheck can have a status :
   - LIVE (service is ready to serve request)
   - ERROR (an error occurred during service health check)
 
-All healthcheck have a timeout of 500ms where check is cancelled and will be returned as error.
+Any subsystem health check have a timeout of 500ms where check is cancelled and will be returned as error.
 
-Typical response to http://localhost:8181/health when unomi NOT started is : 
+Typical response to /health/check when unomi NOT started is : 
 
 ```json 
 [

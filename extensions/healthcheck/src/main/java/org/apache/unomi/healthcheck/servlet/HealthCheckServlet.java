@@ -20,8 +20,8 @@ package org.apache.unomi.healthcheck.servlet;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.unomi.healthcheck.HealthCheckService;
-import org.osgi.service.component.annotations.Component;
-import org.osgi.service.component.annotations.Reference;
+import org.osgi.service.http.HttpContext;
+import org.osgi.service.useradmin.Authorization;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,26 +35,18 @@ import java.io.IOException;
 /**
  * @author Jerome Blanchard
  */
-@Component(
-        service = {javax.servlet.http.HttpServlet.class, javax.servlet.Servlet.class},
-        property = {"alias=/health"}
-)
 public class HealthCheckServlet extends HttpServlet {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(HealthCheckServlet.class.getName());
 
-    @Reference
-    private HealthCheckService service;
-    private ObjectMapper mapper;
+    private final HealthCheckService service;
+    private final ObjectMapper mapper;
 
-    public HealthCheckServlet() {
+    public HealthCheckServlet(HealthCheckService service) {
         LOGGER.info("Building healthcheck servlet...");
+        this.service = service;
         mapper = new ObjectMapper();
         mapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
-    }
-
-    public void setHealthCheckService(HealthCheckService service) {
-        this.service = service;
     }
 
     @Override
@@ -65,6 +57,11 @@ public class HealthCheckServlet extends HttpServlet {
 
     @Override
     protected void service(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        if (request.getAttribute(HttpContext.AUTHORIZATION) == null ||
+            !((Authorization)request.getAttribute(HttpContext.AUTHORIZATION)).hasRole("health")) {
+            response.sendError(HttpServletResponse.SC_FORBIDDEN);
+            return;
+        }
         response.getWriter().println(mapper.writeValueAsString(service.check()));
         response.setContentType("application/json");
         response.setStatus(HttpServletResponse.SC_OK);

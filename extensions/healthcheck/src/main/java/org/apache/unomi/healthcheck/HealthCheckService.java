@@ -17,13 +17,20 @@
 
 package org.apache.unomi.healthcheck;
 
+import org.apache.unomi.healthcheck.servlet.HealthCheckHttpContext;
+import org.apache.unomi.healthcheck.servlet.HealthCheckServlet;
 import org.osgi.service.component.annotations.*;
+import org.osgi.service.http.HttpService;
+import org.osgi.service.http.NamespaceException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.servlet.ServletException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.*;
+
+import static org.apache.unomi.healthcheck.HealthCheckConfig.CONFIG_AUTH_REALM;
 
 /**
  * @author Jerome Blanchard
@@ -36,19 +43,37 @@ public class HealthCheckService {
     private final List<HealthCheckProvider> providers = new ArrayList<>();
     private ExecutorService executor;
 
+    @Reference
+    protected HttpService httpService;
+
+    @Reference(cardinality = ReferenceCardinality.MANDATORY, updated = "updated")
+    private HealthCheckConfig config;
+
     public HealthCheckService() {
         LOGGER.info("Building healthcheck service...");
     }
 
+    public void setConfig(HealthCheckConfig config) {
+        this.config = config;
+    }
+
     @Activate
-    public void activate() {
+    public void activate() throws ServletException, NamespaceException {
         LOGGER.info("Activating healthcheck service...");
         executor = Executors.newSingleThreadExecutor();
+        httpService.registerServlet("/health/check", new HealthCheckServlet(this), null, new HealthCheckHttpContext(config.get(CONFIG_AUTH_REALM)));
+    }
+
+    public void updated() throws ServletException, NamespaceException {
+        LOGGER.info("Updating healthcheck service...");
+        httpService.unregister("/health/check");
+        httpService.registerServlet("/health/check", new HealthCheckServlet(this), null, new HealthCheckHttpContext(config.get(CONFIG_AUTH_REALM)));
     }
 
     @Deactivate
     public void deactivate() {
         LOGGER.info("Deactivating healthcheck service...");
+        httpService.unregister("/health/check");
         executor.shutdown();
     }
 
