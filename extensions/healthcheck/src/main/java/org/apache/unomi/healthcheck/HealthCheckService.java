@@ -51,6 +51,12 @@ public class HealthCheckService {
     @Reference(cardinality = ReferenceCardinality.MANDATORY, updated = "updated")
     private HealthCheckConfig config;
 
+    @Reference
+    protected HttpService httpService;
+
+    @Reference(cardinality = ReferenceCardinality.MANDATORY, updated = "updated")
+    private HealthCheckConfig config;
+
     public HealthCheckService() {
         LOGGER.info("Building healthcheck service...");
     }
