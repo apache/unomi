@@ -29,7 +29,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * @author Jerome Blanchard
+ * A health check that track the Unomi persistence layer availability. An evolution would be to check the persistence migration status to
+ * ensure that running instance is aligned with the underlying persistence migration status and structures.
  */
 @Component(service = HealthCheckProvider.class, immediate = true)
 public class PersistenceHealthCheckProvider implements HealthCheckProvider {
