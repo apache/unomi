@@ -27,7 +27,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * @author Jerome Blanchard
+ * Health check configuration.
  */
 @Component(immediate = true, service = HealthCheckConfig.class, configurationPid = {"org.apache.unomi.healthcheck"})
 public class HealthCheckConfig {

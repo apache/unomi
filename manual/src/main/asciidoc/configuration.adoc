@@ -849,3 +849,79 @@ The following permissions are required by Unomi:
 
  - required cluster privileges: `manage` OR `all`
  - required index privileges on unomi indices: `write, manage, read` OR `all`
+
+=== Health Check Extension
+
+The Health Check extension provides a way to check is required Unomi components are 'live'.
+
+It consists in a simple http endpoint that provide a JSON view of integrated health checks. It can then be used to determine if the server
+is up and running and can serve requests.
+
+The health check endpoint is available at the following URL: /health/check and returns a simple JSON response that includes all health check provider responses.
+
+Basic Http Authentication is enabled by default for the health check endpoint using the existing karaf realm. The user needs to have the specific role **health**
+to access the endpoint. Users and roles can be configured in the etc/users.properties file. By default, a login/pass health/health is configured.
+
+Specific configuration is located in : org.apache.unomi.healthcheck.cfg  Existing health checks are using configuration from that file, including authentication realm.
+
+Existing health checks gives information about :
+- Karaf (as soon as the karaf container is started, that check is LIVE)
+- Elasticsearch (connection to elasticsearch cluster and its health)
+- Unomi (unomi bundles status)
+- Persistence (unomi to elasticsearch binding)
+- Cluster health (unomi cluster status and nodes information)
+
+All healthcheck can have a status :
+- DOWN (service is not available)
+- UP (service is up but does not respond to request (starting or misconfigured))
+- LIVE (service is ready to serve request)
+- ERROR (an error occurred during service health check)
+
+Any subsystem health check have a timeout of 500ms where check is cancelled and will be returned as error.
+
+Typical response to /health/check when unomi NOT started is :
+
+[source,json]
+----
+[
+  {
+    "name":"karaf",
+    "status":"LIVE",
+    "collectingTime":0
+  },
+  {
+    "name":"cluster",
+    "status":"DOWN",
+    "collectingTime":0
+  },
+  {
+    "name":"elasticsearch",
+    "status":"LIVE",
+    "collectingTime":6
+  },
+  {
+    "name":"persistence",
+    "status":"DOWN",
+    "collectingTime":0
+  },
+  {
+    "name":"unomi",
+    "status":"DOWN",
+    "collectingTime":0
+  }
+]
+----
+
+Existing health check can be extended by adding specific provider in the dedicated extension. A provider is a class that implements the HealthCheckProvider interface.
+
+[source,java]
+----
+package org.apache.unomi.healthcheck;
+
+public interface HealthCheckProvider {
+    String name();
+    HealthCheckResponse execute();
+}
+----
+
+Calls to provider are supposed to be done at a regular rate (every 15 seconds for example) and should be fast to execute. Feel free to include any caching strategy if needed.
