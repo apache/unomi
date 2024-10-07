@@ -33,7 +33,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 
 /**
- * @author Jerome Blanchard
+ * A simple servlet that provides a health check endpoint.
  */
 public class HealthCheckServlet extends HttpServlet {
 

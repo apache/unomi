@@ -17,9 +17,6 @@
 
 package org.apache.unomi.healthcheck;
 
-/**
- * @author Jerome Blanchard
- */
 public interface HealthCheckProvider {
 
     String name();

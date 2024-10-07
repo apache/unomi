@@ -42,7 +42,8 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 
 /**
- * @author Jerome Blanchard
+ * A Health Check that checks the status of the ElasticSearch connectivity according to the provided configuration.
+ * This connectivity should be LIVE before any try to start Unomi.
  */
 @Component(service = HealthCheckProvider.class, immediate = true)
 public class ElasticSearchHealthCheckProvider implements HealthCheckProvider {

@@ -21,7 +21,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
- * @author Jerome Blanchard
+ * A Health Check response.
  */
 public class HealthCheckResponse {
 

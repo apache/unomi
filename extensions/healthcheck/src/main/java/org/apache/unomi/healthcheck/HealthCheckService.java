@@ -33,7 +33,8 @@ import java.util.concurrent.*;
 import static org.apache.unomi.healthcheck.HealthCheckConfig.CONFIG_AUTH_REALM;
 
 /**
- * @author Jerome Blanchard
+ * Health check service that aggregates health checks from multiple providers and ensure asynchronous execution. The service is
+ * aware of any configuration changes.
  */
 @Component (service = HealthCheckService.class, immediate = true)
 public class HealthCheckService {

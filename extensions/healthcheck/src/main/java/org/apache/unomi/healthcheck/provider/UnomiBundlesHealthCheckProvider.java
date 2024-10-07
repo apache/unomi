@@ -28,7 +28,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * @author Jerome Blanchard
+ * A health check that track the Unomi bundles availability.
  */
 @Component(service = HealthCheckProvider.class, immediate = true)
 public class UnomiBundlesHealthCheckProvider implements HealthCheckProvider {

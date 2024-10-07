@@ -35,7 +35,7 @@ import java.net.URL;
 import java.util.Base64;
 
 /**
- * @author Jerome Blanchard
+ * A simple implementation of the {@link HttpContext} interface that provides basic authentication for health checks.
  */
 public class HealthCheckHttpContext implements HttpContext {
 

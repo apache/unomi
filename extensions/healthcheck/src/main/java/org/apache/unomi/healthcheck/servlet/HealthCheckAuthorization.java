@@ -22,7 +22,7 @@ import org.osgi.service.useradmin.Authorization;
 import java.util.Arrays;
 
 /**
- * @author Jerome Blanchard
+ * A simple implementation of the {@link Authorization} interface (usually provided by UserAdmin).
  */
 public class HealthCheckAuthorization implements Authorization {
 

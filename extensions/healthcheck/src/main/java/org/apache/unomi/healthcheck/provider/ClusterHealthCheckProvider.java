@@ -32,7 +32,7 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
- * @author Jerome Blanchard
+ * A Health Check that checks the status of the Unomi cluster service.
  */
 @Component(service = HealthCheckProvider.class, immediate = true)
 public class ClusterHealthCheckProvider implements HealthCheckProvider {
