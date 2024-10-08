@@ -90,7 +90,7 @@ public class HealthCheckService {
     }
 
     public List<HealthCheckResponse> check() {
-        LOGGER.info("Health check");
+        LOGGER.debug("Health check called");
         List<HealthCheckResponse> health = new ArrayList<>();
         health.add(HealthCheckResponse.live("karaf"));
         for (HealthCheckProvider provider : providers) {
@@ -100,8 +100,9 @@ public class HealthCheckService {
                 health.add(response);
             } catch (TimeoutException e) {
                 future.cancel(true);
+                health.add(provider.timeout());
             } catch (Exception e) {
-                // handle other exceptions
+                LOGGER.error("Error while executing health check", e);
             }
         }
         return health;

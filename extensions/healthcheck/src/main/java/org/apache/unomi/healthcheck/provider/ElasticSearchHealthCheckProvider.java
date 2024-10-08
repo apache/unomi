@@ -107,6 +107,7 @@ public class ElasticSearchHealthCheckProvider implements HealthCheckProvider {
             }
         } catch (IOException e) {
             builder.error().withData("error", e.getMessage());
+            LOGGER.error("Error while checking elasticsearch health", e);
         } finally {
             if (response != null) {
                 EntityUtils.consumeQuietly(response.getEntity());

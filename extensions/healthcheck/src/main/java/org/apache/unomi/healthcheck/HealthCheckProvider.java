@@ -23,4 +23,8 @@ public interface HealthCheckProvider {
 
     HealthCheckResponse execute();
 
+    default HealthCheckResponse timeout() {
+        return new HealthCheckResponse.Builder().name(name()).withData("error.cause", "timeout").error().build();
+    }
+
 }
