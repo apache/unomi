@@ -68,6 +68,7 @@ public class UnomiBundlesHealthCheckProvider implements HealthCheckProvider {
             }
         } catch (Exception e) {
             builder.error().withData("error", e.getMessage());
+            LOGGER.error("Error while checking unomi bundles health", e);
         }
         return builder.build();
     }
