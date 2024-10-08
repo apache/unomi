@@ -71,6 +71,7 @@ public class PersistenceHealthCheckProvider implements HealthCheckProvider {
             }
         } catch (Exception e) {
             builder.error().withData("error", e.getMessage());
+            LOGGER.error("Error while checking persistence health", e);
         }
         return builder.build();
     }

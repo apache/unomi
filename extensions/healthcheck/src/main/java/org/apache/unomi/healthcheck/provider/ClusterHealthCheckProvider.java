@@ -91,8 +91,8 @@ public class ClusterHealthCheckProvider implements HealthCheckProvider {
             }
         } catch (Exception e) {
             builder.error().withData("error", e.getMessage());
+            LOGGER.error("Error checking cluster health", e);
         }
         return builder.build();
     }
-
 }
