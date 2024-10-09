@@ -144,7 +144,7 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
      * script will be parsed with the GroovyShell (groovyShell.parse(...)), the action will extends the base script, so the functions
      * could be called
      *
-     * @throws IOException
+     * @throws IOException if the base script is not found
      */
     private void loadBaseScript() throws IOException {
         URL groovyBaseScriptURL = bundleContext.getBundle().getEntry("META-INF/base/BaseScript.groovy");
@@ -179,14 +179,15 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
     }
 
     @Override
-    public void save(String actionName, String groovyScript) {
-        GroovyCodeSource groovyCodeSource = buildClassScript(groovyScript, actionName);
+    public void save(String fileName, String groovyScript) {
+        GroovyCodeSource groovyCodeSource = buildClassScript(groovyScript, fileName);
         try {
-            saveActionType(groovyShell.parse(groovyCodeSource).getClass().getMethod("execute").getAnnotation(Action.class));
-            saveScript(actionName, groovyScript);
-            LOGGER.info("The script {} has been loaded.", actionName);
+            Action action = groovyShell.parse(groovyCodeSource).getClass().getMethod("execute").getAnnotation(Action.class);
+            saveActionType(action);
+            persistenceService.save(new GroovyAction(action.id(), action.name().isEmpty() ? action.id(): action.name(), groovyScript));
+            LOGGER.info("The script {} has been loaded and the action {} has been persisted.", fileName, action.id());
         } catch (NoSuchMethodException e) {
-            LOGGER.error("Failed to save the script {}", actionName, e);
+            LOGGER.error("Failed to save the script {}", fileName, e);
         }
     }
 
@@ -196,7 +197,7 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
      * @param action Annotation containing the values to save
      */
     private void saveActionType(Action action) {
-        Metadata metadata = new Metadata(null, action.id(), action.name().equals("") ? action.id() : action.name(), action.description());
+        Metadata metadata = new Metadata(null, action.id(), action.name().isEmpty() ? action.id() : action.name(), action.description());
         metadata.setHidden(action.hidden());
         metadata.setReadOnly(true);
         metadata.setSystemTags(new HashSet<>(asList(action.systemTags())));
@@ -210,7 +211,7 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
     }
 
     @Override
-    public void remove(String id) {
+    public boolean remove(String id) {
         if (groovyCodeSourceMap.containsKey(id)) {
             try {
                 definitionsService.removeActionType(
@@ -218,8 +219,9 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
             } catch (NoSuchMethodException e) {
                 LOGGER.error("Failed to delete the action type for the id {}", id, e);
             }
-            persistenceService.remove(id, GroovyAction.class);
+            return persistenceService.remove(id, GroovyAction.class);
         }
+        return false;
     }
 
     @Override
@@ -238,27 +240,15 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
         return new GroovyCodeSource(groovyScript, actionName, "/groovy/script");
     }
 
-    private void saveScript(String actionName, String script) {
-        GroovyAction groovyScript = new GroovyAction(actionName, script);
-        persistenceService.save(groovyScript);
-        LOGGER.info("The script {} has been persisted.", actionName);
-    }
-
     private void refreshGroovyActions() {
         Map<String, GroovyCodeSource> refreshedGroovyCodeSourceMap = new HashMap<>();
         persistenceService.getAllItems(GroovyAction.class).forEach(groovyAction -> refreshedGroovyCodeSourceMap
-                .put(groovyAction.getName(), buildClassScript(groovyAction.getScript(), groovyAction.getName())));
+                .put(groovyAction.getItemId(), buildClassScript(groovyAction.getScript(), groovyAction.getItemId())));
         groovyCodeSourceMap = refreshedGroovyCodeSourceMap;
     }
 
     private void initializeTimers() {
-        TimerTask task = new TimerTask() {
-            @Override
-            public void run() {
-                refreshGroovyActions();
-            }
-        };
-        scheduledFuture = schedulerService.getScheduleExecutorService().scheduleWithFixedDelay(task, 0, config.services_groovy_actions_refresh_interval(),
+        scheduledFuture = schedulerService.getScheduleExecutorService().scheduleWithFixedDelay(this::refreshGroovyActions, 0, config.services_groovy_actions_refresh_interval(),
                 TimeUnit.MILLISECONDS);
     }
 }

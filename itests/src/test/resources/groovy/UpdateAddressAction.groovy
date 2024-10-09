@@ -22,7 +22,7 @@ import java.util.logging.Logger
 
 @Action(id = "updateAddressGroovyAction",
         description = "A test Groovy Action",
-        actionExecutor = "groovy:UpdateAddressAction",
+        actionExecutor = "groovy:updateAddressGroovyAction",
         hidden = false,
         systemTags = ["tag1", "tag2"],
         parameters = [@Parameter(id = "param1", type = "string", multivalued = false), @Parameter(id = "param2", type = "string", multivalued =
