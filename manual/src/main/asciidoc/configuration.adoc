@@ -401,7 +401,7 @@ Placed right before the function, the “@Action” annotation contains a set of
 |actionExecutor
 |String
 |YES
-|Action executor contains the name of the script to call for the action type and must be prefixed with “*groovy:*”. The prefix indicates to Unomi which dispatcher to use when processing the action.
+|Action executor contains the id of the script to call for the action type and must be prefixed with “*groovy:*”. The prefix indicates to Unomi which dispatcher to use when processing the action.
 
 |name
 |String
@@ -464,7 +464,7 @@ The first step consists in creating the groovy script on your filesystem, start 
 [source,groovy]
 ----
 @Action(id = "helloWorldGroovyAction",
-        actionExecutor = "groovy:helloWorldAction",
+        actionExecutor = "groovy:helloWorldGroovyAction",
         parameters = [@Parameter(id = "location", type = "string", multivalued = false)])
 def execute() {
     logger.info("Hello {}", action.getParameterValues().get("location"))
@@ -548,7 +548,7 @@ import org.slf4j.LoggerFactory
 
 final Logger LOGGER = LoggerFactory.getLogger(GroovyActionDispatcher.class.getName());
 
-@Action(id = "displayNumberOfProfilesAction", actionExecutor = "groovy:DisplayNumberOfProfilesAction", description = "Display the number of existing profiles")
+@Action(id = "displayNumberOfProfilesAction", actionExecutor = "groovy:displayNumberOfProfilesAction", description = "Display the number of existing profiles")
 def execute() {
 
     // Use OSGI function to get the bundleContext
@@ -582,7 +582,7 @@ org.apache.unomi.groovy.actions.annotations
 org.apache.unomi.groovy.actions.services
 org.apache.unomi.metrics
 org.apache.unomi.persistence.spi
-org.apache.unomi.services.actions;version
+org.apache.unomi.services.actions
 ----
 
 ==== Scripting roadmap
