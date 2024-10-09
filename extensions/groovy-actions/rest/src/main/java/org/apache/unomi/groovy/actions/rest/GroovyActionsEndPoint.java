@@ -85,10 +85,11 @@ public class GroovyActionsEndPoint {
      * Deletes the rule identified by the specified identifier.
      *
      * @param actionId the identifier of the groovy action that we want to delete
+     * @return true if the action was successfully deleted, false otherwise
      */
     @DELETE
     @Path("/{actionId}")
-    public void remove(@PathParam("actionId") String actionId) {
-        groovyActionsService.remove(actionId);
+    public boolean remove(@PathParam("actionId") String actionId) {
+        return groovyActionsService.remove(actionId);
     }
 }

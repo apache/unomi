@@ -34,10 +34,12 @@ public class GroovyAction extends MetadataItem {
     public GroovyAction() {
     }
 
-    public GroovyAction(String name, String script) {
-        super(new Metadata(name));
+    public GroovyAction(String id, String name, String script) {
+        super(new Metadata(id));
+        this.itemId = id;
         this.name = name;
         this.script = script;
+
     }
 
     public String getName() {

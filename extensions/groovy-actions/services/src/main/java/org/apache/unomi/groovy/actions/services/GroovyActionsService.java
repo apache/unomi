@@ -29,17 +29,18 @@ public interface GroovyActionsService {
     /**
      * Save a groovy action from a groovy file
      *
-     * @param actionName   actionName
+     * @param fileName     fileName
      * @param groovyScript script to save
      */
-    void save(String actionName, String groovyScript);
+    void save(String fileName, String groovyScript);
 
     /**
      * Remove a groovy action
      *
      * @param id of the action to remove
+     * @return true if the action was successfully deleted, false otherwise
      */
-    void remove(String id);
+    boolean remove(String id);
 
     /**
      * Get a groovy code source object by an id
