@@ -123,8 +123,6 @@ public class HttpUtils {
         for (JsonNode event : eventsNode) {
             if (schemaService.isEventValid(event.toString())) {
                 filteredEvents.add(jsonParser.getCodec().treeToValue(event, Event.class));
-            } else {
-                LOGGER.error("An event was rejected - switch to DEBUG log level for more information OR test the payload of your event against the \"validateEvent\" endpoint.");
             }
         }
         return filteredEvents;
