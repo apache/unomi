@@ -53,6 +53,16 @@
             <artifactId>graphql-java-annotations</artifactId>
             <version>${graphql.java.annotations.version}</version>
             <scope>compile</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>com.graphql-java</groupId>
+                    <artifactId>graphql-java-extended-scalars</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.graphql-java</groupId>
+                    <artifactId>graphql-java</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
     </dependencies>
 
