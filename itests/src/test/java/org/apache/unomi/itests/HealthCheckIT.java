@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.module.jaxb.JaxbAnnotationModule;
 import org.apache.commons.io.IOUtils;
+import org.apache.cxf.interceptor.security.AccessDeniedException;
 import org.apache.http.auth.AuthScope;
 import org.apache.http.auth.UsernamePasswordCredentials;
 import org.apache.http.client.config.RequestConfig;
@@ -94,173 +95,25 @@ import static org.ops4j.pax.exam.karaf.options.KarafDistributionOption.*;
  */
 @RunWith(PaxExam.class)
 @ExamReactorStrategy(PerSuite.class)
-public class HealthCheckIT extends KarafTestSupport {
+public class HealthCheckIT extends BaseIT {
 
     private final static Logger LOGGER = LoggerFactory.getLogger(HealthCheckIT.class);
 
-    protected static final String UNOMI_KEY = "670c26d1cc413346c3b2fd9ce65dab41";
-    protected static final ContentType JSON_CONTENT_TYPE = ContentType.create("application/json");
-    protected static final String BASE_URL = "http://localhost";
+    protected static final String HEALTHCHECK_AUTH_USER_NAME = "health";
+    protected static final String HEALTHCHECK_AUTH_PASSWORD = "health";
     protected static final String HEALTHCHECK_ENDPOINT = "/health/check";
-    protected static final String BASIC_AUTH_USER_NAME = "health";
-    protected static final String BASIC_AUTH_PASSWORD = "health";
-    protected static final int REQUEST_TIMEOUT = 60000;
-    protected static final int DEFAULT_TRYING_TIMEOUT = 2000;
-    protected static final int DEFAULT_TRYING_TRIES = 30;
-
-    protected final static ObjectMapper objectMapper;
-    protected static boolean unomiStarted = false;
-
-    static {
-        objectMapper = new ObjectMapper();
-        objectMapper.registerModule(new JaxbAnnotationModule());
-        objectMapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
-        objectMapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
-    }
-
-    protected PersistenceService persistenceService;
-    protected DefinitionsService definitionsService;
-    protected ProfileService profileService;
-    protected EventService eventService;
-    protected BundleWatcher bundleWatcher;
-
-    @Inject
-    @Filter(timeout = 600000)
-    protected ConfigurationAdmin configurationAdmin;
-
-    protected CloseableHttpClient httpClient;
-
-    @Before
-    public void before() throws InterruptedException {
-        // disable retry
-        retry = new Retry(false);
-
-        // init httpClient
-        httpClient = initHttpClient();
-    }
-
-    @After
-    public void shutdown() {
-        // Start Unomi if not already done
-        if (unomiStarted) {
-            executeCommand("unomi:stop");
-            unomiStarted = true;
-        }
-
-        closeHttpClient(httpClient);
-        httpClient = null;
-    }
-
-    @Override
-    public MavenArtifactUrlReference getKarafDistribution() {
-        return CoreOptions.maven().groupId("org.apache.unomi").artifactId("unomi").versionAsInProject().type("tar.gz");
-    }
-
-    @Configuration
-    public Option[] config() {
-        System.out.println("==== Configuring container");
-        Option[] options = new Option[]{
-                replaceConfigurationFile("etc/org.apache.unomi.router.cfg", new File("src/test/resources/org.apache.unomi.router.cfg")),
-
-                editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.rootLogger.level", "INFO"),
-                editConfigurationFilePut("etc/org.apache.karaf.features.cfg", "serviceRequirements", "disable"),
-                editConfigurationFilePut("etc/system.properties", "my.system.property", System.getProperty("my.system.property")),
-                editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.graphql.feature.activated", "true"),
-                editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.elasticsearch.cluster.name", "contextElasticSearchITests"),
-                editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.elasticsearch.addresses", "localhost:9400"),
-                editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.elasticsearch.taskWaitingPollingInterval", "50"),
-
-                systemProperty("org.ops4j.pax.exam.rbc.rmi.port").value("1199"),
-                systemProperty("org.apache.unomi.hazelcast.group.name").value("cellar"),
-                systemProperty("org.apache.unomi.hazelcast.group.password").value("pass"),
-                systemProperty("org.apache.unomi.hazelcast.network.port").value("5701"),
-                systemProperty("org.apache.unomi.hazelcast.tcp-ip.members").value("127.0.0.1"),
-                systemProperty("org.apache.unomi.hazelcast.tcp-ip.interface").value("127.0.0.1"),
-
-                logLevel(LogLevel.INFO),
-                keepRuntimeFolder(),
-                CoreOptions.bundleStartLevel(100),
-                CoreOptions.frameworkStartLevel(100)
-        };
-        List<Option> karafOptions = new ArrayList<>();
-        karafOptions.addAll(Arrays.asList(options));
-
-        String karafDebug = System.getProperty("it.karaf.debug");
-        if (karafDebug != null) {
-            System.out.println("Found system Karaf Debug system property, activating configuration: " + karafDebug);
-            String port = "5006";
-            boolean hold = true;
-            if (karafDebug.trim().length() > 0) {
-                String[] debugOptions = karafDebug.split(",");
-                for (String debugOption : debugOptions) {
-                    String[] debugOptionParts = debugOption.split(":");
-                    if ("hold".equals(debugOptionParts[0])) {
-                        hold = Boolean.parseBoolean(debugOptionParts[1].trim());
-                    }
-                    if ("port".equals(debugOptionParts[0])) {
-                        port = debugOptionParts[1].trim();
-                    }
-                }
-            }
-            karafOptions.add(0, debugConfiguration(port, hold));
-        }
-
-        // Jacoco setup
-        final String agentFile = System.getProperty("user.dir") + "/target/jacoco/lib/jacocoagent.jar";
-        Path path = Paths.get(agentFile);
-        if (Files.exists(path)) {
-            final String jacocoOption = "-javaagent:" + agentFile + "=destfile=" + System.getProperty("user.dir")
-                    + "/target/jacoco.exec,includes=org.apache.unomi.*";
-            LOGGER.info("set jacoco java agent: {}", jacocoOption);
-            karafOptions.add(new VMOption(jacocoOption));
-        } else {
-            LOGGER.warn("Unable to set jacoco agent as {} was not found", agentFile);
-        }
-
-        String customLogging = System.getProperty("it.karaf.customLogging");
-        if (customLogging != null) {
-            String[] customLoggingParts = customLogging.split(":");
-            karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.logger.customLogging.name", customLoggingParts[0]));
-            karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.logger.customLogging.level", customLoggingParts[1]));
-        }
-
-        return Stream.of(super.config(), karafOptions.toArray(new Option[karafOptions.size()])).flatMap(Stream::of).toArray(Option[]::new);
-    }
-
-    public String getFullUrl(String url) throws Exception {
-        return BASE_URL + ":" + getHttpPort() + url;
-    }
 
     @Test
     public void testHealthCheck() {
         try {
             List<HealthCheckResponse> response = get(HEALTHCHECK_ENDPOINT, new TypeReference<>() {});
-            LOGGER.info("Initial health check response: {}", response);
+            LOGGER.info("health check response: {}", response);
             Assert.assertEquals(5, response.size());
             Assert.assertTrue(response.stream().anyMatch(r -> r.getName().equals("karaf") && r.getStatus() == HealthCheckResponse.Status.LIVE));
             Assert.assertTrue(response.stream().anyMatch(r -> r.getName().equals("elasticsearch") && r.getStatus() == HealthCheckResponse.Status.LIVE));
-            Assert.assertTrue(response.stream().anyMatch(r -> r.getName().equals("unomi") && r.getStatus() == HealthCheckResponse.Status.DOWN));
-            Assert.assertTrue(response.stream().anyMatch(r -> r.getName().equals("cluster") && r.getStatus() == HealthCheckResponse.Status.DOWN));
-            Assert.assertTrue(response.stream().anyMatch(r -> r.getName().equals("persistence") && r.getStatus() == HealthCheckResponse.Status.DOWN));
-
-            // Start Unomi if not already done
-            if (!unomiStarted) {
-                executeCommand("unomi:start");
-                unomiStarted = true;
-            }
-
-            // Wait for startup complete
-            bundleWatcher = getOsgiService(BundleWatcher.class, 600000);
-            while (!bundleWatcher.isStartupComplete() || !bundleWatcher.allAdditionalBundleStarted()) {
-                LOGGER.info("Waiting for startup to complete...");
-                Thread.sleep(1000);
-            }
-
-            response = get(HEALTHCHECK_ENDPOINT, new TypeReference<>() {});
-            LOGGER.info("Unomi started health check response: {}", response);
-            Assert.assertEquals(5, response.size());
-            Assert.assertTrue(response.stream().allMatch(r -> r.getStatus() == HealthCheckResponse.Status.LIVE));
-
+            Assert.assertTrue(response.stream().anyMatch(r -> r.getName().equals("unomi") && r.getStatus() == HealthCheckResponse.Status.LIVE));
+            Assert.assertTrue(response.stream().anyMatch(r -> r.getName().equals("cluster") && r.getStatus() == HealthCheckResponse.Status.LIVE));
+            Assert.assertTrue(response.stream().anyMatch(r -> r.getName().equals("persistence") && r.getStatus() == HealthCheckResponse.Status.LIVE));
         } catch (Exception e) {
             LOGGER.error("Error while executing health check", e);
             fail("Error while executing health check" + e.getMessage());
@@ -291,81 +144,10 @@ public class HealthCheckIT extends KarafTestSupport {
         return null;
     }
 
-    protected CloseableHttpResponse executeHttpRequest(HttpUriRequest request) throws IOException {
-        System.out.println("Executing request " + request.getMethod() + " " + request.getURI() + "...");
-        CloseableHttpResponse response = httpClient.execute(request);
-        int statusCode = response.getStatusLine().getStatusCode();
-        if (statusCode != 200) {
-            String content = null;
-            if (response.getEntity() != null) {
-                InputStream contentInputStream = response.getEntity().getContent();
-                if (contentInputStream != null) {
-                    content = IOUtils.toString(response.getEntity().getContent());
-                }
-            }
-            LOGGER.error("Response status code: {}, reason: {}, content:{}", response.getStatusLine().getStatusCode(),
-                    response.getStatusLine().getReasonPhrase(), content);
-        }
-        return response;
-    }
-
-    public static CloseableHttpClient initHttpClient() {
-        long requestStartTime = System.currentTimeMillis();
-        BasicCredentialsProvider credsProvider = null;
-        credsProvider = new BasicCredentialsProvider();
-        credsProvider.setCredentials(AuthScope.ANY, new UsernamePasswordCredentials(BASIC_AUTH_USER_NAME, BASIC_AUTH_PASSWORD));
-        HttpClientBuilder httpClientBuilder = HttpClients.custom().useSystemProperties().setDefaultCredentialsProvider(credsProvider);
-
-        try {
-            SSLContext sslContext = SSLContext.getInstance("SSL");
-            sslContext.init(null, new TrustManager[] { new X509TrustManager() {
-                public X509Certificate[] getAcceptedIssuers() {
-                    return null;
-                }
-
-                public void checkClientTrusted(X509Certificate[] certs, String authType) {
-                }
-
-                public void checkServerTrusted(X509Certificate[] certs, String authType) {
-                }
-            } }, new SecureRandom());
-
-            Registry<ConnectionSocketFactory> socketFactoryRegistry = RegistryBuilder.<ConnectionSocketFactory>create()
-                    .register("http", PlainConnectionSocketFactory.getSocketFactory())
-                    .register("https", new SSLConnectionSocketFactory(sslContext, SSLConnectionSocketFactory.ALLOW_ALL_HOSTNAME_VERIFIER))
-                    .build();
-
-            PoolingHttpClientConnectionManager poolingHttpClientConnectionManager = new PoolingHttpClientConnectionManager(
-                    socketFactoryRegistry);
-            poolingHttpClientConnectionManager.setMaxTotal(10);
-
-            httpClientBuilder.setHostnameVerifier(SSLConnectionSocketFactory.ALLOW_ALL_HOSTNAME_VERIFIER)
-                    .setConnectionManager(poolingHttpClientConnectionManager);
-
-        } catch (NoSuchAlgorithmException | KeyManagementException e) {
-            LOGGER.error("Error creating SSL Context", e);
-        }
-
-        RequestConfig requestConfig = RequestConfig.custom().setConnectTimeout(REQUEST_TIMEOUT).setSocketTimeout(REQUEST_TIMEOUT)
-                .setConnectionRequestTimeout(REQUEST_TIMEOUT).build();
-        httpClientBuilder.setDefaultRequestConfig(requestConfig);
-
-        if (LOGGER.isDebugEnabled()) {
-            long totalRequestTime = System.currentTimeMillis() - requestStartTime;
-            LOGGER.debug("Init HttpClient executed in " + totalRequestTime + "ms");
-        }
-
-        return httpClientBuilder.build();
-    }
-
-    public static void closeHttpClient(CloseableHttpClient httpClient) {
-        try {
-            if (httpClient != null) {
-                httpClient.close();
-            }
-        } catch (IOException e) {
-            LOGGER.error("Could not close httpClient: " + httpClient, e);
-        }
+    public BasicCredentialsProvider getHttpClientCredentialProvider() {
+        BasicCredentialsProvider credsProvider = new BasicCredentialsProvider();
+        credsProvider.setCredentials(AuthScope.ANY, new UsernamePasswordCredentials(HEALTHCHECK_AUTH_USER_NAME, HEALTHCHECK_AUTH_PASSWORD));
+        return credsProvider;
     }
 
     public static class HealthCheckResponse {
