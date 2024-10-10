@@ -43,6 +43,7 @@ public class HealthCheckService {
 
     private final List<HealthCheckProvider> providers = new ArrayList<>();
     private ExecutorService executor;
+    private boolean busy = false;
 
     @Reference
     protected HttpService httpService;
@@ -89,22 +90,31 @@ public class HealthCheckService {
         providers.remove(provider);
     }
 
-    public List<HealthCheckResponse> check() {
+    public List<HealthCheckResponse> check() throws RejectedExecutionException {
         LOGGER.debug("Health check called");
-        List<HealthCheckResponse> health = new ArrayList<>();
-        health.add(HealthCheckResponse.live("karaf"));
-        for (HealthCheckProvider provider : providers) {
-            Future<HealthCheckResponse> future = executor.submit(provider::execute);
+        if (busy) {
+            throw new RejectedExecutionException("Health check already in progress");
+        } else {
             try {
-                HealthCheckResponse response = future.get(500, TimeUnit.MILLISECONDS);
-                health.add(response);
-            } catch (TimeoutException e) {
-                future.cancel(true);
-                health.add(provider.timeout());
-            } catch (Exception e) {
-                LOGGER.error("Error while executing health check", e);
+                busy = true;
+                List<HealthCheckResponse> health = new ArrayList<>();
+                health.add(HealthCheckResponse.live("karaf"));
+                for (HealthCheckProvider provider : providers) {
+                    Future<HealthCheckResponse> future = executor.submit(provider::execute);
+                    try {
+                        HealthCheckResponse response = future.get(250, TimeUnit.MILLISECONDS);
+                        health.add(response);
+                    } catch (TimeoutException e) {
+                        future.cancel(true);
+                        health.add(provider.timeout());
+                    } catch (Exception e) {
+                        LOGGER.error("Error while executing health check", e);
+                    }
+                }
+                return health;
+            } finally {
+                busy = false;
             }
         }
-        return health;
     }
 }
