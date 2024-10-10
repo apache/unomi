@@ -197,7 +197,7 @@ public abstract class BaseIT extends KarafTestSupport {
         routerCamelContext = getOsgiService(IRouterCamelContext.class, 600000);
 
         // init httpClient
-        httpClient = initHttpClient();
+        httpClient = initHttpClient(getHttpClientCredentialProvider());
     }
 
     @After
@@ -555,12 +555,9 @@ public abstract class BaseIT extends KarafTestSupport {
         }
     }
 
-    public static CloseableHttpClient initHttpClient() {
+    public static CloseableHttpClient initHttpClient(BasicCredentialsProvider credentialsProvider) {
         long requestStartTime = System.currentTimeMillis();
-        BasicCredentialsProvider credsProvider = null;
-        credsProvider = new BasicCredentialsProvider();
-        credsProvider.setCredentials(AuthScope.ANY, new UsernamePasswordCredentials(BASIC_AUTH_USER_NAME, BASIC_AUTH_PASSWORD));
-        HttpClientBuilder httpClientBuilder = HttpClients.custom().useSystemProperties().setDefaultCredentialsProvider(credsProvider);
+        HttpClientBuilder httpClientBuilder = HttpClients.custom().useSystemProperties().setDefaultCredentialsProvider(credentialsProvider);
 
         try {
             SSLContext sslContext = SSLContext.getInstance("SSL");
@@ -612,5 +609,11 @@ public abstract class BaseIT extends KarafTestSupport {
         } catch (IOException e) {
             LOGGER.error("Could not close httpClient: " + httpClient, e);
         }
+    }
+
+    public BasicCredentialsProvider getHttpClientCredentialProvider() {
+        BasicCredentialsProvider credsProvider = new BasicCredentialsProvider();
+        credsProvider.setCredentials(AuthScope.ANY, new UsernamePasswordCredentials(BASIC_AUTH_USER_NAME, BASIC_AUTH_PASSWORD));
+        return credsProvider;
     }
 }
