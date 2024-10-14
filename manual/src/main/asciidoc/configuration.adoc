@@ -877,7 +877,7 @@ All healthcheck can have a status :
 - LIVE (service is ready to serve request)
 - ERROR (an error occurred during service health check)
 
-Any subsystem health check have a timeout of 500ms where check is cancelled and will be returned as error.
+Any subsystem health check have a timeout of 400ms where check is cancelled and will be returned as error.
 
 Typical response to /health/check when unomi NOT started is :
 
@@ -925,3 +925,16 @@ public interface HealthCheckProvider {
 ----
 
 Calls to provider are supposed to be done at a regular rate (every 15 seconds for example) and should be fast to execute. Feel free to include any caching strategy if needed.
+
+
+==== Configuration
+
+Healthcheck extension configuration is located in the file etc/org.apache.unomi.healthcheck.cfg
+
+Extension can be disabled by setting the property `enabled` to `false`. An environment variable can be used to set this property : UNOMI_HEALTHCHECK_ENABLED.
+You must restart the bundle for that config to take effect.
+
+By default, all healthcheck providers are included but the list of those included providers can be customized by setting the property `providers` with a comma separated list of provider names. An environment variable can be used to set this property : UNOMI_HEALTHCHECK_PROVIDERS.
+Karaf provider is the one needed by healthcheck (always LIVE), it cannot be ignored.
+
+The timeout used for each health check can be set by setting the property `timeout` to the desired value in milliseconds. An environment variable can be used to set this property : UNOMI_HEALTHCHECK_TIMEOUT

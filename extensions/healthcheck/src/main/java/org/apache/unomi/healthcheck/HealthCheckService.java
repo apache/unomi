@@ -26,9 +26,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.servlet.ServletException;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.*;
+import java.util.stream.Collectors;
 
 import static org.apache.unomi.healthcheck.HealthCheckConfig.CONFIG_AUTH_REALM;
 
@@ -44,6 +44,7 @@ public class HealthCheckService {
     private final List<HealthCheckProvider> providers = new ArrayList<>();
     private ExecutorService executor;
     private boolean busy = false;
+    private boolean registered = false;
 
     @Reference
     protected HttpService httpService;
@@ -67,22 +68,42 @@ public class HealthCheckService {
 
     @Activate
     public void activate() throws ServletException, NamespaceException {
-        LOGGER.info("Activating healthcheck service...");
-        executor = Executors.newSingleThreadExecutor();
-        httpService.registerServlet("/health/check", new HealthCheckServlet(this), null, new HealthCheckHttpContext(config.get(CONFIG_AUTH_REALM)));
+        if (config.isEnabled()) {
+            LOGGER.info("Activating healthcheck service...");
+            executor = Executors.newSingleThreadExecutor();
+            httpService.registerServlet("/health/check", new HealthCheckServlet(this), null,
+                    new HealthCheckHttpContext(config.get(CONFIG_AUTH_REALM)));
+            this.registered = true;
+        } else {
+            LOGGER.info("Healthcheck service is disabled");
+        }
     }
 
     public void updated() throws ServletException, NamespaceException {
-        LOGGER.info("Updating healthcheck service...");
-        httpService.unregister("/health/check");
-        httpService.registerServlet("/health/check", new HealthCheckServlet(this), null, new HealthCheckHttpContext(config.get(CONFIG_AUTH_REALM)));
+        if (config.isEnabled()) {
+            LOGGER.info("Updating healthcheck service...");
+            if (registered) {
+                httpService.unregister("/health/check");
+                registered = false;
+            }
+            httpService.registerServlet("/health/check", new HealthCheckServlet(this), null,
+                    new HealthCheckHttpContext(config.get(CONFIG_AUTH_REALM)));
+            registered = true;
+        } else {
+            LOGGER.info("Healthcheck service is disabled");
+        }
     }
 
     @Deactivate
     public void deactivate() {
         LOGGER.info("Deactivating healthcheck service...");
-        httpService.unregister("/health/check");
-        executor.shutdown();
+        if (registered) {
+            httpService.unregister("/health/check");
+            registered = false;
+        }
+        if (executor != null) {
+            executor.shutdown();
+        }
     }
 
     @Reference(service = HealthCheckProvider.class, cardinality = ReferenceCardinality.MULTIPLE, policy = ReferencePolicy.DYNAMIC, unbind = "unbind")
@@ -97,30 +118,36 @@ public class HealthCheckService {
     }
 
     public List<HealthCheckResponse> check() throws RejectedExecutionException {
-        LOGGER.debug("Health check called");
-        if (busy) {
-            throw new RejectedExecutionException("Health check already in progress");
-        } else {
-            try {
-                busy = true;
-                List<HealthCheckResponse> health = new ArrayList<>();
-                health.add(HealthCheckResponse.live("karaf"));
-                for (HealthCheckProvider provider : providers) {
-                    Future<HealthCheckResponse> future = executor.submit(provider::execute);
-                    try {
-                        HealthCheckResponse response = future.get(250, TimeUnit.MILLISECONDS);
-                        health.add(response);
-                    } catch (TimeoutException e) {
-                        future.cancel(true);
-                        health.add(provider.timeout());
-                    } catch (Exception e) {
-                        LOGGER.error("Error while executing health check", e);
+        if (config.isEnabled()) {
+            LOGGER.debug("Health check called");
+            if (busy) {
+                throw new RejectedExecutionException("Health check already in progress");
+            } else {
+                try {
+                    busy = true;
+                    List<HealthCheckResponse> health = new ArrayList<>();
+                    health.add(HealthCheckResponse.live("karaf"));
+                    for (HealthCheckProvider provider : providers.stream().filter(p -> config.getEnabledProviders().contains(p.name())).collect(Collectors.toList())) {
+                        Future<HealthCheckResponse> future = executor.submit(provider::execute);
+                        try {
+                            HealthCheckResponse response = future.get(config.getTimeout(), TimeUnit.MILLISECONDS);
+                            health.add(response);
+                        } catch (TimeoutException e) {
+                            future.cancel(true);
+                            health.add(provider.timeout());
+                        } catch (Exception e) {
+                            LOGGER.error("Error while executing health check", e);
+                        }
                     }
+                    return health;
+                } finally {
+                    busy = false;
                 }
-                return health;
-            } finally {
-                busy = false;
             }
+        } else {
+            LOGGER.info("Healthcheck service is disabled");
+            return Collections.emptyList();
         }
     }
+
 }

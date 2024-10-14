@@ -19,6 +19,7 @@ package org.apache.unomi.healthcheck.servlet;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.unomi.healthcheck.HealthCheckResponse;
 import org.apache.unomi.healthcheck.HealthCheckService;
 import org.osgi.service.http.HttpContext;
 import org.osgi.service.useradmin.Authorization;
@@ -31,6 +32,8 @@ import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.util.Comparator;
+import java.util.List;
 
 /**
  * A simple servlet that provides a health check endpoint.
@@ -62,8 +65,15 @@ public class HealthCheckServlet extends HttpServlet {
             response.sendError(HttpServletResponse.SC_FORBIDDEN);
             return;
         }
-        response.getWriter().println(mapper.writeValueAsString(service.check()));
+        List<HealthCheckResponse> checks = service.check();
+        checks.sort(Comparator.comparing(HealthCheckResponse::getName));
+        response.getWriter().println(mapper.writeValueAsString(checks));
         response.setContentType("application/json");
-        response.setStatus(HttpServletResponse.SC_OK);
+        response.setHeader("Cache-Control", "no-cache");
+        if (checks.stream().allMatch(HealthCheckResponse::isLive)) {
+            response.setStatus(HttpServletResponse.SC_OK);
+        } else {
+            response.setStatus(HttpServletResponse.SC_PARTIAL_CONTENT);
+        }
     }
 }

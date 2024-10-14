@@ -77,6 +77,18 @@ public class HealthCheckResponse {
         return named(name).error().build();
     }
 
+    public boolean isLive() {
+        return this.status == Status.LIVE;
+    }
+
+    public boolean isUp() {
+        return this.status == Status.UP;
+    }
+
+    public boolean isDown() {
+        return this.status == Status.DOWN;
+    }
+
     public static class Builder {
         private final long borntime;
         private String name;

@@ -73,3 +73,13 @@ Typical response to /health/check when unomi NOT started is :
   }
 ]
 ```
+
+## Configuration
+
+Configuration is located in the file etc/org.apache.unomi.healthcheck.cfg
+
+Extension can be disabled by setting the property `enabled` to `false`. An environment variable can be used to set this property : UNOMI_HEALTHCHECK_ENABLED
+
+By default, all healthcheck providers are included but the list of those included providers can be customized by setting the property `providers` with a comma separated list of provider names. An environment variable can be used to set this property : UNOMI_HEALTHCHECK_PROVIDERS
+
+The timeout used for each health check can be set by setting the property `timeout` to the desired value in milliseconds. An environment variable can be used to set this property : UNOMI_HEALTHCHECK_TIMEOUT 

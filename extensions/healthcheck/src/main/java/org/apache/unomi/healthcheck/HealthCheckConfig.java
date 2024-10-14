@@ -23,7 +23,9 @@ import org.osgi.service.component.annotations.Modified;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -40,17 +42,54 @@ public class HealthCheckConfig {
     public static final String CONFIG_ES_PASSWORD = "esPassword";
     public static final String CONFIG_TRUST_ALL_CERTIFICATES = "httpClient.trustAllCertificates";
     public static final String CONFIG_AUTH_REALM = "authentication.realm";
+    public static final String ENABLED = "healthcheck.enabled";
+    public static final String PROVIDERS = "healthcheck.providers";
+    public static final String TIMEOUT = "healthcheck.timeout";
 
     private Map<String, String> config = new HashMap<>();
+    private boolean enabled = true;
+    private List<String> enabledProviders = new ArrayList<>();
+    private int timeout = 400;
 
     @Activate
     @Modified
     public void modified(Map<String, String> config) {
         LOGGER.info("Updating healthcheck configuration, config size: {}", config.size());
-        this.config = config;
+        this.setConfig(config);
+        this.setEnabled(config.getOrDefault(ENABLED, "true").equalsIgnoreCase("true"));
+        this.setEnabledProviders(config.getOrDefault(PROVIDERS, "").isEmpty() ? new ArrayList<>() : List.of(config.get(PROVIDERS).split(",")));
+        this.setTimeout(Integer.parseInt(config.getOrDefault(TIMEOUT, "400")));
     }
 
     public String get(String configKey) {
         return this.config.get(configKey);
+    }
+
+    public boolean isEnabled() {
+        return enabled;
+    }
+
+    public List<String> getEnabledProviders() {
+        return enabledProviders;
+    }
+
+    public int getTimeout() {
+        return timeout;
+    }
+
+    public void setConfig(Map<String, String> config) {
+        this.config = config;
+    }
+
+    public void setEnabled(boolean enabled) {
+        this.enabled = enabled;
+    }
+
+    public void setEnabledProviders(List<String> enabledProviders) {
+        this.enabledProviders = enabledProviders;
+    }
+
+    public void setTimeout(int timeout) {
+        this.timeout = timeout;
     }
 }

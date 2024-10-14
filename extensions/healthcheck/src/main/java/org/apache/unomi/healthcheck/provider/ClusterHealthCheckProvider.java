@@ -73,7 +73,7 @@ public class ClusterHealthCheckProvider implements HealthCheckProvider {
                 }
                 int idx = 1;
                 for (ClusterNode node : nodes) {
-                    if (nodes.size() == 1 || node.isMaster()) {
+                    if (!nodes.isEmpty() || node.isMaster()) {
                         builder.live();
                     }
                     builder.withData("cluster.node." + idx + ".uptime", node.getUptime());
