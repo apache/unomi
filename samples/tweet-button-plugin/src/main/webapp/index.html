@@ -61,13 +61,9 @@
                     if (window.performance && typeof window.performance.now === "function") {
                         d += performance.now();  //use high-precision timer if available
                     }
-                    var randomValues = new Uint8Array(16);
-                    window.crypto.getRandomValues(randomValues);
-                    var uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c, i) {
-                        var r = randomValues[i] % 16;
-                        return (c == 'x' ? r : (r & 0x3 | 0x8)).toString(16);
-                    });
-                    return uuid;
+                    return "10000000-1000-4000-8000-100000000000".replace(/[018]/g, c =>
+                      (+c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> +c / 4).toString(16)
+                    );
                 }
 
                 function contextRequest(successCallback, errorCallback, payload) {
