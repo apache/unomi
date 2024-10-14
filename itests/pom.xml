@@ -261,7 +261,6 @@
                         <configuration>
                             <includes>
                                 <include>**/*AllITs.java</include>
-                                <include>**/*HealthCheckITs.java</include>
                             </includes>
                             <systemPropertyVariables>
                                 <my.system.property>foo</my.system.property>
