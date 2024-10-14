@@ -19,6 +19,7 @@ package org.apache.unomi.healthcheck.provider;
 
 import org.apache.unomi.healthcheck.HealthCheckResponse;
 import org.apache.unomi.healthcheck.HealthCheckProvider;
+import org.apache.unomi.healthcheck.util.CachedValue;
 import org.apache.unomi.lifecycle.BundleWatcher;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
@@ -27,14 +28,18 @@ import org.osgi.service.component.annotations.ReferencePolicy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.concurrent.TimeUnit;
+
 /**
  * A health check that track the Unomi bundles availability.
  */
 @Component(service = HealthCheckProvider.class, immediate = true)
 public class UnomiBundlesHealthCheckProvider implements HealthCheckProvider {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(UnomiBundlesHealthCheckProvider.class.getName());
     public static final String NAME = "unomi";
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(UnomiBundlesHealthCheckProvider.class.getName());
+    private final CachedValue<HealthCheckResponse> cache = new CachedValue<>(10, TimeUnit.SECONDS);
 
     @Reference(service = BundleWatcher.class, cardinality = ReferenceCardinality.OPTIONAL, policy = ReferencePolicy.DYNAMIC, bind = "bind", unbind = "unbind")
     private volatile BundleWatcher service;
@@ -57,6 +62,14 @@ public class UnomiBundlesHealthCheckProvider implements HealthCheckProvider {
 
     @Override public HealthCheckResponse execute() {
         LOGGER.debug("Health check unomi bundles");
+        if (cache.isStaled() || !cache.getValue().isLive()) {
+            cache.setValue(refresh());
+        }
+        return cache.getValue();
+    }
+
+    private HealthCheckResponse refresh() {
+        LOGGER.debug("Refresh");
         HealthCheckResponse.Builder builder = new HealthCheckResponse.Builder();
         builder.name(NAME).down();
         try {

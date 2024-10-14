@@ -31,6 +31,7 @@ import org.apache.http.util.EntityUtils;
 import org.apache.unomi.healthcheck.HealthCheckConfig;
 import org.apache.unomi.healthcheck.HealthCheckResponse;
 import org.apache.unomi.healthcheck.HealthCheckProvider;
+import org.apache.unomi.healthcheck.util.CachedValue;
 import org.apache.unomi.shell.migration.utils.HttpUtils;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
@@ -40,6 +41,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 
 /**
  * A Health Check that checks the status of the ElasticSearch connectivity according to the provided configuration.
@@ -48,8 +50,10 @@ import java.io.IOException;
 @Component(service = HealthCheckProvider.class, immediate = true)
 public class ElasticSearchHealthCheckProvider implements HealthCheckProvider {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(ElasticSearchHealthCheckProvider.class.getName());
     public static final String NAME = "elasticsearch";
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(ElasticSearchHealthCheckProvider.class.getName());
+    private final CachedValue<HealthCheckResponse> cache = new CachedValue<>(10, TimeUnit.SECONDS);
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY)
     private HealthCheckConfig config;
@@ -89,6 +93,14 @@ public class ElasticSearchHealthCheckProvider implements HealthCheckProvider {
 
     @Override public HealthCheckResponse execute() {
         LOGGER.debug("Health check elasticsearch");
+        if (cache.isStaled() || cache.getValue().isDown() || cache.getValue().isError()) {
+            cache.setValue(refresh());
+        }
+        return cache.getValue();
+    }
+
+    private HealthCheckResponse refresh() {
+        LOGGER.debug("Refresh");
         HealthCheckResponse.Builder builder = new HealthCheckResponse.Builder();
         builder.name(NAME).down();
         String url = (config.get(HealthCheckConfig.CONFIG_ES_SSL_ENABLED).equals("true") ? "https://" : "http://")

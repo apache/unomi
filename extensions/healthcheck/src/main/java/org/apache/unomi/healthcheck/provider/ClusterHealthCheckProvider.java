@@ -21,6 +21,7 @@ import org.apache.unomi.api.ClusterNode;
 import org.apache.unomi.api.services.ClusterService;
 import org.apache.unomi.healthcheck.HealthCheckResponse;
 import org.apache.unomi.healthcheck.HealthCheckProvider;
+import org.apache.unomi.healthcheck.util.CachedValue;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
@@ -37,8 +38,10 @@ import java.util.List;
 @Component(service = HealthCheckProvider.class, immediate = true)
 public class ClusterHealthCheckProvider implements HealthCheckProvider {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(ClusterHealthCheckProvider.class.getName());
     public static final String NAME = "cluster";
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(ClusterHealthCheckProvider.class.getName());
+    private final CachedValue<HealthCheckResponse> cache = new CachedValue<>(10, java.util.concurrent.TimeUnit.SECONDS);
 
     @Reference(service = ClusterService.class, cardinality = ReferenceCardinality.OPTIONAL, policy = ReferencePolicy.DYNAMIC, bind = "bind", unbind = "unbind")
     private volatile ClusterService service;
@@ -61,6 +64,14 @@ public class ClusterHealthCheckProvider implements HealthCheckProvider {
 
     @Override public HealthCheckResponse execute() {
         LOGGER.debug("Health check cluster");
+        if (cache.isStaled() || cache.getValue().isDown() || cache.getValue().isError()) {
+            cache.setValue(refresh());
+        }
+        return cache.getValue();
+    }
+
+    private HealthCheckResponse refresh() {
+        LOGGER.debug("Refresh");
         HealthCheckResponse.Builder builder = new HealthCheckResponse.Builder();
         builder.name(NAME).down();
         try {

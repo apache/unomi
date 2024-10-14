@@ -89,6 +89,10 @@ public class HealthCheckResponse {
         return this.status == Status.DOWN;
     }
 
+    public boolean isError() {
+        return this.status == Status.ERROR;
+    }
+
     public static class Builder {
         private final long borntime;
         private String name;
