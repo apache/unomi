@@ -260,6 +260,7 @@ public abstract class BaseIT extends KarafTestSupport {
                 systemProperty("org.apache.unomi.hazelcast.network.port").value("5701"),
                 systemProperty("org.apache.unomi.hazelcast.tcp-ip.members").value("127.0.0.1"),
                 systemProperty("org.apache.unomi.hazelcast.tcp-ip.interface").value("127.0.0.1"),
+                systemProperty("org.apache.unomi.healthcheck.enabled").value("true"),
 
                 logLevel(LogLevel.INFO),
                 keepRuntimeFolder(),
