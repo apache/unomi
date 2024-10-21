@@ -859,7 +859,7 @@ is up and running and can serve requests.
 
 The health check endpoint is available at the following URL: /health/check and returns a simple JSON response that includes all health check provider responses.
 
-Basic Http Authentication is enabled by default for the health check endpoint using the existing karaf realm. The user needs to have the specific role **health**
+Basic Http Authentication enforce security for the health check endpoint using the existing karaf realm. The user needs to have the specific role **health**
 to access the endpoint. Users and roles can be configured in the etc/users.properties file. By default, a login/pass health/health is configured.
 
 Specific configuration is located in : org.apache.unomi.healthcheck.cfg  Existing health checks are using configuration from that file, including authentication realm.
@@ -912,7 +912,7 @@ Typical response to /health/check when unomi NOT started is :
 ]
 ----
 
-Existing health check can be extended by adding specific provider in the dedicated extension. A provider is a class that implements the HealthCheckProvider interface.
+Existing health check can be extended by adding specific provider in the extension. A provider is a class that implements the HealthCheckProvider interface.
 
 [source,java]
 ----
@@ -931,7 +931,7 @@ Calls to provider are supposed to be done at a regular rate (every 15 seconds fo
 
 Healthcheck extension configuration is located in the file etc/org.apache.unomi.healthcheck.cfg
 
-Extension can be disabled by setting the property `enabled` to `false`. An environment variable can be used to set this property : UNOMI_HEALTHCHECK_ENABLED.
+Extension can be enabled by setting the property `enabled` to `true`. An environment variable can be used to set this property : UNOMI_HEALTHCHECK_ENABLED.
 You must restart the bundle for that config to take effect.
 
 By default, all healthcheck providers are included but the list of those included providers can be customized by setting the property `providers` with a comma separated list of provider names. An environment variable can be used to set this property : UNOMI_HEALTHCHECK_PROVIDERS.

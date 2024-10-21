@@ -17,6 +17,8 @@
 
 package org.apache.unomi.healthcheck;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -77,18 +79,22 @@ public class HealthCheckResponse {
         return named(name).error().build();
     }
 
+    @JsonIgnore
     public boolean isLive() {
         return this.status == Status.LIVE;
     }
 
+    @JsonIgnore
     public boolean isUp() {
         return this.status == Status.UP;
     }
 
+    @JsonIgnore
     public boolean isDown() {
         return this.status == Status.DOWN;
     }
 
+    @JsonIgnore
     public boolean isError() {
         return this.status == Status.ERROR;
     }
