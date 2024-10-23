@@ -91,5 +91,5 @@ context.performMigrationStep("2.0.0-create-aliases-for-existing-merged-profiles"
 
 context.performMigrationStep("2.0.0-delete-existing-merged-profiles", () -> {
     String profileMergedDeleteRequest = MigrationUtils.resourceAsString(bundleContext,"requestBody/2.0.0/profile_merged_delete.json")
-    HttpUtils.executePostRequest(context.getHttpClient(), esAddress + "/" + profileIndex + "/_delete_by_query", profileMergedDeleteRequest, null)
+    MigrationUtils.deleteByQuery(context.getHttpClient(), esAddress, profileIndex, profileMergedDeleteRequest)
 })
