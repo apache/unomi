@@ -65,7 +65,7 @@ public class UnomiManagementServiceImpl implements UnomiManagementService {
                 startUnomi();
             }
         } catch (Exception e) {
-            LOGGER.error("Error while starting Unomi", e);
+            LOGGER.error("Error during Unomi startup when processing 'unomi.autoMigrate' or 'unomi.autoStart' properties:", e);
         }
     }
 
