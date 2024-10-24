@@ -123,7 +123,11 @@ public class MigrationUtils {
             });
             String matchAllBodyRequest = resourceAsString(bundleContext, "requestBody/2.2.0/match_all_body_request.json");
 
-            HttpUtils.executePostRequest(httpClient, esAddress + "/" + lastIndexName + "/_delete_by_query", matchAllBodyRequest, null);
+            try {
+                deleteByQuery(httpClient, esAddress, lastIndexName, matchAllBodyRequest);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
         }
     }
 
@@ -288,6 +292,44 @@ public class MigrationUtils {
             migrationContext.printMessage("Waiting for ES Cluster status to be Yellow, current status is " + status.get("status"));
         }
 
+    }
+
+    /**
+     * Updates documents in an index based on a specified query.
+     *
+     * <p>This method sends a request to update documents that match the provided query in the specified index. The update operation is
+     * performed asynchronously, and the method waits for the task to complete before returning.</p>
+     *
+     * @param httpClient the CloseableHttpClient used to send the request to the Elasticsearch server
+     * @param esAddress the address of the Elasticsearch server
+     * @param indexName the name of the index where documents should be updated
+     * @param requestBody the JSON body containing the query and update instructions for the documents
+     * @throws Exception if there is an error during the HTTP request or while waiting for the task to finish
+     */
+    public static void updateByQuery(CloseableHttpClient httpClient, String esAddress, String indexName, String requestBody) throws Exception {
+        JSONObject task = new JSONObject(HttpUtils.executePostRequest(httpClient, esAddress + "/" + indexName + "/_update_by_query?wait_for_completion=false", requestBody, null));
+
+        //Wait for the deletion task to finish
+        waitForTaskToFinish(httpClient, esAddress, task.getString("task"), null);
+    }
+
+    /**
+     * Deletes documents from an index based on a specified query.
+     *
+     * <p>This method sends a request to the Elasticsearch cluster to delete documents
+     * that match the provided query in the specified index. The deletion operation is
+     * performed asynchronously, and the method waits for the task to complete before returning.</p>
+     *
+     * @param httpClient  the CloseableHttpClient used to send the request to the Elasticsearch server
+     * @param esAddress   the address of the Elasticsearch server
+     * @param indexName   the name of the index from which documents should be deleted
+     * @param requestBody the JSON body containing the query that defines which documents to delete
+     * @throws Exception if there is an error during the HTTP request or while waiting for the task to finish
+     */
+    public static void deleteByQuery(CloseableHttpClient httpClient, String esAddress, String indexName, String requestBody) throws Exception {
+        JSONObject task = new JSONObject(HttpUtils.executePostRequest(httpClient, esAddress + "/" + indexName + "/_delete_by_query?wait_for_completion=false", requestBody, null));
+        //Wait for the deletion task to finish
+        waitForTaskToFinish(httpClient, esAddress, task.getString("task"), null);
     }
 
     public static void waitForTaskToFinish(CloseableHttpClient httpClient, String esAddress, String taskId, MigrationContext migrationContext) throws IOException {

@@ -25,7 +25,7 @@ String indexPrefix = context.getConfigString("indexPrefix")
 
 context.performMigrationStep("2.0.0-remove-events-not-persisted-anymore", () -> {
     String removeInternalEventsRequest = MigrationUtils.resourceAsString(bundleContext, "requestBody/2.0.0/event_delete_by_query.json")
-    HttpUtils.executePostRequest(context.getHttpClient(), "${esAddress}/${indexPrefix}-event-*/_delete_by_query", removeInternalEventsRequest, null)
+    MigrationUtils.deleteByQuery(context.getHttpClient(), esAddress, "${indexPrefix}-event-*", removeInternalEventsRequest)
 })
 
 // Reindex the rest of the events
