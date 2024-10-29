@@ -335,7 +335,7 @@ public class MigrationUtils {
     public static void waitForTaskToFinish(CloseableHttpClient httpClient, String esAddress, String taskId, MigrationContext migrationContext) throws IOException {
         while (true) {
             final JSONObject status = new JSONObject(
-                    HttpUtils.executeGetRequest(httpClient, esAddress + "/_tasks/" + taskId + "?wait_for_completion=true&timeout=15s",
+                    HttpUtils.executeGetRequest(httpClient, esAddress + "/_tasks/" + taskId,
                             null));
             if (status.has("completed") && status.getBoolean("completed")) {
                 if (migrationContext != null) {
@@ -353,6 +353,11 @@ public class MigrationUtils {
                 migrationContext.printMessage("Waiting for Task " + taskId + " to complete");
             } else {
                 LOGGER.info("Waiting for Task {} to complete", taskId);
+            }
+            try {
+                Thread.sleep(5000);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
             }
         }
     }
