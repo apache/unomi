@@ -25,6 +25,7 @@ MigrationContext context = migrationContext
 def jsonSlurper = new JsonSlurper()
 String searchScopesRequest = MigrationUtils.resourceAsString(bundleContext,"requestBody/2.0.0/scope_search.json")
 String saveScopeRequestBulk = MigrationUtils.resourceAsString(bundleContext, "requestBody/2.0.0/scope_save_bulk.ndjson")
+String searchScopeById = MigrationUtils.resourceAsString(bundleContext, "requestBody/2.0.0/scope_search_by_item_id.json")
 String esAddress = context.getConfigString("esAddress")
 String indexPrefix = context.getConfigString("indexPrefix")
 String scopeIndex = indexPrefix + "-scope"
@@ -52,20 +53,22 @@ context.performMigrationStep("2.0.0-create-scopes-from-existing-events", () -> {
             bucket -> {
                 // Filter empty scope from existing events
                 if (bucket.key) {
+                    def scopeKey = bucket.key.replaceAll(" ", "-")
                     // check that the scope doesn't already exists
                     def scopeAlreadyExists = false
                     try {
-                        def existingScope = jsonSlurper.parseText(HttpUtils.executeGetRequest(context.getHttpClient(), esAddress + "/" + scopeIndex + "/_doc/" + bucket.key, null));
-                        scopeAlreadyExists = existingScope.found
+                        context.printMessage("Check if " + scopeKey + " exists")
+                        def existingScope = jsonSlurper.parseText(HttpUtils.executePostRequest(context.getHttpClient(), esAddress + "/" + scopeIndex + "/_search/", searchScopeById.replace("##scope##", scopeKey), null));
+                        scopeAlreadyExists = existingScope.hits.total.value > 0
                     } catch (HttpRequestException e) {
                         // can happen in case response code > 400 due to item not exist in ElasticSearch
                     }
 
                     if (!scopeAlreadyExists) {
-                        context.printMessage("Scope: " + bucket.key + " will be created")
-                        bulkSaveRequest.append(saveScopeRequestBulk.replace("##scope##", bucket.key))
+                        context.printMessage("Scope: " + scopeKey + " will be created")
+                        bulkSaveRequest.append(saveScopeRequestBulk.replace("##scope##", scopeKey))
                     } else {
-                        context.printMessage("Scope: " + bucket.key + " already exists, won't be created")
+                        context.printMessage("Scope: " + scopeKey + " already exists, won't be created")
                     }
                 }
             }

@@ -1,0 +1,8 @@
+{
+  "query": {
+    "size": 1,
+    "term": {
+      "itemId": "##scope##"
+    }
+  }
+}
