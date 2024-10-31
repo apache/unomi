@@ -25,6 +25,7 @@ MigrationContext context = migrationContext
 def jsonSlurper = new JsonSlurper()
 String searchScopesRequest = MigrationUtils.resourceAsString(bundleContext,"requestBody/2.0.0/scope_search.json")
 String saveScopeRequestBulk = MigrationUtils.resourceAsString(bundleContext, "requestBody/2.0.0/scope_save_bulk.ndjson")
+String searchScopeById = MigrationUtils.resourceAsString(bundleContext, "requestBody/2.0.0/scope_search_by_item_id.json")
 String esAddress = context.getConfigString("esAddress")
 String indexPrefix = context.getConfigString("indexPrefix")
 String scopeIndex = indexPrefix + "-scope"
@@ -55,8 +56,9 @@ context.performMigrationStep("2.0.0-create-scopes-from-existing-events", () -> {
                     // check that the scope doesn't already exists
                     def scopeAlreadyExists = false
                     try {
-                        def existingScope = jsonSlurper.parseText(HttpUtils.executeGetRequest(context.getHttpClient(), esAddress + "/" + scopeIndex + "/_doc/" + bucket.key, null));
-                        scopeAlreadyExists = existingScope.found
+                        context.printMessage("Check if " + bucket.key + " exists")
+                        def existingScope = jsonSlurper.parseText(HttpUtils.executePostRequest(context.getHttpClient(), esAddress + "/" + scopeIndex + "/_search/", searchScopeById.replace("##scope##", bucket.key), null));
+                        scopeAlreadyExists = existingScope.hits.total.value > 0
                     } catch (HttpRequestException e) {
                         // can happen in case response code > 400 due to item not exist in ElasticSearch
                     }
