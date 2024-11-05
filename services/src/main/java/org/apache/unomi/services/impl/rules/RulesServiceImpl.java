@@ -355,7 +355,7 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
 
     public Set<Metadata> getRuleMetadatas() {
         Set<Metadata> metadatas = new HashSet<Metadata>();
-        for (Rule rule : persistenceService.getAllItems(Rule.class, 0, 50, null).getList()) {
+        for (Rule rule : allRules) {
             metadatas.add(rule.getMetadata());
         }
         return metadatas;

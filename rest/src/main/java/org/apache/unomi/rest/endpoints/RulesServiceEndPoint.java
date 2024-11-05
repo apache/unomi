@@ -66,7 +66,7 @@ public class RulesServiceEndPoint {
 
     /**
      * Retrieves the metadata for all known rules.
-     *
+     * Note that it only includes the rules in memory, not those persisted in storage.
      * @return the Set of known metadata
      */
     @GET
