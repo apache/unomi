@@ -49,31 +49,28 @@ public class HealthCheckService {
     @Reference
     protected HttpService httpService;
 
-    @Reference(cardinality = ReferenceCardinality.MANDATORY, updated = "updated")
     private HealthCheckConfig config;
 
     public HealthCheckService() {
         LOGGER.info("Building healthcheck service...");
     }
 
-    public void setConfig(HealthCheckConfig config) {
-        this.config = config;
-    }
-
     @Activate
     public void activate() throws ServletException, NamespaceException {
-        if (config.isEnabled()) {
-            LOGGER.info("Activating healthcheck service...");
-            executor = Executors.newSingleThreadExecutor();
-            httpService.registerServlet("/health/check", new HealthCheckServlet(this), null,
-                    new HealthCheckHttpContext(config.get(CONFIG_AUTH_REALM)));
-            this.registered = true;
-        } else {
-            LOGGER.info("Healthcheck service is disabled");
+        LOGGER.info("Activating healthcheck service...");
+        executor = Executors.newSingleThreadExecutor();
+        if (!registered) {
+            setConfig(config);
         }
     }
 
-    public void updated() throws ServletException, NamespaceException {
+    @Reference(service = HealthCheckConfig.class, policy = ReferencePolicy.DYNAMIC, updated = "setConfig")
+    private void setConfig(HealthCheckConfig config) throws ServletException, NamespaceException {
+        this.config = config;
+        if (httpService == null ) {
+            LOGGER.info("Healthcheck config with {} entrie(s) did not update the service as not fully started yet.", config.getSize());
+            return;
+        }
         if (config.isEnabled()) {
             LOGGER.info("Updating healthcheck service...");
             if (registered) {
@@ -84,8 +81,14 @@ public class HealthCheckService {
                     new HealthCheckHttpContext(config.get(CONFIG_AUTH_REALM)));
             registered = true;
         } else {
+            httpService.unregister("/health/check");
+            registered = false;
             LOGGER.info("Healthcheck service is disabled");
         }
+    }
+
+    private void unsetConfig(HealthCheckConfig config) {
+        this.config = null;
     }
 
     @Deactivate
@@ -112,7 +115,7 @@ public class HealthCheckService {
     }
 
     public List<HealthCheckResponse> check() throws RejectedExecutionException {
-        if (config.isEnabled()) {
+        if (config !=null && config.isEnabled()) {
             LOGGER.debug("Health check called");
             if (busy) {
                 throw new RejectedExecutionException("Health check already in progress");
