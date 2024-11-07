@@ -13,6 +13,7 @@ jobs:
   unit-tests:
     name: Execute unit tests
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
     - uses: actions/checkout@v4
     - name: Set up JDK 11

@@ -65,6 +65,10 @@ public class HealthCheckConfig {
         return this.config.get(configKey);
     }
 
+    public int getSize() {
+        return this.config.size();
+    }
+
     public boolean isEnabled() {
         return enabled;
     }
