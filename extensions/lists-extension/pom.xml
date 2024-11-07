@@ -28,7 +28,7 @@
     <parent>
         <groupId>org.apache.unomi</groupId>
         <artifactId>unomi-extensions</artifactId>
-        <version>2.6.0-SNAPSHOT</version>
+        <version>2.6.0</version>
     </parent>
 
     <artifactId>cxs-lists-extension</artifactId>
