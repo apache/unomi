@@ -272,7 +272,7 @@ public class BundleWatcherImpl implements SynchronousBundleListener, ServiceList
         if (Boolean.parseBoolean(bundleContext.getProperty("org.apache.unomi.graphql.feature.activated"))) {
             featuresToInstall.add(CDP_GRAPHQL_FEATURE);
             requiredBundlesFromFeatures.put("org.apache.unomi.cdp-graphql-api-impl", false);
-            requiredBundlesFromFeatures.put("org.apache.unomi.graphql-playground", false);
+            requiredBundlesFromFeatures.put("org.apache.unomi.graphql-ui", false);
         }
     }
 

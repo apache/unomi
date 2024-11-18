@@ -24,9 +24,9 @@
         <version>2.6.1-SNAPSHOT</version>
     </parent>
 
-    <artifactId>unomi-graphql-playground</artifactId>
-    <name>Apache Unomi :: GraphQL API :: GraphQL Playground</name>
-    <description>An integrated GraphQL playground UI</description>
+    <artifactId>unomi-graphql-ui</artifactId>
+    <name>Apache Unomi :: GraphQL API :: GraphQL UI</name>
+    <description>An integrated GraphQL UI</description>
     <packaging>bundle</packaging>
 
     <properties>
@@ -100,7 +100,7 @@
                 <extensions>true</extensions>
                 <configuration>
                     <instructions>
-                        <_wab>src/main/webapp,target/javascript</_wab>
+                        <_wab>src/main/webapp,target/assets</_wab>
                         <Embed-Dependency>*;scope=compile|runtime</Embed-Dependency>
                         <Import-Package>
                             *
