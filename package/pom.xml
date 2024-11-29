@@ -334,7 +334,7 @@
                 </executions>
                 <configuration>
                     <startupBundles>
-                        <bundle>mvn:org.apache.unomi/log4j-extension/2.6.0-SNAPSHOT</bundle>
+                        <bundle>mvn:org.apache.unomi/log4j-extension/${project.version}</bundle>
                     </startupBundles>
                     <installedFeatures>
                         <feature>wrapper</feature>
