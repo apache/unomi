@@ -28,7 +28,7 @@ public interface UnomiManagementService {
      * This method will start Apache Unomi
      * @throws BundleException if there was an error starting Unomi's bundles
      */
-    void startUnomi() throws BundleException;
+    void startUnomi(String selectedPersistenceImplementation) throws BundleException;
 
     /**
      * This method will stop Apache Unomi

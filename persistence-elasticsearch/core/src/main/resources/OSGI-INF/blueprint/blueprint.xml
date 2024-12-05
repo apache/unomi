@@ -93,11 +93,7 @@
         <property name="scriptExecutor" ref="scriptExecutor" />
     </bean>
 
-    <bean id="conditionEvaluatorDispatcherImpl"
-          class="org.apache.unomi.persistence.elasticsearch.conditions.ConditionEvaluatorDispatcher">
-        <property name="metricsService" ref="metricsService" />
-        <property name="scriptExecutor" ref="scriptExecutor" />
-    </bean>
+    <reference id="conditionEvaluatorDispatcherImpl" interface="org.apache.unomi.persistence.spi.conditions.ConditionEvaluatorDispatcher" />
 
     <bean id="elasticSearchPersistenceServiceImpl"
           class="org.apache.unomi.persistence.elasticsearch.ElasticSearchPersistenceServiceImpl"

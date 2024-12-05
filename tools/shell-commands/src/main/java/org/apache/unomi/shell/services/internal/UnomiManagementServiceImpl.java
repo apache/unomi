@@ -28,23 +28,26 @@ import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 
 /**
+ * TODO We really should replace this with Karaf Features that we activate. We could still keep the starting mechanism
+ * to work properly with the migration process but we should remove the hardcoded list of packages in this class.
  * @author dgaillard
  */
 @Component(service = UnomiManagementService.class, immediate = true)
 public class UnomiManagementServiceImpl implements UnomiManagementService {
 
     private BundleContext bundleContext;
-    
+
     @Reference(cardinality = ReferenceCardinality.MANDATORY)
     private MigrationService migrationService;
-    
+
     private final List<String> bundleSymbolicNames = new ArrayList<>();
     private List<String> reversedBundleSymbolicNames;
+    private Map<String,String> persistenceImplementations = new HashMap<>();
+    private Map<String,String> persistenceConditions = new HashMap<>();
+    private String selectedPersistenceImplementation = "elasticsearch";
 
     @Activate
     public void init(ComponentContext componentContext) throws Exception {
@@ -57,13 +60,24 @@ public class UnomiManagementServiceImpl implements UnomiManagementService {
 
         if (StringUtils.isNotBlank(bundleContext.getProperty("unomi.autoStart")) &&
                 bundleContext.getProperty("unomi.autoStart").equals("true")) {
-            startUnomi();
+            startUnomi(selectedPersistenceImplementation);
         }
     }
 
     @Override
-    public void startUnomi() throws BundleException {
+    public void startUnomi(String selectedPersistenceImplementation) throws BundleException {
+        if (selectedPersistenceImplementation != null) {
+            this.selectedPersistenceImplementation = selectedPersistenceImplementation;
+        }
         for (String bundleSymbolicName : bundleSymbolicNames) {
+            if (bundleSymbolicName.equals("${persistenceImplementationName}")) {
+                bundleSymbolicName = persistenceImplementations.get(selectedPersistenceImplementation);
+            } else if (bundleSymbolicName.equals("${persistenceConditionsName}")) {
+                bundleSymbolicName = persistenceConditions.get(selectedPersistenceImplementation);
+                if (bundleSymbolicName == null) {
+                    continue;
+                }
+            }
             for (Bundle bundle : bundleContext.getBundles()) {
                 if (bundle.getSymbolicName().equals(bundleSymbolicName)) {
                     if (bundle.getState() == Bundle.RESOLVED) {
@@ -78,6 +92,14 @@ public class UnomiManagementServiceImpl implements UnomiManagementService {
     @Override
     public void stopUnomi() throws BundleException {
         for (String bundleSymbolicName : reversedBundleSymbolicNames) {
+            if (bundleSymbolicName.equals("${persistenceImplementationName}")) {
+                bundleSymbolicName = persistenceImplementations.get(selectedPersistenceImplementation);
+            } else if (bundleSymbolicName.equals("${persistenceConditionsName}")) {
+                bundleSymbolicName = persistenceConditions.get(selectedPersistenceImplementation);
+                if (bundleSymbolicName == null) {
+                    continue;
+                }
+            }
             for (Bundle bundle : bundleContext.getBundles()) {
                 if (bundle.getSymbolicName().equals(bundleSymbolicName)) {
                     if (bundle.getState() == Bundle.ACTIVE) {
@@ -90,6 +112,11 @@ public class UnomiManagementServiceImpl implements UnomiManagementService {
     }
 
     public void initReversedBundleSymbolicNames() {
+        persistenceImplementations.clear();
+        persistenceImplementations.put("elasticsearch", "org.apache.unomi.persistence-elasticsearch-core");
+        persistenceImplementations.put("opensearch", "org.apache.unomi.persistence-opensearch-core");
+        persistenceConditions.clear();
+        persistenceConditions.put("opensearch", "org.apache.unomi.persistence-opensearch-conditions");
         bundleSymbolicNames.clear();
         bundleSymbolicNames.add("org.apache.unomi.lifecycle-watcher");
         bundleSymbolicNames.add("org.apache.unomi.api");
@@ -97,7 +124,8 @@ public class UnomiManagementServiceImpl implements UnomiManagementService {
         bundleSymbolicNames.add("org.apache.unomi.scripting");
         bundleSymbolicNames.add("org.apache.unomi.metrics");
         bundleSymbolicNames.add("org.apache.unomi.persistence-spi");
-        bundleSymbolicNames.add("org.apache.unomi.persistence-elasticsearch-core");
+        bundleSymbolicNames.add("${persistenceImplementationName}");
+        bundleSymbolicNames.add("${persistenceConditionsName}");
         bundleSymbolicNames.add("org.apache.unomi.services");
         bundleSymbolicNames.add("org.apache.unomi.cxs-lists-extension-services");
         bundleSymbolicNames.add("org.apache.unomi.cxs-lists-extension-rest");

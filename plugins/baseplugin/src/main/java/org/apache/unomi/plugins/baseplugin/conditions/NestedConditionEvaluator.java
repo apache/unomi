@@ -22,8 +22,8 @@ import org.apache.unomi.api.Item;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.Session;
 import org.apache.unomi.api.conditions.Condition;
-import org.apache.unomi.persistence.elasticsearch.conditions.ConditionEvaluator;
-import org.apache.unomi.persistence.elasticsearch.conditions.ConditionEvaluatorDispatcher;
+import org.apache.unomi.persistence.spi.conditions.ConditionEvaluator;
+import org.apache.unomi.persistence.spi.conditions.ConditionEvaluatorDispatcher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,7 +31,7 @@ import java.util.*;
 
 public class NestedConditionEvaluator implements ConditionEvaluator {
 
-    private static final Logger logger = LoggerFactory.getLogger(NestedConditionEvaluator.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(NestedConditionEvaluator.class.getName());
 
     PropertyConditionEvaluator propertyConditionEvaluator;
 
@@ -67,7 +67,7 @@ public class NestedConditionEvaluator implements ConditionEvaluator {
                 }
             }
         } catch (Exception e) {
-            logger.error("Failed to evaluated nested condition", e);
+            LOGGER.error("Failed to evaluated nested condition", e);
             return false;
         }
         return false;

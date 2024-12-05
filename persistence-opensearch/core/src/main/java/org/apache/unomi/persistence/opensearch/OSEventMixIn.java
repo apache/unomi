@@ -14,13 +14,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package org.apache.unomi.persistence.opensearch;
 
-/* Handle login events */
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
-ctx._source.put('scope', 'systemsite');
-if (ctx._source.source != null) {
-    ctx._source.source.put('scope', 'systemsite');
-}
-if (ctx._source.target != null) {
-    ctx._source.target.put('scope', 'systemsite');
+/**
+ * This mixin is used in OSCustomObjectMapper to prevent the persistent parameter from being registered in ES
+ */
+public abstract class OSEventMixIn {
+
+    public OSEventMixIn() { }
+
+    @JsonIgnore abstract boolean isPersistent();
 }

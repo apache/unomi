@@ -22,9 +22,9 @@ import org.apache.unomi.api.Item;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.services.DefinitionsService;
-import org.apache.unomi.persistence.elasticsearch.conditions.ConditionEvaluator;
-import org.apache.unomi.persistence.elasticsearch.conditions.ConditionEvaluatorDispatcher;
 import org.apache.unomi.persistence.spi.PersistenceService;
+import org.apache.unomi.persistence.spi.conditions.ConditionEvaluator;
+import org.apache.unomi.persistence.spi.conditions.ConditionEvaluatorDispatcher;
 import org.apache.unomi.scripting.ScriptExecutor;
 
 import java.util.ArrayList;

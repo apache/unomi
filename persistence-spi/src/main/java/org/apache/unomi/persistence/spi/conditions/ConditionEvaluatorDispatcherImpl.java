@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.apache.unomi.persistence.elasticsearch.conditions;
+package org.apache.unomi.persistence.spi.conditions;
 
 import org.apache.unomi.api.Item;
 import org.apache.unomi.api.conditions.Condition;
@@ -32,8 +32,8 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * Entry point for condition evaluation. Will dispatch to all evaluators.
  */
-public class ConditionEvaluatorDispatcher {
-    private static final Logger logger = LoggerFactory.getLogger(ConditionEvaluatorDispatcher.class.getName());
+public class ConditionEvaluatorDispatcherImpl implements ConditionEvaluatorDispatcher {
+    private static final Logger LOGGER = LoggerFactory.getLogger(ConditionEvaluatorDispatcherImpl.class.getName());
 
     private Map<String, ConditionEvaluator> evaluators = new ConcurrentHashMap<>();
 
@@ -48,18 +48,22 @@ public class ConditionEvaluatorDispatcher {
         this.scriptExecutor = scriptExecutor;
     }
 
+    @Override
     public void addEvaluator(String name, ConditionEvaluator evaluator) {
         evaluators.put(name, evaluator);
     }
 
+    @Override
     public void removeEvaluator(String name) {
         evaluators.remove(name);
     }
 
+    @Override
     public boolean eval(Condition condition, Item item) {
         return eval(condition, item, new HashMap<String, Object>());
     }
 
+    @Override
     public boolean eval(Condition condition, Item item, Map<String, Object> context) {
         String conditionEvaluatorKey = condition.getConditionType().getConditionEvaluator();
         if (condition.getConditionType().getParentCondition() != null) {
@@ -87,7 +91,7 @@ public class ConditionEvaluatorDispatcher {
                     }
                 }.runWithTimer();
             } catch (Exception e) {
-                logger.error("Error executing condition evaluator with key=" + conditionEvaluatorKey, e);
+                LOGGER.error("Error executing condition evaluator with key=" + conditionEvaluatorKey, e);
             }
         }
 

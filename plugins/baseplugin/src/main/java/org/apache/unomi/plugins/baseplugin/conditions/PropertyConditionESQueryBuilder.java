@@ -19,7 +19,7 @@ package org.apache.unomi.plugins.baseplugin.conditions;
 
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.unomi.api.conditions.Condition;
-import org.apache.unomi.persistence.elasticsearch.conditions.ConditionContextHelper;
+import org.apache.unomi.persistence.spi.conditions.ConditionContextHelper;
 import org.apache.unomi.persistence.elasticsearch.conditions.ConditionESQueryBuilder;
 import org.apache.unomi.persistence.elasticsearch.conditions.ConditionESQueryBuilderDispatcher;
 import org.elasticsearch.common.geo.GeoPoint;

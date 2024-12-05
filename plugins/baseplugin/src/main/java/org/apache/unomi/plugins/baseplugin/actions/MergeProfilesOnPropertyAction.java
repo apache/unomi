@@ -35,7 +35,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 public class MergeProfilesOnPropertyAction implements ActionExecutor {
-    private static final Logger logger = LoggerFactory.getLogger(MergeProfilesOnPropertyAction.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(MergeProfilesOnPropertyAction.class.getName());
 
     private ProfileService profileService;
     private PersistenceService persistenceService;
@@ -135,7 +135,7 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
                     }
                 }
             } catch (Exception e) {
-                logger.error("unable to execute callback action, profile and session will not be saved", e);
+                LOGGER.error("unable to execute callback action, profile and session will not be saved", e);
                 return false;
             }
             return true;
@@ -192,7 +192,7 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
             eventProfile.getSystemProperties().put(mergePropName, mergePropValue);
         }
 
-        logger.info("Different users, switch to {}", eventProfile.getItemId());
+        LOGGER.info("Different users, switch to {}", eventProfile.getItemId());
         // At the end of the merge, we must set the merged profile as profile event to process other Actions
         event.setProfileId(eventProfile.getItemId());
         event.setProfile(eventProfile);

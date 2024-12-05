@@ -61,15 +61,16 @@
         <karaf.version>4.2.15</karaf.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <cxf.version>3.3.11</cxf.version>
-        <version.jackson.core>2.11.4</version.jackson.core>
-        <version.jackson.databind>2.11.4</version.jackson.databind>
-        <version.jackson.jaxb>2.11.4</version.jackson.jaxb>
+        <version.jackson.core>2.13.5</version.jackson.core>
+        <version.jackson.databind>2.13.5</version.jackson.databind>
+        <version.jackson.jaxb>2.13.5</version.jackson.jaxb>
         <version.karaf>4.2.15</version.karaf>
         <version.karaf.cellar>4.2.1</version.karaf.cellar>
         <version.pax.exam>4.13.5</version.pax.exam>
         <elasticsearch.version>7.4.2</elasticsearch.version>
         <elasticsearch.test.version>7.11.0</elasticsearch.test.version>
         <lucene.version>8.2.0</lucene.version>
+        <opensearch.version>2.18.0</opensearch.version>
         <groovy.version>4.0.21</groovy.version>
         <networknt.version>1.4.0</networknt.version>
         <bean.validation.version>1.1.0.Final</bean.validation.version>
@@ -99,6 +100,7 @@
         <jna.version>4.5.0</jna.version>
         <httpclient-osgi.version>4.5.14</httpclient-osgi.version>
         <httpcore-osgi.version>4.4.16</httpcore-osgi.version>
+        <guava.version>33.3.1-jre</guava.version>
 
         <node.version>v16.20.2</node.version>
         <yarn.version>v1.22.19</yarn.version>
@@ -992,6 +994,7 @@
         <module>persistence-spi</module>
         <module>lifecycle-watcher</module>
         <module>persistence-elasticsearch</module>
+        <module>persistence-opensearch</module>
         <module>services</module>
         <module>rest</module>
         <module>graphql</module>
@@ -1020,7 +1023,7 @@
                 <plugin>
                     <groupId>org.apache.felix</groupId>
                     <artifactId>maven-bundle-plugin</artifactId>
-                    <version>4.2.1</version>
+                    <version>5.1.1</version>
                     <extensions>true</extensions>
                     <configuration>
                         <instructions>
@@ -1177,6 +1180,14 @@
                 </configuration>
             </plugin>
         </plugins>
+
+        <extensions>
+            <extension>
+                <groupId>org.apache.maven.extensions</groupId>
+                <artifactId>maven-build-cache-extension</artifactId>
+                <version>1.2.0</version>
+            </extension>
+        </extensions>
 
     </build>
 

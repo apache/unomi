@@ -194,6 +194,17 @@
                                 </artifactItem>
                                 <artifactItem>
                                     <groupId>org.apache.unomi</groupId>
+                                    <artifactId>unomi-persistence-opensearch-core</artifactId>
+                                    <version>${project.version}</version>
+                                    <classifier>opensearchcfg</classifier>
+                                    <type>cfg</type>
+                                    <outputDirectory>
+                                        ${project.build.directory}/assembly/etc
+                                    </outputDirectory>
+                                    <destFileName>org.apache.unomi.persistence.opensearch.cfg</destFileName>
+                                </artifactItem>
+                                <artifactItem>
+                                    <groupId>org.apache.unomi</groupId>
                                     <artifactId>unomi-services</artifactId>
                                     <version>${project.version}</version>
                                     <classifier>hazelcastconfig</classifier>
@@ -333,6 +344,9 @@
                     </execution>
                 </executions>
                 <configuration>
+                    <startupBundles>
+                        <bundle>mvn:org.apache.unomi/log4j-extension/2.6.0-SNAPSHOT</bundle>
+                    </startupBundles>
                     <installedFeatures>
                         <feature>wrapper</feature>
                         <feature>cxf-commands</feature>

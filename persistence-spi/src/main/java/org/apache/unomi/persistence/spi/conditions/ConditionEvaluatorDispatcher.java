@@ -14,19 +14,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.apache.unomi.persistence.elasticsearch.conditions;
+package org.apache.unomi.persistence.spi.conditions;
 
 import org.apache.unomi.api.Item;
 import org.apache.unomi.api.conditions.Condition;
 
 import java.util.Map;
 
-/**
- * Condition evaluator interface
- */
-public interface ConditionEvaluator {
+public interface ConditionEvaluatorDispatcher {
+    void addEvaluator(String name, ConditionEvaluator evaluator);
 
-    boolean eval(Condition condition, Item item, Map<String, Object> context, ConditionEvaluatorDispatcher dispatcher);
+    void removeEvaluator(String name);
 
+    boolean eval(Condition condition, Item item);
+
+    boolean eval(Condition condition, Item item, Map<String, Object> context);
 }

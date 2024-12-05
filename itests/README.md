@@ -56,6 +56,20 @@ You can run the integration tests along with the build by doing:
     
 from the project's root directory
 
+### Search Engine Selection
+
+The integration tests can be run against either ElasticSearch (default) or OpenSearch:
+
+```bash
+# Run with ElasticSearch (default)
+mvn clean install -P integration-tests -Duse.opensearch=false
+
+# Run with OpenSearch 
+mvn clean install -P integration-tests -Duse.opensearch=true
+```
+
+## Debugging integration tests
+
 If you want to run the tests with a debugger, you can use the `it.karaf.debug` system property.
 Here's an example:
 

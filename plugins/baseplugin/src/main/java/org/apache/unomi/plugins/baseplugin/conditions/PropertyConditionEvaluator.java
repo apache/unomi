@@ -26,9 +26,9 @@ import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.plugins.baseplugin.conditions.accessors.HardcodedPropertyAccessor;
 import org.apache.unomi.scripting.ExpressionFilterFactory;
 import org.apache.unomi.scripting.SecureFilteringClassLoader;
-import org.apache.unomi.persistence.elasticsearch.conditions.ConditionContextHelper;
-import org.apache.unomi.persistence.elasticsearch.conditions.ConditionEvaluator;
-import org.apache.unomi.persistence.elasticsearch.conditions.ConditionEvaluatorDispatcher;
+import org.apache.unomi.persistence.spi.conditions.ConditionContextHelper;
+import org.apache.unomi.persistence.spi.conditions.ConditionEvaluator;
+import org.apache.unomi.persistence.spi.conditions.ConditionEvaluatorDispatcher;
 import org.apache.unomi.persistence.spi.PropertyHelper;
 import org.elasticsearch.ElasticsearchParseException;
 import org.elasticsearch.common.joda.Joda;
@@ -49,7 +49,7 @@ import java.util.stream.Collectors;
  */
 public class PropertyConditionEvaluator implements ConditionEvaluator {
 
-    private static final Logger logger = LoggerFactory.getLogger(PropertyConditionEvaluator.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(PropertyConditionEvaluator.class.getName());
 
     private static final SimpleDateFormat yearMonthDayDateFormat = new SimpleDateFormat("yyyyMMdd");
 
@@ -71,7 +71,7 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
 
     public void init() {
         if (!useOGNLScripting) {
-            logger.info("OGNL Script disabled, properties using OGNL won't be evaluated");
+            LOGGER.info("OGNL Script disabled, properties using OGNL won't be evaluated");
         }
     }
 
@@ -91,7 +91,8 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
         } else if (expectedValueDateExpr != null) {
             return getDate(actualValue).compareTo(getDate(expectedValueDateExpr));
         } else {
-            return actualValue.toString().compareTo(expectedValue);
+            // We use toLowerCase here to match the behavior of the analyzer configuration in the persistence configuration
+            return actualValue.toString().toLowerCase().compareTo(expectedValue);
         }
     }
 
@@ -187,7 +188,7 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
                 actualValue = getPropertyValue(item, name);
                 time = System.nanoTime() - time;
                 if (time > 5000000L) {
-                    logger.info("eval took {} ms for {} {}", time / 1000000L, item.getClass().getName(), name);
+                    LOGGER.info("eval took {} ms for {} {}", time / 1000000L, item.getClass().getName(), name);
                 }
             } catch (NullPointerException e) {
                 // property not found
@@ -196,10 +197,8 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
                 if (!(e instanceof OgnlException)
                         || (!StringUtils.startsWith(e.getMessage(),
                         "source is null for getProperty(null"))) {
-                    logger.warn("Error evaluating value for {} {}. See debug level for more information", item.getClass().getName(), name);
-                    if (logger.isDebugEnabled()) {
-                        logger.debug("Error evaluating value for {} {}", item.getClass().getName(), name, e);
-                    }
+                    LOGGER.warn("Error evaluating value for {} {}. See debug level for more information", item.getClass().getName(), name);
+                    if (LOGGER.isDebugEnabled()) LOGGER.debug("Error evaluating value for {} {}", item.getClass().getName(), name, e);
                 }
                 actualValue = null;
             }
@@ -336,10 +335,8 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
 
     protected Object getOGNLPropertyValue(Item item, String expression) throws Exception {
         if (expressionFilterFactory.getExpressionFilter("ognl").filter(expression) == null) {
-            logger.warn("OGNL expression filtered because not allowed on item: {}. See debug log level for more information", item.getClass().getName());
-            if (logger.isDebugEnabled()) {
-                logger.debug("OGNL expression filtered because not allowed: {}", expression);
-            }
+            LOGGER.warn("OGNL expression filtered because not allowed on item: {}. See debug log level for more information", item.getClass().getName());
+            LOGGER.debug("OGNL expression filtered because not allowed: {}", expression);
             return null;
         }
         OgnlContext ognlContext = getOgnlContext(secureFilteringClassLoader);
@@ -348,11 +345,8 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
             try {
                 return accessor.get(ognlContext, item);
             } catch (Throwable t) {
-                logger.error("Error evaluating expression on item {}. See debug level for more information", item.getClass().getName());
-                if (logger.isDebugEnabled()) {
-                    logger.debug("Error evaluating expression {} on item {}.", expression, item.getClass().getName(), t);
-                }
-
+                LOGGER.error("Error evaluating expression on item {}. See debug level for more information", item.getClass().getName());
+                LOGGER.debug("Error evaluating expression {} on item {}.", expression, item.getClass().getName(), t);
                 return null;
             }
         }
@@ -391,10 +385,8 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
                             accessible = Modifier.isPublic(modifiers);
                         }
                         if (!accessible) {
-                            logger.warn("OGNL security filtered target, member for property. See debug log level for more information");
-                            if (logger.isDebugEnabled()) {
-                                logger.debug("OGNL security filtered: Target {} and member {} for property {}. Not allowed", target, member, propertyName);
-                            }
+                            LOGGER.warn("OGNL security filtered target, member for property. See debug log level for more information");
+                            LOGGER.debug("OGNL security filtered: Target {} and member {} for property {}. Not allowed", target, member, propertyName);
                         }
                         return accessible;
                     }
@@ -426,23 +418,23 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
             if (accessor != null) {
                 expressions.put(expression, accessor);
             } else {
-                logger.warn("Unable to compile expression for {}. See debug log level for more information", clazz);
-                if (logger.isDebugEnabled()) {
-                    logger.debug("Unable to compile expression: {} for: {}", expression, clazz);
+                if (LOGGER.isDebugEnabled()) {
+                    LOGGER.debug("Unable to compile expression: {} for: {}", expression, clazz);
+                } else {
+                    LOGGER.warn("Unable to compile expression for {}. See debug log level for more information", clazz);
                 }
             }
-            time = System.nanoTime() - time;
-            if (logger.isDebugEnabled()) {
-                logger.debug("Expression compilation for item={} expression={} took {}", item.getClass().getName(), expression, time / 1000000L);
-            } else if (logger.isInfoEnabled()) {
-                logger.info("Expression compilation for item={} took {}. See debug log level for more information", item.getClass().getName(), time / 1000000L);
+            if (LOGGER.isDebugEnabled()) {
+                LOGGER.debug("Expression compilation for item={} expression={} took {}", item.getClass().getName(), expression, (System.nanoTime() - time) / 1000000L);
+            } else {
+                LOGGER.info("Expression compilation for item={} took {}. See debug log level for more information", item.getClass().getName(), (System.nanoTime() - time) / 1000000L);
             }
         }
 
         return accessor;
     }
 
-    protected static Date getDate(Object value) {
+    public static Date getDate(Object value) {
         if (value == null) {
             return null;
         }
@@ -453,10 +445,8 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
             try {
                 return Date.from(parser.parse(value.toString(), System::currentTimeMillis));
             } catch (ElasticsearchParseException e) {
-                logger.warn("unable to parse date. See debug log level for full stacktrace");
-                if (logger.isDebugEnabled()) {
-                    logger.debug("unable to parse date {}", value.toString(), e);
-                }
+                LOGGER.warn("unable to parse date. See debug log level for full stacktrace");
+                LOGGER.debug("unable to parse date {}", value, e);
             }
         }
         return null;

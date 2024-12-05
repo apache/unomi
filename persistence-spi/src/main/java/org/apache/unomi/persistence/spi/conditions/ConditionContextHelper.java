@@ -15,10 +15,10 @@
  * limitations under the License.
  */
 
-package org.apache.unomi.persistence.elasticsearch.conditions;
+package org.apache.unomi.persistence.spi.conditions;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.logging.log4j.core.util.IOUtils;
 import org.apache.lucene.analysis.charfilter.MappingCharFilterFactory;
 import org.apache.lucene.analysis.util.ClasspathResourceLoader;
 import org.apache.unomi.api.conditions.Condition;
@@ -33,7 +33,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public class ConditionContextHelper {
-    private static final Logger logger = LoggerFactory.getLogger(ConditionContextHelper.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(ConditionContextHelper.class);
 
     private static MappingCharFilterFactory mappingCharFilterFactory;
     static {
@@ -132,7 +132,7 @@ public class ConditionContextHelper {
             try (StringReader stringReader = new StringReader(s); Reader foldedStringReader = mappingCharFilterFactory.create(stringReader)) {
                 return IOUtils.toString(foldedStringReader);
             } catch (IOException e) {
-                logger.error("Error folding to ASCII string " + s, e);
+                LOGGER.error("Error folding to ASCII string " + s, e);
             }
         }
         return null;
@@ -140,12 +140,14 @@ public class ConditionContextHelper {
 
     public static <T> Collection<T> foldToASCII(Collection<T> s) {
         if (s != null) {
-            return s.stream().map(o -> {
-                if (o instanceof String) {
-                    return (T) ConditionContextHelper.foldToASCII((String) o);
-                }
-                return o;
-            }).collect(Collectors.toCollection(ArrayList::new));
+            return s.stream()
+                    .map(o -> {
+                        if (o instanceof String) {
+                            return (T) ConditionContextHelper.foldToASCII((String) o);
+                        }
+                        return o;
+                    })
+                    .collect(Collectors.toList());
         }
         return null;
     }

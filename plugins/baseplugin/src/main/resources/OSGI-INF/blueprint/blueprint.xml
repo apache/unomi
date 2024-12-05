@@ -134,21 +134,21 @@
 
 
     <!-- Condition evaluators -->
-    <service interface="org.apache.unomi.persistence.elasticsearch.conditions.ConditionEvaluator">
+    <service interface="org.apache.unomi.persistence.spi.conditions.ConditionEvaluator">
         <service-properties>
             <entry key="conditionEvaluatorId" value="booleanConditionEvaluator"/>
         </service-properties>
         <bean class="org.apache.unomi.plugins.baseplugin.conditions.BooleanConditionEvaluator"/>
     </service>
 
-    <service interface="org.apache.unomi.persistence.elasticsearch.conditions.ConditionEvaluator">
+    <service interface="org.apache.unomi.persistence.spi.conditions.ConditionEvaluator">
         <service-properties>
             <entry key="conditionEvaluatorId" value="idsConditionEvaluator"/>
         </service-properties>
         <bean class="org.apache.unomi.plugins.baseplugin.conditions.IdsConditionEvaluator"/>
     </service>
 
-    <service interface="org.apache.unomi.persistence.elasticsearch.conditions.ConditionEvaluator">
+    <service interface="org.apache.unomi.persistence.spi.conditions.ConditionEvaluator">
         <service-properties>
             <entry key="conditionEvaluatorId" value="notConditionEvaluator"/>
         </service-properties>
@@ -158,27 +158,27 @@
     <bean id="propertyConditionEvaluator" class="org.apache.unomi.plugins.baseplugin.conditions.PropertyConditionEvaluator" init-method="init">
         <property name="usePropertyConditionOptimizations" value="${base.usePropertyConditionOptimizations}"/>
     </bean>
-    <service  interface="org.apache.unomi.persistence.elasticsearch.conditions.ConditionEvaluator" ref="propertyConditionEvaluator">
+    <service interface="org.apache.unomi.persistence.spi.conditions.ConditionEvaluator" ref="propertyConditionEvaluator">
         <service-properties>
             <entry key="conditionEvaluatorId" value="propertyConditionEvaluator"/>
         </service-properties>
     </service>
 
-    <service interface="org.apache.unomi.persistence.elasticsearch.conditions.ConditionEvaluator">
+    <service interface="org.apache.unomi.persistence.spi.conditions.ConditionEvaluator">
         <service-properties>
             <entry key="conditionEvaluatorId" value="matchAllConditionEvaluator"/>
         </service-properties>
         <bean class="org.apache.unomi.plugins.baseplugin.conditions.MatchAllConditionEvaluator"/>
     </service>
 
-    <service interface="org.apache.unomi.persistence.elasticsearch.conditions.ConditionEvaluator">
+    <service interface="org.apache.unomi.persistence.spi.conditions.ConditionEvaluator">
         <service-properties>
             <entry key="conditionEvaluatorId" value="geoLocationByPointSessionConditionEvaluator"/>
         </service-properties>
         <bean class="org.apache.unomi.plugins.baseplugin.conditions.GeoLocationByPointSessionConditionEvaluator"/>
     </service>
 
-    <service interface="org.apache.unomi.persistence.elasticsearch.conditions.ConditionEvaluator">
+    <service interface="org.apache.unomi.persistence.spi.conditions.ConditionEvaluator">
         <service-properties>
             <entry key="conditionEvaluatorId" value="sourceEventPropertyConditionEvaluator"/>
         </service-properties>
@@ -188,7 +188,7 @@
     </service>
 
     <service
-            interface="org.apache.unomi.persistence.elasticsearch.conditions.ConditionEvaluator">
+            interface="org.apache.unomi.persistence.spi.conditions.ConditionEvaluator">
         <service-properties>
             <entry key="conditionEvaluatorId" value="pastEventConditionEvaluator"/>
         </service-properties>
@@ -199,7 +199,7 @@
         </bean>
     </service>
 
-    <service interface="org.apache.unomi.persistence.elasticsearch.conditions.ConditionEvaluator">
+    <service interface="org.apache.unomi.persistence.spi.conditions.ConditionEvaluator">
         <service-properties>
             <entry key="conditionEvaluatorId" value="nestedConditionEvaluator"/>
         </service-properties>

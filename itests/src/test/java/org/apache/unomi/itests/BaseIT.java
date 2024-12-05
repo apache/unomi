@@ -19,6 +19,7 @@ package org.apache.unomi.itests;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.module.jaxb.JaxbAnnotationModule;
 import org.apache.commons.io.IOUtils;
@@ -122,8 +123,13 @@ public abstract class BaseIT extends KarafTestSupport {
     protected static final int DEFAULT_TRYING_TIMEOUT = 2000;
     protected static final int DEFAULT_TRYING_TRIES = 30;
 
+    protected static final String SEARCH_ENGINE_PROPERTY = "unomi.search.engine";
+    protected static final String SEARCH_ENGINE_ELASTICSEARCH = "elasticsearch";
+    protected static final String SEARCH_ENGINE_OPENSEARCH = "opensearch";
+
     protected final static ObjectMapper objectMapper;
     protected static boolean unomiStarted = false;
+    protected static String searchEngine = SEARCH_ENGINE_ELASTICSEARCH;
 
     static {
         objectMapper = new ObjectMapper();
@@ -166,7 +172,11 @@ public abstract class BaseIT extends KarafTestSupport {
 
         // Start Unomi if not already done
         if (!unomiStarted) {
-            executeCommand("unomi:start");
+            if (SEARCH_ENGINE_ELASTICSEARCH.equals(searchEngine)) {
+                executeCommand("unomi:start");
+            } else {
+                executeCommand("unomi:start opensearch");
+            }
             unomiStarted = true;
         }
 
@@ -196,7 +206,7 @@ public abstract class BaseIT extends KarafTestSupport {
         routerCamelContext = getOsgiService(IRouterCamelContext.class, 600000);
 
         // init httpClient
-        httpClient = initHttpClient();
+        httpClient = initHttpClient(getHttpClientCredentialProvider());
     }
 
     @After
@@ -259,6 +269,7 @@ public abstract class BaseIT extends KarafTestSupport {
                 systemProperty("org.apache.unomi.hazelcast.network.port").value("5701"),
                 systemProperty("org.apache.unomi.hazelcast.tcp-ip.members").value("127.0.0.1"),
                 systemProperty("org.apache.unomi.hazelcast.tcp-ip.interface").value("127.0.0.1"),
+                systemProperty("org.apache.unomi.healthcheck.enabled").value("true"),
 
                 logLevel(LogLevel.INFO),
                 keepRuntimeFolder(),
@@ -306,6 +317,9 @@ public abstract class BaseIT extends KarafTestSupport {
             karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.logger.customLogging.name", customLoggingParts[0]));
             karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.logger.customLogging.level", customLoggingParts[1]));
         }
+
+        searchEngine = System.getProperty(SEARCH_ENGINE_PROPERTY, SEARCH_ENGINE_ELASTICSEARCH);
+        System.out.println("Search Engine: " + searchEngine);
 
         return Stream.of(super.config(), karafOptions.toArray(new Option[karafOptions.size()])).flatMap(Stream::of).toArray(Option[]::new);
     }
@@ -546,18 +560,17 @@ public abstract class BaseIT extends KarafTestSupport {
     protected String resourceAsString(final String resource) {
         final java.net.URL url = bundleContext.getBundle().getResource(resource);
         try (InputStream stream = url.openStream()) {
-            return objectMapper.writeValueAsString(objectMapper.readTree(stream));
+            JsonNode node = objectMapper.readTree(stream);
+            String value = objectMapper.writeValueAsString(node);
+            return value;
         } catch (final Exception e) {
             throw new RuntimeException(e);
         }
     }
 
-    public static CloseableHttpClient initHttpClient() {
+    public static CloseableHttpClient initHttpClient(BasicCredentialsProvider credentialsProvider) {
         long requestStartTime = System.currentTimeMillis();
-        BasicCredentialsProvider credsProvider = null;
-        credsProvider = new BasicCredentialsProvider();
-        credsProvider.setCredentials(AuthScope.ANY, new UsernamePasswordCredentials(BASIC_AUTH_USER_NAME, BASIC_AUTH_PASSWORD));
-        HttpClientBuilder httpClientBuilder = HttpClients.custom().useSystemProperties().setDefaultCredentialsProvider(credsProvider);
+        HttpClientBuilder httpClientBuilder = HttpClients.custom().useSystemProperties().setDefaultCredentialsProvider(credentialsProvider);
 
         try {
             SSLContext sslContext = SSLContext.getInstance("SSL");
@@ -609,5 +622,34 @@ public abstract class BaseIT extends KarafTestSupport {
         } catch (IOException e) {
             LOGGER.error("Could not close httpClient: " + httpClient, e);
         }
+    }
+
+    public BasicCredentialsProvider getHttpClientCredentialProvider() {
+        BasicCredentialsProvider credsProvider = new BasicCredentialsProvider();
+        credsProvider.setCredentials(AuthScope.ANY, new UsernamePasswordCredentials(BASIC_AUTH_USER_NAME, BASIC_AUTH_PASSWORD));
+        return credsProvider;
+    }
+
+    /**
+     * @return true if ElasticSearch is the current search engine
+     */
+    protected boolean isElasticSearch() {
+        String searchEngine = System.getProperty(SEARCH_ENGINE_PROPERTY, SEARCH_ENGINE_ELASTICSEARCH);
+        return SEARCH_ENGINE_ELASTICSEARCH.equals(searchEngine);
+    }
+
+    /**
+     * @return true if OpenSearch is the current search engine
+     */
+    protected boolean isOpenSearch() {
+        String searchEngine = System.getProperty(SEARCH_ENGINE_PROPERTY, SEARCH_ENGINE_ELASTICSEARCH);
+        return SEARCH_ENGINE_OPENSEARCH.equals(searchEngine);
+    }
+
+    /**
+     * @return the current search engine name
+     */
+    protected String getCurrentSearchEngine() {
+        return System.getProperty(SEARCH_ENGINE_PROPERTY, SEARCH_ENGINE_ELASTICSEARCH);
     }
 }
