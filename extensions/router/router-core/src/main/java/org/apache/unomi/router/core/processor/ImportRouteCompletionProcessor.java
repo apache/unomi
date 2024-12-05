@@ -30,7 +30,7 @@ import java.util.*;
  */
 public class ImportRouteCompletionProcessor implements Processor {
 
-    private static final Logger logger = LoggerFactory.getLogger(ImportRouteCompletionProcessor.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(ImportRouteCompletionProcessor.class.getName());
     private ImportExportConfigurationService<ImportConfiguration> importConfigurationService;
     private int executionsHistorySize;
     private int execErrReportSize;
@@ -86,7 +86,7 @@ public class ImportRouteCompletionProcessor implements Processor {
             importConfiguration.setStatus(RouterConstants.CONFIG_STATUS_COMPLETE_SUCCESS);
         }
         importConfigurationService.save(importConfiguration, false);
-        logger.info("Processing route {} completed. completion date: {}.", exchange.getFromRouteId(), new Date());
+        LOGGER.info("Processing route {} completed. completion date: {}.", exchange.getFromRouteId(), new Date());
     }
 
     public void setImportConfigurationService(ImportExportConfigurationService<ImportConfiguration> importConfigurationService) {

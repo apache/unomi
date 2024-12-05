@@ -50,7 +50,7 @@ public class ClusterServiceImpl implements ClusterService {
     public static final String KARAF_CELLAR_CLUSTER_NODE_CONFIGURATION = "org.apache.unomi.nodes";
     public static final String KARAF_CLUSTER_CONFIGURATION_PUBLIC_ENDPOINTS = "publicEndpoints";
     public static final String KARAF_CLUSTER_CONFIGURATION_INTERNAL_ENDPOINTS = "internalEndpoints";
-    private static final Logger logger = LoggerFactory.getLogger(ClusterServiceImpl.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(ClusterServiceImpl.class.getName());
     PersistenceService persistenceService;
     private ClusterManager karafCellarClusterManager;
     private EventProducer karafCellarEventProducer;
@@ -115,7 +115,7 @@ public class ClusterServiceImpl implements ClusterService {
             boolean setupConfigOk = true;
             group = karafCellarGroupManager.findGroupByName(karafCellarGroupName);
             if (setupConfigOk && group == null) {
-                logger.error("Cluster group " + karafCellarGroupName + " doesn't exist, creating it...");
+                LOGGER.error("Cluster group {} doesn't exist, creating it...", karafCellarGroupName);
                 group = karafCellarGroupManager.createGroup(karafCellarGroupName);
                 if (group != null) {
                     setupConfigOk = true;
@@ -126,13 +126,14 @@ public class ClusterServiceImpl implements ClusterService {
 
             // check if the producer is ON
             if (setupConfigOk && karafCellarEventProducer.getSwitch().getStatus().equals(SwitchStatus.OFF)) {
-                logger.error("Cluster event producer is OFF");
+                LOGGER.error("Cluster event producer is OFF");
                 setupConfigOk = false;
             }
 
             // check if the config pid is allowed
             if (setupConfigOk && !isClusterConfigPIDAllowed(group, Constants.CATEGORY, KARAF_CELLAR_CLUSTER_NODE_CONFIGURATION, EventType.OUTBOUND)) {
-                logger.error("Configuration PID " + KARAF_CELLAR_CLUSTER_NODE_CONFIGURATION + " is blocked outbound for cluster group " + karafCellarGroupName);
+                LOGGER.error("Configuration PID " + KARAF_CELLAR_CLUSTER_NODE_CONFIGURATION + " is blocked outbound for cluster group {}",
+                        karafCellarGroupName);
                 setupConfigOk = false;
             }
 
@@ -162,18 +163,18 @@ public class ClusterServiceImpl implements ClusterService {
                     try {
                         updateSystemStats();
                     } catch (Throwable t) {
-                        logger.error("Error updating system statistics", t);
+                        LOGGER.error("Error updating system statistics", t);
                     }
                 }
             };
             schedulerService.getScheduleExecutorService().scheduleWithFixedDelay(statisticsTask, 0, nodeStatisticsUpdateFrequency, TimeUnit.MILLISECONDS);
 
         }
-        logger.info("Cluster service initialized.");
+        LOGGER.info("Cluster service initialized.");
     }
 
     public void destroy() {
-        logger.info("Cluster service shutdown.");
+        LOGGER.info("Cluster service shutdown.");
     }
 
     @Override
@@ -298,14 +299,8 @@ public class ClusterServiceImpl implements ClusterService {
         Double systemCpuLoad = null;
         try {
             systemCpuLoad = (Double) ManagementFactory.getPlatformMBeanServer().getAttribute(operatingSystemMXBeanName, "SystemCpuLoad");
-        } catch (MBeanException e) {
-            logger.error("Error retrieving system CPU load", e);
-        } catch (AttributeNotFoundException e) {
-            logger.error("Error retrieving system CPU load", e);
-        } catch (InstanceNotFoundException e) {
-            logger.error("Error retrieving system CPU load", e);
-        } catch (ReflectionException e) {
-            logger.error("Error retrieving system CPU load", e);
+        } catch (MBeanException | AttributeNotFoundException | InstanceNotFoundException | ReflectionException e) {
+            LOGGER.error("Error retrieving system CPU load", e);
         }
         final OperatingSystemMXBean operatingSystemMXBean = ManagementFactory.getOperatingSystemMXBean();
         double systemLoadAverage = operatingSystemMXBean.getSystemLoadAverage();

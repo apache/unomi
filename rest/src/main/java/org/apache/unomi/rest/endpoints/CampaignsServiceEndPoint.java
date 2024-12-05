@@ -51,13 +51,13 @@ import java.util.Set;
 @Component(service=CampaignsServiceEndPoint.class,property = "osgi.jaxrs.resource=true")
 public class CampaignsServiceEndPoint {
 
-    private static final Logger logger = LoggerFactory.getLogger(CampaignsServiceEndPoint.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(CampaignsServiceEndPoint.class.getName());
 
     @Reference
     private GoalsService goalsService;
 
     public CampaignsServiceEndPoint() {
-        logger.info("Initializing campaigns service endpoint...");
+        LOGGER.info("Initializing campaigns service endpoint...");
     }
 
     @WebMethod(exclude=true)

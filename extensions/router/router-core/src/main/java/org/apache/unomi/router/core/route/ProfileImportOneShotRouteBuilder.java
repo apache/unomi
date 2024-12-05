@@ -34,7 +34,7 @@ import java.util.Map;
  */
 public class ProfileImportOneShotRouteBuilder extends RouterAbstractRouteBuilder {
 
-    private Logger logger = LoggerFactory.getLogger(ProfileImportOneShotRouteBuilder.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(ProfileImportOneShotRouteBuilder.class.getName());
     private ImportConfigByFileNameProcessor importConfigByFileNameProcessor;
     private String uploadDir;
 
@@ -45,7 +45,7 @@ public class ProfileImportOneShotRouteBuilder extends RouterAbstractRouteBuilder
     @Override
     public void configure() throws Exception {
 
-        logger.info("Configure OneShot Route...");
+        LOGGER.info("Configure OneShot Route...");
 
         ProcessorDefinition prDefErr = onException(BadProfileDataFormatException.class)
                 .log(LoggingLevel.ERROR, "Error processing record ${exchangeProperty.CamelSplitIndex}++ !")

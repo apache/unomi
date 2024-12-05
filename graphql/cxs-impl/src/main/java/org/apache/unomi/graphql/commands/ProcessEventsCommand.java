@@ -40,7 +40,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class ProcessEventsCommand extends BaseCommand<Integer> {
 
-    private static final Logger LOG = LoggerFactory.getLogger(ProcessEventsCommand.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(ProcessEventsCommand.class.getName());
 
     private static final List<String> STATIC_FIELDS = new ArrayList<>();
 
@@ -104,10 +104,8 @@ public class ProcessEventsCommand extends BaseCommand<Integer> {
                         }
 
                     } catch (Exception e) {
-                        LOG.warn("Process field {} is failed. enable debug log to see the full stack trace", eventProcessor.getFieldName());
-                        if (LOG.isDebugEnabled()) {
-                            LOG.debug("Process field failed", e);
-                        }
+                        LOGGER.warn("Process field {} is failed. enable debug log to see the full stack trace", eventProcessor.getFieldName());
+                        LOGGER.debug("Process field failed", e);
                     }
                 });
     }
@@ -118,10 +116,8 @@ public class ProcessEventsCommand extends BaseCommand<Integer> {
                 try {
                     processField(fieldDefinition, eventInputAsMap);
                 } catch (Exception e) {
-                    LOG.warn("Process field {} is failed. enable debug log to see the full stack trace", fieldDefinition);
-                    if (LOG.isDebugEnabled()) {
-                        LOG.debug("Process field failed", e);
-                    }
+                    LOGGER.warn("Process field {} is failed. enable debug log to see the full stack trace", fieldDefinition);
+                    LOGGER.debug("Process field failed", e);
                 }
             }
         });

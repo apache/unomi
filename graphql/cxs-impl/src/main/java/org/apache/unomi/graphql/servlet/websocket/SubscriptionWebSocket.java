@@ -33,7 +33,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class SubscriptionWebSocket extends WebSocketAdapter {
-    private static final Logger logger = LoggerFactory.getLogger(SubscriptionWebSocket.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(SubscriptionWebSocket.class);
 
     private GraphQL graphQL;
 
@@ -48,19 +48,19 @@ public class SubscriptionWebSocket extends WebSocketAdapter {
 
     @Override
     public void onWebSocketConnect(Session sess) {
-        logger.info("Opening web socket");
+        LOGGER.info("Opening web socket");
         super.onWebSocketConnect(sess);
     }
 
     @Override
     public void onWebSocketClose(int statusCode, String reason) {
-        logger.info("Closing web socket");
+        LOGGER.info("Closing web socket");
         super.onWebSocketClose(statusCode, reason);
     }
 
     @Override
     public void onWebSocketText(String textMessage) {
-        logger.info("Got web socket messages {}", textMessage);
+        LOGGER.info("Got web socket messages {}", textMessage);
         final GraphQLMessage message = GraphQLMessage.fromJson(textMessage);
         if (message == null) {
             return;
@@ -91,7 +91,7 @@ public class SubscriptionWebSocket extends WebSocketAdapter {
         try {
             getRemote().sendString(message.toString());
         } catch (IOException e) {
-            logger.error("Web socket error when sending a message", e);
+            LOGGER.error("Web socket error when sending a message", e);
         }
     }
 

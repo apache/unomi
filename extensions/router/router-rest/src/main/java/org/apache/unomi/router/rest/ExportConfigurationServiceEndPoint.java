@@ -52,7 +52,7 @@ import java.util.Date;
 @Component(service=ExportConfigurationServiceEndPoint.class,property = "osgi.jaxrs.resource=true")
 public class ExportConfigurationServiceEndPoint extends AbstractConfigurationServiceEndpoint<ExportConfiguration> {
 
-    private static final Logger logger = LoggerFactory.getLogger(ExportConfigurationServiceEndPoint.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(ExportConfigurationServiceEndPoint.class.getName());
 
     @Reference
     private ProfileExportService profileExportService;
@@ -61,7 +61,7 @@ public class ExportConfigurationServiceEndPoint extends AbstractConfigurationSer
     private ProfileService profileService;
 
     public ExportConfigurationServiceEndPoint() throws KeyStoreException, NoSuchAlgorithmException, KeyManagementException {
-        logger.info("Initializing export configuration service endpoint...");
+        LOGGER.info("Initializing export configuration service endpoint...");
     }
 
     @WebMethod(exclude = true)

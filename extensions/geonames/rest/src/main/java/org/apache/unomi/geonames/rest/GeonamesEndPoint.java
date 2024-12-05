@@ -46,13 +46,13 @@ import java.util.Locale;
 @Component(service=GeonamesEndPoint.class,property = "osgi.jaxrs.resource=true")
 public class GeonamesEndPoint {
 
-    private static final Logger logger = LoggerFactory.getLogger(GeonamesEndPoint.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(GeonamesEndPoint.class.getName());
 
     @Reference
     private GeonamesService geonamesService;
 
     public GeonamesEndPoint() {
-        logger.info("Initializing geonames service endpoint...");
+        LOGGER.info("Initializing geonames service endpoint...");
     }
 
     @WebMethod(exclude = true)

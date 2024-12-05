@@ -33,7 +33,7 @@ import java.util.Map;
  */
 public class ProfileImportToUnomiRouteBuilder extends RouterAbstractRouteBuilder {
 
-    private Logger logger = LoggerFactory.getLogger(ProfileImportToUnomiRouteBuilder.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(ProfileImportToUnomiRouteBuilder.class.getName());
 
     private UnomiStorageProcessor unomiStorageProcessor;
     private ImportRouteCompletionProcessor importRouteCompletionProcessor;
@@ -45,7 +45,7 @@ public class ProfileImportToUnomiRouteBuilder extends RouterAbstractRouteBuilder
     @Override
     public void configure() throws Exception {
 
-        logger.info("Configure Recurrent Route 'To Target'");
+        LOGGER.info("Configure Recurrent Route 'To Target'");
 
         RouteDefinition rtDef;
         if (RouterConstants.CONFIG_TYPE_KAFKA.equals(configType)) {

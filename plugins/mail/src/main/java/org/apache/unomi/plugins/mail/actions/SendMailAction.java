@@ -38,7 +38,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class SendMailAction implements ActionExecutor {
-    private static final Logger logger = LoggerFactory.getLogger(SendMailAction.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(SendMailAction.class.getName());
 
     private PersistenceService persistenceService;
 
@@ -97,7 +97,7 @@ public class SendMailAction implements ActionExecutor {
         if (profileNotif != null && profileNotif.get(notifType) != null && ((HashMap) profileNotif.get(notifType)).get(notifTypeId) != null) {
             Integer notifTypeAck = (Integer) ((HashMap) profileNotif.get(notifType) ).get(notifTypeId);
             if(notifyOnce.booleanValue() && notifTypeAck > 0){
-                logger.info("Notification "+notifType+" already sent for the profile "+event.getProfileId());
+                LOGGER.info("Notification {} already sent for the profile {}", notifType, event.getProfileId());
                 return EventService.NO_CHANGE;
             }else{
                 ((HashMap) profileNotif.get(notifType) ).put(notifTypeId, notifTypeAck+1);
@@ -158,7 +158,7 @@ public class SendMailAction implements ActionExecutor {
             // send the email
             email.send();
         } catch (EmailException e) {
-            logger.error("Cannot send mail",e);
+            LOGGER.error("Cannot send mail",e);
         }
 
         return EventService.NO_CHANGE;

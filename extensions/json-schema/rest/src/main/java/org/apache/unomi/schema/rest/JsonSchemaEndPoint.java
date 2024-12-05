@@ -45,13 +45,13 @@ import java.util.*;
 @Component(service = JsonSchemaEndPoint.class, property = "osgi.jaxrs.resource=true")
 public class JsonSchemaEndPoint {
 
-    private static final Logger logger = LoggerFactory.getLogger(JsonSchemaEndPoint.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(JsonSchemaEndPoint.class.getName());
 
     @Reference
     private SchemaService schemaService;
 
     public JsonSchemaEndPoint() {
-        logger.info("Initializing JSON schema endpoint...");
+        LOGGER.info("Initializing JSON schema endpoint...");
     }
 
     @WebMethod(exclude = true)

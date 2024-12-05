@@ -50,13 +50,13 @@ import java.util.List;
 @Component(service=ScoringServiceEndPoint.class,property = "osgi.jaxrs.resource=true")
 public class ScoringServiceEndPoint {
 
-    private static final Logger logger = LoggerFactory.getLogger(ScoringServiceEndPoint.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(ScoringServiceEndPoint.class.getName());
 
     @Reference
     private SegmentService segmentService;
 
     public ScoringServiceEndPoint() {
-        logger.info("Initializing scoring service endpoint...");
+        LOGGER.info("Initializing scoring service endpoint...");
     }
 
     @WebMethod(exclude = true)

@@ -37,7 +37,7 @@ import org.slf4j.LoggerFactory;
 @Component(service = ActionDispatcher.class)
 public class GroovyActionDispatcher implements ActionDispatcher {
 
-    private static final Logger logger = LoggerFactory.getLogger(GroovyActionDispatcher.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(GroovyActionDispatcher.class.getName());
 
     private static final String GROOVY_PREFIX = "groovy";
 
@@ -61,7 +61,7 @@ public class GroovyActionDispatcher implements ActionDispatcher {
     public Integer execute(Action action, Event event, String actionName) {
         GroovyCodeSource groovyCodeSource = groovyActionsService.getGroovyCodeSource(actionName);
         if (groovyCodeSource == null) {
-            logger.warn("Couldn't find a Groovy action with name {}, action will not execute !", actionName);
+            LOGGER.warn("Couldn't find a Groovy action with name {}, action will not execute !", actionName);
         } else {
             GroovyShell groovyShell = groovyActionsService.getGroovyShell();
             groovyShell.setVariable("action", action);
@@ -75,7 +75,7 @@ public class GroovyActionDispatcher implements ActionDispatcher {
                     }
                 }.runWithTimer();
             } catch (Exception e) {
-                logger.error("Error executing Groovy action with key=" + actionName, e);
+                LOGGER.error("Error executing Groovy action with key={}", actionName, e);
             }
         }
         return 0;

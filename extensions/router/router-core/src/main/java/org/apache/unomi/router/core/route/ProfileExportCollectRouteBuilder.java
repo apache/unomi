@@ -23,7 +23,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.router.api.ExportConfiguration;
 import org.apache.unomi.router.api.RouterConstants;
-import org.apache.unomi.router.api.services.ImportExportConfigurationService;
 import org.apache.unomi.router.core.bean.CollectProfileBean;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,7 +35,7 @@ import java.util.Map;
  */
 public class ProfileExportCollectRouteBuilder extends RouterAbstractRouteBuilder {
 
-    private static final Logger logger = LoggerFactory.getLogger(ProfileExportCollectRouteBuilder.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(ProfileExportCollectRouteBuilder.class);
 
     private List<ExportConfiguration> exportConfigurationList;
     private PersistenceService persistenceService;
@@ -52,7 +51,7 @@ public class ProfileExportCollectRouteBuilder extends RouterAbstractRouteBuilder
             return;
         }
 
-        logger.info("Configure Recurrent Route 'Export :: Collect Data'");
+        LOGGER.info("Configure Recurrent Route 'Export :: Collect Data'");
 
         CollectProfileBean collectProfileBean = new CollectProfileBean();
         collectProfileBean.setPersistenceService(persistenceService);
@@ -83,13 +82,13 @@ public class ProfileExportCollectRouteBuilder extends RouterAbstractRouteBuilder
                             prDef.to((String) getEndpointURI(RouterConstants.DIRECTION_FROM, RouterConstants.DIRECT_EXPORT_DEPOSIT_BUFFER));
                         }
                     } else {
-                        logger.error("Endpoint scheme {} is not allowed, route {} will be skipped.", destinationEndpoint.substring(0, destinationEndpoint.indexOf(':')), exportConfiguration.getItemId());
+                        LOGGER.error("Endpoint scheme {} is not allowed, route {} will be skipped.", destinationEndpoint.substring(0, destinationEndpoint.indexOf(':')), exportConfiguration.getItemId());
                     }
                 } else {
-                    logger.warn("Mapping is null in export configuration, route {} will be skipped!", exportConfiguration.getItemId());
+                    LOGGER.warn("Mapping is null in export configuration, route {} will be skipped!", exportConfiguration.getItemId());
                 }
             } else {
-                logger.warn("Export configuration incomplete, route {} will be skipped!", exportConfiguration.getItemId());
+                LOGGER.warn("Export configuration incomplete, route {} will be skipped!", exportConfiguration.getItemId());
             }
         }
     }

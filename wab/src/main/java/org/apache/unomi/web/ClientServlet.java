@@ -35,7 +35,7 @@ import java.io.IOException;
 @Deprecated
 public class ClientServlet extends HttpServlet {
 
-    private static final Logger logger = LoggerFactory.getLogger(ClientServlet.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(ClientServlet.class.getName());
     private static final long serialVersionUID = 2928875960103325238L;
 
     private String allowedProfileDownloadFormats;
@@ -46,14 +46,14 @@ public class ClientServlet extends HttpServlet {
     public void init(ServletConfig config) throws ServletException {
         super.init(config);
         configSharingService.setProperty("allowedProfileDownloadFormats", allowedProfileDownloadFormats);
-        logger.info("ClientServlet initialized.");
+        LOGGER.info("ClientServlet initialized.");
     }
 
     @Override
     public void destroy() {
         super.destroy();
 
-        logger.info("Client servlet shutdown.");
+        LOGGER.info("Client servlet shutdown.");
     }
 
     @Override

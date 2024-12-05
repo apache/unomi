@@ -40,7 +40,7 @@ import java.util.List;
  * This is duplicate of the class from the wab bundle, the original file will be removed once endpoints forwarded
  */
 public class HttpUtils {
-    private static final Logger logger = LoggerFactory.getLogger(HttpUtils.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(HttpUtils.class);
 
     private static final int MAX_COOKIE_AGE_IN_SECONDS = 60 * 60 * 24 * 365; // 1 year
 
@@ -123,8 +123,6 @@ public class HttpUtils {
         for (JsonNode event : eventsNode) {
             if (schemaService.isEventValid(event.toString())) {
                 filteredEvents.add(jsonParser.getCodec().treeToValue(event, Event.class));
-            } else {
-                logger.error("An event was rejected - switch to DEBUG log level for more information OR test the payload of your event against the \"validateEvent\" endpoint.");
             }
         }
         return filteredEvents;

@@ -30,8 +30,6 @@ import org.apache.unomi.rest.models.RESTValueType;
 import org.apache.unomi.rest.service.impl.LocalizationHelper;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import javax.jws.WebMethod;
 import javax.jws.WebService;
@@ -51,8 +49,6 @@ import java.util.*;
 @Path("/definitions")
 @Component(service=DefinitionsServiceEndPoint.class,property = "osgi.jaxrs.resource=true")
 public class DefinitionsServiceEndPoint {
-    private static final Logger logger = LoggerFactory.getLogger(DefinitionsServiceEndPoint.class.getName());
-
     @Reference
     private DefinitionsService definitionsService;
 

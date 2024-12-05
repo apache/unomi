@@ -378,7 +378,7 @@ org.apache.unomi.security.personalization.sanitizeConditions=${env:UNOMI_SECURIT
 
 Groovy actions offer the ability to define a set of actions and action types (aka action descriptors) purely from Groovy scripts defined at runtime.
 
-Initially submitted to Unomi through a purpose-built REST API endpoint, Groovy actions are then stored in Elasticsearch. When an event matches a rule configured to execute an action, the corresponding action is fetched from Elasticsearch and executed. 
+Initially submitted to Unomi through a purpose-built REST API endpoint, Groovy actions are then stored in Elasticsearch. When an event matches a rule configured to execute an action, the corresponding action is fetched from Elasticsearch and executed.
 
 ===== Anatomy of a Groovy Action
 
@@ -401,7 +401,7 @@ Placed right before the function, the “@Action” annotation contains a set of
 |actionExecutor
 |String
 |YES
-|Action executor contains the name of the script to call for the action type and must be prefixed with “*groovy:*”. The prefix indicates to Unomi which dispatcher to use when processing the action. 
+|Action executor contains the name of the script to call for the action type and must be prefixed with “*groovy:*”. The prefix indicates to Unomi which dispatcher to use when processing the action. The name must be the file name of the groovy file containing the action without the extension (*groovy:<filename>*).
 
 |name
 |String
@@ -429,7 +429,7 @@ The function contained within the Groovy Action must be called `execute()` and i
 
 This integer serves as an indication whether the values of the session and profile should be persisted. In general, the codes used are defined in the https://github.com/apache/unomi/blob/master/api/src/main/java/org/apache/unomi/api/services/EventService.java[EventService interface].
 
-Each groovy actions extends by default a Base script 
+Each groovy actions extends by default a Base script
 https://github.com/apache/unomi/blob/master/extensions/groovy-actions/services/src/main/resources/META-INF/base/BaseScript.groovy[defined here]
 
 ===== REST API
@@ -450,7 +450,7 @@ Delete an Action:
 [source,bash]
 ----
 curl -X DELETE 'http://localhost:8181/cxs/groovyActions/<Action id>' \
---user karaf:karaf 
+--user karaf:karaf
 ----
 
 Note that when a groovy action is deleted by the API, the action type associated with this action will also be deleted.
@@ -459,12 +459,12 @@ Note that when a groovy action is deleted by the API, the action type associated
 
 In this short example, we’re going to create a Groovy Action that will be adding “Hello world!” to the logs whenever a new view event is triggered.
 
-The first step consists in creating the groovy script on your filesystem, start by creating the file `hello-world.groovy`:
+The first step consists in creating the groovy script on your filesystem, start by creating the file `helloWorldGroovyAction.groovy`:
 
 [source,groovy]
 ----
 @Action(id = "helloWorldGroovyAction",
-        actionExecutor = "groovy:helloWorldAction",
+        actionExecutor = "groovy:helloWorldGroovyAction",
         parameters = [@Parameter(id = "location", type = "string", multivalued = false)])
 def execute() {
     logger.info("Hello {}", action.getParameterValues().get("location"))
@@ -472,15 +472,17 @@ def execute() {
 }
 ----
 
-As the last instruction of the script is `EventService.NO_CHANGE`, data will not be persisted. 
+As the last instruction of the script is `EventService.NO_CHANGE`, data will not be persisted.
 
-Once the action has been created you need to submit it to Unomi (from the same folder as `hello-world.groovy`).
+Once the action has been created you need to submit it to Unomi (from the same folder as `helloWorldGroovyAction.groovy`).
 [source,bash]
 ----
 curl -X POST 'http://localhost:8181/cxs/groovyActions' \
 --user karaf:karaf \
---form 'file=@hello-world.groovy'
+--form 'file=@helloWorldGroovyAction.groovy'
 ----
+
+Important: A bug ( https://issues.apache.org/jira/browse/UNOMI-847[UNOMI-847] ) in Apache Unomi 2.5 and lower requires the filename of a Groovy file being submitted to be the same than the id of the Groovy action (as per the example above).
 
 Finally, register a rule to trigger execution of the groovy action:
 [source,bash]
@@ -519,7 +521,7 @@ Once you’re done with the Hello World! action, it can be deleted using the fol
 [source,bash]
 ----
 curl -X DELETE 'http://localhost:8181/cxs/groovyActions/helloWorldGroovyAction' \
---user karaf:karaf 
+--user karaf:karaf
 ----
 
 And the corresponding rule can be deleted using the following command:
@@ -544,7 +546,7 @@ import org.osgi.framework.ServiceReference
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
-final Logger logger = LoggerFactory.getLogger(GroovyActionDispatcher.class.getName());
+final Logger LOGGER = LoggerFactory.getLogger(GroovyActionDispatcher.class.getName());
 
 @Action(id = "displayNumberOfProfilesAction", actionExecutor = "groovy:DisplayNumberOfProfilesAction", description = "Display the number of existing profiles")
 def execute() {
@@ -560,8 +562,8 @@ def execute() {
     ProfileService profileService = context.getService(serviceReference);
 
     // Example of displaying the number of profile
-    logger.info("Display profile count")
-    logger.info(profileService.getAllProfilesCount().toString())
+    LOGGER.info("Display profile count")
+    LOGGER.info("{}", profileService.getAllProfilesCount().toString())
 
     return EventService.NO_CHANGE
 }
@@ -585,7 +587,7 @@ org.apache.unomi.services.actions;version
 
 ==== Scripting roadmap
 
-Scripting will probably undergo major changes in future versions of Apache Unomi, with the likely retirement of MVEL in favor of Groovy Actions detailed above. 
+Scripting will probably undergo major changes in future versions of Apache Unomi, with the likely retirement of MVEL in favor of Groovy Actions detailed above.
 
 These changes will not happen on maintenance versions of Apache Unomi, only in the next major version. Maintenance
 versions will of course maintain compatibility with existing scripting solutions.
@@ -635,7 +637,7 @@ highly recommended that you design your client applications to use the HTTPS por
 The user accounts to access the REST API are actually routed through Karaf's JAAS support, which you may find the
 documentation for here :
 
-* http://karaf.apache.org/manual/latest/users-guide/security.html[http://karaf.apache.org/manual/latest/users-guide/security.html]
+* https://karaf.apache.org/manual/latest/#_security_2[https://karaf.apache.org/manual/latest/#_security_2]
 
 The default username/password is
 
@@ -839,7 +841,7 @@ sslTrustAllCertificates=true
 
 ==== Permissions
 
-Apache Unomi requires a particular set of Elasticsearch permissions for its operation. 
+Apache Unomi requires a particular set of Elasticsearch permissions for its operation.
 
 If you are using Elasticsearch in a production environment, you will most likely need to fine tune permissions given to the user used by Unomi.
 
@@ -847,3 +849,92 @@ The following permissions are required by Unomi:
 
  - required cluster privileges: `manage` OR `all`
  - required index privileges on unomi indices: `write, manage, read` OR `all`
+
+=== Health Check Extension
+
+The Health Check extension provides a way to check is required Unomi components are 'live'.
+
+It consists in a simple http endpoint that provide a JSON view of integrated health checks. It can then be used to determine if the server
+is up and running and can serve requests.
+
+The health check endpoint is available at the following URL: /health/check and returns a simple JSON response that includes all health check provider responses.
+
+Basic Http Authentication enforce security for the health check endpoint using the existing karaf realm. The user needs to have the specific role **health**
+to access the endpoint. Users and roles can be configured in the etc/users.properties file. By default, a login/pass health/health is configured.
+
+Specific configuration is located in : org.apache.unomi.healthcheck.cfg  Existing health checks are using configuration from that file, including authentication realm.
+
+Existing health checks gives information about :
+- Karaf (as soon as the karaf container is started, that check is LIVE)
+- Elasticsearch (connection to elasticsearch cluster and its health)
+- Unomi (unomi bundles status)
+- Persistence (unomi to elasticsearch binding)
+- Cluster health (unomi cluster status and nodes information)
+
+All healthcheck can have a status :
+- DOWN (service is not available)
+- UP (service is up but does not respond to request (starting or misconfigured))
+- LIVE (service is ready to serve request)
+- ERROR (an error occurred during service health check)
+
+Any subsystem health check have a timeout of 400ms where check is cancelled and will be returned as error.
+
+Typical response to /health/check when unomi NOT started is :
+
+[source,json]
+----
+[
+  {
+    "name":"karaf",
+    "status":"LIVE",
+    "collectingTime":0
+  },
+  {
+    "name":"cluster",
+    "status":"DOWN",
+    "collectingTime":0
+  },
+  {
+    "name":"elasticsearch",
+    "status":"LIVE",
+    "collectingTime":6
+  },
+  {
+    "name":"persistence",
+    "status":"DOWN",
+    "collectingTime":0
+  },
+  {
+    "name":"unomi",
+    "status":"DOWN",
+    "collectingTime":0
+  }
+]
+----
+
+Existing health check can be extended by adding specific provider in the extension. A provider is a class that implements the HealthCheckProvider interface.
+
+[source,java]
+----
+package org.apache.unomi.healthcheck;
+
+public interface HealthCheckProvider {
+    String name();
+    HealthCheckResponse execute();
+}
+----
+
+Calls to provider are supposed to be done at a regular rate (every 15 seconds for example) and should be fast to execute. Feel free to include any caching strategy if needed.
+
+
+==== Configuration
+
+Healthcheck extension configuration is located in the file etc/org.apache.unomi.healthcheck.cfg
+
+Extension can be enabled by setting the property `enabled` to `true`. An environment variable can be used to set this property : UNOMI_HEALTHCHECK_ENABLED.
+You must restart the bundle for that config to take effect.
+
+By default, all healthcheck providers are included but the list of those included providers can be customized by setting the property `providers` with a comma separated list of provider names. An environment variable can be used to set this property : UNOMI_HEALTHCHECK_PROVIDERS.
+Karaf provider is the one needed by healthcheck (always LIVE), it cannot be ignored.
+
+The timeout used for each health check can be set by setting the property `timeout` to the desired value in milliseconds. An environment variable can be used to set this property : UNOMI_HEALTHCHECK_TIMEOUT

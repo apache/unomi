@@ -43,7 +43,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class SetRemoteHostInfoAction implements ActionExecutor {
-    private static final Logger logger = LoggerFactory.getLogger(SetRemoteHostInfoAction.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(SetRemoteHostInfoAction.class.getName());
 
     private UserAgentDetectorServiceImpl userAgentDetectorService;
 
@@ -115,28 +115,20 @@ public class SetRemoteHostInfoAction implements ActionExecutor {
         }
 
         String remoteAddr = httpServletRequest.getRemoteAddr();
-        if (logger.isDebugEnabled()) {
-            logger.debug("Remote address is " + remoteAddr);
-        }
+        LOGGER.debug("Remote address is {}", remoteAddr);
         String remoteAddrParameter = httpServletRequest.getParameter("remoteAddr");
-        if (logger.isDebugEnabled()) {
-            logger.debug("Remote address param is " + remoteAddrParameter);
-        }
+        LOGGER.debug("Remote address param is {}", remoteAddrParameter);
         String xff = httpServletRequest.getHeader("X-Forwarded-For");
-        if (logger.isDebugEnabled()) {
-            logger.debug("X-Forwarded-For is " + xff);
-        }
-        if (remoteAddrParameter != null && remoteAddrParameter.length() > 0) {
+        LOGGER.debug("X-Forwarded-For is {}", xff);
+        if (remoteAddrParameter != null && !remoteAddrParameter.isEmpty()) {
             remoteAddr = remoteAddrParameter;
-        } else if (xff != null && !xff.equals("")) {
+        } else if (xff != null && !xff.isEmpty()) {
             if (xff.indexOf(',') > -1) {
                 xff = xff.substring(0, xff.indexOf(','));
             }
             remoteAddr = xff;
         }
-        if (logger.isDebugEnabled()) {
-            logger.debug("Remote address used to localized is " + remoteAddr);
-        }
+        LOGGER.debug("Remote address used to localized is {}", remoteAddr);
 
         try {
             if (isAValidIPAddress(remoteAddr)) {
@@ -156,7 +148,7 @@ public class SetRemoteHostInfoAction implements ActionExecutor {
             session.setProperty("countryAndCity", session.getProperty("sessionCountryName") + "@@" + session.getProperty("sessionCity") +
                     "@@" + session.getProperty("sessionAdminSubDiv1") + "@@" + session.getProperty("sessionAdminSubDiv2"));
         } catch (Exception e) {
-            logger.error("Cannot lookup IP", e);
+            LOGGER.error("Cannot lookup IP", e);
         }
 
 
@@ -189,7 +181,7 @@ public class SetRemoteHostInfoAction implements ActionExecutor {
         try {
             this.databaseReader = new DatabaseReader.Builder(database).build();
         } catch (IOException e) {
-            logger.error("Cannot read IP database", e);
+            LOGGER.error("Cannot read IP database", e);
         }
 
     }
@@ -213,7 +205,7 @@ public class SetRemoteHostInfoAction implements ActionExecutor {
                 session.setProperty("sessionCityId", cityResponse.getCity().getGeoNameId());
             }
 
-            if (cityResponse.getSubdivisions().size() > 0) {
+            if (!cityResponse.getSubdivisions().isEmpty()) {
                 session.setProperty("sessionAdminSubDiv1", cityResponse.getSubdivisions().get(0).getGeoNameId());
             }
             if (cityResponse.getSubdivisions().size() > 1) {
@@ -232,10 +224,8 @@ public class SetRemoteHostInfoAction implements ActionExecutor {
             }
             return true;
         } catch (IOException | GeoIp2Exception e) {
-            logger.warn("Cannot resolve IP, enable debug log level for complete stacktrace");
-            if (logger.isDebugEnabled()) {
-                logger.debug("Cannot resolve IP: {}", remoteAddr, e);
-            }
+            LOGGER.warn("Cannot resolve IP, enable debug log level for complete stacktrace");
+            LOGGER.debug("Cannot resolve IP: {}", remoteAddr, e);
         }
         return false;
     }
@@ -246,10 +236,8 @@ public class SetRemoteHostInfoAction implements ActionExecutor {
             try {
                 addr = InetAddress.getByName(remoteAddr);
             } catch (UnknownHostException e) {
-                logger.warn("Cannot resolve IP, enable debug log level for complete stacktrace");
-                if (logger.isDebugEnabled()) {
-                    logger.debug("Cannot resolve IP: {}", remoteAddr, e);
-                }
+                LOGGER.warn("Cannot resolve IP, enable debug log level for complete stacktrace");
+                LOGGER.debug("Cannot resolve IP: {}", remoteAddr, e);
                 return false;
             }
             // Check if the address is a valid special local or loop back

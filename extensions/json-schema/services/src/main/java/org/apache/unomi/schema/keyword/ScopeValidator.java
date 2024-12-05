@@ -27,7 +27,7 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 
 public class ScopeValidator extends BaseJsonValidator implements JsonValidator {
-    private static final Logger logger = LoggerFactory.getLogger(ScopeValidator.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(ScopeValidator.class);
 
     private ScopeService scopeService;
 
@@ -38,9 +38,7 @@ public class ScopeValidator extends BaseJsonValidator implements JsonValidator {
 
     @Override
     public Set<ValidationMessage> validate(JsonNode node, JsonNode rootNode, String at) {
-        if (logger.isDebugEnabled()) {
-            logger.debug("validate( {}, {}, {})", node, rootNode, at);
-        }
+        LOGGER.debug("validate( {}, {}, {})", node, rootNode, at);
         Set<ValidationMessage> errors = new LinkedHashSet<>();
         if (scopeService.getScope(node.textValue()) == null) {
             ValidationMessage.Builder builder = new ValidationMessage.Builder();

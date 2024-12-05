@@ -28,6 +28,8 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.net.URL;
@@ -41,6 +43,8 @@ import static org.apache.unomi.shell.migration.service.MigrationConfig.*;
  * @author dgaillard
  */
 public class MigrationUtils {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(MigrationUtils.class);
 
     public static JSONObject queryWithScroll(CloseableHttpClient httpClient, String url) throws IOException {
         url += "?scroll=1m";
@@ -129,7 +133,7 @@ public class MigrationUtils {
             if (predefinedMappings == null) {
                 continue;
             }
-            while (predefinedMappings.hasMoreElements()) {
+            if (predefinedMappings.hasMoreElements()) {
                 URL predefinedMappingURL = predefinedMappings.nextElement();
                 return IOUtils.toString(predefinedMappingURL);
             }
@@ -176,7 +180,10 @@ public class MigrationUtils {
     public static void moveToIndex(CloseableHttpClient httpClient, BundleContext bundleContext, String esAddress, String sourceIndexName, String targetIndexName, String painlessScript) throws Exception {
         String reIndexRequest = resourceAsString(bundleContext, "requestBody/2.2.0/base_reindex_request.json").replace("#source", sourceIndexName).replace("#dest", targetIndexName).replace("#painless", StringUtils.isNotEmpty(painlessScript) ? getScriptPart(painlessScript) : "");
 
-        HttpUtils.executePostRequest(httpClient, esAddress + "/_reindex", reIndexRequest, null);
+        // Reindex
+        JSONObject task = new JSONObject(HttpUtils.executePostRequest(httpClient, esAddress + "/_reindex?wait_for_completion=false", reIndexRequest, null));
+        //Wait for the reindex task to finish
+        waitForTaskToFinish(httpClient, esAddress, task.getString("task"), null);
     }
 
     public static void deleteIndex(CloseableHttpClient httpClient, String esAddress, String indexName) throws Exception {
@@ -216,7 +223,9 @@ public class MigrationUtils {
             // Recreate the original index with new mappings
             HttpUtils.executePutRequest(httpClient, esAddress + "/" + indexName, newIndexSettings, null);
             // Reindex data from clone
-            HttpUtils.executePostRequest(httpClient, esAddress + "/_reindex", reIndexRequest, null);
+            JSONObject task = new JSONObject(HttpUtils.executePostRequest(httpClient, esAddress + "/_reindex?wait_for_completion=false", reIndexRequest, null));
+            //Wait for the reindex task to finish
+            waitForTaskToFinish(httpClient, esAddress, task.getString("task"), migrationContext);
         });
 
         migrationContext.performMigrationStep("Reindex step for: " + indexName + " (delete clone)", () -> {
@@ -249,7 +258,7 @@ public class MigrationUtils {
             }
 
             // no more results, delete scroll
-            if (hits.length() == 0) {
+            if (hits.isEmpty()) {
                 if (scrollId != null) {
                     HttpUtils.executeDeleteRequest(httpClient, esAddress + "/_search/scroll/" + scrollId, null);
                 }
@@ -279,6 +288,31 @@ public class MigrationUtils {
             migrationContext.printMessage("Waiting for ES Cluster status to be Yellow, current status is " + status.get("status"));
         }
 
+    }
+
+    public static void waitForTaskToFinish(CloseableHttpClient httpClient, String esAddress, String taskId, MigrationContext migrationContext) throws IOException {
+        while (true) {
+            final JSONObject status = new JSONObject(
+                    HttpUtils.executeGetRequest(httpClient, esAddress + "/_tasks/" + taskId + "?wait_for_completion=true&timeout=15s",
+                            null));
+            if (status.has("completed") && status.getBoolean("completed")) {
+                if (migrationContext != null) {
+                    migrationContext.printMessage("Task is completed");
+                } else {
+                    LOGGER.info("Task is completed");
+                }
+                break;
+            }
+            if (status.has("error")) {
+                final JSONObject error = status.getJSONObject("error");
+                throw new IOException("Task error: " + error.getString("type") + " - " + error.getString("reason"));
+            }
+            if (migrationContext != null) {
+                migrationContext.printMessage("Waiting for Task " + taskId + " to complete");
+            } else {
+                LOGGER.info("Waiting for Task {} to complete", taskId);
+            }
+        }
     }
 
     public interface ScrollCallback {

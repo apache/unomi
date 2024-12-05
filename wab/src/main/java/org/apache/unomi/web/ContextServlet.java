@@ -35,7 +35,7 @@ import java.io.IOException;
 @Deprecated
 public class ContextServlet extends HttpServlet {
     private static final long serialVersionUID = 2928875830103325238L;
-    private static final Logger logger = LoggerFactory.getLogger(ContextServlet.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(ContextServlet.class.getName());
 
     private static final int MAX_COOKIE_AGE_IN_SECONDS = 60 * 60 * 24 * 365; // 1 year
 
@@ -55,7 +55,7 @@ public class ContextServlet extends HttpServlet {
         configSharingService.setProperty("profileIdCookieMaxAgeInSeconds", profileIdCookieMaxAgeInSeconds);
         configSharingService.setProperty("profileIdCookieHttpOnly", profileIdCookieHttpOnly);
         configSharingService.setProperty("publicPostRequestBytesLimit", publicPostRequestBytesLimit);
-        logger.info("ContextServlet initialized.");
+        LOGGER.info("ContextServlet initialized.");
     }
 
     @Override
@@ -65,7 +65,7 @@ public class ContextServlet extends HttpServlet {
 
     @Override
     public void destroy() {
-        logger.info("Context servlet shutdown.");
+        LOGGER.info("Context servlet shutdown.");
     }
 
     public void setProfileIdCookieDomain(String profileIdCookieDomain) {

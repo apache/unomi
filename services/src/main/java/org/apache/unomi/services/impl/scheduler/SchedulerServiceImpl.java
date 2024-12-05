@@ -30,7 +30,7 @@ import java.util.concurrent.ScheduledExecutorService;
  * @author dgaillard
  */
 public class SchedulerServiceImpl implements SchedulerService {
-    private static final Logger logger = LoggerFactory.getLogger(SchedulerServiceImpl.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(SchedulerServiceImpl.class.getName());
 
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
     private ScheduledExecutorService sharedScheduler;
@@ -38,13 +38,13 @@ public class SchedulerServiceImpl implements SchedulerService {
 
     public void postConstruct() {
         sharedScheduler = Executors.newScheduledThreadPool(threadPoolSize);
-        logger.info("Scheduler service initialized.");
+        LOGGER.info("Scheduler service initialized.");
     }
 
     public void preDestroy() {
         sharedScheduler.shutdown();
         scheduler.shutdown();
-        logger.info("Scheduler service shutdown.");
+        LOGGER.info("Scheduler service shutdown.");
     }
 
     public void setThreadPoolSize(int threadPoolSize) {

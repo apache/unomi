@@ -19,20 +19,13 @@ package org.apache.unomi.router.core.processor;
 import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
 import org.apache.unomi.api.Profile;
-import org.apache.unomi.api.PropertyType;
 import org.apache.unomi.router.api.ExportConfiguration;
 import org.apache.unomi.router.api.services.ProfileExportService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.util.Collection;
 
 /**
  * Created by amidani on 28/06/2017.
  */
 public class LineBuildProcessor implements Processor {
-
-    private static final Logger logger = LoggerFactory.getLogger(LineBuildProcessor.class);
 
     private ProfileExportService profileExportService;
 

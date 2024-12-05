@@ -15,8 +15,34 @@
  * limitations under the License.
  */
 
-if (ctx._source.profile != null) {
-    if (ctx._source.profile.systemProperties != null && ctx._source.profile.systemProperties.pastEvents != null) {
-         ctx._source.profile.systemProperties.remove('pastEvents');
+package org.apache.unomi.healthcheck.util;
+
+import java.util.concurrent.TimeUnit;
+
+/**
+ * A Health Check response.
+ */
+public class CachedValue<T> {
+
+    private long ttl;
+    private long date;
+    private T value;
+
+    public CachedValue(long value, TimeUnit unit) {
+        this.ttl = TimeUnit.MILLISECONDS.convert(value, unit);
     }
+
+    public boolean isStaled() {
+        return System.currentTimeMillis() - date > ttl;
+    }
+
+    public synchronized void setValue(T value) {
+        this.date = System.currentTimeMillis();
+        this.value = value;
+    }
+
+    public synchronized T getValue() {
+        return isStaled()?null:value;
+    }
+
 }

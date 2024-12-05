@@ -32,7 +32,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class ImportConfigurationServiceImpl implements ImportExportConfigurationService<ImportConfiguration> {
 
-    private static final Logger logger = LoggerFactory.getLogger(ImportConfigurationServiceImpl.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(ImportConfigurationServiceImpl.class.getName());
 
     private PersistenceService persistenceService;
 
@@ -43,7 +43,7 @@ public class ImportConfigurationServiceImpl implements ImportExportConfiguration
     private final Map<String, RouterConstants.CONFIG_CAMEL_REFRESH> camelConfigsToRefresh = new ConcurrentHashMap<>();
 
     public ImportConfigurationServiceImpl() {
-        logger.info("Initializing import configuration service...");
+        LOGGER.info("Initializing import configuration service...");
     }
 
     @Override

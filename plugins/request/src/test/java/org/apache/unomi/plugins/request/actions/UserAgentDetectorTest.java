@@ -21,7 +21,6 @@ import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.logging.Logger;
 
 import org.apache.unomi.plugins.request.useragent.UserAgent;
 import org.apache.unomi.plugins.request.useragent.UserAgentDetectorServiceImpl;
@@ -30,11 +29,13 @@ import org.junit.Before;
 import org.junit.FixMethodOrder;
 import org.junit.Test;
 import org.junit.runners.MethodSorters;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class UserAgentDetectorTest {
 
-    private static final Logger logger = Logger.getLogger(UserAgentDetectorTest.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(UserAgentDetectorTest.class.getName());
 
     private UserAgentDetectorServiceImpl userAgentDetectorService;
 
@@ -44,7 +45,7 @@ public class UserAgentDetectorTest {
         this.userAgentDetectorService = new UserAgentDetectorServiceImpl();
         this.userAgentDetectorService.postConstruct();
         long end = System.currentTimeMillis();
-        logger.info("Duration starting user agent (in msec) > " + (end - start));
+        LOGGER.info("Duration starting user agent (in msec) > {}", end - start);
     }
 
     @After
@@ -59,8 +60,8 @@ public class UserAgentDetectorTest {
         long start = System.currentTimeMillis();
         UserAgent agent = this.userAgentDetectorService.parseUserAgent(header);
         long end = System.currentTimeMillis();
-        logger.info("Duration user agent parsing (in msec) > " + (end - start));
-        logger.info(agent.toString());
+        LOGGER.info("Duration user agent parsing (in msec) > {}", end - start);
+        LOGGER.info(agent.toString());
     }
 
     @Test
@@ -69,7 +70,7 @@ public class UserAgentDetectorTest {
         ExecutorService executorService = Executors.newFixedThreadPool(3000);
 
         for (int cpt = 1; cpt < 6; cpt++) {
-            logger.info("Execution " + cpt + "/5");
+            LOGGER.info("Execution {}/5", cpt);
             executeWorker(executorService, workerCount);
         }
     }
@@ -82,7 +83,7 @@ public class UserAgentDetectorTest {
         }
         executorService.invokeAll(callables);
         long totalTime = System.currentTimeMillis() - startTime;
-        logger.info("AgentWorker workers completed execution in " + totalTime + "ms");
+        LOGGER.info("AgentWorker workers completed execution in {}ms", totalTime);
     }
 
     private class AgentWorker implements Callable<Object> {

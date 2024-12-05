@@ -49,13 +49,13 @@ import java.util.List;
 @Component(service = ScopeServiceEndPoint.class, property = "osgi.jaxrs.resource=true")
 public class ScopeServiceEndPoint {
 
-    private static final Logger logger = LoggerFactory.getLogger(ScopeServiceEndPoint.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(ScopeServiceEndPoint.class.getName());
 
     @Reference
     private ScopeService scopeService;
 
     public ScopeServiceEndPoint() {
-        logger.info("Initializing scope service endpoint...");
+        LOGGER.info("Initializing scope service endpoint...");
     }
 
     @WebMethod(exclude = true)

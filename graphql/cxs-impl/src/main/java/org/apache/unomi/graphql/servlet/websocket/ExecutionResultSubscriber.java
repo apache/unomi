@@ -27,7 +27,7 @@ import java.util.Collections;
 
 public class ExecutionResultSubscriber extends io.reactivex.subscribers.DefaultSubscriber<ExecutionResult> {
 
-    private static final Logger logger = LoggerFactory.getLogger(ExecutionResultSubscriber.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(ExecutionResultSubscriber.class);
 
     private final RemoteEndpoint remote;
 
@@ -40,7 +40,7 @@ public class ExecutionResultSubscriber extends io.reactivex.subscribers.DefaultS
 
     @Override
     public void onNext(ExecutionResult result) {
-        logger.debug("Subscriber sending data", result);
+        LOGGER.debug("Subscriber sending data {}", result);
 
         final GraphQLMessage message = GraphQLMessage.create(id)
                 .data(result.getData())
@@ -56,13 +56,13 @@ public class ExecutionResultSubscriber extends io.reactivex.subscribers.DefaultS
         try {
             this.remote.sendString(message.toString());
         } catch (IOException e) {
-            logger.warn("Subscriber failed to send data", e);
+            LOGGER.warn("Subscriber failed to send data", e);
         }
     }
 
     @Override
     public void onError(Throwable t) {
-        logger.error("Subscriber exception", t);
+        LOGGER.error("Subscriber exception", t);
 
         sendMessage(GraphQLMessage.create(id).errors(Collections.singletonList(t.getMessage())).build());
         cancel();
@@ -70,7 +70,7 @@ public class ExecutionResultSubscriber extends io.reactivex.subscribers.DefaultS
 
     @Override
     public void onComplete() {
-        logger.info("Subscriber complete");
+        LOGGER.info("Subscriber complete");
 
         sendMessage(GraphQLMessage.complete(id));
         cancel();

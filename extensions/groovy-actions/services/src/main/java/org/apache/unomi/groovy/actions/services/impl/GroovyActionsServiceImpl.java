@@ -67,17 +67,12 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
     }
 
     private BundleContext bundleContext;
-
     private GroovyScriptEngine groovyScriptEngine;
-
     private GroovyShell groovyShell;
-
     private Map<String, GroovyCodeSource> groovyCodeSourceMap;
-
     private ScheduledFuture<?> scheduledFuture;
 
-    private static final Logger logger = LoggerFactory.getLogger(GroovyActionsServiceImpl.class.getName());
-
+    private static final Logger LOGGER = LoggerFactory.getLogger(GroovyActionsServiceImpl.class.getName());
     private static final String BASE_SCRIPT_NAME = "BaseScript";
 
     private DefinitionsService definitionsService;
@@ -112,7 +107,7 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
 
     @Activate
     public void start(GroovyActionsServiceConfig config, BundleContext bundleContext) {
-        logger.debug("postConstruct {}", bundleContext.getBundle());
+        LOGGER.debug("postConstruct {}", bundleContext.getBundle());
 
         this.config = config;
         this.bundleContext = bundleContext;
@@ -126,15 +121,15 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
         try {
             loadBaseScript();
         } catch (IOException e) {
-            logger.error("Failed to load base script", e);
+            LOGGER.error("Failed to load base script", e);
         }
         initializeTimers();
-        logger.info("Groovy action service initialized.");
+        LOGGER.info("Groovy action service initialized.");
     }
 
     @Deactivate
     public void onDestroy() {
-        logger.debug("onDestroy Method called");
+        LOGGER.debug("onDestroy Method called");
         if (scheduledFuture != null && !scheduledFuture.isCancelled()) {
             scheduledFuture.cancel(true);
         }
@@ -156,7 +151,7 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
         if (groovyBaseScriptURL == null) {
             return;
         }
-        logger.debug("Found Groovy base script at {}, loading... ", groovyBaseScriptURL.getPath());
+        LOGGER.debug("Found Groovy base script at {}, loading... ", groovyBaseScriptURL.getPath());
         GroovyCodeSource groovyCodeSource = new GroovyCodeSource(IOUtils.toString(groovyBaseScriptURL.openStream()), BASE_SCRIPT_NAME, "/groovy/script");
         groovyScriptEngine.getGroovyClassLoader().parseClass(groovyCodeSource, true);
     }
@@ -189,9 +184,9 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
         try {
             saveActionType(groovyShell.parse(groovyCodeSource).getClass().getMethod("execute").getAnnotation(Action.class));
             saveScript(actionName, groovyScript);
-            logger.info("The script {} has been loaded.", actionName);
+            LOGGER.info("The script {} has been loaded.", actionName);
         } catch (NoSuchMethodException e) {
-            logger.error("Failed to save the script {}", actionName, e);
+            LOGGER.error("Failed to save the script {}", actionName, e);
         }
     }
 
@@ -221,7 +216,7 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
                 definitionsService.removeActionType(
                         groovyShell.parse(groovyCodeSourceMap.get(id)).getClass().getMethod("execute").getAnnotation(Action.class).id());
             } catch (NoSuchMethodException e) {
-                logger.error("Failed to delete the action type for the id {}", id, e);
+                LOGGER.error("Failed to delete the action type for the id {}", id, e);
             }
             persistenceService.remove(id, GroovyAction.class);
         }
@@ -246,7 +241,7 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
     private void saveScript(String actionName, String script) {
         GroovyAction groovyScript = new GroovyAction(actionName, script);
         persistenceService.save(groovyScript);
-        logger.info("The script {} has been persisted.", actionName);
+        LOGGER.info("The script {} has been persisted.", actionName);
     }
 
     private void refreshGroovyActions() {

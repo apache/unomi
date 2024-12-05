@@ -51,7 +51,7 @@ import java.util.*;
 
 
 public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener {
-    private static final Logger logger = LoggerFactory.getLogger(GoalsServiceImpl.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(GoalsServiceImpl.class.getName());
 
     private BundleContext bundleContext;
 
@@ -78,7 +78,7 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
     }
 
     public void postConstruct() {
-        logger.debug("postConstruct {" + bundleContext.getBundle() + "}");
+        LOGGER.debug("postConstruct {{}}", bundleContext.getBundle());
 
         loadPredefinedGoals(bundleContext);
         loadPredefinedCampaigns(bundleContext);
@@ -89,12 +89,12 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
             }
         }
         bundleContext.addBundleListener(this);
-        logger.info("Goal service initialized.");
+        LOGGER.info("Goal service initialized.");
     }
 
     public void preDestroy() {
         bundleContext.removeBundleListener(this);
-        logger.info("Goal service shutdown.");
+        LOGGER.info("Goal service shutdown.");
     }
 
     private void processBundleStartup(BundleContext bundleContext) {
@@ -116,7 +116,7 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
 
         while (predefinedRuleEntries.hasMoreElements()) {
             URL predefinedGoalURL = predefinedRuleEntries.nextElement();
-            logger.debug("Found predefined goals at " + predefinedGoalURL + ", loading... ");
+            LOGGER.debug("Found predefined goals at {}, loading... ", predefinedGoalURL);
 
             try {
                 Goal goal = CustomObjectMapper.getObjectMapper().readValue(predefinedGoalURL, Goal.class);
@@ -125,9 +125,9 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
                 }
 
                 setGoal(goal);
-                logger.info("Predefined goal with id {} registered", goal.getMetadata().getId());
+                LOGGER.info("Predefined goal with id {} registered", goal.getMetadata().getId());
             } catch (IOException e) {
-                logger.error("Error while loading segment definition " + predefinedGoalURL, e);
+                LOGGER.error("Error while loading segment definition {}", predefinedGoalURL, e);
             }
         }
     }
@@ -232,7 +232,7 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
     @Override
     public void setGoal(Goal goal) {
         if (goal == null) {
-            logger.warn("Trying to save null goal, aborting...");
+            LOGGER.warn("Trying to save null goal, aborting...");
             return;
         }
         ParserHelper.resolveConditionType(definitionsService, goal.getStartEvent(), "goal "+goal.getItemId()+" start event");
@@ -269,14 +269,14 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
 
         while (predefinedRuleEntries.hasMoreElements()) {
             URL predefinedCampaignURL = predefinedRuleEntries.nextElement();
-            logger.debug("Found predefined campaigns at " + predefinedCampaignURL + ", loading... ");
+            LOGGER.debug("Found predefined campaigns at {}, loading... ", predefinedCampaignURL);
 
             try {
                 Campaign campaign = CustomObjectMapper.getObjectMapper().readValue(predefinedCampaignURL, Campaign.class);
                 setCampaign(campaign);
-                logger.info("Predefined campaign with id {} registered", campaign.getMetadata().getId());
+                LOGGER.info("Predefined campaign with id {} registered", campaign.getMetadata().getId());
             } catch (IOException e) {
-                logger.error("Error while loading segment definition " + predefinedCampaignURL, e);
+                LOGGER.error("Error while loading segment definition {}", predefinedCampaignURL, e);
             }
         }
     }
