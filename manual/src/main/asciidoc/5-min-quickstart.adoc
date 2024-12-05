@@ -51,9 +51,14 @@ Try accessing https://localhost:9443/cxs/cluster with username/password: karaf/k
 1) Install JDK 11 (https://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html) and make sure you set the
 JAVA_HOME variable https://docs.oracle.com/cd/E19182-01/820-7851/inst_cli_jdk_javahome_t/ (see our <<JDK compatibility,Getting Started>> guide for more information on JDK compatibility)
 
-2) Download ElasticSearch here : https://www.elastic.co/downloads/past-releases/elasticsearch-7-17-5 (please <strong>make sure</strong> you use the proper version : 7.17.5)
+2) Download ElasticSearch here : https://www.elastic.co/downloads/past-releases/elasticsearch-7-17-5 (please *make sure* you use the proper version : 7.17.5)
 
-3) Uncompress it and change the `config/elasticsearch.yml` to include the following config : <code>cluster.name: contextElasticSearch</code>
+3) Uncompress it and change the `config/elasticsearch.yml` to include the following config :
+
+[source,yaml]
+----
+cluster.name: contextElasticSearch
+----
 
 4) Launch ElasticSearch using : `bin/elasticsearch`
 
