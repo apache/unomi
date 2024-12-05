@@ -37,7 +37,7 @@ public interface RulesService {
 
     /**
      * Retrieves the metadata for all known rules.
-     *
+     * Note that it only includes the rules in memory, not those persisted in storage.
      * @return the Set of known metadata
      */
     Set<Metadata> getRuleMetadatas();

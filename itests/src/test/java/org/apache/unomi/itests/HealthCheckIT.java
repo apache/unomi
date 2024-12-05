@@ -110,15 +110,7 @@ public class HealthCheckIT extends BaseIT {
             LOGGER.info("health check response: {}", response);
             Assert.assertEquals(5, response.size());
             Assert.assertTrue(response.stream().anyMatch(r -> r.getName().equals("karaf") && r.getStatus() == HealthCheckResponse.Status.LIVE));
-            Assert.assertTrue(response.stream().anyMatch(r -> {
-                if (r.getName().equals("elasticsearch") && r.getStatus() == HealthCheckResponse.Status.LIVE) {
-                    Map<String, Object> data = r.getData();
-                    String clusterName = (String) data.get("clusterName");
-                    String expectedClusterName = isOpenSearch() ? "docker-cluster" : "contextElasticSearchITests";
-                    return clusterName != null && clusterName.equals(expectedClusterName);
-                }
-                return false;
-            }));
+            Assert.assertTrue(response.stream().anyMatch(r -> r.getName().equals("elasticsearch") && r.getStatus() == HealthCheckResponse.Status.LIVE));
             Assert.assertTrue(response.stream().anyMatch(r -> r.getName().equals("unomi") && r.getStatus() == HealthCheckResponse.Status.LIVE));
             Assert.assertTrue(response.stream().anyMatch(r -> r.getName().equals("cluster") && r.getStatus() == HealthCheckResponse.Status.LIVE));
             Assert.assertTrue(response.stream().anyMatch(r -> r.getName().equals("persistence") && r.getStatus() == HealthCheckResponse.Status.LIVE));

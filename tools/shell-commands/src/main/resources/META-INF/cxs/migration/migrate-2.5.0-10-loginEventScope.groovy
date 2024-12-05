@@ -28,6 +28,6 @@ context.performMigrationStep("2.5.0-migrate-login-event-scope", () -> {
     String updatePathScript = MigrationUtils.getFileWithoutComments(bundleContext, "requestBody/2.5.0/login_event_scope_migrate.painless")
     String baseSettings = MigrationUtils.resourceAsString(bundleContext, "requestBody/2.5.0/scope_update_by_query_request.json")
     eventIndices.each { eventIndex ->
-        HttpUtils.executePostRequest(context.getHttpClient(), "${esAddress}/${eventIndex}/_update_by_query", baseSettings.replace('#painless', updatePathScript), null)
+        MigrationUtils.updateByQuery(context.getHttpClient(), esAddress, eventIndex, baseSettings.replace('#painless', updatePathScript));
     }
 })

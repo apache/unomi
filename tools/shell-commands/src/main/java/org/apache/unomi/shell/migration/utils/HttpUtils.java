@@ -124,7 +124,7 @@ public class HttpUtils {
         httpPost.addHeader("accept", "application/json");
 
         if (jsonData != null) {
-            StringEntity input = new StringEntity(jsonData);
+            StringEntity input = new StringEntity(jsonData, "UTF-8");
             input.setContentType("application/json");
             httpPost.setEntity(input);
         }
