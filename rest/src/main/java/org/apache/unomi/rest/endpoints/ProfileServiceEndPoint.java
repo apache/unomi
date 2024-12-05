@@ -58,7 +58,7 @@ import java.util.*;
 @Component(service=ProfileServiceEndPoint.class,property = "osgi.jaxrs.resource=true")
 public class ProfileServiceEndPoint {
 
-    private static final Logger logger = LoggerFactory.getLogger(ProfileServiceEndPoint.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(ProfileServiceEndPoint.class.getName());
 
     @Reference
     private ProfileService profileService;
@@ -73,7 +73,7 @@ public class ProfileServiceEndPoint {
     private LocalizationHelper localizationHelper;
 
     public ProfileServiceEndPoint() {
-        logger.info("Initializing profile service endpoint...");
+        LOGGER.info("Initializing profile service endpoint...");
     }
 
     @WebMethod(exclude = true)
@@ -132,7 +132,7 @@ public class ProfileServiceEndPoint {
         try {
             return exportProfiles(CustomObjectMapper.getObjectMapper().readValue(query, Query.class));
         } catch (IOException e) {
-            logger.error(e.getMessage(), e);
+            LOGGER.error("{}", e.getMessage(), e);
             return Response.serverError().build();
         }
     }
@@ -151,7 +151,7 @@ public class ProfileServiceEndPoint {
         try {
             return exportProfiles(CustomObjectMapper.getObjectMapper().readValue(query, Query.class));
         } catch (IOException e) {
-            logger.error(e.getMessage(), e);
+            LOGGER.error("{}", e.getMessage(), e);
             return Response.serverError().build();
         }
     }
@@ -399,7 +399,7 @@ public class ProfileServiceEndPoint {
     public Session loadSession(@PathParam("sessionId") String sessionId) throws ParseException {
         return profileService.loadSession(sessionId);
     }
-    
+
     /**
      * Saves the specified session.
      *
@@ -410,6 +410,17 @@ public class ProfileServiceEndPoint {
     @Path("/sessions/{sessionId}")
     public Session saveSession(Session session) {
         return profileService.saveSession(session);
+    }
+
+    /**
+     * Delete the session by specifying its unique identifier
+     * @param sessionId the session identifier for the session to delete
+     * @throws ParseException
+     */
+    @DELETE
+    @Path("/sessions/{sessionId}")
+    public void deleteSession(@PathParam("sessionId") String sessionId) throws ParseException {
+        profileService.deleteSession(sessionId);
     }
 
     /**

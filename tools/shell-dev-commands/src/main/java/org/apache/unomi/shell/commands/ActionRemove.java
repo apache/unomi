@@ -20,24 +20,26 @@ import org.apache.karaf.shell.api.action.Argument;
 import org.apache.karaf.shell.api.action.Command;
 import org.apache.karaf.shell.api.action.lifecycle.Reference;
 import org.apache.karaf.shell.api.action.lifecycle.Service;
-import org.apache.unomi.api.services.ProfileService;
+import org.apache.unomi.api.services.DefinitionsService;
 
-@Command(scope = "unomi", name = "profile-remove", description = "This command will remove a profile")
+@Command(scope = "unomi", name = "action-remove", description = "This command will remove an action type.")
 @Service
-public class ProfileRemove extends RemoveCommandSupport {
+public class ActionRemove extends RemoveCommandSupport {
 
     @Reference
-    ProfileService profileService;
+    DefinitionsService definitionsService;
 
-    @Argument(index = 0, name = "profile", description = "The identifier for the profile", required = true, multiValued = false)
-    String profileIdentifier;
+    @Argument(index = 0, name = "actionId", description = "The identifier for the action", required = true, multiValued = false)
+    String actionTypeIdentifier;
 
-    public String getResourceDescription() {
-        return "profile [" + profileIdentifier + "]";
+    @Override
+    public Object doRemove() throws Exception {
+        definitionsService.removeActionType(actionTypeIdentifier);
+        return true;
     }
 
-    public Object doRemove() throws Exception {
-        profileService.delete(profileIdentifier, false);
-        return true;
+    @Override
+    public String getResourceDescription() {
+        return "action type [" + actionTypeIdentifier + "]";
     }
 }

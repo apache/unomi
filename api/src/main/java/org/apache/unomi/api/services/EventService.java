@@ -161,4 +161,10 @@ public interface EventService {
      * @param profileId identifier of the profile that we want to remove it's events
      */
     void removeProfileEvents(String profileId);
+
+    /**
+     * Delete an event by specifying its event identifier
+     * @param eventIdentifier the unique identifier for the event
+     */
+    void deleteEvent(String eventIdentifier);
 }

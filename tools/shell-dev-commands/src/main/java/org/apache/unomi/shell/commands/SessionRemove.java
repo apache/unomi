@@ -22,22 +22,24 @@ import org.apache.karaf.shell.api.action.lifecycle.Reference;
 import org.apache.karaf.shell.api.action.lifecycle.Service;
 import org.apache.unomi.api.services.ProfileService;
 
-@Command(scope = "unomi", name = "profile-remove", description = "This command will remove a profile")
+@Command(scope = "unomi", name = "session-remove", description = "This command will remove a session.")
 @Service
-public class ProfileRemove extends RemoveCommandSupport {
+public class SessionRemove extends RemoveCommandSupport {
 
     @Reference
     ProfileService profileService;
 
-    @Argument(index = 0, name = "profile", description = "The identifier for the profile", required = true, multiValued = false)
-    String profileIdentifier;
+    @Argument(index = 0, name = "session", description = "The identifier for the session", required = true, multiValued = false)
+    String sessionIdentifier;
 
-    public String getResourceDescription() {
-        return "profile [" + profileIdentifier + "]";
+    @Override
+    public Object doRemove() throws Exception {
+        profileService.deleteSession(sessionIdentifier);
+        return true;
     }
 
-    public Object doRemove() throws Exception {
-        profileService.delete(profileIdentifier, false);
-        return true;
+    @Override
+    public String getResourceDescription() {
+        return "session [" + sessionIdentifier + "]";
     }
 }

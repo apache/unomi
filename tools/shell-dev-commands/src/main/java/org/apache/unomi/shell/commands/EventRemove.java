@@ -20,24 +20,26 @@ import org.apache.karaf.shell.api.action.Argument;
 import org.apache.karaf.shell.api.action.Command;
 import org.apache.karaf.shell.api.action.lifecycle.Reference;
 import org.apache.karaf.shell.api.action.lifecycle.Service;
-import org.apache.unomi.api.services.ProfileService;
+import org.apache.unomi.api.services.EventService;
 
-@Command(scope = "unomi", name = "profile-remove", description = "This command will remove a profile")
+@Command(scope = "unomi", name = "event-remove", description = "This command will remove an event.")
 @Service
-public class ProfileRemove extends RemoveCommandSupport {
+public class EventRemove extends RemoveCommandSupport {
 
     @Reference
-    ProfileService profileService;
+    EventService eventService;
 
-    @Argument(index = 0, name = "profile", description = "The identifier for the profile", required = true, multiValued = false)
-    String profileIdentifier;
+    @Argument(index = 0, name = "event", description = "The identifier for the event", required = true, multiValued = false)
+    String eventIdentifier;
 
-    public String getResourceDescription() {
-        return "profile [" + profileIdentifier + "]";
+    @Override
+    public Object doRemove() throws Exception {
+        eventService.deleteEvent(eventIdentifier);
+        return true;
     }
 
-    public Object doRemove() throws Exception {
-        profileService.delete(profileIdentifier, false);
-        return true;
+    @Override
+    public String getResourceDescription() {
+        return "event [" + eventIdentifier + "]";
     }
 }
