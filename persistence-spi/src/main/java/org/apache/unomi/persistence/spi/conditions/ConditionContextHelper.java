@@ -132,7 +132,7 @@ public class ConditionContextHelper {
             try (StringReader stringReader = new StringReader(s); Reader foldedStringReader = mappingCharFilterFactory.create(stringReader)) {
                 return IOUtils.toString(foldedStringReader);
             } catch (IOException e) {
-                LOGGER.error("Error folding to ASCII string " + s, e);
+                LOGGER.error("Error folding to ASCII string {}", s, e);
             }
         }
         return null;

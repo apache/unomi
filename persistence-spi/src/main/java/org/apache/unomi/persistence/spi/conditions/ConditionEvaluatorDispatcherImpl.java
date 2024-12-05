@@ -91,7 +91,7 @@ public class ConditionEvaluatorDispatcherImpl implements ConditionEvaluatorDispa
                     }
                 }.runWithTimer();
             } catch (Exception e) {
-                LOGGER.error("Error executing condition evaluator with key=" + conditionEvaluatorKey, e);
+                LOGGER.error("Error executing condition evaluator with key={}", conditionEvaluatorKey, e);
             }
         }
 

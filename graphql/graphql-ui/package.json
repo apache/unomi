@@ -1,11 +1,11 @@
 {
-  "name": "unomi-graphql-playground",
+  "name": "unomi-graphql-ui",
   "version": "1.0.0",
-  "description": "The Apache Unomi GraphQL Playground integration.",
-  "main": "target/javascript/unomi-graphql-playground.js",
+  "description": "The Apache Unomi GraphQL UI integration.",
+  "main": "target/assets/js/index.js",
   "keywords": [
     "unomi",
-    "graphql-playground",
+    "graphql-ui",
     "apache"
   ],
   "author": "Apache Software Foundation",
@@ -15,11 +15,13 @@
     "build:production": "yarn webpack --mode=production"
   },
   "dependencies": {
-    "graphql": "^15.2.0",
-    "graphql-playground-react": "^1.7.27",
-    "react": "^16.13.1",
-    "react-dom": "^16.13.1",
-    "react-redux": "^7.2.2"
+    "@graphiql/react": "0.22.3",
+    "@graphiql/toolkit": "^0.9.1",
+    "graphiql": "^3.3.1",
+    "graphql": "^16.8.2",
+    "graphql-ws": "^5.16.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
   },
   "resolutions" : {
     "**/terser" : "4.8.1",
@@ -35,7 +37,13 @@
     "css-loader": "^3.6.0",
     "file-loader": "^6.0.0",
     "style-loader": "^1.2.1",
-    "webpack": "^4.43.0",
-    "webpack-cli": "^3.3.12"
+    "webpack": "^5.88.2",
+    "webpack-cli": "^5.1.4",
+    "less": "^4.2.0",
+    "less-loader": "^11.1.3",
+    "mini-css-extract-plugin": "^2.7.6",
+    "postcss": "^8.4.28",
+    "postcss-loader": "^7.3.3",
+    "source-map-loader": "^4.0.1"
   }
 }

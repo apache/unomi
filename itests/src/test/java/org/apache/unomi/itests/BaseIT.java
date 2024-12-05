@@ -629,27 +629,4 @@ public abstract class BaseIT extends KarafTestSupport {
         credsProvider.setCredentials(AuthScope.ANY, new UsernamePasswordCredentials(BASIC_AUTH_USER_NAME, BASIC_AUTH_PASSWORD));
         return credsProvider;
     }
-
-    /**
-     * @return true if ElasticSearch is the current search engine
-     */
-    protected boolean isElasticSearch() {
-        String searchEngine = System.getProperty(SEARCH_ENGINE_PROPERTY, SEARCH_ENGINE_ELASTICSEARCH);
-        return SEARCH_ENGINE_ELASTICSEARCH.equals(searchEngine);
-    }
-
-    /**
-     * @return true if OpenSearch is the current search engine
-     */
-    protected boolean isOpenSearch() {
-        String searchEngine = System.getProperty(SEARCH_ENGINE_PROPERTY, SEARCH_ENGINE_ELASTICSEARCH);
-        return SEARCH_ENGINE_OPENSEARCH.equals(searchEngine);
-    }
-
-    /**
-     * @return the current search engine name
-     */
-    protected String getCurrentSearchEngine() {
-        return System.getProperty(SEARCH_ENGINE_PROPERTY, SEARCH_ENGINE_ELASTICSEARCH);
-    }
 }

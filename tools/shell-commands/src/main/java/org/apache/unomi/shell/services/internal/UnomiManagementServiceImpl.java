@@ -27,6 +27,8 @@ import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.component.annotations.ReferenceCardinality;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.*;
 
@@ -37,6 +39,8 @@ import java.util.*;
  */
 @Component(service = UnomiManagementService.class, immediate = true)
 public class UnomiManagementServiceImpl implements UnomiManagementService {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(UnomiManagementServiceImpl.class.getName());
 
     private BundleContext bundleContext;
 
@@ -51,16 +55,20 @@ public class UnomiManagementServiceImpl implements UnomiManagementService {
 
     @Activate
     public void init(ComponentContext componentContext) throws Exception {
-        this.bundleContext = componentContext.getBundleContext();
-        initReversedBundleSymbolicNames();
+        try {
+            this.bundleContext = componentContext.getBundleContext();
+            initReversedBundleSymbolicNames();
 
-        if (StringUtils.isNotBlank(bundleContext.getProperty("unomi.autoMigrate"))) {
-            migrationService.migrateUnomi(bundleContext.getProperty("unomi.autoMigrate"), true, null);
-        }
+            if (StringUtils.isNotBlank(bundleContext.getProperty("unomi.autoMigrate"))) {
+                migrationService.migrateUnomi(bundleContext.getProperty("unomi.autoMigrate"), true, null);
+            }
 
-        if (StringUtils.isNotBlank(bundleContext.getProperty("unomi.autoStart")) &&
-                bundleContext.getProperty("unomi.autoStart").equals("true")) {
-            startUnomi(selectedPersistenceImplementation);
+            if (StringUtils.isNotBlank(bundleContext.getProperty("unomi.autoStart")) &&
+                    bundleContext.getProperty("unomi.autoStart").equals("true")) {
+                startUnomi(selectedPersistenceImplementation);
+            }
+        } catch (Exception e) {
+            LOGGER.error("Error during Unomi startup when processing 'unomi.autoMigrate' or 'unomi.autoStart' properties:", e);
         }
     }
 
