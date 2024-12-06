@@ -35,5 +35,5 @@ String mapping = MigrationUtils.extractMappingFromBundles(bundleContext, "event.
 String newIndexSettings = MigrationUtils.buildIndexCreationRequest(baseSettings, mapping, context, true)
 Set<String> eventIndices = MigrationUtils.getIndexesPrefixedBy(context.getHttpClient(), esAddress, "${indexPrefix}-event-date-")
 eventIndices.each { eventIndex ->
-    MigrationUtils.reIndex(context.getHttpClient(), bundleContext, esAddress, eventIndex, newIndexSettings, reIndexScript, context)
+    MigrationUtils.reIndex(context.getHttpClient(), bundleContext, esAddress, eventIndex, newIndexSettings, reIndexScript, context, "migrate-2.0.0-15-eventsReindex")
 }
