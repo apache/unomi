@@ -26,4 +26,4 @@ String baseSettings = MigrationUtils.resourceAsString(bundleContext, "requestBod
 String mapping = MigrationUtils.extractMappingFromBundles(bundleContext, "profile.json")
 String newIndexSettings = MigrationUtils.buildIndexCreationRequest(baseSettings, mapping, context, false)
 MigrationUtils.reIndex(context.getHttpClient(), bundleContext, esAddress, indexPrefix + "-profile",
-        newIndexSettings, MigrationUtils.getFileWithoutComments(bundleContext, "requestBody/2.0.0/profile_migrate.painless"), context)
+        newIndexSettings, MigrationUtils.getFileWithoutComments(bundleContext, "requestBody/2.0.0/profile_migrate.painless"), context, "migrate-2.0.0-10-profileReindex")
