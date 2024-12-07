@@ -526,7 +526,7 @@ src/main/resources/OSGI-INF/blueprint/blueprint.xml
         <bean class="org.apache.unomi.plugins.baseplugin.conditions.MatchAllConditionESQueryBuilder"/>
     </service>
 
-    <service interface="org.apache.unomi.persistence.elasticsearch.conditions.ConditionEvaluator">
+    <service interface="org.apache.unomi.persistence.spi.conditions.ConditionEvaluator">
         <service-properties>
             <entry key="conditionEvaluatorId" value="matchAllConditionEvaluator"/>
         </service-properties>
