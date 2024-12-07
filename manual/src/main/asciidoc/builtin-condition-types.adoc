@@ -76,7 +76,7 @@ From https://github.com/apache/unomi/blob/master/plugins/baseplugin/src/main/res
     </service>
 ...
     <!-- Condition evaluators -->
-    <service interface="org.apache.unomi.persistence.elasticsearch.conditions.ConditionEvaluator">
+    <service interface="org.apache.unomi.persistence.spi.conditions.ConditionEvaluator">
         <service-properties>
             <entry key="conditionEvaluatorId" value="booleanConditionEvaluator"/>
         </service-properties>
