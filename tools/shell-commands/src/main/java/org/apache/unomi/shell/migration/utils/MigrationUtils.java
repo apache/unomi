@@ -239,7 +239,7 @@ public class MigrationUtils {
             }
         });
 
-        migrationContext.performMigrationStep("Reindex step for: " + indexName + " (refresh at the end)", () -> {
+        migrationContext.performMigrationStep(migrationUniqueName + " - reindex step for: " + indexName + " (refresh at the end)", () -> {
             // Do a refresh
             HttpUtils.executePostRequest(httpClient, esAddress + "/" + indexName + "/_refresh", null, null);
 
