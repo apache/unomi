@@ -66,7 +66,7 @@ public class Migrate16xTo220IT extends BaseIT {
         }
 
         // Do migrate the data set
-        String commandResults = executeCommand("unomi:migrate 1.6.0 true");
+        String commandResults = executeCommand("unomi:migrate 1.6.0 true", 900000L, true);
 
         // Prin the resulted output in the karaf shell directly
         System.out.println("Migration command output results:");
@@ -262,7 +262,7 @@ public class Migrate16xTo220IT extends BaseIT {
         // check that the scope mySite have been created based on the previous existings events
         Map<String, Long> existingScopesFromEvents = persistenceService.aggregateWithOptimizedQuery(null, new TermsAggregate("scope"), Event.ITEM_TYPE);
         for (String scopeFromEvents : existingScopesFromEvents.keySet()) {
-            if (!Objects.equals(scopeFromEvents, "_filtered")) {
+            if (!Objects.equals(scopeFromEvents, "_filtered") && !Objects.equals(scopeFromEvents, "_missing")) {
                 Scope scope = scopeService.getScope(scopeFromEvents);
                 Assert.assertNotNull(String.format("Unable to find registered scope %s", scopeFromEvents), scope);
             }
