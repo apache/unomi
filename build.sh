@@ -64,6 +64,7 @@ MAVEN_OFFLINE=false
 SEARCH_ENGINE="elasticsearch"
 KARAF_DEBUG_PORT=5005
 KARAF_DEBUG_SUSPEND=n
+USE_OPENSEARCH=false
 
 # Function to display usage
 usage() {
@@ -91,6 +92,7 @@ EOF
     echo "  --purge-maven-cache        Purge local Maven cache before building"
     echo "  --search-engine ENGINE     Set search engine (elasticsearch|opensearch)"
     echo "  --karaf-home PATH          Set Karaf home directory for deployment"
+    echo "  --use-opensearch          Use OpenSearch instead of ElasticSearch for tests"
     echo ""
     echo "Examples:"
     echo "  $0 --integration-tests --search-engine opensearch"
@@ -99,6 +101,7 @@ EOF
     echo "  $0 --purge-maven-cache --no-maven-cache"
     echo "  $0 -X --integration-tests    Run tests with Maven debug output"
     echo "  $0 -o -X                    Run offline with Maven debug output"
+    echo "  $0 --integration-tests --use-opensearch"
     exit 1
 }
 
@@ -146,6 +149,9 @@ while [ "$1" != "" ]; do
         --karaf-home)
             shift
             CONTEXT_SERVER_KARAF_HOME=$1
+            ;;
+        --use-opensearch)
+            USE_OPENSEARCH=true
             ;;
         *)
             echo "Unknown option: $1"
@@ -244,7 +250,14 @@ fi
 # Add profile options
 PROFILES=""
 if [ "$RUN_INTEGRATION_TESTS" = true ]; then
-    PROFILES="$PROFILES,integration-tests,$SEARCH_ENGINE"
+    if [ "$USE_OPENSEARCH" = true ]; then
+        MVN_OPTS="$MVN_OPTS -Duse.opensearch=true -P opensearch"
+        echo "Running integration tests with OpenSearch"
+    else
+        MVN_OPTS="$MVN_OPTS -Duse.opensearch=false"
+        echo "Running integration tests with ElasticSearch"
+    fi
+    MVN_OPTS="$MVN_OPTS -P integration-tests"
 else
     if [ "$SKIP_TESTS" = true ]; then
         PROFILES="$PROFILES,!integration-tests,!run-tests"
