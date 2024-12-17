@@ -86,7 +86,7 @@ public class MigrationUtils {
             in.close();
             return value.toString();
         } catch (final Exception e) {
-            throw new RuntimeException(e);
+            throw new RuntimeException("Error reading file " + resource, e);
         }
     }
 
@@ -196,7 +196,7 @@ public class MigrationUtils {
         }
     }
 
-    public static void reIndex(CloseableHttpClient httpClient, BundleContext bundleContext, String esAddress, String indexName, String newIndexSettings, String painlessScript, MigrationContext migrationContext) throws Exception {
+    public static void reIndex(CloseableHttpClient httpClient, BundleContext bundleContext, String esAddress, String indexName, String newIndexSettings, String painlessScript, MigrationContext migrationContext, String migrationUniqueName) throws Exception {
         if (indexName.endsWith("-cloned")) {
             // We should never reIndex a clone ...
             return;
@@ -208,7 +208,7 @@ public class MigrationUtils {
 
         String setIndexReadOnlyRequest = resourceAsString(bundleContext, "requestBody/2.0.0/base_set_index_readonly_request.json");
 
-        migrationContext.performMigrationStep("Reindex step for: " + indexName + " (clone creation)", () -> {
+        migrationContext.performMigrationStep(migrationUniqueName + " - reindex step for: " + indexName + " (clone creation)", () -> {
             // Delete clone in case it already exists, could be incomplete from a previous reindex attempt, so better create a fresh one.
             if (indexExists(httpClient, esAddress, indexNameCloned)) {
                 HttpUtils.executeDeleteRequest(httpClient, esAddress + "/" + indexNameCloned, null);
@@ -219,7 +219,7 @@ public class MigrationUtils {
             HttpUtils.executePostRequest(httpClient, esAddress + "/" + indexName + "/_clone/" + indexNameCloned, null, null);
         });
 
-        migrationContext.performMigrationStep("Reindex step for: " + indexName + " (recreate the index and perform the re-indexation)", () -> {
+        migrationContext.performMigrationStep(migrationUniqueName + " - reindex step for: " + indexName + " (recreate the index and perform the re-indexation)", () -> {
             // Delete original index if it still exists
             if (indexExists(httpClient, esAddress, indexName)) {
                 HttpUtils.executeDeleteRequest(httpClient, esAddress + "/" + indexName, null);
@@ -232,14 +232,14 @@ public class MigrationUtils {
             waitForTaskToFinish(httpClient, esAddress, task.getString("task"), migrationContext);
         });
 
-        migrationContext.performMigrationStep("Reindex step for: " + indexName + " (delete clone)", () -> {
+        migrationContext.performMigrationStep(migrationUniqueName + " - reindex step for: " + indexName + " (delete clone)", () -> {
             // Delete original index if it still exists
             if (indexExists(httpClient, esAddress, indexNameCloned)) {
                 HttpUtils.executeDeleteRequest(httpClient, esAddress + "/" + indexNameCloned, null);
             }
         });
 
-        migrationContext.performMigrationStep("Reindex step for: " + indexName + " (refresh at the end)", () -> {
+        migrationContext.performMigrationStep(migrationUniqueName + " - reindex step for: " + indexName + " (refresh at the end)", () -> {
             // Do a refresh
             HttpUtils.executePostRequest(httpClient, esAddress + "/" + indexName + "/_refresh", null, null);
 

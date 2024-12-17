@@ -38,6 +38,13 @@
         </dependency>
 
         <dependency>
+            <groupId>org.apache.karaf.features</groupId>
+            <artifactId>org.apache.karaf.features.core</artifactId>
+            <version>${version.karaf}</version> <!-- Use the version that matches your Karaf installation -->
+            <scope>provided</scope> <!-- Provided because the service will be available in the Karaf runtime -->
+        </dependency>
+
+        <dependency>
             <groupId>org.apache.httpcomponents</groupId>
             <artifactId>httpclient-osgi</artifactId>
             <type>bundle</type>
@@ -107,6 +114,12 @@
             <version>${version.jackson.databind}</version>
             <scope>provided</scope>
         </dependency>
+        <dependency>
+            <groupId>org.apache.unomi</groupId>
+            <artifactId>unomi-lifecycle-watcher</artifactId>
+            <version>${project.version}</version>
+            <scope>provided</scope>
+        </dependency>
     </dependencies>
 
     <build>
@@ -148,6 +161,13 @@
                                     </file>
                                     <type>cfg</type>
                                     <classifier>migration</classifier>
+                                </artifact>
+                                <artifact>
+                                    <file>
+                                        src/main/resources/org.apache.unomi.start.cfg
+                                    </file>
+                                    <type>cfg</type>
+                                    <classifier>start</classifier>
                                 </artifact>
                             </artifacts>
                         </configuration>

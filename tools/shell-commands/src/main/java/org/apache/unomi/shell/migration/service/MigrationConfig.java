@@ -49,27 +49,29 @@ public class MigrationConfig {
     public static final String ROLLOVER_MAX_AGE = "rolloverMaxAge";
     public static final String ROLLOVER_MAX_SIZE = "rolloverMaxSize";
     public static final String ROLLOVER_MAX_DOCS = "rolloverMaxDocs";
+    public static final String SEARCH_ENGINE = "searchEngine";
     protected static final Map<String, MigrationConfigProperty> configProperties;
     static {
         Map<String, MigrationConfigProperty> m = new HashMap<>();
-        m.put(CONFIG_ES_ADDRESSES, new MigrationConfigProperty("Enter ElasticSearch TARGET address (default: localhost:9200): ", "localhost:9200"));
-        m.put(CONFIG_ES_SSL_ENABLED, new MigrationConfigProperty("Should the ElasticSearch TARGET connection be established using SSL (https) protocol ? (yes/no)", null));
-        m.put(CONFIG_ES_LOGIN, new MigrationConfigProperty("Enter ElasticSearch TARGET login (default: none): ", ""));
-        m.put(CONFIG_ES_PASSWORD, new MigrationConfigProperty("Enter ElasticSearch TARGET password (default: none): ", ""));
+        m.put(SEARCH_ENGINE, new MigrationConfigProperty("Enter search engine to use (default: elasticsearch): ", "elasticsearch"));
+        m.put(CONFIG_ES_ADDRESSES, new MigrationConfigProperty("Enter search engine TARGET address (default: localhost:9200): ", "localhost:9200"));
+        m.put(CONFIG_ES_SSL_ENABLED, new MigrationConfigProperty("Should the search engine TARGET connection be established using SSL (https) protocol ? (yes/no)", null));
+        m.put(CONFIG_ES_LOGIN, new MigrationConfigProperty("Enter search engine TARGET login (default: none): ", ""));
+        m.put(CONFIG_ES_PASSWORD, new MigrationConfigProperty("Enter search engine TARGET password (default: none): ", ""));
         m.put(CONFIG_TRUST_ALL_CERTIFICATES, new MigrationConfigProperty("We need to initialize a HttpClient, do we need to trust all certificates ? (yes/no)", null));
-        m.put(INDEX_PREFIX, new MigrationConfigProperty("Enter ElasticSearch Unomi indices prefix (default: context): ", "context"));
-        m.put(NUMBER_OF_SHARDS, new MigrationConfigProperty("Enter ElasticSearch index mapping configuration: number_of_shards (default: 5): ", "5"));
-        m.put(NUMBER_OF_REPLICAS, new MigrationConfigProperty("Enter ElasticSearch index mapping configuration: number_of_replicas (default: 0): ", "0"));
-        m.put(TOTAL_FIELDS_LIMIT, new MigrationConfigProperty("Enter ElasticSearch index mapping configuration: mapping.total_fields.limit (default: 1000): ", "1000"));
-        m.put(MAX_DOC_VALUE_FIELDS_SEARCH, new MigrationConfigProperty("Enter ElasticSearch index mapping configuration: max_docvalue_fields_search (default: 1000): ", "1000"));
-        m.put(MONTHLY_NUMBER_OF_SHARDS, new MigrationConfigProperty("Enter ElasticSearch monthly index (event, session) mapping configuration: number_of_shards (default: 5): ", "5"));
-        m.put(MONTHLY_NUMBER_OF_REPLICAS, new MigrationConfigProperty("Enter ElasticSearch monthly index (event, session) mapping configuration: number_of_replicas (default: 0): ", "0"));
-        m.put(MONTHLY_TOTAL_FIELDS_LIMIT, new MigrationConfigProperty("Enter ElasticSearch monthly index (event, session) mapping configuration: mapping.total_fields.limit (default: 1000): ", "1000"));
-        m.put(MONTHLY_MAX_DOC_VALUE_FIELDS_SEARCH, new MigrationConfigProperty("Enter ElasticSearch monthly index (event, session) mapping configuration: max_docvalue_fields_search (default: 1000): ", "1000"));
+        m.put(INDEX_PREFIX, new MigrationConfigProperty("Enter search engine Unomi indices prefix (default: context): ", "context"));
+        m.put(NUMBER_OF_SHARDS, new MigrationConfigProperty("Enter search engine index mapping configuration: number_of_shards (default: 5): ", "5"));
+        m.put(NUMBER_OF_REPLICAS, new MigrationConfigProperty("Enter search engine index mapping configuration: number_of_replicas (default: 0): ", "0"));
+        m.put(TOTAL_FIELDS_LIMIT, new MigrationConfigProperty("Enter search engine index mapping configuration: mapping.total_fields.limit (default: 1000): ", "1000"));
+        m.put(MAX_DOC_VALUE_FIELDS_SEARCH, new MigrationConfigProperty("Enter search engine index mapping configuration: max_docvalue_fields_search (default: 1000): ", "1000"));
+        m.put(MONTHLY_NUMBER_OF_SHARDS, new MigrationConfigProperty("Enter search engine monthly index (event, session) mapping configuration: number_of_shards (default: 5): ", "5"));
+        m.put(MONTHLY_NUMBER_OF_REPLICAS, new MigrationConfigProperty("Enter search engine monthly index (event, session) mapping configuration: number_of_replicas (default: 0): ", "0"));
+        m.put(MONTHLY_TOTAL_FIELDS_LIMIT, new MigrationConfigProperty("Enter search engine monthly index (event, session) mapping configuration: mapping.total_fields.limit (default: 1000): ", "1000"));
+        m.put(MONTHLY_MAX_DOC_VALUE_FIELDS_SEARCH, new MigrationConfigProperty("Enter search engine monthly index (event, session) mapping configuration: max_docvalue_fields_search (default: 1000): ", "1000"));
         m.put(MIGRATION_HISTORY_RECOVER, new MigrationConfigProperty("We found an existing migration attempt, should we restart from it ? (this will avoid redoing steps already completed successfully) (yes/no)", null));
-        m.put(ROLLOVER_MAX_AGE, new MigrationConfigProperty("Enter ElasticSearch index rollover configuration: max_age (default: null): ", null));
-        m.put(ROLLOVER_MAX_SIZE, new MigrationConfigProperty("Enter ElasticSearch index rollover configuration: max_size (default: 30gb): ", "30gb"));
-        m.put(ROLLOVER_MAX_DOCS, new MigrationConfigProperty("Enter ElasticSearch index rollover configuration: max_docs (default: null): ", null));
+        m.put(ROLLOVER_MAX_AGE, new MigrationConfigProperty("Enter search engine index rollover configuration: max_age (default: null): ", null));
+        m.put(ROLLOVER_MAX_SIZE, new MigrationConfigProperty("Enter search engine index rollover configuration: max_size (default: 30gb): ", "30gb"));
+        m.put(ROLLOVER_MAX_DOCS, new MigrationConfigProperty("Enter search engine index rollover configuration: max_docs (default: null): ", null));
 
         configProperties = Collections.unmodifiableMap(m);
     }

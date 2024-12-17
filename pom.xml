@@ -763,6 +763,13 @@
                 <version>${version.jackson.core}</version>
                 <scope>provided</scope>
             </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson.datatype</groupId>
+                <artifactId>jackson-datatype-jsr310</artifactId>
+                <version>${version.jackson.databind}</version>
+                <scope>provided</scope>
+            </dependency>
+
             <!-- End of Jackson dependencies -->
 
             <!-- Apache Commons dependencies -->

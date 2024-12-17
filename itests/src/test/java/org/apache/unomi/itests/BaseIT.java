@@ -26,11 +26,7 @@ import org.apache.commons.io.IOUtils;
 import org.apache.http.auth.AuthScope;
 import org.apache.http.auth.UsernamePasswordCredentials;
 import org.apache.http.client.config.RequestConfig;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpDelete;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.client.methods.HttpUriRequest;
+import org.apache.http.client.methods.*;
 import org.apache.http.config.Registry;
 import org.apache.http.config.RegistryBuilder;
 import org.apache.http.conn.socket.ConnectionSocketFactory;
@@ -100,6 +96,7 @@ import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
+import static org.ops4j.pax.exam.CoreOptions.maven;
 import static org.ops4j.pax.exam.CoreOptions.systemProperty;
 import static org.ops4j.pax.exam.karaf.options.KarafDistributionOption.*;
 
@@ -173,11 +170,21 @@ public abstract class BaseIT extends KarafTestSupport {
         // Start Unomi if not already done
         if (!unomiStarted) {
             if (SEARCH_ENGINE_ELASTICSEARCH.equals(searchEngine)) {
+                LOGGER.info("Starting Unomi with elasticsearch search engine...");
+                System.out.println("==== Starting Unomi with elasticsearch search engine...");
                 executeCommand("unomi:start");
+            } else if (SEARCH_ENGINE_OPENSEARCH.equals(searchEngine)){
+                LOGGER.info("Starting Unomi with opensearch search engine...");
+                System.out.println("==== Starting Unomi with opensearch search engine...");
+                executeCommand("unomi:start " + SEARCH_ENGINE_OPENSEARCH);
             } else {
-                executeCommand("unomi:start opensearch");
+                LOGGER.error("Unknown search engine: " + searchEngine);
+                throw new InterruptedException("Unknown search engine: " + searchEngine);
             }
             unomiStarted = true;
+        } else {
+            LOGGER.info("Unomi is already started.");
+            System.out.println("==== Unomi is already started.");
         }
 
         // Wait for startup complete
@@ -216,6 +223,12 @@ public abstract class BaseIT extends KarafTestSupport {
     }
 
     protected void removeItems(final Class<? extends Item>... classes) throws InterruptedException {
+        if (definitionsService == null) {
+            throw new RuntimeException("definitionsService is null");
+        }
+        if (persistenceService == null) {
+            throw new RuntimeException("persistenceService is null");
+        }
         Condition condition = new Condition(definitionsService.getConditionType("matchAllCondition"));
         for (Class<? extends Item> aClass : classes) {
             persistenceService.removeByQuery(condition, aClass);
@@ -232,12 +245,34 @@ public abstract class BaseIT extends KarafTestSupport {
 
     @Override
     public MavenArtifactUrlReference getKarafDistribution() {
-        return CoreOptions.maven().groupId("org.apache.unomi").artifactId("unomi").versionAsInProject().type("tar.gz");
+        return maven().groupId("org.apache.unomi").artifactId("unomi").versionAsInProject().type("tar.gz");
     }
 
     @Configuration
     public Option[] config() {
         System.out.println("==== Configuring container");
+
+        searchEngine = System.getProperty(SEARCH_ENGINE_PROPERTY, SEARCH_ENGINE_ELASTICSEARCH);
+        System.out.println("Search Engine: " + searchEngine);
+
+        // Define features option based on search engine
+        Option featuresOption;
+        if (SEARCH_ENGINE_ELASTICSEARCH.equals(searchEngine)) {
+            featuresOption = features(maven().groupId("org.apache.unomi")
+                    .artifactId("unomi-kar").versionAsInProject().type("xml").classifier("features"),
+                    "unomi-persistence-elasticsearch", "unomi-services",
+                    "unomi-router-karaf-feature", "unomi-groovy-actions",
+                    "unomi-web-applications", "unomi-rest-ui", "unomi-healthcheck", "cdp-graphql-feature");
+        } else if (SEARCH_ENGINE_OPENSEARCH.equals(searchEngine)) {
+            featuresOption = features(maven().groupId("org.apache.unomi")
+                    .artifactId("unomi-kar").versionAsInProject().type("xml").classifier("features"),
+                    "unomi-persistence-opensearch", "unomi-services",
+                    "unomi-router-karaf-feature", "unomi-groovy-actions",
+                    "unomi-web-applications", "unomi-rest-ui", "unomi-healthcheck", "cdp-graphql-feature");
+        } else {
+            throw new IllegalArgumentException("Unknown search engine: " + searchEngine);
+        }
+
         Option[] options = new Option[]{
                 replaceConfigurationFile("etc/org.apache.unomi.router.cfg", new File("src/test/resources/org.apache.unomi.router.cfg")),
 
@@ -271,6 +306,9 @@ public abstract class BaseIT extends KarafTestSupport {
                 systemProperty("org.apache.unomi.hazelcast.tcp-ip.interface").value("127.0.0.1"),
                 systemProperty("org.apache.unomi.healthcheck.enabled").value("true"),
 
+                featuresOption,  // Add the features option
+
+                configureConsole().startRemoteShell(),
                 logLevel(LogLevel.INFO),
                 keepRuntimeFolder(),
                 CoreOptions.bundleStartLevel(100),

@@ -30,12 +30,7 @@ import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
 import org.ops4j.pax.exam.spi.reactors.PerSuite;
 
 import java.io.File;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 
 /**
  * Created by amidani on 14/08/2017.
@@ -95,7 +90,8 @@ public class ProfileImportActorsIT extends BaseIT {
                 "file://" + importSurfersFile.getAbsolutePath() + "?fileName=6-actors-test.csv&consumer.delay=10m&move=.done");
         importConfigActors.setActive(true);
 
-        importConfigurationService.save(importConfigActors, true);
+        ImportConfiguration savedImportConfigActors = importConfigurationService.save(importConfigActors, true);
+        keepTrying("Failed waiting for actors import configuration to be saved", () -> importConfigurationService.load(importConfigActors.getItemId()), Objects::nonNull, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
 
         //Wait for data to be processed
         keepTrying("Failed waiting for actors initial import to complete",

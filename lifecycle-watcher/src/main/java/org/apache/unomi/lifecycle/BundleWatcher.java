@@ -38,4 +38,8 @@ public interface BundleWatcher {
     boolean isStartupComplete();
 
     boolean allAdditionalBundleStarted();
+
+    public void addRequiredBundle(String bundleName);
+
+    public boolean removeRequiredBundle(String bundleName);
 }

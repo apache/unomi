@@ -1,8 +1,5 @@
 import org.apache.unomi.shell.migration.service.MigrationContext
-import org.apache.unomi.shell.migration.utils.HttpUtils
 import org.apache.unomi.shell.migration.utils.MigrationUtils
-import org.osgi.framework.BundleContext
-import org.osgi.framework.Bundle
 
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
@@ -32,7 +29,7 @@ context.performMigrationStep("2.5.0-clean-profile-mapping", () -> {
     String updatePastEventScript = MigrationUtils.getFileWithoutComments(bundleContext, "requestBody/2.5.0/update_pastEvents_profile.painless")
     String mapping = MigrationUtils.extractMappingFromBundles(bundleContext, "profile.json")
     String newIndexSettings = MigrationUtils.buildIndexCreationRequest(baseSettings, mapping, context, false)
-    MigrationUtils.reIndex(context.getHttpClient(), bundleContext, esAddress, indexPrefix + "-profile", newIndexSettings, updatePastEventScript, context)
+    MigrationUtils.reIndex(context.getHttpClient(), bundleContext, esAddress, indexPrefix + "-profile", newIndexSettings, updatePastEventScript, context, "2.5.0-clean-profile-mapping")
 })
 
 context.performMigrationStep("2.5.0-clean-session-mapping", () -> {
@@ -43,6 +40,6 @@ context.performMigrationStep("2.5.0-clean-session-mapping", () -> {
     Set<String> sessionIndices = MigrationUtils.getIndexesPrefixedBy(context.getHttpClient(), esAddress, "${indexPrefix}-session-")
 
     sessionIndices.each { sessionIndex ->
-        MigrationUtils.reIndex(context.getHttpClient(), bundleContext, esAddress, sessionIndex, newIndexSettings, cleanPastEventScript, context)
+        MigrationUtils.reIndex(context.getHttpClient(), bundleContext, esAddress, sessionIndex, newIndexSettings, cleanPastEventScript, context, "2.5.0-clean-session-mapping")
     }
 })

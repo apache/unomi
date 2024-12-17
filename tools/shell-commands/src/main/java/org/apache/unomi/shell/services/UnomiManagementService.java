@@ -25,10 +25,12 @@ import org.osgi.framework.BundleException;
 public interface UnomiManagementService {
 
     /**
-     * This method will start Apache Unomi
+     * This method will start Apache Unomi with the specified persistence implementation
+     * @param selectedPersistenceImplementation the persistence implementation to use
+     * @param mustStartFeatures true if features should be started, false if they should not
      * @throws BundleException if there was an error starting Unomi's bundles
      */
-    void startUnomi(String selectedPersistenceImplementation) throws BundleException;
+    void startUnomi(String selectedPersistenceImplementation, boolean mustStartFeatures) throws BundleException;
 
     /**
      * This method will stop Apache Unomi

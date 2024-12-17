@@ -19,6 +19,7 @@ package org.apache.unomi.itests.migration;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.unomi.api.*;
+import org.apache.unomi.geonames.services.GeonameEntry;
 import org.apache.unomi.itests.BaseIT;
 import org.apache.unomi.persistence.spi.aggregate.TermsAggregate;
 import org.apache.unomi.shell.migration.utils.HttpUtils;
@@ -27,11 +28,15 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.*;
 
 public class Migrate16xTo220IT extends BaseIT {
+
+    private final static Logger LOGGER = LoggerFactory.getLogger(Migrate16xTo220IT.class);
 
     private int eventCount = 0;
     private int sessionCount = 0;
@@ -47,6 +52,9 @@ public class Migrate16xTo220IT extends BaseIT {
     @Before
     public void waitForStartup() throws InterruptedException {
 
+        System.out.println("Restoring snapshot into search engine...");
+        LOGGER.info("Restoring snapshot into search engine...");
+
         // Restore snapshot from 1.6.x
         try (CloseableHttpClient httpClient = HttpUtils.initHttpClient(true, null)) {
             // Create snapshot repo
@@ -59,16 +67,31 @@ public class Migrate16xTo220IT extends BaseIT {
             // Restore the snapshot
             HttpUtils.executePostRequest(httpClient, "http://localhost:9400/_snapshot/snapshots_repository/snapshot_1.6.x/_restore?wait_for_completion=true", "{}", null);
 
+            String snapshotStatus = HttpUtils.executeGetRequest(httpClient, "http://localhost:9400/_snapshot/_status", null);
+            System.out.println(snapshotStatus);
+            LOGGER.info(snapshotStatus);
+
             // Get initial counts of items to compare after migration
             initCounts(httpClient);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+        } catch (Throwable t) {
+            throw new RuntimeException("Error during snapshot restore", t);
         }
 
-        // Do migrate the data set
-        String commandResults = executeCommand("unomi:migrate 1.6.0 true");
+        System.out.println("Launching migration from 1.6.0...");
+        LOGGER.info("Launching migration from 1.6.0...");
 
-        // Prin the resulted output in the karaf shell directly
+        // Do migrate the data set
+        String commandResults = null;
+        try {
+            commandResults = executeCommand("unomi:migrate 1.6.0 true", 900000L, true);
+        } catch (Throwable t) {
+            LOGGER.error("Error during migration", t);
+            System.err.println("Error during migration");
+            t.printStackTrace();
+            throw new RuntimeException("Error during migration", t);
+        }
+
+        // Print the resulted output in the karaf shell directly
         System.out.println("Migration command output results:");
         System.out.println(commandResults);
 
@@ -78,11 +101,18 @@ public class Migrate16xTo220IT extends BaseIT {
 
     @After
     public void cleanup() throws InterruptedException {
-        removeItems(Profile.class);
-        removeItems(ProfileAlias.class);
-        removeItems(Session.class);
-        removeItems(Event.class);
-        removeItems(Scope.class);
+        try {
+            removeItems(Profile.class);
+            removeItems(ProfileAlias.class);
+            removeItems(Session.class);
+            removeItems(Event.class);
+            removeItems(Scope.class);
+            removeItems(GeonameEntry.class);
+        } catch (Throwable t) {
+            LOGGER.error("Error during cleanup", t);
+            System.err.println("Error during cleanup");
+            t.printStackTrace();
+        }
     }
 
     @Test
@@ -262,7 +292,7 @@ public class Migrate16xTo220IT extends BaseIT {
         // check that the scope mySite have been created based on the previous existings events
         Map<String, Long> existingScopesFromEvents = persistenceService.aggregateWithOptimizedQuery(null, new TermsAggregate("scope"), Event.ITEM_TYPE);
         for (String scopeFromEvents : existingScopesFromEvents.keySet()) {
-            if (!Objects.equals(scopeFromEvents, "_filtered")) {
+            if (!Objects.equals(scopeFromEvents, "_filtered") && !Objects.equals(scopeFromEvents, "_missing")) {
                 Scope scope = scopeService.getScope(scopeFromEvents);
                 Assert.assertNotNull(String.format("Unable to find registered scope %s", scopeFromEvents), scope);
             }

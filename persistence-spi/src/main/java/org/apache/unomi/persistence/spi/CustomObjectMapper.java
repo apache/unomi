@@ -58,6 +58,7 @@ public class CustomObjectMapper extends ObjectMapper {
     public CustomObjectMapper(Map<Class, StdDeserializer<?>> deserializers) {
         super();
         super.registerModule(new JaxbAnnotationModule());
+        super.registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule());
         configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false);
         setSerializationInclusion(JsonInclude.Include.NON_NULL);
         ISO8601DateFormat dateFormat = new ISO8601DateFormat();

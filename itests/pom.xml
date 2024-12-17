@@ -304,6 +304,7 @@
                     <plugin>
                         <groupId>com.github.alexcojocaru</groupId>
                         <artifactId>elasticsearch-maven-plugin</artifactId>
+                        <!-- REPLACE THE FOLLOWING WITH THE PLUGIN VERSION YOU NEED -->
                         <version>6.23</version>
                         <configuration>
                             <clusterName>contextElasticSearchITests</clusterName>
@@ -311,6 +312,7 @@
                             <httpPort>9400</httpPort>
                             <version>${elasticsearch.test.version}</version>
                             <autoCreateIndex>true</autoCreateIndex>
+                            <timeout>120</timeout>
                             <environmentVariables>
                                 <ES_JAVA_OPTS>-Xms4g -Xmx4g</ES_JAVA_OPTS>
                             </environmentVariables>
@@ -326,6 +328,10 @@
                             </instanceSettings>
                         </configuration>
                         <executions>
+                            <!--
+                                The elasticsearch maven plugin goals are by default bound to the
+                                pre-integration-test and post-integration-test phases
+                            -->
                             <execution>
                                 <id>start-elasticsearch</id>
                                 <phase>pre-integration-test</phase>

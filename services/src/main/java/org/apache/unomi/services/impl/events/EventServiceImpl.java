@@ -20,33 +20,22 @@ package org.apache.unomi.services.impl.events;
 import inet.ipaddr.IPAddress;
 import inet.ipaddr.IPAddressString;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.unomi.api.Event;
-import org.apache.unomi.api.EventProperty;
-import org.apache.unomi.api.Metadata;
-import org.apache.unomi.api.PartialList;
-import org.apache.unomi.api.PropertyType;
-import org.apache.unomi.api.Session;
-import org.apache.unomi.api.ValueType;
+import org.apache.unomi.api.*;
 import org.apache.unomi.api.actions.ActionPostExecutor;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.query.Query;
-import org.apache.unomi.api.services.*;
+import org.apache.unomi.api.services.DefinitionsService;
+import org.apache.unomi.api.services.EventListenerService;
+import org.apache.unomi.api.services.EventService;
+import org.apache.unomi.api.utils.ParserHelper;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.aggregate.TermsAggregate;
-import org.apache.unomi.api.utils.ParserHelper;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceReference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 public class EventServiceImpl implements EventService {
@@ -127,6 +116,7 @@ public class EventServiceImpl implements EventService {
             for (Map.Entry<String, ThirdPartyServer> entry : thirdPartyServers.entrySet()) {
                 ThirdPartyServer server = entry.getValue();
                 if (server.getKey().equals(key)) {
+                    // This is a fix to support proper IPv6 parsing
                     if (ip != null) {
                         if (ip.startsWith("[") && ip.endsWith("]")) {
                             // This can happen with IPv6 addresses, we must remove the markers since our IPAddress library doesn't support them.
