@@ -94,7 +94,7 @@
     </service>
 
     <bean id="conditionOSQueryBuilderDispatcher"
-          class="org.apache.unomi.persistence.opensearch.conditions.ConditionOSQueryBuilderDispatcher">
+          class="org.apache.unomi.persistence.opensearch.ConditionOSQueryBuilderDispatcher">
         <property name="scriptExecutor" ref="scriptExecutor" />
     </bean>
 
@@ -162,7 +162,7 @@
 
     <!-- We use a listener here because using the list directly for listening to proxies coming from the same bundle didn't seem to work -->
     <reference-list id="conditionOSQueryBuilders"
-                    interface="org.apache.unomi.persistence.opensearch.conditions.ConditionOSQueryBuilder"
+                    interface="org.apache.unomi.persistence.opensearch.ConditionOSQueryBuilder"
         availability="optional">
         <reference-listener
                 bind-method="bindConditionOSQueryBuilder" unbind-method="unbindConditionOSQueryBuilder" ref="openSearchPersistenceServiceImpl"/>

@@ -297,7 +297,7 @@
                             org.elasticsearch.*;version="${elasticsearch.version}",
                             org.elasticsearch.index.query.*;version="${elasticsearch.version}",
                             org.apache.lucene.search.join.*;version="${lucene.version}",
-                            org.apache.unomi.persistence.elasticsearch.conditions;version="${project.version}"
+                            org.apache.unomi.persistence.elasticsearch;version="${project.version}"
                         </Export-Package>
                         <Embed-Dependency>*;scope=compile|runtime</Embed-Dependency>
                         <Embed-Transitive>true</Embed-Transitive>

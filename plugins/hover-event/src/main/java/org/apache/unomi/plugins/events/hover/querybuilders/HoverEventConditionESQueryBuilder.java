@@ -18,8 +18,8 @@
 package org.apache.unomi.plugins.events.hover.querybuilders;
 
 import org.apache.unomi.api.conditions.Condition;
-import org.apache.unomi.persistence.elasticsearch.conditions.ConditionESQueryBuilder;
-import org.apache.unomi.persistence.elasticsearch.conditions.ConditionESQueryBuilderDispatcher;
+import org.apache.unomi.persistence.elasticsearch.ConditionESQueryBuilder;
+import org.apache.unomi.persistence.elasticsearch.ConditionESQueryBuilderDispatcher;
 import org.elasticsearch.index.query.BoolQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;

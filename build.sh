@@ -61,7 +61,6 @@ USE_MAVEN_CACHE=true
 PURGE_MAVEN_CACHE=false
 MAVEN_DEBUG=false
 MAVEN_OFFLINE=false
-SEARCH_ENGINE="elasticsearch"
 KARAF_DEBUG_PORT=5005
 KARAF_DEBUG_SUSPEND=n
 USE_OPENSEARCH=false
@@ -90,7 +89,6 @@ EOF
     echo "  --debug-suspend           Suspend JVM until debugger connects"
     echo "  --no-maven-cache           Disable Maven build cache"
     echo "  --purge-maven-cache        Purge local Maven cache before building"
-    echo "  --search-engine ENGINE     Set search engine (elasticsearch|opensearch)"
     echo "  --karaf-home PATH          Set Karaf home directory for deployment"
     echo "  --use-opensearch          Use OpenSearch instead of ElasticSearch for tests"
     echo ""
@@ -142,10 +140,6 @@ while [ "$1" != "" ]; do
         --purge-maven-cache)
             PURGE_MAVEN_CACHE=true
             ;;
-        --search-engine)
-            shift
-            SEARCH_ENGINE=$1
-            ;;
         --karaf-home)
             shift
             CONTEXT_SERVER_KARAF_HOME=$1
@@ -173,12 +167,6 @@ if [ "$PURGE_MAVEN_CACHE" = true ]; then
     echo "Purging Maven cache..."
     rm -rf ~/.m2/build-cache ~/.m2/dependency-cache ~/.m2/dependency-cache_v2
     echo "Maven cache purged."
-fi
-
-# Validate search engine value
-if [ "$SEARCH_ENGINE" != "elasticsearch" ] && [ "$SEARCH_ENGINE" != "opensearch" ]; then
-    echo "Invalid search engine: $SEARCH_ENGINE. Must be 'elasticsearch' or 'opensearch'"
-    exit 1
 fi
 
 # Function to check if command exists
@@ -254,7 +242,6 @@ if [ "$RUN_INTEGRATION_TESTS" = true ]; then
         MVN_OPTS="$MVN_OPTS -Duse.opensearch=true -P opensearch"
         echo "Running integration tests with OpenSearch"
     else
-        MVN_OPTS="$MVN_OPTS -Duse.opensearch=false"
         echo "Running integration tests with ElasticSearch"
     fi
     MVN_OPTS="$MVN_OPTS -P integration-tests"

@@ -61,12 +61,6 @@
         </dependency>
         <dependency>
             <groupId>org.apache.unomi</groupId>
-            <artifactId>unomi-persistence-elasticsearch-core</artifactId>
-            <version>${project.version}</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.unomi</groupId>
             <artifactId>unomi-persistence-spi</artifactId>
             <version>${project.version}</version>
             <scope>provided</scope>

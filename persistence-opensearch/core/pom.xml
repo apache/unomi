@@ -156,7 +156,7 @@
                             org.opensearch.*;version="${opensearch.version}",
                             org.opensearch.index.query.*;version="${opensearch.version}",
                             org.apache.lucene.search.join.*;version="${lucene.version}",
-                            org.apache.unomi.persistence.opensearch.conditions;version="${project.version}"
+                            org.apache.unomi.persistence.opensearch;version="${project.version}"
                         </Export-Package>
                         <Embed-Dependency>*;scope=compile|runtime</Embed-Dependency>
                         <Embed-Transitive>true</Embed-Transitive>

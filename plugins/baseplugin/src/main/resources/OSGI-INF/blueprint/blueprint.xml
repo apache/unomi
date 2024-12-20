@@ -49,89 +49,7 @@
     <reference id="configSharingService" interface="org.apache.unomi.api.services.ConfigSharingService"/>
     <reference id="scriptExecutor" interface="org.apache.unomi.scripting.ScriptExecutor"/>
     <reference id="topicService" interface="org.apache.unomi.api.services.TopicService"/>
-
-    <service
-            interface="org.apache.unomi.persistence.elasticsearch.conditions.ConditionESQueryBuilder">
-        <service-properties>
-            <entry key="queryBuilderId" value="idsConditionESQueryBuilder"/>
-        </service-properties>
-        <bean class="org.apache.unomi.plugins.baseplugin.conditions.IdsConditionESQueryBuilder">
-            <property name="maximumIdsQueryCount" value="${es.maximumIdsQueryCount}"/>
-        </bean>
-    </service>
-
-    <service
-            interface="org.apache.unomi.persistence.elasticsearch.conditions.ConditionESQueryBuilder">
-        <service-properties>
-            <entry key="queryBuilderId" value="booleanConditionESQueryBuilder"/>
-        </service-properties>
-        <bean class="org.apache.unomi.plugins.baseplugin.conditions.BooleanConditionESQueryBuilder"/>
-    </service>
-
-    <service
-            interface="org.apache.unomi.persistence.elasticsearch.conditions.ConditionESQueryBuilder">
-        <service-properties>
-            <entry key="queryBuilderId" value="notConditionESQueryBuilder"/>
-        </service-properties>
-        <bean class="org.apache.unomi.plugins.baseplugin.conditions.NotConditionESQueryBuilder"/>
-    </service>
-
-    <service
-            interface="org.apache.unomi.persistence.elasticsearch.conditions.ConditionESQueryBuilder">
-        <service-properties>
-            <entry key="queryBuilderId" value="matchAllConditionESQueryBuilder"/>
-        </service-properties>
-        <bean class="org.apache.unomi.plugins.baseplugin.conditions.MatchAllConditionESQueryBuilder"/>
-    </service>
-
-    <service
-            interface="org.apache.unomi.persistence.elasticsearch.conditions.ConditionESQueryBuilder">
-        <service-properties>
-            <entry key="queryBuilderId" value="propertyConditionESQueryBuilder"/>
-        </service-properties>
-        <bean class="org.apache.unomi.plugins.baseplugin.conditions.PropertyConditionESQueryBuilder"/>
-    </service>
-
-    <service
-            interface="org.apache.unomi.persistence.elasticsearch.conditions.ConditionESQueryBuilder">
-        <service-properties>
-            <entry key="queryBuilderId" value="geoLocationByPointSessionConditionESQueryBuilder"/>
-        </service-properties>
-        <bean class="org.apache.unomi.plugins.baseplugin.conditions.GeoLocationByPointSessionConditionESQueryBuilder"/>
-    </service>
-
-    <service
-            interface="org.apache.unomi.persistence.elasticsearch.conditions.ConditionESQueryBuilder">
-        <service-properties>
-            <entry key="queryBuilderId" value="sourceEventPropertyConditionESQueryBuilder"/>
-        </service-properties>
-        <bean class="org.apache.unomi.plugins.baseplugin.conditions.SourceEventPropertyConditionESQueryBuilder"/>
-    </service>
-
-    <service
-            interface="org.apache.unomi.persistence.elasticsearch.conditions.ConditionESQueryBuilder">
-        <service-properties>
-            <entry key="queryBuilderId" value="pastEventConditionESQueryBuilder"/>
-        </service-properties>
-        <bean class="org.apache.unomi.plugins.baseplugin.conditions.PastEventConditionESQueryBuilder">
-            <property name="definitionsService" ref="definitionsService"/>
-            <property name="persistenceService" ref="persistenceService"/>
-            <property name="segmentService" ref="segmentService"/>
-            <property name="scriptExecutor" ref="scriptExecutor"/>
-            <property name="maximumIdsQueryCount" value="${es.maximumIdsQueryCount}"/>
-            <property name="pastEventsDisablePartitions" value="${es.pastEventsDisablePartitions}"/>
-            <property name="aggregateQueryBucketSize" value="${es.aggregateQueryBucketSize}"/>
-        </bean>
-    </service>
-
-    <service
-            interface="org.apache.unomi.persistence.elasticsearch.conditions.ConditionESQueryBuilder">
-        <service-properties>
-            <entry key="queryBuilderId" value="nestedConditionESQueryBuilder"/>
-        </service-properties>
-        <bean class="org.apache.unomi.plugins.baseplugin.conditions.NestedConditionESQueryBuilder"/>
-    </service>
-
+    <reference id="pastEventConditionPersistenceQueryBuilder" interface="org.apache.unomi.persistence.spi.conditions.PastEventConditionPersistenceQueryBuilder"/>
 
     <!-- Condition evaluators -->
     <service interface="org.apache.unomi.persistence.spi.conditions.ConditionEvaluator">
@@ -196,6 +114,7 @@
             <property name="definitionsService" ref="definitionsService"/>
             <property name="persistenceService" ref="persistenceService"/>
             <property name="scriptExecutor" ref="scriptExecutor"/>
+            <property name="pastEventConditionPersistenceQueryBuilder" ref="pastEventConditionPersistenceQueryBuilder"/>
         </bean>
     </service>
 

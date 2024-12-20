@@ -84,15 +84,6 @@
     <feature name="unomi-persistence-elasticsearch" description="ElasticSearch persistence implementation for Apache Unomi" version="${project.version}">
         <configfile finalname="/etc/org.apache.unomi.persistence.elasticsearch.cfg">mvn:org.apache.unomi/unomi-persistence-elasticsearch-core/${project.version}/cfg/elasticsearchcfg</configfile>
         <bundle start="false">mvn:org.apache.unomi/unomi-persistence-elasticsearch-core/${project.version}</bundle>
-    </feature>
-
-    <feature name="unomi-persistence-opensearch" description="OpenSearch persistence implementation for Apache Unomi" version="${project.version}">
-        <configfile finalname="/etc/org.apache.unomi.persistence.opensearch.cfg">mvn:org.apache.unomi/unomi-persistence-opensearch-core/${project.version}/cfg/opensearchcfg</configfile>
-        <bundle start="false">mvn:org.apache.unomi/unomi-persistence-opensearch-core/${project.version}</bundle>
-        <bundle start="false">mvn:org.apache.unomi/unomi-persistence-opensearch-conditions/${project.version}</bundle>
-    </feature>
-
-    <feature name="unomi-services" description="Apache Unomi :: Services" version="${project.version}">
         <bundle start="false">mvn:org.apache.unomi/unomi-services/${project.version}</bundle>
         <bundle start="false">mvn:org.apache.unomi/unomi-json-schema-services/${project.version}</bundle>
         <bundle start="false">mvn:org.apache.unomi/unomi-json-schema-rest/${project.version}</bundle>
@@ -102,12 +93,37 @@
         <bundle start="false">mvn:org.apache.unomi/cxs-geonames-rest/${project.version}</bundle>
         <bundle start="false">mvn:org.apache.unomi/cxs-privacy-extension-services/${project.version}</bundle>
         <bundle start="false">mvn:org.apache.unomi/cxs-privacy-extension-rest/${project.version}</bundle>
+        <bundle start="false">mvn:org.apache.unomi/unomi-persistence-elasticsearch-conditions/${project.version}</bundle>
         <bundle start="false">mvn:org.apache.unomi/unomi-rest/${project.version}</bundle>
         <bundle start="false">mvn:org.apache.unomi/unomi-plugins-base/${project.version}</bundle>
         <bundle start="false">mvn:org.apache.unomi/unomi-plugins-request/${project.version}</bundle>
         <bundle start="false">mvn:org.apache.unomi/unomi-plugins-mail/${project.version}</bundle>
         <bundle start="false">mvn:org.apache.unomi/unomi-plugins-optimization-test/${project.version}</bundle>
         <bundle start="false">mvn:org.apache.unomi/cxs-lists-extension-actions/${project.version}</bundle>
+    </feature>
+
+    <feature name="unomi-persistence-opensearch" description="OpenSearch persistence implementation for Apache Unomi" version="${project.version}">
+        <configfile finalname="/etc/org.apache.unomi.persistence.opensearch.cfg">mvn:org.apache.unomi/unomi-persistence-opensearch-core/${project.version}/cfg/opensearchcfg</configfile>
+        <bundle start="false">mvn:org.apache.unomi/unomi-persistence-opensearch-core/${project.version}</bundle>
+        <bundle start="false">mvn:org.apache.unomi/unomi-services/${project.version}</bundle>
+        <bundle start="false">mvn:org.apache.unomi/unomi-json-schema-services/${project.version}</bundle>
+        <bundle start="false">mvn:org.apache.unomi/unomi-json-schema-rest/${project.version}</bundle>
+        <bundle start="false">mvn:org.apache.unomi/cxs-lists-extension-services/${project.version}</bundle>
+        <bundle start="false">mvn:org.apache.unomi/cxs-lists-extension-rest/${project.version}</bundle>
+        <bundle start="false">mvn:org.apache.unomi/cxs-geonames-services/${project.version}</bundle>
+        <bundle start="false">mvn:org.apache.unomi/cxs-geonames-rest/${project.version}</bundle>
+        <bundle start="false">mvn:org.apache.unomi/cxs-privacy-extension-services/${project.version}</bundle>
+        <bundle start="false">mvn:org.apache.unomi/cxs-privacy-extension-rest/${project.version}</bundle>
+        <bundle start="false">mvn:org.apache.unomi/unomi-persistence-opensearch-conditions/${project.version}</bundle>
+        <bundle start="false">mvn:org.apache.unomi/unomi-rest/${project.version}</bundle>
+        <bundle start="false">mvn:org.apache.unomi/unomi-plugins-base/${project.version}</bundle>
+        <bundle start="false">mvn:org.apache.unomi/unomi-plugins-request/${project.version}</bundle>
+        <bundle start="false">mvn:org.apache.unomi/unomi-plugins-mail/${project.version}</bundle>
+        <bundle start="false">mvn:org.apache.unomi/unomi-plugins-optimization-test/${project.version}</bundle>
+        <bundle start="false">mvn:org.apache.unomi/cxs-lists-extension-actions/${project.version}</bundle>
+    </feature>
+
+    <feature name="unomi-services" description="Apache Unomi :: Services" version="${project.version}">
         <bundle start="false">mvn:org.apache.unomi/shell-dev-commands/${project.version}</bundle>
     </feature>
 

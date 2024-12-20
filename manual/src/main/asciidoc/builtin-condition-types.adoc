@@ -68,11 +68,11 @@ From https://github.com/apache/unomi/blob/master/plugins/baseplugin/src/main/res
 ----
 ...
     <service
-            interface="org.apache.unomi.persistence.elasticsearch.conditions.ConditionESQueryBuilder">
+            interface="org.apache.unomi.persistence.elasticsearch.ConditionESQueryBuilder">
         <service-properties>
             <entry key="queryBuilderId" value="booleanConditionESQueryBuilder"/>
         </service-properties>
-        <bean class="org.apache.unomi.plugins.baseplugin.conditions.BooleanConditionESQueryBuilder"/>
+        <bean class="conditions.org.apache.unomi.persistence.elasticsearch.BooleanConditionESQueryBuilder"/>
     </service>
 ...
     <!-- Condition evaluators -->

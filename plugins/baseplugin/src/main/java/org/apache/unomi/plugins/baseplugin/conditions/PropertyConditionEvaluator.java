@@ -21,19 +21,19 @@ import ognl.*;
 import ognl.enhance.ExpressionAccessor;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.unomi.api.*;
+import org.apache.unomi.api.Event;
+import org.apache.unomi.api.GeoPoint;
+import org.apache.unomi.api.Item;
 import org.apache.unomi.api.conditions.Condition;
-import org.apache.unomi.plugins.baseplugin.conditions.accessors.HardcodedPropertyAccessor;
-import org.apache.unomi.scripting.ExpressionFilterFactory;
-import org.apache.unomi.scripting.SecureFilteringClassLoader;
+import org.apache.unomi.persistence.spi.PropertyHelper;
 import org.apache.unomi.persistence.spi.conditions.ConditionContextHelper;
 import org.apache.unomi.persistence.spi.conditions.ConditionEvaluator;
 import org.apache.unomi.persistence.spi.conditions.ConditionEvaluatorDispatcher;
-import org.apache.unomi.persistence.spi.PropertyHelper;
-import org.elasticsearch.ElasticsearchParseException;
-import org.elasticsearch.common.joda.Joda;
-import org.elasticsearch.common.joda.JodaDateMathParser;
-import org.elasticsearch.common.unit.DistanceUnit;
+import org.apache.unomi.persistence.spi.conditions.DateUtils;
+import org.apache.unomi.persistence.spi.conditions.geo.DistanceUnit;
+import org.apache.unomi.plugins.baseplugin.conditions.accessors.HardcodedPropertyAccessor;
+import org.apache.unomi.scripting.ExpressionFilterFactory;
+import org.apache.unomi.scripting.SecureFilteringClassLoader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,6 +43,8 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+
+import static org.apache.unomi.persistence.spi.conditions.DateUtils.getDate;
 
 /**
  * Evaluator for property comparison conditions
@@ -99,7 +101,7 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
     private boolean compareValues(Object actualValue, Collection<?> expectedValues, Collection<?> expectedValuesInteger,  Collection<?> expectedValuesDouble,  Collection<?> expectedValuesDate, Collection<?> expectedValuesDateExpr, String op) {
         Collection<Object> expectedDateExpr = null;
         if (expectedValuesDateExpr != null) {
-            expectedDateExpr = expectedValuesDateExpr.stream().map(PropertyConditionEvaluator::getDate).collect(Collectors.toList());
+            expectedDateExpr = expectedValuesDateExpr.stream().map(DateUtils::getDate).collect(Collectors.toList());
         }
         @SuppressWarnings("unchecked")
         Collection<?> expected = ObjectUtils.firstNonNull(expectedValues, expectedValuesDate, expectedValuesInteger, expectedValuesDouble, expectedDateExpr);
@@ -306,8 +308,8 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
             }
 
             final GeoPoint expectedCenter = GeoPoint.fromString(centerString);
-            final DistanceUnit expectedUnit = unitString != null ? DistanceUnit.fromString(unitString) : DistanceUnit.DEFAULT;
-            final double distanceInMeters = expectedUnit.convert(distance, DistanceUnit.METERS);
+            final DistanceUnit expectedUnit = unitString != null ? DistanceUnit.fromString(unitString) : DistanceUnit.METERS;
+            final double distanceInMeters = expectedUnit.toMeters(distance);
 
             return expectedCenter.distanceTo(actualCenter) <= distanceInMeters;
         }
@@ -432,24 +434,6 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
         }
 
         return accessor;
-    }
-
-    public static Date getDate(Object value) {
-        if (value == null) {
-            return null;
-        }
-        if (value instanceof Date) {
-            return ((Date) value);
-        } else {
-            JodaDateMathParser parser = new JodaDateMathParser(Joda.forPattern("strictDateOptionalTime||epoch_millis"));
-            try {
-                return Date.from(parser.parse(value.toString(), System::currentTimeMillis));
-            } catch (ElasticsearchParseException e) {
-                LOGGER.warn("unable to parse date. See debug log level for full stacktrace");
-                LOGGER.debug("unable to parse date {}", value, e);
-            }
-        }
-        return null;
     }
 
     @SuppressWarnings("unchecked")

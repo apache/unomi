@@ -89,7 +89,7 @@
     </service>
 
     <bean id="conditionESQueryBuilderDispatcher"
-          class="org.apache.unomi.persistence.elasticsearch.conditions.ConditionESQueryBuilderDispatcher">
+          class="org.apache.unomi.persistence.elasticsearch.ConditionESQueryBuilderDispatcher">
         <property name="scriptExecutor" ref="scriptExecutor" />
     </bean>
 
@@ -169,7 +169,7 @@
     </reference-list>
 
     <reference-list id="conditionESQueryBuilders"
-                    interface="org.apache.unomi.persistence.elasticsearch.conditions.ConditionESQueryBuilder"
+                    interface="org.apache.unomi.persistence.elasticsearch.ConditionESQueryBuilder"
         availability="optional">
         <reference-listener
                 bind-method="bindConditionESQueryBuilder" unbind-method="unbindConditionESQueryBuilder" ref="elasticSearchPersistenceServiceImpl"/>

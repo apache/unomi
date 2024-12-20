@@ -519,11 +519,11 @@ src/main/resources/OSGI-INF/blueprint/blueprint.xml
            xsi:schemaLocation="http://www.osgi.org/xmlns/blueprint/v1.0.0 http://www.osgi.org/xmlns/blueprint/v1.0.0/blueprint.xsd">
 
     <service
-            interface="org.apache.unomi.persistence.elasticsearch.conditions.ConditionESQueryBuilder">
+            interface="org.apache.unomi.persistence.elasticsearch.ConditionESQueryBuilder">
         <service-properties>
             <entry key="queryBuilderId" value="matchAllConditionESQueryBuilder"/>
         </service-properties>
-        <bean class="org.apache.unomi.plugins.baseplugin.conditions.MatchAllConditionESQueryBuilder"/>
+        <bean class="conditions.org.apache.unomi.persistence.elasticsearch.MatchAllConditionESQueryBuilder"/>
     </service>
 
     <service interface="org.apache.unomi.persistence.spi.conditions.ConditionEvaluator">
@@ -538,6 +538,6 @@ src/main/resources/OSGI-INF/blueprint/blueprint.xml
 
 You can find the implementation of the two classes here :
 
-* https://github.com/apache/unomi/blob/master/plugins/baseplugin/src/main/java/org/apache/unomi/plugins/baseplugin/conditions/MatchAllConditionESQueryBuilder.java[org.apache.unomi.plugins.baseplugin.conditions.MatchAllConditionESQueryBuilder]
+* https://github.com/apache/unomi/blob/master/plugins/baseplugin/src/main/java/org/apache/unomi/plugins/baseplugin/conditions/MatchAllConditionESQueryBuilder.java[conditions.org.apache.unomi.persistence.elasticsearch.MatchAllConditionESQueryBuilder]
 * https://github.com/apache/unomi/blob/master/plugins/baseplugin/src/main/java/org/apache/unomi/plugins/baseplugin/conditions/MatchAllConditionEvaluator.java[org.apache.unomi.plugins.baseplugin.conditions.MatchAllConditionEvaluator]
 
