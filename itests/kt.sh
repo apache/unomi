@@ -1,15 +1,33 @@
 #!/bin/bash
+################################################################################
+#
+#    Licensed to the Apache Software Foundation (ASF) under one or more
+#    contributor license agreements.  See the NOTICE file distributed with
+#    this work for additional information regarding copyright ownership.
+#    The ASF licenses this file to You under the Apache License, Version 2.0
+#    (the "License"); you may not use this file except in compliance with
+#    the License.  You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS,
+#    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#    See the License for the specific language governing permissions and
+#    limitations under the License.
+#
+################################################################################
 
 # ASCII art and version
 print_header() {
     cat << "EOF"
- _  __                __   _____           _     
-| |/ /               / _| |_   _|         | |    
-| ' / __ _ _ __ __ _| |_    | | ___   ___ | |___ 
+ _  __                __   _____           _
+| |/ /               / _| |_   _|         | |
+| ' / __ _ _ __ __ _| |_    | | ___   ___ | |___
 |  < / _` | '__/ _` |  _|   | |/ _ \ / _ \| / __|
 | . \ (_| | | | (_| | |     | | (_) | (_) | \__ \
 |_|\_\__,_|_|  \__,_|_|     \_/\___/ \___/|_|___/
-                                                  
+
 EOF
     echo "--------------------------------------------------"
     echo "Karaf Test Tools (kt.sh) - Version 1.0.0"
@@ -37,11 +55,11 @@ find_karaf_dir() {
 
     local latest_time=0
     local latest_dir=""
-    
+
     while IFS= read -r dir; do
         local stat_output=$(get_file_mtime "$dir")
         local mtime=$(echo "$stat_output" | cut -d' ' -f1)
-        
+
         if (( mtime > latest_time )); then
             latest_time=$mtime
             latest_dir=$dir
@@ -114,33 +132,33 @@ USAGE
 COMMANDS
     start, s    Start the Karaf instance
                 Launches Karaf in the background
-    
+
     debug, d    Start Karaf in debug mode
                 Launches Karaf with JPDA debugging enabled on port 5005
-    
+
     console, c  Start Karaf in console mode
                 Launches Karaf in foreground with direct console access
-    
+
     stop, x     Stop the running Karaf instance
                 Gracefully shuts down the Karaf container
-    
+
     log, l      View the latest Karaf log file using less
                 Useful for scrolling through the entire log file
-    
+
     tail, t     Tail the current Karaf log file
                 Follows the log in real-time, great for watching test execution
-    
+
     grep, g     Grep the latest Karaf log file
                 Searches for patterns in the log file
                 Example: kt.sh grep "ERROR" finds all error messages
-    
+
     dir, i      Print the latest Karaf directory path
                 Shows the full path to the most recent test instance
-    
+
     pushd, p    Change to the latest Karaf directory using pushd
                 Quickly navigate to the test instance directory
                 Use 'popd' to return to the previous directory
-    
+
     help, h     Show this help message
 
 EXAMPLES
@@ -238,4 +256,4 @@ case "${1:-help}" in
     help|h|*)
         usage
         ;;
-esac 
+esac
