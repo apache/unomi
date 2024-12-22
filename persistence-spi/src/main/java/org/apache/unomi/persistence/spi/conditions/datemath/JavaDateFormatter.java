@@ -53,6 +53,15 @@ public class JavaDateFormatter {
         this.allowEpochSecond = epochSecond;
     }
 
+    private String adjustForCaseInsensitive(String input) {
+        // Replace 't' with 'T' only when it's part of an ISO datetime format (e.g., `2022-05-18t15:23:17z`)
+        input = input.replaceAll("(?<=\\d{4}-\\d{2}-\\d{2})t", "T"); // Match 't' after a full date
+        // Replace 'z' with 'Z' only when it's at the end of the string or follows time components
+        input = input.replaceAll("z$", "Z"); // Match 'z' at the end
+        input = input.replaceAll("(?<=[:\\d])z", "Z"); // Match 'z' after a time component
+        return input;
+    }
+
     public TemporalAccessor parse(String input) {
         // Numeric check
         if (isNumeric(input)) {
@@ -64,6 +73,8 @@ public class JavaDateFormatter {
                 return Instant.ofEpochSecond(value);
             }
         }
+
+        input = adjustForCaseInsensitive(input);
 
         for (FormatDefinition def : formats) {
             try {
@@ -303,6 +314,7 @@ public class JavaDateFormatter {
     private FormatDefinition fmt(String name, String pattern) {
         // Apply UTC zone to all and consider using strict resolver if needed
         DateTimeFormatter dtf = new DateTimeFormatterBuilder()
+                .parseCaseSensitive()
                 .appendPattern(pattern)
                 .toFormatter()
                 .withZone(ZoneOffset.UTC);

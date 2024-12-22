@@ -189,4 +189,54 @@ public class DateMathParserTest {
             assertTrue(e.getMessage().startsWith("failed to parse date field [not-a-date] with format"));
         }
     }
+
+    @Test
+    public void testInvalidLowercaseMathOperator() {
+        try {
+            parser.parse("now*1d", fixedNow, false, ZoneOffset.UTC); // Invalid operator
+            fail("Expected an exception");
+        } catch (DateMathParseException e) {
+            assertEquals("operator not supported for date math [*1d]", e.getMessage());
+        }
+    }
+
+
+    @Test
+    public void testDateMathWithCaseInsensitiveParsing() {
+        Instant parsed = parser.parse("2001-01-01t12:00:00z||+1d", fixedNow, false, ZoneOffset.UTC);
+        assertEquals("2001-01-02T12:00:00Z", parsed.toString());
+
+        parsed = parser.parse("now+1h/d", fixedNow, false, ZoneOffset.UTC);
+        assertEquals("2001-01-01T00:00:00Z", parsed.toString());
+    }
+
+    @Test
+    public void testMixedCaseDateMath() {
+        Instant parsed = parser.parse("2001-01-01T12:00:00z||+1M/d", fixedNow, true, ZoneOffset.UTC); // Mixed case
+        assertEquals("2001-02-01T23:59:59.999Z", parsed.toString());
+    }
+
+    @Test
+    public void testInvalidMathWithCaseInsensitiveInput() {
+        try {
+            parser.parse("now*1d", fixedNow, false, ZoneOffset.UTC); // Invalid operator
+            fail("Expected an exception");
+        } catch (DateMathParseException e) {
+            assertEquals("operator not supported for date math [*1d]", e.getMessage());
+        }
+
+        try {
+            parser.parse("2001-01-01t12:00:00x||+1d", fixedNow, false, ZoneOffset.UTC); // Invalid separator
+            fail("Expected an exception");
+        } catch (DateMathParseException e) {
+            assertTrue(e.getMessage().contains("failed to parse date field"));
+        }
+    }
+
+    @Test
+    public void testDateMathWithExtraSpaces() {
+        Instant parsed = parser.parse("  2001-01-01T12:00:00Z  || +1d  ", fixedNow, false, ZoneOffset.UTC);
+        assertEquals("2001-01-02T12:00:00Z", parsed.toString());
+    }
+
 }

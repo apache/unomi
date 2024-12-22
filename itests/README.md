@@ -274,3 +274,54 @@ And the final step is, zipping the new version of the snapshot repository and re
 > In case you are using docker, do zip in the container and use `docker cp` to get the zip file from the docker container.
 
 Now you can modify the migration test class to test that your added data in 1.6.x is correctly migrated in 2.0.0
+
+# Integration Tests
+
+This directory contains the integration tests for Apache Unomi.
+
+## Karaf Tools
+
+The `kt.sh` script (short for "Karaf Tools") provides convenient utilities for working with Karaf logs and directories during integration testing. Since Karaf test directories are created with unique UUIDs for each test run, this script helps locate and work with the latest test instance.
+
+### Usage
+
+```bash
+./kt.sh COMMAND [ARGS]
+```
+
+### Available Commands
+
+| Command      | Alias | Description                                           |
+|-------------|-------|-------------------------------------------------------|
+| `log`       | `l`   | View the latest Karaf log file using less            |
+| `tail`      | `t`   | Tail the current Karaf log file                      |
+| `grep`      | `g`   | Grep the latest Karaf log file (requires pattern)    |
+| `dir`       | `d`   | Print the latest Karaf directory path                |
+| `pushd`     | `p`   | Change to the latest Karaf directory using pushd     |
+| `help`      | `h`   | Show help message                                    |
+
+### Examples
+
+```bash
+# View log with less
+./kt.sh log
+
+# Tail log file
+./kt.sh tail
+
+# Search for ERROR in log file
+./kt.sh grep ERROR
+
+# Print Karaf directory path
+./kt.sh dir
+
+# Change to Karaf directory
+./kt.sh pushd
+```
+
+### Tips
+
+- The script automatically finds the most recently created Karaf test directory
+- All commands have short aliases (single letter) for faster typing
+- Error handling is included for missing directories and files
+- The script is particularly useful when debugging integration test failures

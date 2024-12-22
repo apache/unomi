@@ -30,13 +30,13 @@ import org.ops4j.pax.exam.spi.reactors.PerSuite;
 import java.util.List;
 
 /**
- * Integration tests for various condition query builder types (elasticsearch).
+ * Integration tests for various condition query builder types (ElasticSearch or OpenSearch).
  *
  * @author Sergiy Shyrkov
  */
 @RunWith(PaxExam.class)
 @ExamReactorStrategy(PerSuite.class)
-public class ConditionESQueryBuilderIT extends ConditionEvaluatorIT {
+public class ConditionQueryBuilderIT extends ConditionEvaluatorIT {
 
     @Override
     protected boolean eval(Condition c) {

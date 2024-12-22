@@ -159,6 +159,45 @@ public class JavaDateFormatterTest {
         }
     }
 
-    // Add more tests as needed for strict variants, time_no_millis, t_time, week_date, etc.
-    // The provided tests give a broad coverage of different formats.
+    @Test
+    public void testMixedCaseDate() {
+        JavaDateFormatter formatter = new JavaDateFormatter("strict_date_optional_time");
+        Instant parsed = Instant.from(formatter.parse("2022-05-18T15:23:17z")); // mixed case 'T' and 'z'
+        assertEquals("2022-05-18T15:23:17Z", parsed.toString());
+    }
+
+    @Test
+    public void testCaseInsensitiveISOWithValidInputs() {
+        JavaDateFormatter formatter = new JavaDateFormatter("strict_date_optional_time");
+        // Lowercase `t` and `z`
+        Instant parsed = Instant.from(formatter.parse("2022-05-18t15:23:17z"));
+        assertEquals("2022-05-18T15:23:17Z", parsed.toString());
+
+        // Mixed case
+        parsed = Instant.from(formatter.parse("2022-05-18T15:23:17z"));
+        assertEquals("2022-05-18T15:23:17Z", parsed.toString());
+
+        // Uppercase (valid)
+        parsed = Instant.from(formatter.parse("2022-05-18T15:23:17Z"));
+        assertEquals("2022-05-18T15:23:17Z", parsed.toString());
+    }
+
+    @Test
+    public void testCaseInsensitiveISOWithInvalidInputs() {
+        JavaDateFormatter formatter = new JavaDateFormatter("strict_date_optional_time");
+
+        try {
+            formatter.parse("2022-05-18x15:23:17z"); // Invalid separator
+            fail("Expected an exception");
+        } catch (DateMathParseException e) {
+            assertTrue(e.getMessage().contains("failed to parse date field"));
+        }
+
+        try {
+            formatter.parse("2022-05-18T15:23:17X"); // Invalid character for timezone
+            fail("Expected an exception");
+        } catch (DateMathParseException e) {
+            assertTrue(e.getMessage().contains("failed to parse date field"));
+        }
+    }
 }

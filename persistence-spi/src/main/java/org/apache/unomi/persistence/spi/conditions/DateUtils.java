@@ -45,7 +45,7 @@ public class DateUtils {
                 return Date.from(instant);
             } catch (DateMathParseException e) {
                 LOGGER.warn("unable to parse date. See debug log level for full stacktrace");
-                LOGGER.debug("unable to parse date {}", value, e);
+                LOGGER.warn("unable to parse date {}", value, e);
             }
             return null;
         }

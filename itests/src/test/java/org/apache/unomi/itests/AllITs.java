@@ -17,8 +17,8 @@
 
 package org.apache.unomi.itests;
 
-import org.apache.unomi.itests.migration.Migrate16xTo220IT;
 import org.apache.unomi.itests.graphql.*;
+import org.apache.unomi.itests.migration.Migrate16xTo220IT;
 import org.apache.unomi.itests.migration.MigrationIT;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
@@ -35,7 +35,7 @@ import org.junit.runners.Suite.SuiteClasses;
         MigrationIT.class,
         BasicIT.class,
         ConditionEvaluatorIT.class,
-        ConditionESQueryBuilderIT.class,
+        ConditionQueryBuilderIT.class,
         SegmentIT.class,
         ProfileServiceIT.class,
         ProfileImportBasicIT.class,

@@ -48,9 +48,21 @@ public class Migrate16xTo220IT extends BaseIT {
             "context-userlist", "context-propertytype", "context-scope", "context-conditiontype", "context-rule", "context-scoring", "context-segment", "context-groovyaction", "context-topic",
             "context-patch", "context-jsonschema", "context-importconfig", "context-exportconfig", "context-rulestats");
 
+    public void checkSearchEngine() {
+        searchEngine = System.getProperty(SEARCH_ENGINE_PROPERTY, SEARCH_ENGINE_ELASTICSEARCH);
+        System.out.println("Check search engine: " + searchEngine);
+    }
+
     @Override
     @Before
     public void waitForStartup() throws InterruptedException {
+        checkSearchEngine();
+
+        if (SEARCH_ENGINE_OPENSEARCH.equals(searchEngine)) {
+            System.out.println("Migration from 1.x to 2.x not supported for OpenSearch, skipping snapshot restore");
+            super.waitForStartup();
+            return;
+        }
 
         System.out.println("Restoring snapshot into search engine...");
         LOGGER.info("Restoring snapshot into search engine...");
@@ -117,6 +129,10 @@ public class Migrate16xTo220IT extends BaseIT {
 
     @Test
     public void checkMigratedData() throws Exception {
+        if (SEARCH_ENGINE_OPENSEARCH.equals(searchEngine)) {
+            System.out.println("Migration from 1.x to 2.x not supported for OpenSearch, skipping checks");
+            return;
+        }
         checkMergedProfilesAliases();
         checkProfileInterests();
         checkScopeHaveBeenCreated();
@@ -420,4 +436,5 @@ public class Migrate16xTo220IT extends BaseIT {
             Assert.assertEquals("eventTriggeredabcdefgh", pastEvents.get(0).get("key"));
             Assert.assertEquals(5, (int) pastEvents.get(0).get("count"));
         }
+
     }

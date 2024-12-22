@@ -43,15 +43,15 @@ import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 
 /**
- * A Health Check that checks the status of the ElasticSearch connectivity according to the provided configuration.
+ * A Health Check that checks the status of the OpenSearch connectivity according to the provided configuration.
  * This connectivity should be LIVE before any try to start Unomi.
  */
 @Component(service = HealthCheckProvider.class, immediate = true)
-public class ElasticSearchHealthCheckProvider implements HealthCheckProvider {
+public class OpenSearchHealthCheckProvider implements HealthCheckProvider {
 
-    public static final String NAME = "elasticsearch";
+    public static final String NAME = "opensearch";
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(ElasticSearchHealthCheckProvider.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(OpenSearchHealthCheckProvider.class.getName());
     private final CachedValue<HealthCheckResponse> cache = new CachedValue<>(10, TimeUnit.SECONDS);
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY)
@@ -59,24 +59,24 @@ public class ElasticSearchHealthCheckProvider implements HealthCheckProvider {
 
     private CloseableHttpClient httpClient;
 
-    public ElasticSearchHealthCheckProvider() {
-        LOGGER.info("Building elasticsearch health provider service...");
+    public OpenSearchHealthCheckProvider() {
+        LOGGER.info("Building OpenSearch health provider service...");
     }
 
     @Activate
     public void activate() {
-        LOGGER.info("Activating elasticsearch health provider service...");
+        LOGGER.info("Activating OpenSearch health provider service...");
         CredentialsProvider credentialsProvider = null;
-        String login = config.get(HealthCheckConfig.CONFIG_ES_LOGIN);
+        String login = config.get(HealthCheckConfig.CONFIG_OS_LOGIN); // Reuse ElasticSearch credentials key
         if (StringUtils.isNotEmpty(login)) {
             credentialsProvider = new BasicCredentialsProvider();
             UsernamePasswordCredentials credentials
-                    = new UsernamePasswordCredentials(login, config.get(HealthCheckConfig.CONFIG_ES_PASSWORD));
+                    = new UsernamePasswordCredentials(login, config.get(HealthCheckConfig.CONFIG_OS_PASSWORD));
             credentialsProvider.setCredentials(AuthScope.ANY, credentials);
         }
         try {
             httpClient = HttpUtils.initHttpClient(
-                    Boolean.parseBoolean(config.get(HealthCheckConfig.CONFIG_ES_TRUST_ALL_CERTIFICATES)), credentialsProvider);
+                    Boolean.parseBoolean(config.get(HealthCheckConfig.CONFIG_OS_TRUST_ALL_CERTIFICATES)), credentialsProvider);
         } catch (IOException e) {
             LOGGER.error("Unable to initialize http client", e);
         }
@@ -91,7 +91,7 @@ public class ElasticSearchHealthCheckProvider implements HealthCheckProvider {
     }
 
     @Override public HealthCheckResponse execute() {
-        LOGGER.debug("Health check elasticsearch");
+        LOGGER.debug("Health check OpenSearch");
         if (cache.isStaled() || cache.getValue().isDown() || cache.getValue().isError()) {
             cache.setValue(refresh());
         }
@@ -103,8 +103,8 @@ public class ElasticSearchHealthCheckProvider implements HealthCheckProvider {
         HealthCheckResponse.Builder builder = new HealthCheckResponse.Builder();
         builder.name(NAME).down();
         String url = (config.get(HealthCheckConfig.CONFIG_ES_SSL_ENABLED).equals("true") ? "https://" : "http://")
-                        .concat(config.get(HealthCheckConfig.CONFIG_ES_ADDRESSES).split(",")[0].trim())
-                        .concat("/_cluster/health");
+                .concat(config.get(HealthCheckConfig.CONFIG_ES_ADDRESSES).split(",")[0].trim())
+                .concat("/_cluster/health");
         CloseableHttpResponse response = null;
         try {
             response = httpClient.execute(new HttpGet(url));
@@ -118,7 +118,7 @@ public class ElasticSearchHealthCheckProvider implements HealthCheckProvider {
             }
         } catch (IOException e) {
             builder.error().withData("error", e.getMessage());
-            LOGGER.error("Error while checking elasticsearch health", e);
+            LOGGER.error("Error while checking OpenSearch health", e);
         } finally {
             if (response != null) {
                 EntityUtils.consumeQuietly(response.getEntity());

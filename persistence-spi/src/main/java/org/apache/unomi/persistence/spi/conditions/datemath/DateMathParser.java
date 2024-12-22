@@ -75,7 +75,18 @@ public class DateMathParser {
         this.roundUpFormatter = roundUpFormatter;
     }
 
+    private String normalizeDateMathInput(String input) {
+        // Replace 't' with 'T' only when it's part of an ISO datetime format (e.g., `2022-05-18t15:23:17z`)
+        input = input.replaceAll("(?<=\\d{4}-\\d{2}-\\d{2})t", "T"); // Match 't' after a full date
+        // Replace 'z' with 'Z' only when it's at the end of the string or follows time components
+        input = input.replaceAll("z$", "Z"); // Match 'z' at the end
+        input = input.replaceAll("(?<=[:\\d])z", "Z"); // Match 'z' after a time component
+        return input;
+    }
+
     public Instant parse(String text, LongSupplier now, boolean roundUpProperty, ZoneId timeZone) {
+        text = text.trim();
+
         Instant time;
         String mathString;
         if (text.startsWith("now")) {
@@ -89,10 +100,12 @@ public class DateMathParser {
             int index = text.indexOf("||");
             if (index == -1) {
                 // no math, just parse date
+                // Normalize input for case-insensitive ISO datetime handling
+                text = normalizeDateMathInput(text);
                 return parseDateTime(text, timeZone, roundUpProperty);
             }
-            time = parseDateTime(text.substring(0, index), timeZone, false);
-            mathString = text.substring(index + 2);
+            time = parseDateTime(normalizeDateMathInput(text.substring(0, index).trim()), timeZone, false);
+            mathString = text.substring(index + 2).trim();
         }
 
         return parseMath(mathString, time, roundUpProperty, timeZone);
