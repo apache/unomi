@@ -21,7 +21,6 @@ import org.apache.unomi.itests.graphql.*;
 import org.apache.unomi.itests.migration.Migrate16xTo220IT;
 import org.apache.unomi.itests.migration.MigrationIT;
 import org.junit.runner.RunWith;
-import org.junit.runners.Suite;
 import org.junit.runners.Suite.SuiteClasses;
 
 /**
@@ -29,7 +28,7 @@ import org.junit.runners.Suite.SuiteClasses;
  *
  * @author Sergiy Shyrkov
  */
-@RunWith(Suite.class)
+@RunWith(ProgressSuite.class)
 @SuiteClasses({
         Migrate16xTo220IT.class,
         MigrationIT.class,
