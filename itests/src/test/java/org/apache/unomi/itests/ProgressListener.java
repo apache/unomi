@@ -170,25 +170,32 @@ public class ProgressListener extends RunListener {
                 ansiSupported ? RESET : "");
 
         // Display the top 10 slowest tests
-        System.out.println("═══════════════════════════════════════════════════════════");
         System.out.printf("Top 10 Slowest Tests:%n");
-        // Table header
-        System.out.printf("%s%-4s %-50s %-10s%s%n",
-                ansiSupported ? BLUE : "",
-                "Rank", "Test Name", "Duration",
-                ansiSupported ? RESET : "");
-        System.out.printf("%s%-4s %-50s %-10s%s%n",
-                ansiSupported ? BLUE : "",
-                "----", "--------------------------------------------------", "----------",
-                ansiSupported ? RESET : "");
+        // Prepare CSV data
+        StringBuilder csvBuilder = new StringBuilder();
+        csvBuilder.append("Rank,Test Name,Duration (ms)\n");
 
-        // Table rows for the top 10 slowest tests
         AtomicInteger rank = new AtomicInteger(1);
         slowTests.stream()
                 .sorted((t1, t2) -> Long.compare(t2.time, t1.time)) // Sort by descending order
                 .limit(10)
-                .forEach(test -> System.out.printf("%-4d %-50s %-10d ms%n",
-                        rank.getAndIncrement(), test.name, test.time));
+                .forEach(test -> csvBuilder.append(String.format("%d,\"%s\",%d%n",
+                        rank.getAndIncrement(), escapeCsv(test.name), test.time)));
+
+        // Output CSV
+        System.out.println(csvBuilder.toString());
+        System.out.println("═══════════════════════════════════════════════════════════");
+
+    }
+
+    /**
+     * Escapes special characters for CSV compatibility.
+     */
+    private String escapeCsv(String value) {
+        if (value.contains(",") || value.contains("\"") || value.contains("\n")) {
+            return "\"" + value.replace("\"", "\"\"") + "\"";
+        }
+        return value;
     }
 
     private void displayProgress() {

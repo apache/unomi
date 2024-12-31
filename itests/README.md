@@ -275,9 +275,15 @@ And the final step is, zipping the new version of the snapshot repository and re
 
 Now you can modify the migration test class to test that your added data in 1.6.x is correctly migrated in 2.0.0
 
-# Integration Tests
+# Known issues
 
-This directory contains the integration tests for Apache Unomi.
+In the OpenSearch test logs, you will see a lot of lines that look like this : 
+
+    opensearch> [2024-12-31T15:33:14,652][WARN ][o.o.w.QueryGroupTask     ] [f3200971b164] QueryGroup _id can't be null, It should be set before accessing it. This is abnormal behaviour
+
+This is due to a bug in OpenSearch 2.18 but it has no impact on the actual functionality. You can track this bug here:
+
+    https://github.com/opensearch-project/OpenSearch/issues/16874
 
 ## Karaf Tools
 
