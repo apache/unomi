@@ -83,7 +83,8 @@ import java.util.*;
  * @see org.apache.unomi.shell.migration.MigrationService
  * @see org.apache.karaf.features.FeaturesService
  * @see org.apache.karaf.features.Feature
- */@Component(service = UnomiManagementService.class, immediate = true, configurationPid = "org.apache.unomi.start")
+ */
+@Component(service = UnomiManagementService.class, immediate = true, configurationPid = "org.apache.unomi.start")
 @Designate(ocd = UnomiManagementServiceConfiguration.class)
 public class UnomiManagementServiceImpl implements UnomiManagementService {
 
@@ -138,15 +139,14 @@ public class UnomiManagementServiceImpl implements UnomiManagementService {
         return featuresToInstall;
     }
 
-    private Map<String, List<String>> parseStartFeatures(String startFeaturesConfig) {
+    private Map<String, List<String>> parseStartFeatures(String[] startFeaturesConfig) {
         Map<String, List<String>> startFeatures = new HashMap<>();
-        if (startFeaturesConfig == null || startFeaturesConfig.isEmpty()) {
+        if (startFeaturesConfig == null) {
             return startFeatures;
         }
 
-        String[] entries = startFeaturesConfig.split(";");
-        for (String entry : entries) {
-            String[] parts = entry.split(":");
+        for (String entry : startFeaturesConfig) {
+            String[] parts = entry.split("=");
             if (parts.length == 2) {
                 String key = parts[0].trim();
                 List<String> features = new ArrayList<>(Arrays.asList(parts[1].split(",")));

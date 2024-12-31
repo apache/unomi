@@ -28,7 +28,7 @@
   http://aries.apache.org/blueprint/xmlns/blueprint-cm/v1.1.0 http://aries.apache.org/schemas/blueprint-cm/blueprint-cm-1.1.0.xsd">
 
     <cm:property-placeholder persistent-id="org.apache.unomi.persistence.opensearch"
-                             update-strategy="reload" placeholder-prefix="${es.">
+                             update-strategy="reload" placeholder-prefix="${os.">
         <cm:default-properties>
             <cm:property name="cluster.name" value="opensearch-cluster"/>
             <cm:property name="openSearchAddresses" value="localhost:9200"/>
@@ -80,6 +80,8 @@
             <cm:property name="alwaysOverwrite" value="true" />
             <cm:property name="errorLogLevelRestClient" value="true" />
 
+            <cm:property name="minimalClusterState" value="GREEN" />
+
         </cm:default-properties>
     </cm:property-placeholder>
 
@@ -107,57 +109,58 @@
         <property name="bundleContext" ref="blueprintBundleContext"/>
         <property name="conditionEvaluatorDispatcher" ref="conditionEvaluatorDispatcherImpl"/>
         <property name="conditionOSQueryBuilderDispatcher" ref="conditionOSQueryBuilderDispatcher"/>
-        <property name="clusterName" value="${es.cluster.name}"/>
-        <property name="indexPrefix" value="${es.index.prefix}"/>
-        <property name="monthlyIndexNumberOfShards" value="${es.monthlyIndex.numberOfShards}"/>
-        <property name="monthlyIndexNumberOfReplicas" value="${es.monthlyIndex.numberOfReplicas}"/>
-        <property name="monthlyIndexMappingTotalFieldsLimit" value="${es.monthlyIndex.indexMappingTotalFieldsLimit}"/>
-        <property name="monthlyIndexMaxDocValueFieldsSearch" value="${es.monthlyIndex.indexMaxDocValueFieldsSearch}"/>
-        <property name="numberOfShards" value="${es.numberOfShards}"/>
-        <property name="numberOfReplicas" value="${es.numberOfReplicas}"/>
-        <property name="indexMappingTotalFieldsLimit" value="${es.indexMappingTotalFieldsLimit}"/>
-        <property name="indexMaxDocValueFieldsSearch" value="${es.indexMaxDocValueFieldsSearch}"/>
-        <property name="openSearchAddresses" value="${es.openSearchAddresses}"/>
-        <property name="fatalIllegalStateErrors" value="${es.fatalIllegalStateErrors}"/>
-        <property name="defaultQueryLimit" value="${es.defaultQueryLimit}"/>
-        <property name="itemsMonthlyIndexedOverride" value="${es.monthlyIndex.itemsMonthlyIndexedOverride}" />
+        <property name="clusterName" value="${os.cluster.name}"/>
+        <property name="indexPrefix" value="${os.index.prefix}"/>
+        <property name="monthlyIndexNumberOfShards" value="${os.monthlyIndex.numberOfShards}"/>
+        <property name="monthlyIndexNumberOfReplicas" value="${os.monthlyIndex.numberOfReplicas}"/>
+        <property name="monthlyIndexMappingTotalFieldsLimit" value="${os.monthlyIndex.indexMappingTotalFieldsLimit}"/>
+        <property name="monthlyIndexMaxDocValueFieldsSearch" value="${os.monthlyIndex.indexMaxDocValueFieldsSearch}"/>
+        <property name="numberOfShards" value="${os.numberOfShards}"/>
+        <property name="numberOfReplicas" value="${os.numberOfReplicas}"/>
+        <property name="indexMappingTotalFieldsLimit" value="${os.indexMappingTotalFieldsLimit}"/>
+        <property name="indexMaxDocValueFieldsSearch" value="${os.indexMaxDocValueFieldsSearch}"/>
+        <property name="openSearchAddresses" value="${os.openSearchAddresses}"/>
+        <property name="fatalIllegalStateErrors" value="${os.fatalIllegalStateErrors}"/>
+        <property name="defaultQueryLimit" value="${os.defaultQueryLimit}"/>
+        <property name="itemsMonthlyIndexedOverride" value="${os.monthlyIndex.itemsMonthlyIndexedOverride}" />
         <property name="routingByType">
             <map>
             </map>
         </property>
 
-        <property name="rolloverIndices" value="${es.rollover.indices}" />
-        <property name="rolloverMaxSize" value="${es.rollover.maxSize}" />
-        <property name="rolloverMaxAge" value="${es.rollover.maxAge}" />
-        <property name="rolloverMaxDocs" value="${es.rollover.maxDocs}" />
-        <property name="rolloverIndexNumberOfShards" value="${es.rollover.numberOfShards}"/>
-        <property name="rolloverIndexNumberOfReplicas" value="${es.rollover.numberOfReplicas}"/>
-        <property name="rolloverIndexMappingTotalFieldsLimit" value="${es.rollover.indexMappingTotalFieldsLimit}"/>
-        <property name="rolloverIndexMaxDocValueFieldsSearch" value="${es.rollover.indexMaxDocValueFieldsSearch}"/>
+        <property name="rolloverIndices" value="${os.rollover.indices}" />
+        <property name="rolloverMaxSize" value="${os.rollover.maxSize}" />
+        <property name="rolloverMaxAge" value="${os.rollover.maxAge}" />
+        <property name="rolloverMaxDocs" value="${os.rollover.maxDocs}" />
+        <property name="rolloverIndexNumberOfShards" value="${os.rollover.numberOfShards}"/>
+        <property name="rolloverIndexNumberOfReplicas" value="${os.rollover.numberOfReplicas}"/>
+        <property name="rolloverIndexMappingTotalFieldsLimit" value="${os.rollover.indexMappingTotalFieldsLimit}"/>
+        <property name="rolloverIndexMaxDocValueFieldsSearch" value="${os.rollover.indexMaxDocValueFieldsSearch}"/>
 
-        <property name="minimalOpenSearchVersion" value="${es.minimalOpenSearchVersion}" />
-        <property name="maximalOpenSearchVersion" value="${es.maximalOpenSearchVersion}" />
+        <property name="minimalOpenSearchVersion" value="${os.minimalOpenSearchVersion}" />
+        <property name="maximalOpenSearchVersion" value="${os.maximalOpenSearchVersion}" />
 
-        <property name="aggregateQueryBucketSize" value="${es.aggregateQueryBucketSize}" />
-        <property name="aggQueryMaxResponseSizeHttp" value="${es.aggQueryMaxResponseSizeHttp}" />
-        <property name="aggQueryThrowOnMissingDocs" value="${es.aggQueryThrowOnMissingDocs}" />
-        <property name="itemTypeToRefreshPolicy" value="${es.itemTypeToRefreshPolicy}" />
+        <property name="aggregateQueryBucketSize" value="${os.aggregateQueryBucketSize}" />
+        <property name="aggQueryMaxResponseSizeHttp" value="${os.aggQueryMaxResponseSizeHttp}" />
+        <property name="aggQueryThrowOnMissingDocs" value="${os.aggQueryThrowOnMissingDocs}" />
+        <property name="itemTypeToRefreshPolicy" value="${os.itemTypeToRefreshPolicy}" />
 
-        <property name="clientSocketTimeout" value="${es.clientSocketTimeout}" />
-        <property name="taskWaitingTimeout" value="${es.taskWaitingTimeout}" />
-        <property name="taskWaitingPollingInterval" value="${es.taskWaitingPollingInterval}" />
+        <property name="clientSocketTimeout" value="${os.clientSocketTimeout}" />
+        <property name="taskWaitingTimeout" value="${os.taskWaitingTimeout}" />
+        <property name="taskWaitingPollingInterval" value="${os.taskWaitingPollingInterval}" />
 
         <property name="metricsService" ref="metricsService" />
-        <property name="useBatchingForSave" value="${es.useBatchingForSave}" />
-        <property name="useBatchingForUpdate" value="${es.useBatchingForUpdate}" />
+        <property name="useBatchingForSave" value="${os.useBatchingForSave}" />
+        <property name="useBatchingForUpdate" value="${os.useBatchingForUpdate}" />
 
-        <property name="username" value="${es.username}" />
-        <property name="password" value="${es.password}" />
-        <property name="sslEnable" value="${es.sslEnable}" />
-        <property name="sslTrustAllCertificates" value="${es.sslTrustAllCertificates}" />
-        <property name="throwExceptions" value="${es.throwExceptions}" />
-        <property name="alwaysOverwrite" value="${es.alwaysOverwrite}" />
-        <property name="logLevelRestClient" value="${es.logLevelRestClient}" />
+        <property name="username" value="${os.username}" />
+        <property name="password" value="${os.password}" />
+        <property name="sslEnable" value="${os.sslEnable}" />
+        <property name="sslTrustAllCertificates" value="${os.sslTrustAllCertificates}" />
+        <property name="throwExceptions" value="${os.throwExceptions}" />
+        <property name="alwaysOverwrite" value="${os.alwaysOverwrite}" />
+        <property name="logLevelRestClient" value="${os.logLevelRestClient}" />
+        <property name="minimalClusterState" value="${os.minimalClusterState}" />
     </bean>
 
     <!-- We use a listener here because using the list directly for listening to proxies coming from the same bundle didn't seem to work -->

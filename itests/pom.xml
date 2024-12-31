@@ -30,6 +30,7 @@
     <properties>
         <unomi.search.engine>elasticsearch</unomi.search.engine>
         <use.opensearch>false</use.opensearch>
+        <docker.container.name>itests-opensearch</docker.container.name>
     </properties>
 
     <dependencyManagement>
@@ -393,6 +394,7 @@
                         <artifactId>docker-maven-plugin</artifactId>
                         <version>0.45.1</version>
                         <configuration>
+                            <containerNamePattern>${docker.container.name}</containerNamePattern>
                             <images>
                                 <image>
                                     <name>opensearchproject/opensearch:${opensearch.version}</name>
@@ -403,7 +405,7 @@
                                         </ports>
                                         <env>
                                             <discovery.type>single-node</discovery.type>
-                                            <OPENSEARCH_JAVA_OPTS>-Xms4g -Xmx4g</OPENSEARCH_JAVA_OPTS>
+                                            <OPENSEARCH_JAVA_OPTS>-Xms4g -Xmx4g -Dcluster.default.index.settings.number_of_replicas=0</OPENSEARCH_JAVA_OPTS>
                                             <path.repo>/tmp/snapshots_repository</path.repo>
                                             <plugins.security.disabled>true</plugins.security.disabled>
                                             <OPENSEARCH_INITIAL_ADMIN_PASSWORD>Unomi.1ntegrat10n.Tests</OPENSEARCH_INITIAL_ADMIN_PASSWORD>
@@ -426,6 +428,16 @@
                             </images>
                         </configuration>
                         <executions>
+                            <!-- Force remove existing container before starting -->
+                            <execution>
+                                <id>remove-existing-container</id>
+                                <phase>pre-integration-test</phase>
+                                <goals>
+                                    <goal>stop</goal> <!-- Stops the container if running -->
+                                    <goal>remove</goal> <!-- Removes the container -->
+                                </goals>
+                            </execution>
+
                             <execution>
                                 <id>start-opensearch</id>
                                 <phase>pre-integration-test</phase>

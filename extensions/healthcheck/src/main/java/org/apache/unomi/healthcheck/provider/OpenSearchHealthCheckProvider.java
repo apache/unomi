@@ -31,11 +31,9 @@ import org.apache.unomi.healthcheck.HealthCheckConfig;
 import org.apache.unomi.healthcheck.HealthCheckProvider;
 import org.apache.unomi.healthcheck.HealthCheckResponse;
 import org.apache.unomi.healthcheck.util.CachedValue;
+import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.shell.migration.utils.HttpUtils;
-import org.osgi.service.component.annotations.Activate;
-import org.osgi.service.component.annotations.Component;
-import org.osgi.service.component.annotations.Reference;
-import org.osgi.service.component.annotations.ReferenceCardinality;
+import org.osgi.service.component.annotations.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -59,8 +57,24 @@ public class OpenSearchHealthCheckProvider implements HealthCheckProvider {
 
     private CloseableHttpClient httpClient;
 
+    @Reference(service = PersistenceService.class, cardinality = ReferenceCardinality.OPTIONAL, policy = ReferencePolicy.DYNAMIC, bind = "bind", unbind = "unbind")
+    private volatile PersistenceService persistenceService;
+
+    public void bind(PersistenceService persistenceService) {
+        this.persistenceService = persistenceService;
+    }
+
+    public void unbind(PersistenceService persistenceService) {
+        this.persistenceService = null;
+    }
+
     public OpenSearchHealthCheckProvider() {
         LOGGER.info("Building OpenSearch health provider service...");
+    }
+
+    @Override
+    public boolean isAvailable() {
+        return persistenceService != null && "opensearch".equals(persistenceService.getName());
     }
 
     @Activate
@@ -102,8 +116,14 @@ public class OpenSearchHealthCheckProvider implements HealthCheckProvider {
         LOGGER.debug("Refresh");
         HealthCheckResponse.Builder builder = new HealthCheckResponse.Builder();
         builder.name(NAME).down();
-        String url = (config.get(HealthCheckConfig.CONFIG_ES_SSL_ENABLED).equals("true") ? "https://" : "http://")
-                .concat(config.get(HealthCheckConfig.CONFIG_ES_ADDRESSES).split(",")[0].trim())
+        String minimalClusterState = config.get(HealthCheckConfig.CONFIG_OS_MINIMAL_CLUSTER_STATE);
+        if (StringUtils.isEmpty(minimalClusterState)) {
+            minimalClusterState = "green";
+        } else {
+            minimalClusterState = minimalClusterState.toLowerCase();
+        }
+        String url = (config.get(HealthCheckConfig.CONFIG_OS_SSL_ENABLED).equals("true") ? "https://" : "http://")
+                .concat(config.get(HealthCheckConfig.CONFIG_OS_ADDRESSES).split(",")[0].trim())
                 .concat("/_cluster/health");
         CloseableHttpResponse response = null;
         try {
@@ -111,9 +131,12 @@ public class OpenSearchHealthCheckProvider implements HealthCheckProvider {
             if (response != null && response.getStatusLine().getStatusCode() == 200) {
                 builder.up();
                 HttpEntity entity = response.getEntity();
-                if (entity != null && EntityUtils.toString(entity).contains("\"status\":\"green\"")) {
-                    builder.live();
-                    //TODO parse and add cluster data
+                if (entity != null) {
+                    String content = EntityUtils.toString(entity);
+                    if (content.contains("\"status\":\"green\"") ||
+                        content.contains("\"status\":\"yellow\"") && minimalClusterState.equals("yellow")) {
+                        builder.live();
+                    }
                 }
             }
         } catch (IOException e) {

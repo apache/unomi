@@ -27,8 +27,8 @@ public @interface UnomiManagementServiceConfiguration {
 
     @AttributeDefinition(
             name = "Start Features",
-            description = "A semicolon-separated list of start features in the format 'key:feature1,feature2;key2:feature3'."
+            description = "An array of strings representing start features in the format '[\"key=feature1,feature2\", \"key2:feature3\"]."
     )
-    String startFeatures() default "";
+    String[] startFeatures() default "";
 
 }

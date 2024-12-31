@@ -56,6 +56,7 @@ public class HealthCheckIT extends BaseIT {
         try {
             List<HealthCheckResponse> response = get(HEALTHCHECK_ENDPOINT, new TypeReference<>() {});
             LOGGER.info("health check response: {}", response);
+            Assert.assertNotNull(response);
             Assert.assertEquals(5, response.size());
             Assert.assertTrue(response.stream().anyMatch(r -> r.getName().equals("karaf") && r.getStatus() == HealthCheckResponse.Status.LIVE));
             Assert.assertTrue(response.stream().anyMatch(r -> r.getName().equals(searchEngine) && r.getStatus() == HealthCheckResponse.Status.LIVE));
@@ -73,12 +74,13 @@ public class HealthCheckIT extends BaseIT {
         try {
             final HttpGet httpGet = new HttpGet(getFullUrl(url));
             response = executeHttpRequest(httpGet);
-            if (response.getStatusLine().getStatusCode() == 200) {
+            if (response.getStatusLine().getStatusCode() == 200 || response.getStatusLine().getStatusCode() == 206) {
                 return objectMapper.readValue(response.getEntity().getContent(), typeReference);
             } else {
                 return null;
             }
         } catch (Exception e) {
+            LOGGER.error("Error performing GET request with url {}", url, e);
             e.printStackTrace();
         } finally {
             if (response != null) {

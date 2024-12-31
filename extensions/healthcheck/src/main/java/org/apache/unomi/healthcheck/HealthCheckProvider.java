@@ -21,6 +21,13 @@ public interface HealthCheckProvider {
 
     String name();
 
+    /**
+     * Used to check whether the provider is available. For example an ElasticSearch provider will not be available
+     * if OpenSearch is used instead as a persistence implementation.
+     * @return true if the provider is available, false otherwise
+     */
+    default boolean isAvailable() { return true;}
+
     HealthCheckResponse execute();
 
     default HealthCheckResponse timeout() {

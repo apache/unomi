@@ -134,6 +134,7 @@
                             *
                         </Import-Package>
                         <Export-Package>
+                            org.apache.unomi.shell.services,
                             org.apache.unomi.shell.migration.utils,
                             org.apache.unomi.shell.migration.service,
                         </Export-Package>

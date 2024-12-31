@@ -62,7 +62,7 @@ The integration tests can be run against either ElasticSearch (default) or OpenS
 
 ```bash
 # Run with ElasticSearch (default)
-mvn clean install -P integration-tests -Duse.opensearch=false
+mvn clean install -P integration-tests
 
 # Run with OpenSearch 
 mvn clean install -P integration-tests -Duse.opensearch=true

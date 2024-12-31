@@ -54,6 +54,7 @@ import org.apache.unomi.router.api.ImportConfiguration;
 import org.apache.unomi.router.api.services.ImportExportConfigurationService;
 import org.apache.unomi.schema.api.SchemaService;
 import org.apache.unomi.services.UserListService;
+import org.apache.unomi.shell.services.UnomiManagementService;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -166,9 +167,13 @@ public abstract class BaseIT extends KarafTestSupport {
     public void waitForStartup() throws InterruptedException {
         // disable retry
         retry = new KarafTestSupport.Retry(false);
+        searchEngine = System.getProperty(SEARCH_ENGINE_PROPERTY, SEARCH_ENGINE_ELASTICSEARCH);
 
         // Start Unomi if not already done
         if (!unomiStarted) {
+            // We must check that the Unomi Management Service is up and running before launching the
+            // command otherwise the start configuration will not be properly populated.
+            waitForUnomiManagementService();
             if (SEARCH_ENGINE_ELASTICSEARCH.equals(searchEngine)) {
                 LOGGER.info("Starting Unomi with elasticsearch search engine...");
                 System.out.println("==== Starting Unomi with elasticsearch search engine...");
@@ -182,9 +187,6 @@ public abstract class BaseIT extends KarafTestSupport {
                 throw new InterruptedException("Unknown search engine: " + searchEngine);
             }
             unomiStarted = true;
-        } else {
-            LOGGER.info("Unomi is already started.");
-            System.out.println("==== Unomi is already started.");
         }
 
         // Wait for startup complete
@@ -214,6 +216,15 @@ public abstract class BaseIT extends KarafTestSupport {
 
         // init httpClient
         httpClient = initHttpClient(getHttpClientCredentialProvider());
+    }
+
+    private void waitForUnomiManagementService() throws InterruptedException {
+        UnomiManagementService unomiManagementService = getOsgiService(UnomiManagementService.class, 600000);
+        while (unomiManagementService == null) {
+            LOGGER.info("Waiting for Unomi Management Service to be available...");
+            Thread.sleep(1000);
+            unomiManagementService = getOsgiService(UnomiManagementService.class, 600000);
+        }
     }
 
     @After
@@ -304,6 +315,7 @@ public abstract class BaseIT extends KarafTestSupport {
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.opensearch.password", "Unomi.1ntegrat10n.Tests"),
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.opensearch.sslEnable", "false"),
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.opensearch.sslTrustAllCertificates", "true"),
+                editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.opensearch.minimalClusterState", "YELLOW"),
 
                 systemProperty("org.ops4j.pax.exam.rbc.rmi.port").value("1199"),
                 systemProperty("org.apache.unomi.hazelcast.group.name").value("cellar"),

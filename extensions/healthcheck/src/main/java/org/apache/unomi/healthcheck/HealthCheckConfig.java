@@ -46,6 +46,7 @@ public class HealthCheckConfig {
     public static final String CONFIG_OS_LOGIN = "osLogin";
     public static final String CONFIG_OS_PASSWORD = "osPassword";
     public static final String CONFIG_OS_TRUST_ALL_CERTIFICATES = "osHttpClient.trustAllCertificates";
+    public static final String CONFIG_OS_MINIMAL_CLUSTER_STATE = "osMinimalClusterState";
     public static final String CONFIG_AUTH_REALM = "authentication.realm";
     public static final String ENABLED = "healthcheck.enabled";
     public static final String PROVIDERS = "healthcheck.providers";

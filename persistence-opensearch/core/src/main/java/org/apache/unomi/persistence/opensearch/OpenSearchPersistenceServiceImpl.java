@@ -37,7 +37,6 @@ import org.apache.unomi.api.query.IpRange;
 import org.apache.unomi.api.query.NumericRange;
 import org.apache.unomi.metrics.MetricAdapter;
 import org.apache.unomi.metrics.MetricsService;
-import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.aggregate.DateRangeAggregate;
 import org.apache.unomi.persistence.spi.aggregate.IpRangeAggregate;
@@ -55,6 +54,7 @@ import org.opensearch.client.opensearch._types.aggregations.*;
 import org.opensearch.client.opensearch._types.mapping.TypeMapping;
 import org.opensearch.client.opensearch._types.query_dsl.Query;
 import org.opensearch.client.opensearch.cluster.HealthRequest;
+import org.opensearch.client.opensearch.cluster.HealthResponse;
 import org.opensearch.client.opensearch.core.*;
 import org.opensearch.client.opensearch.core.bulk.BulkOperation;
 import org.opensearch.client.opensearch.core.bulk.UpdateOperation;
@@ -171,6 +171,10 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
     }
 
     private final JsonpMapper jsonpMapper = new JacksonJsonpMapper();
+
+    private String minimalClusterState = "GREEN"; // Add this as a class field
+    private int clusterHealthTimeout = 30; // timeout in seconds
+    private int clusterHealthRetries = 3;
 
     public void setBundleContext(BundleContext bundleContext) {
         this.bundleContext = bundleContext;
@@ -375,6 +379,18 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
         }
     }
 
+    public void setMinimalClusterState(String minimalClusterState) {
+        if ("GREEN".equalsIgnoreCase(minimalClusterState) || "YELLOW".equalsIgnoreCase(minimalClusterState)) {
+            this.minimalClusterState = minimalClusterState.toUpperCase();
+        } else {
+            LOGGER.warn("Invalid minimal cluster state: {}. Using default: GREEN", minimalClusterState);
+        }
+    }
+
+    public String getName() {
+        return "opensearch";
+    }
+
     public void start() throws Exception {
 
         // on startup
@@ -394,6 +410,8 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
                     throw new Exception("OpenSearch version is not within [" + minimalVersion + "," + maximalVersion + "), aborting startup !");
                 }
 
+                waitForClusterHealth();
+
                 registerRolloverLifecyclePolicy();
 
                 loadPredefinedMappings(bundleContext, false);
@@ -407,10 +425,10 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
                     }
                 }
 
-                // Wait for green
-                LOGGER.info("Waiting for GREEN cluster status...");
-                client.cluster().health(new HealthRequest.Builder().waitForStatus(HealthStatus.Green).build());
-                LOGGER.info("Cluster status is GREEN");
+                // Wait for minimal cluster state
+                LOGGER.info("Waiting for {} cluster status...", minimalClusterState);
+                client.cluster().health(new HealthRequest.Builder().waitForStatus(getHealthStatus(minimalClusterState)).build());
+                LOGGER.info("Cluster status is {}", minimalClusterState);
 
                 // We keep in memory the latest available session index to be able to load session using direct GET access on ES
                 if (isItemTypeRollingOver(Session.ITEM_TYPE)) {
@@ -490,7 +508,7 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
         });
 
         restClient = clientBuilder.build();
-        OpenSearchTransport transport = new RestClientTransport(restClient, new JacksonJsonpMapper(CustomObjectMapper.getObjectMapper()));
+        OpenSearchTransport transport = new RestClientTransport(restClient, new JacksonJsonpMapper(OSCustomObjectMapper.getObjectMapper()));
         client = new OpenSearchClient(transport);
 
         LOGGER.info("Connecting to OpenSearch persistence backend using cluster name " + clusterName + " and index prefix " + indexPrefix + "...");
@@ -847,7 +865,10 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
                 try {
                     UpdateRequest updateRequest = createUpdateRequest(clazz, item, source, alwaysOverwrite);
 
-                    UpdateResponse response = client.update(updateRequest, String.class);
+                    UpdateResponse response = client.update(updateRequest, Item.class);
+                    if (response.result().equals(Result.NoOp)) {
+                        LOGGER.warn("Update of item {} with source {} returned NoOp", item.getItemId(), source);
+                    }
                     setMetadata(item, response.id(), response.version(), response.seqNo(), response.primaryTerm(), response.index());
                     logMetadataItemOperation("updated", item);
                     return true;
@@ -1232,12 +1253,22 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
                     String endpoint = "_plugins/_ism/policies/" + policyName;
 
                     RestClient restClient = ((RestClientTransport) client._transport()).restClient();
-                    Request getRequest = new Request("GET", endpoint);
-                    Response response = restClient.performRequest(getRequest);
-                    if (response.getStatusLine().getStatusCode() == 200) {
-                        LOGGER.info("Found existing rollover lifecycle policy, deleting the existing one.");
-                        Request deleteRequest = new Request("DELETE", endpoint);
-                        restClient.performRequest(deleteRequest);
+
+                    // Upon initial OpenSearch startup, the .opendistro-ism-config index may not exist yet, so we need to check if it exists first
+                    // Check if the .opendistro-ism-config index exists
+                    Request checkIndexRequest = new Request("HEAD", ".opendistro-ism-config");
+                    Response checkIndexResponse = restClient.performRequest(checkIndexRequest);
+
+                    if (checkIndexResponse.getStatusLine().getStatusCode() == 404) {
+                        LOGGER.info(".opendistro-ism-config index does not exist. Initializing ISM configuration.");
+                    } else {
+                        Request getRequest = new Request("GET", endpoint);
+                        Response response = restClient.performRequest(getRequest);
+                        if (response.getStatusLine().getStatusCode() == 200) {
+                            LOGGER.info("Found existing rollover lifecycle policy, deleting the existing one.");
+                            Request deleteRequest = new Request("DELETE", endpoint);
+                            restClient.performRequest(deleteRequest);
+                        }
                     }
 
                     // Build the ILM policy JSON
@@ -1284,7 +1315,7 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
 
                     Request request = new Request("PUT", endpoint);
                     request.setJsonEntity(policyJson);
-                    response = restClient.performRequest(request);
+                    Response response = restClient.performRequest(request);
 
                     return response.getStatusLine().getStatusCode() == 200;
                 } catch (Exception e) {
@@ -2636,5 +2667,95 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
         if (item instanceof MetadataItem) {
             LOGGER.info("Item of type {} with ID {} has been {}", item.getItemType(), item.getItemId(), operation);
         }
+    }
+
+    private void waitForClusterHealth() throws Exception {
+        LOGGER.info("Checking cluster health (minimum required state: {})...", minimalClusterState);
+        HealthStatus requiredStatus = getHealthStatus(minimalClusterState);
+
+        for (int attempt = 1; attempt <= clusterHealthRetries; attempt++) {
+            try {
+                HealthResponse health = client.cluster().health(new HealthRequest.Builder()
+                    .waitForStatus(requiredStatus)
+                    .timeout(t -> t.time(String.valueOf(clusterHealthTimeout) + "s"))
+                    .build());
+
+                if (health.status() == HealthStatus.Green) {
+                    logClusterHealth(health, "Cluster status is GREEN - fully operational");
+                    return;
+                } else if (health.status() == HealthStatus.Yellow && "YELLOW".equals(minimalClusterState)) {
+                    logClusterHealth(health, "Cluster status is YELLOW - operating with reduced redundancy");
+                    return;
+                }
+
+                if (attempt == clusterHealthRetries && requiredStatus == HealthStatus.Green) {
+                    LOGGER.warn("Unable to achieve GREEN status after {} attempts. Checking if YELLOW status is acceptable...", clusterHealthRetries);
+                    if ("YELLOW".equals(minimalClusterState)) {
+                        requiredStatus = HealthStatus.Yellow;
+                        attempt = 0; // Reset attempts for yellow status check
+                        continue;
+                    }
+                }
+
+                logClusterHealth(health, "Cluster health check attempt " + attempt + " of " + clusterHealthRetries);
+
+            } catch (OpenSearchException e) {
+                if (e.getMessage().contains("408")) {
+                    LOGGER.warn("Cluster health check timeout on attempt {} of {}", attempt, clusterHealthRetries);
+                } else {
+                    throw e;
+                }
+            }
+
+            if (attempt < clusterHealthRetries) {
+                Thread.sleep(1000); // Wait 1 second between attempts
+            }
+        }
+
+        // Final check with detailed diagnostics if we couldn't achieve desired status
+        try {
+            HealthResponse finalHealth = client.cluster().health(new HealthRequest.Builder().build());
+            String message = String.format("Could not achieve %s status after %d attempts. Current status: %s",
+                minimalClusterState, clusterHealthRetries, finalHealth.status());
+            logClusterHealth(finalHealth, message);
+
+            if ("YELLOW".equals(minimalClusterState) && finalHealth.status() != HealthStatus.Red) {
+                return; // Accept current state if yellow is minimum and we're not red
+            }
+
+            throw new Exception(message);
+        } catch (OpenSearchException e) {
+            throw new Exception("Failed to get final cluster health status", e);
+        }
+    }
+
+    private void logClusterHealth(HealthResponse health, String message) {
+        LOGGER.info("{}\nCluster Details:\n" +
+            "- Status: {}\n" +
+            "- Nodes: {} (data nodes: {})\n" +
+            "- Shards: {} active ({} primary, {} relocating, {} initializing, {} unassigned)\n" +
+            "- Active shards: {}%",
+            message,
+            health.status(),
+            health.numberOfNodes(), health.numberOfDataNodes(),
+            health.activeShards(), health.activePrimaryShards(),
+            health.relocatingShards(), health.initializingShards(), health.unassignedShards(),
+            health.activeShardsPercentAsNumber());
+    }
+
+    public static HealthStatus getHealthStatus(String value) {
+        for (HealthStatus status : HealthStatus.values()) {
+            if (status.jsonValue().equalsIgnoreCase(value)) {
+                return status;
+            }
+            if (status.aliases() != null) {
+                for (String alias : status.aliases()) {
+                    if (alias.equalsIgnoreCase(value)) {
+                        return status;
+                    }
+                }
+            }
+        }
+        throw new IllegalArgumentException("Unknown HealthStatus: " + value);
     }
 }

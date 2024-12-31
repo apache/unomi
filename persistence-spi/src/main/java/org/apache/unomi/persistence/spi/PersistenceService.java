@@ -27,12 +27,17 @@ import org.apache.unomi.persistence.spi.aggregate.BaseAggregate;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Consumer;
 
 /**
  * A service to provide persistence and retrieval of context server entities.
  */
 public interface PersistenceService {
+
+    /**
+     * A unique name to identify the persistence service.
+     * @return a string containing the unique name for the persistence service.
+     */
+    String getName();
 
     /**
      * Retrieves all known items of the specified class.

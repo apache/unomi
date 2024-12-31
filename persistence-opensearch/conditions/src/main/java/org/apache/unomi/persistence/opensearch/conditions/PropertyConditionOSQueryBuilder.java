@@ -32,6 +32,7 @@ import org.opensearch.client.opensearch._types.query_dsl.BoolQuery;
 import org.opensearch.client.opensearch._types.query_dsl.Query;
 import org.opensearch.client.util.ObjectBuilder;
 
+import java.time.OffsetDateTime;
 import java.util.*;
 
 import static org.apache.unomi.persistence.spi.conditions.DateUtils.getDate;
@@ -201,6 +202,8 @@ public class PropertyConditionOSQueryBuilder implements ConditionOSQueryBuilder 
         }
         if (dateValue instanceof Date) {
             return dateTimeFormatter.print(new DateTime(dateValue));
+        } else if (dateValue instanceof OffsetDateTime) {
+            return dateTimeFormatter.print(new DateTime(Date.from(((OffsetDateTime)dateValue).toInstant())));
         } else {
             return dateValue;
         }
@@ -235,6 +238,8 @@ public class PropertyConditionOSQueryBuilder implements ConditionOSQueryBuilder 
             return fieldValueBuilder.booleanValue((Boolean) fieldValue);
         } else if (fieldValue instanceof Date) {
             return fieldValueBuilder.stringValue(convertDateToISO((Date) fieldValue).toString());
+        } else if (fieldValue instanceof OffsetDateTime) {
+            return fieldValueBuilder.stringValue(convertDateToISO((OffsetDateTime) fieldValue).toString());
         } else {
             throw new IllegalArgumentException("Impossible to build ES filter, unsupported value type: " + fieldValue.getClass().getName());
         }

@@ -456,6 +456,10 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         }
     }
 
+    public String getName() {
+        return "elasticsearch";
+    }
+
     public void start() throws Exception {
 
         // Work around to avoid ES Logs regarding the deprecated [ignore_throttled] parameter

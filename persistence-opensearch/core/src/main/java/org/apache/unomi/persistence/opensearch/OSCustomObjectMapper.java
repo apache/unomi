@@ -16,14 +16,16 @@
  */
 package org.apache.unomi.persistence.opensearch;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.Item;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 
+import java.util.Map;
+
 /**
- * This CustomObjectMapper is used to avoid the version parameter to be registered in ES
- * @author dgaillard
+ * This CustomObjectMapper is used to avoid the version parameter to be registered in OpenSearch
  */
 public class OSCustomObjectMapper extends CustomObjectMapper {
 
@@ -33,6 +35,8 @@ public class OSCustomObjectMapper extends CustomObjectMapper {
         super();
         this.addMixIn(Item.class, OSItemMixIn.class);
         this.addMixIn(Event.class, OSEventMixIn.class);
+        this.configOverride(Map.class)
+                .setInclude(JsonInclude.Value.construct(JsonInclude.Include.ALWAYS, JsonInclude.Include.ALWAYS));
     }
 
     public static ObjectMapper getObjectMapper() {

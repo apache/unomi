@@ -26,7 +26,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.servlet.ServletException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.*;
 import java.util.stream.Collectors;
 
@@ -124,7 +126,7 @@ public class HealthCheckService {
                     busy = true;
                     List<HealthCheckResponse> health = new ArrayList<>();
                     health.add(HealthCheckResponse.live("karaf"));
-                    for (HealthCheckProvider provider : providers.stream().filter(p -> config.getEnabledProviders().contains(p.name())).collect(Collectors.toList())) {
+                    for (HealthCheckProvider provider : providers.stream().filter(p -> config.getEnabledProviders().contains(p.name()) && p.isAvailable()).collect(Collectors.toList())) {
                         Future<HealthCheckResponse> future = executor.submit(provider::execute);
                         try {
                             HealthCheckResponse response = future.get(config.getTimeout(), TimeUnit.MILLISECONDS);
