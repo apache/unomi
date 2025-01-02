@@ -64,6 +64,8 @@ MAVEN_OFFLINE=false
 KARAF_DEBUG_PORT=5005
 KARAF_DEBUG_SUSPEND=n
 USE_OPENSEARCH=false
+NO_KARAF=false
+AUTO_START=""
 
 # Function to display usage
 usage() {
@@ -91,6 +93,8 @@ EOF
     echo "  --purge-maven-cache        Purge local Maven cache before building"
     echo "  --karaf-home PATH          Set Karaf home directory for deployment"
     echo "  --use-opensearch          Use OpenSearch instead of ElasticSearch for tests"
+    echo "  --no-karaf               Build without starting Karaf"
+    echo "  --auto-start ENGINE      Auto-start with specified engine (elasticsearch or opensearch)"
     echo ""
     echo "Examples:"
     echo "  $0 --integration-tests --search-engine opensearch"
@@ -100,6 +104,7 @@ EOF
     echo "  $0 -X --integration-tests    Run tests with Maven debug output"
     echo "  $0 -o -X                    Run offline with Maven debug output"
     echo "  $0 --integration-tests --use-opensearch"
+    echo "  $0 --no-karaf --auto-start opensearch"
     exit 1
 }
 
@@ -146,6 +151,17 @@ while [ "$1" != "" ]; do
             ;;
         --use-opensearch)
             USE_OPENSEARCH=true
+            ;;
+        --no-karaf)
+            NO_KARAF=true
+            ;;
+        --auto-start)
+            shift
+            if [[ "$1" != "elasticsearch" && "$1" != "opensearch" ]]; then
+                echo "Error: --auto-start must be either 'elasticsearch' or 'opensearch'"
+                exit 1
+            fi
+            AUTO_START="$1"
             ;;
         *)
             echo "Unknown option: $1"
@@ -282,6 +298,110 @@ print_progress() {
     printf "] %d%% %s (%s)" $((100 * step / total)) "$msg" "$elapsed"
 }
 
+# Function to validate combinations of options
+validate_options() {
+    # Check for mutually exclusive options
+    if [ "$SKIP_TESTS" = true ] && [ "$RUN_INTEGRATION_TESTS" = true ]; then
+        echo "Error: Cannot use --skip-tests and --integration-tests together"
+        exit 1
+    fi
+
+    # Check for offline mode conflicts
+    if [ "$MAVEN_OFFLINE" = true ]; then
+        if [ "$PURGE_MAVEN_CACHE" = true ]; then
+            echo "Error: Cannot use --purge-maven-cache in offline mode (--offline)"
+            exit 1
+        fi
+        if [ "$USE_MAVEN_CACHE" = false ]; then
+            echo "Warning: Using --no-maven-cache with offline mode may cause build failures"
+            prompt_continue
+        fi
+    fi
+
+    # Validate debug-related options
+    if [ "$DEBUG" = true ]; then
+        if ! [[ "$KARAF_DEBUG_PORT" =~ ^[0-9]+$ ]] || [ "$KARAF_DEBUG_PORT" -lt 1024 ] || [ "$KARAF_DEBUG_PORT" -gt 65535 ]; then
+            echo "Error: Debug port must be a valid port number (1024-65535)"
+            exit 1
+        fi
+        # Check if debug port is already in use
+        if command -v nc >/dev/null 2>&1; then
+            if nc -z localhost "$KARAF_DEBUG_PORT" 2>/dev/null; then
+                echo "Error: Port $KARAF_DEBUG_PORT is already in use"
+                exit 1
+            fi
+        fi
+    fi
+
+    # Validate Karaf home if specified
+    if [ ! -z "$CONTEXT_SERVER_KARAF_HOME" ]; then
+        if [ ! -d "$CONTEXT_SERVER_KARAF_HOME" ]; then
+            echo "Error: Specified Karaf home directory does not exist: $CONTEXT_SERVER_KARAF_HOME"
+            exit 1
+        fi
+        if [ ! -w "$CONTEXT_SERVER_KARAF_HOME" ]; then
+            echo "Error: Specified Karaf home directory is not writable: $CONTEXT_SERVER_KARAF_HOME"
+            exit 1
+        fi
+    fi
+
+    # Check system requirements
+    check_system_requirements
+}
+
+# Function to check system requirements
+check_system_requirements() {
+    local min_memory=2048  # 2GB in MB
+    local min_disk=1024    # 1GB in MB
+
+    # Check Java version
+    if ! command -v java >/dev/null 2>&1; then
+        echo "Error: Java is not installed"
+        exit 1
+    fi
+    java_version=$(java -version 2>&1 | awk -F '"' '/version/ {print $2}')
+    if [[ ! "$java_version" =~ ^1[1-9]\. && ! "$java_version" =~ ^[2-9][0-9]\. ]]; then
+        echo "Error: Java 11 or higher is required (found: $java_version)"
+        exit 1
+    fi
+
+    # Check Maven if not in offline mode
+    if [ "$MAVEN_OFFLINE" = false ] && ! command -v mvn >/dev/null 2>&1; then
+        echo "Error: Maven is not installed"
+        exit 1
+    fi
+
+    # Check available memory
+    if command -v free >/dev/null 2>&1; then
+        available_memory=$(free -m | awk '/^Mem:/{print $2}')
+        if [ "$available_memory" -lt "$min_memory" ]; then
+            echo "Warning: Less than ${min_memory}MB of memory available (${available_memory}MB)"
+            prompt_continue
+        fi
+    fi
+
+    # Check available disk space
+    if command -v df >/dev/null 2>&1; then
+        available_disk=$(df -m . | awk 'NR==2 {print $4}')
+        if [ "$available_disk" -lt "$min_disk" ]; then
+            echo "Warning: Less than ${min_disk}MB of disk space available (${available_disk}MB)"
+            prompt_continue
+        fi
+    fi
+}
+
+# Function to prompt for continuation
+prompt_continue() {
+    read -p "Continue anyway? (y/N) " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        exit 1
+    fi
+}
+
+# Add this after parsing arguments
+validate_options
+
 # Build command
 cat << "EOF"
      ____  _    _ _____ _      ____
@@ -412,6 +532,12 @@ EOF
         echo "Error: Failed to change directory to Karaf bin directory"
         exit 1
     }
+
+    # Configure auto-start if specified
+    if [ ! -z "$AUTO_START" ]; then
+        echo "Configuring auto-start for $AUTO_START"
+        export KARAF_OPTS="-Dunomi.autoStart=$AUTO_START"
+    fi
 
     print_progress $((++current_step)) $total_karaf_steps "Starting Karaf..."
     if [ "$DEBUG" = true ]; then
