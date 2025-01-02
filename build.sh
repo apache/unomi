@@ -47,10 +47,183 @@ EOF
     exit $exit_code
 }
 
-echo "-----------------------------------------------------------------------------------------------"
-echo "Apache Unomi Build Script"
-echo "-----------------------------------------------------------------------------------------------"
-echo
+# Function to detect color support
+setup_colors() {
+    # Only use colors if connected to a terminal
+    if [ -t 1 ]; then
+        # Check if NO_COLOR is set (https://no-color.org/)
+        if [ -z "${NO_COLOR+x}" ]; then
+            # Check if terminal supports colors
+            if [ -n "$TERM" ] && [ "$TERM" != "dumb" ]; then
+                # Check if tput is available
+                if command -v tput > /dev/null && tput setaf 1 >&/dev/null; then
+                    RED='\033[0;31m'
+                    GREEN='\033[0;32m'
+                    YELLOW='\033[1;33m'
+                    BLUE='\033[0;34m'
+                    MAGENTA='\033[0;35m'
+                    CYAN='\033[0;36m'
+                    GRAY='\033[0;90m'
+                    BOLD='\033[1m'
+                    NC='\033[0m' # No Color
+
+                    # Unicode symbols (only if terminal likely supports UTF-8)
+                    if [ "$TERM" != "linux" ] && [ -n "$LANG" ] && [ "$LANG" != "C" ]; then
+                        CHECK_MARK="✔"
+                        CROSS_MARK="✘"
+                        ARROW="➜"
+                        WARNING="⚠"
+                        INFO="ℹ"
+                    else
+                        CHECK_MARK="(+)"
+                        CROSS_MARK="(x)"
+                        ARROW="(>)"
+                        WARNING="(!)"
+                        INFO="(i)"
+                    fi
+
+                    HAS_COLORS=1
+                fi
+            fi
+        fi
+    fi
+
+    # If colors are not supported or disabled, use plain text without escape sequences
+    if [ -z "${HAS_COLORS+x}" ]; then
+        RED=''
+        GREEN=''
+        YELLOW=''
+        BLUE=''
+        MAGENTA=''
+        CYAN=''
+        GRAY=''
+        BOLD=''
+        NC=''
+
+        # Use ASCII alternatives without escape sequences
+        CHECK_MARK="(+)"
+        CROSS_MARK="(x)"
+        ARROW="(>)"
+        WARNING="(!)"
+        INFO="(i)"
+
+        HAS_COLORS=0
+    fi
+}
+
+# Initialize colors early
+setup_colors
+
+# Function to print section headers
+print_section() {
+    local text="$1"
+    local text_length=${#text}
+    local total_width=80  # Standard terminal width
+    local padding_length=$(( (total_width - text_length - 4) / 2 ))  # -4 for the borders and spaces
+    local left_padding=""
+    local right_padding=""
+
+    # Create padding strings of spaces for the text line
+    for ((i=0; i<padding_length; i++)); do
+        left_padding+=" "
+        right_padding+=" "
+    done
+
+    # Adjust right padding for odd lengths
+    if [ $(( (total_width - text_length) % 2 )) -eq 1 ]; then
+        right_padding+=" "
+    fi
+
+    if [ "$HAS_COLORS" -eq 1 ]; then
+        echo -e "\n${BLUE}╔════════════════════════════════════════════════════════════════════════════╗${NC}"
+        echo -e "${BLUE}║${NC}${left_padding}${BOLD}${text}${NC}${right_padding}${BLUE}║${NC}"
+        echo -e "${BLUE}╚════════════════════════════════════════════════════════════════════════════╝${NC}"
+    else
+        echo -e "\n+------------------------------------------------------------------------------+"
+        echo -e "| ${left_padding}${text}${right_padding} |"
+        echo "+------------------------------------------------------------------------------+"
+    fi
+}
+
+# Function to print status messages
+print_status() {
+    local status=$1
+    local message=$2
+    
+    if [ "$HAS_COLORS" -eq 1 ]; then
+        case $status in
+            "success")
+                echo -e " ${GREEN}${CHECK_MARK}${NC} ${GREEN}${message}${NC}"
+                ;;
+            "error")
+                echo -e " ${RED}${CROSS_MARK}${NC} ${RED}${message}${NC}"
+                ;;
+            "warning")
+                echo -e " ${YELLOW}${WARNING}${NC} ${YELLOW}${message}${NC}"
+                ;;
+            "info")
+                echo -e " ${CYAN}${INFO}${NC} ${CYAN}${message}${NC}"
+                ;;
+            *)
+                echo -e " ${BLUE}${ARROW}${NC} ${message}"
+                ;;
+        esac
+    else
+        # No colors - use plain text without escape sequences
+        local symbol
+        case $status in
+            "success")
+                symbol="${CHECK_MARK}"
+                ;;
+            "error")
+                symbol="${CROSS_MARK}"
+                ;;
+            "warning")
+                symbol="${WARNING}"
+                ;;
+            "info")
+                symbol="${INFO}"
+                ;;
+            *)
+                symbol="${ARROW}"
+                ;;
+        esac
+        echo " ${symbol} ${message}"
+    fi
+}
+
+# Enhanced progress tracking
+print_progress() {
+    local current=$1
+    local total=$2
+    local message=$3
+    local percentage=$((current * 100 / total))
+
+    if [ "$HAS_COLORS" -eq 1 ]; then
+        local filled=$((percentage / 2))
+        local empty=$((50 - filled))
+
+        local progress="["
+        for ((i=0; i<filled; i++)); do progress+="█"; done
+        for ((i=0; i<empty; i++)); do progress+="░"; done
+        progress+="]"
+
+        echo -e "\r${CYAN}${progress}${NC} ${percentage}% ${GRAY}${message}${NC}"
+    else
+        local filled=$((percentage / 4))
+        local empty=$((25 - filled))
+
+        local progress="["
+        for ((i=0; i<filled; i++)); do progress+="#"; done
+        for ((i=0; i<empty; i++)); do progress+="-"; done
+        progress+="]"
+
+        echo -e "\r${progress} ${percentage}% ${message}"
+    fi
+}
+
+# Add the new section header
+print_section "Apache Unomi Build Script"
 
 # Default values
 SKIP_TESTS=false
@@ -67,44 +240,107 @@ USE_OPENSEARCH=false
 NO_KARAF=false
 AUTO_START=""
 
-# Function to display usage
+# Enhanced usage function with color support
 usage() {
-    cat << "EOF"
+    if [ "$HAS_COLORS" -eq 1 ]; then
+        echo -e "${CYAN}"
+        cat << "EOF"
      _    _ _____ _      ____
     | |  | |  ___| |    |  _ \
     | |__| | |__ | |    | |_) |
     |  __  |  __|| |    |  __/
     | |  | | |___| |____| |
     |_|  |_\_____|______|_|
-
 EOF
-    echo "Usage: $0 [options]"
-    echo "Options:"
-    echo "  -h, --help                 Show this help message"
-    echo "  -s, --skip-tests           Skip all tests"
-    echo "  -i, --integration-tests    Run integration tests"
-    echo "  -d, --deploy               Deploy after build"
-    echo "  -X, --maven-debug         Enable Maven debug output"
-    echo "  -o, --offline             Run Maven in offline mode"
-    echo "  --debug                    Run Karaf in debug mode"
-    echo "  --debug-port PORT          Set debug port (default: 5005)"
-    echo "  --debug-suspend           Suspend JVM until debugger connects"
-    echo "  --no-maven-cache           Disable Maven build cache"
-    echo "  --purge-maven-cache        Purge local Maven cache before building"
-    echo "  --karaf-home PATH          Set Karaf home directory for deployment"
-    echo "  --use-opensearch          Use OpenSearch instead of ElasticSearch for tests"
-    echo "  --no-karaf               Build without starting Karaf"
-    echo "  --auto-start ENGINE      Auto-start with specified engine (elasticsearch or opensearch)"
-    echo ""
+        echo -e "${NC}"
+
+        echo -e "${BOLD}Usage:${NC} $0 [options]"
+        echo
+        echo -e "${BOLD}Options:${NC}"
+        echo -e "  ${CYAN}-h, --help${NC}                 Show this help message"
+        echo -e "  ${CYAN}-s, --skip-tests${NC}           Skip all tests"
+        echo -e "  ${CYAN}-i, --integration-tests${NC}    Run integration tests"
+        echo -e "  ${CYAN}-d, --deploy${NC}               Deploy after build"
+        echo -e "  ${CYAN}-X, --maven-debug${NC}         Enable Maven debug output"
+        echo -e "  ${CYAN}-o, --offline${NC}             Run Maven in offline mode"
+        echo -e "  ${CYAN}--debug${NC}                    Run Karaf in debug mode"
+        echo -e "  ${CYAN}--debug-port PORT${NC}          Set debug port (default: 5005)"
+        echo -e "  ${CYAN}--debug-suspend${NC}           Suspend JVM until debugger connects"
+        echo -e "  ${CYAN}--no-maven-cache${NC}           Disable Maven build cache"
+        echo -e "  ${CYAN}--purge-maven-cache${NC}        Purge local Maven cache before building"
+        echo -e "  ${CYAN}--karaf-home PATH${NC}          Set Karaf home directory for deployment"
+        echo -e "  ${CYAN}--use-opensearch${NC}          Use OpenSearch instead of ElasticSearch"
+        echo -e "  ${CYAN}--no-karaf${NC}               Build without starting Karaf"
+        echo -e "  ${CYAN}--auto-start ENGINE${NC}      Auto-start with specified engine"
+    else
+        cat << "EOF"
+     _    _ _____ _      ____
+    | |  | |  ___| |    |  _ \
+    | |__| | |__ | |    | |_) |
+    |  __  |  __|| |    |  __/
+    | |  | | |___| |____| |
+    |_|  |_\_____|______|_|
+EOF
+        echo
+        echo "Usage: $0 [options]"
+        echo
+        echo "Options:"
+        echo "  -h, --help                 Show this help message"
+        echo "  -s, --skip-tests           Skip all tests"
+        echo "  -i, --integration-tests    Run integration tests"
+        echo "  -d, --deploy               Deploy after build"
+        echo "  -X, --maven-debug         Enable Maven debug output"
+        echo "  -o, --offline             Run Maven in offline mode"
+        echo "  --debug                    Run Karaf in debug mode"
+        echo "  --debug-port PORT          Set debug port (default: 5005)"
+        echo "  --debug-suspend           Suspend JVM until debugger connects"
+        echo "  --no-maven-cache           Disable Maven build cache"
+        echo "  --purge-maven-cache        Purge local Maven cache before building"
+        echo "  --karaf-home PATH          Set Karaf home directory for deployment"
+        echo "  --use-opensearch          Use OpenSearch instead of ElasticSearch"
+        echo "  --no-karaf               Build without starting Karaf"
+        echo "  --auto-start ENGINE      Auto-start with specified engine"
+    fi
+
+    echo
     echo "Examples:"
-    echo "  $0 --integration-tests --search-engine opensearch"
-    echo "  $0 --debug --debug-port 5006 --debug-suspend"
-    echo "  $0 --deploy --karaf-home ~/apache-karaf"
-    echo "  $0 --purge-maven-cache --no-maven-cache"
-    echo "  $0 -X --integration-tests    Run tests with Maven debug output"
-    echo "  $0 -o -X                    Run offline with Maven debug output"
-    echo "  $0 --integration-tests --use-opensearch"
-    echo "  $0 --no-karaf --auto-start opensearch"
+    if [ "$HAS_COLORS" -eq 1 ]; then
+        echo -e "  ${GRAY}# Build with integration tests using OpenSearch${NC}"
+        echo -e "  ${GRAY}$0 --integration-tests --use-opensearch${NC}"
+        echo -e
+        echo -e "  ${GRAY}# Build in debug mode${NC}"
+        echo -e "  ${GRAY}$0 --debug --debug-port 5006 --debug-suspend${NC}"
+        echo -e
+        echo -e "  ${GRAY}# Deploy to specific Karaf instance${NC}"
+        echo -e "  ${GRAY}$0 --deploy --karaf-home ~/apache-karaf${NC}"
+        echo -e
+        echo -e "  ${GRAY}# Build without Karaf and auto-start OpenSearch${NC}"
+        echo -e "  ${GRAY}$0 --no-karaf --auto-start opensearch${NC}"
+        echo -e
+        echo -e "  ${GRAY}# Run without colored output${NC}"
+        echo -e "  ${GRAY}NO_COLOR=1 $0${NC}"
+        echo -e "  ${GRAY}# or ${NC}"
+        echo -e "  ${GRAY}export NO_COLOR=1${NC}"
+        echo -e "  ${GRAY}$0${NC}"
+    else
+        echo "  # Build with integration tests using OpenSearch"
+        echo "  $0 --integration-tests --use-opensearch"
+        echo
+        echo "  # Build in debug mode"
+        echo "  $0 --debug --debug-port 5006 --debug-suspend"
+        echo
+        echo "  # Deploy to specific Karaf instance"
+        echo "  $0 --deploy --karaf-home ~/apache-karaf"
+        echo
+        echo "  # Build without Karaf and auto-start OpenSearch"
+        echo "  $0 --no-karaf --auto-start opensearch"
+        echo
+        echo "  # Run without colored output"
+        echo "  NO_COLOR=1 $0"
+        echo "  # or"
+        echo "  export NO_COLOR=1"
+        echo "  $0"
+    fi
     exit 1
 }
 
@@ -285,19 +521,6 @@ get_elapsed_time() {
     printf "%02d:%02d" $((elapsed/60)) $((elapsed%60))
 }
 
-print_progress() {
-    local step=$1
-    local total=$2
-    local msg=$3
-    local elapsed=$(get_elapsed_time)
-    local width=50
-    local progress=$((width * step / total))
-    printf "\r["
-    printf "%${progress}s" | tr ' ' '#'
-    printf "%$((width-progress))s" | tr ' ' '-'
-    printf "] %d%% %s (%s)" $((100 * step / total)) "$msg" "$elapsed"
-}
-
 # Function to validate combinations of options
 validate_options() {
     # Check for mutually exclusive options
@@ -351,50 +574,74 @@ validate_options() {
 
 # Function to check system requirements
 check_system_requirements() {
-    local min_memory=2048  # 2GB in MB
-    local min_disk=1024    # 1GB in MB
+    print_section "System Requirements Check"
+    local has_warnings=false
 
-    # Check Java version
-    if ! command -v java >/dev/null 2>&1; then
-        echo "Error: Java is not installed"
-        exit 1
-    fi
-    java_version=$(java -version 2>&1 | awk -F '"' '/version/ {print $2}')
-    if [[ ! "$java_version" =~ ^1[1-9]\. && ! "$java_version" =~ ^[2-9][0-9]\. ]]; then
-        echo "Error: Java 11 or higher is required (found: $java_version)"
-        exit 1
-    fi
-
-    # Check Maven if not in offline mode
-    if [ "$MAVEN_OFFLINE" = false ] && ! command -v mvn >/dev/null 2>&1; then
-        echo "Error: Maven is not installed"
+    # Java check
+    if command -v java >/dev/null 2>&1; then
+        java_version=$(java -version 2>&1 | awk -F '"' '/version/ {print $2}')
+        if [[ "$java_version" =~ ^1[1-9]\. || "$java_version" =~ ^[2-9][0-9]\. ]]; then
+            print_status "success" "Java ${java_version} detected"
+        else
+            print_status "error" "Java 11 or higher required (found: ${java_version})"
+            exit 1
+        fi
+    else
+        print_status "error" "Java not found"
         exit 1
     fi
 
-    # Check available memory
+    # Maven check
+    if [ "$MAVEN_OFFLINE" = false ]; then
+        if command -v mvn >/dev/null 2>&1; then
+            mvn_version=$(mvn --version | head -n 1)
+            print_status "success" "${mvn_version}"
+        else
+            print_status "error" "Maven not found"
+            exit 1
+        fi
+    fi
+
+    # Memory check
     if command -v free >/dev/null 2>&1; then
         available_memory=$(free -m | awk '/^Mem:/{print $2}')
-        if [ "$available_memory" -lt "$min_memory" ]; then
-            echo "Warning: Less than ${min_memory}MB of memory available (${available_memory}MB)"
-            prompt_continue
+        if [ "$available_memory" -lt 2048 ]; then
+            print_status "warning" "Low memory: ${available_memory}MB available (2048MB recommended)"
+            has_warnings=true
+        else
+            print_status "success" "Memory: ${available_memory}MB available"
         fi
     fi
 
-    # Check available disk space
+    # Disk space check
     if command -v df >/dev/null 2>&1; then
         available_disk=$(df -m . | awk 'NR==2 {print $4}')
-        if [ "$available_disk" -lt "$min_disk" ]; then
-            echo "Warning: Less than ${min_disk}MB of disk space available (${available_disk}MB)"
-            prompt_continue
+        if [ "$available_disk" -lt 1024 ]; then
+            print_status "warning" "Low disk space: ${available_disk}MB available (1024MB recommended)"
+            has_warnings=true
+        else
+            print_status "success" "Disk space: ${available_disk}MB available"
         fi
+    fi
+
+    if [ "$has_warnings" = true ]; then
+        echo
+        prompt_continue "Continue despite warnings?"
     fi
 }
 
-# Function to prompt for continuation
+# Enhanced prompt_continue with color support
 prompt_continue() {
-    read -p "Continue anyway? (y/N) " -n 1 -r
+    local message=${1:-"Continue?"}
+    if [ "$HAS_COLORS" -eq 1 ]; then
+        echo -en "${YELLOW}${WARNING} ${message} (y/N) ${NC}"
+    else
+        echo -en "${WARNING} ${message} (y/N) "
+    fi
+    read -n 1 -r
     echo
     if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        print_status "error" "Operation cancelled by user"
         exit 1
     fi
 }
@@ -416,34 +663,53 @@ echo "Building..."
 echo "Estimated time: 3-5 minutes for build, 50-60 minutes with integration tests"
 start_timer
 
-# Build phases
+# Build phases with enhanced output
 total_steps=2
 current_step=0
 
 print_progress $((++current_step)) $total_steps "Cleaning previous build..."
-$MVN_CMD clean $MVN_OPTS
+if [ "$HAS_COLORS" -eq 1 ]; then
+    echo -e "${GRAY}Running: $MVN_CMD clean $MVN_OPTS${NC}"
+else
+    echo "Running: $MVN_CMD clean $MVN_OPTS"
+fi
+$MVN_CMD clean $MVN_OPTS || {
+    print_status "error" "Maven clean failed"
+    exit 1
+}
 
-print_progress $((++current_step)) $total_steps "Compiling, testing and installing artifacts..."
-$MVN_CMD install $MVN_OPTS
+print_progress $((++current_step)) $total_steps "Compiling and installing artifacts..."
+if [ "$HAS_COLORS" -eq 1 ]; then
+    echo -e "${GRAY}Running: $MVN_CMD install $MVN_OPTS${NC}"
+else
+    echo "Running: $MVN_CMD install $MVN_OPTS"
+fi
+$MVN_CMD install $MVN_OPTS || {
+    print_status "error" "Maven install failed"
+    exit 1
+}
 
-echo -e "\nBuild completed in $(get_elapsed_time)"
+print_status "success" "Build completed in $(get_elapsed_time)"
 
+# Deployment section with enhanced output
 if [ "$DEPLOY" = true ]; then
     # Validate Karaf home directory
     if [ -z "$CONTEXT_SERVER_KARAF_HOME" ]; then
-        echo "Error: Karaf home directory not set. Use --karaf-home option."
+        print_status "error" "Karaf home directory not set. Use --karaf-home option."
         exit 1
     fi
     if [ ! -d "$CONTEXT_SERVER_KARAF_HOME" ]; then
-        echo "Error: Karaf home directory does not exist: $CONTEXT_SERVER_KARAF_HOME"
+        print_status "error" "Karaf home directory does not exist: $CONTEXT_SERVER_KARAF_HOME"
         exit 1
     fi
     if [ ! -w "$CONTEXT_SERVER_KARAF_HOME/deploy" ]; then
-        echo "Error: No write permission to Karaf deploy directory: $CONTEXT_SERVER_KARAF_HOME/deploy"
+        print_status "error" "No write permission to Karaf deploy directory: $CONTEXT_SERVER_KARAF_HOME/deploy"
         exit 1
     fi
 
-    cat << "EOF"
+    if [ "$HAS_COLORS" -eq 1 ]; then
+        echo -e "${MAGENTA}"
+        cat << "EOF"
      ____  _____ ____  _     _____   __
     |  _ \| ____|  _ \| |   / _ \ \ / /
     | | | |  _| | |_) | |  | | | \ V /
@@ -451,101 +717,140 @@ if [ "$DEPLOY" = true ]; then
     |____/|_____|_|   |_____\___/ |_|
 
 EOF
+        echo -e "${NC}"
+    else
+        cat << "EOF"
+     ____  _____ ____  _     _____   __
+    |  _ \| ____|  _ \| |   / _ \ \ / /
+    | | | |  _| | |_) | |  | | | \ V /
+    | |_| | |___|  __/| |__| |_| || |
+    |____/|_____|_|   |_____\___/ |_|
+
+EOF
+    fi
+
     start_timer
     total_deploy_steps=3
     current_step=0
 
     print_progress $((++current_step)) $total_deploy_steps "Copying KAR package..."
     if [ ! -f "kar/target/unomi-kar-$UNOMI_VERSION.kar" ]; then
-        echo "Error: KAR file not found: kar/target/unomi-kar-$UNOMI_VERSION.kar"
+        print_status "error" "KAR file not found: kar/target/unomi-kar-$UNOMI_VERSION.kar"
         exit 1
     fi
-    cp -v kar/target/unomi-kar-$UNOMI_VERSION.kar $CONTEXT_SERVER_KARAF_HOME/deploy/
-    if [ $? -ne 0 ]; then
-        echo "Error: Failed to copy KAR file to deploy directory"
+    cp -v kar/target/unomi-kar-$UNOMI_VERSION.kar $CONTEXT_SERVER_KARAF_HOME/deploy/ || {
+        print_status "error" "Failed to copy KAR file to deploy directory"
         exit 1
-    fi
+    }
+    print_status "success" "KAR package copied successfully"
 
     print_progress $((++current_step)) $total_deploy_steps "Purging Karaf Maven repository..."
     if [ -d "$CONTEXT_SERVER_KARAF_HOME/data/maven/repository" ]; then
         rm -rf "$CONTEXT_SERVER_KARAF_HOME/data/maven/repository/"* || {
-            echo "Error: Failed to purge Karaf Maven repository"
+            print_status "error" "Failed to purge Karaf Maven repository"
             exit 1
         }
+        print_status "success" "Karaf Maven repository purged"
+    else
+        print_status "info" "Karaf Maven repository not found, skipping purge"
     fi
 
     print_progress $((++current_step)) $total_deploy_steps "Purging Karaf temporary files..."
     if [ -d "$CONTEXT_SERVER_KARAF_HOME/data/tmp" ]; then
         rm -rf "$CONTEXT_SERVER_KARAF_HOME/data/tmp/"* || {
-            echo "Error: Failed to purge Karaf temporary directory"
+            print_status "error" "Failed to purge Karaf temporary directory"
             exit 1
         }
+        print_status "success" "Karaf temporary files purged"
+    else
+        print_status "info" "Karaf temporary directory not found, skipping purge"
     fi
 
-    echo -e "\nDeployment completed in $(get_elapsed_time)"
+    print_status "success" "Deployment completed in $(get_elapsed_time)"
 fi
 
-if [ "$DEPLOY" = false ]; then
-    cat << "EOF"
+# Karaf startup section
+if [ "$NO_KARAF" = false ]; then
+    if [ "$HAS_COLORS" -eq 1 ]; then
+        echo -e "${GREEN}"
+        cat << "EOF"
      _  __    _    ____      _    _____
     | |/ /   / \  |  _ \    / \  |  ___|
     | ' /   / _ \ | |_) |  / _ \ | |_
     | . \  / ___ \|  _ <  / ___ \|  _|
     |_|\_\/_/   \_\_| \_\/_/   \_\_|
-
 EOF
-    start_timer
-    total_karaf_steps=3
+        echo -e "${NC}"
+    else
+        cat << "EOF"
+     _  __    _    ____      _    _____
+    | |/ /   / \  |  _ \    / \  |  ___|
+    | ' /   / _ \ | |_) |  / _ \ | |_
+    | . \  / ___ \|  _ <  / ___ \|  _|
+    |_|\_\/_/   \_\_| \_\/_/   \_\_|
+EOF
+    fi
+
+    total_karaf_steps=4  # Increased for additional checks
     current_step=0
 
+    # Check Karaf environment
+    print_progress $((++current_step)) $total_karaf_steps "Checking Karaf environment..."
+    if [ ! -d "package/target" ]; then
+        print_status "error" "Build directory not found. Did the build complete successfully?"
+        exit 1
+    fi
+
     pushd package/target || {
-        echo "Error: Failed to change directory to package/target"
+        print_status "error" "Failed to change directory to package/target"
         exit 1
     }
 
+    # Verify Unomi version is set
+    if [ -z "$UNOMI_VERSION" ]; then
+        print_status "error" "UNOMI_VERSION is not set"
+        exit 1
+    fi
+
     print_progress $((++current_step)) $total_karaf_steps "Uncompressing Unomi package..."
     if [ ! -f "unomi-$UNOMI_VERSION.tar.gz" ]; then
-        echo "Error: Unomi package not found: unomi-$UNOMI_VERSION.tar.gz"
+        print_status "error" "Unomi package not found: unomi-$UNOMI_VERSION.tar.gz"
         exit 1
     fi
     tar zxvf unomi-$UNOMI_VERSION.tar.gz
 
     print_progress $((++current_step)) $total_karaf_steps "Installing optional databases..."
-    # Copy optional databases with error handling
     if [ -f "../../GeoLite2-City.mmdb" ]; then
-        echo "Installing GeoLite2 City database..."
+        print_status "info" "Installing GeoLite2 City database..."
         cp -v ../../GeoLite2-City.mmdb unomi-$UNOMI_VERSION/etc || {
-            echo "Error: Failed to copy GeoLite2 database"
+            print_status "error" "Failed to copy GeoLite2 database"
             exit 1
         }
+    else
+        print_status "info" "GeoLite2 City database not found (optional)"
     fi
 
     if [ -f "../../allCountries.zip" ]; then
-        echo "Installing Geonames countries database..."
+        print_status "info" "Installing Geonames countries database..."
         cp -v ../../allCountries.zip unomi-$UNOMI_VERSION/etc || {
-            echo "Error: Failed to copy Geonames database"
+            print_status "error" "Failed to copy Geonames database"
             exit 1
         }
+    else
+        print_status "info" "Geonames countries database not found (optional)"
     fi
 
     cd unomi-$UNOMI_VERSION/bin || {
-        echo "Error: Failed to change directory to Karaf bin directory"
+        print_status "error" "Failed to change directory to Karaf bin directory"
         exit 1
     }
 
-    # Configure auto-start if specified
-    if [ ! -z "$AUTO_START" ]; then
-        echo "Configuring auto-start for $AUTO_START"
-        export KARAF_OPTS="-Dunomi.autoStart=$AUTO_START"
-    fi
-
     print_progress $((++current_step)) $total_karaf_steps "Starting Karaf..."
     if [ "$DEBUG" = true ]; then
-        echo "Starting Karaf in debug mode (port: $KARAF_DEBUG_PORT, suspend: $KARAF_DEBUG_SUSPEND)"
-        # Check if debug port is already in use
-        if command_exists nc; then
-            if nc -z localhost $KARAF_DEBUG_PORT; then
-                echo "Error: Debug port $KARAF_DEBUG_PORT is already in use"
+        print_status "info" "Debug mode enabled (port: $KARAF_DEBUG_PORT, suspend: $KARAF_DEBUG_SUSPEND)"
+        if command -v nc >/dev/null 2>&1; then
+            if nc -z localhost "$KARAF_DEBUG_PORT" 2>/dev/null; then
+                print_status "error" "Port $KARAF_DEBUG_PORT is already in use"
                 exit 1
             fi
         fi
@@ -554,16 +859,27 @@ EOF
     fi
 
     if [ ! -x "./karaf" ]; then
-        echo "Error: Karaf executable not found or not executable"
+        print_status "error" "Karaf executable not found or not executable"
         exit 1
     fi
 
-    echo "Apache Unomi features installed, use [unomi:start] to start it."
+    if [ ! -z "$AUTO_START" ]; then
+        print_status "info" "Configuring auto-start for $AUTO_START"
+        export KARAF_OPTS="-Dunomi.autoStart=$AUTO_START"
+    else
+        print_status "info" "Use [unomi:start] to start Unomi after Karaf initialization"
+    fi
+
     ./karaf || {
-        echo "Error: Karaf failed to start"
+        print_status "error" "Karaf failed to start"
         exit 1
     }
     popd || true
+else
+    print_status "info" "Skipping Karaf startup (--no-karaf specified)"
+    if [ ! -z "$AUTO_START" ]; then
+        print_status "info" "Note: auto-start ($AUTO_START) will be applied when Karaf is started manually"
+    fi
 fi
 
 cat << "EOF"
