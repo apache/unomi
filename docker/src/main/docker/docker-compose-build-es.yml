@@ -18,7 +18,7 @@ version: '2.4'
 services:
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:7.4.2
-    volumes: # Persist ES data in separate "esdata" volume
+    volumes: # Persist ES data in seperate "esdata" volume
       - esdata1:/usr/share/elasticsearch/data
     environment:
       - bootstrap.memory_lock=true
@@ -30,20 +30,28 @@ services:
       - "9200:9200"
 
   unomi:
+    build: .
     image: apache/unomi:${project.version}
     container_name: unomi
     environment:
+      - UNOMI_AUTO_START=elasticsearch
       - UNOMI_ELASTICSEARCH_ADDRESSES=elasticsearch:9200
+      # Debug settings
+      - KARAF_DEBUG=${DEBUG:-false}
+      - KARAF_DEBUG_PORT=${DEBUG_PORT:-5005}
+      - KARAF_DEBUG_SUSPEND=${DEBUG_SUSPEND:-n}
     ports:
       - 8181:8181
       - 9443:9443
       - 8102:8102
+      # Debug port
+      - "${DEBUG_PORT:-5005}:5005"
     links:
       - elasticsearch
     depends_on:
       - elasticsearch
 
 
-volumes: # Define separate volume for Elasticsearch data
+volumes: # Define seperate volume for Elasticsearch data
   esdata1:
     driver: local

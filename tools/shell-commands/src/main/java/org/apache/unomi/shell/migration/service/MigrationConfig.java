@@ -18,6 +18,7 @@ package org.apache.unomi.shell.migration.service;
 
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.ConfigurationPolicy;
 import org.osgi.service.component.annotations.Modified;
 
 import java.util.Collections;
@@ -27,7 +28,7 @@ import java.util.Map;
 /**
  * Service uses to provide configuration information for the migration
  */
-@Component(immediate = true, service = MigrationConfig.class, configurationPid = {"org.apache.unomi.migration"})
+@Component(immediate = true, service = MigrationConfig.class, configurationPid = {"org.apache.unomi.migration"}, configurationPolicy = ConfigurationPolicy.REQUIRE)
 public class MigrationConfig {
 
     public static final String CONFIG_ES_ADDRESS = "esAddress";

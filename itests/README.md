@@ -58,7 +58,7 @@ from the project's root directory
 
 ### Search Engine Selection
 
-The integration tests can be run against either ElasticSearch (default) or OpenSearch:
+Apache Unomi supports both ElasticSearch and OpenSearch as search engine backends. The integration tests can be configured to run against either engine:
 
 ```bash
 # Run with ElasticSearch (default)
@@ -67,6 +67,13 @@ mvn clean install -P integration-tests
 # Run with OpenSearch 
 mvn clean install -P integration-tests -Duse.opensearch=true
 ```
+
+When using OpenSearch, you might see log messages like:
+```
+[o.o.w.QueryGroupTask] QueryGroup _id can't be null
+```
+This is a known issue in OpenSearch 2.18 that doesn't affect functionality. You can track this issue at:
+https://github.com/opensearch-project/OpenSearch/issues/16874
 
 ## Debugging integration tests
 

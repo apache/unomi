@@ -30,11 +30,27 @@ public interface UnomiManagementService {
      * @param mustStartFeatures true if features should be started, false if they should not
      * @throws BundleException if there was an error starting Unomi's bundles
      */
-    void startUnomi(String selectedPersistenceImplementation, boolean mustStartFeatures) throws BundleException;
+    void startUnomi(String selectedPersistenceImplementation, boolean mustStartFeatures) throws Exception;
+
+    /**
+     * This method will start Apache Unomi with the specified persistence implementation
+     * @param selectedPersistenceImplementation the persistence implementation to use
+     * @param mustStartFeatures true if features should be started, false if they should not
+     * @param waitForCompletion true if the method should wait for completion, false if it should not
+     * @throws BundleException if there was an error starting Unomi's bundles
+     */
+    void startUnomi(String selectedPersistenceImplementation, boolean mustStartFeatures, boolean waitForCompletion) throws Exception;
 
     /**
      * This method will stop Apache Unomi
      * @throws BundleException if there was an error stopping Unomi's bundles
      */
-    void stopUnomi() throws BundleException;
+    void stopUnomi() throws Exception;
+
+    /**
+     * This method will stop Apache Unomi
+     * @param waitForCompletion true if the method should wait for completion, false if it should not
+     * @throws BundleException if there was an error stopping Unomi's bundles
+     */
+    void stopUnomi(boolean waitForCompletion) throws Exception;
 }

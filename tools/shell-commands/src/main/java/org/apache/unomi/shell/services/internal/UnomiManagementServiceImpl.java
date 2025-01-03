@@ -24,17 +24,14 @@ import org.apache.unomi.lifecycle.BundleWatcher;
 import org.apache.unomi.shell.migration.MigrationService;
 import org.apache.unomi.shell.services.UnomiManagementService;
 import org.osgi.framework.BundleContext;
-import org.osgi.framework.BundleException;
 import org.osgi.service.component.ComponentContext;
-import org.osgi.service.component.annotations.Activate;
-import org.osgi.service.component.annotations.Component;
-import org.osgi.service.component.annotations.Reference;
-import org.osgi.service.component.annotations.ReferenceCardinality;
+import org.osgi.service.component.annotations.*;
 import org.osgi.service.metatype.annotations.Designate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
+import java.util.concurrent.*;
 
 /**
  * Implementation of the {@link UnomiManagementService} interface, providing functionality to manage
@@ -84,11 +81,14 @@ import java.util.*;
  * @see org.apache.karaf.features.FeaturesService
  * @see org.apache.karaf.features.Feature
  */
-@Component(service = UnomiManagementService.class, immediate = true, configurationPid = "org.apache.unomi.start")
+@Component(service = UnomiManagementService.class, immediate = true, configurationPid = "org.apache.unomi.start", configurationPolicy = ConfigurationPolicy.REQUIRE)
 @Designate(ocd = UnomiManagementServiceConfiguration.class)
 public class UnomiManagementServiceImpl implements UnomiManagementService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(UnomiManagementServiceImpl.class.getName());
+    private static final int DEFAULT_TIMEOUT = 300; // 5 minutes timeout
+
+    private final ExecutorService executor = Executors.newSingleThreadExecutor();
 
     private static final String CDP_GRAPHQL_FEATURE = "cdp-graphql-feature";
 
@@ -107,10 +107,9 @@ public class UnomiManagementServiceImpl implements UnomiManagementService {
     private final List<String> installedFeatures = new ArrayList<>();
     private final List<String> startedFeatures = new ArrayList<>();
 
-    private String selectedPersistenceImplementation = "elasticsearch";
-
     @Activate
     public void init(ComponentContext componentContext, UnomiManagementServiceConfiguration config) throws Exception {
+        LOGGER.info("Initializing Unomi management service with configuration {}", config);
         try {
             this.bundleContext = componentContext.getBundleContext();
             this.startFeatures = parseStartFeatures(config.startFeatures());
@@ -119,13 +118,23 @@ public class UnomiManagementServiceImpl implements UnomiManagementService {
                 migrationService.migrateUnomi(bundleContext.getProperty("unomi.autoMigrate"), true, null);
             }
 
-            if (StringUtils.isNotBlank(bundleContext.getProperty("unomi.autoStart")) &&
-                    bundleContext.getProperty("unomi.autoStart").equals("true")) {
-                startUnomi(selectedPersistenceImplementation, true);
+            String autoStart = bundleContext.getProperty("unomi.autoStart");
+            if (StringUtils.isNotBlank(autoStart)) {
+                String resolvedAutoStart = autoStart;
+                if ("true".equals(autoStart)) {
+                    resolvedAutoStart = "elasticsearch";
+                } if ("elasticsearch".equals(autoStart)) {
+                    resolvedAutoStart = "elasticsearch";
+                } if ("opensearch".equals(autoStart)) {
+                    resolvedAutoStart = "opensearch";
+                }
+                LOGGER.info("Auto-starting unomi management service with {}", resolvedAutoStart);
+                // Don't wait for completion during initialization
+                startUnomi(resolvedAutoStart, true, false);
             }
-
         } catch (Exception e) {
-            LOGGER.error("Error during Unomi startup when processing 'unomi.autoMigrate' or 'unomi.autoStart' properties:", e);
+            LOGGER.error("Error during Unomi startup:", e);
+            throw e;
         }
     }
 
@@ -159,10 +168,33 @@ public class UnomiManagementServiceImpl implements UnomiManagementService {
     }
 
     @Override
-    public void startUnomi(String selectedPersistenceImplementation, boolean mustStartFeatures) throws BundleException {
-        if (selectedPersistenceImplementation != null) {
-            this.selectedPersistenceImplementation = selectedPersistenceImplementation;
+    public void startUnomi(String selectedPersistenceImplementation, boolean mustStartFeatures) throws Exception {
+        // Default to waiting for completion
+        startUnomi(selectedPersistenceImplementation, mustStartFeatures, true);
+    }
+
+    @Override
+    public void startUnomi(String selectedPersistenceImplementation, boolean mustStartFeatures, boolean waitForCompletion) throws Exception {
+        Future<?> future = executor.submit(() -> {
+            try {
+                doStartUnomi(selectedPersistenceImplementation, mustStartFeatures);
+            } catch (Exception e) {
+                LOGGER.error("Error starting Unomi:", e);
+                throw new RuntimeException(e);
+            }
+        });
+
+        if (waitForCompletion) {
+            try {
+                future.get(DEFAULT_TIMEOUT, TimeUnit.SECONDS);
+            } catch (TimeoutException e) {
+                LOGGER.error("Timeout waiting for Unomi to start", e);
+                throw e;
+            }
         }
+    }
+
+    private void doStartUnomi(String selectedPersistenceImplementation, boolean mustStartFeatures) throws Exception {
         List<String> features = startFeatures.get(selectedPersistenceImplementation);
         if (features == null || features.isEmpty()) {
             LOGGER.warn("No features configured for persistence implementation: {}", selectedPersistenceImplementation);
@@ -211,7 +243,33 @@ public class UnomiManagementServiceImpl implements UnomiManagementService {
     }
 
     @Override
-    public void stopUnomi() throws BundleException {
+    public void stopUnomi() throws Exception {
+        // Default to waiting for completion
+        stopUnomi(true);
+    }
+
+    @Override
+    public void stopUnomi(boolean waitForCompletion) throws Exception {
+        Future<?> future = executor.submit(() -> {
+            try {
+                doStopUnomi();
+            } catch (Exception e) {
+                LOGGER.error("Error stopping Unomi:", e);
+                throw new RuntimeException(e);
+            }
+        });
+
+        if (waitForCompletion) {
+            try {
+                future.get(DEFAULT_TIMEOUT, TimeUnit.SECONDS);
+            } catch (TimeoutException e) {
+                LOGGER.error("Timeout waiting for Unomi to stop", e);
+                throw e;
+            }
+        }
+    }
+
+    private void doStopUnomi() throws Exception {
         if (startedFeatures.isEmpty()) {
             LOGGER.info("No features to stop.");
         } else {
@@ -263,6 +321,19 @@ public class UnomiManagementServiceImpl implements UnomiManagementService {
         regionChanges.put(feature.getId(), FeatureState.Resolved);
         stateChanges.put(FeaturesService.ROOT_REGION, regionChanges);
         featuresService.updateFeaturesState(stateChanges, EnumSet.of(FeaturesService.Option.Verbose));
+    }
+
+    @Deactivate
+    public void deactivate() {
+        executor.shutdown();
+        try {
+            if (!executor.awaitTermination(30, TimeUnit.SECONDS)) {
+                executor.shutdownNow();
+            }
+        } catch (InterruptedException e) {
+            executor.shutdownNow();
+            Thread.currentThread().interrupt();
+        }
     }
 
 }

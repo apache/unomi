@@ -68,19 +68,45 @@ org.apache.unomi.cluster.public.address=http://localhost:8181
 org.apache.unomi.cluster.internal.address=https://localhost:9443
 ----
 
-If you need to specify an ElasticSearch cluster name, or a host and port that are different than the default,
-it is recommended to do this BEFORE you start the server for the first time, or you will loose all the data
+If you need to specify a search engine configuration that is different than the default,
+it is recommended to do this BEFORE you start the server for the first time, or you will lose all the data
 you have stored previously.
 
-You can use the following properties for the ElasticSearch configuration
+Apache Unomi supports both ElasticSearch and OpenSearch as search engine backends. Here are the configuration properties for each:
+
+For ElasticSearch:
 [source]
 ----
 org.apache.unomi.elasticsearch.cluster.name=contextElasticSearch
-# The elasticsearch.adresses may be a comma seperated list of host names and ports such as
+# The elasticsearch.addresses may be a comma separated list of host names and ports such as
 # hostA:9200,hostB:9200
 # Note: the port number must be repeated for each host.
 org.apache.unomi.elasticsearch.addresses=localhost:9200
 ----
+
+For OpenSearch:
+[source]
+----
+org.apache.unomi.opensearch.cluster.name=opensearch-cluster
+# The opensearch.addresses may be a comma separated list of host names and ports such as
+# hostA:9200,hostB:9200
+# Note: the port number must be repeated for each host.
+org.apache.unomi.opensearch.addresses=localhost:9200
+
+# OpenSearch security settings (if needed)
+org.apache.unomi.opensearch.ssl.enable=false
+org.apache.unomi.opensearch.username=
+org.apache.unomi.opensearch.password=
+----
+
+To select which search engine to use, you can:
+1. Use the appropriate configuration properties above
+2. When building from source, use the appropriate Maven profile:
+   * For ElasticSearch (default): no special profile needed
+   * For OpenSearch: add `-P opensearch` to your Maven command
+
+Note: When using OpenSearch 2.18, you might see log messages about "QueryGroup _id can't be null". This is a known issue
+that doesn't affect functionality and is being tracked at: https://github.com/opensearch-project/OpenSearch/issues/16874
 
 === Secured events configuration
 

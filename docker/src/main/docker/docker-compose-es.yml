@@ -15,10 +15,17 @@
 # limitations under the License.
 ################################################################################
 version: '2.4'
+
+# Define networks first
+networks:
+  unomi-net:
+    driver: bridge
+
 services:
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:7.4.2
-    volumes: # Persist ES data in seperate "esdata" volume
+    container_name: elasticsearch
+    volumes: # Persist ES data in separate "esdata" volume
       - esdata1:/usr/share/elasticsearch/data
     environment:
       - bootstrap.memory_lock=true
@@ -28,23 +35,36 @@ services:
       - cluster.name=contextElasticSearch
     ports: # Expose Elasticsearch ports
       - "9200:9200"
+    networks:
+      unomi-net:
+        aliases:
+          - elasticsearch
 
   unomi:
-    build: .
     image: apache/unomi:${project.version}
     container_name: unomi
     environment:
+      - UNOMI_AUTO_START=elasticsearch
       - UNOMI_ELASTICSEARCH_ADDRESSES=elasticsearch:9200
+      # Debug settings
+      - KARAF_DEBUG=${DEBUG:-false}
+      - KARAF_DEBUG_PORT=${DEBUG_PORT:-5005}
+      - KARAF_DEBUG_SUSPEND=${DEBUG_SUSPEND:-n}
     ports:
       - 8181:8181
       - 9443:9443
       - 8102:8102
+      # Debug port
+      - "${DEBUG_PORT:-5005}:5005"
     links:
       - elasticsearch
     depends_on:
       - elasticsearch
+    networks:
+      unomi-net:
+        aliases:
+          - unomi
 
-
-volumes: # Define seperate volume for Elasticsearch data
+volumes: # Define separate volume for Elasticsearch data
   esdata1:
     driver: local

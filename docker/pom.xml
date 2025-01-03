@@ -83,8 +83,10 @@
                                     <directory>${project.basedir}/src/main/docker</directory>
                                     <filtering>true</filtering>
                                     <includes>
-                                        <include>docker-compose.yml</include>
-                                        <include>docker-compose-build.yml</include>
+                                        <include>docker-compose-es.yml</include>
+                                        <include>docker-compose-build-es.yml</include>
+                                        <include>docker-compose-os.yml</include>
+                                        <include>docker-compose-build-os.yml</include>
                                     </includes>
                                 </resource>
                                 <!-- # Unfiltered Resources -->
@@ -92,8 +94,10 @@
                                     <directory>${project.basedir}/src/main/docker</directory>
                                     <filtering>false</filtering>
                                     <excludes>
-                                        <exclude>docker-compose.yml</exclude>
-                                        <include>docker-compose-build.yml</include>
+                                        <exclude>docker-compose-es.yml</exclude>
+                                        <exclude>docker-compose-build-es.yml</exclude>
+                                        <exclude>docker-compose-os.yml</exclude>
+                                        <exclude>docker-compose-build-os.yml</exclude>
                                     </excludes>
                                 </resource>
                             </resources>
@@ -105,7 +109,7 @@
             <plugin>
                 <groupId>io.fabric8</groupId>
                 <artifactId>docker-maven-plugin</artifactId>
-                <version>0.40.2</version>
+                <version>0.45.1</version>
                 <configuration>
                     <images>
                         <image>
@@ -122,7 +126,7 @@
                             <external>
                                 <type>compose</type>
                                 <basedir>${project.build.directory}/filtered-docker</basedir>
-                                <composeFile>${project.build.directory}/filtered-docker/docker-compose-build.yml</composeFile>
+                                <composeFile>${project.build.directory}/filtered-docker/docker-compose-build-es.yml</composeFile>
                             </external>
                         </image>
                     </images>
@@ -150,10 +154,17 @@
                             <artifacts>
                                 <artifact>
                                     <file>
-                                        ${project.build.directory}/filtered-docker/docker-compose.yml
+                                        ${project.build.directory}/filtered-docker/docker-compose-es.yml
                                     </file>
                                     <type>yml</type>
-                                    <classifier>docker-compose</classifier>
+                                    <classifier>docker-compose-es</classifier>
+                                </artifact>
+                                <artifact>
+                                    <file>
+                                        ${project.build.directory}/filtered-docker/docker-compose-os.yml
+                                    </file>
+                                    <type>yml</type>
+                                    <classifier>docker-compose-os</classifier>
                                 </artifact>
                             </artifacts>
                         </configuration>
