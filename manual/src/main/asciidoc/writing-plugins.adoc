@@ -13,7 +13,19 @@
 //
 === Writing Plugins
 
-Unomi is architected so that users can provided extensions in the form of plugins.
+Apache Unomi is architected to be extensible through plugins. However, it's important to note that plugins are only necessary when custom Java logic is required. Most common needs and use cases can now be covered using:
+
+* Groovy actions (for custom action logic without deployment)
+* Complex condition trees (for sophisticated matching logic)
+* Rules (for defining business logic and automation)
+* Apache Unomi's REST API (for configuration and management)
+
+These built-in features allow you to implement most functionality without deploying any code, making the system more maintainable and reducing development overhead. You should only consider developing a plugin when you need to:
+
+* Implement custom Java-based query builders for search engine integration
+* Add new core system functionality that requires deep integration
+* Optimize performance-critical operations with compiled code
+* Integrate with external systems requiring complex Java libraries
 
 === Types vs. instances
 
@@ -51,6 +63,116 @@ within the `META-INF/cxs/` directory of the bundle JAR file:
 
 http://aries.apache.org/modules/blueprint.html[Blueprint] is used to declare what the plugin provides and inject
 any required dependency. The Blueprint file is located, as usual, at `OSGI-INF/blueprint/blueprint.xml` in the bundle JAR file.
+
+=== Search Engine Specific Implementations
+
+When implementing plugins that need to interact with the search engine layer (ElasticSearch or OpenSearch), special consideration must be taken to ensure compatibility and proper deployment.
+
+==== Search Engine Specific Bundles
+
+For plugins that provide search query builder implementations, you should structure your plugin with three bundles:
+1. A common bundle for shared code and resources
+2. An ElasticSearch-specific implementation bundle
+3. An OpenSearch-specific implementation bundle
+
+Example structure:
+```
+my-plugin/
+├── common/
+│   ├── src/main/java/.../
+│   │   ├── model/
+│   │   │   └── MyCustomCondition.java
+│   │   └── services/
+│   │       └── MyCustomService.java
+│   ├── src/main/resources/META-INF/cxs/
+│   │   ├── conditions/
+│   │   │   └── my-custom-condition.json
+│   │   └── actions/
+│   │       └── my-custom-action.json
+│   └── pom.xml
+├── elasticsearch/
+│   ├── src/main/java/.../
+│   │   └── impl/
+│   │       └── MyElasticSearchQueryBuilder.java
+│   ├── src/main/resources/META-INF/cxs/
+│   │   └── mappings/
+│   │       └── my-index-mapping.json
+│   └── pom.xml
+├── opensearch/
+│   ├── src/main/java/.../
+│   │   └── impl/
+│   │       └── MyOpenSearchQueryBuilder.java
+│   ├── src/main/resources/META-INF/cxs/
+│   │   └── mappings/
+│   │       └── my-index-mapping.json
+│   └── pom.xml
+└── pom.xml
+```
+
+Example POM dependencies:
+
+Common Bundle (my-plugin-common):
+[source,xml]
+----
+<dependencies>
+    <dependency>
+        <groupId>org.apache.unomi</groupId>
+        <artifactId>unomi-api</artifactId>
+        <version>${unomi.version}</version>
+        <scope>provided</scope>
+    </dependency>
+</dependencies>
+----
+
+ElasticSearch Bundle (my-plugin-elasticsearch):
+[source,xml]
+----
+<dependencies>
+    <dependency>
+        <groupId>my.group.id</groupId>
+        <artifactId>my-plugin-common</artifactId>
+        <version>${project.version}</version>
+    </dependency>
+    <dependency>
+        <groupId>org.apache.unomi</groupId>
+        <artifactId>unomi-persistence-elasticsearch-core</artifactId>
+        <version>${unomi.version}</version>
+        <scope>provided</scope>
+    </dependency>
+</dependencies>
+----
+
+OpenSearch Bundle (my-plugin-opensearch):
+[source,xml]
+----
+<dependencies>
+    <dependency>
+        <groupId>my.group.id</groupId>
+        <artifactId>my-plugin-common</artifactId>
+        <version>${project.version}</version>
+    </dependency>
+    <dependency>
+        <groupId>org.apache.unomi</groupId>
+        <artifactId>unomi-persistence-opensearch-core</artifactId>
+        <version>${unomi.version}</version>
+        <scope>provided</scope>
+    </dependency>
+</dependencies>
+----
+
+==== Configuration and Deployment
+
+Administrators can control which search engine implementation to use through the `org.apache.unomi.start.cfg` configuration file. This file determines which features (including your plugin's bundles) are deployed based on the chosen search engine:
+
+[source]
+----
+startFeatures = [
+    "elasticsearch=unomi-persistence-elasticsearch,my-plugin-elasticsearch,unomi-services,...",
+    "opensearch=unomi-persistence-opensearch,my-plugin-opensearch,unomi-services,..."
+]
+----
+
+==== Custom Plugins
 
 The plugin otherwise follows a regular maven project layout and should depend on the Unomi API maven artifact:
 
@@ -540,4 +662,140 @@ You can find the implementation of the two classes here :
 
 * https://github.com/apache/unomi/blob/master/plugins/baseplugin/src/main/java/org/apache/unomi/plugins/baseplugin/conditions/MatchAllConditionESQueryBuilder.java[conditions.org.apache.unomi.persistence.elasticsearch.MatchAllConditionESQueryBuilder]
 * https://github.com/apache/unomi/blob/master/plugins/baseplugin/src/main/java/org/apache/unomi/plugins/baseplugin/conditions/MatchAllConditionEvaluator.java[org.apache.unomi.plugins.baseplugin.conditions.MatchAllConditionEvaluator]
+
+==== Implementation Examples
+
+Here's an example of implementing custom query builders for both search engines:
+
+ElasticSearch Implementation:
+[source,java]
+----
+package org.apache.unomi.plugin.elasticsearch;
+
+import java.util.Map;
+import org.apache.unomi.api.conditions.Condition;
+import org.apache.unomi.persistence.elasticsearch.ConditionESQueryBuilder;
+import org.elasticsearch.index.query.QueryBuilder;
+import org.elasticsearch.index.query.QueryBuilders;
+
+public class MyElasticSearchQueryBuilder implements ConditionESQueryBuilder {
+    @Override
+    public QueryBuilder buildQuery(Condition condition, Map<String, Object> context) {
+        // ElasticSearch specific implementation
+        return QueryBuilders.boolQuery()
+            .must(QueryBuilders.termQuery("field", "value"));
+    }
+}
+----
+
+OpenSearch Implementation:
+[source,java]
+----
+package org.apache.unomi.plugin.opensearch;
+
+import java.util.Map;
+import org.apache.unomi.api.conditions.Condition;
+import org.apache.unomi.persistence.opensearch.ConditionOSQueryBuilder;
+import org.opensearch.index.query.QueryBuilder;
+import org.opensearch.index.query.QueryBuilders;
+
+public class MyOpenSearchQueryBuilder implements ConditionOSQueryBuilder {
+    @Override
+    public QueryBuilder buildQuery(Condition condition, Map<String, Object> context) {
+        // OpenSearch specific implementation
+        return QueryBuilders.boolQuery()
+            .must(QueryBuilders.termQuery("field", "value"));
+    }
+}
+----
+
+OSGi Service Registration for ElasticSearch (elasticsearch bundle's blueprint.xml):
+[source,xml]
+----
+<blueprint>
+    <!-- Common services -->
+    <reference id="persistenceService" interface="org.apache.unomi.api.services.PersistenceService"/>
+    
+    <!-- Register the query builder -->
+    <service interface="org.apache.unomi.persistence.elasticsearch.ConditionESQueryBuilder">
+        <service-properties>
+            <entry key="queryBuilderId" value="myCustomQueryBuilder"/>
+        </service-properties>
+        <bean class="org.apache.unomi.plugin.MyElasticSearchQueryBuilder">
+            <property name="persistenceService" ref="persistenceService"/>
+        </bean>
+    </service>
+</blueprint>
+----
+
+OSGi Service Registration for OpenSearch (opensearch bundle's blueprint.xml):
+[source,xml]
+----
+<blueprint>
+    <!-- Common services -->
+    <reference id="persistenceService" interface="org.apache.unomi.api.services.PersistenceService"/>
+    
+    <!-- Register the query builder -->
+    <service interface="org.apache.unomi.persistence.opensearch.ConditionOSQueryBuilder">
+        <service-properties>
+            <entry key="queryBuilderId" value="myCustomQueryBuilder"/>
+        </service-properties>
+        <bean class="org.apache.unomi.plugin.MyOpenSearchQueryBuilder">
+            <property name="persistenceService" ref="persistenceService"/>
+        </bean>
+    </service>
+</blueprint>
+----
+
+==== Best Practices
+
+1. Common Code
+   - Keep shared logic in a common module
+   - Use interfaces to define common behavior
+   - Implement search engine specific code only where necessary
+
+2. Mapping Files
+   - Maintain separate mapping files for each search engine
+   - Document any search engine specific features used
+   - Test mappings with both engines
+
+3. Testing
+   - Create test suites for both implementations
+   - Use Docker containers for testing:
+     ```yaml
+     services:
+       elasticsearch:
+         image: docker.elastic.co/elasticsearch/elasticsearch:7.17.9
+       opensearch:
+         image: opensearchproject/opensearch:2.18.0
+     ```
+
+4. Deployment
+   - Package search engine specific code in separate bundles
+   - Use feature files to group related bundles
+   - Document dependencies and requirements
+
+==== Learning from Core Implementation
+
+You can study the core persistence implementations as references:
+
+1. ElasticSearch Implementation:
+   - Location: `persistence-elasticsearch/core`
+   - Key classes:
+     * ElasticSearchPersistenceServiceImpl
+     * ElasticSearchQueryBuilder
+
+2. OpenSearch Implementation:
+   - Location: `persistence-opensearch/core`
+   - Key classes:
+     * OpenSearchPersistenceServiceImpl
+     * OpenSearchQueryBuilder
+
+These implementations demonstrate:
+- How to handle search engine specific features
+- Query building patterns
+- Mapping file organization
+- Error handling and retry mechanisms
+- Connection management
+- Security configuration
 

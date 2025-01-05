@@ -29,9 +29,9 @@ Basic Http Authentication is enabled by default for the health check endpoint. T
 
 The healthcheck is available even if unomi is not started. It gives health information about :   
   - Karaf (as soon as the karaf container is started)
-  - Elasticsearch (connection to elasticsearch cluster and its health)
+  - ElasticSearch or OpenSearch (connection to ElasticSearch or OpenSearch cluster and its health)
   - Unomi (unomi bundles status)
-  - Persistence (unomi to elasticsearch binding)
+  - Persistence (unomi to ElasticSearch/OpenSearch binding)
   - Cluster health (unomi cluster status and nodes information)
 
 All healthcheck can have a status :
