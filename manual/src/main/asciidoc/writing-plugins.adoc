@@ -715,7 +715,7 @@ OSGi Service Registration for ElasticSearch (elasticsearch bundle's blueprint.xm
 <blueprint>
     <!-- Common services -->
     <reference id="persistenceService" interface="org.apache.unomi.api.services.PersistenceService"/>
-    
+
     <!-- Register the query builder -->
     <service interface="org.apache.unomi.persistence.elasticsearch.ConditionESQueryBuilder">
         <service-properties>
@@ -734,7 +734,7 @@ OSGi Service Registration for OpenSearch (opensearch bundle's blueprint.xml):
 <blueprint>
     <!-- Common services -->
     <reference id="persistenceService" interface="org.apache.unomi.api.services.PersistenceService"/>
-    
+
     <!-- Register the query builder -->
     <service interface="org.apache.unomi.persistence.opensearch.ConditionOSQueryBuilder">
         <service-properties>

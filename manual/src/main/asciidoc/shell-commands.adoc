@@ -67,7 +67,7 @@ The commands control the lifecycle of the Apache Unomi server and are used to mi
 
 |migrate
 |fromVersion
-|This command must be used only when the Apache Unomi application is NOT STARTED. It will perform migration of the data stored in ElasticSearch using the argument fromVersion as a starting point.
+|This command must be used only when the Apache Unomi application is NOT STARTED. It will perform migration of the data stored in search engine using the argument fromVersion as a starting point.
 
 |stop
 |n/a
