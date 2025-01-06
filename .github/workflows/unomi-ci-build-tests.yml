@@ -32,6 +32,7 @@ jobs:
       matrix:
         search-engine: [elasticsearch, opensearch]
       fail-fast: false
+      max-parallel: 1  # Run tests sequentially to avoid port conflicts
     steps:
       - uses: actions/checkout@v4
       - name: Set up JDK 11
