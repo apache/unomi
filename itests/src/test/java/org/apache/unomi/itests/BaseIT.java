@@ -307,10 +307,10 @@ public abstract class BaseIT extends KarafTestSupport {
                 editConfigurationFilePut("etc/system.properties", SEARCH_ENGINE_PROPERTY, System.getProperty(SEARCH_ENGINE_PROPERTY, SEARCH_ENGINE_ELASTICSEARCH)),
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.graphql.feature.activated", "true"),
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.elasticsearch.cluster.name", "contextElasticSearchITests"),
-                editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.elasticsearch.addresses", "localhost:9400"),
+                editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.elasticsearch.addresses", "localhost:" + getSearchPort()),
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.elasticsearch.taskWaitingPollingInterval", "50"),
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.opensearch.cluster.name", "contextElasticSearchITests"),
-                editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.opensearch.addresses", "localhost:9400"),
+                editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.opensearch.addresses", "localhost:" + getSearchPort()),
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.opensearch.username", "admin"),
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.opensearch.password", "Unomi.1ntegrat10n.Tests"),
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.opensearch.sslEnable", "false"),
@@ -685,5 +685,17 @@ public abstract class BaseIT extends KarafTestSupport {
         BasicCredentialsProvider credsProvider = new BasicCredentialsProvider();
         credsProvider.setCredentials(AuthScope.ANY, new UsernamePasswordCredentials(BASIC_AUTH_USER_NAME, BASIC_AUTH_PASSWORD));
         return credsProvider;
+    }
+
+    protected static String getSearchPort() {
+        String searchEngine = System.getProperty(SEARCH_ENGINE_PROPERTY, SEARCH_ENGINE_ELASTICSEARCH);
+        if (SEARCH_ENGINE_OPENSEARCH.equals(searchEngine)) {
+            // For OpenSearch, get the port from the system property set by maven-failsafe-plugin
+            return System.getProperty("org.apache.unomi.opensearch.addresses", "localhost:9401")
+                    .split(":")[1]; // Extract port number from "localhost:9401"
+        } else {
+            // For Elasticsearch, use the default port or system property if set
+            return System.getProperty("elasticsearch.port", "9400");
+        }
     }
 }

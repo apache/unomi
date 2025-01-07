@@ -354,9 +354,12 @@
         </profile>
         <profile>
             <id>opensearch</id>
+            <properties>
+                <opensearch.port>9401</opensearch.port>
+            </properties>
             <activation>
                 <property>
-                    <name>use.opensearch</name> <!-- Activate if use.opensearch is set -->
+                    <name>use.opensearch</name>
                 </property>
             </activation>
             <build>
@@ -372,6 +375,7 @@
                             <systemPropertyVariables>
                                 <my.system.property>foo</my.system.property>
                                 <unomi.search.engine>opensearch</unomi.search.engine>
+                                <org.apache.unomi.opensearch.addresses>localhost:${opensearch.port}</org.apache.unomi.opensearch.addresses>
                             </systemPropertyVariables>
                         </configuration>
                         <executions>
@@ -401,7 +405,7 @@
                                     <alias>opensearch</alias>
                                     <run>
                                         <ports>
-                                            <port>9400:9200</port>
+                                            <port>${opensearch.port}:9200</port>
                                         </ports>
                                         <env>
                                             <discovery.type>single-node</discovery.type>
@@ -417,12 +421,13 @@
                                         </volumes>
                                         <wait>
                                             <http>
-                                                <url>http://localhost:9400</url>
+                                                <url>http://localhost:${opensearch.port}</url>
                                                 <method>GET</method>
                                                 <status>200</status>
                                             </http>
                                             <time>120000</time>
                                         </wait>
+                                        <portPropertyFile>${project.build.directory}/opensearch-port.properties</portPropertyFile>
                                     </run>
                                 </image>
                             </images>
