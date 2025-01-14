@@ -35,6 +35,8 @@ import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.query.DateRange;
 import org.apache.unomi.api.query.IpRange;
 import org.apache.unomi.api.query.NumericRange;
+import org.apache.unomi.api.security.SecurityService;
+import org.apache.unomi.api.tenants.TenantTransformationService;
 import org.apache.unomi.metrics.MetricAdapter;
 import org.apache.unomi.metrics.MetricsService;
 import org.apache.unomi.persistence.spi.PersistenceService;
@@ -231,6 +233,10 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         itemTypeIndexNameMap.put("profile", "profile");
         itemTypeIndexNameMap.put("persona", "profile");
     }
+
+    // Add fields after other class fields
+    private SecurityService securityProvider;
+    private TenantTransformationService tenantTransformationService;
 
     public void setBundleContext(BundleContext bundleContext) {
         this.bundleContext = bundleContext;
@@ -454,6 +460,14 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         if (StringUtils.isNumeric(taskWaitingPollingInterval)) {
             this.taskWaitingPollingInterval = Integer.parseInt(taskWaitingPollingInterval);
         }
+    }
+
+    public void setSecurityService(SecurityService securityService) {
+        this.securityProvider = securityService;
+    }
+
+    public void setTenantItemTransformationService(TenantTransformationService tenantTransformationService) {
+        this.tenantTransformationService = tenantTransformationService;
     }
 
     public String getName() {
@@ -879,7 +893,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                             String sourceAsString = response.getSourceAsString();
                             final T value = ESCustomObjectMapper.getObjectMapper().readValue(sourceAsString, clazz);
                             setMetadata(value, response.getId(), response.getVersion(), response.getSeqNo(), response.getPrimaryTerm(), response.getIndex());
-                            return value;
+                            return handleItemReverseTransformation(value);
                         } else {
                             return null;
                         }
@@ -928,10 +942,13 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Override
     public boolean save(final Item item, final Boolean useBatchingOption, final Boolean alwaysOverwriteOption) {
+        String tenantId = item.getTenantId();
+        securityProvider.validateTenantOperation(tenantId, "SAVE");
+
         final boolean useBatching = useBatchingOption == null ? this.useBatchingForSave : useBatchingOption;
         final boolean alwaysOverwrite = alwaysOverwriteOption == null ? this.alwaysOverwrite : alwaysOverwriteOption;
 
-        Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".saveItem", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
+        return new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".saveItem", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
             protected Boolean execute(Object... args) throws Exception {
                 try {
                     String source = ESCustomObjectMapper.getObjectMapper().writeValueAsString(item);
@@ -985,17 +1002,19 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         LOGGER.error("Could not find index {}, could not register item type {} with id {} ", index, itemType, item.getItemId(), e);
                         return false;
                     }
+
+                    // Add tenants-specific encryption if configured
+                    handleItemTransformation(item);
+
+                    // Add tenants metadata
+                    addTenantMetadata(item, tenantId);
+
                     return true;
                 } catch (IOException e) {
                     throw new Exception("Error saving item " + item, e);
                 }
             }
         }.catchingExecuteInClassLoader(true);
-        if (result == null) {
-            return false;
-        } else {
-            return result;
-        }
     }
 
     @Override
@@ -1333,10 +1352,15 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         return Objects.requireNonNullElse(result, false);
     }
 
+    @Override
     public <T extends Item> boolean removeByQuery(final Condition query, final Class<T> clazz) {
+        String tenantId = securityProvider.getCurrentTenantId();
+        securityProvider.validateTenantOperation(tenantId, "REMOVE_BY_QUERY");
+
         Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".removeByQuery", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
             protected Boolean execute(Object... args) throws Exception {
                 QueryBuilder queryBuilder = conditionESQueryBuilderDispatcher.getQueryBuilder(query);
+                queryBuilder = wrapWithTenantAndItemTypeQuery(Item.getItemType(clazz), queryBuilder, tenantId);
                 return removeByQuery(queryBuilder, clazz);
             }
         }.catchingExecuteInClassLoader(true);
@@ -1850,7 +1874,12 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Override
     public <T extends Item> PartialList<T> query(final Condition query, String sortBy, final Class<T> clazz, final int offset, final int size) {
-        return query(conditionESQueryBuilderDispatcher.getQueryBuilder(query), sortBy, clazz, offset, size, null, null);
+        String tenantId = securityProvider.getCurrentTenantId();
+        securityProvider.validateTenantOperation(tenantId, "QUERY");
+
+        QueryBuilder queryBuilder = conditionESQueryBuilderDispatcher.buildFilter(query);
+        queryBuilder = wrapWithTenantAndItemTypeQuery(Item.getItemType(clazz), queryBuilder, tenantId);
+        return query(queryBuilder, sortBy, clazz, offset, size, null, null);
     }
 
     @Override
@@ -1860,7 +1889,12 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Override
     public PartialList<CustomItem> queryCustomItem(final Condition query, String sortBy, final String customItemType, final int offset, final int size, final String scrollTimeValidity) {
-        return query(conditionESQueryBuilderDispatcher.getQueryBuilder(query), sortBy, customItemType, offset, size, null, scrollTimeValidity);
+        String tenantId = securityProvider.getCurrentTenantId();
+        securityProvider.validateTenantOperation(tenantId, "QUERY");
+
+        QueryBuilder queryBuilder = conditionESQueryBuilderDispatcher.getQueryBuilder(query);
+        queryBuilder = wrapWithTenantAndItemTypeQuery(customItemType, queryBuilder, tenantId);
+        return query(queryBuilder, sortBy, customItemType, offset, size, null, scrollTimeValidity);
     }
 
     @Override
@@ -2019,7 +2053,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                                 String sourceAsString = searchHit.getSourceAsString();
                                 final T value = ESCustomObjectMapper.getObjectMapper().readValue(sourceAsString, clazz);
                                 setMetadata(value, searchHit.getId(), searchHit.getVersion(), searchHit.getSeqNo(), searchHit.getPrimaryTerm(), searchHit.getIndex());
-                                results.add(value);
+                                results.add(handleItemReverseTransformation(value));
                             }
 
                             SearchScrollRequest searchScrollRequest = new SearchScrollRequest(response.getScrollId());
@@ -2049,7 +2083,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                             String sourceAsString = searchHit.getSourceAsString();
                             final T value = ESCustomObjectMapper.getObjectMapper().readValue(sourceAsString, clazz);
                             setMetadata(value, searchHit.getId(), searchHit.getVersion(), searchHit.getSeqNo(), searchHit.getPrimaryTerm(), searchHit.getIndex());
-                            results.add(value);
+                            results.add(handleItemReverseTransformation(value));
                         }
                     }
                 } catch (Exception t) {
@@ -2072,8 +2106,10 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Override
     public <T extends Item> PartialList<T> continueScrollQuery(final Class<T> clazz, final String scrollIdentifier, final String scrollTimeValidity) {
-        return new InClassLoaderExecute<PartialList<T>>(metricsService, this.getClass().getName() + ".continueScrollQuery", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
+        String tenantId = securityProvider.getCurrentTenantId();
+        securityProvider.validateTenantOperation(tenantId, "SCROLL_QUERY");
 
+        return new InClassLoaderExecute<PartialList<T>>(metricsService, this.getClass().getName() + ".continueScrollQuery", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
             @Override
             protected PartialList<T> execute(Object... args) throws Exception {
                 List<T> results = new ArrayList<T>();
@@ -2092,10 +2128,13 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     } else {
                         for (SearchHit searchHit : response.getHits().getHits()) {
                             // add hit to results
-                            String sourceAsString = searchHit.getSourceAsString();
-                            final T value = ESCustomObjectMapper.getObjectMapper().readValue(sourceAsString, clazz);
-                            setMetadata(value, searchHit.getId(), searchHit.getVersion(), searchHit.getSeqNo(), searchHit.getPrimaryTerm(), searchHit.getIndex());
-                            results.add(value);
+                            String sourceTenantId = (String) searchHit.getSourceAsMap().get("tenantId");
+                            if (tenantId.equals(sourceTenantId)) {
+                                String sourceAsString = searchHit.getSourceAsString();
+                                final T value = ESCustomObjectMapper.getObjectMapper().readValue(sourceAsString, clazz);
+                                setMetadata(value, searchHit.getId(), searchHit.getVersion(), searchHit.getSeqNo(), searchHit.getPrimaryTerm(), searchHit.getIndex());
+                                results.add(handleItemReverseTransformation(value));
+                            }
                         }
                     }
                     PartialList<T> result = new PartialList<T>(results, 0, response.getHits().getHits().length, response.getHits().getTotalHits().value, getTotalHitsRelation(response.getHits().getTotalHits()));
@@ -2113,8 +2152,10 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Override
     public PartialList<CustomItem> continueCustomItemScrollQuery(final String customItemType, final String scrollIdentifier, final String scrollTimeValidity) {
-        return new InClassLoaderExecute<PartialList<CustomItem>>(metricsService, this.getClass().getName() + ".continueScrollQuery", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
+        String tenantId = securityProvider.getCurrentTenantId();
+        securityProvider.validateTenantOperation(tenantId, "SCROLL_QUERY");
 
+        return new InClassLoaderExecute<PartialList<CustomItem>>(metricsService, this.getClass().getName() + ".continueScrollQuery", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
             @Override
             protected PartialList<CustomItem> execute(Object... args) throws Exception {
                 List<CustomItem> results = new ArrayList<CustomItem>();
@@ -2130,15 +2171,20 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         ClearScrollRequest clearScrollRequest = new ClearScrollRequest();
                         clearScrollRequest.addScrollId(response.getScrollId());
                         client.clearScroll(clearScrollRequest, RequestOptions.DEFAULT);
-                    } else {
-                        for (SearchHit searchHit : response.getHits().getHits()) {
+                    }
+
+                    // Validate tenants for each result
+                    for (SearchHit searchHit : response.getHits().getHits()) {
+                        String sourceTenantId = (String) searchHit.getSourceAsMap().get("tenantId");
+                        if (tenantId.equals(sourceTenantId)) {
                             // add hit to results
                             String sourceAsString = searchHit.getSourceAsString();
                             final CustomItem value = ESCustomObjectMapper.getObjectMapper().readValue(sourceAsString, CustomItem.class);
                             setMetadata(value, searchHit.getId(), searchHit.getVersion(), searchHit.getSeqNo(), searchHit.getPrimaryTerm(), searchHit.getIndex());
-                            results.add(value);
+                            results.add(handleItemReverseTransformation(value));
                         }
                     }
+
                     PartialList<CustomItem> result = new PartialList<CustomItem>(results, 0, response.getHits().getHits().length, response.getHits().getTotalHits().value, getTotalHitsRelation(response.getHits().getTotalHits()));
                     if (scrollIdentifier != null) {
                         result.setScrollIdentifier(scrollIdentifier);
@@ -2173,6 +2219,9 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     private Map<String, Long> aggregateQuery(final Condition filter, final BaseAggregate aggregate, final String itemType,
                                              final boolean optimizedQuery, int queryBucketSize) {
+        String tenantId = securityProvider.getCurrentTenantId();
+        securityProvider.validateTenantOperation(tenantId, "AGGREGATE");
+
         return new InClassLoaderExecute<Map<String, Long>>(metricsService, this.getClass().getName() + ".aggregateQuery", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
 
             @Override
@@ -2182,9 +2231,9 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 SearchRequest searchRequest = new SearchRequest(getIndexNameForQuery(itemType));
                 SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
                 searchSourceBuilder.size(0);
-                MatchAllQueryBuilder matchAll = QueryBuilders.matchAllQuery();
+                QueryBuilder baseQuery = wrapWithTenantAndItemTypeQuery(itemType, QueryBuilders.matchAllQuery(), tenantId);
                 boolean isItemTypeSharingIndex = isItemTypeSharingIndex(itemType);
-                searchSourceBuilder.query(isItemTypeSharingIndex ? getItemTypeQueryBuilder(itemType) : matchAll);
+                searchSourceBuilder.query(isItemTypeSharingIndex ? getItemTypeQueryBuilder(itemType) : baseQuery);
                 List<AggregationBuilder> lastAggregation = new ArrayList<AggregationBuilder>();
 
                 if (aggregate != null) {
@@ -2434,34 +2483,38 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Override
     public void purge(final String scope) {
+        String tenantId = securityProvider.getCurrentTenantId();
+        securityProvider.validateTenantOperation(tenantId, "PURGE");
+
         LOGGER.debug("Purge scope {}", scope);
         new InClassLoaderExecute<Void>(metricsService, this.getClass().getName() + ".purgeWithScope", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
             @Override
             protected Void execute(Object... args) throws IOException {
-                QueryBuilder query = termQuery("scope", scope);
+                QueryBuilder queryBuilder = QueryBuilders.boolQuery()
+                    .must(QueryBuilders.termQuery("scope", scope))
+                    .must(QueryBuilders.termQuery("tenantId", tenantId));
 
-                BulkRequest deleteByScopeBulkRequest = new BulkRequest();
-
-                final TimeValue keepAlive = TimeValue.timeValueHours(1);
-                SearchRequest searchRequest = new SearchRequest(getAllIndexForQuery()).scroll(keepAlive);
+                SearchRequest searchRequest = new SearchRequest(getAllIndexForQuery());
                 SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder()
-                        .query(query)
-                        .size(100);
+                    .query(queryBuilder)
+                    .size(100);
+                searchRequest.scroll(TimeValue.timeValueHours(1));
                 searchRequest.source(searchSourceBuilder);
+
                 SearchResponse response = client.search(searchRequest, RequestOptions.DEFAULT);
 
                 // Scroll until no more hits are returned
+                BulkRequest bulkRequest = new BulkRequest();
                 while (true) {
-
-                    for (SearchHit hit : response.getHits().getHits()) {
+                    for (SearchHit searchHit : response.getHits().getHits()) {
                         // add hit to bulk delete
-                        DeleteRequest deleteRequest = new DeleteRequest(hit.getIndex(), hit.getId());
-                        deleteByScopeBulkRequest.add(deleteRequest);
+                        DeleteRequest deleteRequest = new DeleteRequest(searchHit.getIndex(), searchHit.getId());
+                        bulkRequest.add(deleteRequest);
                     }
 
-                    SearchScrollRequest searchScrollRequest = new SearchScrollRequest(response.getScrollId());
-                    searchScrollRequest.scroll(keepAlive);
-                    response = client.scroll(searchScrollRequest, RequestOptions.DEFAULT);
+                    SearchScrollRequest scrollRequest = new SearchScrollRequest(response.getScrollId());
+                    scrollRequest.scroll(TimeValue.timeValueHours(1));
+                    response = client.scroll(scrollRequest, RequestOptions.DEFAULT);
 
                     // If we have no more hits, exit
                     if (response.getHits().getHits().length == 0) {
@@ -2472,12 +2525,11 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     }
                 }
 
-                // we're done with the scrolling, delete now
-                if (deleteByScopeBulkRequest.numberOfActions() > 0) {
-                    final BulkResponse deleteResponse = client.bulk(deleteByScopeBulkRequest, RequestOptions.DEFAULT);
-                    if (deleteResponse.hasFailures()) {
-                        // do something
-                        LOGGER.warn("Couldn't delete from scope {}:\n{}", scope, deleteResponse.buildFailureMessage());
+                // Execute bulk delete if we have any requests
+                if (bulkRequest.numberOfActions() > 0) {
+                    BulkResponse bulkResponse = client.bulk(bulkRequest, RequestOptions.DEFAULT);
+                    if (bulkResponse.hasFailures()) {
+                        LOGGER.warn("Couldn't delete from scope " + scope + ":\n{}", bulkResponse.buildFailureMessage());
                     }
                 }
                 return null;
@@ -2699,6 +2751,195 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     private void logMetadataItemOperation (String operation, Item item) {
         if (item instanceof MetadataItem) {
             LOGGER.info("Item of type {} with ID {} has been {}", item.getItemType(), item.getItemId(), operation);
+        }
+    }
+
+    private QueryBuilder wrapWithTenantAndItemTypeQuery(String itemType, QueryBuilder originalQuery, String tenantId) {
+        BoolQueryBuilder boolQuery = QueryBuilders.boolQuery();
+
+        // Add tenants filter
+        if (tenantId != null) {
+            boolQuery.must(QueryBuilders.termQuery("tenantId", tenantId));
+        }
+
+        // Add item type filter if needed
+        if (isItemTypeSharingIndex(itemType)) {
+            boolQuery.must(getItemTypeQueryBuilder(itemType));
+        }
+
+        // Add original query
+        if (originalQuery != null) {
+            boolQuery.must(originalQuery);
+        }
+
+        return boolQuery;
+    }
+
+    private void addTenantMetadata(Item item, String tenantId) {
+        if (tenantId != null) {
+            item.setTenantId(tenantId);
+        }
+    }
+
+    private String extractTenantId(DocWriteRequest<?> request) {
+        try {
+            if (request instanceof IndexRequest) {
+                IndexRequest indexRequest = (IndexRequest) request;
+                return (String) indexRequest.sourceAsMap().get("tenantId");
+            } else if (request instanceof UpdateRequest) {
+                UpdateRequest updateRequest = (UpdateRequest) request;
+                return (String) updateRequest.doc().sourceAsMap().get("tenantId");
+            }
+            return null;
+        } catch (Exception e) {
+            LOGGER.error("Error extracting tenantId from request", e);
+            return null;
+        }
+    }
+
+    private AggregationBuilder createAggregationBuilder(BaseAggregate aggregate, String itemType) {
+        if (aggregate == null) {
+            return null;
+        }
+
+        String fieldName = aggregate.getField();
+        if (aggregate instanceof DateAggregate) {
+            DateAggregate dateAggregate = (DateAggregate) aggregate;
+            DateHistogramAggregationBuilder builder = AggregationBuilders.dateHistogram("buckets")
+                    .field(fieldName)
+                    .calendarInterval(new DateHistogramInterval(dateAggregate.getInterval()));
+            if (dateAggregate.getFormat() != null) {
+                builder.format(dateAggregate.getFormat());
+            }
+            return builder;
+        } else if (aggregate instanceof NumericRangeAggregate) {
+            RangeAggregationBuilder builder = AggregationBuilders.range("buckets").field(fieldName);
+            for (NumericRange range : ((NumericRangeAggregate) aggregate).getRanges()) {
+                if (range != null) {
+                    if (range.getFrom() != null && range.getTo() != null) {
+                        builder.addRange(range.getKey(), range.getFrom(), range.getTo());
+                    } else if (range.getFrom() != null) {
+                        builder.addUnboundedFrom(range.getKey(), range.getFrom());
+                    } else if (range.getTo() != null) {
+                        builder.addUnboundedTo(range.getKey(), range.getTo());
+                    }
+                }
+            }
+            return builder;
+        }
+        // Add other aggregate type handlers as needed
+        return null;
+    }
+
+    private <T extends Item> T handleItemTransformation(T item) {
+        if (item != null && tenantTransformationService != null) {
+            String tenantId = item.getTenantId();
+            if (tenantId != null) {
+                tenantTransformationService.transformItem(item, tenantId);
+            }
+        }
+        return item;
+    }
+
+    private <T extends Item> T handleItemReverseTransformation(T item) {
+        if (item != null && tenantTransformationService != null) {
+            String tenantId = item.getTenantId();
+            if (tenantId != null) {
+                tenantTransformationService.reverseTransformItem(item, tenantId);
+            }
+        }
+        return item;
+    }
+
+    @Override
+    public long calculateStorageSize(String tenantId) {
+        try {
+            // Build query to match tenant ID
+            SearchRequest searchRequest = new SearchRequest(getAllIndexForQuery())
+                .source(new SearchSourceBuilder()
+                    .query(QueryBuilders.termQuery("tenantId", tenantId))
+                    .size(0)
+                    .trackTotalHits(true));
+
+            // Get total document count
+            SearchResponse response = client.search(searchRequest, RequestOptions.DEFAULT);
+            return response.getHits().getTotalHits().value;
+
+        } catch (Exception e) {
+            LOGGER.error("Error calculating storage size for tenant " + tenantId, e);
+            return -1;
+        }
+    }
+
+    @Override
+    public boolean migrateTenantData(String sourceTenantId, String targetTenantId, List<String> itemTypes) {
+        try {
+            SearchRequest searchRequest = new SearchRequest(getAllIndexForQuery())
+                .source(new SearchSourceBuilder()
+                    .query(QueryBuilders.termQuery("tenantId", sourceTenantId))
+                    .size(1000))
+                .scroll(TimeValue.timeValueMinutes(1));
+
+            SearchResponse searchResponse = client.search(searchRequest, RequestOptions.DEFAULT);
+            String scrollId = searchResponse.getScrollId();
+
+            while (searchResponse.getHits().getHits().length > 0) {
+                BulkRequest bulkRequest = new BulkRequest();
+
+                // Process each hit
+                for (SearchHit hit : searchResponse.getHits()) {
+                    Map<String, Object> source = hit.getSourceAsMap();
+                    source.put("tenantId", targetTenantId);
+
+                    // Add update operation to bulk
+                    bulkRequest.add(new UpdateRequest(hit.getIndex(), hit.getId())
+                        .doc(source)
+                        .docAsUpsert(true));
+                }
+
+                // Execute bulk update if there are operations
+                if (bulkRequest.numberOfActions() > 0) {
+                    client.bulk(bulkRequest, RequestOptions.DEFAULT);
+                }
+
+                // Get next batch
+                SearchScrollRequest scrollRequest = new SearchScrollRequest(scrollId)
+                    .scroll(TimeValue.timeValueMinutes(1));
+                searchResponse = client.scroll(scrollRequest, RequestOptions.DEFAULT);
+                scrollId = searchResponse.getScrollId();
+            }
+
+            // Clear scroll
+            ClearScrollRequest clearScrollRequest = new ClearScrollRequest();
+            clearScrollRequest.addScrollId(scrollId);
+            client.clearScroll(clearScrollRequest, RequestOptions.DEFAULT);
+
+            return true;
+
+        } catch (Exception e) {
+            LOGGER.error("Error migrating tenant data from " + sourceTenantId + " to " + targetTenantId, e);
+            return false;
+        }
+    }
+
+    @Override
+    public long getApiCallCount(String tenantId) {
+        try {
+            // Build query to count API calls for tenant
+            SearchRequest searchRequest = new SearchRequest(getAllIndexForQuery())
+                .source(new SearchSourceBuilder()
+                    .query(QueryBuilders.boolQuery()
+                        .must(QueryBuilders.termQuery("tenantId", tenantId))
+                        .must(QueryBuilders.termQuery("itemType", "apiCall")))
+                    .size(0));
+
+            // Execute count query
+            SearchResponse response = client.search(searchRequest, RequestOptions.DEFAULT);
+            return response.getHits().getTotalHits().value;
+
+        } catch (Exception e) {
+            LOGGER.error("Error getting API call count for tenant " + tenantId, e);
+            return -1;
         }
     }
 }

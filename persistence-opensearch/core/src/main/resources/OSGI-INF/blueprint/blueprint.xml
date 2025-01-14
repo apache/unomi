@@ -161,6 +161,7 @@
         <property name="alwaysOverwrite" value="${os.alwaysOverwrite}" />
         <property name="logLevelRestClient" value="${os.logLevelRestClient}" />
         <property name="minimalClusterState" value="${os.minimalClusterState}" />
+        <property name="tenantTransformationService" ref="tenantTransformationService"/>
     </bean>
 
     <!-- We use a listener here because using the list directly for listening to proxies coming from the same bundle didn't seem to work -->
@@ -178,5 +179,9 @@
         <reference-listener
                 bind-method="bindConditionEvaluator" unbind-method="unbindConditionEvaluator" ref="openSearchPersistenceServiceImpl"/>
     </reference-list>
+
+    <reference id="tenantTransformationService"
+               interface="org.apache.unomi.api.tenants.TenantTransformationService"
+               availability="optional"/>
 
 </blueprint>

@@ -28,6 +28,7 @@
     <reference id="privacyService" interface="org.apache.unomi.api.services.PrivacyService"/>
     <reference id="personalizationService" interface="org.apache.unomi.api.services.PersonalizationService"/>
     <reference id="configSharingService" interface="org.apache.unomi.api.services.ConfigSharingService" />
+    <reference id="tenantService" interface="org.apahce.unomi.api.tenants.TenantService" />
 
     <cm:property-placeholder persistent-id="org.apache.unomi.web"
                              update-strategy="reload" placeholder-prefix="${web.">
@@ -38,9 +39,9 @@
             <cm:property name="contextserver.profileIdCookieHttpOnly" value="false"/> <!-- 1 year by default -->
             <cm:property name="allowed.profile.download.formats" value="yaml"/>
             <cm:property name="public.post.request.bytes.limit" value="200000"/>
+            <cm:property name="defaultTenantId" value="default" />
         </cm:default-properties>
     </cm:property-placeholder>
-
 
     <bean id="contextServlet" class="org.apache.unomi.web.ContextServlet">
         <property name="configSharingService" ref="configSharingService"/>
@@ -49,6 +50,11 @@
         <property name="profileIdCookieMaxAgeInSeconds" value="${web.contextserver.profileIdCookieMaxAgeInSeconds}"/>
         <property name="profileIdCookieHttpOnly" value="${web.contextserver.profileIdCookieHttpOnly}"/>
         <property name="publicPostRequestBytesLimit" value="${web.public.post.request.bytes.limit}"/>
+    </bean>
+
+    <bean id="tenantSecurityFilter" class="org.apache.unomi.web.TenantSecurityFilter">
+        <property name="tenantService" ref="tenantService" />
+        <property name="defaultTenantId" value="${web.defaultTenantId}"/>
     </bean>
 
     <service id="contextServletService" ref="contextServlet">

@@ -1,0 +1,102 @@
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+= Apache Unomi Multi-tenancy
+:toc: macro
+:toclevels: 3
+:toc-title: Table of contents
+
+== Overview
+
+Apache Unomi now supports multi-tenancy, allowing multiple organizations to use the same Unomi instance while keeping their data completely isolated.
+
+== Features
+
+* Complete data isolation between tenants
+* API key-based authentication
+* Tenant-specific configuration
+* Resource quotas and limits
+* Migration tools for existing data
+
+== Configuration
+
+=== Basic Setup
+
+[source,properties]
+----
+# etc/org.apache.unomi.tenant.cfg
+tenant.default.id=default
+tenant.apikey.validity.period=30
+tenant.apikey.validity.unit=DAYS
+----
+
+=== Security Configuration
+
+For Elasticsearch:
+[source,properties]
+----
+tenant.security.provider=elasticsearch
+----
+
+For OpenSearch:
+[source,properties]
+----
+tenant.security.provider=opensearch
+----
+
+== API Usage
+
+=== Creating a Tenant
+
+[source,bash]
+----
+curl -X POST http://localhost:8181/cxs/tenants \
+  -H "Content-Type: application/json" \
+  -d '{"name": "MyTenant", "properties": {}}'
+----
+
+=== Generating API Keys
+
+[source,bash]
+----
+curl -X POST http://localhost:8181/cxs/tenants/{tenantId}/apikeys \
+  -H "Content-Type: application/json" \
+  -d '{"validityPeriod": 30}'
+----
+
+== Migration Guide
+
+To migrate existing data to use multi-tenancy:
+
+[source,bash]
+----
+curl -X POST http://localhost:8181/cxs/tenants/migration/default
+----
+
+== Best Practices
+
+1. API Key Management
+* Rotate keys regularly
+* Use short-lived keys when possible
+* Monitor key usage
+
+2. Resource Management
+* Set appropriate quotas
+* Monitor resource usage
+* Configure alerts for quota limits
+
+3. Security
+* Use HTTPS for all communications
+* Implement proper key rotation
+* Regular security audits

@@ -768,4 +768,30 @@ public interface PersistenceService {
      */
     void purge(final String scope);
 
+    /**
+     * Calculates the total storage size for a specific tenant.
+     *
+     * @param tenantId the ID of the tenant
+     * @return the total storage size in bytes
+     */
+    long calculateStorageSize(String tenantId);
+
+    /**
+     * Retrieves the number of API calls made by a specific tenant.
+     *
+     * @param tenantId the ID of the tenant
+     * @return the number of API calls
+     */
+    long getApiCallCount(String tenantId);
+
+    /**
+     * Migrates data from one tenant to another.
+     *
+     * @param sourceTenantId the source tenant ID
+     * @param targetTenantId the target tenant ID
+     * @param itemTypes the types of items to migrate
+     * @return true if migration was successful, false otherwise
+     */
+    boolean migrateTenantData(String sourceTenantId, String targetTenantId, List<String> itemTypes);
+
 }

@@ -158,6 +158,7 @@
         <property name="throwExceptions" value="${es.throwExceptions}" />
         <property name="alwaysOverwrite" value="${es.alwaysOverwrite}" />
         <property name="logLevelRestClient" value="${es.logLevelRestClient}" />
+        <property name="tenantTransformationService" ref="tenantTransformationService"/>
     </bean>
 
     <!-- We use a listener here because using the list directly for listening to proxies coming from the same bundle didn't seem to work -->
@@ -174,5 +175,9 @@
         <reference-listener
                 bind-method="bindConditionESQueryBuilder" unbind-method="unbindConditionESQueryBuilder" ref="elasticSearchPersistenceServiceImpl"/>
     </reference-list>
+
+    <reference id="tenantTransformationService"
+               interface="org.apache.unomi.api.tenants.TenantTransformationService"
+               availability="optional"/>
 
 </blueprint>
