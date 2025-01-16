@@ -20,6 +20,7 @@ package org.apache.unomi.api.actions;
 import org.apache.unomi.api.Metadata;
 import org.apache.unomi.api.MetadataItem;
 import org.apache.unomi.api.Parameter;
+import org.apache.unomi.api.PluginType;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -27,12 +28,13 @@ import java.util.List;
 /**
  * A type definition for {@link Action}s.
  */
-public class ActionType extends MetadataItem {
+public class ActionType extends MetadataItem implements PluginType {
     public static final String ITEM_TYPE = "actionType";
 
     private static final long serialVersionUID = -3522958600710010935L;
     private String actionExecutor;
     private List<Parameter> parameters = new ArrayList<Parameter>();
+    private long pluginId;
 
     /**
      * Instantiates a new Action type.
@@ -100,5 +102,15 @@ public class ActionType extends MetadataItem {
     @Override
     public int hashCode() {
         return itemId.hashCode();
+    }
+
+    @Override
+    public long getPluginId() {
+        return pluginId;
+    }
+
+    @Override
+    public void setPluginId(long pluginId) {
+        this.pluginId = pluginId;
     }
 }

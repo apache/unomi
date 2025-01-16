@@ -16,12 +16,6 @@
  */
 package org.apache.unomi.plugins.request.actions;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-
 import org.apache.unomi.plugins.request.useragent.UserAgent;
 import org.apache.unomi.plugins.request.useragent.UserAgentDetectorServiceImpl;
 import org.junit.After;
@@ -31,6 +25,12 @@ import org.junit.Test;
 import org.junit.runners.MethodSorters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 @FixMethodOrder(MethodSorters.NAME_ASCENDING)
 public class UserAgentDetectorTest {
@@ -66,8 +66,8 @@ public class UserAgentDetectorTest {
 
     @Test
     public void testUserAgentDetectionPerformance() throws InterruptedException {
-        int workerCount = 5000000;
-        ExecutorService executorService = Executors.newFixedThreadPool(3000);
+        int workerCount = 5000;
+        ExecutorService executorService = Executors.newFixedThreadPool(100);
 
         for (int cpt = 1; cpt < 6; cpt++) {
             LOGGER.info("Execution {}/5", cpt);

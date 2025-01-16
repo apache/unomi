@@ -16,14 +16,13 @@
  */
 package org.apache.unomi.services.impl.tenants;
 
+import org.apache.unomi.api.services.TenantLifecycleListener;
 import org.apache.unomi.api.tenants.ApiKey;
 import org.apache.unomi.api.tenants.Tenant;
 import org.apache.unomi.api.tenants.TenantService;
 import org.apache.unomi.api.tenants.TenantStatus;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.osgi.service.cm.ConfigurationAdmin;
-import org.osgi.service.component.annotations.Component;
-import org.osgi.service.component.annotations.Reference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,19 +32,34 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CopyOnWriteArrayList;
 
-@Component(service = TenantService.class)
 public class TenantServiceImpl implements TenantService {
     private static final Logger LOGGER = LoggerFactory.getLogger(TenantServiceImpl.class);
     private static final SecureRandom secureRandom = new SecureRandom();
 
-    @Reference
+    private final List<TenantLifecycleListener> lifecycleListeners = new CopyOnWriteArrayList<>();
     private PersistenceService persistenceService;
-
-    @Reference
     private ConfigurationAdmin configAdmin;
-
     private ThreadLocal<String> currentTenant = new ThreadLocal<>();
+
+    public void setPersistenceService(PersistenceService persistenceService) {
+        this.persistenceService = persistenceService;
+    }
+
+    public void setConfigAdmin(ConfigurationAdmin configAdmin) {
+        this.configAdmin = configAdmin;
+    }
+
+    public void bindListener(TenantLifecycleListener listener) {
+        lifecycleListeners.add(listener);
+        LOGGER.debug("Added tenant lifecycle listener: {}", listener.getClass().getName());
+    }
+
+    public void unbindListener(TenantLifecycleListener listener) {
+        lifecycleListeners.remove(listener);
+        LOGGER.debug("Removed tenant lifecycle listener: {}", listener.getClass().getName());
+    }
 
     @Override
     public Tenant createTenant(String name, Map<String, Object> properties) {
@@ -113,6 +127,17 @@ public class TenantServiceImpl implements TenantService {
     @Override
     public void deleteTenant(String tenantId) {
         persistenceService.remove(tenantId, Tenant.class);
+
+        // Notify all listeners of tenant removal
+        for (TenantLifecycleListener listener : lifecycleListeners) {
+            try {
+                listener.onTenantRemoved(tenantId);
+            } catch (Exception e) {
+                LOGGER.error("Error notifying listener {} of tenant removal: {}", listener.getClass().getName(), tenantId, e);
+            }
+        }
+
+        LOGGER.info("Tenant {} and associated resources have been removed", tenantId);
     }
 
     @Override

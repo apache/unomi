@@ -28,10 +28,11 @@ import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.rules.Rule;
 import org.apache.unomi.api.rules.RuleStatistics;
 import org.apache.unomi.api.services.*;
+import org.apache.unomi.api.utils.ParserHelper;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.services.actions.ActionExecutorDispatcher;
-import org.apache.unomi.api.utils.ParserHelper;
+import org.apache.unomi.services.impl.AbstractTenantAwareService;
 import org.osgi.framework.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,7 +44,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 
-public class RulesServiceImpl implements RulesService, EventListenerService, SynchronousBundleListener {
+public class RulesServiceImpl extends AbstractTenantAwareService implements RulesService, EventListenerService, SynchronousBundleListener {
 
     public static final String TRACKED_PARAMETER = "trackedConditionParameters";
     private static final Logger LOGGER = LoggerFactory.getLogger(RulesServiceImpl.class.getName());

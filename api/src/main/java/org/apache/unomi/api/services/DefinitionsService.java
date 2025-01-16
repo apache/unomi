@@ -207,16 +207,14 @@ public interface DefinitionsService {
     boolean resolveConditionType(Condition rootCondition);
 
     /**
-     * Forces a refresh of the definitions from the persistence service. Warning: this may seriously impact performance
-     * so it is recommended to use this in specific cases such as for example in integration tests.
+     * Refreshes the definitions service, reloading all types from persistence.
      */
     void refresh();
 
-
     /**
-     * Retrieves a new instance of a ConditionBuilder to help to build conditions.
+     * Gets the condition builder instance.
      *
-     * @return a new instance of a ConditionBuilder
+     * @return the condition builder instance
      */
     ConditionBuilder getConditionBuilder();
 }

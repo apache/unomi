@@ -20,6 +20,7 @@ package org.apache.unomi.api.conditions;
 import org.apache.unomi.api.Metadata;
 import org.apache.unomi.api.MetadataItem;
 import org.apache.unomi.api.Parameter;
+import org.apache.unomi.api.PluginType;
 
 import javax.xml.bind.annotation.XmlElement;
 import java.util.ArrayList;
@@ -31,7 +32,7 @@ import java.util.List;
  * optimized by coding it. They may also be defined as combination of other conditions. A simple condition  could be: “User is male”, while a more generic condition with
  * parameters may test whether a given property has a specific value: “User property x has value y”.
  */
-public class ConditionType extends MetadataItem  {
+public class ConditionType extends MetadataItem implements PluginType {
     public static final String ITEM_TYPE = "conditionType";
 
     private static final long serialVersionUID = -6965481691241954969L;
@@ -39,6 +40,7 @@ public class ConditionType extends MetadataItem  {
     private String queryBuilder;
     private Condition parentCondition;
     private List<Parameter> parameters = new ArrayList<Parameter>();
+    private long pluginId;
 
     /**
      * Instantiates a new Condition type.
@@ -141,5 +143,15 @@ public class ConditionType extends MetadataItem  {
     @Override
     public int hashCode() {
         return itemId.hashCode();
+    }
+
+    @Override
+    public long getPluginId() {
+        return pluginId;
+    }
+
+    @Override
+    public void setPluginId(long pluginId) {
+        this.pluginId = pluginId;
     }
 }

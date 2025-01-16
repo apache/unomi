@@ -100,6 +100,7 @@
         <interfaces>
             <value>org.apache.unomi.api.services.DefinitionsService</value>
             <value>org.osgi.framework.SynchronousBundleListener</value>
+            <value>org.apache.unomi.api.services.TenantLifecycleListener</value>
         </interfaces>
     </service>
 
@@ -443,5 +444,25 @@
             <entry key="managed" value="true"/>
         </service-properties>
     </service>
+
+    <!-- Tenant Service -->
+    <bean id="tenantService" class="org.apache.unomi.services.impl.tenants.TenantServiceImpl">
+        <property name="persistenceService" ref="persistenceService"/>
+        <property name="configAdmin" ref="configAdmin"/>
+    </bean>
+
+    <service id="tenantServiceService" ref="tenantService" interface="org.apache.unomi.api.tenants.TenantService">
+        <service-properties>
+            <entry key="service.exported.interfaces" value="*"/>
+        </service-properties>
+    </service>
+
+    <reference-list id="tenantLifecycleListeners" 
+                    interface="org.apache.unomi.api.services.TenantLifecycleListener" 
+                    availability="optional">
+        <reference-listener ref="tenantService" 
+                           bind-method="bindListener" 
+                           unbind-method="unbindListener"/>
+    </reference-list>
 
 </blueprint>
