@@ -18,166 +18,31 @@ package org.apache.unomi.services.impl;
 
 import org.apache.unomi.api.*;
 import org.apache.unomi.api.conditions.Condition;
+import org.apache.unomi.api.tenants.TenantService;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.aggregate.BaseAggregate;
-import org.apache.unomi.persistence.spi.conditions.ConditionEvaluator;
 import org.apache.unomi.persistence.spi.conditions.ConditionEvaluatorDispatcher;
-import org.apache.unomi.persistence.spi.conditions.ConditionEvaluatorDispatcherImpl;
 
-import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+
+import static org.apache.unomi.services.impl.TestTenantService.SYSTEM_TENANT;
 
 /**
  * An in-memory implementation of PersistenceService for testing purposes.
  */
-public class InMemoryPersistenceServiceImpl implements PersistenceService {
+public class InMemoryPersistenceServiceImpl  implements PersistenceService {
     private final Map<String, Item> items = new ConcurrentHashMap<>();
     private ConditionEvaluatorDispatcher conditionEvaluatorDispatcher;
+    private final TenantService tenantService;
 
-    public InMemoryPersistenceServiceImpl() {
+    public InMemoryPersistenceServiceImpl(TenantService tenantService) {
         initializeConditionEvaluators();
+        this.tenantService = tenantService;
     }
 
     public void initializeConditionEvaluators() {
-        ConditionEvaluatorDispatcherImpl dispatcher = new ConditionEvaluatorDispatcherImpl();
-
-        // Add basic condition evaluators
-        dispatcher.addEvaluator("booleanCondition", new ConditionEvaluator() {
-            @Override
-            public boolean eval(Condition condition, Item item, Map<String, Object> context, ConditionEvaluatorDispatcher dispatcher) {
-                String operator = (String) condition.getParameter("operator");
-                List<Condition> subConditions = (List<Condition>) condition.getParameter("subConditions");
-
-                if (subConditions == null || subConditions.isEmpty()) {
-                    return true;
-                }
-
-                boolean isAnd = "and".equalsIgnoreCase(operator);
-
-                for (Condition subCondition : subConditions) {
-                    boolean result = dispatcher.eval(subCondition, item, context);
-                    if (isAnd && !result) {
-                        return false;
-                    } else if (!isAnd && result) {
-                        return true;
-                    }
-                }
-
-                return isAnd;
-            }
-        });
-
-        dispatcher.addEvaluator("propertyCondition", new ConditionEvaluator() {
-            @Override
-            public boolean eval(Condition condition, Item item, Map<String, Object> context, ConditionEvaluatorDispatcher dispatcher) {
-                String propertyName = (String) condition.getParameter("propertyName");
-                String comparisonOperator = (String) condition.getParameter("comparisonOperator");
-                Object expectedValue = condition.getParameter("propertyValue");
-
-                if (propertyName == null || comparisonOperator == null) {
-                    return false;
-                }
-
-                Object actualValue = getPropertyValue(item, propertyName);
-
-                switch (comparisonOperator) {
-                    case "equals":
-                        return Objects.equals(expectedValue, actualValue);
-                    case "notEquals":
-                        return !Objects.equals(expectedValue, actualValue);
-                    case "exists":
-                        return actualValue != null;
-                    case "missing":
-                        return actualValue == null;
-                    case "contains":
-                        return actualValue != null && actualValue.toString().contains(expectedValue.toString());
-                    case "startsWith":
-                        return actualValue != null && actualValue.toString().startsWith(expectedValue.toString());
-                    case "endsWith":
-                        return actualValue != null && actualValue.toString().endsWith(expectedValue.toString());
-                    default:
-                        return false;
-                }
-            }
-
-            private Object getPropertyValue(Item item, String propertyName) {
-                if (item == null || propertyName == null) {
-                    return null;
-                }
-
-                // Handle metadata properties first
-                if (propertyName.startsWith("metadata.")) {
-                    String metadataField = propertyName.substring("metadata.".length());
-                    if (item instanceof MetadataItem) {
-                        Metadata metadata = ((MetadataItem) item).getMetadata();
-                        if (metadata != null) {
-                            if ("tags".equals(metadataField)) {
-                                return metadata.getTags();
-                            } else if ("systemTags".equals(metadataField)) {
-                                return metadata.getSystemTags();
-                            }
-                            // Try to get other metadata fields using reflection
-                            return getFieldValueByReflection(metadata, metadataField);
-                        }
-                    }
-                    return null;
-                }
-
-                // Handle nested properties
-                String[] propertyPath = propertyName.split("\\.");
-                Object currentObject = item;
-
-                for (String property : propertyPath) {
-                    if (currentObject == null) {
-                        return null;
-                    }
-
-                    // Try to get value using reflection
-                    currentObject = getFieldValueByReflection(currentObject, property);
-                }
-
-                return currentObject;
-            }
-
-            private Object getFieldValueByReflection(Object object, String fieldName) {
-                if (object == null || fieldName == null) {
-                    return null;
-                }
-
-                Class<?> clazz = object.getClass();
-                while (clazz != null) {
-                    try {
-                        // First try to find a getter method
-                        String getterName = "get" + fieldName.substring(0, 1).toUpperCase() + fieldName.substring(1);
-                        try {
-                            Method getter = clazz.getDeclaredMethod(getterName);
-                            getter.setAccessible(true);
-                            return getter.invoke(object);
-                        } catch (NoSuchMethodException e) {
-                            // No getter found, try direct field access
-                            try {
-                                Field field = clazz.getDeclaredField(fieldName);
-                                field.setAccessible(true);
-                                return field.get(object);
-                            } catch (NoSuchFieldException nsfe) {
-                                // Try superclass
-                                clazz = clazz.getSuperclass();
-                                continue;
-                            }
-                        }
-                    } catch (IllegalAccessException | InvocationTargetException e) {
-                        // If we can't access the field/method, return null
-                        return null;
-                    }
-                }
-                return null;
-            }
-        });
-
-        this.conditionEvaluatorDispatcher = dispatcher;
+        this.conditionEvaluatorDispatcher = TestConditionEvaluators.createDispatcher();
     }
 
     @Override
@@ -192,7 +57,11 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
     }
 
     private <T extends Item> String getKey(String itemId, Class<T> clazz) {
-        return clazz.getName() + ":" + itemId;
+        return clazz.getName() + ":" + itemId + ":" + getCurrentTenantId();
+    }
+
+    private String getCurrentTenantId() {
+        return tenantService != null ? tenantService.getCurrentTenantId() : SYSTEM_TENANT;
     }
 
     @Override
@@ -202,6 +71,9 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
 
     @Override
     public boolean save(Item item) {
+        if (item.getTenantId() == null) {
+            item.setTenantId(getCurrentTenantId());
+        }
         items.put(getKey(item.getItemId(), (Class<Item>) item.getClass()), item);
         return true;
     }
@@ -218,7 +90,16 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
 
     @Override
     public <T extends Item> T load(String itemId, Class<T> clazz) {
-        return (T) items.get(getKey(itemId, clazz));
+        String currentTenant = getCurrentTenantId();
+        T item = (T) items.get(getKey(itemId, clazz));
+
+        // If not found in current tenant and current tenant is not system, try system tenant
+        if (item == null && currentTenant != null && !currentTenant.equals("system")) {
+            String systemKey = clazz.getName() + ":" + itemId + ":system";
+            item = (T) items.get(systemKey);
+        }
+
+        return item;
     }
 
     @Override
@@ -228,6 +109,7 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
 
     @Override
     public <T extends Item> boolean remove(String itemId, Class<T> clazz) {
+        // Only remove from current tenant
         items.remove(getKey(itemId, clazz));
         return true;
     }
@@ -245,12 +127,28 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
     public <T extends Item> List<T> getAllItems(Class<T> clazz) {
         List<T> result = new ArrayList<>();
         String prefix = clazz.getName() + ":";
+        String currentTenant = getCurrentTenantId();
+
         for (Map.Entry<String, Item> entry : items.entrySet()) {
             if (entry.getKey().startsWith(prefix)) {
-                result.add((T) entry.getValue());
+                Item item = entry.getValue();
+                // Only return items for current tenant or system tenant if current tenant has no override
+                if (item.getTenantId() != null && (item.getTenantId().equals(currentTenant) ||
+                    (item.getTenantId().equals("system") && !hasCurrentTenantOverride(item.getItemId(), clazz)))) {
+                    result.add((T) item);
+                }
             }
         }
         return result;
+    }
+
+    private <T extends Item> boolean hasCurrentTenantOverride(String itemId, Class<T> clazz) {
+        String currentTenant = getCurrentTenantId();
+        if ("system".equals(currentTenant)) {
+            return false;
+        }
+        String tenantKey = clazz.getName() + ":" + itemId + ":" + currentTenant;
+        return items.containsKey(tenantKey);
     }
 
     @Override

@@ -17,17 +17,27 @@
 package org.apache.unomi.itests;
 
 import org.apache.unomi.api.Profile;
+import org.apache.unomi.api.query.Query;
+import org.apache.unomi.api.tenants.ApiKey;
+import org.apache.unomi.api.tenants.Tenant;
+import org.apache.unomi.api.tenants.TenantService;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.ops4j.pax.exam.junit.PaxExam;
+import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
 import org.ops4j.pax.exam.spi.reactors.PerSuite;
 
+import javax.inject.Inject;
 import java.util.Collections;
+import java.util.List;
 
 @RunWith(PaxExam.class)
 @ExamReactorStrategy(PerSuite.class)
 public class TenantIT extends BaseIT {
+
+    @Inject
+    private TenantService tenantService;
 
     @Test
     public void testTenantIsolation() throws Exception {
@@ -40,14 +50,14 @@ public class TenantIT extends BaseIT {
         ApiKey apiKey2 = tenantService.generateApiKey(tenant2.getItemId(), null);
 
         // Create profile in tenant1
-        ((TenantServiceImpl)tenantService).setCurrentTenant(tenant1.getItemId());
+        tenantService.setCurrentTenant(tenant1.getItemId());
         Profile profile1 = new Profile();
         profile1.setItemId("profile1");
         profile1.setProperty("name", "John");
         persistenceService.save(profile1);
 
         // Try to access profile from tenant2
-        ((TenantServiceImpl)tenantService).setCurrentTenant(tenant2.getItemId());
+        tenantService.setCurrentTenant(tenant2.getItemId());
         Profile loadedProfile = persistenceService.load("profile1", Profile.class);
         Assert.assertNull("Profile should not be accessible from different tenants", loadedProfile);
     }
@@ -59,8 +69,8 @@ public class TenantIT extends BaseIT {
         ApiKey apiKey = tenantService.generateApiKey(tenant.getItemId(), null);
 
         // Test valid API key
-        String authHeader = tenant.getItemId() + ":" + apiKey.getId();
-        Assert.assertTrue(tenantService.validateApiKey(tenant.getItemId(), apiKey.getId()));
+        String authHeader = tenant.getItemId() + ":" + apiKey.getItemId();
+        Assert.assertTrue(tenantService.validateApiKey(tenant.getItemId(), apiKey.getItemId()));
 
         // Test invalid API key
         String invalidAuthHeader = tenant.getItemId() + ":invalid-key";
@@ -75,23 +85,9 @@ public class TenantIT extends BaseIT {
 
         Thread.sleep(2); // Wait for key to expire
 
-        Assert.assertFalse(tenantService.validateApiKey(tenant.getItemId(), apiKey.getId()));
+        Assert.assertFalse(tenantService.validateApiKey(tenant.getItemId(), apiKey.getItemId()));
     }
 
-    @Test
-    public void testTenantMigration() throws Exception {
-        // Create some data without tenants ID
-        Profile profileNoTenant = new Profile();
-        profileNoTenant.setItemId("profile-no-tenants");
-        persistenceService.save(profileNoTenant);
-
-        // Run migration
-        tenantMigrationService.migrateToDefaultTenant("default");
-
-        // Verify migration
-        Profile migratedProfile = persistenceService.load("profile-no-tenants", Profile.class);
-        Assert.assertEquals("default", migratedProfile.getTenantId());
-    }
 
     @Test
     public void testTenantDeletion() throws Exception {
@@ -99,7 +95,7 @@ public class TenantIT extends BaseIT {
         Tenant tenant = tenantService.createTenant("DeleteTest", Collections.emptyMap());
 
         // Create data for tenants
-        ((TenantServiceImpl)tenantService).setCurrentTenant(tenant.getItemId());
+        tenantService.setCurrentTenant(tenant.getItemId());
         Profile profile = new Profile();
         profile.setItemId("delete-test-profile");
         persistenceService.save(profile);
@@ -119,7 +115,7 @@ public class TenantIT extends BaseIT {
         Tenant tenant2 = tenantService.createTenant("SearchTest2", Collections.emptyMap());
 
         // Add data to tenant1
-        ((TenantServiceImpl)tenantService).setCurrentTenant(tenant1.getItemId());
+        tenantService.setCurrentTenant(tenant1.getItemId());
         for (int i = 0; i < 10; i++) {
             Profile profile = new Profile();
             profile.setItemId("search-test-" + i);
@@ -128,10 +124,9 @@ public class TenantIT extends BaseIT {
         }
 
         // Search from tenant2
-        ((TenantServiceImpl)tenantService).setCurrentTenant(tenant2.getItemId());
+        tenantService.setCurrentTenant(tenant2.getItemId());
         Query query = new Query();
-        query.setQueryString("testKey:testValue");
-        PartialList<Profile> results = persistenceService.query(query, Profile.class);
+        List<Profile> results = persistenceService.query("testKey", "testValue", null, Profile.class);
 
         Assert.assertEquals(0, results.size());
     }

@@ -321,12 +321,18 @@ public class DefinitionsServiceImpl extends AbstractTenantAwareService implement
             return;
         }
 
-        // Remove from persistence service
-        persistenceService.remove(conditionType.getItemId(), ConditionType.class);
-
-        // Remove from all tenant caches
-        conditionTypeByTenantId.values().forEach(cache ->
-            cache.remove(conditionType.getItemId()));
+        // Only remove from system tenant since that's where bundle types are created
+        String originalTenant = tenantService.getCurrentTenantId();
+        try {
+            tenantService.setCurrentTenant(SYSTEM_TENANT);
+            persistenceService.remove(conditionType.getItemId(), ConditionType.class);
+            Map<String, ConditionType> systemCache = conditionTypeByTenantId.get(SYSTEM_TENANT);
+            if (systemCache != null) {
+                systemCache.remove(conditionType.getItemId());
+            }
+        } finally {
+            tenantService.setCurrentTenant(originalTenant);
+        }
     }
 
     private void removeActionTypeFromAllTenants(ActionType actionType) {
@@ -334,12 +340,18 @@ public class DefinitionsServiceImpl extends AbstractTenantAwareService implement
             return;
         }
 
-        // Remove from persistence service
-        persistenceService.remove(actionType.getItemId(), ActionType.class);
-
-        // Remove from all tenant caches
-        actionTypeByTenantId.values().forEach(cache ->
-            cache.remove(actionType.getItemId()));
+        // Only remove from system tenant since that's where bundle types are created
+        String originalTenant = tenantService.getCurrentTenantId();
+        try {
+            tenantService.setCurrentTenant(SYSTEM_TENANT);
+            persistenceService.remove(actionType.getItemId(), ActionType.class);
+            Map<String, ActionType> systemCache = actionTypeByTenantId.get(SYSTEM_TENANT);
+            if (systemCache != null) {
+                systemCache.remove(actionType.getItemId());
+            }
+        } finally {
+            tenantService.setCurrentTenant(originalTenant);
+        }
     }
 
     private void removeValueTypeFromAllTenants(ValueType valueType) {
@@ -347,24 +359,36 @@ public class DefinitionsServiceImpl extends AbstractTenantAwareService implement
             return;
         }
 
-        // Remove from value type caches
-        valueTypeByTenantId.values().forEach(cache -> cache.remove(valueType.getId()));
+        // Only remove from system tenant since that's where bundle types are created
+        String originalTenant = tenantService.getCurrentTenantId();
+        try {
+            tenantService.setCurrentTenant(SYSTEM_TENANT);
+            // Remove from value type cache
+            Map<String, ValueType> systemCache = valueTypeByTenantId.get(SYSTEM_TENANT);
+            if (systemCache != null) {
+                systemCache.remove(valueType.getId());
+            }
 
-        // Remove from tag caches
-        Set<String> tags = valueType.getTags();
-        if (tags != null) {
-            valueTypeByTagByTenantId.values().forEach(tagCache ->
-                tags.forEach(tag -> {
-                    Set<ValueType> valueTypes = tagCache.get(tag);
-                    if (valueTypes != null) {
-                        synchronized(valueTypes) {
-                            valueTypes.remove(valueType);
-                            if (valueTypes.isEmpty()) {
-                                tagCache.remove(tag);
+            // Remove from tag cache
+            Set<String> tags = valueType.getTags();
+            if (tags != null) {
+                Map<String, Set<ValueType>> systemTagCache = valueTypeByTagByTenantId.get(SYSTEM_TENANT);
+                if (systemTagCache != null) {
+                    tags.forEach(tag -> {
+                        Set<ValueType> valueTypes = systemTagCache.get(tag);
+                        if (valueTypes != null) {
+                            synchronized(valueTypes) {
+                                valueTypes.remove(valueType);
+                                if (valueTypes.isEmpty()) {
+                                    systemTagCache.remove(tag);
+                                }
                             }
                         }
-                    }
-                }));
+                    });
+                }
+            }
+        } finally {
+            tenantService.setCurrentTenant(originalTenant);
         }
     }
 
@@ -372,8 +396,11 @@ public class DefinitionsServiceImpl extends AbstractTenantAwareService implement
         if (strategyType == null || strategyType.getId() == null) {
             return;
         }
-        propertyMergeStrategyTypeByTenantId.values()
-            .forEach(cache -> cache.remove(strategyType.getId()));
+        // Only remove from system tenant since that's where bundle types are created
+        Map<String, PropertyMergeStrategyType> systemCache = propertyMergeStrategyTypeByTenantId.get(SYSTEM_TENANT);
+        if (systemCache != null) {
+            systemCache.remove(strategyType.getId());
+        }
     }
 
     private void removeSystemTenantTypes() {
