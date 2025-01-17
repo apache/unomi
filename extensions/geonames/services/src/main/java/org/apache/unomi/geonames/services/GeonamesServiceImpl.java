@@ -37,6 +37,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
+import static org.apache.unomi.api.tenants.TenantService.SYSTEM_TENANT;
+
 public class GeonamesServiceImpl implements GeonamesService {
     public static final String GEOCODING_MAX_DISTANCE = "100km";
     private static final Logger LOGGER = LoggerFactory.getLogger(GeonamesServiceImpl.class.getName());
@@ -86,7 +88,7 @@ public class GeonamesServiceImpl implements GeonamesService {
 
     private <T> T withSystemTenant(java.util.function.Supplier<T> supplier) {
         String currentTenant = tenantService.getCurrentTenantId();
-        tenantService.setCurrentTenant("system");
+        tenantService.setCurrentTenant(SYSTEM_TENANT);
         try {
             return supplier.get();
         } finally {
@@ -96,7 +98,7 @@ public class GeonamesServiceImpl implements GeonamesService {
 
     private void withSystemTenant(Runnable runnable) {
         String currentTenant = tenantService.getCurrentTenantId();
-        tenantService.setCurrentTenant("system");
+        tenantService.setCurrentTenant(SYSTEM_TENANT);
         try {
             runnable.run();
         } finally {
@@ -286,7 +288,7 @@ public class GeonamesServiceImpl implements GeonamesService {
             Condition andCondition = getItemsInChildrenQuery(items, CITIES_FEATURE_CODES);
             Condition featureCodeCondition = ((List<Condition>) andCondition.getParameter("subConditions")).get(0);
             int level = items.size();
-    
+
             featureCodeCondition.setParameter("propertyValues", ORDERED_FEATURES.get(level));
             PartialList<GeonameEntry> r = persistenceService.query(andCondition, null, GeonameEntry.class, offset, size);
             while (r.size() == 0 && level < ORDERED_FEATURES.size() - 1) {

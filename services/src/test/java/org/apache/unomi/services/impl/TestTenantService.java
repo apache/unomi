@@ -12,8 +12,6 @@ import java.util.Map;
 public class TestTenantService implements TenantService {
     private ThreadLocal<String> currentTenantId = new ThreadLocal<>();
 
-    public static final String SYSTEM_TENANT = "system";
-
     public void setCurrentTenantId(String tenantId) {
         currentTenantId.set(tenantId);
     }

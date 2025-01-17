@@ -28,6 +28,12 @@ import java.util.Map;
 public interface TenantService {
 
     /**
+     * The ID of the system tenant, which is used for system-wide configurations and data.
+     * The system tenant is special and cannot be removed.
+     */
+    String SYSTEM_TENANT = "system";
+
+    /**
      * Creates a new tenant in the system with the specified name and properties.
      *
      * @param name       the name of the tenant to create

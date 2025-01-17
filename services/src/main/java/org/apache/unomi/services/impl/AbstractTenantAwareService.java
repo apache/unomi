@@ -22,6 +22,8 @@ import org.apache.unomi.persistence.spi.PersistenceService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.apache.unomi.api.tenants.TenantService.SYSTEM_TENANT;
+
 /**
  * Base class for services that need to be tenant-aware and handle inheritance from the system tenant.
  */
@@ -59,8 +61,8 @@ public abstract class AbstractTenantAwareService {
         T item = persistenceService.load(itemId, itemClass);
         if (item == null) {
             String currentTenant = tenantService.getCurrentTenantId();
-            if (currentTenant != null && !currentTenant.equals("system")) {
-                tenantService.setCurrentTenant("system");
+            if (currentTenant != null && !currentTenant.equals(SYSTEM_TENANT)) {
+                tenantService.setCurrentTenant(SYSTEM_TENANT);
                 try {
                     item = persistenceService.load(itemId, itemClass);
                 } finally {
@@ -92,7 +94,7 @@ public abstract class AbstractTenantAwareService {
      */
     protected boolean isSystemTenant() {
         String currentTenant = tenantService.getCurrentTenantId();
-        return "system".equals(currentTenant);
+        return SYSTEM_TENANT.equals(currentTenant);
     }
 
     /**
@@ -102,7 +104,7 @@ public abstract class AbstractTenantAwareService {
      */
     protected void withSystemTenant(Runnable runnable) {
         String currentTenant = tenantService.getCurrentTenantId();
-        tenantService.setCurrentTenant("system");
+        tenantService.setCurrentTenant(SYSTEM_TENANT);
         try {
             runnable.run();
         } finally {
@@ -118,7 +120,7 @@ public abstract class AbstractTenantAwareService {
      */
     protected <T> T withSystemTenant(java.util.function.Supplier<T> supplier) {
         String currentTenant = tenantService.getCurrentTenantId();
-        tenantService.setCurrentTenant("system");
+        tenantService.setCurrentTenant(SYSTEM_TENANT);
         try {
             return supplier.get();
         } finally {

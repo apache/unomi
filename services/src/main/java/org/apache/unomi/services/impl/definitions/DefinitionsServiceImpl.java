@@ -48,6 +48,8 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
+import static org.apache.unomi.api.tenants.TenantService.SYSTEM_TENANT;
+
 @Component(service = {DefinitionsService.class, TenantLifecycleListener.class})
 public class DefinitionsServiceImpl extends AbstractTenantAwareService implements DefinitionsService, TenantLifecycleListener, SynchronousBundleListener {
 
@@ -131,7 +133,6 @@ public class DefinitionsServiceImpl extends AbstractTenantAwareService implement
     private BundleContext bundleContext;
 
     private static final int MAX_RECURSIVE_CONDITIONS = 1000; // Prevent stack overflow
-    private static final String SYSTEM_TENANT = "system";
     private static final String BOOLEAN_CONDITION_TYPE = "booleanCondition";
     private static final String AND_OPERATOR = "and";
     private static final String SUB_CONDITIONS_PARAM = "subConditions";
@@ -484,7 +485,7 @@ public class DefinitionsServiceImpl extends AbstractTenantAwareService implement
         loadPredefinedTypes(bundleContext, "META-INF/cxs/conditions", ConditionType.class, type -> {
             synchronized(pluginTypes) {
                 type.setPluginId(bundleContext.getBundle().getBundleId());
-                type.setTenantId("system");
+                type.setTenantId(SYSTEM_TENANT);
                 setConditionType(type);
                 List<PluginType> bundlePluginTypes = pluginTypes.computeIfAbsent(
                     bundleContext.getBundle().getBundleId(), k -> new CopyOnWriteArrayList<>());
@@ -497,7 +498,7 @@ public class DefinitionsServiceImpl extends AbstractTenantAwareService implement
         loadPredefinedTypes(bundleContext, "META-INF/cxs/actions", ActionType.class, type -> {
             synchronized(pluginTypes) {
                 type.setPluginId(bundleContext.getBundle().getBundleId());
-                type.setTenantId("system");
+                type.setTenantId(SYSTEM_TENANT);
                 setActionType(type);
                 List<PluginType> bundlePluginTypes = pluginTypes.computeIfAbsent(
                     bundleContext.getBundle().getBundleId(), k -> new CopyOnWriteArrayList<>());
@@ -525,7 +526,7 @@ public class DefinitionsServiceImpl extends AbstractTenantAwareService implement
                 List<PluginType> bundlePluginTypes = pluginTypes.computeIfAbsent(
                     bundleContext.getBundle().getBundleId(), k -> new CopyOnWriteArrayList<>());
                 bundlePluginTypes.add(type);
-                getPropertyMergeStrategyTypeCache("system").put(type.getId(), type);
+                getPropertyMergeStrategyTypeCache(SYSTEM_TENANT).put(type.getId(), type);
             }
         });
     }
@@ -833,7 +834,7 @@ public class DefinitionsServiceImpl extends AbstractTenantAwareService implement
         String currentTenant = tenantService.getCurrentTenantId();
         PropertyMergeStrategyType type = getPropertyMergeStrategyTypeCache(currentTenant).get(id);
         if (type == null) {
-            type = getPropertyMergeStrategyTypeCache("system").get(id);
+            type = getPropertyMergeStrategyTypeCache(SYSTEM_TENANT).get(id);
         }
         return type;
     }

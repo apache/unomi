@@ -94,8 +94,8 @@ public class InMemoryPersistenceServiceImpl  implements PersistenceService {
         T item = (T) items.get(getKey(itemId, clazz));
 
         // If not found in current tenant and current tenant is not system, try system tenant
-        if (item == null && currentTenant != null && !currentTenant.equals("system")) {
-            String systemKey = clazz.getName() + ":" + itemId + ":system";
+        if (item == null && currentTenant != null && !currentTenant.equals(SYSTEM_TENANT)) {
+            String systemKey = clazz.getName() + ":" + itemId + ":" + SYSTEM_TENANT;
             item = (T) items.get(systemKey);
         }
 
@@ -134,7 +134,7 @@ public class InMemoryPersistenceServiceImpl  implements PersistenceService {
                 Item item = entry.getValue();
                 // Only return items for current tenant or system tenant if current tenant has no override
                 if (item.getTenantId() != null && (item.getTenantId().equals(currentTenant) ||
-                    (item.getTenantId().equals("system") && !hasCurrentTenantOverride(item.getItemId(), clazz)))) {
+                    (item.getTenantId().equals(SYSTEM_TENANT) && !hasCurrentTenantOverride(item.getItemId(), clazz)))) {
                     result.add((T) item);
                 }
             }
@@ -144,7 +144,7 @@ public class InMemoryPersistenceServiceImpl  implements PersistenceService {
 
     private <T extends Item> boolean hasCurrentTenantOverride(String itemId, Class<T> clazz) {
         String currentTenant = getCurrentTenantId();
-        if ("system".equals(currentTenant)) {
+        if (SYSTEM_TENANT.equals(currentTenant)) {
             return false;
         }
         String tenantKey = clazz.getName() + ":" + itemId + ":" + currentTenant;
