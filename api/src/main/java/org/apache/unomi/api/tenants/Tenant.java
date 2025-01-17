@@ -23,6 +23,8 @@ import java.util.*;
 /**
  * Represents a tenant in the system.
  * A tenant is an isolated entity within the system with its own users, data, and configuration.
+ * Each tenant has its own set of API keys (public and private) for authentication and authorization,
+ * resource quotas to limit usage, and event permissions to control access to specific event types.
  * This class extends the base Item class and provides functionality for managing tenant
  * settings, resource quotas, and lifecycle.
  */
@@ -59,11 +61,14 @@ public class Tenant extends Item {
 
     /**
      * The resource quota limits for the tenant.
+     * This includes limits on profiles, events, and requests.
      */
     private ResourceQuota resourceQuota;
 
     /**
-     * The list of API keys associated with the tenant.
+     * The list of all API keys (both active and historical) associated with the tenant.
+     * This list maintains a history of all API keys that have been generated for the tenant,
+     * including both public and private keys, for auditing purposes.
      */
     private List<ApiKey> apiKeys;
 
@@ -73,7 +78,35 @@ public class Tenant extends Item {
     private Map<String, Object> properties;
 
     /**
+     * The currently active private API key for the tenant.
+     * This key is used for secure operations and administrative tasks.
+     * It should be kept confidential and only used for server-to-server communication.
+     */
+    private String privateApiKey;
+
+    /**
+     * The currently active public API key for the tenant.
+     * This key is used for client-side operations and can be safely exposed
+     * in client applications.
+     */
+    private String publicApiKey;
+
+    /**
+     * The set of event types that require special permissions for this tenant.
+     * Events in this set will be subject to additional authorization checks
+     * before being processed.
+     */
+    private Set<String> restrictedEventPermissions = new HashSet<>();
+
+    /**
+     * The set of IP addresses or CIDR ranges that are authorized to make requests
+     * for this tenant. Requests from IP addresses not in this set will be rejected.
+     */
+    private Set<String> authorizedIPs = new HashSet<>();
+
+    /**
      * Default constructor that initializes the tenant as an Item.
+     * Sets the item type to TENANT and initializes empty collections.
      */
     public Tenant() {
         super();
@@ -179,7 +212,8 @@ public class Tenant extends Item {
     }
 
     /**
-     * Gets the list of API keys associated with the tenant.
+     * Gets the list of all API keys associated with the tenant.
+     * This includes both active and historical keys for auditing purposes.
      * @return the list of API keys
      */
     public List<ApiKey> getApiKeys() {
@@ -210,25 +244,69 @@ public class Tenant extends Item {
         this.properties = properties;
     }
 
-    private String itemId;
-    private String privateApiKey;
-    private String publicApiKey;
-    private Set<String> restrictedEventPermissions = new HashSet<>();
-    private Set<String> authorizedIPs = new HashSet<>();
-
+    /**
+     * Gets the set of event types that require special permissions for this tenant.
+     * @return the set of restricted event types
+     */
     public Set<String> getRestrictedEventPermissions() {
         return restrictedEventPermissions;
     }
 
+    /**
+     * Sets the event types that require special permissions for this tenant.
+     * @param restrictedEventPermissions the set of restricted event types to set
+     */
     public void setRestrictedEventPermissions(Set<String> restrictedEventPermissions) {
         this.restrictedEventPermissions = restrictedEventPermissions;
     }
 
+    /**
+     * Gets the set of authorized IP addresses or CIDR ranges for this tenant.
+     * @return the set of authorized IP addresses/ranges
+     */
     public Set<String> getAuthorizedIPs() {
         return authorizedIPs;
     }
 
+    /**
+     * Sets the authorized IP addresses or CIDR ranges for this tenant.
+     * @param authorizedIPs the set of authorized IP addresses/ranges to set
+     */
     public void setAuthorizedIPs(Set<String> authorizedIPs) {
         this.authorizedIPs = authorizedIPs;
+    }
+
+    /**
+     * Gets the currently active private API key for the tenant.
+     * This key should be used for secure operations and administrative tasks.
+     * @return the active private API key
+     */
+    public String getPrivateApiKey() {
+        return privateApiKey;
+    }
+
+    /**
+     * Sets the active private API key for the tenant.
+     * @param privateApiKey the private API key to set as active
+     */
+    public void setPrivateApiKey(String privateApiKey) {
+        this.privateApiKey = privateApiKey;
+    }
+
+    /**
+     * Gets the currently active public API key for the tenant.
+     * This key can be safely used in client-side applications.
+     * @return the active public API key
+     */
+    public String getPublicApiKey() {
+        return publicApiKey;
+    }
+
+    /**
+     * Sets the active public API key for the tenant.
+     * @param publicApiKey the public API key to set as active
+     */
+    public void setPublicApiKey(String publicApiKey) {
+        this.publicApiKey = publicApiKey;
     }
 }

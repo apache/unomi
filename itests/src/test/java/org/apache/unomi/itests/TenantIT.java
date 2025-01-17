@@ -16,12 +16,24 @@
  */
 package org.apache.unomi.itests;
 
+import org.apache.http.client.methods.HttpDelete;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.client.methods.HttpPut;
+import org.apache.http.entity.ContentType;
+import org.apache.http.entity.StringEntity;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.util.EntityUtils;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.tenants.ApiKey;
+import org.apache.unomi.api.tenants.ResourceQuota;
 import org.apache.unomi.api.tenants.Tenant;
 import org.apache.unomi.api.tenants.TenantService;
+import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.ops4j.pax.exam.junit.PaxExam;
@@ -30,14 +42,110 @@ import org.ops4j.pax.exam.spi.reactors.PerSuite;
 
 import javax.inject.Inject;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @RunWith(PaxExam.class)
 @ExamReactorStrategy(PerSuite.class)
 public class TenantIT extends BaseIT {
 
+    private static final String REST_ENDPOINT = "http://localhost:8181/cxs/tenants";
+    private CloseableHttpClient httpClient;
+    private CustomObjectMapper objectMapper;
+
     @Inject
     private TenantService tenantService;
+
+    @Before
+    public void setUp() {
+        httpClient = HttpClients.createDefault();
+        objectMapper = new CustomObjectMapper();
+    }
+
+    @Test
+    public void testRestEndpoint() throws Exception {
+        // Test create tenant
+        Map<String, Object> properties = new HashMap<>();
+        properties.put("testProperty", "testValue");
+
+        Map<String, Object> requestBody = new HashMap<>();
+        requestBody.put("name", "RestTestTenant");
+        requestBody.put("properties", properties);
+
+        HttpPost createRequest = new HttpPost(REST_ENDPOINT);
+        createRequest.setEntity(new StringEntity(objectMapper.writeValueAsString(requestBody), ContentType.APPLICATION_JSON));
+
+        String createResponse = EntityUtils.toString(httpClient.execute(createRequest).getEntity());
+        Tenant createdTenant = objectMapper.readValue(createResponse, Tenant.class);
+
+        Assert.assertNotNull("Created tenant should not be null", createdTenant);
+        Assert.assertEquals("RestTestTenant", createdTenant.getName());
+        Assert.assertNotNull("Tenant should have public API key", createdTenant.getPublicApiKey());
+        Assert.assertNotNull("Tenant should have private API key", createdTenant.getPrivateApiKey());
+
+        // Test get tenant
+        HttpGet getRequest = new HttpGet(REST_ENDPOINT + "/" + createdTenant.getItemId());
+        String getResponse = EntityUtils.toString(httpClient.execute(getRequest).getEntity());
+        Tenant retrievedTenant = objectMapper.readValue(getResponse, Tenant.class);
+
+        Assert.assertEquals("Retrieved tenant should match created tenant", createdTenant.getItemId(), retrievedTenant.getItemId());
+
+        // Test update tenant
+        retrievedTenant.setName("UpdatedRestTestTenant");
+        ResourceQuota quota = new ResourceQuota();
+        quota.setMaxProfiles(1000L);
+        quota.setMaxEvents(5000L);
+        retrievedTenant.setResourceQuota(quota);
+
+        HttpPut updateRequest = new HttpPut(REST_ENDPOINT + "/" + retrievedTenant.getItemId());
+        updateRequest.setEntity(new StringEntity(objectMapper.writeValueAsString(retrievedTenant), ContentType.APPLICATION_JSON));
+
+        String updateResponse = EntityUtils.toString(httpClient.execute(updateRequest).getEntity());
+        Tenant updatedTenant = objectMapper.readValue(updateResponse, Tenant.class);
+
+        Assert.assertEquals("Tenant name should be updated", "UpdatedRestTestTenant", updatedTenant.getName());
+        Assert.assertEquals("Tenant quota should be updated", 1000L, updatedTenant.getResourceQuota().getMaxProfiles().longValue());
+
+        // Test generate new API key
+        String generateKeyUrl = String.format("%s/%s/apikeys?type=%s&validityDays=30",
+            REST_ENDPOINT, updatedTenant.getItemId(), ApiKey.ApiKeyType.PUBLIC.name());
+        HttpPost generateKeyRequest = new HttpPost(generateKeyUrl);
+
+        String generateKeyResponse = EntityUtils.toString(httpClient.execute(generateKeyRequest).getEntity());
+        ApiKey newApiKey = objectMapper.readValue(generateKeyResponse, ApiKey.class);
+
+        Assert.assertNotNull("New API key should not be null", newApiKey);
+        Assert.assertEquals("API key type should match requested type", ApiKey.ApiKeyType.PUBLIC, newApiKey.getKeyType());
+
+        // Test validate API key
+        String validateKeyUrl = String.format("%s/%s/apikeys/validate?key=%s&type=%s",
+            REST_ENDPOINT, updatedTenant.getItemId(), newApiKey.getKey(), ApiKey.ApiKeyType.PUBLIC.name());
+        HttpGet validateKeyRequest = new HttpGet(validateKeyUrl);
+
+        int validateResponse = httpClient.execute(validateKeyRequest).getStatusLine().getStatusCode();
+        Assert.assertEquals("API key validation should succeed", 200, validateResponse);
+
+        // Test validate with wrong type
+        String validateWrongTypeUrl = String.format("%s/%s/apikeys/validate?key=%s&type=%s",
+            REST_ENDPOINT, updatedTenant.getItemId(), newApiKey.getKey(), ApiKey.ApiKeyType.PRIVATE.name());
+        HttpGet validateWrongTypeRequest = new HttpGet(validateWrongTypeUrl);
+
+        int validateWrongTypeResponse = httpClient.execute(validateWrongTypeRequest).getStatusLine().getStatusCode();
+        Assert.assertEquals("API key validation with wrong type should fail", 401, validateWrongTypeResponse);
+
+        // Test delete tenant
+        HttpDelete deleteRequest = new HttpDelete(REST_ENDPOINT + "/" + updatedTenant.getItemId());
+        int deleteResponse = httpClient.execute(deleteRequest).getStatusLine().getStatusCode();
+
+        Assert.assertEquals("Delete response should be 204", 204, deleteResponse);
+
+        // Verify tenant is deleted
+        HttpGet verifyDeleteRequest = new HttpGet(REST_ENDPOINT + "/" + updatedTenant.getItemId());
+        int verifyDeleteResponse = httpClient.execute(verifyDeleteRequest).getStatusLine().getStatusCode();
+
+        Assert.assertEquals("Get deleted tenant should return 404", 404, verifyDeleteResponse);
+    }
 
     @Test
     public void testTenantIsolation() throws Exception {
@@ -146,13 +254,13 @@ public class TenantIT extends BaseIT {
         Assert.assertEquals("Private key should have correct type", ApiKey.ApiKeyType.PRIVATE, privateKey.getKeyType());
 
         // Test key type validation
-        Assert.assertTrue("Public key should validate as public", 
+        Assert.assertTrue("Public key should validate as public",
             tenantService.validateApiKeyWithType(tenant.getItemId(), publicKey.getKey(), ApiKey.ApiKeyType.PUBLIC));
-        Assert.assertFalse("Public key should not validate as private", 
+        Assert.assertFalse("Public key should not validate as private",
             tenantService.validateApiKeyWithType(tenant.getItemId(), publicKey.getKey(), ApiKey.ApiKeyType.PRIVATE));
-        Assert.assertTrue("Private key should validate as private", 
+        Assert.assertTrue("Private key should validate as private",
             tenantService.validateApiKeyWithType(tenant.getItemId(), privateKey.getKey(), ApiKey.ApiKeyType.PRIVATE));
-        Assert.assertFalse("Private key should not validate as public", 
+        Assert.assertFalse("Private key should not validate as public",
             tenantService.validateApiKeyWithType(tenant.getItemId(), privateKey.getKey(), ApiKey.ApiKeyType.PUBLIC));
     }
 
