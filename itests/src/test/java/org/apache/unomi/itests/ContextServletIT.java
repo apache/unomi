@@ -24,6 +24,9 @@ import org.apache.unomi.api.*;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.segments.Scoring;
 import org.apache.unomi.api.segments.Segment;
+import org.apache.unomi.api.tenants.ApiKey;
+import org.apache.unomi.api.tenants.Tenant;
+import org.apache.unomi.api.tenants.TenantService;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.junit.After;
 import org.junit.Before;
@@ -33,26 +36,16 @@ import org.ops4j.pax.exam.junit.PaxExam;
 import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
 import org.ops4j.pax.exam.spi.reactors.PerSuite;
 
+import javax.inject.Inject;
 import java.io.File;
 import java.net.URI;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 
 import static org.hamcrest.core.IsCollectionContaining.hasItem;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThat;
+import static org.junit.Assert.*;
 
 /**
  * Created by Ron Barabash on 5/4/2020.
@@ -80,6 +73,9 @@ public class ContextServletIT extends BaseIT {
     public static final String TEST_SCOPE = "test-scope";
 
     private Profile profile;
+
+    @Inject
+    private TenantService tenantService;
 
     @Before
     public void setUp() throws InterruptedException {
@@ -900,6 +896,35 @@ public class ContextServletIT extends BaseIT {
         contextRequest.setRequiredProfileProperties(Arrays.asList("*"));
         request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
         assertEquals(TestUtils.executeContextJSONRequest(request, sessionId).getContextResponse().getProfileProperties().get("customProperty"), ("concealedValue"));
+    }
+
+    @Test
+    public void testContextRequestWithPublicApiKey() throws Exception {
+        // Create tenant with API keys
+        Tenant tenant = tenantService.createTenant("ContextApiKeyTest", Collections.emptyMap());
+        ApiKey publicKey = tenantService.getApiKey(tenant.getItemId(), ApiKey.ApiKeyType.PUBLIC);
+
+        // Create context request with public API key
+        ContextRequest contextRequest = new ContextRequest();
+        contextRequest.setSessionId(TEST_SESSION_ID);
+        contextRequest.setPublicApiKey(publicKey.getKey());
+
+        // Send request
+        HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
+        request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
+        TestUtils.RequestResponse response = TestUtils.executeContextJSONRequest(request, TEST_SESSION_ID);
+
+        // Verify response
+        ContextResponse contextResponse = response.getContextResponse();
+        assertNotNull("Context response should not be null", contextResponse);
+
+        // Test with invalid API key
+        contextRequest.setPublicApiKey("invalid-key");
+        request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
+        response = TestUtils.executeContextJSONRequest(request, TEST_SESSION_ID);
+
+        // Verify error response for invalid key
+        assertEquals("Should receive unauthorized response", 401, response.getStatusCode());
     }
 
     private Boolean getPersistedControlGroupStatus(SystemPropertiesItem systemPropertiesItem, String personalizationId) {

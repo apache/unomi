@@ -27,6 +27,8 @@ import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.EventListenerService;
 import org.apache.unomi.api.services.EventService;
+import org.apache.unomi.api.tenants.Tenant;
+import org.apache.unomi.api.tenants.TenantService;
 import org.apache.unomi.api.utils.ParserHelper;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.aggregate.TermsAggregate;
@@ -39,7 +41,7 @@ import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 public class EventServiceImpl implements EventService {
-    private static final Logger LOGGER = LoggerFactory.getLogger(EventServiceImpl.class.getName());
+    private static final Logger LOGGER = LoggerFactory.getLogger(EventServiceImpl.class);
     private static final int MAX_RECURSION_DEPTH = 10;
 
     private List<EventListenerService> eventListeners = new CopyOnWriteArrayList<EventListenerService>();
@@ -48,40 +50,13 @@ public class EventServiceImpl implements EventService {
 
     private DefinitionsService definitionsService;
 
+    private TenantService tenantService;
+
     private BundleContext bundleContext;
 
     private Set<String> predefinedEventTypeIds = new LinkedHashSet<String>();
 
     private Set<String> restrictedEventTypeIds = new LinkedHashSet<String>();
-
-    private Map<String, ThirdPartyServer> thirdPartyServers = new HashMap<>();
-
-    public void setThirdPartyConfiguration(Map<String, String> thirdPartyConfiguration) {
-        this.thirdPartyServers = new HashMap<>();
-        for (Map.Entry<String, String> entry : thirdPartyConfiguration.entrySet()) {
-            String[] keys = StringUtils.split(entry.getKey(),'.');
-            if (keys[0].equals("thirdparty")) {
-                if (!thirdPartyServers.containsKey(keys[1])) {
-                    thirdPartyServers.put(keys[1], new ThirdPartyServer(keys[1]));
-                }
-                ThirdPartyServer thirdPartyServer = thirdPartyServers.get(keys[1]);
-                if (keys[2].equals("allowedEvents")) {
-                    HashSet<String> allowedEvents = new HashSet<>(Arrays.asList(StringUtils.split(entry.getValue(), ',')));
-                    restrictedEventTypeIds.addAll(allowedEvents);
-                    thirdPartyServer.setAllowedEvents(allowedEvents);
-                } else if (keys[2].equals("key")) {
-                    thirdPartyServer.setKey(entry.getValue());
-                } else if (keys[2].equals("ipAddresses")) {
-                    Set<IPAddress> ipAddresses = new HashSet<>();
-                    for (String ip : StringUtils.split(entry.getValue(), ',')) {
-                        IPAddress ipAddress = new IPAddressString(ip.trim()).getAddress();
-                        ipAddresses.add(ipAddress);
-                    }
-                    thirdPartyServer.setIpAddresses(ipAddresses);
-                }
-            }
-        }
-    }
 
     public void setPredefinedEventTypeIds(Set<String> predefinedEventTypeIds) {
         this.predefinedEventTypeIds = predefinedEventTypeIds;
@@ -99,41 +74,73 @@ public class EventServiceImpl implements EventService {
         this.definitionsService = definitionsService;
     }
 
+    public void setTenantService(TenantService tenantService) {
+        this.tenantService = tenantService;
+    }
+
     public void setBundleContext(BundleContext bundleContext) {
         this.bundleContext = bundleContext;
     }
 
-    public boolean isEventAllowed(Event event, String thirdPartyId) {
-        if (restrictedEventTypeIds.contains(event.getEventType())) {
-            return thirdPartyServers.containsKey(thirdPartyId) && thirdPartyServers.get(thirdPartyId).getAllowedEvents().contains(event.getEventType());
+    @Override
+    public boolean isEventAllowedForTenant(Event event, String tenantId, String sourceIP) {
+        if (event == null || tenantId == null) {
+            return false;
         }
-        return true;
-    }
 
-    public String authenticateThirdPartyServer(String key, String ip) {
-        LOGGER.debug("Authenticating third party server with key: {} and IP: {}", key, ip);
-        if (key != null) {
-            for (Map.Entry<String, ThirdPartyServer> entry : thirdPartyServers.entrySet()) {
-                ThirdPartyServer server = entry.getValue();
-                if (server.getKey().equals(key)) {
-                    // This is a fix to support proper IPv6 parsing
-                    if (ip != null) {
-                        if (ip.startsWith("[") && ip.endsWith("]")) {
-                            // This can happen with IPv6 addresses, we must remove the markers since our IPAddress library doesn't support them.
-                            ip = ip.substring(1, ip.length() - 1);
+        // First check if the event type is restricted
+        if (!restrictedEventTypeIds.contains(event.getEventType())) {
+            return true;  // Non-restricted events are always allowed
+        }
+
+        // Get tenant
+        Tenant tenant = tenantService.getTenant(tenantId);
+        if (tenant == null) {
+            return false;
+        }
+
+        // For restricted events, check if tenant has permission
+        Set<String> permissions = tenant.getRestrictedEventPermissions();
+        if (permissions == null || !permissions.contains(event.getEventType())) {
+            return false;
+        }
+
+        // Check IP address if configured for tenant
+        Set<String> authorizedIPs = tenant.getAuthorizedIPs();
+        if (authorizedIPs != null && !authorizedIPs.isEmpty()) {
+            if (StringUtils.isBlank(sourceIP)) {
+                return false;
+            }
+            try {
+                if (sourceIP.startsWith("[") && sourceIP.endsWith("]")) {
+                    // This can happen with IPv6 addresses, we must remove the markers since our IPAddress library doesn't support them.
+                    sourceIP = sourceIP.substring(1, sourceIP.length() - 1);
+                }
+                IPAddress eventIP = new IPAddressString(sourceIP).toAddress();
+
+                boolean ipAuthorized = false;
+                for (String authorizedIP : authorizedIPs) {
+                    try {
+                        IPAddress ip = new IPAddressString(authorizedIP.trim()).toAddress();
+                        if (ip.contains(eventIP)) {
+                            ipAuthorized = true;
+                            break;
                         }
-                        IPAddress ipAddress = new IPAddressString(ip).getAddress();
-                        for (IPAddress serverIpAddress : server.getIpAddresses()) {
-                            if (serverIpAddress.contains(ipAddress)) {
-                                return server.getId();
-                            }
-                        }
+                    } catch (Exception e) {
+                        // Log invalid IP in tenant config but continue checking others
+                        LOGGER.warn("Invalid IP address in tenant configuration: {}. Skipping.", authorizedIP);
                     }
                 }
+                if (!ipAuthorized) {
+                    return false;
+                }
+            } catch (Exception e) {
+                LOGGER.error("Invalid source IP address: {}", sourceIP, e);
+                return false;
             }
-            LOGGER.warn("Could not authenticate any third party servers for key: {}", key);
         }
-        return null;
+
+        return true;
     }
 
     public int send(Event event) {

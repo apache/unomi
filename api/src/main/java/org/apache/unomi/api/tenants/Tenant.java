@@ -18,9 +18,7 @@ package org.apache.unomi.api.tenants;
 
 import org.apache.unomi.api.Item;
 
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Represents a tenant in the system.
@@ -210,5 +208,27 @@ public class Tenant extends Item {
      */
     public void setProperties(Map<String, Object> properties) {
         this.properties = properties;
+    }
+
+    private String itemId;
+    private String privateApiKey;
+    private String publicApiKey;
+    private Set<String> restrictedEventPermissions = new HashSet<>();
+    private Set<String> authorizedIPs = new HashSet<>();
+
+    public Set<String> getRestrictedEventPermissions() {
+        return restrictedEventPermissions;
+    }
+
+    public void setRestrictedEventPermissions(Set<String> restrictedEventPermissions) {
+        this.restrictedEventPermissions = restrictedEventPermissions;
+    }
+
+    public Set<String> getAuthorizedIPs() {
+        return authorizedIPs;
+    }
+
+    public void setAuthorizedIPs(Set<String> authorizedIPs) {
+        this.authorizedIPs = authorizedIPs;
     }
 }

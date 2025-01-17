@@ -32,9 +32,29 @@ public class ApiKey extends Item {
     public static final String ITEM_TYPE = "apiKey";
 
     /**
+     * Enum defining the types of API keys.
+     */
+    public enum ApiKeyType {
+        /**
+         * Public API key for context.json, event collector and other public-facing endpoints
+         */
+        PUBLIC,
+        
+        /**
+         * Private API key for protected endpoints including login and updateProperties
+         */
+        PRIVATE
+    }
+
+    /**
      * The API key value.
      */
     private String key;
+
+    /**
+     * The type of API key (public or private).
+     */
+    private ApiKeyType keyType;
 
     /**
      * The name or identifier of the API key.
@@ -164,5 +184,21 @@ public class ApiKey extends Item {
      */
     public void setRevoked(boolean revoked) {
         this.revoked = revoked;
+    }
+
+    /**
+     * Gets the type of the API key.
+     * @return the API key type
+     */
+    public ApiKeyType getKeyType() {
+        return keyType;
+    }
+
+    /**
+     * Sets the type of the API key.
+     * @param keyType the API key type to set
+     */
+    public void setKeyType(ApiKeyType keyType) {
+        this.keyType = keyType;
     }
 }

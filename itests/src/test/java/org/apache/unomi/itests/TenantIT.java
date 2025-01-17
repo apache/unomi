@@ -130,4 +130,55 @@ public class TenantIT extends BaseIT {
 
         Assert.assertEquals(0, results.size());
     }
+
+    @Test
+    public void testPublicPrivateApiKeys() throws Exception {
+        // Create tenant
+        Tenant tenant = tenantService.createTenant("DualKeyTenant", Collections.emptyMap());
+
+        // Verify both keys were created during tenant creation
+        ApiKey publicKey = tenantService.getApiKey(tenant.getItemId(), ApiKey.ApiKeyType.PUBLIC);
+        ApiKey privateKey = tenantService.getApiKey(tenant.getItemId(), ApiKey.ApiKeyType.PRIVATE);
+
+        Assert.assertNotNull("Public key should exist", publicKey);
+        Assert.assertNotNull("Private key should exist", privateKey);
+        Assert.assertEquals("Public key should have correct type", ApiKey.ApiKeyType.PUBLIC, publicKey.getKeyType());
+        Assert.assertEquals("Private key should have correct type", ApiKey.ApiKeyType.PRIVATE, privateKey.getKeyType());
+
+        // Test key type validation
+        Assert.assertTrue("Public key should validate as public", 
+            tenantService.validateApiKeyWithType(tenant.getItemId(), publicKey.getKey(), ApiKey.ApiKeyType.PUBLIC));
+        Assert.assertFalse("Public key should not validate as private", 
+            tenantService.validateApiKeyWithType(tenant.getItemId(), publicKey.getKey(), ApiKey.ApiKeyType.PRIVATE));
+        Assert.assertTrue("Private key should validate as private", 
+            tenantService.validateApiKeyWithType(tenant.getItemId(), privateKey.getKey(), ApiKey.ApiKeyType.PRIVATE));
+        Assert.assertFalse("Private key should not validate as public", 
+            tenantService.validateApiKeyWithType(tenant.getItemId(), privateKey.getKey(), ApiKey.ApiKeyType.PUBLIC));
+    }
+
+    @Test
+    public void testTenantLookupByApiKey() throws Exception {
+        // Create tenant
+        Tenant tenant = tenantService.createTenant("LookupTenant", Collections.emptyMap());
+        ApiKey publicKey = tenantService.getApiKey(tenant.getItemId(), ApiKey.ApiKeyType.PUBLIC);
+        ApiKey privateKey = tenantService.getApiKey(tenant.getItemId(), ApiKey.ApiKeyType.PRIVATE);
+
+        // Test lookup by key
+        Tenant foundByPublic = tenantService.getTenantByApiKey(publicKey.getKey());
+        Tenant foundByPrivate = tenantService.getTenantByApiKey(privateKey.getKey());
+
+        Assert.assertEquals("Should find correct tenant by public key", tenant.getItemId(), foundByPublic.getItemId());
+        Assert.assertEquals("Should find correct tenant by private key", tenant.getItemId(), foundByPrivate.getItemId());
+
+        // Test lookup with type validation
+        Tenant foundByPublicAsPublic = tenantService.getTenantByApiKey(publicKey.getKey(), ApiKey.ApiKeyType.PUBLIC);
+        Tenant foundByPublicAsPrivate = tenantService.getTenantByApiKey(publicKey.getKey(), ApiKey.ApiKeyType.PRIVATE);
+        Tenant foundByPrivateAsPrivate = tenantService.getTenantByApiKey(privateKey.getKey(), ApiKey.ApiKeyType.PRIVATE);
+        Tenant foundByPrivateAsPublic = tenantService.getTenantByApiKey(privateKey.getKey(), ApiKey.ApiKeyType.PUBLIC);
+
+        Assert.assertNotNull("Should find tenant by public key when type matches", foundByPublicAsPublic);
+        Assert.assertNull("Should not find tenant by public key when type is private", foundByPublicAsPrivate);
+        Assert.assertNotNull("Should find tenant by private key when type matches", foundByPrivateAsPrivate);
+        Assert.assertNull("Should not find tenant by private key when type is public", foundByPrivateAsPublic);
+    }
 }

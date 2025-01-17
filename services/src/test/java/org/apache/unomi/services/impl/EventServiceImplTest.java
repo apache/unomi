@@ -18,180 +18,164 @@ package org.apache.unomi.services.impl;
 
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.Profile;
+import org.apache.unomi.api.tenants.Tenant;
+import org.apache.unomi.api.tenants.TenantService;
 import org.apache.unomi.services.impl.events.EventServiceImpl;
+import org.junit.Before;
 import org.junit.Test;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.when;
 
 public class EventServiceImplTest {
-    @Test
-    public void testThirdPartyAuthenticationAndRestrictedEvents() {
-        EventServiceImpl eventService = mockEventServiceForThirdPartyTests(
-                "670c26d1cc413346c3b2fd9ce65dab41",
-                "127.0.0.1,::1",
-                "test1,test2",
-                Arrays.asList("test1", "test2", "test3")
-        );
 
-        // test authentication
-        String authenticateServerName = eventService.authenticateThirdPartyServer("670c26d1cc413346c3b2fd9ce65dab41", "127.0.0.1");
-        assertEquals("provider1", authenticateServerName);
+    private EventServiceImpl eventService;
 
-        // test allowed events
-        assertTrue(eventService.isEventAllowed(new Event("test1", null, new Profile(), null, null, null, null), authenticateServerName));
-        assertTrue(eventService.isEventAllowed(new Event("test2", null, new Profile(), null, null, null, null), authenticateServerName));
-        assertTrue(eventService.isEventAllowed(new Event("test4", null, new Profile(), null, null, null, null), authenticateServerName));
+    @Mock
+    private TenantService tenantService;
 
-        // test restricted events
-        assertFalse(eventService.isEventAllowed(new Event("test3", null, new Profile(), null, null, null, null), authenticateServerName));
+    @Before
+    public void setUp() {
+        MockitoAnnotations.initMocks(this);
+        eventService = new EventServiceImpl();
+        eventService.setTenantService(tenantService);
+        eventService.setRestrictedEventTypeIds(new HashSet<>(Arrays.asList("test1", "test2", "test3", "test4")));
     }
 
     @Test
-    public void testNotAuthenticatedRestrictedEvents() {
-        EventServiceImpl eventService = mockEventServiceForThirdPartyTests(
-                "670c26d1cc413346c3b2fd9ce65dab41",
-                "127.0.0.1,::1",
-                "test1,test2",
-                Arrays.asList("test1", "test2", "test3")
-        );
+    public void testEventAllowed() {
+        String tenantId = "test_tenant";
+        String sourceIP = "127.0.0.1";
 
-        // test authentication
-        String authenticateServerName = eventService.authenticateThirdPartyServer("670c26d1cc413346c3b2fd9ce65dab41", "192.168.1.15");
-        assertNull("Server should not be authenticate, ip is not matching a declared thirdparty server", authenticateServerName);
+        // Create test tenant with permissions
+        Tenant tenant = new Tenant();
+        tenant.setItemId(tenantId);
+        Set<String> permissions = new HashSet<>(Arrays.asList("test1", "test2", "test4"));
+        tenant.setRestrictedEventPermissions(permissions);
+        Set<String> ips = new HashSet<>(Arrays.asList(sourceIP));
+        tenant.setAuthorizedIPs(ips);
+        when(tenantService.getTenant(tenantId)).thenReturn(tenant);
 
-        // test allowed events
-        assertTrue(eventService.isEventAllowed(new Event("test4", null, new Profile(), null, null, null, null), authenticateServerName));
+        assertTrue(eventService.isEventAllowedForTenant(new Event("test1", null, new Profile(), null, null, null, null), tenantId, sourceIP));
+        assertTrue(eventService.isEventAllowedForTenant(new Event("test2", null, new Profile(), null, null, null, null), tenantId, sourceIP));
+        assertTrue(eventService.isEventAllowedForTenant(new Event("test4", null, new Profile(), null, null, null, null), tenantId, sourceIP));
 
-        // test restricted events
-        assertFalse(eventService.isEventAllowed(new Event("test1", null, new Profile(), null, null, null, null), authenticateServerName));
-        assertFalse(eventService.isEventAllowed(new Event("test2", null, new Profile(), null, null, null, null), authenticateServerName));
-        assertFalse(eventService.isEventAllowed(new Event("test3", null, new Profile(), null, null, null, null), authenticateServerName));
+        // Test unauthorized event type
+        assertFalse(eventService.isEventAllowedForTenant(new Event("test3", null, new Profile(), null, null, null, null), tenantId, sourceIP));
+
+        // Test unauthorized IP
+        assertFalse(eventService.isEventAllowedForTenant(new Event("test1", null, new Profile(), null, null, null, null), tenantId, "192.168.1.1"));
+
+        // Test invalid tenant
+        assertFalse(eventService.isEventAllowedForTenant(new Event("test1", null, new Profile(), null, null, null, null), "invalid_tenant", sourceIP));
     }
 
     @Test
-    public void testThirdPartyAuthentication_ip_range() {
-        EventServiceImpl eventService = mockEventServiceForThirdPartyTests(
-                "670c26d1cc413346c3b2fd9ce65dab41",
-                "192.168.1.1-100",
-                "test1,test2",
-                Arrays.asList("test1", "test2", "test3")
-        );
+    public void testIPv6EventAllowed() {
+        String tenantId = "test_tenant";
 
-        // test authentication
-        assertEquals("provider1", eventService.authenticateThirdPartyServer("670c26d1cc413346c3b2fd9ce65dab41", "192.168.1.1"));
-        assertEquals("provider1", eventService.authenticateThirdPartyServer("670c26d1cc413346c3b2fd9ce65dab41", "192.168.1.2"));
-        assertEquals("provider1", eventService.authenticateThirdPartyServer("670c26d1cc413346c3b2fd9ce65dab41", "192.168.1.3"));
-        assertEquals("provider1", eventService.authenticateThirdPartyServer("670c26d1cc413346c3b2fd9ce65dab41", "192.168.1.98"));
-        assertEquals("provider1", eventService.authenticateThirdPartyServer("670c26d1cc413346c3b2fd9ce65dab41", "192.168.1.99"));
-        assertEquals("provider1", eventService.authenticateThirdPartyServer("670c26d1cc413346c3b2fd9ce65dab41", "192.168.1.100"));
-        assertNull(eventService.authenticateThirdPartyServer("670c26d1cc413346c3b2fd9ce65dab41", "192.168.1.101"));
-        assertNull(eventService.authenticateThirdPartyServer("670c26d1cc413346c3b2fd9ce65dab41", "1.2.2.2"));
+        // Create test tenant with IPv6 permissions
+        Tenant tenant = new Tenant();
+        tenant.setItemId(tenantId);
+        Set<String> permissions = new HashSet<>(Arrays.asList("test1", "test2", "test4"));
+        tenant.setRestrictedEventPermissions(permissions);
+        Set<String> ips = new HashSet<>(Arrays.asList(
+            "2001:db8::/32",                  // IPv6 CIDR block
+            "::1",                            // IPv6 localhost
+            "2001:db8::1",                    // Single IPv6 address
+            "2001:db8:3:4:5:6:7:8"           // Full IPv6 address
+        ));
+        tenant.setAuthorizedIPs(ips);
+        when(tenantService.getTenant(tenantId)).thenReturn(tenant);
+
+        // Test IPv6 addresses with square brackets (as returned by HttpServletRequest.getRemoteAddr)
+        assertTrue(eventService.isEventAllowedForTenant(new Event("test1", null, new Profile(), null, null, null, null),
+            tenantId, "[2001:db8::1]"));
+        assertTrue(eventService.isEventAllowedForTenant(new Event("test1", null, new Profile(), null, null, null, null),
+            tenantId, "[2001:db8:1:2:3:4:5:6]"));
+        assertTrue(eventService.isEventAllowedForTenant(new Event("test1", null, new Profile(), null, null, null, null),
+            tenantId, "[::1]"));
+
+        // Test IPv6 addresses without square brackets
+        assertTrue(eventService.isEventAllowedForTenant(new Event("test1", null, new Profile(), null, null, null, null),
+            tenantId, "2001:db8::1"));
+        assertTrue(eventService.isEventAllowedForTenant(new Event("test1", null, new Profile(), null, null, null, null),
+            tenantId, "2001:db8:3:4:5:6:7:8"));
+        assertTrue(eventService.isEventAllowedForTenant(new Event("test1", null, new Profile(), null, null, null, null),
+            tenantId, "::1"));
+
+        // Test unauthorized IPv6 addresses
+        assertFalse(eventService.isEventAllowedForTenant(new Event("test1", null, new Profile(), null, null, null, null),
+            tenantId, "[2001:db9::1]"));  // Different prefix
+        assertFalse(eventService.isEventAllowedForTenant(new Event("test1", null, new Profile(), null, null, null, null),
+            tenantId, "2001:db9::1"));    // Different prefix without brackets
     }
 
     @Test
-    public void testThirdPartyAuthentication_ip_subnet() {
-        EventServiceImpl eventService = mockEventServiceForThirdPartyTests(
-                "670c26d1cc413346c3b2fd9ce65dab41",
-                "1.2.0.0/16",
-                "test1,test2",
-                Arrays.asList("test1", "test2", "test3")
-        );
+    public void testMixedIPv4AndIPv6EventAllowed() {
+        String tenantId = "test_tenant";
 
-        // test authentication
-        assertEquals("provider1", eventService.authenticateThirdPartyServer("670c26d1cc413346c3b2fd9ce65dab41", "1.2.0.0"));
-        assertEquals("provider1", eventService.authenticateThirdPartyServer("670c26d1cc413346c3b2fd9ce65dab41", "1.2.1.1"));
-        assertEquals("provider1", eventService.authenticateThirdPartyServer("670c26d1cc413346c3b2fd9ce65dab41", "1.2.2.2"));
-        assertEquals("provider1", eventService.authenticateThirdPartyServer("670c26d1cc413346c3b2fd9ce65dab41", "1.2.50.125"));
-        assertNull(eventService.authenticateThirdPartyServer("670c26d1cc413346c3b2fd9ce65dab41", "1.3.50.125"));
-        assertNull(eventService.authenticateThirdPartyServer("670c26d1cc413346c3b2fd9ce65dab41", "192.168.1.100"));
+        // Create test tenant with mixed IPv4 and IPv6 permissions
+        Tenant tenant = new Tenant();
+        tenant.setItemId(tenantId);
+        Set<String> permissions = new HashSet<>(Arrays.asList("test1"));
+        tenant.setRestrictedEventPermissions(permissions);
+        Set<String> ips = new HashSet<>(Arrays.asList(
+            "127.0.0.1",                      // IPv4 localhost
+            "192.168.1.0/24",                 // IPv4 CIDR block
+            "2001:db8::/32",                  // IPv6 CIDR block
+            "::1"                             // IPv6 localhost
+        ));
+        tenant.setAuthorizedIPs(ips);
+        when(tenantService.getTenant(tenantId)).thenReturn(tenant);
+
+        // Test IPv4 addresses
+        assertTrue(eventService.isEventAllowedForTenant(new Event("test1", null, new Profile(), null, null, null, null),
+            tenantId, "127.0.0.1"));
+        assertTrue(eventService.isEventAllowedForTenant(new Event("test1", null, new Profile(), null, null, null, null),
+            tenantId, "192.168.1.100"));
+
+        // Test IPv6 addresses with and without brackets
+        assertTrue(eventService.isEventAllowedForTenant(new Event("test1", null, new Profile(), null, null, null, null),
+            tenantId, "[::1]"));
+        assertTrue(eventService.isEventAllowedForTenant(new Event("test1", null, new Profile(), null, null, null, null),
+            tenantId, "::1"));
+        assertTrue(eventService.isEventAllowedForTenant(new Event("test1", null, new Profile(), null, null, null, null),
+            tenantId, "[2001:db8::1]"));
+        assertTrue(eventService.isEventAllowedForTenant(new Event("test1", null, new Profile(), null, null, null, null),
+            tenantId, "2001:db8::1"));
+
+        // Test unauthorized IPs
+        assertFalse(eventService.isEventAllowedForTenant(new Event("test1", null, new Profile(), null, null, null, null),
+            tenantId, "192.168.2.1"));        // Outside IPv4 range
+        assertFalse(eventService.isEventAllowedForTenant(new Event("test1", null, new Profile(), null, null, null, null),
+            tenantId, "[2001:db9::1]"));      // Outside IPv6 range
     }
 
     @Test
-    public void testThirdPartyAuthentication_ip_wildcards() {
-        EventServiceImpl eventService = mockEventServiceForThirdPartyTests(
-                "670c26d1cc413346c3b2fd9ce65dab41",
-                "1.2.*.*",
-                "test1,test2",
-                Arrays.asList("test1", "test2", "test3")
-        );
+    public void testEventAllowedAfterConfigurationChange() {
+        String tenantId = "test_tenant";
+        String sourceIP = "127.0.0.1";
 
-        // test authentication
-        assertEquals("provider1", eventService.authenticateThirdPartyServer("670c26d1cc413346c3b2fd9ce65dab41", "1.2.0.0"));
-        assertEquals("provider1", eventService.authenticateThirdPartyServer("670c26d1cc413346c3b2fd9ce65dab41", "1.2.1.1"));
-        assertEquals("provider1", eventService.authenticateThirdPartyServer("670c26d1cc413346c3b2fd9ce65dab41", "1.2.2.2"));
-        assertEquals("provider1", eventService.authenticateThirdPartyServer("670c26d1cc413346c3b2fd9ce65dab41", "1.2.50.125"));
-        assertNull(eventService.authenticateThirdPartyServer("670c26d1cc413346c3b2fd9ce65dab41", "1.3.50.125"));
-        assertNull(eventService.authenticateThirdPartyServer("670c26d1cc413346c3b2fd9ce65dab41", "192.168.1.100"));
-    }
+        // Create test tenant with initial permissions
+        Tenant tenant = new Tenant();
+        tenant.setItemId(tenantId);
+        Set<String> permissions = new HashSet<>(Arrays.asList("test4"));
+        tenant.setRestrictedEventPermissions(permissions);
+        Set<String> ips = new HashSet<>(Arrays.asList(sourceIP));
+        tenant.setAuthorizedIPs(ips);
+        when(tenantService.getTenant(tenantId)).thenReturn(tenant);
 
-    @Test
-    public void testThirdPartyAuthentication_ip_combined() {
-        EventServiceImpl eventService = mockEventServiceForThirdPartyTests(
-                "670c26d1cc413346c3b2fd9ce65dab41",
-                "1.*.2-3.4",
-                "test1,test2",
-                Arrays.asList("test1", "test2", "test3")
-        );
-
-        // test authentication
-        assertEquals("provider1", eventService.authenticateThirdPartyServer("670c26d1cc413346c3b2fd9ce65dab41", "1.2.3.4"));
-        assertEquals("provider1", eventService.authenticateThirdPartyServer("670c26d1cc413346c3b2fd9ce65dab41", "1.50.2.4"));
-        assertNull(eventService.authenticateThirdPartyServer("670c26d1cc413346c3b2fd9ce65dab41", "1.3.50.4"));
-        assertNull(eventService.authenticateThirdPartyServer("670c26d1cc413346c3b2fd9ce65dab41", "1.3.3.5"));
-        assertNull(eventService.authenticateThirdPartyServer("670c26d1cc413346c3b2fd9ce65dab41", "192.168.1.100"));
-    }
-
-    @Test
-    public void testThirdPartyAuthentication_ip_multiple() {
-        EventServiceImpl eventService = mockEventServiceForThirdPartyTests(
-                "670c26d1cc413346c3b2fd9ce65dab41",
-                "1.*.2-3.4,192.168.1.1-100,::1",
-                "test1,test2",
-                Arrays.asList("test1", "test2", "test3")
-        );
-
-        // test authentication
-        assertEquals("provider1", eventService.authenticateThirdPartyServer("670c26d1cc413346c3b2fd9ce65dab41", "1.2.3.4"));
-        assertEquals("provider1", eventService.authenticateThirdPartyServer("670c26d1cc413346c3b2fd9ce65dab41", "1.50.2.4"));
-        assertEquals("provider1", eventService.authenticateThirdPartyServer("670c26d1cc413346c3b2fd9ce65dab41", "192.168.1.1"));
-        assertEquals("provider1", eventService.authenticateThirdPartyServer("670c26d1cc413346c3b2fd9ce65dab41", "192.168.1.2"));
-        assertNull(eventService.authenticateThirdPartyServer("670c26d1cc413346c3b2fd9ce65dab41", "1.3.50.4"));
-        assertNull(eventService.authenticateThirdPartyServer("670c26d1cc413346c3b2fd9ce65dab41", "1.3.3.5"));
-        assertNull(eventService.authenticateThirdPartyServer("670c26d1cc413346c3b2fd9ce65dab41", "192.168.1.101"));
-    }
-
-    @Test
-    public void testThirdPartyAuthentication_ip_matchAll() {
-        EventServiceImpl eventService = mockEventServiceForThirdPartyTests(
-                "670c26d1cc413346c3b2fd9ce65dab41",
-                "*.*.*.*",
-                "test1,test2",
-                Arrays.asList("test1", "test2", "test3")
-        );
-
-        // test authentication
-        assertEquals("provider1", eventService.authenticateThirdPartyServer("670c26d1cc413346c3b2fd9ce65dab41", "1.2.0.0"));
-        assertEquals("provider1", eventService.authenticateThirdPartyServer("670c26d1cc413346c3b2fd9ce65dab41", "1.2.1.1"));
-        assertEquals("provider1", eventService.authenticateThirdPartyServer("670c26d1cc413346c3b2fd9ce65dab41", "1.2.2.2"));
-        assertEquals("provider1", eventService.authenticateThirdPartyServer("670c26d1cc413346c3b2fd9ce65dab41", "1.2.50.125"));
-        assertEquals("provider1", eventService.authenticateThirdPartyServer("670c26d1cc413346c3b2fd9ce65dab41", "1.3.50.125"));
-        assertEquals("provider1", eventService.authenticateThirdPartyServer("670c26d1cc413346c3b2fd9ce65dab41", "192.168.1.100"));
-    }
-
-    private EventServiceImpl mockEventServiceForThirdPartyTests(String key, String ipAddresses, String allowedEvents, List<String> restrictedEventTypeIds) {
-        // conf
-        Map<String, String> thirdPartyConfiguration = new HashMap<>();
-        thirdPartyConfiguration.put("thirdparty.provider1.key", key);
-        thirdPartyConfiguration.put("thirdparty.provider1.ipAddresses", ipAddresses);
-        thirdPartyConfiguration.put("thirdparty.provider1.allowedEvents", allowedEvents);
-
-        // mock service
-        EventServiceImpl eventService = new EventServiceImpl();
-        eventService.setThirdPartyConfiguration(thirdPartyConfiguration);
-        eventService.setRestrictedEventTypeIds(new HashSet<>(restrictedEventTypeIds));
-
-        return eventService;
+        assertTrue(eventService.isEventAllowedForTenant(new Event("test4", null, new Profile(), null, null, null, null), tenantId, sourceIP));
+        assertFalse(eventService.isEventAllowedForTenant(new Event("test1", null, new Profile(), null, null, null, null), tenantId, sourceIP));
+        assertFalse(eventService.isEventAllowedForTenant(new Event("test2", null, new Profile(), null, null, null, null), tenantId, sourceIP));
+        assertFalse(eventService.isEventAllowedForTenant(new Event("test3", null, new Profile(), null, null, null, null), tenantId, sourceIP));
     }
 }

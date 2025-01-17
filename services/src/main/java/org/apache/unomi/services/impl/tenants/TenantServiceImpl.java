@@ -68,17 +68,31 @@ public class TenantServiceImpl implements TenantService {
         tenant.setName(name);
         tenant.setProperties(properties);
         tenant.setStatus(TenantStatus.ACTIVE);
+        tenant.setCreationDate(new Date());
 
+        // Save tenant first to ensure it exists
         persistenceService.save(tenant);
-        return tenant;
+
+        // Generate both public and private API keys
+        generateApiKeyWithType(tenant.getItemId(), ApiKey.ApiKeyType.PUBLIC, null);
+        generateApiKeyWithType(tenant.getItemId(), ApiKey.ApiKeyType.PRIVATE, null);
+
+        // Reload tenant to get the updated version with API keys
+        return getTenant(tenant.getItemId());
     }
 
     @Override
     public ApiKey generateApiKey(String tenantId, Long validityPeriod) {
+        return generateApiKeyWithType(tenantId, ApiKey.ApiKeyType.PUBLIC, validityPeriod);
+    }
+
+    @Override
+    public ApiKey generateApiKeyWithType(String tenantId, ApiKey.ApiKeyType keyType, Long validityPeriod) {
         ApiKey apiKey = new ApiKey();
         apiKey.setItemId(UUID.randomUUID().toString());
         String key = generateSecureKey();
         apiKey.setKey(key);
+        apiKey.setKeyType(keyType);
         apiKey.setCreationDate(new Date());
         if (validityPeriod != null) {
             apiKey.setExpirationDate(new Date(System.currentTimeMillis() + validityPeriod));
@@ -86,6 +100,8 @@ public class TenantServiceImpl implements TenantService {
 
         Tenant tenant = persistenceService.load(tenantId, Tenant.class);
         if (tenant != null) {
+            // Remove any existing key of the same type
+            tenant.getApiKeys().removeIf(existingKey -> existingKey.getKeyType() == keyType);
             tenant.getApiKeys().add(apiKey);
             persistenceService.save(tenant);
         }
@@ -142,12 +158,55 @@ public class TenantServiceImpl implements TenantService {
 
     @Override
     public boolean validateApiKey(String tenantId, String key) {
+        return validateApiKeyWithType(tenantId, key, null);
+    }
+
+    @Override
+    public boolean validateApiKeyWithType(String tenantId, String key, ApiKey.ApiKeyType requiredType) {
         Tenant tenant = getTenant(tenantId);
         if (tenant == null) {
             return false;
         }
         return tenant.getApiKeys().stream()
                 .anyMatch(apiKey -> apiKey.getKey().equals(key) &&
+                        !apiKey.isRevoked() &&
+                        (requiredType == null || apiKey.getKeyType() == requiredType) &&
                         (apiKey.getExpirationDate() == null || apiKey.getExpirationDate().after(new Date())));
+    }
+
+    @Override
+    public ApiKey getApiKey(String tenantId, ApiKey.ApiKeyType keyType) {
+        Tenant tenant = getTenant(tenantId);
+        if (tenant == null) {
+            return null;
+        }
+        return tenant.getApiKeys().stream()
+                .filter(apiKey -> apiKey.getKeyType() == keyType &&
+                        !apiKey.isRevoked() &&
+                        (apiKey.getExpirationDate() == null || apiKey.getExpirationDate().after(new Date())))
+                .findFirst()
+                .orElse(null);
+    }
+
+    @Override
+    public Tenant getTenantByApiKey(String key) {
+        return getTenantByApiKey(key, null);
+    }
+
+    @Override
+    public Tenant getTenantByApiKey(String key, ApiKey.ApiKeyType requiredType) {
+        if (key == null) {
+            return null;
+        }
+        
+        List<Tenant> allTenants = getAllTenants();
+        return allTenants.stream()
+                .filter(tenant -> tenant.getApiKeys().stream()
+                        .anyMatch(apiKey -> apiKey.getKey().equals(key) &&
+                                !apiKey.isRevoked() &&
+                                (requiredType == null || apiKey.getKeyType() == requiredType) &&
+                                (apiKey.getExpirationDate() == null || apiKey.getExpirationDate().after(new Date()))))
+                .findFirst()
+                .orElse(null);
     }
 }

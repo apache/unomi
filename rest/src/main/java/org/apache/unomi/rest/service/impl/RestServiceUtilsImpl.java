@@ -23,6 +23,8 @@ import org.apache.unomi.api.services.ConfigSharingService;
 import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.api.services.PrivacyService;
 import org.apache.unomi.api.services.ProfileService;
+import org.apache.unomi.api.tenants.Tenant;
+import org.apache.unomi.api.tenants.TenantService;
 import org.apache.unomi.rest.exception.InvalidRequestException;
 import org.apache.unomi.rest.service.RestServiceUtils;
 import org.apache.unomi.schema.api.SchemaService;
@@ -37,6 +39,8 @@ import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.BadRequestException;
+import javax.ws.rs.WebApplicationException;
+import javax.ws.rs.core.Response;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
@@ -62,6 +66,9 @@ public class RestServiceUtilsImpl implements RestServiceUtils {
 
     @Reference
     SchemaService schemaService;
+
+    @Reference
+    private TenantService tenantService;
 
     @Override
     public String getProfileIdCookieValue(HttpServletRequest httpServletRequest) {
@@ -234,8 +241,16 @@ public class RestServiceUtilsImpl implements RestServiceUtils {
     @Override
     public EventsRequestContext performEventsRequest(List<Event> events, EventsRequestContext eventsRequestContext) {
         List<String> filteredEventTypes = privacyService.getFilteredEventTypes(eventsRequestContext.getProfile());
-        String thirdPartyId = eventService.authenticateThirdPartyServer(eventsRequestContext.getRequest().getHeader("X-Unomi-Peer"),
-                eventsRequestContext.getRequest().getRemoteAddr());
+        String privateApiKey = eventsRequestContext.getRequest().getHeader("X-Unomi-Api-Key");
+
+        if (StringUtils.isBlank(privateApiKey)) {
+            throw new WebApplicationException("Missing private API key", Response.Status.UNAUTHORIZED);
+        }
+
+        Tenant tenant = tenantService.getTenantByApiKey(privateApiKey);
+        if (tenant == null) {
+            throw new WebApplicationException("Invalid private API key", Response.Status.UNAUTHORIZED);
+        }
 
         // execute provided events if any
         if (events != null && !(eventsRequestContext.getProfile() instanceof Persona)) {
@@ -246,17 +261,11 @@ public class RestServiceUtilsImpl implements RestServiceUtils {
                 eventsRequestContext.setProcessedItems(eventsRequestContext.getProcessedItems() + 1);
 
                 if (event.getEventType() != null) {
-                    Event eventToSend = new Event(event.getEventType(), eventsRequestContext.getSession(), eventsRequestContext.getProfile(), event.getScope(), event.getSource(),
-                            event.getTarget(), event.getProperties(), eventsRequestContext.getTimestamp(), event.isPersistent());
+                    Event eventToSend = new Event(event.getEventType(), event.getSession(), event.getProfile(), event.getScope(),
+                            event.getSource(), event.getTarget(), event.getProperties(), eventsRequestContext.getTimestamp(), event.isPersistent());
                     eventToSend.setFlattenedProperties(event.getFlattenedProperties());
-                    if (!eventService.isEventAllowed(event, thirdPartyId)) {
-                        LOGGER.warn("Event is not allowed : {}", event.getEventType());
-                        continue;
-                    }
-                    if (thirdPartyId != null && event.getItemId() != null) {
-                        eventToSend = new Event(event.getItemId(), event.getEventType(), eventsRequestContext.getSession(), eventsRequestContext.getProfile(), event.getScope(),
-                                event.getSource(), event.getTarget(), event.getProperties(), eventsRequestContext.getTimestamp(), event.isPersistent());
-                        eventToSend.setFlattenedProperties(event.getFlattenedProperties());
+                    if (!eventService.isEventAllowedForTenant(event, tenant.getItemId(), eventsRequestContext.getRequest().getRemoteAddr())) {
+                        throw new WebApplicationException("Tenant is not authorized to send event " + event.getEventType() + " from IP " + eventsRequestContext.getRequest().getRemoteAddr(), Response.Status.UNAUTHORIZED);
                     }
                     if (filteredEventTypes != null && filteredEventTypes.contains(event.getEventType())) {
                         LOGGER.debug("Profile is filtering event type {}", event.getEventType());

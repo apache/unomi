@@ -68,12 +68,37 @@ public class TestTenantService implements TenantService {
     }
 
     @Override
+    public boolean validateApiKeyWithType(String tenantId, String apiKey, ApiKey.ApiKeyType type) {
+        return true;
+    }
+
+    @Override
     public Tenant createTenant(String tenantId, Map<String, Object> properties) {
         return null;
     }
 
     @Override
     public ApiKey generateApiKey(String tenantId, Long validityPeriod) {
+        return null;
+    }
+
+    @Override
+    public ApiKey generateApiKeyWithType(String tenantId, ApiKey.ApiKeyType type, Long validityPeriod) {
+        return null;
+    }
+
+    @Override
+    public Tenant getTenantByApiKey(String apiKey) {
+        return null;
+    }
+
+    @Override
+    public Tenant getTenantByApiKey(String apiKey, ApiKey.ApiKeyType type) {
+        return null;
+    }
+
+    @Override
+    public ApiKey getApiKey(String tenantId, ApiKey.ApiKeyType type) {
         return null;
     }
 }

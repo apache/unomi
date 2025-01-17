@@ -113,4 +113,51 @@ public interface TenantService {
      * @return true if the key is valid, false otherwise
      */
     boolean validateApiKey(String tenantId, String key);
+
+    /**
+     * Generates a new API key of the specified type for the tenant.
+     *
+     * @param tenantId       the ID of the tenant for which to generate the API key
+     * @param keyType       the type of API key to generate (PUBLIC or PRIVATE)
+     * @param validityPeriod the period (in milliseconds) for which the API key should be valid, null for no expiration
+     * @return the generated ApiKey object containing the key and associated metadata
+     * @throws IllegalArgumentException if tenantId is null or does not exist
+     */
+    ApiKey generateApiKeyWithType(String tenantId, ApiKey.ApiKeyType keyType, Long validityPeriod);
+
+    /**
+     * Validates an API key for a given tenant and checks if it has the required type.
+     *
+     * @param tenantId the ID of the tenant
+     * @param key the API key to validate
+     * @param requiredType the required type of the API key
+     * @return true if the key is valid and matches the required type, false otherwise
+     */
+    boolean validateApiKeyWithType(String tenantId, String key, ApiKey.ApiKeyType requiredType);
+
+    /**
+     * Gets the API key of the specified type for a tenant.
+     *
+     * @param tenantId the ID of the tenant
+     * @param keyType the type of API key to retrieve
+     * @return the API key of the specified type, or null if not found
+     */
+    ApiKey getApiKey(String tenantId, ApiKey.ApiKeyType keyType);
+
+    /**
+     * Retrieves a tenant by its API key.
+     *
+     * @param key the API key to look up
+     * @return the Tenant object if found, null otherwise
+     */
+    Tenant getTenantByApiKey(String key);
+
+    /**
+     * Retrieves a tenant by its API key, ensuring it matches the required type.
+     *
+     * @param key the API key to look up
+     * @param requiredType the required type of the API key (PUBLIC or PRIVATE)
+     * @return the Tenant object if found and key type matches, null otherwise
+     */
+    Tenant getTenantByApiKey(String key, ApiKey.ApiKeyType requiredType);
 }

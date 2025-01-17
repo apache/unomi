@@ -31,6 +31,11 @@ public class EventsCollectorRequest {
     private String profileId;
 
     /**
+     * The public API key for tenant authentication.
+     */
+    private String publicApiKey;
+
+    /**
      * Retrieves the events to be processed.
      *
      * @return the events to be processed
@@ -80,5 +85,21 @@ public class EventsCollectorRequest {
      */
     public void setProfileId(String profileId) {
         this.profileId = profileId;
+    }
+
+    /**
+     * Gets the public API key used for tenant authentication.
+     * @return the public API key
+     */
+    public String getPublicApiKey() {
+        return publicApiKey;
+    }
+
+    /**
+     * Sets the public API key used for tenant authentication.
+     * @param publicApiKey the public API key to set
+     */
+    public void setPublicApiKey(String publicApiKey) {
+        this.publicApiKey = publicApiKey;
     }
 }

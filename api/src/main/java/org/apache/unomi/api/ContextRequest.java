@@ -24,6 +24,7 @@ import org.apache.unomi.api.services.EventListenerService;
 import org.apache.unomi.api.services.PersonalizationService;
 import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.api.services.RulesService;
+
 import java.util.List;
 import java.util.Map;
 
@@ -70,6 +71,11 @@ public class ContextRequest {
     private String profileId;
 
     private String clientId;
+
+    /**
+     * The public API key for tenant authentication.
+     */
+    private String publicApiKey;
 
     /**
      * Retrieves the source of the context request.
@@ -293,5 +299,21 @@ public class ContextRequest {
 
     public void setClientId(String clientId) {
         this.clientId = clientId;
+    }
+
+    /**
+     * Gets the public API key used for tenant authentication.
+     * @return the public API key
+     */
+    public String getPublicApiKey() {
+        return publicApiKey;
+    }
+
+    /**
+     * Sets the public API key used for tenant authentication.
+     * @param publicApiKey the public API key to set
+     */
+    public void setPublicApiKey(String publicApiKey) {
+        this.publicApiKey = publicApiKey;
     }
 }
