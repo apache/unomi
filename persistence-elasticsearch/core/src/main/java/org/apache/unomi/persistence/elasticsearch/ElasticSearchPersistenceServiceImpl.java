@@ -915,14 +915,34 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     }
 
-    private void setMetadata(Item item, String itemId, long version, long seqNo, long primaryTerm, String index) {
-        if (!systemItems.contains(item.getItemType()) && item.getItemId() == null) {
-            item.setItemId(itemId);
+    private String getDocumentIDForItemType(String itemId, String itemType) {
+        String tenantId = securityProvider.getCurrentTenantId();
+        String baseId = systemItems.contains(itemType) ? (itemId + "_" + itemType.toLowerCase()) : itemId;
+        return tenantId + "_" + baseId;
+    }
+
+    private String stripTenantFromDocumentId(String documentId) {
+        if (documentId == null) {
+            return null;
         }
-        item.setVersion(version);
-        item.setSystemMetadata(SEQ_NO, seqNo);
-        item.setSystemMetadata(PRIMARY_TERM, primaryTerm);
-        item.setSystemMetadata("index", index);
+        int firstUnderscore = documentId.indexOf('_');
+        if (firstUnderscore < 0) {
+            return documentId;
+        }
+        return documentId.substring(firstUnderscore + 1);
+    }
+
+    private void setMetadata(Item item, String itemId, long version, long seqNo, long primaryTerm, String index) {
+        if (item != null) {
+            String strippedId = stripTenantFromDocumentId(itemId);
+            if (!systemItems.contains(item.getItemType()) && item.getItemId() == null) {
+                item.setItemId(strippedId);
+            }
+            item.setVersion(version);
+            item.setSystemMetadata(SEQ_NO, seqNo);
+            item.setSystemMetadata(PRIMARY_TERM, primaryTerm);
+            item.setSystemMetadata("index", index);
+        }
     }
 
     @Override
@@ -2695,10 +2715,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         return itemTypeIndexNameMap.getOrDefault(itemType, itemType);
     }
 
-    private String getDocumentIDForItemType(String itemId, String itemType) {
-        return systemItems.contains(itemType) ? (itemId + "_" + itemType.toLowerCase()) : itemId;
-    }
-
     private QueryBuilder wrapWithItemTypeQuery(String itemType, QueryBuilder originalQuery) {
         if (isItemTypeSharingIndex(itemType)) {
             BoolQueryBuilder wrappedQuery = QueryBuilders.boolQuery();
@@ -2776,25 +2792,15 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     }
 
     private void addTenantMetadata(Item item, String tenantId) {
-        if (tenantId != null) {
+        if (item != null && tenantId != null) {
             item.setTenantId(tenantId);
         }
     }
 
     private String extractTenantId(DocWriteRequest<?> request) {
-        try {
-            if (request instanceof IndexRequest) {
-                IndexRequest indexRequest = (IndexRequest) request;
-                return (String) indexRequest.sourceAsMap().get("tenantId");
-            } else if (request instanceof UpdateRequest) {
-                UpdateRequest updateRequest = (UpdateRequest) request;
-                return (String) updateRequest.doc().sourceAsMap().get("tenantId");
-            }
-            return null;
-        } catch (Exception e) {
-            LOGGER.error("Error extracting tenantId from request", e);
-            return null;
-        }
+        String documentId = request.id();
+        int underscoreIndex = documentId.indexOf('_');
+        return underscoreIndex >= 0 ? documentId.substring(0, underscoreIndex) : null;
     }
 
     private AggregationBuilder createAggregationBuilder(BaseAggregate aggregate, String itemType) {
@@ -2890,11 +2896,22 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 for (SearchHit hit : searchResponse.getHits()) {
                     Map<String, Object> source = hit.getSourceAsMap();
                     source.put("tenantId", targetTenantId);
+                    
+                    // Get the item type from the source
+                    String itemType = (String) source.get("itemType");
+                    // Create new document ID with target tenant prefix
+                    String oldId = stripTenantFromDocumentId(hit.getId());
+                    String newDocumentId = getDocumentIDForItemType(oldId, itemType);
+                    
+                    // Add index operation for new document
+                    IndexRequest indexRequest = new IndexRequest(hit.getIndex())
+                        .id(newDocumentId)
+                        .source(source);
+                    bulkRequest.add(indexRequest);
 
-                    // Add update operation to bulk
-                    bulkRequest.add(new UpdateRequest(hit.getIndex(), hit.getId())
-                        .doc(source)
-                        .docAsUpsert(true));
+                    // Add delete operation for old document
+                    DeleteRequest deleteRequest = new DeleteRequest(hit.getIndex(), hit.getId());
+                    bulkRequest.add(deleteRequest);
                 }
 
                 // Execute bulk update if there are operations

@@ -54,7 +54,6 @@ import org.opensearch.client.opensearch.OpenSearchClient;
 import org.opensearch.client.opensearch._types.*;
 import org.opensearch.client.opensearch._types.aggregations.*;
 import org.opensearch.client.opensearch._types.mapping.TypeMapping;
-import org.opensearch.client.opensearch._types.query_dsl.BoolQuery;
 import org.opensearch.client.opensearch._types.query_dsl.Query;
 import org.opensearch.client.opensearch.cluster.HealthRequest;
 import org.opensearch.client.opensearch.cluster.HealthResponse;
@@ -759,13 +758,16 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
     }
 
     private void setMetadata(Item item, String itemId, long version, long seqNo, long primaryTerm, String index) {
-        if (!systemItems.contains(item.getItemType()) && item.getItemId() == null) {
-            item.setItemId(itemId);
+        if (item != null) {
+            String strippedId = stripTenantFromDocumentId(itemId);
+            if (!systemItems.contains(item.getItemType()) && item.getItemId() == null) {
+                item.setItemId(strippedId);
+            }
+            item.setVersion(version);
+            item.setSystemMetadata(SEQ_NO, seqNo);
+            item.setSystemMetadata(PRIMARY_TERM, primaryTerm);
+            item.setSystemMetadata("index", index);
         }
-        item.setVersion(version);
-        item.setSystemMetadata(SEQ_NO, seqNo);
-        item.setSystemMetadata(PRIMARY_TERM, primaryTerm);
-        item.setSystemMetadata("index", index);
     }
 
     @Override
@@ -2662,7 +2664,20 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
     }
 
     private String getDocumentIDForItemType(String itemId, String itemType) {
-        return systemItems.contains(itemType) ? (itemId + "_" + itemType.toLowerCase()) : itemId;
+        String tenantId = securityProvider.getCurrentTenantId();
+        String baseId = systemItems.contains(itemType) ? (itemId + "_" + itemType.toLowerCase()) : itemId;
+        return tenantId + "_" + baseId;
+    }
+
+    private String stripTenantFromDocumentId(String documentId) {
+        if (documentId == null) {
+            return null;
+        }
+        int firstUnderscore = documentId.indexOf('_');
+        if (firstUnderscore < 0) {
+            return documentId;
+        }
+        return documentId.substring(firstUnderscore + 1);
     }
 
     private Query wrapWithItemTypeQuery(String itemType, Query originalQuery) {
@@ -2816,24 +2831,25 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
     }
 
     private Query wrapWithTenantAndItemTypeQuery(String itemType, Query originalQuery, String tenantId) {
-        BoolQuery.Builder boolQuery = new BoolQuery.Builder();
+        return Query.of(q -> q
+                .bool(b -> {
+                    // Add tenants filter
+                    if (tenantId != null) {
+                        b.must(Query.of(q2 -> q2.term(t -> t.field("tenantId").value(v -> v.stringValue(tenantId)))));
+                    }
 
-        // Add tenants filter
-        if (tenantId != null) {
-            boolQuery.must(b -> b.term(t->t.field("tenantId").value(v -> v.stringValue(tenantId))));
-        }
+                    // Add item type filter if needed
+                    if (isItemTypeSharingIndex(itemType)) {
+                        b.must(getItemTypeQueryBuilder(itemType));
+                    }
 
-        // Add item type filter if needed
-        if (isItemTypeSharingIndex(itemType)) {
-            boolQuery.must(getItemTypeQueryBuilder(itemType));
-        }
+                    // Add original query
+                    if (originalQuery != null) {
+                        b.must(originalQuery);
+                    }
 
-        // Add original query
-        if (originalQuery != null) {
-            boolQuery.must(originalQuery);
-        }
-
-        return boolQuery.build().toQuery();
+                    return b;
+                }));
     }
 
     private <T extends Item> T handleItemTransformation(T item) {
@@ -2859,7 +2875,6 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
     @Override
     public long calculateStorageSize(String tenantId) {
         try {
-            // Build query to match tenant ID
             Query query = Query.of(q -> q.term(t -> t.field("tenantId").value(v -> v.stringValue(tenantId))));
 
             // Execute count query
@@ -2901,17 +2916,20 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
                     }
                     source.setTenantId(targetTenantId);
 
-                    Script script = Script.of(s -> s.inline(i -> i
-                        .source("ctx._source = params.source")
-                        .lang("painless")
-                        .params(Collections.singletonMap("source", JsonData.of(source)))));
+                    // Create new document ID with target tenant prefix
+                    String oldId = stripTenantFromDocumentId(hit.id());
+                    String newDocumentId = getDocumentIDForItemType(oldId, source.getItemType());
 
-                    // Add update operation to bulk
-                    operations.add(BulkOperation.of(b -> b.update(u -> u
+                    // Add index operation for new document
+                    operations.add(BulkOperation.of(b -> b.index(idx -> idx
                         .index(hit.index())
-                        .id(hit.id())
-                        .script(script)
-                        .docAsUpsert(true))));
+                        .id(newDocumentId)
+                        .document(source))));
+
+                    // Add delete operation for old document
+                    operations.add(BulkOperation.of(b -> b.delete(del -> del
+                        .index(hit.index())
+                        .id(hit.id()))));
                 }
 
                 // Execute bulk update if there are operations
