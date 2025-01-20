@@ -28,7 +28,7 @@
     <reference id="privacyService" interface="org.apache.unomi.api.services.PrivacyService"/>
     <reference id="personalizationService" interface="org.apache.unomi.api.services.PersonalizationService"/>
     <reference id="configSharingService" interface="org.apache.unomi.api.services.ConfigSharingService" />
-    <reference id="tenantService" interface="org.apahce.unomi.api.tenants.TenantService" />
+    <reference id="tenantService" interface="org.apache.unomi.api.tenants.TenantService" />
 
     <cm:property-placeholder persistent-id="org.apache.unomi.web"
                              update-strategy="reload" placeholder-prefix="${web.">

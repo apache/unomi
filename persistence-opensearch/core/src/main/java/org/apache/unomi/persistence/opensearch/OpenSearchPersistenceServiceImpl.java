@@ -396,7 +396,7 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
         this.securityProvider = securityService;
     }
 
-    public void setTenantItemTransformationService(TenantTransformationService tenantTransformationService) {
+    public void setTenantTransformationService(TenantTransformationService tenantTransformationService) {
         this.tenantTransformationService = tenantTransformationService;
     }
 

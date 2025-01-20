@@ -466,7 +466,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         this.securityProvider = securityService;
     }
 
-    public void setTenantItemTransformationService(TenantTransformationService tenantTransformationService) {
+    public void setTenantTransformationService(TenantTransformationService tenantTransformationService) {
         this.tenantTransformationService = tenantTransformationService;
     }
 
@@ -2896,13 +2896,13 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 for (SearchHit hit : searchResponse.getHits()) {
                     Map<String, Object> source = hit.getSourceAsMap();
                     source.put("tenantId", targetTenantId);
-                    
+
                     // Get the item type from the source
                     String itemType = (String) source.get("itemType");
                     // Create new document ID with target tenant prefix
                     String oldId = stripTenantFromDocumentId(hit.getId());
                     String newDocumentId = getDocumentIDForItemType(oldId, itemType);
-                    
+
                     // Add index operation for new document
                     IndexRequest indexRequest = new IndexRequest(hit.getIndex())
                         .id(newDocumentId)
