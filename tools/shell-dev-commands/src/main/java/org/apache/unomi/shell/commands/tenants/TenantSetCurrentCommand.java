@@ -22,49 +22,38 @@ import org.apache.karaf.shell.api.action.Command;
 import org.apache.karaf.shell.api.action.Completion;
 import org.apache.karaf.shell.api.action.lifecycle.Reference;
 import org.apache.karaf.shell.api.action.lifecycle.Service;
-import org.apache.unomi.api.tenants.ApiKey;
 import org.apache.unomi.api.tenants.Tenant;
 import org.apache.unomi.api.tenants.TenantService;
 import org.apache.unomi.shell.completers.TenantCompleter;
 
-@Command(scope = "tenant", name = "show", description = "Show tenant details")
+@Command(scope = "tenant", name = "set-current", description = "Set the current tenant ID for this shell session")
 @Service
-public class TenantShowCommand implements Action {
+public class TenantSetCurrentCommand implements Action {
 
     @Reference
     private TenantService tenantService;
 
-    @Argument(index = 0, name = "tenantId", description = "Tenant ID", required = true)
+    @Argument(index = 0, name = "tenantId", description = "Tenant ID to set as current", required = true)
     @Completion(TenantCompleter.class)
     String tenantId;
 
     @Override
     public Object execute() throws Exception {
+        // Verify the tenant exists
         Tenant tenant = tenantService.getTenant(tenantId);
         if (tenant == null) {
-            System.err.println("Tenant not found.");
+            System.err.println("Error: Tenant '" + tenantId + "' not found");
             return null;
         }
 
-        System.out.println("Tenant Details:");
-        System.out.println("ID: " + tenant.getItemId());
-        System.out.println("Name: " + tenant.getName());
-        System.out.println("Description: " + tenant.getDescription());
-        System.out.println("Status: " + tenant.getStatus());
-        System.out.println("Creation Date: " + tenant.getCreationDate());
-        System.out.println("Last Modified: " + tenant.getLastModificationDate());
-
-        // Show API keys
-        ApiKey publicKey = tenantService.getApiKey(tenant.getItemId(), ApiKey.ApiKeyType.PUBLIC);
-        ApiKey privateKey = tenantService.getApiKey(tenant.getItemId(), ApiKey.ApiKeyType.PRIVATE);
-
-        if (publicKey != null) {
-            System.out.println("Public API Key: " + publicKey.getKey());
-        }
-        if (privateKey != null) {
-            System.out.println("Private API Key: " + privateKey.getKey());
-        }
-
+        // Set the current tenant
+        tenantService.setCurrentTenant(tenantId);
+        System.out.println("Current tenant set to: " + tenantId);
+        
+        // Show additional tenant details
+        System.out.println("Tenant details:");
+        System.out.println("  Name: " + tenant.getName());
+        System.out.println("  Status: " + tenant.getStatus());
         return null;
     }
 } 

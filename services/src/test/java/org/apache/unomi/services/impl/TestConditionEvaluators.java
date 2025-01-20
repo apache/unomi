@@ -16,21 +16,17 @@
  */
 package org.apache.unomi.services.impl;
 
+import org.apache.unomi.api.Event;
 import org.apache.unomi.api.Item;
 import org.apache.unomi.api.Metadata;
-import org.apache.unomi.api.MetadataItem;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.persistence.spi.conditions.ConditionEvaluator;
 import org.apache.unomi.persistence.spi.conditions.ConditionEvaluatorDispatcher;
 import org.apache.unomi.persistence.spi.conditions.ConditionEvaluatorDispatcherImpl;
 
-import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -44,71 +40,65 @@ public class TestConditionEvaluators {
         ConditionEvaluatorDispatcherImpl dispatcher = new ConditionEvaluatorDispatcherImpl();
         dispatcher.addEvaluator("booleanCondition", createBooleanConditionEvaluator());
         dispatcher.addEvaluator("propertyCondition", createPropertyConditionEvaluator());
+        dispatcher.addEvaluator("matchAllCondition", createMatchAllConditionEvaluator());
+        dispatcher.addEvaluator("eventTypeCondition", createEventTypeConditionEvaluator());
+        dispatcher.addEvaluator("sessionPropertyCondition", createPropertyConditionEvaluator());
+        dispatcher.addEvaluator("eventPropertyCondition", createPropertyConditionEvaluator());
+        dispatcher.addEvaluator("profilePropertyCondition", createPropertyConditionEvaluator());
         initializeConditionTypes();
         return dispatcher;
     }
 
-    public static ConditionEvaluator createBooleanConditionEvaluator() {
-        return new ConditionEvaluator() {
-            @Override
-            public boolean eval(Condition condition, Item item, Map<String, Object> context, ConditionEvaluatorDispatcher dispatcher) {
-                String operator = (String) condition.getParameter("operator");
-                List<Condition> subConditions = (List<Condition>) condition.getParameter("subConditions");
+    private static ConditionEvaluator createBooleanConditionEvaluator() {
+        return (condition, item, context, dispatcher) -> {
+            String operator = (String) condition.getParameter("operator");
+            List<Condition> subConditions = (List<Condition>) condition.getParameter("subConditions");
 
-                if (subConditions == null || subConditions.isEmpty()) {
+            if (subConditions == null || subConditions.isEmpty()) {
+                return true;
+            }
+
+            boolean isAnd = "and".equalsIgnoreCase(operator);
+
+            for (Condition subCondition : subConditions) {
+                boolean result = dispatcher.eval(subCondition, item, context);
+                if (isAnd && !result) {
+                    return false;
+                } else if (!isAnd && result) {
                     return true;
                 }
-
-                boolean isAnd = "and".equalsIgnoreCase(operator);
-
-                for (Condition subCondition : subConditions) {
-                    boolean result = dispatcher.eval(subCondition, item, context);
-                    if (isAnd && !result) {
-                        return false;
-                    } else if (!isAnd && result) {
-                        return true;
-                    }
-                }
-
-                return isAnd;
             }
+
+            return isAnd;
         };
     }
 
-    public static ConditionEvaluator createPropertyConditionEvaluator() {
-        return new ConditionEvaluator() {
-            @Override
-            public boolean eval(Condition condition, Item item, Map<String, Object> context, ConditionEvaluatorDispatcher dispatcher) {
-                String propertyName = (String) condition.getParameter("propertyName");
-                String comparisonOperator = (String) condition.getParameter("comparisonOperator");
-                Object expectedValue = condition.getParameter("propertyValue");
+    private static boolean compareValues(Object expectedValue, Object actualValue, String comparisonOperator) {
+        if (comparisonOperator == null) {
+            return false;
+        }
 
-                if (propertyName == null || comparisonOperator == null) {
-                    return false;
+        switch (comparisonOperator) {
+            case "equals":
+                return Objects.equals(expectedValue, actualValue);
+            case "notEquals":
+                return !Objects.equals(expectedValue, actualValue);
+            case "exists":
+                return actualValue != null;
+            case "missing":
+                return actualValue == null;
+            case "contains":
+                if (actualValue instanceof Collection) {
+                    return ((Collection<?>) actualValue).contains(expectedValue);
                 }
-
-                Object actualValue = getPropertyValue(item, propertyName);
-
-                switch (comparisonOperator) {
-                    case "equals":
-                        return Objects.equals(expectedValue, actualValue);
-                    case "notEquals":
-                        return !Objects.equals(expectedValue, actualValue);
-                    case "exists":
-                        return actualValue != null;
-                    case "missing":
-                        return actualValue == null;
-                    case "contains":
-                        return actualValue != null && actualValue.toString().contains(expectedValue.toString());
-                    case "startsWith":
-                        return actualValue != null && actualValue.toString().startsWith(expectedValue.toString());
-                    case "endsWith":
-                        return actualValue != null && actualValue.toString().endsWith(expectedValue.toString());
-                    default:
-                        return false;
-                }
-            }
-        };
+                return actualValue != null && actualValue.toString().contains(expectedValue.toString());
+            case "startsWith":
+                return actualValue != null && actualValue.toString().startsWith(expectedValue.toString());
+            case "endsWith":
+                return actualValue != null && actualValue.toString().endsWith(expectedValue.toString());
+            default:
+                return false;
+        }
     }
 
     private static Object getPropertyValue(Item item, String propertyName) {
@@ -116,97 +106,128 @@ public class TestConditionEvaluators {
             return null;
         }
 
-        // Handle metadata properties first
-        if (propertyName.startsWith("metadata.")) {
-            String metadataField = propertyName.substring("metadata.".length());
-            if (item instanceof MetadataItem) {
-                Metadata metadata = ((MetadataItem) item).getMetadata();
-                if (metadata != null) {
-                    if ("tags".equals(metadataField)) {
-                        return metadata.getTags();
-                    } else if ("systemTags".equals(metadataField)) {
-                        return metadata.getSystemTags();
+        try {
+            String[] path = propertyName.split("\\.");
+            Object current = item;
+
+            for (String field : path) {
+                if (current == null) {
+                    return null;
+                }
+
+                // Handle Map-based access
+                if (current instanceof Map) {
+                    current = ((Map<?, ?>) current).get(field);
+                    continue;
+                }
+
+                // Handle special cases for known types
+                if (current instanceof Event && "profile".equals(field)) {
+                    current = ((Event) current).getProfile();
+                    continue;
+                } else if (current instanceof Event && "session".equals(field)) {
+                    current = ((Event) current).getSession();
+                    continue;
+                }
+
+                // Try getter method
+                try {
+                    Method getter = current.getClass().getMethod("get" + field.substring(0, 1).toUpperCase() + field.substring(1));
+                    current = getter.invoke(current);
+                } catch (Exception e) {
+                    // If getter fails, try direct field access
+                    try {
+                        current = current.getClass().getField(field).get(current);
+                    } catch (Exception ex) {
+                        return null;
                     }
-                    // Try to get other metadata fields using reflection
-                    return getFieldValueByReflection(metadata, metadataField);
                 }
             }
+            return current;
+        } catch (Exception e) {
             return null;
         }
-
-        // Handle nested properties
-        String[] propertyPath = propertyName.split("\\.");
-        Object currentObject = item;
-
-        for (String property : propertyPath) {
-            if (currentObject == null) {
-                return null;
-            }
-
-            // Try to get value using reflection
-            currentObject = getFieldValueByReflection(currentObject, property);
-        }
-
-        return currentObject;
     }
 
-    private static Object getFieldValueByReflection(Object object, String fieldName) {
-        if (object == null || fieldName == null) {
-            return null;
-        }
+    private static ConditionEvaluator createPropertyConditionEvaluator() {
+        return (condition, item, context, dispatcher) -> {
+            String propertyName = (String) condition.getParameter("propertyName");
+            String comparisonOperator = (String) condition.getParameter("comparisonOperator");
+            Object expectedValue = condition.getParameter("propertyValue");
 
-        // Handle Map lookup first
-        if (object instanceof Map) {
-            return ((Map<?, ?>) object).get(fieldName);
-        }
-
-        Class<?> clazz = object.getClass();
-        while (clazz != null) {
-            try {
-                // First try to find a getter method
-                String getterName = "get" + fieldName.substring(0, 1).toUpperCase() + fieldName.substring(1);
-                try {
-                    Method getter = clazz.getDeclaredMethod(getterName);
-                    getter.setAccessible(true);
-                    return getter.invoke(object);
-                } catch (NoSuchMethodException e) {
-                    // No getter found, try direct field access
-                    try {
-                        Field field = clazz.getDeclaredField(fieldName);
-                        field.setAccessible(true);
-                        return field.get(object);
-                    } catch (NoSuchFieldException nsfe) {
-                        // Try superclass
-                        clazz = clazz.getSuperclass();
-                        continue;
-                    }
-                }
-            } catch (IllegalAccessException | InvocationTargetException e) {
-                // If we can't access the field/method, return null
-                return null;
+            if (propertyName == null || comparisonOperator == null) {
+                return false;
             }
-        }
-        return null;
+
+            Object actualValue = getPropertyValue(item, propertyName);
+            return compareValues(expectedValue, actualValue, comparisonOperator);
+        };
+    }
+
+    private static ConditionEvaluator createMatchAllConditionEvaluator() {
+        return (condition, item, context, dispatcher) -> true;
+    }
+
+    private static ConditionEvaluator createEventTypeConditionEvaluator() {
+        return (condition, item, context, dispatcher) -> {
+            if (!(item instanceof Event)) {
+                return false;
+            }
+            Event event = (Event) item;
+            String expectedEventType = (String) condition.getParameter("eventTypeId");
+            return expectedEventType != null && expectedEventType.equals(event.getEventType());
+        };
     }
 
     private static void initializeConditionTypes() {
         // Create property condition type
-        ConditionType propertyConditionType = new ConditionType();
-        propertyConditionType.setItemId("propertyCondition");
-        Metadata propertyMetadata = new Metadata();
-        propertyMetadata.setId("propertyCondition");
-        propertyConditionType.setMetadata(propertyMetadata);
-        propertyConditionType.setConditionEvaluator("propertyCondition");
+        ConditionType propertyConditionType = createConditionType("propertyCondition", null);
         conditionTypes.put("propertyCondition", propertyConditionType);
 
         // Create boolean condition type
-        ConditionType booleanConditionType = new ConditionType();
-        booleanConditionType.setItemId("booleanCondition");
-        Metadata booleanMetadata = new Metadata();
-        booleanMetadata.setId("booleanCondition");
-        booleanConditionType.setMetadata(booleanMetadata);
-        booleanConditionType.setConditionEvaluator("booleanCondition");
+        ConditionType booleanConditionType = createConditionType("booleanCondition", null);
         conditionTypes.put("booleanCondition", booleanConditionType);
+
+        // Create matchAll condition type
+        ConditionType matchAllConditionType = createConditionType("matchAllCondition", null);
+        conditionTypes.put("matchAllCondition", matchAllConditionType);
+
+        // Create eventType condition type
+        ConditionType eventTypeConditionType = createConditionType("eventTypeCondition", Collections.singleton("eventCondition"));
+        conditionTypes.put("eventTypeCondition", eventTypeConditionType);
+
+        // Create eventProperty condition type
+        ConditionType eventPropertyConditionType = createConditionType("eventPropertyCondition", Collections.singleton("eventCondition"));
+        conditionTypes.put("eventPropertyCondition", eventPropertyConditionType);
+
+        // Create sessionProperty condition type
+        ConditionType sessionPropertyConditionType = createConditionType("sessionPropertyCondition", Collections.singleton("sessionCondition"));
+        conditionTypes.put("sessionPropertyCondition", sessionPropertyConditionType);
+
+        // Create profileProperty condition type
+        ConditionType profilePropertyConditionType = createConditionType("profilePropertyCondition", Collections.singleton("profileCondition"));
+        conditionTypes.put("profilePropertyCondition", profilePropertyConditionType);
+    }
+
+    private static ConditionType createConditionType(String typeId, Set<String> systemTags) {
+        ConditionType conditionType = new ConditionType();
+        conditionType.setItemId(typeId);
+
+        Metadata metadata = new Metadata();
+        metadata.setId(typeId);
+        metadata.setEnabled(true);
+        if (systemTags != null) {
+            metadata.setSystemTags(new HashSet<>(systemTags));
+        }
+
+        conditionType.setMetadata(metadata);
+        conditionType.setConditionEvaluator(typeId);
+
+        return conditionType;
+    }
+
+    public static Map<String, ConditionType> getConditionTypes() {
+        return conditionTypes;
     }
 
     public static ConditionType getConditionType(String conditionTypeId) {

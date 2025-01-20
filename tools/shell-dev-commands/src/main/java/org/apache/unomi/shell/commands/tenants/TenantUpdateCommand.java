@@ -16,12 +16,14 @@
  */
 package org.apache.unomi.shell.commands.tenants;
 
-import org.apache.karaf.shell.api.action.Action;
-import org.apache.karaf.shell.api.action.Command;
-import org.apache.karaf.shell.api.action.Option;
+import org.apache.karaf.shell.api.action.*;
 import org.apache.karaf.shell.api.action.lifecycle.Reference;
 import org.apache.karaf.shell.api.action.lifecycle.Service;
 import org.apache.unomi.api.tenants.*;
+import org.apache.unomi.shell.completers.EventTypeCompleter;
+import org.apache.unomi.shell.completers.IPAddressCompleter;
+import org.apache.unomi.shell.completers.TenantCompleter;
+import org.apache.unomi.shell.completers.TenantStatusCompleter;
 
 import java.util.*;
 
@@ -34,8 +36,9 @@ public class TenantUpdateCommand implements Action {
     @Reference
     private TenantService tenantService;
 
-    @Option(name = "--id", description = "Tenant ID", required = true)
-    String id;
+    @Argument(index = 0, name = "tenantId", description = "Tenant ID to update", required = true)
+    @Completion(TenantCompleter.class)
+    String tenantId;
 
     @Option(name = "--name", description = "New tenant name")
     String name;
@@ -44,6 +47,7 @@ public class TenantUpdateCommand implements Action {
     String description;
 
     @Option(name = "--status", description = "New tenant status (ACTIVE, DISABLED, SUSPENDED)")
+    @Completion(TenantStatusCompleter.class)
     String status;
 
     @Option(name = "--max-profiles", description = "Maximum number of profiles allowed")
@@ -56,9 +60,11 @@ public class TenantUpdateCommand implements Action {
     Long maxRequests;
 
     @Option(name = "--restricted-events", description = "Comma-separated list of restricted event types")
+    @Completion(EventTypeCompleter.class)
     String restrictedEvents;
 
     @Option(name = "--authorized-ips", description = "Comma-separated list of authorized IP addresses/ranges")
+    @Completion(IPAddressCompleter.class)
     String authorizedIPs;
 
     @Option(name = "--generate-public-key", description = "Generate a new public API key")
@@ -72,7 +78,7 @@ public class TenantUpdateCommand implements Action {
 
     @Override
     public Object execute() throws Exception {
-        Tenant tenant = tenantService.getTenant(id);
+        Tenant tenant = tenantService.getTenant(tenantId);
         if (tenant == null) {
             System.err.println("Tenant not found.");
             return null;
@@ -190,6 +196,31 @@ public class TenantUpdateCommand implements Action {
         if (modified) {
             tenantService.saveTenant(tenant);
             System.out.println("Tenant updated successfully.");
+
+            // Show updated tenant details
+            System.out.println("\nUpdated Tenant Details:");
+            System.out.println("ID: " + tenant.getItemId());
+            System.out.println("Name: " + tenant.getName());
+            System.out.println("Description: " + tenant.getDescription());
+            System.out.println("Status: " + tenant.getStatus());
+
+            ResourceQuota quota = tenant.getResourceQuota();
+            if (quota != null) {
+                System.out.println("Resource Quota:");
+                System.out.println("  Max Profiles: " + quota.getMaxProfiles());
+                System.out.println("  Max Events: " + quota.getMaxEvents());
+                System.out.println("  Max Requests: " + quota.getMaxRequests());
+            }
+
+            Set<String> restrictedEventTypes = tenant.getRestrictedEventPermissions();
+            if (restrictedEventTypes != null && !restrictedEventTypes.isEmpty()) {
+                System.out.println("Restricted Events: " + String.join(", ", restrictedEventTypes));
+            }
+
+            Set<String> authorizedIPAddresses = tenant.getAuthorizedIPs();
+            if (authorizedIPAddresses != null && !authorizedIPAddresses.isEmpty()) {
+                System.out.println("Authorized IPs: " + String.join(", ", authorizedIPAddresses));
+            }
         } else {
             System.out.println("No changes were made to the tenant.");
         }

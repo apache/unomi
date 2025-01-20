@@ -20,13 +20,16 @@ import org.apache.unomi.api.tenants.ApiKey;
 import org.apache.unomi.api.tenants.Tenant;
 import org.apache.unomi.api.tenants.TenantService;
 
-import java.util.Collections;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 // Custom TenantService implementation for testing
 public class TestTenantService implements TenantService {
     private ThreadLocal<String> currentTenantId = new ThreadLocal<>();
+    private Map<String, Tenant> tenants = new ConcurrentHashMap<>();
 
     public void setCurrentTenantId(String tenantId) {
         currentTenantId.set(tenantId);
@@ -44,61 +47,67 @@ public class TestTenantService implements TenantService {
 
     @Override
     public List<Tenant> getAllTenants() {
-        return Collections.emptyList();
+        return new ArrayList<>(tenants.values());
     }
 
     @Override
     public Tenant getTenant(String tenantId) {
-        return null;
+        return tenants.get(tenantId);
     }
 
     @Override
     public void saveTenant(Tenant tenant) {
-        // No-op for test
+        if (tenant != null && tenant.getItemId() != null) {
+            tenants.put(tenant.getItemId(), tenant);
+        }
     }
 
     @Override
     public void deleteTenant(String tenantId) {
-        // No-op for test
+        tenants.remove(tenantId);
     }
 
     @Override
     public boolean validateApiKey(String tenantId, String apiKey) {
-        return true;
+        return true; // For testing purposes
     }
 
     @Override
     public boolean validateApiKeyWithType(String tenantId, String apiKey, ApiKey.ApiKeyType type) {
-        return true;
+        return true; // For testing purposes
     }
 
     @Override
     public Tenant createTenant(String tenantId, Map<String, Object> properties) {
-        return null;
+        Tenant tenant = new Tenant();
+        tenant.setItemId(tenantId);
+        tenant.setProperties(properties != null ? properties : new HashMap<>());
+        saveTenant(tenant);
+        return tenant;
     }
 
     @Override
     public ApiKey generateApiKey(String tenantId, Long validityPeriod) {
-        return null;
+        return null; // Not needed for testing
     }
 
     @Override
     public ApiKey generateApiKeyWithType(String tenantId, ApiKey.ApiKeyType type, Long validityPeriod) {
-        return null;
+        return null; // Not needed for testing
     }
 
     @Override
     public Tenant getTenantByApiKey(String apiKey) {
-        return null;
+        return null; // Not needed for testing
     }
 
     @Override
     public Tenant getTenantByApiKey(String apiKey, ApiKey.ApiKeyType type) {
-        return null;
+        return null; // Not needed for testing
     }
 
     @Override
     public ApiKey getApiKey(String tenantId, ApiKey.ApiKeyType type) {
-        return null;
+        return null; // Not needed for testing
     }
 }

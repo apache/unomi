@@ -16,14 +16,13 @@
  */
 package org.apache.unomi.shell.commands.tenants;
 
-import org.apache.karaf.shell.api.action.Action;
-import org.apache.karaf.shell.api.action.Command;
-import org.apache.karaf.shell.api.action.Option;
+import org.apache.karaf.shell.api.action.*;
 import org.apache.karaf.shell.api.action.lifecycle.Reference;
 import org.apache.karaf.shell.api.action.lifecycle.Service;
 import org.apache.unomi.api.tenants.ApiKey;
 import org.apache.unomi.api.tenants.Tenant;
 import org.apache.unomi.api.tenants.TenantService;
+import org.apache.unomi.shell.completers.TenantStatusCompleter;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -39,16 +38,20 @@ public class TenantCreateCommand implements Action {
     @Reference
     private TenantService tenantService;
 
-    @Option(name = "--id", description = "Tenant ID", required = true)
+    @Argument(index = 0, name = "id", description = "Tenant ID", required = true)
     String id;
 
-    @Option(name = "--name", description = "Tenant name", required = true)
+    @Argument(index = 1, name = "name", description = "Tenant name", required = true)
     String name;
 
     @Option(name = "--description", description = "Tenant description")
     String description;
 
-    @Option(name = "--key-validity", description = "Validity period for API keys in days (0 for no expiration)", required = false)
+    @Option(name = "--status", description = "Initial tenant status (ACTIVE, DISABLED, SUSPENDED)")
+    @Completion(TenantStatusCompleter.class)
+    String status = "ACTIVE";
+
+    @Option(name = "--key-validity", description = "Validity period for API keys in days (0 for no expiration)")
     Integer keyValidityDays;
 
     @Override
@@ -57,6 +60,9 @@ public class TenantCreateCommand implements Action {
         properties.put("name", name);
         if (description != null) {
             properties.put("description", description);
+        }
+        if (status != null) {
+            properties.put("status", status);
         }
 
         // Convert days to milliseconds for API key validity
@@ -88,6 +94,7 @@ public class TenantCreateCommand implements Action {
             System.out.println("ID: " + tenant.getItemId());
             System.out.println("Name: " + tenant.getName());
             System.out.println("Description: " + tenant.getDescription());
+            System.out.println("Status: " + tenant.getStatus());
             System.out.println("Public API Key: " + publicKey.getKey());
             System.out.println("Private API Key: " + privateKey.getKey());
             if (keyValidityDays != null && keyValidityDays > 0) {
@@ -100,4 +107,4 @@ public class TenantCreateCommand implements Action {
         }
         return null;
     }
-} 
+}

@@ -16,33 +16,39 @@
  */
 package org.apache.unomi.services.impl;
 
-import org.apache.unomi.api.*;
+import org.apache.unomi.api.CustomItem;
+import org.apache.unomi.api.Item;
+import org.apache.unomi.api.PartialList;
+import org.apache.unomi.api.PropertyType;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.tenants.TenantService;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.aggregate.BaseAggregate;
 import org.apache.unomi.persistence.spi.conditions.ConditionEvaluatorDispatcher;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
-import static org.apache.unomi.services.impl.TestTenantService.SYSTEM_TENANT;
+import static org.apache.unomi.api.tenants.TenantService.SYSTEM_TENANT;
 
 /**
  * An in-memory implementation of PersistenceService for testing purposes.
  */
 public class InMemoryPersistenceServiceImpl  implements PersistenceService {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(InMemoryPersistenceServiceImpl.class);
+
     private final Map<String, Item> items = new ConcurrentHashMap<>();
-    private ConditionEvaluatorDispatcher conditionEvaluatorDispatcher;
+    private final ConditionEvaluatorDispatcher conditionEvaluatorDispatcher;
     private final TenantService tenantService;
 
-    public InMemoryPersistenceServiceImpl(TenantService tenantService) {
-        initializeConditionEvaluators();
+    public InMemoryPersistenceServiceImpl(TenantService tenantService, ConditionEvaluatorDispatcher conditionEvaluatorDispatcher) {
+        this.conditionEvaluatorDispatcher = conditionEvaluatorDispatcher;
         this.tenantService = tenantService;
-    }
-
-    public void initializeConditionEvaluators() {
-        this.conditionEvaluatorDispatcher = TestConditionEvaluators.createDispatcher();
     }
 
     @Override
@@ -216,21 +222,130 @@ public class InMemoryPersistenceServiceImpl  implements PersistenceService {
             return false;
         }
 
-        if (fieldName.startsWith("metadata.")) {
-            String metadataField = fieldName.substring("metadata.".length());
-            if (item instanceof MetadataItem) {
-                Metadata metadata = ((MetadataItem) item).getMetadata();
-                if (metadata != null) {
-                    if ("tags".equals(metadataField)) {
-                        return metadata.getTags() != null && metadata.getTags().contains(fieldValue);
-                    } else if ("systemTags".equals(metadataField)) {
-                        return metadata.getSystemTags() != null && metadata.getSystemTags().contains(fieldValue);
-                    }
+        try {
+            // Try direct map access first
+            Object value = getValueFromPath(item, fieldName);
+            if (value != null) {
+                if (value instanceof Collection) {
+                    return ((Collection<?>) value).contains(fieldValue);
+                }
+                return value.toString().equals(fieldValue);
+            }
+
+            // If direct access fails, try path-based access
+            value = getValueFromPath(item, fieldName);
+            if (value == null) {
+                return false;
+            }
+
+            if (value instanceof Collection) {
+                return ((Collection<?>) value).contains(fieldValue);
+            }
+
+            return value.toString().equals(fieldValue);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private Object getValueFromPath(Object obj, String path) {
+        if (obj == null || path == null) {
+            return null;
+        }
+
+        try {
+            Object current = obj;
+            StringBuilder currentPart = new StringBuilder();
+            boolean inBrackets = false;
+            boolean escaped = false;
+
+            for (int i = 0; i < path.length(); i++) {
+                char c = path.charAt(i);
+
+                if (escaped) {
+                    currentPart.append(c);
+                    escaped = false;
+                    continue;
+                }
+
+                switch (c) {
+                    case '\\':
+                        escaped = true;
+                        break;
+                    case '[':
+                        if (currentPart.length() > 0) {
+                            current = resolveValue(current, currentPart.toString());
+                            currentPart = new StringBuilder();
+                        }
+                        inBrackets = true;
+                        break;
+                    case ']':
+                        if (inBrackets) {
+                            current = resolveValue(current, currentPart.toString());
+                            currentPart = new StringBuilder();
+                            inBrackets = false;
+                        } else {
+                            currentPart.append(c);
+                        }
+                        break;
+                    case '.':
+                        if (!inBrackets) {
+                            if (currentPart.length() > 0) {
+                                current = resolveValue(current, currentPart.toString());
+                                currentPart = new StringBuilder();
+                            }
+                        } else {
+                            currentPart.append(c);
+                        }
+                        break;
+                    default:
+                        currentPart.append(c);
+                }
+            }
+
+            // Handle any remaining part
+            if (currentPart.length() > 0) {
+                current = resolveValue(current, currentPart.toString());
+            }
+
+            return current;
+        } catch (Exception e) {
+            LOGGER.debug("Error accessing path: " + path, e);
+            return null;
+        }
+    }
+
+    private Object resolveValue(Object obj, String key) throws Exception {
+        if (obj == null) {
+            return null;
+        }
+
+        if (obj instanceof Map) {
+            return ((Map<?, ?>) obj).get(key);
+        }
+
+        // Try getter method first
+        try {
+            String getterName = "get" + key.substring(0, 1).toUpperCase() + key.substring(1);
+            Method getter = obj.getClass().getMethod(getterName);
+            return getter.invoke(obj);
+        } catch (NoSuchMethodException e) {
+            // Try boolean getter
+            try {
+                String isName = "is" + key.substring(0, 1).toUpperCase() + key.substring(1);
+                Method isGetter = obj.getClass().getMethod(isName);
+                return isGetter.invoke(obj);
+            } catch (NoSuchMethodException e2) {
+                // Try field access
+                try {
+                    Field field = obj.getClass().getDeclaredField(key);
+                    field.setAccessible(true);
+                    return field.get(obj);
+                } catch (NoSuchFieldException e3) {
+                    return null;
                 }
             }
         }
-
-        return false;
     }
 
     @Override
@@ -282,7 +397,12 @@ public class InMemoryPersistenceServiceImpl  implements PersistenceService {
     @Override public boolean createIndex(String itemType) { return true; }
     @Override public boolean removeQuery(String queryString) { return true; }
     @Override public boolean saveQuery(String queryString, Condition condition) { return true; }
-    @Override public boolean testMatch(Condition condition, Item item) { return false; }
+    @Override public boolean testMatch(Condition condition, Item item) {
+        if (condition == null || item == null) {
+            return false;
+        }
+        return isValidCondition(condition, item);
+    }
     @Override public <T extends Item> PartialList<T> queryFullText(String fieldName, String fullTextSearch, Class<T> clazz, int offset, int size) { return new PartialList<>(Collections.<T>emptyList(), offset, size, 0, PartialList.Relation.EQUAL); }
     @Override public <T extends Item> PartialList<T> queryFullText(String fullTextSearch, Condition condition, String sortBy, Class<T> clazz, int offset, int size) { return new PartialList<>(Collections.<T>emptyList(), offset, size, 0, PartialList.Relation.EQUAL); }
     @Override public <T extends Item> PartialList<T> queryFullText(String fieldName, String fullTextSearch, String sortBy, String scrollTimeValidity, Class<T> clazz, int offset, int size) { return new PartialList<>(Collections.<T>emptyList(), offset, size, 0, PartialList.Relation.EQUAL); }

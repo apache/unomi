@@ -22,7 +22,9 @@ import org.apache.unomi.api.PropertyMergeStrategyType;
 import org.apache.unomi.api.ValueType;
 import org.apache.unomi.api.actions.ActionType;
 import org.apache.unomi.api.conditions.ConditionType;
+import org.apache.unomi.persistence.spi.conditions.ConditionEvaluatorDispatcher;
 import org.apache.unomi.services.impl.InMemoryPersistenceServiceImpl;
+import org.apache.unomi.services.impl.TestConditionEvaluators;
 import org.apache.unomi.services.impl.TestTenantService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -100,7 +102,8 @@ class DefinitionsServiceImplTest {
     void setUp() {
         tenantService = new TestTenantService();
         tenantService.setCurrentTenantId("test-tenant");
-        persistenceService = new InMemoryPersistenceServiceImpl(tenantService);
+        ConditionEvaluatorDispatcher conditionEvaluatorDispatcher = TestConditionEvaluators.createDispatcher();
+        persistenceService = new InMemoryPersistenceServiceImpl(tenantService, conditionEvaluatorDispatcher);
         definitionsService = new TestDefinitionsServiceImpl();
         definitionsService.setPersistenceService(persistenceService);
         definitionsService.setBundleContext(bundleContext);
