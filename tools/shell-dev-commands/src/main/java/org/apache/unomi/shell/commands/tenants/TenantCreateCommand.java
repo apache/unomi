@@ -29,7 +29,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-@Command(scope = "tenant", name = "create", description = "Create a new tenant")
+@Command(scope = "unomi", name = "tenant-create", description = "Create a new tenant")
 @Service
 public class TenantCreateCommand implements Action {
 

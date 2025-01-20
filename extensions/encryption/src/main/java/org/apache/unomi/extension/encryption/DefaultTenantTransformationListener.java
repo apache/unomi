@@ -17,7 +17,7 @@
 package org.apache.unomi.extension.encryption;
 
 import org.apache.unomi.api.Item;
-import org.apache.unomi.api.tenants.TenantTransformationService;
+import org.apache.unomi.api.tenants.TenantTransformationListener;
 import org.apache.unomi.extension.encryption.config.EncryptionConfig;
 import org.apache.unomi.extension.encryption.services.AESEncryptionService;
 import org.slf4j.Logger;
@@ -29,15 +29,20 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-public class DefaultTenantTransformationService implements TenantTransformationService {
+public class DefaultTenantTransformationListener implements TenantTransformationListener {
 
-    private static final Logger logger = LoggerFactory.getLogger(DefaultTenantTransformationService.class);
+    private static final Logger logger = LoggerFactory.getLogger(DefaultTenantTransformationListener.class);
 
     private EncryptionConfig config;
     private AESEncryptionService encryptionService;
 
-    public DefaultTenantTransformationService() {
+    public DefaultTenantTransformationListener() {
         this.encryptionService = new AESEncryptionService();
+    }
+
+    @Override
+    public int getPriority() {
+        return 100; // Default encryption transformation has high priority
     }
 
     @Override
@@ -73,7 +78,6 @@ public class DefaultTenantTransformationService implements TenantTransformationS
             return item;
         }
     }
-
 
     @Override
     public Item reverseTransformItem(Item item, String tenantId) {
@@ -174,4 +178,4 @@ public class DefaultTenantTransformationService implements TenantTransformationS
     public String getTransformationType() {
         return "encryption";
     }
-}
+} 

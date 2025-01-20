@@ -87,6 +87,7 @@
 
     <reference id="metricsService" interface="org.apache.unomi.metrics.MetricsService" />
     <reference id="scriptExecutor" interface="org.apache.unomi.scripting.ScriptExecutor" />
+    <reference id="securityServiceReference" interface="org.apache.unomi.api.security.SecurityService" availability="optional" />
 
     <service id="openSearchPersistenceService" ref="openSearchPersistenceServiceImpl">
         <interfaces>
@@ -161,7 +162,7 @@
         <property name="alwaysOverwrite" value="${os.alwaysOverwrite}" />
         <property name="logLevelRestClient" value="${os.logLevelRestClient}" />
         <property name="minimalClusterState" value="${os.minimalClusterState}" />
-        <property name="tenantTransformationService" ref="tenantTransformationService"/>
+        <property name="securityServiceReference" ref="securityServiceReference" />
     </bean>
 
     <!-- We use a listener here because using the list directly for listening to proxies coming from the same bundle didn't seem to work -->
@@ -180,8 +181,14 @@
                 bind-method="bindConditionEvaluator" unbind-method="unbindConditionEvaluator" ref="openSearchPersistenceServiceImpl"/>
     </reference-list>
 
-    <reference id="tenantTransformationService"
-               interface="org.apache.unomi.api.tenants.TenantTransformationService"
-               availability="optional"/>
+    <!-- Transformation Listeners -->
+    <reference-list id="transformationListeners"
+                   interface="org.apache.unomi.api.tenants.TenantTransformationListener"
+                   availability="optional">
+        <reference-listener bind-method="bindTransformationListener"
+                          unbind-method="unbindTransformationListener">
+            <ref component-id="openSearchPersistenceServiceImpl"/>
+        </reference-listener>
+    </reference-list>
 
 </blueprint>

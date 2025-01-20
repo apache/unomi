@@ -27,7 +27,7 @@ import org.apache.unomi.shell.completers.TenantStatusCompleter;
 
 import java.util.*;
 
-@Command(scope = "tenant", name = "update", description = "Update a tenant")
+@Command(scope = "unomi", name = "tenant-update", description = "Update a tenant")
 @Service
 public class TenantUpdateCommand implements Action {
 

@@ -57,8 +57,12 @@ public class TenantServiceImpl implements TenantService {
     }
 
     public void unbindListener(TenantLifecycleListener listener) {
-        lifecycleListeners.remove(listener);
-        LOGGER.debug("Removed tenant lifecycle listener: {}", listener.getClass().getName());
+        if (listener != null) {
+            lifecycleListeners.remove(listener);
+            LOGGER.debug("Removed tenant lifecycle listener: {}", listener.getClass().getName());
+        } else {
+            LOGGER.warn("Null tenant lifecycle listener found when trying to unbind");
+        }
     }
 
     @Override
@@ -198,7 +202,7 @@ public class TenantServiceImpl implements TenantService {
         if (key == null) {
             return null;
         }
-        
+
         List<Tenant> allTenants = getAllTenants();
         return allTenants.stream()
                 .filter(tenant -> tenant.getApiKeys().stream()

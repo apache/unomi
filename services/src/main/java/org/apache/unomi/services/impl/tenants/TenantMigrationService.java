@@ -19,24 +19,26 @@ package org.apache.unomi.services.impl.tenants;
 import org.apache.unomi.api.tenants.Tenant;
 import org.apache.unomi.api.tenants.TenantService;
 import org.apache.unomi.persistence.spi.PersistenceService;
-import org.osgi.service.component.annotations.Component;
-import org.osgi.service.component.annotations.Reference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Arrays;
 import java.util.List;
 
-@Component
 public class TenantMigrationService {
 
     private static final Logger logger = LoggerFactory.getLogger(TenantMigrationService.class);
 
-    @Reference
     private PersistenceService persistenceService;
-
-    @Reference
     private TenantService tenantService;
+
+    public void setPersistenceService(PersistenceService persistenceService) {
+        this.persistenceService = persistenceService;
+    }
+
+    public void setTenantService(TenantService tenantService) {
+        this.tenantService = tenantService;
+    }
 
     public boolean migrateTenant(String sourceTenantId, String targetTenantId) {
         try {

@@ -32,7 +32,7 @@
     <reference id="persistenceService" interface="org.apache.unomi.persistence.spi.PersistenceService"/>
     <reference id="definitionsService" interface="org.apache.unomi.api.services.DefinitionsService"/>
     <reference id="schedulerService" interface="org.apache.unomi.api.services.SchedulerService"/>
-
+    <reference id="tenantService" interface="org.apache.unomi.api.tenants.TenantService"/>
 
     <!-- User List service -->
 
@@ -44,6 +44,7 @@
         <property name="pathToGeonamesDatabase" value="${request.geonamesDatabase.location}"/>
         <property name="forceDbImport" value="${request.geonamesDatabase.forceImport}"/>
         <property name="refreshDbInterval" value="${service.geonames.refresh.interval}"/>
+        <property name="tenantService" ref="tenantService" />
     </bean>
     <service id="geonamesService" ref="geonamesServiceImpl" interface="org.apache.unomi.geonames.services.GeonamesService"/>
 

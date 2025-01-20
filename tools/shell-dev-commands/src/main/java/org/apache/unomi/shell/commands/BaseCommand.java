@@ -17,6 +17,7 @@
 package org.apache.unomi.shell.commands;
 
 import org.apache.karaf.shell.api.action.Action;
+import org.apache.karaf.shell.api.action.lifecycle.Reference;
 import org.apache.karaf.shell.api.console.Session;
 import org.apache.karaf.shell.support.table.ShellTable;
 import org.apache.unomi.persistence.spi.PersistenceService;
@@ -29,11 +30,8 @@ import java.io.IOException;
 public abstract class BaseCommand implements Action {
     protected static final int DEFAULT_ENTRIES = 100;
 
+    @Reference
     protected PersistenceService persistenceService;
-
-    public void setPersistenceService(PersistenceService persistenceService) {
-        this.persistenceService = persistenceService;
-    }
 
     protected ShellTable buildTable() {
         ShellTable table = new ShellTable();

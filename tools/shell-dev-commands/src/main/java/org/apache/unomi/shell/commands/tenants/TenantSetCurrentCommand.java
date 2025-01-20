@@ -26,7 +26,7 @@ import org.apache.unomi.api.tenants.Tenant;
 import org.apache.unomi.api.tenants.TenantService;
 import org.apache.unomi.shell.completers.TenantCompleter;
 
-@Command(scope = "tenant", name = "set-current", description = "Set the current tenant ID for this shell session")
+@Command(scope = "unomi-", name = "tenant-set-current", description = "Set the current tenant ID for this shell session")
 @Service
 public class TenantSetCurrentCommand implements Action {
 
@@ -49,11 +49,11 @@ public class TenantSetCurrentCommand implements Action {
         // Set the current tenant
         tenantService.setCurrentTenant(tenantId);
         System.out.println("Current tenant set to: " + tenantId);
-        
+
         // Show additional tenant details
         System.out.println("Tenant details:");
         System.out.println("  Name: " + tenant.getName());
         System.out.println("  Status: " + tenant.getStatus());
         return null;
     }
-} 
+}

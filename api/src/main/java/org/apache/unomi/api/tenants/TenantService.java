@@ -63,6 +63,16 @@ public interface TenantService {
     String getCurrentTenantId();
 
     /**
+     * Gets the current tenant ID for the executing thread, returning a default value if none is set.
+     *
+     * @return the current tenant ID, or SYSTEM_TENANT if no tenant is set
+     */
+    default String getCurrentTenantIdWithDefault() {
+        String currentTenant = getCurrentTenantId();
+        return currentTenant != null ? currentTenant : SYSTEM_TENANT;
+    }
+
+    /**
      * Sets the current tenant context for the executing thread.
      * This method should be used with caution and typically wrapped in a try-finally block
      * to ensure the tenant context is properly cleared after use.

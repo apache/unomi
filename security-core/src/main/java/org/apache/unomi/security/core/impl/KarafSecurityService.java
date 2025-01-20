@@ -14,12 +14,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.services.security;
+package org.apache.unomi.security.core.impl;
 
 import org.apache.karaf.jaas.boot.principal.RolePrincipal;
 import org.apache.unomi.api.security.SecurityService;
-import org.apache.unomi.api.tenants.AuditService;
-import org.osgi.service.component.annotations.Component;
+import org.apache.unomi.api.tenants.TenantAuditService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -29,7 +28,6 @@ import java.security.Principal;
 import java.util.HashSet;
 import java.util.Set;
 
-@Component(service = SecurityService.class, immediate = true)
 public class KarafSecurityService implements SecurityService {
 
     private static final Logger logger = LoggerFactory.getLogger(KarafSecurityService.class);
@@ -37,7 +35,11 @@ public class KarafSecurityService implements SecurityService {
     private static final String ROLE_ADMIN = "unomi-admin";
     private static final String ROLE_USER = "unomi-user";
 
-    private AuditService auditService;
+    private TenantAuditService tenantAuditService;
+
+    public void setTenantAuditService(TenantAuditService tenantAuditService) {
+        this.tenantAuditService = tenantAuditService;
+    }
 
     @Override
     public boolean hasRole(String role) {
@@ -71,9 +73,7 @@ public class KarafSecurityService implements SecurityService {
             return false;
         }
 
-        // Check if user has explicit access to this tenants
-        // This could be extended to check a tenants-user mapping table
-        return hasRole("tenants-" + tenantId) || hasRole(ROLE_USER);
+        return hasRole("tenant-" + tenantId) || hasRole(ROLE_USER);
     }
 
     @Override
@@ -96,13 +96,13 @@ public class KarafSecurityService implements SecurityService {
     @Override
     public void validateTenantOperation(String tenantId, String operation) throws SecurityException {
         if (!hasTenantAccess(tenantId)) {
-            throw new SecurityException("User does not have access to tenants: " + tenantId);
+            throw new SecurityException("User does not have access to tenant: " + tenantId);
         }
 
         if (!hasPermission(operation)) {
             throw new SecurityException("User does not have permission to perform operation: " + operation);
         }
-        auditService.logTenantOperation(tenantId, operation);
+        tenantAuditService.logTenantOperation(tenantId, operation);
     }
 
     @Override
@@ -111,7 +111,6 @@ public class KarafSecurityService implements SecurityService {
             return true;
         }
 
-        // Define operation-role mappings
         Set<String> requiredRoles = getRequiredRolesForOperation(operation);
         for (String role : requiredRoles) {
             if (hasRole(role)) {
@@ -164,4 +163,4 @@ public class KarafSecurityService implements SecurityService {
 
         return roles;
     }
-}
+} 

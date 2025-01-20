@@ -20,9 +20,6 @@ import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.tenants.Tenant;
 import org.apache.unomi.api.tenants.TenantService;
 import org.apache.unomi.persistence.spi.PersistenceService;
-import org.osgi.service.component.annotations.Activate;
-import org.osgi.service.component.annotations.Component;
-import org.osgi.service.component.annotations.Reference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -33,20 +30,23 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-@Component
 public class TenantMonitoringService {
 
     private static final Logger logger = LoggerFactory.getLogger(TenantMonitoringService.class);
 
-    @Reference
     private PersistenceService persistenceService;
-
-    @Reference
     private TenantService tenantService;
 
     private final Map<String, TenantMetrics> metricsCache = new ConcurrentHashMap<>();
 
-    @Activate
+    public void setPersistenceService(PersistenceService persistenceService) {
+        this.persistenceService = persistenceService;
+    }
+
+    public void setTenantService(TenantService tenantService) {
+        this.tenantService = tenantService;
+    }
+
     public void activate() {
         startMetricsCollection();
     }

@@ -24,10 +24,10 @@
         <property name="encryptionVersion" value="${encryption.version}"/>
     </bean>
 
-    <bean id="tenantTransformationService" class="org.apache.unomi.extension.encryption.DefaultTenantEncryptionService">
+    <bean id="defaultTenantTransformationListener" class="org.apache.unomi.extension.encryption.DefaultTenantTransformationListener">
         <property name="config" ref="encryptionConfig"/>
     </bean>
 
-    <service ref="tenantTransformationService" interface="org.apache.unomi.api.tenants.TenantTransformationService"/>
+    <service id="tenantTransformationListener" ref="defaultTenantTransformationListener" interface="org.apache.unomi.api.tenants.TenantTransformationListener"/>
 
 </blueprint>

@@ -27,7 +27,7 @@ import org.apache.unomi.api.tenants.TenantService;
 
 import java.util.List;
 
-@Command(scope = "tenant", name = "list", description = "List all tenants")
+@Command(scope = "unomi", name = "tenant-list", description = "List all tenants")
 @Service
 public class TenantListCommand implements Action {
 
@@ -70,4 +70,4 @@ public class TenantListCommand implements Action {
         table.print(System.out);
         return null;
     }
-} 
+}

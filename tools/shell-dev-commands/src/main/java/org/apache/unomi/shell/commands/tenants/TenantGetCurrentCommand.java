@@ -22,7 +22,7 @@ import org.apache.karaf.shell.api.action.lifecycle.Reference;
 import org.apache.karaf.shell.api.action.lifecycle.Service;
 import org.apache.unomi.api.tenants.TenantService;
 
-@Command(scope = "tenant", name = "get-current", description = "Get the current tenant ID for this shell session")
+@Command(scope = "unomi", name = "tenant-get-current", description = "Get the current tenant ID for this shell session")
 @Service
 public class TenantGetCurrentCommand implements Action {
 
@@ -39,4 +39,4 @@ public class TenantGetCurrentCommand implements Action {
         }
         return null;
     }
-} 
+}

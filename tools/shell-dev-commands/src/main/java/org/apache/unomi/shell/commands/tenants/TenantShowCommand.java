@@ -27,7 +27,7 @@ import org.apache.unomi.api.tenants.Tenant;
 import org.apache.unomi.api.tenants.TenantService;
 import org.apache.unomi.shell.completers.TenantCompleter;
 
-@Command(scope = "tenant", name = "show", description = "Show tenant details")
+@Command(scope = "unomi", name = "tenant-show", description = "Show tenant details")
 @Service
 public class TenantShowCommand implements Action {
 
@@ -67,4 +67,4 @@ public class TenantShowCommand implements Action {
 
         return null;
     }
-} 
+}

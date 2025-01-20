@@ -35,7 +35,6 @@ import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleEvent;
 import org.osgi.framework.SynchronousBundleListener;
-import org.osgi.service.component.annotations.Component;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,7 +49,6 @@ import java.util.function.Consumer;
 
 import static org.apache.unomi.api.tenants.TenantService.SYSTEM_TENANT;
 
-@Component(service = {DefinitionsService.class, TenantLifecycleListener.class})
 public class DefinitionsServiceImpl extends AbstractTenantAwareService implements DefinitionsService, TenantLifecycleListener, SynchronousBundleListener {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(DefinitionsServiceImpl.class.getName());
@@ -213,7 +211,8 @@ public class DefinitionsServiceImpl extends AbstractTenantAwareService implement
         }
 
         try {
-            String currentTenant = tenantService.getCurrentTenantId();
+            String currentTenant = tenantService.getCurrentTenantIdWithDefault();
+
             Map<String, ConditionType> newConditionTypes = new ConcurrentHashMap<>();
             Collection<ConditionType> types = getAllConditionTypes();
             if (types != null) {
@@ -242,7 +241,7 @@ public class DefinitionsServiceImpl extends AbstractTenantAwareService implement
         }
 
         try {
-            String currentTenant = tenantService.getCurrentTenantId();
+            String currentTenant = tenantService.getCurrentTenantIdWithDefault();
             Map<String, ActionType> newActionTypes = new ConcurrentHashMap<>();
             Collection<ActionType> types = getAllActionTypes();
             if (types != null) {
@@ -555,7 +554,7 @@ public class DefinitionsServiceImpl extends AbstractTenantAwareService implement
 
     private Set<ConditionType> getConditionTypesBy(String fieldName, String fieldValue) {
         Set<ConditionType> conditionTypes = new LinkedHashSet<ConditionType>();
-        String currentTenant = tenantService.getCurrentTenantId();
+        String currentTenant = tenantService.getCurrentTenantIdWithDefault();
 
         // Get types from current tenant
         List<ConditionType> directConditionTypes = persistenceService.query(fieldName, fieldValue, null, ConditionType.class);
@@ -592,7 +591,8 @@ public class DefinitionsServiceImpl extends AbstractTenantAwareService implement
         if (id == null) {
             return null;
         }
-        String currentTenant = tenantService.getCurrentTenantId();
+        String currentTenant = tenantService.getCurrentTenantIdWithDefault();
+
         ConditionType type = getConditionTypeCache(currentTenant).get(id);
         if (type == null || type.getVersion() == null) {
             type = loadWithInheritance(id, ConditionType.class);
@@ -613,7 +613,8 @@ public class DefinitionsServiceImpl extends AbstractTenantAwareService implement
     }
 
     public void removeConditionType(String conditionTypeId) {
-        String currentTenant = tenantService.getCurrentTenantId();
+        String currentTenant = tenantService.getCurrentTenantIdWithDefault();
+
         getConditionTypeCache(currentTenant).remove(conditionTypeId);
         persistenceService.remove(conditionTypeId, ConditionType.class);
     }
@@ -624,7 +625,7 @@ public class DefinitionsServiceImpl extends AbstractTenantAwareService implement
             return;
         }
 
-        String tenantId = tenantService.getCurrentTenantId();
+        String tenantId = tenantService.getCurrentTenantIdWithDefault();
 
         if (conditionType.getTenantId() == null) {
             conditionType.setTenantId(tenantId);
@@ -663,7 +664,7 @@ public class DefinitionsServiceImpl extends AbstractTenantAwareService implement
 
     private Set<ActionType> getActionTypesBy(String fieldName, String fieldValue) {
         Map<String, ActionType> actionTypes = new LinkedHashMap<>();
-        String currentTenant = tenantService.getCurrentTenantId();
+        String currentTenant = tenantService.getCurrentTenantIdWithDefault();
 
         // Get types from current tenant
         List<ActionType> directActionTypes = persistenceService.query(fieldName, fieldValue, null, ActionType.class);
@@ -693,7 +694,8 @@ public class DefinitionsServiceImpl extends AbstractTenantAwareService implement
         if (id == null) {
             return null;
         }
-        String currentTenant = tenantService.getCurrentTenantId();
+        String currentTenant = tenantService.getCurrentTenantIdWithDefault();
+
         ActionType type = getActionTypeCache(currentTenant).get(id);
         if (type == null || type.getVersion() == null) {
             type = loadWithInheritance(id, ActionType.class);
@@ -705,7 +707,8 @@ public class DefinitionsServiceImpl extends AbstractTenantAwareService implement
     }
 
     public void removeActionType(String actionTypeId) {
-        String currentTenant = tenantService.getCurrentTenantId();
+        String currentTenant = tenantService.getCurrentTenantIdWithDefault();
+
         getActionTypeCache(currentTenant).remove(actionTypeId);
         persistenceService.remove(actionTypeId, ActionType.class);
     }
@@ -716,7 +719,8 @@ public class DefinitionsServiceImpl extends AbstractTenantAwareService implement
             return;
         }
 
-        String tenantId = tenantService.getCurrentTenantId();
+        String tenantId = tenantService.getCurrentTenantIdWithDefault();
+
         if (tenantId == null) {
             actionType.setTenantId(tenantId);
             return;
@@ -758,7 +762,7 @@ public class DefinitionsServiceImpl extends AbstractTenantAwareService implement
         }
 
         Map<String, ValueType> valueTypes = new LinkedHashMap<>();
-        String currentTenant = tenantService.getCurrentTenantId();
+        String currentTenant = tenantService.getCurrentTenantIdWithDefault();
 
         // Get types from current tenant's cache
         Map<String, Set<ValueType>> currentTenantTagCache = getValueTypeByTagCache(currentTenant);
@@ -790,7 +794,8 @@ public class DefinitionsServiceImpl extends AbstractTenantAwareService implement
         if (id == null) {
             return null;
         }
-        String currentTenant = tenantService.getCurrentTenantId();
+        String currentTenant = tenantService.getCurrentTenantIdWithDefault();
+
         return getFromCacheWithInheritance(id, currentTenant, valueTypeByTenantId);
     }
 
@@ -832,6 +837,10 @@ public class DefinitionsServiceImpl extends AbstractTenantAwareService implement
             return null;
         }
         String currentTenant = tenantService.getCurrentTenantId();
+        if (currentTenant == null) {
+            currentTenant = SYSTEM_TENANT;
+        }
+
         PropertyMergeStrategyType type = getPropertyMergeStrategyTypeCache(currentTenant).get(id);
         if (type == null) {
             type = getPropertyMergeStrategyTypeCache(SYSTEM_TENANT).get(id);
@@ -1011,10 +1020,7 @@ public class DefinitionsServiceImpl extends AbstractTenantAwareService implement
         valueType.setTags(tagsCopy);
 
         try {
-            String currentTenant = tenantService.getCurrentTenantId();
-            if (currentTenant == null) {
-                currentTenant = SYSTEM_TENANT;
-            }
+            String currentTenant = tenantService.getCurrentTenantIdWithDefault();
             Map<String, ValueType> cache = getValueTypeCache(currentTenant);
             cache.put(valueTypeId, valueType);
 
@@ -1036,10 +1042,7 @@ public class DefinitionsServiceImpl extends AbstractTenantAwareService implement
         }
 
         try {
-            String currentTenant = tenantService.getCurrentTenantId();
-            if (currentTenant == null) {
-                currentTenant = SYSTEM_TENANT;
-            }
+            String currentTenant = tenantService.getCurrentTenantIdWithDefault();
             ValueType valueType = getValueTypeCache(currentTenant).remove(valueTypeId);
             if (valueType != null) {
                 // Clean up tag cache

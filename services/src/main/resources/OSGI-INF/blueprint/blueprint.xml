@@ -76,6 +76,7 @@
     <reference id="osgiConfigurationAdmin" interface="org.osgi.service.cm.ConfigurationAdmin"/>
     <reference id="metricsService" interface="org.apache.unomi.metrics.MetricsService"/>
     <reference id="scriptExecutor" interface="org.apache.unomi.scripting.ScriptExecutor"/>
+    <reference id="configAdmin" interface="org.osgi.service.cm.ConfigurationAdmin"/>
 
     <!-- Service definitions -->
 
@@ -95,6 +96,7 @@
         <property name="bundleContext" ref="blueprintBundleContext"/>
         <property name="schedulerService" ref="schedulerServiceImpl"/>
         <property name="definitionsRefreshInterval" value="${services.definitions.refresh.interval}"/>
+        <property name="tenantService" ref="tenantService" />
     </bean>
     <service id="definitionsService" ref="definitionsServiceImpl">
         <interfaces>
@@ -125,9 +127,6 @@
                 <value>ruleFired</value>
                 <value>updateProperties</value>
             </set>
-        </property>
-        <property name="thirdPartyConfiguration">
-            <cm:cm-properties persistent-id="org.apache.unomi.thirdparty" update="true"/>
         </property>
     </bean>
     <service id="eventService" ref="eventServiceImpl" interface="org.apache.unomi.api.services.EventService"/>
@@ -178,6 +177,7 @@
         <property name="rulesRefreshInterval" value="${services.rules.refresh.interval}"/>
         <property name="rulesStatisticsRefreshInterval" value="${services.rules.statistics.refresh.interval}"/>
         <property name="optimizedRulesActivated" value="${services.rules.optimizationActivated}"/>
+        <property name="tenantService" ref="tenantService" />
     </bean>
     <service id="rulesService" ref="rulesServiceImpl">
         <interfaces>
@@ -451,18 +451,57 @@
         <property name="configAdmin" ref="configAdmin"/>
     </bean>
 
-    <service id="tenantServiceService" ref="tenantService" interface="org.apache.unomi.api.tenants.TenantService">
+    <service id="tenantServiceOsgi" ref="tenantService" interface="org.apache.unomi.api.tenants.TenantService">
         <service-properties>
             <entry key="service.exported.interfaces" value="*"/>
         </service-properties>
     </service>
 
-    <reference-list id="tenantLifecycleListeners" 
-                    interface="org.apache.unomi.api.services.TenantLifecycleListener" 
+    <reference-list id="tenantLifecycleListeners"
+                    interface="org.apache.unomi.api.services.TenantLifecycleListener"
                     availability="optional">
-        <reference-listener ref="tenantService" 
-                           bind-method="bindListener" 
+        <reference-listener ref="tenantService"
+                           bind-method="bindListener"
                            unbind-method="unbindListener"/>
     </reference-list>
+
+    <!-- Audit Service -->
+    <bean id="auditService" class="org.apache.unomi.services.impl.tenants.AuditServiceImpl">
+        <property name="persistenceService" ref="persistenceService"/>
+    </bean>
+    <service id="auditServiceOsgi" ref="auditService" interface="org.apache.unomi.api.tenants.AuditService"/>
+
+    <!-- Tenant Migration Service -->
+    <bean id="tenantMigrationService" class="org.apache.unomi.services.impl.tenants.TenantMigrationService">
+        <property name="persistenceService" ref="persistenceService"/>
+        <property name="tenantService" ref="tenantService"/>
+    </bean>
+    <service id="tenantMigrationServiceOsgi" ref="tenantMigrationService" interface="org.apache.unomi.services.impl.tenants.TenantMigrationService"/>
+
+    <!-- Tenant Monitoring Service -->
+    <bean id="tenantMonitoringService" class="org.apache.unomi.services.impl.tenants.TenantMonitoringService" init-method="activate">
+        <property name="persistenceService" ref="persistenceService"/>
+        <property name="tenantService" ref="tenantService"/>
+    </bean>
+    <service id="tenantMonitoringServiceOsgi" ref="tenantMonitoringService" interface="org.apache.unomi.services.impl.tenants.TenantMonitoringService"/>
+
+    <!-- Tenant Quota Service -->
+    <bean id="tenantQuotaService" class="org.apache.unomi.services.impl.tenants.TenantQuotaService" init-method="activate">
+        <property name="persistenceService" ref="persistenceService"/>
+        <property name="tenantService" ref="tenantService"/>
+    </bean>
+    <service id="tenantQuotaServiceOsgi" ref="tenantQuotaService" interface="org.apache.unomi.services.impl.tenants.TenantQuotaService"/>
+
+    <!-- Tenant Security Service -->
+    <bean id="tenantSecurityService" class="org.apache.unomi.services.impl.tenants.TenantSecurityService" init-method="activate">
+        <property name="configAdmin" ref="configAdmin"/>
+    </bean>
+    <service id="tenantSecurityServiceOsgi" ref="tenantSecurityService" interface="org.apache.unomi.services.impl.tenants.TenantSecurityService"/>
+
+    <!-- Karaf Security Service -->
+    <bean id="karafSecurityService" class="org.apache.unomi.services.impl.KarafSecurityService">
+        <property name="tenantAuditService" ref="auditService"/>
+    </bean>
+    <service id="securityService" ref="karafSecurityService" interface="org.apache.unomi.api.security.SecurityService"/>
 
 </blueprint>

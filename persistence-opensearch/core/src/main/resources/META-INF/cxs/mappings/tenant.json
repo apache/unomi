@@ -1,0 +1,56 @@
+{
+  "dynamic_templates": [
+    {
+      "all_props": {
+        "match": "properties.*",
+        "mapping": {
+          "type": "keyword"
+        }
+      }
+    }
+  ],
+  "properties": {
+    "itemId": {
+      "type": "keyword"
+    },
+    "itemType": {
+      "type": "keyword"
+    },
+    "version": {
+      "type": "long"
+    },
+    "name": {
+      "type": "keyword"
+    },
+    "status": {
+      "type": "keyword"
+    },
+    "creationDate": {
+      "type": "date"
+    },
+    "modificationDate": {
+      "type": "date"
+    },
+    "properties": {
+      "type": "object",
+      "enabled": true
+    },
+    "apiKeys": {
+      "type": "nested",
+      "properties": {
+        "key": {
+          "type": "keyword"
+        },
+        "keyType": {
+          "type": "keyword"
+        },
+        "expirationDate": {
+          "type": "date"
+        },
+        "creationDate": {
+          "type": "date"
+        }
+      }
+    }
+  }
+} 

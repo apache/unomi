@@ -19,9 +19,6 @@ package org.apache.unomi.services.impl.tenants;
 import org.apache.unomi.api.tenants.ResourceQuota;
 import org.apache.unomi.api.tenants.TenantService;
 import org.apache.unomi.persistence.spi.PersistenceService;
-import org.osgi.service.component.annotations.Activate;
-import org.osgi.service.component.annotations.Component;
-import org.osgi.service.component.annotations.Reference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,20 +28,23 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-@Component
 public class TenantQuotaService {
 
     private static final Logger logger = LoggerFactory.getLogger(TenantQuotaService.class);
 
-    @Reference
     private PersistenceService persistenceService;
-
-    @Reference
     private TenantService tenantService;
 
     private Map<String, TenantUsage> usageCache = new ConcurrentHashMap<>();
 
-    @Activate
+    public void setPersistenceService(PersistenceService persistenceService) {
+        this.persistenceService = persistenceService;
+    }
+
+    public void setTenantService(TenantService tenantService) {
+        this.tenantService = tenantService;
+    }
+
     public void activate() {
         // Start usage monitoring
         startUsageMonitoring();

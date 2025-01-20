@@ -22,9 +22,9 @@ import java.util.Date;
 import java.util.List;
 
 /**
- * Combined service interface for both item and tenant auditing operations.
+ * A service to track and audit changes to items.
  */
-public interface AuditService extends ItemAuditService, TenantAuditService {
+public interface ItemAuditService {
     /**
      * Records the creation of an item.
      *
@@ -85,8 +85,14 @@ public interface AuditService extends ItemAuditService, TenantAuditService {
      */
     Date getLastSyncDate(String tenantId, String sourceInstanceId);
 
+    /**
+     * Updates the modification metadata of an item.
+     *
+     * @param item the item to update
+     * @param userId the user performing the modification
+     */
     default void updateModificationMetadata(Item item, String userId) {
         item.setLastModifiedBy(userId);
         item.setLastModificationDate(new Date());
     }
-}
+} 

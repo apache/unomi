@@ -36,7 +36,7 @@ import org.apache.unomi.api.query.DateRange;
 import org.apache.unomi.api.query.IpRange;
 import org.apache.unomi.api.query.NumericRange;
 import org.apache.unomi.api.security.SecurityService;
-import org.apache.unomi.api.tenants.TenantTransformationService;
+import org.apache.unomi.api.tenants.TenantTransformationListener;
 import org.apache.unomi.metrics.MetricAdapter;
 import org.apache.unomi.metrics.MetricsService;
 import org.apache.unomi.persistence.spi.PersistenceService;
@@ -137,8 +137,10 @@ import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
 import java.util.*;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 
+import static org.apache.unomi.api.tenants.TenantService.SYSTEM_TENANT;
 import static org.elasticsearch.index.query.QueryBuilders.termQuery;
 
 @SuppressWarnings("rawtypes")
@@ -219,7 +221,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     private Integer clientSocketTimeout = null;
     private Map<String, WriteRequest.RefreshPolicy> itemTypeToRefreshPolicy = new HashMap<>();
 
-    private Map<String, Map<String, Map<String, Object>>> knownMappings = new HashMap<>();
+    private final Map<String, Map<String, Map<String, Object>>> knownMappings = new HashMap<>();
 
     private static final Map<String, String> itemTypeIndexNameMap = new HashMap<>();
     private static final Collection<String> systemItems = Arrays.asList("actionType", "campaign", "campaignevent", "goal",
@@ -234,12 +236,15 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         itemTypeIndexNameMap.put("persona", "profile");
     }
 
-    // Add fields after other class fields
-    private SecurityService securityProvider;
-    private TenantTransformationService tenantTransformationService;
+    private ServiceReference<SecurityService> securityServiceReference;
+    private List<TenantTransformationListener> transformationListeners = new CopyOnWriteArrayList<>();
 
     public void setBundleContext(BundleContext bundleContext) {
         this.bundleContext = bundleContext;
+    }
+
+    public void setSecurityServiceReference(ServiceReference<SecurityService> securityServiceReference) {
+        this.securityServiceReference = securityServiceReference;
     }
 
     public void setClusterName(String clusterName) {
@@ -462,12 +467,32 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         }
     }
 
-    public void setSecurityService(SecurityService securityService) {
-        this.securityProvider = securityService;
+    private SecurityService getSecurityService() {
+        if (securityServiceReference != null) {
+            return FrameworkUtil
+                    .getBundle(getClass())
+                    .getBundleContext()
+                    .getService(securityServiceReference);
+        }
+        return null;
     }
 
-    public void setTenantTransformationService(TenantTransformationService tenantTransformationService) {
-        this.tenantTransformationService = tenantTransformationService;
+    private String getTenantId() {
+        String tenantId = SYSTEM_TENANT;
+        SecurityService securityService = getSecurityService();
+        if (securityService != null) {
+            tenantId = securityService.getCurrentTenantId();
+        }
+        return tenantId;
+    }
+
+    private String validateTenantAndGetId(String operation) {
+        String tenantId = getTenantId();
+        SecurityService securityService = getSecurityService();
+        if (securityService != null) {
+            securityService.validateTenantOperation(tenantId, operation);
+        }
+        return tenantId;
     }
 
     public String getName() {
@@ -916,7 +941,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     }
 
     private String getDocumentIDForItemType(String itemId, String itemType) {
-        String tenantId = securityProvider.getCurrentTenantId();
+        String tenantId = getTenantId();
         String baseId = systemItems.contains(itemType) ? (itemId + "_" + itemType.toLowerCase()) : itemId;
         return tenantId + "_" + baseId;
     }
@@ -963,7 +988,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     @Override
     public boolean save(final Item item, final Boolean useBatchingOption, final Boolean alwaysOverwriteOption) {
         String tenantId = item.getTenantId();
-        securityProvider.validateTenantOperation(tenantId, "SAVE");
+        validateTenantAndGetId("SAVE");
 
         final boolean useBatching = useBatchingOption == null ? this.useBatchingForSave : useBatchingOption;
         final boolean alwaysOverwrite = alwaysOverwriteOption == null ? this.alwaysOverwrite : alwaysOverwriteOption;
@@ -1374,13 +1399,12 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Override
     public <T extends Item> boolean removeByQuery(final Condition query, final Class<T> clazz) {
-        String tenantId = securityProvider.getCurrentTenantId();
-        securityProvider.validateTenantOperation(tenantId, "REMOVE_BY_QUERY");
+        String finalTenantId = validateTenantAndGetId("REMOVE_BY_QUERY");
 
         Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".removeByQuery", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
             protected Boolean execute(Object... args) throws Exception {
                 QueryBuilder queryBuilder = conditionESQueryBuilderDispatcher.getQueryBuilder(query);
-                queryBuilder = wrapWithTenantAndItemTypeQuery(Item.getItemType(clazz), queryBuilder, tenantId);
+                queryBuilder = wrapWithTenantAndItemTypeQuery(Item.getItemType(clazz), queryBuilder, finalTenantId);
                 return removeByQuery(queryBuilder, clazz);
             }
         }.catchingExecuteInClassLoader(true);
@@ -1894,11 +1918,10 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Override
     public <T extends Item> PartialList<T> query(final Condition query, String sortBy, final Class<T> clazz, final int offset, final int size) {
-        String tenantId = securityProvider.getCurrentTenantId();
-        securityProvider.validateTenantOperation(tenantId, "QUERY");
+        String finalTenantId = validateTenantAndGetId("QUERY");
 
         QueryBuilder queryBuilder = conditionESQueryBuilderDispatcher.buildFilter(query);
-        queryBuilder = wrapWithTenantAndItemTypeQuery(Item.getItemType(clazz), queryBuilder, tenantId);
+        queryBuilder = wrapWithTenantAndItemTypeQuery(Item.getItemType(clazz), queryBuilder, finalTenantId);
         return query(queryBuilder, sortBy, clazz, offset, size, null, null);
     }
 
@@ -1909,11 +1932,10 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Override
     public PartialList<CustomItem> queryCustomItem(final Condition query, String sortBy, final String customItemType, final int offset, final int size, final String scrollTimeValidity) {
-        String tenantId = securityProvider.getCurrentTenantId();
-        securityProvider.validateTenantOperation(tenantId, "QUERY");
+        String finalTenantId = validateTenantAndGetId("QUERY");
 
         QueryBuilder queryBuilder = conditionESQueryBuilderDispatcher.getQueryBuilder(query);
-        queryBuilder = wrapWithTenantAndItemTypeQuery(customItemType, queryBuilder, tenantId);
+        queryBuilder = wrapWithTenantAndItemTypeQuery(customItemType, queryBuilder, finalTenantId);
         return query(queryBuilder, sortBy, customItemType, offset, size, null, scrollTimeValidity);
     }
 
@@ -2126,8 +2148,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Override
     public <T extends Item> PartialList<T> continueScrollQuery(final Class<T> clazz, final String scrollIdentifier, final String scrollTimeValidity) {
-        String tenantId = securityProvider.getCurrentTenantId();
-        securityProvider.validateTenantOperation(tenantId, "SCROLL_QUERY");
+        String finalTenantId = validateTenantAndGetId("SCROLL_QUERY");
 
         return new InClassLoaderExecute<PartialList<T>>(metricsService, this.getClass().getName() + ".continueScrollQuery", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
             @Override
@@ -2149,7 +2170,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         for (SearchHit searchHit : response.getHits().getHits()) {
                             // add hit to results
                             String sourceTenantId = (String) searchHit.getSourceAsMap().get("tenantId");
-                            if (tenantId.equals(sourceTenantId)) {
+                            if (finalTenantId.equals(sourceTenantId)) {
                                 String sourceAsString = searchHit.getSourceAsString();
                                 final T value = ESCustomObjectMapper.getObjectMapper().readValue(sourceAsString, clazz);
                                 setMetadata(value, searchHit.getId(), searchHit.getVersion(), searchHit.getSeqNo(), searchHit.getPrimaryTerm(), searchHit.getIndex());
@@ -2172,8 +2193,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Override
     public PartialList<CustomItem> continueCustomItemScrollQuery(final String customItemType, final String scrollIdentifier, final String scrollTimeValidity) {
-        String tenantId = securityProvider.getCurrentTenantId();
-        securityProvider.validateTenantOperation(tenantId, "SCROLL_QUERY");
+        String finalTenantId = validateTenantAndGetId("SCROLL_QUERY");
 
         return new InClassLoaderExecute<PartialList<CustomItem>>(metricsService, this.getClass().getName() + ".continueScrollQuery", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
             @Override
@@ -2196,7 +2216,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     // Validate tenants for each result
                     for (SearchHit searchHit : response.getHits().getHits()) {
                         String sourceTenantId = (String) searchHit.getSourceAsMap().get("tenantId");
-                        if (tenantId.equals(sourceTenantId)) {
+                        if (finalTenantId.equals(sourceTenantId)) {
                             // add hit to results
                             String sourceAsString = searchHit.getSourceAsString();
                             final CustomItem value = ESCustomObjectMapper.getObjectMapper().readValue(sourceAsString, CustomItem.class);
@@ -2239,8 +2259,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     private Map<String, Long> aggregateQuery(final Condition filter, final BaseAggregate aggregate, final String itemType,
                                              final boolean optimizedQuery, int queryBucketSize) {
-        String tenantId = securityProvider.getCurrentTenantId();
-        securityProvider.validateTenantOperation(tenantId, "AGGREGATE");
+        String finalTenantId = validateTenantAndGetId("AGGREGATE");
 
         return new InClassLoaderExecute<Map<String, Long>>(metricsService, this.getClass().getName() + ".aggregateQuery", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
 
@@ -2251,7 +2270,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 SearchRequest searchRequest = new SearchRequest(getIndexNameForQuery(itemType));
                 SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
                 searchSourceBuilder.size(0);
-                QueryBuilder baseQuery = wrapWithTenantAndItemTypeQuery(itemType, QueryBuilders.matchAllQuery(), tenantId);
+                QueryBuilder baseQuery = wrapWithTenantAndItemTypeQuery(itemType, QueryBuilders.matchAllQuery(), finalTenantId);
                 boolean isItemTypeSharingIndex = isItemTypeSharingIndex(itemType);
                 searchSourceBuilder.query(isItemTypeSharingIndex ? getItemTypeQueryBuilder(itemType) : baseQuery);
                 List<AggregationBuilder> lastAggregation = new ArrayList<AggregationBuilder>();
@@ -2503,8 +2522,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Override
     public void purge(final String scope) {
-        String tenantId = securityProvider.getCurrentTenantId();
-        securityProvider.validateTenantOperation(tenantId, "PURGE");
+        String finalTenantId = validateTenantAndGetId("PURGE");
 
         LOGGER.debug("Purge scope {}", scope);
         new InClassLoaderExecute<Void>(metricsService, this.getClass().getName() + ".purgeWithScope", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
@@ -2512,7 +2530,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             protected Void execute(Object... args) throws IOException {
                 QueryBuilder queryBuilder = QueryBuilders.boolQuery()
                     .must(QueryBuilders.termQuery("scope", scope))
-                    .must(QueryBuilders.termQuery("tenantId", tenantId));
+                    .must(QueryBuilders.termQuery("tenantId", finalTenantId));
 
                 SearchRequest searchRequest = new SearchRequest(getAllIndexForQuery());
                 SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder()
@@ -2838,20 +2856,46 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     }
 
     private <T extends Item> T handleItemTransformation(T item) {
-        if (item != null && tenantTransformationService != null) {
+        if (item != null) {
             String tenantId = item.getTenantId();
             if (tenantId != null) {
-                tenantTransformationService.transformItem(item, tenantId);
+                for (TenantTransformationListener listener : transformationListeners) {
+                    if (listener.isTransformationEnabled()) {
+                        try {
+                            T transformedItem = (T) listener.transformItem(item, tenantId);
+                            if (transformedItem != null) {
+                                item = transformedItem;
+                            }
+                        } catch (Exception e) {
+                            // Log error but continue with other listeners since transformation is optional
+                            LOGGER.warn("Error during item transformation for tenant {} with listener {}: {}",
+                                tenantId, listener.getTransformationType(), e.getMessage());
+                        }
+                    }
+                }
             }
         }
         return item;
     }
 
     private <T extends Item> T handleItemReverseTransformation(T item) {
-        if (item != null && tenantTransformationService != null) {
+        if (item != null) {
             String tenantId = item.getTenantId();
             if (tenantId != null) {
-                tenantTransformationService.reverseTransformItem(item, tenantId);
+                for (TenantTransformationListener listener : transformationListeners) {
+                    if (listener.isTransformationEnabled()) {
+                        try {
+                            T transformedItem = (T) listener.reverseTransformItem(item, tenantId);
+                            if (transformedItem != null) {
+                                item = transformedItem;
+                            }
+                        } catch (Exception e) {
+                            // Log error but continue with other listeners since transformation is optional
+                            LOGGER.warn("Error during item reverse transformation for tenant {} with listener {}: {}",
+                                tenantId, listener.getTransformationType(), e.getMessage());
+                        }
+                    }
+                }
             }
         }
         return item;
@@ -2958,5 +3002,17 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             LOGGER.error("Error getting API call count for tenant " + tenantId, e);
             return -1;
         }
+    }
+
+    public void bindTransformationListener(ServiceReference<TenantTransformationListener> listenerReference) {
+        TenantTransformationListener listener = bundleContext.getService(listenerReference);
+        transformationListeners.add(listener);
+        // Sort listeners by priority (highest first)
+        transformationListeners.sort((l1, l2) -> Integer.compare(l2.getPriority(), l1.getPriority()));
+    }
+
+    public void unbindTransformationListener(ServiceReference<TenantTransformationListener> listenerReference) {
+        TenantTransformationListener listener = bundleContext.getService(listenerReference);
+        transformationListeners.remove(listener);
     }
 }

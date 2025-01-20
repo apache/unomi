@@ -21,8 +21,17 @@ import org.apache.unomi.api.Item;
 /**
  * Interface for item-specific data transformations that can be implemented by Unomi extensions.
  * Transformations can include data masking, format conversion, or other data modifications.
+ * Multiple listeners can be registered and will be called in order of priority.
  */
-public interface TenantTransformationService {
+public interface TenantTransformationListener {
+
+    /**
+     * Gets the priority of this listener. Listeners with higher priority values will be executed first.
+     * @return the priority value (default is 0)
+     */
+    default int getPriority() {
+        return 0;
+    }
 
     /**
      * Applies forward transformation to data in an item for a specific tenant
@@ -60,4 +69,4 @@ public interface TenantTransformationService {
      * @return String identifying the type of transformation
      */
     String getTransformationType();
-}
+} 

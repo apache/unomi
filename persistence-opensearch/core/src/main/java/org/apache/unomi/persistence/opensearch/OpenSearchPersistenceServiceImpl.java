@@ -36,7 +36,7 @@ import org.apache.unomi.api.query.DateRange;
 import org.apache.unomi.api.query.IpRange;
 import org.apache.unomi.api.query.NumericRange;
 import org.apache.unomi.api.security.SecurityService;
-import org.apache.unomi.api.tenants.TenantTransformationService;
+import org.apache.unomi.api.tenants.TenantTransformationListener;
 import org.apache.unomi.metrics.MetricAdapter;
 import org.apache.unomi.metrics.MetricsService;
 import org.apache.unomi.persistence.spi.PersistenceService;
@@ -85,7 +85,10 @@ import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
 import java.util.*;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.stream.Collectors;
+
+import static org.apache.unomi.api.tenants.TenantService.SYSTEM_TENANT;
 
 @SuppressWarnings("rawtypes")
 public class OpenSearchPersistenceServiceImpl implements PersistenceService, SynchronousBundleListener {
@@ -178,8 +181,8 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
     private int clusterHealthTimeout = 30; // timeout in seconds
     private int clusterHealthRetries = 3;
 
-    private SecurityService securityProvider;
-    private TenantTransformationService tenantTransformationService;
+    private ServiceReference<SecurityService> securityServiceReference;
+    private List<TenantTransformationListener> transformationListeners = new CopyOnWriteArrayList<>();
 
     public void setBundleContext(BundleContext bundleContext) {
         this.bundleContext = bundleContext;
@@ -392,12 +395,8 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
         }
     }
 
-    public void setSecurityService(SecurityService securityService) {
-        this.securityProvider = securityService;
-    }
-
-    public void setTenantTransformationService(TenantTransformationService tenantTransformationService) {
-        this.tenantTransformationService = tenantTransformationService;
+    public void setSecurityServiceReference(ServiceReference<SecurityService> securityServiceReference) {
+        this.securityServiceReference = securityServiceReference;
     }
 
     public String getName() {
@@ -790,8 +789,7 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
         final boolean useBatching = useBatchingOption == null ? this.useBatchingForSave : useBatchingOption;
         final boolean alwaysOverwrite = alwaysOverwriteOption == null ? this.alwaysOverwrite : alwaysOverwriteOption;
 
-        String tenantId = securityProvider.getCurrentTenantId();
-        securityProvider.validateTenantOperation(tenantId, "SAVE");
+        validateTenantAndGetId("SAVE");
 
         handleItemTransformation(item);
 
@@ -881,13 +879,10 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
 
     @Override
     public boolean update(final Item item, final Class clazz, final Map source, final boolean alwaysOverwrite) {
-        String tenantId = securityProvider.getCurrentTenantId();
-        securityProvider.validateTenantOperation(tenantId, "UPDATE");
+        validateTenantAndGetId("UPDATE");
 
         // For property updates, we need to check if the field needs transformation
-        if (tenantTransformationService != null && tenantTransformationService.isTransformationEnabled()) {
-            handleItemTransformation(item);
-        }
+        handleItemTransformation(item);
 
         Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".updateItem", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
             protected Boolean execute(Object... args) throws Exception {
@@ -1209,13 +1204,12 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
 
     @Override
     public <T extends Item> boolean removeByQuery(final Condition query, final Class<T> clazz) {
-        String tenantId = securityProvider.getCurrentTenantId();
-        securityProvider.validateTenantOperation(tenantId, "REMOVE_BY_QUERY");
+        String finalTenantId = validateTenantAndGetId("REMOVE_BY_QUERY");
 
         Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".removeByQuery", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
             protected Boolean execute(Object... args) throws Exception {
                 Query queryBuilder = conditionOSQueryBuilderDispatcher.getQueryBuilder(query);
-                queryBuilder = wrapWithTenantAndItemTypeQuery(Item.getItemType(clazz), queryBuilder, tenantId);
+                queryBuilder = wrapWithTenantAndItemTypeQuery(Item.getItemType(clazz), queryBuilder, finalTenantId);
                 return removeByQuery(queryBuilder, clazz);
             }
         }.catchingExecuteInClassLoader(true);
@@ -1814,17 +1808,29 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
 
     @Override
     public <T extends Item> PartialList<T> query(final Condition query, String sortBy, final Class<T> clazz, final int offset, final int size) {
-        return query(conditionOSQueryBuilderDispatcher.getQueryBuilder(query), sortBy, clazz, offset, size, null, null);
+        String finalTenantId = validateTenantAndGetId("QUERY");
+
+        Query queryBuilder = conditionOSQueryBuilderDispatcher.buildFilter(query);
+        queryBuilder = wrapWithTenantAndItemTypeQuery(Item.getItemType(clazz), queryBuilder, finalTenantId);
+        return query(queryBuilder, sortBy, clazz, offset, size, null, null);
     }
 
     @Override
     public <T extends Item> PartialList<T> query(final Condition query, String sortBy, final Class<T> clazz, final int offset, final int size, final String scrollTimeValidity) {
-        return query(conditionOSQueryBuilderDispatcher.getQueryBuilder(query), sortBy, clazz, offset, size, null, scrollTimeValidity);
+        String finalTenantId = validateTenantAndGetId("QUERY");
+
+        Query queryBuilder = conditionOSQueryBuilderDispatcher.buildFilter(query);
+        queryBuilder = wrapWithTenantAndItemTypeQuery(Item.getItemType(clazz), queryBuilder, finalTenantId);
+        return query(queryBuilder, sortBy, clazz, offset, size, null, scrollTimeValidity);
     }
 
     @Override
     public PartialList<CustomItem> queryCustomItem(final Condition query, String sortBy, final String customItemType, final int offset, final int size, final String scrollTimeValidity) {
-        return query(conditionOSQueryBuilderDispatcher.getQueryBuilder(query), sortBy, customItemType, offset, size, null, scrollTimeValidity);
+        String finalTenantId = validateTenantAndGetId("QUERY");
+
+        Query queryBuilder = conditionOSQueryBuilderDispatcher.getQueryBuilder(query);
+        queryBuilder = wrapWithTenantAndItemTypeQuery(customItemType, queryBuilder, finalTenantId);
+        return query(queryBuilder, sortBy, customItemType, offset, size, null, scrollTimeValidity);
     }
 
     @Override
@@ -1923,8 +1929,8 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
     }
 
     private <T extends Item> PartialList<T> query(final Query query, final String sortBy, final Class<T> clazz, final String customItemType, final int offset, final int size, final String[] routing, final String scrollTimeValidity) {
-        String tenantId = securityProvider.getCurrentTenantId();
-        securityProvider.validateTenantOperation(tenantId, "QUERY");
+        String tenantId = getTenantId();
+        validateTenantAndGetId("QUERY");
         return new InClassLoaderExecute<PartialList<T>>(metricsService, this.getClass().getName() + ".query", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
 
             @Override
@@ -2052,8 +2058,7 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
 
     @Override
     public <T extends Item> PartialList<T> continueScrollQuery(final Class<T> clazz, final String scrollIdentifier, final String scrollTimeValidity) {
-        String tenantId = securityProvider.getCurrentTenantId();
-        securityProvider.validateTenantOperation(tenantId, "SCROLL_QUERY");
+        String finalTenantId = validateTenantAndGetId("SCROLL_QUERY");
 
         return new InClassLoaderExecute<PartialList<T>>(metricsService, this.getClass().getName() + ".continueScrollQuery", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
 
@@ -2071,7 +2076,7 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
                     } else {
                         for (Hit<T> searchHit : (List<Hit<T>>) response.hits().hits()) {
                             String sourceTenantId = (String) searchHit.source().getTenantId();
-                            if (tenantId.equals(sourceTenantId)) {
+                            if (finalTenantId.equals(sourceTenantId)) {
                                 // add hit to results
                                 final T value = searchHit.source();
                                 setMetadata(value, searchHit.id(), searchHit.version(), searchHit.seqNo(), searchHit.primaryTerm(), searchHit.index());
@@ -2094,8 +2099,8 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
 
     @Override
     public PartialList<CustomItem> continueCustomItemScrollQuery(final String customItemType, final String scrollIdentifier, final String scrollTimeValidity) {
-        String tenantId = securityProvider.getCurrentTenantId();
-        securityProvider.validateTenantOperation(tenantId, "SCROLL_QUERY");
+        String tenantId = getTenantId();
+        validateTenantAndGetId("SCROLL_QUERY");
 
         return new InClassLoaderExecute<PartialList<CustomItem>>(metricsService, this.getClass().getName() + ".continueScrollQuery", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
             @Override
@@ -2155,8 +2160,7 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
 
     private Map<String, Long> aggregateQuery(final Condition filter, final BaseAggregate aggregate, final String itemType,
                                              final boolean optimizedQuery, int queryBucketSize) {
-        String tenantId = securityProvider.getCurrentTenantId();
-        securityProvider.validateTenantOperation(tenantId, "AGGREGATE");
+        String finalTenantId = validateTenantAndGetId("AGGREGATE");
 
         return new InClassLoaderExecute<Map<String, Long>>(metricsService, this.getClass().getName() + ".aggregateQuery", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
 
@@ -2168,7 +2172,7 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
                 searchRequestBuilder.size(0);
                 Query matchAll = Query.of(q->q.matchAll(m->m));
                 boolean isItemTypeSharingIndex = isItemTypeSharingIndex(itemType);
-                searchRequestBuilder.query(wrapWithTenantAndItemTypeQuery(itemType,matchAll, tenantId));
+                searchRequestBuilder.query(wrapWithTenantAndItemTypeQuery(itemType,matchAll, finalTenantId));
                 Map<String, Aggregation.Builder.ContainerBuilder> lastAggregation = new LinkedHashMap<>();
 
                 if (aggregate != null) {
@@ -2434,8 +2438,7 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
 
     @Override
     public void purge(final String scope) {
-        String tenantId = securityProvider.getCurrentTenantId();
-        securityProvider.validateTenantOperation(tenantId, "PURGE");
+        String finalTenantId = validateTenantAndGetId("PURGE");
 
         LOGGER.debug("Purge scope {}", scope);
         new InClassLoaderExecute<Void>(metricsService, this.getClass().getName() + ".purgeWithScope", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
@@ -2453,7 +2456,7 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
                                         .must(m -> m
                                                 .term(t -> t
                                                         .field("tenantId")
-                                                        .value(v -> v.stringValue(tenantId))
+                                                        .value(v -> v.stringValue(finalTenantId))
                                                 )
                                         )
                                 )
@@ -2664,7 +2667,7 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
     }
 
     private String getDocumentIDForItemType(String itemId, String itemType) {
-        String tenantId = securityProvider.getCurrentTenantId();
+        String tenantId = getTenantId();
         String baseId = systemItems.contains(itemType) ? (itemId + "_" + itemType.toLowerCase()) : itemId;
         return tenantId + "_" + baseId;
     }
@@ -2853,20 +2856,46 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
     }
 
     private <T extends Item> T handleItemTransformation(T item) {
-        if (item != null && tenantTransformationService != null) {
+        if (item != null) {
             String tenantId = item.getTenantId();
             if (tenantId != null) {
-                tenantTransformationService.transformItem(item, tenantId);
+                for (TenantTransformationListener listener : transformationListeners) {
+                    if (listener.isTransformationEnabled()) {
+                        try {
+                            T transformedItem = (T) listener.transformItem(item, tenantId);
+                            if (transformedItem != null) {
+                                item = transformedItem;
+                            }
+                        } catch (Exception e) {
+                            // Log error but continue with other listeners since transformation is optional
+                            LOGGER.warn("Error during item transformation for tenant {} with listener {}: {}",
+                                tenantId, listener.getTransformationType(), e.getMessage());
+                        }
+                    }
+                }
             }
         }
         return item;
     }
 
     private <T extends Item> T handleItemReverseTransformation(T item) {
-        if (item != null && tenantTransformationService != null) {
+        if (item != null) {
             String tenantId = item.getTenantId();
             if (tenantId != null) {
-                tenantTransformationService.reverseTransformItem(item, tenantId);
+                for (TenantTransformationListener listener : transformationListeners) {
+                    if (listener.isTransformationEnabled()) {
+                        try {
+                            T transformedItem = (T) listener.reverseTransformItem(item, tenantId);
+                            if (transformedItem != null) {
+                                item = transformedItem;
+                            }
+                        } catch (Exception e) {
+                            // Log error but continue with other listeners since transformation is optional
+                            LOGGER.warn("Error during item reverse transformation for tenant {} with listener {}: {}",
+                                tenantId, listener.getTransformationType(), e.getMessage());
+                        }
+                    }
+                }
             }
         }
         return item;
@@ -2977,6 +3006,47 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
             LOGGER.error("Error getting API call count for tenant " + tenantId, e);
             return -1;
         }
+    }
+
+    private SecurityService getSecurityService() {
+        if (securityServiceReference != null) {
+            return FrameworkUtil
+                    .getBundle(getClass())
+                    .getBundleContext()
+                    .getService(securityServiceReference);
+        }
+        return null;
+    }
+
+    private String getTenantId() {
+        String tenantId = SYSTEM_TENANT;
+        SecurityService securityService = getSecurityService();
+        if (securityService != null) {
+            tenantId = securityService.getCurrentTenantId();
+        }
+        return tenantId;
+    }
+
+    private String validateTenantAndGetId(String operation) {
+        String tenantId = SYSTEM_TENANT;
+        SecurityService securityService = getSecurityService();
+        if (securityService != null) {
+            tenantId = securityService.getCurrentTenantId();
+            securityService.validateTenantOperation(tenantId, operation);
+        }
+        return tenantId;
+    }
+    
+    public void bindTransformationListener(ServiceReference<TenantTransformationListener> listenerReference) {
+        TenantTransformationListener listener = bundleContext.getService(listenerReference);
+        transformationListeners.add(listener);
+        // Sort listeners by priority (highest first)
+        transformationListeners.sort((l1, l2) -> Integer.compare(l2.getPriority(), l1.getPriority()));
+    }
+
+    public void unbindTransformationListener(ServiceReference<TenantTransformationListener> listenerReference) {
+        TenantTransformationListener listener = bundleContext.getService(listenerReference);
+        transformationListeners.remove(listener);
     }
 
 }

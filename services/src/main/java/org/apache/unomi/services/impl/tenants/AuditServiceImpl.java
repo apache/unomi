@@ -20,19 +20,19 @@ import org.apache.unomi.api.Item;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.tenants.AuditService;
 import org.apache.unomi.persistence.spi.PersistenceService;
-import org.osgi.service.component.annotations.Component;
-import org.osgi.service.component.annotations.Reference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
 
-@Component(service = AuditService.class, immediate = true)
 public class AuditServiceImpl implements AuditService {
     private static final Logger LOGGER = LoggerFactory.getLogger(AuditServiceImpl.class);
 
-    @Reference
     private PersistenceService persistenceService;
+
+    public void setPersistenceService(PersistenceService persistenceService) {
+        this.persistenceService = persistenceService;
+    }
 
     @Override
     public void auditCreate(Item item, String userId) {

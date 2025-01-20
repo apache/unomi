@@ -159,7 +159,7 @@ public class RulesServiceImpl extends AbstractTenantAwareService implements Rule
 
     public Set<Rule> getMatchingRules(Event event) {
         Set<Rule> matchedRules = new LinkedHashSet<>();
-        String currentTenant = tenantService.getCurrentTenantId();
+        String currentTenant = tenantService.getCurrentTenantIdWithDefault();
 
         Boolean hasEventAlreadyBeenRaised = null;
         Boolean hasEventAlreadyBeenRaisedForSession = null;
@@ -328,7 +328,7 @@ public class RulesServiceImpl extends AbstractTenantAwareService implements Rule
     }
 
     public List<Rule> getAllRules() {
-        String currentTenant = tenantService.getCurrentTenantId();
+        String currentTenant = tenantService.getCurrentTenantIdWithDefault();
         List<Rule> rules = new ArrayList<>(getRuleCache(currentTenant).values());
 
         // If not in system tenant, also get inherited rules
@@ -345,7 +345,8 @@ public class RulesServiceImpl extends AbstractTenantAwareService implements Rule
     }
 
     private List<Rule> queryAllRules() {
-        String currentTenant = tenantService.getCurrentTenantId();
+        String currentTenant = tenantService.getCurrentTenantIdWithDefault();
+
         List<Rule> rules = new ArrayList<>();
 
         // Get tenant-specific rules
@@ -431,7 +432,7 @@ public class RulesServiceImpl extends AbstractTenantAwareService implements Rule
 
     @Override
     public RuleStatistics getRuleStatistics(String ruleId) {
-        String currentTenant = tenantService.getCurrentTenantId();
+        String currentTenant = tenantService.getCurrentTenantIdWithDefault();
 
         // Check current tenant statistics
         Map<String, RuleStatistics> tenantStats = getRuleStatisticsForTenant(currentTenant);
@@ -455,7 +456,8 @@ public class RulesServiceImpl extends AbstractTenantAwareService implements Rule
     }
 
     public Map<String, RuleStatistics> getAllRuleStatistics() {
-        String currentTenant = tenantService.getCurrentTenantId();
+        String currentTenant = tenantService.getCurrentTenantIdWithDefault();
+
         Map<String, RuleStatistics> result = new ConcurrentHashMap<>(getRuleStatisticsForTenant(currentTenant));
 
         // If not in system tenant, also get inherited statistics
@@ -473,7 +475,8 @@ public class RulesServiceImpl extends AbstractTenantAwareService implements Rule
 
     @Override
     public void resetAllRuleStatistics() {
-        String currentTenant = tenantService.getCurrentTenantId();
+        String currentTenant = tenantService.getCurrentTenantIdWithDefault();
+
         Condition matchAllCondition = new Condition(definitionsService.getConditionType("matchAllCondition"));
 
         // Remove from persistence
@@ -490,7 +493,7 @@ public class RulesServiceImpl extends AbstractTenantAwareService implements Rule
 
     public Set<Metadata> getRuleMetadatas() {
         Set<Metadata> metadatas = new HashSet<>();
-        String currentTenant = tenantService.getCurrentTenantId();
+        String currentTenant = tenantService.getCurrentTenantIdWithDefault();
 
         // Get rules from current tenant
         Collection<Rule> rules = getRuleCache(currentTenant).values();
@@ -540,7 +543,8 @@ public class RulesServiceImpl extends AbstractTenantAwareService implements Rule
         if (ruleId == null) {
             return null;
         }
-        String currentTenant = tenantService.getCurrentTenantId();
+        String currentTenant = tenantService.getCurrentTenantIdWithDefault();
+
         Rule rule = getFromCacheWithInheritance(ruleId, currentTenant);
         if (rule == null || rule.getVersion() == null) {
             rule = loadWithInheritance(ruleId, Rule.class);
@@ -561,7 +565,8 @@ public class RulesServiceImpl extends AbstractTenantAwareService implements Rule
             return;
         }
 
-        String tenantId = tenantService.getCurrentTenantId();
+        String tenantId = tenantService.getCurrentTenantIdWithDefault();
+
         if (rule.getMetadata().getScope() == null) {
             rule.getMetadata().setScope("systemscope");
         }
@@ -595,7 +600,8 @@ public class RulesServiceImpl extends AbstractTenantAwareService implements Rule
     }
 
     public void removeRule(String ruleId) {
-        String currentTenant = tenantService.getCurrentTenantId();
+        String currentTenant = tenantService.getCurrentTenantIdWithDefault();
+
         getRuleCache(currentTenant).remove(ruleId);
         persistenceService.remove(ruleId, Rule.class);
     }
@@ -640,7 +646,8 @@ public class RulesServiceImpl extends AbstractTenantAwareService implements Rule
             allPersistedRuleStatistics.put(ruleStatistics.getItemId(), ruleStatistics);
         }
 
-        String currentTenant = tenantService.getCurrentTenantId();
+        String currentTenant = tenantService.getCurrentTenantIdWithDefault();
+
         Map<String, RuleStatistics> tenantStats = getRuleStatisticsForTenant(currentTenant);
 
         // Sync tenant statistics
@@ -773,7 +780,7 @@ public class RulesServiceImpl extends AbstractTenantAwareService implements Rule
 
     public Set<Condition> getTrackedConditions(Item source) {
         Set<Condition> trackedConditions = new HashSet<>();
-        String currentTenant = tenantService.getCurrentTenantId();
+        String currentTenant = tenantService.getCurrentTenantIdWithDefault();
 
         // Get rules from current tenant and system tenant
         List<Rule> rules = new ArrayList<>(getRuleCache(currentTenant).values());

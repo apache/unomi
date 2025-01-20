@@ -35,7 +35,7 @@
     <input>
         <global>
             <!--  If not defined, default glob is "*"  -->
-            <glob> {*.java,*.groovy,*.yaml,*.svcd,*.proto,*assembly.xml,assembly*.xml,*logback.xml,*.vm,*.ini,*.jks,*.properties,*.sh,*.bat} </glob>
+            <!--glob> {*.java,*.groovy,*.yaml,*.svcd,*.proto,*assembly.xml,assembly*.xml,*logback.xml,*.vm,*.ini,*.jks,*.properties,*.sh,*.bat} </glob-->
             <includes>
                 <!--  By default, project sources and resources directories are included
                 (src/main/java and src/main/resources)  -->
@@ -55,101 +55,5 @@
                 <exclude>src/main/javagen/**</exclude>
             </excludes>
         </global>
-        <plugins>
-            <plugin artifactId="codegen">
-                <effectivePom>
-                    <excludeProperties>
-                        <excludeProperty>111</excludeProperty>
-                    </excludeProperties>
-                </effectivePom>
-                <dirScan mode="auto">
-                    <excludes>
-                        <exclude tagName="outputDirectory" />
-                        <exclude tagName="directory" />
-                    </excludes>
-                    <tagScanConfigs>
-                        <tagScanConfig tagName="someProperty" glob="*.java" recursive="false" />
-                    </tagScanConfigs>
-                </dirScan>
-                <executions>
-                    <execution>
-                        <execIds>
-                            <execId>1</execId>
-                            <execId>2</execId>
-                        </execIds>
-                        <dirScan mode="auto">
-                            <includes>
-                                <include tagName="protolocation" recursive="false" glob="*.proto" />
-                            </includes>
-                        </dirScan>
-                    </execution>
-                </executions>
-            </plugin>
-        </plugins>
     </input>
-    <executionControl>
-        <runAlways>
-            <plugins>
-                <plugin artifactId="maven-failsafe-plugin" />
-            </plugins>
-            <executions>
-                <execution artifactId="maven-deploy-plugin">
-                    <execIds>
-                        <execId>my-execution-id</execId>
-                    </execIds>
-                </execution>
-            </executions>
-            <goalsLists>
-                <goalsList artifactId="maven-install-plugin">
-                    <goals>
-                        <goal>install</goal>
-                    </goals>
-                </goalsList>
-                <goalsList artifactId="maven-deploy-plugin">
-                    <goals>
-                        <goal>deploy</goal>
-                    </goals>
-                </goalsList>
-                <goalsList artifactId="bb-sdk-codegen">
-                    <goals>
-                        <goal>deploy-local</goal>
-                    </goals>
-                </goalsList>
-            </goalsLists>
-        </runAlways>
-        <reconcile logAllProperties="true">
-            <plugins>
-                <plugin artifactId="maven-compiler-plugin" goal="compile">
-                    <reconciles>
-                        <reconcile propertyName="source" />
-                        <reconcile propertyName="target" />
-                        <reconcile propertyName="debug" />
-                        <reconcile propertyName="debuglevel" />
-                    </reconciles>
-                    <!--  whitelist of logged properties -->
-                    <logs>
-                        <log propertyName="includes" />
-                        <log propertyName="excludes" />
-                        <log propertyName="argLine" />
-                    </logs>
-                </plugin>
-                <plugin artifactId="duplicate-finder-maven-plugin" goal="check">
-                    <reconciles>
-                        <reconcile propertyName="skip" skipValue="true" />
-                        <reconcile propertyName="quiet" skipValue="true" />
-                    </reconciles>
-                </plugin>
-                <plugin artifactId="maven-enforcer-plugin" goal="enforce">
-                    <reconciles>
-                        <reconcile propertyName="skip" skipValue="true" />
-                    </reconciles>
-                    <!--  blacklisted from logging properties -->
-                    <nologs>
-                        <nolog propertyName="redundantProperty" />
-                        <nolog propertyName="redundantProperty2" />
-                    </nologs>
-                </plugin>
-            </plugins>
-        </reconcile>
-    </executionControl>
 </cache>

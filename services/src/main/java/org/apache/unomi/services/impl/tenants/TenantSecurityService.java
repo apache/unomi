@@ -17,9 +17,6 @@
 package org.apache.unomi.services.impl.tenants;
 
 import org.osgi.service.cm.ConfigurationAdmin;
-import org.osgi.service.component.annotations.Activate;
-import org.osgi.service.component.annotations.Component;
-import org.osgi.service.component.annotations.Reference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -27,14 +24,15 @@ import org.slf4j.LoggerFactory;
  * Core tenant security service that handles tenant-specific security operations.
  * Rate limiting and IP filtering are handled by Apache CXF.
  */
-@Component
 public class TenantSecurityService {
     private static final Logger logger = LoggerFactory.getLogger(TenantSecurityService.class);
 
-    @Reference
     private ConfigurationAdmin configAdmin;
 
-    @Activate
+    public void setConfigAdmin(ConfigurationAdmin configAdmin) {
+        this.configAdmin = configAdmin;
+    }
+
     public void activate() {
         loadSecurityConfigurations();
     }

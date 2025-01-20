@@ -23,7 +23,7 @@ import org.apache.unomi.api.tenants.Tenant;
 import org.apache.unomi.api.tenants.TenantService;
 import org.apache.unomi.shell.completers.TenantCompleter;
 
-@Command(scope = "tenant", name = "delete", description = "Delete a tenant")
+@Command(scope = "unomi", name = "tenant-delete", description = "Delete a tenant")
 @Service
 public class TenantDeleteCommand implements Action {
 
