@@ -29,12 +29,15 @@ import org.apache.cxf.jaxrs.security.SimpleAuthorizingFilter;
 import org.apache.cxf.message.Message;
 import org.apache.unomi.api.ContextRequest;
 import org.apache.unomi.api.EventsCollectorRequest;
+import org.apache.unomi.api.security.SecurityService;
 import org.apache.unomi.api.services.ConfigSharingService;
+import org.apache.unomi.api.tenants.TenantService;
 import org.apache.unomi.rest.authentication.AuthenticationFilter;
 import org.apache.unomi.rest.authentication.AuthorizingInterceptor;
 import org.apache.unomi.rest.authentication.RestAuthenticationConfig;
 import org.apache.unomi.rest.deserializers.ContextRequestDeserializer;
 import org.apache.unomi.rest.deserializers.EventsCollectorRequestDeserializer;
+import org.apache.unomi.rest.security.SecurityFilter;
 import org.apache.unomi.rest.server.provider.RetroCompatibilityParamConverterProvider;
 import org.apache.unomi.rest.validation.request.RequestValidatorInterceptor;
 import org.apache.unomi.schema.api.SchemaService;
@@ -42,11 +45,7 @@ import org.osgi.framework.BundleContext;
 import org.osgi.framework.Filter;
 import org.osgi.framework.ServiceReference;
 import org.osgi.service.component.ComponentContext;
-import org.osgi.service.component.annotations.Activate;
-import org.osgi.service.component.annotations.Component;
-import org.osgi.service.component.annotations.Deactivate;
-import org.osgi.service.component.annotations.Reference;
-import org.osgi.service.component.annotations.ReferenceCardinality;
+import org.osgi.service.component.annotations.*;
 import org.osgi.util.tracker.ServiceTracker;
 import org.osgi.util.tracker.ServiceTrackerCustomizer;
 import org.slf4j.Logger;
@@ -73,6 +72,9 @@ public class RestServer {
     private List<ExceptionMapper> exceptionMappers = new ArrayList<>();
     private ConfigSharingService configSharingService;
     private SchemaService schemaService;
+    private TenantService tenantService;
+    private SecurityService securityService;
+    private SecurityFilter securityFilter;
 
     // refresh
     private long timeOfLastUpdate = System.currentTimeMillis();
@@ -99,6 +101,21 @@ public class RestServer {
     @Reference(cardinality = ReferenceCardinality.MANDATORY)
     public void setConfigSharingService(ConfigSharingService configSharingService) {
         this.configSharingService = configSharingService;
+    }
+
+    @Reference(cardinality = ReferenceCardinality.MANDATORY)
+    public void setTenantService(TenantService tenantService) {
+        this.tenantService = tenantService;
+    }
+
+    @Reference(cardinality = ReferenceCardinality.MANDATORY)
+    public void setSecurityService(SecurityService securityService) {
+        this.securityService = securityService;
+    }
+
+    @Reference(cardinality = ReferenceCardinality.MANDATORY)
+    public void setSecurityFilter(SecurityFilter securityFilter) {
+        this.securityFilter = securityFilter;
     }
 
     @Reference(cardinality = ReferenceCardinality.MULTIPLE)
@@ -214,8 +231,10 @@ public class RestServer {
         jaxrsServerFactoryBean.setProvider(new org.apache.cxf.rs.security.cors.CrossOriginResourceSharingFilter());
         jaxrsServerFactoryBean.setProvider(new RetroCompatibilityParamConverterProvider(objectMapper));
 
-        // Authentication filter (used for authenticating user from request)
-        jaxrsServerFactoryBean.setProvider(new AuthenticationFilter(restAuthenticationConfig));
+        jaxrsServerFactoryBean.setProvider(new AuthenticationFilter(restAuthenticationConfig, tenantService));
+
+        // Security filter for role-based access control
+        jaxrsServerFactoryBean.setProvider(securityFilter);
 
         // Authorization interceptor (used for checking roles at methods access directly)
         SimpleAuthorizingFilter simpleAuthorizingFilter = new SimpleAuthorizingFilter();

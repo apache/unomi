@@ -52,9 +52,8 @@
         <property name="publicPostRequestBytesLimit" value="${web.public.post.request.bytes.limit}"/>
     </bean>
 
-    <bean id="tenantSecurityFilter" class="org.apache.unomi.web.TenantSecurityFilter">
+    <bean id="unomiAuthenticationFilter" class="org.apache.unomi.web.UnomiAuthenticationFilter">
         <property name="tenantService" ref="tenantService" />
-        <property name="defaultTenantId" value="${web.defaultTenantId}"/>
     </bean>
 
     <service id="contextServletService" ref="contextServlet">

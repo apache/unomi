@@ -34,7 +34,7 @@ import java.io.IOException;
 import java.lang.reflect.Method;
 
 @Provider
-@Component(service = ContainerRequestFilter.class)
+@Component(service = SecurityFilter.class)
 @Priority(Priorities.AUTHORIZATION)
 public class SecurityFilter implements ContainerRequestFilter {
 

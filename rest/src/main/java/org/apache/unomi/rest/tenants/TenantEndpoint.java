@@ -19,6 +19,7 @@ package org.apache.unomi.rest.tenants;
 import org.apache.unomi.api.tenants.ApiKey;
 import org.apache.unomi.api.tenants.Tenant;
 import org.apache.unomi.api.tenants.TenantService;
+import org.apache.unomi.rest.security.RequiresRole;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 
@@ -34,6 +35,7 @@ import java.util.List;
  */
 @Component
 @Path("/tenants")
+@RequiresRole("unomi-admin")
 public class TenantEndpoint {
 
     @Reference

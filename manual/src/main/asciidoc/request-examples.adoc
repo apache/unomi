@@ -158,3 +158,124 @@ to send additional events.
 
 * You can find more <<Useful Apache Unomi URLs,useful Apache Unomi URLs>> that can be used in the same way as the above examples.
 * Read the <<Twitter sample,Twitter sample>> documentation that contains a detailed example of how to integrate with Apache Unomi.
+
+=== Public API Examples
+
+==== Sending a context request
+
+[source]
+----
+curl -X POST http://localhost:8181/cxs/context.json?sessionId=1234 \
+-H "Content-Type: application/json" \
+-H "X-Unomi-API-Key: YOUR_PUBLIC_API_KEY" \
+-d @- <<'EOF'
+{
+    "source":{
+        "itemId":"homepage",
+        "itemType":"page",
+        "scope":"example"
+    },
+    "events":[
+        {
+            "eventType":"view",
+            "scope": "example",
+            "source":{
+                "itemType": "site",
+                "scope":"example",
+                "itemId": "mysite"
+            },
+            "target":{
+                "itemType":"page",
+                "scope":"example",
+                "itemId":"homepage",
+                "properties":{
+                    "pageInfo":{
+                        "referringURL":"https://apache.org/"
+                    }
+                }
+            }
+        }
+    ]
+}
+EOF
+----
+
+==== Collecting events
+
+[source]
+----
+curl -X POST http://localhost:8181/cxs/eventcollector \
+-H "Content-Type: application/json" \
+-H "X-Unomi-API-Key: YOUR_PUBLIC_API_KEY" \
+-d '{
+    "sessionId" : "1234",
+    "events":[
+        {
+            "eventType":"contactInfoSubmitted",
+            "scope": "example",
+            "source":{
+                "itemType": "site",
+                "scope": "example",
+                "itemId": "mysite"
+            },
+            "target":{
+                "itemType": "form",
+                "scope": "example",
+                "itemId": "contactForm"
+            },
+            "properties" : {
+              "firstName": "John",
+              "lastName": "Doe",
+              "email": "john.doe@acme.com"
+            }
+        }
+    ]
+}'
+----
+
+=== Private API Examples
+
+==== Searching profiles
+
+[source]
+----
+curl -X POST http://localhost:8181/cxs/profiles/search \
+--user "YOUR_TENANT_ID:YOUR_PRIVATE_API_KEY" \
+-H "Content-Type: application/json" \
+-d '{
+  "offset" : 0,
+  "limit" : 20,
+  "condition" : {
+    "type": "profilePropertyCondition",
+    "parameterValues" : {
+      "propertyName" : "properties.firstName",
+      "comparisonOperator" : "equals",
+      "propertyValue" : "John"
+    }
+  }
+}'
+----
+
+==== Creating a segment
+
+[source]
+----
+curl -X POST http://localhost:8181/cxs/segments \
+--user "YOUR_TENANT_ID:YOUR_PRIVATE_API_KEY" \
+-H "Content-Type: application/json" \
+-d '{
+  "metadata": {
+    "id": "newSegment",
+    "name": "New Segment",
+    "scope": "example"
+  },
+  "condition": {
+    "type": "profilePropertyCondition",
+    "parameterValues": {
+      "propertyName": "properties.age",
+      "comparisonOperator": "greaterThan",
+      "propertyValueInteger": 25
+    }
+  }
+}'
+----

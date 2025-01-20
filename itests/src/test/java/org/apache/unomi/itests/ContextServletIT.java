@@ -17,9 +17,15 @@
 
 package org.apache.unomi.itests;
 
+import org.apache.http.auth.AuthScope;
+import org.apache.http.auth.UsernamePasswordCredentials;
+import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
+import org.apache.http.impl.client.BasicCredentialsProvider;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
 import org.apache.unomi.api.*;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.segments.Scoring;
@@ -29,6 +35,7 @@ import org.apache.unomi.api.tenants.Tenant;
 import org.apache.unomi.api.tenants.TenantService;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -805,6 +812,51 @@ public class ContextServletIT extends BaseIT {
                 false,
                 /* We can see we still have old control group check stored in the profile */ true,
                 /*  We can see we still have old control group check stored in the session too */ false);
+    }
+
+    @Test
+    public void testContextEndpointAuthentication() throws Exception {
+        // Create a tenant for testing
+        Tenant tenant = tenantService.createTenant("TestTenant", Collections.emptyMap());
+        ApiKey publicKey = tenantService.generateApiKeyWithType(tenant.getItemId(), ApiKey.ApiKeyType.PUBLIC, null);
+        ApiKey privateKey = tenantService.generateApiKeyWithType(tenant.getItemId(), ApiKey.ApiKeyType.PRIVATE, null);
+
+        // Test without any authentication
+        ContextRequest contextRequest = new ContextRequest();
+        contextRequest.setSessionId(TEST_SESSION_ID);
+
+        HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
+        request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
+        TestUtils.RequestResponse response = TestUtils.executeContextJSONRequest(request, TEST_SESSION_ID);
+        Assert.assertEquals("Unauthenticated request should be rejected", 401, response.getStatusCode());
+
+        // Test with JAAS authentication (should succeed)
+        BasicCredentialsProvider credsProvider = new BasicCredentialsProvider();
+        credsProvider.setCredentials(AuthScope.ANY, new UsernamePasswordCredentials("karaf", "karaf"));
+        CloseableHttpClient adminClient = HttpClients.custom().setDefaultCredentialsProvider(credsProvider).build();
+
+        request = new HttpPost(getFullUrl(CONTEXT_URL));
+        request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
+        CloseableHttpResponse jaasResponse = adminClient.execute(request);
+        Assert.assertEquals("JAAS authenticated request should succeed", 200, jaasResponse.getStatusLine().getStatusCode());
+
+        // Test with public API key (should succeed)
+        contextRequest.setPublicApiKey(publicKey.getKey());
+        request = new HttpPost(getFullUrl(CONTEXT_URL));
+        request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
+        response = TestUtils.executeContextJSONRequest(request, TEST_SESSION_ID);
+        Assert.assertEquals("Public API key request should succeed", 200, response.getStatusCode());
+
+        // Test with private API key (should fail for public endpoint)
+        request = new HttpPost(getFullUrl(CONTEXT_URL));
+        request.setHeader("Authorization", "Basic " + Base64.getEncoder().encodeToString(
+            (tenant.getItemId() + ":" + privateKey.getKey()).getBytes()));
+        request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
+        response = TestUtils.executeContextJSONRequest(request, TEST_SESSION_ID);
+        Assert.assertEquals("Private API key should not be accepted for public endpoint", 401, response.getStatusCode());
+
+        // Cleanup
+        tenantService.deleteTenant(tenant.getItemId());
     }
 
     private void performPersonalizationWithControlGroup(Map<String, String> controlGroupConfig, List<String> expectedVariants,

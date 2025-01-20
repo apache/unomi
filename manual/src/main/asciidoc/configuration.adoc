@@ -224,6 +224,287 @@ You should now have SSL setup on Karaf with your certificate, and you can test i
 Changing the default Karaf password can be done by modifying the `org.apache.unomi.security.root.password` in the
 `$MY_KARAF_HOME/etc/unomi.custom.system.properties` file
 
+=== Tenant Management and API Access
+
+Apache Unomi supports multi-tenancy, allowing multiple organizations to use the same Unomi instance while keeping their data completely isolated. Each tenant has its own set of API keys for authentication.
+
+==== Creating and Managing Tenants
+
+IMPORTANT: All tenant management operations (create, list, update, delete, API key management) are restricted to administrators only and require JAAS authentication. These endpoints cannot be accessed using tenant API keys.
+
+To manage tenants, you need administrator access to Unomi (default credentials: karaf/karaf). You can manage tenants using either the REST API or the Karaf shell commands:
+
+Using REST API (requires admin credentials):
+[source,bash]
+----
+# Create a new tenant (JAAS auth required)
+curl -X POST "http://localhost:8181/cxs/tenants" \
+  -u karaf:karaf \
+  -H "Content-Type: application/json" \
+  -d '{
+    "itemId": "mytenant",
+    "name": "My Company",
+    "description": "My Company tenant",
+    "properties": {
+      "address": "123 Main St",
+      "country": "USA"
+    }
+  }'
+
+# Response (HTTP 201 Created):
+{
+    "itemId": "mytenant",
+    "name": "My Company",
+    "description": "My Company tenant",
+    "properties": {
+        "address": "123 Main St",
+        "country": "USA"
+    },
+    "itemType": "tenant",
+    "version": 1,
+    "status": "ACTIVE",
+    "creationDate": "2024-03-14T10:30:00Z",
+    "lastModificationDate": "2024-03-14T10:30:00Z"
+}
+
+# List all tenants (JAAS auth required)
+curl -X GET "http://localhost:8181/cxs/tenants" \
+  -u karaf:karaf \
+  -H "Accept: application/json"
+
+# Get tenant details (JAAS auth required)
+curl -X GET "http://localhost:8181/cxs/tenants/mytenant" \
+  -u karaf:karaf \
+  -H "Accept: application/json"
+
+# Delete a tenant (JAAS auth required)
+curl -X DELETE "http://localhost:8181/cxs/tenants/mytenant" \
+  -u karaf:karaf
+----
+
+Using Karaf shell (requires admin access to Karaf console):
+[source,bash]
+----
+# Create a tenant
+unomi:tenant-create mytenant "My Company" --description="My Company tenant"
+
+# List all tenants
+unomi:tenant-list
+
+# View tenant details
+unomi:tenant-show mytenant
+
+# Delete a tenant
+unomi:tenant-delete mytenant
+----
+
+==== API Keys and Authentication
+
+Each tenant has two types of API keys:
+* Public API Key: Used for client-side operations and public endpoints
+* Private API Key: Used for secure operations and administrative tasks
+
+The API keys are automatically generated when creating a tenant. You can view them using:
+[source,bash]
+----
+# Using Karaf shell (requires admin access)
+unomi:tenant-show mytenant
+
+# Output example:
+Tenant Details:
+ID: mytenant
+Name: My Company
+Description: My Company tenant
+Status: ACTIVE
+Creation Date: 2024-03-14T10:30:00Z
+Last Modified: 2024-03-14T10:30:00Z
+Public API Key: 8f7d9a2c-5e4b-3f1a-9b8c-7d6e5f4a3b2c
+Private API Key: 1a2b3c4d-5e6f-7g8h-9i0j-k1l2m3n4o5p6
+----
+
+To generate new API keys (requires admin access):
+[source,bash]
+----
+# Using REST API (JAAS auth required)
+curl -X POST "http://localhost:8181/cxs/tenants/mytenant/apikeys?type=PUBLIC&validityDays=30" \
+  -u karaf:karaf \
+  -H "Content-Type: application/json"
+
+# Response (HTTP 200 OK):
+{
+    "key": "8f7d9a2c-5e4b-3f1a-9b8c-7d6e5f4a3b2c",
+    "type": "PUBLIC",
+    "expirationDate": "2024-04-13T10:30:00Z",
+    "creationDate": "2024-03-14T10:30:00Z"
+}
+
+# Using Karaf shell (requires admin access)
+unomi:tenant-generate-key mytenant PUBLIC 30
+----
+
+==== Accessing API Endpoints
+
+There are three ways to authenticate with the Unomi API:
+
+1. JAAS Authentication (Full Admin Access):
+[source,bash]
+----
+# List all profiles (admin access)
+curl -X GET "http://localhost:8181/cxs/profiles" \
+  -u karaf:karaf \
+  -H "Accept: application/json"
+
+# Response (HTTP 200 OK):
+{
+    "list": [
+        {
+            "itemId": "profile1",
+            "properties": {
+                "firstName": "John",
+                "lastName": "Doe"
+            }
+        }
+    ],
+    "offset": 0,
+    "pageSize": 50,
+    "totalSize": 1
+}
+----
+
+2. Public API Access (Client-Side Operations):
+[source,bash]
+----
+# Get context data
+curl -X POST "http://localhost:8181/cxs/context.json" \
+  -H "X-Unomi-Api-Key: 8f7d9a2c-5e4b-3f1a-9b8c-7d6e5f4a3b2c" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "source": {
+        "itemId": "homepage",
+        "itemType": "page",
+        "scope": "example"
+    },
+    "requiredProfileProperties": ["firstName", "lastName"]
+  }'
+
+# Response (HTTP 200 OK):
+{
+    "profileId": "xyz123",
+    "sessionId": "abc456",
+    "profileProperties": {
+        "firstName": "John",
+        "lastName": "Doe"
+    }
+}
+----
+
+3. Private API Access (Server-Side Operations):
+[source,bash]
+----
+# Get profiles using tenant credentials
+curl -X GET "http://localhost:8181/cxs/profiles" \
+  -H "Authorization: Basic $(echo -n 'mytenant:1a2b3c4d-5e6f-7g8h-9i0j-k1l2m3n4o5p6' | base64)" \
+  -H "Accept: application/json"
+
+# Response (HTTP 200 OK):
+{
+    "list": [
+        {
+            "itemId": "profile1",
+            "scope": "mytenant",
+            "properties": {
+                "firstName": "John",
+                "lastName": "Doe"
+            }
+        }
+    ],
+    "offset": 0,
+    "pageSize": 50,
+    "totalSize": 1
+}
+----
+
+Authentication Rules:
+* If JAAS authentication is provided (username/password), it grants full access to all endpoints
+* Public paths (like /context.json) require a valid public API key
+* Private paths require both tenantId and private API key
+* All other requests are denied
+
+==== Public vs Private Endpoints
+
+Public endpoints (requiring only public API key):
+* GET/POST /context.json
+[source,bash]
+----
+# Example request
+curl -X GET "http://localhost:8181/cxs/context.json?sessionId=abc123" \
+  -H "X-Unomi-Api-Key: 8f7d9a2c-5e4b-3f1a-9b8c-7d6e5f4a3b2c"
+----
+
+* GET/POST /eventcollector
+[source,bash]
+----
+# Example request
+curl -X POST "http://localhost:8181/cxs/eventcollector" \
+  -H "X-Unomi-Api-Key: 8f7d9a2c-5e4b-3f1a-9b8c-7d6e5f4a3b2c" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "events": [{
+        "eventType": "view",
+        "scope": "example",
+        "source": {
+            "itemId": "page1",
+            "itemType": "page",
+            "scope": "example"
+        },
+        "target": {
+            "itemId": "product1",
+            "itemType": "product",
+            "scope": "example"
+        }
+    }]
+  }'
+----
+
+* GET /client/*
+[source,bash]
+----
+# Example request
+curl -X GET "http://localhost:8181/cxs/client/myapp/status" \
+  -H "X-Unomi-Api-Key: 8f7d9a2c-5e4b-3f1a-9b8c-7d6e5f4a3b2c"
+----
+
+All other endpoints are considered private and require either:
+* JAAS authentication with admin credentials, or
+* Private API key authentication with tenant credentials
+
+Example private endpoint access:
+[source,bash]
+----
+# Get segment details
+curl -X GET "http://localhost:8181/cxs/segments/important-customers" \
+  -H "Authorization: Basic $(echo -n 'mytenant:1a2b3c4d-5e6f-7g8h-9i0j-k1l2m3n4o5p6' | base64)" \
+  -H "Accept: application/json"
+
+# Create a new segment
+curl -X POST "http://localhost:8181/cxs/segments" \
+  -H "Authorization: Basic $(echo -n 'mytenant:1a2b3c4d-5e6f-7g8h-9i0j-k1l2m3n4o5p6' | base64)" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "itemId": "high-value-customers",
+    "name": "High Value Customers",
+    "description": "Customers with high purchase value",
+    "condition": {
+        "type": "profilePropertyCondition",
+        "parameterValues": {
+            "propertyName": "totalPurchases",
+            "comparisonOperator": "greaterThan",
+            "propertyValue": 1000
+        }
+    }
+  }'
+----
+
 === Scripting security
 
 ==== Multi-layer scripting filtering system
@@ -329,8 +610,8 @@ From https://github.com/apache/unomi/blob/unomi-1.5.x/plugins/baseplugin/src/mai
 As we see in the above example, we use an MVEL script with the setPropertyAction to set a property value.
 Starting with version 1.5.2, any expression use in rules MUST be allow-listed.
 
-OGNL was previously used wherever a parameter could be used, but MVEL could only be used with a “script::” prefix.
-Starting with version 1.5.2 OGNL will no longer be allowed and is replaced by a compatible “hardcoded” property
+OGNL was previously used wherever a parameter could be used, but MVEL could only be used with a "script::" prefix.
+Starting with version 1.5.2 OGNL will no longer be allowed and is replaced by a compatible "hardcoded" property
 lookup system, while MVEL requires allow-listing the scripts that are to be used.
 
 By default, Apache Unomi comes with some built-in allowed expressions that cover all the internal uses cases.
@@ -358,7 +639,7 @@ If you require or are already using custom expressions, you should add a plugin 
 The choice of a plugin was to make sure only system administrators and solution developers could provide such a
 list, avoiding the possibility to provide it through an API call or another security sensitive deployment mechanism.
 
-There is another way of allow-listing expressions through configuration, see the “scripting configuration parameters” section below.
+There is another way of allow-listing expressions through configuration, see the "scripting configuration parameters" section below.
 
 Procedure to add allowed expressions:
 
@@ -420,7 +701,7 @@ To be valid, a Groovy action must follow a particular convention which is divide
 * An annotation used to define the associated action type
 * The function to be executed
 
-Placed right before the function, the “@Action” annotation contains a set of parameter detailing how the action should be triggered.
+Placed right before the function, the "@"Action annotation contains a set of parameter detailing how the action should be triggered.
 
 .@Action annotation
 |===
@@ -434,7 +715,7 @@ Placed right before the function, the “@Action” annotation contains a set of
 |actionExecutor
 |String
 |YES
-|Action executor contains the name of the script to call for the action type and must be prefixed with “*groovy:*”. The prefix indicates to Unomi which dispatcher to use when processing the action. The name must be the file name of the groovy file containing the action without the extension (*groovy:<filename>*).
+|Action executor contains the name of the script to call for the action type and must be prefixed with "*groovy:*". The prefix indicates to Unomi which dispatcher to use when processing the action. The name must be the file name of the groovy file containing the action without the extension (*groovy:<filename>*).
 
 |name
 |String
@@ -490,7 +771,8 @@ Note that when a groovy action is deleted by the API, the action type associated
 
 ===== Hello World!
 
-In this short example, we’re going to create a Groovy Action that will be adding “Hello world!” to the logs whenever a new view event is triggered.
+In this short example, we're going to create a Groovy Action that will be adding "Hello world!
+" to the logs whenever a new view event is triggered.
 
 The first step consists in creating the groovy script on your filesystem, start by creating the file `helloWorldGroovyAction.groovy`:
 
@@ -546,11 +828,11 @@ curl -X POST 'http://localhost:8181/cxs/rules' \
 }'
 ----
 
-Note that this rule contains a “location” parameter, with the value “world!”, which is then used in the log message triggered by the action.
+Note that this rule contains a "location" parameter, with the value "world!", which is then used in the log message triggered by the action.
 
-You can now use unomi to trigger a “view” event and see the corresponding message in the Unomi logs.
+You can now use unomi to trigger a "view" event and see the corresponding message in the Unomi logs.
 
-Once you’re done with the Hello World! action, it can be deleted using the following command:
+Once you're done with the Hello World! action, it can be deleted using the following command:
 [source,bash]
 ----
 curl -X DELETE 'http://localhost:8181/cxs/groovyActions/helloWorldGroovyAction' \
