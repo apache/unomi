@@ -20,6 +20,7 @@ import org.apache.unomi.api.Metadata;
 import org.apache.unomi.api.MetadataItem;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.conditions.Condition;
+import org.apache.unomi.api.tenants.TenantService;
 import org.apache.unomi.persistence.spi.conditions.ConditionEvaluatorDispatcher;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -84,6 +85,7 @@ class InMemoryPersistenceServiceImplTest {
     @BeforeEach
     void setUp() {
         testTenantService = new TestTenantService();
+        testTenantService.setCurrentTenant(TenantService.SYSTEM_TENANT);
         conditionEvaluatorDispatcher = TestConditionEvaluators.createDispatcher();
         persistenceService = new InMemoryPersistenceServiceImpl(testTenantService, conditionEvaluatorDispatcher);
     }

@@ -28,6 +28,7 @@ import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.unomi.api.Item;
 import org.apache.unomi.api.services.ScopeService;
+import org.apache.unomi.api.tenants.TenantService;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.schema.api.JsonSchemaWrapper;
 import org.apache.unomi.schema.api.SchemaService;
@@ -43,6 +44,8 @@ import java.net.URI;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.stream.Collectors;
+
+import static org.apache.unomi.api.tenants.TenantService.SYSTEM_TENANT;
 
 public class SchemaServiceImpl implements SchemaService {
 
@@ -73,6 +76,7 @@ public class SchemaServiceImpl implements SchemaService {
 
     private PersistenceService persistenceService;
     private ScopeService scopeService;
+    private TenantService tenantService;
 
     private JsonSchemaFactory jsonSchemaFactory;
 
@@ -157,7 +161,24 @@ public class SchemaServiceImpl implements SchemaService {
 
     @Override
     public JsonSchemaWrapper getSchema(String schemaId) {
-        return schemasById.get(schemaId);
+        // Try current tenant first
+        JsonSchemaWrapper schema = schemasById.get(schemaId);
+        if (schema != null) {
+            return schema;
+        }
+
+        // If not found and not in system tenant, try system tenant
+        String currentTenant = tenantService.getCurrentTenantId();
+        if (!SYSTEM_TENANT.equals(currentTenant)) {
+            tenantService.setCurrentTenant(SYSTEM_TENANT);
+            try {
+                return schemasById.get(schemaId);
+            } finally {
+                tenantService.setCurrentTenant(currentTenant);
+            }
+        }
+
+        return null;
     }
 
     @Override
@@ -212,6 +233,7 @@ public class SchemaServiceImpl implements SchemaService {
     public void loadPredefinedSchema(InputStream schemaStream) throws IOException {
         String schema = IOUtils.toString(schemaStream);
         JsonSchemaWrapper jsonSchemaWrapper = buildJsonSchemaWrapper(schema);
+        jsonSchemaWrapper.setTenantId(SYSTEM_TENANT);
         predefinedUnomiJSONSchemaById.put(jsonSchemaWrapper.getItemId(), jsonSchemaWrapper);
     }
 
@@ -295,10 +317,24 @@ public class SchemaServiceImpl implements SchemaService {
     }
 
     public void refreshJSONSchemas() {
-        // use local variable to avoid concurrency issues.
+        // Get system tenant schemas first
         Map<String, JsonSchemaWrapper> schemasByIdReloaded = new HashMap<>();
         schemasByIdReloaded.putAll(predefinedUnomiJSONSchemaById);
-        schemasByIdReloaded.putAll(persistenceService.getAllItems(JsonSchemaWrapper.class).stream().collect(Collectors.toMap(Item::getItemId, s -> s)));
+
+        String currentTenant = tenantService.getCurrentTenantId();
+        if (!SYSTEM_TENANT.equals(currentTenant)) {
+            tenantService.setCurrentTenant(SYSTEM_TENANT);
+            try {
+                schemasByIdReloaded.putAll(persistenceService.getAllItems(JsonSchemaWrapper.class).stream()
+                        .collect(Collectors.toMap(Item::getItemId, s -> s)));
+            } finally {
+                tenantService.setCurrentTenant(currentTenant);
+            }
+        }
+
+        // Get current tenant schemas (will override system tenant schemas)
+        schemasByIdReloaded.putAll(persistenceService.getAllItems(JsonSchemaWrapper.class).stream()
+                .collect(Collectors.toMap(Item::getItemId, s -> s)));
 
         // flush cache if size is different (can be new schema or deleted schemas)
         boolean changes = schemasByIdReloaded.size() != schemasById.size();
@@ -434,6 +470,10 @@ public class SchemaServiceImpl implements SchemaService {
 
     public void setScopeService(ScopeService scopeService) {
         this.scopeService = scopeService;
+    }
+
+    public void setTenantService(TenantService tenantService) {
+        this.tenantService = tenantService;
     }
 
     public void setJsonSchemaRefreshInterval(Integer jsonSchemaRefreshInterval) {

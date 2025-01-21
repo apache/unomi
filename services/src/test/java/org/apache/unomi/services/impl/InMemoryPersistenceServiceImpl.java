@@ -16,6 +16,7 @@
  */
 package org.apache.unomi.services.impl;
 
+import org.apache.commons.beanutils.PropertyUtils;
 import org.apache.unomi.api.CustomItem;
 import org.apache.unomi.api.Item;
 import org.apache.unomi.api.PartialList;
@@ -32,23 +33,25 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 import static org.apache.unomi.api.tenants.TenantService.SYSTEM_TENANT;
 
 /**
  * An in-memory implementation of PersistenceService for testing purposes.
  */
-public class InMemoryPersistenceServiceImpl  implements PersistenceService {
+public class InMemoryPersistenceServiceImpl implements PersistenceService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(InMemoryPersistenceServiceImpl.class);
 
-    private final Map<String, Item> items = new ConcurrentHashMap<>();
+    private final Map<String, Item> itemsById = new ConcurrentHashMap<>();
+    private final Map<String, Map<String, Map<String, Object>>> propertyMappings = new ConcurrentHashMap<>();
     private final ConditionEvaluatorDispatcher conditionEvaluatorDispatcher;
     private final TenantService tenantService;
 
     public InMemoryPersistenceServiceImpl(TenantService tenantService, ConditionEvaluatorDispatcher conditionEvaluatorDispatcher) {
-        this.conditionEvaluatorDispatcher = conditionEvaluatorDispatcher;
         this.tenantService = tenantService;
+        this.conditionEvaluatorDispatcher = conditionEvaluatorDispatcher;
     }
 
     @Override
@@ -77,10 +80,11 @@ public class InMemoryPersistenceServiceImpl  implements PersistenceService {
 
     @Override
     public boolean save(Item item) {
-        if (item.getTenantId() == null) {
-            item.setTenantId(getCurrentTenantId());
+        if (item.getItemId() == null) {
+            return false;
         }
-        items.put(getKey(item.getItemId(), (Class<Item>) item.getClass()), item);
+        item.setTenantId(tenantService.getCurrentTenantId());
+        itemsById.put(getKey(item.getItemId(), item.getClass()), item);
         return true;
     }
 
@@ -96,16 +100,11 @@ public class InMemoryPersistenceServiceImpl  implements PersistenceService {
 
     @Override
     public <T extends Item> T load(String itemId, Class<T> clazz) {
-        String currentTenant = getCurrentTenantId();
-        T item = (T) items.get(getKey(itemId, clazz));
-
-        // If not found in current tenant and current tenant is not system, try system tenant
-        if (item == null && currentTenant != null && !currentTenant.equals(SYSTEM_TENANT)) {
-            String systemKey = clazz.getName() + ":" + itemId + ":" + SYSTEM_TENANT;
-            item = (T) items.get(systemKey);
+        Item item = itemsById.get(getKey(itemId, clazz));
+        if (item != null && clazz.isAssignableFrom(item.getClass()) && tenantService.getCurrentTenantId().equals(item.getTenantId())) {
+            return (T) item;
         }
-
-        return item;
+        return null;
     }
 
     @Override
@@ -115,9 +114,12 @@ public class InMemoryPersistenceServiceImpl  implements PersistenceService {
 
     @Override
     public <T extends Item> boolean remove(String itemId, Class<T> clazz) {
-        // Only remove from current tenant
-        items.remove(getKey(itemId, clazz));
-        return true;
+        Item item = itemsById.get(getKey(itemId, clazz));
+        if (item != null && clazz.isAssignableFrom(item.getClass()) && tenantService.getCurrentTenantId().equals(item.getTenantId())) {
+            Item removedItem = itemsById.remove(getKey(itemId, clazz));
+            return removedItem != null;
+        }
+        return false;
     }
 
     @Override
@@ -131,42 +133,65 @@ public class InMemoryPersistenceServiceImpl  implements PersistenceService {
 
     @Override
     public <T extends Item> List<T> getAllItems(Class<T> clazz) {
-        List<T> result = new ArrayList<>();
-        String prefix = clazz.getName() + ":";
-        String currentTenant = getCurrentTenantId();
-
-        for (Map.Entry<String, Item> entry : items.entrySet()) {
-            if (entry.getKey().startsWith(prefix)) {
-                Item item = entry.getValue();
-                // Only return items for current tenant or system tenant if current tenant has no override
-                if (item.getTenantId() != null && (item.getTenantId().equals(currentTenant) ||
-                    (item.getTenantId().equals(SYSTEM_TENANT) && !hasCurrentTenantOverride(item.getItemId(), clazz)))) {
-                    result.add((T) item);
-                }
-            }
-        }
-        return result;
-    }
-
-    private <T extends Item> boolean hasCurrentTenantOverride(String itemId, Class<T> clazz) {
-        String currentTenant = getCurrentTenantId();
-        if (SYSTEM_TENANT.equals(currentTenant)) {
-            return false;
-        }
-        String tenantKey = clazz.getName() + ":" + itemId + ":" + currentTenant;
-        return items.containsKey(tenantKey);
-    }
-
-    @Override
-    public <T extends Item> PartialList<T> getAllItems(Class<T> clazz, int offset, int size, String sortBy) {
-        List<T> items = getAllItems(clazz);
-        List<T> pageItems = items.subList(Math.min(offset, items.size()), Math.min(offset + size, items.size()));
-        return new PartialList<>(pageItems, offset, size, items.size(), PartialList.Relation.EQUAL);
+        return itemsById.values().stream()
+                .filter(item -> clazz.isAssignableFrom(item.getClass()) && tenantService.getCurrentTenantId().equals(item.getTenantId()))
+                .map(item -> (T) item)
+                .collect(Collectors.toList());
     }
 
     @Override
     public <T extends Item> PartialList<T> getAllItems(Class<T> clazz, int offset, int size, String sortBy, String scrollTimeValidity) {
         return getAllItems(clazz, offset, size, sortBy);
+    }
+
+    @Override
+    public <T extends Item> PartialList<T> getAllItems(Class<T> clazz, int offset, int size, String sortBy) {
+        List<T> items = itemsById.values().stream()
+                .filter(item -> clazz.isAssignableFrom(item.getClass()) && tenantService.getCurrentTenantId().equals(item.getTenantId()))
+                .map(item -> (T) item)
+                .collect(Collectors.toList());
+
+        if (sortBy != null) {
+            Collections.sort(items, (o1, o2) -> {
+                try {
+                    String[] sortByArray = sortBy.split(":");
+                    String propertyName = sortByArray[0];
+                    String sortOrder = sortByArray.length > 1 ? sortByArray[1] : "asc";
+                    Object propertyValue1 = PropertyUtils.getProperty(o1, propertyName);
+                    Object propertyValue2 = PropertyUtils.getProperty(o2, propertyName);
+                    if (propertyValue1 == null && propertyValue2 == null) {
+                        return 0;
+                    } else if (propertyValue1 == null) {
+                        return "desc".equals(sortOrder) ? 1 : -1;
+                    } else if (propertyValue2 == null) {
+                        return "desc".equals(sortOrder) ? -1 : 1;
+                    }
+                    if (!(propertyValue1 instanceof Comparable)) {
+                        return 0;
+                    }
+                    int comparisonResult = ((Comparable) propertyValue1).compareTo(propertyValue2);
+                    return "desc".equals(sortOrder) ? -comparisonResult : comparisonResult;
+                } catch (Exception e) {
+                    return 0;
+                }
+            });
+        }
+
+        int totalSize = items.size();
+        if (size == -1) {
+            // Return all items when size is -1
+            return new PartialList<>(items, offset, items.size(), totalSize, PartialList.Relation.EQUAL);
+        }
+
+        int fromIndex = offset;
+        int toIndex = Math.min(offset + size, items.size());
+        if (fromIndex > items.size()) {
+            fromIndex = 0;
+            toIndex = 0;
+        }
+        items = items.subList(fromIndex, toIndex);
+
+        return new PartialList<>(items, offset, items.size(), totalSize, PartialList.Relation.EQUAL);
     }
 
     @Override
@@ -206,7 +231,7 @@ public class InMemoryPersistenceServiceImpl  implements PersistenceService {
         List<T> results = new ArrayList<>();
         String prefix = clazz.getName() + ":";
 
-        for (Map.Entry<String, Item> entry : items.entrySet()) {
+        for (Map.Entry<String, Item> entry : itemsById.entrySet()) {
             if (entry.getKey().startsWith(prefix)) {
                 T item = (T) entry.getValue();
                 if (matchesField(item, fieldName, fieldValue)) {
@@ -384,15 +409,34 @@ public class InMemoryPersistenceServiceImpl  implements PersistenceService {
         return new PartialList<>(pageItems, offset, size, totalSize, PartialList.Relation.EQUAL);
     }
 
+    @Override
+    public void setPropertyMapping(PropertyType property, String itemType) {
+        Map<String, Map<String, Object>> mappings = propertyMappings.computeIfAbsent(itemType, k -> new HashMap<>());
+        Map<String, Object> properties = mappings.computeIfAbsent("properties", k -> new HashMap<>());
+        Map<String, Object> fieldProperties = (Map<String,Object>) properties.computeIfAbsent("properties", k -> new HashMap<>());
+        fieldProperties.put(property.getItemId(), Collections.emptyMap());
+    }
+
+    @Override
+    public Map<String, Map<String, Object>> getPropertiesMapping(String itemType) {
+        return propertyMappings.get(itemType);
+    }
+
+    @Override
+    public Map<String, Object> getPropertyMapping(String property, String itemType) {
+        Map<String, Map<String, Object>> mappings = propertyMappings.get(itemType);
+        if (mappings == null || !mappings.containsKey("properties")) {
+            return null;
+        }
+        return (Map<String, Object>) mappings.get("properties").get(property);
+    }
+
     // Other required methods with default no-op implementations
     @Override public void refresh() {}
     @Override public void purge(Date date) {}
     @Override public void purge(String scope) {}
     @Override public <T extends Item> void refreshIndex(Class<T> clazz, Date dateHint) {}
     @Override public void createMapping(String itemType, String mappingConfig) {}
-    @Override public Map<String,Map<String,Object>> getPropertiesMapping(String itemType) { return Collections.emptyMap(); }
-    @Override public Map<String,Object> getPropertyMapping(String itemType, String property) { return Collections.emptyMap(); }
-    @Override public void setPropertyMapping(PropertyType propertyType, String itemType) {}
     @Override public boolean removeIndex(String itemType) { return true; }
     @Override public boolean createIndex(String itemType) { return true; }
     @Override public boolean removeQuery(String queryString) { return true; }

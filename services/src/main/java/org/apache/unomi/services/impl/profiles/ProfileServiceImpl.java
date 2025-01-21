@@ -29,17 +29,13 @@ import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.api.services.SchedulerService;
 import org.apache.unomi.api.services.SegmentService;
+import org.apache.unomi.api.tenants.TenantService;
+import org.apache.unomi.api.utils.ParserHelper;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.PropertyHelper;
-import org.apache.unomi.api.utils.ParserHelper;
 import org.apache.unomi.services.sorts.ControlGroupPersonalizationStrategy;
-import org.osgi.framework.Bundle;
-import org.osgi.framework.BundleContext;
-import org.osgi.framework.BundleEvent;
-import org.osgi.framework.InvalidSyntaxException;
-import org.osgi.framework.ServiceReference;
-import org.osgi.framework.SynchronousBundleListener;
+import org.osgi.framework.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -191,6 +187,8 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
 
     private boolean forceRefreshOnSave = false;
 
+    private TenantService tenantService;
+
     public ProfileServiceImpl() {
         LOGGER.info("Initializing profile service...");
     }
@@ -221,6 +219,10 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
 
     public void setPropertiesRefreshInterval(long propertiesRefreshInterval) {
         this.propertiesRefreshInterval = propertiesRefreshInterval;
+    }
+
+    public void setTenantService(TenantService tenantService) {
+        this.tenantService = tenantService;
     }
 
     public void postConstruct() {
@@ -968,11 +970,32 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
     }
 
     public Persona loadPersona(String personaId) {
-        return persistenceService.load(personaId, Persona.class);
+        if (personaId == null) {
+            return null;
+        }
+
+        // Try current tenant first
+        Persona result = persistenceService.load(personaId, Persona.class);
+        if (result != null) {
+            return result;
+        }
+
+        // If not found and not in system tenant, try system tenant
+        String currentTenant = tenantService.getCurrentTenantId();
+        if (!TenantService.SYSTEM_TENANT.equals(currentTenant)) {
+            tenantService.setCurrentTenant(TenantService.SYSTEM_TENANT);
+            try {
+                return persistenceService.load(personaId, Persona.class);
+            } finally {
+                tenantService.setCurrentTenant(currentTenant);
+            }
+        }
+
+        return null;
     }
 
     public PersonaWithSessions loadPersonaWithSessions(String personaId) {
-        Persona persona = persistenceService.load(personaId, Persona.class);
+        Persona persona = loadPersona(personaId);
         if (persona == null) {
             return null;
         }
@@ -991,41 +1014,131 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
     }
 
 
+    @Override
     public Collection<PropertyType> getTargetPropertyTypes(String target) {
         if (target == null) {
             return null;
         }
-        Collection<PropertyType> result = propertyTypes.getByTarget(target);
-        if (result == null) {
-            return new ArrayList<>();
+
+        // Get system tenant results first
+        Collection<PropertyType> systemResult = null;
+        String currentTenant = tenantService.getCurrentTenantId();
+        if (!TenantService.SYSTEM_TENANT.equals(currentTenant)) {
+            tenantService.setCurrentTenant(TenantService.SYSTEM_TENANT);
+            try {
+                systemResult = persistenceService.getAllItems(PropertyType.class).stream()
+                        .filter(p -> target.equals(p.getTarget()))
+                        .collect(Collectors.toList());
+            } finally {
+                tenantService.setCurrentTenant(currentTenant);
+            }
         }
-        return result;
+
+        // Get current tenant results
+        Collection<PropertyType> tenantResult = persistenceService.getAllItems(PropertyType.class).stream()
+                .filter(p -> target.equals(p.getTarget()))
+                .collect(Collectors.toList());
+
+        // Merge results with tenant overriding system
+        Map<String, PropertyType> mergedMap = new LinkedHashMap<>();
+        if (systemResult != null) {
+            for (PropertyType prop : systemResult) {
+                mergedMap.put(prop.getItemId(), prop);
+            }
+        }
+        if (tenantResult != null) {
+            for (PropertyType prop : tenantResult) {
+                mergedMap.put(prop.getItemId(), prop);
+            }
+        }
+
+        return mergedMap.isEmpty() ? new ArrayList<>() : new ArrayList<>(mergedMap.values());
     }
 
     public Map<String, Collection<PropertyType>> getTargetPropertyTypes() {
         return new HashMap<>(propertyTypes.getAllByTarget());
     }
 
+    @Override
     public Set<PropertyType> getPropertyTypeByTag(String tag) {
         if (tag == null) {
             return null;
         }
-        List<PropertyType> result = propertyTypes.getByTag(tag);
-        if (result == null) {
-            return new LinkedHashSet<>();
+
+        // Get system tenant results first
+        Set<PropertyType> systemResult = null;
+        String currentTenant = tenantService.getCurrentTenantId();
+        if (!TenantService.SYSTEM_TENANT.equals(currentTenant)) {
+            tenantService.setCurrentTenant(TenantService.SYSTEM_TENANT);
+            try {
+                systemResult = persistenceService.getAllItems(PropertyType.class).stream()
+                        .filter(p -> p.getMetadata().getTags().contains(tag))
+                        .collect(Collectors.toSet());
+            } finally {
+                tenantService.setCurrentTenant(currentTenant);
+            }
         }
-        return new LinkedHashSet<>(result);
+
+        // Get current tenant results
+        Set<PropertyType> tenantResult = persistenceService.getAllItems(PropertyType.class).stream()
+                .filter(p -> p.getMetadata().getTags().contains(tag))
+                .collect(Collectors.toSet());
+
+        // Merge results with tenant overriding system
+        Map<String, PropertyType> mergedMap = new LinkedHashMap<>();
+        if (systemResult != null) {
+            for (PropertyType prop : systemResult) {
+                mergedMap.put(prop.getItemId(), prop);
+            }
+        }
+        if (tenantResult != null) {
+            for (PropertyType prop : tenantResult) {
+                mergedMap.put(prop.getItemId(), prop);
+            }
+        }
+
+        return mergedMap.isEmpty() ? new LinkedHashSet<>() : new LinkedHashSet<>(mergedMap.values());
     }
 
+    @Override
     public Set<PropertyType> getPropertyTypeBySystemTag(String tag) {
         if (tag == null) {
             return null;
         }
-        List<PropertyType> result = propertyTypes.getBySystemTag(tag);
-        if (result == null) {
-            return new LinkedHashSet<>();
+
+        // Get system tenant results first
+        Set<PropertyType> systemResult = null;
+        String currentTenant = tenantService.getCurrentTenantId();
+        if (!TenantService.SYSTEM_TENANT.equals(currentTenant)) {
+            tenantService.setCurrentTenant(TenantService.SYSTEM_TENANT);
+            try {
+                systemResult = persistenceService.getAllItems(PropertyType.class).stream()
+                        .filter(p -> p.getMetadata().getSystemTags().contains(tag))
+                        .collect(Collectors.toSet());
+            } finally {
+                tenantService.setCurrentTenant(currentTenant);
+            }
         }
-        return new LinkedHashSet<>(result);
+
+        // Get current tenant results
+        Set<PropertyType> tenantResult = persistenceService.getAllItems(PropertyType.class).stream()
+                .filter(p -> p.getMetadata().getSystemTags().contains(tag))
+                .collect(Collectors.toSet());
+
+        // Merge results with tenant overriding system
+        Map<String, PropertyType> mergedMap = new LinkedHashMap<>();
+        if (systemResult != null) {
+            for (PropertyType prop : systemResult) {
+                mergedMap.put(prop.getItemId(), prop);
+            }
+        }
+        if (tenantResult != null) {
+            for (PropertyType prop : tenantResult) {
+                mergedMap.put(prop.getItemId(), prop);
+            }
+        }
+
+        return mergedMap.isEmpty() ? new LinkedHashSet<>() : new LinkedHashSet<>(mergedMap.values());
     }
 
     public Collection<PropertyType> getPropertyTypeByMapping(String propertyName) {
@@ -1050,8 +1163,30 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         return l;
     }
 
+    @Override
     public PropertyType getPropertyType(String id) {
-        return propertyTypes.get(id);
+        if (id == null) {
+            return null;
+        }
+
+        // Try current tenant first
+        PropertyType result = persistenceService.load(id, PropertyType.class);
+        if (result != null) {
+            return result;
+        }
+
+        // If not found and not in system tenant, try system tenant
+        String currentTenant = tenantService.getCurrentTenantId();
+        if (!TenantService.SYSTEM_TENANT.equals(currentTenant)) {
+            tenantService.setCurrentTenant(TenantService.SYSTEM_TENANT);
+            try {
+                return persistenceService.load(id, PropertyType.class);
+            } finally {
+                tenantService.setCurrentTenant(currentTenant);
+            }
+        }
+
+        return null;
     }
 
     public PartialList<Session> getPersonaSessions(String personaId, int offset, int size, String sortBy) {
@@ -1290,4 +1425,5 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
     public void deleteSession(String sessionIdentifier) {
         persistenceService.remove(sessionIdentifier, Session.class);
     }
+
 }

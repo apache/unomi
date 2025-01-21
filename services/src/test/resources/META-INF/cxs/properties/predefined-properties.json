@@ -1,0 +1,12 @@
+{
+  "metadata": {
+    "id": "firstName",
+    "name": "First Name",
+    "description": "The first name of the profile",
+    "systemTags": ["profileProperties", "personalProfileProperties"]
+  },
+  "target": "profiles",
+  "type": "string",
+  "defaultValue": "",
+  "automaticMappingsFrom": ["j:firstName"]
+} 

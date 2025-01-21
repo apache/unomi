@@ -297,6 +297,7 @@ public class Profile extends Item implements SystemPropertiesItem {
         sb.append(", itemId='").append(itemId).append('\'');
         sb.append(", itemType='").append(itemType).append('\'');
         sb.append(", scope='").append(scope).append('\'');
+        sb.append(", tenantId'").append(getTenantId()).append('\'');
         sb.append(", version=").append(version);
         sb.append('}');
         return sb.toString();
