@@ -194,14 +194,14 @@ public class RulesServiceImplTest {
         rulesService.setRule(tenantRule);
 
         // Test that tenant1 can see both rules
-        Set<Rule> allRules = new HashSet<>(persistenceService.getAllItems(Rule.class));
+        Set<Rule> allRules = new HashSet<>(rulesService.getAllRules());
         assertEquals("Should see both system and tenant rules", 2, allRules.size());
         assertTrue("Should contain system rule", allRules.stream().anyMatch(r -> r.getItemId().equals("system-rule")));
         assertTrue("Should contain tenant rule", allRules.stream().anyMatch(r -> r.getItemId().equals("tenant-rule")));
 
         // Test that tenant2 can only see system rule
         tenantService.setCurrentTenant(TENANT_2);
-        allRules = new HashSet<>(persistenceService.getAllItems(Rule.class));
+        allRules = new HashSet<>(rulesService.getAllRules());
         assertEquals("Should only see system rule", 1, allRules.size());
         assertTrue("Should contain system rule", allRules.stream().anyMatch(r -> r.getItemId().equals("system-rule")));
     }
