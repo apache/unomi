@@ -3012,7 +3012,9 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     }
 
     public void unbindTransformationListener(ServiceReference<TenantTransformationListener> listenerReference) {
-        TenantTransformationListener listener = bundleContext.getService(listenerReference);
-        transformationListeners.remove(listener);
+        if (listenerReference != null) {
+            TenantTransformationListener listener = bundleContext.getService(listenerReference);
+            transformationListeners.remove(listener);
+        }
     }
 }

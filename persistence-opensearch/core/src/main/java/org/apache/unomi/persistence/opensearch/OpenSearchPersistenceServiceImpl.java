@@ -3036,7 +3036,7 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
         }
         return tenantId;
     }
-    
+
     public void bindTransformationListener(ServiceReference<TenantTransformationListener> listenerReference) {
         TenantTransformationListener listener = bundleContext.getService(listenerReference);
         transformationListeners.add(listener);
@@ -3045,8 +3045,10 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
     }
 
     public void unbindTransformationListener(ServiceReference<TenantTransformationListener> listenerReference) {
-        TenantTransformationListener listener = bundleContext.getService(listenerReference);
-        transformationListeners.remove(listener);
+        if (listenerReference != null) {
+            TenantTransformationListener listener = bundleContext.getService(listenerReference);
+            transformationListeners.remove(listener);
+        }
     }
 
 }
