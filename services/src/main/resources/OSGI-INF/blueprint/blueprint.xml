@@ -243,6 +243,7 @@
         <property name="forceRefreshOnSave" value="${services.profile.forceRefreshOnSave}"/>
         <property name="propertiesRefreshInterval" value="${services.properties.refresh.interval}"/>
         <property name="schedulerService" ref="schedulerServiceImpl"/>
+        <property name="tenantService" ref="tenantService" />
     </bean>
     <service id="profileService" ref="profileServiceImpl">
         <interfaces>
