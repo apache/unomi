@@ -29,7 +29,7 @@
         <bundle start-level="80">wrap:mvn:com.graphql-java/java-dataloader/${java.dataloader.version}</bundle>
         <bundle start-level="80">mvn:org.reactivestreams/reactive-streams/1.0.2</bundle>
         <bundle start-level="80">mvn:com.graphql-java/graphql-java/${graphql.java.version}</bundle>
-        <bundle start-level="80">mvn:io.github.graphql-java/graphql-java-annotations/${graphql.java.annotations.version}</bundle>
+        <bundle start-level="80">wrap:mvn:io.github.graphql-java/graphql-java-annotations/${graphql.java.annotations.version}</bundle>
         <bundle start-level="80">mvn:javax.validation/validation-api/${bean.validation.version}</bundle>
         <bundle start-level="80">wrap:mvn:com.graphql-java/graphql-java-extended-scalars/${graphql.java.extended.scalars.version}</bundle>
         <bundle start-level="80">wrap:mvn:com.squareup.okhttp3/okhttp/3.2.0</bundle>
