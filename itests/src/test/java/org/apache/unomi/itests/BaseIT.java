@@ -44,7 +44,11 @@ import org.apache.unomi.api.Item;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.rules.Rule;
 import org.apache.unomi.api.services.*;
+import org.apache.unomi.api.tenants.ApiKey;
+import org.apache.unomi.api.tenants.Tenant;
+import org.apache.unomi.api.tenants.TenantService;
 import org.apache.unomi.groovy.actions.services.GroovyActionsService;
+import org.apache.unomi.itests.tools.httpclient.HttpClientThatWaitsForUnomi;
 import org.apache.unomi.lifecycle.BundleWatcher;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.persistence.spi.PersistenceService;
@@ -153,6 +157,11 @@ public abstract class BaseIT extends KarafTestSupport {
     protected IRouterCamelContext routerCamelContext;
     protected UserListService userListService;
     protected TopicService topicService;
+    protected TenantService tenantService;
+    protected Tenant testTenant;
+    protected ApiKey testPublicKey;
+    protected ApiKey testPrivateKey;
+    protected static final String TEST_TENANT_ID = "itTestTenant";
 
     @Inject
     protected BundleContext bundleContext;
@@ -198,6 +207,7 @@ public abstract class BaseIT extends KarafTestSupport {
 
         // init unomi services that are available once unomi:start have been called
         persistenceService = getOsgiService(PersistenceService.class, 600000);
+        tenantService = getOsgiService(TenantService.class, 600000);
         rulesService = getOsgiService(RulesService.class, 600000);
         definitionsService = getOsgiService(DefinitionsService.class, 600000);
         profileService = getOsgiService(ProfileService.class, 600000);
@@ -214,6 +224,28 @@ public abstract class BaseIT extends KarafTestSupport {
         exportConfigurationService = getOsgiService(ImportExportConfigurationService.class, "(configDiscriminator=EXPORT)", 600000);
         routerCamelContext = getOsgiService(IRouterCamelContext.class, 600000);
 
+        // Create test tenant if not exists
+        if (testTenant == null) {
+            testTenant = tenantService.getTenant(TEST_TENANT_ID);
+            if (testTenant == null) {
+                testTenant = new Tenant();
+                testTenant.setItemId(TEST_TENANT_ID);
+                testTenant.setName("Integration Test Tenant");
+                testTenant.setDescription("Tenant for integration tests");
+                testTenant = tenantService.createTenant(testTenant.getItemId(), Collections.emptyMap());
+
+                // Get the generated API keys
+                testPublicKey = tenantService.getApiKey(testTenant.getItemId(), ApiKey.ApiKeyType.PUBLIC);
+                testPrivateKey = tenantService.getApiKey(testTenant.getItemId(), ApiKey.ApiKeyType.PRIVATE);
+            }
+        }
+
+        // Setup the thread-locale test tenant ID
+        tenantService.setCurrentTenant(TEST_TENANT_ID);
+
+        // Set up test tenant for HttpClientThatWaitsForUnomi
+        HttpClientThatWaitsForUnomi.setTestTenant(testTenant, testPublicKey, testPrivateKey);
+
         // init httpClient
         httpClient = initHttpClient(getHttpClientCredentialProvider());
     }
@@ -229,6 +261,16 @@ public abstract class BaseIT extends KarafTestSupport {
 
     @After
     public void shutdown() {
+        if (testTenant != null) {
+            try {
+                tenantService.deleteTenant(testTenant.getItemId());
+                testTenant = null;
+                testPublicKey = null;
+                testPrivateKey = null;
+            } catch (Exception e) {
+                LOGGER.error("Error cleaning up test tenant", e);
+            }
+        }
         closeHttpClient(httpClient);
         httpClient = null;
     }
@@ -597,6 +639,17 @@ public abstract class BaseIT extends KarafTestSupport {
     }
 
     protected CloseableHttpResponse executeHttpRequest(HttpUriRequest request) throws IOException {
+        // Add API key headers based on the request path
+        String path = request.getURI().getPath();
+        if (isPrivateEndpoint(path)) {
+            // For private endpoints, use Basic auth with tenant ID and private key
+            String credentials = TEST_TENANT_ID + ":" + testPrivateKey.getKey();
+            request.setHeader("Authorization", "Basic " + Base64.getEncoder().encodeToString(credentials.getBytes()));
+        } else {
+            // For public endpoints, use X-Unomi-API-Key header
+            request.setHeader("X-Unomi-API-Key", testPublicKey.getKey());
+        }
+
         System.out.println("Executing request " + request.getMethod() + " " + request.getURI() + "...");
         CloseableHttpResponse response = httpClient.execute(request);
         int statusCode = response.getStatusLine().getStatusCode();
@@ -697,5 +750,15 @@ public abstract class BaseIT extends KarafTestSupport {
             // For Elasticsearch, use the default port or system property if set
             return System.getProperty("elasticsearch.port", "9400");
         }
+    }
+
+    protected boolean isPrivateEndpoint(String path) {
+        // Add paths that require private key authentication
+        return path.contains("/cxs/profiles") ||
+               path.contains("/cxs/rules") ||
+               path.contains("/cxs/segments") ||
+               path.contains("/cxs/scoring") ||
+               path.contains("/cxs/definitions") ||
+               path.contains("/cxs/tenants");
     }
 }

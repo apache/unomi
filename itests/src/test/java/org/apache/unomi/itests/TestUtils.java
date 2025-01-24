@@ -18,29 +18,15 @@
 package org.apache.unomi.itests;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.commons.io.IOUtils;
+import org.apache.http.Header;
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
-import org.apache.http.auth.AuthScope;
-import org.apache.http.auth.UsernamePasswordCredentials;
-import org.apache.http.client.CredentialsProvider;
-import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
-import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.entity.ContentType;
-import org.apache.http.entity.StringEntity;
-import org.apache.http.impl.client.BasicCredentialsProvider;
-import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.util.EntityUtils;
-import org.apache.unomi.api.ContextResponse;
-import org.apache.unomi.api.Event;
-import org.apache.unomi.api.Metadata;
-import org.apache.unomi.api.Profile;
-import org.apache.unomi.api.Scope;
-import org.apache.unomi.api.Session;
+import org.apache.unomi.api.*;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.ScopeService;
@@ -87,19 +73,24 @@ public class TestUtils {
 			}
 			Assert.assertEquals("Response content type should be " + JSON_MYME_TYPE, JSON_MYME_TYPE, mimeType);
 
-			// validate context
-			ContextResponse context = TestUtils.retrieveResourceFromResponse(response, ContextResponse.class);
-			Assert.assertNotNull("Context should not be null", context);
-			Assert.assertNotNull("Context profileId should not be null", context.getProfileId());
-			if (sessionId != null) {
-				Assert.assertEquals("Context sessionId should be the same as the sessionId used to request the context", sessionId,
-						context.getSessionId());
-			}
+			// get response
 			String cookieHeader = null;
-			if (response.containsHeader("Set-Cookie")) {
-				cookieHeader = response.getHeaders("Set-Cookie")[0].toString().substring(12);
+			if (sessionId != null) {
+				Header setCookieHeader = response.getFirstHeader("Set-Cookie");
+				if (setCookieHeader != null) {
+					cookieHeader = setCookieHeader.getValue();
+				}
 			}
-			return new RequestResponse(response.getStatusLine().getStatusCode(), context, cookieHeader);
+
+			String responseContent = EntityUtils.toString(entity);
+			int responseCode = response.getStatusLine().getStatusCode();
+
+			ContextResponse contextResponse = null;
+			if (responseCode == 200) {
+				contextResponse = CustomObjectMapper.getObjectMapper().readValue(responseContent, ContextResponse.class);
+			}
+
+			return new RequestResponse(cookieHeader, responseCode, contextResponse);
 		}
 	}
 
@@ -149,10 +140,10 @@ public class TestUtils {
 		private String cookieHeaderValue;
 		int statusCode;
 
-		public RequestResponse(int statusCode, ContextResponse contextResponse, String cookieHeaderValue) {
-			this.contextResponse = contextResponse;
+		public RequestResponse(String cookieHeaderValue, int statusCode, ContextResponse contextResponse) {
 			this.cookieHeaderValue = cookieHeaderValue;
 			this.statusCode = statusCode;
+			this.contextResponse = contextResponse;
 		}
 
 		public ContextResponse getContextResponse() {

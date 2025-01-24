@@ -38,13 +38,10 @@ public class TestConditionEvaluators {
 
     public static ConditionEvaluatorDispatcher createDispatcher() {
         ConditionEvaluatorDispatcherImpl dispatcher = new ConditionEvaluatorDispatcherImpl();
-        dispatcher.addEvaluator("booleanCondition", createBooleanConditionEvaluator());
-        dispatcher.addEvaluator("propertyCondition", createPropertyConditionEvaluator());
-        dispatcher.addEvaluator("matchAllCondition", createMatchAllConditionEvaluator());
-        dispatcher.addEvaluator("eventTypeCondition", createEventTypeConditionEvaluator());
-        dispatcher.addEvaluator("sessionPropertyCondition", createPropertyConditionEvaluator());
-        dispatcher.addEvaluator("eventPropertyCondition", createPropertyConditionEvaluator());
-        dispatcher.addEvaluator("profilePropertyCondition", createPropertyConditionEvaluator());
+        dispatcher.addEvaluator("booleanConditionEvaluator", createBooleanConditionEvaluator());
+        dispatcher.addEvaluator("propertyConditionEvaluator", createPropertyConditionEvaluator());
+        dispatcher.addEvaluator("matchAllConditionEvaluator", createMatchAllConditionEvaluator());
+        dispatcher.addEvaluator("eventTypeConditionEvaluator", createEventTypeConditionEvaluator());
         initializeConditionTypes();
         return dispatcher;
     }
@@ -180,36 +177,50 @@ public class TestConditionEvaluators {
     }
 
     private static void initializeConditionTypes() {
-        // Create property condition type
-        ConditionType propertyConditionType = createConditionType("propertyCondition", null);
+
+        ConditionType propertyConditionType = createConditionType("propertyCondition", "propertyConditionEvaluator", "propertyConditionESQueryBuilder", null);
         conditionTypes.put("propertyCondition", propertyConditionType);
 
         // Create boolean condition type
-        ConditionType booleanConditionType = createConditionType("booleanCondition", null);
+        ConditionType booleanConditionType = createConditionType("booleanCondition",
+                "booleanConditionEvaluator",
+                "booleanConditionESQueryBuilder", Set.of("profileTags",
+                        "logical",
+                        "condition",
+                        "profileCondition",
+                        "eventCondition",
+                        "sessionCondition",
+                        "sourceEventCondition"));
         conditionTypes.put("booleanCondition", booleanConditionType);
 
         // Create matchAll condition type
-        ConditionType matchAllConditionType = createConditionType("matchAllCondition", null);
+        ConditionType matchAllConditionType = createConditionType("matchAllCondition", "matchAllConditionEvaluator",
+                "matchAllConditionESQueryBuilder", Set.of("profileTags", "logical", "condition", "profileCondition",
+                        "eventCondition", "sessionCondition", "sourceEventCondition"));
         conditionTypes.put("matchAllCondition", matchAllConditionType);
 
         // Create eventType condition type
-        ConditionType eventTypeConditionType = createConditionType("eventTypeCondition", Collections.singleton("eventCondition"));
+        ConditionType eventTypeConditionType = createConditionType("eventTypeCondition", "eventTypeConditionEvaluator",
+                "eventTypeConditionESQueryBuilder", Set.of("profileTags", "event", "condition", "eventCondition"));
         conditionTypes.put("eventTypeCondition", eventTypeConditionType);
 
         // Create eventProperty condition type
-        ConditionType eventPropertyConditionType = createConditionType("eventPropertyCondition", Collections.singleton("eventCondition"));
+        ConditionType eventPropertyConditionType = createConditionType("eventPropertyCondition", "propertyConditionEvaluator",
+                "propertyConditionESQueryBuilder", Set.of("profileTags", "demographic", "condition", "eventCondition"));
         conditionTypes.put("eventPropertyCondition", eventPropertyConditionType);
 
         // Create sessionProperty condition type
-        ConditionType sessionPropertyConditionType = createConditionType("sessionPropertyCondition", Collections.singleton("sessionCondition"));
+        ConditionType sessionPropertyConditionType = createConditionType("sessionPropertyCondition", "propertyConditionEvaluator",
+                "propertyConditionESQueryBuilder", Set.of("availableToEndUser", "sessionBased", "profileTags", "event", "condition", "sessionCondition"));
         conditionTypes.put("sessionPropertyCondition", sessionPropertyConditionType);
 
         // Create profileProperty condition type
-        ConditionType profilePropertyConditionType = createConditionType("profilePropertyCondition", Collections.singleton("profileCondition"));
+        ConditionType profilePropertyConditionType = createConditionType("profilePropertyCondition", "propertyConditionEvaluator",
+                "propertyConditionESQueryBuilder", Set.of("availableToEndUser", "profileTags", "demographic", "condition", "profileCondition"));
         conditionTypes.put("profilePropertyCondition", profilePropertyConditionType);
     }
 
-    private static ConditionType createConditionType(String typeId, Set<String> systemTags) {
+    private static ConditionType createConditionType(String typeId, String conditionEvaluatorId, String queryBuilderId, Set<String> systemTags) {
         ConditionType conditionType = new ConditionType();
         conditionType.setItemId(typeId);
 
@@ -221,7 +232,8 @@ public class TestConditionEvaluators {
         }
 
         conditionType.setMetadata(metadata);
-        conditionType.setConditionEvaluator(typeId);
+        conditionType.setConditionEvaluator(conditionEvaluatorId);
+        conditionType.setQueryBuilder(queryBuilderId);
 
         return conditionType;
     }

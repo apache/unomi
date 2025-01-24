@@ -30,6 +30,7 @@ public class DefaultRestAuthenticationConfig implements RestAuthenticationConfig
 
     private static final String GUEST_ROLES = "ROLE_UNOMI_PUBLIC";
     private static final String ADMIN_ROLES = "ROLE_UNOMI_ADMIN";
+    private static final String TENANT_ROLES = "ROLE_UNOMI_TENANT";
 
     private static final List<Pattern> PUBLIC_PATH_PATTERNS = Arrays.asList(
             Pattern.compile("(GET|POST|OPTIONS) context\\.js(on|)"),
@@ -52,6 +53,13 @@ public class DefaultRestAuthenticationConfig implements RestAuthenticationConfig
         roles.put("org.apache.unomi.rest.endpoints.EventsCollectorEndpoint.options", GUEST_ROLES);
         roles.put("org.apache.unomi.rest.endpoints.ClientEndpoint.getClient", GUEST_ROLES);
         roles.put("org.apache.unomi.rest.endpoints.ClientEndpoint.options", GUEST_ROLES);
+        roles.put("org.apache.unomi.rest.tenants.TenantEndpoint.getTenants", ADMIN_ROLES);
+        roles.put("org.apache.unomi.rest.tenants.TenantEndpoint.getTenant", ADMIN_ROLES);
+        roles.put("org.apache.unomi.rest.tenants.TenantEndpoint.createTenant", ADMIN_ROLES);
+        roles.put("org.apache.unomi.rest.tenants.TenantEndpoint.updateTenant", ADMIN_ROLES);
+        roles.put("org.apache.unomi.rest.tenants.TenantEndpoint.deleteTenant", ADMIN_ROLES);
+        roles.put("org.apache.unomi.rest.tenants.TenantEndpoint.generateApiKey", ADMIN_ROLES);
+        roles.put("org.apache.unomi.rest.tenants.TenantEndpoint.validateApiKey", ADMIN_ROLES);
         ROLES_MAPPING = Collections.unmodifiableMap(roles);
     }
 
@@ -67,6 +75,6 @@ public class DefaultRestAuthenticationConfig implements RestAuthenticationConfig
 
     @Override
     public String getGlobalRoles() {
-        return ADMIN_ROLES;
+        return TENANT_ROLES;
     }
 }

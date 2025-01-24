@@ -1036,7 +1036,7 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
                         // TODO fix this updateByQueryRequest.setMaxRetries(1000);
                         updateByQueryRequestBuilder.slices(2L);
                         updateByQueryRequestBuilder.script(scripts[i]);
-                        updateByQueryRequestBuilder.query(wrapWithItemsTypeQuery(itemTypes, queryBuilder));
+                        updateByQueryRequestBuilder.query(wrapWithTenantAndItemsTypeQuery(itemTypes, queryBuilder, getTenantId()));
                         updateByQueryRequestBuilder.waitForCompletion(false); // force the return of a task ID.
 
                         UpdateByQueryRequest updateByQueryRequest = updateByQueryRequestBuilder.build();
@@ -1221,7 +1221,7 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
             String itemType = Item.getItemType(clazz);
             LOGGER.debug("Remove item of type {} using a query", itemType);
             final DeleteByQueryRequest.Builder deleteByQueryRequestBuilder = new DeleteByQueryRequest.Builder().index(getIndexNameForQuery(itemType))
-                    .query(wrapWithItemTypeQuery(itemType, queryBuilder))
+                    .query(wrapWithTenantAndItemTypeQuery(itemType, queryBuilder, getTenantId()))
                     // Setting slices to auto will let OpenSearch choose the number of slices to use.
                     // This setting will use one slice per shard, up to a certain limit.
                     // The delete request will be more efficient and faster than no slicing.
@@ -1914,7 +1914,7 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
             @Override
             protected Long execute(Object... args) throws IOException {
                 CountResponse response = client.count(count -> count.index(getIndexNameForQuery(itemType))
-                        .query(wrapWithItemTypeQuery(itemType, filter)));
+                        .query(wrapWithTenantAndItemTypeQuery(itemType, filter, getTenantId())));
                 return response.count();
             }
         }.catchingExecuteInClassLoader(true);
@@ -2270,11 +2270,11 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
                     }
 
                     if (filter != null) {
-                        searchRequestBuilder.query(wrapWithItemTypeQuery(itemType, conditionOSQueryBuilderDispatcher.buildFilter(filter)));
+                        searchRequestBuilder.query(wrapWithTenantAndItemTypeQuery(itemType, conditionOSQueryBuilderDispatcher.buildFilter(filter), finalTenantId));
                     }
                 } else {
                     if (filter != null) {
-                        Aggregation.Builder.ContainerBuilder filterAggregationContainerBuilder = new Aggregation.Builder().filter(wrapWithItemTypeQuery(itemType, conditionOSQueryBuilderDispatcher.buildFilter(filter)));
+                        Aggregation.Builder.ContainerBuilder filterAggregationContainerBuilder = new Aggregation.Builder().filter(wrapWithTenantAndItemTypeQuery(itemType, conditionOSQueryBuilderDispatcher.buildFilter(filter), finalTenantId));
                         for (Map.Entry<String,Aggregation.Builder.ContainerBuilder> aggregationBuilder : lastAggregation.entrySet()) {
                             filterAggregationContainerBuilder.aggregations(aggregationBuilder.getKey(), aggregationBuilder.getValue().build());
                         }
@@ -2683,43 +2683,13 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
         return documentId.substring(firstUnderscore + 1);
     }
 
-    private Query wrapWithItemTypeQuery(String itemType, Query originalQuery) {
-        if (isItemTypeSharingIndex(itemType)) {
-            return new Query.Builder().bool(bool -> bool.must(getItemTypeQueryBuilder(itemType))
-                    .must(originalQuery)).build();
-        }
-        return originalQuery;
-    }
-
-    private Query wrapWithItemsTypeQuery(String[] itemTypes, Query originalQuery) {
-        if (itemTypes.length == 1) {
-            return wrapWithItemTypeQuery(itemTypes[0], originalQuery);
-        }
-
-        if (Arrays.stream(itemTypes).anyMatch(this::isItemTypeSharingIndex)) {
-            return Query.of(q -> q
-                    .bool(b -> b
-                            .must(originalQuery)
-                            .filter(f -> f
-                                    .bool(b2 -> b2
-                                            .minimumShouldMatch("1")
-                                            .should(Arrays
-                                                    .stream(itemTypes)
-                                                    .map(this::getItemTypeQueryBuilder)
-                                                    .collect(Collectors.toList())
-                                            )
-                                    )
-                            )
-                    )
-            );
-        }
-        return originalQuery;
-    }
-
     private Query getItemTypeQueryBuilder(String itemType) {
-        return new Query.Builder().term(term -> term.field("itemType")
-                .value(value -> value.stringValue(ConditionContextHelper.foldToASCII(itemType))))
-                .build();
+        return Query.of(q -> q
+                .term(t -> t
+                        .field("itemType")
+                        .value(v -> v.stringValue(ConditionContextHelper.foldToASCII(itemType)))
+                )
+        );
     }
 
     private boolean isItemTypeSharingIndex(String itemType) {
@@ -3037,7 +3007,7 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
         return tenantId;
     }
 
-    public void bindTransformationListener(ServiceReference<TenantTransformationListener> listenerReference) {
+    private void bindTransformationListener(ServiceReference<TenantTransformationListener> listenerReference) {
         TenantTransformationListener listener = bundleContext.getService(listenerReference);
         transformationListeners.add(listener);
         // Sort listeners by priority (highest first)
@@ -3049,6 +3019,38 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
             TenantTransformationListener listener = bundleContext.getService(listenerReference);
             transformationListeners.remove(listener);
         }
+    }
+
+    private Query wrapWithTenantAndItemsTypeQuery(String[] itemTypes, Query originalQuery, String tenantId) {
+        if (itemTypes.length == 1) {
+            return wrapWithTenantAndItemTypeQuery(itemTypes[0], originalQuery, tenantId);
+        }
+
+        if (Arrays.stream(itemTypes).anyMatch(this::isItemTypeSharingIndex)) {
+            return Query.of(q -> q
+                    .bool(b -> {
+                        // Add tenant filter if provided
+                        if (tenantId != null) {
+                            b.must(Query.of(q2 -> q2.term(t -> t.field("tenantId").value(v -> v.stringValue(tenantId)))));
+                        }
+                        
+                        // Add original query and item types filter
+                        b.must(originalQuery)
+                         .filter(f -> f
+                                .bool(b2 -> b2
+                                        .minimumShouldMatch("1")
+                                        .should(Arrays
+                                                .stream(itemTypes)
+                                                .map(this::getItemTypeQueryBuilder)
+                                                .collect(Collectors.toList())
+                                        )
+                                )
+                        );
+                        return b;
+                    })
+            );
+        }
+        return originalQuery;
     }
 
 }

@@ -136,7 +136,7 @@ class InMemoryPersistenceServiceImplTest {
             profile.setProperty("age", 25);
 
             Condition condition = new Condition();
-            condition.setConditionType(TestConditionEvaluators.getConditionType("propertyCondition"));
+            condition.setConditionType(TestConditionEvaluators.getConditionType("profilePropertyCondition"));
             condition.setParameter("propertyName", "properties.age");
             condition.setParameter("comparisonOperator", "equals");
             condition.setParameter("propertyValue", 25);
@@ -180,13 +180,13 @@ class InMemoryPersistenceServiceImplTest {
             profile.setProperty("active", true);
 
             Condition ageCondition = new Condition();
-            ageCondition.setConditionType(TestConditionEvaluators.getConditionType("propertyCondition"));
+            ageCondition.setConditionType(TestConditionEvaluators.getConditionType("profilePropertyCondition"));
             ageCondition.setParameter("propertyName", "properties.age");
             ageCondition.setParameter("comparisonOperator", "equals");
             ageCondition.setParameter("propertyValue", 25);
 
             Condition activeCondition = new Condition();
-            activeCondition.setConditionType(TestConditionEvaluators.getConditionType("propertyCondition"));
+            activeCondition.setConditionType(TestConditionEvaluators.getConditionType("profilePropertyCondition"));
             activeCondition.setParameter("propertyName", "properties.active");
             activeCondition.setParameter("comparisonOperator", "equals");
             activeCondition.setParameter("propertyValue", true);

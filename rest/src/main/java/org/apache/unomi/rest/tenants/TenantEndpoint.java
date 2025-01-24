@@ -16,6 +16,7 @@
  */
 package org.apache.unomi.rest.tenants;
 
+import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
 import org.apache.unomi.api.tenants.ApiKey;
 import org.apache.unomi.api.tenants.Tenant;
 import org.apache.unomi.api.tenants.TenantService;
@@ -23,6 +24,7 @@ import org.apache.unomi.rest.security.RequiresRole;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 
+import javax.jws.WebService;
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
@@ -33,9 +35,15 @@ import java.util.List;
  * Provides operations for creating, updating, deleting, and retrieving tenants,
  * as well as managing their API keys and configurations.
  */
-@Component
+@WebService
+@Produces(MediaType.APPLICATION_JSON)
+@CrossOriginResourceSharing(
+        allowAllOrigins = true,
+        allowCredentials = true
+)
+@Component(service= TenantEndpoint.class,property = "osgi.jaxrs.resource=true")
 @Path("/tenants")
-@RequiresRole("unomi-admin")
+@RequiresRole("ROLE_UNOMI_ADMIN")
 public class TenantEndpoint {
 
     @Reference
@@ -81,11 +89,11 @@ public class TenantEndpoint {
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     public Tenant createTenant(TenantRequest request) {
-        if (request.getName() == null || request.getName().trim().isEmpty()) {
-            throw new WebApplicationException("Tenant name is required", Response.Status.BAD_REQUEST);
+        if (request.getRequestedId() == null || request.getRequestedId().trim().isEmpty()) {
+            throw new WebApplicationException("Tenant ID is required", Response.Status.BAD_REQUEST);
         }
 
-        Tenant tenant = tenantService.createTenant(request.getName(), request.getProperties());
+        Tenant tenant = tenantService.createTenant(request.getRequestedId(), request.getProperties());
         if (tenant != null) {
             // Generate both API keys with default validity period
             ApiKey publicKey = tenantService.generateApiKeyWithType(tenant.getItemId(), ApiKey.ApiKeyType.PUBLIC, null);
@@ -123,7 +131,7 @@ public class TenantEndpoint {
         if (!tenantId.equals(tenant.getItemId())) {
             throw new WebApplicationException("Tenant ID mismatch", Response.Status.BAD_REQUEST);
         }
-        
+
         if (tenantService.getTenant(tenantId) == null) {
             throw new WebApplicationException("Tenant not found", Response.Status.NOT_FOUND);
         }

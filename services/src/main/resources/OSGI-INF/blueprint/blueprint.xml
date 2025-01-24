@@ -137,6 +137,7 @@
         <property name="definitionsService" ref="definitionsServiceImpl"/>
         <property name="rulesService" ref="rulesServiceImpl"/>
         <property name="bundleContext" ref="blueprintBundleContext"/>
+        <property name="tenantService" ref="tenantService"/>
     </bean>
     <service id="goalsService" ref="goalsServiceImpl">
         <interfaces>
@@ -150,6 +151,7 @@
         <property name="persistenceService" ref="persistenceService"/>
         <property name="schedulerService" ref="schedulerServiceImpl"/>
         <property name="scopesRefreshInterval" value="${services.scopes.refresh.interval}"/>
+        <property name="tenantService" ref="tenantService"/>
     </bean>
     <service id="scopeService" ref="scopeServiceImpl" interface="org.apache.unomi.api.services.ScopeService"/>
 
@@ -206,7 +208,7 @@
         <property name="batchSegmentProfileUpdate" value="${services.segment.batch.update}"/>
         <property name="sendProfileUpdateEventForSegmentUpdate" value="${services.segment.send.profile.update.event}"/>
         <property name="dailyDateExprEvaluationHourUtc" value="${services.segment.daily.dateexpr.evaluation.hourutc}"/>
-
+        <property name="tenantService" ref="tenantService"/>
     </bean>
     <service id="segmentService" ref="segmentServiceImpl">
         <interfaces>
@@ -220,6 +222,7 @@
         <property name="persistenceService" ref="persistenceService"/>
         <property name="definitionsService" ref="definitionsServiceImpl"/>
         <property name="bundleContext" ref="blueprintBundleContext"/>
+        <property name="tenantService" ref="tenantService"/>
     </bean>
     <service id="userListService" ref="userListServiceImpl">
         <interfaces>
@@ -449,7 +452,6 @@
     <!-- Tenant Service -->
     <bean id="tenantService" class="org.apache.unomi.services.impl.tenants.TenantServiceImpl">
         <property name="persistenceService" ref="persistenceService"/>
-        <property name="configAdmin" ref="configAdmin"/>
     </bean>
 
     <service id="tenantServiceOsgi" ref="tenantService" interface="org.apache.unomi.api.tenants.TenantService">
@@ -482,6 +484,7 @@
     <!-- Tenant Monitoring Service -->
     <bean id="tenantMonitoringService" class="org.apache.unomi.services.impl.tenants.TenantMonitoringService" init-method="activate">
         <property name="persistenceService" ref="persistenceService"/>
+        <property name="definitionsService" ref="definitionsServiceImpl" />
         <property name="tenantService" ref="tenantService"/>
     </bean>
     <service id="tenantMonitoringServiceOsgi" ref="tenantMonitoringService" interface="org.apache.unomi.services.impl.tenants.TenantMonitoringService"/>

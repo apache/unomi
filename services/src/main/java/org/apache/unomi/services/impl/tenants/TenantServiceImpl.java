@@ -22,33 +22,48 @@ import org.apache.unomi.api.tenants.Tenant;
 import org.apache.unomi.api.tenants.TenantService;
 import org.apache.unomi.api.tenants.TenantStatus;
 import org.apache.unomi.persistence.spi.PersistenceService;
-import org.osgi.service.cm.ConfigurationAdmin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.xml.bind.DatatypeConverter;
 import java.security.SecureRandom;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 public class TenantServiceImpl implements TenantService {
     private static final Logger LOGGER = LoggerFactory.getLogger(TenantServiceImpl.class);
     private static final SecureRandom secureRandom = new SecureRandom();
+    private static final int MAX_TENANT_ID_LENGTH = 32;
+    private static final String TENANT_ID_PATTERN = "^[a-zA-Z0-9][a-zA-Z0-9-_]*[a-zA-Z0-9]$";
 
     private final List<TenantLifecycleListener> lifecycleListeners = new CopyOnWriteArrayList<>();
     private PersistenceService persistenceService;
-    private ConfigurationAdmin configAdmin;
-    private ThreadLocal<String> currentTenant = new ThreadLocal<>();
+    private final ThreadLocal<String> currentTenant = new ThreadLocal<>();
+
+    // Helper method to execute operations as system tenant while preserving current tenant
+    private <T> T executeAsSystemTenant(java.util.function.Supplier<T> operation) {
+        String previousTenant = getCurrentTenantId();
+        try {
+            setCurrentTenant(SYSTEM_TENANT);
+            return operation.get();
+        } finally {
+            setCurrentTenant(previousTenant);
+        }
+    }
+
+    // Void version of the helper method
+    private void executeAsSystemTenant(Runnable operation) {
+        String previousTenant = getCurrentTenantId();
+        try {
+            setCurrentTenant(SYSTEM_TENANT);
+            operation.run();
+        } finally {
+            setCurrentTenant(previousTenant);
+        }
+    }
 
     public void setPersistenceService(PersistenceService persistenceService) {
         this.persistenceService = persistenceService;
-    }
-
-    public void setConfigAdmin(ConfigurationAdmin configAdmin) {
-        this.configAdmin = configAdmin;
     }
 
     public void bindListener(TenantLifecycleListener listener) {
@@ -65,17 +80,36 @@ public class TenantServiceImpl implements TenantService {
         }
     }
 
+    private void validateTenantId(String tenantId) {
+        if (tenantId == null || tenantId.trim().isEmpty()) {
+            throw new IllegalArgumentException("Tenant ID cannot be null or empty");
+        }
+        if (tenantId.length() > MAX_TENANT_ID_LENGTH) {
+            throw new IllegalArgumentException("Tenant ID cannot be longer than " + MAX_TENANT_ID_LENGTH + " characters");
+        }
+        if (!tenantId.matches(TENANT_ID_PATTERN)) {
+            throw new IllegalArgumentException("Tenant ID can only contain alphanumeric characters, hyphens, and underscores, and cannot start or end with a hyphen or underscore");
+        }
+        if (SYSTEM_TENANT.equalsIgnoreCase(tenantId)) {
+            throw new IllegalArgumentException("Cannot create tenant with reserved ID: " + SYSTEM_TENANT);
+        }
+        if (getTenant(tenantId) != null) {
+            throw new IllegalArgumentException("Tenant with ID " + tenantId + " already exists");
+        }
+    }
+
     @Override
-    public Tenant createTenant(String name, Map<String, Object> properties) {
+    public Tenant createTenant(String requestedId, Map<String, Object> properties) {
+        validateTenantId(requestedId);
+
         Tenant tenant = new Tenant();
-        tenant.setItemId(UUID.randomUUID().toString());
-        tenant.setName(name);
+        tenant.setItemId(requestedId);
         tenant.setProperties(properties);
         tenant.setStatus(TenantStatus.ACTIVE);
         tenant.setCreationDate(new Date());
 
         // Save tenant first to ensure it exists
-        persistenceService.save(tenant);
+        executeAsSystemTenant(() -> persistenceService.save(tenant));
 
         // Generate both public and private API keys
         generateApiKeyWithType(tenant.getItemId(), ApiKey.ApiKeyType.PUBLIC, null);
@@ -102,12 +136,15 @@ public class TenantServiceImpl implements TenantService {
             apiKey.setExpirationDate(new Date(System.currentTimeMillis() + validityPeriod));
         }
 
-        Tenant tenant = persistenceService.load(tenantId, Tenant.class);
+        Tenant tenant = executeAsSystemTenant(() -> persistenceService.load(tenantId, Tenant.class));
         if (tenant != null) {
             // Remove any existing key of the same type
+            if (tenant.getApiKeys() == null) {
+                tenant.setApiKeys(new ArrayList<>());
+            }
             tenant.getApiKeys().removeIf(existingKey -> existingKey.getKeyType() == keyType);
             tenant.getApiKeys().add(apiKey);
-            persistenceService.save(tenant);
+            executeAsSystemTenant(() -> persistenceService.save(tenant));
         }
 
         return apiKey;
@@ -125,12 +162,12 @@ public class TenantServiceImpl implements TenantService {
 
     @Override
     public List<Tenant> getAllTenants() {
-        return persistenceService.getAllItems(Tenant.class);
+        return executeAsSystemTenant(() -> persistenceService.getAllItems(Tenant.class));
     }
 
     @Override
     public Tenant getTenant(String tenantId) {
-        return persistenceService.load(tenantId, Tenant.class);
+        return executeAsSystemTenant(() -> persistenceService.load(tenantId, Tenant.class));
     }
 
     private String generateSecureKey() {
@@ -141,23 +178,23 @@ public class TenantServiceImpl implements TenantService {
 
     @Override
     public void saveTenant(Tenant tenant) {
-        persistenceService.save(tenant);
+        executeAsSystemTenant(() -> persistenceService.save(tenant));
     }
 
     @Override
     public void deleteTenant(String tenantId) {
-        persistenceService.remove(tenantId, Tenant.class);
-
-        // Notify all listeners of tenant removal
-        for (TenantLifecycleListener listener : lifecycleListeners) {
-            try {
-                listener.onTenantRemoved(tenantId);
-            } catch (Exception e) {
-                LOGGER.error("Error notifying listener {} of tenant removal: {}", listener.getClass().getName(), tenantId, e);
+        Tenant tenant = executeAsSystemTenant(() ->persistenceService.load(tenantId, Tenant.class));
+        if (tenant != null) {
+            // Notify listeners before deletion
+            for (TenantLifecycleListener listener : lifecycleListeners) {
+                try {
+                    listener.onTenantRemoved(tenantId);
+                } catch (Exception e) {
+                    LOGGER.error("Error notifying listener {} of tenant removal: {}", listener.getClass().getName(), tenantId, e);
+                }
             }
+            executeAsSystemTenant(()->persistenceService.remove(tenantId, Tenant.class));
         }
-
-        LOGGER.info("Tenant {} and associated resources have been removed", tenantId);
     }
 
     @Override
@@ -171,6 +208,9 @@ public class TenantServiceImpl implements TenantService {
         if (tenant == null) {
             return false;
         }
+        if (tenant.getApiKeys() == null) {
+            return false;
+        }
         return tenant.getApiKeys().stream()
                 .anyMatch(apiKey -> apiKey.getKey().equals(key) &&
                         !apiKey.isRevoked() &&
@@ -180,37 +220,39 @@ public class TenantServiceImpl implements TenantService {
 
     @Override
     public ApiKey getApiKey(String tenantId, ApiKey.ApiKeyType keyType) {
-        Tenant tenant = getTenant(tenantId);
-        if (tenant == null) {
+        return executeAsSystemTenant(() -> {
+            Tenant tenant = persistenceService.load(tenantId, Tenant.class);
+            if (tenant != null && tenant.getApiKeys() != null) {
+                return tenant.getApiKeys().stream()
+                    .filter(key -> key.getKeyType() == keyType)
+                    .findFirst()
+                    .orElse(null);
+            }
             return null;
-        }
-        return tenant.getApiKeys().stream()
-                .filter(apiKey -> apiKey.getKeyType() == keyType &&
-                        !apiKey.isRevoked() &&
-                        (apiKey.getExpirationDate() == null || apiKey.getExpirationDate().after(new Date())))
-                .findFirst()
-                .orElse(null);
+        });
     }
 
     @Override
-    public Tenant getTenantByApiKey(String key) {
-        return getTenantByApiKey(key, null);
-    }
-
-    @Override
-    public Tenant getTenantByApiKey(String key, ApiKey.ApiKeyType requiredType) {
-        if (key == null) {
-            return null;
-        }
-
-        List<Tenant> allTenants = getAllTenants();
-        return allTenants.stream()
+    public Tenant getTenantByApiKey(String apiKey) {
+        return executeAsSystemTenant(() -> {
+            List<Tenant> tenants = persistenceService.getAllItems(Tenant.class);
+            return tenants.stream()
                 .filter(tenant -> tenant.getApiKeys().stream()
-                        .anyMatch(apiKey -> apiKey.getKey().equals(key) &&
-                                !apiKey.isRevoked() &&
-                                (requiredType == null || apiKey.getKeyType() == requiredType) &&
-                                (apiKey.getExpirationDate() == null || apiKey.getExpirationDate().after(new Date()))))
+                    .anyMatch(key -> key.getKey().equals(apiKey)))
                 .findFirst()
                 .orElse(null);
+        });
+    }
+
+    @Override
+    public Tenant getTenantByApiKey(String apiKey, ApiKey.ApiKeyType keyType) {
+        return executeAsSystemTenant(() -> {
+            List<Tenant> tenants = persistenceService.getAllItems(Tenant.class);
+            return tenants.stream()
+                .filter(tenant -> tenant.getApiKeys().stream()
+                    .anyMatch(key -> key.getKey().equals(apiKey) && key.getKeyType() == keyType))
+                .findFirst()
+                .orElse(null);
+        });
     }
 }

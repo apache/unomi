@@ -20,20 +20,48 @@ package org.apache.unomi.itests.tools.httpclient;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpUriRequest;
 import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.unomi.api.tenants.ApiKey;
+import org.apache.unomi.api.tenants.Tenant;
 import org.eclipse.jetty.http.HttpStatus;
 
 import java.io.IOException;
+import java.util.Base64;
 
 public class HttpClientThatWaitsForUnomi {
 
     private static final long TIMER = 1000L;
     private static final int MAX_TRIES = 10;
 
+    private static Tenant testTenant;
+    private static ApiKey testPublicKey;
+    private static ApiKey testPrivateKey;
+
+    public static void setTestTenant(Tenant tenant, ApiKey publicKey, ApiKey privateKey) {
+        testTenant = tenant;
+        testPublicKey = publicKey;
+        testPrivateKey = privateKey;
+    }
+
     public static CloseableHttpResponse doRequest(HttpUriRequest request) throws IOException {
         return doRequest(request, -1);
     }
 
     public static CloseableHttpResponse doRequest(HttpUriRequest request, int expectedStatusCode) throws IOException {
+        // Add API key headers based on the request path
+        String path = request.getURI().getPath();
+        if (isPrivateEndpoint(path)) {
+            // For private endpoints, use Basic auth with tenant ID and private key
+            if (testTenant != null && testPrivateKey != null) {
+                String credentials = testTenant.getItemId() + ":" + testPrivateKey.getKey();
+                request.setHeader("Authorization", "Basic " + Base64.getEncoder().encodeToString(credentials.getBytes()));
+            }
+        } else {
+            // For public endpoints, use X-Unomi-API-Key header
+            if (testPublicKey != null) {
+                request.setHeader("X-Unomi-API-Key", testPublicKey.getKey());
+            }
+        }
+
         int count = 0;
         while (true) {
             CloseableHttpResponse response = HttpClientBuilder.create().build().execute(request);
@@ -52,5 +80,15 @@ public class HttpClientThatWaitsForUnomi {
                 throw new RuntimeException(e);
             }
         }
+    }
+
+    private static boolean isPrivateEndpoint(String path) {
+        // Add paths that require private key authentication
+        return path.contains("/cxs/profiles") || 
+               path.contains("/cxs/rules") || 
+               path.contains("/cxs/segments") || 
+               path.contains("/cxs/scoring") ||
+               path.contains("/cxs/definitions") ||
+               path.contains("/cxs/tenants");
     }
 }

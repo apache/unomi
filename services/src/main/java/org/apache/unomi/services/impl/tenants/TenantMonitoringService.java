@@ -16,7 +16,10 @@
  */
 package org.apache.unomi.services.impl.tenants;
 
+import org.apache.unomi.api.Event;
+import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.conditions.Condition;
+import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.tenants.Tenant;
 import org.apache.unomi.api.tenants.TenantService;
 import org.apache.unomi.persistence.spi.PersistenceService;
@@ -35,6 +38,7 @@ public class TenantMonitoringService {
     private static final Logger logger = LoggerFactory.getLogger(TenantMonitoringService.class);
 
     private PersistenceService persistenceService;
+    private DefinitionsService definitionsService;
     private TenantService tenantService;
 
     private final Map<String, TenantMetrics> metricsCache = new ConcurrentHashMap<>();
@@ -45,6 +49,10 @@ public class TenantMonitoringService {
 
     public void setTenantService(TenantService tenantService) {
         this.tenantService = tenantService;
+    }
+
+    public void setDefinitionsService(DefinitionsService definitionsService) {
+        this.definitionsService = definitionsService;
     }
 
     public void activate() {
@@ -81,19 +89,21 @@ public class TenantMonitoringService {
 
     private long countProfiles(String tenantId) {
         Condition condition = new Condition();
-        condition.setConditionTypeId("propertyCondition");
+        condition.setConditionTypeId("profilePropertyCondition");
+        condition.setConditionType(definitionsService.getConditionType("profilePropertyCondition"));
         condition.setParameter("propertyName", "tenantId");
         condition.setParameter("comparisonOperator", "equals");
         condition.setParameter("propertyValue", tenantId);
-        return persistenceService.queryCount(condition, "profile");
+        return persistenceService.queryCount(condition, Profile.ITEM_TYPE);
     }
 
     private long countEvents(String tenantId) {
         Condition condition = new Condition();
-        condition.setConditionTypeId("propertyCondition");
+        condition.setConditionTypeId("eventPropertyCondition");
+        condition.setConditionType(definitionsService.getConditionType("profilePropertyCondition"));
         condition.setParameter("propertyName", "tenantId");
         condition.setParameter("comparisonOperator", "equals");
         condition.setParameter("propertyValue", tenantId);
-        return persistenceService.queryCount(condition, "event");
+        return persistenceService.queryCount(condition, Event.ITEM_TYPE);
     }
 }

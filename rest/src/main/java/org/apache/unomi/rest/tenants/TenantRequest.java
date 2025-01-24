@@ -19,15 +19,15 @@ package org.apache.unomi.rest.tenants;
 import java.util.Map;
 
 public class TenantRequest {
-    private String name;
+    private String requestedId;
     private Map<String, Object> properties;
 
-    public String getName() {
-        return name;
+    public String getRequestedId() {
+        return requestedId;
     }
 
-    public void setName(String name) {
-        this.name = name;
+    public void setRequestedId(String requestedId) {
+        this.requestedId = requestedId;
     }
 
     public Map<String, Object> getProperties() {

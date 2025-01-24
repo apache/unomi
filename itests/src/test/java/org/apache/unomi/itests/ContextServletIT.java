@@ -33,6 +33,7 @@ import org.apache.unomi.api.segments.Segment;
 import org.apache.unomi.api.tenants.ApiKey;
 import org.apache.unomi.api.tenants.Tenant;
 import org.apache.unomi.api.tenants.TenantService;
+import org.apache.unomi.itests.TestUtils.RequestResponse;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.junit.After;
 import org.junit.Assert;
@@ -486,7 +487,6 @@ public class ContextServletIT extends BaseIT {
 
     @Test
     public void testOGNLVulnerability() throws Exception {
-
         File vulnFile = new File("target/vuln-file.txt");
         if (vulnFile.exists()) {
             vulnFile.delete();
@@ -499,7 +499,7 @@ public class ContextServletIT extends BaseIT {
         HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
         request.setEntity(
                 new StringEntity(getValidatedBundleJSON("security/ognl-payload-1.json", parameters), ContentType.APPLICATION_JSON));
-        TestUtils.executeContextJSONRequest(request);
+        RequestResponse response = TestUtils.executeContextJSONRequest(request, TEST_SESSION_ID);
 
         shouldBeTrueUntilEnd("Vulnerability successfully executed ! File created at " + vulnFileCanonicalPath, vulnFile::exists,
                 exists -> exists == Boolean.FALSE, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
@@ -507,7 +507,6 @@ public class ContextServletIT extends BaseIT {
 
     @Test
     public void testMVELVulnerability() throws Exception {
-
         File vulnFile = new File("target/vuln-file.txt");
         if (vulnFile.exists()) {
             vulnFile.delete();
@@ -520,7 +519,7 @@ public class ContextServletIT extends BaseIT {
         HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
         request.setEntity(
                 new StringEntity(getValidatedBundleJSON("security/mvel-payload-1.json", parameters), ContentType.APPLICATION_JSON));
-        TestUtils.executeContextJSONRequest(request);
+        RequestResponse response = TestUtils.executeContextJSONRequest(request, TEST_SESSION_ID);
 
         shouldBeTrueUntilEnd("Vulnerability successfully executed ! File created at " + vulnFileCanonicalPath, vulnFile::exists,
                 exists -> exists == Boolean.FALSE, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
@@ -528,11 +527,10 @@ public class ContextServletIT extends BaseIT {
 
     @Test
     public void testPersonalization() throws Exception {
-
         Map<String, String> parameters = new HashMap<>();
         HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
         request.setEntity(new StringEntity(getValidatedBundleJSON("personalization.json", parameters), ContentType.APPLICATION_JSON));
-        TestUtils.RequestResponse response = TestUtils.executeContextJSONRequest(request);
+        RequestResponse response = TestUtils.executeContextJSONRequest(request, TEST_SESSION_ID);
         assertEquals("Invalid response code", 200, response.getStatusCode());
     }
 

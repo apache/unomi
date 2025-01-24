@@ -704,8 +704,8 @@ class DefinitionsServiceImplTest {
             assertTrue(definitionsService.getValueTypeByTag("tag1").contains(valueType));
 
             // Verify items were saved in persistence service
-            ConditionType savedCondition = persistenceService.load("test1", ConditionType.class);
-            ActionType savedAction = persistenceService.load("test2", ActionType.class);
+            ConditionType savedCondition = definitionsService.getConditionType("test1");
+            ActionType savedAction = definitionsService.getActionType("test2");
             assertNotNull(savedCondition, "Condition type should be saved");
             assertNotNull(savedAction, "Action type should be saved");
             assertEquals(SYSTEM_TENANT, savedCondition.getTenantId());

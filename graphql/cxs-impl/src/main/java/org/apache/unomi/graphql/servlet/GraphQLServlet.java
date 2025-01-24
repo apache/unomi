@@ -20,6 +20,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import graphql.ExecutionInput;
 import graphql.ExecutionResult;
 import graphql.introspection.IntrospectionQuery;
+import org.apache.unomi.api.tenants.TenantService;
 import org.apache.unomi.graphql.schema.GraphQLSchemaUpdater;
 import org.apache.unomi.graphql.services.ServiceManager;
 import org.apache.unomi.graphql.servlet.auth.GraphQLServletSecurityValidator;
@@ -53,6 +54,8 @@ public class GraphQLServlet extends WebSocketServlet {
 
     private ServiceManager serviceManager;
 
+    private TenantService tenantService;
+
     private GraphQLServletSecurityValidator validator;
 
     @Reference
@@ -65,10 +68,15 @@ public class GraphQLServlet extends WebSocketServlet {
         this.graphQLSchemaUpdater = graphQLSchemaUpdater;
     }
 
+    @Reference
+    public void setTenantService(TenantService tenantService) {
+        this.tenantService = tenantService;
+    }
+
     @Override
     public void init(ServletConfig config) throws ServletException {
         super.init(config);
-        this.validator = new GraphQLServletSecurityValidator();
+        this.validator = new GraphQLServletSecurityValidator(tenantService);
     }
 
     private WebSocketServletFactory factory;

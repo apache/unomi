@@ -987,7 +987,8 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Override
     public boolean save(final Item item, final Boolean useBatchingOption, final Boolean alwaysOverwriteOption) {
-        String tenantId = item.getTenantId();
+        String tenantId = getTenantId();
+        item.setTenantId(tenantId);
         validateTenantAndGetId("SAVE");
 
         final boolean useBatching = useBatchingOption == null ? this.useBatchingForSave : useBatchingOption;
@@ -1214,7 +1215,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         updateByQueryRequest.setMaxRetries(1000);
                         updateByQueryRequest.setSlices(2);
                         updateByQueryRequest.setScript(scripts[i]);
-                        updateByQueryRequest.setQuery(wrapWithItemsTypeQuery(itemTypes, queryBuilder));
+                        updateByQueryRequest.setQuery(wrapWithTenantAndItemsTypeQuery(itemTypes, queryBuilder, getTenantId()));
 
                         TaskSubmissionResponse taskResponse = client.submitUpdateByQuery(updateByQueryRequest, RequestOptions.DEFAULT);
                         if (taskResponse == null) {
@@ -1416,7 +1417,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             String itemType = Item.getItemType(clazz);
             LOGGER.debug("Remove item of type {} using a query", itemType);
             final DeleteByQueryRequest deleteByQueryRequest = new DeleteByQueryRequest(getIndexNameForQuery(itemType))
-                    .setQuery(wrapWithItemTypeQuery(itemType, queryBuilder))
+                    .setQuery(wrapWithTenantAndItemTypeQuery(itemType, queryBuilder, getTenantId()))
                     // Setting slices to auto will let Elasticsearch choose the number of slices to use.
                     // This setting will use one slice per shard, up to a certain limit.
                     // The delete request will be more efficient and faster than no slicing.
@@ -2002,7 +2003,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
                 CountRequest countRequest = new CountRequest(getIndexNameForQuery(itemType));
                 SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
-                searchSourceBuilder.query(wrapWithItemTypeQuery(itemType, filter));
+                searchSourceBuilder.query(wrapWithTenantAndItemTypeQuery(itemType, filter, getTenantId()));
                 countRequest.source(searchSourceBuilder);
                 CountResponse response = client.count(countRequest, RequestOptions.DEFAULT);
                 return response.getCount();
@@ -2037,7 +2038,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder()
                             .fetchSource(true)
                             .seqNoAndPrimaryTerm(true)
-                            .query(wrapWithItemTypeQuery(itemType, query))
+                            .query(wrapWithTenantAndItemsTypeQuery(new String[]{itemType}, query, getTenantId()))
                             .size(size < 0 ? defaultQueryLimit : size)
                             .from(offset);
                     if (scrollTimeValidity != null) {
@@ -2353,12 +2354,12 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     }
 
                     if (filter != null) {
-                        searchSourceBuilder.query(wrapWithItemTypeQuery(itemType, conditionESQueryBuilderDispatcher.buildFilter(filter)));
+                        searchSourceBuilder.query(wrapWithTenantAndItemTypeQuery(itemType, conditionESQueryBuilderDispatcher.buildFilter(filter), getTenantId()));
                     }
                 } else {
                     if (filter != null) {
                         AggregationBuilder filterAggregation = AggregationBuilders.filter("filter",
-                                wrapWithItemTypeQuery(itemType, conditionESQueryBuilderDispatcher.buildFilter(filter)));
+                                wrapWithTenantAndItemTypeQuery(itemType, conditionESQueryBuilderDispatcher.buildFilter(filter), getTenantId()));
                         for (AggregationBuilder aggregationBuilder : lastAggregation) {
                             filterAggregation.subAggregation(aggregationBuilder);
                         }
@@ -2733,36 +2734,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         return itemTypeIndexNameMap.getOrDefault(itemType, itemType);
     }
 
-    private QueryBuilder wrapWithItemTypeQuery(String itemType, QueryBuilder originalQuery) {
-        if (isItemTypeSharingIndex(itemType)) {
-            BoolQueryBuilder wrappedQuery = QueryBuilders.boolQuery();
-            wrappedQuery.must(getItemTypeQueryBuilder(itemType));
-            wrappedQuery.must(originalQuery);
-            return wrappedQuery;
-        }
-        return originalQuery;
-    }
-
-    private QueryBuilder wrapWithItemsTypeQuery(String[] itemTypes, QueryBuilder originalQuery) {
-        if (itemTypes.length == 1) {
-            return wrapWithItemTypeQuery(itemTypes[0], originalQuery);
-        }
-
-        if (Arrays.stream(itemTypes).anyMatch(this::isItemTypeSharingIndex)) {
-            BoolQueryBuilder itemTypeQuery = QueryBuilders.boolQuery();
-            itemTypeQuery.minimumShouldMatch(1);
-            for (String itemType : itemTypes) {
-                itemTypeQuery.should(getItemTypeQueryBuilder(itemType));
-            }
-
-            BoolQueryBuilder wrappedQuery = QueryBuilders.boolQuery();
-            wrappedQuery.filter(itemTypeQuery);
-            wrappedQuery.must(originalQuery);
-            return wrappedQuery;
-        }
-        return originalQuery;
-    }
-
     private QueryBuilder getItemTypeQueryBuilder(String itemType) {
         return QueryBuilders.termQuery("itemType", ConditionContextHelper.foldToASCII(itemType));
     }
@@ -3017,4 +2988,34 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             transformationListeners.remove(listener);
         }
     }
+
+    private QueryBuilder wrapWithTenantAndItemsTypeQuery(String[] itemTypes, QueryBuilder originalQuery, String tenantId) {
+        if (itemTypes.length == 1) {
+            return wrapWithTenantAndItemTypeQuery(itemTypes[0], originalQuery, tenantId);
+        }
+
+        if (Arrays.stream(itemTypes).anyMatch(this::isItemTypeSharingIndex)) {
+            BoolQueryBuilder itemTypeQuery = QueryBuilders.boolQuery();
+            itemTypeQuery.minimumShouldMatch(1);
+            for (String itemType : itemTypes) {
+                itemTypeQuery.should(getItemTypeQueryBuilder(itemType));
+            }
+
+            BoolQueryBuilder wrappedQuery = QueryBuilders.boolQuery();
+            wrappedQuery.filter(itemTypeQuery);
+            wrappedQuery.must(originalQuery);
+            if (tenantId != null) {
+                wrappedQuery.must(QueryBuilders.termQuery("tenantId", tenantId));
+            }
+            return wrappedQuery;
+        }
+        if (tenantId != null) {
+            BoolQueryBuilder wrappedQuery = QueryBuilders.boolQuery();
+            wrappedQuery.must(originalQuery);
+            wrappedQuery.must(QueryBuilders.termQuery("tenantId", tenantId));
+            return wrappedQuery;
+        }
+        return originalQuery;
+    }
+
 }

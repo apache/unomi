@@ -23,7 +23,11 @@ import org.apache.cxf.jaxrs.utils.JAXRSUtils;
 import org.apache.cxf.security.SecurityContext;
 import org.apache.karaf.jaas.boot.principal.RolePrincipal;
 import org.apache.karaf.jaas.boot.principal.UserPrincipal;
+import org.apache.unomi.api.tenants.ApiKey;
+import org.apache.unomi.api.tenants.Tenant;
 import org.apache.unomi.api.tenants.TenantService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.annotation.Priority;
 import javax.security.auth.Subject;
@@ -47,6 +51,8 @@ import java.util.List;
 @PreMatching
 @Priority(Priorities.AUTHENTICATION)
 public class AuthenticationFilter implements ContainerRequestFilter {
+
+    private static final Logger logger = LoggerFactory.getLogger(AuthenticationFilter.class);
 
     // Guest user config
     public static final String GUEST_USERNAME = "guest";
@@ -86,10 +92,11 @@ public class AuthenticationFilter implements ContainerRequestFilter {
     public void filter(ContainerRequestContext requestContext) throws IOException {
         String path = requestContext.getUriInfo().getPath();
 
-        // Tenant endpoints require JAAS authentication
+        // Tenant endpoints require JAAS authentication only
         if (path.startsWith("tenants")) {
             String authHeader = requestContext.getHeaderString(HttpHeaders.AUTHORIZATION);
             if (authHeader == null || !authHeader.startsWith("Basic ")) {
+                logger.debug("Tenant endpoint access denied: Missing or invalid Basic Auth header");
                 unauthorized(requestContext);
                 return;
             }
@@ -98,60 +105,74 @@ public class AuthenticationFilter implements ContainerRequestFilter {
                 jaasAuthenticationFilter.filter(requestContext);
                 return; // If JAAS auth succeeds, we're done
             } catch (Exception e) {
+                logger.debug("Tenant endpoint access denied: JAAS authentication failed");
                 unauthorized(requestContext);
                 return;
             }
         }
 
-        // For other endpoints, try JAAS authentication first if Basic Auth credentials are present
-        String authHeader = requestContext.getHeaderString(HttpHeaders.AUTHORIZATION);
-        if (authHeader != null && authHeader.startsWith("Basic ")) {
-            try {
-                jaasAuthenticationFilter.filter(requestContext);
-                return; // If JAAS auth succeeds, we're done - full access granted
-            } catch (Exception e) {
-                // JAAS auth failed, continue to API key checks
+        // Check if this is a public path
+        if (isPublicPath(requestContext)) {
+            String apiKey = requestContext.getHeaderString("X-Unomi-API-Key");
+            if (apiKey == null) {
+                logger.debug("Public endpoint access denied: Missing API key");
+                unauthorized(requestContext);
+                return;
             }
-        }
 
-        // No valid JAAS auth, check for API key authentication
-        String apiKey = requestContext.getHeaderString("X-Unomi-API-Key");
-        if (apiKey == null) {
-            // No API key provided, authentication failed
+            // Find tenant by API key and validate it's a public key
+            Tenant tenant = tenantService.getTenantByApiKey(apiKey, ApiKey.ApiKeyType.PUBLIC);
+            if (tenant != null) {
+                // Set the current tenant context
+                tenantService.setCurrentTenant(tenant.getItemId());
+
+                // Create and set security context with tenant principal and public role
+                Subject subject = new Subject();
+                subject.getPrincipals().add(new UserPrincipal(tenant.getItemId()));
+                subject.getPrincipals().add(new RolePrincipal(GUEST_DEFAULT_ROLE));
+                JAXRSUtils.getCurrentMessage().put(SecurityContext.class,
+                        new RolePrefixSecurityContextImpl(subject, ROLE_CLASSIFIER, ROLE_CLASSIFIER_TYPE));
+                return;
+            }
+            logger.debug("Public endpoint access denied: Invalid public API key");
             unauthorized(requestContext);
             return;
         }
 
-        // For public paths, accept public API key
-        if (isPublicPath(requestContext)) {
-            if (tenantService.validateApiKey(TenantService.SYSTEM_TENANT, apiKey)) {
-                JAXRSUtils.getCurrentMessage().put(SecurityContext.class,
-                        new RolePrefixSecurityContextImpl(GUEST_SUBJECT, ROLE_CLASSIFIER, ROLE_CLASSIFIER_TYPE));
-                return;
+        // For private endpoints, try tenant private key first, then fall back to JAAS
+        String authHeader = requestContext.getHeaderString(HttpHeaders.AUTHORIZATION);
+        if (authHeader != null && authHeader.startsWith("Basic ")) {
+            // Try tenant private key authentication first
+            String[] credentials = extractBasicAuthCredentials(authHeader);
+            if (credentials != null && credentials.length == 2) {
+                String tenantId = credentials[0];
+                String privateKey = credentials[1];
+
+                // Validate tenant credentials with private key type
+                if (tenantService.validateApiKeyWithType(tenantId, privateKey, ApiKey.ApiKeyType.PRIVATE)) {
+                    // Set the current tenant context
+                    tenantService.setCurrentTenant(tenantId);
+
+                    // Create and set security context with tenant principal and roles
+                    Subject subject = new Subject();
+                    subject.getPrincipals().add(new UserPrincipal(tenantId));
+                    subject.getPrincipals().add(new RolePrincipal("ROLE_UNOMI_TENANT"));
+                    JAXRSUtils.getCurrentMessage().put(SecurityContext.class,
+                        new RolePrefixSecurityContextImpl(subject, ROLE_CLASSIFIER, ROLE_CLASSIFIER_TYPE));
+                    return;
+                }
+                logger.debug("Private endpoint access denied: Invalid tenant private key");
+            }
+
+            // If tenant auth fails, try JAAS auth
+            try {
+                jaasAuthenticationFilter.filter(requestContext);
+                return; // If JAAS auth succeeds, we're done - full access granted
+            } catch (Exception e) {
+                logger.debug("Private endpoint access denied: Both tenant key and JAAS authentication failed");
             }
         } else {
-            // For private paths, require both tenantId and private key
-            if (authHeader == null || !authHeader.startsWith("Basic ")) {
-                unauthorized(requestContext);
-                return;
-            }
-
-            // Extract credentials
-            String[] credentials = extractBasicAuthCredentials(authHeader);
-            if (credentials == null || credentials.length != 2) {
-                unauthorized(requestContext);
-                return;
-            }
-
-            String tenantId = credentials[0];
-            String privateKey = credentials[1];
-
-            // Validate tenant credentials
-            if (tenantService.validateApiKey(tenantId, privateKey)) {
-                // Set the current tenant context
-                tenantService.setCurrentTenant(tenantId);
-                return;
-            }
+            logger.debug("Private endpoint access denied: Missing Basic Auth header");
         }
 
         // If we get here, no valid authentication was provided

@@ -65,6 +65,12 @@ public class ConditionEvaluatorDispatcherImpl implements ConditionEvaluatorDispa
 
     @Override
     public boolean eval(Condition condition, Item item, Map<String, Object> context) {
+        if (condition == null) {
+            throw new UnsupportedOperationException("Null condition passed for item : " + item);
+        }
+        if (condition.getConditionType() == null) {
+            throw new UnsupportedOperationException("Null condition type passed for condition typeID=" + condition.getConditionTypeId());
+        }
         String conditionEvaluatorKey = condition.getConditionType().getConditionEvaluator();
         if (condition.getConditionType().getParentCondition() != null) {
             context.putAll(condition.getParameterValues());

@@ -34,14 +34,14 @@ public interface TenantService {
     String SYSTEM_TENANT = "system";
 
     /**
-     * Creates a new tenant in the system with the specified name and properties.
+     * Creates a new tenant in the system with the specified ID and properties.
      *
-     * @param name       the name of the tenant to create
+     * @param requestedId the requested ID for the tenant
      * @param properties additional properties to associate with the tenant
      * @return the newly created Tenant object
-     * @throws IllegalArgumentException if the name is null or empty
+     * @throws IllegalArgumentException if the requestedId is invalid, already exists, or is a reserved ID
      */
-    Tenant createTenant(String name, Map<String, Object> properties);
+    Tenant createTenant(String requestedId, Map<String, Object> properties);
 
     /**
      * Generates a new API key for the specified tenant with an optional validity period.

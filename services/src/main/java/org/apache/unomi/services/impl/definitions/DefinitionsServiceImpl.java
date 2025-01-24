@@ -1122,7 +1122,8 @@ public class DefinitionsServiceImpl extends AbstractTenantAwareService implement
                 Metadata metadata = new Metadata();
                 metadata.setId("propertyCondition");
                 propertyConditionType.setMetadata(metadata);
-                propertyConditionType.setConditionEvaluator("propertyCondition");
+                propertyConditionType.setConditionEvaluator("propertyConditionEvaluator");
+                propertyConditionType.setQueryBuilder("propertyConditionESQueryBuilder");
 
                 // Create tenant condition
                 Condition tenantCondition = new Condition(propertyConditionType);

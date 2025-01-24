@@ -261,6 +261,7 @@ public class SchemaServiceImpl implements SchemaService {
                             .collect(Collectors.toSet()) :
                     Collections.emptySet();
         } catch (Exception e) {
+            LOGGER.debug("Unexpected error while validating schema :", e);
             throw new ValidationException("Unexpected error while validating", e);
         }
     }

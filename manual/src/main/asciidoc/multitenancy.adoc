@@ -14,34 +14,124 @@
 
 = Apache Unomi Multi-tenancy
 :toc: macro
-:toclevels: 3
+:toclevels: 4
 :toc-title: Table of contents
+
+toc::[]
 
 == Overview
 
-Apache Unomi now supports multi-tenancy, allowing multiple organizations to use the same Unomi instance while keeping their data completely isolated.
+Apache Unomi provides robust multi-tenancy support, allowing multiple organizations to use the same Unomi instance while maintaining complete data isolation. Each tenant gets their own dedicated space with separate data storage, configuration, and API keys.
 
-== Features
+== Key Features
 
 * Complete data isolation between tenants
-* API key-based authentication
+* Dual API key system (public and private keys)
 * Tenant-specific configuration
 * Resource quotas and limits
 * Migration tools for existing data
+* Support for both REST and GraphQL APIs
+
+== Authentication Methods
+
+=== Public API Key
+Used for public endpoints (e.g., context requests) that are typically accessed from client-side applications.
+
+[source,http]
+----
+X-Unomi-Api-Key: <PUBLIC_KEY>
+----
+
+=== Private API Key
+Used for administrative operations and sensitive endpoints. Requires Basic Authentication using tenant ID and private key.
+
+[source,http]
+----
+Authorization: Basic <BASE64(TENANT_ID:PRIVATE_KEY)>
+----
+
+== Getting Started
+
+=== Creating Your First Tenant
+
+To create a new tenant, use the Tenant API endpoint:
+
+[source,bash]
+----
+curl -X POST http://localhost:8181/cxs/tenants \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Basic <ADMIN_CREDENTIALS>" \
+  -d '{
+    "itemId": "my-tenant",
+    "name": "My Organization",
+    "description": "My organization description"
+  }'
+----
+
+The response includes the tenant's API keys:
+
+[source,json]
+----
+{
+  "itemId": "my-tenant",
+  "name": "My Organization",
+  "description": "My organization description",
+  "publicKey": "abc123...",
+  "privateKey": "xyz789..."
+}
+----
+
+=== Making Your First API Call
+
+==== Public Endpoint Example (Context Request)
+
+[source,bash]
+----
+curl http://localhost:8181/cxs/context.json \
+  -H "X-Unomi-Api-Key: <PUBLIC_KEY>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "sessionId": "session-123",
+    "source": {
+      "itemId": "homepage",
+      "itemType": "page",
+      "scope": "example"
+    }
+  }'
+----
+
+==== Private Endpoint Example (Profile Management)
+
+[source,bash]
+----
+curl http://localhost:8181/cxs/profiles \
+  -H "Authorization: Basic <BASE64(TENANT_ID:PRIVATE_KEY)>" \
+  -H "Content-Type: application/json"
+----
 
 == Configuration
 
 === Basic Setup
 
+Configure default tenant settings in `etc/org.apache.unomi.tenant.cfg`:
+
 [source,properties]
 ----
-# etc/org.apache.unomi.tenant.cfg
+# Default tenant ID for backward compatibility
 tenant.default.id=default
+
+# API key validity period
 tenant.apikey.validity.period=30
 tenant.apikey.validity.unit=DAYS
+
+# Maximum number of API calls per tenant per day
+tenant.apikey.maxCalls=100000
+
+# Enable/disable tenant isolation
+tenant.isolation.enabled=true
 ----
 
-=== Security Configuration
+=== Security Provider Configuration
 
 For Elasticsearch:
 [source,properties]
@@ -55,48 +145,458 @@ For OpenSearch:
 tenant.security.provider=opensearch
 ----
 
-== API Usage
+== Tenant Management
 
-=== Creating a Tenant
-
-[source,bash]
-----
-curl -X POST http://localhost:8181/cxs/tenants \
-  -H "Content-Type: application/json" \
-  -d '{"name": "MyTenant", "properties": {}}'
-----
-
-=== Generating API Keys
+=== Listing Tenants
 
 [source,bash]
 ----
-curl -X POST http://localhost:8181/cxs/tenants/{tenantId}/apikeys \
+curl http://localhost:8181/cxs/tenants \
+  -H "Authorization: Basic <ADMIN_CREDENTIALS>"
+----
+
+=== Updating a Tenant
+
+[source,bash]
+----
+curl -X PUT http://localhost:8181/cxs/tenants/my-tenant \
+  -H "Authorization: Basic <ADMIN_CREDENTIALS>" \
   -H "Content-Type: application/json" \
-  -d '{"validityPeriod": 30}'
+  -d '{
+    "displayName": "Updated Organization Name",
+    "description": "Updated description"
+  }'
+----
+
+=== Regenerating API Keys
+
+[source,bash]
+----
+curl -X POST http://localhost:8181/cxs/tenants/my-tenant/keys \
+  -H "Authorization: Basic <ADMIN_CREDENTIALS>"
+----
+
+=== Deleting a Tenant
+
+[source,bash]
+----
+curl -X DELETE http://localhost:8181/cxs/tenants/my-tenant \
+  -H "Authorization: Basic <ADMIN_CREDENTIALS>"
+----
+
+== GraphQL Support
+
+GraphQL endpoints support both public and private authentication methods:
+
+[source,bash]
+----
+curl http://localhost:8181/graphql \
+  -H "Authorization: Basic <BASE64(TENANT_ID:PRIVATE_KEY)>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "{ profiles { edges { node { id } } } }"
+  }'
+----
+
+== Monitoring and Management
+
+=== Monitoring API Usage
+
+Track tenant API usage:
+
+[source,bash]
+----
+curl http://localhost:8181/cxs/tenants/my-tenant/apiCalls \
+  -H "Authorization: Basic <ADMIN_CREDENTIALS>"
+----
+
+=== Data Migration
+
+Migrate data between tenants:
+
+[source,bash]
+----
+curl -X POST http://localhost:8181/cxs/tenants/source-tenant/migrate/target-tenant \
+  -H "Authorization: Basic <ADMIN_CREDENTIALS>"
+----
+
+== Best Practices
+
+=== API Key Management
+* Rotate keys regularly using the key regeneration endpoint
+* Use public keys only for public endpoints
+* Never expose private keys in client-side code
+* Monitor API key usage and implement rate limiting
+
+=== Resource Management
+* Set appropriate quotas for each tenant
+* Monitor resource usage through the monitoring endpoints
+* Configure alerts for quota limits
+* Regularly review and adjust limits based on usage patterns
+
+=== Security
+* Always use HTTPS in production
+* Implement proper key rotation policies
+* Conduct regular security audits
+* Monitor for suspicious activity patterns
+* Keep tenant configurations up to date
+
+== Troubleshooting
+
+=== Common Issues
+
+==== 401 Unauthorized
+* Verify API key is correct
+* Check if using public key for private endpoint
+* Ensure tenant ID matches the API key
+
+==== 400 Bad Request
+* Check if API key header is present
+* Verify request format is correct
+
+==== 404 Not Found
+* Verify tenant ID exists
+* Check if endpoint path is correct
+
+=== Logging
+
+Enable debug logging for tenant-related operations:
+
+[source,properties]
+----
+log4j.logger.org.apache.unomi.tenant=DEBUG
 ----
 
 == Migration Guide
+
+=== Migrating Existing Data
 
 To migrate existing data to use multi-tenancy:
 
 [source,bash]
 ----
-curl -X POST http://localhost:8181/cxs/tenants/migration/default
+# Step 1: Create new tenant
+curl -X POST http://localhost:8181/cxs/tenants \
+  -H "Authorization: Basic <ADMIN_CREDENTIALS>" \
+  -d '{"id": "new-tenant"}'
+
+# Step 2: Migrate data
+curl -X POST http://localhost:8181/cxs/tenants/migration/default/new-tenant \
+  -H "Authorization: Basic <ADMIN_CREDENTIALS>"
 ----
 
-== Best Practices
+=== Verification
 
-1. API Key Management
-* Rotate keys regularly
-* Use short-lived keys when possible
-* Monitor key usage
+After migration, verify data integrity:
 
-2. Resource Management
-* Set appropriate quotas
-* Monitor resource usage
-* Configure alerts for quota limits
+[source,bash]
+----
+# Check profile count
+curl http://localhost:8181/cxs/tenants/new-tenant/profiles/count \
+  -H "Authorization: Basic <ADMIN_CREDENTIALS>"
+----
 
-3. Security
-* Use HTTPS for all communications
-* Implement proper key rotation
-* Regular security audits
+== Working with Events and Rules
+
+=== Creating Custom Event Types
+
+First, create a JSON schema for your custom event type and deploy it using the JSON schema endpoint:
+
+[source,bash]
+----
+curl --location --request POST 'http://localhost:8181/cxs/jsonSchema' \
+-u 'karaf:karaf' \
+--header 'Content-Type: application/json' \
+--data-raw '{
+    "$id": "https://unomi.apache.org/schemas/json/events/purchaseCompleted/1-0-0",
+    "$schema": "https://json-schema.org/draft/2019-09/schema",
+    "self": {
+        "vendor": "org.apache.unomi",
+        "name": "purchaseCompleted",
+        "format": "jsonschema",
+        "target": "events",
+        "version": "1-0-0"
+    },
+    "title": "Purchase Completed Event",
+    "type": "object",
+    "allOf": [{ "$ref": "https://unomi.apache.org/schemas/json/event/1-0-0" }],
+    "properties": {
+        "properties": {
+            "type": "object",
+            "properties": {
+                "orderId": {
+                    "type": "string",
+                    "description": "The unique order identifier"
+                },
+                "amount": {
+                    "type": "number",
+                    "description": "The total purchase amount"
+                },
+                "currency": {
+                    "type": "string",
+                    "description": "The currency code (e.g., USD)"
+                },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "productId": {
+                                "type": "string"
+                            },
+                            "quantity": {
+                                "type": "integer"
+                            },
+                            "price": {
+                                "type": "number"
+                            }
+                        },
+                        "required": ["productId", "quantity", "price"]
+                    }
+                }
+            },
+            "required": ["orderId", "amount", "currency"]
+        }
+    },
+    "unevaluatedProperties": false
+}'
+----
+
+You can verify your schema has been deployed by listing all available schemas:
+
+[source,bash]
+----
+curl -u karaf:karaf http://localhost:8181/cxs/jsonSchema
+----
+
+You can also validate events against your schema using the validation endpoint:
+
+[source,bash]
+----
+curl --request POST \
+  --url http://localhost:8181/cxs/jsonSchema/validateEvent \
+  --user karaf:karaf \
+  --header 'Content-Type: application/json' \
+  --data '{
+    "eventType": "purchaseCompleted",
+    "scope": "myapp",
+    "properties": {
+      "orderId": "order-123",
+      "amount": 99.99,
+      "currency": "USD",
+      "items": [
+        {
+          "productId": "product-001",
+          "quantity": 2,
+          "price": 49.99
+        }
+      ]
+    }
+  }'
+----
+
+=== Sending Custom Events
+
+Once the event type is defined, you can send events:
+
+[source,bash]
+----
+curl -X POST http://localhost:8181/cxs/context.json \
+  -H "X-Unomi-Api-Key: <PUBLIC_KEY>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "sessionId": "session-123",
+    "profileId": "profile-456",
+    "source": {
+      "itemId": "checkout-page",
+      "itemType": "page",
+      "scope": "myapp"
+    },
+    "events": [{
+      "eventType": "purchaseCompleted",
+      "scope": "myapp",
+      "properties": {
+        "orderId": "order-789",
+        "amount": 99.99,
+        "currency": "USD",
+        "items": [
+          {
+            "productId": "product-001",
+            "quantity": 2,
+            "price": 49.99
+          }
+        ]
+      }
+    }]
+  }'
+----
+
+=== Creating Rules for Event Processing
+
+Create a rule to update profile properties based on purchase events:
+
+[source,bash]
+----
+curl -X POST http://localhost:8181/cxs/rules \
+  -H "Authorization: Basic <BASE64(TENANT_ID:PRIVATE_KEY)>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "metadata": {
+      "id": "updateTotalPurchases",
+      "name": "Update total purchases",
+      "description": "Updates profile properties when a purchase is completed",
+      "scope": "myapp"
+    },
+    "condition": {
+      "type": "eventTypeCondition",
+      "parameterValues": {
+        "eventTypeId": "purchaseCompleted"
+      }
+    },
+    "actions": [
+      {
+        "type": "setPropertyAction",
+        "parameterValues": {
+          "setPropertyName": "properties.totalPurchases",
+          "setPropertyValue": "script::profile.properties.totalPurchases != null ? profile.properties.totalPurchases + 1 : 1",
+          "setPropertyStrategy": "alwaysSet"
+        }
+      },
+      {
+        "type": "setPropertyAction",
+        "parameterValues": {
+          "setPropertyName": "properties.totalRevenue",
+          "setPropertyValue": "script::profile.properties.totalRevenue != null ? profile.properties.totalRevenue + event.properties.amount : event.properties.amount",
+          "setPropertyStrategy": "alwaysSet"
+        }
+      }
+    ]
+  }'
+----
+
+=== Testing the Event Processing
+
+To test that everything works:
+
+1. Send a purchase event:
+[source,bash]
+----
+curl -X POST http://localhost:8181/cxs/context.json \
+  -H "X-Unomi-Api-Key: <PUBLIC_KEY>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "sessionId": "session-123",
+    "profileId": "profile-456",
+    "source": {
+      "itemId": "checkout-page",
+      "itemType": "page",
+      "scope": "myapp"
+    },
+    "events": [{
+      "eventType": "purchaseCompleted",
+      "scope": "myapp",
+      "properties": {
+        "orderId": "order-790",
+        "amount": 149.99,
+        "currency": "USD",
+        "items": [
+          {
+            "productId": "product-002",
+            "quantity": 1,
+            "price": 149.99
+          }
+        ]
+      }
+    }]
+  }'
+----
+
+2. Verify profile properties were updated:
+[source,bash]
+----
+curl http://localhost:8181/cxs/profiles/profile-456 \
+  -H "Authorization: Basic <BASE64(TENANT_ID:PRIVATE_KEY)>"
+----
+
+Expected response will show updated properties:
+[source,json]
+----
+{
+  "itemId": "profile-456",
+  "properties": {
+    "totalPurchases": 1,
+    "totalRevenue": 149.99
+  }
+  // ... other profile properties ...
+}
+----
+
+=== Advanced Rule Examples
+
+==== Segmenting High-Value Customers
+
+Create a segment for customers with high total revenue:
+
+[source,bash]
+----
+curl -X POST http://localhost:8181/cxs/segments \
+  -H "Authorization: Basic <BASE64(TENANT_ID:PRIVATE_KEY)>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "metadata": {
+      "id": "highValueCustomers",
+      "name": "High Value Customers",
+      "scope": "myapp"
+    },
+    "condition": {
+      "type": "profilePropertyCondition",
+      "parameterValues": {
+        "propertyName": "properties.totalRevenue",
+        "comparisonOperator": "greaterThan",
+        "propertyValueInteger": 1000
+      }
+    }
+  }'
+----
+
+==== Tracking Purchase Frequency
+
+Create a rule to track days between purchases:
+
+[source,bash]
+----
+curl -X POST http://localhost:8181/cxs/rules \
+  -H "Authorization: Basic <BASE64(TENANT_ID:PRIVATE_KEY)>" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "metadata": {
+      "id": "trackPurchaseFrequency",
+      "name": "Track Purchase Frequency",
+      "scope": "myapp"
+    },
+    "condition": {
+      "type": "eventTypeCondition",
+      "parameterValues": {
+        "eventTypeId": "purchaseCompleted"
+      }
+    },
+    "actions": [
+      {
+        "type": "setPropertyAction",
+        "parameterValues": {
+          "setPropertyName": "properties.lastPurchaseDate",
+          "setPropertyValue": "script::currentDate",
+          "setPropertyStrategy": "alwaysSet"
+        }
+      },
+      {
+        "type": "setPropertyAction",
+        "parameterValues": {
+          "setPropertyName": "properties.daysBetweenPurchases",
+          "setPropertyValue": "script::profile.properties.lastPurchaseDate != null ? Duration.between(profile.properties.lastPurchaseDate.toInstant(), currentDate.toInstant()).toDays() : null",
+          "setPropertyStrategy": "alwaysSet"
+        }
+      }
+    ]
+  }'
+----

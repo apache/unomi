@@ -24,20 +24,17 @@ import org.apache.unomi.api.*;
 import org.apache.unomi.api.actions.Action;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.conditions.ConditionType;
+import org.apache.unomi.api.exceptions.BadSegmentConditionException;
 import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.rules.Rule;
 import org.apache.unomi.api.segments.*;
-import org.apache.unomi.api.services.EventService;
-import org.apache.unomi.api.services.RulesService;
-import org.apache.unomi.api.services.SchedulerService;
-import org.apache.unomi.api.services.SegmentService;
+import org.apache.unomi.api.services.*;
 import org.apache.unomi.api.utils.ConditionBuilder;
+import org.apache.unomi.api.utils.ParserHelper;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.persistence.spi.aggregate.TermsAggregate;
-import org.apache.unomi.services.impl.AbstractServiceImpl;
+import org.apache.unomi.services.impl.AbstractTenantAwareService;
 import org.apache.unomi.services.impl.scheduler.SchedulerServiceImpl;
-import org.apache.unomi.api.utils.ParserHelper;
-import org.apache.unomi.api.exceptions.BadSegmentConditionException;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleEvent;
@@ -56,7 +53,7 @@ import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentService, SynchronousBundleListener {
+public class SegmentServiceImpl extends AbstractTenantAwareService implements SegmentService, SynchronousBundleListener {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(SegmentServiceImpl.class.getName());
 
@@ -69,6 +66,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
     private EventService eventService;
     private RulesService rulesService;
     private SchedulerService schedulerService;
+    private DefinitionsService definitionsService;
 
     private long taskExecutionPeriod = 1;
     private List<Segment> allSegments;
@@ -102,6 +100,10 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
 
     public void setSchedulerService(SchedulerService schedulerService) {
         this.schedulerService = schedulerService;
+    }
+
+    public void setDefinitionsService(DefinitionsService definitionsService) {
+        this.definitionsService = definitionsService;
     }
 
     public void setSegmentUpdateBatchSize(int segmentUpdateBatchSize) {
@@ -225,7 +227,18 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
     }
 
     public PartialList<Metadata> getSegmentMetadatas(int offset, int size, String sortBy) {
-        return getMetadatas(offset, size, sortBy, Segment.class);
+        String currentTenantId = tenantService.getCurrentTenantId();
+        Condition tenantCondition = new Condition(definitionsService.getConditionType("sessionPropertyCondition"));
+        tenantCondition.setParameter("propertyName", "tenantId");
+        tenantCondition.setParameter("comparisonOperator", "equals");
+        tenantCondition.setParameter("propertyValue", currentTenantId);
+
+        PartialList<Segment> segments = persistenceService.query(tenantCondition, sortBy, Segment.class, offset, size);
+        List<Metadata> details = new LinkedList<>();
+        for (Segment definition : segments.getList()) {
+            details.add(definition.getMetadata());
+        }
+        return new PartialList<>(details, segments.getOffset(), segments.getPageSize(), segments.getTotalSize(), segments.getTotalSizeRelation());
     }
 
     public PartialList<Metadata> getSegmentMetadatas(String scope, int offset, int size, String sortBy) {
@@ -242,7 +255,13 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
     }
 
     private List<Segment> getAllSegmentDefinitions() {
-        List<Segment> allItems = persistenceService.getAllItems(Segment.class);
+        String currentTenantId = tenantService.getCurrentTenantId();
+        Condition tenantCondition = new Condition(definitionsService.getConditionType("sessionPropertyCondition"));
+        tenantCondition.setParameter("propertyName", "tenantId");
+        tenantCondition.setParameter("comparisonOperator", "equals");
+        tenantCondition.setParameter("propertyValue", currentTenantId);
+
+        List<Segment> allItems = persistenceService.query(tenantCondition, null, Segment.class, 0, -1).getList();
         for (Segment segment : allItems) {
             if (segment.getMetadata().isEnabled()) {
                 ParserHelper.resolveConditionType(definitionsService, segment.getCondition(), "segment " + segment.getItemId());
@@ -1232,5 +1251,40 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
 
     public void setTaskExecutionPeriod(long taskExecutionPeriod) {
         this.taskExecutionPeriod = taskExecutionPeriod;
+    }
+
+    protected <T extends MetadataItem> PartialList<Metadata> getMetadatas(int offset, int size, String sortBy, Class<T> clazz) {
+        String currentTenantId = tenantService.getCurrentTenantId();
+        Condition tenantCondition = new Condition(definitionsService.getConditionType("sessionPropertyCondition"));
+        tenantCondition.setParameter("propertyName", "tenantId");
+        tenantCondition.setParameter("comparisonOperator", "equals");
+        tenantCondition.setParameter("propertyValue", currentTenantId);
+
+        PartialList<T> items = persistenceService.query(tenantCondition, sortBy, clazz, offset, size);
+        List<Metadata> details = new LinkedList<>();
+        for (T definition : items.getList()) {
+            details.add(definition.getMetadata());
+        }
+        return new PartialList<>(details, items.getOffset(), items.getPageSize(), items.getTotalSize(), items.getTotalSizeRelation());
+    }
+
+    protected <T extends MetadataItem> PartialList<Metadata> getMetadatas(Query query, Class<T> clazz) {
+        definitionsService.resolveConditionType(query.getCondition());
+        String currentTenantId = tenantService.getCurrentTenantId();
+        Condition tenantCondition = new Condition(definitionsService.getConditionType("sessionPropertyCondition"));
+        tenantCondition.setParameter("propertyName", "tenantId");
+        tenantCondition.setParameter("comparisonOperator", "equals");
+        tenantCondition.setParameter("propertyValue", currentTenantId);
+
+        Condition finalCondition = new Condition(definitionsService.getConditionType("booleanCondition"));
+        finalCondition.setParameter("operator", "and");
+        finalCondition.setParameter("subConditions", Arrays.asList(query.getCondition(), tenantCondition));
+
+        PartialList<T> items = persistenceService.query(finalCondition, query.getSortby(), clazz, query.getOffset(), query.getLimit());
+        List<Metadata> details = new LinkedList<>();
+        for (T definition : items.getList()) {
+            details.add(definition.getMetadata());
+        }
+        return new PartialList<>(details, items.getOffset(), items.getPageSize(), items.getTotalSize(), items.getTotalSizeRelation());
     }
 }
