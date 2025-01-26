@@ -87,6 +87,7 @@
         <bundle start="false">mvn:org.apache.unomi/unomi-services/${project.version}</bundle>
         <bundle start="false">mvn:org.apache.unomi/unomi-json-schema-services/${project.version}</bundle>
         <bundle start="false">mvn:org.apache.unomi/unomi-json-schema-rest/${project.version}</bundle>
+        <bundle start="false">mvn:org.apache.unomi/unomi-json-schema-shell-commands/${project.version}</bundle>
         <bundle start="false">mvn:org.apache.unomi/cxs-lists-extension-services/${project.version}</bundle>
         <bundle start="false">mvn:org.apache.unomi/cxs-lists-extension-rest/${project.version}</bundle>
         <bundle start="false">mvn:org.apache.unomi/cxs-geonames-services/${project.version}</bundle>
@@ -108,6 +109,7 @@
         <bundle start="false">mvn:org.apache.unomi/unomi-services/${project.version}</bundle>
         <bundle start="false">mvn:org.apache.unomi/unomi-json-schema-services/${project.version}</bundle>
         <bundle start="false">mvn:org.apache.unomi/unomi-json-schema-rest/${project.version}</bundle>
+        <bundle start="false">mvn:org.apache.unomi/unomi-json-schema-shell-commands/${project.version}</bundle>
         <bundle start="false">mvn:org.apache.unomi/cxs-lists-extension-services/${project.version}</bundle>
         <bundle start="false">mvn:org.apache.unomi/cxs-lists-extension-rest/${project.version}</bundle>
         <bundle start="false">mvn:org.apache.unomi/cxs-geonames-services/${project.version}</bundle>

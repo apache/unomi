@@ -32,6 +32,7 @@
     <modules>
         <module>services</module>
         <module>rest</module>
+        <module>shell-commands</module>
     </modules>
 
 </project>
