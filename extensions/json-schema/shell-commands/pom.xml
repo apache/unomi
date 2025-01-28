@@ -44,9 +44,20 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
+            <groupId>org.apache.unomi</groupId>
+            <artifactId>shell-dev-commands</artifactId>
+            <version>${project.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
             <groupId>org.apache.karaf.shell</groupId>
             <artifactId>org.apache.karaf.shell.core</artifactId>
             <version>${karaf.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.osgi</groupId>
+            <artifactId>osgi.cmpn</artifactId>
             <scope>provided</scope>
         </dependency>
     </dependencies>
@@ -69,6 +80,10 @@
                             org.apache.unomi.schema.api,
                             *
                         </Import-Package>
+                        <_dsannotations>*</_dsannotations>
+                        <_dsannotations-options>inherit</_dsannotations-options>
+                        <_metatypeannotations>*</_metatypeannotations>
+                        <_metatypeannotations-options>version;nested</_metatypeannotations-options>
                     </instructions>
                 </configuration>
             </plugin>

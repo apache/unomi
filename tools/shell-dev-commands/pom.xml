@@ -116,6 +116,14 @@
                 <configuration>
                     <instructions>
                         <Karaf-Commands>*</Karaf-Commands>
+                        <Export-Package>
+                            org.apache.unomi.shell.dev.services,
+                            org.apache.unomi.shell.dev.commands
+                        </Export-Package>
+                        <_dsannotations>*</_dsannotations>
+                        <_dsannotations-options>inherit</_dsannotations-options>
+                        <_metatypeannotations>*</_metatypeannotations>
+                        <_metatypeannotations-options>version;nested</_metatypeannotations-options>
                     </instructions>
                 </configuration>
             </plugin>

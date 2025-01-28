@@ -1271,6 +1271,11 @@ public class SegmentServiceImpl extends AbstractTenantAwareService implements Se
     protected <T extends MetadataItem> PartialList<Metadata> getMetadatas(Query query, Class<T> clazz) {
         definitionsService.resolveConditionType(query.getCondition());
         String currentTenantId = tenantService.getCurrentTenantId();
+        if (currentTenantId == null) {
+            LOGGER.error("No current tenant id available, unable retrieve segments");
+            return new PartialList<>();
+        }
+
         Condition tenantCondition = new Condition(definitionsService.getConditionType("sessionPropertyCondition"));
         tenantCondition.setParameter("propertyName", "tenantId");
         tenantCondition.setParameter("comparisonOperator", "equals");
