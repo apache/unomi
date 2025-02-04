@@ -1285,4 +1285,9 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
     public void refresh() {
         reloadPropertyTypes(true);
     }
+
+    @Override
+    public void deleteSession(String sessionIdentifier) {
+        persistenceService.remove(sessionIdentifier, Session.class);
+    }
 }

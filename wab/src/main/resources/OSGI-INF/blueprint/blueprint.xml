@@ -54,10 +54,9 @@
     <service id="contextServletService" ref="contextServlet">
         <interfaces>
             <value>javax.servlet.Servlet</value>
-            <value>javax.servlet.ServletConfig</value>
-            <value>java.io.Serializable</value>
         </interfaces>
         <service-properties>
+            <entry key="osgi.http.whiteboard.servlet.name" value="ContextServlet"/>
             <entry key="urlPatterns">
                 <array value-type="java.lang.String">
                     <value>/context.json</value>
@@ -72,10 +71,9 @@
     <service id="eventsCollectorServletService" ref="eventsCollectorServlet">
         <interfaces>
             <value>javax.servlet.Servlet</value>
-            <value>javax.servlet.ServletConfig</value>
-            <value>java.io.Serializable</value>
         </interfaces>
         <service-properties>
+            <entry key="osgi.http.whiteboard.servlet.name" value="EventsCollectorServlet"/>
             <entry key="urlPatterns" value="/eventcollector"/>
         </service-properties>
     </service>
@@ -88,10 +86,9 @@
     <service id="clientServletService" ref="clientServlet">
         <interfaces>
             <value>javax.servlet.Servlet</value>
-            <value>javax.servlet.ServletConfig</value>
-            <value>java.io.Serializable</value>
         </interfaces>
         <service-properties>
+            <entry key="osgi.http.whiteboard.servlet.name" value="ClientServlet"/>
             <entry key="urlPatterns" value="/client/*"/>
         </service-properties>
     </service>

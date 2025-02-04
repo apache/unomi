@@ -37,9 +37,11 @@ import org.apache.unomi.api.query.IpRange;
 import org.apache.unomi.api.query.NumericRange;
 import org.apache.unomi.metrics.MetricAdapter;
 import org.apache.unomi.metrics.MetricsService;
-import org.apache.unomi.persistence.elasticsearch.conditions.*;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.aggregate.*;
+import org.apache.unomi.persistence.spi.conditions.ConditionContextHelper;
+import org.apache.unomi.persistence.spi.conditions.ConditionEvaluator;
+import org.apache.unomi.persistence.spi.conditions.ConditionEvaluatorDispatcher;
 import org.elasticsearch.ElasticsearchStatusException;
 import org.elasticsearch.Version;
 import org.elasticsearch.action.DocWriteRequest;
@@ -64,8 +66,8 @@ import org.elasticsearch.action.search.SearchScrollRequest;
 import org.elasticsearch.action.support.WriteRequest;
 import org.elasticsearch.action.support.master.AcknowledgedResponse;
 import org.elasticsearch.action.update.UpdateRequest;
-import org.elasticsearch.client.*;
 import org.elasticsearch.action.update.UpdateResponse;
+import org.elasticsearch.client.*;
 import org.elasticsearch.client.core.CountRequest;
 import org.elasticsearch.client.core.CountResponse;
 import org.elasticsearch.client.core.MainResponse;
@@ -81,10 +83,14 @@ import org.elasticsearch.common.unit.ByteSizeUnit;
 import org.elasticsearch.common.unit.ByteSizeValue;
 import org.elasticsearch.common.unit.DistanceUnit;
 import org.elasticsearch.common.unit.TimeValue;
-import org.elasticsearch.common.xcontent.*;
+import org.elasticsearch.common.xcontent.XContentBuilder;
+import org.elasticsearch.common.xcontent.XContentFactory;
+import org.elasticsearch.common.xcontent.XContentType;
 import org.elasticsearch.index.IndexNotFoundException;
 import org.elasticsearch.index.query.*;
-import org.elasticsearch.index.reindex.*;
+import org.elasticsearch.index.reindex.AbstractBulkByScrollRequest;
+import org.elasticsearch.index.reindex.DeleteByQueryRequest;
+import org.elasticsearch.index.reindex.UpdateByQueryRequest;
 import org.elasticsearch.rest.RestStatus;
 import org.elasticsearch.script.Script;
 import org.elasticsearch.script.ScriptException;
@@ -448,6 +454,10 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         if (StringUtils.isNumeric(taskWaitingPollingInterval)) {
             this.taskWaitingPollingInterval = Integer.parseInt(taskWaitingPollingInterval);
         }
+    }
+
+    public String getName() {
+        return "elasticsearch";
     }
 
     public void start() throws Exception {
@@ -1307,7 +1317,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         itemType = customItemType;
                     }
                     String documentId = getDocumentIDForItemType(itemId, itemType);
-                    String index = getIndexNameForQuery(itemType);
+                    String index = getIndex(itemType);
 
                     DeleteRequest deleteRequest = new DeleteRequest(index, documentId);
                     client.delete(deleteRequest, RequestOptions.DEFAULT);

@@ -1,8 +1,5 @@
 import org.apache.unomi.shell.migration.service.MigrationContext
-import org.apache.unomi.shell.migration.utils.HttpUtils
 import org.apache.unomi.shell.migration.utils.MigrationUtils
-import org.osgi.framework.BundleContext
-import org.osgi.framework.Bundle
 
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more

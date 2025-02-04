@@ -44,7 +44,7 @@ import java.util.Objects;
 @RunWith(PaxExam.class)
 @ExamReactorStrategy(PerSuite.class)
 public class ProfileImportSurfersIT extends BaseIT {
-    private Logger logger = LoggerFactory.getLogger(ProfileImportSurfersIT.class);
+    private Logger LOGGER = LoggerFactory.getLogger(ProfileImportSurfersIT.class);
 
     @Test
     public void testImportSurfers() throws InterruptedException {
@@ -91,7 +91,7 @@ public class ProfileImportSurfersIT extends BaseIT {
 
         importConfigurationService.save(importConfigSurfers, true);
 
-        logger.info("ProfileImportSurfersIT setup successfully.");
+        LOGGER.info("ProfileImportSurfersIT setup successfully.");
 
         //Wait for data to be processed
         keepTrying("Failed waiting for surfers initial import to complete",
@@ -139,7 +139,7 @@ public class ProfileImportSurfersIT extends BaseIT {
 
         importConfigurationService.save(importConfigSurfersOverwrite, true);
 
-        logger.info("ProfileImportSurfersOverwriteIT setup successfully.");
+        LOGGER.info("ProfileImportSurfersOverwriteIT setup successfully.");
 
         //Wait for data to be processed
         keepTrying("Failed waiting for surfers overwrite import to complete",
@@ -182,7 +182,7 @@ public class ProfileImportSurfersIT extends BaseIT {
 
         importConfigurationService.save(importConfigSurfersDelete, true);
 
-        logger.info("ProfileImportSurfersDeleteIT setup successfully.");
+        LOGGER.info("ProfileImportSurfersDeleteIT setup successfully.");
 
         //Wait for data to be processed
         keepTrying("Failed waiting for surfers delete import to complete",

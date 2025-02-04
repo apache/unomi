@@ -368,14 +368,16 @@ public class ProfileMergeIT extends BaseIT {
 
         // Check events are correctly rewritten (Anonymous !)
         for (Event event : eventsToBeRewritten) {
-            keepTrying("Wait for event: " + event.getItemId() + " profileId to be rewritten for NULL due to anonymous browsing",
+            keepTrying("Timeout waiting for event " + event.getItemId() +
+                            " 's profileId to be modified to NULL due to anonymous browsing. event.getProfileId()=" + event.getProfileId() +
+                            ", event.getProfile().getItemId()=" + event.getProfile().getItemId(),
                     () -> persistenceService.load(event.getItemId(), Event.class),
                     (loadedEvent) -> loadedEvent.getProfileId() == null, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
         }
 
         // Check sessions are correctly rewritten (Anonymous !)
         for (Session session : sessionsToBeRewritten) {
-            keepTrying("Wait for session: " + session.getItemId() + " profileId to be rewritten for NULL due to anonymous browsing",
+            keepTrying("Wait for session: " + session.getItemId() + " profileId to be modified for NULL due to anonymous browsing",
                     () -> persistenceService.load(session.getItemId(), Session.class),
                     (loadedSession) -> loadedSession.getProfileId() == null, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
         }

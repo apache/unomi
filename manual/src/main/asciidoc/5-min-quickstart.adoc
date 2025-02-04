@@ -14,32 +14,80 @@
 
 === Quick start with Docker
 
-Begin by creating a `docker-compose.yml` file with the following content:
+Begin by creating a `docker-compose.yml` file. You can choose between ElasticSearch or OpenSearch:
 
-[source]
+==== Option 1: Using ElasticSearch
+
+[source,yaml]
 ----
 version: '3.8'
 services:
     elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.5
-    environment:
-        - discovery.type=single-node
-    ports:
-        - 9200:9200
+        image: docker.elastic.co/elasticsearch/elasticsearch:7.17.5
+        environment:
+            - discovery.type=single-node
+        ports:
+            - 9200:9200
     unomi:
-    # Unomi version can be updated based on your needs
-    image: apache/unomi:2.0.0
-    environment:
-        - UNOMI_ELASTICSEARCH_ADDRESSES=elasticsearch:9200
-        - UNOMI_THIRDPARTY_PROVIDER1_IPADDRESSES=0.0.0.0/0,::1,127.0.0.1
-    ports:
-        - 8181:8181
-        - 9443:9443
-        - 8102:8102
-    links:
-        - elasticsearch
-    depends_on:
-        - elasticsearch
+        # Unomi version can be updated based on your needs
+        image: apache/unomi:2.0.0
+        environment:
+            - UNOMI_ELASTICSEARCH_ADDRESSES=elasticsearch:9200
+            - UNOMI_THIRDPARTY_PROVIDER1_IPADDRESSES=0.0.0.0/0,::1,127.0.0.1
+        ports:
+            - 8181:8181
+            - 9443:9443
+            - 8102:8102
+        links:
+            - elasticsearch
+        depends_on:
+            - elasticsearch
+----
+
+==== Option 2: Using OpenSearch
+
+[source,yaml]
+----
+version: '3.8'
+services:
+    opensearch-node1:
+        image: opensearchproject/opensearch:2.18.0
+        environment:
+            - cluster.name=opensearch-cluster
+            - node.name=opensearch-node1
+            - discovery.type=single-node
+            - bootstrap.memory_lock=true
+            - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m"
+            - OPENSEARCH_INITIAL_ADMIN_PASSWORD=${OPENSEARCH_INITIAL_ADMIN_PASSWORD:-admin}
+        ulimits:
+            memlock:
+                soft: -1
+                hard: -1
+            nofile:
+                soft: 65536
+                hard: 65536
+        volumes:
+            - opensearch-data1:/usr/share/opensearch/data
+        ports:
+            - 9200:9200
+            - 9600:9600
+
+    unomi:
+        image: apache/unomi:2.0.0
+        environment:
+            - UNOMI_AUTO_START=opensearch
+            - UNOMI_OPENSEARCH_ADDRESSES=opensearch-node1:9200
+            - UNOMI_OPENSEARCH_USERNAME=admin
+            - UNOMI_OPENSEARCH_PASSWORD=${OPENSEARCH_INITIAL_ADMIN_PASSWORD:-admin}
+        ports:
+            - 8181:8181
+            - 9443:9443
+            - 8102:8102
+        depends_on:
+            - opensearch-node1
+
+volumes:
+    opensearch-data1:
 ----
 
 From the same folder, start the environment using `docker-compose up` and wait for the startup to complete.
@@ -47,6 +95,8 @@ From the same folder, start the environment using `docker-compose up` and wait f
 Try accessing https://localhost:9443/cxs/cluster with username/password: karaf/karaf . You might get a certificate warning in your browser, just accept it despite the warning it is safe.
 
 === Quick Start manually
+
+==== Option 1: Using ElasticSearch
 
 1) Install JDK 11 (https://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html) and make sure you set the
 JAVA_HOME variable https://docs.oracle.com/cd/E19182-01/820-7851/inst_cli_jdk_javahome_t/ (see our <<JDK compatibility,Getting Started>> guide for more information on JDK compatibility)
@@ -62,11 +112,31 @@ cluster.name: contextElasticSearch
 
 4) Launch ElasticSearch using : `bin/elasticsearch`
 
+==== Option 2: Using OpenSearch
+
+1) Install JDK 11 as described above
+
+2) Download OpenSearch here: https://opensearch.org/downloads.html (please *make sure* you use version 2.18.0)
+
+3) Uncompress it and change the `config/opensearch.yml` to include the following config:
+
+[source,yaml]
+----
+cluster.name: opensearch-cluster
+discovery.type: single-node
+----
+
+4) Launch OpenSearch using: `bin/opensearch`
+
+==== Complete the Setup
+
 5) Download Apache Unomi here : https://unomi.apache.org/download.html
 
 6) Start it using : `./bin/karaf`
 
-7) Start the Apache Unomi packages using `unomi:start` in the Apache Karaf Shell
+7) Start the Apache Unomi packages using:
+- For ElasticSearch: `unomi:start elasticsearch`
+- For OpenSearch: `unomi:start opensearch`
 
 8) Wait for startup to complete
 
@@ -74,9 +144,14 @@ cluster.name: contextElasticSearch
 
 10) Request your first context by simply accessing : http://localhost:8181/cxs/context.js?sessionId=1234
 
-11) If something goes wrong, you should check the logs in `./data/log/karaf.log`. If you get errors on ElasticSearch,
+11) If something goes wrong, you should check the logs in `./data/log/karaf.log`. If you get errors on the search engine,
 make sure you are using the proper version.
 
 Next steps:
 
 - Trying our integration <<Samples,samples page>>
+
+Note: When using OpenSearch, make sure to:
+- Set up proper SSL certificates or disable SSL verification for development
+- Configure the admin password via OPENSEARCH_INITIAL_ADMIN_PASSWORD
+- Enable SSL in Unomi configuration if using secure connections

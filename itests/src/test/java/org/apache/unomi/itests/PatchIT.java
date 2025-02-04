@@ -35,7 +35,7 @@ import java.io.IOException;
 @RunWith(PaxExam.class)
 @ExamReactorStrategy(PerSuite.class)
 public class PatchIT extends BaseIT {
-    private Logger logger = LoggerFactory.getLogger(PatchIT.class);
+    private Logger LOGGER = LoggerFactory.getLogger(PatchIT.class);
 
     @Test
     public void testPatch() throws IOException {

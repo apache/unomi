@@ -56,6 +56,27 @@ You can run the integration tests along with the build by doing:
     
 from the project's root directory
 
+### Search Engine Selection
+
+Apache Unomi supports both ElasticSearch and OpenSearch as search engine backends. The integration tests can be configured to run against either engine:
+
+```bash
+# Run with ElasticSearch (default)
+mvn clean install -P integration-tests
+
+# Run with OpenSearch 
+mvn clean install -P integration-tests -Duse.opensearch=true
+```
+
+When using OpenSearch, you might see log messages like:
+```
+[o.o.w.QueryGroupTask] QueryGroup _id can't be null
+```
+This is a known issue in OpenSearch 2.18 that doesn't affect functionality. You can track this issue at:
+https://github.com/opensearch-project/OpenSearch/issues/16874
+
+## Debugging integration tests
+
 If you want to run the tests with a debugger, you can use the `it.karaf.debug` system property.
 Here's an example:
 
@@ -260,3 +281,60 @@ And the final step is, zipping the new version of the snapshot repository and re
 > In case you are using docker, do zip in the container and use `docker cp` to get the zip file from the docker container.
 
 Now you can modify the migration test class to test that your added data in 1.6.x is correctly migrated in 2.0.0
+
+# Known issues
+
+In the OpenSearch test logs, you will see a lot of lines that look like this : 
+
+    opensearch> [2024-12-31T15:33:14,652][WARN ][o.o.w.QueryGroupTask     ] [f3200971b164] QueryGroup _id can't be null, It should be set before accessing it. This is abnormal behaviour
+
+This is due to a bug in OpenSearch 2.18 but it has no impact on the actual functionality. You can track this bug here:
+
+    https://github.com/opensearch-project/OpenSearch/issues/16874
+
+## Karaf Tools
+
+The `kt.sh` script (short for "Karaf Tools") provides convenient utilities for working with Karaf logs and directories during integration testing. Since Karaf test directories are created with unique UUIDs for each test run, this script helps locate and work with the latest test instance.
+
+### Usage
+
+```bash
+./kt.sh COMMAND [ARGS]
+```
+
+### Available Commands
+
+| Command      | Alias | Description                                           |
+|-------------|-------|-------------------------------------------------------|
+| `log`       | `l`   | View the latest Karaf log file using less            |
+| `tail`      | `t`   | Tail the current Karaf log file                      |
+| `grep`      | `g`   | Grep the latest Karaf log file (requires pattern)    |
+| `dir`       | `d`   | Print the latest Karaf directory path                |
+| `pushd`     | `p`   | Change to the latest Karaf directory using pushd     |
+| `help`      | `h`   | Show help message                                    |
+
+### Examples
+
+```bash
+# View log with less
+./kt.sh log
+
+# Tail log file
+./kt.sh tail
+
+# Search for ERROR in log file
+./kt.sh grep ERROR
+
+# Print Karaf directory path
+./kt.sh dir
+
+# Change to Karaf directory
+./kt.sh pushd
+```
+
+### Tips
+
+- The script automatically finds the most recently created Karaf test directory
+- All commands have short aliases (single letter) for faster typing
+- Error handling is included for missing directories and files
+- The script is particularly useful when debugging integration test failures

@@ -145,7 +145,13 @@ public class RestServiceUtilsImpl implements RestServiceUtils {
                         // Session user has been switched, profile id in cookie is not up to date
                         // We must reload the profile with the session ID as some properties could be missing from the session profile
                         // #personalIdentifier
-                        eventsRequestContext.setProfile(profileService.load(sessionProfile.getItemId()));
+                        Profile sessionProfileWithId = profileService.load(sessionProfile.getItemId());
+                        if (sessionProfileWithId != null) {
+                            eventsRequestContext.setProfile(sessionProfileWithId);
+                        } else {
+                            LOGGER.warn("Couldn't find profile ID {} referenced from session with ID {}, so we re-create it", sessionProfile.getItemId(), sessionId);
+                            eventsRequestContext.setProfile(createNewProfile(sessionProfile.getItemId(), timestamp));
+                        }
                     }
 
                     // Handle anonymous situation
@@ -165,10 +171,14 @@ public class RestServiceUtilsImpl implements RestServiceUtils {
                     } else if (!requireAnonymousBrowsing && !anonymousSessionProfile) {
                         // User does not want to browse anonymously, use the real profile. Check that session contains the current profile.
                         sessionProfile = eventsRequestContext.getProfile();
-                        if (!eventsRequestContext.getSession().getProfileId().equals(sessionProfile.getItemId())) {
-                            eventsRequestContext.addChanges(EventService.SESSION_UPDATED);
+                        if (sessionProfile != null) {
+                            if (!eventsRequestContext.getSession().getProfileId().equals(sessionProfile.getItemId())) {
+                                eventsRequestContext.addChanges(EventService.SESSION_UPDATED);
+                            }
+                            eventsRequestContext.getSession().setProfile(sessionProfile);
+                        } else {
+                            LOGGER.warn("Null profile in event request context");
                         }
-                        eventsRequestContext.getSession().setProfile(sessionProfile);
                     }
                 }
             }

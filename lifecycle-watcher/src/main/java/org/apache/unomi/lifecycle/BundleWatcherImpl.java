@@ -17,17 +17,8 @@
 package org.apache.unomi.lifecycle;
 
 import org.apache.commons.lang3.StringUtils;
-import org.apache.karaf.features.FeaturesService;
 import org.apache.unomi.api.ServerInfo;
-import org.osgi.framework.Bundle;
-import org.osgi.framework.BundleContext;
-import org.osgi.framework.BundleEvent;
-import org.osgi.framework.Filter;
-import org.osgi.framework.InvalidSyntaxException;
-import org.osgi.framework.ServiceEvent;
-import org.osgi.framework.ServiceListener;
-import org.osgi.framework.ServiceReference;
-import org.osgi.framework.SynchronousBundleListener;
+import org.osgi.framework.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,19 +27,8 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URL;
 import java.text.MessageFormat;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.EnumSet;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.TimerTask;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
+import java.util.*;
+import java.util.concurrent.*;
 import java.util.stream.Collectors;
 
 /**
@@ -59,15 +39,12 @@ public class BundleWatcherImpl implements SynchronousBundleListener, ServiceList
 
     private static final Logger LOGGER = LoggerFactory.getLogger(BundleWatcherImpl.class.getName());
 
-    private static final String CDP_GRAPHQL_FEATURE = "cdp-graphql-feature";
-
     private long startupTime;
     private Map<String, Boolean> requiredBundles = new ConcurrentHashMap<>();
     private Map<String, Boolean> requiredBundlesFromFeatures = new ConcurrentHashMap<>();
 
     private ScheduledExecutorService scheduler;
     private ScheduledFuture<?> scheduledFuture;
-    private FeaturesService featuresService;
 
     private String requiredServices;
     private Set<Filter> requiredServicesFilters = new LinkedHashSet<>();
@@ -79,8 +56,6 @@ public class BundleWatcherImpl implements SynchronousBundleListener, ServiceList
 
     private Integer checkStartupStateRefreshInterval = 60;
 
-    private Set<String> featuresToInstall = ConcurrentHashMap.newKeySet();
-    private boolean installingFeatureStarted = false;
     private List<ServerInfo> serverInfos = new ArrayList<>();
 
     public void setRequiredBundles(Map<String, Boolean> requiredBundles) {
@@ -108,13 +83,8 @@ public class BundleWatcherImpl implements SynchronousBundleListener, ServiceList
         this.bundleContext = bundleContext;
     }
 
-    public void setFeaturesService(FeaturesService featuresService) {
-        this.featuresService = featuresService;
-    }
-
     public void init() {
         scheduler = Executors.newSingleThreadScheduledExecutor();
-        prepareGraphQLFeatureToInstall();
         checkExistingBundles();
         bundleContext.addBundleListener(this);
         bundleContext.addServiceListener(this);
@@ -268,36 +238,6 @@ public class BundleWatcherImpl implements SynchronousBundleListener, ServiceList
         });
     }
 
-    private void prepareGraphQLFeatureToInstall() {
-        if (Boolean.parseBoolean(bundleContext.getProperty("org.apache.unomi.graphql.feature.activated"))) {
-            featuresToInstall.add(CDP_GRAPHQL_FEATURE);
-            requiredBundlesFromFeatures.put("org.apache.unomi.cdp-graphql-api-impl", false);
-            requiredBundlesFromFeatures.put("org.apache.unomi.graphql-ui", false);
-        }
-    }
-
-    public boolean shouldInstallAdditionalFeatures() {
-        return !featuresToInstall.isEmpty();
-    }
-
-    private void installFeatures() {
-        List<String> installedFeatures = new ArrayList<>();
-        featuresToInstall.forEach(value -> {
-            try {
-                long featureStartupTime = System.currentTimeMillis();
-                if (!featuresService.isInstalled(featuresService.getFeature(value))) {
-                    System.out.println("Installing feature " + value);
-                    featuresService.installFeature(value, EnumSet.of(FeaturesService.Option.NoAutoRefreshManagedBundles,
-                            FeaturesService.Option.NoAutoRefreshUnmanagedBundles, FeaturesService.Option.NoAutoRefreshBundles));
-                    LOGGER.info("Feature {} successfully installed in {} ms", value, (System.currentTimeMillis() - featureStartupTime));
-                }
-                installedFeatures.add(value);
-            } catch (Exception e) {
-                LOGGER.error("Error when installing {} feature", value, e);
-            }
-        });
-        installedFeatures.forEach(value -> featuresToInstall.remove(value));
-    }
 
     private TimerTask getBundleCheckTask() {
         return new TimerTask() {
@@ -314,10 +254,6 @@ public class BundleWatcherImpl implements SynchronousBundleListener, ServiceList
         return new TimerTask() {
             @Override
             public void run() {
-                if (shouldInstallAdditionalFeatures() && !installingFeatureStarted) {
-                    installingFeatureStarted = true;
-                    installFeatures();
-                }
                 displayLogsForInactiveBundles(requiredBundlesFromFeatures);
                 checkStartupComplete();
             }
@@ -454,5 +390,15 @@ public class BundleWatcherImpl implements SynchronousBundleListener, ServiceList
             serverInfo.setLogoLines(logoLines);
         }
         return serverInfo;
+    }
+
+    @Override
+    public void addRequiredBundle(String bundleName) {
+        requiredBundlesFromFeatures.put(bundleName, false);
+    }
+
+    @Override
+    public boolean removeRequiredBundle(String bundleName) {
+        return requiredBundlesFromFeatures.remove(bundleName);
     }
 }

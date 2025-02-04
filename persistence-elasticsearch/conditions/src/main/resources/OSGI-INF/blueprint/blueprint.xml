@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Licensed to the Apache Software Foundation (ASF) under one or more
+  ~ contributor license agreements.  See the NOTICE file distributed with
+  ~ this work for additional information regarding copyright ownership.
+  ~ The ASF licenses this file to You under the Apache License, Version 2.0
+  ~ (the "License"); you may not use this file except in compliance with
+  ~ the License.  You may obtain a copy of the License at
+  ~
+  ~      http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+
+<blueprint xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://www.osgi.org/xmlns/blueprint/v1.0.0"
+           xmlns:cm="http://aries.apache.org/blueprint/xmlns/blueprint-cm/v1.1.0"
+           xsi:schemaLocation="http://www.osgi.org/xmlns/blueprint/v1.0.0 http://www.osgi.org/xmlns/blueprint/v1.0.0/blueprint.xsd
+                               http://aries.apache.org/blueprint/xmlns/blueprint-cm/v1.1.0 http://aries.apache.org/schemas/blueprint-cm/blueprint-cm-1.1.0.xsd">
+
+    <cm:property-placeholder persistent-id="org.apache.unomi.plugins.base"
+                             update-strategy="reload" placeholder-prefix="${base.">
+        <cm:default-properties>
+            <cm:property name="useEventToUpdateProfile" value="false"/>
+            <cm:property name="usePropertyConditionOptimizations" value="true"/>
+            <cm:property name="maxProfilesInOneMerge" value="50"/>
+        </cm:default-properties>
+    </cm:property-placeholder>
+
+    <cm:property-placeholder persistent-id="org.apache.unomi.persistence.elasticsearch"
+                             update-strategy="reload" placeholder-prefix="${es.">
+        <cm:default-properties>
+            <cm:property name="maximumIdsQueryCount" value="5000"/>
+            <cm:property name="aggregateQueryBucketSize" value="5000"/>
+            <cm:property name="pastEventsDisablePartitions" value="false"/>
+        </cm:default-properties>
+    </cm:property-placeholder>
+
+    <reference id="definitionsService" interface="org.apache.unomi.api.services.DefinitionsService"/>
+    <reference id="persistenceService" interface="org.apache.unomi.persistence.spi.PersistenceService"/>
+    <reference id="profileService" interface="org.apache.unomi.api.services.ProfileService"/>
+    <reference id="privacyService" interface="org.apache.unomi.api.services.PrivacyService"/>
+    <reference id="schedulerService" interface="org.apache.unomi.api.services.SchedulerService"/>
+    <reference id="segmentService" interface="org.apache.unomi.api.services.SegmentService"/>
+    <reference id="eventService" interface="org.apache.unomi.api.services.EventService"/>
+    <reference id="scriptExecutor" interface="org.apache.unomi.scripting.ScriptExecutor"/>
+
+    <service
+            interface="org.apache.unomi.persistence.elasticsearch.ConditionESQueryBuilder">
+        <service-properties>
+            <entry key="queryBuilderId" value="idsConditionESQueryBuilder"/>
+        </service-properties>
+        <bean class="org.apache.unomi.persistence.elasticsearch.conditions.IdsConditionESQueryBuilder">
+            <property name="maximumIdsQueryCount" value="${es.maximumIdsQueryCount}"/>
+        </bean>
+    </service>
+
+    <service
+            interface="org.apache.unomi.persistence.elasticsearch.ConditionESQueryBuilder">
+        <service-properties>
+            <entry key="queryBuilderId" value="booleanConditionESQueryBuilder"/>
+        </service-properties>
+        <bean class="org.apache.unomi.persistence.elasticsearch.conditions.BooleanConditionESQueryBuilder"/>
+    </service>
+
+    <service
+            interface="org.apache.unomi.persistence.elasticsearch.ConditionESQueryBuilder">
+        <service-properties>
+            <entry key="queryBuilderId" value="notConditionESQueryBuilder"/>
+        </service-properties>
+        <bean class="org.apache.unomi.persistence.elasticsearch.conditions.NotConditionESQueryBuilder"/>
+    </service>
+
+    <service
+            interface="org.apache.unomi.persistence.elasticsearch.ConditionESQueryBuilder">
+        <service-properties>
+            <entry key="queryBuilderId" value="matchAllConditionESQueryBuilder"/>
+        </service-properties>
+        <bean class="org.apache.unomi.persistence.elasticsearch.conditions.MatchAllConditionESQueryBuilder"/>
+    </service>
+
+    <service
+            interface="org.apache.unomi.persistence.elasticsearch.ConditionESQueryBuilder">
+        <service-properties>
+            <entry key="queryBuilderId" value="propertyConditionESQueryBuilder"/>
+        </service-properties>
+        <bean class="org.apache.unomi.persistence.elasticsearch.conditions.PropertyConditionESQueryBuilder"/>
+    </service>
+
+    <service
+            interface="org.apache.unomi.persistence.elasticsearch.ConditionESQueryBuilder">
+        <service-properties>
+            <entry key="queryBuilderId" value="geoLocationByPointSessionConditionESQueryBuilder"/>
+        </service-properties>
+        <bean class="org.apache.unomi.persistence.elasticsearch.conditions.GeoLocationByPointSessionConditionESQueryBuilder"/>
+    </service>
+
+    <service
+            interface="org.apache.unomi.persistence.elasticsearch.ConditionESQueryBuilder">
+        <service-properties>
+            <entry key="queryBuilderId" value="sourceEventPropertyConditionESQueryBuilder"/>
+        </service-properties>
+        <bean class="org.apache.unomi.persistence.elasticsearch.conditions.SourceEventPropertyConditionESQueryBuilder"/>
+    </service>
+
+    <service>
+        <interfaces>
+            <value>org.apache.unomi.persistence.elasticsearch.ConditionESQueryBuilder</value>
+            <value>org.apache.unomi.persistence.spi.conditions.PastEventConditionPersistenceQueryBuilder</value>
+        </interfaces>
+        <service-properties>
+            <entry key="queryBuilderId" value="pastEventConditionESQueryBuilder"/>
+        </service-properties>
+        <bean class="org.apache.unomi.persistence.elasticsearch.conditions.PastEventConditionESQueryBuilder">
+            <property name="definitionsService" ref="definitionsService"/>
+            <property name="persistenceService" ref="persistenceService"/>
+            <property name="segmentService" ref="segmentService"/>
+            <property name="scriptExecutor" ref="scriptExecutor"/>
+            <property name="maximumIdsQueryCount" value="${es.maximumIdsQueryCount}"/>
+            <property name="pastEventsDisablePartitions" value="${es.pastEventsDisablePartitions}"/>
+            <property name="aggregateQueryBucketSize" value="${es.aggregateQueryBucketSize}"/>
+        </bean>
+    </service>
+
+    <service
+            interface="org.apache.unomi.persistence.elasticsearch.ConditionESQueryBuilder">
+        <service-properties>
+            <entry key="queryBuilderId" value="nestedConditionESQueryBuilder"/>
+        </service-properties>
+        <bean class="org.apache.unomi.persistence.elasticsearch.conditions.NestedConditionESQueryBuilder"/>
+    </service>
+
+</blueprint>

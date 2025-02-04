@@ -175,3 +175,38 @@ This version increase is releated to Apache Unomi 2.0 makeing use of a new Elast
 called https://www.elastic.co/guide/en/elasticsearch/reference/7.17/flattened.html[Flattened],
 and although it was available in prior versions of Elasticsearch, we do not recommend using those
 due to the above-mentioned log4j vulnerabilities.
+
+==== OpenSearch Support
+
+Starting with version 2.7.0, Apache Unomi now officially supports OpenSearch 2.18.0 as an alternative to Elasticsearch. This addition gives users more flexibility in choosing their search engine backend. Key features include:
+
+- Full support for OpenSearch 2.18.0
+- Seamless integration with existing Unomi features
+- Support for security features enabled by default in OpenSearch
+- Compatible with both standalone and Docker deployments
+
+===== Configuration Options
+
+Users can choose between ElasticSearch and OpenSearch through various configuration methods:
+
+1. Using configuration properties
+2. Using Maven profiles during build
+3. Using Docker environment variables
+
+For detailed configuration instructions, see the <<Configuration,configuration section>>.
+
+===== Security Considerations
+
+When using OpenSearch:
+- Security is enabled by default and requires SSL/TLS
+- Default admin credentials are required
+- The initial admin password can be configured via environment variables
+
+===== Migration Notes
+
+For users wanting to migrate from ElasticSearch to OpenSearch:
+- Data migration requires a full cluster shutdown
+- All existing features, including the flattened field type, are supported
+- Existing queries and aggregations work seamlessly with both backends
+
+For detailed migration instructions, refer to the <<Migrations,migration guide>>.

@@ -26,17 +26,14 @@ import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
 import org.apache.unomi.healthcheck.HealthCheckConfig;
-import org.apache.unomi.healthcheck.HealthCheckResponse;
 import org.apache.unomi.healthcheck.HealthCheckProvider;
+import org.apache.unomi.healthcheck.HealthCheckResponse;
 import org.apache.unomi.healthcheck.util.CachedValue;
+import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.shell.migration.utils.HttpUtils;
-import org.osgi.service.component.annotations.Activate;
-import org.osgi.service.component.annotations.Component;
-import org.osgi.service.component.annotations.Reference;
-import org.osgi.service.component.annotations.ReferenceCardinality;
+import org.osgi.service.component.annotations.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -60,8 +57,19 @@ public class ElasticSearchHealthCheckProvider implements HealthCheckProvider {
 
     private CloseableHttpClient httpClient;
 
+    @Reference(service = PersistenceService.class, cardinality = ReferenceCardinality.OPTIONAL, policy = ReferencePolicy.DYNAMIC, bind = "bind", unbind = "unbind")
+    private volatile PersistenceService persistenceService;
+
     public ElasticSearchHealthCheckProvider() {
         LOGGER.info("Building elasticsearch health provider service...");
+    }
+
+    public void bind(PersistenceService persistenceService) {
+        this.persistenceService = persistenceService;
+    }
+
+    public void unbind(PersistenceService persistenceService) {
+        this.persistenceService = null;
     }
 
     @Activate
@@ -77,7 +85,7 @@ public class ElasticSearchHealthCheckProvider implements HealthCheckProvider {
         }
         try {
             httpClient = HttpUtils.initHttpClient(
-                    Boolean.parseBoolean(config.get(HealthCheckConfig.CONFIG_TRUST_ALL_CERTIFICATES)), credentialsProvider);
+                    Boolean.parseBoolean(config.get(HealthCheckConfig.CONFIG_ES_TRUST_ALL_CERTIFICATES)), credentialsProvider);
         } catch (IOException e) {
             LOGGER.error("Unable to initialize http client", e);
         }
@@ -89,6 +97,11 @@ public class ElasticSearchHealthCheckProvider implements HealthCheckProvider {
 
     @Override public String name() {
         return NAME;
+    }
+
+    @Override
+    public boolean isAvailable() {
+        return persistenceService != null && "elasticsearch".equals(persistenceService.getName());
     }
 
     @Override public HealthCheckResponse execute() {

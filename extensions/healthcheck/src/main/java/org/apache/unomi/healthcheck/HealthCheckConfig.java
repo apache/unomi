@@ -40,7 +40,13 @@ public class HealthCheckConfig {
     public static final String CONFIG_ES_SSL_ENABLED = "esSSLEnabled";
     public static final String CONFIG_ES_LOGIN = "esLogin";
     public static final String CONFIG_ES_PASSWORD = "esPassword";
-    public static final String CONFIG_TRUST_ALL_CERTIFICATES = "httpClient.trustAllCertificates";
+    public static final String CONFIG_ES_TRUST_ALL_CERTIFICATES = "esHttpClient.trustAllCertificates";
+    public static final String CONFIG_OS_ADDRESSES = "osAddresses";
+    public static final String CONFIG_OS_SSL_ENABLED = "osSSLEnabled";
+    public static final String CONFIG_OS_LOGIN = "osLogin";
+    public static final String CONFIG_OS_PASSWORD = "osPassword";
+    public static final String CONFIG_OS_TRUST_ALL_CERTIFICATES = "osHttpClient.trustAllCertificates";
+    public static final String CONFIG_OS_MINIMAL_CLUSTER_STATE = "osMinimalClusterState";
     public static final String CONFIG_AUTH_REALM = "authentication.realm";
     public static final String ENABLED = "healthcheck.enabled";
     public static final String PROVIDERS = "healthcheck.providers";

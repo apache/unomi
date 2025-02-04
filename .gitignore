@@ -1,5 +1,6 @@
 /NOTICE-generated
 .settings
+.vscode
 target
 .classpath
 .project

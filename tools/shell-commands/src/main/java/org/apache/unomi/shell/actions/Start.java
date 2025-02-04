@@ -17,7 +17,9 @@
 package org.apache.unomi.shell.actions;
 
 import org.apache.karaf.shell.api.action.Action;
+import org.apache.karaf.shell.api.action.Argument;
 import org.apache.karaf.shell.api.action.Command;
+import org.apache.karaf.shell.api.action.Option;
 import org.apache.karaf.shell.api.action.lifecycle.Reference;
 import org.apache.karaf.shell.api.action.lifecycle.Service;
 import org.apache.unomi.shell.services.UnomiManagementService;
@@ -29,8 +31,20 @@ public class Start implements Action {
     @Reference
     UnomiManagementService unomiManagementService;
 
+    @Argument(name = "persistence", description = "Persistence implementation to use (elasticsearch/opensearch)", valueToShowInHelp = "elasticsearch")
+    private String selectedPersistenceImplementation = "elasticsearch";
+
+    @Option(name = "-i", aliases = "--install-only", description = "Only install features, don't start them", required = false, multiValued = false)
+    boolean installOnly = false;
+
     public Object execute() throws Exception {
-        unomiManagementService.startUnomi();
+        if (!selectedPersistenceImplementation.equals("elasticsearch") &&
+                !selectedPersistenceImplementation.equals("opensearch")) {
+            System.err.println("Invalid value '"+selectedPersistenceImplementation+"' specified for persistence implementation, will default to elasticsearch");
+            selectedPersistenceImplementation = "elasticsearch";
+        }
+        System.out.println("Starting Apache Unomi with persistence implementation: " + selectedPersistenceImplementation);
+        unomiManagementService.startUnomi(selectedPersistenceImplementation, !installOnly);
         return null;
     }
 

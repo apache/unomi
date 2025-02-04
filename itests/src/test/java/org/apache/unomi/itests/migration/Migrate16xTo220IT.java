@@ -19,6 +19,7 @@ package org.apache.unomi.itests.migration;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.unomi.api.*;
+import org.apache.unomi.geonames.services.GeonameEntry;
 import org.apache.unomi.itests.BaseIT;
 import org.apache.unomi.persistence.spi.aggregate.TermsAggregate;
 import org.apache.unomi.shell.migration.utils.HttpUtils;
@@ -27,11 +28,15 @@ import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.*;
 
 public class Migrate16xTo220IT extends BaseIT {
+
+    private final static Logger LOGGER = LoggerFactory.getLogger(Migrate16xTo220IT.class);
 
     private int eventCount = 0;
     private int sessionCount = 0;
@@ -43,9 +48,24 @@ public class Migrate16xTo220IT extends BaseIT {
             "context-userlist", "context-propertytype", "context-scope", "context-conditiontype", "context-rule", "context-scoring", "context-segment", "context-groovyaction", "context-topic",
             "context-patch", "context-jsonschema", "context-importconfig", "context-exportconfig", "context-rulestats");
 
+    public void checkSearchEngine() {
+        searchEngine = System.getProperty(SEARCH_ENGINE_PROPERTY, SEARCH_ENGINE_ELASTICSEARCH);
+        System.out.println("Check search engine: " + searchEngine);
+    }
+
     @Override
     @Before
     public void waitForStartup() throws InterruptedException {
+        checkSearchEngine();
+
+        if (SEARCH_ENGINE_OPENSEARCH.equals(searchEngine)) {
+            System.out.println("Migration from 1.x to 2.x not supported for OpenSearch, skipping snapshot restore");
+            super.waitForStartup();
+            return;
+        }
+
+        System.out.println("Restoring snapshot into search engine...");
+        LOGGER.info("Restoring snapshot into search engine...");
 
         // Restore snapshot from 1.6.x
         try (CloseableHttpClient httpClient = HttpUtils.initHttpClient(true, null)) {
@@ -59,16 +79,31 @@ public class Migrate16xTo220IT extends BaseIT {
             // Restore the snapshot
             HttpUtils.executePostRequest(httpClient, "http://localhost:9400/_snapshot/snapshots_repository/snapshot_1.6.x/_restore?wait_for_completion=true", "{}", null);
 
+            String snapshotStatus = HttpUtils.executeGetRequest(httpClient, "http://localhost:9400/_snapshot/_status", null);
+            System.out.println(snapshotStatus);
+            LOGGER.info(snapshotStatus);
+
             // Get initial counts of items to compare after migration
             initCounts(httpClient);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+        } catch (Throwable t) {
+            throw new RuntimeException("Error during snapshot restore", t);
         }
 
-        // Do migrate the data set
-        String commandResults = executeCommand("unomi:migrate 1.6.0 true", 900000L, true);
+        System.out.println("Launching migration from 1.6.0...");
+        LOGGER.info("Launching migration from 1.6.0...");
 
-        // Prin the resulted output in the karaf shell directly
+        // Do migrate the data set
+        String commandResults = null;
+        try {
+            commandResults = executeCommand("unomi:migrate 1.6.0 true", 900000L, true);
+        } catch (Throwable t) {
+            LOGGER.error("Error during migration", t);
+            System.err.println("Error during migration");
+            t.printStackTrace();
+            throw new RuntimeException("Error during migration", t);
+        }
+
+        // Print the resulted output in the karaf shell directly
         System.out.println("Migration command output results:");
         System.out.println(commandResults);
 
@@ -78,15 +113,26 @@ public class Migrate16xTo220IT extends BaseIT {
 
     @After
     public void cleanup() throws InterruptedException {
-        removeItems(Profile.class);
-        removeItems(ProfileAlias.class);
-        removeItems(Session.class);
-        removeItems(Event.class);
-        removeItems(Scope.class);
+        try {
+            removeItems(Profile.class);
+            removeItems(ProfileAlias.class);
+            removeItems(Session.class);
+            removeItems(Event.class);
+            removeItems(Scope.class);
+            removeItems(GeonameEntry.class);
+        } catch (Throwable t) {
+            LOGGER.error("Error during cleanup", t);
+            System.err.println("Error during cleanup");
+            t.printStackTrace();
+        }
     }
 
     @Test
     public void checkMigratedData() throws Exception {
+        if (SEARCH_ENGINE_OPENSEARCH.equals(searchEngine)) {
+            System.out.println("Migration from 1.x to 2.x not supported for OpenSearch, skipping checks");
+            return;
+        }
         checkMergedProfilesAliases();
         checkProfileInterests();
         checkScopeHaveBeenCreated();
@@ -390,4 +436,5 @@ public class Migrate16xTo220IT extends BaseIT {
             Assert.assertEquals("eventTriggeredabcdefgh", pastEvents.get(0).get("key"));
             Assert.assertEquals(5, (int) pastEvents.get(0).get("count"));
         }
+
     }

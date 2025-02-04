@@ -89,15 +89,11 @@
     </service>
 
     <bean id="conditionESQueryBuilderDispatcher"
-          class="org.apache.unomi.persistence.elasticsearch.conditions.ConditionESQueryBuilderDispatcher">
+          class="org.apache.unomi.persistence.elasticsearch.ConditionESQueryBuilderDispatcher">
         <property name="scriptExecutor" ref="scriptExecutor" />
     </bean>
 
-    <bean id="conditionEvaluatorDispatcherImpl"
-          class="org.apache.unomi.persistence.elasticsearch.conditions.ConditionEvaluatorDispatcher">
-        <property name="metricsService" ref="metricsService" />
-        <property name="scriptExecutor" ref="scriptExecutor" />
-    </bean>
+    <reference id="conditionEvaluatorDispatcherImpl" interface="org.apache.unomi.persistence.spi.conditions.ConditionEvaluatorDispatcher" />
 
     <bean id="elasticSearchPersistenceServiceImpl"
           class="org.apache.unomi.persistence.elasticsearch.ElasticSearchPersistenceServiceImpl"
@@ -166,14 +162,14 @@
 
     <!-- We use a listener here because using the list directly for listening to proxies coming from the same bundle didn't seem to work -->
     <reference-list id="conditionEvaluators"
-                    interface="org.apache.unomi.persistence.elasticsearch.conditions.ConditionEvaluator"
+                    interface="org.apache.unomi.persistence.spi.conditions.ConditionEvaluator"
                     availability="optional">
         <reference-listener
                 bind-method="bindConditionEvaluator" unbind-method="unbindConditionEvaluator" ref="elasticSearchPersistenceServiceImpl"/>
     </reference-list>
 
     <reference-list id="conditionESQueryBuilders"
-                    interface="org.apache.unomi.persistence.elasticsearch.conditions.ConditionESQueryBuilder"
+                    interface="org.apache.unomi.persistence.elasticsearch.ConditionESQueryBuilder"
         availability="optional">
         <reference-listener
                 bind-method="bindConditionESQueryBuilder" unbind-method="unbindConditionESQueryBuilder" ref="elasticSearchPersistenceServiceImpl"/>

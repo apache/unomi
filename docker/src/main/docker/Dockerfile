@@ -18,12 +18,18 @@
 FROM library/eclipse-temurin:11
 
 # Unomi environment variables
-ENV UNOMI_HOME /opt/apache-unomi
-ENV PATH $PATH:$UNOMI_HOME/bin
+ENV UNOMI_HOME=/opt/apache-unomi
+ENV PATH=$PATH:$UNOMI_HOME/bin
 
-ENV KARAF_OPTS "-Dunomi.autoStart=true"
+ENV UNOMI_AUTO_START=true
+
+# Debug configuration (disabled by default)
+ENV KARAF_DEBUG=false
+ENV KARAF_DEBUG_PORT=5005
+ENV KARAF_DEBUG_SUSPEND=n
 
 ENV UNOMI_ELASTICSEARCH_ADDRESSES=localhost:9200
+ENV UNOMI_OPENSEARCH_ADDRESSES=localhost:9200
 
 WORKDIR $UNOMI_HOME
 
@@ -36,8 +42,11 @@ RUN mv unomi-*/* . \
 
 COPY entrypoint.sh ./entrypoint.sh
 
+# Expose standard ports
 EXPOSE 9443
 EXPOSE 8181
 EXPOSE 8102
+# Expose debug port
+EXPOSE 5005
 
 CMD ["/bin/bash", "./entrypoint.sh"]

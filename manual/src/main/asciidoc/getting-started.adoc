@@ -31,19 +31,27 @@ Also, as there are new licensing restrictions on JDKs provided by Oracle for pro
 added support for OpenJDK builds. Other JDK distributions might also work but are not regularly tested so you should use
 them at your own risks.
 
-===== ElasticSearch compatibility
+===== Search Engine Compatibility
 
-Starting with version 2.0.0 Apache Unomi adds compatibility with ElasticSearch 7.17.5 . It is highly recommended to use the
-ElasticSearch version specified in the documentation whenever possible. If in doubt, don't hesitate to check with the Apache Unomi community
-to get the latest information about ElasticSearch version compatibility.
+Apache Unomi supports two search engine backends:
+
+* *ElasticSearch*: Version 7.17.5 is supported starting with Unomi 2.0.0
+* *OpenSearch*: Version 2.18.0 is supported
+
+It is highly recommended to use the versions specified in the documentation. When in doubt, consult the Apache Unomi community
+for the latest compatibility information.
+
+Note for OpenSearch users:
+- Security is enabled by default and requires SSL/TLS
+- Default admin credentials are required (username: admin)
+- The initial admin password can be configured via environment variable
 
 ==== Running Unomi
 
 ===== Start Unomi
 
 Start Unomi according to the <<Five Minutes QuickStart,quick start with docker>> or by compiling using the
-<<Building,building instructions>>. Once you have Karaf running,
- you should wait until you see the following messages on the Karaf console:
+<<Building,building instructions>>. Once you have Karaf running, you should wait until you see the following messages on the Karaf console:
 
 [source]
 ----
@@ -57,10 +65,11 @@ Initializing profile service endpoint...
 Initializing cluster service endpoint...
 ----
 
-This indicates that all the Unomi services are started and ready to react to requests. You can then open a browser and go to `http://localhost:8181/cxs` to see the list of
-available RESTful services or retrieve an initial context at `http://localhost:8181/cxs/context.json` (which isn't very useful at this point).
+This indicates that all the Unomi services are started and ready to react to requests. You can then:
 
-You can now find an introduction page at the following location: http://localhost:8181
+1. Access the RESTful services list: `http://localhost:8181/cxs`
+2. Retrieve an initial context: `http://localhost:8181/cxs/context.json`
+3. View the introduction page: `http://localhost:8181`
 
 Also now that your service is up and running you can go look at the
 <<Request examples,request examples>> to learn basic
