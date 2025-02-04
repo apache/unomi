@@ -176,7 +176,7 @@ public class PropertyConditionOSQueryBuilder implements ConditionOSQueryBuilder 
 
     private void checkRequiredValuesSize(Collection<?> values, String name, String operator, int expectedSize) {
         if (values == null || values.size() != expectedSize) {
-            throw new IllegalArgumentException("Impossible to build ES filter, missing " + expectedSize + " values for a condition using comparisonOperator: " + operator + ", and propertyName: " + name);
+            throw new IllegalArgumentException("Impossible to build OS filter, missing " + expectedSize + " values for a condition using comparisonOperator: " + operator + ", and propertyName: " + name);
         }
     }
 
