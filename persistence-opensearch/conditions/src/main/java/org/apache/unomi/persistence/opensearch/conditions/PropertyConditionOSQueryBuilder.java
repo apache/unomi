@@ -51,7 +51,7 @@ public class PropertyConditionOSQueryBuilder implements ConditionOSQueryBuilder 
         String name = (String) condition.getParameter("propertyName");
 
         if (comparisonOperator == null || name == null) {
-            throw new IllegalArgumentException("Impossible to build ES filter, condition is not valid, comparisonOperator and propertyName properties should be provided");
+            throw new IllegalArgumentException("Impossible to build OS filter, condition is not valid, comparisonOperator and propertyName properties should be provided");
         }
 
         String expectedValue = ConditionContextHelper.foldToASCII((String) condition.getParameter("propertyValue"));
