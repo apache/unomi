@@ -1540,7 +1540,7 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
                 return "date";
             case "string":
             case "id":
-            case "email": // TODO Consider supporting email mapping in ES, right now will be map to text to avoid warning in logs
+            case "email": // TODO Consider supporting email mapping in OS, right now will be map to text to avoid warning in logs
                 return "text";
             default:
                 return null;
