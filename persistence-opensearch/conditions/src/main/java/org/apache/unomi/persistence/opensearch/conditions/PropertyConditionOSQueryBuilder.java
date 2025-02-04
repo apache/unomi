@@ -182,7 +182,7 @@ public class PropertyConditionOSQueryBuilder implements ConditionOSQueryBuilder 
 
     private void checkRequiredValue(Object value, String name, String operator, boolean multiple) {
         if (value == null) {
-            throw new IllegalArgumentException("Impossible to build ES filter, missing value" + (multiple ? "s" : "") + " for condition using comparisonOperator: " + operator + ", and propertyName: " + name);
+            throw new IllegalArgumentException("Impossible to build OS filter, missing value" + (multiple ? "s" : "") + " for condition using comparisonOperator: " + operator + ", and propertyName: " + name);
         }
     }
 
