@@ -62,7 +62,7 @@ public class SchedulerServiceImpl implements SchedulerService {
     private DefinitionsService definitionsService;
 
     private static final ConditionType PROPERTY_CONDITION_TYPE = new ConditionType() {
-        private String queryBuilder = "propertyESQueryBuilder";
+        private String queryBuilder = "propertyConditionESQueryBuilder";
         private String conditionEvaluator = "propertyConditionEvaluator";
 
         @Override
@@ -203,7 +203,7 @@ public class SchedulerServiceImpl implements SchedulerService {
             Condition enabledCondition = new Condition(PROPERTY_CONDITION_TYPE);
             enabledCondition.setParameter("propertyName", "enabled");
             enabledCondition.setParameter("comparisonOperator", "equals");
-            enabledCondition.setParameter("propertyValueBoolean", true);
+            enabledCondition.setParameter("propertyValue", true);
             List<ScheduledTask> tasks = persistenceService.query(enabledCondition, null, ScheduledTask.class, 0, -1).getList();
 
             for (ScheduledTask task : tasks) {
