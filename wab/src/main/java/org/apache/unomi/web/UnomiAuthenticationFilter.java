@@ -16,6 +16,7 @@
  */
 package org.apache.unomi.web;
 
+import org.apache.unomi.api.services.ExecutionContextManager;
 import org.apache.unomi.api.tenants.ApiKey;
 import org.apache.unomi.api.tenants.Tenant;
 import org.apache.unomi.api.tenants.TenantService;
@@ -40,10 +41,15 @@ public class UnomiAuthenticationFilter implements Filter {
         PUBLIC_ENDPOINTS.add("/eventcollector");
     }
 
+    private ExecutionContextManager executionContextManager;
     private TenantService tenantService;
 
     public void setTenantService(TenantService tenantService) {
         this.tenantService = tenantService;
+    }
+
+    public void setExecutionContextManager(ExecutionContextManager executionContextManager) {
+        this.executionContextManager = executionContextManager;
     }
 
     @Override
@@ -73,12 +79,13 @@ public class UnomiAuthenticationFilter implements Filter {
             }
 
             // Set tenant ID for the request
-            tenantService.setCurrentTenant(tenant.getItemId());
-            try {
-                chain.doFilter(request, response);
-            } finally {
-                tenantService.setCurrentTenant(null);
-            }
+            executionContextManager.executeAsTenant(tenant.getItemId(), () -> {
+                try {
+                    chain.doFilter(request, response);
+                } catch (IOException | ServletException e) {
+                    throw new RuntimeException(e);
+                }
+            });
         }
         // Handle private endpoints (CXS)
         else {
@@ -104,12 +111,13 @@ public class UnomiAuthenticationFilter implements Filter {
             }
 
             // Set tenant ID for the request
-            tenantService.setCurrentTenant(tenantId);
-            try {
-                chain.doFilter(request, response);
-            } finally {
-                tenantService.setCurrentTenant(null);
-            }
+            executionContextManager.executeAsTenant(tenantId, () -> {
+                try {
+                    chain.doFilter(request, response);
+                } catch (IOException | ServletException e) {
+                    throw new RuntimeException(e);
+                }
+            });
         }
     }
 

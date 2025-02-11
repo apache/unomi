@@ -145,6 +145,199 @@ For OpenSearch:
 tenant.security.provider=opensearch
 ----
 
+== Security Model
+
+=== Roles and Permissions
+
+Apache Unomi implements a hierarchical role-based access control (RBAC) system. The main roles are:
+
+* `ROLE_UNOMI_SYSTEM`: Highest privilege level, used for system operations
+* `ROLE_UNOMI_ADMIN`: Administrative access across the platform
+* `ROLE_UNOMI_TENANT_USER`: Basic tenant access for public operations
+* `ROLE_UNOMI_TENANT_ADMIN`: Extended tenant access for private operations
+* `ROLE_UNOMI_TENANT_PUBLIC_PREFIX_*`: Tenant-specific public roles
+* `ROLE_UNOMI_TENANT_PRIVATE_PREFIX_*`: Tenant-specific private roles
+
+Configure system roles in `etc/org.apache.unomi.security.cfg`:
+
+[source,properties]
+----
+# Define system roles
+systemRoles=ROLE_UNOMI_SYSTEM,ROLE_UNOMI_ADMIN
+
+# Enable encryption for sensitive data
+enableEncryption=false
+
+# Operation role mappings
+operation.roles.QUERY=ROLE_UNOMI_TENANT_USER,ROLE_UNOMI_TENANT_ADMIN
+operation.roles.PROFILE_UPDATE=ROLE_UNOMI_TENANT_ADMIN
+operation.roles.SYSTEM_MAINTENANCE=ROLE_UNOMI_SYSTEM
+operation.roles.TENANT_MANAGEMENT=ROLE_UNOMI_ADMIN
+operation.roles.DECRYPT_PROFILE_DATA=ROLE_UNOMI_TENANT_ADMIN
+operation.roles.SEGMENT_UPDATE=ROLE_UNOMI_TENANT_ADMIN
+operation.roles.RULE_UPDATE=ROLE_UNOMI_TENANT_ADMIN
+----
+
+The configuration uses the format `operation.roles.OPERATION_NAME=ROLE1,ROLE2,...` where:
+- `OPERATION_NAME` is the uppercase operation identifier
+- Multiple roles are comma-separated
+- Changes take effect immediately without restart
+
+=== Operation Configuration
+
+Operations in Unomi can be customized to require specific roles. This is configured through OSGi configuration files.
+
+==== Configuration File
+
+Create or modify the file `etc/org.apache.unomi.security.cfg`:
+
+[source,properties]
+----
+# Define system roles
+systemRoles=ROLE_UNOMI_SYSTEM,ROLE_UNOMI_ADMIN
+
+# Enable encryption for sensitive data
+enableEncryption=false
+
+# Operation role mappings
+operation.roles.QUERY=ROLE_UNOMI_TENANT_USER,ROLE_UNOMI_TENANT_ADMIN
+operation.roles.PROFILE_UPDATE=ROLE_UNOMI_TENANT_ADMIN
+operation.roles.SYSTEM_MAINTENANCE=ROLE_UNOMI_SYSTEM
+operation.roles.TENANT_MANAGEMENT=ROLE_UNOMI_ADMIN
+operation.roles.DECRYPT_PROFILE_DATA=ROLE_UNOMI_TENANT_ADMIN
+operation.roles.SEGMENT_UPDATE=ROLE_UNOMI_TENANT_ADMIN
+operation.roles.RULE_UPDATE=ROLE_UNOMI_TENANT_ADMIN
+----
+
+The configuration uses the format `operation.roles.OPERATION_NAME=ROLE1,ROLE2,...` where:
+- `OPERATION_NAME` is the uppercase operation identifier
+- Multiple roles are comma-separated
+- Changes take effect immediately without restart
+
+==== Common Operations
+
+Here are some common operations and their typical role requirements:
+
+[options="header"]
+|===
+|Operation |Description |Default Required Roles
+|QUERY |Basic data querying |ROLE_UNOMI_TENANT_USER, ROLE_UNOMI_TENANT_ADMIN
+|PROFILE_UPDATE |Update profile data |ROLE_UNOMI_TENANT_ADMIN
+|SYSTEM_MAINTENANCE |System-level operations |ROLE_UNOMI_SYSTEM
+|TENANT_MANAGEMENT |Tenant administration |ROLE_UNOMI_ADMIN
+|DECRYPT_PROFILE_DATA |Access to encrypted profile data |ROLE_UNOMI_TENANT_ADMIN
+|SEGMENT_UPDATE |Update user segments |ROLE_UNOMI_TENANT_ADMIN
+|RULE_UPDATE |Update business rules |ROLE_UNOMI_TENANT_ADMIN
+|===
+
+==== Custom Operations
+
+To define custom operations:
+
+1. Define the operation name (use uppercase by convention)
+2. Add the operation-role mapping to the configuration file
+3. Use `securityService.validateTenantOperation()` to enforce the permission
+
+Example:
+
+1. Add to `etc/org.apache.unomi.security.cfg`:
+[source,properties]
+----
+operation.roles.CUSTOM_OPERATION=ROLE_UNOMI_TENANT_ADMIN
+----
+
+2. Use in your code:
+[source,java]
+----
+public void performCustomOperation() {
+    securityService.validateTenantOperation("CUSTOM_OPERATION");
+    // Operation implementation
+}
+----
+
+=== Subjects and Authentication
+
+A Subject represents an authenticated entity in the system. There are three types of subjects:
+
+1. System Subject:
+* Used for system-level operations
+* Has full access across all tenants
+* Created with `ROLE_UNOMI_SYSTEM`
+
+2. Admin Subject:
+* Used for administrative operations
+* Has tenant management capabilities
+* Created with `ROLE_UNOMI_ADMIN`
+
+3. Tenant Subject:
+* Represents a tenant-specific user
+* Has access only to their tenant's resources
+* Created with tenant-specific roles
+
+Example of subject creation:
+
+[source,java]
+----
+Subject tenantSubject = new Subject();
+tenantSubject.getPrincipals().add(new UserPrincipal("tenant-id"));
+tenantSubject.getPrincipals().add(new RolePrincipal("ROLE_UNOMI_TENANT_ADMIN"));
+----
+
+=== Tenant-Role Relationship
+
+Each tenant has associated public and private roles:
+
+1. User Role (`ROLE_UNOMI_TENANT_USER`):
+* Basic read-only access to tenant data
+* Can perform queries and view profiles
+
+2. Admin Role (`ROLE_UNOMI_TENANT_ADMIN`):
+* Full access to tenant data
+* Can perform all tenant operations
+
+=== Operation Validation
+
+The security service validates operations based on:
+
+1. Subject's roles
+2. Operation type
+3. Tenant context
+
+Example of operation validation:
+
+[source,java]
+----
+// Validate a tenant operation
+securityService.validateTenantOperation("SYSTEM_MAINTENANCE");
+
+// Execute with elevated privileges
+securityService.executeAsSystemSubject(() -> {
+    // Perform system operation
+});
+----
+
+=== Best Practices
+
+1. Role Assignment:
+* Assign minimum required roles
+* Use tenant-specific roles when possible
+* Avoid using system roles for regular operations
+
+2. Subject Management:
+* Clear subjects after operations
+* Use temporary privileged subjects sparingly
+* Always validate tenant context
+
+3. Security Configuration:
+* Regularly rotate API keys
+* Enable encryption for sensitive data
+* Monitor failed authentication attempts
+
+4. Operation Execution:
+* Use `executeAsSystemSubject` for system operations
+* Validate operations before execution
+* Maintain proper audit trails
+
 == Tenant Management
 
 === Listing Tenants

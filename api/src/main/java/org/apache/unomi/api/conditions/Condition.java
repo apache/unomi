@@ -65,7 +65,9 @@ public class Condition implements Serializable {
      */
     public void setConditionType(ConditionType conditionType) {
         this.conditionType = conditionType;
-        this.conditionTypeId = conditionType.getItemId();
+        if (conditionType != null) {
+            this.conditionTypeId = conditionType.getItemId();
+        }
     }
 
     /**

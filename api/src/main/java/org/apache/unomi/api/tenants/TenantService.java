@@ -54,35 +54,6 @@ public interface TenantService {
     ApiKey generateApiKey(String tenantId, Long validityPeriod);
 
     /**
-     * Retrieves the ID of the tenant associated with the current context.
-     * This method is typically used in request-scoped operations to determine
-     * the tenant context in which the current operation is being executed.
-     *
-     * @return the current tenant ID, or null if no tenant context is set
-     */
-    String getCurrentTenantId();
-
-    /**
-     * Gets the current tenant ID for the executing thread, returning a default value if none is set.
-     *
-     * @return the current tenant ID, or SYSTEM_TENANT if no tenant is set
-     */
-    default String getCurrentTenantIdWithDefault() {
-        String currentTenant = getCurrentTenantId();
-        return currentTenant != null ? currentTenant : SYSTEM_TENANT;
-    }
-
-    /**
-     * Sets the current tenant context for the executing thread.
-     * This method should be used with caution and typically wrapped in a try-finally block
-     * to ensure the tenant context is properly cleared after use.
-     *
-     * @param tenantId the ID of the tenant to set as current
-     * @throws IllegalArgumentException if the tenantId is null or does not exist
-     */
-    void setCurrentTenant(String tenantId);
-
-    /**
      * Retrieves a tenant by its ID.
      *
      * @param tenantId the ID of the tenant to retrieve
@@ -170,4 +141,5 @@ public interface TenantService {
      * @return the Tenant object if found and key type matches, null otherwise
      */
     Tenant getTenantByApiKey(String key, ApiKey.ApiKeyType requiredType);
+
 }

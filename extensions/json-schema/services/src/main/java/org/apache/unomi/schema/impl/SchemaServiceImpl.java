@@ -27,6 +27,7 @@ import com.networknt.schema.*;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.unomi.api.Item;
+import org.apache.unomi.api.services.ExecutionContextManager;
 import org.apache.unomi.api.services.ScopeService;
 import org.apache.unomi.api.tenants.Tenant;
 import org.apache.unomi.api.tenants.TenantService;
@@ -78,6 +79,7 @@ public class SchemaServiceImpl implements SchemaService {
     private PersistenceService persistenceService;
     private ScopeService scopeService;
     private TenantService tenantService;
+    private ExecutionContextManager contextManager;
 
     private JsonSchemaFactory jsonSchemaFactory;
 
@@ -163,7 +165,7 @@ public class SchemaServiceImpl implements SchemaService {
     @Override
     public JsonSchemaWrapper getSchema(String schemaId) {
         // Try current tenant first
-        String currentTenant = tenantService.getCurrentTenantId();
+        String currentTenant = contextManager.getCurrentContext().getTenantId();
         if (currentTenant != null) {
             Map<String, JsonSchemaWrapper> tenantSchemas = schemasByTenantId.get(currentTenant);
             if (tenantSchemas != null) {
@@ -199,7 +201,7 @@ public class SchemaServiceImpl implements SchemaService {
         schemaIds.addAll(predefinedUnomiJSONSchemaById.keySet());
 
         // Add current tenant schemas
-        String currentTenant = tenantService.getCurrentTenantId();
+        String currentTenant = contextManager.getCurrentContext().getTenantId();
         if (currentTenant != null) {
             ConcurrentMap<String, JsonSchemaWrapper> tenantSchemas = schemasByTenantId.get(currentTenant);
             if (tenantSchemas != null) {
@@ -245,9 +247,10 @@ public class SchemaServiceImpl implements SchemaService {
 
     @Override
     public void saveSchema(String schema) {
+        contextManager.getCurrentContext().validateAccess("SCHEMA_WRITE");
         JsonSchemaWrapper jsonSchemaWrapper = buildJsonSchemaWrapper(schema);
         if (!predefinedUnomiJSONSchemaById.containsKey(jsonSchemaWrapper.getItemId())) {
-            String currentTenant = tenantService.getCurrentTenantId();
+            String currentTenant = contextManager.getCurrentContext().getTenantId();
             jsonSchemaWrapper.setTenantId(currentTenant);
             persistenceService.save(jsonSchemaWrapper);
         } else {
@@ -257,6 +260,7 @@ public class SchemaServiceImpl implements SchemaService {
 
     @Override
     public boolean deleteSchema(String schemaId) {
+        contextManager.getCurrentContext().validateAccess("SCHEMA_DELETE");
         // forbidden to delete predefined Unomi schemas
         if (!predefinedUnomiJSONSchemaById.containsKey(schemaId)) {
             // remove persisted schema
@@ -356,35 +360,33 @@ public class SchemaServiceImpl implements SchemaService {
     public void refreshJSONSchemas() {
         Map<String, ConcurrentMap<String, JsonSchemaWrapper>> schemasByTenantIdReloaded = new HashMap<>();
 
-        // Store current tenant to restore it later
-        String currentTenant = tenantService.getCurrentTenantId();
+        // First load predefined schemas into system tenant
+        ConcurrentMap<String, JsonSchemaWrapper> systemSchemas = new ConcurrentHashMap<>(predefinedUnomiJSONSchemaById);
+        schemasByTenantIdReloaded.put(SYSTEM_TENANT, systemSchemas);
 
-        try {
-            // Add predefined schemas to system tenant
-            ConcurrentMap<String, JsonSchemaWrapper> systemSchemas = new ConcurrentHashMap<>(predefinedUnomiJSONSchemaById);
-            schemasByTenantIdReloaded.put(SYSTEM_TENANT, systemSchemas);
-
+        // Get all tenants using system context
+        contextManager.executeAsSystem(() -> {
             // First get system tenant schemas
-            tenantService.setCurrentTenant(SYSTEM_TENANT);
-            List<JsonSchemaWrapper> systemTenantSchemas = persistenceService.getAllItems(JsonSchemaWrapper.class);
-            systemSchemas.putAll(systemTenantSchemas.stream()
-                    .collect(Collectors.toMap(Item::getItemId, s -> s)));
+            contextManager.executeAsTenant(SYSTEM_TENANT, () -> {
+                List<JsonSchemaWrapper> systemTenantSchemas = persistenceService.getAllItems(JsonSchemaWrapper.class);
+                systemSchemas.putAll(systemTenantSchemas.stream()
+                        .collect(Collectors.toMap(Item::getItemId, s -> s)));
+            });
 
             // Get all tenants using TenantService (which implicitly uses system tenant)
             List<Tenant> allTenants = tenantService.getAllTenants();
 
-            // Then process each tenant's schemas
+            // Then process each tenant's schemas with its own context
             for (Tenant tenant : allTenants) {
                 String tenantId = tenant.getItemId();
-                // Switch to tenant context to load its schemas
-                tenantService.setCurrentTenant(tenantId);
-
-                List<JsonSchemaWrapper> tenantSchemas = persistenceService.getAllItems(JsonSchemaWrapper.class);
-                if (!tenantSchemas.isEmpty()) {
-                    ConcurrentMap<String, JsonSchemaWrapper> tenantSchemasMap = new ConcurrentHashMap<>(
-                            tenantSchemas.stream().collect(Collectors.toMap(Item::getItemId, s -> s)));
-                    schemasByTenantIdReloaded.put(tenantId, tenantSchemasMap);
-                }
+                contextManager.executeAsTenant(tenantId, () -> {
+                    List<JsonSchemaWrapper> tenantSchemas = persistenceService.getAllItems(JsonSchemaWrapper.class);
+                    if (!tenantSchemas.isEmpty()) {
+                        ConcurrentMap<String, JsonSchemaWrapper> tenantSchemasMap = new ConcurrentHashMap<>(
+                                tenantSchemas.stream().collect(Collectors.toMap(Item::getItemId, s -> s)));
+                        schemasByTenantIdReloaded.put(tenantId, tenantSchemasMap);
+                    }
+                });
             }
 
             // Check for changes
@@ -395,10 +397,7 @@ public class SchemaServiceImpl implements SchemaService {
                 initExtensions(schemasByTenantIdReloaded);
                 initJsonSchemaFactory();
             }
-        } finally {
-            // Restore original tenant context
-            tenantService.setCurrentTenant(currentTenant);
-        }
+        });
     }
 
     private void initExtensions(Map<String, ConcurrentMap<String, JsonSchemaWrapper>> schemas) {
@@ -463,9 +462,15 @@ public class SchemaServiceImpl implements SchemaService {
             @Override
             public void run() {
                 try {
-                    refreshJSONSchemas();
+                    contextManager.executeAsSystem(() -> {
+                        try {
+                            refreshJSONSchemas();
+                        } catch (Exception e) {
+                            LOGGER.error("Unexpected error while refreshing JSON Schemas", e);
+                        }
+                    });
                 } catch (Exception e) {
-                    LOGGER.error("Unexpected error while refreshing JSON Schemas", e);
+                    LOGGER.error("Error executing JSON Schema refresh as system subject", e);
                 }
             }
         };
@@ -522,6 +527,10 @@ public class SchemaServiceImpl implements SchemaService {
 
     public void setTenantService(TenantService tenantService) {
         this.tenantService = tenantService;
+    }
+
+    public void setContextManager(ExecutionContextManager contextManager) {
+        this.contextManager = contextManager;
     }
 
     public void setJsonSchemaRefreshInterval(Integer jsonSchemaRefreshInterval) {

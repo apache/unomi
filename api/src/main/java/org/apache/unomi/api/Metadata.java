@@ -279,5 +279,19 @@ public class Metadata implements Comparable<Metadata>, Serializable {
         return result;
     }
 
-
+    @Override
+    public String toString() {
+        return "Metadata{" +
+                "id='" + id + '\'' +
+                ", name='" + name + '\'' +
+                ", description='" + description + '\'' +
+                ", scope='" + scope + '\'' +
+                ", tags=" + tags +
+                ", systemTags=" + systemTags +
+                ", enabled=" + enabled +
+                ", missingPlugins=" + missingPlugins +
+                ", hidden=" + hidden +
+                ", readOnly=" + readOnly +
+                '}';
+    }
 }

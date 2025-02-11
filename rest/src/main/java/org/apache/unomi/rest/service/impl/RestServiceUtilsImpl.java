@@ -261,7 +261,7 @@ public class RestServiceUtilsImpl implements RestServiceUtils {
                 eventsRequestContext.setProcessedItems(eventsRequestContext.getProcessedItems() + 1);
 
                 if (event.getEventType() != null) {
-                    Event eventToSend = new Event(event.getEventType(), event.getSession(), event.getProfile(), event.getScope(),
+                    Event eventToSend = new Event(event.getEventType(), eventsRequestContext.getSession(), eventsRequestContext.getProfile(), event.getScope(),
                             event.getSource(), event.getTarget(), event.getProperties(), eventsRequestContext.getTimestamp(), event.isPersistent());
                     eventToSend.setFlattenedProperties(event.getFlattenedProperties());
                     if (!eventService.isEventAllowedForTenant(event, tenant.getItemId(), eventsRequestContext.getRequest().getRemoteAddr())) {

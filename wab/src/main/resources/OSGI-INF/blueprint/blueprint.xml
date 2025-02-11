@@ -22,6 +22,7 @@
            xsi:schemaLocation="http://www.osgi.org/xmlns/blueprint/v1.0.0 http://www.osgi.org/xmlns/blueprint/v1.0.0/blueprint.xsd
            http://aries.apache.org/blueprint/xmlns/blueprint-cm/v1.1.0 http://aries.apache.org/schemas/blueprint-cm/blueprint-cm-1.1.0.xsd">
 
+    <!-- References -->
     <reference id="profileService" interface="org.apache.unomi.api.services.ProfileService"/>
     <reference id="eventService" interface="org.apache.unomi.api.services.EventService"/>
     <reference id="rulesService" interface="org.apache.unomi.api.services.RulesService"/>
@@ -29,7 +30,9 @@
     <reference id="personalizationService" interface="org.apache.unomi.api.services.PersonalizationService"/>
     <reference id="configSharingService" interface="org.apache.unomi.api.services.ConfigSharingService" />
     <reference id="tenantService" interface="org.apache.unomi.api.tenants.TenantService" />
+    <reference id="executionContextManager" interface="org.apache.unomi.api.services.ExecutionContextManager" />
 
+    <!-- Configuration -->
     <cm:property-placeholder persistent-id="org.apache.unomi.web"
                              update-strategy="reload" placeholder-prefix="${web.">
         <cm:default-properties>
@@ -43,6 +46,7 @@
         </cm:default-properties>
     </cm:property-placeholder>
 
+    <!-- Beans -->
     <bean id="contextServlet" class="org.apache.unomi.web.ContextServlet">
         <property name="configSharingService" ref="configSharingService"/>
         <property name="profileIdCookieDomain" value="${web.contextserver.domain}" />
@@ -54,8 +58,17 @@
 
     <bean id="unomiAuthenticationFilter" class="org.apache.unomi.web.UnomiAuthenticationFilter">
         <property name="tenantService" ref="tenantService" />
+        <property name="executionContextManager" ref="executionContextManager" />
     </bean>
 
+    <bean id="eventsCollectorServlet" class="org.apache.unomi.web.EventsCollectorServlet"/>
+
+    <bean id="clientServlet" class="org.apache.unomi.web.ClientServlet">
+        <property name="configSharingService" ref="configSharingService"/>
+        <property name="allowedProfileDownloadFormats" value="${web.allowed.profile.download.formats}" />
+    </bean>
+
+    <!-- Services -->
     <service id="contextServletService" ref="contextServlet">
         <interfaces>
             <value>javax.servlet.Servlet</value>
@@ -71,8 +84,6 @@
         </service-properties>
     </service>
 
-    <bean id="eventsCollectorServlet" class="org.apache.unomi.web.EventsCollectorServlet"/>
-
     <service id="eventsCollectorServletService" ref="eventsCollectorServlet">
         <interfaces>
             <value>javax.servlet.Servlet</value>
@@ -82,11 +93,6 @@
             <entry key="urlPatterns" value="/eventcollector"/>
         </service-properties>
     </service>
-
-    <bean id="clientServlet" class="org.apache.unomi.web.ClientServlet">
-        <property name="configSharingService" ref="configSharingService"/>
-        <property name="allowedProfileDownloadFormats" value="${web.allowed.profile.download.formats}" />
-    </bean>
 
     <service id="clientServletService" ref="clientServlet">
         <interfaces>

@@ -21,6 +21,7 @@ import com.github.fge.jsonpatch.JsonPatch;
 import com.github.fge.jsonpatch.JsonPatchException;
 import org.apache.unomi.api.Item;
 import org.apache.unomi.api.Patch;
+import org.apache.unomi.api.services.ExecutionContextManager;
 import org.apache.unomi.api.services.PatchService;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.persistence.spi.PersistenceService;
@@ -40,8 +41,8 @@ public class PatchServiceImpl implements PatchService, SynchronousBundleListener
     private static final Logger LOGGER = LoggerFactory.getLogger(PatchServiceImpl.class.getName());
 
     private BundleContext bundleContext;
-
     private PersistenceService persistenceService;
+    private ExecutionContextManager contextManager;
 
     public void setBundleContext(BundleContext bundleContext) {
         this.bundleContext = bundleContext;
@@ -51,15 +52,21 @@ public class PatchServiceImpl implements PatchService, SynchronousBundleListener
         this.persistenceService = persistenceService;
     }
 
+    public void setContextManager(ExecutionContextManager contextManager) {
+        this.contextManager = contextManager;
+    }
+
     public void postConstruct() {
         LOGGER.debug("postConstruct {{}}", bundleContext.getBundle());
 
-        processBundleStartup(bundleContext);
-        for (Bundle bundle : bundleContext.getBundles()) {
-            if (bundle.getBundleContext() != null && bundle.getBundleId() != bundleContext.getBundle().getBundleId()) {
-                processBundleStartup(bundle.getBundleContext());
+        contextManager.executeAsSystem(() -> {
+            processBundleStartup(bundleContext);
+            for (Bundle bundle : bundleContext.getBundles()) {
+                if (bundle.getBundleContext() != null && bundle.getBundleId() != bundleContext.getBundle().getBundleId()) {
+                    processBundleStartup(bundle.getBundleContext());
+                }
             }
-        }
+        });
         bundleContext.addBundleListener(this);
         LOGGER.info("Patch service initialized.");
     }
@@ -71,9 +78,11 @@ public class PatchServiceImpl implements PatchService, SynchronousBundleListener
 
     @Override
     public void bundleChanged(BundleEvent event) {
-        if (event.getType() == BundleEvent.STARTED) {
-            processBundleStartup(event.getBundle().getBundleContext());
-        }
+        contextManager.executeAsSystem(() -> {
+            if (event.getType() == BundleEvent.STARTED) {
+                processBundleStartup(event.getBundle().getBundleContext());
+            }
+        });
     }
 
     private void processBundleStartup(BundleContext bundleContext) {

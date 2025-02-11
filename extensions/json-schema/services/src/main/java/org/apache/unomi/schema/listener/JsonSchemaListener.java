@@ -16,6 +16,7 @@
  */
 package org.apache.unomi.schema.listener;
 
+import org.apache.unomi.api.services.ExecutionContextManager;
 import org.apache.unomi.schema.api.SchemaService;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
@@ -41,6 +42,7 @@ public class JsonSchemaListener implements SynchronousBundleListener {
 
     private SchemaService schemaService;
     private BundleContext bundleContext;
+    private ExecutionContextManager contextManager;
 
     public void setSchemaService(SchemaService schemaService) {
         this.schemaService = schemaService;
@@ -48,6 +50,10 @@ public class JsonSchemaListener implements SynchronousBundleListener {
 
     public void setBundleContext(BundleContext bundleContext) {
         this.bundleContext = bundleContext;
+    }
+
+    public void setContextManager(ExecutionContextManager contextManager) {
+        this.contextManager = contextManager;
     }
 
     public void postConstruct() {
@@ -87,16 +93,18 @@ public class JsonSchemaListener implements SynchronousBundleListener {
     }
 
     public void bundleChanged(BundleEvent event) {
-        switch (event.getType()) {
-            case BundleEvent.STARTED:
-                processBundleStartup(event.getBundle().getBundleContext());
-                break;
-            case BundleEvent.STOPPING:
-                if (!event.getBundle().getSymbolicName().equals(bundleContext.getBundle().getSymbolicName())) {
-                    processBundleStop(event.getBundle().getBundleContext());
-                }
-                break;
-        }
+        contextManager.executeAsSystem(() -> {
+            switch (event.getType()) {
+                case BundleEvent.STARTED:
+                    processBundleStartup(event.getBundle().getBundleContext());
+                    break;
+                case BundleEvent.STOPPING:
+                    if (!event.getBundle().getSymbolicName().equals(bundleContext.getBundle().getSymbolicName())) {
+                        processBundleStop(event.getBundle().getBundleContext());
+                    }
+                    break;
+            }
+        });
     }
 
     private void loadPredefinedSchemas(BundleContext bundleContext, boolean load) {

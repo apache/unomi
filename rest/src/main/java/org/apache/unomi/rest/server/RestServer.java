@@ -35,6 +35,7 @@ import org.apache.unomi.api.tenants.TenantService;
 import org.apache.unomi.rest.authentication.AuthenticationFilter;
 import org.apache.unomi.rest.authentication.AuthorizingInterceptor;
 import org.apache.unomi.rest.authentication.RestAuthenticationConfig;
+import org.apache.unomi.rest.authentication.SecurityContextCleanupFilter;
 import org.apache.unomi.rest.deserializers.ContextRequestDeserializer;
 import org.apache.unomi.rest.deserializers.EventsCollectorRequestDeserializer;
 import org.apache.unomi.rest.security.SecurityFilter;
@@ -231,15 +232,20 @@ public class RestServer {
         jaxrsServerFactoryBean.setProvider(new org.apache.cxf.rs.security.cors.CrossOriginResourceSharingFilter());
         jaxrsServerFactoryBean.setProvider(new RetroCompatibilityParamConverterProvider(objectMapper));
 
-        jaxrsServerFactoryBean.setProvider(new AuthenticationFilter(restAuthenticationConfig, tenantService));
+        // Authentication and Security filters in order of priority
+        // 1. Authentication filter (Priorities.AUTHENTICATION = 2000)
+        jaxrsServerFactoryBean.setProvider(new AuthenticationFilter(restAuthenticationConfig, tenantService, securityService));
 
-        // Security filter for role-based access control
+        // 2. Security filter for role-based access control (Priorities.AUTHORIZATION = 3000)
         jaxrsServerFactoryBean.setProvider(securityFilter);
 
-        // Authorization interceptor (used for checking roles at methods access directly)
+        // 3. Authorization interceptor for method-level security (after role checks)
         SimpleAuthorizingFilter simpleAuthorizingFilter = new SimpleAuthorizingFilter();
         simpleAuthorizingFilter.setInterceptor(new AuthorizingInterceptor(restAuthenticationConfig));
         jaxrsServerFactoryBean.setProvider(simpleAuthorizingFilter);
+
+        // 4. Security context cleanup filter (same priority as Authentication but runs during response)
+        jaxrsServerFactoryBean.setProvider(new SecurityContextCleanupFilter(securityService));
 
         // Exception mappers
         for (ExceptionMapper exceptionMapper : exceptionMappers) {
@@ -252,8 +258,7 @@ public class RestServer {
         openApiFeature.setLicense("Apache 2.0 License");
         openApiFeature.setLicenseUrl("http://www.apache.org/licenses/LICENSE-2.0.html");
         openApiFeature.setScan(false);
-        openApiFeature.setUseContextBasedConfig(
-                true);        //Set<String> resourceClasses = serviceBeans.stream().map(service -> service.getClass().getName()).collect(toSet());
+        openApiFeature.setUseContextBasedConfig(true);
         OpenApiCustomizer customizer = new OpenApiCustomizer();
         customizer.setDynamicBasePath(true);
         openApiFeature.setCustomizer(customizer);

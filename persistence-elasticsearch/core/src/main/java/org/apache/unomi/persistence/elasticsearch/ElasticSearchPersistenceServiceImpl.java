@@ -35,7 +35,7 @@ import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.query.DateRange;
 import org.apache.unomi.api.query.IpRange;
 import org.apache.unomi.api.query.NumericRange;
-import org.apache.unomi.api.security.SecurityService;
+import org.apache.unomi.api.services.ExecutionContextManager;
 import org.apache.unomi.api.tenants.TenantTransformationListener;
 import org.apache.unomi.metrics.MetricAdapter;
 import org.apache.unomi.metrics.MetricsService;
@@ -236,15 +236,11 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         itemTypeIndexNameMap.put("persona", "profile");
     }
 
-    private ServiceReference<SecurityService> securityServiceReference;
+    private volatile ExecutionContextManager contextManager = null;    
     private List<TenantTransformationListener> transformationListeners = new CopyOnWriteArrayList<>();
 
     public void setBundleContext(BundleContext bundleContext) {
         this.bundleContext = bundleContext;
-    }
-
-    public void setSecurityServiceReference(ServiceReference<SecurityService> securityServiceReference) {
-        this.securityServiceReference = securityServiceReference;
     }
 
     public void setClusterName(String clusterName) {
@@ -467,30 +463,33 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         }
     }
 
-    private SecurityService getSecurityService() {
-        if (securityServiceReference != null) {
-            return FrameworkUtil
-                    .getBundle(getClass())
-                    .getBundleContext()
-                    .getService(securityServiceReference);
-        }
-        return null;
+    public void bindContextManager(ExecutionContextManager contextManager) {
+        this.contextManager = contextManager;
+        LOGGER.info("ExecutionContextManager bound");
     }
+    
+    public void unbindContextManager(ExecutionContextManager contextManager) {
+        if (this.contextManager == contextManager) {
+            this.contextManager = null;
+            LOGGER.info("ExecutionContextManager unbound");
+        }
+    }    
 
     private String getTenantId() {
-        String tenantId = SYSTEM_TENANT;
-        SecurityService securityService = getSecurityService();
-        if (securityService != null) {
-            tenantId = securityService.getCurrentTenantId();
+        if (contextManager == null) {
+            return SYSTEM_TENANT;
         }
-        return tenantId;
+        ExecutionContext context = contextManager.getCurrentContext();
+        if (context == null || context.getTenantId() == null) {
+            return SYSTEM_TENANT;
+        }
+        return context.getTenantId();
     }
 
     private String validateTenantAndGetId(String operation) {
         String tenantId = getTenantId();
-        SecurityService securityService = getSecurityService();
-        if (securityService != null) {
-            securityService.validateTenantOperation(tenantId, operation);
+        if (contextManager != null && contextManager.getCurrentContext() != null) {
+            contextManager.getCurrentContext().validateAccess(operation);
         }
         return tenantId;
     }
@@ -758,11 +757,17 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Override
     public void bundleChanged(BundleEvent event) {
-        switch (event.getType()) {
-            case BundleEvent.STARTING:
+        if (event.getType() == BundleEvent.STARTING) {
+            if (contextManager != null) {
+                contextManager.executeAsSystem(() -> {
+                    loadPredefinedMappings(event.getBundle().getBundleContext(), true);
+                    loadPainlessScripts(event.getBundle().getBundleContext());
+                });
+            } else {
+                // If security service is not available, execute directly as operations won't be validated
                 loadPredefinedMappings(event.getBundle().getBundleContext(), true);
                 loadPainlessScripts(event.getBundle().getBundleContext());
-                break;
+            }
         }
     }
 

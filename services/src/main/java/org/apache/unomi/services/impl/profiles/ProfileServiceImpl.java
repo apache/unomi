@@ -25,11 +25,8 @@ import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.segments.Segment;
-import org.apache.unomi.api.services.DefinitionsService;
-import org.apache.unomi.api.services.ProfileService;
-import org.apache.unomi.api.services.SchedulerService;
-import org.apache.unomi.api.services.SegmentService;
-import org.apache.unomi.api.tenants.TenantService;
+import org.apache.unomi.api.services.*;
+import org.apache.unomi.api.tasks.ScheduledTask;
 import org.apache.unomi.api.utils.ParserHelper;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.persistence.spi.PersistenceService;
@@ -179,15 +176,15 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
     private Integer purgeSessionExistTime = 0;
     private Integer purgeEventExistTime = 0;
     private Integer purgeProfileInterval = 0;
-    private TimerTask purgeTask = null;
+    private ScheduledTask propertyTypeLoadTask;
+    private ScheduledTask purgeTask;
     private long propertiesRefreshInterval = 10000;
 
     private PropertyTypes propertyTypes;
-    private TimerTask propertyTypeLoadTask = null;
 
     private boolean forceRefreshOnSave = false;
 
-    private TenantService tenantService;
+    private ExecutionContextManager contextManager;
 
     public ProfileServiceImpl() {
         LOGGER.info("Initializing profile service...");
@@ -221,33 +218,35 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         this.propertiesRefreshInterval = propertiesRefreshInterval;
     }
 
-    public void setTenantService(TenantService tenantService) {
-        this.tenantService = tenantService;
+    public void setContextManager(ExecutionContextManager contextManager) {
+        this.contextManager = contextManager;
     }
 
     public void postConstruct() {
         LOGGER.debug("postConstruct {{}}", bundleContext.getBundle());
 
-        loadPropertyTypesFromPersistence();
-        processBundleStartup(bundleContext);
-        for (Bundle bundle : bundleContext.getBundles()) {
-            if (bundle.getBundleContext() != null && bundle.getBundleId() != bundleContext.getBundle().getBundleId()) {
-                processBundleStartup(bundle.getBundleContext());
+        contextManager.executeAsSystem(() -> {
+            loadPropertyTypesFromPersistence();
+            processBundleStartup(bundleContext);
+            for (Bundle bundle : bundleContext.getBundles()) {
+                if (bundle.getBundleContext() != null && bundle.getBundleId() != bundleContext.getBundle().getBundleId()) {
+                    processBundleStartup(bundle.getBundleContext());
+                }
             }
-        }
-        bundleContext.addBundleListener(this);
-        initializeDefaultPurgeValuesIfNecessary();
-        initializePurge();
-        schedulePropertyTypeLoad();
+            bundleContext.addBundleListener(this);
+            initializeDefaultPurgeValuesIfNecessary();
+            initializePurge();
+            schedulePropertyTypeLoad();
+        });
         LOGGER.info("Profile service initialized.");
     }
 
     public void preDestroy() {
-        if (purgeTask != null) {
-            purgeTask.cancel();
-        }
         if (propertyTypeLoadTask != null) {
-            propertyTypeLoadTask.cancel();
+            schedulerService.cancelTask(propertyTypeLoadTask.getItemId());
+        }
+        if (purgeTask != null) {
+            schedulerService.cancelTask(purgeTask.getItemId());
         }
         bundleContext.removeBundleListener(this);
         LOGGER.info("Profile service shutdown.");
@@ -306,14 +305,12 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
     }
 
     private void schedulePropertyTypeLoad() {
-        propertyTypeLoadTask = new TimerTask() {
-            @Override
-            public void run() {
-                reloadPropertyTypes(false);
-            }
-        };
-        schedulerService.getScheduleExecutorService().scheduleAtFixedRate(propertyTypeLoadTask, 10000, propertiesRefreshInterval, TimeUnit.MILLISECONDS);
-        LOGGER.info("Scheduled task for property type loading each 10s");
+        propertyTypeLoadTask = schedulerService.newTask("property-type-load")
+            .nonPersistent()  // Cache-like refresh, should not be persisted
+            .withPeriod(propertiesRefreshInterval, TimeUnit.MILLISECONDS)
+            .withFixedDelay() // Sequential execution
+            .withSimpleExecutor(() -> contextManager.executeAsSystem(() -> reloadPropertyTypes(true)))
+            .schedule();
     }
 
     public void reloadPropertyTypes(boolean refresh) {
@@ -395,49 +392,24 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
     }
 
     private void initializePurge() {
-        LOGGER.info("Purge: Initializing");
-
-        if (purgeProfileInactiveTime > 0 || purgeProfileExistTime > 0 || purgeSessionExistTime > 0 || purgeEventExistTime > 0) {
-            if (purgeProfileInactiveTime > 0) {
-                LOGGER.info("Purge: Profile with no visits since more than {} days, will be purged", purgeProfileInactiveTime);
-            }
-            if (purgeProfileExistTime > 0) {
-                LOGGER.info("Purge: Profile created since more than {} days, will be purged", purgeProfileExistTime);
-            }
-
-            if (purgeSessionExistTime > 0) {
-                LOGGER.info("Purge: Session items created since more than {} days, will be purged", purgeSessionExistTime);
-            }
-            if (purgeEventExistTime > 0) {
-                LOGGER.info("Purge: Event items created since more than {} days, will be purged", purgeEventExistTime);
-            }
-
-            purgeTask = new TimerTask() {
-                @Override
-                public void run() {
-                    try {
-                        long purgeStartTime = System.currentTimeMillis();
-                        LOGGER.info("Purge: triggered");
-
-                        // Profile purge
-                        purgeProfiles(purgeProfileInactiveTime, purgeProfileExistTime);
-
-                        // Monthly items purge
-                        purgeSessionItems(purgeSessionExistTime);
-                        purgeEventItems(purgeEventExistTime);
-                        LOGGER.info("Purge: executed in {} ms", System.currentTimeMillis() - purgeStartTime);
-                    } catch (Throwable t) {
-                        LOGGER.error("Error while purging", t);
-                    }
-                }
-            };
-
-            schedulerService.getScheduleExecutorService().scheduleAtFixedRate(purgeTask, 1, purgeProfileInterval, TimeUnit.DAYS);
-
-            LOGGER.info("Purge: purge scheduled with an interval of {} days", purgeProfileInterval);
-        } else {
-            LOGGER.info("Purge: No purge scheduled");
+        if (purgeProfileExistTime <= 0 && purgeProfileInactiveTime <= 0 && purgeSessionExistTime <= 0 && purgeEventExistTime <= 0) {
+            return;
         }
+
+        purgeTask = schedulerService.newTask("profile-purge")
+            .withPeriod(purgeProfileInterval, TimeUnit.DAYS)
+            .withFixedRate()  // Run at fixed intervals
+            // By default tasks run on a single node, no need to explicitly set it
+            .withSimpleExecutor(() -> contextManager.executeAsSystem(() -> {
+                purgeProfiles(purgeProfileInactiveTime, purgeProfileExistTime);
+                if (purgeSessionExistTime > 0) {
+                    purgeSessionItems(purgeSessionExistTime);
+                }
+                if (purgeEventExistTime > 0) {
+                    purgeEventItems(purgeEventExistTime);
+                }
+            }))
+            .schedule();
     }
 
 
@@ -478,10 +450,12 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         boolean result = false;
         if (previousProperty == null) {
             persistenceService.setPropertyMapping(property, Profile.ITEM_TYPE);
+            property.setTenantId(contextManager.getCurrentContext().getTenantId());
             result = persistenceService.save(property);
             propertyTypes = propertyTypes.with(property);
         } else if (merge(previousProperty, property)) {
             persistenceService.setPropertyMapping(previousProperty, Profile.ITEM_TYPE);
+            previousProperty.setTenantId(contextManager.getCurrentContext().getTenantId());
             result = persistenceService.save(previousProperty);
             propertyTypes = propertyTypes.with(previousProperty);
         }
@@ -981,17 +955,9 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         }
 
         // If not found and not in system tenant, try system tenant
-        String currentTenant = tenantService.getCurrentTenantId();
-        if (!TenantService.SYSTEM_TENANT.equals(currentTenant)) {
-            tenantService.setCurrentTenant(TenantService.SYSTEM_TENANT);
-            try {
-                return persistenceService.load(personaId, Persona.class);
-            } finally {
-                tenantService.setCurrentTenant(currentTenant);
-            }
-        }
-
-        return null;
+        return contextManager.executeAsSystem(() -> {
+            return persistenceService.load(personaId, Persona.class);
+        });
     }
 
     public PersonaWithSessions loadPersonaWithSessions(String personaId) {
@@ -1021,18 +987,11 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         }
 
         // Get system tenant results first
-        Collection<PropertyType> systemResult = null;
-        String currentTenant = tenantService.getCurrentTenantId();
-        if (!TenantService.SYSTEM_TENANT.equals(currentTenant)) {
-            tenantService.setCurrentTenant(TenantService.SYSTEM_TENANT);
-            try {
-                systemResult = persistenceService.getAllItems(PropertyType.class).stream()
-                        .filter(p -> target.equals(p.getTarget()))
-                        .collect(Collectors.toList());
-            } finally {
-                tenantService.setCurrentTenant(currentTenant);
-            }
-        }
+        Collection<PropertyType> systemResult = contextManager.executeAsSystem(() -> {
+            return persistenceService.getAllItems(PropertyType.class).stream()
+                    .filter(p -> target.equals(p.getTarget()))
+                    .collect(Collectors.toList());
+        });
 
         // Get current tenant results
         Collection<PropertyType> tenantResult = persistenceService.getAllItems(PropertyType.class).stream()
@@ -1066,18 +1025,11 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         }
 
         // Get system tenant results first
-        Set<PropertyType> systemResult = null;
-        String currentTenant = tenantService.getCurrentTenantId();
-        if (!TenantService.SYSTEM_TENANT.equals(currentTenant)) {
-            tenantService.setCurrentTenant(TenantService.SYSTEM_TENANT);
-            try {
-                systemResult = persistenceService.getAllItems(PropertyType.class).stream()
-                        .filter(p -> p.getMetadata().getTags().contains(tag))
-                        .collect(Collectors.toSet());
-            } finally {
-                tenantService.setCurrentTenant(currentTenant);
-            }
-        }
+        Set<PropertyType> systemResult = contextManager.executeAsSystem(() -> {
+            return persistenceService.getAllItems(PropertyType.class).stream()
+                    .filter(p -> p.getMetadata().getTags().contains(tag))
+                    .collect(Collectors.toSet());
+        });
 
         // Get current tenant results
         Set<PropertyType> tenantResult = persistenceService.getAllItems(PropertyType.class).stream()
@@ -1107,18 +1059,11 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         }
 
         // Get system tenant results first
-        Set<PropertyType> systemResult = null;
-        String currentTenant = tenantService.getCurrentTenantId();
-        if (!TenantService.SYSTEM_TENANT.equals(currentTenant)) {
-            tenantService.setCurrentTenant(TenantService.SYSTEM_TENANT);
-            try {
-                systemResult = persistenceService.getAllItems(PropertyType.class).stream()
-                        .filter(p -> p.getMetadata().getSystemTags().contains(tag))
-                        .collect(Collectors.toSet());
-            } finally {
-                tenantService.setCurrentTenant(currentTenant);
-            }
-        }
+        Set<PropertyType> systemResult = contextManager.executeAsSystem(() -> {
+            return persistenceService.getAllItems(PropertyType.class).stream()
+                    .filter(p -> p.getMetadata().getSystemTags().contains(tag))
+                    .collect(Collectors.toSet());
+        });
 
         // Get current tenant results
         Set<PropertyType> tenantResult = persistenceService.getAllItems(PropertyType.class).stream()
@@ -1176,15 +1121,9 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         }
 
         // If not found and not in system tenant, try system tenant
-        String currentTenant = tenantService.getCurrentTenantId();
-        if (!TenantService.SYSTEM_TENANT.equals(currentTenant)) {
-            tenantService.setCurrentTenant(TenantService.SYSTEM_TENANT);
-            try {
-                return persistenceService.load(id, PropertyType.class);
-            } finally {
-                tenantService.setCurrentTenant(currentTenant);
-            }
-        }
+        contextManager.executeAsSystem(() -> {
+            return persistenceService.load(id, PropertyType.class);
+        });
 
         return null;
     }
@@ -1285,14 +1224,16 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
 
 
     public void bundleChanged(BundleEvent event) {
-        switch (event.getType()) {
-            case BundleEvent.STARTED:
-                processBundleStartup(event.getBundle().getBundleContext());
-                break;
-            case BundleEvent.STOPPING:
-                processBundleStop(event.getBundle().getBundleContext());
-                break;
-        }
+        contextManager.executeAsSystem(() -> {
+            switch (event.getType()) {
+                case BundleEvent.STARTED:
+                    processBundleStartup(event.getBundle().getBundleContext());
+                    break;
+                case BundleEvent.STOPPING:
+                    processBundleStop(event.getBundle().getBundleContext());
+                    break;
+            }
+        });
     }
 
     private <T> boolean merge(T target, T object) {

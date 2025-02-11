@@ -20,6 +20,11 @@ jobs:
       uses: actions/setup-java@v1
       with:
         java-version: 11
+    - name: Install GraphViz
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y graphviz
+        dot -V
     - name: Build and Unit tests
       run: mvn -U -ntp -e clean install
 

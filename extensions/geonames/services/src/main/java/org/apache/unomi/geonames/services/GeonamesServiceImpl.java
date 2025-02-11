@@ -21,6 +21,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.unomi.api.PartialList;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.services.DefinitionsService;
+import org.apache.unomi.api.services.ExecutionContextManager;
 import org.apache.unomi.api.services.SchedulerService;
 import org.apache.unomi.api.tenants.TenantService;
 import org.apache.unomi.persistence.spi.PersistenceService;
@@ -37,8 +38,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
-import static org.apache.unomi.api.tenants.TenantService.SYSTEM_TENANT;
-
 public class GeonamesServiceImpl implements GeonamesService {
     public static final String GEOCODING_MAX_DISTANCE = "100km";
     private static final Logger LOGGER = LoggerFactory.getLogger(GeonamesServiceImpl.class.getName());
@@ -46,6 +45,7 @@ public class GeonamesServiceImpl implements GeonamesService {
     private PersistenceService persistenceService;
     private SchedulerService schedulerService;
     private TenantService tenantService;
+    private ExecutionContextManager contextManager;
 
     private String pathToGeonamesDatabase;
     private Boolean forceDbImport;
@@ -71,6 +71,10 @@ public class GeonamesServiceImpl implements GeonamesService {
         this.tenantService = tenantService;
     }
 
+    public void setContextManager(ExecutionContextManager contextManager) {
+        this.contextManager = contextManager;
+    }
+
     public void setPathToGeonamesDatabase(String pathToGeonamesDatabase) {
         this.pathToGeonamesDatabase = pathToGeonamesDatabase;
     }
@@ -86,28 +90,8 @@ public class GeonamesServiceImpl implements GeonamesService {
     public void stop() {
     }
 
-    private <T> T withSystemTenant(java.util.function.Supplier<T> supplier) {
-        String currentTenant = tenantService.getCurrentTenantId();
-        tenantService.setCurrentTenant(SYSTEM_TENANT);
-        try {
-            return supplier.get();
-        } finally {
-            tenantService.setCurrentTenant(currentTenant);
-        }
-    }
-
-    private void withSystemTenant(Runnable runnable) {
-        String currentTenant = tenantService.getCurrentTenantId();
-        tenantService.setCurrentTenant(SYSTEM_TENANT);
-        try {
-            runnable.run();
-        } finally {
-            tenantService.setCurrentTenant(currentTenant);
-        }
-    }
-
     public void importDatabase() {
-        withSystemTenant(() -> {
+        contextManager.executeAsSystem(() -> {
             if (!persistenceService.createIndex(GeonameEntry.ITEM_TYPE)) {
                 if (forceDbImport) {
                     persistenceService.removeIndex(GeonameEntry.ITEM_TYPE);
@@ -129,7 +113,14 @@ public class GeonamesServiceImpl implements GeonamesService {
                 schedulerService.getSharedScheduleExecutorService().schedule(new TimerTask() {
                     @Override
                     public void run() {
-                        importGeoNameDatabase(f);
+                        contextManager.executeAsSystem(() -> {
+                            try {
+                                importGeoNameDatabase(f);
+                            } catch (Exception e) {
+                                LOGGER.error("Error importing geoname database", e);
+                            }
+                            return null;
+                        });
                     }
                 }, refreshDbInterval, TimeUnit.MILLISECONDS);
             }
@@ -258,7 +249,7 @@ public class GeonamesServiceImpl implements GeonamesService {
     }
 
     public List<GeonameEntry> reverseGeoCode(String lat, String lon) {
-        return withSystemTenant(() -> {
+        return contextManager.executeAsSystem(() -> {
             List<Condition> l = new ArrayList<Condition>();
             Condition andCondition = new Condition();
             andCondition.setConditionType(definitionsService.getConditionType("booleanCondition"));
@@ -284,7 +275,7 @@ public class GeonamesServiceImpl implements GeonamesService {
     }
 
     public PartialList<GeonameEntry> getChildrenEntries(List<String> items, int offset, int size) {
-        return withSystemTenant(() -> {
+        return contextManager.executeAsSystem(() -> {
             Condition andCondition = getItemsInChildrenQuery(items, CITIES_FEATURE_CODES);
             Condition featureCodeCondition = ((List<Condition>) andCondition.getParameter("subConditions")).get(0);
             int level = items.size();
@@ -301,7 +292,7 @@ public class GeonamesServiceImpl implements GeonamesService {
     }
 
     public PartialList<GeonameEntry> getChildrenCities(List<String> items, int offset, int size) {
-        return withSystemTenant(() -> persistenceService.query(getItemsInChildrenQuery(items, CITIES_FEATURE_CODES), null, GeonameEntry.class, offset, size));
+        return contextManager.executeAsSystem(() -> persistenceService.query(getItemsInChildrenQuery(items, CITIES_FEATURE_CODES), null, GeonameEntry.class, offset, size));
     }
 
     private Condition getItemsInChildrenQuery(List<String> items, List<String> featureCodes) {
@@ -327,7 +318,7 @@ public class GeonamesServiceImpl implements GeonamesService {
     }
 
     public List<GeonameEntry> getCapitalEntries(String itemId) {
-        return withSystemTenant(() -> {
+        return contextManager.executeAsSystem(() -> {
             GeonameEntry entry = persistenceService.load(itemId, GeonameEntry.class);
             List<String> featureCodes;
 

@@ -16,6 +16,7 @@
  */
 package org.apache.unomi.shell.dev.commands.profiles;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.unomi.api.PartialList;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.query.Query;
@@ -33,6 +34,7 @@ import java.util.stream.Collectors;
 @Component(service = CrudCommand.class, immediate = true)
 public class ProfileCrudCommand extends BaseCrudCommand {
 
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
     private static final List<String> PROPERTY_NAMES = Arrays.asList(
         "itemId",
         "properties.firstName",
@@ -103,7 +105,7 @@ public class ProfileCrudCommand extends BaseCrudCommand {
     @Override
     public Map<String, Object> read(String id) {
         Profile profile = profileService.load(id);
-        return profile != null ? profile.getProperties() : null;
+        return profile != null ? OBJECT_MAPPER.convertValue(profile, Map.class) : null;
     }
 
     @Override

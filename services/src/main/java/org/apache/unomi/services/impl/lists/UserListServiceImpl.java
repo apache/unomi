@@ -23,7 +23,7 @@ import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.lists.UserList;
 import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.UserListService;
-import org.apache.unomi.services.impl.AbstractTenantAwareService;
+import org.apache.unomi.services.impl.AbstractContextAwareService;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleEvent;
 import org.osgi.framework.SynchronousBundleListener;
@@ -36,7 +36,7 @@ import java.util.List;
 /**
  * Created by amidani on 24/03/2017.
  */
-public class UserListServiceImpl extends AbstractTenantAwareService implements UserListService, SynchronousBundleListener {
+public class UserListServiceImpl extends AbstractContextAwareService implements UserListService, SynchronousBundleListener {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(UserListServiceImpl.class.getName());
 
@@ -72,7 +72,7 @@ public class UserListServiceImpl extends AbstractTenantAwareService implements U
     }
 
     protected <T extends UserList> PartialList<Metadata> getMetadatas(int offset, int size, String sortBy, Class<T> clazz) {
-        String currentTenantId = tenantService.getCurrentTenantId();
+        String currentTenantId = contextManager.getCurrentContext().getTenantId();
         Condition tenantCondition = new Condition(definitionsService.getConditionType("sessionPropertyCondition"));
         tenantCondition.setParameter("propertyName", "tenantId");
         tenantCondition.setParameter("comparisonOperator", "equals");

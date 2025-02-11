@@ -20,6 +20,7 @@ import org.apache.unomi.api.Event;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.services.DefinitionsService;
+import org.apache.unomi.api.services.ExecutionContextManager;
 import org.apache.unomi.api.tenants.Tenant;
 import org.apache.unomi.api.tenants.TenantService;
 import org.apache.unomi.persistence.spi.PersistenceService;
@@ -40,6 +41,7 @@ public class TenantMonitoringService {
     private PersistenceService persistenceService;
     private DefinitionsService definitionsService;
     private TenantService tenantService;
+    private ExecutionContextManager contextManager;
 
     private final Map<String, TenantMetrics> metricsCache = new ConcurrentHashMap<>();
 
@@ -55,6 +57,10 @@ public class TenantMonitoringService {
         this.definitionsService = definitionsService;
     }
 
+    public void setContextManager(ExecutionContextManager contextManager) {
+        this.contextManager = contextManager;
+    }
+
     public void activate() {
         startMetricsCollection();
     }
@@ -67,9 +73,15 @@ public class TenantMonitoringService {
         ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
         executor.scheduleAtFixedRate(() -> {
             try {
-                updateMetrics();
+                contextManager.executeAsSystem(() -> {
+                    try {
+                        updateMetrics();
+                    } catch (Exception e) {
+                        logger.error("Error updating metrics", e);
+                    }
+                });
             } catch (Exception e) {
-                logger.error("Error updating metrics", e);
+                logger.error("Error executing metrics update as system subject", e);
             }
         }, 0, 5, TimeUnit.MINUTES);
     }

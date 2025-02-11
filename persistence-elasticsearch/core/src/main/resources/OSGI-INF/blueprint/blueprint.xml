@@ -80,7 +80,6 @@
 
     <reference id="metricsService" interface="org.apache.unomi.metrics.MetricsService" />
     <reference id="scriptExecutor" interface="org.apache.unomi.scripting.ScriptExecutor" />
-    <reference id="securityServiceReference" interface="org.apache.unomi.api.security.SecurityService" availability="optional" />
 
     <service id="elasticSearchPersistenceService" ref="elasticSearchPersistenceServiceImpl">
         <interfaces>
@@ -159,7 +158,6 @@
         <property name="throwExceptions" value="${es.throwExceptions}" />
         <property name="alwaysOverwrite" value="${es.alwaysOverwrite}" />
         <property name="logLevelRestClient" value="${es.logLevelRestClient}" />
-        <property name="securityServiceReference" ref="securityServiceReference" />
     </bean>
 
     <!-- We use a listener here because using the list directly for listening to proxies coming from the same bundle didn't seem to work -->
@@ -186,5 +184,16 @@
             <ref component-id="elasticSearchPersistenceServiceImpl"/>
         </reference-listener>
     </reference-list>
+
+    <!-- Execution Context Manager Reference -->
+    <reference id="contextManager"
+               interface="org.apache.unomi.api.services.ExecutionContextManager"
+               availability="optional"
+               timeout="0">
+        <reference-listener bind-method="bindContextManager"
+                          unbind-method="unbindContextManager">
+            <ref component-id="elasticSearchPersistenceServiceImpl"/>
+        </reference-listener>
+    </reference>
 
 </blueprint>

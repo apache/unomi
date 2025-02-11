@@ -28,11 +28,22 @@ image::asf_logo_url.png[pdfwidth=35%,align=center]
 
 include::whats-new.adoc[]
 
+== Architecture Overview
+
+include::architecture.adoc[]
+
+=== Data Structures
+include::data-structures.adoc[]
+
+=== Event Processing Architecture
+include::event-processing.adoc[]
+
+=== Security Architecture
+include::security.adoc[]
+
 == Discover Unomi
 
 include::5-min-quickstart.adoc[]
-
-include::getting-started.adoc[]
 
 include::tutorial.adoc[]
 
@@ -101,6 +112,8 @@ include::builtin-condition-types.adoc[]
 include::builtin-action-types.adoc[]
 
 include::updating-events.adoc[]
+
+include::past-event-conditions.adoc[]
 
 include::web-tracker.adoc[]
 

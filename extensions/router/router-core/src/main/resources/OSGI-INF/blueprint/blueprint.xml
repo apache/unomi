@@ -18,10 +18,8 @@
 <blueprint xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
            xmlns="http://www.osgi.org/xmlns/blueprint/v1.0.0"
            xmlns:cm="http://aries.apache.org/blueprint/xmlns/blueprint-cm/v1.1.0"
-           xmlns:camel="http://camel.apache.org/schema/blueprint"
            xsi:schemaLocation="http://www.osgi.org/xmlns/blueprint/v1.0.0 http://www.osgi.org/xmlns/blueprint/v1.0.0/blueprint.xsd
-                               http://aries.apache.org/blueprint/xmlns/blueprint-cm/v1.1.0 http://aries.apache.org/schemas/blueprint-cm/blueprint-cm-1.1.0.xsd
-                               http://camel.apache.org/schema/blueprint http://camel.apache.org/schema/blueprint/camel-blueprint.xsd">
+                               http://aries.apache.org/blueprint/xmlns/blueprint-cm/v1.1.0 http://aries.apache.org/schemas/blueprint-cm/blueprint-cm-1.1.0.xsd">
 
     <cm:property-placeholder persistent-id="org.apache.unomi.router" update-strategy="reload">
         <cm:default-properties>
@@ -112,25 +110,13 @@
         <property name="persistenceService" ref="persistenceService"/>
         <property name="profileExportService" ref="profileExportService"/>
         <property name="profileService" ref="profileService"/>
-        <property name="clusterService" ref="clusterService" />
+        <property name="contextManager" ref="contextManager"/>
     </bean>
     <service id="camelContextOSGI" ref="camelContext" interface="org.apache.unomi.router.api.IRouterCamelContext"/>
 
     <bean id="collectProfileBean" class="org.apache.unomi.router.core.bean.CollectProfileBean">
         <property name="persistenceService" ref="persistenceService"/>
     </bean>
-
-    <bean id="updateCamelRouteEventHandler" class="org.apache.unomi.router.core.event.UpdateCamelRouteEventHandler">
-        <property name="configurationAdmin" ref="osgiConfigurationAdmin"/>
-        <property name="clusterManager" ref="karafCellarClusterManager"/>
-        <property name="groupManager" ref="karafCellarGroupManager"/>
-        <property name="routerCamelContext" ref="camelContext"/>
-    </bean>
-    <service ref="updateCamelRouteEventHandler" interface="org.apache.karaf.cellar.core.event.EventHandler">
-        <service-properties>
-            <entry key="managed" value="true"/>
-        </service-properties>
-    </service>
 
     <reference id="configSharingService" interface="org.apache.unomi.api.services.ConfigSharingService" />
     <reference id="profileImportService" interface="org.apache.unomi.router.api.services.ProfileImportService"/>
@@ -140,9 +126,6 @@
     <reference id="segmentService" interface="org.apache.unomi.api.services.SegmentService"/>
     <reference id="importConfigurationService" interface="org.apache.unomi.router.api.services.ImportExportConfigurationService" filter="(configDiscriminator=IMPORT)"/>
     <reference id="exportConfigurationService" interface="org.apache.unomi.router.api.services.ImportExportConfigurationService" filter="(configDiscriminator=EXPORT)"/>
-    <reference id="clusterService" interface="org.apache.unomi.api.services.ClusterService" />
-    <reference id="karafCellarGroupManager" interface="org.apache.karaf.cellar.core.GroupManager" />
-    <reference id="osgiConfigurationAdmin" interface="org.osgi.service.cm.ConfigurationAdmin"/>
-    <reference id="karafCellarClusterManager" interface="org.apache.karaf.cellar.core.ClusterManager" />
+    <reference id="contextManager" interface="org.apache.unomi.api.services.ExecutionContextManager" />
 
 </blueprint>

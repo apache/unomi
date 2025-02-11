@@ -25,12 +25,13 @@ import org.apache.unomi.api.actions.ActionType;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.api.services.DefinitionsService;
-import org.apache.unomi.api.services.SchedulerService;
 import org.apache.unomi.api.services.TenantLifecycleListener;
+import org.apache.unomi.api.services.cache.CacheableTypeConfig;
+import org.apache.unomi.api.services.cache.MultiTypeCacheService;
 import org.apache.unomi.api.utils.ConditionBuilder;
 import org.apache.unomi.api.utils.ParserHelper;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
-import org.apache.unomi.services.impl.AbstractTenantAwareService;
+import org.apache.unomi.services.impl.cache.AbstractMultiTypeCachingService;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleEvent;
@@ -49,86 +50,18 @@ import java.util.function.Consumer;
 
 import static org.apache.unomi.api.tenants.TenantService.SYSTEM_TENANT;
 
-public class DefinitionsServiceImpl extends AbstractTenantAwareService implements DefinitionsService, TenantLifecycleListener, SynchronousBundleListener {
+public class DefinitionsServiceImpl extends AbstractMultiTypeCachingService implements DefinitionsService, TenantLifecycleListener, SynchronousBundleListener {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(DefinitionsServiceImpl.class.getName());
 
-    private SchedulerService schedulerService;
     private volatile boolean isShutdown = false;
     private volatile java.util.concurrent.ScheduledFuture<?> reloadTaskFuture;
 
-    // Tenant-aware caches
-    private final Map<String, Map<String, ConditionType>> conditionTypeByTenantId = new ConcurrentHashMap<>();
-    private final Map<String, Map<String, ActionType>> actionTypeByTenantId = new ConcurrentHashMap<>();
-    private final Map<String, Map<String, ValueType>> valueTypeByTenantId = new ConcurrentHashMap<>();
-    private final Map<String, Map<String, Set<ValueType>>> valueTypeByTagByTenantId = new ConcurrentHashMap<>();
-    private final Map<String, Map<String, PropertyMergeStrategyType>> propertyMergeStrategyTypeByTenantId = new ConcurrentHashMap<>();
     private final Map<Long, List<PluginType>> pluginTypes = new ConcurrentHashMap<>();
-
-    // Generic cache management with better synchronization
-    private <T> Map<String, T> getTenantCache(Map<String, Map<String, T>> tenantMap, String tenantId) {
-        if (tenantId == null) {
-            throw new IllegalArgumentException("Tenant ID cannot be null");
-        }
-        synchronized (cacheLock) {
-            return tenantMap.computeIfAbsent(tenantId, k -> new ConcurrentHashMap<>());
-        }
-    }
-
-    private <T> T getFromCacheWithInheritance(String id, String tenantId, Map<String, Map<String, T>> cache) {
-        if (id == null) {
-            return null;
-        }
-        T value = getTenantCache(cache, tenantId).get(id);
-        if (value == null && !SYSTEM_TENANT.equals(tenantId)) {
-            value = getTenantCache(cache, SYSTEM_TENANT).get(id);
-        }
-        return value;
-    }
-
-    private <T> void updateCache(Map<String, Map<String, T>> cacheMap, String tenantId, Map<String, T> newItems) {
-        synchronized(cacheLock) {
-            Map<String, T> cache = getTenantCache(cacheMap, tenantId);
-            cache.clear();
-            cache.putAll(newItems);
-        }
-    }
-
-    private <T> void removeFromCache(Map<String, Map<String, T>> cacheMap, String tenantId, String itemId) {
-        if (tenantId == null || itemId == null) {
-            return;
-        }
-        synchronized(cacheLock) {
-            Map<String, T> cache = getTenantCache(cacheMap, tenantId);
-            cache.remove(itemId);
-        }
-    }
-
-    // Simplified helper methods using generic cache management
-    private Map<String, ConditionType> getConditionTypeCache(String tenantId) {
-        return getTenantCache(conditionTypeByTenantId, tenantId);
-    }
-
-    private Map<String, ActionType> getActionTypeCache(String tenantId) {
-        return getTenantCache(actionTypeByTenantId, tenantId);
-    }
-
-    private Map<String, ValueType> getValueTypeCache(String tenantId) {
-        return getTenantCache(valueTypeByTenantId, tenantId);
-    }
-
-    private Map<String, Set<ValueType>> getValueTypeByTagCache(String tenantId) {
-        return getTenantCache(valueTypeByTagByTenantId, tenantId);
-    }
-
-    private Map<String, PropertyMergeStrategyType> getPropertyMergeStrategyTypeCache(String tenantId) {
-        return getTenantCache(propertyMergeStrategyTypeByTenantId, tenantId);
-    }
 
     private long definitionsRefreshInterval = 10000;
 
     private ConditionBuilder conditionBuilder;
-    private BundleContext bundleContext;
 
     private static final int MAX_RECURSIVE_CONDITIONS = 1000; // Prevent stack overflow
     private static final String BOOLEAN_CONDITION_TYPE = "booleanCondition";
@@ -137,39 +70,41 @@ public class DefinitionsServiceImpl extends AbstractTenantAwareService implement
     private static final String OPERATOR_PARAM = "operator";
 
     private static final long TASK_TIMEOUT_MS = 60000; // 1 minute timeout for tasks
-    private final Object cacheLock = new Object(); // Dedicated lock object
+
+    public void setCacheService(MultiTypeCacheService cacheService) {
+        super.setCacheService(cacheService);
+    }
 
     public DefinitionsServiceImpl() {
+        // Initialize other components
+        conditionBuilder = new ConditionBuilder(this);
     }
 
-    public void setBundleContext(BundleContext bundleContext) {
-        this.bundleContext = bundleContext;
-    }
+    @Override
+    public void postConstruct() {
+        super.postConstruct();
 
-    public void setSchedulerService(SchedulerService schedulerService) {
-        this.schedulerService = schedulerService;
+        // Process bundle startup
+        if (bundleContext != null) {
+            LOGGER.debug("postConstruct {{}}", bundleContext.getBundle());
+            processBundleStartup(bundleContext);
+
+            // Process already started bundles
+            for (Bundle bundle : bundleContext.getBundles()) {
+                if (bundle.getBundleContext() != null && bundle.getBundleId() != bundleContext.getBundle().getBundleId()) {
+                    processBundleStartup(bundle.getBundleContext());
+                }
+            }
+
+            bundleContext.addBundleListener(this);
+        }
+
+        scheduleTypeReloads();
+        LOGGER.info("Definitions service initialized.");
     }
 
     public void setDefinitionsRefreshInterval(long definitionsRefreshInterval) {
         this.definitionsRefreshInterval = definitionsRefreshInterval;
-    }
-
-    public void postConstruct() {
-        LOGGER.debug("postConstruct {{}}", bundleContext.getBundle());
-
-        processBundleStartup(bundleContext);
-
-        // process already started bundles
-        for (Bundle bundle : bundleContext.getBundles()) {
-            if (bundle.getBundleContext() != null && bundle.getBundleId() != bundleContext.getBundle().getBundleId()) {
-                processBundleStartup(bundle.getBundleContext());
-            }
-        }
-
-        bundleContext.addBundleListener(this);
-        scheduleTypeReloads();
-        conditionBuilder = new ConditionBuilder(this);
-        LOGGER.info("Definitions service initialized.");
     }
 
     private void scheduleTypeReloads() {
@@ -205,55 +140,54 @@ public class DefinitionsServiceImpl extends AbstractTenantAwareService implement
     }
 
     private void loadConditionTypesFromPersistence() {
-        if (persistenceService == null || tenantService == null) {
+        if (persistenceService == null || contextManager == null) {
             LOGGER.warn("Cannot load condition types - required services not available");
             return;
         }
 
         try {
-            String currentTenant = tenantService.getCurrentTenantIdWithDefault();
-
-            Map<String, ConditionType> newConditionTypes = new ConcurrentHashMap<>();
-            Collection<ConditionType> types = getAllConditionTypes();
-            if (types != null) {
-                for (ConditionType conditionType : types) {
-                    if (conditionType != null && conditionType.getItemId() != null) {
-                        newConditionTypes.put(conditionType.getItemId(), conditionType);
+            contextManager.executeAsSystem(() -> {
+                try {
+                    Collection<ConditionType> types = persistenceService.getAllItems(ConditionType.class);
+                    if (types != null) {
+                        for (ConditionType conditionType : types) {
+                            if (conditionType != null && conditionType.getItemId() != null) {
+                                cacheService.put(ConditionType.ITEM_TYPE, conditionType.getItemId(), SYSTEM_TENANT, conditionType);
+                            }
+                        }
                     }
+                } catch (Exception e) {
+                    LOGGER.error("Error loading condition types from persistence service", e);
                 }
-            }
-
-            // Atomic update of cache
-            synchronized(cacheLock) {
-                Map<String, ConditionType> cache = getConditionTypeCache(currentTenant);
-                cache.clear();  // Clear old entries
-                cache.putAll(newConditionTypes);
-            }
+            });
         } catch (Exception e) {
-            LOGGER.error("Error loading condition types from persistence service", e);
+            LOGGER.error("Error executing in system context while loading condition types", e);
         }
     }
 
     private void loadActionTypesFromPersistence() {
-        if (persistenceService == null || tenantService == null) {
+        if (persistenceService == null || contextManager == null) {
             LOGGER.warn("Cannot load action types - required services not available");
             return;
         }
 
         try {
-            String currentTenant = tenantService.getCurrentTenantIdWithDefault();
-            Map<String, ActionType> newActionTypes = new ConcurrentHashMap<>();
-            Collection<ActionType> types = getAllActionTypes();
-            if (types != null) {
-                for (ActionType actionType : types) {
-                    if (actionType != null && actionType.getItemId() != null) {
-                        newActionTypes.put(actionType.getItemId(), actionType);
+            contextManager.executeAsSystem(() -> {
+                try {
+                    Collection<ActionType> types = persistenceService.getAllItems(ActionType.class);
+                    if (types != null) {
+                        for (ActionType actionType : types) {
+                            if (actionType != null && actionType.getItemId() != null) {
+                                cacheService.put(ActionType.ITEM_TYPE, actionType.getItemId(), SYSTEM_TENANT, actionType);
+                            }
+                        }
                     }
+                } catch (Exception e) {
+                    LOGGER.error("Error loading action types from persistence service", e);
                 }
-            }
-            updateCache(actionTypeByTenantId, currentTenant, newActionTypes);
+            });
         } catch (Exception e) {
-            LOGGER.error("Error loading action types from persistence service", e);
+            LOGGER.error("Error executing in system context while loading action types", e);
         }
     }
 
@@ -262,26 +196,28 @@ public class DefinitionsServiceImpl extends AbstractTenantAwareService implement
             return;
         }
 
-        Long bundleId = null;
+        Bundle bundle = bundleContext.getBundle();
+        if (bundle == null) {
+            LOGGER.warn("No bundle found in context during startup");
+            return;
+        }
+
+        final Long bundleId = bundle.getBundleId();
         try {
-            Bundle bundle = bundleContext.getBundle();
-            if (bundle == null) {
-                LOGGER.warn("No bundle found in context during startup");
-                return;
-            }
-            bundleId = bundle.getBundleId();
-
-            loadPredefinedConditionTypes(bundleContext);
-            loadPredefinedActionTypes(bundleContext);
-            loadPredefinedValueTypes(bundleContext);
-            loadPredefinedPropertyMergeStrategyTypes(bundleContext);
-
+            contextManager.executeAsSystem(() -> {
+                try {
+                    loadPredefinedConditionTypes(bundleContext);
+                    loadPredefinedActionTypes(bundleContext);
+                    loadPredefinedValueTypes(bundleContext);
+                    loadPredefinedPropertyMergeStrategyTypes(bundleContext);
+                } catch (Exception e) {
+                    LOGGER.error("Error loading predefined types for bundle: {}", bundleId, e);
+                }
+            });
         } catch (Exception e) {
             LOGGER.error("Error during bundle startup processing for bundle: {}", bundleId, e);
             // Cleanup on failure
-            if (bundleId != null) {
-                pluginTypes.remove(bundleId);
-            }
+            pluginTypes.remove(bundleId);
         }
     }
 
@@ -297,139 +233,35 @@ public class DefinitionsServiceImpl extends AbstractTenantAwareService implement
         }
 
         try {
-            synchronized(cacheLock) {
+            contextManager.executeAsSystem(() -> {
                 // Process each type based on its actual class
                 for (PluginType type : types) {
                     if (type instanceof ConditionType) {
-                        removeConditionTypeFromAllTenants((ConditionType) type);
+                        ConditionType conditionType = (ConditionType) type;
+                        cacheService.remove(ConditionType.ITEM_TYPE, conditionType.getItemId(), SYSTEM_TENANT, ConditionType.class);
                     } else if (type instanceof ActionType) {
-                        removeActionTypeFromAllTenants((ActionType) type);
+                        ActionType actionType = (ActionType) type;
+                        cacheService.remove(ActionType.ITEM_TYPE, actionType.getItemId(), SYSTEM_TENANT, ActionType.class);
                     } else if (type instanceof ValueType) {
-                        removeValueTypeFromAllTenants((ValueType) type);
+                        ValueType valueType = (ValueType) type;
+                        cacheService.remove(ValueType.class.getSimpleName(), valueType.getId(), SYSTEM_TENANT, ValueType.class);
                     } else if (type instanceof PropertyMergeStrategyType) {
-                        removePropertyMergeStrategyFromAllTenants((PropertyMergeStrategyType) type);
+                        PropertyMergeStrategyType strategyType = (PropertyMergeStrategyType) type;
+                        cacheService.remove(PropertyMergeStrategyType.class.getSimpleName(), strategyType.getId(), SYSTEM_TENANT, PropertyMergeStrategyType.class);
                     }
                 }
-            }
+            });
         } catch (Exception e) {
             LOGGER.error("Error during bundle stop processing for bundle ID: {}", bundleId, e);
         }
     }
 
-    private void removeConditionTypeFromAllTenants(ConditionType conditionType) {
-        if (conditionType == null || conditionType.getItemId() == null) {
-            return;
-        }
-
-        // Only remove from system tenant since that's where bundle types are created
-        String originalTenant = tenantService.getCurrentTenantId();
-        try {
-            tenantService.setCurrentTenant(SYSTEM_TENANT);
-            persistenceService.remove(conditionType.getItemId(), ConditionType.class);
-            Map<String, ConditionType> systemCache = conditionTypeByTenantId.get(SYSTEM_TENANT);
-            if (systemCache != null) {
-                systemCache.remove(conditionType.getItemId());
-            }
-        } finally {
-            tenantService.setCurrentTenant(originalTenant);
-        }
-    }
-
-    private void removeActionTypeFromAllTenants(ActionType actionType) {
-        if (actionType == null || actionType.getItemId() == null) {
-            return;
-        }
-
-        // Only remove from system tenant since that's where bundle types are created
-        String originalTenant = tenantService.getCurrentTenantId();
-        try {
-            tenantService.setCurrentTenant(SYSTEM_TENANT);
-            persistenceService.remove(actionType.getItemId(), ActionType.class);
-            Map<String, ActionType> systemCache = actionTypeByTenantId.get(SYSTEM_TENANT);
-            if (systemCache != null) {
-                systemCache.remove(actionType.getItemId());
-            }
-        } finally {
-            tenantService.setCurrentTenant(originalTenant);
-        }
-    }
-
-    private void removeValueTypeFromAllTenants(ValueType valueType) {
-        if (valueType == null || valueType.getId() == null) {
-            return;
-        }
-
-        // Only remove from system tenant since that's where bundle types are created
-        String originalTenant = tenantService.getCurrentTenantId();
-        try {
-            tenantService.setCurrentTenant(SYSTEM_TENANT);
-            // Remove from value type cache
-            Map<String, ValueType> systemCache = valueTypeByTenantId.get(SYSTEM_TENANT);
-            if (systemCache != null) {
-                systemCache.remove(valueType.getId());
-            }
-
-            // Remove from tag cache
-            Set<String> tags = valueType.getTags();
-            if (tags != null) {
-                Map<String, Set<ValueType>> systemTagCache = valueTypeByTagByTenantId.get(SYSTEM_TENANT);
-                if (systemTagCache != null) {
-                    tags.forEach(tag -> {
-                        Set<ValueType> valueTypes = systemTagCache.get(tag);
-                        if (valueTypes != null) {
-                            synchronized(valueTypes) {
-                                valueTypes.remove(valueType);
-                                if (valueTypes.isEmpty()) {
-                                    systemTagCache.remove(tag);
-                                }
-                            }
-                        }
-                    });
-                }
-            }
-        } finally {
-            tenantService.setCurrentTenant(originalTenant);
-        }
-    }
-
-    private void removePropertyMergeStrategyFromAllTenants(PropertyMergeStrategyType strategyType) {
-        if (strategyType == null || strategyType.getId() == null) {
-            return;
-        }
-        // Only remove from system tenant since that's where bundle types are created
-        Map<String, PropertyMergeStrategyType> systemCache = propertyMergeStrategyTypeByTenantId.get(SYSTEM_TENANT);
-        if (systemCache != null) {
-            systemCache.remove(strategyType.getId());
-        }
-    }
-
-    private void removeSystemTenantTypes() {
-        // Remove condition types
-        conditionTypeByTenantId.values().forEach(cache -> {
-            new ArrayList<>(cache.values()).stream()
-                .filter(type -> type != null && SYSTEM_TENANT.equals(type.getTenantId()))
-                .forEach(type -> {
-                    cache.remove(type.getItemId());
-                    persistenceService.remove(type.getItemId(), ConditionType.class);
-                });
-        });
-
-        // Remove action types
-        actionTypeByTenantId.values().forEach(cache -> {
-            new ArrayList<>(cache.values()).stream()
-                .filter(type -> type != null && SYSTEM_TENANT.equals(type.getTenantId()))
-                .forEach(type -> {
-                    cache.remove(type.getItemId());
-                    persistenceService.remove(type.getItemId(), ActionType.class);
-                });
-        });
-    }
-
+    @Override
     public void preDestroy() {
+        super.preDestroy();
         isShutdown = true;
         if (reloadTaskFuture != null) {
-            reloadTaskFuture.cancel(false);
-            reloadTaskFuture = null;
+            reloadTaskFuture.cancel(true);
         }
         if (bundleContext != null) {
             bundleContext.removeBundleListener(this);
@@ -468,10 +300,17 @@ public class DefinitionsServiceImpl extends AbstractTenantAwareService implement
                 T type = CustomObjectMapper.getObjectMapper().readValue(bis, typeClass);
                 if (type != null) {
                     try {
-                        typeProcessor.accept(type);
-                        LOGGER.info("Predefined {} registered", typeClass.getSimpleName());
+                        // Ensure type processing happens in system context
+                        contextManager.executeAsSystem(() -> {
+                            try {
+                                typeProcessor.accept(type);
+                                LOGGER.info("Predefined {} registered", typeClass.getSimpleName());
+                            } catch (Exception e) {
+                                LOGGER.error("Error processing {} definition {}", typeClass.getSimpleName(), entryURL, e);
+                            }
+                        });
                     } catch (Exception e) {
-                        LOGGER.error("Error processing {} definition {}", typeClass.getSimpleName(), entryURL, e);
+                        LOGGER.error("Error in system context execution for {} definition {}", typeClass.getSimpleName(), entryURL, e);
                     }
                 }
             } catch (IOException e) {
@@ -525,278 +364,166 @@ public class DefinitionsServiceImpl extends AbstractTenantAwareService implement
                 List<PluginType> bundlePluginTypes = pluginTypes.computeIfAbsent(
                     bundleContext.getBundle().getBundleId(), k -> new CopyOnWriteArrayList<>());
                 bundlePluginTypes.add(type);
-                getPropertyMergeStrategyTypeCache(SYSTEM_TENANT).put(type.getId(), type);
+                cacheService.put(PropertyMergeStrategyType.class.getSimpleName(), type.getId(), SYSTEM_TENANT, type);
             }
         });
     }
 
+    @Override
     public Map<Long, List<PluginType>> getTypesByPlugin() {
         return pluginTypes;
     }
 
+    @Override
     public Collection<ConditionType> getAllConditionTypes() {
-        Collection<ConditionType> all = persistenceService.getAllItems(ConditionType.class);
-        for (ConditionType type : all) {
-            if (type != null && type.getParentCondition() != null) {
-                ParserHelper.resolveConditionType(this, type.getParentCondition(), "condition type " + type.getItemId());
-            }
-        }
-        return all;
+        return new ArrayList<>(cacheService.getTenantCache(contextManager.getCurrentContext().getTenantId(), ConditionType.class).values());
     }
 
+    @Override
     public Set<ConditionType> getConditionTypesByTag(String tag) {
-        return getConditionTypesBy("metadata.tags", tag);
+        return cacheService.getValuesByPredicateWithInheritance(
+            contextManager.getCurrentContext().getTenantId(),
+            ConditionType.class,
+            conditionType -> conditionType.getMetadata() != null && conditionType.getMetadata().getTags().contains(tag)
+        );
     }
 
+    @Override
     public Set<ConditionType> getConditionTypesBySystemTag(String tag) {
-        return getConditionTypesBy("metadata.systemTags", tag);
+        return cacheService.getValuesByPredicateWithInheritance(
+            contextManager.getCurrentContext().getTenantId(),
+            ConditionType.class,
+            conditionType -> conditionType.getMetadata() != null && conditionType.getMetadata().getSystemTags().contains(tag)
+        );
     }
 
-    private Set<ConditionType> getConditionTypesBy(String fieldName, String fieldValue) {
-        Set<ConditionType> conditionTypes = new LinkedHashSet<ConditionType>();
-        String currentTenant = tenantService.getCurrentTenantIdWithDefault();
-
-        // Get types from current tenant
-        List<ConditionType> directConditionTypes = persistenceService.query(fieldName, fieldValue, null, ConditionType.class);
-        Map<String, ConditionType> tenantSpecificTypes = new HashMap<>();
-        for (ConditionType type : directConditionTypes) {
-            if (type.getTenantId() != null && type.getTenantId().equals(currentTenant)) {
-                if (type.getParentCondition() != null) {
-                    ParserHelper.resolveConditionType(this, type.getParentCondition(), "condition type " + type.getItemId());
-                }
-                tenantSpecificTypes.put(type.getItemId(), type);
-            }
-        }
-
-        // If not in system tenant, also get inherited types from system tenant
-        if (!SYSTEM_TENANT.equals(currentTenant)) {
-            List<ConditionType> systemConditionTypes = persistenceService.query(fieldName, fieldValue, null, ConditionType.class);
-            for (ConditionType type : systemConditionTypes) {
-                if (type.getTenantId() != null && type.getTenantId().equals(SYSTEM_TENANT)) {
-                    // Only add system type if no tenant-specific type exists with the same ID
-                    if (!tenantSpecificTypes.containsKey(type.getItemId())) {
-                        if (type.getParentCondition() != null) {
-                            ParserHelper.resolveConditionType(this, type.getParentCondition(), "condition type " + type.getItemId());
-                        }
-                        tenantSpecificTypes.put(type.getItemId(), type);
-                    }
-                }
-            }
-        }
-
-        return new LinkedHashSet<>(tenantSpecificTypes.values());
-    }
-
+    @Override
     public ConditionType getConditionType(String id) {
-        if (id == null) {
-            return null;
-        }
-        String currentTenant = tenantService.getCurrentTenantIdWithDefault();
-
-        ConditionType type = getConditionTypeCache(currentTenant).get(id);
-        if (type == null || type.getVersion() == null) {
-            type = loadWithInheritance(id, ConditionType.class);
-            if (type != null) {
-                getConditionTypeCache(type.getTenantId()).put(id, type);
-            }
-        }
-        if (type != null && type.getParentCondition() != null) {
-            String typeId = type.getItemId();
-            if (typeId != null) {
-                ParserHelper.resolveConditionType(this, type.getParentCondition(),
-                    "condition type " + typeId);
-            } else {
-                LOGGER.warn("Found condition type with null itemId");
-            }
-        }
-        return type;
+        return cacheService.getWithInheritance(id, contextManager.getCurrentContext().getTenantId(), ConditionType.class);
     }
 
-    public void removeConditionType(String conditionTypeId) {
-        String currentTenant = tenantService.getCurrentTenantIdWithDefault();
-
-        getConditionTypeCache(currentTenant).remove(conditionTypeId);
-        persistenceService.remove(conditionTypeId, ConditionType.class);
-    }
-
+    @Override
     public void setConditionType(ConditionType conditionType) {
-        if (conditionType == null) {
-            LOGGER.warn("Attempt to set null condition type");
+        if (conditionType.getMetadata().getId() == null) {
             return;
         }
 
-        String tenantId = tenantService.getCurrentTenantIdWithDefault();
-
-        if (conditionType.getTenantId() == null) {
-            conditionType.setTenantId(tenantId);
-        }
-
-        if (conditionType.getMetadata() == null) {
-            LOGGER.warn("Condition type has null metadata");
-            return;
-        }
-
-        String metadataId = conditionType.getMetadata().getId();
-        if (metadataId == null) {
-            LOGGER.warn("Condition type has null metadata ID");
-            return;
-        }
-
-        try {
-            saveWithTenant(conditionType);
-            getConditionTypeCache(tenantId).put(metadataId, conditionType);
-        } catch (Exception e) {
-            LOGGER.error("Error setting condition type: {}", metadataId, e);
-        }
+        String currentTenant = contextManager.getCurrentContext().getTenantId();
+        persistenceService.save(conditionType);
+        cacheService.put(ConditionType.ITEM_TYPE, conditionType.getItemId(), currentTenant, conditionType);
     }
 
+    @Override
     public Collection<ActionType> getAllActionTypes() {
-        return persistenceService.getAllItems(ActionType.class);
+        return new ArrayList<>(cacheService.getTenantCache(contextManager.getCurrentContext().getTenantId(), ActionType.class).values());
     }
 
+    @Override
     public Set<ActionType> getActionTypeByTag(String tag) {
-        return getActionTypesBy("metadata.tags", tag);
+        return cacheService.getValuesByPredicateWithInheritance(
+            contextManager.getCurrentContext().getTenantId(),
+            ActionType.class,
+            actionType -> actionType.getMetadata() != null && actionType.getMetadata().getTags().contains(tag)
+        );
     }
 
+    @Override
     public Set<ActionType> getActionTypeBySystemTag(String tag) {
-        return getActionTypesBy("metadata.systemTags", tag);
+        return cacheService.getValuesByPredicateWithInheritance(
+            contextManager.getCurrentContext().getTenantId(),
+            ActionType.class,
+            actionType -> actionType.getMetadata() != null && actionType.getMetadata().getSystemTags().contains(tag)
+        );
     }
 
-    private Set<ActionType> getActionTypesBy(String fieldName, String fieldValue) {
-        Map<String, ActionType> actionTypes = new LinkedHashMap<>();
-        String currentTenant = tenantService.getCurrentTenantIdWithDefault();
-
-        // Get types from current tenant
-        List<ActionType> directActionTypes = persistenceService.query(fieldName, fieldValue, null, ActionType.class);
-        for (ActionType type : directActionTypes) {
-            if (type.getTenantId() != null && type.getTenantId().equals(currentTenant)) {
-                actionTypes.put(type.getItemId(), type);
-            }
-        }
-
-        // If not in system tenant, also get inherited types from system tenant
-        if (!SYSTEM_TENANT.equals(currentTenant)) {
-            List<ActionType> systemActionTypes = persistenceService.query(fieldName, fieldValue, null, ActionType.class);
-            for (ActionType type : systemActionTypes) {
-                if (type.getTenantId() != null && type.getTenantId().equals(SYSTEM_TENANT)) {
-                    // Only add system type if no tenant-specific type exists with the same ID
-                    if (!actionTypes.containsKey(type.getItemId())) {
-                        actionTypes.put(type.getItemId(), type);
-                    }
-                }
-            }
-        }
-
-        return new LinkedHashSet<>(actionTypes.values());
-    }
-
+    @Override
     public ActionType getActionType(String id) {
-        if (id == null) {
-            return null;
-        }
-        String currentTenant = tenantService.getCurrentTenantIdWithDefault();
-
-        ActionType type = getActionTypeCache(currentTenant).get(id);
-        if (type == null || type.getVersion() == null) {
-            type = loadWithInheritance(id, ActionType.class);
-            if (type != null) {
-                getActionTypeCache(type.getTenantId()).put(id, type);
-            }
-        }
-        return type;
+        return cacheService.getWithInheritance(id, contextManager.getCurrentContext().getTenantId(), ActionType.class);
     }
 
-    public void removeActionType(String actionTypeId) {
-        String currentTenant = tenantService.getCurrentTenantIdWithDefault();
-
-        getActionTypeCache(currentTenant).remove(actionTypeId);
-        persistenceService.remove(actionTypeId, ActionType.class);
-    }
-
+    @Override
     public void setActionType(ActionType actionType) {
-        if (actionType == null) {
-            LOGGER.warn("Attempt to set null action type");
+        if (actionType.getMetadata().getId() == null) {
             return;
         }
 
-        String tenantId = tenantService.getCurrentTenantIdWithDefault();
-
-        if (tenantId == null) {
-            actionType.setTenantId(tenantId);
-            return;
-        }
-
-        if (actionType.getMetadata() == null) {
-            LOGGER.warn("Action type has null metadata");
-            return;
-        }
-
-        String metadataId = actionType.getMetadata().getId();
-        if (metadataId == null) {
-            LOGGER.warn("Action type has null metadata ID");
-            return;
-        }
-
-        try {
-            saveWithTenant(actionType);
-            getActionTypeCache(tenantId).put(metadataId, actionType);
-        } catch (Exception e) {
-            LOGGER.error("Error setting action type: {}", metadataId, e);
-        }
+        String currentTenant = contextManager.getCurrentContext().getTenantId();
+        persistenceService.save(actionType);
+        cacheService.put(ActionType.ITEM_TYPE, actionType.getItemId(), currentTenant, actionType);
     }
 
+    @Override
+    public void removeActionType(String id) {
+        cacheService.remove(ActionType.ITEM_TYPE, id, contextManager.getCurrentContext().getTenantId(), ActionType.class);
+        persistenceService.remove(id, ActionType.class);
+    }
+
+    @Override
     public Collection<ValueType> getAllValueTypes() {
-        // Use ConcurrentHashMap for thread safety
-        Map<String, ValueType> allValueTypes = new ConcurrentHashMap<>();
-        for (Map.Entry<String, Map<String, ValueType>> entry : valueTypeByTenantId.entrySet()) {
-            if (entry.getValue() != null) {
-                allValueTypes.putAll(new HashMap<>(entry.getValue())); // Create defensive copy
-            }
-        }
-        return Collections.unmodifiableCollection(allValueTypes.values());
+        return new ArrayList<>(cacheService.getTenantCache(contextManager.getCurrentContext().getTenantId(), ValueType.class).values());
     }
 
+    @Override
     public Set<ValueType> getValueTypeByTag(String tag) {
-        if (tag == null) {
-            return Collections.emptySet();
-        }
-
-        Map<String, ValueType> valueTypes = new LinkedHashMap<>();
-        String currentTenant = tenantService.getCurrentTenantIdWithDefault();
-
-        // Get types from current tenant's cache
-        Map<String, Set<ValueType>> currentTenantTagCache = getValueTypeByTagCache(currentTenant);
-        Set<ValueType> currentTenantTypes = currentTenantTagCache.get(tag);
-        if (currentTenantTypes != null) {
-            for (ValueType type : currentTenantTypes) {
-                valueTypes.put(type.getId(), type);
-            }
-        }
-
-        // If not in system tenant, also get inherited types from system tenant's cache
-        if (!SYSTEM_TENANT.equals(currentTenant)) {
-            Map<String, Set<ValueType>> systemTenantTagCache = getValueTypeByTagCache(SYSTEM_TENANT);
-            Set<ValueType> systemTenantTypes = systemTenantTagCache.get(tag);
-            if (systemTenantTypes != null) {
-                for (ValueType type : systemTenantTypes) {
-                    // Only add system type if no tenant-specific type exists with the same ID
-                    if (!valueTypes.containsKey(type.getId())) {
-                        valueTypes.put(type.getId(), type);
-                    }
-                }
-            }
-        }
-
-        return new LinkedHashSet<>(valueTypes.values());
+        return cacheService.getValuesByPredicateWithInheritance(
+            contextManager.getCurrentContext().getTenantId(),
+            ValueType.class,
+            valueType -> valueType.getTags() != null && valueType.getTags().contains(tag)
+        );
     }
 
+    @Override
     public ValueType getValueType(String id) {
-        if (id == null) {
-            return null;
-        }
-        String currentTenant = tenantService.getCurrentTenantIdWithDefault();
+        return cacheService.getWithInheritance(id, contextManager.getCurrentContext().getTenantId(), ValueType.class);
+    }
 
-        return getFromCacheWithInheritance(id, currentTenant, valueTypeByTenantId);
+    @Override
+    public void setValueType(ValueType valueType) {
+        if (valueType.getId() == null) {
+            return;
+        }
+        cacheService.put(ValueType.class.getSimpleName(), valueType.getId(), contextManager.getCurrentContext().getTenantId(), valueType);
+    }
+
+    @Override
+    public void removeValueType(String id) {
+        if (id == null) {
+            return;
+        }
+        ValueType valueType = getValueType(id);
+        if (valueType != null) {
+            cacheService.remove(ValueType.class.getSimpleName(), id, contextManager.getCurrentContext().getTenantId(), ValueType.class);
+        }
+    }
+
+    @Override
+    public PropertyMergeStrategyType getPropertyMergeStrategyType(String id) {
+        return cacheService.getWithInheritance(id, contextManager.getCurrentContext().getTenantId(), PropertyMergeStrategyType.class);
+    }
+
+    @Override
+    public void setPropertyMergeStrategyType(PropertyMergeStrategyType propertyMergeStrategyType) {
+        if (propertyMergeStrategyType.getId() == null) {
+            return;
+        }
+
+        cacheService.put(PropertyMergeStrategyType.class.getSimpleName(), propertyMergeStrategyType.getId(), contextManager.getCurrentContext().getTenantId(), propertyMergeStrategyType);
+    }
+
+    @Override
+    public void removePropertyMergeStrategyType(String id) {
+        if (id == null) {
+            return;
+        }
+        PropertyMergeStrategyType strategyType = getPropertyMergeStrategyType(id);
+        if (strategyType != null) {
+            cacheService.remove(PropertyMergeStrategyType.class.getSimpleName(), id, contextManager.getCurrentContext().getTenantId(), PropertyMergeStrategyType.class);
+        }
+    }
+
+    @Override
+    public Collection<PropertyMergeStrategyType> getAllPropertyMergeStrategyTypes() {
+        return new ArrayList<>(cacheService.getTenantCache(contextManager.getCurrentContext().getTenantId(), PropertyMergeStrategyType.class).values());
     }
 
     public void bundleChanged(BundleEvent event) {
@@ -810,67 +537,87 @@ public class DefinitionsServiceImpl extends AbstractTenantAwareService implement
             return;
         }
 
-        try {
-            BundleContext context = bundle.getBundleContext();
-            if (context == null) {
-                LOGGER.warn("Bundle {} has no context", bundle.getBundleId());
-                return;
-            }
+        contextManager.executeAsSystem(() -> {
+            try {
+                BundleContext context = bundle.getBundleContext();
+                if (context == null) {
+                    LOGGER.warn("Bundle {} has no context", bundle.getBundleId());
+                    return;
+                }
 
-            switch (event.getType()) {
-                case BundleEvent.STARTED:
-                    processBundleStartup(context);
-                    break;
-                case BundleEvent.STOPPING:
-                    processBundleStop(context);
-                    break;
-                default:
-                    // Ignore other event types
+                switch (event.getType()) {
+                    case BundleEvent.STARTED:
+                        processBundleStartup(context);
+                        break;
+                    case BundleEvent.STOPPING:
+                        processBundleStop(context);
+                        break;
+                    default:
+                        // Ignore other event types
+                }
+            } catch (Exception e) {
+                LOGGER.error("Error handling bundle event for bundle: {}", bundle.getBundleId(), e);
             }
-        } catch (Exception e) {
-            LOGGER.error("Error handling bundle event for bundle: {}", bundle.getBundleId(), e);
-        }
+        });
     }
 
-    public PropertyMergeStrategyType getPropertyMergeStrategyType(String id) {
-        if (id == null) {
-            return null;
-        }
-        String currentTenant = tenantService.getCurrentTenantId();
-        if (currentTenant == null) {
-            currentTenant = SYSTEM_TENANT;
-        }
-
-        PropertyMergeStrategyType type = getPropertyMergeStrategyTypeCache(currentTenant).get(id);
-        if (type == null) {
-            type = getPropertyMergeStrategyTypeCache(SYSTEM_TENANT).get(id);
-        }
-        return type;
-    }
-
-    public Set<Condition> extractConditionsByType(Condition rootCondition, String typeId) {
+    @Override
+    public List<Condition> extractConditionsByType(Condition rootCondition, String typeId) {
         if (rootCondition == null || typeId == null) {
-            return Collections.emptySet();
+            return Collections.emptyList();
         }
 
-        Set<Condition> result = new HashSet<>();
-        extractConditionsByTypeRecursive(rootCondition, typeId, result, 0);
-        return Collections.unmodifiableSet(result);
+        List<Condition> result = new ArrayList<>();
+        extractConditionsRecursively(rootCondition, typeId, result, 0);
+        return result;
     }
 
-    private void extractConditionsByTypeRecursive(Condition condition, String typeId, Set<Condition> accumulator, int depth) {
+    private void extractConditionsRecursively(Condition condition, String typeId, List<Condition> result, int depth) {
         if (condition == null || depth > MAX_RECURSIVE_CONDITIONS) {
             return;
         }
 
-        if (condition.containsParameter(SUB_CONDITIONS_PARAM)) {
-            List<Condition> subConditions = getSubConditions(condition);
-            for (Condition subCondition : subConditions) {
-                extractConditionsByTypeRecursive(subCondition, typeId, accumulator, depth + 1);
-            }
-        } else if (typeId != null && typeId.equals(condition.getConditionTypeId())) {
-            accumulator.add(condition);
+        // Check if current condition matches the type
+        if (typeId.equals(condition.getConditionTypeId())) {
+            result.add(condition);
         }
+
+        // Process sub-conditions if they exist
+        List<Condition> subConditions = getSubConditions(condition);
+        if (subConditions != null) {
+            for (Condition subCondition : subConditions) {
+                extractConditionsRecursively(subCondition, typeId, result, depth + 1);
+            }
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<Condition> getSubConditions(Condition condition) {
+        if (condition == null) {
+            return Collections.emptyList();
+        }
+
+        Object subConditionsObj = condition.getParameter(SUB_CONDITIONS_PARAM);
+        if (subConditionsObj == null) {
+            return Collections.emptyList();
+        }
+
+        if (!(subConditionsObj instanceof List<?>)) {
+            LOGGER.warn("Invalid sub-conditions type: expected List but got {}",
+                subConditionsObj.getClass().getName());
+            return Collections.emptyList();
+        }
+
+        List<?> subConditions = (List<?>) subConditionsObj;
+        for (Object obj : subConditions) {
+            if (!(obj instanceof Condition)) {
+                LOGGER.warn("Invalid condition type in list: expected Condition but got {}",
+                    obj != null ? obj.getClass().getName() : "null");
+                return Collections.emptyList();
+            }
+        }
+
+        return (List<Condition>) subConditions;
     }
 
     /**
@@ -936,27 +683,27 @@ public class DefinitionsServiceImpl extends AbstractTenantAwareService implement
                 } else if (matchingConditions.equals(subConditions)) {
                     return rootCondition;
                 } else if (BOOLEAN_CONDITION_TYPE.equals(rootCondition.getConditionTypeId()) &&
-                          AND_OPERATOR.equals(rootCondition.getParameter(OPERATOR_PARAM))) {
+                        AND_OPERATOR.equals(rootCondition.getParameter(OPERATOR_PARAM))) {
                     return createBooleanCondition(matchingConditions);
                 }
                 throw new IllegalArgumentException(String.format(
-                    "Cannot extract condition with system tag: %s from condition: %s",
-                    systemTag, rootCondition.getConditionTypeId()));
+                        "Cannot extract condition with system tag: %s from condition: %s",
+                        systemTag, rootCondition.getConditionTypeId()));
             }
 
             return isConditionMatchingSystemTag(rootCondition, systemTag) ? rootCondition : null;
         } catch (Exception e) {
             LOGGER.error("Error extracting condition by system tag: {} from condition: {}",
-                systemTag, rootCondition.getConditionTypeId(), e);
+                    systemTag, rootCondition.getConditionTypeId(), e);
             return null;
         }
     }
 
     private boolean isConditionMatchingSystemTag(Condition condition, String systemTag) {
         return condition.getConditionType() != null &&
-               condition.getConditionType().getMetadata() != null &&
-               condition.getConditionType().getMetadata().getSystemTags() != null &&
-               condition.getConditionType().getMetadata().getSystemTags().contains(systemTag);
+                condition.getConditionType().getMetadata() != null &&
+                condition.getConditionType().getMetadata().getSystemTags() != null &&
+                condition.getConditionType().getMetadata().getSystemTags().contains(systemTag);
     }
 
     private Condition createBooleanCondition(List<Condition> conditions) {
@@ -964,12 +711,12 @@ public class DefinitionsServiceImpl extends AbstractTenantAwareService implement
             return null;
         }
         if (conditions.size() == 1) {
-            return conditions.get(0);
+            return conditions.get(0);  // Return single condition directly
         }
         Condition res = new Condition();
         res.setConditionType(getConditionType(BOOLEAN_CONDITION_TYPE));
         res.setParameter(OPERATOR_PARAM, AND_OPERATOR);
-        res.setParameter(SUB_CONDITIONS_PARAM, new ArrayList<>(conditions)); // Defensive copy
+        res.setParameter(SUB_CONDITIONS_PARAM, new ArrayList<>(conditions));
         return res;
     }
 
@@ -979,118 +726,9 @@ public class DefinitionsServiceImpl extends AbstractTenantAwareService implement
     }
 
     @Override
-    public void refresh() {
-        if (isShutdown) {
-            LOGGER.warn("Attempt to refresh after shutdown was prevented");
-            return;
-        }
-
-        Thread currentThread = Thread.currentThread();
-        String originalName = currentThread.getName();
-        try {
-            currentThread.setName("ManualRefresh-" + System.currentTimeMillis());
-            reloadTypes(true);
-        } catch (Exception e) {
-            LOGGER.error("Error refreshing definitions", e);
-        } finally {
-            currentThread.setName(originalName);
-        }
-    }
-
-    @Override
-    public ConditionBuilder getConditionBuilder() {
-        return conditionBuilder;
-    }
-
-    public void setValueType(ValueType valueType) {
-        if (valueType == null) {
-            LOGGER.warn("Attempt to set null value type");
-            return;
-        }
-
-        String valueTypeId = valueType.getId();
-        if (valueTypeId == null) {
-            LOGGER.warn("Value type has null ID");
-            return;
-        }
-
-        Set<String> tags = valueType.getTags();
-        // Create defensive copy of tags if present
-        Set<String> tagsCopy = tags != null ? new HashSet<>(tags) : null;
-        valueType.setTags(tagsCopy);
-
-        try {
-            String currentTenant = tenantService.getCurrentTenantIdWithDefault();
-            Map<String, ValueType> cache = getValueTypeCache(currentTenant);
-            cache.put(valueTypeId, valueType);
-
-            // Update tag cache
-            if (tagsCopy != null) {
-                Map<String, Set<ValueType>> tagCache = getValueTypeByTagCache(currentTenant);
-                for (String tag : tagsCopy) {
-                    updateTagCache(tag, valueType, tagCache, false);
-                }
-            }
-        } catch (Exception e) {
-            LOGGER.error("Error setting value type: {}", valueTypeId, e);
-        }
-    }
-
-    public void removeValueType(String valueTypeId) {
-        if (valueTypeId == null) {
-            return;
-        }
-
-        try {
-            String currentTenant = tenantService.getCurrentTenantIdWithDefault();
-            ValueType valueType = getValueTypeCache(currentTenant).remove(valueTypeId);
-            if (valueType != null) {
-                // Clean up tag cache
-                Set<String> tags = valueType.getTags();
-                if (tags != null) {
-                    Map<String, Set<ValueType>> tagCache = getValueTypeByTagCache(currentTenant);
-                    for (String tag : tags) {
-                        updateTagCache(tag, valueType, tagCache, true);
-                    }
-                }
-            }
-        } catch (Exception e) {
-            LOGGER.error("Error removing value type: {}", valueTypeId, e);
-        }
-    }
-
-    public void setPropertyMergeStrategyType(PropertyMergeStrategyType propertyMergeStrategyType) {
-        if (propertyMergeStrategyType == null) {
-            LOGGER.warn("Attempt to set null property merge strategy type");
-            return;
-        }
-
-        String id = propertyMergeStrategyType.getId();
-        if (id == null) {
-            LOGGER.warn("Property merge strategy type has null ID");
-            return;
-        }
-
-        try {
-            getPropertyMergeStrategyTypeCache(SYSTEM_TENANT).put(id, propertyMergeStrategyType);
-            LOGGER.debug("Property merge strategy type {} set successfully", id);
-        } catch (Exception e) {
-            LOGGER.error("Error setting property merge strategy type: {}", id, e);
-        }
-    }
-
-    public void removePropertyMergeStrategyType(String propertyMergeStrategyTypeId) {
-        if (propertyMergeStrategyTypeId == null) {
-            LOGGER.warn("Attempt to remove null property merge strategy type ID");
-            return;
-        }
-
-        try {
-            getPropertyMergeStrategyTypeCache(SYSTEM_TENANT).remove(propertyMergeStrategyTypeId);
-            LOGGER.debug("Property merge strategy type {} removed successfully", propertyMergeStrategyTypeId);
-        } catch (Exception e) {
-            LOGGER.error("Error removing property merge strategy type: {}", propertyMergeStrategyTypeId, e);
-        }
+    public void removeConditionType(String id) {
+        cacheService.remove(ConditionType.ITEM_TYPE, id, contextManager.getCurrentContext().getTenantId(), ConditionType.class);
+        persistenceService.remove(id, ConditionType.class);
     }
 
     @Override
@@ -1101,97 +739,100 @@ public class DefinitionsServiceImpl extends AbstractTenantAwareService implement
         }
 
         try {
-            synchronized(cacheLock) {
-                // Remove from cache
-                Map<String, Map<?, ?>> removedCaches = new HashMap<>();
-                removedCaches.put("conditions", conditionTypeByTenantId.remove(tenantId));
-                removedCaches.put("actions", actionTypeByTenantId.remove(tenantId));
-                removedCaches.put("values", valueTypeByTenantId.remove(tenantId));
-                removedCaches.put("valueTags", valueTypeByTagByTenantId.remove(tenantId));
-                removedCaches.put("strategies", propertyMergeStrategyTypeByTenantId.remove(tenantId));
+            contextManager.executeAsSystem(() -> {
+                try {
+                    // Clear all caches for this tenant
+                    cacheService.clear(tenantId);
 
-                if (LOGGER.isDebugEnabled()) {
-                    removedCaches.forEach((type, cache) ->
-                        LOGGER.debug("Removed {} cache for tenant {}: {} entries",
-                            type, tenantId, cache != null ? ((Map<?,?>)cache).size() : 0));
+                    // Create a basic property condition type for persistence cleanup
+                    ConditionType propertyConditionType = new ConditionType();
+                    propertyConditionType.setItemId("propertyCondition");
+                    Metadata metadata = new Metadata();
+                    metadata.setId("propertyCondition");
+                    propertyConditionType.setMetadata(metadata);
+                    propertyConditionType.setConditionEvaluator("propertyConditionEvaluator");
+                    propertyConditionType.setQueryBuilder("propertyConditionESQueryBuilder");
+
+                    // Create tenant condition
+                    Condition tenantCondition = new Condition(propertyConditionType);
+                    tenantCondition.setParameter("propertyName", "tenantId");
+                    tenantCondition.setParameter("comparisonOperator", "equals");
+                    tenantCondition.setParameter("propertyValue", tenantId);
+
+                    // Remove tenant-specific items from persistence service
+                    persistenceService.removeByQuery(tenantCondition, ConditionType.class);
+                    persistenceService.removeByQuery(tenantCondition, ActionType.class);
+
+                    LOGGER.info("Successfully removed all caches and persistent data for tenant: {}", tenantId);
+                } catch (Exception e) {
+                    LOGGER.error("Error removing data for tenant: {}", tenantId, e);
                 }
-
-                // Create a basic property condition type
-                ConditionType propertyConditionType = new ConditionType();
-                propertyConditionType.setItemId("propertyCondition");
-                Metadata metadata = new Metadata();
-                metadata.setId("propertyCondition");
-                propertyConditionType.setMetadata(metadata);
-                propertyConditionType.setConditionEvaluator("propertyConditionEvaluator");
-                propertyConditionType.setQueryBuilder("propertyConditionESQueryBuilder");
-
-                // Create tenant condition
-                Condition tenantCondition = new Condition(propertyConditionType);
-                tenantCondition.setParameter("propertyName", "tenantId");
-                tenantCondition.setParameter("comparisonOperator", "equals");
-                tenantCondition.setParameter("propertyValue", tenantId);
-
-                // Remove tenant-specific items from persistence service
-                persistenceService.removeByQuery(tenantCondition, ConditionType.class);
-                persistenceService.removeByQuery(tenantCondition, ActionType.class);
-            }
-            LOGGER.info("Successfully removed all caches and persistent data for tenant: {}", tenantId);
+            });
         } catch (Exception e) {
-            LOGGER.error("Error removing data for tenant: {}", tenantId, e);
+            LOGGER.error("Error executing in system context while removing tenant: {}", tenantId, e);
         }
     }
 
-    @SuppressWarnings("unchecked")
-    private List<Condition> getSubConditions(Condition condition) {
-        if (condition == null) {
-            return Collections.emptyList();
-        }
+    @Override
+    protected Set<CacheableTypeConfig<?>> getTypeConfigs() {
+        Set<CacheableTypeConfig<?>> configs = new HashSet<>();
+        CacheableTypeConfig<ActionType> actionTypeConfig = new CacheableTypeConfig<>(
+            ActionType.class,
+            ActionType.ITEM_TYPE,
+            "actions",
+            true,
+            true,
+            definitionsRefreshInterval,
+            item -> item.getItemId()
+        );
+        configs.add(actionTypeConfig);
 
-        Object subConditionsObj = condition.getParameter(SUB_CONDITIONS_PARAM);
-        if (subConditionsObj == null) {
-            return Collections.emptyList();
-        }
+        CacheableTypeConfig<ValueType> valueTypeConfig = new CacheableTypeConfig<>(
+            ValueType.class,
+            ValueType.class.getSimpleName(),
+            "values",
+            true,
+            true,
+            definitionsRefreshInterval,
+            item -> item.getId()
+        );
+        configs.add(valueTypeConfig);
 
-        if (!(subConditionsObj instanceof List<?>)) {
-            LOGGER.warn("Invalid sub-conditions type: expected List but got {}",
-                subConditionsObj.getClass().getName());
-            return Collections.emptyList();
-        }
+        CacheableTypeConfig<PropertyMergeStrategyType> propertyMergeStrategyTypeConfig = new CacheableTypeConfig<>(
+            PropertyMergeStrategyType.class,
+            PropertyMergeStrategyType.class.getSimpleName(),
+            "properties",
+            true,
+            true,
+            definitionsRefreshInterval,
+            item -> item.getId()
+        );
+        configs.add(propertyMergeStrategyTypeConfig);
 
-        List<?> subConditions = (List<?>) subConditionsObj;
-        for (Object obj : subConditions) {
-            if (!(obj instanceof Condition)) {
-                LOGGER.warn("Invalid condition type in list: expected Condition but got {}",
-                    obj != null ? obj.getClass().getName() : "null");
-                return Collections.emptyList();
-            }
-        }
+        CacheableTypeConfig<ConditionType> conditionTypeConfig = new CacheableTypeConfig<>(
+            ConditionType.class,
+            ConditionType.ITEM_TYPE,
+            "conditions",
+            true,
+            true,
+            definitionsRefreshInterval,
+            item -> item.getItemId()
+        );
+        configs.add(conditionTypeConfig);
 
-        return (List<Condition>) subConditions;
+        return configs;
     }
 
-    private void updateTagCache(String tag, ValueType valueType, Map<String, Set<ValueType>> tagCache, boolean isRemove) {
-        if (tag == null || valueType == null || tagCache == null) {
-            return;
+    @Override
+    public void refresh() {
+        for (CacheableTypeConfig<?> config : getTypeConfigs()) {
+            refreshTypeCache(config);
         }
+    }
 
-        Set<ValueType> valueTypes = tagCache.computeIfAbsent(tag,
-            k -> Collections.synchronizedSet(new LinkedHashSet<>()));
-
-        synchronized(valueTypes) {
-            try {
-                if (isRemove) {
-                    valueTypes.remove(valueType);
-                    if (valueTypes.isEmpty()) {
-                        tagCache.remove(tag);
-                    }
-                } else {
-                    valueTypes.add(valueType);
-                }
-            } catch (Exception e) {
-                LOGGER.error("Error updating tag cache for tag: {} and value type: {}", tag, valueType.getId(), e);
-            }
-        }
+    @Override
+    public ConditionBuilder getConditionBuilder() {
+        return conditionBuilder;
     }
 
     private class TypeReloadTask implements Runnable {
@@ -1202,35 +843,27 @@ public class DefinitionsServiceImpl extends AbstractTenantAwareService implement
             try {
                 currentThread.setName("TypeReloadTask-" + System.currentTimeMillis());
                 if (!isShutdown) {
-                    java.util.concurrent.Future<?> timeoutFuture = createTimeoutFuture(currentThread);
+                    java.util.concurrent.Future<?> timeoutFuture = schedulerService.getScheduleExecutorService()
+                        .schedule(() -> {
+                            LOGGER.warn("Type reload task timed out after {} ms", TASK_TIMEOUT_MS);
+                            currentThread.interrupt();
+                        }, TASK_TIMEOUT_MS, TimeUnit.MILLISECONDS);
                     try {
-                        reloadTypes(false);
+                        contextManager.executeAsSystem(() -> reloadTypes(false));
                     } finally {
                         timeoutFuture.cancel(false);
                     }
                 }
             } catch (Exception e) {
-                handleReloadError(e);
+                if (e instanceof InterruptedException || Thread.currentThread().isInterrupted()) {
+                    LOGGER.warn("Type reload task was interrupted");
+                    Thread.currentThread().interrupt();
+                } else {
+                    LOGGER.error("Error in scheduled type reload task", e);
+                }
             } finally {
                 currentThread.setName(originalName);
             }
         }
-
-        private java.util.concurrent.Future<?> createTimeoutFuture(Thread taskThread) {
-            return schedulerService.getScheduleExecutorService().schedule(() -> {
-                LOGGER.warn("Type reload task timed out after {} ms", TASK_TIMEOUT_MS);
-                taskThread.interrupt();
-            }, TASK_TIMEOUT_MS, TimeUnit.MILLISECONDS);
-        }
-
-        private void handleReloadError(Exception e) {
-            if (e instanceof InterruptedException || Thread.currentThread().isInterrupted()) {
-                LOGGER.warn("Type reload task was interrupted");
-                Thread.currentThread().interrupt();
-            } else {
-                LOGGER.error("Error in scheduled type reload task", e);
-            }
-        }
     }
-
 }

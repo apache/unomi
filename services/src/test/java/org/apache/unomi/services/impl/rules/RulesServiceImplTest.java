@@ -29,11 +29,11 @@ import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.api.services.RuleListenerService;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.conditions.ConditionEvaluatorDispatcher;
-import org.apache.unomi.services.impl.InMemoryPersistenceServiceImpl;
-import org.apache.unomi.services.impl.TestActionExecutorDispatcher;
-import org.apache.unomi.services.impl.TestConditionEvaluators;
-import org.apache.unomi.services.impl.TestTenantService;
+import org.apache.unomi.services.TestHelper;
+import org.apache.unomi.services.impl.*;
+import org.apache.unomi.services.impl.cache.MultiTypeCacheServiceImpl;
 import org.apache.unomi.services.impl.definitions.DefinitionsServiceImpl;
+import org.apache.unomi.services.impl.tenants.AuditServiceImpl;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
@@ -55,13 +55,16 @@ public class RulesServiceImplTest {
     private TestTenantService tenantService;
     private PersistenceService persistenceService;
     private DefinitionsServiceImpl definitionsService;
+    private MultiTypeCacheServiceImpl multiTypeCacheService;
+    private ExecutionContextManagerImpl executionContextManager;
+    private KarafSecurityService securityService;
+    private AuditServiceImpl auditService;
 
     @Mock
     private BundleContext bundleContext;
     @Mock
     private EventService eventService;
     private TestActionExecutorDispatcher actionExecutorDispatcher;
-    @Mock
     private org.apache.unomi.api.services.SchedulerService schedulerService;
 
     private static final String TENANT_1 = "tenant1";
@@ -73,24 +76,18 @@ public class RulesServiceImplTest {
 
         MockitoAnnotations.initMocks(this);
         tenantService = new TestTenantService();
+        securityService = TestHelper.createSecurityService();
+        executionContextManager = TestHelper.createExecutionContextManager(securityService);
         // Register condition evaluators and condition types in system tenant.
-        tenantService.setCurrentTenant(SYSTEM_TENANT);
-
-        // Create tenants
-        tenantService.createTenant(SYSTEM_TENANT, Collections.singletonMap("description", "System tenant"));
-        tenantService.createTenant(TENANT_1, Collections.singletonMap("description", "Tenant 1"));
-        tenantService.createTenant(TENANT_2, Collections.singletonMap("description", "Tenant 2"));
+        executionContextManager.executeAsSystem(() -> {
+            // Create tenants
+            tenantService.createTenant(SYSTEM_TENANT, Collections.singletonMap("description", "System tenant"));
+            tenantService.createTenant(TENANT_1, Collections.singletonMap("description", "Tenant 1"));
+            tenantService.createTenant(TENANT_2, Collections.singletonMap("description", "Tenant 2"));
+            return null;
+        });
 
         ConditionEvaluatorDispatcher conditionEvaluatorDispatcher = TestConditionEvaluators.createDispatcher();
-
-        persistenceService = new InMemoryPersistenceServiceImpl(tenantService, conditionEvaluatorDispatcher);
-        definitionsService = new DefinitionsServiceImpl();
-        definitionsService.setPersistenceService(persistenceService);
-        definitionsService.setTenantService(tenantService);
-
-        TestConditionEvaluators.getConditionTypes().forEach((key, value) -> definitionsService.setConditionType(value));
-
-        rulesService = new RulesServiceImpl();
 
         // Mock bundle context
         Bundle bundle = mock(Bundle.class);
@@ -99,11 +96,20 @@ public class RulesServiceImplTest {
         when(bundle.findEntries(eq("META-INF/cxs/rules"), eq("*.json"), eq(true))).thenReturn(null);
         when(bundleContext.getBundles()).thenReturn(new Bundle[0]);
 
-        // Mock scheduler service
-        when(schedulerService.getScheduleExecutorService()).thenReturn(java.util.concurrent.Executors.newSingleThreadScheduledExecutor());
+        // Create scheduler service using TestHelper
+        schedulerService = TestHelper.createSchedulerService(persistenceService, executionContextManager);
+
+        multiTypeCacheService = new MultiTypeCacheServiceImpl();
+
+        persistenceService = new InMemoryPersistenceServiceImpl(executionContextManager, conditionEvaluatorDispatcher);
+        definitionsService = TestHelper.createDefinitionService(persistenceService, bundleContext, schedulerService, multiTypeCacheService, executionContextManager, tenantService);
+
+        TestConditionEvaluators.getConditionTypes().forEach((key, value) -> definitionsService.setConditionType(value));
+
+        rulesService = new RulesServiceImpl();
 
         // Set up action executor dispatcher
-        actionExecutorDispatcher = new TestActionExecutorDispatcher();
+        actionExecutorDispatcher = new TestActionExecutorDispatcher(definitionsService, persistenceService);
         actionExecutorDispatcher.setDefaultReturnValue(EventService.PROFILE_UPDATED);
 
         rulesService.setBundleContext(bundleContext);
@@ -113,15 +119,13 @@ public class RulesServiceImplTest {
         rulesService.setActionExecutorDispatcher(actionExecutorDispatcher);
         rulesService.setTenantService(tenantService);
         rulesService.setSchedulerService(schedulerService);
+        rulesService.setContextManager(executionContextManager);
 
         // Set up condition types
         setupActionTypes();
 
         // Initialize rule caches
         rulesService.postConstruct();
-
-        // Set default tenant
-        tenantService.setCurrentTenant(TENANT_1);
 
     }
 
@@ -140,7 +144,7 @@ public class RulesServiceImplTest {
     private Event createTestEvent() {
         Event event = new Event();
         event.setEventType("test");
-        String currentTenant = tenantService.getCurrentTenantId();
+        String currentTenant = executionContextManager.getCurrentContext().getTenantId();
         Profile profile = new Profile(currentTenant);
         profile.setProperty("testProperty", "testValue"); // Add test property for profile condition
         event.setProfile(profile);
@@ -156,10 +160,12 @@ public class RulesServiceImplTest {
 
     @Test
     public void testGetMatchingRules_NoRules() {
-        tenantService.setCurrentTenant(TENANT_1);
-        Event event = createTestEvent();
-        Set<Rule> matchedRules = rulesService.getMatchingRules(event);
-        assertTrue("Should return empty set when no rules match", matchedRules.isEmpty());
+        executionContextManager.executeAsTenant(TENANT_1, () -> {
+            Event event = createTestEvent();
+            Set<Rule> matchedRules = rulesService.getMatchingRules(event);
+            assertTrue("Should return empty set when no rules match", matchedRules.isEmpty());
+            return null;
+        });
     }
 
     @Test
@@ -182,68 +188,85 @@ public class RulesServiceImplTest {
     @Test
     public void testRuleInheritanceFromSystemTenant() {
         // Create a rule in system tenant
-        tenantService.setCurrentTenant(SYSTEM_TENANT);
-        Rule systemRule = createTestRule();
-        systemRule.setItemId("system-rule");
-        rulesService.setRule(systemRule);
+        executionContextManager.executeAsSystem(() -> {
+            Rule systemRule = createTestRule();
+            systemRule.setItemId("system-rule");
+            rulesService.setRule(systemRule);
+            return null;
+        });
 
         // Create a rule in tenant1
-        tenantService.setCurrentTenant(TENANT_1);
-        Rule tenantRule = createTestRule();
-        tenantRule.setItemId("tenant-rule");
-        rulesService.setRule(tenantRule);
+        executionContextManager.executeAsTenant(TENANT_1, () -> {
+            Rule tenantRule = createTestRule();
+            tenantRule.setItemId("tenant-rule");
+            rulesService.setRule(tenantRule);
 
-        // Test that tenant1 can see both rules
-        Set<Rule> allRules = new HashSet<>(rulesService.getAllRules());
-        assertEquals("Should see both system and tenant rules", 2, allRules.size());
-        assertTrue("Should contain system rule", allRules.stream().anyMatch(r -> r.getItemId().equals("system-rule")));
-        assertTrue("Should contain tenant rule", allRules.stream().anyMatch(r -> r.getItemId().equals("tenant-rule")));
+            // Test that tenant1 can see both rules
+            Set<Rule> allRules = new HashSet<>(rulesService.getAllRules());
+            assertEquals("Should see both system and tenant rules", 2, allRules.size());
+            assertTrue("Should contain system rule", allRules.stream().anyMatch(r -> r.getItemId().equals("system-rule")));
+            assertTrue("Should contain tenant rule", allRules.stream().anyMatch(r -> r.getItemId().equals("tenant-rule")));
+            return null;
+        });
+
 
         // Test that tenant2 can only see system rule
-        tenantService.setCurrentTenant(TENANT_2);
-        allRules = new HashSet<>(rulesService.getAllRules());
-        assertEquals("Should only see system rule", 1, allRules.size());
-        assertTrue("Should contain system rule", allRules.stream().anyMatch(r -> r.getItemId().equals("system-rule")));
+        executionContextManager.executeAsTenant(TENANT_2, () -> {
+            Set<Rule> tenant2Rules = new HashSet<>(rulesService.getAllRules());
+            assertEquals("Should only see system rule", 1, tenant2Rules.size());
+            assertTrue("Should contain system rule", tenant2Rules.stream().anyMatch(r -> r.getItemId().equals("system-rule")));
+            return null;
+        });
     }
 
     @Test
     public void testRuleStatisticsAreTenantSpecific() {
         // Setup rules in different tenants
-        tenantService.setCurrentTenant(TENANT_1);
-        Rule tenant1Rule = createTestRule();
-        tenant1Rule.setItemId("tenant1-rule");
-        tenant1Rule.setTenantId(TENANT_1);
-        rulesService.setRule(tenant1Rule);
+        final Rule[] tenant1Rule = new Rule[1];
+        executionContextManager.executeAsTenant(TENANT_1, () -> {
+            tenant1Rule[0] = createTestRule();
+            tenant1Rule[0].setItemId("tenant1-rule");
+            tenant1Rule[0].setTenantId(TENANT_1);
+            rulesService.setRule(tenant1Rule[0]);
+            return null;
+        });
 
-        tenantService.setCurrentTenant(TENANT_2);
-        Rule tenant2Rule = createTestRule();
-        tenant2Rule.setItemId("tenant2-rule");
-        tenant2Rule.setTenantId(TENANT_2);
-        rulesService.setRule(tenant2Rule);
+        final Rule[] tenant2Rule = new Rule[1];
+        executionContextManager.executeAsTenant(TENANT_2, () -> {
+            tenant2Rule[0] = createTestRule();
+            tenant2Rule[0].setItemId("tenant2-rule");
+            tenant2Rule[0].setTenantId(TENANT_2);
+            rulesService.setRule(tenant2Rule[0]);
+            return null;
+        });
 
         // Test statistics for tenant1
-        tenantService.setCurrentTenant(TENANT_1);
-        Event event1 = createTestEvent();
-        rulesService.getMatchingRules(event1);
-        RuleStatistics stats1 = rulesService.getRuleStatistics(tenant1Rule.getItemId());
-        assertNotNull("Tenant1 rule statistics should exist", stats1);
+        executionContextManager.executeAsTenant(TENANT_1, () -> {
+            Event event1 = createTestEvent();
+            rulesService.getMatchingRules(event1);
+            RuleStatistics stats1 = rulesService.getRuleStatistics(tenant1Rule[0].getItemId());
+            assertNotNull("Tenant1 rule statistics should exist", stats1);
+            return null;
+        });
 
         // Test statistics for tenant2
-        tenantService.setCurrentTenant(TENANT_2);
-        Event event2 = createTestEvent();
-        rulesService.getMatchingRules(event2);
-        RuleStatistics stats2 = rulesService.getRuleStatistics(tenant2Rule.getItemId());
-        assertNotNull("Tenant2 rule statistics should exist", stats2);
+        executionContextManager.executeAsTenant(TENANT_2, () -> {
+            Event event2 = createTestEvent();
+            rulesService.getMatchingRules(event2);
+            RuleStatistics stats2 = rulesService.getRuleStatistics(tenant2Rule[0].getItemId());
+            assertNotNull("Tenant2 rule statistics should exist", stats2);
 
-        // Verify tenant isolation
-        assertNull("Tenant2 should not see tenant1's rule statistics",
-            rulesService.getRuleStatistics(tenant1Rule.getItemId()));
+            // Verify tenant isolation
+            assertNull("Tenant2 should not see tenant1's rule statistics",
+                rulesService.getRuleStatistics(tenant1Rule[0].getItemId()));
+            return null;
+        });
     }
 
     private Rule createTestRule() {
         Rule rule = new Rule();
         rule.setItemId("test-rule");
-        rule.setTenantId(tenantService.getCurrentTenantId());
+        rule.setTenantId(executionContextManager.getCurrentContext().getTenantId());
 
         Metadata metadata = new Metadata();
         metadata.setId("test-rule");
@@ -282,23 +305,26 @@ public class RulesServiceImplTest {
 
     @Test
     public void testRuleStatistics() {
-        // Setup test data
-        Event event = createTestEvent();
-        Rule rule = createTestRule();
-        rule.setTenantId(TENANT_1);
-        rulesService.setRule(rule);
+        executionContextManager.executeAsTenant(TENANT_1, () -> {
+            // Setup test data
+            Event event = createTestEvent();
+            Rule rule = createTestRule();
+            rule.setTenantId(TENANT_1);
+            rulesService.setRule(rule);
 
-        rulesService.refreshRules();
+            rulesService.refreshRules();
 
-        // Execute test
-        Set<Rule> matchingRules = rulesService.getMatchingRules(event);
-        assertNotNull("Rule statistics should exist", matchingRules);
-        assertTrue("Rule statistics should exist", !matchingRules.isEmpty());
+            // Execute test
+            Set<Rule> matchingRules = rulesService.getMatchingRules(event);
+            assertNotNull("Rule statistics should exist", matchingRules);
+            assertTrue("Rule statistics should exist", !matchingRules.isEmpty());
 
-        // Verify statistics were updated
-        RuleStatistics stats = rulesService.getRuleStatistics(rule.getItemId());
-        assertNotNull("Rule statistics should be created", stats);
-        assertEquals("Statistics should have correct tenant ID", TENANT_1, stats.getTenantId());
+            // Verify statistics were updated
+            RuleStatistics stats = rulesService.getRuleStatistics(rule.getItemId());
+            assertNotNull("Rule statistics should be created", stats);
+            assertEquals("Statistics should have correct tenant ID", TENANT_1, stats.getTenantId());
+            return null;
+        });
     }
 
     @Test
@@ -324,18 +350,21 @@ public class RulesServiceImplTest {
 
     @Test
     public void testSetRule() {
-        // Setup
-        Rule rule = createTestRule();
-        rule.setTenantId(TENANT_1);
+        executionContextManager.executeAsTenant(TENANT_1, () -> {
+            // Setup
+            Rule rule = createTestRule();
+            rule.setTenantId(TENANT_1);
 
-        // Execute
-        rulesService.setRule(rule);
+            // Execute
+            rulesService.setRule(rule);
 
-        // Verify
-        Rule savedRule = persistenceService.load(rule.getItemId(), Rule.class);
-        assertNotNull("Rule should be saved", savedRule);
-        assertEquals("Rule should have correct tenant", TENANT_1, savedRule.getTenantId());
-        assertEquals("Rule should have correct scope", "systemscope", savedRule.getMetadata().getScope());
+            // Verify
+            Rule savedRule = persistenceService.load(rule.getItemId(), Rule.class);
+            assertNotNull("Rule should be saved", savedRule);
+            assertEquals("Rule should have correct tenant", TENANT_1, savedRule.getTenantId());
+            assertEquals("Rule should have correct scope", "systemscope", savedRule.getMetadata().getScope());
+            return null;
+        });
     }
 
     @Test
@@ -354,71 +383,79 @@ public class RulesServiceImplTest {
 
     @Test
     public void testGetRule() {
-        // Setup
-        Rule rule = createTestRule();
-        rule.setItemId("test-rule-id");
-        rule.setTenantId(TENANT_1);
-        rulesService.setRule(rule);
+        executionContextManager.executeAsTenant(TENANT_1, () -> {
+            // Setup
+            Rule rule = createTestRule();
+            rule.setItemId("test-rule-id");
+            rule.setTenantId(TENANT_1);
+            rulesService.setRule(rule);
 
-        // Execute
-        Rule result = rulesService.getRule(rule.getItemId());
+            // Execute
+            Rule result = rulesService.getRule(rule.getItemId());
 
-        // Verify
-        assertNotNull("Should return the rule", result);
-        assertEquals("Should return the correct rule", rule.getItemId(), result.getItemId());
-        assertEquals("Should have correct tenant", TENANT_1, result.getTenantId());
+            // Verify
+            assertNotNull("Should return the rule", result);
+            assertEquals("Should return the correct rule", rule.getItemId(), result.getItemId());
+            assertEquals("Should have correct tenant", TENANT_1, result.getTenantId());
+            return null;
+        });
     }
 
     @Test
     public void testGetRuleStatistics() {
-        // Setup
-        tenantService.setCurrentTenant(TENANT_1);
-        Rule rule = createTestRule();
-        rule.setTenantId(TENANT_1);
-        rulesService.setRule(rule);
+        executionContextManager.executeAsTenant(TENANT_1, () -> {
+            Rule rule = createTestRule();
+            rule.setTenantId(TENANT_1);
+            rulesService.setRule(rule);
 
-        // Execute
-        rulesService.resetAllRuleStatistics();
+            // Execute
+            rulesService.resetAllRuleStatistics();
+            // Execute test
+            rulesService.refreshRules();
 
-        // Verify
-        RuleStatistics stats = rulesService.getRuleStatistics(rule.getItemId());
-        assertNull("Statistics should be reset", stats);
+            // Verify
+            RuleStatistics stats = rulesService.getRuleStatistics(rule.getItemId());
+            assertNull("Statistics should be reset", stats);
+            return null;
+        });
     }
 
     @Test
     public void testEventRaisedOnlyOnce() {
-        // Setup
-        tenantService.setCurrentTenant(TENANT_1);
-        Event event = createTestEvent();
-        Rule rule = createTestRule();
-        rule.setRaiseEventOnlyOnce(true);
-        rulesService.setRule(rule);
+        executionContextManager.executeAsTenant(TENANT_1, () -> {
+            Event event = createTestEvent();
+            Rule rule = createTestRule();
+            rule.setRaiseEventOnlyOnce(true);
+            rulesService.setRule(rule);
 
-        when(eventService.hasEventAlreadyBeenRaised(any(Event.class))).thenReturn(true);
+            when(eventService.hasEventAlreadyBeenRaised(any(Event.class))).thenReturn(true);
 
-        // Execute
-        Set<Rule> matchedRules = rulesService.getMatchingRules(event);
+            // Execute
+            Set<Rule> matchedRules = rulesService.getMatchingRules(event);
 
-        // Verify
-        assertTrue("Should not match rule when event already raised", matchedRules.isEmpty());
+            // Verify
+            assertTrue("Should not match rule when event already raised", matchedRules.isEmpty());
+            return null;
+        });
     }
 
     @Test
     public void testEventRaisedOnlyOnceForProfile() {
-        // Setup
-        tenantService.setCurrentTenant(TENANT_1);
-        Event event = createTestEvent();
-        Rule rule = createTestRule();
-        rule.setRaiseEventOnlyOnceForProfile(true);
-        rulesService.setRule(rule);
+        executionContextManager.executeAsTenant(TENANT_1, () -> {
+            Event event = createTestEvent();
+            Rule rule = createTestRule();
+            rule.setRaiseEventOnlyOnceForProfile(true);
+            rulesService.setRule(rule);
 
-        when(eventService.hasEventAlreadyBeenRaised(any(Event.class), eq(false))).thenReturn(true);
+            when(eventService.hasEventAlreadyBeenRaised(any(Event.class), eq(false))).thenReturn(true);
 
-        // Execute
-        Set<Rule> matchedRules = rulesService.getMatchingRules(event);
+            // Execute
+            Set<Rule> matchedRules = rulesService.getMatchingRules(event);
 
-        // Verify
-        assertTrue("Should not match rule when event already raised for profile", matchedRules.isEmpty());
+            // Verify
+            assertTrue("Should not match rule when event already raised for profile", matchedRules.isEmpty());
+            return null;
+        });
     }
 
     @Test
@@ -504,32 +541,44 @@ public class RulesServiceImplTest {
     @Test
     public void testRefreshRulesHandlesAllTenants() {
         // Setup rules in different tenants
-        tenantService.setCurrentTenant(SYSTEM_TENANT);
-        Rule systemRule = createTestRule();
-        systemRule.setItemId("system-rule");
-        rulesService.setRule(systemRule);
+        executionContextManager.executeAsSystem(() -> {
+            Rule systemRule = createTestRule();
+            systemRule.setItemId("system-rule");
+            rulesService.setRule(systemRule);
+            return null;
+        });
 
-        tenantService.setCurrentTenant(TENANT_1);
-        Rule tenant1Rule = createTestRule();
-        tenant1Rule.setItemId("tenant1-rule");
-        rulesService.setRule(tenant1Rule);
+        executionContextManager.executeAsTenant(TENANT_1, () -> {
+            Rule tenant1Rule = createTestRule();
+            tenant1Rule.setItemId("tenant1-rule");
+            rulesService.setRule(tenant1Rule);
+            return null;
+        });
 
-        tenantService.setCurrentTenant(TENANT_2);
-        Rule tenant2Rule = createTestRule();
-        tenant2Rule.setItemId("tenant2-rule");
-        rulesService.setRule(tenant2Rule);
+        executionContextManager.executeAsTenant(TENANT_2, () -> {
+            Rule tenant2Rule = createTestRule();
+            tenant2Rule.setItemId("tenant2-rule");
+            rulesService.setRule(tenant2Rule);
+            return null;
+        });
 
         // Execute refresh
         rulesService.refreshRules();
 
         // Verify rules are loaded for all tenants
-        tenantService.setCurrentTenant(SYSTEM_TENANT);
-        assertNotNull("System rule should be loaded", rulesService.getRule("system-rule"));
+        executionContextManager.executeAsSystem(() -> {
+            assertNotNull("System rule should be loaded", rulesService.getRule("system-rule"));
+            return null;
+        });
 
-        tenantService.setCurrentTenant(TENANT_1);
-        assertNotNull("Tenant1 rule should be loaded", rulesService.getRule("tenant1-rule"));
+        executionContextManager.executeAsTenant(TENANT_1, () -> {
+            assertNotNull("Tenant1 rule should be loaded", rulesService.getRule("tenant1-rule"));
+            return null;
+        });
 
-        tenantService.setCurrentTenant(TENANT_2);
-        assertNotNull("Tenant2 rule should be loaded", rulesService.getRule("tenant2-rule"));
+        executionContextManager.executeAsTenant(TENANT_2, () -> {
+            assertNotNull("Tenant2 rule should be loaded", rulesService.getRule("tenant2-rule"));
+            return null;
+        });
     }
 }

@@ -23,6 +23,9 @@ import org.apache.cxf.jaxrs.utils.JAXRSUtils;
 import org.apache.cxf.security.SecurityContext;
 import org.apache.karaf.jaas.boot.principal.RolePrincipal;
 import org.apache.karaf.jaas.boot.principal.UserPrincipal;
+import org.apache.unomi.api.security.SecurityService;
+import org.apache.unomi.api.security.TenantPrincipal;
+import org.apache.unomi.api.security.UnomiRoles;
 import org.apache.unomi.api.tenants.ApiKey;
 import org.apache.unomi.api.tenants.Tenant;
 import org.apache.unomi.api.tenants.TenantService;
@@ -53,18 +56,12 @@ import java.util.List;
 public class AuthenticationFilter implements ContainerRequestFilter {
 
     private static final Logger logger = LoggerFactory.getLogger(AuthenticationFilter.class);
-
-    // Guest user config
-    public static final String GUEST_USERNAME = "guest";
-    public static final String GUEST_DEFAULT_ROLE = "ROLE_UNOMI_PUBLIC";
-    private static final List<String> GUEST_ROLES = Collections.singletonList(GUEST_DEFAULT_ROLE);
-    private static final Subject GUEST_SUBJECT = new Subject();
-    static {
-        GUEST_SUBJECT.getPrincipals().add(new UserPrincipal(GUEST_USERNAME));
-        for (String roleName : GUEST_ROLES) {
-            GUEST_SUBJECT.getPrincipals().add(new RolePrincipal(roleName));
-        }
-    }
+    private static final String GUEST_USERNAME = "guest";
+    private static final String AUTHORIZATION_HEADER = "Authorization";
+    private static final String BASIC_AUTH_PREFIX = "Basic ";
+    private static final String BEARER_AUTH_PREFIX = "Bearer ";
+    private static final String GUEST_AUTH_PREFIX = "Guest ";
+    private static final String GUEST_AUTH_HEADER = GUEST_AUTH_PREFIX + GUEST_USERNAME;
 
     // JAAS config
     private static final String ROLE_CLASSIFIER = "ROLE_UNOMI";
@@ -72,13 +69,24 @@ public class AuthenticationFilter implements ContainerRequestFilter {
     private static final String REALM_NAME = "cxs";
     private static final String CONTEXT_NAME = "karaf";
 
+    private static final List<String> GUEST_ROLES = Collections.singletonList(UnomiRoles.USER);
+    private static final Subject GUEST_SUBJECT = new Subject();
+    static {
+        GUEST_SUBJECT.getPrincipals().add(new UserPrincipal("guest"));
+        GUEST_SUBJECT.getPrincipals().add(new RolePrincipal(UnomiRoles.USER));
+    }
+
     private final JAASAuthenticationFilter jaasAuthenticationFilter;
     private final RestAuthenticationConfig restAuthenticationConfig;
     private final TenantService tenantService;
+    private final SecurityService securityService;
 
-    public AuthenticationFilter(RestAuthenticationConfig restAuthenticationConfig, TenantService tenantService) {
+    public AuthenticationFilter(RestAuthenticationConfig restAuthenticationConfig,
+                              TenantService tenantService,
+                              SecurityService securityService) {
         this.restAuthenticationConfig = restAuthenticationConfig;
         this.tenantService = tenantService;
+        this.securityService = securityService;
 
         // Build wrapped jaas filter
         jaasAuthenticationFilter = new JAASAuthenticationFilter();
@@ -90,93 +98,111 @@ public class AuthenticationFilter implements ContainerRequestFilter {
 
     @Override
     public void filter(ContainerRequestContext requestContext) throws IOException {
-        String path = requestContext.getUriInfo().getPath();
+        try {
+            String path = requestContext.getUriInfo().getPath();
 
-        // Tenant endpoints require JAAS authentication only
-        if (path.startsWith("tenants")) {
-            String authHeader = requestContext.getHeaderString(HttpHeaders.AUTHORIZATION);
-            if (authHeader == null || !authHeader.startsWith("Basic ")) {
-                logger.debug("Tenant endpoint access denied: Missing or invalid Basic Auth header");
-                unauthorized(requestContext);
-                return;
-            }
-
-            try {
-                jaasAuthenticationFilter.filter(requestContext);
-                return; // If JAAS auth succeeds, we're done
-            } catch (Exception e) {
-                logger.debug("Tenant endpoint access denied: JAAS authentication failed");
-                unauthorized(requestContext);
-                return;
-            }
-        }
-
-        // Check if this is a public path
-        if (isPublicPath(requestContext)) {
-            String apiKey = requestContext.getHeaderString("X-Unomi-API-Key");
-            if (apiKey == null) {
-                logger.debug("Public endpoint access denied: Missing API key");
-                unauthorized(requestContext);
-                return;
-            }
-
-            // Find tenant by API key and validate it's a public key
-            Tenant tenant = tenantService.getTenantByApiKey(apiKey, ApiKey.ApiKeyType.PUBLIC);
-            if (tenant != null) {
-                // Set the current tenant context
-                tenantService.setCurrentTenant(tenant.getItemId());
-
-                // Create and set security context with tenant principal and public role
-                Subject subject = new Subject();
-                subject.getPrincipals().add(new UserPrincipal(tenant.getItemId()));
-                subject.getPrincipals().add(new RolePrincipal(GUEST_DEFAULT_ROLE));
-                JAXRSUtils.getCurrentMessage().put(SecurityContext.class,
-                        new RolePrefixSecurityContextImpl(subject, ROLE_CLASSIFIER, ROLE_CLASSIFIER_TYPE));
-                return;
-            }
-            logger.debug("Public endpoint access denied: Invalid public API key");
-            unauthorized(requestContext);
-            return;
-        }
-
-        // For private endpoints, try tenant private key first, then fall back to JAAS
-        String authHeader = requestContext.getHeaderString(HttpHeaders.AUTHORIZATION);
-        if (authHeader != null && authHeader.startsWith("Basic ")) {
-            // Try tenant private key authentication first
-            String[] credentials = extractBasicAuthCredentials(authHeader);
-            if (credentials != null && credentials.length == 2) {
-                String tenantId = credentials[0];
-                String privateKey = credentials[1];
-
-                // Validate tenant credentials with private key type
-                if (tenantService.validateApiKeyWithType(tenantId, privateKey, ApiKey.ApiKeyType.PRIVATE)) {
-                    // Set the current tenant context
-                    tenantService.setCurrentTenant(tenantId);
-
-                    // Create and set security context with tenant principal and roles
-                    Subject subject = new Subject();
-                    subject.getPrincipals().add(new UserPrincipal(tenantId));
-                    subject.getPrincipals().add(new RolePrincipal("ROLE_UNOMI_TENANT"));
-                    JAXRSUtils.getCurrentMessage().put(SecurityContext.class,
-                        new RolePrefixSecurityContextImpl(subject, ROLE_CLASSIFIER, ROLE_CLASSIFIER_TYPE));
+            // Tenant endpoints require JAAS authentication only
+            if (path.startsWith("tenants")) {
+                String authHeader = requestContext.getHeaderString(HttpHeaders.AUTHORIZATION);
+                if (authHeader == null || !authHeader.startsWith("Basic ")) {
+                    logger.debug("Tenant endpoint access denied: Missing or invalid Basic Auth header");
+                    unauthorized(requestContext);
                     return;
                 }
-                logger.debug("Private endpoint access denied: Invalid tenant private key");
+
+                try {
+                    jaasAuthenticationFilter.filter(requestContext);
+                    // Get the subject from the security context after successful JAAS auth
+                    SecurityContext securityContext = JAXRSUtils.getCurrentMessage().get(SecurityContext.class);
+                    if (securityContext != null) {
+                        Subject subject = ((RolePrefixSecurityContextImpl) securityContext).getSubject();
+                        // Set the authenticated subject in Unomi's security service
+                        securityService.setCurrentSubject(subject);
+                    }
+                    return;
+                } catch (Exception e) {
+                    logger.debug("Tenant endpoint access denied: JAAS authentication failed");
+                    unauthorized(requestContext);
+                    return;
+                }
             }
 
-            // If tenant auth fails, try JAAS auth
-            try {
-                jaasAuthenticationFilter.filter(requestContext);
-                return; // If JAAS auth succeeds, we're done - full access granted
-            } catch (Exception e) {
-                logger.debug("Private endpoint access denied: Both tenant key and JAAS authentication failed");
+            // Check if this is a public path
+            if (isPublicPath(requestContext)) {
+                String apiKey = requestContext.getHeaderString("X-Unomi-API-Key");
+                if (apiKey == null) {
+                    logger.debug("Public endpoint access denied: Missing API key");
+                    unauthorized(requestContext);
+                    return;
+                }
+
+                // Find tenant by API key and validate it's a public key
+                Tenant tenant = tenantService.getTenantByApiKey(apiKey, ApiKey.ApiKeyType.PUBLIC);
+                if (tenant != null) {
+                    // Create and set security context with tenant principal and public role
+                    Subject subject = createSubject(tenant.getItemId(), false);
+
+                    // Set CXF security context
+                    JAXRSUtils.getCurrentMessage().put(SecurityContext.class,
+                        new RolePrefixSecurityContextImpl(subject, ROLE_CLASSIFIER, ROLE_CLASSIFIER_TYPE));
+
+                    // Set the security service subject
+                    securityService.setCurrentSubject(subject);
+                    return;
+                }
+                logger.debug("Public endpoint access denied: Invalid public API key");
+                unauthorized(requestContext);
+                return;
             }
-        } else {
-            logger.debug("Private endpoint access denied: Missing Basic Auth header");
+
+            // For private endpoints, try tenant private key first, then fall back to JAAS
+            String authHeader = requestContext.getHeaderString(HttpHeaders.AUTHORIZATION);
+            if (authHeader != null && authHeader.startsWith("Basic ")) {
+                // Try tenant private key authentication first
+                String[] credentials = extractBasicAuthCredentials(authHeader);
+                if (credentials != null && credentials.length == 2) {
+                    String tenantId = credentials[0];
+                    String privateKey = credentials[1];
+
+                    // Validate tenant credentials with private key type
+                    if (tenantService.validateApiKeyWithType(tenantId, privateKey, ApiKey.ApiKeyType.PRIVATE)) {
+                        Subject subject = createSubject(tenantId, true);
+
+                        // Set CXF security context
+                        JAXRSUtils.getCurrentMessage().put(SecurityContext.class,
+                            new RolePrefixSecurityContextImpl(subject, ROLE_CLASSIFIER, ROLE_CLASSIFIER_TYPE));
+
+                        // Set the security service subject
+                        securityService.setCurrentSubject(subject);
+                        return;
+                    }
+                    logger.debug("Private endpoint access denied: Invalid tenant private key");
+                }
+
+                // If tenant auth fails, try JAAS auth
+                try {
+                    jaasAuthenticationFilter.filter(requestContext);
+                    // Get the subject from the security context after successful JAAS auth
+                    SecurityContext securityContext = JAXRSUtils.getCurrentMessage().get(SecurityContext.class);
+                    if (securityContext != null) {
+                        Subject subject = ((RolePrefixSecurityContextImpl) securityContext).getSubject();
+                        // Set the authenticated subject in Unomi's security service
+                        securityService.setCurrentSubject(subject);
+                    }
+                    return;
+                } catch (Exception e) {
+                    logger.debug("Private endpoint access denied: Both tenant key and JAAS authentication failed");
+                }
+            } else {
+                logger.debug("Private endpoint access denied: Missing Basic Auth header");
+            }
+
+            // If we get here, no valid authentication was provided
+            unauthorized(requestContext);
+        } catch (Exception e) {
+            logger.error("Error during authentication", e);
+            unauthorized(requestContext);
         }
-
-        // If we get here, no valid authentication was provided
-        unauthorized(requestContext);
     }
 
     private String[] extractBasicAuthCredentials(String authHeader) {
@@ -206,5 +232,21 @@ public class AuthenticationFilter implements ContainerRequestFilter {
         // check if current path is matching any public path patterns
         String currentPath = requestContext.getMethod() + " " + requestContext.getUriInfo().getPath();
         return restAuthenticationConfig.getPublicPathPatterns().stream().anyMatch(pattern -> pattern.matcher(currentPath).matches());
+    }
+
+    private Subject createSubject(String tenantId, boolean isPrivate) {
+        Subject subject = new Subject();
+        subject.getPrincipals().add(new TenantPrincipal(tenantId));
+        subject.getPrincipals().add(new UserPrincipal(tenantId));
+        if (isPrivate) {
+            subject.getPrincipals().add(new RolePrincipal(UnomiRoles.TENANT_ADMINISTRATOR));
+            subject.getPrincipals().add(new RolePrincipal(UnomiRoles.TENANT_ADMIN_PREFIX + tenantId));
+            subject.getPrincipals().add(new RolePrincipal(UnomiRoles.USER));
+            subject.getPrincipals().add(new RolePrincipal(UnomiRoles.TENANT_USER_PREFIX + tenantId));
+        } else {
+            subject.getPrincipals().add(new RolePrincipal(UnomiRoles.USER));
+            subject.getPrincipals().add(new RolePrincipal(UnomiRoles.TENANT_USER_PREFIX + tenantId));
+        }
+        return subject;
     }
 }

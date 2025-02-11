@@ -73,6 +73,7 @@ public class ParserHelper {
             return false;
         }
         final List<String> result = new ArrayList<String>();
+        final Set<String> visitedTypes = new HashSet<>();
         visitConditions(rootCondition, new ConditionVisitor() {
             @Override
             public void visit(Condition condition) {
@@ -81,6 +82,17 @@ public class ParserHelper {
                     if (conditionType != null) {
                         unresolvedConditionTypes.remove(condition.getConditionTypeId());
                         condition.setConditionType(conditionType);
+
+                        // Handle parent condition resolution
+                        if (conditionType.getParentCondition() != null) {
+                            // Check for circular references
+                            if (!resolveParentConditionType(conditionType, visitedTypes, definitionsService)) {
+                                result.add(condition.getConditionTypeId());
+                                condition.setConditionType(null); // Reset to prevent partial resolution
+                                LOGGER.warn("Detected circular reference in parent conditions for type: {} in {}",
+                                    condition.getConditionTypeId(), contextObjectName);
+                            }
+                        }
                     } else {
                         result.add(condition.getConditionTypeId());
                         if (!unresolvedConditionTypes.contains(condition.getConditionTypeId())) {
@@ -96,6 +108,39 @@ public class ParserHelper {
             }
         });
         return result.isEmpty();
+    }
+
+    private static boolean resolveParentConditionType(ConditionType conditionType, Set<String> visitedTypes, DefinitionsService definitionsService) {
+        Condition parentCondition = conditionType.getParentCondition();
+        if (parentCondition == null) {
+            return true;
+        }
+
+        // Check for circular reference
+        if (!visitedTypes.add(parentCondition.getConditionTypeId())) {
+            return false; // Circular reference detected
+        }
+
+        try {
+            // Resolve parent condition type
+            if (parentCondition.getConditionType() == null) {
+                ConditionType parentType = definitionsService.getConditionType(parentCondition.getConditionTypeId());
+                if (parentType == null) {
+                    return false;
+                }
+                parentCondition.setConditionType(parentType);
+
+                // Recursively resolve parent's parent
+                if (parentType.getParentCondition() != null) {
+                    if (!resolveParentConditionType(parentType, visitedTypes, definitionsService)) {
+                        return false;
+                    }
+                }
+            }
+            return true;
+        } finally {
+            visitedTypes.remove(parentCondition.getConditionTypeId());
+        }
     }
 
     public static List<String> getConditionTypeIds(Condition rootCondition) {

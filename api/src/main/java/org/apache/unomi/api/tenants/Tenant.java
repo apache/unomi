@@ -92,11 +92,12 @@ public class Tenant extends Item {
     private String publicApiKey;
 
     /**
-     * The set of event types that require special permissions for this tenant.
-     * Events in this set will be subject to additional authorization checks
-     * before being processed.
+     * The set of event types that are restricted for this tenant.
+     * Events of these types will require IP validation before being processed.
+     * This is used to control which event types require additional validation
+     * at the tenant level.
      */
-    private Set<String> restrictedEventPermissions = new HashSet<>();
+    private Set<String> restrictedEventTypes = new HashSet<>();
 
     /**
      * The set of IP addresses or CIDR ranges that are authorized to make requests
@@ -245,19 +246,21 @@ public class Tenant extends Item {
     }
 
     /**
-     * Gets the set of event types that require special permissions for this tenant.
+     * Gets the set of event types that are restricted for this tenant.
+     * Events of these types will require IP validation before being processed.
      * @return the set of restricted event types
      */
-    public Set<String> getRestrictedEventPermissions() {
-        return restrictedEventPermissions;
+    public Set<String> getRestrictedEventTypes() {
+        return restrictedEventTypes;
     }
 
     /**
-     * Sets the event types that require special permissions for this tenant.
-     * @param restrictedEventPermissions the set of restricted event types to set
+     * Sets the event types that are restricted for this tenant.
+     * Events of these types will require IP validation before being processed.
+     * @param restrictedEventTypes the set of restricted event types to set
      */
-    public void setRestrictedEventPermissions(Set<String> restrictedEventPermissions) {
-        this.restrictedEventPermissions = restrictedEventPermissions;
+    public void setRestrictedEventTypes(Set<String> restrictedEventTypes) {
+        this.restrictedEventTypes = restrictedEventTypes;
     }
 
     /**

@@ -21,11 +21,12 @@ import org.apache.unomi.api.PluginType;
 import org.apache.unomi.api.PropertyMergeStrategyType;
 import org.apache.unomi.api.ValueType;
 import org.apache.unomi.api.actions.ActionType;
+import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.persistence.spi.conditions.ConditionEvaluatorDispatcher;
-import org.apache.unomi.services.impl.InMemoryPersistenceServiceImpl;
-import org.apache.unomi.services.impl.TestConditionEvaluators;
-import org.apache.unomi.services.impl.TestTenantService;
+import org.apache.unomi.services.TestHelper;
+import org.apache.unomi.services.impl.*;
+import org.apache.unomi.services.impl.cache.MultiTypeCacheServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -70,44 +71,36 @@ class DefinitionsServiceImplTest {
     private BundleContext bundleContext;
     @Mock
     private Bundle bundle;
+    private org.apache.unomi.api.services.SchedulerService schedulerService;
 
     private TestTenantService tenantService;
-    private TestDefinitionsServiceImpl definitionsService;
+    private DefinitionsServiceImpl definitionsService;
     private InMemoryPersistenceServiceImpl persistenceService;
-
-    // Extend DefinitionsServiceImpl to make private methods visible for testing
-    private static class TestDefinitionsServiceImpl extends DefinitionsServiceImpl {
-        @Override
-        public void processBundleStartup(BundleContext bundleContext) {
-            super.processBundleStartup(bundleContext);
-        }
-
-        @Override
-        public void processBundleStop(BundleContext bundleContext) {
-            super.processBundleStop(bundleContext);
-        }
-
-        @Override
-        public Map<Long, List<PluginType>> getTypesByPlugin() {
-            return super.getTypesByPlugin();
-        }
-
-        @Override
-        public void onTenantRemoved(String tenantId) {
-            super.onTenantRemoved(tenantId);
-        }
-    }
+    private MultiTypeCacheServiceImpl multiTypeCacheService;
+    private KarafSecurityService securityService;
+    private ExecutionContextManagerImpl executionContextManager;
 
     @BeforeEach
     void setUp() {
         tenantService = new TestTenantService();
         tenantService.setCurrentTenantId("test-tenant");
         ConditionEvaluatorDispatcher conditionEvaluatorDispatcher = TestConditionEvaluators.createDispatcher();
-        persistenceService = new InMemoryPersistenceServiceImpl(tenantService, conditionEvaluatorDispatcher);
-        definitionsService = new TestDefinitionsServiceImpl();
-        definitionsService.setPersistenceService(persistenceService);
-        definitionsService.setBundleContext(bundleContext);
-        definitionsService.setTenantService(tenantService);
+        securityService = TestHelper.createSecurityService();
+        executionContextManager = TestHelper.createExecutionContextManager(securityService);
+        persistenceService = new InMemoryPersistenceServiceImpl(executionContextManager, conditionEvaluatorDispatcher);
+
+        // Mock bundle context
+        Bundle bundle = mock(Bundle.class);
+        when(bundleContext.getBundle()).thenReturn(bundle);
+        when(bundle.getBundleContext()).thenReturn(bundleContext);
+        when(bundle.findEntries(eq("META-INF/cxs/rules"), eq("*.json"), eq(true))).thenReturn(null);
+        when(bundleContext.getBundles()).thenReturn(new Bundle[0]);
+
+        // Create scheduler service using TestHelper
+        schedulerService = TestHelper.createSchedulerService(persistenceService, executionContextManager);
+
+        multiTypeCacheService = new MultiTypeCacheServiceImpl();
+        definitionsService = TestHelper.createDefinitionService(persistenceService, bundleContext, schedulerService, multiTypeCacheService, executionContextManager, tenantService);
     }
 
     @Nested
@@ -117,7 +110,6 @@ class DefinitionsServiceImplTest {
             // given
             when(bundle.getBundleId()).thenReturn(1L);
             when(bundleContext.getBundle()).thenReturn(bundle);
-            tenantService.setCurrentTenant(SYSTEM_TENANT);
 
             // Mock condition type JSON
             String conditionJson = "{\"metadata\":{\"id\":\"test-condition\",\"name\":\"Test Condition\",\"tags\":[\"tag1\"],\"systemTags\":[\"systemTag1\"]},\"parentCondition\":null}";
@@ -271,11 +263,11 @@ class DefinitionsServiceImplTest {
                     new Thread(() -> {
                         try {
                             barrier.await();
-                            synchronized(tenantService) {
-                                tenantService.setCurrentTenant(SYSTEM_TENANT);
-                            }
-                            ConditionType conditionType = createTestConditionType("test" + index, new HashSet<>(Arrays.asList("tag1")), null);
-                            definitionsService.setConditionType(conditionType);
+                            executionContextManager.executeAsSystem(() -> {
+                                ConditionType conditionType = createTestConditionType("test" + index, new HashSet<>(Arrays.asList("tag1")), null);
+                                definitionsService.setConditionType(conditionType);
+
+                            });
                         } catch (Exception e) {
                             failed.set(true);
                             LOGGER.error("Thread execution failed", e);
@@ -288,11 +280,10 @@ class DefinitionsServiceImplTest {
                     new Thread(() -> {
                         try {
                             barrier.await();
-                            synchronized(tenantService) {
-                                tenantService.setCurrentTenant("tenant1");
-                            }
-                            ConditionType conditionType = createTestConditionType("test" + index + "-tenant", new HashSet<>(Arrays.asList("tag1")), null);
-                            definitionsService.setConditionType(conditionType);
+                            executionContextManager.executeAsTenant("tenant1", () -> {
+                                ConditionType conditionType = createTestConditionType("test" + index + "-tenant", new HashSet<>(Arrays.asList("tag1")), null);
+                                definitionsService.setConditionType(conditionType);
+                            });
                         } catch (Exception e) {
                             failed.set(true);
                             LOGGER.error("Thread execution failed", e);
@@ -307,37 +298,40 @@ class DefinitionsServiceImplTest {
             assertFalse(failed.get(), "One or more threads failed execution");
 
             // Verify tenant isolation
-            synchronized(tenantService) {
-                tenantService.setCurrentTenant(SYSTEM_TENANT);
+            executionContextManager.executeAsSystem(() -> {
                 assertEquals(threadCount, definitionsService.getConditionTypesByTag("tag1").size());
-                tenantService.setCurrentTenant("tenant1");
+            });
+            executionContextManager.executeAsTenant("tenant1", () -> {
                 assertEquals(threadCount*2, definitionsService.getConditionTypesByTag("tag1").size());
-            }
+            });
         }
 
         @Test
         void shouldHandleTenantRemoval() {
             // Add types for multiple tenants
-            tenantService.setCurrentTenant(SYSTEM_TENANT);
-            ConditionType systemType = createTestConditionType("test1", new HashSet<>(Arrays.asList("tag1")), null);
-            definitionsService.setConditionType(systemType);
-
-            tenantService.setCurrentTenant("tenant1");
-            ConditionType tenantType = createTestConditionType("test2", new HashSet<>(Arrays.asList("tag1")), null);
-            definitionsService.setConditionType(tenantType);
+            executionContextManager.executeAsSystem(() -> {
+                ConditionType systemType = createTestConditionType("test1", new HashSet<>(Arrays.asList("tag1")), null);
+                definitionsService.setConditionType(systemType);
+            });
+            executionContextManager.executeAsTenant("tenant1", () -> {
+                ConditionType tenantType = createTestConditionType("test2", new HashSet<>(Arrays.asList("tag1")), null);
+                definitionsService.setConditionType(tenantType);
+            });
 
             // Simulate tenant removal
             definitionsService.onTenantRemoved("tenant1");
 
             // Verify tenant caches are cleared
-            tenantService.setCurrentTenant("tenant1");
-            assertEquals(1, definitionsService.getConditionTypesByTag("tag1").size());
-            assertNull(definitionsService.getConditionType("test2"));
+            executionContextManager.executeAsTenant("tenant1", () -> {
+                assertEquals(1, definitionsService.getConditionTypesByTag("tag1").size());
+                assertNull(definitionsService.getConditionType("test2"));
+            });
 
             // Verify system tenant is unaffected
-            tenantService.setCurrentTenant(SYSTEM_TENANT);
-            assertFalse(definitionsService.getConditionTypesByTag("tag1").isEmpty());
-            assertNotNull(definitionsService.getConditionType("test1"));
+            executionContextManager.executeAsSystem(() -> {
+                assertFalse(definitionsService.getConditionTypesByTag("tag1").isEmpty());
+                assertNotNull(definitionsService.getConditionType("test1"));
+            });
         }
 
         @Test
@@ -345,28 +339,42 @@ class DefinitionsServiceImplTest {
             int numThreads = 10;
             ConcurrentTestHelper testHelper = new ConcurrentTestHelper(numThreads);
 
-            // Setup initial data
-            setupTenantContext("tenant1");
-            ConditionType tenantType = createTestConditionType("test1", new HashSet<>(Arrays.asList("tag1")), null);
-            definitionsService.setConditionType(tenantType);
+            executionContextManager.executeAsTenant("tenant1", () -> {
+                ConditionType tenantType = createTestConditionType("test1", new HashSet<>(Arrays.asList("tag1")), null);
+                definitionsService.setConditionType(tenantType);
+            });
 
             // Create threads that will access the service while tenant is being removed
             for (int i = 0; i < numThreads; i++) {
                 testHelper.startThread("TenantAccess-" + i, () -> {
-                    setupTenantContext("tenant1");
-                    definitionsService.getConditionType("test1");
-                    definitionsService.getConditionTypesByTag("tag1");
-                    Thread.sleep(10); // Simulate some work
+                    try {
+                        executionContextManager.executeAsTenant("tenant1", () -> {
+                            try {
+                                definitionsService.getConditionType("test1");
+                                definitionsService.getConditionTypesByTag("tag1");
+                                Thread.sleep(10); // Simulate some work
+                            } catch (InterruptedException e) {
+                                Thread.currentThread().interrupt();
+                                throw new RuntimeException("Thread interrupted during test", e);
+                            }
+                        });
+                    } catch (Exception e) {
+                        throw new RuntimeException("Error executing in tenant context", e);
+                    }
                 });
             }
 
-            definitionsService.onTenantRemoved("tenant1");
-            testHelper.executeAndVerify("Tenant removal test", 5);
+            executionContextManager.executeAsTenant("tenant1", () -> {
+                definitionsService.onTenantRemoved("tenant1");
+                try {
+                    testHelper.executeAndVerify("Tenant removal test", 5);
+                } catch (InterruptedException e) {
+                    throw new RuntimeException(e);
+                }
 
-            // Verify tenant was properly removed
-            setupTenantContext("tenant1");
-            assertTrue(definitionsService.getConditionTypesByTag("tag1").isEmpty());
-            assertNull(definitionsService.getConditionType("test1"));
+                assertTrue(definitionsService.getConditionTypesByTag("tag1").isEmpty());
+                assertNull(definitionsService.getConditionType("test1"));
+            });
         }
 
         @Test
@@ -375,9 +383,10 @@ class DefinitionsServiceImplTest {
             definitionsService.onTenantRemoved(SYSTEM_TENANT);
 
             // Verify system tenant data is still accessible
-            tenantService.setCurrentTenant(SYSTEM_TENANT);
-            ConditionType systemType = createTestConditionType("test1", new HashSet<>(Arrays.asList("tag1")), null);
-            definitionsService.setConditionType(systemType);
+            executionContextManager.executeAsSystem(() -> {
+                ConditionType systemType = createTestConditionType("test1", new HashSet<>(Arrays.asList("tag1")), null);
+                definitionsService.setConditionType(systemType);
+            });
 
             assertNotNull(definitionsService.getConditionType("test1"));
             assertFalse(definitionsService.getConditionTypesByTag("tag1").isEmpty());
@@ -401,16 +410,16 @@ class DefinitionsServiceImplTest {
             // given
             Long bundleId = 1L;
             setupMockBundle(bundleId);
-            tenantService.setCurrentTenant(SYSTEM_TENANT);
+            executionContextManager.executeAsSystem(() -> {
+                // Add all types of definitions
+                ValueType valueType = createTestValueType("test1", new HashSet<>(Arrays.asList("tag1")), bundleId);
+                ConditionType conditionType = createTestConditionType("test2", new HashSet<>(Arrays.asList("tag1")), bundleId);
+                ActionType actionType = createTestActionType("test3", new HashSet<>(Arrays.asList("tag1")), bundleId);
 
-            // Add all types of definitions
-            ValueType valueType = createTestValueType("test1", new HashSet<>(Arrays.asList("tag1")), bundleId);
-            ConditionType conditionType = createTestConditionType("test2", new HashSet<>(Arrays.asList("tag1")), bundleId);
-            ActionType actionType = createTestActionType("test3", new HashSet<>(Arrays.asList("tag1")), bundleId);
-
-            registerPluginType(valueType, bundleId);
-            registerPluginType(conditionType, bundleId);
-            registerPluginType(actionType, bundleId);
+                registerPluginType(valueType, bundleId);
+                registerPluginType(conditionType, bundleId);
+                registerPluginType(actionType, bundleId);
+            });
 
             // when
             definitionsService.processBundleStop(bundleContext);
@@ -432,26 +441,26 @@ class DefinitionsServiceImplTest {
             // Add types from multiple bundles
             Long bundleId1 = 1L;
             Long bundleId2 = 2L;
-            tenantService.setCurrentTenant(SYSTEM_TENANT);
+            executionContextManager.executeAsSystem(() -> {
+                ValueType valueType1 = createTestValueType("test1", new HashSet<>(Arrays.asList("tag1")), bundleId1);
+                registerPluginType(valueType1, bundleId1);
 
-            ValueType valueType1 = createTestValueType("test1", new HashSet<>(Arrays.asList("tag1")), bundleId1);
-            registerPluginType(valueType1, bundleId1);
+                ValueType valueType2 = createTestValueType("test2", new HashSet<>(Arrays.asList("tag1")), bundleId2);
+                registerPluginType(valueType2, bundleId2);
 
-            ValueType valueType2 = createTestValueType("test2", new HashSet<>(Arrays.asList("tag1")), bundleId2);
-            registerPluginType(valueType2, bundleId2);
+                // Stop one bundle
+                setupMockBundle(bundleId1);
+                definitionsService.processBundleStop(bundleContext);
 
-            // Stop one bundle
-            setupMockBundle(bundleId1);
-            definitionsService.processBundleStop(bundleContext);
+                // Verify only its types are removed
+                assertNull(definitionsService.getValueType("test1"));
+                assertNotNull(definitionsService.getValueType("test2"));
 
-            // Verify only its types are removed
-            assertNull(definitionsService.getValueType("test1"));
-            assertNotNull(definitionsService.getValueType("test2"));
-
-            // Verify tag cache consistency
-            Set<ValueType> taggedTypes = definitionsService.getValueTypeByTag("tag1");
-            assertEquals(1, taggedTypes.size());
-            assertTrue(taggedTypes.contains(valueType2));
+                // Verify tag cache consistency
+                Set<ValueType> taggedTypes = definitionsService.getValueTypeByTag("tag1");
+                assertEquals(1, taggedTypes.size());
+                assertTrue(taggedTypes.contains(valueType2));
+            });
         }
 
         @Test
@@ -462,19 +471,21 @@ class DefinitionsServiceImplTest {
             valueType.setTags(Collections.singleton("testTag"));
 
             // Add to system tenant cache
-            tenantService.setCurrentTenant(SYSTEM_TENANT);
-            definitionsService.setValueType(valueType);
+            executionContextManager.executeAsSystem(() -> {
+                definitionsService.setValueType(valueType);
+            });
 
             // Switch to different tenant and verify inheritance
-            tenantService.setCurrentTenant("tenant1");
-            ValueType result = definitionsService.getValueType("test");
-            assertNotNull(result);
-            assertEquals("test", result.getId());
+            executionContextManager.executeAsTenant("tenant1", () -> {
+                ValueType result = definitionsService.getValueType("test");
+                assertNotNull(result);
+                assertEquals("test", result.getId());
 
-            // Second lookup should use cache
-            result = definitionsService.getValueType("test");
-            assertNotNull(result);
-            assertEquals("test", result.getId());
+                // Second lookup should use cache
+                result = definitionsService.getValueType("test");
+                assertNotNull(result);
+                assertEquals("test", result.getId());
+            });
         }
 
         @Test
@@ -520,9 +531,10 @@ class DefinitionsServiceImplTest {
                 new Thread(() -> {
                     try {
                         barrier.await();
-                        tenantService.setCurrentTenant("test-tenant");
-                        ActionType actionType = createTestActionType(id, new HashSet<>(Arrays.asList(tag)), null);
-                        definitionsService.setActionType(actionType);
+                        executionContextManager.executeAsTenant("test-tenant", () -> {
+                            ActionType actionType = createTestActionType(id, new HashSet<>(Arrays.asList(tag)), null);
+                            definitionsService.setActionType(actionType);
+                        });
                     } catch (Exception e) {
                         fail("Thread execution failed: " + e.getMessage());
                     } finally {
@@ -533,27 +545,29 @@ class DefinitionsServiceImplTest {
 
             assertTrue(endLatch.await(5, TimeUnit.SECONDS));
 
-            // Verify all types were saved
-            Collection<ActionType> allTypes = definitionsService.getAllActionTypes();
-            assertEquals(threadCount, allTypes.size());
+            executionContextManager.executeAsTenant("test-tenant", () -> {
+                // Verify all types were saved
+                Collection<ActionType> allTypes = definitionsService.getAllActionTypes();
+                assertEquals(threadCount, allTypes.size());
 
-            // Verify all tags are present
-            for (String tag : expectedTags) {
-                Set<ActionType> taggedTypes = definitionsService.getActionTypeByTag(tag);
-                assertEquals(1, taggedTypes.size());
-                ActionType taggedType = taggedTypes.iterator().next();
-                assertTrue(taggedType.getMetadata().getTags().contains(tag));
-            }
+                // Verify all tags are present
+                for (String tag : expectedTags) {
+                    Set<ActionType> taggedTypes = definitionsService.getActionTypeByTag(tag);
+                    assertEquals(1, taggedTypes.size());
+                    ActionType taggedType = taggedTypes.iterator().next();
+                    assertTrue(taggedType.getMetadata().getTags().contains(tag));
+                }
+            });
         }
 
         @Test
         void shouldMaintainTagCacheConsistency() {
             // given
-            tenantService.setCurrentTenant("tenant1");
+            executionContextManager.executeAsTenant("tenant1", () -> {
 
-            // Add type with tags
-            ConditionType type1 = createTestConditionType("test1", new HashSet<>(Arrays.asList("tag1", "tag2")), null);
-            definitionsService.setConditionType(type1);
+                // Add type with tags
+                ConditionType type1 = createTestConditionType("test1", new HashSet<>(Arrays.asList("tag1", "tag2")), null);
+                definitionsService.setConditionType(type1);
 
             // Verify initial state
             assertEquals(1, definitionsService.getConditionTypesByTag("tag1").size());
@@ -574,6 +588,7 @@ class DefinitionsServiceImplTest {
             // Verify all tag caches are clean
             assertTrue(definitionsService.getConditionTypesByTag("tag2").isEmpty());
             assertTrue(definitionsService.getConditionTypesByTag("tag3").isEmpty());
+            });
         }
 
         @Test
@@ -614,29 +629,34 @@ class DefinitionsServiceImplTest {
         @Test
         void shouldPreserveSystemTenantOnTenantRemoval() {
             // Add system tenant types
-            tenantService.setCurrentTenant(SYSTEM_TENANT);
-            ConditionType systemType = createTestConditionType("test1", new HashSet<>(Arrays.asList("tag1")), null);
-            definitionsService.setConditionType(systemType);
+            final ConditionType[] systemType = new ConditionType[1];
+            executionContextManager.executeAsSystem(() -> {
+                systemType[0] = createTestConditionType("test1", new HashSet<>(Arrays.asList("tag1")), null);
+                definitionsService.setConditionType(systemType[0]);
+            });
 
             // Add custom tenant types
-            tenantService.setCurrentTenant("tenant1");
-            ConditionType tenantType = createTestConditionType("test2", new HashSet<>(Arrays.asList("tag1")), null);
-            definitionsService.setConditionType(tenantType);
+            executionContextManager.executeAsTenant("tenant1", () -> {
+                ConditionType tenantType = createTestConditionType("test2", new HashSet<>(Arrays.asList("tag1")), null);
+                definitionsService.setConditionType(tenantType);
+            });
 
             // Remove tenant
             definitionsService.onTenantRemoved("tenant1");
 
             // Verify tenant caches are cleared
-            tenantService.setCurrentTenant("tenant1");
-            assertEquals(1, definitionsService.getConditionTypesByTag("tag1").size());
-            assertNull(definitionsService.getConditionType("test2"));
+            executionContextManager.executeAsTenant("tenant1", () -> {
+                assertEquals(1, definitionsService.getConditionTypesByTag("tag1").size());
+                assertNull(definitionsService.getConditionType("test2"));
+            });
 
-            // Verify system tenant is preserved
-            tenantService.setCurrentTenant(SYSTEM_TENANT);
-            Set<ConditionType> systemTypes = definitionsService.getConditionTypesByTag("tag1");
-            assertEquals(1, systemTypes.size());
-            assertTrue(systemTypes.contains(systemType));
-            assertEquals(systemType, definitionsService.getConditionType("test1"));
+            // Verify system tenant is unaffected
+            executionContextManager.executeAsSystem(() -> {
+                Set<ConditionType> systemTypes = definitionsService.getConditionTypesByTag("tag1");
+                assertEquals(1, systemTypes.size());
+                assertTrue(systemTypes.contains(systemType[0]));
+                assertEquals(systemType[0], definitionsService.getConditionType("test1"));
+            });
         }
 
         @Test
@@ -677,39 +697,45 @@ class DefinitionsServiceImplTest {
         @Test
         void shouldHandleInheritanceForAllTypes() {
             // Create system tenant types
-            tenantService.setCurrentTenant(SYSTEM_TENANT);
+            final ConditionType[] conditionType = new ConditionType[1];
+            final ActionType[] actionType = new ActionType[1];
+            final ValueType[] valueType = new ValueType[1];
 
-            ConditionType conditionType = createTestConditionType("test1", new HashSet<>(Arrays.asList("tag1")), null);
-            definitionsService.setConditionType(conditionType);
-
-            ActionType actionType = createTestActionType("test2", new HashSet<>(Arrays.asList("tag1")), null);
-            definitionsService.setActionType(actionType);
-
-            ValueType valueType = createTestValueType("test3", new HashSet<>(Arrays.asList("tag1")), null);
-            definitionsService.setValueType(valueType);
+            executionContextManager.executeAsSystem(() -> {
+                conditionType[0] = createTestConditionType("test1", new HashSet<>(Arrays.asList("tag1")), null);
+                definitionsService.setConditionType(conditionType[0]);
+            });
+            executionContextManager.executeAsSystem(() -> {
+                actionType[0] = createTestActionType("test2", new HashSet<>(Arrays.asList("tag1")), null);
+                definitionsService.setActionType(actionType[0]);
+            });
+            executionContextManager.executeAsSystem(() -> {
+                valueType[0] = createTestValueType("test3", new HashSet<>(Arrays.asList("tag1")), null);
+                definitionsService.setValueType(valueType[0]);
+            });
 
             // Switch to custom tenant
-            tenantService.setCurrentTenant("tenant1");
+            executionContextManager.executeAsTenant("tenant1", () -> {
+                // Verify inheritance for condition types
+                assertEquals(conditionType[0], definitionsService.getConditionType("test1"));
+                assertTrue(definitionsService.getConditionTypesByTag("tag1").contains(conditionType[0]));
 
-            // Verify inheritance for condition types
-            assertEquals(conditionType, definitionsService.getConditionType("test1"));
-            assertTrue(definitionsService.getConditionTypesByTag("tag1").contains(conditionType));
+                // Verify inheritance for action types
+                assertEquals(actionType[0], definitionsService.getActionType("test2"));
+                assertTrue(definitionsService.getActionTypeByTag("tag1").contains(actionType[0]));
 
-            // Verify inheritance for action types
-            assertEquals(actionType, definitionsService.getActionType("test2"));
-            assertTrue(definitionsService.getActionTypeByTag("tag1").contains(actionType));
+                // Verify inheritance for value types
+                assertEquals(valueType[0], definitionsService.getValueType("test3"));
+                assertTrue(definitionsService.getValueTypeByTag("tag1").contains(valueType[0]));
 
-            // Verify inheritance for value types
-            assertEquals(valueType, definitionsService.getValueType("test3"));
-            assertTrue(definitionsService.getValueTypeByTag("tag1").contains(valueType));
-
-            // Verify items were saved in persistence service
-            ConditionType savedCondition = definitionsService.getConditionType("test1");
-            ActionType savedAction = definitionsService.getActionType("test2");
-            assertNotNull(savedCondition, "Condition type should be saved");
-            assertNotNull(savedAction, "Action type should be saved");
-            assertEquals(SYSTEM_TENANT, savedCondition.getTenantId());
-            assertEquals(SYSTEM_TENANT, savedAction.getTenantId());
+                // Verify items were saved in persistence service
+                ConditionType savedCondition = definitionsService.getConditionType("test1");
+                ActionType savedAction = definitionsService.getActionType("test2");
+                assertNotNull(savedCondition, "Condition type should be saved");
+                assertNotNull(savedAction, "Action type should be saved");
+                assertEquals(SYSTEM_TENANT, savedCondition.getTenantId());
+                assertEquals(SYSTEM_TENANT, savedAction.getTenantId());
+            });
         }
 
         @Test
@@ -726,9 +752,10 @@ class DefinitionsServiceImplTest {
                 new Thread(() -> {
                     try {
                         barrier.await();
-                        tenantService.setCurrentTenantId(SYSTEM_TENANT);
-                        ConditionType conditionType = createTestConditionType("test" + index, new HashSet<>(Arrays.asList("tag1")), null);
-                        definitionsService.setConditionType(conditionType);
+                        executionContextManager.executeAsTenant(SYSTEM_TENANT, () -> {
+                            ConditionType conditionType = createTestConditionType("test" + index, new HashSet<>(Arrays.asList("tag1")), null);
+                            definitionsService.setConditionType(conditionType);
+                        });
                     } catch (Exception e) {
                         failed.set(true);
                         LOGGER.error("Thread execution failed", e);
@@ -741,9 +768,10 @@ class DefinitionsServiceImplTest {
                 new Thread(() -> {
                     try {
                         barrier.await();
-                        tenantService.setCurrentTenantId("tenant1");
-                        ConditionType conditionType = createTestConditionType("test" + index + "-tenant", new HashSet<>(Arrays.asList("tag1")), null);
-                        definitionsService.setConditionType(conditionType);
+                        executionContextManager.executeAsTenant("tenant1", () -> {
+                            ConditionType conditionType = createTestConditionType("test" + index + "-tenant", new HashSet<>(Arrays.asList("tag1")), null);
+                            definitionsService.setConditionType(conditionType);
+                        });
                     } catch (Exception e) {
                         failed.set(true);
                         LOGGER.error("Thread execution failed", e);
@@ -757,57 +785,65 @@ class DefinitionsServiceImplTest {
             assertFalse(failed.get(), "One or more threads failed execution");
 
             // Verify tenant isolation
-            tenantService.setCurrentTenantId(SYSTEM_TENANT);
-            assertEquals(threadCount, definitionsService.getConditionTypesByTag("tag1").size());
-            tenantService.setCurrentTenantId("tenant1");
-            assertEquals(threadCount*2, definitionsService.getConditionTypesByTag("tag1").size());
+            executionContextManager.executeAsTenant(SYSTEM_TENANT, () -> {
+                assertEquals(threadCount, definitionsService.getConditionTypesByTag("tag1").size());
+            });
+            executionContextManager.executeAsTenant("tenant1", () -> {
+                assertEquals(threadCount*2 /* Because of inheritance */, definitionsService.getConditionTypesByTag("tag1").size());
+            });
         }
 
         @Test
         void shouldHandleTenantLifecycle() {
             // Setup system tenant data
-            tenantService.setCurrentTenant(SYSTEM_TENANT);
-            ConditionType systemConditionType = createTestConditionType("test1", new HashSet<>(Arrays.asList("tag1")), null);
-            systemConditionType.setTenantId(SYSTEM_TENANT);
-            definitionsService.setConditionType(systemConditionType);
+            final ConditionType[] systemConditionType = new ConditionType[1];
+            final ActionType[] systemActionType = new ActionType[1];
 
-            ActionType systemActionType = createTestActionType("test2", new HashSet<>(Arrays.asList("tag1")), null);
-            systemActionType.setTenantId(SYSTEM_TENANT);
-            definitionsService.setActionType(systemActionType);
+            executionContextManager.executeAsTenant(SYSTEM_TENANT, () -> {
+                systemConditionType[0] = createTestConditionType("test1", new HashSet<>(Arrays.asList("tag1")), null);
+                systemConditionType[0].setTenantId(SYSTEM_TENANT);
+                definitionsService.setConditionType(systemConditionType[0]);
+
+                systemActionType[0] = createTestActionType("test2", new HashSet<>(Arrays.asList("tag1")), null);
+                systemActionType[0].setTenantId(SYSTEM_TENANT);
+                definitionsService.setActionType(systemActionType[0]);
+            });
 
             // Setup tenant data
-            tenantService.setCurrentTenant("tenant1");
-            ConditionType tenantConditionType = createTestConditionType("test4", new HashSet<>(Arrays.asList("tag2")), null);
-            tenantConditionType.setTenantId("tenant1");
-            definitionsService.setConditionType(tenantConditionType);
+            executionContextManager.executeAsTenant("tenant1", () -> {
+                ConditionType tenantConditionType = createTestConditionType("test4", new HashSet<>(Arrays.asList("tag2")), null);
+                tenantConditionType.setTenantId("tenant1");
+                definitionsService.setConditionType(tenantConditionType);
 
-            ActionType tenantActionType = createTestActionType("test5", new HashSet<>(Arrays.asList("tag2")), null);
-            tenantActionType.setTenantId("tenant1");
-            definitionsService.setActionType(tenantActionType);
+                ActionType tenantActionType = createTestActionType("test5", new HashSet<>(Arrays.asList("tag2")), null);
+                tenantActionType.setTenantId("tenant1");
+                definitionsService.setActionType(tenantActionType);
 
-            // Verify tenant data
-            assertEquals(tenantConditionType, definitionsService.getConditionType("test4"));
-            assertEquals(tenantActionType, definitionsService.getActionType("test5"));
-            assertTrue(definitionsService.getConditionTypesByTag("tag2").contains(tenantConditionType));
-            assertTrue(definitionsService.getActionTypeByTag("tag2").contains(tenantActionType));
+                // Verify tenant data
+                assertEquals(tenantConditionType, definitionsService.getConditionType("test4"));
+                assertEquals(tenantActionType, definitionsService.getActionType("test5"));
+                assertTrue(definitionsService.getConditionTypesByTag("tag2").contains(tenantConditionType));
+                assertTrue(definitionsService.getActionTypeByTag("tag2").contains(tenantActionType));
 
-            // Verify system tenant data is accessible
-            assertNotNull(definitionsService.getConditionType("test1"));
-            assertNotNull(definitionsService.getActionType("test2"));
+                // Verify system tenant data is accessible
+                assertNotNull(definitionsService.getConditionType("test1"));
+                assertNotNull(definitionsService.getActionType("test2"));
 
-            // Test tenant removal
-            definitionsService.onTenantRemoved("tenant1");
+                // Test tenant removal
+                definitionsService.onTenantRemoved("tenant1");
 
-            // Verify tenant data is removed
-            assertNull(definitionsService.getConditionType("test4"));
-            assertNull(definitionsService.getActionType("test5"));
-            assertTrue(definitionsService.getConditionTypesByTag("tag2").isEmpty());
-            assertTrue(definitionsService.getActionTypeByTag("tag2").isEmpty());
+                // Verify tenant data is removed
+                assertNull(definitionsService.getConditionType("test4"));
+                assertNull(definitionsService.getActionType("test5"));
+                assertTrue(definitionsService.getConditionTypesByTag("tag2").isEmpty());
+                assertTrue(definitionsService.getActionTypeByTag("tag2").isEmpty());
+            });
 
             // Verify system tenant data is preserved
-            tenantService.setCurrentTenant(SYSTEM_TENANT);
-            assertEquals(systemConditionType, definitionsService.getConditionType("test1"));
-            assertEquals(systemActionType, definitionsService.getActionType("test2"));
+            executionContextManager.executeAsTenant(SYSTEM_TENANT, () -> {
+                assertEquals(systemConditionType[0], definitionsService.getConditionType("test1"));
+                assertEquals(systemActionType[0], definitionsService.getActionType("test2"));
+            });
         }
 
         @Test
@@ -816,136 +852,166 @@ class DefinitionsServiceImplTest {
             ConcurrentTestHelper testHelper = new ConcurrentTestHelper(numThreads);
 
             // Setup initial data
-            setupTenantContext("tenant1");
-            ConditionType tenantType = createTestConditionType("test1", new HashSet<>(Arrays.asList("tag1")), null);
-            definitionsService.setConditionType(tenantType);
+            executionContextManager.executeAsTenant("tenant1", () -> {
+                ConditionType tenantType = createTestConditionType("test1", new HashSet<>(Arrays.asList("tag1")), null);
+                definitionsService.setConditionType(tenantType);
+            });
 
             // Create threads that will access the service while tenant is being removed
             for (int i = 0; i < numThreads; i++) {
                 testHelper.startThread("TenantAccess-" + i, () -> {
-                    setupTenantContext("tenant1");
-                    definitionsService.getConditionType("test1");
-                    definitionsService.getConditionTypesByTag("tag1");
-                    Thread.sleep(10); // Simulate some work
+                    try {
+                        executionContextManager.executeAsTenant("tenant1", () -> {
+                            try {
+                                definitionsService.getConditionType("test1");
+                                definitionsService.getConditionTypesByTag("tag1");
+                                Thread.sleep(10); // Simulate some work
+                            } catch (InterruptedException e) {
+                                Thread.currentThread().interrupt();
+                                throw new RuntimeException("Thread interrupted during test", e);
+                            }
+                        });
+                    } catch (Exception e) {
+                        throw new RuntimeException("Error executing in tenant context", e);
+                    }
                 });
             }
 
-            definitionsService.onTenantRemoved("tenant1");
-            testHelper.executeAndVerify("Tenant removal test", 5);
+            try {
+                definitionsService.onTenantRemoved("tenant1");
+                testHelper.executeAndVerify("Tenant removal test", 5);
 
-            // Verify tenant was properly removed
-            setupTenantContext("tenant1");
-            assertTrue(definitionsService.getConditionTypesByTag("tag1").isEmpty());
-            assertNull(definitionsService.getConditionType("test1"));
+                // Verify tenant was properly removed
+                executionContextManager.executeAsTenant("tenant1", () -> {
+                    assertTrue(definitionsService.getConditionTypesByTag("tag1").isEmpty());
+                    assertNull(definitionsService.getConditionType("test1"));
+                });
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw e;
+            }
         }
 
         @Test
         void shouldPreferTenantSpecificTypes() {
             // Create system tenant types
-            tenantService.setCurrentTenant(SYSTEM_TENANT);
-            ConditionType systemConditionType = createTestConditionType("test1", new HashSet<>(Arrays.asList("tag1")), null);
-            systemConditionType.setTenantId(SYSTEM_TENANT);
-            definitionsService.setConditionType(systemConditionType);
+            final ConditionType[] systemConditionType = new ConditionType[1];
+            final ActionType[] systemActionType = new ActionType[1];
+            final ValueType[] systemValueType = new ValueType[1];
 
-            ActionType systemActionType = createTestActionType("test2", new HashSet<>(Arrays.asList("tag1")), null);
-            systemActionType.setTenantId(SYSTEM_TENANT);
-            definitionsService.setActionType(systemActionType);
+            executionContextManager.executeAsTenant(SYSTEM_TENANT, () -> {
+                systemConditionType[0] = createTestConditionType("test1", new HashSet<>(Arrays.asList("tag1")), null);
+                systemConditionType[0].setTenantId(SYSTEM_TENANT);
+                definitionsService.setConditionType(systemConditionType[0]);
 
-            ValueType systemValueType = createTestValueType("test3", new HashSet<>(Arrays.asList("tag1")), null);
-            definitionsService.setValueType(systemValueType);
+                systemActionType[0] = createTestActionType("test2", new HashSet<>(Arrays.asList("tag1")), null);
+                systemActionType[0].setTenantId(SYSTEM_TENANT);
+                definitionsService.setActionType(systemActionType[0]);
+
+                systemValueType[0] = createTestValueType("test3", new HashSet<>(Arrays.asList("tag1")), null);
+                definitionsService.setValueType(systemValueType[0]);
+            });
 
             // Create tenant-specific types with same IDs but different tags
-            tenantService.setCurrentTenant("tenant1");
-            ConditionType tenantConditionType = createTestConditionType("test1", new HashSet<>(Arrays.asList("tag2")), null);
-            tenantConditionType.setTenantId("tenant1");
-            definitionsService.setConditionType(tenantConditionType);
+            executionContextManager.executeAsTenant("tenant1", () -> {
+                ConditionType tenantConditionType = createTestConditionType("test1", new HashSet<>(Arrays.asList("tag2")), null);
+                tenantConditionType.setTenantId("tenant1");
+                definitionsService.setConditionType(tenantConditionType);
 
-            ActionType tenantActionType = createTestActionType("test2", new HashSet<>(Arrays.asList("tag2")), null);
-            tenantActionType.setTenantId("tenant1");
-            definitionsService.setActionType(tenantActionType);
+                ActionType tenantActionType = createTestActionType("test2", new HashSet<>(Arrays.asList("tag2")), null);
+                tenantActionType.setTenantId("tenant1");
+                definitionsService.setActionType(tenantActionType);
 
-            ValueType tenantValueType = createTestValueType("test3", new HashSet<>(Arrays.asList("tag2")), null);
-            definitionsService.setValueType(tenantValueType);
+                ValueType tenantValueType = createTestValueType("test3", new HashSet<>(Arrays.asList("tag2")), null);
+                definitionsService.setValueType(tenantValueType);
 
-            // Verify that tenant-specific types are returned
-            assertEquals(tenantConditionType, definitionsService.getConditionType("test1"));
-            assertEquals(tenantActionType, definitionsService.getActionType("test2"));
-            assertEquals(tenantValueType, definitionsService.getValueType("test3"));
+                // Verify that tenant-specific types are returned
+                assertEquals(tenantConditionType, definitionsService.getConditionType("test1"));
+                assertEquals(tenantActionType, definitionsService.getActionType("test2"));
+                assertEquals(tenantValueType, definitionsService.getValueType("test3"));
 
-            // Verify that only tenant-specific tags are returned
-            assertTrue(definitionsService.getConditionTypesByTag("tag2").contains(tenantConditionType));
-            assertTrue(definitionsService.getConditionTypesByTag("tag1").contains(systemConditionType));
+                // Verify that only tenant-specific tags are returned
+                assertTrue(definitionsService.getConditionTypesByTag("tag2").contains(tenantConditionType));
+                assertTrue(definitionsService.getConditionTypesByTag("tag1").contains(systemConditionType[0]));
 
-            assertTrue(definitionsService.getActionTypeByTag("tag2").contains(tenantActionType));
-            assertTrue(definitionsService.getActionTypeByTag("tag1").contains(systemActionType));
+                assertTrue(definitionsService.getActionTypeByTag("tag2").contains(tenantActionType));
+                assertTrue(definitionsService.getActionTypeByTag("tag1").contains(systemActionType[0]));
 
-            assertTrue(definitionsService.getValueTypeByTag("tag2").contains(tenantValueType));
-            assertTrue(definitionsService.getValueTypeByTag("tag1").contains(systemValueType));
+                assertTrue(definitionsService.getValueTypeByTag("tag2").contains(tenantValueType));
+                assertTrue(definitionsService.getValueTypeByTag("tag1").contains(systemValueType[0]));
+            });
         }
 
         @Test
         void shouldHandleTypeRemovalWithInheritance() {
             // Create system tenant types
-            tenantService.setCurrentTenant(SYSTEM_TENANT);
-            ConditionType systemConditionType = createTestConditionType("test1", new HashSet<>(Arrays.asList("tag1")), null);
-            systemConditionType.setTenantId(SYSTEM_TENANT);
-            definitionsService.setConditionType(systemConditionType);
-            // Verify system tenant type was saved
-            assertEquals(systemConditionType, definitionsService.getConditionType("test1"));
+            final ConditionType[] systemConditionType = new ConditionType[1];
+            final ActionType[] systemActionType = new ActionType[1];
+            final ValueType[] systemValueType = new ValueType[1];
 
-            ActionType systemActionType = createTestActionType("test2", new HashSet<>(Arrays.asList("tag1")), null);
-            systemActionType.setTenantId(SYSTEM_TENANT);
-            definitionsService.setActionType(systemActionType);
-            // Verify system tenant type was saved
-            assertEquals(systemActionType, definitionsService.getActionType("test2"));
+            executionContextManager.executeAsTenant(SYSTEM_TENANT, () -> {
+                systemConditionType[0] = createTestConditionType("test1", new HashSet<>(Arrays.asList("tag1")), null);
+                systemConditionType[0].setTenantId(SYSTEM_TENANT);
+                definitionsService.setConditionType(systemConditionType[0]);
+                // Verify system tenant type was saved
+                assertEquals(systemConditionType[0], definitionsService.getConditionType("test1"));
 
-            ValueType systemValueType = createTestValueType("test3", new HashSet<>(Arrays.asList("tag1")), null);
-            definitionsService.setValueType(systemValueType);
-            // Verify system tenant type was saved
-            assertEquals(systemValueType, definitionsService.getValueType("test3"));
+                systemActionType[0] = createTestActionType("test2", new HashSet<>(Arrays.asList("tag1")), null);
+                systemActionType[0].setTenantId(SYSTEM_TENANT);
+                definitionsService.setActionType(systemActionType[0]);
+                // Verify system tenant type was saved
+                assertEquals(systemActionType[0], definitionsService.getActionType("test2"));
+
+                systemValueType[0] = createTestValueType("test3", new HashSet<>(Arrays.asList("tag1")), null);
+                definitionsService.setValueType(systemValueType[0]);
+                // Verify system tenant type was saved
+                assertEquals(systemValueType[0], definitionsService.getValueType("test3"));
+            });
 
             // Create tenant-specific types with same IDs
-            tenantService.setCurrentTenant("tenant1");
-            ConditionType tenantConditionType = createTestConditionType("test1", new HashSet<>(Arrays.asList("tag2")), null);
-            tenantConditionType.setTenantId("tenant1");
-            definitionsService.setConditionType(tenantConditionType);
+            executionContextManager.executeAsTenant("tenant1", () -> {
+                ConditionType tenantConditionType = createTestConditionType("test1", new HashSet<>(Arrays.asList("tag2")), null);
+                tenantConditionType.setTenantId("tenant1");
+                definitionsService.setConditionType(tenantConditionType);
 
-            ActionType tenantActionType = createTestActionType("test2", new HashSet<>(Arrays.asList("tag2")), null);
-            tenantActionType.setTenantId("tenant1");
-            definitionsService.setActionType(tenantActionType);
+                ActionType tenantActionType = createTestActionType("test2", new HashSet<>(Arrays.asList("tag2")), null);
+                tenantActionType.setTenantId("tenant1");
+                definitionsService.setActionType(tenantActionType);
 
-            ValueType tenantValueType = createTestValueType("test3", new HashSet<>(Arrays.asList("tag2")), null);
-            definitionsService.setValueType(tenantValueType);
+                ValueType tenantValueType = createTestValueType("test3", new HashSet<>(Arrays.asList("tag2")), null);
+                definitionsService.setValueType(tenantValueType);
 
-            // Verify initial state
-            assertEquals(tenantConditionType, definitionsService.getConditionType("test1"));
-            assertEquals(tenantActionType, definitionsService.getActionType("test2"));
-            assertEquals(tenantValueType, definitionsService.getValueType("test3"));
+                // Verify initial state
+                assertEquals(tenantConditionType, definitionsService.getConditionType("test1"));
+                assertEquals(tenantActionType, definitionsService.getActionType("test2"));
+                assertEquals(tenantValueType, definitionsService.getValueType("test3"));
 
-            // Remove tenant-specific types
-            definitionsService.removeConditionType("test1");
-            definitionsService.removeActionType("test2");
-            definitionsService.removeValueType("test3");
+                // Remove tenant-specific types
+                definitionsService.removeConditionType("test1");
+                definitionsService.removeActionType("test2");
+                definitionsService.removeValueType("test3");
 
-            // Verify tenant-specific types are removed but system types are still accessible
-            assertEquals(systemConditionType, definitionsService.getConditionType("test1"));
-            assertEquals(systemActionType, definitionsService.getActionType("test2"));
-            assertEquals(systemValueType, definitionsService.getValueType("test3"));
+                // Verify tenant-specific types are removed but system types are still accessible
+                assertEquals(systemConditionType[0], definitionsService.getConditionType("test1"));
+                assertEquals(systemActionType[0], definitionsService.getActionType("test2"));
+                assertEquals(systemValueType[0], definitionsService.getValueType("test3"));
 
-            // Verify tag-based queries
-            assertFalse(definitionsService.getConditionTypesByTag("tag2").contains(tenantConditionType));
-            assertFalse(definitionsService.getActionTypeByTag("tag2").contains(tenantActionType));
-            assertFalse(definitionsService.getValueTypeByTag("tag2").contains(tenantValueType));
+                // Verify tag-based queries
+                assertFalse(definitionsService.getConditionTypesByTag("tag2").contains(tenantConditionType));
+                assertFalse(definitionsService.getActionTypeByTag("tag2").contains(tenantActionType));
+                assertFalse(definitionsService.getValueTypeByTag("tag2").contains(tenantValueType));
 
-            assertTrue(definitionsService.getConditionTypesByTag("tag1").contains(systemConditionType));
-            assertTrue(definitionsService.getActionTypeByTag("tag1").contains(systemActionType));
-            assertTrue(definitionsService.getValueTypeByTag("tag1").contains(systemValueType));
+                assertTrue(definitionsService.getConditionTypesByTag("tag1").contains(systemConditionType[0]));
+                assertTrue(definitionsService.getActionTypeByTag("tag1").contains(systemActionType[0]));
+                assertTrue(definitionsService.getValueTypeByTag("tag1").contains(systemValueType[0]));
+            });
 
             // Switch to system tenant and verify types still exist
-            tenantService.setCurrentTenant(SYSTEM_TENANT);
-            assertEquals(systemConditionType, definitionsService.getConditionType("test1"));
-            assertEquals(systemActionType, definitionsService.getActionType("test2"));
-            assertEquals(systemValueType, definitionsService.getValueType("test3"));
+            executionContextManager.executeAsTenant(SYSTEM_TENANT, () -> {
+                assertEquals(systemConditionType[0], definitionsService.getConditionType("test1"));
+                assertEquals(systemActionType[0], definitionsService.getActionType("test2"));
+                assertEquals(systemValueType[0], definitionsService.getValueType("test3"));
+            });
         }
 
         @Test
@@ -954,55 +1020,57 @@ class DefinitionsServiceImplTest {
             Long bundleId = 1L;
             setupMockBundle(bundleId);
 
-            tenantService.setCurrentTenant(SYSTEM_TENANT);
-            ConditionType systemConditionType = createTestConditionType("test1", new HashSet<>(Arrays.asList("tag1")), bundleId);
-            systemConditionType.setTenantId(SYSTEM_TENANT);
-            registerPluginType(systemConditionType, bundleId);
+            executionContextManager.executeAsTenant(SYSTEM_TENANT, () -> {
+                ConditionType systemConditionType = createTestConditionType("test1", new HashSet<>(Arrays.asList("tag1")), bundleId);
+                systemConditionType.setTenantId(SYSTEM_TENANT);
+                registerPluginType(systemConditionType, bundleId);
 
-            ActionType systemActionType = createTestActionType("test2", new HashSet<>(Arrays.asList("tag1")), bundleId);
-            systemActionType.setTenantId(SYSTEM_TENANT);
-            registerPluginType(systemActionType, bundleId);
+                ActionType systemActionType = createTestActionType("test2", new HashSet<>(Arrays.asList("tag1")), bundleId);
+                systemActionType.setTenantId(SYSTEM_TENANT);
+                registerPluginType(systemActionType, bundleId);
 
-            ValueType systemValueType = createTestValueType("test3", new HashSet<>(Arrays.asList("tag1")), bundleId);
-            registerPluginType(systemValueType, bundleId);
+                ValueType systemValueType = createTestValueType("test3", new HashSet<>(Arrays.asList("tag1")), bundleId);
+                registerPluginType(systemValueType, bundleId);
+            });
 
             // Create tenant-specific overrides
-            tenantService.setCurrentTenant("tenant1");
-            ConditionType tenantConditionType = createTestConditionType("test1", new HashSet<>(Arrays.asList("tag2")), null);
-            tenantConditionType.setTenantId("tenant1");
-            definitionsService.setConditionType(tenantConditionType);
+            executionContextManager.executeAsTenant("tenant1", () -> {
+                ConditionType tenantConditionType = createTestConditionType("test1", new HashSet<>(Arrays.asList("tag2")), null);
+                tenantConditionType.setTenantId("tenant1");
+                definitionsService.setConditionType(tenantConditionType);
 
-            ActionType tenantActionType = createTestActionType("test2", new HashSet<>(Arrays.asList("tag2")), null);
-            tenantActionType.setTenantId("tenant1");
-            definitionsService.setActionType(tenantActionType);
+                ActionType tenantActionType = createTestActionType("test2", new HashSet<>(Arrays.asList("tag2")), null);
+                tenantActionType.setTenantId("tenant1");
+                definitionsService.setActionType(tenantActionType);
 
-            ValueType tenantValueType = createTestValueType("test3", new HashSet<>(Arrays.asList("tag2")), null);
-            definitionsService.setValueType(tenantValueType);
+                ValueType tenantValueType = createTestValueType("test3", new HashSet<>(Arrays.asList("tag2")), null);
+                definitionsService.setValueType(tenantValueType);
 
-            // Stop the bundle, this should remove the system types
-            definitionsService.processBundleStop(bundleContext);
+                // Stop the bundle, this should remove the system types
+                definitionsService.processBundleStop(bundleContext);
 
-            // Verify tenant-specific types are still available
-            assertEquals(tenantConditionType, definitionsService.getConditionType("test1"));
-            assertEquals(tenantActionType, definitionsService.getActionType("test2"));
-            assertEquals(tenantValueType, definitionsService.getValueType("test3"));
+                // Verify tenant-specific types are still available
+                assertEquals(tenantConditionType, definitionsService.getConditionType("test1"));
+                assertEquals(tenantActionType, definitionsService.getActionType("test2"));
+                assertEquals(tenantValueType, definitionsService.getValueType("test3"));
 
-            // Remove tenant-specific types
-            definitionsService.removeConditionType("test1");
-            definitionsService.removeActionType("test2");
-            definitionsService.removeValueType("test3");
+                // Remove tenant-specific types
+                definitionsService.removeConditionType("test1");
+                definitionsService.removeActionType("test2");
+                definitionsService.removeValueType("test3");
 
-            // Verify all types are now gone (system types were removed by bundle stop)
-            assertNull(definitionsService.getConditionType("test1"));
-            assertNull(definitionsService.getActionType("test2"));
-            assertNull(definitionsService.getValueType("test3"));
+                // Verify all types are now gone (system types were removed by bundle stop)
+                assertNull(definitionsService.getConditionType("test1"));
+                assertNull(definitionsService.getActionType("test2"));
+                assertNull(definitionsService.getValueType("test3"));
 
-            assertTrue(definitionsService.getConditionTypesByTag("tag1").isEmpty());
-            assertTrue(definitionsService.getActionTypeByTag("tag1").isEmpty());
-            assertTrue(definitionsService.getValueTypeByTag("tag1").isEmpty());
-            assertTrue(definitionsService.getConditionTypesByTag("tag2").isEmpty());
-            assertTrue(definitionsService.getActionTypeByTag("tag2").isEmpty());
-            assertTrue(definitionsService.getValueTypeByTag("tag2").isEmpty());
+                assertTrue(definitionsService.getConditionTypesByTag("tag1").isEmpty());
+                assertTrue(definitionsService.getActionTypeByTag("tag1").isEmpty());
+                assertTrue(definitionsService.getValueTypeByTag("tag1").isEmpty());
+                assertTrue(definitionsService.getConditionTypesByTag("tag2").isEmpty());
+                assertTrue(definitionsService.getActionTypeByTag("tag2").isEmpty());
+                assertTrue(definitionsService.getValueTypeByTag("tag2").isEmpty());
+            });
         }
     }
 
@@ -1081,9 +1149,10 @@ class DefinitionsServiceImplTest {
                 new Thread(() -> {
                     try {
                         barrier.await();
-                        tenantService.setCurrentTenant("test-tenant");
-                        ValueType valueType = createTestValueType(id, new HashSet<>(Arrays.asList(tag)), null);
-                        definitionsService.setValueType(valueType);
+                        executionContextManager.executeAsTenant("test-tenant", () -> {
+                            ValueType valueType = createTestValueType(id, new HashSet<>(Arrays.asList(tag)), null);
+                            definitionsService.setValueType(valueType);
+                        });
                     } catch (Exception e) {
                         fail("Thread execution failed: " + e.getMessage());
                     } finally {
@@ -1094,27 +1163,29 @@ class DefinitionsServiceImplTest {
 
             assertTrue(endLatch.await(5, TimeUnit.SECONDS));
 
-            // Verify all types were saved in memory
-            Collection<ValueType> allTypes = definitionsService.getAllValueTypes();
-            assertEquals(threadCount, allTypes.size());
+            executionContextManager.executeAsTenant("test-tenant", () -> {
+                // Verify all types were saved in memory
+                Collection<ValueType> allTypes = definitionsService.getAllValueTypes();
+                assertEquals(threadCount, allTypes.size());
 
-            // Verify all tags are present
-            Set<String> actualTags = new HashSet<>();
-            Set<String> actualIds = new HashSet<>();
-            for (ValueType type : allTypes) {
-                actualIds.add(type.getId());
-                actualTags.addAll(type.getTags());
-            }
-            assertEquals(expectedTags, actualTags);
-            assertEquals(expectedIds, actualIds);
+                // Verify all tags are present
+                Set<String> actualTags = new HashSet<>();
+                Set<String> actualIds = new HashSet<>();
+                for (ValueType type : allTypes) {
+                    actualIds.add(type.getId());
+                    actualTags.addAll(type.getTags());
+                }
+                assertEquals(expectedTags, actualTags);
+                assertEquals(expectedIds, actualIds);
 
-            // Verify tag cache consistency
-            for (String tag : expectedTags) {
-                Set<ValueType> taggedTypes = definitionsService.getValueTypeByTag(tag);
-                assertEquals(1, taggedTypes.size());
-                ValueType taggedType = taggedTypes.iterator().next();
-                assertTrue(taggedType.getTags().contains(tag));
-            }
+                // Verify tag cache consistency
+                for (String tag : expectedTags) {
+                    Set<ValueType> taggedTypes = definitionsService.getValueTypeByTag(tag);
+                    assertEquals(1, taggedTypes.size());
+                    ValueType taggedType = taggedTypes.iterator().next();
+                    assertTrue(taggedType.getTags().contains(tag));
+                }
+            });
         }
     }
 
@@ -1177,9 +1248,10 @@ class DefinitionsServiceImplTest {
                 new Thread(() -> {
                     try {
                         barrier.await();
-                        tenantService.setCurrentTenant("test-tenant");
-                        ConditionType conditionType = createTestConditionType(id, new HashSet<>(Arrays.asList(tag)), null);
-                        definitionsService.setConditionType(conditionType);
+                        executionContextManager.executeAsTenant("test-tenant", () -> {
+                            ConditionType conditionType = createTestConditionType(id, new HashSet<>(Arrays.asList(tag)), null);
+                            definitionsService.setConditionType(conditionType);
+                        });
                     } catch (Exception e) {
                         fail("Thread execution failed: " + e.getMessage());
                     } finally {
@@ -1188,19 +1260,22 @@ class DefinitionsServiceImplTest {
                 }).start();
             }
 
-            assertTrue(endLatch.await(5, TimeUnit.SECONDS));
+            assertTrue(endLatch.await(10, TimeUnit.SECONDS));
 
-            // Verify all types were saved
-            Collection<ConditionType> allTypes = definitionsService.getAllConditionTypes();
-            assertEquals(threadCount, allTypes.size());
+            executionContextManager.executeAsTenant("test-tenant", () -> {
+                // Verify all types were saved
+                Collection<ConditionType> allTypes = definitionsService.getAllConditionTypes();
+                assertEquals(threadCount, allTypes.size());
 
-            // Verify all tags are present
-            for (String tag : expectedTags) {
-                Set<ConditionType> taggedTypes = definitionsService.getConditionTypesByTag(tag);
-                assertEquals(1, taggedTypes.size());
-                ConditionType taggedType = taggedTypes.iterator().next();
-                assertTrue(taggedType.getMetadata().getTags().contains(tag));
-            }
+                // Verify all tags are present
+                for (String tag : expectedTags) {
+                    Set<ConditionType> taggedTypes = definitionsService.getConditionTypesByTag(tag);
+                    assertEquals(1, taggedTypes.size());
+                    ConditionType taggedType = taggedTypes.iterator().next();
+                    assertTrue(taggedType.getMetadata().getTags().contains(tag));
+                }
+            });
+
         }
     }
 
@@ -1208,23 +1283,24 @@ class DefinitionsServiceImplTest {
     class ActionTypeTests {
         @Test
         void shouldManageActionTypes() {
-            tenantService.setCurrentTenant(SYSTEM_TENANT);
-            // given
-            ActionType actionType = createTestActionType("test1", new HashSet<>(Arrays.asList("tag1")), null);
+            executionContextManager.executeAsTenant(SYSTEM_TENANT, () -> {
+                // given
+                ActionType actionType = createTestActionType("test1", new HashSet<>(Arrays.asList("tag1")), null);
 
-            // when
-            definitionsService.setActionType(actionType);
+                // when
+                definitionsService.setActionType(actionType);
 
-            // then
-            assertEquals(actionType, definitionsService.getActionType("test1"));
-            assertTrue(definitionsService.getActionTypeByTag("tag1").contains(actionType));
+                // then
+                assertEquals(actionType, definitionsService.getActionType("test1"));
+                assertTrue(definitionsService.getActionTypeByTag("tag1").contains(actionType));
 
-            // when removing
-            definitionsService.removeActionType("test1");
+                // when removing
+                definitionsService.removeActionType("test1");
 
-            // then
-            assertNull(persistenceService.load("test1", ActionType.class), "Action type should be removed");
-            assertTrue(definitionsService.getActionTypeByTag("tag1").isEmpty());
+                // then
+                assertNull(persistenceService.load("test1", ActionType.class), "Action type should be removed");
+                assertTrue(definitionsService.getActionTypeByTag("tag1").isEmpty());
+            });
         }
 
         @Test
@@ -1271,48 +1347,54 @@ class DefinitionsServiceImplTest {
         @Test
         void shouldHandleTenantLifecycle() {
             // Setup system tenant data
-            tenantService.setCurrentTenant(SYSTEM_TENANT);
-            ConditionType systemConditionType = createTestConditionType("test1", new HashSet<>(Arrays.asList("tag1")), null);
-            systemConditionType.setTenantId(SYSTEM_TENANT);
-            definitionsService.setConditionType(systemConditionType);
+            final ConditionType[] systemConditionType = new ConditionType[1];
+            final ActionType[] systemActionType = new ActionType[1];
 
-            ActionType systemActionType = createTestActionType("test2", new HashSet<>(Arrays.asList("tag1")), null);
-            systemActionType.setTenantId(SYSTEM_TENANT);
-            definitionsService.setActionType(systemActionType);
+            executionContextManager.executeAsTenant(SYSTEM_TENANT, () -> {
+                systemConditionType[0] = createTestConditionType("test1", new HashSet<>(Arrays.asList("tag1")), null);
+                systemConditionType[0].setTenantId(SYSTEM_TENANT);
+                definitionsService.setConditionType(systemConditionType[0]);
+
+                systemActionType[0] = createTestActionType("test2", new HashSet<>(Arrays.asList("tag1")), null);
+                systemActionType[0].setTenantId(SYSTEM_TENANT);
+                definitionsService.setActionType(systemActionType[0]);
+            });
 
             // Setup tenant data
-            tenantService.setCurrentTenant("tenant1");
-            ConditionType tenantConditionType = createTestConditionType("test4", new HashSet<>(Arrays.asList("tag2")), null);
-            tenantConditionType.setTenantId("tenant1");
-            definitionsService.setConditionType(tenantConditionType);
+            executionContextManager.executeAsTenant("tenant1", () -> {
+                ConditionType tenantConditionType = createTestConditionType("test4", new HashSet<>(Arrays.asList("tag2")), null);
+                tenantConditionType.setTenantId("tenant1");
+                definitionsService.setConditionType(tenantConditionType);
 
-            ActionType tenantActionType = createTestActionType("test5", new HashSet<>(Arrays.asList("tag2")), null);
-            tenantActionType.setTenantId("tenant1");
-            definitionsService.setActionType(tenantActionType);
+                ActionType tenantActionType = createTestActionType("test5", new HashSet<>(Arrays.asList("tag2")), null);
+                tenantActionType.setTenantId("tenant1");
+                definitionsService.setActionType(tenantActionType);
 
-            // Verify tenant data
-            assertEquals(tenantConditionType, definitionsService.getConditionType("test4"));
-            assertEquals(tenantActionType, definitionsService.getActionType("test5"));
-            assertTrue(definitionsService.getConditionTypesByTag("tag2").contains(tenantConditionType));
-            assertTrue(definitionsService.getActionTypeByTag("tag2").contains(tenantActionType));
+                // Verify tenant data
+                assertEquals(tenantConditionType, definitionsService.getConditionType("test4"));
+                assertEquals(tenantActionType, definitionsService.getActionType("test5"));
+                assertTrue(definitionsService.getConditionTypesByTag("tag2").contains(tenantConditionType));
+                assertTrue(definitionsService.getActionTypeByTag("tag2").contains(tenantActionType));
 
-            // Verify system tenant data is accessible
-            assertNotNull(definitionsService.getConditionType("test1"));
-            assertNotNull(definitionsService.getActionType("test2"));
+                // Verify system tenant data is accessible
+                assertNotNull(definitionsService.getConditionType("test1"));
+                assertNotNull(definitionsService.getActionType("test2"));
 
-            // Test tenant removal
-            definitionsService.onTenantRemoved("tenant1");
+                // Test tenant removal
+                definitionsService.onTenantRemoved("tenant1");
 
-            // Verify tenant data is removed
-            assertNull(definitionsService.getConditionType("test4"));
-            assertNull(definitionsService.getActionType("test5"));
-            assertTrue(definitionsService.getConditionTypesByTag("tag2").isEmpty());
-            assertTrue(definitionsService.getActionTypeByTag("tag2").isEmpty());
+                // Verify tenant data is removed
+                assertNull(definitionsService.getConditionType("test4"));
+                assertNull(definitionsService.getActionType("test5"));
+                assertTrue(definitionsService.getConditionTypesByTag("tag2").isEmpty());
+                assertTrue(definitionsService.getActionTypeByTag("tag2").isEmpty());
+            });
 
             // Verify system tenant data is preserved
-            tenantService.setCurrentTenant(SYSTEM_TENANT);
-            assertEquals(systemConditionType, definitionsService.getConditionType("test1"));
-            assertEquals(systemActionType, definitionsService.getActionType("test2"));
+            executionContextManager.executeAsTenant(SYSTEM_TENANT, () -> {
+                assertEquals(systemConditionType[0], definitionsService.getConditionType("test1"));
+                assertEquals(systemActionType[0], definitionsService.getActionType("test2"));
+            });
         }
 
         @Test
@@ -1329,9 +1411,10 @@ class DefinitionsServiceImplTest {
                 new Thread(() -> {
                     try {
                         barrier.await();
-                        tenantService.setCurrentTenantId(SYSTEM_TENANT);
-                        ConditionType conditionType = createTestConditionType("test" + index, new HashSet<>(Arrays.asList("tag1")), null);
-                        definitionsService.setConditionType(conditionType);
+                        executionContextManager.executeAsTenant(SYSTEM_TENANT, () -> {
+                            ConditionType conditionType = createTestConditionType("test" + index, new HashSet<>(Arrays.asList("tag1")), null);
+                            definitionsService.setConditionType(conditionType);
+                        });
                     } catch (Exception e) {
                         failed.set(true);
                         LOGGER.error("Thread execution failed", e);
@@ -1344,9 +1427,10 @@ class DefinitionsServiceImplTest {
                 new Thread(() -> {
                     try {
                         barrier.await();
-                        tenantService.setCurrentTenantId("tenant1");
-                        ConditionType conditionType = createTestConditionType("test" + index + "-tenant", new HashSet<>(Arrays.asList("tag1")), null);
-                        definitionsService.setConditionType(conditionType);
+                        executionContextManager.executeAsTenant("tenant1", () -> {
+                            ConditionType conditionType = createTestConditionType("test" + index + "-tenant", new HashSet<>(Arrays.asList("tag1")), null);
+                            definitionsService.setConditionType(conditionType);
+                        });
                     } catch (Exception e) {
                         failed.set(true);
                         LOGGER.error("Thread execution failed", e);
@@ -1360,10 +1444,301 @@ class DefinitionsServiceImplTest {
             assertFalse(failed.get(), "One or more threads failed execution");
 
             // Verify tenant isolation
-            tenantService.setCurrentTenantId(SYSTEM_TENANT);
-            assertEquals(threadCount, definitionsService.getConditionTypesByTag("tag1").size());
-            tenantService.setCurrentTenantId("tenant1");
-            assertEquals(threadCount*2 /* Because of inheritance */, definitionsService.getConditionTypesByTag("tag1").size());
+            executionContextManager.executeAsTenant(SYSTEM_TENANT, () -> {
+                assertEquals(threadCount, definitionsService.getConditionTypesByTag("tag1").size());
+            });
+            executionContextManager.executeAsTenant("tenant1", () -> {
+                assertEquals(threadCount*2 /* Because of inheritance */, definitionsService.getConditionTypesByTag("tag1").size());
+            });
+        }
+    }
+
+    @Nested
+    class ExtractConditionTests {
+        @Test
+        void shouldExtractConditionsByType() {
+            // Create a complex condition structure
+            ConditionType propertyType = createTestConditionType("propertyCondition", new HashSet<>(), null);
+            ConditionType booleanType = createTestConditionType("booleanCondition", new HashSet<>(), null);
+            definitionsService.setConditionType(propertyType);
+            definitionsService.setConditionType(booleanType);
+
+            Condition property1 = new Condition(propertyType);
+            property1.setParameter("propertyName", "prop1");
+
+            Condition property2 = new Condition(propertyType);
+            property2.setParameter("propertyName", "prop2");
+
+            Condition andCondition = new Condition(booleanType);
+            andCondition.setParameter("operator", "and");
+            andCondition.setParameter("subConditions", Arrays.asList(property1, property2));
+
+            // Test extraction
+            List<Condition> extracted = definitionsService.extractConditionsByType(andCondition, "propertyCondition");
+            assertEquals(2, extracted.size());
+            assertTrue(extracted.contains(property1));
+            assertTrue(extracted.contains(property2));
+
+            // Test with non-existent type
+            List<Condition> emptyResult = definitionsService.extractConditionsByType(andCondition, "nonExistentType");
+            assertTrue(emptyResult.isEmpty());
+
+            // Test with null inputs
+            assertTrue(definitionsService.extractConditionsByType(null, "propertyCondition").isEmpty());
+            assertTrue(definitionsService.extractConditionsByType(andCondition, null).isEmpty());
+        }
+
+        @Test
+        void shouldHandleDeepNestedConditions() {
+            // Create condition types
+            ConditionType propertyType = createTestConditionType("propertyCondition", new HashSet<>(), null);
+            ConditionType booleanType = createTestConditionType("booleanCondition", new HashSet<>(), null);
+            definitionsService.setConditionType(propertyType);
+            definitionsService.setConditionType(booleanType);
+
+            // Create a deeply nested condition structure
+            Condition property1 = new Condition(propertyType);
+            Condition property2 = new Condition(propertyType);
+            Condition property3 = new Condition(propertyType);
+
+            Condition innerAnd = new Condition(booleanType);
+            innerAnd.setParameter("operator", "and");
+            innerAnd.setParameter("subConditions", Arrays.asList(property2, property3));
+
+            Condition outerAnd = new Condition(booleanType);
+            outerAnd.setParameter("operator", "and");
+            outerAnd.setParameter("subConditions", Arrays.asList(property1, innerAnd));
+
+            // Test extraction
+            List<Condition> extracted = definitionsService.extractConditionsByType(outerAnd, "propertyCondition");
+            assertEquals(3, extracted.size());
+            assertTrue(extracted.contains(property1));
+            assertTrue(extracted.contains(property2));
+            assertTrue(extracted.contains(property3));
+        }
+
+        @Test
+        void shouldHandleInvalidSubConditions() {
+            ConditionType booleanType = createTestConditionType("booleanCondition", new HashSet<>(), null);
+            definitionsService.setConditionType(booleanType);
+
+            // Create condition with invalid subConditions parameter
+            Condition invalidCondition = new Condition(booleanType);
+            invalidCondition.setParameter("operator", "and");
+            invalidCondition.setParameter("subConditions", "not a list"); // Invalid type
+
+            List<Condition> result = definitionsService.extractConditionsByType(invalidCondition, "anyType");
+            assertTrue(result.isEmpty());
+
+            // Test with list containing non-Condition objects
+            Condition invalidListCondition = new Condition(booleanType);
+            invalidListCondition.setParameter("operator", "and");
+            invalidListCondition.setParameter("subConditions", Arrays.asList("not a condition", 123)); // Invalid list contents
+
+            result = definitionsService.extractConditionsByType(invalidListCondition, "anyType");
+            assertTrue(result.isEmpty());
+        }
+
+        @Test
+        void shouldExtractConditionBySystemTag() {
+            // Create condition types with system tags
+            ConditionType taggedType = createTestConditionType("taggedCondition", new HashSet<>(), null);
+            taggedType.getMetadata().setSystemTags(new HashSet<>(Arrays.asList("testTag")));
+            ConditionType untaggedType = createTestConditionType("untaggedCondition", new HashSet<>(), null);
+            definitionsService.setConditionType(taggedType);
+            definitionsService.setConditionType(untaggedType);
+
+            // Create test conditions
+            Condition taggedCondition = new Condition(taggedType);
+            Condition untaggedCondition = new Condition(untaggedType);
+
+            // Create boolean condition containing both
+            ConditionType booleanType = createTestConditionType("booleanCondition", new HashSet<>(), null);
+            definitionsService.setConditionType(booleanType);
+            Condition booleanCondition = new Condition(booleanType);
+            booleanCondition.setParameter("operator", "and");
+            booleanCondition.setParameter("subConditions", Arrays.asList(taggedCondition, untaggedCondition));
+
+            // Test extraction
+            Condition extracted = definitionsService.extractConditionBySystemTag(booleanCondition, "testTag");
+            assertNotNull(extracted);
+            assertEquals(taggedCondition, extracted);
+
+            // Test with non-existent tag
+            assertNull(definitionsService.extractConditionBySystemTag(booleanCondition, "nonExistentTag"));
+
+            // Test with null inputs
+            assertNull(definitionsService.extractConditionBySystemTag(null, "testTag"));
+            assertNull(definitionsService.extractConditionBySystemTag(booleanCondition, null));
+        }
+
+        @Test
+        void shouldHandleComplexSystemTagExtraction() {
+            // Create condition types with system tags
+            ConditionType taggedType = createTestConditionType("taggedCondition", new HashSet<>(), null);
+            taggedType.getMetadata().setSystemTags(new HashSet<>(Arrays.asList("testTag")));
+            ConditionType booleanType = createTestConditionType("booleanCondition", new HashSet<>(), null);
+            definitionsService.setConditionType(taggedType);
+            definitionsService.setConditionType(booleanType);
+
+            // Create multiple tagged conditions
+            Condition taggedCondition1 = new Condition(taggedType);
+            Condition taggedCondition2 = new Condition(taggedType);
+
+            // Create nested boolean structure
+            Condition innerAnd = new Condition(booleanType);
+            innerAnd.setParameter("operator", "and");
+            innerAnd.setParameter("subConditions", Arrays.asList(taggedCondition1, taggedCondition2));
+
+            // Test extraction returns combined boolean condition
+            Condition extracted = definitionsService.extractConditionBySystemTag(innerAnd, "testTag");
+            assertNotNull(extracted);
+            assertEquals(innerAnd, extracted);
+
+            // Test with single matching condition
+            Condition singleAnd = new Condition(booleanType);
+            singleAnd.setParameter("operator", "and");
+            singleAnd.setParameter("subConditions", Collections.singletonList(taggedCondition1));
+
+            extracted = definitionsService.extractConditionBySystemTag(singleAnd, "testTag");
+            assertNotNull(extracted);
+            assertEquals(singleAnd, extracted);
+        }
+
+        @Test
+        void shouldHandleInvalidSystemTagExtraction() {
+            // Create condition types
+            ConditionType taggedType = createTestConditionType("taggedCondition", new HashSet<>(), null);
+            taggedType.getMetadata().setSystemTags(new HashSet<>(Arrays.asList("testTag")));
+            ConditionType booleanType = createTestConditionType("booleanCondition", new HashSet<>(), null);
+            definitionsService.setConditionType(taggedType);
+            definitionsService.setConditionType(booleanType);
+
+            // Test with invalid subConditions parameter
+            Condition invalidCondition = new Condition(booleanType);
+            invalidCondition.setParameter("operator", "and");
+            invalidCondition.setParameter("subConditions", "invalid");
+            assertNull(definitionsService.extractConditionBySystemTag(invalidCondition, "testTag"));
+
+            // Test with condition type having no metadata
+            ConditionType noMetadataType = createTestConditionType("noMetadata", new HashSet<>(), null);
+            noMetadataType.setMetadata(null);
+            Condition noMetadataCondition = new Condition(noMetadataType);
+            assertNull(definitionsService.extractConditionBySystemTag(noMetadataCondition, "testTag"));
+
+            // Test with condition type having no system tags
+            ConditionType noTagsType = createTestConditionType("noTags", new HashSet<>(), null);
+            Condition noTagsCondition = new Condition(noTagsType);
+            assertNull(definitionsService.extractConditionBySystemTag(noTagsCondition, "testTag"));
+        }
+
+        @SuppressWarnings("deprecation")
+        @Test
+        void shouldHandleDeprecatedExtractConditionByTag() {
+            // Create condition types with tags
+            ConditionType taggedType = createTestConditionType("taggedCondition", new HashSet<>(Arrays.asList("testTag")), null);
+            ConditionType untaggedType = createTestConditionType("untaggedCondition", new HashSet<>(), null);
+            definitionsService.setConditionType(taggedType);
+            definitionsService.setConditionType(untaggedType);
+
+            // Create test conditions
+            Condition taggedCondition = new Condition(taggedType);
+            Condition untaggedCondition = new Condition(untaggedType);
+
+            // Test simple extraction
+            Condition extracted = definitionsService.extractConditionByTag(taggedCondition, "testTag");
+            assertEquals(taggedCondition, extracted);
+
+            // Test with boolean AND condition
+            ConditionType booleanType = createTestConditionType("booleanCondition", new HashSet<>(), null);
+            definitionsService.setConditionType(booleanType);
+            Condition booleanCondition = new Condition(booleanType);
+            booleanCondition.setParameter("operator", "and");
+            booleanCondition.setParameter("subConditions", Arrays.asList(taggedCondition, taggedCondition));
+
+            extracted = definitionsService.extractConditionByTag(booleanCondition, "testTag");
+            assertNotNull(extracted);
+            assertEquals(booleanCondition, extracted);
+
+            // Test with mixed conditions
+            booleanCondition.setParameter("subConditions", Arrays.asList(taggedCondition, untaggedCondition));
+            extracted = definitionsService.extractConditionByTag(booleanCondition, "testTag");
+            assertNotNull(extracted);
+            assertEquals(taggedCondition, extracted);
+        }
+    }
+
+    @Nested
+    class RefreshTimerTests {
+        @Test
+        void shouldScheduleAndExecuteRefreshTask() throws InterruptedException {
+            // Create a test condition type
+            ConditionType testType = createTestConditionType("testCondition", new HashSet<>(), null);
+            definitionsService.setConditionType(testType);
+
+            // Set a short refresh interval for testing
+            definitionsService.setDefinitionsRefreshInterval(100);
+
+            // Wait for at least one refresh cycle
+            Thread.sleep(150);
+
+            // Verify the condition type is still available
+            ConditionType retrieved = definitionsService.getConditionType("testCondition");
+            assertNotNull(retrieved);
+            assertEquals(testType.getItemId(), retrieved.getItemId());
+        }
+
+        @Test
+        void shouldHandleRefreshFailureGracefully() throws InterruptedException {
+            // Save original persistence service
+            org.apache.unomi.persistence.spi.PersistenceService originalPersistence = definitionsService.getPersistenceService();
+
+            try {
+                // Create a test condition type before breaking persistence
+                ConditionType testType = createTestConditionType("testCondition", new HashSet<>(), null);
+                definitionsService.setConditionType(testType);
+
+                // Replace with failing persistence service
+                definitionsService.setPersistenceService(null);
+
+                // Set a short refresh interval
+                definitionsService.setDefinitionsRefreshInterval(100);
+
+                // Wait for at least one refresh cycle
+                Thread.sleep(150);
+
+                // Service should still be operational with in-memory data
+                assertNotNull(definitionsService.getConditionType("testCondition"));
+            } finally {
+                // Restore original persistence service
+                definitionsService.setPersistenceService(originalPersistence);
+            }
+        }
+
+        @Test
+        void shouldStopRefreshOnShutdown() throws Exception {
+            // Set a short refresh interval
+            definitionsService.setDefinitionsRefreshInterval(100);
+
+            // Trigger shutdown
+            definitionsService.preDestroy();
+
+            try {
+                // Verify the service is marked as shutdown
+                java.lang.reflect.Field isShutdownField = DefinitionsServiceImpl.class.getDeclaredField("isShutdown");
+                isShutdownField.setAccessible(true);
+                assertTrue((Boolean) isShutdownField.get(definitionsService));
+
+                // Wait for potential refresh cycle
+                Thread.sleep(150);
+
+                // Service should still respond to direct calls but not refresh
+                ConditionType testType = createTestConditionType("testCondition", new HashSet<>(), null);
+                definitionsService.setConditionType(testType);
+                assertNotNull(definitionsService.getConditionType("testCondition"));
+            } catch (NoSuchFieldException | IllegalAccessException e) {
+                throw new Exception("Failed to access isShutdown field", e);
+            }
         }
     }
 
@@ -1553,10 +1928,6 @@ class DefinitionsServiceImplTest {
         when(bundle.getBundleId()).thenReturn(bundleId);
         when(bundle.getBundleContext()).thenReturn(bundleContext);
         when(bundleContext.getBundle()).thenReturn(bundle);
-    }
-
-    private void setupTenantContext(String tenantId) {
-        tenantService.setCurrentTenantId(tenantId);
     }
 
     private URL createTestURL(final InputStream content) {

@@ -19,15 +19,14 @@ package org.apache.unomi.services.impl.profiles;
 import org.apache.unomi.api.*;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.conditions.ConditionEvaluatorDispatcher;
-import org.apache.unomi.services.impl.InMemoryPersistenceServiceImpl;
-import org.apache.unomi.services.impl.TestBundleContext;
-import org.apache.unomi.services.impl.TestConditionEvaluators;
-import org.apache.unomi.services.impl.TestTenantService;
+import org.apache.unomi.services.TestHelper;
+import org.apache.unomi.services.impl.*;
+import org.apache.unomi.services.impl.cache.MultiTypeCacheServiceImpl;
 import org.apache.unomi.services.impl.definitions.DefinitionsServiceImpl;
+import org.apache.unomi.services.impl.tenants.AuditServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
@@ -50,8 +49,10 @@ public class ProfileServiceImplTest {
     private PersistenceService persistenceService;
     private DefinitionsServiceImpl definitionsService;
     private TestBundleContext bundleContext;
-
-    @Mock
+    private ExecutionContextManagerImpl executionContextManager;
+    private MultiTypeCacheServiceImpl multiTypeCacheService;
+    private KarafSecurityService securityService;
+    private AuditServiceImpl auditService;
     private org.apache.unomi.api.services.SchedulerService schedulerService;
 
     private static final String TENANT_1 = "tenant1";
@@ -59,26 +60,33 @@ public class ProfileServiceImplTest {
 
     @BeforeEach
     public void setUp() {
+        bundleContext = new TestBundleContext();
         tenantService = new TestTenantService();
-        tenantService.setCurrentTenant(SYSTEM_TENANT);
 
-        // Create tenants
-        tenantService.createTenant(SYSTEM_TENANT, Collections.singletonMap("description", "System tenant"));
-        tenantService.createTenant(TENANT_1, Collections.singletonMap("description", "Tenant 1"));
+
+        securityService = TestHelper.createSecurityService();
+        executionContextManager = TestHelper.createExecutionContextManager(securityService);
+
+        executionContextManager.executeAsSystem(() -> {
+            // Create tenants
+            tenantService.createTenant(SYSTEM_TENANT, Collections.singletonMap("description", "System tenant"));
+            tenantService.createTenant(TENANT_1, Collections.singletonMap("description", "Tenant 1"));
+            return null;
+        });
 
         // Set up condition evaluator dispatcher
         ConditionEvaluatorDispatcher conditionEvaluatorDispatcher = TestConditionEvaluators.createDispatcher();
 
-        // Mock scheduler service
-        when(schedulerService.getScheduleExecutorService()).thenReturn(java.util.concurrent.Executors.newSingleThreadScheduledExecutor());
+        multiTypeCacheService = new MultiTypeCacheServiceImpl();
 
         // Set up persistence service
-        persistenceService = new InMemoryPersistenceServiceImpl(tenantService, conditionEvaluatorDispatcher);
+        persistenceService = new InMemoryPersistenceServiceImpl(executionContextManager, conditionEvaluatorDispatcher);
+
+        // Create scheduler service using TestHelper
+        schedulerService = TestHelper.createSchedulerService(persistenceService, executionContextManager);
 
         // Set up definitions service
-        definitionsService = new DefinitionsServiceImpl();
-        definitionsService.setPersistenceService(persistenceService);
-        definitionsService.setTenantService(tenantService);
+        definitionsService = TestHelper.createDefinitionService(persistenceService, bundleContext, schedulerService, multiTypeCacheService, executionContextManager, tenantService);
 
         // Set up value types
         ValueType stringType = new ValueType();
@@ -104,21 +112,17 @@ public class ProfileServiceImplTest {
         when(bundleContext.getBundle().findEntries("META-INF/cxs/personas", "*.json", true))
                 .thenReturn(Collections.enumeration(Arrays.asList(personasUrl)));
 
-
         // Set up profile service
         profileService = new ProfileServiceImpl();
         profileService.setBundleContext(bundleContext);
         profileService.setPersistenceService(persistenceService);
         profileService.setDefinitionsService(definitionsService);
-        profileService.setTenantService(tenantService);
+        profileService.setContextManager(executionContextManager);
         profileService.setSchedulerService(schedulerService);
         profileService.postConstruct();
 
         // Load predefined data
         profileService.bundleChanged(new BundleEvent(BundleEvent.STARTED, systemBundle));
-
-        // Set default tenant
-        tenantService.setCurrentTenant(TENANT_1);
     }
 
     @Test
@@ -142,150 +146,176 @@ public class ProfileServiceImplTest {
 
     @Test
     public void testPropertyTypeByTag_CurrentTenant() {
-        // Setup
-        PropertyType propertyType = createPropertyType("prop1", "test", Collections.singleton("tag1"), Collections.emptySet());
-        profileService.setPropertyType(propertyType);
+        executionContextManager.executeAsTenant(TENANT_1, () -> {
+            // Setup
+            PropertyType propertyType = createPropertyType("prop1", "test", Collections.singleton("tag1"), Collections.emptySet());
+            profileService.setPropertyType(propertyType);
 
-        // Test
-        Set<PropertyType> result = profileService.getPropertyTypeByTag("tag1");
+            // Test
+            Set<PropertyType> result = profileService.getPropertyTypeByTag("tag1");
 
-        // Verify
-        assertNotNull(result);
-        assertEquals(1, result.size());
-        assertEquals(TENANT_1, result.iterator().next().getTenantId());
+            // Verify
+            assertNotNull(result);
+            assertEquals(1, result.size());
+            assertEquals(TENANT_1, result.iterator().next().getTenantId());
+        });
     }
 
     @Test
     public void testPropertyTypeByTag_SystemTenant() {
         // Setup
-        tenantService.setCurrentTenant(SYSTEM_TENANT);
-        PropertyType systemPropertyType = createPropertyType("systemProp", "test", Collections.singleton("systemTag"), Collections.singleton("systemTag"));
-        profileService.setPropertyType(systemPropertyType);
+        executionContextManager.executeAsSystem(() -> {
+            PropertyType systemPropertyType = createPropertyType("systemProp", "test", Collections.singleton("systemTag"), Collections.singleton("systemTag"));
+            profileService.setPropertyType(systemPropertyType);
+            return null;
+        });
 
         // Test from tenant context
-        tenantService.setCurrentTenant(TENANT_1);
-        Collection<PropertyType> result = profileService.getPropertyTypeByTag("systemTag");
+        executionContextManager.executeAsTenant(TENANT_1, () -> {
+            Collection<PropertyType> result = profileService.getPropertyTypeByTag("systemTag");
 
-        // Verify
-        assertNotNull(result);
-        assertFalse(result.isEmpty());
-        PropertyType foundType = result.iterator().next();
-        assertEquals(SYSTEM_TENANT, foundType.getTenantId());
-        assertEquals("systemProp", foundType.getItemId());
+            // Verify
+            assertNotNull(result);
+            assertFalse(result.isEmpty());
+            PropertyType foundType = result.iterator().next();
+            assertEquals(SYSTEM_TENANT, foundType.getTenantId());
+            assertEquals("systemProp", foundType.getItemId());
+            return null;
+        });
     }
 
     @Test
     public void testPropertyTypeByTag_TenantOverride() {
         // Setup system tenant property
-        tenantService.setCurrentTenant(SYSTEM_TENANT);
-        PropertyType systemProperty = createPropertyType("prop1", "system-version", Collections.singleton("tag1"), Collections.emptySet());
-        profileService.setPropertyType(systemProperty);
+        executionContextManager.executeAsSystem(() -> {
+            PropertyType systemProperty = createPropertyType("prop1", "system-version", Collections.singleton("tag1"), Collections.emptySet());
+            profileService.setPropertyType(systemProperty);
+            return null;
+        });
 
         // Setup tenant property
-        tenantService.setCurrentTenant(TENANT_1);
-        PropertyType tenantProperty = createPropertyType("prop1", "tenant-version", Collections.singleton("tag1"), Collections.emptySet());
-        profileService.setPropertyType(tenantProperty);
+        executionContextManager.executeAsTenant(TENANT_1, () -> {
+            PropertyType tenantProperty = createPropertyType("prop1", "tenant-version", Collections.singleton("tag1"), Collections.emptySet());
+            profileService.setPropertyType(tenantProperty);
 
-        // Test
-        Set<PropertyType> result = profileService.getPropertyTypeByTag("tag1");
+            // Test
+            Set<PropertyType> result = profileService.getPropertyTypeByTag("tag1");
 
-        // Verify
-        assertNotNull(result);
-        assertEquals(1, result.size());
-        PropertyType resultProp = result.iterator().next();
-        assertEquals(TENANT_1, resultProp.getTenantId());
-        assertEquals("tenant-version", resultProp.getMetadata().getName());
+            // Verify
+            assertNotNull(result);
+            assertEquals(1, result.size());
+            PropertyType resultProp = result.iterator().next();
+            assertEquals(TENANT_1, resultProp.getTenantId());
+            assertEquals("tenant-version", resultProp.getMetadata().getName());
+            return null;
+        });
     }
 
     @Test
     public void testPropertyTypeBySystemTag_CurrentTenant() {
-        // Setup
-        PropertyType propertyType = createPropertyType("prop1", "test", Collections.emptySet(), Collections.singleton("systag1"));
-        profileService.setPropertyType(propertyType);
+        executionContextManager.executeAsTenant(TENANT_1, () -> {
+            // Setup
+            PropertyType propertyType = createPropertyType("prop1", "test", Collections.emptySet(), Collections.singleton("systag1"));
+            profileService.setPropertyType(propertyType);
 
-        // Test
-        Set<PropertyType> result = profileService.getPropertyTypeBySystemTag("systag1");
+            // Test
+            Set<PropertyType> result = profileService.getPropertyTypeBySystemTag("systag1");
 
-        // Verify
-        assertNotNull(result);
-        assertEquals(1, result.size());
-        assertEquals(TENANT_1, result.iterator().next().getTenantId());
+            // Verify
+            assertNotNull(result);
+            assertEquals(1, result.size());
+            assertEquals(TENANT_1, result.iterator().next().getTenantId());
+        });
     }
 
     @Test
     public void testPropertyTypeBySystemTag_SystemTenant() {
         // Setup system tenant property
-        tenantService.setCurrentTenant(SYSTEM_TENANT);
-        PropertyType systemProperty = createPropertyType("prop1", "test", Collections.emptySet(), Collections.singleton("systag1"));
-        profileService.setPropertyType(systemProperty);
+        executionContextManager.executeAsSystem(() -> {
+            PropertyType systemProperty = createPropertyType("prop1", "test", Collections.emptySet(), Collections.singleton("systag1"));
+            profileService.setPropertyType(systemProperty);
+            return null;
+        });
 
         // Test from tenant1
-        tenantService.setCurrentTenant(TENANT_1);
-        Set<PropertyType> result = profileService.getPropertyTypeBySystemTag("systag1");
+        executionContextManager.executeAsTenant(TENANT_1, () -> {
+            Set<PropertyType> result = profileService.getPropertyTypeBySystemTag("systag1");
 
-        // Verify
-        assertNotNull(result);
-        assertEquals(1, result.size());
-        assertEquals(SYSTEM_TENANT, result.iterator().next().getTenantId());
+            // Verify
+            assertNotNull(result);
+            assertEquals(1, result.size());
+            assertEquals(SYSTEM_TENANT, result.iterator().next().getTenantId());
+            return null;
+        });
     }
 
     @Test
     public void testTargetPropertyTypes_CurrentTenant() {
-        // Setup
-        PropertyType propertyType = createPropertyType("prop1", "test", Collections.emptySet(), Collections.emptySet());
-        propertyType.setTarget("profile");
-        profileService.setPropertyType(propertyType);
+        executionContextManager.executeAsTenant(TENANT_1, () -> {
+            // Setup
+            PropertyType propertyType = createPropertyType("prop1", "test", Collections.emptySet(), Collections.emptySet());
+            propertyType.setTarget("profile");
+            profileService.setPropertyType(propertyType);
 
-        // Test
-        Collection<PropertyType> result = profileService.getTargetPropertyTypes("profile");
+            // Test
+            Collection<PropertyType> result = profileService.getTargetPropertyTypes("profile");
 
-        // Verify
-        assertNotNull(result);
-        assertEquals(1, result.size());
-        assertEquals(TENANT_1, result.iterator().next().getTenantId());
+            // Verify
+            assertNotNull(result);
+            assertEquals(1, result.size());
+            assertEquals(TENANT_1, result.iterator().next().getTenantId());
+        });
     }
 
     @Test
     public void testTargetPropertyTypes_SystemTenant() {
         // Setup system tenant property
-        tenantService.setCurrentTenant(SYSTEM_TENANT);
-        PropertyType systemProperty = createPropertyType("prop1", "test", Collections.emptySet(), Collections.emptySet());
-        systemProperty.setTarget("profile");
-        profileService.setPropertyType(systemProperty);
+        executionContextManager.executeAsSystem(() -> {
+            PropertyType systemProperty = createPropertyType("prop1", "test", Collections.emptySet(), Collections.emptySet());
+            systemProperty.setTarget("profile");
+            profileService.setPropertyType(systemProperty);
+            return null;
+        });
 
         // Test from tenant1
-        tenantService.setCurrentTenant(TENANT_1);
-        Collection<PropertyType> result = profileService.getTargetPropertyTypes("profile");
+        executionContextManager.executeAsTenant(TENANT_1, () -> {
+            Collection<PropertyType> result = profileService.getTargetPropertyTypes("profile");
 
-        // Verify
-        assertNotNull(result);
-        assertEquals(1, result.size());
-        assertEquals(SYSTEM_TENANT, result.iterator().next().getTenantId());
+            // Verify
+            assertNotNull(result);
+            assertEquals(1, result.size());
+            assertEquals(SYSTEM_TENANT, result.iterator().next().getTenantId());
+            return null;
+        });
     }
 
     @Test
     public void testTargetPropertyTypes_TenantOverride() {
         // Setup system tenant property
-        tenantService.setCurrentTenant(SYSTEM_TENANT);
-        PropertyType systemProperty = createPropertyType("prop1", "system-version", Collections.emptySet(), Collections.emptySet());
-        systemProperty.setTarget("profile");
-        profileService.setPropertyType(systemProperty);
+        executionContextManager.executeAsSystem(() -> {
+            PropertyType systemProperty = createPropertyType("prop1", "system-version", Collections.emptySet(), Collections.emptySet());
+            systemProperty.setTarget("profile");
+            profileService.setPropertyType(systemProperty);
+            return null;
+        });
 
-        // Setup tenant property
-        tenantService.setCurrentTenant(TENANT_1);
-        PropertyType tenantProperty = createPropertyType("prop1", "tenant-version", Collections.emptySet(), Collections.emptySet());
-        tenantProperty.setTarget("profile");
-        profileService.setPropertyType(tenantProperty);
+        // Setup tenant property and test
+        executionContextManager.executeAsTenant(TENANT_1, () -> {
+            PropertyType tenantProperty = createPropertyType("prop1", "tenant-version", Collections.emptySet(), Collections.emptySet());
+            tenantProperty.setTarget("profile");
+            profileService.setPropertyType(tenantProperty);
 
-        // Test
-        Collection<PropertyType> result = profileService.getTargetPropertyTypes("profile");
+            // Test
+            Collection<PropertyType> result = profileService.getTargetPropertyTypes("profile");
 
-        // Verify
-        assertNotNull(result);
-        assertEquals(1, result.size());
-        PropertyType resultProp = result.iterator().next();
-        assertEquals(TENANT_1, resultProp.getTenantId());
-        assertEquals("tenant-version", resultProp.getMetadata().getName());
+            // Verify
+            assertNotNull(result);
+            assertEquals(1, result.size());
+            PropertyType resultProp = result.iterator().next();
+            assertEquals(TENANT_1, resultProp.getTenantId());
+            assertEquals("tenant-version", resultProp.getMetadata().getName());
+            return null;
+        });
     }
 
     @Test
@@ -359,182 +389,208 @@ public class ProfileServiceImplTest {
 
     @Test
     public void testPersonaInheritance_CurrentTenant() {
-        // Setup
-        tenantService.setCurrentTenant(TENANT_1);
-        Persona persona = new Persona("test-persona");
-        persistenceService.save(persona);
+        executionContextManager.executeAsTenant(TENANT_1, () -> {
+            Persona persona = new Persona("test-persona");
+            persistenceService.save(persona);
 
-        // Test
-        Persona result = profileService.loadPersona("test-persona");
+            // Test
+            Persona result = profileService.loadPersona("test-persona");
 
-        // Verify
-        assertNotNull(result);
-        assertEquals(TENANT_1, result.getTenantId());
+            // Verify
+            assertNotNull(result);
+            assertEquals(TENANT_1, result.getTenantId());
+            return null;
+        });
     }
 
     @Test
     public void testPersonaInheritance_SystemTenant() {
         // Setup
-        tenantService.setCurrentTenant(SYSTEM_TENANT);
-        Persona persona = new Persona("test-persona");
-        persistenceService.save(persona);
+        executionContextManager.executeAsSystem(() -> {
+            Persona persona = new Persona("test-persona");
+            persistenceService.save(persona);
+            return null;
+        });
 
         // Switch to tenant1 and test
-        tenantService.setCurrentTenant(TENANT_1);
-        Persona result = profileService.loadPersona("test-persona");
+        executionContextManager.executeAsTenant(TENANT_1, () -> {
+            Persona result = profileService.loadPersona("test-persona");
 
-        // Verify
-        assertNotNull(result);
-        assertEquals(SYSTEM_TENANT, result.getTenantId());
+            // Verify
+            assertNotNull(result);
+            assertEquals(SYSTEM_TENANT, result.getTenantId());
+            return null;
+        });
     }
 
     @Test
     public void testPersonaInheritance_TenantOverride() {
         // Setup system persona
-        tenantService.setCurrentTenant(SYSTEM_TENANT);
-        Persona systemPersona = new Persona("test-persona");
-        systemPersona.setProperty("version", "system");
-        persistenceService.save(systemPersona);
+        executionContextManager.executeAsSystem(() -> {
+            Persona systemPersona = new Persona("test-persona");
+            systemPersona.setProperty("version", "system");
+            persistenceService.save(systemPersona);
+            return null;
+        });
 
-        // Setup tenant persona
-        tenantService.setCurrentTenant(TENANT_1);
-        Persona tenantPersona = new Persona("test-persona");
-        tenantPersona.setProperty("version", "tenant");
-        persistenceService.save(tenantPersona);
+        // Setup tenant persona and test
+        executionContextManager.executeAsTenant(TENANT_1, () -> {
+            Persona tenantPersona = new Persona("test-persona");
+            tenantPersona.setProperty("version", "tenant");
+            persistenceService.save(tenantPersona);
 
-        // Test
-        Persona result = profileService.loadPersona("test-persona");
+            // Test
+            Persona result = profileService.loadPersona("test-persona");
 
-        // Verify
-        assertNotNull(result);
-        assertEquals(TENANT_1, result.getTenantId());
-        assertEquals("tenant", result.getProperty("version"));
+            // Verify
+            assertNotNull(result);
+            assertEquals(TENANT_1, result.getTenantId());
+            assertEquals("tenant", result.getProperty("version"));
+            return null;
+        });
     }
 
     @Test
     public void testPropertyTypeByTagInheritance_MergeResults() {
         // Setup system properties
-        tenantService.setCurrentTenant(SYSTEM_TENANT);
-        PropertyType systemOnlyProp = new PropertyType();
-        systemOnlyProp.setMetadata(new Metadata("system-only-prop"));
-        systemOnlyProp.setTarget("profiles");
-        persistenceService.save(systemOnlyProp);
+        executionContextManager.executeAsSystem(() -> {
+            PropertyType systemOnlyProp = new PropertyType();
+            systemOnlyProp.setMetadata(new Metadata("system-only-prop"));
+            systemOnlyProp.setTarget("profiles");
+            persistenceService.save(systemOnlyProp);
 
-        PropertyType systemOverrideProp = new PropertyType();
-        systemOverrideProp.setMetadata(new Metadata("override-prop"));
-        systemOverrideProp.setTarget("profiles");
-        systemOverrideProp.getMetadata().setSystemTags(Collections.singleton("system"));
-        persistenceService.save(systemOverrideProp);
+            PropertyType systemOverrideProp = new PropertyType();
+            systemOverrideProp.setMetadata(new Metadata("override-prop"));
+            systemOverrideProp.setTarget("profiles");
+            systemOverrideProp.getMetadata().setSystemTags(Collections.singleton("system"));
+            persistenceService.save(systemOverrideProp);
+            return null;
+        });
 
-        // Setup tenant properties
-        tenantService.setCurrentTenant(TENANT_1);
-        PropertyType tenantOverrideProp = new PropertyType();
-        tenantOverrideProp.setMetadata(new Metadata("override-prop"));
-        tenantOverrideProp.setTarget("profiles");
-        tenantOverrideProp.getMetadata().setSystemTags(Collections.singleton("tenant"));
-        persistenceService.save(tenantOverrideProp);
+        // Setup tenant properties and test
+        executionContextManager.executeAsTenant(TENANT_1, () -> {
+            PropertyType tenantOverrideProp = new PropertyType();
+            tenantOverrideProp.setMetadata(new Metadata("override-prop"));
+            tenantOverrideProp.setTarget("profiles");
+            tenantOverrideProp.getMetadata().setSystemTags(Collections.singleton("tenant"));
+            persistenceService.save(tenantOverrideProp);
 
-        PropertyType tenantOnlyProp = new PropertyType();
-        tenantOnlyProp.setMetadata(new Metadata("tenant-only-prop"));
-        tenantOnlyProp.setTarget("profiles");
-        persistenceService.save(tenantOnlyProp);
+            PropertyType tenantOnlyProp = new PropertyType();
+            tenantOnlyProp.setMetadata(new Metadata("tenant-only-prop"));
+            tenantOnlyProp.setTarget("profiles");
+            persistenceService.save(tenantOnlyProp);
 
-        // Test
-        Collection<PropertyType> result = profileService.getTargetPropertyTypes("profiles");
+            // Test
+            Collection<PropertyType> result = profileService.getTargetPropertyTypes("profiles");
 
-        // Verify
-        assertNotNull(result);
-        assertEquals(4, result.size());  // Should have 4 unique properties (3 test properties + firstName)
+            // Verify
+            assertNotNull(result);
+            assertEquals(4, result.size());  // Should have 4 unique properties (3 test properties + firstName)
 
-        Map<String, PropertyType> resultMap = new HashMap<>();
-        for (PropertyType prop : result) {
-            resultMap.put(prop.getMetadata().getId(), prop);
-        }
+            Map<String, PropertyType> resultMap = new HashMap<>();
+            for (PropertyType prop : result) {
+                resultMap.put(prop.getMetadata().getId(), prop);
+            }
 
-        assertTrue(resultMap.containsKey("system-only-prop"));
-        assertTrue(resultMap.containsKey("override-prop"));
-        assertTrue(resultMap.containsKey("tenant-only-prop"));
-        assertTrue(resultMap.containsKey("firstName"));  // Predefined property
+            assertTrue(resultMap.containsKey("system-only-prop"));
+            assertTrue(resultMap.containsKey("override-prop"));
+            assertTrue(resultMap.containsKey("tenant-only-prop"));
+            assertTrue(resultMap.containsKey("firstName"));  // Predefined property
 
-        // Verify the overridden property has tenant version
-        assertTrue(resultMap.get("override-prop").getMetadata().getSystemTags().contains("tenant"));
+            // Verify the overridden property has tenant version
+            assertTrue(resultMap.get("override-prop").getMetadata().getSystemTags().contains("tenant"));
+            return null;
+        });
     }
 
     @Test
     public void testPredefinedPersonas() {
-        // Test
-        tenantService.setCurrentTenant(TENANT_1);
-        Persona result = profileService.loadPersona("testPersona");
+        executionContextManager.executeAsTenant(TENANT_1, () -> {
+            Persona result = profileService.loadPersona("testPersona");
 
-        // Verify predefined persona exists
-        assertNotNull(result);
-        assertEquals(SYSTEM_TENANT, result.getTenantId());
-        assertEquals("Test", result.getProperty("firstName"));
-        assertEquals("Persona", result.getProperty("lastName"));
-        assertEquals(30, result.getProperty("age"));
-        assertTrue(((List<String>)result.getSystemProperties().get("systemTags")).contains("predefinedPersona"));
+            // Verify predefined persona exists
+            assertNotNull(result);
+            assertEquals(SYSTEM_TENANT, result.getTenantId());
+            assertEquals("Test", result.getProperty("firstName"));
+            assertEquals("Persona", result.getProperty("lastName"));
+            assertEquals(30, result.getProperty("age"));
+            assertTrue(((List<String>)result.getSystemProperties().get("systemTags")).contains("predefinedPersona"));
+            return null;
+        });
     }
 
     @Test
     public void testPersonaInheritance_SystemFallback() {
         // Setup system persona only
-        tenantService.setCurrentTenant(SYSTEM_TENANT);
-        Persona systemPersona = new Persona();
-        systemPersona.setItemId("systemOnlyPersona");
-        systemPersona.setProperties(Collections.singletonMap("role", "system"));
-        persistenceService.save(systemPersona);
+        executionContextManager.executeAsSystem(() -> {
+            Persona systemPersona = new Persona();
+            systemPersona.setItemId("systemOnlyPersona");
+            systemPersona.setProperties(Collections.singletonMap("role", "system"));
+            persistenceService.save(systemPersona);
+            return null;
+        });
 
         // Test from tenant context
-        tenantService.setCurrentTenant(TENANT_1);
-        Persona result = profileService.loadPersona("systemOnlyPersona");
+        executionContextManager.executeAsTenant(TENANT_1, () -> {
+            Persona result = profileService.loadPersona("systemOnlyPersona");
 
-        // Verify system persona is returned
-        assertNotNull(result);
-        assertEquals(SYSTEM_TENANT, result.getTenantId());
-        assertEquals("system", result.getProperty("role"));
+            // Verify system persona is returned
+            assertNotNull(result);
+            assertEquals(SYSTEM_TENANT, result.getTenantId());
+            assertEquals("system", result.getProperty("role"));
+            return null;
+        });
     }
 
     @Test
     public void testPropertyTypeBySystemTag_TenantOverride() {
         // Setup system property type
-        tenantService.setCurrentTenant(SYSTEM_TENANT);
-        PropertyType systemPropertyType = createPropertyType("sharedProp", "test", Collections.singleton("sharedTag"), Collections.singleton("systemTag"));
-        profileService.setPropertyType(systemPropertyType);
+        executionContextManager.executeAsSystem(() -> {
+            PropertyType systemPropertyType = createPropertyType("sharedProp", "test", Collections.singleton("sharedTag"), Collections.singleton("systemTag"));
+            profileService.setPropertyType(systemPropertyType);
+            return null;
+        });
 
-        // Setup tenant property type with same ID
-        tenantService.setCurrentTenant(TENANT_1);
-        PropertyType tenantPropertyType = createPropertyType("sharedProp", "test", Collections.singleton("tenantTag"), Collections.singleton("systemTag"));
-        profileService.setPropertyType(tenantPropertyType);
+        // Setup tenant property type and test
+        executionContextManager.executeAsTenant(TENANT_1, () -> {
+            PropertyType tenantPropertyType = createPropertyType("sharedProp", "test", Collections.singleton("tenantTag"), Collections.singleton("systemTag"));
+            profileService.setPropertyType(tenantPropertyType);
 
-        // Test
-        Collection<PropertyType> result = profileService.getPropertyTypeBySystemTag("systemTag");
+            // Test
+            Collection<PropertyType> result = profileService.getPropertyTypeBySystemTag("systemTag");
 
-        // Verify tenant property type overrides system one
-        assertNotNull(result);
-        assertFalse(result.isEmpty());
-        PropertyType foundType = result.iterator().next();
-        assertEquals(TENANT_1, foundType.getTenantId());
-        assertTrue(foundType.getMetadata().getTags().contains("tenantTag"));
+            // Verify tenant property type overrides system one
+            assertNotNull(result);
+            assertFalse(result.isEmpty());
+            PropertyType foundType = result.iterator().next();
+            assertEquals(TENANT_1, foundType.getTenantId());
+            assertTrue(foundType.getMetadata().getTags().contains("tenantTag"));
+            return null;
+        });
     }
 
     @Test
     public void testPersonaWithSessions_SystemTenant() {
         // Setup system persona
-        tenantService.setCurrentTenant(SYSTEM_TENANT);
-        Persona systemPersona = new Persona();
-        systemPersona.setItemId("personaWithSessions");
-        systemPersona.setProperties(Collections.singletonMap("role", "system"));
-        persistenceService.save(systemPersona);
+        executionContextManager.executeAsSystem(() -> {
+            Persona systemPersona = new Persona();
+            systemPersona.setItemId("personaWithSessions");
+            systemPersona.setProperties(Collections.singletonMap("role", "system"));
+            persistenceService.save(systemPersona);
+            return null;
+        });
 
         // Test from tenant context
-        tenantService.setCurrentTenant(TENANT_1);
-        PersonaWithSessions result = profileService.loadPersonaWithSessions("personaWithSessions");
+        executionContextManager.executeAsTenant(TENANT_1, () -> {
+            PersonaWithSessions result = profileService.loadPersonaWithSessions("personaWithSessions");
 
-        // Verify system persona is returned with sessions
-        assertNotNull(result);
-        assertNotNull(result.getPersona());
-        assertEquals(SYSTEM_TENANT, result.getPersona().getTenantId());
-        assertEquals("system", result.getPersona().getProperty("role"));
+            // Verify system persona is returned with sessions
+            assertNotNull(result);
+            assertNotNull(result.getPersona());
+            assertEquals(SYSTEM_TENANT, result.getPersona().getTenantId());
+            assertEquals("system", result.getPersona().getProperty("role"));
+            return null;
+        });
     }
 
 }

@@ -20,18 +20,18 @@ import org.apache.karaf.shell.api.action.Action;
 import org.apache.karaf.shell.api.action.Command;
 import org.apache.karaf.shell.api.action.lifecycle.Reference;
 import org.apache.karaf.shell.api.action.lifecycle.Service;
-import org.apache.unomi.api.tenants.TenantService;
+import org.apache.unomi.api.services.ExecutionContextManager;
 
-@Command(scope = "unomi", name = "tenant-get-current", description = "Get the current tenant ID for this shell session")
+@Command(scope = "unomi", name = "tenant-get", description = "Get the current tenant ID for this shell session")
 @Service
 public class TenantGetCurrentCommand implements Action {
 
     @Reference
-    private TenantService tenantService;
+    private ExecutionContextManager executionContextManager;
 
     @Override
     public Object execute() throws Exception {
-        String currentTenantId = tenantService.getCurrentTenantId();
+        String currentTenantId = executionContextManager.getCurrentContext().getTenantId();
         if (currentTenantId != null) {
             System.out.println("Current tenant ID: " + currentTenantId);
         } else {

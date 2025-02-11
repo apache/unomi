@@ -32,6 +32,7 @@ import org.apache.unomi.api.query.AggregateQuery;
 import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.rules.Rule;
 import org.apache.unomi.api.services.DefinitionsService;
+import org.apache.unomi.api.services.ExecutionContextManager;
 import org.apache.unomi.api.services.GoalsService;
 import org.apache.unomi.api.services.RulesService;
 import org.apache.unomi.api.tenants.TenantService;
@@ -39,7 +40,7 @@ import org.apache.unomi.api.utils.ParserHelper;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.aggregate.*;
-import org.apache.unomi.services.impl.AbstractTenantAwareService;
+import org.apache.unomi.services.impl.AbstractContextAwareService;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleEvent;
@@ -52,7 +53,7 @@ import java.net.URL;
 import java.util.*;
 
 
-public class GoalsServiceImpl extends AbstractTenantAwareService implements GoalsService, SynchronousBundleListener {
+public class GoalsServiceImpl extends AbstractContextAwareService implements GoalsService, SynchronousBundleListener {
     private static final Logger LOGGER = LoggerFactory.getLogger(GoalsServiceImpl.class.getName());
 
     private BundleContext bundleContext;
@@ -64,6 +65,8 @@ public class GoalsServiceImpl extends AbstractTenantAwareService implements Goal
     private RulesService rulesService;
 
     private TenantService tenantService;
+
+    private ExecutionContextManager contextManager;
 
     public void setBundleContext(BundleContext bundleContext) {
         this.bundleContext = bundleContext;
@@ -85,17 +88,23 @@ public class GoalsServiceImpl extends AbstractTenantAwareService implements Goal
         this.tenantService = tenantService;
     }
 
+    public void setContextManager(ExecutionContextManager contextManager) {
+        this.contextManager = contextManager;
+    }
+
     public void postConstruct() {
         LOGGER.debug("postConstruct {{}}", bundleContext.getBundle());
 
-        loadPredefinedGoals(bundleContext);
-        loadPredefinedCampaigns(bundleContext);
-        for (Bundle bundle : bundleContext.getBundles()) {
-            if (bundle.getBundleContext() != null && bundle.getBundleId() != bundleContext.getBundle().getBundleId()) {
-                loadPredefinedGoals(bundle.getBundleContext());
-                loadPredefinedCampaigns(bundle.getBundleContext());
+        contextManager.executeAsSystem(() -> {
+            loadPredefinedGoals(bundleContext);
+            loadPredefinedCampaigns(bundleContext);
+            for (Bundle bundle : bundleContext.getBundles()) {
+                if (bundle.getBundleContext() != null && bundle.getBundleId() != bundleContext.getBundle().getBundleId()) {
+                    loadPredefinedGoals(bundle.getBundleContext());
+                    loadPredefinedCampaigns(bundle.getBundleContext());
+                }
             }
-        }
+        });
         bundleContext.addBundleListener(this);
         LOGGER.info("Goal service initialized.");
     }
@@ -564,14 +573,18 @@ public class GoalsServiceImpl extends AbstractTenantAwareService implements Goal
         persistenceService.remove(campaignEventId, CampaignEvent.class);
     }
 
+    @Override
     public void bundleChanged(BundleEvent event) {
-        switch (event.getType()) {
-            case BundleEvent.STARTED:
+        if (event.getType() == BundleEvent.STARTING) {
+            contextManager.executeAsSystem(() -> {
                 processBundleStartup(event.getBundle().getBundleContext());
-                break;
-            case BundleEvent.STOPPING:
+                return null;
+            });
+        } else if (event.getType() == BundleEvent.STOPPING) {
+            contextManager.executeAsSystem(() -> {
                 processBundleStop(event.getBundle().getBundleContext());
-                break;
+                return null;
+            });
         }
     }
 

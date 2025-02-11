@@ -30,19 +30,18 @@ import java.util.concurrent.ConcurrentHashMap;
 public class TestTenantService implements TenantService {
     private ThreadLocal<String> currentTenantId = new ThreadLocal<>();
     private Map<String, Tenant> tenants = new ConcurrentHashMap<>();
+    private ThreadLocal<Boolean> inSystemOperation = new ThreadLocal<>();
+
+    public void setInSystemOperation(boolean inSystemOperation) {
+        this.inSystemOperation.set(inSystemOperation);
+    }
+
+    public void clearInSystemOperation() {
+        this.inSystemOperation.remove();
+    }
 
     public void setCurrentTenantId(String tenantId) {
         currentTenantId.set(tenantId);
-    }
-
-    @Override
-    public String getCurrentTenantId() {
-        return currentTenantId.get();
-    }
-
-    @Override
-    public void setCurrentTenant(String tenantId) {
-        setCurrentTenantId(tenantId);
     }
 
     @Override

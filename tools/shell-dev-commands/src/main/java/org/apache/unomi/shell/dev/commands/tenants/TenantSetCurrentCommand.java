@@ -22,16 +22,20 @@ import org.apache.karaf.shell.api.action.Command;
 import org.apache.karaf.shell.api.action.Completion;
 import org.apache.karaf.shell.api.action.lifecycle.Reference;
 import org.apache.karaf.shell.api.action.lifecycle.Service;
+import org.apache.unomi.api.services.ExecutionContextManager;
 import org.apache.unomi.api.tenants.Tenant;
 import org.apache.unomi.api.tenants.TenantService;
 import org.apache.unomi.shell.dev.completers.TenantCompleter;
 
-@Command(scope = "unomi", name = "tenant-set-current", description = "Set the current tenant ID for this shell session")
+@Command(scope = "unomi", name = "tenant-set", description = "Set the current tenant ID for this shell session")
 @Service
 public class TenantSetCurrentCommand implements Action {
 
     @Reference
     private TenantService tenantService;
+
+    @Reference
+    private ExecutionContextManager executionContextManager;
 
     @Argument(index = 0, name = "tenantId", description = "Tenant ID to set as current", required = true)
     @Completion(TenantCompleter.class)
@@ -47,7 +51,7 @@ public class TenantSetCurrentCommand implements Action {
         }
 
         // Set the current tenant
-        tenantService.setCurrentTenant(tenantId);
+        executionContextManager.setCurrentContext(executionContextManager.createContext(tenantId));
         System.out.println("Current tenant set to: " + tenantId);
 
         if (tenant == null) {

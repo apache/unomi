@@ -99,6 +99,8 @@ public class ConditionEvaluatorDispatcherImpl implements ConditionEvaluatorDispa
             } catch (Exception e) {
                 LOGGER.error("Error executing condition evaluator with key={}", conditionEvaluatorKey, e);
             }
+        } else {
+            LOGGER.error("Couldn't find evaluator with key={}", conditionEvaluatorKey);
         }
 
         // if no matching

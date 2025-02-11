@@ -17,9 +17,12 @@
 package org.apache.unomi.api.utils;
 
 import org.apache.unomi.api.conditions.Condition;
+import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.api.services.DefinitionsService;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Date;
 
 /**
  * Utility class for creating various types of {@link Condition} objects.
@@ -334,6 +337,10 @@ public class ConditionBuilder {
 
         ConditionItem(String conditionTypeId, DefinitionsService definitionsService) {
             this.definitionsService = definitionsService;
+            ConditionType conditionType = definitionsService.getConditionType(conditionTypeId);
+            if (conditionType == null) {
+                throw new IllegalArgumentException("ConditionType not found: " + conditionTypeId);
+            }
             condition = new Condition(
                     this.definitionsService.getConditionType(conditionTypeId));
         }

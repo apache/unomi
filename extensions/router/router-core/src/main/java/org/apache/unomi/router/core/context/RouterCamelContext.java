@@ -21,8 +21,8 @@ import org.apache.camel.Route;
 import org.apache.camel.component.jackson.JacksonDataFormat;
 import org.apache.camel.core.osgi.OsgiDefaultCamelContext;
 import org.apache.camel.model.RouteDefinition;
-import org.apache.unomi.api.services.ClusterService;
 import org.apache.unomi.api.services.ConfigSharingService;
+import org.apache.unomi.api.services.ExecutionContextManager;
 import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.router.api.ExportConfiguration;
@@ -31,7 +31,6 @@ import org.apache.unomi.router.api.ImportConfiguration;
 import org.apache.unomi.router.api.RouterConstants;
 import org.apache.unomi.router.api.services.ImportExportConfigurationService;
 import org.apache.unomi.router.api.services.ProfileExportService;
-import org.apache.unomi.router.core.event.UpdateCamelRouteEvent;
 import org.apache.unomi.router.core.processor.ExportRouteCompletionProcessor;
 import org.apache.unomi.router.core.processor.ImportConfigByFileNameProcessor;
 import org.apache.unomi.router.core.processor.ImportRouteCompletionProcessor;
@@ -75,16 +74,12 @@ public class RouterCamelContext implements IRouterCamelContext {
     private String allowedEndpoints;
     private BundleContext bundleContext;
     private ConfigSharingService configSharingService;
-    private ClusterService clusterService;
+    private ExecutionContextManager contextManager;
 
     // TODO UNOMI-572: when fixing UNOMI-572 please remove the usage of the custom ScheduledExecutorService and re-introduce the Unomi Scheduler Service
     private ScheduledExecutorService scheduler;
     private Integer configsRefreshInterval = 1000;
     private ScheduledFuture<?> scheduledFuture;
-
-    public static String EVENT_ID_REMOVE = "org.apache.unomi.router.event.remove";
-    public static String EVENT_ID_IMPORT = "org.apache.unomi.router.event.import";
-    public static String EVENT_ID_EXPORT = "org.apache.unomi.router.event.export";
 
     public void setExecHistorySize(String execHistorySize) {
         this.execHistorySize = execHistorySize;
@@ -102,8 +97,8 @@ public class RouterCamelContext implements IRouterCamelContext {
         this.configSharingService = configSharingService;
     }
 
-    public void setClusterService(ClusterService clusterService) {
-        this.clusterService = clusterService;
+    public void setContextManager(ExecutionContextManager contextManager) {
+        this.contextManager = contextManager;
     }
 
     public void setTracing(boolean tracing) {
@@ -139,37 +134,43 @@ public class RouterCamelContext implements IRouterCamelContext {
             @Override
             public void run() {
                 try {
-                    Map<String, RouterConstants.CONFIG_CAMEL_REFRESH> importConfigsToRefresh = importConfigurationService.consumeConfigsToBeRefresh();
-                    Map<String, RouterConstants.CONFIG_CAMEL_REFRESH> exportConfigsToRefresh = exportConfigurationService.consumeConfigsToBeRefresh();
-
-                    for (Map.Entry<String, RouterConstants.CONFIG_CAMEL_REFRESH> importConfigToRefresh : importConfigsToRefresh.entrySet()) {
+                    contextManager.executeAsSystem(() -> {
                         try {
-                            if (importConfigToRefresh.getValue().equals(RouterConstants.CONFIG_CAMEL_REFRESH.UPDATED)) {
-                                updateProfileImportReaderRoute(importConfigToRefresh.getKey(), true);
-                            } else if (importConfigToRefresh.getValue().equals(RouterConstants.CONFIG_CAMEL_REFRESH.REMOVED)) {
-                                killExistingRoute(importConfigToRefresh.getKey(), true);
+                            Map<String, RouterConstants.CONFIG_CAMEL_REFRESH> importConfigsToRefresh = importConfigurationService.consumeConfigsToBeRefresh();
+                            Map<String, RouterConstants.CONFIG_CAMEL_REFRESH> exportConfigsToRefresh = exportConfigurationService.consumeConfigsToBeRefresh();
+
+                            for (Map.Entry<String, RouterConstants.CONFIG_CAMEL_REFRESH> importConfigToRefresh : importConfigsToRefresh.entrySet()) {
+                                try {
+                                    if (importConfigToRefresh.getValue().equals(RouterConstants.CONFIG_CAMEL_REFRESH.UPDATED)) {
+                                        updateProfileImportReaderRoute(importConfigToRefresh.getKey(), true);
+                                    } else if (importConfigToRefresh.getValue().equals(RouterConstants.CONFIG_CAMEL_REFRESH.REMOVED)) {
+                                        killExistingRoute(importConfigToRefresh.getKey(), true);
+                                    }
+                                } catch (Exception e) {
+                                    LOGGER.error("Unexpected error while refreshing({}) camel route: {}", importConfigToRefresh.getValue(),
+                                            importConfigToRefresh.getKey(), e);
+                                }
+                            }
+
+                            for (Map.Entry<String, RouterConstants.CONFIG_CAMEL_REFRESH> exportConfigToRefresh : exportConfigsToRefresh.entrySet()) {
+                                try {
+                                    if (exportConfigToRefresh.getValue().equals(RouterConstants.CONFIG_CAMEL_REFRESH.UPDATED)) {
+                                        updateProfileExportReaderRoute(exportConfigToRefresh.getKey(), true);
+                                    } else if (exportConfigToRefresh.getValue().equals(RouterConstants.CONFIG_CAMEL_REFRESH.REMOVED)) {
+                                        killExistingRoute(exportConfigToRefresh.getKey(), true);
+                                    }
+                                } catch (Exception e) {
+                                    LOGGER.error("Unexpected error while refreshing({}) camel route: {}", exportConfigToRefresh.getValue(),
+                                            exportConfigToRefresh.getKey(), e);
+                                }
                             }
                         } catch (Exception e) {
-                            LOGGER.error("Unexpected error while refreshing({}) camel route: {}", importConfigToRefresh.getValue(),
-                                    importConfigToRefresh.getKey(), e);
+                            LOGGER.error("Unexpected error while refreshing import/export camel routes", e);
                         }
-                    }
-
-
-                    for (Map.Entry<String, RouterConstants.CONFIG_CAMEL_REFRESH> exportConfigToRefresh : exportConfigsToRefresh.entrySet()) {
-                        try {
-                            if (exportConfigToRefresh.getValue().equals(RouterConstants.CONFIG_CAMEL_REFRESH.UPDATED)) {
-                                updateProfileExportReaderRoute(exportConfigToRefresh.getKey(), true);
-                            } else if (exportConfigToRefresh.getValue().equals(RouterConstants.CONFIG_CAMEL_REFRESH.REMOVED)) {
-                                killExistingRoute(exportConfigToRefresh.getKey(), true);
-                            }
-                        } catch (Exception e) {
-                            LOGGER.error("Unexpected error while refreshing({}) camel route: {}", exportConfigToRefresh.getValue(),
-                                    exportConfigToRefresh.getKey(), e);
-                        }
-                    }
+                        return null;
+                    });
                 } catch (Exception e) {
-                    LOGGER.error("Unexpected error while refreshing import/export camel routes", e);
+                    LOGGER.error("Error executing route refresh as system subject", e);
                 }
             }
         };
@@ -240,12 +241,6 @@ public class RouterCamelContext implements IRouterCamelContext {
                 camelContext.removeRouteDefinition(routeDefinition);
             }
         }
-
-        if (fireEvent) {
-            UpdateCamelRouteEvent event = new UpdateCamelRouteEvent(EVENT_ID_REMOVE);
-            event.setRouteId(routeId);
-            clusterService.sendEvent(event);
-        }
     }
 
     public void updateProfileImportReaderRoute(String configId, boolean fireEvent) throws Exception {
@@ -266,11 +261,6 @@ public class RouterCamelContext implements IRouterCamelContext {
             builder.setJacksonDataFormat(jacksonDataFormat);
             builder.setContext(camelContext);
             camelContext.addRoutes(builder);
-
-            if (fireEvent) {
-                UpdateCamelRouteEvent event = new UpdateCamelRouteEvent(EVENT_ID_IMPORT);
-                clusterService.sendEvent(event);
-            }
         }
     }
 
@@ -291,11 +281,6 @@ public class RouterCamelContext implements IRouterCamelContext {
             profileExportCollectRouteBuilder.setJacksonDataFormat(jacksonDataFormat);
             profileExportCollectRouteBuilder.setContext(camelContext);
             camelContext.addRoutes(profileExportCollectRouteBuilder);
-
-            if (fireEvent) {
-                UpdateCamelRouteEvent event = new UpdateCamelRouteEvent(EVENT_ID_EXPORT);
-                clusterService.sendEvent(event);
-            }
         }
     }
 

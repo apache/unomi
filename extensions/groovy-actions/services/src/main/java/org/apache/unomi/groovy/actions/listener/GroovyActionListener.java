@@ -18,6 +18,7 @@ package org.apache.unomi.groovy.actions.listener;
 
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
+import org.apache.unomi.api.services.ExecutionContextManager;
 import org.apache.unomi.groovy.actions.services.GroovyActionsService;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
@@ -48,10 +49,16 @@ public class GroovyActionListener implements SynchronousBundleListener {
 
     private GroovyActionsService groovyActionsService;
     private BundleContext bundleContext;
+    private ExecutionContextManager contextManager;
 
     @Reference
     public void setGroovyActionsService(GroovyActionsService groovyActionsService) {
         this.groovyActionsService = groovyActionsService;
+    }
+
+    @Reference
+    public void setContextManager(ExecutionContextManager contextManager) {
+        this.contextManager = contextManager;
     }
 
     @Activate
@@ -91,16 +98,19 @@ public class GroovyActionListener implements SynchronousBundleListener {
     }
 
     public void bundleChanged(BundleEvent event) {
-        switch (event.getType()) {
-            case BundleEvent.STARTED:
-                processBundleStartup(event.getBundle().getBundleContext());
-                break;
-            case BundleEvent.STOPPING:
-                if (!event.getBundle().getSymbolicName().equals("org.apache.unomi.groovy-actions-services")) {
-                    processBundleStop(event.getBundle().getBundleContext());
-                }
-                break;
-        }
+        contextManager.executeAsSystem(() -> {
+            switch (event.getType()) {
+                case BundleEvent.STARTED:
+                    processBundleStartup(event.getBundle().getBundleContext());
+                    break;
+                case BundleEvent.STOPPING:
+                    if (!event.getBundle().getSymbolicName().equals("org.apache.unomi.groovy-actions-services")) {
+                        processBundleStop(event.getBundle().getBundleContext());
+                    }
+                    break;
+            }
+            return null;
+        });
     }
 
     private void addGroovyAction(URL groovyActionURL) {

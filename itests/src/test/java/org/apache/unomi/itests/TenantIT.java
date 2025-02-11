@@ -284,16 +284,18 @@ public class TenantIT extends BaseIT {
         ApiKey apiKey2 = tenantService.generateApiKey(tenant2.getItemId(), null);
 
         // Create profile in tenant1
-        tenantService.setCurrentTenant(tenant1.getItemId());
-        Profile profile1 = new Profile();
-        profile1.setItemId("profile1");
-        profile1.setProperty("name", "John");
-        persistenceService.save(profile1);
+        executionContextManager.executeAsTenant(tenant1.getItemId(), () -> {
+            Profile profile1 = new Profile();
+            profile1.setItemId("profile1");
+            profile1.setProperty("name", "John");
+            persistenceService.save(profile1);
+        });
 
         // Try to access profile from tenant2
-        tenantService.setCurrentTenant(tenant2.getItemId());
-        Profile loadedProfile = persistenceService.load("profile1", Profile.class);
-        Assert.assertNull("Profile should not be accessible from different tenants", loadedProfile);
+        executionContextManager.executeAsTenant(tenant2.getItemId(), () -> {
+            Profile loadedProfile = persistenceService.load("profile1", Profile.class);
+            Assert.assertNull("Profile should not be accessible from different tenants", loadedProfile);
+        });
     }
 
     @Test
@@ -348,10 +350,11 @@ public class TenantIT extends BaseIT {
         Tenant tenant = tenantService.createTenant("delete-test", Collections.emptyMap());
 
         // Create data for tenants
-        tenantService.setCurrentTenant(tenant.getItemId());
-        Profile profile = new Profile();
-        profile.setItemId("delete-test-profile");
-        persistenceService.save(profile);
+        executionContextManager.executeAsTenant(tenant.getItemId(), () -> {
+            Profile profile = new Profile();
+            profile.setItemId("delete-test-profile");
+            persistenceService.save(profile);
+        });
 
         // Delete tenants
         tenantService.deleteTenant(tenant.getItemId());
@@ -368,20 +371,21 @@ public class TenantIT extends BaseIT {
         Tenant tenant2 = tenantService.createTenant("search-test-2", Collections.emptyMap());
 
         // Add data to tenant1
-        tenantService.setCurrentTenant(tenant1.getItemId());
-        for (int i = 0; i < 10; i++) {
-            Profile profile = new Profile();
-            profile.setItemId("search-test-" + i);
-            profile.setProperty("testKey", "testValue");
-            persistenceService.save(profile);
-        }
+        executionContextManager.executeAsTenant(tenant1.getItemId(), () -> {
+            for (int i = 0; i < 10; i++) {
+                Profile profile = new Profile();
+                profile.setItemId("search-test-" + i);
+                profile.setProperty("testKey", "testValue");
+                persistenceService.save(profile);
+            }
+        });
 
         // Search from tenant2
-        tenantService.setCurrentTenant(tenant2.getItemId());
-        Query query = new Query();
-        List<Profile> results = persistenceService.query("testKey", "testValue", null, Profile.class);
-
-        Assert.assertEquals(0, results.size());
+        executionContextManager.executeAsTenant(tenant2.getItemId(), () -> {
+            Query query = new Query();
+            List<Profile> results = persistenceService.query("testKey", "testValue", null, Profile.class);
+            Assert.assertEquals(0, results.size());
+        });
     }
 
     @Test

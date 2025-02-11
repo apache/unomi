@@ -154,4 +154,15 @@ public class ConditionType extends MetadataItem implements PluginType {
     public void setPluginId(long pluginId) {
         this.pluginId = pluginId;
     }
+
+    @Override
+    public String toString() {
+        return "ConditionType{" +
+                "conditionEvaluator='" + conditionEvaluator + '\'' +
+                ", queryBuilder='" + queryBuilder + '\'' +
+                ", parentCondition=" + parentCondition +
+                ", parameters=" + parameters +
+                ", pluginId=" + pluginId +
+                '}';
+    }
 }

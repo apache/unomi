@@ -24,7 +24,9 @@ import org.apache.commons.io.IOUtils;
 import org.apache.unomi.api.Metadata;
 import org.apache.unomi.api.actions.ActionType;
 import org.apache.unomi.api.services.DefinitionsService;
+import org.apache.unomi.api.services.ExecutionContextManager;
 import org.apache.unomi.api.services.SchedulerService;
+import org.apache.unomi.api.tasks.ScheduledTask;
 import org.apache.unomi.groovy.actions.GroovyAction;
 import org.apache.unomi.groovy.actions.GroovyBundleResourceConnector;
 import org.apache.unomi.groovy.actions.annotations.Action;
@@ -35,7 +37,10 @@ import org.codehaus.groovy.control.CompilerConfiguration;
 import org.codehaus.groovy.control.customizers.ImportCustomizer;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.wiring.BundleWiring;
-import org.osgi.service.component.annotations.*;
+import org.osgi.service.component.annotations.Activate;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Deactivate;
+import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.metatype.annotations.Designate;
 import org.osgi.service.metatype.annotations.ObjectClassDefinition;
 import org.slf4j.Logger;
@@ -46,7 +51,6 @@ import java.net.URL;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
-import java.util.TimerTask;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -71,6 +75,7 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
     private GroovyShell groovyShell;
     private Map<String, GroovyCodeSource> groovyCodeSourceMap;
     private ScheduledFuture<?> scheduledFuture;
+    private ScheduledTask scheduledTask;
 
     private static final Logger LOGGER = LoggerFactory.getLogger(GroovyActionsServiceImpl.class.getName());
     private static final String BASE_SCRIPT_NAME = "BaseScript";
@@ -78,6 +83,7 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
     private DefinitionsService definitionsService;
     private PersistenceService persistenceService;
     private SchedulerService schedulerService;
+    private ExecutionContextManager contextManager;
     private ActionExecutorDispatcher actionExecutorDispatcher;
     private GroovyActionsServiceConfig config;
 
@@ -94,6 +100,11 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
     @Reference
     public void setSchedulerService(SchedulerService schedulerService) {
         this.schedulerService = schedulerService;
+    }
+
+    @Reference
+    public void setContextManager(ExecutionContextManager contextManager) {
+        this.contextManager = contextManager;
     }
 
     @Reference
@@ -132,6 +143,9 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
         LOGGER.debug("onDestroy Method called");
         if (scheduledFuture != null && !scheduledFuture.isCancelled()) {
             scheduledFuture.cancel(true);
+        }
+        if (scheduledTask != null) {
+            schedulerService.cancelTask(scheduledTask.getItemId());
         }
     }
 
@@ -252,13 +266,14 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
     }
 
     private void initializeTimers() {
-        TimerTask task = new TimerTask() {
-            @Override
-            public void run() {
+        scheduledTask = schedulerService.newTask("groovy-actions-refresh")
+            .nonPersistent()  // Cache-like refresh, should not be persisted
+            .withPeriod(config.services_groovy_actions_refresh_interval(), TimeUnit.MILLISECONDS)
+            .withFixedDelay() // Sequential execution
+            .withSimpleExecutor(() -> contextManager.executeAsSystem(() -> {
                 refreshGroovyActions();
-            }
-        };
-        scheduledFuture = schedulerService.getScheduleExecutorService().scheduleWithFixedDelay(task, 0, config.services_groovy_actions_refresh_interval(),
-                TimeUnit.MILLISECONDS);
+                return null;
+            }))
+            .schedule();
     }
 }

@@ -16,18 +16,21 @@
  */
 package org.apache.unomi.services.impl;
 
-import org.apache.unomi.api.Event;
-import org.apache.unomi.api.Item;
-import org.apache.unomi.api.Metadata;
+import org.apache.commons.lang3.ObjectUtils;
+import org.apache.unomi.api.*;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.conditions.ConditionType;
-import org.apache.unomi.persistence.spi.conditions.ConditionEvaluator;
-import org.apache.unomi.persistence.spi.conditions.ConditionEvaluatorDispatcher;
-import org.apache.unomi.persistence.spi.conditions.ConditionEvaluatorDispatcherImpl;
+import org.apache.unomi.api.services.EventService;
+import org.apache.unomi.persistence.spi.PropertyHelper;
+import org.apache.unomi.persistence.spi.conditions.*;
+import org.apache.unomi.persistence.spi.conditions.geo.DistanceUnit;
 
 import java.lang.reflect.Method;
+import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 /**
  * Test condition evaluators for use in unit tests.
@@ -35,6 +38,23 @@ import java.util.concurrent.ConcurrentHashMap;
 public class TestConditionEvaluators {
 
     private static Map<String, ConditionType> conditionTypes = new ConcurrentHashMap<>();
+    private static final SimpleDateFormat ISO_DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
+    private static final SimpleDateFormat yearMonthDayDateFormat = new SimpleDateFormat("yyyyMMdd");
+    private static EventService eventService;
+    private static TestConditionEvaluationTracer tracer = new TestConditionEvaluationTracer(true);
+
+    static {
+        ISO_DATE_FORMAT.setTimeZone(TimeZone.getTimeZone("UTC"));
+        yearMonthDayDateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
+    }
+
+    public static void setEventService(EventService service) {
+        eventService = service;
+    }
+
+    public static TestConditionEvaluationTracer getTracer() {
+        return tracer;
+    }
 
     public static ConditionEvaluatorDispatcher createDispatcher() {
         ConditionEvaluatorDispatcherImpl dispatcher = new ConditionEvaluatorDispatcherImpl();
@@ -42,31 +62,43 @@ public class TestConditionEvaluators {
         dispatcher.addEvaluator("propertyConditionEvaluator", createPropertyConditionEvaluator());
         dispatcher.addEvaluator("matchAllConditionEvaluator", createMatchAllConditionEvaluator());
         dispatcher.addEvaluator("eventTypeConditionEvaluator", createEventTypeConditionEvaluator());
+        dispatcher.addEvaluator("pastEventConditionEvaluator", createPastEventConditionEvaluator());
+        dispatcher.addEvaluator("notConditionEvaluator", createNotConditionEvaluator());
+        dispatcher.addEvaluator("nestedConditionEvaluator", createNestedConditionEvaluator());
+        dispatcher.addEvaluator("profileUpdatedEventConditionEvaluator", createProfileUpdatedEventConditionEvaluator());
+        dispatcher.addEvaluator("idsConditionEvaluator", createIdsConditionEvaluator());
         initializeConditionTypes();
         return dispatcher;
     }
 
     private static ConditionEvaluator createBooleanConditionEvaluator() {
         return (condition, item, context, dispatcher) -> {
+            tracer.startEvaluation(condition, "Evaluating boolean condition with operator: " + condition.getParameter("operator"));
             String operator = (String) condition.getParameter("operator");
             List<Condition> subConditions = (List<Condition>) condition.getParameter("subConditions");
 
             if (subConditions == null || subConditions.isEmpty()) {
+                tracer.endEvaluation(condition, true, "No subconditions found, returning true");
                 return true;
             }
 
             boolean isAnd = "and".equalsIgnoreCase(operator);
+            tracer.trace(condition, "Using " + (isAnd ? "AND" : "OR") + " operator for " + subConditions.size() + " subconditions");
 
             for (Condition subCondition : subConditions) {
                 boolean result = dispatcher.eval(subCondition, item, context);
                 if (isAnd && !result) {
+                    tracer.endEvaluation(condition, false, "AND condition failed on subcondition");
                     return false;
                 } else if (!isAnd && result) {
+                    tracer.endEvaluation(condition, true, "OR condition succeeded on subcondition");
                     return true;
                 }
             }
 
-            return isAnd;
+            boolean finalResult = isAnd;
+            tracer.endEvaluation(condition, finalResult, "All subconditions processed, returning " + finalResult);
+            return finalResult;
         };
     }
 
@@ -150,19 +182,257 @@ public class TestConditionEvaluators {
         return (condition, item, context, dispatcher) -> {
             String propertyName = (String) condition.getParameter("propertyName");
             String comparisonOperator = (String) condition.getParameter("comparisonOperator");
-            Object expectedValue = condition.getParameter("propertyValue");
+
+            tracer.startEvaluation(condition, "Evaluating property condition for property: " + propertyName + " with operator: " + comparisonOperator);
 
             if (propertyName == null || comparisonOperator == null) {
+                tracer.endEvaluation(condition, false, "Missing property name or comparison operator");
                 return false;
             }
 
             Object actualValue = getPropertyValue(item, propertyName);
-            return compareValues(expectedValue, actualValue, comparisonOperator);
+            tracer.trace(condition, "Property value retrieved: " + actualValue);
+
+            boolean result = evaluateCondition(actualValue, comparisonOperator, condition);
+            tracer.endEvaluation(condition, result, "Property comparison result: " + result);
+            return result;
         };
     }
 
+    private static boolean evaluateCondition(Object actualValue, String operator, Condition condition) {
+        // Handle null cases first
+        if (operator == null) {
+            return false;
+        }
+        if (actualValue == null) {
+            return operator.equals("missing") || operator.equals("notIn") ||
+                   operator.equals("notEquals") || operator.equals("hasNoneOf");
+        }
+        if (operator.equals("exists")) {
+            return !(actualValue instanceof List) || !((List<?>) actualValue).isEmpty();
+        }
+
+        // Get all possible expected values
+        String expectedValue = condition.getParameter("propertyValue") == null ? null :
+            ConditionContextHelper.foldToASCII(condition.getParameter("propertyValue").toString());
+        Object expectedValueInteger = condition.getParameter("propertyValueInteger");
+        Object expectedValueDouble = condition.getParameter("propertyValueDouble");
+        Object expectedValueDate = condition.getParameter("propertyValueDate");
+        Object expectedValueDateExpr = condition.getParameter("propertyValueDateExpr");
+
+        // Convert string values to ASCII folded form
+        if (actualValue instanceof String || expectedValue != null) {
+            actualValue = ConditionContextHelper.foldToASCII(actualValue.toString());
+        }
+
+        // Handle comparison operators
+        switch (operator) {
+            case "equals":
+            case "notEquals":
+            case "greaterThan":
+            case "greaterThanOrEqualTo":
+            case "lessThan":
+            case "lessThanOrEqualTo":
+                int comparisonResult = compareValues(actualValue, expectedValue, expectedValueDate,
+                    expectedValueInteger, expectedValueDateExpr, expectedValueDouble);
+                return evaluateComparison(operator, comparisonResult);
+
+            case "between":
+                return evaluateBetweenCondition(actualValue, condition);
+
+            case "contains":
+            case "notContains":
+            case "startsWith":
+            case "endsWith":
+            case "matchesRegex":
+                return evaluateStringCondition(actualValue.toString(), expectedValue, operator);
+
+            case "in":
+            case "inContains":
+            case "notIn":
+            case "hasSomeOf":
+            case "hasNoneOf":
+            case "all":
+                return evaluateCollectionCondition(actualValue, condition, operator);
+
+            case "isDay":
+            case "isNotDay":
+                return evaluateDateCondition(actualValue, expectedValueDate, expectedValueDateExpr, operator);
+
+            case "distance":
+                return evaluateDistanceCondition(actualValue, condition);
+
+            default:
+                return false;
+        }
+    }
+
+    private static boolean evaluateComparison(String operator, int comparisonResult) {
+        switch (operator) {
+            case "equals": return comparisonResult == 0;
+            case "notEquals": return comparisonResult != 0;
+            case "greaterThan": return comparisonResult > 0;
+            case "greaterThanOrEqualTo": return comparisonResult >= 0;
+            case "lessThan": return comparisonResult < 0;
+            case "lessThanOrEqualTo": return comparisonResult <= 0;
+            default: return false;
+        }
+    }
+
+    private static boolean evaluateStringCondition(String actualValue, String expectedValue, String operator) {
+        if (expectedValue == null) {
+            return false;
+        }
+        switch (operator) {
+            case "contains": return actualValue.contains(expectedValue);
+            case "notContains": return !actualValue.contains(expectedValue);
+            case "startsWith": return actualValue.startsWith(expectedValue);
+            case "endsWith": return actualValue.endsWith(expectedValue);
+            case "matchesRegex": return Pattern.compile(expectedValue).matcher(actualValue).matches();
+            default: return false;
+        }
+    }
+
+    private static boolean evaluateBetweenCondition(Object actualValue, Condition condition) {
+        Collection<?> expectedValuesInteger = (Collection<?>) condition.getParameter("propertyValuesInteger");
+        Collection<?> expectedValuesDouble = (Collection<?>) condition.getParameter("propertyValuesDouble");
+        Collection<?> expectedValuesDate = (Collection<?>) condition.getParameter("propertyValuesDate");
+        Collection<?> expectedValuesDateExpr = (Collection<?>) condition.getParameter("propertyValuesDateExpr");
+
+        int lowerBoundComparison = compareValues(actualValue, null,
+                getDate(getFirst(expectedValuesDate)),
+                getFirst(expectedValuesInteger),
+                getFirst(expectedValuesDateExpr),
+                getFirst(expectedValuesDouble));
+
+        int upperBoundComparison = compareValues(actualValue, null,
+                getDate(getSecond(expectedValuesDate)),
+                getSecond(expectedValuesInteger),
+                getSecond(expectedValuesDateExpr),
+                getSecond(expectedValuesDouble));
+
+        return lowerBoundComparison >= 0 && upperBoundComparison <= 0;
+    }
+
+    private static boolean evaluateDateCondition(Object actualValue, Object expectedValueDate,
+                                               Object expectedValueDateExpr, String operator) {
+        Object expectedDate = expectedValueDate == null ? expectedValueDateExpr : expectedValueDate;
+        boolean isSameDay = yearMonthDayDateFormat.format(getDate(actualValue))
+                .equals(yearMonthDayDateFormat.format(getDate(expectedDate)));
+        return operator.equals("isDay") ? isSameDay : !isSameDay;
+    }
+
+    private static boolean evaluateDistanceCondition(Object actualValue, Condition condition) {
+        GeoPoint actualCenter = null;
+        if (actualValue instanceof GeoPoint) {
+            actualCenter = (GeoPoint) actualValue;
+        } else if (actualValue instanceof Map) {
+            actualCenter = GeoPoint.fromMap((Map<String, Double>) actualValue);
+        } else if (actualValue instanceof String) {
+            actualCenter = GeoPoint.fromString((String) actualValue);
+        }
+        if (actualCenter == null) {
+            return false;
+        }
+
+        String unitString = (String) condition.getParameter("unit");
+        String centerString = (String) condition.getParameter("center");
+        Double distance = (Double) condition.getParameter("distance");
+        if (centerString == null || distance == null) {
+            return false;
+        }
+
+        GeoPoint expectedCenter = GeoPoint.fromString(centerString);
+        DistanceUnit expectedUnit = unitString != null ? DistanceUnit.fromString(unitString) : DistanceUnit.METERS;
+        return expectedCenter.distanceTo(actualCenter) <= expectedUnit.toMeters(distance);
+    }
+
+    private static boolean evaluateCollectionCondition(Object actualValue, Condition condition, String operator) {
+        Collection<?> expectedValues = ConditionContextHelper.foldToASCII((Collection<?>) condition.getParameter("propertyValues"));
+        Collection<?> expectedValuesInteger = (Collection<?>) condition.getParameter("propertyValuesInteger");
+        Collection<?> expectedValuesDate = (Collection<?>) condition.getParameter("propertyValuesDate");
+        Collection<?> expectedValuesDateExpr = (Collection<?>) condition.getParameter("propertyValuesDateExpr");
+        Collection<?> expectedValuesDouble = (Collection<?>) condition.getParameter("propertyValuesDouble");
+
+        Collection<Object> expectedDateExpr = expectedValuesDateExpr != null ?
+            expectedValuesDateExpr.stream().map(DateUtils::getDate).collect(Collectors.toList()) : null;
+
+        @SuppressWarnings("unchecked")
+        Collection<?> expected = ObjectUtils.firstNonNull(expectedValues, expectedValuesDate,
+            expectedValuesInteger, expectedValuesDouble, expectedDateExpr);
+
+        if (expected == null) {
+            return actualValue == null;
+        }
+
+        Collection<Object> actual = ConditionContextHelper.foldToASCII(getValueSet(actualValue));
+
+        switch (operator) {
+            case "in": return actual.stream().anyMatch(expected::contains);
+            case "inContains": return actual.stream().anyMatch(a ->
+                expected.stream().anyMatch(b -> ((String) a).contains((String) b)));
+            case "notIn": return actual.stream().noneMatch(expected::contains);
+            case "all": return expected.stream().allMatch(actual::contains);
+            case "hasNoneOf": return Collections.disjoint(actual, expected);
+            case "hasSomeOf": return !Collections.disjoint(actual, expected);
+            default: return false;
+        }
+    }
+
+    private static int compareValues(Object actualValue, String expectedValue, Object expectedValueDate,
+                                   Object expectedValueInteger, Object expectedValueDateExpr, Object expectedValueDouble) {
+        if (expectedValue == null && expectedValueDate == null && expectedValueInteger == null &&
+            getDate(expectedValueDateExpr) == null && expectedValueDouble == null) {
+            return actualValue == null ? 0 : 1;
+        } else if (actualValue == null) {
+            return -1;
+        }
+
+        if (expectedValueInteger != null) {
+            return PropertyHelper.getInteger(actualValue).compareTo(PropertyHelper.getInteger(expectedValueInteger));
+        } else if (expectedValueDouble != null) {
+            return PropertyHelper.getDouble(actualValue).compareTo(PropertyHelper.getDouble(expectedValueDouble));
+        } else if (expectedValueDate != null) {
+            return getDate(actualValue).compareTo(getDate(expectedValueDate));
+        } else if (expectedValueDateExpr != null) {
+            return getDate(actualValue).compareTo(getDate(expectedValueDateExpr));
+        } else {
+            return actualValue.toString().toLowerCase().compareTo(expectedValue);
+        }
+    }
+
+    private static List<Object> getValueSet(Object value) {
+        if (value instanceof List) {
+            return (List<Object>) value;
+        } else if (value instanceof Collection) {
+            return new ArrayList<>((Collection<?>) value);
+        } else {
+            return Collections.singletonList(value);
+        }
+    }
+
+    private static Object getFirst(Collection<?> collection) {
+        if (collection == null || collection.isEmpty()) {
+            return null;
+        }
+        return collection.iterator().next();
+    }
+
+    private static Object getSecond(Collection<?> collection) {
+        if (collection == null || collection.size() < 2) {
+            return null;
+        }
+        Iterator<?> iterator = collection.iterator();
+        iterator.next();
+        return iterator.next();
+    }
+
     private static ConditionEvaluator createMatchAllConditionEvaluator() {
-        return (condition, item, context, dispatcher) -> true;
+        return (condition, item, context, dispatcher) -> {
+            tracer.startEvaluation(condition, "Evaluating matchAll condition");
+            tracer.endEvaluation(condition, true, "MatchAll condition always returns true");
+            return true;
+        };
     }
 
     private static ConditionEvaluator createEventTypeConditionEvaluator() {
@@ -174,6 +444,175 @@ public class TestConditionEvaluators {
             String expectedEventType = (String) condition.getParameter("eventTypeId");
             return expectedEventType != null && expectedEventType.equals(event.getEventType());
         };
+    }
+
+    private static ConditionEvaluator createPastEventConditionEvaluator() {
+        return (condition, item, context, dispatcher) -> {
+            tracer.startEvaluation(condition, "Evaluating past event condition");
+
+            if (!(item instanceof Profile)) {
+                tracer.endEvaluation(condition, false, "Item is not a Profile");
+                return false;
+            }
+
+            Profile profile = (Profile) item;
+            Map<String, Object> parameters = condition.getParameterValues();
+            long count;
+
+            if (parameters.containsKey("generatedPropertyKey")) {
+                String key = (String) parameters.get("generatedPropertyKey");
+                tracer.trace(condition, "Using generated property key: " + key);
+
+                List<Map<String, Object>> pastEvents = (ArrayList<Map<String, Object>>) profile.getSystemProperties().get("pastEvents");
+                if (pastEvents != null) {
+                    tracer.trace(condition, "Found pastEvents in profile system properties");
+                    Number l = (Number) pastEvents
+                            .stream()
+                            .filter(pastEvent -> pastEvent.get("key").equals(key))
+                            .findFirst()
+                            .map(pastEvent -> pastEvent.get("count")).orElse(0L);
+                    count = l.longValue();
+                    tracer.trace(condition, "Found count=" + count + " for key=" + key);
+                } else {
+                    tracer.trace(condition, "No pastEvents found in profile system properties");
+                    count = 0;
+                }
+            } else {
+                tracer.trace(condition, "No generatedPropertyKey found, querying events directly");
+                Condition eventCondition = (Condition) condition.getParameter("eventCondition");
+                count = eventService.searchEvents(eventCondition, 0, 1).size();
+                tracer.trace(condition, "Direct event query returned count=" + count);
+            }
+
+            boolean eventsOccurred = "true".equals(condition.getParameter("operator"));
+            if (eventsOccurred) {
+                int minimumEventCount = parameters.get("minimumEventCount") == null ? 0 : (Integer) parameters.get("minimumEventCount");
+                int maximumEventCount = parameters.get("maximumEventCount") == null ? Integer.MAX_VALUE : (Integer) parameters.get("maximumEventCount");
+                boolean result = count > 0 && (count >= minimumEventCount && count <= maximumEventCount);
+                tracer.endEvaluation(condition, result,
+                    String.format("Events occurred check: count=%d, min=%d, max=%d", count, minimumEventCount, maximumEventCount));
+                return result;
+            } else {
+                boolean result = count == 0;
+                tracer.endEvaluation(condition, result, "Events not occurred check: count=" + count);
+                return result;
+            }
+        };
+    }
+
+    private static ConditionEvaluator createNotConditionEvaluator() {
+        return (condition, item, context, dispatcher) -> {
+            Condition subCondition = (Condition) condition.getParameter("subCondition");
+            if (subCondition == null) {
+                return false;
+            }
+            return !dispatcher.eval(subCondition, item, context);
+        };
+    }
+
+    private static ConditionEvaluator createProfileUpdatedEventConditionEvaluator() {
+        return (condition, item, context, dispatcher) -> {
+            if (!(item instanceof Event)) {
+                return false;
+            }
+            Event event = (Event) item;
+            return "profileUpdated".equals(event.getEventType());
+        };
+    }
+
+    private static ConditionEvaluator createNestedConditionEvaluator() {
+        return (condition, item, context, dispatcher) -> {
+            tracer.startEvaluation(condition, "Evaluating nested condition");
+
+            String path = (String) condition.getParameter("path");
+            Condition subCondition = (Condition) condition.getParameter("subCondition");
+
+            if (subCondition == null || path == null) {
+                tracer.endEvaluation(condition, false, "Missing required parameters: subCondition or path is null");
+                return false;
+            }
+
+            tracer.trace(condition, "Evaluating nested condition with path: " + path);
+
+            try {
+                // Get list of nested items to be evaluated
+                Object nestedItems = getPropertyValue(item, path);
+                if (nestedItems instanceof List) {
+                    tracer.trace(condition, "Found list of nested items at path: " + path + ", size: " + ((List<?>) nestedItems).size());
+
+                    // Evaluate each nested item until one matches the nested condition
+                    for (Object nestedItem : (List<?>) nestedItems) {
+                        if (nestedItem instanceof Map) {
+                            Map<String, Object> flattenedNestedItem = flattenNestedItem(path, (Map<String, Object>) nestedItem);
+                            Item finalNestedItem = createFinalNestedItemForEvaluation(item, path, flattenedNestedItem);
+
+                            if (finalNestedItem != null) {
+                                tracer.trace(condition, "Evaluating subcondition on nested item");
+                                boolean result = dispatcher.eval(subCondition, finalNestedItem, context);
+                                if (result) {
+                                    tracer.endEvaluation(condition, true, "Found matching nested item");
+                                    return true;
+                                }
+                            }
+                        }
+                    }
+                    tracer.endEvaluation(condition, false, "No matching nested items found");
+                } else {
+                    tracer.endEvaluation(condition, false, "Property at path is not a list: " + path);
+                }
+            } catch (Exception e) {
+                tracer.trace(condition, "Error evaluating nested condition: " + e.getMessage());
+                tracer.endEvaluation(condition, false, "Failed to evaluate nested condition: " + e.getMessage());
+                return false;
+            }
+            return false;
+        };
+    }
+
+    private static Map<String, Object> flattenNestedItem(String path, Map<String, Object> nestedItem) {
+        Map<String, Object> flattenedNestedItem = new HashMap<>();
+
+        if (path != null && !path.isEmpty()) {
+            String propertyPath = path.contains(".") ? path.substring(path.indexOf(".") + 1) : path;
+            if (!propertyPath.isEmpty()) {
+                String[] propertyKeys = propertyPath.split("\\.");
+                Map<String, Object> currentLevel = flattenedNestedItem;
+
+                for (int i = 0; i < propertyKeys.length; i++) {
+                    String key = propertyKeys[i];
+                    if (i == propertyKeys.length - 1) {
+                        currentLevel.put(key, nestedItem);
+                    } else {
+                        Map<String, Object> nextLevel = new HashMap<>();
+                        currentLevel.put(key, nextLevel);
+                        currentLevel = nextLevel;
+                    }
+                }
+            }
+        }
+
+        return flattenedNestedItem;
+    }
+
+    private static Item createFinalNestedItemForEvaluation(Item parentItem, String path, Map<String, Object> flattenedNestedItem) {
+        if (parentItem instanceof Profile) {
+            Profile profile = new Profile(parentItem.getItemId());
+            if (path.startsWith("properties.")) {
+                profile.setProperties(flattenedNestedItem);
+            } else if (path.startsWith("systemProperties.")) {
+                profile.setSystemProperties(flattenedNestedItem);
+            }
+            return profile;
+        } else if (parentItem instanceof Session) {
+            Session session = new Session();
+            if (path.startsWith("properties.")) {
+                session.setProperties(flattenedNestedItem);
+            } else if (path.startsWith("systemProperties.")) {
+                session.setSystemProperties(flattenedNestedItem);
+            }
+            return session;
+        }
+        return null;
     }
 
     private static void initializeConditionTypes() {
@@ -218,6 +657,37 @@ public class TestConditionEvaluators {
         ConditionType profilePropertyConditionType = createConditionType("profilePropertyCondition", "propertyConditionEvaluator",
                 "propertyConditionESQueryBuilder", Set.of("availableToEndUser", "profileTags", "demographic", "condition", "profileCondition"));
         conditionTypes.put("profilePropertyCondition", profilePropertyConditionType);
+
+        // Create pastEvent condition type
+        ConditionType pastEventConditionType = createConditionType("pastEventCondition", "pastEventConditionEvaluator",
+                "pastEventConditionESQueryBuilder", Set.of("profileTags", "event", "condition", "pastEventCondition"));
+        conditionTypes.put("pastEventCondition", pastEventConditionType);
+
+        // Create not condition type
+        ConditionType notConditionType = createConditionType("notCondition", "notConditionEvaluator",
+                "notConditionESQueryBuilder", Set.of("profileTags", "logical", "condition", "profileCondition",
+                        "eventCondition", "sessionCondition", "sourceEventCondition"));
+        conditionTypes.put("notCondition", notConditionType);
+
+        // Create profileUpdatedEvent condition type
+        ConditionType profileUpdatedEventConditionType = createConditionType("profileUpdatedEventCondition",
+                "profileUpdatedEventConditionEvaluator",
+                "eventTypeConditionESQueryBuilder",
+                Set.of("profileTags", "event", "condition", "eventCondition"));
+        conditionTypes.put("profileUpdatedEventCondition", profileUpdatedEventConditionType);
+
+        // Create nested condition type
+        ConditionType nestedConditionType = createConditionType("nestedCondition",
+                "nestedConditionEvaluator",
+                "nestedConditionESQueryBuilder",
+                Set.of("profileTags", "logical", "condition", "profileCondition", "sessionCondition"));
+        conditionTypes.put("nestedCondition", nestedConditionType);
+
+        // Create ids condition type
+        ConditionType idsConditionType = createConditionType("idsCondition", "idsConditionEvaluator",
+                "idsConditionESQueryBuilder", Set.of("profileTags", "logical", "condition", "profileCondition",
+                        "eventCondition", "sessionCondition", "sourceEventCondition"));
+        conditionTypes.put("idsCondition", idsConditionType);
     }
 
     private static ConditionType createConditionType(String typeId, String conditionEvaluatorId, String queryBuilderId, Set<String> systemTags) {
@@ -245,4 +715,46 @@ public class TestConditionEvaluators {
     public static ConditionType getConditionType(String conditionTypeId) {
         return conditionTypes.get(conditionTypeId);
     }
+
+    private static Date getDate(Object value) {
+        return DateUtils.getDate(value);
+    }
+
+    private static ConditionEvaluator createIdsConditionEvaluator() {
+        return (condition, item, context, dispatcher) -> {
+            tracer.startEvaluation(condition, "Evaluating ids condition");
+
+            if (item == null) {
+                tracer.endEvaluation(condition, false, "Item is null");
+                return false;
+            }
+
+            Object idsObj = condition.getParameter("ids");
+            if (idsObj == null) {
+                tracer.endEvaluation(condition, false, "No ids provided in condition");
+                return false;
+            }
+
+            Collection<String> ids;
+            if (idsObj instanceof Collection) {
+                @SuppressWarnings("unchecked")
+                Collection<String> temp = (Collection<String>) idsObj;
+                ids = temp;
+            } else {
+                tracer.endEvaluation(condition, false, "Ids parameter is not a collection");
+                return false;
+            }
+
+            if (ids.isEmpty()) {
+                tracer.endEvaluation(condition, false, "Empty ids collection");
+                return false;
+            }
+
+            tracer.trace(condition, "Checking if item id " + item.getItemId() + " is in collection: " + ids);
+            boolean result = ids.contains(item.getItemId());
+            tracer.endEvaluation(condition, result, "Item id " + (result ? "found" : "not found") + " in collection");
+            return result;
+        };
+    }
 }
+

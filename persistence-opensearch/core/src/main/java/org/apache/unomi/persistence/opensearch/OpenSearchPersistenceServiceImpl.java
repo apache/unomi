@@ -35,7 +35,7 @@ import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.query.DateRange;
 import org.apache.unomi.api.query.IpRange;
 import org.apache.unomi.api.query.NumericRange;
-import org.apache.unomi.api.security.SecurityService;
+import org.apache.unomi.api.services.ExecutionContextManager;
 import org.apache.unomi.api.tenants.TenantTransformationListener;
 import org.apache.unomi.metrics.MetricAdapter;
 import org.apache.unomi.metrics.MetricsService;
@@ -181,7 +181,7 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
     private int clusterHealthTimeout = 30; // timeout in seconds
     private int clusterHealthRetries = 3;
 
-    private ServiceReference<SecurityService> securityServiceReference;
+    private volatile ExecutionContextManager contextManager = null;
     private List<TenantTransformationListener> transformationListeners = new CopyOnWriteArrayList<>();
 
     public void setBundleContext(BundleContext bundleContext) {
@@ -395,10 +395,6 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
         }
     }
 
-    public void setSecurityServiceReference(ServiceReference<SecurityService> securityServiceReference) {
-        this.securityServiceReference = securityServiceReference;
-    }
-
     public String getName() {
         return "opensearch";
     }
@@ -569,8 +565,16 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
     @Override
     public void bundleChanged(BundleEvent event) {
         if (event.getType() == BundleEvent.STARTING) {
-            loadPredefinedMappings(event.getBundle().getBundleContext(), true);
-            loadPainlessScripts(event.getBundle().getBundleContext());
+            if (contextManager != null) {
+                contextManager.executeAsSystem(() -> {
+                    loadPredefinedMappings(event.getBundle().getBundleContext(), true);
+                    loadPainlessScripts(event.getBundle().getBundleContext());
+                });
+            } else {
+                // If context manager is not available, execute directly as operations won't be validated
+                loadPredefinedMappings(event.getBundle().getBundleContext(), true);
+                loadPainlessScripts(event.getBundle().getBundleContext());
+            }
         }
     }
 
@@ -2978,31 +2982,22 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
         }
     }
 
-    private SecurityService getSecurityService() {
-        if (securityServiceReference != null) {
-            return FrameworkUtil
-                    .getBundle(getClass())
-                    .getBundleContext()
-                    .getService(securityServiceReference);
-        }
-        return null;
-    }
 
     private String getTenantId() {
-        String tenantId = SYSTEM_TENANT;
-        SecurityService securityService = getSecurityService();
-        if (securityService != null) {
-            tenantId = securityService.getCurrentTenantId();
+        if (contextManager == null) {
+            return SYSTEM_TENANT;
         }
-        return tenantId;
+        ExecutionContext context = contextManager.getCurrentContext();
+        if (context == null || context.getTenantId() == null) {
+            return SYSTEM_TENANT;
+        }
+        return context.getTenantId();
     }
 
     private String validateTenantAndGetId(String operation) {
-        String tenantId = SYSTEM_TENANT;
-        SecurityService securityService = getSecurityService();
-        if (securityService != null) {
-            tenantId = securityService.getCurrentTenantId();
-            securityService.validateTenantOperation(tenantId, operation);
+        String tenantId = getTenantId();
+        if (contextManager != null && contextManager.getCurrentContext() != null) {
+            contextManager.getCurrentContext().validateAccess(operation);
         }
         return tenantId;
     }
@@ -3033,7 +3028,7 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
                         if (tenantId != null) {
                             b.must(Query.of(q2 -> q2.term(t -> t.field("tenantId").value(v -> v.stringValue(tenantId)))));
                         }
-                        
+
                         // Add original query and item types filter
                         b.must(originalQuery)
                          .filter(f -> f
@@ -3051,6 +3046,18 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
             );
         }
         return originalQuery;
+    }
+
+    public void bindContextManager(ExecutionContextManager contextManager   ) {
+        this.contextManager = contextManager;
+        LOGGER.info("ContextManager bound");
+    }
+
+    public void unbindContextManager(ExecutionContextManager contextManager) {
+        if (this.contextManager == contextManager) {
+            this.contextManager = null;
+            LOGGER.info("ContextManager unbound");
+        }
     }
 
 }

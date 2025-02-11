@@ -16,6 +16,7 @@
  */
 package org.apache.unomi.rest.authentication.impl;
 
+import org.apache.unomi.api.security.UnomiRoles;
 import org.apache.unomi.rest.authentication.RestAuthenticationConfig;
 import org.osgi.service.component.annotations.Component;
 
@@ -28,9 +29,9 @@ import java.util.regex.Pattern;
 @Component(service = RestAuthenticationConfig.class)
 public class DefaultRestAuthenticationConfig implements RestAuthenticationConfig {
 
-    private static final String GUEST_ROLES = "ROLE_UNOMI_PUBLIC";
-    private static final String ADMIN_ROLES = "ROLE_UNOMI_ADMIN";
-    private static final String TENANT_ROLES = "ROLE_UNOMI_TENANT";
+    private static final String GUEST_ROLES = UnomiRoles.USER;
+    private static final String ADMIN_ROLES = UnomiRoles.ADMINISTRATOR;
+    private static final String TENANT_ADMIN_ROLES = UnomiRoles.ADMINISTRATOR + " " + UnomiRoles.TENANT_ADMINISTRATOR;
 
     private static final List<Pattern> PUBLIC_PATH_PATTERNS = Arrays.asList(
             Pattern.compile("(GET|POST|OPTIONS) context\\.js(on|)"),
@@ -75,6 +76,6 @@ public class DefaultRestAuthenticationConfig implements RestAuthenticationConfig
 
     @Override
     public String getGlobalRoles() {
-        return TENANT_ROLES;
+        return TENANT_ADMIN_ROLES;
     }
 }

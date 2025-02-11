@@ -12,6 +12,8 @@
 // limitations under the License.
 //
 
+=== Migration from Apache Unomi 1.4 to 1.5
+
 ==== Data model and ElasticSearch 7
 
 Since Apache Unomi version 1.5.0 we decided to upgrade the supported ElasticSearch version to the 7.4.2.
@@ -21,7 +23,6 @@ To be able to do so, we had to rework the way the data was stored inside Elastic
 Previously every items was stored inside the same ElasticSearch index but this is not allowed anymore in recent ElasticSearch versions.
 
 Since Apache Unomi version 1.5.0 every type of items (see section: link:#_items[Items]) is now stored in a dedicated separated index.
-
 
 ==== API changes
 
@@ -39,9 +40,10 @@ This class should not be use directly, instead you should use OSGI service depen
 
 But if you are interested in the implementation changes:
 
-. The property `index.name` have been renamed to `index.prefix`.
+1. The property `index.name` have been renamed to `index.prefix`.
 Previously used for the single one index name, now every index is prefixed using this property. (`context-` by default)
-. We removed the property `index.names` originally used to create additional indices (used by the geonames DB for exemple).
+
+2. We removed the property `index.names` originally used to create additional indices (used by the geonames DB for exemple).
 This property is not needed anymore because the index is automatically created by the peristence service when the mapping configuration is loaded.
 Example of mapping configuration file: (https://github.com/apache/unomi/blob/9f1bab437fd93826dc54d318ed00d3b2e3161437/extensions/geonames/services/src/main/resources/META-INF/cxs/mappings/geonameEntry.json[geoname index mapping])
 

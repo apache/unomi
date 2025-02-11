@@ -17,35 +17,40 @@
 package org.apache.unomi.services.impl.scope;
 
 import org.apache.unomi.api.Scope;
+import org.apache.unomi.api.services.ExecutionContextManager;
 import org.apache.unomi.api.services.SchedulerService;
 import org.apache.unomi.api.services.ScopeService;
+import org.apache.unomi.api.tasks.ScheduledTask;
 import org.apache.unomi.api.tenants.TenantService;
 import org.apache.unomi.persistence.spi.PersistenceService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.TimerTask;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 public class ScopeServiceImpl implements ScopeService {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(ScopeServiceImpl.class.getName());
+
     private PersistenceService persistenceService;
     private SchedulerService schedulerService;
     private TenantService tenantService;
     private Integer scopesRefreshInterval = 1000;
+    private ExecutionContextManager contextManager;
 
     // Map of tenant ID to its scopes map
     private ConcurrentMap<String, ConcurrentMap<String, Scope>> tenantScopes = new ConcurrentHashMap<>();
-    private ScheduledFuture<?> scheduledFuture;
+    private ScheduledTask scheduledTask;
 
     @Override
     public List<Scope> getScopes() {
-        String currentTenant = tenantService.getCurrentTenantId();
+        String currentTenant = contextManager.getCurrentContext().getTenantId();
         if (currentTenant == null) {
             return Collections.emptyList();
         }
@@ -55,7 +60,7 @@ public class ScopeServiceImpl implements ScopeService {
 
     @Override
     public void save(Scope scope) {
-        String currentTenant = tenantService.getCurrentTenantId();
+        String currentTenant = contextManager.getCurrentContext().getTenantId();
         if (currentTenant == null) {
             throw new IllegalStateException("Cannot save scope: no tenant specified");
         }
@@ -70,7 +75,7 @@ public class ScopeServiceImpl implements ScopeService {
 
     @Override
     public Scope getScope(String id) {
-        String currentTenant = tenantService.getCurrentTenantId();
+        String currentTenant = contextManager.getCurrentContext().getTenantId();
         if (currentTenant == null) {
             return null;
         }
@@ -91,9 +96,7 @@ public class ScopeServiceImpl implements ScopeService {
 
         // For each tenant, load its scopes
         for (String tenantId : allTenants) {
-            String previousTenant = tenantService.getCurrentTenantId();
-            try {
-                tenantService.setCurrentTenant(tenantId);
+            contextManager.executeAsTenant(tenantId, () -> {
                 List<Scope> tenantScopes = persistenceService.getAllItems(Scope.class);
                 if (!tenantScopes.isEmpty()) {
                     ConcurrentMap<String, Scope> scopeMap = new ConcurrentHashMap<>();
@@ -102,9 +105,7 @@ public class ScopeServiceImpl implements ScopeService {
                     }
                     newTenantScopes.put(tenantId, scopeMap);
                 }
-            } finally {
-                tenantService.setCurrentTenant(previousTenant);
-            }
+            });
         }
 
         // Atomic update of the tenant scopes map
@@ -127,22 +128,26 @@ public class ScopeServiceImpl implements ScopeService {
         this.scopesRefreshInterval = scopesRefreshInterval;
     }
 
+    public void setContextManager(ExecutionContextManager contextManager) {
+        this.contextManager = contextManager;
+    }
+
     public void postConstruct() {
         initializeTimers();
     }
 
     public void preDestroy() {
-        scheduledFuture.cancel(true);
+        if (scheduledTask != null) {
+            schedulerService.cancelTask(scheduledTask.getItemId());
+        }
     }
 
     private void initializeTimers() {
-        TimerTask task = new TimerTask() {
-            @Override
-            public void run() {
-                refreshScopes();
-            }
-        };
-        scheduledFuture = schedulerService.getScheduleExecutorService()
-                .scheduleWithFixedDelay(task, 0, scopesRefreshInterval, TimeUnit.MILLISECONDS);
+        scheduledTask = schedulerService.newTask("scope-refresh")
+            .nonPersistent()  // Cache-like refresh, should not be persisted
+            .withPeriod(scopesRefreshInterval, TimeUnit.MILLISECONDS)
+            .withFixedDelay() // Sequential execution
+            .withSimpleExecutor(() -> contextManager.executeAsSystem(() -> refreshScopes()))
+            .schedule();
     }
 }

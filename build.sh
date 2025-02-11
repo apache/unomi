@@ -441,6 +441,18 @@ check_requirements() {
         printf '  - %s\n' "${missing_tools[@]}"
         exit 1
     fi
+
+    # Check for GraphViz dot command
+    if command_exists dot; then
+        print_status "success" "GraphViz detected: $(dot -V 2>&1)"
+        # Set GRAPHVIZ_DOT if not already set
+        if [ -z "$GRAPHVIZ_DOT" ]; then
+            export GRAPHVIZ_DOT=$(command -v dot)
+            MVN_OPTS="$MVN_OPTS -Dgraphviz.dot.path=$GRAPHVIZ_DOT"
+        fi
+    else
+        print_status "warning" "GraphViz not found. Manual generation may fail. See installation instructions in BUILDING guide."
+    fi
 }
 
 # Check requirements early
@@ -508,6 +520,11 @@ if [ ! -z "$PROFILES" ]; then
     # Remove leading comma if present
     PROFILES=${PROFILES#,}
     MVN_OPTS="$MVN_OPTS -P$PROFILES"
+fi
+
+# Add GraphViz path to Maven options if manually specified
+if [ ! -z "$GRAPHVIZ_DOT" ]; then
+    MVN_OPTS="$MVN_OPTS -Dgraphviz.dot.path=$GRAPHVIZ_DOT"
 fi
 
 # Progress tracking functions

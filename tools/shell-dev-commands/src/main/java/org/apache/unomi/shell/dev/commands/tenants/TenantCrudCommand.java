@@ -137,7 +137,7 @@ public class TenantCrudCommand extends BaseCrudCommand {
             if (properties.containsKey("restrictedEventPermissions")) {
                 @SuppressWarnings("unchecked")
                 Set<String> permissions = new HashSet<>((List<String>) properties.get("restrictedEventPermissions"));
-                tenant.setRestrictedEventPermissions(permissions);
+                tenant.setRestrictedEventTypes(permissions);
             }
             if (properties.containsKey("authorizedIPs")) {
                 @SuppressWarnings("unchecked")

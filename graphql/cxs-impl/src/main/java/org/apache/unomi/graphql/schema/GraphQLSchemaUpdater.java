@@ -20,40 +20,23 @@ import graphql.GraphQL;
 import graphql.execution.SubscriptionExecutionStrategy;
 import graphql.schema.GraphQLCodeRegistry;
 import graphql.schema.GraphQLSchema;
+import org.apache.unomi.api.services.ExecutionContextManager;
 import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.graphql.fetchers.event.UnomiEventPublisher;
-import org.apache.unomi.graphql.providers.GraphQLAdditionalTypesProvider;
-import org.apache.unomi.graphql.providers.GraphQLCodeRegistryProvider;
-import org.apache.unomi.graphql.providers.GraphQLExtensionsProvider;
-import org.apache.unomi.graphql.providers.GraphQLFieldVisibilityProvider;
-import org.apache.unomi.graphql.providers.GraphQLMutationProvider;
-import org.apache.unomi.graphql.providers.GraphQLProvider;
-import org.apache.unomi.graphql.providers.GraphQLQueryProvider;
-import org.apache.unomi.graphql.providers.GraphQLSubscriptionProvider;
-import org.apache.unomi.graphql.providers.GraphQLTypeFunctionProvider;
-import org.apache.unomi.graphql.types.output.CDPEventInterface;
-import org.apache.unomi.graphql.types.output.CDPPersona;
-import org.apache.unomi.graphql.types.output.CDPProfile;
-import org.apache.unomi.graphql.types.output.CDPProfileInterface;
-import org.apache.unomi.graphql.types.output.CDPPropertyInterface;
+import org.apache.unomi.graphql.providers.*;
+import org.apache.unomi.graphql.types.output.*;
 import org.apache.unomi.schema.api.SchemaService;
-import org.osgi.service.component.annotations.Activate;
-import org.osgi.service.component.annotations.Component;
-import org.osgi.service.component.annotations.Deactivate;
-import org.osgi.service.component.annotations.Reference;
-import org.osgi.service.component.annotations.ReferenceCardinality;
-import org.osgi.service.component.annotations.ReferencePolicy;
-import org.osgi.service.component.annotations.ReferencePolicyOption;
+import org.osgi.service.component.annotations.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 
 @Component(service = GraphQLSchemaUpdater.class)
 public class GraphQLSchemaUpdater {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(GraphQLSchemaUpdater.class);
 
     public @interface SchemaConfig {
 
@@ -90,6 +73,8 @@ public class GraphQLSchemaUpdater {
     private CDPProfileInterfaceRegister profilesInterfaceRegister;
 
     private CDPPropertyInterfaceRegister propertyInterfaceRegister;
+
+    private ExecutionContextManager contextManager;
 
     private ScheduledExecutorService executorService;
 
@@ -148,6 +133,11 @@ public class GraphQLSchemaUpdater {
     @Reference
     public void setPropertiesInterfaceRegister(CDPPropertyInterfaceRegister propertyInterfaceRegister) {
         this.propertyInterfaceRegister = propertyInterfaceRegister;
+    }
+
+    @Reference
+    public void setContextManager(ExecutionContextManager contextManager) {
+        this.contextManager = contextManager;
     }
 
     @Reference(cardinality = ReferenceCardinality.MULTIPLE, policy = ReferencePolicy.DYNAMIC)
@@ -317,11 +307,18 @@ public class GraphQLSchemaUpdater {
     }
 
     private void doUpdateSchema() {
-        final GraphQLSchema graphQLSchema = createGraphQLSchema();
+        try {
+            contextManager.executeAsSystem(() -> {
+                final GraphQLSchema graphQLSchema = createGraphQLSchema();
 
-        this.graphQL = GraphQL.newGraphQL(graphQLSchema)
-                .subscriptionExecutionStrategy(new SubscriptionExecutionStrategy())
-                .build();
+                this.graphQL = GraphQL.newGraphQL(graphQLSchema)
+                        .subscriptionExecutionStrategy(new SubscriptionExecutionStrategy())
+                        .build();
+                return null;
+            });
+        } catch (Exception e) {
+            LOGGER.error("Error executing GraphQL schema update as system subject", e);
+        }
     }
 
     public GraphQL getGraphQL() {

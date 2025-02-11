@@ -54,7 +54,16 @@ public abstract class MetadataItem extends Item {
 
     @XmlTransient
     public String getScope() {
-        return metadata.getScope();
+        if (metadata != null) {
+            return metadata.getScope();
+        }
+        return scope;
     }
 
+    @Override
+    public String toString() {
+        return "MetadataItem{" +
+                "metadata=" + metadata +
+                '}';
+    }
 }

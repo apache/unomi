@@ -17,6 +17,7 @@
 package org.apache.unomi.rest.tenants;
 
 import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
+import org.apache.unomi.api.security.UnomiRoles;
 import org.apache.unomi.api.tenants.ApiKey;
 import org.apache.unomi.api.tenants.Tenant;
 import org.apache.unomi.api.tenants.TenantService;
@@ -43,7 +44,7 @@ import java.util.List;
 )
 @Component(service= TenantEndpoint.class,property = "osgi.jaxrs.resource=true")
 @Path("/tenants")
-@RequiresRole("ROLE_UNOMI_ADMIN")
+@RequiresRole(UnomiRoles.ADMINISTRATOR)
 public class TenantEndpoint {
 
     @Reference

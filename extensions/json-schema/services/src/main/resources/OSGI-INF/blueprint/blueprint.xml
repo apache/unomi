@@ -21,35 +21,43 @@
            xmlns="http://www.osgi.org/xmlns/blueprint/v1.0.0"
            xsi:schemaLocation="http://www.osgi.org/xmlns/blueprint/v1.0.0 http://www.osgi.org/xmlns/blueprint/v1.0.0/blueprint.xsd">
 
+    <!-- References -->
+    <reference id="persistenceService" interface="org.apache.unomi.persistence.spi.PersistenceService"/>
+    <reference id="scopeService" interface="org.apache.unomi.api.services.ScopeService"/>
+    <reference id="tenantService" interface="org.apache.unomi.api.tenants.TenantService"/>
+    <reference id="contextManager" interface="org.apache.unomi.api.services.ExecutionContextManager"/>
+
+    <!-- Configuration -->
     <cm:property-placeholder persistent-id="org.apache.unomi.schema" update-strategy="reload">
         <cm:default-properties>
             <cm:property name="json.schema.refresh.interval" value="1000"/>
         </cm:default-properties>
     </cm:property-placeholder>
 
-    <reference id="scopeService" interface="org.apache.unomi.api.services.ScopeService"/>
-    <reference id="persistenceService" interface="org.apache.unomi.persistence.spi.PersistenceService"/>
-    <reference id="tenantService" interface="org.apache.unomi.api.tenants.TenantService"/>
-    <!--reference id="schedulerService" interface="org.apache.unomi.api.services.SchedulerService"/-->
-
-    <bean id="schemaServiceImpl" class="org.apache.unomi.schema.impl.SchemaServiceImpl" init-method="init"
-          destroy-method="destroy">
+    <!-- Beans -->
+    <bean id="schemaServiceImpl" class="org.apache.unomi.schema.impl.SchemaServiceImpl"
+          init-method="init" destroy-method="destroy">
         <property name="persistenceService" ref="persistenceService"/>
         <property name="scopeService" ref="scopeService"/>
         <property name="tenantService" ref="tenantService"/>
-        <!--property name="schedulerService" ref="schedulerService"/-->
+        <property name="contextManager" ref="contextManager"/>
         <property name="jsonSchemaRefreshInterval" value="${json.schema.refresh.interval}"/>
     </bean>
-    <service id="schemaService" ref="schemaServiceImpl" interface="org.apache.unomi.schema.api.SchemaService"/>
 
     <bean id="jsonSchemaListenerImpl" class="org.apache.unomi.schema.listener.JsonSchemaListener"
           init-method="postConstruct" destroy-method="preDestroy">
         <property name="bundleContext" ref="blueprintBundleContext"/>
         <property name="schemaService" ref="schemaServiceImpl"/>
+        <property name="contextManager" ref="contextManager"/>
     </bean>
+
+    <!-- Services -->
+    <service id="schemaService" ref="schemaServiceImpl" interface="org.apache.unomi.schema.api.SchemaService"/>
+
     <service id="jsonSchemaListener" ref="jsonSchemaListenerImpl">
         <interfaces>
             <value>org.osgi.framework.SynchronousBundleListener</value>
         </interfaces>
     </service>
+
 </blueprint>

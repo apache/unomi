@@ -31,6 +31,11 @@ import java.util.Map;
 public class TestActionExecutorDispatcher implements ActionExecutorDispatcher {
     private final Map<String, ActionExecutor> actionExecutors = new HashMap<>();
     private int defaultReturnValue = EventService.NO_CHANGE;
+    private final TestConditionEvaluationTracer tracer;
+
+    public TestActionExecutorDispatcher(TestConditionEvaluationTracer tracer) {
+        this.tracer = tracer;
+    }
 
     public void setActionExecutor(String actionId, ActionExecutor executor) {
         actionExecutors.put(actionId, executor);
@@ -43,15 +48,31 @@ public class TestActionExecutorDispatcher implements ActionExecutorDispatcher {
     @Override
     public int execute(Action action, Event event) {
         if (action == null || action.getActionType() == null) {
+            if (tracer != null) {
+                tracer.trace(null, "Action or action type is null, returning default value: " + defaultReturnValue);
+            }
             return defaultReturnValue;
         }
 
         String actionId = action.getActionType().getItemId();
-        ActionExecutor executor = actionExecutors.get(actionId);
-        if (executor != null) {
-            return executor.execute(action, event);
+        if (tracer != null) {
+            tracer.startEvaluation(null, "Executing action: " + actionId);
         }
 
+        ActionExecutor executor = actionExecutors.get(actionId);
+        if (executor != null) {
+            int result = executor.execute(action, event);
+            if (tracer != null) {
+                tracer.endEvaluation(null, result != EventService.NO_CHANGE, 
+                    "Action execution completed with result: " + result);
+            }
+            return result;
+        }
+
+        if (tracer != null) {
+            tracer.endEvaluation(null, false, 
+                "No executor found for action: " + actionId + ", returning default value: " + defaultReturnValue);
+        }
         return defaultReturnValue;
     }
 } 

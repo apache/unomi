@@ -16,6 +16,7 @@
  */
 package org.apache.unomi.services.impl.tenants;
 
+import org.apache.unomi.api.services.ExecutionContextManager;
 import org.apache.unomi.api.tenants.ResourceQuota;
 import org.apache.unomi.api.tenants.TenantService;
 import org.apache.unomi.persistence.spi.PersistenceService;
@@ -34,6 +35,7 @@ public class TenantQuotaService {
 
     private PersistenceService persistenceService;
     private TenantService tenantService;
+    private ExecutionContextManager contextManager;
 
     private Map<String, TenantUsage> usageCache = new ConcurrentHashMap<>();
 
@@ -43,6 +45,10 @@ public class TenantQuotaService {
 
     public void setTenantService(TenantService tenantService) {
         this.tenantService = tenantService;
+    }
+
+    public void setContextManager(ExecutionContextManager contextManager) {
+        this.contextManager = contextManager;
     }
 
     public void activate() {
@@ -92,9 +98,15 @@ public class TenantQuotaService {
         ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
         executor.scheduleAtFixedRate(() -> {
             try {
-                updateUsageStatistics();
+                contextManager.executeAsSystem(() -> {
+                    try {
+                        updateUsageStatistics();
+                    } catch (Exception e) {
+                        logger.error("Error updating usage statistics", e);
+                    }
+                });
             } catch (Exception e) {
-                logger.error("Error updating usage statistics", e);
+                logger.error("Error executing usage statistics update as system subject", e);
             }
         }, 0, 1, TimeUnit.HOURS);
     }

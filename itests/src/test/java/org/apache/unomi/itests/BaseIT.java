@@ -43,6 +43,7 @@ import org.apache.karaf.itests.KarafTestSupport;
 import org.apache.unomi.api.Item;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.rules.Rule;
+import org.apache.unomi.api.security.SecurityService;
 import org.apache.unomi.api.services.*;
 import org.apache.unomi.api.tenants.ApiKey;
 import org.apache.unomi.api.tenants.Tenant;
@@ -158,6 +159,8 @@ public abstract class BaseIT extends KarafTestSupport {
     protected UserListService userListService;
     protected TopicService topicService;
     protected TenantService tenantService;
+    protected SecurityService securityService;
+    protected ExecutionContextManager executionContextManager;
     protected Tenant testTenant;
     protected ApiKey testPublicKey;
     protected ApiKey testPrivateKey;
@@ -223,6 +226,8 @@ public abstract class BaseIT extends KarafTestSupport {
         importConfigurationService = getOsgiService(ImportExportConfigurationService.class, "(configDiscriminator=IMPORT)", 600000);
         exportConfigurationService = getOsgiService(ImportExportConfigurationService.class, "(configDiscriminator=EXPORT)", 600000);
         routerCamelContext = getOsgiService(IRouterCamelContext.class, 600000);
+        securityService = getOsgiService(SecurityService.class, 600000);
+        executionContextManager = getOsgiService(ExecutionContextManager.class, 600000);
 
         // Create test tenant if not exists
         if (testTenant == null) {
@@ -240,8 +245,7 @@ public abstract class BaseIT extends KarafTestSupport {
             }
         }
 
-        // Setup the thread-locale test tenant ID
-        tenantService.setCurrentTenant(TEST_TENANT_ID);
+        executionContextManager.setCurrentContext(executionContextManager.createContext(testTenant.getItemId()));
 
         // Set up test tenant for HttpClientThatWaitsForUnomi
         HttpClientThatWaitsForUnomi.setTestTenant(testTenant, testPublicKey, testPrivateKey);

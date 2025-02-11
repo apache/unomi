@@ -88,59 +88,66 @@ public class EventServiceImpl implements EventService {
             return false;
         }
 
-        // First check if the event type is restricted
-        if (!restrictedEventTypeIds.contains(event.getEventType())) {
-            return true;  // Non-restricted events are always allowed
-        }
-
         // Get tenant
         Tenant tenant = tenantService.getTenant(tenantId);
         if (tenant == null) {
             return false;
         }
 
-        // For restricted events, check if tenant has permission
-        Set<String> permissions = tenant.getRestrictedEventPermissions();
-        if (permissions == null || !permissions.contains(event.getEventType())) {
+        // Check tenant-specific restrictions first
+        Set<String> tenantRestrictions = tenant.getRestrictedEventTypes();
+        if (tenantRestrictions != null && !tenantRestrictions.isEmpty()) {
+            // If tenant has defined restrictions, check if this event type is restricted
+            if (tenantRestrictions.contains(event.getEventType())) {
+                // Event is restricted by tenant, proceed to IP check
+                return checkIPAuthorization(tenant, sourceIP);
+            }
+        }
+
+        // If tenant has no restrictions or event not in tenant restrictions,
+        // check global restrictions
+        if (restrictedEventTypeIds.contains(event.getEventType())) {
+            // Event is restricted globally, proceed to IP check
+            return checkIPAuthorization(tenant, sourceIP);
+        }
+
+        // Event is not restricted by either tenant or global settings
+        return true;
+    }
+
+    private boolean checkIPAuthorization(Tenant tenant, String sourceIP) {
+        Set<String> authorizedIPs = tenant.getAuthorizedIPs();
+        if (authorizedIPs == null || authorizedIPs.isEmpty()) {
+            return true;  // No IP restrictions
+        }
+
+        if (StringUtils.isBlank(sourceIP)) {
             return false;
         }
 
-        // Check IP address if configured for tenant
-        Set<String> authorizedIPs = tenant.getAuthorizedIPs();
-        if (authorizedIPs != null && !authorizedIPs.isEmpty()) {
-            if (StringUtils.isBlank(sourceIP)) {
-                return false;
+        try {
+            if (sourceIP.startsWith("[") && sourceIP.endsWith("]")) {
+                // This can happen with IPv6 addresses, we must remove the markers since our IPAddress library doesn't support them.
+                sourceIP = sourceIP.substring(1, sourceIP.length() - 1);
             }
-            try {
-                if (sourceIP.startsWith("[") && sourceIP.endsWith("]")) {
-                    // This can happen with IPv6 addresses, we must remove the markers since our IPAddress library doesn't support them.
-                    sourceIP = sourceIP.substring(1, sourceIP.length() - 1);
-                }
-                IPAddress eventIP = new IPAddressString(sourceIP).toAddress();
+            IPAddress eventIP = new IPAddressString(sourceIP).toAddress();
 
-                boolean ipAuthorized = false;
-                for (String authorizedIP : authorizedIPs) {
-                    try {
-                        IPAddress ip = new IPAddressString(authorizedIP.trim()).toAddress();
-                        if (ip.contains(eventIP)) {
-                            ipAuthorized = true;
-                            break;
-                        }
-                    } catch (Exception e) {
-                        // Log invalid IP in tenant config but continue checking others
-                        LOGGER.warn("Invalid IP address in tenant configuration: {}. Skipping.", authorizedIP);
+            for (String authorizedIP : authorizedIPs) {
+                try {
+                    IPAddress ip = new IPAddressString(authorizedIP.trim()).toAddress();
+                    if (ip.contains(eventIP)) {
+                        return true;
                     }
+                } catch (Exception e) {
+                    // Log invalid IP in tenant config but continue checking others
+                    LOGGER.warn("Invalid IP address in tenant configuration: {}. Skipping.", authorizedIP);
                 }
-                if (!ipAuthorized) {
-                    return false;
-                }
-            } catch (Exception e) {
-                LOGGER.error("Invalid source IP address: {}", sourceIP, e);
-                return false;
             }
+            return false;
+        } catch (Exception e) {
+            LOGGER.error("Invalid source IP address: {}", sourceIP, e);
+            return false;
         }
-
-        return true;
     }
 
     public int send(Event event) {
@@ -155,8 +162,12 @@ public class EventServiceImpl implements EventService {
 
         boolean saveSucceeded = true;
         if (event.isPersistent()) {
-            saveSucceeded = persistenceService.save(event, null, true);
-        }
+            try {
+                saveSucceeded = persistenceService.save(event, null, true);
+            } catch (Throwable t) {
+                LOGGER.error("Failed to save event: ", t);
+                return NO_CHANGE;
+            }}
 
         int changes;
 
@@ -385,6 +396,14 @@ public class EventServiceImpl implements EventService {
         andCondition.setParameter("subConditions", conditions);
         long size = persistenceService.queryCount(andCondition, Event.ITEM_TYPE);
         return size > 0;
+    }
+
+    public void addEventListenerService(EventListenerService eventListenerService) {
+        eventListeners.add(eventListenerService);
+    }
+
+    public void removeEventListenerService(EventListenerService eventListenerService) {
+        eventListeners.remove(eventListenerService);
     }
 
     public void bind(ServiceReference<EventListenerService> serviceReference) {

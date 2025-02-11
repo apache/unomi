@@ -101,6 +101,7 @@ org.apache.unomi.opensearch.sslTrustAllCertificates=true
 ----
 
 To select which search engine to use, you can:
+
 1. Use the appropriate configuration properties above
 2. When building from source, use the appropriate Maven profile:
    * For ElasticSearch (default): no special profile needed
@@ -114,6 +115,13 @@ Note: When using OpenSearch 2.18:
 - The default admin username is 'admin'
 - The initial admin password can be set via OPENSEARCH_INITIAL_ADMIN_PASSWORD environment variable
 - You might see log messages about "QueryGroup _id can't be null". This is a known issue that doesn't affect functionality and is being tracked at: https://github.com/opensearch-project/OpenSearch/issues/16874
+
+Authentication Rules:
+
+1. If JAAS authentication is provided (username/password), it grants full access to all endpoints
+2. Public paths (like /context.json) require a valid public API key
+3. Private paths require both tenantId and private API key
+4. All other requests are denied
 
 === Secured events configuration
 
@@ -425,15 +433,17 @@ curl -X GET "http://localhost:8181/cxs/profiles" \
 ----
 
 Authentication Rules:
-* If JAAS authentication is provided (username/password), it grants full access to all endpoints
-* Public paths (like /context.json) require a valid public API key
-* Private paths require both tenantId and private API key
-* All other requests are denied
+
+1. If JAAS authentication is provided (username/password), it grants full access to all endpoints
+2. Public paths (like /context.json) require a valid public API key
+3. Private paths require both tenantId and private API key
+4. All other requests are denied
 
 ==== Public vs Private Endpoints
 
 Public endpoints (requiring only public API key):
-* GET/POST /context.json
+
+1. GET/POST /context.json
 [source,bash]
 ----
 # Example request
@@ -441,7 +451,7 @@ curl -X GET "http://localhost:8181/cxs/context.json?sessionId=abc123" \
   -H "X-Unomi-Api-Key: 8f7d9a2c-5e4b-3f1a-9b8c-7d6e5f4a3b2c"
 ----
 
-* GET/POST /eventcollector
+2. GET/POST /eventcollector
 [source,bash]
 ----
 # Example request
@@ -466,7 +476,7 @@ curl -X POST "http://localhost:8181/cxs/eventcollector" \
   }'
 ----
 
-* GET /client/*
+3. GET /client/*
 [source,bash]
 ----
 # Example request
@@ -1253,3 +1263,159 @@ By default, all healthcheck providers are included but the list of those include
 Karaf provider is the one needed by healthcheck (always LIVE), it cannot be ignored.
 
 The timeout used for each health check can be set by setting the property `timeout` to the desired value in milliseconds. An environment variable can be used to set this property : UNOMI_HEALTHCHECK_TIMEOUT
+
+=== API Access Examples
+
+1. Basic Authentication Example:
+[source,bash]
+----
+# Get authentication token
+curl -X POST "http://localhost:8181/cxs/login" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "myuser",
+    "password": "mypassword"
+  }'
+
+# Response (HTTP 200 OK):
+{
+    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "totalSize": 1
+}
+----
+
+2. Public API Access (Client-Side Operations):
+[source,bash]
+----
+# Get context data
+curl -X POST "http://localhost:8181/cxs/context.json" \
+  -H "X-Unomi-Api-Key: 8f7d9a2c-5e4b-3f1a-9b8c-7d6e5f4a3b2c" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "source": {
+        "itemId": "homepage",
+        "itemType": "page",
+        "scope": "example"
+    },
+    "requiredProfileProperties": ["firstName", "lastName"]
+  }'
+
+# Response (HTTP 200 OK):
+{
+    "profileId": "xyz123",
+    "sessionId": "abc456",
+    "profileProperties": {
+        "firstName": "John",
+        "lastName": "Doe"
+    }
+}
+----
+
+3. Private API Access (Server-Side Operations):
+[source,bash]
+----
+# Get profiles using tenant credentials
+curl -X GET "http://localhost:8181/cxs/profiles" \
+  -H "Authorization: Basic $(echo -n 'mytenant:1a2b3c4d-5e6f-7g8h-9i0j-k1l2m3n4o5p6' | base64)" \
+  -H "Accept: application/json"
+
+# Response (HTTP 200 OK):
+{
+    "list": [
+        {
+            "itemId": "profile1",
+            "scope": "mytenant",
+            "properties": {
+                "firstName": "John",
+                "lastName": "Doe"
+            }
+        }
+    ],
+    "offset": 0,
+    "pageSize": 50,
+    "totalSize": 1
+}
+----
+
+Authentication Rules:
+
+1. If JAAS authentication is provided (username/password), it grants full access to all endpoints
+2. Public paths (like /context.json) require a valid public API key
+3. Private paths require both tenantId and private API key
+4. All other requests are denied
+
+==== Public vs Private Endpoints
+
+Public endpoints (requiring only public API key):
+
+1. GET/POST /context.json
+[source,bash]
+----
+# Example request
+curl -X GET "http://localhost:8181/cxs/context.json?sessionId=abc123" \
+  -H "X-Unomi-Api-Key: 8f7d9a2c-5e4b-3f1a-9b8c-7d6e5f4a3b2c"
+----
+
+2. GET/POST /eventcollector
+[source,bash]
+----
+# Example request
+curl -X POST "http://localhost:8181/cxs/eventcollector" \
+  -H "X-Unomi-Api-Key: 8f7d9a2c-5e4b-3f1a-9b8c-7d6e5f4a3b2c" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "events": [{
+        "eventType": "view",
+        "scope": "example",
+        "source": {
+            "itemId": "page1",
+            "itemType": "page",
+            "scope": "example"
+        },
+        "target": {
+            "itemId": "product1",
+            "itemType": "product",
+            "scope": "example"
+        }
+    }]
+  }'
+----
+
+3. GET /client/*
+[source,bash]
+----
+# Example request
+curl -X GET "http://localhost:8181/cxs/client/myapp/status" \
+  -H "X-Unomi-Api-Key: 8f7d9a2c-5e4b-3f1a-9b8c-7d6e5f4a3b2c"
+----
+
+All other endpoints are considered private and require either:
+* JAAS authentication with admin credentials, or
+* Private API key authentication with tenant credentials
+
+Example private endpoint access:
+[source,bash]
+----
+# Get segment details
+curl -X GET "http://localhost:8181/cxs/segments/important-customers" \
+  -H "Authorization: Basic $(echo -n 'mytenant:1a2b3c4d-5e6f-7g8h-9i0j-k1l2m3n4o5p6' | base64)" \
+  -H "Accept: application/json"
+
+# Create a new segment
+curl -X POST "http://localhost:8181/cxs/segments" \
+  -H "Authorization: Basic $(echo -n 'mytenant:1a2b3c4d-5e6f-7g8h-9i0j-k1l2m3n4o5p6' | base64)" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "itemId": "high-value-customers",
+    "name": "High Value Customers",
+    "description": "Customers with high purchase value",
+    "condition": {
+        "type": "profilePropertyCondition",
+        "parameterValues": {
+            "propertyName": "totalPurchases",
+            "comparisonOperator": "greaterThan",
+            "propertyValue": 1000
+        }
+    }
+  }'
+----

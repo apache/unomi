@@ -18,13 +18,14 @@
 package org.apache.unomi.api;
 
 import javax.xml.bind.annotation.XmlTransient;
+import java.io.Serializable;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
 /**
  * A value type to be used to constrain property values.
  */
-public class ValueType implements PluginType {
+public class ValueType implements PluginType, Serializable {
 
     private String id;
     private String nameKey;

@@ -28,17 +28,20 @@ import org.apache.unomi.api.exceptions.BadSegmentConditionException;
 import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.rules.Rule;
 import org.apache.unomi.api.segments.*;
-import org.apache.unomi.api.services.*;
+import org.apache.unomi.api.services.DefinitionsService;
+import org.apache.unomi.api.services.EventService;
+import org.apache.unomi.api.services.RulesService;
+import org.apache.unomi.api.services.SegmentService;
+import org.apache.unomi.api.services.cache.CacheableTypeConfig;
+import org.apache.unomi.api.tenants.TenantService;
 import org.apache.unomi.api.utils.ConditionBuilder;
 import org.apache.unomi.api.utils.ParserHelper;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.persistence.spi.aggregate.TermsAggregate;
-import org.apache.unomi.services.impl.AbstractTenantAwareService;
+import org.apache.unomi.services.impl.cache.AbstractMultiTypeCachingService;
 import org.apache.unomi.services.impl.scheduler.SchedulerServiceImpl;
-import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleEvent;
-import org.osgi.framework.SynchronousBundleListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -53,7 +56,7 @@ import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
-public class SegmentServiceImpl extends AbstractTenantAwareService implements SegmentService, SynchronousBundleListener {
+public class SegmentServiceImpl extends AbstractMultiTypeCachingService implements SegmentService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(SegmentServiceImpl.class.getName());
 
@@ -61,16 +64,11 @@ public class SegmentServiceImpl extends AbstractTenantAwareService implements Se
     private static final String RESET_SCORING_SCRIPT = "resetScoringPlan";
     private static final String EVALUATE_SCORING_ELEMENT_SCRIPT = "evaluateScoringPlanElement";
 
-    private BundleContext bundleContext;
-
     private EventService eventService;
     private RulesService rulesService;
-    private SchedulerService schedulerService;
     private DefinitionsService definitionsService;
 
     private long taskExecutionPeriod = 1;
-    private List<Segment> allSegments;
-    private List<Scoring> allScoring;
     private int segmentUpdateBatchSize = 1000;
     private long segmentRefreshInterval = 1000;
     private int aggregateQueryBucketSize = 5000;
@@ -86,20 +84,12 @@ public class SegmentServiceImpl extends AbstractTenantAwareService implements Se
         LOGGER.info("Initializing segment service...");
     }
 
-    public void setBundleContext(BundleContext bundleContext) {
-        this.bundleContext = bundleContext;
-    }
-
     public void setEventService(EventService eventService) {
         this.eventService = eventService;
     }
 
     public void setRulesService(RulesService rulesService) {
         this.rulesService = rulesService;
-    }
-
-    public void setSchedulerService(SchedulerService schedulerService) {
-        this.schedulerService = schedulerService;
     }
 
     public void setDefinitionsService(DefinitionsService definitionsService) {
@@ -146,23 +136,43 @@ public class SegmentServiceImpl extends AbstractTenantAwareService implements Se
         this.dailyDateExprEvaluationHourUtc = dailyDateExprEvaluationHourUtc;
     }
 
-    public void postConstruct() throws IOException {
-        LOGGER.debug("postConstruct {{}}", bundleContext.getBundle());
-        loadPredefinedSegments(bundleContext);
-        loadPredefinedScorings(bundleContext);
-        for (Bundle bundle : bundleContext.getBundles()) {
-            if (bundle.getBundleContext() != null && bundle.getBundleId() != bundleContext.getBundle().getBundleId()) {
-                loadPredefinedSegments(bundle.getBundleContext());
-                loadPredefinedScorings(bundle.getBundleContext());
-            }
-        }
-        bundleContext.addBundleListener(this);
+    public void setTenantService(TenantService tenantService) {
+        this.tenantService = tenantService;
+    }
+
+    @Override
+    protected Set<CacheableTypeConfig<?>> getTypeConfigs() {
+        Set<CacheableTypeConfig<?>> configs = new HashSet<>();
+        configs.add(new CacheableTypeConfig<>(
+            Segment.class,
+            Segment.ITEM_TYPE,
+            "segments",
+            true,
+            true,
+            1000L,
+            segment -> segment.getMetadata().getId()
+        ));
+        configs.add(new CacheableTypeConfig<>(
+            Scoring.class,
+            "scoring",
+            "scoring",
+            true,
+            true,
+            1000L,
+            scoring -> scoring.getMetadata().getId()
+        ));
+        return configs;
+    }
+
+    @Override
+    public void postConstruct() {
+        super.postConstruct();
         initializeTimer();
         LOGGER.info("Segment service initialized.");
     }
 
     public void preDestroy() {
-        bundleContext.removeBundleListener(this);
+        super.preDestroy();
         LOGGER.info("Segment service shutdown.");
     }
 
@@ -181,103 +191,163 @@ public class SegmentServiceImpl extends AbstractTenantAwareService implements Se
     }
 
     private void loadPredefinedSegments(BundleContext bundleContext) {
-        Enumeration<URL> predefinedSegmentEntries = bundleContext.getBundle().findEntries("META-INF/cxs/segments", "*.json", true);
-        if (predefinedSegmentEntries == null) {
-            return;
-        }
-
-        while (predefinedSegmentEntries.hasMoreElements()) {
-            URL predefinedSegmentURL = predefinedSegmentEntries.nextElement();
-            LOGGER.debug("Found predefined segment at {}, loading... ", predefinedSegmentURL);
-
-            try {
-                Segment segment = CustomObjectMapper.getObjectMapper().readValue(predefinedSegmentURL, Segment.class);
-                if (segment.getMetadata().getScope() == null) {
-                    segment.getMetadata().setScope("systemscope");
-                }
-                setSegmentDefinition(segment);
-                LOGGER.info("Predefined segment with id {} registered", segment.getMetadata().getId());
-            } catch (IOException e) {
-                LOGGER.error("Error while loading segment definition {}", predefinedSegmentURL, e);
+        contextManager.executeAsSystem(() -> {
+            Enumeration<URL> predefinedSegmentEntries = bundleContext.getBundle().findEntries("META-INF/cxs/segments", "*.json", true);
+            if (predefinedSegmentEntries == null) {
+                return;
             }
-        }
+
+            while (predefinedSegmentEntries.hasMoreElements()) {
+                URL predefinedSegmentURL = predefinedSegmentEntries.nextElement();
+                LOGGER.debug("Found predefined segment at {}, loading... ", predefinedSegmentURL);
+
+                try {
+                    Segment segment = CustomObjectMapper.getObjectMapper().readValue(predefinedSegmentURL, Segment.class);
+                    if (segment.getMetadata().getScope() == null) {
+                        segment.getMetadata().setScope("systemscope");
+                    }
+                    setSegmentDefinition(segment);
+                    LOGGER.info("Predefined segment with id {} registered", segment.getMetadata().getId());
+                } catch (IOException e) {
+                    LOGGER.error("Error while loading segment definition {}", predefinedSegmentURL, e);
+                }
+            }
+        });
     }
 
     private void loadPredefinedScorings(BundleContext bundleContext) {
-        Enumeration<URL> predefinedScoringEntries = bundleContext.getBundle().findEntries("META-INF/cxs/scoring", "*.json", true);
-        if (predefinedScoringEntries == null) {
-            return;
-        }
-
-        while (predefinedScoringEntries.hasMoreElements()) {
-            URL predefinedScoringURL = predefinedScoringEntries.nextElement();
-            LOGGER.debug("Found predefined scoring at {}, loading... ", predefinedScoringURL);
-
-            try {
-                Scoring scoring = CustomObjectMapper.getObjectMapper().readValue(predefinedScoringURL, Scoring.class);
-                if (scoring.getMetadata().getScope() == null) {
-                    scoring.getMetadata().setScope("systemscope");
-                }
-                setScoringDefinition(scoring);
-                LOGGER.info("Predefined scoring with id {} registered", scoring.getMetadata().getId());
-            } catch (IOException e) {
-                LOGGER.error("Error while loading segment definition {}", predefinedScoringURL, e);
+        contextManager.executeAsSystem(() -> {
+            Enumeration<URL> predefinedScoringEntries = bundleContext.getBundle().findEntries("META-INF/cxs/scoring", "*.json", true);
+            if (predefinedScoringEntries == null) {
+                return;
             }
-        }
+
+            while (predefinedScoringEntries.hasMoreElements()) {
+                URL predefinedScoringURL = predefinedScoringEntries.nextElement();
+                LOGGER.debug("Found predefined scoring at {}, loading... ", predefinedScoringURL);
+
+                try {
+                    Scoring scoring = CustomObjectMapper.getObjectMapper().readValue(predefinedScoringURL, Scoring.class);
+                    if (scoring.getMetadata().getScope() == null) {
+                        scoring.getMetadata().setScope("systemscope");
+                    }
+                    setScoringDefinition(scoring);
+                    LOGGER.info("Predefined scoring with id {} registered", scoring.getMetadata().getId());
+                } catch (IOException e) {
+                    LOGGER.error("Error while loading segment definition {}", predefinedScoringURL, e);
+                }
+            }
+        });
     }
 
     public PartialList<Metadata> getSegmentMetadatas(int offset, int size, String sortBy) {
-        String currentTenantId = tenantService.getCurrentTenantId();
-        Condition tenantCondition = new Condition(definitionsService.getConditionType("sessionPropertyCondition"));
-        tenantCondition.setParameter("propertyName", "tenantId");
-        tenantCondition.setParameter("comparisonOperator", "equals");
-        tenantCondition.setParameter("propertyValue", currentTenantId);
-
-        PartialList<Segment> segments = persistenceService.query(tenantCondition, sortBy, Segment.class, offset, size);
-        List<Metadata> details = new LinkedList<>();
-        for (Segment definition : segments.getList()) {
-            details.add(definition.getMetadata());
-        }
-        return new PartialList<>(details, segments.getOffset(), segments.getPageSize(), segments.getTotalSize(), segments.getTotalSizeRelation());
+        return getSegmentMetadatas(null, offset, size, sortBy);
     }
 
     public PartialList<Metadata> getSegmentMetadatas(String scope, int offset, int size, String sortBy) {
-        PartialList<Segment> segments = persistenceService.query("metadata.scope", scope, sortBy, Segment.class, offset, size);
+        String currentTenantId = contextManager.getCurrentContext().getTenantId();
         List<Metadata> details = new LinkedList<>();
-        for (Segment definition : segments.getList()) {
-            details.add(definition.getMetadata());
+
+        // Get system tenant segments first
+        if (!TenantService.SYSTEM_TENANT.equals(currentTenantId)) {
+            contextManager.executeAsSystem(() -> {
+                Condition systemTenantCondition = new Condition(definitionsService.getConditionType("booleanCondition"));
+                systemTenantCondition.setParameter("operator", "and");
+                List<Condition> systemConditions = new ArrayList<>();
+
+                Condition systemTenantCheck = new Condition(definitionsService.getConditionType("sessionPropertyCondition"));
+                systemTenantCheck.setParameter("propertyName", "tenantId");
+                systemTenantCheck.setParameter("comparisonOperator", "equals");
+                systemTenantCheck.setParameter("propertyValue", TenantService.SYSTEM_TENANT);
+                systemConditions.add(systemTenantCheck);
+
+                if (scope != null) {
+                    Condition systemScopeCheck = new Condition(definitionsService.getConditionType("sessionPropertyCondition"));
+                    systemScopeCheck.setParameter("propertyName", "metadata.scope");
+                    systemScopeCheck.setParameter("comparisonOperator", "equals");
+                    systemScopeCheck.setParameter("propertyValue", scope);
+                    systemConditions.add(systemScopeCheck);
+                }
+
+                systemTenantCondition.setParameter("subConditions", systemConditions);
+
+                PartialList<Segment> systemSegments = persistenceService.query(systemTenantCondition, sortBy, Segment.class, 0, -1);
+                for (Segment definition : systemSegments.getList()) {
+                    details.add(definition.getMetadata());
+                }
+                return null;
+            });
         }
-        return new PartialList<>(details, segments.getOffset(), segments.getPageSize(), segments.getTotalSize(), segments.getTotalSizeRelation());
+
+        // Get current tenant segments (will override system segments with same ID)
+        Condition tenantCondition = new Condition(definitionsService.getConditionType("booleanCondition"));
+        tenantCondition.setParameter("operator", "and");
+        List<Condition> conditions = new ArrayList<>();
+
+        Condition tenantCheck = new Condition(definitionsService.getConditionType("sessionPropertyCondition"));
+        tenantCheck.setParameter("propertyName", "tenantId");
+        tenantCheck.setParameter("comparisonOperator", "equals");
+        tenantCheck.setParameter("propertyValue", currentTenantId);
+        conditions.add(tenantCheck);
+
+        if (scope != null) {
+            Condition scopeCheck = new Condition(definitionsService.getConditionType("sessionPropertyCondition"));
+            scopeCheck.setParameter("propertyName", "metadata.scope");
+            scopeCheck.setParameter("comparisonOperator", "equals");
+            scopeCheck.setParameter("propertyValue", scope);
+            conditions.add(scopeCheck);
+        }
+
+        tenantCondition.setParameter("subConditions", conditions);
+
+        PartialList<Segment> segments = persistenceService.query(tenantCondition, sortBy, Segment.class, 0, -1);
+        Map<String, Metadata> mergedDetails = new HashMap<>();
+
+        // Add system tenant segments first
+        for (Metadata metadata : details) {
+            mergedDetails.put(metadata.getId(), metadata);
+        }
+
+        // Override with current tenant segments
+        for (Segment definition : segments.getList()) {
+            mergedDetails.put(definition.getMetadata().getId(), definition.getMetadata());
+        }
+
+        // Convert to list and apply pagination
+        List<Metadata> finalDetails = new ArrayList<>(mergedDetails.values());
+        if (sortBy != null) {
+            // TODO: Implement sorting of merged results
+        }
+
+        int totalSize = finalDetails.size();
+        int fromIndex = offset;
+        int toIndex = offset + size;
+        if (fromIndex >= totalSize) {
+            return new PartialList<Metadata>(new ArrayList<>(), offset, size, totalSize, PartialList.Relation.EQUAL);
+        }
+        if (toIndex > totalSize) {
+            toIndex = totalSize;
+        }
+        finalDetails = finalDetails.subList(fromIndex, toIndex);
+
+        return new PartialList<Metadata>(finalDetails, offset, size, totalSize, PartialList.Relation.EQUAL);
     }
 
     public PartialList<Metadata> getSegmentMetadatas(Query query) {
         return getMetadatas(query, Segment.class);
     }
 
-    private List<Segment> getAllSegmentDefinitions() {
-        String currentTenantId = tenantService.getCurrentTenantId();
-        Condition tenantCondition = new Condition(definitionsService.getConditionType("sessionPropertyCondition"));
-        tenantCondition.setParameter("propertyName", "tenantId");
-        tenantCondition.setParameter("comparisonOperator", "equals");
-        tenantCondition.setParameter("propertyValue", currentTenantId);
-
-        List<Segment> allItems = persistenceService.query(tenantCondition, null, Segment.class, 0, -1).getList();
-        for (Segment segment : allItems) {
-            if (segment.getMetadata().isEnabled()) {
-                ParserHelper.resolveConditionType(definitionsService, segment.getCondition(), "segment " + segment.getItemId());
-            }
-        }
-        return allItems;
-    }
-
+    @Override
     public Segment getSegmentDefinition(String segmentId) {
-        Segment definition = persistenceService.load(segmentId, Segment.class);
-        if (definition != null && definition.getMetadata().isEnabled()) {
-            ParserHelper.resolveConditionType(definitionsService, definition.getCondition(), "segment " + segmentId);
+        String currentTenant = contextManager.getCurrentContext().getTenantId();
+        Segment segment = cacheService.getWithInheritance(segmentId, currentTenant, Segment.class);
+        if (segment != null && segment.getMetadata().isEnabled()) {
+            ParserHelper.resolveConditionType(definitionsService, segment.getCondition(), "segment " + segmentId);
         }
-        return definition;
+        return segment;
     }
 
+    @Override
     public void setSegmentDefinition(Segment segment) {
         if (segment.getMetadata().isEnabled()) {
             ParserHelper.resolveConditionType(definitionsService, segment.getCondition(), "segment " + segment.getItemId());
@@ -289,8 +359,10 @@ public class SegmentServiceImpl extends AbstractTenantAwareService implements Se
             }
         }
 
-        // make sure we update the name and description metadata that might not match, so first we remove the entry from the map
+        // Save to persistence and cache
+        segment.setTenantId(contextManager.getCurrentContext().getTenantId());
         persistenceService.save(segment, null, true);
+        cacheService.put(Segment.ITEM_TYPE, segment.getItemId(), segment.getTenantId(), segment);
         updateExistingProfilesForSegment(segment);
     }
 
@@ -355,37 +427,57 @@ public class SegmentServiceImpl extends AbstractTenantAwareService implements Se
     }
 
     private Set<Segment> getSegmentDependentSegments(String segmentId) {
-        Set<Segment> impactedSegments = new HashSet<>(this.allSegments.size());
-        for (Segment segment : this.allSegments) {
-            if (checkSegmentDeletionImpact(segment.getCondition(), segmentId)) {
-                impactedSegments.add(segment);
+        String currentTenant = contextManager.getCurrentContext().getTenantId();
+        Map<String, Segment> tenantSegments = cacheService.getTenantCache(currentTenant, Segment.class);
+        Set<Segment> impactedSegments = new HashSet<>();
+        if (tenantSegments != null) {
+            for (Segment segment : tenantSegments.values()) {
+                if (checkSegmentDeletionImpact(segment.getCondition(), segmentId)) {
+                    impactedSegments.add(segment);
+                }
             }
         }
         return impactedSegments;
     }
 
     private Set<Scoring> getSegmentDependentScorings(String segmentId) {
-        Set<Scoring> impactedScoring = new HashSet<>(this.allScoring.size());
-        for (Scoring scoring : this.allScoring) {
-            for (ScoringElement element : scoring.getElements()) {
-                if (checkSegmentDeletionImpact(element.getCondition(), segmentId)) {
-                    impactedScoring.add(scoring);
-                    break;
+        String currentTenant = contextManager.getCurrentContext().getTenantId();
+        Map<String, Scoring> tenantScoring = cacheService.getTenantCache(currentTenant, Scoring.class);
+        Set<Scoring> impactedScorings = new HashSet<>();
+        if (tenantScoring != null) {
+            for (Scoring scoring : tenantScoring.values()) {
+                if (checkSegmentDeletionImpact(scoring.getElements().get(0).getCondition(), segmentId)) {
+                    impactedScorings.add(scoring);
                 }
             }
         }
-        return impactedScoring;
+        return impactedScorings;
     }
 
     public DependentMetadata getSegmentDependentMetadata(String segmentId) {
-        List<Metadata> segments = new LinkedList<>();
-        List<Metadata> scorings = new LinkedList<>();
-        for (Segment definition : getSegmentDependentSegments(segmentId)) {
-            segments.add(definition.getMetadata());
+        List<Metadata> segments = new ArrayList<>();
+        List<Metadata> scorings = new ArrayList<>();
+
+        String currentTenant = contextManager.getCurrentContext().getTenantId();
+        Map<String, Segment> tenantSegments = cacheService.getTenantCache(currentTenant, Segment.class);
+        Map<String, Scoring> tenantScoring = cacheService.getTenantCache(currentTenant, Scoring.class);
+
+        if (tenantSegments != null) {
+            for (Segment segment : tenantSegments.values()) {
+                if (checkSegmentDeletionImpact(segment.getCondition(), segmentId)) {
+                    segments.add(segment.getMetadata());
+                }
+            }
         }
-        for (Scoring definition : getSegmentDependentScorings(segmentId)) {
-            scorings.add(definition.getMetadata());
+
+        if (tenantScoring != null) {
+            for (Scoring scoring : tenantScoring.values()) {
+                if (checkSegmentDeletionImpact(scoring.getElements().get(0).getCondition(), segmentId)) {
+                    scorings.add(scoring.getMetadata());
+                }
+            }
         }
+
         return new DependentMetadata(segments, scorings);
     }
 
@@ -431,6 +523,7 @@ public class SegmentServiceImpl extends AbstractTenantAwareService implements Se
             }
 
             persistenceService.remove(segmentId, Segment.class);
+            cacheService.remove(Segment.ITEM_TYPE, segmentId, contextManager.getCurrentContext().getTenantId(), Segment.class);
             List<Rule> previousRules = persistenceService.query("linkedItems", segmentId, null, Rule.class);
             clearAutoGeneratedRules(previousRules, segmentId);
         }
@@ -482,16 +575,50 @@ public class SegmentServiceImpl extends AbstractTenantAwareService implements Se
         Set<String> segments = new HashSet<String>();
         Map<String, Integer> scores = new HashMap<String, Integer>();
 
-        List<Segment> allSegments = this.allSegments;
-        for (Segment segment : allSegments) {
-            if (segment.getMetadata().isEnabled() && persistenceService.testMatch(segment.getCondition(), profile)) {
-                segments.add(segment.getMetadata().getId());
+        String currentTenant = contextManager.getCurrentContext().getTenantId();
+
+        // Get system tenant segments and scoring first
+        Map<String, Segment> systemSegments = cacheService.getTenantCache("system", Segment.class);
+        Map<String, Scoring> systemScoring = cacheService.getTenantCache("system", Scoring.class);
+
+        // Get current tenant segments and scoring
+        Map<String, Segment> tenantSegments = cacheService.getTenantCache(currentTenant, Segment.class);
+        Map<String, Scoring> tenantScoring = cacheService.getTenantCache(currentTenant, Scoring.class);
+
+        // Process system segments first
+        if (systemSegments != null) {
+            for (Segment segment : systemSegments.values()) {
+                if (segment.getMetadata().isEnabled() && persistenceService.testMatch(segment.getCondition(), profile)) {
+                    segments.add(segment.getMetadata().getId());
+                }
             }
         }
 
-        List<Scoring> allScoring = this.allScoring;
+        // Process tenant segments (will override system segments with same ID)
+        if (tenantSegments != null) {
+            for (Segment segment : tenantSegments.values()) {
+                if (segment.getMetadata().isEnabled() && persistenceService.testMatch(segment.getCondition(), profile)) {
+                    segments.add(segment.getMetadata().getId());
+                }
+            }
+        }
+
+        // Process system scoring first
+        if (systemScoring != null) {
+            processScoring(systemScoring, profile, scores);
+        }
+
+        // Process tenant scoring (will override system scoring with same ID)
+        if (tenantScoring != null) {
+            processScoring(tenantScoring, profile, scores);
+        }
+
+        return new SegmentsAndScores(segments, scores);
+    }
+
+    private void processScoring(Map<String, Scoring> scoringMap, Profile profile, Map<String, Integer> scores) {
         Map<String, Integer> scoreModifiers = (Map<String, Integer>) profile.getSystemProperties().get("scoreModifiers");
-        for (Scoring scoring : allScoring) {
+        for (Scoring scoring : scoringMap.values()) {
             if (scoring.getMetadata().isEnabled()) {
                 int score = 0;
                 for (ScoringElement scoringElement : scoring.getElements()) {
@@ -506,21 +633,46 @@ public class SegmentServiceImpl extends AbstractTenantAwareService implements Se
                 scores.put(scoringId, score);
             }
         }
-
-        return new SegmentsAndScores(segments, scores);
     }
 
     public List<Metadata> getSegmentMetadatasForProfile(Profile profile) {
         List<Metadata> metadatas = new ArrayList<>();
+        String currentTenant = contextManager.getCurrentContext().getTenantId();
 
-        List<Segment> allSegments = this.allSegments;
-        for (Segment segment : allSegments) {
-            if (segment.getMetadata().isEnabled() && persistenceService.testMatch(segment.getCondition(), profile)) {
-                metadatas.add(segment.getMetadata());
+        // Get system tenant segments first
+        if (!TenantService.SYSTEM_TENANT.equals(currentTenant)) {
+            contextManager.executeAsSystem(() -> {
+                Map<String, Segment> systemSegments = cacheService.getTenantCache(TenantService.SYSTEM_TENANT, Segment.class);
+                if (systemSegments != null) {
+                    for (Segment segment : systemSegments.values()) {
+                        if (segment.getMetadata().isEnabled() && persistenceService.testMatch(segment.getCondition(), profile)) {
+                            metadatas.add(segment.getMetadata());
+                        }
+                    }
+                }
+                return null;
+            });
+        }
+
+        // Get current tenant segments (will override system segments with same ID)
+        Map<String, Segment> tenantSegments = cacheService.getTenantCache(currentTenant, Segment.class);
+        Map<String, Metadata> mergedMetadatas = new HashMap<>();
+
+        // Add system tenant metadatas first
+        for (Metadata metadata : metadatas) {
+            mergedMetadatas.put(metadata.getId(), metadata);
+        }
+
+        // Override with current tenant metadatas
+        if (tenantSegments != null) {
+            for (Segment segment : tenantSegments.values()) {
+                if (segment.getMetadata().isEnabled() && persistenceService.testMatch(segment.getCondition(), profile)) {
+                    mergedMetadatas.put(segment.getMetadata().getId(), segment.getMetadata());
+                }
             }
         }
 
-        return metadatas;
+        return new ArrayList<>(mergedMetadatas.values());
     }
 
     public PartialList<Metadata> getScoringMetadatas(int offset, int size, String sortBy) {
@@ -531,28 +683,19 @@ public class SegmentServiceImpl extends AbstractTenantAwareService implements Se
         return getMetadatas(query, Scoring.class);
     }
 
-    private List<Scoring> getAllScoringDefinitions() {
-        List<Scoring> allItems = persistenceService.getAllItems(Scoring.class);
-        for (Scoring scoring : allItems) {
-            if (scoring.getMetadata().isEnabled()) {
-                for (ScoringElement element : scoring.getElements()) {
-                    ParserHelper.resolveConditionType(definitionsService, element.getCondition(), "scoring " + scoring.getItemId());
-                }
-            }
-        }
-        return allItems;
-    }
-
+    @Override
     public Scoring getScoringDefinition(String scoringId) {
-        Scoring definition = persistenceService.load(scoringId, Scoring.class);
-        if (definition != null && definition.getMetadata().isEnabled()) {
-            for (ScoringElement element : definition.getElements()) {
+        String currentTenant = contextManager.getCurrentContext().getTenantId();
+        Scoring scoring = cacheService.getWithInheritance(scoringId, currentTenant, Scoring.class);
+        if (scoring != null && scoring.getMetadata().isEnabled()) {
+            for (ScoringElement element : scoring.getElements()) {
                 ParserHelper.resolveConditionType(definitionsService, element.getCondition(), "scoring " + scoringId);
             }
         }
-        return definition;
+        return scoring;
     }
 
+    @Override
     public void setScoringDefinition(Scoring scoring) {
         if (scoring.getMetadata().isEnabled()) {
             for (ScoringElement element : scoring.getElements()) {
@@ -562,8 +705,10 @@ public class SegmentServiceImpl extends AbstractTenantAwareService implements Se
                 }
             }
         }
-        // make sure we update the name and description metadata that might not match, so first we remove the entry from the map
+
+        // Save to persistence and cache
         persistenceService.save(scoring);
+        cacheService.put(Scoring.ITEM_TYPE, scoring.getItemId(), scoring.getTenantId(), scoring);
 
         persistenceService.createMapping(Profile.ITEM_TYPE, String.format(
                 "{\n" +
@@ -648,37 +793,57 @@ public class SegmentServiceImpl extends AbstractTenantAwareService implements Se
     }
 
     private Set<Segment> getScoringDependentSegments(String scoringId) {
-        Set<Segment> impactedSegments = new HashSet<>(this.allSegments.size());
-        for (Segment segment : this.allSegments) {
-            if (checkScoringDeletionImpact(segment.getCondition(), scoringId)) {
-                impactedSegments.add(segment);
+        String currentTenant = contextManager.getCurrentContext().getTenantId();
+        Map<String, Segment> tenantSegments = cacheService.getTenantCache(currentTenant, Segment.class);
+        Set<Segment> impactedSegments = new HashSet<>();
+        if (tenantSegments != null) {
+            for (Segment segment : tenantSegments.values()) {
+                if (checkScoringDeletionImpact(segment.getCondition(), scoringId)) {
+                    impactedSegments.add(segment);
+                }
             }
         }
         return impactedSegments;
     }
 
     private Set<Scoring> getScoringDependentScorings(String scoringId) {
-        Set<Scoring> impactedScoring = new HashSet<>(this.allScoring.size());
-        for (Scoring scoring : this.allScoring) {
-            for (ScoringElement element : scoring.getElements()) {
-                if (checkScoringDeletionImpact(element.getCondition(), scoringId)) {
-                    impactedScoring.add(scoring);
-                    break;
+        String currentTenant = contextManager.getCurrentContext().getTenantId();
+        Map<String, Scoring> tenantScoring = cacheService.getTenantCache(currentTenant, Scoring.class);
+        Set<Scoring> impactedScorings = new HashSet<>();
+        if (tenantScoring != null) {
+            for (Scoring scoring : tenantScoring.values()) {
+                if (checkScoringDeletionImpact(scoring.getElements().get(0).getCondition(), scoringId)) {
+                    impactedScorings.add(scoring);
                 }
             }
         }
-        return impactedScoring;
+        return impactedScorings;
     }
 
     public DependentMetadata getScoringDependentMetadata(String scoringId) {
-        List<Metadata> segments = new LinkedList<>();
-        List<Metadata> scorings = new LinkedList<>();
-        for (Segment definition : getScoringDependentSegments(scoringId)) {
-            segments.add(definition.getMetadata());
+        List<Metadata> segments = new ArrayList<>();
+        List<Metadata> scorings = new ArrayList<>();
+
+        String currentTenant = contextManager.getCurrentContext().getTenantId();
+        Map<String, Segment> tenantSegments = cacheService.getTenantCache(currentTenant, Segment.class);
+        Map<String, Scoring> tenantScoring = cacheService.getTenantCache(currentTenant, Scoring.class);
+
+        if (tenantSegments != null) {
+            for (Segment segment : tenantSegments.values()) {
+                if (checkScoringDeletionImpact(segment.getCondition(), scoringId)) {
+                    segments.add(segment.getMetadata());
+                }
+            }
         }
-        for (Scoring definition : getScoringDependentScorings(scoringId)) {
-            scorings.add(definition.getMetadata());
+
+        if (tenantScoring != null) {
+            for (Scoring scoring : tenantScoring.values()) {
+                if (checkScoringDeletionImpact(scoring.getElements().get(0).getCondition(), scoringId)) {
+                    scorings.add(scoring.getMetadata());
+                }
+            }
         }
+
         return new DependentMetadata(segments, scorings);
     }
 
@@ -963,16 +1128,24 @@ public class SegmentServiceImpl extends AbstractTenantAwareService implements Se
         LOGGER.info("Found {} segments or scoring plans containing pastEventCondition conditions", pastEventSegmentsAndScoringsSize);
 
         // get Segments and Scoring that contains relative date expressions
-        segmentOrScoringIdsToReevaluate.addAll(allSegments.stream()
-                .filter(segment -> segment.getCondition() != null && segment.getCondition().toString().contains("propertyValueDateExpr"))
-                .map(Item::getItemId)
-                .collect(Collectors.toList()));
+        String currentTenant = contextManager.getCurrentContext().getTenantId();
+        Map<String, Segment> tenantSegments = cacheService.getTenantCache(currentTenant, Segment.class);
+        Map<String, Scoring> tenantScoring = cacheService.getTenantCache(currentTenant, Scoring.class);
 
-        segmentOrScoringIdsToReevaluate.addAll(allScoring.stream()
-                .filter(scoring -> scoring.getElements() != null && !scoring.getElements().isEmpty() && scoring.getElements().stream()
-                        .anyMatch(scoringElement -> scoringElement != null && scoringElement.getCondition() != null && scoringElement.getCondition().toString().contains("propertyValueDateExpr")))
-                .map(Item::getItemId)
-                .collect(Collectors.toList()));
+        if (tenantSegments != null) {
+            segmentOrScoringIdsToReevaluate.addAll(tenantSegments.values().stream()
+                    .filter(segment -> segment.getCondition() != null && segment.getCondition().toString().contains("propertyValueDateExpr"))
+                    .map(Item::getItemId)
+                    .collect(Collectors.toList()));
+        }
+
+        if (tenantScoring != null) {
+            segmentOrScoringIdsToReevaluate.addAll(tenantScoring.values().stream()
+                    .filter(scoring -> scoring.getElements() != null && !scoring.getElements().isEmpty() && scoring.getElements().stream()
+                            .anyMatch(scoringElement -> scoringElement != null && scoringElement.getCondition() != null && scoringElement.getCondition().toString().contains("propertyValueDateExpr")))
+                    .map(Item::getItemId)
+                    .collect(Collectors.toList()));
+        }
         LOGGER.info("Found {} segments or scoring plans containing date relative expressions", segmentOrScoringIdsToReevaluate.size() - pastEventSegmentsAndScoringsSize);
 
         // reevaluate segments and scoring.
@@ -1204,92 +1377,180 @@ public class SegmentServiceImpl extends AbstractTenantAwareService implements Se
     }
 
     public void bundleChanged(BundleEvent event) {
-        switch (event.getType()) {
-            case BundleEvent.STARTED:
-                processBundleStartup(event.getBundle().getBundleContext());
-                break;
-            case BundleEvent.STOPPING:
-                processBundleStop(event.getBundle().getBundleContext());
-                break;
-        }
+        contextManager.executeAsSystem(() -> {
+            switch (event.getType()) {
+                case BundleEvent.STARTED:
+                    processBundleStartup(event.getBundle().getBundleContext());
+                    break;
+                case BundleEvent.STOPPING:
+                    processBundleStop(event.getBundle().getBundleContext());
+                    break;
+            }
+        });
     }
-
     private void initializeTimer() {
-
-        TimerTask task = new TimerTask() {
-            @Override
-            public void run() {
-                try {
-                    long currentTimeMillis = System.currentTimeMillis();
-                    LOGGER.info("running scheduled task to recalculate segments and scoring that contains date relative conditions");
-                    recalculatePastEventConditions();
-                    LOGGER.info("finished recalculate segments and scoring that contains date relative conditions in {}ms. ", System.currentTimeMillis() - currentTimeMillis);
-                } catch (Throwable t) {
-                    LOGGER.error("Error while updating profiles for segments and scoring that contains date relative conditions", t);
-                }
-            }
-        };
         long initialDelay = SchedulerServiceImpl.getTimeDiffInSeconds(dailyDateExprEvaluationHourUtc, ZonedDateTime.now(ZoneOffset.UTC));
-        long period = TimeUnit.DAYS.toSeconds(taskExecutionPeriod);
+
         LOGGER.info("daily recalculation job for segments and scoring that contains date relative conditions will run at fixed rate, " +
-                "initialDelay={}, taskExecutionPeriod={} in seconds", initialDelay, period);
-        schedulerService.getScheduleExecutorService().scheduleAtFixedRate(task, initialDelay, period, TimeUnit.SECONDS);
+                "initialDelay={}, taskExecutionPeriod={} in seconds", initialDelay, TimeUnit.DAYS.toSeconds(taskExecutionPeriod));
 
-        task = new TimerTask() {
-            @Override
-            public void run() {
-                try {
-                    allSegments = getAllSegmentDefinitions();
-                    allScoring = getAllScoringDefinitions();
-                } catch (Throwable t) {
-                    LOGGER.error("Error while loading segments and scoring definitions from persistence back-end", t);
-                }
-            }
-        };
-        schedulerService.getScheduleExecutorService().scheduleAtFixedRate(task, 0, segmentRefreshInterval, TimeUnit.MILLISECONDS);
+        schedulerService.newTask("segment-date-recalculation")
+            .withInitialDelay(initialDelay, TimeUnit.SECONDS)
+            .withPeriod(taskExecutionPeriod, TimeUnit.DAYS)
+            .withFixedRate()  // Run at fixed intervals
+            .withSimpleExecutor(() -> {
+                contextManager.executeAsSystem(() -> {
+                    try {
+                        long currentTimeMillis = System.currentTimeMillis();
+                        LOGGER.info("running scheduled task to recalculate segments and scoring that contains date relative conditions");
+                        recalculatePastEventConditions();
+                        LOGGER.info("finished recalculate segments and scoring that contains date relative conditions in {}ms. ", System.currentTimeMillis() - currentTimeMillis);
+                    } catch (Throwable t) {
+                        LOGGER.error("Error while updating profiles for segments and scoring that contains date relative conditions", t);
+                    }
+                });
+            })
+            .schedule();
     }
-
     public void setTaskExecutionPeriod(long taskExecutionPeriod) {
         this.taskExecutionPeriod = taskExecutionPeriod;
     }
 
     protected <T extends MetadataItem> PartialList<Metadata> getMetadatas(int offset, int size, String sortBy, Class<T> clazz) {
-        String currentTenantId = tenantService.getCurrentTenantId();
+        String currentTenantId = contextManager.getCurrentContext().getTenantId();
+        List<Metadata> details = new LinkedList<>();
+
+        // Get system tenant items first
+        if (!TenantService.SYSTEM_TENANT.equals(currentTenantId)) {
+            contextManager.executeAsSystem(() -> {
+                Condition systemTenantCondition = new Condition(definitionsService.getConditionType("sessionPropertyCondition"));
+                systemTenantCondition.setParameter("propertyName", "tenantId");
+                systemTenantCondition.setParameter("comparisonOperator", "equals");
+                systemTenantCondition.setParameter("propertyValue", TenantService.SYSTEM_TENANT);
+                PartialList<T> systemItems = persistenceService.query(systemTenantCondition, sortBy, clazz, 0, -1);
+                for (T definition : systemItems.getList()) {
+                    details.add(definition.getMetadata());
+                }
+                return null;
+            });
+        }
+
+        // Get current tenant items (will override system items with same ID)
         Condition tenantCondition = new Condition(definitionsService.getConditionType("sessionPropertyCondition"));
         tenantCondition.setParameter("propertyName", "tenantId");
         tenantCondition.setParameter("comparisonOperator", "equals");
         tenantCondition.setParameter("propertyValue", currentTenantId);
+        PartialList<T> items = persistenceService.query(tenantCondition, sortBy, clazz, 0, -1);
+        Map<String, Metadata> mergedDetails = new HashMap<>();
 
-        PartialList<T> items = persistenceService.query(tenantCondition, sortBy, clazz, offset, size);
-        List<Metadata> details = new LinkedList<>();
-        for (T definition : items.getList()) {
-            details.add(definition.getMetadata());
+        // Add system tenant items first
+        for (Metadata metadata : details) {
+            mergedDetails.put(metadata.getId(), metadata);
         }
-        return new PartialList<>(details, items.getOffset(), items.getPageSize(), items.getTotalSize(), items.getTotalSizeRelation());
+
+        // Override with current tenant items
+        for (T definition : items.getList()) {
+            mergedDetails.put(definition.getMetadata().getId(), definition.getMetadata());
+        }
+
+        // Convert to list and apply pagination
+        List<Metadata> finalDetails = new ArrayList<>(mergedDetails.values());
+        if (sortBy != null) {
+            // TODO: Implement sorting of merged results
+        }
+
+        int totalSize = finalDetails.size();
+        int fromIndex = offset;
+        int toIndex = offset + size;
+        if (fromIndex >= totalSize) {
+            return new PartialList<Metadata>(new ArrayList<>(), offset, size, totalSize, PartialList.Relation.EQUAL);
+        }
+        if (toIndex > totalSize) {
+            toIndex = totalSize;
+        }
+        finalDetails = finalDetails.subList(fromIndex, toIndex);
+
+        return new PartialList<Metadata>(finalDetails, offset, size, totalSize, PartialList.Relation.EQUAL);
     }
 
     protected <T extends MetadataItem> PartialList<Metadata> getMetadatas(Query query, Class<T> clazz) {
         definitionsService.resolveConditionType(query.getCondition());
-        String currentTenantId = tenantService.getCurrentTenantId();
+        String currentTenantId = contextManager.getCurrentContext().getTenantId();
         if (currentTenantId == null) {
             LOGGER.error("No current tenant id available, unable retrieve segments");
             return new PartialList<>();
         }
 
-        Condition tenantCondition = new Condition(definitionsService.getConditionType("sessionPropertyCondition"));
-        tenantCondition.setParameter("propertyName", "tenantId");
-        tenantCondition.setParameter("comparisonOperator", "equals");
-        tenantCondition.setParameter("propertyValue", currentTenantId);
-
-        Condition finalCondition = new Condition(definitionsService.getConditionType("booleanCondition"));
-        finalCondition.setParameter("operator", "and");
-        finalCondition.setParameter("subConditions", Arrays.asList(query.getCondition(), tenantCondition));
-
-        PartialList<T> items = persistenceService.query(finalCondition, query.getSortby(), clazz, query.getOffset(), query.getLimit());
         List<Metadata> details = new LinkedList<>();
-        for (T definition : items.getList()) {
-            details.add(definition.getMetadata());
+
+        // Get system tenant items first
+        if (!TenantService.SYSTEM_TENANT.equals(currentTenantId)) {
+            contextManager.executeAsSystem(() -> {
+                Condition systemTenantCondition = new Condition(definitionsService.getConditionType("booleanCondition"));
+                systemTenantCondition.setParameter("operator", "and");
+                List<Condition> systemConditions = new ArrayList<>();
+
+                Condition systemTenantCheck = new Condition(definitionsService.getConditionType("sessionPropertyCondition"));
+                systemTenantCheck.setParameter("propertyName", "tenantId");
+                systemTenantCheck.setParameter("comparisonOperator", "equals");
+                systemTenantCheck.setParameter("propertyValue", TenantService.SYSTEM_TENANT);
+                systemConditions.add(systemTenantCheck);
+
+                systemConditions.add(query.getCondition());
+                systemTenantCondition.setParameter("subConditions", systemConditions);
+
+                PartialList<T> systemItems = persistenceService.query(systemTenantCondition, query.getSortby(), clazz, 0, -1);
+                for (T definition : systemItems.getList()) {
+                    details.add(definition.getMetadata());
+                }
+                return null;
+            });
         }
-        return new PartialList<>(details, items.getOffset(), items.getPageSize(), items.getTotalSize(), items.getTotalSizeRelation());
+
+        // Get current tenant items (will override system items with same ID)
+        Condition tenantCondition = new Condition(definitionsService.getConditionType("booleanCondition"));
+        tenantCondition.setParameter("operator", "and");
+        List<Condition> conditions = new ArrayList<>();
+
+        Condition tenantCheck = new Condition(definitionsService.getConditionType("sessionPropertyCondition"));
+        tenantCheck.setParameter("propertyName", "tenantId");
+        tenantCheck.setParameter("comparisonOperator", "equals");
+        tenantCheck.setParameter("propertyValue", currentTenantId);
+        conditions.add(tenantCheck);
+
+        conditions.add(query.getCondition());
+        tenantCondition.setParameter("subConditions", conditions);
+
+        PartialList<T> items = persistenceService.query(tenantCondition, query.getSortby(), clazz, 0, -1);
+        Map<String, Metadata> mergedDetails = new HashMap<>();
+
+        // Add system tenant items first
+        for (Metadata metadata : details) {
+            mergedDetails.put(metadata.getId(), metadata);
+        }
+
+        // Override with current tenant items
+        for (T definition : items.getList()) {
+            mergedDetails.put(definition.getMetadata().getId(), definition.getMetadata());
+        }
+
+        // Convert to list and apply pagination
+        List<Metadata> finalDetails = new ArrayList<>(mergedDetails.values());
+        if (query.getSortby() != null) {
+            // TODO: Implement sorting of merged results
+        }
+
+        int totalSize = finalDetails.size();
+        int fromIndex = query.getOffset();
+        int toIndex = fromIndex + query.getLimit();
+        if (fromIndex >= totalSize) {
+            return new PartialList<Metadata>(new ArrayList<>(), query.getOffset(), query.getLimit(), totalSize, PartialList.Relation.EQUAL);
+        }
+        if (toIndex > totalSize) {
+            toIndex = totalSize;
+        }
+        finalDetails = finalDetails.subList(fromIndex, toIndex);
+
+        return new PartialList<Metadata>(finalDetails, query.getOffset(), query.getLimit(), totalSize, PartialList.Relation.EQUAL);
     }
 }

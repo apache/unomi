@@ -20,6 +20,11 @@ jobs:
           server-id: apache.snapshots.https
           server-username: NEXUS_USER
           server-password: NEXUS_PW
+      - name: Install GraphViz
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y graphviz
+          dot -V
       - name: Generate documentation
         run: mvn -U -ntp -e clean install -DskipTests javadoc:aggregate source:aggregate
       - name: Build & deploy snapshots

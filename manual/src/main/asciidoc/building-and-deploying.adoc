@@ -16,22 +16,22 @@
 
 ==== Initial Setup
 
-. Install J2SE 11 SDK (or later), which can be downloaded from
+1. Install J2SE 11 SDK (or later), which can be downloaded from
  http://www.oracle.com/technetwork/java/javase/downloads/index.html[http://www.oracle.com/technetwork/java/javase/downloads/index.html]
 
-. Make sure that your JAVA_HOME environment variable is set to the newly installed
+2. Make sure that your JAVA_HOME environment variable is set to the newly installed
  JDK location, and that your PATH includes %JAVA_HOME%\bin (windows) or
  $JAVA_HOME$/bin (unix).
 
-. Install Maven 3.0.3 (or later), which can be downloaded from
+3. Install Maven 3.0.3 (or later), which can be downloaded from
  http://maven.apache.org/download.html[http://maven.apache.org/download.html]. Make sure that your PATH includes
  the MVN_HOME/bin directory.
 
 ==== Building
 
-. Get the code: `git clone https://github.com/apache/unomi.git`
-. Change to the top level directory of Apache Unomi source distribution.
-. Run
+1. Get the code: `git clone https://github.com/apache/unomi.git`
+2. Change to the top level directory of Apache Unomi source distribution.
+3. Run
 +
 [source]
 ----
@@ -66,23 +66,27 @@ TIP: On a non-English Windows env, the Asciidoctor Maven Plugin may fail to
 
 ==== Installing a Search Engine
 
-Starting with version 1.2, Apache Unomi no longer embeds a search engine server. You will need to install either ElasticSearch or OpenSearch as a standalone service.
+Starting with version 1.2, Apache Unomi no longer embeds a search engine server. You must install either Elasticsearch or OpenSearch as a standalone service.
 
-===== Option 1: Using ElasticSearch
+===== Option 1: Using Elasticsearch
 
-1. Download ElasticSearch 7.17.5 from: https://www.elastic.co/downloads/past-releases/elasticsearch-7-17-5[https://www.elastic.co/downloads/past-releases/elasticsearch-7-17-5]
+1. Download Elasticsearch version 7.17.10 from https://www.elastic.co/downloads/past-releases/elasticsearch-7-17-10
 
-2. Uncompress the downloaded package into a directory
+2. Extract the archive:
+[source]
+----
+tar -xzf elasticsearch-7.17.10-darwin-x86_64.tar.gz (Mac)
+unzip elasticsearch-7.17.10-windows-x86_64.zip (Windows)
+tar -xzf elasticsearch-7.17.10-linux-x86_64.tar.gz (Linux)
+----
 
-3. In the config/elasticsearch.yml file, uncomment and modify the following line:
-
-[source,yaml]
+3. Configure Elasticsearch by editing `config/elasticsearch.yml`:
+[source]
 ----
 cluster.name: contextElasticSearch
 ----
 
 4. Launch the server using:
-
 [source]
 ----
 bin/elasticsearch (Mac, Linux)
@@ -94,7 +98,6 @@ bin\elasticsearch.bat (Windows)
 The recommended way to run OpenSearch is using Docker Compose:
 
 1. Create a `docker-compose.yml` file with the following content:
-
 [source,yaml]
 ----
 version: '3.8'
@@ -225,6 +228,62 @@ Create a new $MY_KARAF_HOME/etc/org.apache.cxf.osgi.cfg file and put the followi
 
 If all went smoothly, you should be able to access the context script here : http://localhost:8181/cxs/cluster[http://localhost:8181/cxs/cluster] .
  You should be able to login with karaf / karaf and see basic server information. If not something went wrong during the install.
+
+==== Installing GraphViz for Manual Generation
+
+The manual project uses PlantUML diagrams which require GraphViz to be installed. Here's how to install it:
+
+===== On macOS using Homebrew
+[source]
+----
+brew install graphviz
+----
+
+===== On Linux (Debian/Ubuntu)
+[source]
+----
+sudo apt-get install graphviz
+----
+
+===== On Linux (RHEL/CentOS/Fedora)
+[source]
+----
+sudo dnf install graphviz
+----
+
+===== On Windows
+1. Download the installer from https://graphviz.org/download/
+2. Run the installer
+3. Add the GraphViz bin directory to your PATH
+
+===== Building the Manual
+
+You can build the manual directly from the manual directory:
+
+[source]
+----
+cd manual
+mvn clean install
+----
+
+The build script will automatically detect and configure the GraphViz path. If you need to set it manually, you can:
+
+1. Set it via environment variable:
+[source]
+----
+export GRAPHVIZ_DOT=/path/to/dot
+mvn clean install
+----
+
+2. Or specify it directly to Maven:
+[source]
+----
+mvn clean install -Dgraphviz.dot.path=/path/to/dot
+----
+
+The generated documentation will be available in:
+- HTML: `target/generated-docs/html/latest/`
+- PDF: `target/generated-docs/pdf/latest/`
 
 ==== JDK Selection on Mac OS X
 

@@ -18,11 +18,12 @@
 package org.apache.unomi.api;
 
 import javax.xml.bind.annotation.XmlTransient;
+import java.io.Serializable;
 
 /**
  * A unomi plugin that defines a new property merge strategy.
  */
-public class PropertyMergeStrategyType implements PluginType {
+public class PropertyMergeStrategyType implements PluginType, Serializable {
 
     private String id;
     private String filter;

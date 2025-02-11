@@ -87,7 +87,6 @@
 
     <reference id="metricsService" interface="org.apache.unomi.metrics.MetricsService" />
     <reference id="scriptExecutor" interface="org.apache.unomi.scripting.ScriptExecutor" />
-    <reference id="securityServiceReference" interface="org.apache.unomi.api.security.SecurityService" availability="optional" />
 
     <service id="openSearchPersistenceService" ref="openSearchPersistenceServiceImpl">
         <interfaces>
@@ -162,7 +161,7 @@
         <property name="alwaysOverwrite" value="${os.alwaysOverwrite}" />
         <property name="logLevelRestClient" value="${os.logLevelRestClient}" />
         <property name="minimalClusterState" value="${os.minimalClusterState}" />
-        <property name="securityServiceReference" ref="securityServiceReference" />
+        <property name="contextManager" ref="contextManager"/>
     </bean>
 
     <!-- We use a listener here because using the list directly for listening to proxies coming from the same bundle didn't seem to work -->
@@ -190,5 +189,20 @@
             <ref component-id="openSearchPersistenceServiceImpl"/>
         </reference-listener>
     </reference-list>
+
+    <!-- Security Service Reference -->
+    <reference id="securityService"
+               interface="org.apache.unomi.api.security.SecurityService"
+               availability="optional"
+               timeout="0">
+        <reference-listener bind-method="bindSecurityService"
+                          unbind-method="unbindSecurityService">
+            <ref component-id="openSearchPersistenceServiceImpl"/>
+        </reference-listener>
+    </reference>
+
+    <!-- Context Manager Reference -->
+    <reference id="contextManager"
+               interface="org.apache.unomi.api.services.ExecutionContextManager"/>
 
 </blueprint>
