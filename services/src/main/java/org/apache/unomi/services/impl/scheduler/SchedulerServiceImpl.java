@@ -202,7 +202,7 @@ public class SchedulerServiceImpl implements SchedulerService {
             recoverCrashedTasks();
 
             // Get all enabled tasks
-            Condition enabledCondition = createPropertyCondition("enabled", true);
+            Condition enabledCondition = createPropertyCondition("enabled", "true");
             List<ScheduledTask> tasks = persistenceService.query(enabledCondition, null, ScheduledTask.class, 0, -1).getList();
 
             for (ScheduledTask task : tasks) {
@@ -336,11 +336,7 @@ public class SchedulerServiceImpl implements SchedulerService {
         Condition condition = new Condition(PROPERTY_CONDITION_TYPE);
         condition.setParameter("propertyName", propertyName);
         condition.setParameter("comparisonOperator", "equals");
-        if (propertyValue instanceof Boolean) {
-            condition.setParameter("propertyValueInteger", ((Boolean) propertyValue) ? 1 : 0);
-        } else {
-            condition.setParameter("propertyValue", propertyValue);
-        }
+        condition.setParameter("propertyValue", propertyValue);
         return condition;
     }
 

@@ -70,6 +70,7 @@ public class SchedulerIT extends BaseIT {
             TimeUnit.MILLISECONDS,
             true,
             false,
+            false,
             true
         );
         testTaskId = task.getItemId();
