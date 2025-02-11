@@ -831,21 +831,26 @@ public class SchedulerServiceImplTest {
         assertTrue("Task should execute", executionLatch.await(1, TimeUnit.SECONDS));
         assertEquals("Task should execute once", 1, executionCount.get());
 
-        // Verify task is not persisted
+        // Verify task is not persisted but is available through non-persistent methods
         assertNull("Non-persistent task should not be saved",
             persistenceService.load(task.getItemId(), ScheduledTask.class));
+        
+        List<ScheduledTask> memoryTasks = schedulerService.getMemoryTasks();
+        assertEquals("Should have one non-persistent task", 1, memoryTasks.size());
+        assertEquals("Non-persistent task should be found", task.getItemId(), memoryTasks.get(0).getItemId());
 
-        // Verify task is not returned in getAllTasks
-        List<ScheduledTask> allTasks = schedulerService.getAllTasks();
-        assertTrue("Non-persistent task should not be in getAllTasks",
-            allTasks.stream().noneMatch(t -> t.getItemId().equals(task.getItemId())));
+        // Verify task can be retrieved by ID
+        assertNotNull("getTask should find non-persistent task",
+            schedulerService.getTask(task.getItemId()));
 
-        // Verify task can be cancelled
+        // Verify task can be cancelled and is removed from non-persistent list
         schedulerService.cancelTask(task.getItemId());
         Thread.sleep(200); // Wait for another potential execution
         int finalCount = executionCount.get();
         Thread.sleep(200); // Wait again
         assertEquals("Task should not execute after cancellation", finalCount, executionCount.get());
+        assertTrue("Task should be removed from non-persistent tasks",
+            schedulerService.getMemoryTasks().isEmpty());
 
         // Create a mix of persistent and non-persistent tasks
         ScheduledTask persistentTask = schedulerService.newTask("persistent-test-type")
@@ -859,17 +864,259 @@ public class SchedulerServiceImplTest {
             .withSimpleExecutor(() -> {})
             .schedule();
 
-        // Verify only persistent tasks are saved
-        assertNotNull("Persistent task should be saved",
-            persistenceService.load(persistentTask.getItemId(), ScheduledTask.class));
-        assertNull("Non-persistent task should not be saved",
-            persistenceService.load(anotherNonPersistentTask.getItemId(), ScheduledTask.class));
+        // Verify mixed task listing
+        List<ScheduledTask> persistentTasks = schedulerService.getPersistentTasks();
+        assertEquals("Should have one persistent task", 1, persistentTasks.size());
+        assertEquals("Should have one non-persistent task", 1, schedulerService.getMemoryTasks().size());
+        assertEquals("Should have two tasks total", 2, schedulerService.getAllTasks().size());
 
-        // Verify task status updates don't persist for non-persistent tasks
+        // Verify task status updates are maintained for non-persistent tasks
         anotherNonPersistentTask.setStatus(ScheduledTask.TaskStatus.COMPLETED);
         Thread.sleep(100); // Give time for any potential persistence
-        assertNull("Status update should not persist non-persistent task",
-            persistenceService.load(anotherNonPersistentTask.getItemId(), ScheduledTask.class));
+        ScheduledTask updatedTask = schedulerService.getTask(anotherNonPersistentTask.getItemId());
+        assertNotNull("Non-persistent task should still be available", updatedTask);
+        assertEquals("Status should be updated", ScheduledTask.TaskStatus.COMPLETED, updatedTask.getStatus());
+    }
+
+    @Test
+    public void testTaskRetrieval() throws Exception {
+        // Create test tasks
+        ScheduledTask persistentTask = schedulerService.newTask("test-type")
+            .withPeriod(1000, TimeUnit.MILLISECONDS)
+            .withSimpleExecutor(() -> {})
+            .schedule();
+
+        ScheduledTask memoryTask = schedulerService.newTask("test-type")
+            .nonPersistent()
+            .withPeriod(1000, TimeUnit.MILLISECONDS)
+            .withSimpleExecutor(() -> {})
+            .schedule();
+
+        // Test getTask retrieval
+        ScheduledTask retrievedPersistent = schedulerService.getTask(persistentTask.getItemId());
+        assertNotNull("Should retrieve persistent task", retrievedPersistent);
+        assertEquals("Should retrieve correct persistent task", persistentTask.getItemId(), retrievedPersistent.getItemId());
+
+        ScheduledTask retrievedMemory = schedulerService.getTask(memoryTask.getItemId());
+        assertNotNull("Should retrieve memory task", retrievedMemory);
+        assertEquals("Should retrieve correct memory task", memoryTask.getItemId(), retrievedMemory.getItemId());
+
+        // Test list retrieval methods
+        List<ScheduledTask> persistentTasks = schedulerService.getPersistentTasks();
+        assertEquals("Should have one persistent task", 1, persistentTasks.size());
+        assertEquals("Should have correct persistent task", persistentTask.getItemId(), persistentTasks.get(0).getItemId());
+
+        List<ScheduledTask> memoryTasks = schedulerService.getMemoryTasks();
+        assertEquals("Should have one memory task", 1, memoryTasks.size());
+        assertEquals("Should have correct memory task", memoryTask.getItemId(), memoryTasks.get(0).getItemId());
+
+        List<ScheduledTask> allTasks = schedulerService.getAllTasks();
+        assertEquals("Should have both tasks", 2, allTasks.size());
+        assertTrue("Should contain persistent task", 
+            allTasks.stream().anyMatch(t -> t.getItemId().equals(persistentTask.getItemId())));
+        assertTrue("Should contain memory task", 
+            allTasks.stream().anyMatch(t -> t.getItemId().equals(memoryTask.getItemId())));
+
+        // Test non-existent task retrieval
+        assertNull("Should return null for non-existent task", 
+            schedulerService.getTask("non-existent-id"));
+    }
+
+    @Test
+    public void testTaskFilteringWithMemoryTasks() throws Exception {
+        // Create persistent tasks
+        ScheduledTask persistentTask1 = schedulerService.newTask("type1")
+            .withPeriod(1000, TimeUnit.MILLISECONDS)
+            .withSimpleExecutor(() -> {})
+            .schedule();
+        persistentTask1.setStatus(ScheduledTask.TaskStatus.COMPLETED);
+        updateTask(persistentTask1);
+
+        ScheduledTask persistentTask2 = schedulerService.newTask("type2")
+            .withPeriod(1000, TimeUnit.MILLISECONDS)
+            .withSimpleExecutor(() -> {})
+            .schedule();
+        persistentTask2.setStatus(ScheduledTask.TaskStatus.FAILED);
+        updateTask(persistentTask2);
+
+        // Create memory tasks
+        ScheduledTask memoryTask1 = schedulerService.newTask("type1")
+            .nonPersistent()
+            .withPeriod(1000, TimeUnit.MILLISECONDS)
+            .withSimpleExecutor(() -> {})
+            .schedule();
+        memoryTask1.setStatus(ScheduledTask.TaskStatus.COMPLETED);
+
+        ScheduledTask memoryTask2 = schedulerService.newTask("type1")
+            .nonPersistent()
+            .withPeriod(1000, TimeUnit.MILLISECONDS)
+            .withSimpleExecutor(() -> {})
+            .schedule();
+        memoryTask2.setStatus(ScheduledTask.TaskStatus.FAILED);
+
+        // Test status filtering
+        PartialList<ScheduledTask> completedTasks = schedulerService.getTasksByStatus(
+            ScheduledTask.TaskStatus.COMPLETED, 0, 10, null);
+        assertEquals("Should return only persistent completed tasks", 1, completedTasks.getList().size());
+        assertEquals("Should return correct completed task", persistentTask1.getItemId(), 
+            completedTasks.getList().get(0).getItemId());
+
+        // Test type filtering
+        PartialList<ScheduledTask> type1Tasks = schedulerService.getTasksByType("type1", 0, 10, null);
+        assertEquals("Should return only persistent type1 tasks", 1, type1Tasks.getList().size());
+        assertEquals("Should return correct type1 task", persistentTask1.getItemId(), 
+            type1Tasks.getList().get(0).getItemId());
+    }
+
+    @Test
+    public void testTaskLockingAndRecovery() throws Exception {
+        // Create a test executor that completes tasks normally
+        TaskExecutor executor = new TaskExecutor() {
+            @Override
+            public String getTaskType() {
+                return "test-type";
+            }
+
+            @Override
+            public void execute(ScheduledTask task, TaskStatusCallback callback) {
+                callback.complete(); // Complete the task normally
+            }
+        };
+        schedulerService.registerTaskExecutor(executor);
+        
+        schedulerService.setExecutorNode(true);
+        schedulerService.postConstruct();
+
+        // Create a persistent task with expired lock
+        ScheduledTask persistentTask = new ScheduledTask();
+        persistentTask.setItemId("locked-task");
+        persistentTask.setTaskType("test-type");
+        persistentTask.setStatus(ScheduledTask.TaskStatus.RUNNING);
+        persistentTask.setLockOwner("old-node");
+        persistentTask.setLockDate(new Date(System.currentTimeMillis() - 10 * 60 * 1000)); // 10 minutes ago
+        persistentTask.setEnabled(true);
+        persistenceService.save(persistentTask);
+
+        // Create a memory task that should complete normally
+        ScheduledTask memoryTask = schedulerService.newTask("test-type")
+            .nonPersistent()
+            .withPeriod(0, TimeUnit.MILLISECONDS) // No repeat
+            .asOneShot() // One-time execution
+            .withSimpleExecutor(() -> {
+                // Task will be completed by the executor
+            })
+            .schedule();
+
+        // Wait a bit for the memory task to complete
+        Thread.sleep(100);
+
+        // Test crash recovery
+        schedulerService.recoverCrashedTasks();
+
+        // Verify persistent task recovery
+        ScheduledTask recoveredPersistent = schedulerService.getTask(persistentTask.getItemId());
+        assertNotNull("Persistent task should exist", recoveredPersistent);
+        assertEquals("Persistent task should be marked as crashed", 
+            ScheduledTask.TaskStatus.CRASHED, recoveredPersistent.getStatus());
+        assertNull("Persistent task lock should be released", 
+            recoveredPersistent.getLockOwner());
+
+        // Memory task should complete normally
+        ScheduledTask recoveredMemory = schedulerService.getTask(memoryTask.getItemId());
+        assertNotNull("Memory task should exist", recoveredMemory);
+        assertEquals("Memory task should be completed", 
+            ScheduledTask.TaskStatus.COMPLETED, recoveredMemory.getStatus());
+    }
+
+    @Test
+    public void testTaskUpdateBehavior() throws Exception {
+        // Create test tasks
+        ScheduledTask persistentTask = schedulerService.newTask("test-type")
+            .withPeriod(1000, TimeUnit.MILLISECONDS)
+            .withSimpleExecutor(() -> {})
+            .schedule();
+
+        ScheduledTask memoryTask = schedulerService.newTask("test-type")
+            .nonPersistent()
+            .withPeriod(1000, TimeUnit.MILLISECONDS)
+            .withSimpleExecutor(() -> {})
+            .schedule();
+
+        // Test status updates
+        persistentTask.setStatus(ScheduledTask.TaskStatus.COMPLETED);
+        memoryTask.setStatus(ScheduledTask.TaskStatus.COMPLETED);
+        updateTask(persistentTask);
+        updateTask(memoryTask);
+
+        ScheduledTask updatedPersistent = schedulerService.getTask(persistentTask.getItemId());
+        assertEquals("Persistent task status should be updated", 
+            ScheduledTask.TaskStatus.COMPLETED, updatedPersistent.getStatus());
+
+        ScheduledTask updatedMemory = schedulerService.getTask(memoryTask.getItemId());
+        assertEquals("Memory task status should be updated", 
+            ScheduledTask.TaskStatus.COMPLETED, updatedMemory.getStatus());
+
+        // Test configuration updates
+        schedulerService.updateTaskConfig(persistentTask.getItemId(), 5, 1000);
+        schedulerService.updateTaskConfig(memoryTask.getItemId(), 5, 1000);
+
+        updatedPersistent = schedulerService.getTask(persistentTask.getItemId());
+        assertEquals("Persistent task max retries should be updated", 5, updatedPersistent.getMaxRetries());
+        assertEquals("Persistent task retry delay should be updated", 1000, updatedPersistent.getRetryDelay());
+
+        updatedMemory = schedulerService.getTask(memoryTask.getItemId());
+        assertEquals("Memory task max retries should be updated", 5, updatedMemory.getMaxRetries());
+        assertEquals("Memory task retry delay should be updated", 1000, updatedMemory.getRetryDelay());
+    }
+
+    @Test
+    public void testTaskPurgingBehavior() throws Exception {
+        // Create a new scheduler service with purging enabled and short TTL
+        schedulerService = new SchedulerServiceImpl();
+        schedulerService.setPersistenceService(persistenceService);
+        schedulerService.setExecutorNode(true);
+        schedulerService.setCompletedTaskTtlDays(1); // Set 1 day TTL
+        schedulerService.setPurgeTaskEnabled(true);
+        schedulerService.postConstruct();
+
+        // Create an old completed task (2 days ago)
+        ScheduledTask oldTask = new ScheduledTask();
+        oldTask.setItemId("old-task");
+        oldTask.setTaskType("test-type");
+        oldTask.setStatus(ScheduledTask.TaskStatus.COMPLETED);
+        oldTask.setLastExecutionDate(new Date(System.currentTimeMillis() - TimeUnit.DAYS.toMillis(2)));
+        oldTask.setOneShot(true);
+        oldTask.setPeriod(0); // Important: no repeat period
+        oldTask.setEnabled(true); // Make sure task is enabled
+        persistenceService.save(oldTask);
+
+        // Create a recent completed task (should not be purged)
+        ScheduledTask recentTask = new ScheduledTask();
+        recentTask.setItemId("recent-task");
+        recentTask.setTaskType("test-type");
+        recentTask.setStatus(ScheduledTask.TaskStatus.COMPLETED);
+        recentTask.setLastExecutionDate(new Date());
+        recentTask.setOneShot(true);
+        recentTask.setPeriod(0);
+        recentTask.setEnabled(true);
+        persistenceService.save(recentTask);
+
+        // Wait for purge task to run (should run quickly after service start)
+        Thread.sleep(1000);
+
+        // Verify old task is gone
+        assertNull("Old task should be purged", 
+            persistenceService.load(oldTask.getItemId(), ScheduledTask.class));
+        
+        // Verify recent task remains
+        assertNotNull("Recent task should not be purged", 
+            persistenceService.load(recentTask.getItemId(), ScheduledTask.class));
+    }
+
+    private void updateTask(ScheduledTask task) {
+        if (task.isPersistent()) {
+            persistenceService.save(task);
+        }
     }
 
     // Test utility classes

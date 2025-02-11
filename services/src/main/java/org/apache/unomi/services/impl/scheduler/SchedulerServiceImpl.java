@@ -55,6 +55,7 @@ public class SchedulerServiceImpl implements SchedulerService {
     private PersistenceService persistenceService;
     private final Map<String, TaskExecutor> taskExecutors = new ConcurrentHashMap<>();
     private final Map<String, ScheduledFuture<?>> runningTasks = new ConcurrentHashMap<>();
+    private final Map<String, ScheduledTask> nonPersistentTasks = new ConcurrentHashMap<>();
     private final AtomicBoolean running = new AtomicBoolean(false);
     private long completedTaskTtlDays = DEFAULT_COMPLETED_TASK_TTL_DAYS;
     private boolean purgeTaskEnabled = DEFAULT_PURGE_TASK_ENABLED;
@@ -172,6 +173,7 @@ public class SchedulerServiceImpl implements SchedulerService {
             future.cancel(true);
         }
         runningTasks.clear();
+        nonPersistentTasks.clear();
 
         // Release any task locks owned by this node
         if (persistenceService != null) {
@@ -200,10 +202,7 @@ public class SchedulerServiceImpl implements SchedulerService {
             recoverCrashedTasks();
 
             // Get all enabled tasks
-            Condition enabledCondition = new Condition(PROPERTY_CONDITION_TYPE);
-            enabledCondition.setParameter("propertyName", "enabled");
-            enabledCondition.setParameter("comparisonOperator", "equals");
-            enabledCondition.setParameter("propertyValue", true);
+            Condition enabledCondition = createPropertyCondition("enabled", true);
             List<ScheduledTask> tasks = persistenceService.query(enabledCondition, null, ScheduledTask.class, 0, -1).getList();
 
             for (ScheduledTask task : tasks) {
@@ -280,8 +279,10 @@ public class SchedulerServiceImpl implements SchedulerService {
             return;
         }
 
-        // Only persist if the task is marked as persistent
-        if (task.isPersistent()) {
+        // Store non-persistent tasks in memory
+        if (!task.isPersistent()) {
+            nonPersistentTasks.put(task.getItemId(), task);
+        } else {
             persistenceService.save(task);
         }
 
@@ -322,6 +323,8 @@ public class SchedulerServiceImpl implements SchedulerService {
 
     private void updateTaskInPersistence(ScheduledTask task) {
         if (!task.isPersistent()) {
+            // Update the task in memory
+            nonPersistentTasks.put(task.getItemId(), task);
             return;
         }
         Map<Item,Map> updates = new HashMap<>();
@@ -333,7 +336,11 @@ public class SchedulerServiceImpl implements SchedulerService {
         Condition condition = new Condition(PROPERTY_CONDITION_TYPE);
         condition.setParameter("propertyName", propertyName);
         condition.setParameter("comparisonOperator", "equals");
-        condition.setParameter("propertyValue", propertyValue);
+        if (propertyValue instanceof Boolean) {
+            condition.setParameter("propertyValueInteger", ((Boolean) propertyValue) ? 1 : 0);
+        } else {
+            condition.setParameter("propertyValue", propertyValue);
+        }
         return condition;
     }
 
@@ -449,6 +456,7 @@ public class SchedulerServiceImpl implements SchedulerService {
             future.cancel(true);
         }
 
+        // Check both persistent and memory tasks
         ScheduledTask task = getTask(taskId);
         if (task != null) {
             task.setEnabled(false);
@@ -458,6 +466,8 @@ public class SchedulerServiceImpl implements SchedulerService {
             if (task.isPersistent()) {
                 persistenceService.update(updates, ScheduledTask.class);
             }
+            // Remove from memory tasks if applicable
+            nonPersistentTasks.remove(taskId);
         }
     }
 
@@ -487,14 +497,30 @@ public class SchedulerServiceImpl implements SchedulerService {
 
     @Override
     public List<ScheduledTask> getAllTasks() {
-        // Only return persistent tasks
-        return persistenceService.getAllItems(ScheduledTask.class, 0, -1, null).getList();
+        List<ScheduledTask> allTasks = new ArrayList<>(getPersistentTasks());
+        allTasks.addAll(getMemoryTasks());
+        return allTasks;
     }
 
     @Override
     public ScheduledTask getTask(String taskId) {
-        // Only try to load persistent tasks
-        return persistenceService.load(taskId, ScheduledTask.class);
+        // First check persistent storage
+        ScheduledTask task = persistenceService.load(taskId, ScheduledTask.class);
+        // If not found in storage, check memory
+        if (task == null) {
+            task = nonPersistentTasks.get(taskId);
+        }
+        return task;
+    }
+
+    @Override
+    public List<ScheduledTask> getPersistentTasks() {
+        return persistenceService.getAllItems(ScheduledTask.class, 0, -1, null).getList();
+    }
+
+    @Override
+    public List<ScheduledTask> getMemoryTasks() {
+        return new ArrayList<>(nonPersistentTasks.values());
     }
 
     @Override

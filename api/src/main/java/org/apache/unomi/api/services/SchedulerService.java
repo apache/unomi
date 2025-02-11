@@ -79,17 +79,29 @@ public interface SchedulerService {
     void cancelTask(String taskId);
 
     /**
-     * Get all scheduled tasks
-     * @return list of all tasks
+     * Get all tasks from both storage and memory
+     * @return combined list of all tasks
      */
     List<ScheduledTask> getAllTasks();
 
     /**
-     * Get a specific task by ID
+     * Get a task by ID from either storage or memory
      * @param taskId the task ID
      * @return the task or null if not found
      */
     ScheduledTask getTask(String taskId);
+
+    /**
+     * Get all tasks stored in memory
+     * @return list of all in-memory tasks
+     */
+    List<ScheduledTask> getMemoryTasks();
+
+    /**
+     * Get all tasks from storage
+     * @return list of all persistent tasks
+     */
+    List<ScheduledTask> getPersistentTasks();
 
     /**
      * Register a task executor

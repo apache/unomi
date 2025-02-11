@@ -58,22 +58,40 @@ public class ListTasksCommand implements Action {
         table.column(new Col("Next Run").maxSize(19));
         table.column(new Col("Last Run").maxSize(19));
         table.column(new Col("Failures").alignRight());
+        table.column(new Col("Persistent").maxSize(10));
 
         // Get tasks based on filters
         List<ScheduledTask> tasks;
         if (status != null) {
             try {
                 ScheduledTask.TaskStatus taskStatus = ScheduledTask.TaskStatus.valueOf(status.toUpperCase());
+                // Get persistent tasks
                 PartialList<ScheduledTask> filteredTasks = schedulerService.getTasksByStatus(taskStatus, 0, limit, null);
                 tasks = filteredTasks.getList();
+                // Add memory tasks with matching status
+                List<ScheduledTask> memoryTasks = schedulerService.getMemoryTasks();
+                for (ScheduledTask task : memoryTasks) {
+                    if (task.getStatus() == taskStatus) {
+                        tasks.add(task);
+                    }
+                }
             } catch (IllegalArgumentException e) {
                 System.err.println("Invalid status: " + status);
                 return null;
             }
         } else if (type != null) {
+            // Get persistent tasks
             PartialList<ScheduledTask> filteredTasks = schedulerService.getTasksByType(type, 0, limit, null);
             tasks = filteredTasks.getList();
+            // Add memory tasks with matching type
+            List<ScheduledTask> memoryTasks = schedulerService.getMemoryTasks();
+            for (ScheduledTask task : memoryTasks) {
+                if (task.getTaskType().equals(type)) {
+                    tasks.add(task);
+                }
+            }
         } else {
+            // Get all tasks from both storage and memory
             tasks = schedulerService.getAllTasks();
             if (tasks.size() > limit) {
                 tasks = tasks.subList(0, limit);
@@ -88,7 +106,8 @@ public class ListTasksCommand implements Action {
                 task.getStatus(),
                 task.getNextScheduledExecution() != null ? dateFormat.format(task.getNextScheduledExecution()) : "-",
                 task.getLastExecutionDate() != null ? dateFormat.format(task.getLastExecutionDate()) : "-",
-                task.getFailureCount()
+                task.getFailureCount(),
+                task.isPersistent() ? "Storage" : "Memory"
             );
         }
 
@@ -97,7 +116,10 @@ public class ListTasksCommand implements Action {
         if (tasks.isEmpty()) {
             System.out.println("No tasks found.");
         } else {
-            System.out.println("\nShowing " + tasks.size() + " task(s)" +
+            int persistentCount = (int) tasks.stream().filter(ScheduledTask::isPersistent).count();
+            int memoryCount = tasks.size() - persistentCount;
+            System.out.println("\nShowing " + tasks.size() + " task(s) (" + 
+                persistentCount + " in storage, " + memoryCount + " in memory)" +
                 (status != null ? " with status " + status : "") +
                 (type != null ? " of type " + type : ""));
         }
