@@ -1,0 +1,88 @@
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+=== Event Processing Architecture
+
+[plantuml]
+----
+@startuml
+skinparam componentStyle uml2
+skinparam component {
+  BackgroundColor<<event>> LightBlue
+  BackgroundColor<<rule>> LightGreen
+  BackgroundColor<<action>> LightYellow
+}
+
+package "Event Processing" {
+  [Event Service] <<event>>
+  [Event Listeners] <<event>>
+  [Event Router] <<event>>
+}
+
+package "Rules Engine" {
+  [Rules Service] <<rule>>
+  [Rule Evaluator] <<rule>>
+  [Condition Evaluator] <<rule>>
+}
+
+package "Actions" {
+  [Action Executor] <<action>>
+  [Action Dispatcher] <<action>>
+  [Custom Actions] <<action>>
+}
+
+database "Storage" {
+  [Event Store]
+  [Rule Store]
+  [Profile Store]
+}
+
+[Event Service] --> [Event Router]
+[Event Router] --> [Event Listeners]
+[Event Router] --> [Rules Service]
+
+[Rules Service] --> [Rule Evaluator]
+[Rule Evaluator] --> [Condition Evaluator]
+[Rule Evaluator] --> [Action Dispatcher]
+
+[Action Dispatcher] --> [Action Executor]
+[Action Dispatcher] --> [Custom Actions]
+
+[Event Service] --> [Event Store]
+[Rules Service] --> [Rule Store]
+[Action Executor] --> [Profile Store]
+
+note right of [Event Router]
+  Routes events to:
+  1. Event listeners
+  2. Rule evaluation
+  3. Profile updates
+end note
+
+note right of [Rule Evaluator]
+  1. Evaluates conditions
+  2. Triggers actions
+  3. Updates profiles
+end note
+
+note right of [Action Dispatcher]
+  Dispatches actions to:
+  1. Built-in executors
+  2. Custom executors
+  3. External systems
+end note
+
+@enduml
+----
+
+=== Overview 

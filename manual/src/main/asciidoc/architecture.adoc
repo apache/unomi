@@ -1,0 +1,173 @@
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+=== High-Level Architecture
+
+[plantuml]
+----
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+LAYOUT_WITH_LEGEND()
+
+title Apache Unomi - High Level Architecture
+
+Container(webApp, "Web Application", "JavaScript", "Client application using context.js")
+Container(mobileApp, "Mobile App", "Native/Hybrid", "Client using REST API")
+
+Container_Boundary(unomi, "Apache Unomi") {
+    Component(restApi, "REST API", "JAX-RS", "Public and private APIs")
+    Component(contextServer, "Context Server", "OSGi", "Core server components")
+    Component(rules, "Rules Engine", "Java", "Event processing & rule evaluation")
+    Component(profiles, "Profile Service", "Java", "Profile management & tracking")
+    Component(segments, "Segment Service", "Java", "Dynamic user segmentation")
+    Component(events, "Event Service", "Java", "Event collection & processing")
+    Component(privacy, "Privacy Service", "Java", "Consent & privacy management")
+}
+
+ContainerDb(elastic, "Search Engine", "Elasticsearch/OpenSearch", "Data persistence")
+Container(karaf, "Apache Karaf", "OSGi Container", "Runtime environment")
+
+Rel(webApp, restApi, "Uses", "HTTP/JSON")
+Rel(mobileApp, restApi, "Uses", "HTTP/JSON")
+Rel(restApi, contextServer, "Uses")
+Rel(contextServer, rules, "Uses")
+Rel(contextServer, profiles, "Uses")
+Rel(contextServer, segments, "Uses")
+Rel(contextServer, events, "Uses")
+Rel(contextServer, privacy, "Uses")
+Rel(contextServer, elastic, "Persists data", "REST")
+Rel(karaf, unomi, "Hosts")
+
+@enduml
+----
+
+=== Service Architecture
+
+[plantuml]
+----
+@startuml
+skinparam componentStyle uml2
+skinparam component {
+  BackgroundColor<<core>> LightBlue
+  BackgroundColor<<persistence>> LightGreen
+  BackgroundColor<<security>> LightYellow
+}
+
+package "Core Services" {
+  [Profile Service] <<core>>
+  [Event Service] <<core>>
+  [Segment Service] <<core>>
+  [Rules Service] <<core>>
+  [Privacy Service] <<core>>
+  [Definitions Service] <<core>>
+}
+
+package "Security" {
+  [Security Service] <<security>>
+  [Authentication] <<security>>
+  [Authorization] <<security>>
+}
+
+package "Persistence" {
+  [Persistence Service] <<persistence>>
+  [Cache Service] <<persistence>>
+}
+
+package "REST API" {
+  [REST Server]
+  [GraphQL API]
+}
+
+package "Extensions" {
+  [Router]
+  [Plugins]
+}
+
+database "Search Engine" {
+  [Elasticsearch/OpenSearch]
+}
+
+[Profile Service] --> [Persistence Service]
+[Event Service] --> [Persistence Service]
+[Segment Service] --> [Persistence Service]
+[Rules Service] --> [Persistence Service]
+
+[Profile Service] --> [Cache Service]
+[Segment Service] --> [Cache Service]
+[Rules Service] --> [Cache Service]
+
+[REST Server] --> [Security Service]
+[REST Server] --> [Profile Service]
+[REST Server] --> [Event Service]
+[REST Server] --> [Segment Service]
+[REST Server] --> [Rules Service]
+
+[Persistence Service] --> [Elasticsearch/OpenSearch]
+
+[Router] --> [Profile Service]
+[Plugins] --> [Core Services]
+
+note right of [Security Service]
+  Handles authentication,
+  authorization, and
+  tenant isolation
+end note
+
+note right of [Cache Service]
+  Multi-level caching for
+  profiles, segments,
+  and rules
+end note
+@enduml
+----
+
+=== Data Flow
+
+[plantuml]
+----
+@startuml
+skinparam activityBackgroundColor LightBlue
+skinparam activityBorderColor DarkBlue
+skinparam arrowColor DarkBlue
+
+|Client|
+start
+:Send Event/Context Request;
+
+|REST API|
+:Validate Request;
+:Authenticate & Authorize;
+
+|Event Processing|
+:Process Event;
+:Apply Rules;
+:Update Profile;
+
+|Segmentation|
+:Evaluate Segments;
+:Update Profile Segments;
+
+|Persistence|
+:Save Profile;
+:Save Event;
+
+|REST API|
+:Return Response;
+
+|Client|
+:Update UI/Take Action;
+stop
+@enduml
+---- 

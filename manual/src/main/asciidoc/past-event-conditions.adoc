@@ -1,0 +1,1729 @@
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+=== Past Event Conditions in Apache Unomi
+:toc: macro
+:toclevels: 4
+:toc-title: Table of contents
+:doctype: article
+:source-highlighter: highlightjs
+:sectlinks:
+:sectanchors:
+
+toc::[]
+
+==== Introduction
+
+Past event conditions are a powerful feature in Apache Unomi that allows both segments and rules to be defined based on events that occurred within a specific time window. This document explains how past event conditions work, their different usage patterns, and performance implications.
+
+[plantuml]
+----
+@startuml
+skinparam activityBackgroundColor LightBlue
+skinparam activityBorderColor DarkBlue
+skinparam arrowColor DarkBlue
+
+|Visitor|
+start
+:Visit Website;
+
+|Unomi|
+:Track Page Views;
+:Monitor Product Views;
+:Track Search Terms;
+:Record Cart Actions;
+
+|Personalization|
+if (Viewed 3+ products in category?) then (yes)
+  :Show Category Recommendations;
+else (no)
+  :Show Generic Content;
+endif
+
+if (Abandoned Cart?) then (yes)
+  :Trigger Recovery Email;
+else (no)
+  :Continue Normal Flow;
+endif
+
+|Visitor|
+stop
+@enduml
+----
+
+.Example: Product Interest Segment
+[source,json]
+----
+{
+  "metadata": {
+    "id": "electronics_enthusiast",
+    "name": "Electronics Category Interest"
+  },
+  "condition": {
+    "type": "pastEventCondition",
+    "parameterValues": {
+      "eventType": "view",
+      "numberOfDays": 30,
+      "minimumCount": 3,
+      "propertyConditions": {
+        "type": "propertyCondition",
+        "parameterValues": {
+          "propertyName": "target.properties.category",
+          "comparisonOperator": "equals",
+          "propertyValue": "electronics"
+        }
+      }
+    }
+  }
+}
+----
+
+Common website scenarios include:
+
+1. *Shopping Cart Abandonment*
+   * Track cart additions and checkout starts
+   * Identify abandoned carts after time threshold
+   * Trigger recovery campaigns
+
+2. *Content Engagement*
+   * Monitor article views and time spent
+   * Track topic interests
+   * Personalize content recommendations
+
+[source,json]
+----
+{
+  "type": "pastEventCondition",
+  "parameterValues": {
+    "eventType": "articleView",
+    "numberOfDays": 30,
+    "minimumCount": 5,
+    "propertyConditions": {
+      "type": "propertyCondition",
+      "parameterValues": {
+        "propertyName": "topic",
+        "comparisonOperator": "equals",
+        "propertyValue": "technology"
+      }
+    }
+  }
+}
+----
+
+=== Mobile Application Engagement
+
+[plantuml]
+----
+@startuml
+skinparam activityBackgroundColor LightGreen
+skinparam activityBorderColor DarkGreen
+skinparam arrowColor DarkGreen
+
+|User|
+start
+:Open App;
+
+|Unomi|
+:Track Session Start;
+:Monitor Feature Usage;
+:Record In-App Events;
+
+|Engagement|
+if (Inactive for 7 days?) then (yes)
+  :Send Re-engagement Push;
+else (no)
+  if (Used Feature 3x?) then (yes)
+    :Show Advanced Tips;
+  else (no)
+    :Show Basic Tutorial;
+  endif
+endif
+
+|User|
+stop
+@enduml
+----
+
+Common mobile scenarios include:
+
+1. *User Activation*
+   * Track feature discovery and usage
+   * Identify activation milestones
+   * Guide user onboarding
+
+2. *Retention Campaigns*
+   * Monitor app opens and session frequency
+   * Detect usage patterns
+   * Trigger re-engagement actions
+
+[source,json]
+----
+{
+  "type": "pastEventCondition",
+  "parameterValues": {
+    "eventType": "featureUsed",
+    "numberOfDays": 7,
+    "minimumCount": 3,
+    "propertyConditions": {
+      "type": "propertyCondition",
+      "parameterValues": {
+        "propertyName": "featureId",
+        "comparisonOperator": "equals",
+        "propertyValue": "core_feature"
+      }
+    }
+  }
+}
+----
+
+[source,json]
+----
+{
+  "type": "pastEventCondition",
+  "parameterValues": {
+    "eventType": "appOpen",
+    "numberOfDays": 7,
+    "maximumCount": 0,
+    "operator": "eventsNotOccurred"
+  }
+}
+----
+
+=== Customer Data Platform (CDP) Integration
+
+[plantuml]
+----
+@startuml
+skinparam componentStyle uml2
+skinparam component {
+  BackgroundColor<<source>> LightYellow
+  BackgroundColor<<processing>> LightBlue
+  BackgroundColor<<action>> LightGreen
+}
+
+package "Data Sources" {
+  [Website Events] as web <<source>>
+  [Mobile Events] as mobile <<source>>
+  [CRM Data] as crm <<source>>
+  [Support Tickets] as support <<source>>
+}
+
+package "Unomi Processing" {
+  [Event Collection] as collect <<processing>>
+  [Past Event Analysis] as analysis <<processing>>
+  [Segment Evaluation] as segments <<processing>>
+}
+
+package "Activation" {
+  [Email Campaigns] as email <<action>>
+  [Ad Targeting] as ads <<action>>
+  [Support Prioritization] as priority <<action>>
+}
+
+web --> collect
+mobile --> collect
+crm --> collect
+support --> collect
+
+collect --> analysis
+analysis --> segments
+segments --> email
+segments --> ads
+segments --> priority
+@enduml
+----
+
+Common CDP scenarios include:
+
+1. *Cross-Channel Customer Journey*
+   * Track interactions across touchpoints
+   * Build unified customer view
+   * Trigger omnichannel campaigns
+
+2. *Customer Support Optimization*
+   * Monitor support interactions
+   * Track issue resolution
+   * Identify high-value customers
+
+[source,json]
+----
+{
+  "type": "booleanCondition",
+  "parameterValues": {
+    "operator": "and",
+    "subConditions": [
+      {
+        "type": "pastEventCondition",
+        "parameterValues": {
+          "eventType": "websiteView",
+          "numberOfDays": 30,
+          "minimumCount": 1
+        }
+      },
+      {
+        "type": "pastEventCondition",
+        "parameterValues": {
+          "eventType": "mobileAppOpen",
+          "numberOfDays": 30,
+          "minimumCount": 1
+        }
+      }
+    ]
+  }
+}
+----
+
+[source,json]
+----
+{
+  "type": "pastEventCondition",
+  "parameterValues": {
+    "eventType": "supportTicket",
+    "numberOfDays": 90,
+    "minimumCount": 3,
+    "propertyConditions": {
+      "type": "propertyCondition",
+      "parameterValues": {
+        "propertyName": "priority",
+        "comparisonOperator": "equals",
+        "propertyValue": "high"
+      }
+    }
+  }
+}
+----
+
+=== B2B Use Cases
+
+[plantuml]
+----
+@startuml
+skinparam activityBackgroundColor LightPurple
+skinparam activityBorderColor DarkPurple
+skinparam arrowColor DarkPurple
+
+|Account|
+start
+:Multiple Users;
+
+|Unomi|
+:Track User Actions;
+:Aggregate Account Activity;
+:Monitor Product Usage;
+
+|Engagement|
+if (Trial Period Active?) then (yes)
+  if (Key Features Used?) then (yes)
+    :Show Upgrade Offer;
+  else (no)
+    :Send Usage Tips;
+  endif
+else (no)
+  if (Usage Declining?) then (yes)
+    :Trigger CSM Review;
+  endif
+endif
+
+|Account|
+stop
+@enduml
+----
+
+Common B2B scenarios include:
+
+1. *Account Health Monitoring*
+   * Track usage across account users
+   * Monitor feature adoption
+   * Predict churn risk
+
+2. *Product Adoption Tracking*
+   * Monitor feature usage frequency
+   * Track user onboarding progress
+   * Identify power users
+
+[source,json]
+----
+{
+  "type": "pastEventCondition",
+  "parameterValues": {
+    "eventType": "login",
+    "numberOfDays": 30,
+    "maximumCount": 5,
+    "propertyConditions": {
+      "type": "propertyCondition",
+      "parameterValues": {
+        "propertyName": "accountId",
+        "comparisonOperator": "exists"
+      }
+    }
+  }
+}
+----
+
+[source,json]
+----
+{
+  "type": "pastEventCondition",
+  "parameterValues": {
+    "eventType": "featureUsed",
+    "numberOfDays": 30,
+    "minimumCount": 10,
+    "propertyConditions": {
+      "type": "propertyCondition",
+      "parameterValues": {
+        "propertyName": "featureTier",
+        "comparisonOperator": "equals",
+        "propertyValue": "premium"
+      }
+    }
+  }
+}
+----
+
+== Architecture Overview
+
+[plantuml]
+----
+@startuml
+skinparam componentStyle uml2
+skinparam component {
+  BackgroundColor<<cached>> LightGreen
+  BackgroundColor<<uncached>> LightYellow
+}
+
+package "Past Event System" {
+  [SetEventOccurenceCountAction] as action
+  [PastEventConditionEvaluator] as evaluator
+  [PastEventConditionESQueryBuilder] as queryBuilder
+  [SegmentServiceImpl] as segmentService
+}
+
+database "Elasticsearch" {
+  [Events] as events
+  [Profiles] as profiles
+}
+
+cloud "Cache" {
+  [Profile Event Counts] as counts <<cached>>
+}
+
+[Segments] <<cached>> as segments
+[Rules] as rules
+[Auto-Generated Rules] as autoRules
+
+segments --> evaluator
+rules --> evaluator
+evaluator --> queryBuilder
+queryBuilder --> events
+action --> profiles
+action --> counts
+segmentService --> autoRules
+
+note right of counts
+  Cached counts are stored
+  in profile properties
+end note
+
+note right of evaluator
+  Two evaluation strategies:
+  1. Property-based (cached)
+  2. Direct query (uncached)
+end note
+@enduml
+----
+
+== Event Processing Flow
+
+[plantuml]
+----
+@startuml
+skinparam activityBackgroundColor LightBlue
+skinparam activityBorderColor DarkBlue
+skinparam arrowColor DarkBlue
+
+start
+:Event Received;
+
+if (Past Event Condition in Segment?) then (yes)
+  :Generate Property Key;
+  :Find Auto-Generated Rule;
+  :Update Profile Count;
+  :Store in Profile Properties;
+else (no)
+  :Direct Event Query;
+  :Aggregate Results;
+endif
+
+:Evaluate Condition;
+
+if (Condition Met?) then (yes)
+  :Execute Actions;
+else (no)
+  :Skip Actions;
+endif
+
+stop
+@enduml
+----
+
+== Segment vs Direct Rule Comparison
+
+[plantuml]
+----
+@startuml
+skinparam componentStyle uml2
+skinparam component {
+  BackgroundColor<<efficient>> LightGreen
+  BackgroundColor<<inefficient>> LightPink
+}
+
+package "Segment Approach" <<efficient>> {
+  [Past Event Condition] as segmentCondition
+  [Auto-Generated Rule] as autoRule
+  [Cached Profile Count] as profileCount
+}
+
+package "Direct Rule Approach" <<inefficient>> {
+  [Past Event Condition] as ruleCondition
+  [Direct Event Query] as directQuery
+  [Query Results] as queryResults
+}
+
+database "Event Store" as eventStore
+
+segmentCondition --> autoRule
+autoRule --> profileCount
+profileCount --> [Segment Evaluation]
+
+ruleCondition --> directQuery
+directQuery --> eventStore
+eventStore --> queryResults
+queryResults --> [Rule Evaluation]
+
+note right of profileCount
+  Efficient:
+  - Cached counts
+  - Real-time updates
+  - Low latency
+end note
+
+note right of queryResults
+  Less Efficient:
+  - Direct queries
+  - No caching
+  - Higher latency
+end note
+@enduml
+----
+
+== Cache Update Process
+
+[plantuml]
+----
+@startuml
+participant "Event Service" as event
+participant "SetEventOccurenceCountAction" as action
+participant "Profile Service" as profile
+database "Event Store" as store
+database "Profile Store" as profileStore
+
+event -> action: New Event
+activate action
+
+action -> store: Query Existing Events
+store --> action: Event Count
+
+action -> profile: Get Profile
+profile --> action: Profile Data
+
+action -> action: Calculate New Count
+action -> profile: Update Past Events Property
+
+profile -> profileStore: Save Profile
+profileStore --> profile: Saved
+
+action -> event: Profile Updated Event
+deactivate action
+@enduml
+----
+
+== Query Strategy Selection
+
+[plantuml]
+----
+@startuml
+start
+:Past Event Condition;
+
+if (Has Generated Property Key?) then (yes)
+  :Use Property-Based Query;
+  :Check Profile Properties;
+  if (Count Found?) then (yes)
+    :Use Cached Count;
+  else (no)
+    :Calculate Initial Count;
+    :Store in Profile;
+  endif
+else (no)
+  :Use Direct Event Query;
+  :Query Event Store;
+  :Aggregate Results;
+endif
+
+:Return Result;
+stop
+@enduml
+----
+
+== Usage Patterns
+
+=== In Segments
+
+When used in segments, past event conditions automatically generate optimization rules that maintain cached event counts on profiles. This is the recommended approach for optimal performance.
+
+.Example: Segment with Past Event Condition
+[source,json]
+----
+{
+  "metadata": {
+    "id": "activeUsers",
+    "name": "Active Users",
+    "scope": "systemscope"
+  },
+  "condition": {
+    "type": "pastEventCondition",
+    "parameterValues": {
+      "eventType": "view",
+      "numberOfDays": 30,
+      "minimumCount": 10
+    }
+  }
+}
+----
+
+When this segment is created:
+1. The system generates a unique property key for the condition
+2. An auto-generated rule is created to maintain event counts
+3. Initial profile counts are calculated and stored
+4. Subsequent events update the cached counts in real-time
+
+=== In Rules
+
+Past event conditions can also be used directly in rules, but with important performance considerations:
+
+.Example: Rule with Past Event Condition
+[source,json]
+----
+{
+  "metadata": {
+    "id": "directPastEventRule",
+    "name": "Direct Past Event Rule"
+  },
+  "condition": {
+    "type": "pastEventCondition",
+    "parameterValues": {
+      "eventType": "purchase",
+      "numberOfDays": 7,
+      "minimumCount": 1
+    }
+  },
+  "actions": [
+    {
+      "type": "sendEventAction",
+      "parameterValues": {
+        "eventType": "directRuleTriggered"
+      }
+    }
+  ]
+}
+----
+
+*Performance Implications*:
+1. No automatic optimization rules are generated
+2. Each evaluation requires a direct query to the event store
+3. No caching of event counts occurs
+4. Higher latency and resource usage
+5. Not recommended for high-frequency conditions
+
+== Auto-Generated Rules
+
+The system automatically generates rules for past event conditions through `SegmentServiceImpl`:
+
+1. *Rule Creation*
+   * Generated when segments with past event conditions are created/updated
+   * Uses `evaluateProfileSegments.json` template
+   * Includes `EvaluateProfileSegmentsAction` for segment membership updates
+
+2. *Rule Structure*
+[source,json]
+----
+{
+    "metadata": {
+        "id": "evaluateProfileSegments",
+        "name": "Evaluate segments",
+        "description": "Evaluate segments when a profile is modified",
+        "readOnly": true
+    },
+    "condition": {
+        "type": "profileUpdatedEventCondition"
+    },
+    "actions": [
+        {
+            "type": "evaluateProfileSegmentsAction"
+        }
+    ]
+}
+----
+
+3. *Profile Storage Format*
+[source,json]
+----
+{
+  "properties": {
+    "pastEvents": {
+      "past_event_count_abc123_30d_v1": {
+        "count": 15,
+        "lastUpdated": "2024-03-15T10:30:00Z"
+      }
+    }
+  }
+}
+----
+
+== Core Components
+
+The past event condition system consists of four main components:
+
+1. `SetEventOccurenceCountAction` - Handles real-time event processing and updates profile event counts
+2. `PastEventConditionEvaluator` - Manages condition evaluation with optimized caching
+3. `PastEventConditionESQueryBuilder` - Constructs optimized Elasticsearch queries
+4. `SegmentServiceImpl` - Manages segments and auto-generated rules
+
+== Condition Parameters
+
+Past event conditions support the following parameters as defined in `pastEventCondition.json`:
+
+1. *Time Window Parameters*
+   * `numberOfDays` (integer) - Rolling window of N days from current time
+   * `fromDate` (date) - Explicit start date for the time window
+   * `toDate` (date) - Explicit end date for the time window
+
+2. *Count Parameters*
+   * `minimumEventCount` (integer) - Minimum number of events required
+   * `maximumEventCount` (integer) - Maximum number of events allowed
+   * `operator` (string) - Either "eventsOccurred" or "eventsNotOccurred"
+
+3. *Event Filter*
+   * `eventCondition` (Condition) - The condition defining which events to count
+
+== Event Processing System
+
+=== Real-Time Event Processing
+
+When an event occurs in Unomi, the `SetEventOccurenceCountAction` processes it in real-time through the following steps:
+
+1. Extracts the past event condition from the action parameters
+2. Builds a compound condition for event matching that includes:
+   * The original event condition
+   * Time window constraints
+   * Profile filters
+3. Queries existing matching events using optimized Elasticsearch queries
+4. Updates the profile's past event count in system properties
+5. Triggers profile update events if configured
+
+The action is defined in `setEventOccurenceCountAction.json` with the following metadata:
+[source,json]
+----
+{
+  "metadata": {
+    "id": "setEventOccurenceCountAction",
+    "systemTags": [
+      "profileTags",
+      "demographic"
+    ]
+  }
+}
+----
+
+=== Time Window Processing
+
+The `SetEventOccurenceCountAction` implements time window processing using the following logic:
+
+[source,java]
+----
+private boolean inTimeRange(LocalDateTime eventTime, Integer numberOfDays, 
+                          LocalDateTime fromDate, LocalDateTime toDate) {
+    boolean inTimeRange = true;
+
+    if (numberOfDays != null) {
+        LocalDateTime now = LocalDateTime.now(ZoneId.of("UTC"));
+        if (eventTime.isAfter(now)) {
+            inTimeRange = false;
+        }
+        long daysDiff = Duration.between(eventTime, now).toDays();
+        if (daysDiff > numberOfDays) {
+            inTimeRange = false;
+        }
+    }
+    if (fromDate != null && fromDate.isAfter(eventTime)) {
+        inTimeRange = false;
+    }
+    if (toDate != null && toDate.isBefore(eventTime)) {
+        inTimeRange = false;
+    }
+
+    return inTimeRange;
+}
+----
+
+=== Profile Storage Format
+
+Past event counts are stored efficiently in the profile's system properties under a `pastEvents` list. Each entry contains:
+
+* `key` - A generated unique identifier for the condition using MD5 hashing
+* `count` - The number of matching events for that condition
+
+The update process is handled by:
+
+[source,java]
+----
+private boolean updatePastEvents(Event event, String generatedPropertyKey, long count) {
+    List<Map<String, Object>> existingPastEvents = 
+        (List<Map<String, Object>>) event.getProfile().getSystemProperties().get("pastEvents");
+    if (existingPastEvents == null) {
+        existingPastEvents = new ArrayList<>();
+        event.getProfile().getSystemProperties().put("pastEvents", existingPastEvents);
+    }
+
+    // Update or add count
+    for (Map<String, Object> pastEvent : existingPastEvents) {
+        if (generatedPropertyKey.equals(pastEvent.get("key"))) {
+            if (pastEvent.containsKey("count") && pastEvent.get("count").equals(count)) {
+                return false;
+            }
+            pastEvent.put("count", count);
+            return true;
+        }
+    }
+
+    Map<String, Object> newPastEvent = new HashMap<>();
+    newPastEvent.put("key", generatedPropertyKey);
+    newPastEvent.put("count", count);
+    existingPastEvents.add(newPastEvent);
+    return true;
+}
+----
+
+=== Evaluation Process
+
+The evaluation process involves multiple components working together to efficiently evaluate past event conditions:
+
+1. *Condition Evaluator* (`PastEventConditionEvaluator`)
+   * Primary evaluation logic for past event conditions
+   * Two-phase evaluation strategy:
+     ** First checks profile properties for cached counts using `generatedPropertyKey`
+     ** Falls back to direct event queries only if cached data is unavailable
+   * Count validation logic:
+     ** For `eventsOccurred`: Verifies count is between `minimumEventCount` and `maximumEventCount`
+     ** For `eventsNotOccurred`: Verifies count is exactly 0
+
+2. *Query Builder* (`PastEventConditionESQueryBuilder`)
+   * Responsible for constructing optimized Elasticsearch queries
+   * Supports two query strategies:
+     ** Property-based queries: Uses cached counts from profile properties
+     ** Event-based queries: Aggregates events directly when needed
+   * Partitioned processing support:
+     ** Configurable through `pastEventsDisablePartitions`
+     ** Uses `aggregateQueryBucketSize` for partition sizing
+     ** Handles large datasets efficiently
+
+3. *Action Executor* (`ActionExecutorDispatcherImpl`)
+   * Manages the execution of past event condition actions
+   * Features:
+     ** Contextual parameter resolution for dynamic values
+     ** Performance metrics collection for monitoring
+     ** Script execution support for complex logic
+     ** Error handling and logging
+   * Execution flow:
+     1. Resolves action parameters using context
+     2. Validates action configuration
+     3. Executes action with performance tracking
+     4. Handles results and updates profiles
+   * Implementation details:
+[source,java]
+----
+public boolean eval(Condition condition, Item item, Map<String, Object> context, 
+                   ConditionEvaluatorDispatcher dispatcher) {
+    final Map<String, Object> parameters = condition.getParameterValues();
+    long count;
+
+    // Try to get count from profile properties first
+    if (parameters.containsKey("generatedPropertyKey")) {
+        String key = (String) parameters.get("generatedPropertyKey");
+        Profile profile = (Profile) item;
+        List<Map<String, Object>> pastEvents = 
+            (ArrayList<Map<String, Object>>) profile.getSystemProperties().get("pastEvents");
+        if (pastEvents != null) {
+            Number l = (Number) pastEvents
+                    .stream()
+                    .filter(pastEvent -> pastEvent.get("key").equals(key))
+                    .findFirst()
+                    .map(pastEvent -> pastEvent.get("count")).orElse(0L);
+            count = l.longValue();
+        } else {
+            count = 0;
+        }
+    } else {
+        // Legacy fallback: direct event query
+        count = persistenceService.queryCount(
+            pastEventConditionPersistenceQueryBuilder.getEventCondition(
+                condition, context, item.getItemId(), definitionsService, scriptExecutor
+            ), 
+            Event.ITEM_TYPE
+        );
+    }
+
+    // Evaluate count against condition parameters
+    boolean eventsOccurred = pastEventConditionPersistenceQueryBuilder
+        .getStrategyFromOperator((String) condition.getParameter("operator"));
+    if (eventsOccurred) {
+        int minimumEventCount = parameters.get("minimumEventCount") == null ? 
+            0 : (Integer) parameters.get("minimumEventCount");
+        int maximumEventCount = parameters.get("maximumEventCount") == null ? 
+            Integer.MAX_VALUE : (Integer) parameters.get("maximumEventCount");
+        return count > 0 && (count >= minimumEventCount && count <= maximumEventCount);
+    } else {
+        return count == 0;
+    }
+}
+----
+
+== Rule Generation
+
+=== Auto-Generated Rules
+
+The system automatically generates rules for past event conditions through `SegmentServiceImpl`:
+
+1. *Rule Creation*
+   * Generated when segments with past event conditions are created/updated
+   * Uses `evaluateProfileSegments.json` template
+   * Includes `EvaluateProfileSegmentsAction` for segment membership updates
+
+2. *Rule Structure*
+[source,json]
+----
+{
+    "metadata": {
+        "id": "evaluateProfileSegments",
+        "name": "Evaluate segments",
+        "description": "Evaluate segments when a profile is modified",
+        "readOnly": true
+    },
+    "condition": {
+        "type": "profileUpdatedEventCondition"
+    },
+    "actions": [
+        {
+            "type": "evaluateProfileSegmentsAction"
+        }
+    ]
+}
+----
+
+=== Performance Configuration
+
+Key configuration parameters from `SegmentServiceImpl`:
+
+[source]
+----
+# Maximum number of IDs to return in a single query
+maximumIdsQueryCount = 5000
+
+# Size of each partition for aggregation queries
+aggregateQueryBucketSize = 5000
+
+# Whether to disable partitioned processing
+pastEventsDisablePartitions = false
+
+# Segment update batch size
+segmentUpdateBatchSize = 1000
+
+# Maximum retries for profile segment updates
+maxRetriesForUpdateProfileSegment = 3
+
+# Delay between retries (seconds)
+secondsDelayForRetryUpdateProfileSegment = 1
+
+# Whether to send profile update events
+sendProfileUpdateEventForSegmentUpdate = true
+----
+
+== Best Practices
+
+=== Implementation Guidelines
+
+1. *Time Window Selection*
+   * Use `numberOfDays` for rolling windows
+   * Use explicit dates for fixed periods
+   * Consider data retention policies
+   * Account for timezone handling (UTC)
+
+2. *Performance Optimization*
+   * Enable partitioning for large datasets
+   * Configure appropriate batch sizes
+   * Monitor memory usage
+   * Use property-based evaluation when possible
+
+3. *Error Handling*
+   * Configure appropriate retries
+   * Monitor failed updates
+   * Implement proper logging
+   * Plan for recovery scenarios
+
+=== Example Configurations
+
+1. *Rolling Window*
+[source,json]
+----
+{
+  "type": "pastEventCondition",
+  "parameterValues": {
+    "eventCondition": {
+      "type": "eventTypeCondition",
+      "parameterValues": {
+        "eventTypeId": "purchase"
+      }
+    },
+    "numberOfDays": 30
+  }
+}
+----
+
+2. *Date Range*
+[source,json]
+----
+{
+  "type": "pastEventCondition",
+  "parameterValues": {
+    "eventCondition": {
+      "type": "eventTypeCondition",
+      "parameterValues": {
+        "eventTypeId": "campaign-click"
+      }
+    },
+    "fromDate": "2024-01-01T00:00:00Z",
+    "toDate": "2024-12-31T23:59:59Z"
+  }
+}
+----
+
+== Common Use Cases and Examples
+
+=== Basic Past Event Condition
+
+.Example: Count page views in the last 7 days
+[source,json]
+----
+{
+  "type": "pastEventCondition",
+  "parameterValues": {
+    "eventType": "view",
+    "numberOfDays": 7,
+    "minimumCount": 5,
+    "maximumCount": null
+  }
+}
+----
+
+=== Time-Based Conditions
+
+.Example: Count purchases between specific dates
+[source,json]
+----
+{
+  "type": "pastEventCondition",
+  "parameterValues": {
+    "eventType": "purchase",
+    "fromDate": "2024-01-01T00:00:00Z",
+    "toDate": "2024-03-31T23:59:59Z",
+    "minimumCount": 1
+  }
+}
+----
+
+=== Complex Event Conditions
+
+.Example: Count specific product category views with property constraints
+[source,json]
+----
+{
+  "type": "pastEventCondition",
+  "parameterValues": {
+    "eventType": "view",
+    "numberOfDays": 30,
+    "minimumCount": 3,
+    "propertyConditions": {
+      "type": "booleanCondition",
+      "parameterValues": {
+        "operator": "and",
+        "subConditions": [
+          {
+            "type": "propertyCondition",
+            "parameterValues": {
+              "propertyName": "target.properties.category",
+              "comparisonOperator": "equals",
+              "propertyValue": "electronics"
+            }
+          },
+          {
+            "type": "propertyCondition",
+            "parameterValues": {
+              "propertyName": "target.properties.price",
+              "comparisonOperator": "greaterThan",
+              "propertyValue": 100
+            }
+          }
+        ]
+      }
+    }
+  }
+}
+----
+
+=== Segment Definition
+
+.Example: Segment for active users based on past events
+[source,json]
+----
+{
+  "metadata": {
+    "id": "activeUsers",
+    "name": "Active Users",
+    "scope": "systemscope"
+  },
+  "condition": {
+    "type": "booleanCondition",
+    "parameterValues": {
+      "operator": "and",
+      "subConditions": [
+        {
+          "type": "pastEventCondition",
+          "parameterValues": {
+            "eventType": "view",
+            "numberOfDays": 30,
+            "minimumCount": 10
+          }
+        },
+        {
+          "type": "pastEventCondition",
+          "parameterValues": {
+            "eventType": "purchase",
+            "numberOfDays": 90,
+            "minimumCount": 1
+          }
+        }
+      ]
+    }
+  }
+}
+----
+
+=== Auto-Generated Rule
+
+.Example: Auto-generated rule for past event counting
+[source,json]
+----
+{
+  "metadata": {
+    "id": "auto_past_event_count_rule_12345",
+    "name": "Past Event Count Rule for Segment activeUsers",
+    "hidden": true
+  },
+  "condition": {
+    "type": "eventTypeCondition",
+    "parameterValues": {
+      "eventTypeId": "view"
+    }
+  },
+  "actions": [
+    {
+      "type": "setEventOccurenceCountAction",
+      "parameterValues": {
+        "pastEventCondition": {
+          "eventType": "view",
+          "numberOfDays": 30
+        }
+      }
+    }
+  ]
+}
+----
+
+=== Property Storage Format
+
+.Example: Profile property storage format for past event counts
+[source,json]
+----
+{
+  "properties": {
+    "pastEvents": {
+      "past_event_count_abc123_30d_v1": {
+        "count": 15,
+        "lastUpdated": "2024-03-15T10:30:00Z"
+      },
+      "past_event_count_def456_90d_v1": {
+        "count": 3,
+        "lastUpdated": "2024-03-15T10:30:00Z"
+      }
+    }
+  }
+}
+----
+
+=== Integration Examples
+
+==== REST API Usage
+
+.Example: Query past event counts via REST API
+[source,bash]
+----
+curl -X POST http://localhost:8181/cxs/profiles/query \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "condition": {
+      "type": "pastEventCondition",
+      "parameterValues": {
+        "eventType": "view",
+        "numberOfDays": 7,
+        "minimumCount": 5
+      }
+    }
+  }'
+----
+
+==== Batch Update Configuration
+
+.Example: Configure batch updates for past event counts
+[source,properties]
+----
+# Batch processing configuration
+segment.pastEventCondition.batchSize=1000
+segment.pastEventCondition.threadsCount=4
+segment.pastEventCondition.timeoutInSeconds=3600
+
+# Monitoring configuration
+segment.pastEventCondition.monitoringEnabled=true
+segment.pastEventCondition.alertThreshold=100000
+----
+
+== Troubleshooting
+
+=== Common Issues
+
+1. *Performance Problems*
+   * Partition Size Issues
+     ** Symptom: Slow query performance or high memory usage
+     ** Check `aggregateQueryBucketSize` configuration (default: 5000)
+     ** Monitor Elasticsearch heap usage during queries
+     ** Consider enabling partitioned processing for large datasets
+   
+   * Query Optimization
+     ** Verify proper index settings for event timestamps
+     ** Check if property-based queries are being used when possible
+     ** Monitor query execution times through metrics
+     ** Analyze Elasticsearch query patterns
+
+2. *Incorrect Counts*
+   * Time Window Configuration
+     ** Verify UTC timezone handling in date calculations
+     ** Check `numberOfDays` calculation logic
+     ** Validate `fromDate`/`toDate` format (ISO-8601)
+   
+   * Event Processing
+     ** Verify events are being properly persisted
+     ** Check event type matching in conditions
+     ** Validate profile ID associations
+     ** Monitor event indexing status
+
+   * Profile Updates
+     ** Verify `pastEvents` property structure
+     ** Check property key generation
+     ** Monitor profile update events
+     ** Validate segment evaluation timing
+
+=== Debugging Tips
+
+1. *Query Verification*
+   * Elasticsearch Query Analysis
+     ** Use Elasticsearch _explain API to analyze queries
+     ** Monitor query performance through metrics
+     ** Check query routing and shard distribution
+     ** Verify index mappings for event fields
+
+2. *Cache Validation*
+   * Property Storage
+     ** Verify `pastEvents` list structure in profiles
+     ** Check property key consistency
+     ** Monitor cache hit/miss ratios
+     ** Validate property update timestamps
+
+   * Profile Updates
+     ** Monitor profile update events
+     ** Check segment evaluation triggers
+     ** Verify rule execution flow
+     ** Validate condition evaluation results
+
+== Integration Points
+
+=== Event Flow
+
+The complete event processing flow for past event conditions:
+
+1. *Event Reception*
+   * Event arrives through REST API or other channels
+   * Event is validated and enriched
+   * Profile association is verified
+   * Event type is matched against conditions
+
+2. *Real-time Processing*
+   * `SetEventOccurenceCountAction` is triggered
+   * Event conditions are evaluated
+   * Time windows are calculated
+   * Counts are updated in profile
+
+3. *Profile Update*
+   * Profile properties are updated
+   * Cache entries are invalidated if needed
+   * Update events are triggered if configured
+   * Optimistic locking handles concurrent updates
+
+4. *Segment Evaluation*
+   * Profile segments are re-evaluated
+   * New segment memberships are calculated
+   * Profile is updated with new segments
+   * Related rules are triggered
+
+=== Segment Evaluation Flow
+
+The detailed segment evaluation process:
+
+1. *Condition Evaluation*
+   * Past event conditions are extracted
+   * Property-based evaluation is attempted first
+   * Falls back to event queries if needed
+   * Results are cached when possible
+
+2. *Query Building*
+   * Appropriate query strategy is selected
+   * Time constraints are applied
+   * Partitioning is configured if enabled
+   * Optimizations are applied based on context
+
+3. *Result Aggregation*
+   * Event counts are aggregated
+   * Results are partitioned if needed
+   * Memory usage is optimized
+   * Results are validated
+
+4. *Profile Update*
+   * Profile properties are updated atomically
+   * Segment memberships are recalculated
+   * Update events are triggered
+   * Changes are persisted to storage
+
+== Security Considerations
+
+=== Data Access Controls
+
+1. *Profile Data Protection*
+   * Event data access is controlled through permissions
+   * Profile properties are protected by scope definitions
+   * Sensitive data is filtered from event properties
+   * Access to past event counts follows profile permissions
+
+2. *Query Security*
+   * Elasticsearch queries are sanitized
+   * Input parameters are validated
+   * Time ranges are bounded
+   * Resource limits are enforced
+
+=== Resource Protection
+
+1. *Query Limits*
+   * Maximum time window restrictions
+   * Aggregation bucket size limits
+   * Query timeout configurations
+   * Memory usage thresholds
+
+2. *Rate Limiting*
+   * Profile update frequency limits
+   * Event processing rate controls
+   * Segment evaluation throttling
+   * Cache invalidation controls
+
+=== Data Integrity
+
+1. *Event Data*
+   * Event timestamps are validated
+   * Event type verification
+   * Profile association validation
+   * Property value sanitization
+
+2. *Profile Updates*
+   * Optimistic locking for concurrent updates
+   * Transaction boundaries
+   * Update validation
+   * Rollback procedures
+
+=== Audit Trail
+
+1. *Event Processing*
+   * Event processing logs
+   * Profile update tracking
+   * Segment evaluation history
+   * Rule execution records
+
+2. *Error Handling*
+   * Failed update logging
+   * Security violation tracking
+   * Resource limit violations
+   * Data integrity issues
+
+== Configuration Parameters
+
+=== Core Settings
+
+[source,properties]
+----
+# Segment Service Configuration
+segment.pastEventCondition.aggregateQueryBucketSize=5000
+segment.pastEventCondition.maxRetriesForUpdateProfileSegment=3
+segment.pastEventCondition.updateBatchSize=1000
+
+# Event Processing
+event.pastCondition.maxTimeWindow=365
+event.pastCondition.defaultTimeUnit=day
+
+# Query Optimization
+query.pastEvent.usePropertyBasedEvaluation=true
+query.pastEvent.enablePartitioning=true
+query.pastEvent.partitionSize=10000
+----
+
+=== Performance Tuning
+
+[source,properties]
+----
+# Cache Configuration
+cache.pastEventCount.timeToLiveInSeconds=3600
+cache.pastEventCount.maxEntries=10000
+
+# Query Timeouts
+query.pastEvent.timeout=30
+query.pastEvent.scrollTimeout=60
+query.pastEvent.scrollSize=1000
+
+# Batch Processing
+batch.pastEventUpdate.threadPoolSize=4
+batch.pastEventUpdate.queueSize=1000
+----
+
+=== Monitoring Configuration
+
+[source,properties]
+----
+# Metrics Collection
+metrics.pastEventCondition.enabled=true
+metrics.pastEventCondition.detailed=false
+
+# Logging
+logging.pastEventCondition.level=INFO
+logging.pastEventCondition.detailed=false
+
+# Alerts
+alerts.pastEventCondition.slowQueryThreshold=5000
+alerts.pastEventCondition.errorThreshold=100
+----
+
+== Best Practices
+
+=== Performance Optimization
+
+1. *Query Optimization*
+   * Use property-based evaluation when possible
+   * Enable partitioning for large datasets
+   * Configure appropriate cache sizes
+   * Monitor and tune query timeouts
+
+2. *Resource Management*
+   * Configure appropriate batch sizes
+   * Set reasonable time windows
+   * Monitor memory usage
+   * Use partitioned processing
+
+=== Maintenance
+
+1. *Regular Tasks*
+   * Monitor cache hit rates
+   * Review query performance
+   * Check error logs
+   * Validate configuration
+
+2. *Troubleshooting*
+   * Use detailed logging when needed
+   * Monitor metrics
+   * Review audit trails
+   * Check resource usage
+
+=== Scaling Considerations
+
+1. *Horizontal Scaling*
+   * Configure cluster settings
+   * Balance load across nodes
+   * Monitor node health
+   * Optimize resource allocation
+
+2. *Vertical Scaling*
+   * Tune JVM settings
+   * Configure memory limits
+   * Optimize thread pools
+   * Monitor CPU usage
+
+== Evaluation Strategies
+
+The system uses different evaluation strategies depending on how the past event condition is used:
+
+=== Property-Based Evaluation
+
+Used when a past event condition is part of a segment:
+
+1. *Evaluation Process*
+   * Checks for cached count in profile's `pastEvents` property
+   * Uses the generated property key to locate the count
+   * Compares count against condition parameters
+   * No direct event store query needed
+
+.Example Code Flow:
+[source,java]
+----
+if (parameters.containsKey("generatedPropertyKey")) {
+    String key = (String) parameters.get("generatedPropertyKey");
+    Profile profile = (Profile) item;
+    List<Map<String, Object>> pastEvents = 
+        (ArrayList<Map<String, Object>>) profile.getSystemProperties().get("pastEvents");
+    if (pastEvents != null) {
+        Number count = (Number) pastEvents
+                .stream()
+                .filter(pastEvent -> pastEvent.get("key").equals(key))
+                .findFirst()
+                .map(pastEvent -> pastEvent.get("count")).orElse(0L);
+        // Evaluate count against condition parameters
+    }
+}
+----
+
+=== Direct Event Query Evaluation
+
+Used when a past event condition is used directly in a rule:
+
+1. *Evaluation Process*
+   * Constructs Elasticsearch query for matching events
+   * Queries event store directly
+   * Aggregates results
+   * No caching occurs
+
+.Example Query Flow:
+[source,java]
+----
+// Direct event store query (less efficient)
+count = persistenceService.queryCount(
+    pastEventConditionPersistenceQueryBuilder.getEventCondition(
+        condition, context, item.getItemId(), definitionsService, scriptExecutor
+    ), 
+    Event.ITEM_TYPE
+);
+----
+
+== Performance Considerations
+
+=== Segment vs Direct Rule Usage
+
+1. *Segment Usage (Recommended)*
+   * Cached event counts in profile properties
+   * Real-time updates through auto-generated rules
+   * Minimal query overhead during evaluation
+   * Efficient for high-frequency conditions
+   * Suitable for large-scale segment memberships
+
+2. *Direct Rule Usage (Use with Caution)*
+   * No caching mechanism
+   * Direct event store queries on each evaluation
+   * Higher latency and resource usage
+   * Can impact system performance
+   * Suitable only for low-frequency rules
+
+=== Query Optimization
+
+1. *Property-Based Queries*
+   * Used when `generatedPropertyKey` is available
+   * Fast profile property lookups
+   * Minimal resource usage
+   * Example:
+[source,java]
+----
+if (generatedPropertyKey != null) {
+    // Use property-based query (efficient)
+    return dispatcher.buildFilter(
+        getProfileConditionForCounter(
+            generatedPropertyKey, 
+            minimumEventCount, 
+            maximumEventCount, 
+            eventsOccurred
+        ), 
+        context
+    );
+}
+----
+
+2. *Event-Based Queries*
+   * Used for direct rule conditions
+   * Requires event store access
+   * Higher resource usage
+   * Example:
+[source,java]
+----
+// Fall back to event-based query (less efficient)
+Condition eventCondition = getEventCondition(condition, context, null);
+Set<String> ids = getProfileIdsMatchingEventCount(
+    eventCondition, minimumEventCount, maximumEventCount
+);
+----
+
+=== Resource Usage
+
+1. *Memory Impact*
+   * Segment usage: Minimal (only stores count in profile)
+   * Direct rule usage: Higher (query results in memory)
+
+2. *CPU Impact*
+   * Segment usage: Low (simple property lookup)
+   * Direct rule usage: Higher (query execution and aggregation)
+
+3. *Storage Impact*
+   * Segment usage: Small profile property overhead
+   * Direct rule usage: No additional storage
+
+=== Best Practices for Performance
+
+1. *Use Segments When Possible*
+   * Prefer segments over direct rule usage
+   * Let the system generate optimization rules
+   * Benefit from built-in caching
+
+2. *Optimize Time Windows*
+   * Use reasonable time windows
+   * Consider data retention policies
+   * Balance accuracy vs performance
+
+3. *Query Optimization*
+   * Enable partitioning for large datasets
+   * Configure appropriate batch sizes
+   * Monitor query performance
+
+4. *Cache Management*
+   * Monitor cache hit rates
+   * Configure appropriate cache sizes
+   * Regular cache maintenance
+
+=== Resolution Steps
+
+1. *Initial Analysis*
+   * Verify configuration
+   * Check query patterns
+   * Analyze resource usage
+   * Review error logs
+
+2. *Detailed Investigation*
+   * Analyze query execution plans
+   * Review cache statistics
+   * Check system metrics
+   * Examine log patterns
+
+3. *Solution Implementation*
+   * Apply configuration changes
+   * Optimize queries
+   * Adjust cache settings
+   * Update monitoring rules
+
+4. *Validation*
+   * Verify improvements
+   * Monitor performance
+   * Check error rates
+   * Document changes
+
+== Maintenance and Monitoring
+
+=== Regular Maintenance Tasks
+
+1. *Event Count Recalculation*
+   * Periodic recalculation of past event counts
+   * Updates stale or incorrect counts
+   * Example:
+[source,java]
+----
+// Recalculate past event conditions
+segmentService.recalculatePastEventConditions();
+----
+
+2. *Cache Management*
+   * Monitor cache hit rates
+   * Clean up expired entries
+   * Optimize cache sizes
+
+3. *Performance Monitoring*
+   * Track query execution times
+   * Monitor resource usage
+   * Identify bottlenecks
+
+=== Monitoring Metrics
+
+1. *Query Performance*
+   * Average query execution time
+   * Query count by type (property vs direct)
+   * Cache hit/miss ratios
+
+2. *Resource Usage*
+   * Memory consumption
+   * CPU utilization
+   * Storage growth
+
+=== Troubleshooting
+
+1. *Common Issues*
+   * Slow query performance
+   * High memory usage
+   * Incorrect event counts
+   * Cache inconsistencies
+
+2. *Diagnostic Tools*
+   * Elasticsearch query analysis
+   * Performance metrics
+   * Log analysis
+   * Cache statistics
+
+3. *Resolution Steps*
+   * Verify configuration
+   * Check query patterns
+   * Analyze resource usage
+   * Review error logs

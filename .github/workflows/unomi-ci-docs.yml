@@ -1,0 +1,42 @@
+name: Documentation Generation
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    types: [opened, reopened, synchronize]
+    paths:
+      - 'manual/**'
+      - '.github/workflows/unomi-ci-docs.yml'
+
+jobs:
+  build-docs:
+    name: Build Documentation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up JDK 11
+        uses: actions/setup-java@v1
+        with:
+          java-version: 11
+      
+      - name: Install GraphViz
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y graphviz
+          dot -V
+      
+      - name: Build Manual
+        run: |
+          cd manual
+          mvn -U -ntp clean install
+      
+      - name: Archive documentation
+        uses: actions/upload-artifact@v3
+        with:
+          name: unomi-documentation
+          path: |
+            manual/target/generated-docs/html/latest/
+            manual/target/generated-docs/pdf/latest/
+            manual/target/*.pdf 

@@ -1,0 +1,18 @@
+{
+  "itemId": "test-segment",
+  "tenantId": "system",
+  "metadata": {
+    "id": "test-segment",
+    "name": "Test Segment",
+    "scope": "systemscope",
+    "enabled": true
+  },
+  "condition": {
+    "type": "profilePropertyCondition",
+    "parameterValues": {
+      "propertyName": "properties.testProperty",
+      "comparisonOperator": "equals",
+      "propertyValue": "testValue"
+    }
+  }
+}

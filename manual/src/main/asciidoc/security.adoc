@@ -1,0 +1,82 @@
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+=== Security Architecture
+
+[plantuml]
+----
+@startuml
+skinparam componentStyle uml2
+skinparam component {
+  BackgroundColor<<security>> LightYellow
+  BackgroundColor<<api>> LightBlue
+}
+
+package "Security Layer" {
+  [Security Service] <<security>>
+  [Authentication Filter] <<security>>
+  [Authorization Filter] <<security>>
+  [Encryption Service] <<security>>
+}
+
+package "API Layer" {
+  [Public API] <<api>>
+  [Private API] <<api>>
+}
+
+package "Core Services" {
+  [Profile Service]
+  [Event Service]
+  [Other Services]
+}
+
+actor "Public Client" as public
+actor "Admin Client" as admin
+
+database "Tenant Store" {
+  [Tenant Configuration]
+  [Roles & Permissions]
+}
+
+public --> [Public API]
+admin --> [Private API]
+
+[Public API] --> [Authentication Filter]
+[Private API] --> [Authentication Filter]
+
+[Authentication Filter] --> [Authorization Filter]
+[Authorization Filter] --> [Security Service]
+[Security Service] --> [Tenant Configuration]
+[Security Service] --> [Roles & Permissions]
+
+[Security Service] --> [Core Services]
+[Encryption Service] --> [Profile Service]
+
+note right of [Security Service]
+  - JAAS Authentication
+  - Role-based Authorization
+  - Tenant Isolation
+  - Operation Permissions
+end note
+
+note right of [Authentication Filter]
+  - Basic Auth
+  - API Key Auth
+  - Token Auth
+end note
+
+@enduml
+----
+
+=== Overview 

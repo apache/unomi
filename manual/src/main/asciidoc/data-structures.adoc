@@ -1,0 +1,763 @@
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+=== Core Data Structures Overview
+
+==== Base Types
+
+All major entities in Apache Unomi inherit from two base classes that provide essential functionality:
+
+[plantuml]
+----
+@startuml
+skinparam componentStyle uml2
+skinparam class {
+    BackgroundColor White
+    BorderColor DarkGray
+    ArrowColor DarkGray
+    FontSize 14
+}
+
+abstract class Item {
+    + itemId: String
+    + itemType: String
+    + scope: String
+    + version: Long
+    + systemProperties: Map
+}
+
+abstract class MetadataItem {
+    + metadata: Metadata
+}
+
+class Metadata {
+    + id: String
+    + name: String
+    + description: String
+    + scope: String
+    + tags: Set<String>
+    + enabled: Boolean
+    + hidden: Boolean
+    + readOnly: Boolean
+}
+
+Item <|-- MetadataItem
+MetadataItem *-- "1" Metadata
+
+note right of Item
+  Base class for all Unomi objects
+  providing identification and
+  versioning
+end note
+
+note right of MetadataItem
+  Adds metadata support for
+  naming, description, and
+  operational flags
+end note
+@enduml
+----
+
+==== Core Entities and Their Relationships
+
+This diagram shows the key data structures in Apache Unomi and their relationships:
+
+[plantuml]
+----
+@startuml
+skinparam componentStyle uml2
+skinparam class {
+    BackgroundColor White
+    BorderColor DarkGray
+    ArrowColor DarkGray
+    FontSize 14
+}
+
+' Core entities
+class Profile {
+    + itemId: String
+    + properties: Map
+    + segments: Set<String>
+    + scores: Map<String,Integer>
+    + consents: Map<String,Consent>
+    + systemProperties: Map
+}
+
+class Event {
+    + eventType: String
+    + sessionId: String
+    + profileId: String
+    + timeStamp: Date
+    + properties: Map
+    + persistent: Boolean
+    + attributes: Map
+}
+
+class Session {
+    + profileId: String
+    + properties: Map
+    + timeStamp: Date
+    + lastEventDate: Date
+    + duration: Long
+    + size: Integer
+}
+
+class Segment {
+    + itemId: String
+    + condition: Condition
+}
+
+class Rule {
+    + condition: Condition
+    + actions: List<Action>
+    + priority: Integer
+    + raiseEventOnlyOnce: Boolean
+    + raiseEventOnlyOnceForProfile: Boolean
+    + raiseEventOnlyOnceForSession: Boolean
+}
+
+class Goal {
+    + startEvent: Condition
+    + targetEvent: Condition
+    + campaignId: String
+}
+
+class Campaign {
+    + startDate: Date
+    + endDate: Date
+    + cost: Double
+    + currency: String
+    + primaryGoal: String
+    + timezone: String
+}
+
+class Consent {
+    + scope: String
+    + typeIdentifier: String
+    + status: String
+    + statusDate: Date
+    + revokeDate: Date
+}
+
+' Relationships
+Profile "1" *-- "*" Event : generates >
+Profile "1" *-- "*" Session : has >
+Profile "*" -- "*" Segment : belongs to >
+Profile "*" -- "*" Campaign : participates in >
+Profile "1" *-- "*" Consent : manages >
+
+Event "*" -- "1" Session : part of >
+Event -- Goal : triggers >
+Event "*" -- "1" Profile : associated with >
+
+Campaign "1" *-- "*" Goal : contains >
+Rule "*" -- "*" Event : processes >
+
+note right of Profile
+  Central entity representing a visitor
+  - Properties are extensible
+  - Segments are dynamic
+  - Consents track permissions
+end note
+
+note right of Event
+  Records all interactions
+  - Can be persistent or transient
+  - Links profile and session
+  - Carries properties and context
+end note
+
+note right of Session
+  Time-bounded interaction period
+  - Tracks duration and activity
+  - Links to profile
+  - Maintains state
+end note
+
+note left of Rule
+  Defines automated responses
+  - Priority controls execution order
+  - Can limit event generation
+  - Executes actions on match
+end note
+
+@enduml
+----
+
+==== Key Relationships
+
+* *Profile* is the central entity representing a visitor/customer
+** Properties are fully extensible via Map structure
+** Segments are dynamically evaluated and stored as Set
+** Scores track numeric metrics per profile
+** Consents manage user permissions and preferences
+** System properties store internal data
+
+* *Event* represents any interaction or activity
+** Always associated with both profile and session
+** Can be persistent (stored) or transient
+** Carries properties and context attributes
+** Timestamp tracks occurrence time
+** Can trigger rules and goals
+
+* *Session* represents a time-bounded interaction period
+** Belongs to a single profile
+** Tracks duration and last activity
+** Maintains size counter for events
+** Properties store session-specific state
+
+* *Rule* defines automated behavior
+** Processes events using conditions
+** Executes actions when conditions match
+** Priority controls execution order
+** Can limit event generation:
+*** Once per profile
+*** Once per session
+*** Once globally
+
+* *Segment* groups profiles dynamically
+** Uses conditions to determine membership
+** Profiles can belong to multiple segments
+** Automatically maintained by the system
+
+* *Goal* tracks objective completion
+** Defined by start and target conditions
+** Can be part of a campaign
+** Triggered by specific events
+
+* *Campaign* organizes marketing activities
+** Contains multiple goals
+** Tracks costs and timeframes
+** Associates profiles with marketing efforts
+** Supports timezone-aware scheduling
+
+* *Consent* manages user permissions
+** Scoped to specific areas/features
+** Tracks status and dates
+** Supports revocation
+** Linked to profiles
+
+All these entities inherit from `MetadataItem` which provides:
+- Metadata (name, description, scope, tags)
+- Enabled/disabled status
+- Hidden/visible status
+- Read-only protection
+- Version tracking
+
+=== Detailed Structure Definitions
+
+The following sections provide detailed diagrams for each major component:
+
+==== Condition Structure
+
+Conditions are the fundamental building blocks used across many Unomi components. They evaluate to true/false and can be composed.
+
+[plantuml]
+----
+@startuml
+skinparam componentStyle uml2
+skinparam component {
+  BackgroundColor LightBlue
+  BorderColor DarkBlue
+}
+
+class Condition {
+  + type: String
+  + parameterValues: Map<String,Object>
+}
+
+class BooleanCondition {
+  + operator: String (and/or)
+  + subConditions: List<Condition>
+}
+
+class PropertyCondition {
+  + propertyName: String
+  + comparisonOperator: String
+  + propertyValue: Object
+}
+
+class EventCondition {
+  + eventTypeId: String
+}
+
+class PastEventCondition {
+  + eventType: String
+  + numberOfDays: Integer
+  + minimumCount: Integer
+  + maximumCount: Integer
+}
+
+Condition <|-- BooleanCondition
+Condition <|-- PropertyCondition
+Condition <|-- EventCondition
+Condition <|-- PastEventCondition
+
+note right of Condition
+  Base structure for all conditions.
+  Used in segments, rules, goals, etc.
+end note
+@enduml
+----
+
+==== Segment Structure
+
+Segments group profiles based on conditions. They are dynamic - profiles can enter/exit based on condition evaluation.
+
+[plantuml]
+----
+@startuml
+skinparam componentStyle uml2
+skinparam component {
+  BackgroundColor LightGreen
+  BorderColor DarkGreen
+}
+
+class Segment {
+  + itemId: String
+  + itemType: "segment"
+  + metadata: Metadata
+  + condition: Condition
+}
+
+class Metadata {
+  + id: String
+  + name: String
+  + scope: String
+  + description: String
+  + tags: List<String>
+  + enabled: Boolean
+}
+
+class Profile {
+  + itemId: String
+  + properties: Map
+  + segments: List<String>
+}
+
+Segment --> "1" Condition : uses
+Segment --> "1" Metadata : has
+Profile --> "*" Segment : belongs to
+
+note right of Segment
+  Segments automatically generate rules
+  to maintain profile membership
+end note
+@enduml
+----
+
+==== Rule Structure
+
+Rules define automated actions triggered by conditions.
+
+[plantuml]
+----
+@startuml
+skinparam componentStyle uml2
+skinparam component {
+  BackgroundColor LightYellow
+  BorderColor DarkGoldenRod
+}
+
+class Rule {
+  + itemId: String
+  + itemType: "rule"
+  + metadata: Metadata
+  + condition: Condition
+  + actions: List<Action>
+  + raiseEventOnlyOnce: Boolean
+  + priority: Integer
+}
+
+class Action {
+  + type: String
+  + parameterValues: Map
+}
+
+class Event {
+  + eventType: String
+  + source: Item
+  + target: Item
+  + properties: Map
+}
+
+Rule --> "1" Condition : triggers on
+Rule --> "*" Action : executes
+Rule ..> Event : may raise
+
+note right of Rule
+  Rules execute actions when
+  conditions match incoming events
+end note
+@enduml
+----
+
+==== Goal Structure
+
+Goals track visitor progress toward specific objectives.
+
+[plantuml]
+----
+@startuml
+skinparam componentStyle uml2
+skinparam component {
+  BackgroundColor LightPink
+  BorderColor DarkRed
+}
+
+class Goal {
+  + itemId: String
+  + itemType: "goal"
+  + metadata: Metadata
+  + startEvent: Condition
+  + targetEvent: Condition
+  + campaignId: String
+}
+
+class Campaign {
+  + itemId: String
+  + startDate: Date
+  + endDate: Date
+  + cost: Double
+  + currency: String
+  + primaryGoal: String
+}
+
+class GoalEvent {
+  + eventType: "goal"
+  + source: Event
+  + target: Goal
+}
+
+Goal --> "1" Condition : starts with
+Goal --> "1" Condition : completes with
+Goal --> "0..1" Campaign : part of
+Goal ..> GoalEvent : generates
+
+note right of Goal
+  Goals track progress from
+  start to target conditions
+end note
+@enduml
+----
+
+==== Campaign Structure
+
+Campaigns organize marketing activities with goals, timeframes and costs.
+
+[plantuml]
+----
+@startuml
+skinparam componentStyle uml2
+skinparam component {
+  BackgroundColor LightSalmon
+  BorderColor DarkRed
+}
+
+class Campaign {
+  + itemId: String
+  + itemType: "campaign"
+  + metadata: Metadata
+  + startDate: Date
+  + endDate: Date
+  + entryCondition: Condition
+  + cost: Double
+  + currency: String
+  + primaryGoal: String
+  + timezone: String
+}
+
+class Goal {
+  + itemId: String
+  + campaignId: String
+}
+
+class Profile {
+  + itemId: String
+  + properties: Map
+}
+
+Campaign --> "1" Condition : entry criteria
+Campaign --> "1..*" Goal : contains
+Campaign --> "*" Profile : tracks
+
+note right of Campaign
+  Campaigns organize marketing activities
+  with goals, timeframes and costs
+end note
+@enduml
+----
+
+==== Integration Flow
+
+This diagram shows how these components work together in practice.
+
+[plantuml]
+----
+@startuml
+skinparam componentStyle uml2
+skinparam component {
+  BackgroundColor White
+  BorderColor Black
+}
+
+actor Visitor
+participant "Event Collector" as EC
+participant "Rule Engine" as RE
+database "Profile Store" as PS
+database "Event Store" as ES
+
+Visitor -> EC: Generate Event
+EC -> RE: Process Event
+RE -> PS: Load Profile
+RE -> ES: Query Past Events
+
+group Rule Evaluation
+  RE -> RE: Evaluate Conditions
+  RE -> RE: Execute Actions
+end
+
+group Segment Processing  
+  RE -> PS: Update Profile
+  RE -> PS: Update Segments
+end
+
+group Goal Tracking
+  RE -> RE: Check Goal Progress
+  RE -> PS: Record Goal Completion
+end
+
+group Campaign Metrics
+  RE -> PS: Update Campaign Stats
+end
+
+@enduml
+----
+
+The diagrams above illustrate the key data structures in Apache Unomi and how they work together to enable personalization and marketing automation. Each component builds on the foundational concept of conditions to create increasingly sophisticated targeting and tracking capabilities. 
+
+==== Condition Composition Structure
+
+The following diagram illustrates how conditions can be nested and composed to create complex matching logic:
+
+[plantuml]
+----
+@startuml
+skinparam componentStyle uml2
+skinparam class {
+    BackgroundColor White
+    BorderColor DarkGray
+    ArrowColor DarkGray
+    FontSize 14
+}
+
+abstract class Condition {
+    + type: String
+    + parameterValues: Map<String,Object>
+}
+
+class BooleanCondition {
+    + operator: String (and/or/not)
+    + subConditions: List<Condition>
+}
+
+class PropertyCondition {
+    + propertyName: String
+    + comparisonOperator: String
+    + propertyValue: Object
+}
+
+class EventCondition {
+    + eventTypeId: String
+    + properties: Map<String,Object>
+}
+
+class PastEventCondition {
+    + eventCondition: EventCondition
+    + minimumEventCount: Integer
+    + maximumEventCount: Integer
+    + fromDate: Date
+    + toDate: Date
+    + countCondition: String
+}
+
+class SessionPropertyCondition {
+    + propertyName: String
+    + comparisonOperator: String
+    + propertyValue: Object
+}
+
+class ProfileSegmentCondition {
+    + segments: List<String>
+    + matchType: String (all/some)
+}
+
+Condition <|-- BooleanCondition
+Condition <|-- PropertyCondition
+Condition <|-- EventCondition
+Condition <|-- PastEventCondition
+Condition <|-- SessionPropertyCondition
+Condition <|-- ProfileSegmentCondition
+
+BooleanCondition o-- "*" Condition : contains >
+PastEventCondition o-- "1" EventCondition : uses >
+
+note right of BooleanCondition
+  Combines multiple conditions with
+  logical operators (AND/OR/NOT)
+end note
+
+note right of PastEventCondition
+  Matches events that occurred
+  in a specific time window
+  with count constraints
+end note
+
+@enduml
+----
+
+===== Example Condition Compositions
+
+Here are some examples of how conditions can be composed:
+
+[plantuml]
+----
+@startuml
+skinparam componentStyle uml2
+skinparam object {
+    BackgroundColor White
+    BorderColor DarkGray
+    ArrowColor DarkGray
+}
+
+object "BooleanCondition (AND)" as root {
+    type = "booleanCondition"
+    operator = "and"
+}
+
+object "ProfileSegmentCondition" as seg {
+    type = "profileSegmentCondition"
+    segments = ["premium-customer"]
+}
+
+object "BooleanCondition (OR)" as pastEvents {
+    type = "booleanCondition"
+    operator = "or"
+}
+
+object "PastEventCondition (Purchase)" as pastPurchase {
+    type = "pastEventCondition"
+    minimumEventCount = 2
+    fromDate = "last30days"
+}
+
+object "EventCondition (Purchase)" as purchaseEvent {
+    type = "eventCondition"
+    eventTypeId = "purchase"
+    minAmount = 100
+}
+
+object "PastEventCondition (PageView)" as pastPageView {
+    type = "pastEventCondition"
+    minimumEventCount = 5
+    fromDate = "last7days"
+}
+
+object "EventCondition (PageView)" as pageViewEvent {
+    type = "eventCondition"
+    eventTypeId = "pageView"
+    category = "product"
+}
+
+root *-- seg
+root *-- pastEvents
+
+pastEvents *-- pastPurchase
+pastEvents *-- pastPageView
+
+pastPurchase *-- purchaseEvent
+pastPageView *-- pageViewEvent
+
+note right of root
+  Example: Match premium customers who either:
+  - Made 2+ purchases in last 30 days
+  - Viewed 5+ product pages in last 7 days
+end note
+
+@enduml
+----
+
+===== Past Event Condition Structure
+
+Past event conditions have a special structure that allows for complex temporal matching:
+
+[plantuml]
+----
+@startuml
+skinparam componentStyle uml2
+skinparam object {
+    BackgroundColor White
+    BorderColor DarkGray
+    ArrowColor DarkGray
+}
+
+object "PastEventCondition" as past {
+    type = "pastEventCondition"
+    minimumEventCount = 3
+    maximumEventCount = 10
+    fromDate = "2024-01-01"
+    toDate = "2024-12-31"
+    countCondition = "between"
+}
+
+object "EventCondition" as event {
+    type = "eventCondition"
+    eventTypeId = "login"
+}
+
+object "BooleanCondition (AND)" as props {
+    type = "booleanCondition"
+    operator = "and"
+}
+
+object "PropertyCondition 1" as prop1 {
+    type = "propertyCondition"
+    propertyName = "deviceType"
+    propertyValue = "mobile"
+}
+
+object "PropertyCondition 2" as prop2 {
+    type = "propertyCondition"
+    propertyName = "successful"
+    propertyValue = true
+}
+
+past *-- event
+event *-- props
+props *-- prop1
+props *-- prop2
+
+note right of past
+  Matches profiles with 3-10 successful
+  mobile login events during 2024
+end note
+
+@enduml
+----
+
+These diagrams show how conditions can be:
+1. Nested using BooleanCondition to create complex logical expressions
+2. Combined with PastEventCondition to match historical behavior
+3. Enhanced with property constraints at any level
+4. Used to create sophisticated temporal and behavioral matching rules 

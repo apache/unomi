@@ -20,3 +20,5 @@ itests/src/main
 /.cursor/rules/always-read-existing-code.mdc
 /.cursor/rules/avoid-code-duplication.mdc
 /.cursor/rules/osgi-injection-frameworks.mdc
+/services/data/
+/extensions/json-schema/services/data/
