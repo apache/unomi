@@ -727,6 +727,63 @@ Past event conditions support the following parameters as defined in `pastEventC
 3. *Event Filter*
    * `eventCondition` (Condition) - The condition defining which events to count
 
+[IMPORTANT]
+====
+The `eventCondition` parameter can *only* accept conditions that are specifically tagged with `eventCondition`. These are conditions specifically designed to match events. It is NOT allowed to use any other type of condition, including `booleanCondition`, even if that condition contains valid event conditions.
+
+If you need to combine multiple event conditions, you have two options:
+
+1. Use multiple `pastEventCondition`s at a higher level and combine them with a `booleanCondition` (as shown in previous examples).
+
+2. Define a custom condition type that uses a `booleanCondition` in its `parentCondition`. This is a valid pattern because the condition type itself will be tagged with `eventCondition`. Example:
+
+[source,json]
+----
+{
+  "metadata": {
+    "id": "pageViewEventCondition",
+    "name": "pageViewEventCondition",
+    "systemTags": [
+      "eventCondition",  // This tag makes it valid for use in pastEventCondition
+      "event",
+      "condition"
+    ]
+  },
+  "parentCondition": {
+    "type": "booleanCondition",  // Valid here because it's part of condition type definition
+    "parameterValues": {
+      "subConditions": [
+        {
+          "type": "eventTypeCondition",
+          "parameterValues": {
+            "eventTypeId": "view"
+          }
+        },
+        {
+          "type": "eventPropertyCondition",
+          "parameterValues": {
+            "propertyName": "target.properties.pageInfo.pagePath",
+            "propertyValue": "parameter::pagePath",
+            "comparisonOperator": "equals"
+          }
+        }
+      ],
+      "operator": "and"
+    }
+  },
+  "parameters": [
+    {
+      "id": "pagePath",
+      "type": "string",
+      "multivalued": false
+    }
+  ]
+}
+----
+
+This pattern works because the condition type system is hierarchical - a condition type can define a `parentCondition` that will be evaluated as part of the condition evaluation. The restriction on using `booleanCondition` applies only to direct usage in the `eventCondition` parameter, not to the internal structure of properly tagged condition types.
+====
+
 == Event Processing System
 
 === Real-Time Event Processing
