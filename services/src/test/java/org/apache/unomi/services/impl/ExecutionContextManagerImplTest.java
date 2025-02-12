@@ -60,7 +60,7 @@ public class ExecutionContextManagerImplTest {
         when(securityService.getCurrentSubject()).thenReturn(subject);
         when(securityService.extractRolesFromSubject(subject)).thenReturn(roles);
         when(securityService.getPermissionsForRole(UnomiRoles.ADMINISTRATOR))
-            .thenReturn(new HashSet<>(Arrays.asList(SecurityServiceConfiguration.PERMISSION_QUERY, "WRITE", SecurityServiceConfiguration.PERMISSION_DELETE)));
+            .thenReturn(new HashSet<>(Arrays.asList("READ", "WRITE", SecurityServiceConfiguration.PERMISSION_DELETE)));
         when(securityService.getPermissionsForRole(UnomiRoles.USER))
             .thenReturn(new HashSet<>(Arrays.asList("READ")));
 
@@ -69,7 +69,7 @@ public class ExecutionContextManagerImplTest {
 
         // Verify roles and permissions
         assertEquals("Roles should match", roles, context.getRoles());
-        Set<String> expectedPermissions = new HashSet<>(Arrays.asList(SecurityServiceConfiguration.PERMISSION_QUERY, "WRITE", SecurityServiceConfiguration.PERMISSION_DELETE));
+        Set<String> expectedPermissions = new HashSet<>(Arrays.asList("READ", "WRITE", SecurityServiceConfiguration.PERMISSION_DELETE));
         assertEquals("Permissions should be aggregated", expectedPermissions, context.getPermissions());
 
         // Verify security service interactions
@@ -84,7 +84,7 @@ public class ExecutionContextManagerImplTest {
         // Set up test data
         Subject systemSubject = new Subject();
         Set<String> systemRoles = new HashSet<>(Arrays.asList(UnomiRoles.ADMINISTRATOR));
-        Set<String> systemPermissions = new HashSet<>(Arrays.asList(SecurityServiceConfiguration.PERMISSION_QUERY, "WRITE", SecurityServiceConfiguration.PERMISSION_DELETE, "ADMIN"));
+        Set<String> systemPermissions = new HashSet<>(Arrays.asList("READ", "WRITE", SecurityServiceConfiguration.PERMISSION_DELETE, "ADMIN"));
 
         // Mock security service behavior
         when(securityService.getSystemSubject()).thenReturn(systemSubject);
