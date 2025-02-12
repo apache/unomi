@@ -426,37 +426,257 @@ command_exists() {
     command -v "$1" >/dev/null 2>&1
 }
 
-# Function to check required tools
+# Comprehensive function to check all requirements
 check_requirements() {
-    local missing_tools=()
+    print_section "System Requirements Check"
+    local has_warnings=false
+    local has_errors=false
 
-    for tool in mvn java tar gzip; do
-        if ! command_exists "$tool"; then
+    # 1. Required Tools Check
+    print_status "info" "Checking required tools..."
+    local required_tools=("mvn" "java" "tar" "gzip" "dot")
+    local missing_tools=()
+    
+    echo "Required tools:"
+    for tool in "${required_tools[@]}"; do
+        if command_exists "$tool"; then
+            case "$tool" in
+                java)
+                    java_version=$(java -version 2>&1 | awk -F '"' '/version/ {print $2}')
+                    if [[ "$java_version" =~ ^1[1-9]\. || "$java_version" =~ ^[2-9][0-9]\. ]]; then
+                        print_status "success" "✓ Java ${java_version}"
+                    else
+                        print_status "error" "✗ Java ${java_version} (version 11 or higher required)"
+                        echo "Please install Java 11 or higher:"
+                        if [[ "$(uname -sm)" == "Darwin arm64" ]]; then
+                            echo "Apple Silicon (M1/M2) detected, recommended options:"
+                            echo "  - Download native arm64 build from: https://adoptium.net/ (recommended)"
+                            echo "  - Using Homebrew: brew install --cask temurin"
+                            echo "  - Azul Zulu: https://www.azul.com/downloads/?os=macos&architecture=arm-64-bit"
+                            echo "Note: For best performance, ensure you're using an arm64 native JDK"
+                        else
+                            echo "  - Download from: https://adoptium.net/ (recommended)"
+                            echo "  - Or use your system's package manager:"
+                            echo "    - macOS: brew install --cask temurin"
+                            echo "    - Ubuntu/Debian: sudo apt install openjdk-11-jdk"
+                            echo "    - CentOS/RHEL: sudo yum install java-11-openjdk-devel"
+                        fi
+                        echo "  - See BUILDING.md in the project root for more details"
+                        has_errors=true
+                    fi
+                    ;;
+                mvn)
+                    if [ "$MAVEN_OFFLINE" = false ]; then
+                        mvn_version=$(mvn --version | head -n 1)
+                        print_status "success" "✓ ${mvn_version}"
+                    else
+                        print_status "success" "✓ Maven (offline mode enabled)"
+                    fi
+                    ;;
+                dot)
+                    dot_version=$(dot -V 2>&1)
+                    print_status "success" "✓ GraphViz: ${dot_version}"
+                    # Set GRAPHVIZ_DOT if not already set
+                    if [ -z "$GRAPHVIZ_DOT" ]; then
+                        export GRAPHVIZ_DOT=$(command -v dot)
+                        MVN_OPTS="$MVN_OPTS -Dgraphviz.dot.path=$GRAPHVIZ_DOT"
+                    fi
+                    ;;
+                *)
+                    print_status "success" "✓ ${tool}"
+                    ;;
+            esac
+        else
             missing_tools+=("$tool")
+            print_status "error" "✗ ${tool} not found"
+            case "$tool" in
+                java)
+                    echo "Please install Java 11 or higher:"
+                    if [[ "$(uname -sm)" == "Darwin arm64" ]]; then
+                        echo "Apple Silicon (M1/M2) detected, recommended options:"
+                        echo "  - Download native arm64 build from: https://adoptium.net/ (recommended)"
+                        echo "  - Using Homebrew: brew install --cask temurin"
+                        echo "  - Azul Zulu: https://www.azul.com/downloads/?os=macos&architecture=arm-64-bit"
+                        echo "Note: For best performance, ensure you're using an arm64 native JDK"
+                    else
+                        echo "  - Download from: https://adoptium.net/ (recommended)"
+                        echo "  - Or use your system's package manager:"
+                        echo "    - macOS: brew install --cask temurin"
+                        echo "    - Ubuntu/Debian: sudo apt install openjdk-11-jdk"
+                        echo "    - CentOS/RHEL: sudo yum install java-11-openjdk-devel"
+                    fi
+                    echo "  - See BUILDING.md in the project root for more details"
+                    ;;
+                mvn)
+                    echo "Please install Maven 3.6 or higher:"
+                    echo "  - Download from: https://maven.apache.org/download.cgi"
+                    echo "  - Or use your system's package manager:"
+                    echo "    - macOS: brew install maven"
+                    echo "    - Ubuntu/Debian: sudo apt install maven"
+                    echo "    - CentOS/RHEL: sudo yum install maven"
+                    echo "  - See installation guide: https://maven.apache.org/install.html"
+                    echo "  - See BUILDING.md in the project root for more details"
+                    ;;
+                dot)
+                    echo "Please install GraphViz (required for documentation generation):"
+                    echo "  - Project page: https://graphviz.org/download/"
+                    echo "  - Package managers:"
+                    echo "    - macOS: brew install graphviz"
+                    echo "    - Ubuntu/Debian: sudo apt install graphviz"
+                    echo "    - CentOS/RHEL: sudo yum install graphviz"
+                    echo "  - See BUILDING.md in the project root for more details"
+                    ;;
+                tar|gzip)
+                    echo "Please install required system utilities:"
+                    echo "  - macOS: These should be pre-installed"
+                    echo "  - Ubuntu/Debian: sudo apt install tar gzip"
+                    echo "  - CentOS/RHEL: sudo yum install tar gzip"
+                    ;;
+            esac
+            has_errors=true
         fi
     done
+    echo
 
-    if [ ${#missing_tools[@]} -ne 0 ]; then
-        echo "Error: Required tools are missing:"
-        printf '  - %s\n' "${missing_tools[@]}"
+    # 3. System Resources Check
+    print_status "info" "Checking system resources..."
+    
+    # Memory check
+    if command_exists free; then
+        available_memory=$(free -m | awk '/^Mem:/{print $2}')
+        if [ "$available_memory" -lt 2048 ]; then
+            print_status "warning" "✗ Memory: ${available_memory}MB available (2048MB recommended)"
+            echo "Tips to free up memory:"
+            echo "  - Close unnecessary applications"
+            echo "  - Clear browser cache and tabs"
+            echo "  - Check for memory-intensive processes: top or htop"
+            echo "  - If using a VM, consider increasing its memory allocation"
+            has_warnings=true
+        else
+            print_status "success" "✓ Memory: ${available_memory}MB available"
+        fi
+    else
+        print_status "warning" "? Memory check not available"
+        echo "Note: Memory check is not available on macOS by default"
+        echo "You can install htop for memory monitoring: brew install htop"
+        has_warnings=true
+    fi
+
+    # Disk space check
+    if command_exists df; then
+        available_disk=$(df -m . | awk 'NR==2 {print $4}')
+        if [ "$available_disk" -lt 1024 ]; then
+            print_status "warning" "✗ Disk space: ${available_disk}MB available (1024MB recommended)"
+            echo "Tips to free up disk space:"
+            echo "  - Clear Maven cache: rm -rf ~/.m2/repository"
+            echo "  - Clear Docker images/containers if using Docker"
+            echo "  - Use 'du -sh *' to identify large directories"
+            echo "  - Consider running: mvn clean"
+            has_warnings=true
+        else
+            print_status "success" "✓ Disk space: ${available_disk}MB available"
+        fi
+    else
+        print_status "warning" "? Disk space check not available"
+        has_warnings=true
+    fi
+    echo
+
+    # 4. Configuration Check
+    print_status "info" "Checking configuration..."
+    
+    # Maven settings check
+    if [ ! -f ~/.m2/settings.xml ]; then
+        print_status "warning" "✗ Maven settings.xml not found"
+        echo "Tips for Maven configuration:"
+        echo "  - Create a minimal settings.xml:"
+        echo "    mkdir -p ~/.m2"
+        echo "    echo '<settings><localRepository>\${user.home}/.m2/repository</localRepository></settings>' > ~/.m2/settings.xml"
+        echo "  - Or copy the example from: https://maven.apache.org/settings.html"
+        echo "  - See also: BUILDING.md in the project root for project-specific settings"
+        has_warnings=true
+    else
+        print_status "success" "✓ Maven settings.xml found"
+    fi
+
+    # Debug port check if debug mode is enabled
+    if [ "$DEBUG" = true ]; then
+        if ! [[ "$KARAF_DEBUG_PORT" =~ ^[0-9]+$ ]] || [ "$KARAF_DEBUG_PORT" -lt 1024 ] || [ "$KARAF_DEBUG_PORT" -gt 65535 ]; then
+            print_status "error" "✗ Debug port: $KARAF_DEBUG_PORT (invalid)"
+            echo "Please specify a valid port with --debug-port option"
+            echo "Common debug ports: 5005 (default), 8000, 8453"
+            has_errors=true
+        elif command_exists nc && nc -z localhost "$KARAF_DEBUG_PORT" 2>/dev/null; then
+            print_status "error" "✗ Debug port: $KARAF_DEBUG_PORT (already in use)"
+            echo "Tips:"
+            echo "  - Choose a different port with --debug-port option"
+            echo "  - Check what's using the port: lsof -i :$KARAF_DEBUG_PORT"
+            echo "  - Kill the process using the port if necessary"
+            has_errors=true
+        else
+            print_status "success" "✓ Debug port: $KARAF_DEBUG_PORT available"
+        fi
+    fi
+
+    # Karaf home check if deployment is enabled
+    if [ "$DEPLOY" = true ]; then
+        if [ -z "$CONTEXT_SERVER_KARAF_HOME" ]; then
+            print_status "error" "Karaf home directory not set for deployment"
+            has_errors=true
+        elif [ ! -d "$CONTEXT_SERVER_KARAF_HOME" ]; then
+            print_status "error" "Karaf home directory does not exist: $CONTEXT_SERVER_KARAF_HOME"
+            has_errors=true
+        elif [ ! -w "$CONTEXT_SERVER_KARAF_HOME" ]; then
+            print_status "error" "Karaf home directory not writable: $CONTEXT_SERVER_KARAF_HOME"
+            has_errors=true
+        else
+            print_status "success" "Karaf home directory validated: $CONTEXT_SERVER_KARAF_HOME"
+        fi
+    fi
+
+    # 5. Option Validation
+    print_status "info" "Validating options..."
+    
+    if [ "$SKIP_TESTS" = true ] && [ "$RUN_INTEGRATION_TESTS" = true ]; then
+        print_status "error" "Cannot use --skip-tests and --integration-tests together"
+        has_errors=true
+    fi
+
+    if [ "$MAVEN_OFFLINE" = true ]; then
+        if [ "$PURGE_MAVEN_CACHE" = true ]; then
+            print_status "error" "Cannot use --purge-maven-cache in offline mode"
+            has_errors=true
+        fi
+        if [ "$USE_MAVEN_CACHE" = false ]; then
+            print_status "warning" "Using --no-maven-cache with offline mode may cause build failures"
+            has_warnings=true
+        fi
+    fi
+
+    # Final status and prompts
+    echo
+    if [ "$has_errors" = true ]; then
+        print_status "error" "Critical requirements not met. Please fix the errors above."
+        echo
+        echo "For more information and help:"
+        echo "  - Read BUILDING.md in the project root directory"
+        echo "  - Visit Apache Unomi website: https://unomi.apache.org/"
+        echo "  - Check the troubleshooting guide: https://unomi.apache.org/contribute/building-and-deploying.html"
+        echo "  - Ask for help on the mailing list: dev@unomi.apache.org"
+        echo "  - Report issues: https://issues.apache.org/jira/browse/UNOMI"
         exit 1
     fi
 
-    # Check for GraphViz dot command
-    if command_exists dot; then
-        print_status "success" "GraphViz detected: $(dot -V 2>&1)"
-        # Set GRAPHVIZ_DOT if not already set
-        if [ -z "$GRAPHVIZ_DOT" ]; then
-            export GRAPHVIZ_DOT=$(command -v dot)
-            MVN_OPTS="$MVN_OPTS -Dgraphviz.dot.path=$GRAPHVIZ_DOT"
-        fi
+    if [ "$has_warnings" = true ]; then
+        print_status "warning" "Some non-critical requirements not met"
+        echo "You can proceed, but you may encounter issues during the build"
+        echo "See warnings above for recommendations"
+        echo "For more information, check BUILDING.md in the project root"
+        prompt_continue "Continue despite warnings?"
     else
-        print_status "warning" "GraphViz not found. Manual generation may fail. See installation instructions in BUILDING guide."
+        print_status "success" "All requirements checked successfully"
     fi
 }
-
-# Check requirements early
-check_requirements
 
 # Construct Maven command
 MVN_CMD="mvn"
@@ -537,134 +757,6 @@ get_elapsed_time() {
     local elapsed=$((end_time - start_time))
     printf "%02d:%02d" $((elapsed/60)) $((elapsed%60))
 }
-
-# Function to validate combinations of options
-validate_options() {
-    # Check for mutually exclusive options
-    if [ "$SKIP_TESTS" = true ] && [ "$RUN_INTEGRATION_TESTS" = true ]; then
-        echo "Error: Cannot use --skip-tests and --integration-tests together"
-        exit 1
-    fi
-
-    # Check for offline mode conflicts
-    if [ "$MAVEN_OFFLINE" = true ]; then
-        if [ "$PURGE_MAVEN_CACHE" = true ]; then
-            echo "Error: Cannot use --purge-maven-cache in offline mode (--offline)"
-            exit 1
-        fi
-        if [ "$USE_MAVEN_CACHE" = false ]; then
-            echo "Warning: Using --no-maven-cache with offline mode may cause build failures"
-            prompt_continue
-        fi
-    fi
-
-    # Validate debug-related options
-    if [ "$DEBUG" = true ]; then
-        if ! [[ "$KARAF_DEBUG_PORT" =~ ^[0-9]+$ ]] || [ "$KARAF_DEBUG_PORT" -lt 1024 ] || [ "$KARAF_DEBUG_PORT" -gt 65535 ]; then
-            echo "Error: Debug port must be a valid port number (1024-65535)"
-            exit 1
-        fi
-        # Check if debug port is already in use
-        if command -v nc >/dev/null 2>&1; then
-            if nc -z localhost "$KARAF_DEBUG_PORT" 2>/dev/null; then
-                echo "Error: Port $KARAF_DEBUG_PORT is already in use"
-                exit 1
-            fi
-        fi
-    fi
-
-    # Validate Karaf home if specified
-    if [ ! -z "$CONTEXT_SERVER_KARAF_HOME" ]; then
-        if [ ! -d "$CONTEXT_SERVER_KARAF_HOME" ]; then
-            echo "Error: Specified Karaf home directory does not exist: $CONTEXT_SERVER_KARAF_HOME"
-            exit 1
-        fi
-        if [ ! -w "$CONTEXT_SERVER_KARAF_HOME" ]; then
-            echo "Error: Specified Karaf home directory is not writable: $CONTEXT_SERVER_KARAF_HOME"
-            exit 1
-        fi
-    fi
-
-    # Check system requirements
-    check_system_requirements
-}
-
-# Function to check system requirements
-check_system_requirements() {
-    print_section "System Requirements Check"
-    local has_warnings=false
-
-    # Java check
-    if command -v java >/dev/null 2>&1; then
-        java_version=$(java -version 2>&1 | awk -F '"' '/version/ {print $2}')
-        if [[ "$java_version" =~ ^1[1-9]\. || "$java_version" =~ ^[2-9][0-9]\. ]]; then
-            print_status "success" "Java ${java_version} detected"
-        else
-            print_status "error" "Java 11 or higher required (found: ${java_version})"
-            exit 1
-        fi
-    else
-        print_status "error" "Java not found"
-        exit 1
-    fi
-
-    # Maven check
-    if [ "$MAVEN_OFFLINE" = false ]; then
-        if command -v mvn >/dev/null 2>&1; then
-            mvn_version=$(mvn --version | head -n 1)
-            print_status "success" "${mvn_version}"
-        else
-            print_status "error" "Maven not found"
-            exit 1
-        fi
-    fi
-
-    # Memory check
-    if command -v free >/dev/null 2>&1; then
-        available_memory=$(free -m | awk '/^Mem:/{print $2}')
-        if [ "$available_memory" -lt 2048 ]; then
-            print_status "warning" "Low memory: ${available_memory}MB available (2048MB recommended)"
-            has_warnings=true
-        else
-            print_status "success" "Memory: ${available_memory}MB available"
-        fi
-    fi
-
-    # Disk space check
-    if command -v df >/dev/null 2>&1; then
-        available_disk=$(df -m . | awk 'NR==2 {print $4}')
-        if [ "$available_disk" -lt 1024 ]; then
-            print_status "warning" "Low disk space: ${available_disk}MB available (1024MB recommended)"
-            has_warnings=true
-        else
-            print_status "success" "Disk space: ${available_disk}MB available"
-        fi
-    fi
-
-    if [ "$has_warnings" = true ]; then
-        echo
-        prompt_continue "Continue despite warnings?"
-    fi
-}
-
-# Enhanced prompt_continue with color support
-prompt_continue() {
-    local message=${1:-"Continue?"}
-    if [ "$HAS_COLORS" -eq 1 ]; then
-        echo -en "${YELLOW}${WARNING} ${message} (y/N) ${NC}"
-    else
-        echo -en "${WARNING} ${message} (y/N) "
-    fi
-    read -n 1 -r
-    echo
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        print_status "error" "Operation cancelled by user"
-        exit 1
-    fi
-}
-
-# Add this after parsing arguments
-validate_options
 
 # Build command
 cat << "EOF"

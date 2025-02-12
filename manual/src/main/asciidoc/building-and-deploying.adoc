@@ -29,6 +29,8 @@
 
 ==== Building
 
+===== Unix/Linux/macOS
+
 1. Get the code: `git clone https://github.com/apache/unomi.git`
 2. Change to the top level directory of Apache Unomi source distribution.
 3. Run
@@ -45,9 +47,86 @@ This will compile Apache Unomi and run all of the tests in the
 ----
      $> mvn -P \!integration-tests clean install
 ----
+
+===== Windows (PowerShell)
+
+For Windows users, Apache Unomi provides a PowerShell build script that offers enhanced functionality and a more native Windows experience.
+
+1. Get the code: `git clone https://github.com/apache/unomi.git`
+2. Open PowerShell and change to the Unomi directory
+3. Run the build script:
 +
-This will compile Apache Unomi without running the tests and takes less
- time to build.
+[source,powershell]
+----
+.\build.ps1
+----
+
+The script supports various options:
+
+[cols="1,2"]
+|===
+|Option |Description
+
+|-Help
+|Show help message and available options
+
+|-SkipTests
+|Skip all tests during build
+
+|-IntegrationTests
+|Run integration tests
+
+|-Deploy
+|Deploy after build
+
+|-Debug
+|Run Karaf in debug mode
+
+|-DebugPort <port>
+|Set debug port (default: 5005)
+
+|-DebugSuspend
+|Suspend JVM until debugger connects
+
+|-KarafHome <path>
+|Set Karaf home directory for deployment
+
+|-UseOpenSearch
+|Use OpenSearch instead of ElasticSearch
+
+|-NoKaraf
+|Build without starting Karaf
+
+|-AutoStart <engine>
+|Auto-start with specified engine (elasticsearch/opensearch)
+|===
+
+Examples:
+
+[source,powershell]
+----
+# Build with integration tests using OpenSearch
+.\build.ps1 -IntegrationTests -UseOpenSearch
+
+# Build in debug mode
+.\build.ps1 -Debug -DebugPort 5006 -DebugSuspend
+
+# Deploy to specific Karaf instance
+.\build.ps1 -Deploy -KarafHome ~\apache-karaf
+----
+
+Features of the PowerShell script:
+
+* Automatic requirement checking for Java, Maven, and GraphViz
+* Detailed installation instructions if requirements are missing
+* Colorized output (when supported by the terminal)
+* Progress indicators for long-running operations
+* Enhanced error handling and reporting
+* Native Windows path handling
+* System resource validation (memory, disk space)
+
+TIP: The script will automatically detect if your terminal supports ANSI colors and Unicode symbols, falling back to plain text if needed.
+
 +
 TIP: On a non-English Windows env, the Asciidoctor Maven Plugin may fail to
      generate manuals due to an encoding conversion issue.

@@ -51,6 +51,36 @@ Building
 
 3) The distributions will be available under "package/target" directory.
 
+Building on Windows with PowerShell
+---------------------------------
+
+For Windows users, we provide a PowerShell build script (build.ps1) that offers the same functionality
+as the Unix shell script with a more Windows-native experience.
+
+1) Open PowerShell and change to the Apache Unomi directory
+2) Run the build script:
+
+         PS> .\build.ps1
+
+   Available options include:
+   - -Help                    Show help message
+   - -SkipTests              Skip all tests
+   - -IntegrationTests       Run integration tests
+   - -Deploy                 Deploy after build
+   - -Debug                  Run Karaf in debug mode
+   - -UseOpenSearch         Use OpenSearch instead of ElasticSearch
+   - -KarafHome <path>       Set Karaf home directory
+
+   Examples:
+   - Build with integration tests:
+         PS> .\build.ps1 -IntegrationTests
+
+   - Build and deploy to Karaf:
+         PS> .\build.ps1 -Deploy -KarafHome ~\apache-karaf
+
+   The script will automatically check for required tools (Java, Maven, GraphViz)
+   and provide installation instructions if any are missing.
+
 Updating the website
 --------------------
 
