@@ -22,6 +22,7 @@ import org.apache.unomi.api.campaigns.Campaign;
 import org.apache.unomi.api.campaigns.CampaignDetail;
 import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.services.GoalsService;
+import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.shell.dev.services.BaseCrudCommand;
 import org.apache.unomi.shell.dev.services.CrudCommand;
 import org.osgi.service.component.annotations.Component;
@@ -37,7 +38,7 @@ import java.util.stream.Collectors;
 @Component(service = CrudCommand.class, immediate = true)
 public class CampaignCrudCommand extends BaseCrudCommand {
 
-    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    private static final ObjectMapper OBJECT_MAPPER = new CustomObjectMapper();
     private static final List<String> PROPERTY_NAMES = List.of(
         "itemId", "name", "description", "scope", "startDate", "endDate", "cost", "currency", "primaryGoal", "goals", "entryCondition", "enabled"
     );

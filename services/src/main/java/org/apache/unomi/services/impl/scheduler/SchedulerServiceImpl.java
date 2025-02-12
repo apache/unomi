@@ -21,7 +21,6 @@ import org.apache.unomi.api.Item;
 import org.apache.unomi.api.PartialList;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.conditions.ConditionType;
-import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.SchedulerService;
 import org.apache.unomi.api.tasks.ScheduledTask;
 import org.apache.unomi.api.tasks.ScheduledTask.TaskStatus;
@@ -60,7 +59,10 @@ public class SchedulerServiceImpl implements SchedulerService {
     private long completedTaskTtlDays = DEFAULT_COMPLETED_TASK_TTL_DAYS;
     private boolean purgeTaskEnabled = DEFAULT_PURGE_TASK_ENABLED;
     private ScheduledTask taskPurgeTask;
-    private DefinitionsService definitionsService;
+
+    private static final String STATUS_PROPERTY = "status";
+    private static final String LOCK_OWNER_PROPERTY = "lockOwner";
+    private static final String TASK_TYPE_PROPERTY = "taskType";
 
     private static final ConditionType PROPERTY_CONDITION_TYPE = new ConditionType() {
         private String queryBuilder = "propertyConditionESQueryBuilder";
@@ -202,8 +204,7 @@ public class SchedulerServiceImpl implements SchedulerService {
             recoverCrashedTasks();
 
             // Get all enabled tasks
-            Condition enabledCondition = createPropertyCondition("enabled", "true");
-            List<ScheduledTask> tasks = persistenceService.query(enabledCondition, null, ScheduledTask.class, 0, -1).getList();
+            List<ScheduledTask> tasks = persistenceService.query(createPropertyCondition("enabled", "true"), null, ScheduledTask.class, 0, -1).getList();
 
             for (ScheduledTask task : tasks) {
                 if (!shouldExecuteTask(task)) {
@@ -336,7 +337,13 @@ public class SchedulerServiceImpl implements SchedulerService {
         Condition condition = new Condition(PROPERTY_CONDITION_TYPE);
         condition.setParameter("propertyName", propertyName);
         condition.setParameter("comparisonOperator", "equals");
-        condition.setParameter("propertyValue", propertyValue);
+        if (propertyValue instanceof Date) {
+            condition.setParameter("propertyValueDate", propertyValue);
+        } else if (propertyValue instanceof Integer) {
+            condition.setParameter("propertyValueInteger", propertyValue);
+        } else {
+            condition.setParameter("propertyValue", propertyValue.toString());
+        }
         return condition;
     }
 
@@ -345,6 +352,21 @@ public class SchedulerServiceImpl implements SchedulerService {
         condition.setParameter("propertyName", propertyName);
         condition.setParameter("comparisonOperator", "exists");
         return condition;
+    }
+
+    private Condition createDateCondition(String propertyName, String operator, Date date) {
+        Condition condition = new Condition(PROPERTY_CONDITION_TYPE);
+        condition.setParameter("propertyName", propertyName);
+        condition.setParameter("comparisonOperator", operator);
+        condition.setParameter("propertyValueDate", date);
+        return condition;
+    }
+
+    private Condition createAndCondition(List<Condition> conditions) {
+        Condition andCondition = new Condition(BOOLEAN_CONDITION_TYPE);
+        andCondition.setParameter("operator", "and");
+        andCondition.setParameter("subConditions", conditions);
+        return andCondition;
     }
 
     private void releaseLock(ScheduledTask task) {
@@ -578,7 +600,7 @@ public class SchedulerServiceImpl implements SchedulerService {
         try {
             // Find tasks that are marked as running but have expired locks
             List<ScheduledTask> runningTasks = persistenceService.query(
-                createPropertyCondition("status", ScheduledTask.TaskStatus.RUNNING),
+                createPropertyCondition(STATUS_PROPERTY, ScheduledTask.TaskStatus.RUNNING),
                 null, ScheduledTask.class, 0, -1).getList();
 
             for (ScheduledTask task : runningTasks) {
@@ -592,7 +614,7 @@ public class SchedulerServiceImpl implements SchedulerService {
 
             // Check for tasks with expired locks but not marked as running
             List<ScheduledTask> lockedTasks = persistenceService.query(
-                createExistsCondition("lockOwner"),
+                createExistsCondition(LOCK_OWNER_PROPERTY),
                 null, ScheduledTask.class, 0, -1).getList();
 
             for (ScheduledTask task : lockedTasks) {
@@ -644,12 +666,12 @@ public class SchedulerServiceImpl implements SchedulerService {
 
     @Override
     public PartialList<ScheduledTask> getTasksByStatus(ScheduledTask.TaskStatus status, int offset, int size, String sortBy) {
-        return persistenceService.query(createPropertyCondition("status", status), sortBy, ScheduledTask.class, offset, size);
+        return persistenceService.query(createPropertyCondition(STATUS_PROPERTY, status), sortBy, ScheduledTask.class, offset, size);
     }
 
     @Override
     public PartialList<ScheduledTask> getTasksByType(String taskType, int offset, int size, String sortBy) {
-        return persistenceService.query(createPropertyCondition("taskType", taskType), sortBy, ScheduledTask.class, offset, size);
+        return persistenceService.query(createPropertyCondition(TASK_TYPE_PROPERTY, taskType), sortBy, ScheduledTask.class, offset, size);
     }
 
     /**
@@ -858,25 +880,13 @@ public class SchedulerServiceImpl implements SchedulerService {
             long purgeBeforeTime = System.currentTimeMillis() - (completedTaskTtlDays * 24 * 60 * 60 * 1000);
             Date purgeBeforeDate = new Date(purgeBeforeTime);
 
-            // Create condition for completed non-recurring tasks
-            Condition purgeCondition = new Condition(PROPERTY_CONDITION_TYPE);
-            purgeCondition.setParameter("propertyName", "status");
-            purgeCondition.setParameter("comparisonOperator", "equals");
-            purgeCondition.setParameter("propertyValue", TaskStatus.COMPLETED);
+            List<Condition> conditions = Arrays.asList(
+                createPropertyCondition(STATUS_PROPERTY, TaskStatus.COMPLETED),
+                createDateCondition("lastExecutionDate", "lessThanOrEqualTo", purgeBeforeDate),
+                createPropertyCondition("period", 0)
+            );
 
-            Condition dateCondition = new Condition(PROPERTY_CONDITION_TYPE);
-            dateCondition.setParameter("propertyName", "lastExecutionDate");
-            dateCondition.setParameter("comparisonOperator", "lessThanOrEqualTo");
-            dateCondition.setParameter("propertyValueDate", purgeBeforeDate);
-
-            Condition nonRecurringCondition = new Condition(PROPERTY_CONDITION_TYPE);
-            nonRecurringCondition.setParameter("propertyName", "period");
-            nonRecurringCondition.setParameter("comparisonOperator", "equals");
-            nonRecurringCondition.setParameter("propertyValueInteger", 0);
-
-            Condition andCondition = new Condition(BOOLEAN_CONDITION_TYPE);
-            andCondition.setParameter("operator", "and");
-            andCondition.setParameter("subConditions", Arrays.asList(purgeCondition, dateCondition, nonRecurringCondition));
+            Condition andCondition = createAndCondition(conditions);
 
             // Remove tasks matching the condition
             persistenceService.removeByQuery(andCondition, ScheduledTask.class);
@@ -884,10 +894,6 @@ public class SchedulerServiceImpl implements SchedulerService {
         } catch (Exception e) {
             LOGGER.error("Error purging old tasks", e);
         }
-    }
-
-    public void setDefinitionsService(DefinitionsService definitionsService) {
-        this.definitionsService = definitionsService;
     }
 
     public void setPurgeTaskEnabled(boolean purgeTaskEnabled) {

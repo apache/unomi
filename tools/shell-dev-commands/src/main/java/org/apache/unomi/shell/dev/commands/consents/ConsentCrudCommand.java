@@ -22,6 +22,7 @@ import org.apache.unomi.api.PartialList;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.services.ProfileService;
+import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.shell.dev.services.BaseCrudCommand;
 import org.apache.unomi.shell.dev.services.CrudCommand;
 import org.osgi.service.component.annotations.Component;
@@ -40,7 +41,7 @@ import java.util.stream.Collectors;
 @Component(service = CrudCommand.class, immediate = true)
 public class ConsentCrudCommand extends BaseCrudCommand {
 
-    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+    private static final ObjectMapper OBJECT_MAPPER = new CustomObjectMapper();
     private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
     private static final List<String> PROPERTY_NAMES = List.of(
         "profileId", "scope", "typeIdentifier", "status", "statusDate", "revokeDate"

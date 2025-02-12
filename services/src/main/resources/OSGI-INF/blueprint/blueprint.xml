@@ -171,7 +171,6 @@
           init-method="postConstruct" destroy-method="preDestroy">
         <property name="threadPoolSize" value="${services.scheduler.thread.poolSize}"/>
         <property name="persistenceService" ref="persistenceService"/>
-        <property name="definitionsService" ref="definitionsServiceImpl"/>
         <property name="executorNode" value="${services.scheduler.executorNode}"/>
         <property name="completedTaskTtlDays" value="${services.scheduler.completedTaskTtlDays}"/>
     </bean>
