@@ -35,6 +35,7 @@ import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.query.DateRange;
 import org.apache.unomi.api.query.IpRange;
 import org.apache.unomi.api.query.NumericRange;
+import org.apache.unomi.api.security.SecurityServiceConfiguration;
 import org.apache.unomi.api.services.ExecutionContextManager;
 import org.apache.unomi.api.tenants.TenantTransformationListener;
 import org.apache.unomi.metrics.MetricAdapter;
@@ -236,7 +237,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         itemTypeIndexNameMap.put("persona", "profile");
     }
 
-    private volatile ExecutionContextManager contextManager = null;    
+    private volatile ExecutionContextManager contextManager = null;
     private List<TenantTransformationListener> transformationListeners = new CopyOnWriteArrayList<>();
 
     public void setBundleContext(BundleContext bundleContext) {
@@ -467,13 +468,13 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         this.contextManager = contextManager;
         LOGGER.info("ExecutionContextManager bound");
     }
-    
+
     public void unbindContextManager(ExecutionContextManager contextManager) {
         if (this.contextManager == contextManager) {
             this.contextManager = null;
             LOGGER.info("ExecutionContextManager unbound");
         }
-    }    
+    }
 
     private String getTenantId() {
         if (contextManager == null) {
@@ -486,10 +487,10 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         return context.getTenantId();
     }
 
-    private String validateTenantAndGetId(String operation) {
+    private String validateTenantAndGetId(String permission) {
         String tenantId = getTenantId();
         if (contextManager != null && contextManager.getCurrentContext() != null) {
-            contextManager.getCurrentContext().validateAccess(operation);
+            contextManager.getCurrentContext().validateAccess(permission);
         }
         return tenantId;
     }
@@ -992,14 +993,13 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Override
     public boolean save(final Item item, final Boolean useBatchingOption, final Boolean alwaysOverwriteOption) {
-        String tenantId = getTenantId();
-        item.setTenantId(tenantId);
-        validateTenantAndGetId("SAVE");
+        String finalTenantId = validateTenantAndGetId(SecurityServiceConfiguration.PERMISSION_SAVE);
+        item.setTenantId(finalTenantId);
 
         final boolean useBatching = useBatchingOption == null ? this.useBatchingForSave : useBatchingOption;
         final boolean alwaysOverwrite = alwaysOverwriteOption == null ? this.alwaysOverwrite : alwaysOverwriteOption;
 
-        return new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".saveItem", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
+        return new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".save", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
             protected Boolean execute(Object... args) throws Exception {
                 try {
                     String source = ESCustomObjectMapper.getObjectMapper().writeValueAsString(item);
@@ -1058,7 +1058,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     handleItemTransformation(item);
 
                     // Add tenants metadata
-                    addTenantMetadata(item, tenantId);
+                    addTenantMetadata(item, finalTenantId);
 
                     return true;
                 } catch (IOException e) {
@@ -1405,7 +1405,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Override
     public <T extends Item> boolean removeByQuery(final Condition query, final Class<T> clazz) {
-        String finalTenantId = validateTenantAndGetId("REMOVE_BY_QUERY");
+        String finalTenantId = validateTenantAndGetId(SecurityServiceConfiguration.PERMISSION_REMOVE_BY_QUERY);
 
         Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".removeByQuery", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
             protected Boolean execute(Object... args) throws Exception {
@@ -1924,7 +1924,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Override
     public <T extends Item> PartialList<T> query(final Condition query, String sortBy, final Class<T> clazz, final int offset, final int size) {
-        String finalTenantId = validateTenantAndGetId("QUERY");
+        String finalTenantId = validateTenantAndGetId(SecurityServiceConfiguration.PERMISSION_QUERY);
 
         QueryBuilder queryBuilder = conditionESQueryBuilderDispatcher.buildFilter(query);
         queryBuilder = wrapWithTenantAndItemTypeQuery(Item.getItemType(clazz), queryBuilder, finalTenantId);
@@ -1938,7 +1938,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Override
     public PartialList<CustomItem> queryCustomItem(final Condition query, String sortBy, final String customItemType, final int offset, final int size, final String scrollTimeValidity) {
-        String finalTenantId = validateTenantAndGetId("QUERY");
+        String finalTenantId = validateTenantAndGetId(SecurityServiceConfiguration.PERMISSION_QUERY);
 
         QueryBuilder queryBuilder = conditionESQueryBuilderDispatcher.getQueryBuilder(query);
         queryBuilder = wrapWithTenantAndItemTypeQuery(customItemType, queryBuilder, finalTenantId);
@@ -2154,7 +2154,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Override
     public <T extends Item> PartialList<T> continueScrollQuery(final Class<T> clazz, final String scrollIdentifier, final String scrollTimeValidity) {
-        String finalTenantId = validateTenantAndGetId("SCROLL_QUERY");
+        String finalTenantId = validateTenantAndGetId(SecurityServiceConfiguration.PERMISSION_SCROLL_QUERY);
 
         return new InClassLoaderExecute<PartialList<T>>(metricsService, this.getClass().getName() + ".continueScrollQuery", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
             @Override
@@ -2199,7 +2199,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Override
     public PartialList<CustomItem> continueCustomItemScrollQuery(final String customItemType, final String scrollIdentifier, final String scrollTimeValidity) {
-        String finalTenantId = validateTenantAndGetId("SCROLL_QUERY");
+        String finalTenantId = validateTenantAndGetId(SecurityServiceConfiguration.PERMISSION_SCROLL_QUERY);
 
         return new InClassLoaderExecute<PartialList<CustomItem>>(metricsService, this.getClass().getName() + ".continueScrollQuery", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
             @Override
@@ -2265,7 +2265,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     private Map<String, Long> aggregateQuery(final Condition filter, final BaseAggregate aggregate, final String itemType,
                                              final boolean optimizedQuery, int queryBucketSize) {
-        String finalTenantId = validateTenantAndGetId("AGGREGATE");
+        String finalTenantId = validateTenantAndGetId(SecurityServiceConfiguration.PERMISSION_AGGREGATE);
 
         return new InClassLoaderExecute<Map<String, Long>>(metricsService, this.getClass().getName() + ".aggregateQuery", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
 
@@ -2528,7 +2528,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     @Override
     public void purge(final String scope) {
-        String finalTenantId = validateTenantAndGetId("PURGE");
+        String finalTenantId = validateTenantAndGetId(SecurityServiceConfiguration.PERMISSION_PURGE);
 
         LOGGER.debug("Purge scope {}", scope);
         new InClassLoaderExecute<Void>(metricsService, this.getClass().getName() + ".purgeWithScope", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {

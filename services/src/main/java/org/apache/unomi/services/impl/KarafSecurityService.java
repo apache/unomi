@@ -209,7 +209,7 @@ public class KarafSecurityService implements SecurityService {
 
     private boolean hasPermissionInSubject(Subject subject, String permission) {
         Set<String> roles = extractRolesFromSubject(subject);
-        String[] requiredRoles = configuration.getRequiredRolesForOperation(permission);
+        String[] requiredRoles = configuration.getRequiredRolesForPermission(permission);
 
         return requiredRoles != null &&
                roles.stream().anyMatch(role -> Arrays.asList(requiredRoles).contains(role));
@@ -289,15 +289,15 @@ public class KarafSecurityService implements SecurityService {
 
     @Override
     public Set<String> getPermissionsForRole(String role) {
-        if (configuration == null || configuration.getOperationRoles() == null) {
+        if (configuration == null || configuration.getPermissionRoles() == null) {
             return new HashSet<>();
         }
 
         Set<String> permissions = new HashSet<>();
-        Map<String, String[]> operationRoles = configuration.getOperationRoles();
+        Map<String, String[]> permissionRoles = configuration.getPermissionRoles();
 
         // Iterate through all operations and check if the role is allowed
-        for (Map.Entry<String, String[]> entry : operationRoles.entrySet()) {
+        for (Map.Entry<String, String[]> entry : permissionRoles.entrySet()) {
             String operation = entry.getKey();
             String[] allowedRoles = entry.getValue();
 

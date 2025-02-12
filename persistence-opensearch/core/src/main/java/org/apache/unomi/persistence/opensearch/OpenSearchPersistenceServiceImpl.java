@@ -35,6 +35,7 @@ import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.query.DateRange;
 import org.apache.unomi.api.query.IpRange;
 import org.apache.unomi.api.query.NumericRange;
+import org.apache.unomi.api.security.SecurityServiceConfiguration;
 import org.apache.unomi.api.services.ExecutionContextManager;
 import org.apache.unomi.api.tenants.TenantTransformationListener;
 import org.apache.unomi.metrics.MetricAdapter;
@@ -793,11 +794,11 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
         final boolean useBatching = useBatchingOption == null ? this.useBatchingForSave : useBatchingOption;
         final boolean alwaysOverwrite = alwaysOverwriteOption == null ? this.alwaysOverwrite : alwaysOverwriteOption;
 
-        validateTenantAndGetId("SAVE");
+        validateTenantAndGetId(SecurityServiceConfiguration.PERMISSION_SAVE);
 
         handleItemTransformation(item);
 
-        Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".saveItem", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
+        Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".save", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
             protected Boolean execute(Object... args) throws Exception {
                 try {
                     String itemType = item.getItemType();
@@ -883,7 +884,7 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
 
     @Override
     public boolean update(final Item item, final Class clazz, final Map source, final boolean alwaysOverwrite) {
-        validateTenantAndGetId("UPDATE");
+        validateTenantAndGetId(SecurityServiceConfiguration.PERMISSION_UPDATE);
 
         // For property updates, we need to check if the field needs transformation
         handleItemTransformation(item);
@@ -1208,7 +1209,7 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
 
     @Override
     public <T extends Item> boolean removeByQuery(final Condition query, final Class<T> clazz) {
-        String finalTenantId = validateTenantAndGetId("REMOVE_BY_QUERY");
+        String finalTenantId = validateTenantAndGetId(SecurityServiceConfiguration.PERMISSION_REMOVE_BY_QUERY);
 
         Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".removeByQuery", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
             protected Boolean execute(Object... args) throws Exception {
@@ -1812,7 +1813,7 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
 
     @Override
     public <T extends Item> PartialList<T> query(final Condition query, String sortBy, final Class<T> clazz, final int offset, final int size) {
-        String finalTenantId = validateTenantAndGetId("QUERY");
+        String finalTenantId = validateTenantAndGetId(SecurityServiceConfiguration.PERMISSION_QUERY);
 
         Query queryBuilder = conditionOSQueryBuilderDispatcher.buildFilter(query);
         queryBuilder = wrapWithTenantAndItemTypeQuery(Item.getItemType(clazz), queryBuilder, finalTenantId);
@@ -1821,7 +1822,7 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
 
     @Override
     public <T extends Item> PartialList<T> query(final Condition query, String sortBy, final Class<T> clazz, final int offset, final int size, final String scrollTimeValidity) {
-        String finalTenantId = validateTenantAndGetId("QUERY");
+        String finalTenantId = validateTenantAndGetId(SecurityServiceConfiguration.PERMISSION_QUERY);
 
         Query queryBuilder = conditionOSQueryBuilderDispatcher.buildFilter(query);
         queryBuilder = wrapWithTenantAndItemTypeQuery(Item.getItemType(clazz), queryBuilder, finalTenantId);
@@ -1830,7 +1831,7 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
 
     @Override
     public PartialList<CustomItem> queryCustomItem(final Condition query, String sortBy, final String customItemType, final int offset, final int size, final String scrollTimeValidity) {
-        String finalTenantId = validateTenantAndGetId("QUERY");
+        String finalTenantId = validateTenantAndGetId(SecurityServiceConfiguration.PERMISSION_QUERY);
 
         Query queryBuilder = conditionOSQueryBuilderDispatcher.getQueryBuilder(query);
         queryBuilder = wrapWithTenantAndItemTypeQuery(customItemType, queryBuilder, finalTenantId);
@@ -1934,7 +1935,7 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
 
     private <T extends Item> PartialList<T> query(final Query query, final String sortBy, final Class<T> clazz, final String customItemType, final int offset, final int size, final String[] routing, final String scrollTimeValidity) {
         String tenantId = getTenantId();
-        validateTenantAndGetId("QUERY");
+        validateTenantAndGetId(SecurityServiceConfiguration.PERMISSION_QUERY);
         return new InClassLoaderExecute<PartialList<T>>(metricsService, this.getClass().getName() + ".query", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
 
             @Override
@@ -2062,7 +2063,7 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
 
     @Override
     public <T extends Item> PartialList<T> continueScrollQuery(final Class<T> clazz, final String scrollIdentifier, final String scrollTimeValidity) {
-        String finalTenantId = validateTenantAndGetId("SCROLL_QUERY");
+        String finalTenantId = validateTenantAndGetId(SecurityServiceConfiguration.PERMISSION_SCROLL_QUERY);
 
         return new InClassLoaderExecute<PartialList<T>>(metricsService, this.getClass().getName() + ".continueScrollQuery", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
 
@@ -2104,7 +2105,7 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
     @Override
     public PartialList<CustomItem> continueCustomItemScrollQuery(final String customItemType, final String scrollIdentifier, final String scrollTimeValidity) {
         String tenantId = getTenantId();
-        validateTenantAndGetId("SCROLL_QUERY");
+        validateTenantAndGetId(SecurityServiceConfiguration.PERMISSION_SCROLL_QUERY);
 
         return new InClassLoaderExecute<PartialList<CustomItem>>(metricsService, this.getClass().getName() + ".continueScrollQuery", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
             @Override
@@ -2164,7 +2165,7 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
 
     private Map<String, Long> aggregateQuery(final Condition filter, final BaseAggregate aggregate, final String itemType,
                                              final boolean optimizedQuery, int queryBucketSize) {
-        String finalTenantId = validateTenantAndGetId("AGGREGATE");
+        String finalTenantId = validateTenantAndGetId(SecurityServiceConfiguration.PERMISSION_AGGREGATE);
 
         return new InClassLoaderExecute<Map<String, Long>>(metricsService, this.getClass().getName() + ".aggregateQuery", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
 
@@ -2442,7 +2443,7 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
 
     @Override
     public void purge(final String scope) {
-        String finalTenantId = validateTenantAndGetId("PURGE");
+        String finalTenantId = validateTenantAndGetId(SecurityServiceConfiguration.PERMISSION_PURGE);
 
         LOGGER.debug("Purge scope {}", scope);
         new InClassLoaderExecute<Void>(metricsService, this.getClass().getName() + ".purgeWithScope", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
@@ -2994,10 +2995,10 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
         return context.getTenantId();
     }
 
-    private String validateTenantAndGetId(String operation) {
+    private String validateTenantAndGetId(String permission) {
         String tenantId = getTenantId();
         if (contextManager != null && contextManager.getCurrentContext() != null) {
-            contextManager.getCurrentContext().validateAccess(operation);
+            contextManager.getCurrentContext().validateAccess(permission);
         }
         return tenantId;
     }

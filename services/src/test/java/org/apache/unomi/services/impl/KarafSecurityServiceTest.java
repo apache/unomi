@@ -223,9 +223,9 @@ public class KarafSecurityServiceTest {
     public void testHasPermission() {
         // Configure required roles for test permission
         SecurityServiceConfiguration config = new SecurityServiceConfiguration();
-        Map<String, String[]> operationRoles = new HashMap<>();
-        operationRoles.put("TEST_PERMISSION", new String[]{UnomiRoles.ADMINISTRATOR});
-        config.setOperationRoles(operationRoles);
+        Map<String, String[]> permissionRoles = new HashMap<>();
+        permissionRoles.put("TEST_PERMISSION", new String[]{UnomiRoles.ADMINISTRATOR});
+        config.setPermissionRoles(permissionRoles);
         securityService.setConfiguration(config);
 
         // Test with insufficient privileges
@@ -318,11 +318,11 @@ public class KarafSecurityServiceTest {
     public void testGetPermissionsForRole() {
         // Set up test configuration
         SecurityServiceConfiguration config = new SecurityServiceConfiguration();
-        Map<String, String[]> operationRoles = new HashMap<>();
-        operationRoles.put("READ", new String[]{UnomiRoles.USER, UnomiRoles.ADMINISTRATOR});
-        operationRoles.put("WRITE", new String[]{UnomiRoles.ADMINISTRATOR});
-        operationRoles.put("DELETE", new String[]{UnomiRoles.ADMINISTRATOR});
-        config.setOperationRoles(operationRoles);
+        Map<String, String[]> permissionRoles = new HashMap<>();
+        permissionRoles.put("READ", new String[]{UnomiRoles.USER, UnomiRoles.ADMINISTRATOR});
+        permissionRoles.put("WRITE", new String[]{UnomiRoles.ADMINISTRATOR});
+        permissionRoles.put(SecurityServiceConfiguration.PERMISSION_DELETE, new String[]{UnomiRoles.ADMINISTRATOR});
+        config.setPermissionRoles(permissionRoles);
         securityService.setConfiguration(config);
 
         // Test administrator role permissions
@@ -330,7 +330,7 @@ public class KarafSecurityServiceTest {
         assertEquals("Admin should have all configured permissions", 3, adminPermissions.size());
         assertTrue("Admin should have READ permission", adminPermissions.contains("READ"));
         assertTrue("Admin should have WRITE permission", adminPermissions.contains("WRITE"));
-        assertTrue("Admin should have DELETE permission", adminPermissions.contains("DELETE"));
+        assertTrue("Admin should have DELETE permission", adminPermissions.contains(SecurityServiceConfiguration.PERMISSION_DELETE));
 
         // Test user role permissions
         Set<String> userPermissions = securityService.getPermissionsForRole(UnomiRoles.USER);

@@ -206,17 +206,17 @@ public interface SecurityService {
 
     /**
      * Gets all permissions associated with a specific role based on the security configuration.
-     * 
+     *
      * @param role The role name to retrieve permissions for. This should be one of the standard
      *             roles defined in {@link UnomiRoles} or a custom role defined in the security
      *             configuration.
-     * 
+     *
      * @return A Set of String containing all permissions granted to the specified role. The permissions
      *         are derived from the security configuration's operation roles mapping. If the role has no
      *         explicitly mapped permissions, or if the configuration is not properly set up, an empty
      *         Set will be returned.
-     *         
-     * @see SecurityServiceConfiguration#getOperationRoles()
+     *
+     * @see SecurityServiceConfiguration#getPermissionRoles()
      * @see UnomiRoles
      */
     Set<String> getPermissionsForRole(String role);

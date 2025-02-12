@@ -27,6 +27,7 @@ import com.networknt.schema.*;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.unomi.api.Item;
+import org.apache.unomi.api.security.SecurityServiceConfiguration;
 import org.apache.unomi.api.services.ExecutionContextManager;
 import org.apache.unomi.api.services.ScopeService;
 import org.apache.unomi.api.tenants.Tenant;
@@ -247,7 +248,7 @@ public class SchemaServiceImpl implements SchemaService {
 
     @Override
     public void saveSchema(String schema) {
-        contextManager.getCurrentContext().validateAccess("SCHEMA_WRITE");
+        contextManager.getCurrentContext().validateAccess(SecurityServiceConfiguration.PERMISSION_SCHEMA_WRITE);
         JsonSchemaWrapper jsonSchemaWrapper = buildJsonSchemaWrapper(schema);
         if (!predefinedUnomiJSONSchemaById.containsKey(jsonSchemaWrapper.getItemId())) {
             String currentTenant = contextManager.getCurrentContext().getTenantId();
@@ -260,7 +261,7 @@ public class SchemaServiceImpl implements SchemaService {
 
     @Override
     public boolean deleteSchema(String schemaId) {
-        contextManager.getCurrentContext().validateAccess("SCHEMA_DELETE");
+        contextManager.getCurrentContext().validateAccess(SecurityServiceConfiguration.PERMISSION_SCHEMA_DELETE);
         // forbidden to delete predefined Unomi schemas
         if (!predefinedUnomiJSONSchemaById.containsKey(schemaId)) {
             // remove persisted schema

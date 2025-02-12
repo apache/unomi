@@ -25,7 +25,22 @@ import java.util.Set;
  * Configuration for the Security Service
  */
 public class SecurityServiceConfiguration {
-    private Map<String, String[]> operationRoles;
+    // Permission constants
+    public static final String PERMISSION_QUERY = "QUERY";
+    public static final String PERMISSION_AGGREGATE = "AGGREGATE";
+    public static final String PERMISSION_SCROLL_QUERY = "SCROLL_QUERY";
+    public static final String PERMISSION_SAVE = "SAVE";
+    public static final String PERMISSION_UPDATE = "UPDATE";
+    public static final String PERMISSION_DELETE = "DELETE";
+    public static final String PERMISSION_REMOVE_BY_QUERY = "REMOVE_BY_QUERY";
+    public static final String PERMISSION_PURGE = "PURGE";
+    public static final String PERMISSION_SYSTEM_MAINTENANCE = "SYSTEM_MAINTENANCE";
+    public static final String PERMISSION_ENCRYPT_PROFILE_DATA = "ENCRYPT_PROFILE_DATA";
+    public static final String PERMISSION_DECRYPT_PROFILE_DATA = "DECRYPT_PROFILE_DATA";
+    public static final String PERMISSION_SCHEMA_WRITE = "SCHEMA_WRITE";
+    public static final String PERMISSION_SCHEMA_DELETE = "SCHEMA_DELETE";
+
+    private Map<String, String[]> permissionRoles;
     private String defaultRole;
     private Set<String> systemRoles = new HashSet<>();
     private boolean enableEncryption = false;
@@ -36,28 +51,29 @@ public class SecurityServiceConfiguration {
         systemRoles.add(UnomiRoles.TENANT_ADMINISTRATOR);
 
         // Initialize default operation roles
-        operationRoles = new HashMap<>();
-        operationRoles.put("QUERY", new String[]{UnomiRoles.USER, UnomiRoles.TENANT_ADMINISTRATOR});
-        operationRoles.put("AGGREGATE", new String[]{UnomiRoles.USER, UnomiRoles.TENANT_ADMINISTRATOR});
-        operationRoles.put("SCROLL_QUERY", new String[]{UnomiRoles.USER, UnomiRoles.TENANT_ADMINISTRATOR});
-        operationRoles.put("SAVE", new String[]{UnomiRoles.USER, UnomiRoles.TENANT_ADMINISTRATOR});
-        operationRoles.put("UPDATE", new String[]{UnomiRoles.USER, UnomiRoles.TENANT_ADMINISTRATOR});
-        operationRoles.put("DELETE", new String[]{UnomiRoles.USER, UnomiRoles.TENANT_ADMINISTRATOR});
-        operationRoles.put("PURGE", new String[]{UnomiRoles.SYSTEM_MAINTENANCE, UnomiRoles.TENANT_ADMINISTRATOR});
-        operationRoles.put("SYSTEM_MAINTENANCE", new String[]{UnomiRoles.SYSTEM_MAINTENANCE});
-        operationRoles.put("ENCRYPT_PROFILE_DATA", new String[]{UnomiRoles.PROFILE_ENCRYPT});
-        operationRoles.put("DECRYPT_PROFILE_DATA", new String[]{UnomiRoles.PROFILE_DECRYPT});
-        operationRoles.put("SCHEMA_WRITE", new String[]{UnomiRoles.TENANT_ADMINISTRATOR});
-        operationRoles.put("SCHEMA_DELETE", new String[]{UnomiRoles.TENANT_ADMINISTRATOR});
+        permissionRoles = new HashMap<>();
+        permissionRoles.put(PERMISSION_QUERY, new String[]{UnomiRoles.USER, UnomiRoles.TENANT_ADMINISTRATOR});
+        permissionRoles.put(PERMISSION_AGGREGATE, new String[]{UnomiRoles.USER, UnomiRoles.TENANT_ADMINISTRATOR});
+        permissionRoles.put(PERMISSION_SCROLL_QUERY, new String[]{UnomiRoles.USER, UnomiRoles.TENANT_ADMINISTRATOR});
+        permissionRoles.put(PERMISSION_SAVE, new String[]{UnomiRoles.USER, UnomiRoles.TENANT_ADMINISTRATOR});
+        permissionRoles.put(PERMISSION_UPDATE, new String[]{UnomiRoles.USER, UnomiRoles.TENANT_ADMINISTRATOR});
+        permissionRoles.put(PERMISSION_DELETE, new String[]{UnomiRoles.USER, UnomiRoles.TENANT_ADMINISTRATOR});
+        permissionRoles.put(PERMISSION_REMOVE_BY_QUERY, new String[]{UnomiRoles.USER, UnomiRoles.TENANT_ADMINISTRATOR});
+        permissionRoles.put(PERMISSION_PURGE, new String[]{UnomiRoles.SYSTEM_MAINTENANCE, UnomiRoles.TENANT_ADMINISTRATOR});
+        permissionRoles.put(PERMISSION_SYSTEM_MAINTENANCE, new String[]{UnomiRoles.SYSTEM_MAINTENANCE});
+        permissionRoles.put(PERMISSION_ENCRYPT_PROFILE_DATA, new String[]{UnomiRoles.PROFILE_ENCRYPT});
+        permissionRoles.put(PERMISSION_DECRYPT_PROFILE_DATA, new String[]{UnomiRoles.PROFILE_DECRYPT});
+        permissionRoles.put(PERMISSION_SCHEMA_WRITE, new String[]{UnomiRoles.TENANT_ADMINISTRATOR});
+        permissionRoles.put(PERMISSION_SCHEMA_DELETE, new String[]{UnomiRoles.TENANT_ADMINISTRATOR});
         defaultRole = UnomiRoles.USER;
     }
 
-    public Map<String, String[]> getOperationRoles() {
-        return operationRoles;
+    public Map<String, String[]> getPermissionRoles() {
+        return permissionRoles;
     }
 
-    public void setOperationRoles(Map<String, String[]> operationRoles) {
-        this.operationRoles = operationRoles;
+    public void setPermissionRoles(Map<String, String[]> permissionRoles) {
+        this.permissionRoles = permissionRoles;
     }
 
     public String getDefaultRole() {
@@ -69,12 +85,12 @@ public class SecurityServiceConfiguration {
     }
 
     /**
-     * Get required roles for an operation
-     * @param operation the operation to check
-     * @return array of required roles, or array containing default role if operation not mapped
+     * Get required roles for an permission
+     * @param permission the permission to check
+     * @return array of required roles, or array containing default role if permission not mapped
      */
-    public String[] getRequiredRolesForOperation(String operation) {
-        return operationRoles.getOrDefault(operation, new String[]{defaultRole});
+    public String[] getRequiredRolesForPermission(String permission) {
+        return permissionRoles.getOrDefault(permission, new String[]{defaultRole});
     }
 
     public Set<String> getSystemRoles() {

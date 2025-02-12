@@ -18,6 +18,7 @@ package org.apache.unomi.services.impl;
 
 import org.apache.unomi.api.ExecutionContext;
 import org.apache.unomi.api.security.SecurityService;
+import org.apache.unomi.api.security.SecurityServiceConfiguration;
 import org.apache.unomi.api.security.UnomiRoles;
 import org.junit.Before;
 import org.junit.Test;
@@ -59,7 +60,7 @@ public class ExecutionContextManagerImplTest {
         when(securityService.getCurrentSubject()).thenReturn(subject);
         when(securityService.extractRolesFromSubject(subject)).thenReturn(roles);
         when(securityService.getPermissionsForRole(UnomiRoles.ADMINISTRATOR))
-            .thenReturn(new HashSet<>(Arrays.asList("READ", "WRITE", "DELETE")));
+            .thenReturn(new HashSet<>(Arrays.asList(SecurityServiceConfiguration.PERMISSION_QUERY, "WRITE", SecurityServiceConfiguration.PERMISSION_DELETE)));
         when(securityService.getPermissionsForRole(UnomiRoles.USER))
             .thenReturn(new HashSet<>(Arrays.asList("READ")));
 
@@ -68,7 +69,7 @@ public class ExecutionContextManagerImplTest {
 
         // Verify roles and permissions
         assertEquals("Roles should match", roles, context.getRoles());
-        Set<String> expectedPermissions = new HashSet<>(Arrays.asList("READ", "WRITE", "DELETE"));
+        Set<String> expectedPermissions = new HashSet<>(Arrays.asList(SecurityServiceConfiguration.PERMISSION_QUERY, "WRITE", SecurityServiceConfiguration.PERMISSION_DELETE));
         assertEquals("Permissions should be aggregated", expectedPermissions, context.getPermissions());
 
         // Verify security service interactions
@@ -83,7 +84,7 @@ public class ExecutionContextManagerImplTest {
         // Set up test data
         Subject systemSubject = new Subject();
         Set<String> systemRoles = new HashSet<>(Arrays.asList(UnomiRoles.ADMINISTRATOR));
-        Set<String> systemPermissions = new HashSet<>(Arrays.asList("READ", "WRITE", "DELETE", "ADMIN"));
+        Set<String> systemPermissions = new HashSet<>(Arrays.asList(SecurityServiceConfiguration.PERMISSION_QUERY, "WRITE", SecurityServiceConfiguration.PERMISSION_DELETE, "ADMIN"));
 
         // Mock security service behavior
         when(securityService.getSystemSubject()).thenReturn(systemSubject);

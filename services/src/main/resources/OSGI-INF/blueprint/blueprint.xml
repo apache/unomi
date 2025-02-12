@@ -133,7 +133,7 @@
         <cm:default-properties>
             <cm:property name="systemRoles" value="ROLE_UNOMI_SYSTEM,ROLE_UNOMI_ADMIN"/>
             <cm:property name="defaultRole" value="ROLE_UNOMI_TENANT_USER"/>
-            <cm:property name="operationRoles" value="ROLE_UNOMI_SYSTEM,ROLE_UNOMI_ADMIN,ROLE_UNOMI_TENANT_USER,ROLE_UNOMI_TENANT_ADMIN,ROLE_SYSTEM_MAINTENANCE"/>
+            <cm:property name="permissionRoles" value="ROLE_UNOMI_SYSTEM,ROLE_UNOMI_ADMIN,ROLE_UNOMI_TENANT_USER,ROLE_UNOMI_TENANT_ADMIN,ROLE_SYSTEM_MAINTENANCE"/>
             <cm:property name="enableEncryption" value="false"/>
         </cm:default-properties>
     </cm:property-placeholder>
