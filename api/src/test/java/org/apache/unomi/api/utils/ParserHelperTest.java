@@ -484,4 +484,66 @@ public class ParserHelperTest {
         verify(definitionsService, times(1)).getConditionType("conditionB");
         verify(definitionsService, times(1)).getConditionType("conditionC");
     }
+
+    @Test
+    public void testResolveConditionTypeWithParentSubConditions() {
+        // Create test condition
+        Condition condition = new Condition();
+        condition.setConditionTypeId("childConditionType");
+
+        // Create parent condition with subConditions
+        Condition parentCondition = new Condition();
+        parentCondition.setConditionTypeId("parentConditionType");
+
+        // Create subConditions for parent
+        Condition subCondition1 = new Condition();
+        subCondition1.setConditionTypeId("subCondition1Type");
+        
+        Condition subCondition2 = new Condition();
+        subCondition2.setConditionTypeId("subCondition2Type");
+
+        // Set up parent condition's parameters including subConditions
+        parentCondition.setParameter("operator", "and");
+        parentCondition.setParameter("subConditions", Arrays.asList(subCondition1, subCondition2));
+
+        // Create condition types
+        ConditionType childType = new ConditionType();
+        childType.setItemId("childConditionType");
+        childType.setParentCondition(parentCondition);
+
+        ConditionType parentType = new ConditionType();
+        parentType.setItemId("parentConditionType");
+
+        ConditionType subCondition1Type = new ConditionType();
+        subCondition1Type.setItemId("subCondition1Type");
+
+        ConditionType subCondition2Type = new ConditionType();
+        subCondition2Type.setItemId("subCondition2Type");
+
+        // Mock definitions service
+        when(definitionsService.getConditionType("childConditionType")).thenReturn(childType);
+        when(definitionsService.getConditionType("parentConditionType")).thenReturn(parentType);
+        when(definitionsService.getConditionType("subCondition1Type")).thenReturn(subCondition1Type);
+        when(definitionsService.getConditionType("subCondition2Type")).thenReturn(subCondition2Type);
+
+        // Test resolution
+        boolean result = ParserHelper.resolveConditionType(definitionsService, condition, "testContext");
+        assertTrue("Condition type should be resolved", result);
+
+        // Verify child condition type is set
+        assertEquals("Child condition type should be set", childType, condition.getConditionType());
+
+        // Verify parent condition is properly resolved
+        Condition resolvedParent = condition.getConditionType().getParentCondition();
+        assertNotNull("Parent condition should be set", resolvedParent);
+        assertEquals("Parent condition type should be set", parentType, resolvedParent.getConditionType());
+
+        // Verify subConditions are properly resolved
+        @SuppressWarnings("unchecked")
+        List<Condition> resolvedSubConditions = (List<Condition>) resolvedParent.getParameter("subConditions");
+        assertNotNull("SubConditions should be present", resolvedSubConditions);
+        assertEquals("Should have two subConditions", 2, resolvedSubConditions.size());
+        assertEquals("First subCondition type should be set", subCondition1Type, resolvedSubConditions.get(0).getConditionType());
+        assertEquals("Second subCondition type should be set", subCondition2Type, resolvedSubConditions.get(1).getConditionType());
+    }
 }

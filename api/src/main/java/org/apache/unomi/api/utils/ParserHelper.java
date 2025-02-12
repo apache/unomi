@@ -68,78 +68,62 @@ public class ParserHelper {
     }
 
     public static boolean resolveConditionType(final DefinitionsService definitionsService, Condition rootCondition, String contextObjectName) {
+        return resolveConditionType(definitionsService, rootCondition, contextObjectName, new HashSet<>());
+    }
+
+    private static boolean resolveConditionType(final DefinitionsService definitionsService, Condition rootCondition, 
+            String contextObjectName, Set<String> resolutionPath) {
         if (rootCondition == null) {
             LOGGER.warn("Couldn't resolve null condition for {}", contextObjectName);
             return false;
         }
-        final List<String> result = new ArrayList<String>();
-        final Set<String> visitedTypes = new HashSet<>();
-        visitConditions(rootCondition, new ConditionVisitor() {
-            @Override
-            public void visit(Condition condition) {
-                if (condition.getConditionType() == null) {
-                    ConditionType conditionType = definitionsService.getConditionType(condition.getConditionTypeId());
-                    if (conditionType != null) {
-                        unresolvedConditionTypes.remove(condition.getConditionTypeId());
-                        condition.setConditionType(conditionType);
-
-                        // Handle parent condition resolution
-                        if (conditionType.getParentCondition() != null) {
-                            // Check for circular references
-                            if (!resolveParentConditionType(conditionType, visitedTypes, definitionsService)) {
-                                result.add(condition.getConditionTypeId());
-                                condition.setConditionType(null); // Reset to prevent partial resolution
-                                LOGGER.warn("Detected circular reference in parent conditions for type: {} in {}",
-                                    condition.getConditionTypeId(), contextObjectName);
-                            }
-                        }
-                    } else {
-                        result.add(condition.getConditionTypeId());
-                        if (!unresolvedConditionTypes.contains(condition.getConditionTypeId())) {
-                            unresolvedConditionTypes.add(condition.getConditionTypeId());
-                            LOGGER.warn("Couldn't resolve condition type: {} for {}", condition.getConditionTypeId(), contextObjectName);
-                        }
-                    }
-                }
-            }
-
-            @Override
-            public void postVisit(Condition condition) {
-            }
-        });
-        return result.isEmpty();
-    }
-
-    private static boolean resolveParentConditionType(ConditionType conditionType, Set<String> visitedTypes, DefinitionsService definitionsService) {
-        Condition parentCondition = conditionType.getParentCondition();
-        if (parentCondition == null) {
-            return true;
-        }
 
         // Check for circular reference
-        if (!visitedTypes.add(parentCondition.getConditionTypeId())) {
-            return false; // Circular reference detected
+        if (!resolutionPath.add(rootCondition.getConditionTypeId())) {
+            LOGGER.warn("Detected circular reference for condition type {} in {}", rootCondition.getConditionTypeId(), contextObjectName);
+            return false;
         }
 
         try {
-            // Resolve parent condition type
-            if (parentCondition.getConditionType() == null) {
-                ConditionType parentType = definitionsService.getConditionType(parentCondition.getConditionTypeId());
-                if (parentType == null) {
+            // Resolve current condition type if needed
+            if (rootCondition.getConditionType() == null) {
+                ConditionType conditionType = definitionsService.getConditionType(rootCondition.getConditionTypeId());
+                if (conditionType == null) {
+                    if (!unresolvedConditionTypes.contains(rootCondition.getConditionTypeId())) {
+                        unresolvedConditionTypes.add(rootCondition.getConditionTypeId());
+                        LOGGER.warn("Couldn't resolve condition type: {} for {}", rootCondition.getConditionTypeId(), contextObjectName);
+                    }
                     return false;
                 }
-                parentCondition.setConditionType(parentType);
+                unresolvedConditionTypes.remove(rootCondition.getConditionTypeId());
+                rootCondition.setConditionType(conditionType);
 
-                // Recursively resolve parent's parent
-                if (parentType.getParentCondition() != null) {
-                    if (!resolveParentConditionType(parentType, visitedTypes, definitionsService)) {
-                        return false;
+                // Resolve parent condition if it exists
+                if (conditionType.getParentCondition() != null && 
+                    !resolveConditionType(definitionsService, conditionType.getParentCondition(), contextObjectName, resolutionPath)) {
+                    rootCondition.setConditionType(null);
+                    LOGGER.warn("Failed to resolve parent condition for type: {} in {}", 
+                        rootCondition.getConditionTypeId(), contextObjectName);
+                    return false;
+                }
+            }
+
+            // Resolve all parameter conditions
+            for (Object value : rootCondition.getParameterValues().values()) {
+                if (value instanceof Condition && !resolveConditionType(definitionsService, (Condition) value, contextObjectName, resolutionPath)) {
+                    return false;
+                } else if (value instanceof Collection) {
+                    for (Object item : (Collection<?>) value) {
+                        if (item instanceof Condition && !resolveConditionType(definitionsService, (Condition) item, contextObjectName, resolutionPath)) {
+                            return false;
+                        }
                     }
                 }
             }
+
             return true;
         } finally {
-            visitedTypes.remove(parentCondition.getConditionTypeId());
+            resolutionPath.remove(rootCondition.getConditionTypeId());
         }
     }
 

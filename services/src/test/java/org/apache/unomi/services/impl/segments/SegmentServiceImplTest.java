@@ -801,4 +801,155 @@ public class SegmentServiceImplTest {
             return null;
         });
     }
-}
+
+    @Test
+    public void testCustomEventConditionTypeWithBooleanParent() {
+        executionContextManager.executeAsTenant(TENANT_1, () -> {
+            // Create profile
+            Profile profile = createTestProfile();
+            persistenceService.save(profile);
+
+            // Register custom condition type with boolean parent condition
+            ConditionType customEventConditionType = new ConditionType();
+            customEventConditionType.setItemId("customEventCondition");
+            customEventConditionType.setConditionEvaluator("eventTypeConditionEvaluator"); // Required for proper evaluation
+            
+            // Create simple boolean parent condition
+            Condition booleanParent = new Condition(definitionsService.getConditionType("booleanCondition"));
+            booleanParent.setParameter("operator", "and");
+
+            // Add two simple event conditions
+            Condition eventTypeCondition = new Condition(definitionsService.getConditionType("eventTypeCondition"));
+            eventTypeCondition.setParameter("eventTypeId", "view");
+
+            Condition propertyCondition = new Condition(definitionsService.getConditionType("eventPropertyCondition"));
+            propertyCondition.setParameter("propertyName", "testProperty");
+            propertyCondition.setParameter("comparisonOperator", "equals");
+            propertyCondition.setParameter("propertyValue", "parameter::value");
+
+            booleanParent.setParameter("subConditions", Arrays.asList(eventTypeCondition, propertyCondition));
+            customEventConditionType.setParentCondition(booleanParent);
+
+            // Set metadata with eventCondition tag
+            customEventConditionType.setMetadata(new Metadata(null, "customEventCondition", "Custom Event Condition", ""));
+            customEventConditionType.getMetadata().setSystemTags(new HashSet<>(Arrays.asList("eventCondition")));
+            customEventConditionType.getMetadata().setEnabled(true);
+
+            definitionsService.setConditionType(customEventConditionType);
+
+            // Create segment
+            Segment segment = createTestSegment("test-segment", "Test Segment");
+            
+            // Create past event condition using the custom condition
+            Condition pastEventCondition = new Condition(definitionsService.getConditionType("pastEventCondition"));
+            Condition customCondition = new Condition(customEventConditionType);
+            customCondition.setParameter("value", "test");
+            
+            pastEventCondition.setParameter("eventCondition", customCondition);
+            pastEventCondition.setParameter("numberOfDays", 30);
+            segment.setCondition(pastEventCondition);
+
+            segmentService.setSegmentDefinition(segment);
+
+            // Send matching event
+            Event event = createTestEvent(profile, "view");
+            event.setProperty("testProperty", "test");
+            eventService.send(event);
+
+            // Force recalculation
+            segmentService.recalculatePastEventConditions();
+
+            // Verify profile is in segment
+            assertTrue("Profile should be in segment", profile.getSegments().contains("test-segment"));
+
+            return null;
+        });
+    }
+
+    @Test
+    public void testMultiplePastEventConditionsWithBoolean() {
+        executionContextManager.executeAsTenant(TENANT_1, () -> {
+            // Create profile
+            Profile profile = createTestProfile();
+            persistenceService.save(profile);
+    
+            // Create segment with boolean condition combining two past event conditions
+            Segment segment = new Segment();
+            segment.setItemId("test-segment");
+            segment.setTenantId(executionContextManager.getCurrentContext().getTenantId());
+    
+            Metadata metadata = new Metadata();
+            metadata.setId("test-segment");
+            metadata.setName("Test Segment");
+            metadata.setScope("systemscope");
+            metadata.setEnabled(true);
+            segment.setMetadata(metadata);
+    
+            // Create first past event condition (view events)
+            Condition eventCondition1 = new Condition(definitionsService.getConditionType("eventTypeCondition"));
+            eventCondition1.setParameter("eventTypeId", "view");
+            // Ensure event condition type is properly tagged
+            eventCondition1.getConditionType().getMetadata().setSystemTags(Collections.singleton("eventCondition"));
+    
+            Condition pastEventCondition1 = new Condition(definitionsService.getConditionType("pastEventCondition"));
+            pastEventCondition1.setParameter("eventCondition", eventCondition1);
+            pastEventCondition1.setParameter("numberOfDays", 30);
+            pastEventCondition1.setParameter("minimumCount", 1);
+            pastEventCondition1.setParameter("operator", "true");
+    
+            // Create second past event condition (login events)
+            Condition eventCondition2 = new Condition(definitionsService.getConditionType("eventTypeCondition"));
+            eventCondition2.setParameter("eventTypeId", "login");
+            // Ensure event condition type is properly tagged
+            eventCondition2.getConditionType().getMetadata().setSystemTags(Collections.singleton("eventCondition"));
+    
+            Condition pastEventCondition2 = new Condition(definitionsService.getConditionType("pastEventCondition"));
+            pastEventCondition2.setParameter("eventCondition", eventCondition2);
+            pastEventCondition2.setParameter("numberOfDays", 30);
+            pastEventCondition2.setParameter("minimumCount", 1);
+            pastEventCondition2.setParameter("operator", "true");
+    
+            // Combine with boolean condition
+            Condition booleanCondition = new Condition(definitionsService.getConditionType("booleanCondition"));
+            booleanCondition.setParameter("operator", "and");
+            booleanCondition.setParameter("subConditions", Arrays.asList(pastEventCondition1, pastEventCondition2));
+    
+            segment.setCondition(booleanCondition);
+            segmentService.setSegmentDefinition(segment);
+    
+            // Send first matching event (view)
+            Event viewEvent = createTestEvent(profile, "view");
+            viewEvent.setPersistent(true);
+            eventService.send(viewEvent);
+            persistenceService.save(viewEvent);
+    
+            // Force event indexing and recalculation
+            persistenceService.refresh();
+            segmentService.recalculatePastEventConditions();
+            
+            // Reload profile and verify intermediate state
+            profile = persistenceService.load(profile.getItemId(), Profile.class);
+            assertFalse("Profile should not be in segment yet", profile.getSegments().contains("test-segment"));
+    
+            // Send second matching event (login)
+            Event loginEvent = createTestEvent(profile, "login");
+            loginEvent.setPersistent(true);
+            eventService.send(loginEvent);
+            persistenceService.save(loginEvent);
+    
+            // Force event indexing and recalculation
+            persistenceService.refresh();
+            segmentService.recalculatePastEventConditions();
+    
+            // Trigger profile update to force segment evaluation
+            Event profileUpdatedEvent = new Event("profileUpdated", null, profile, null, null, profile, new Date());
+            profileUpdatedEvent.setPersistent(false);
+            eventService.send(profileUpdatedEvent);
+    
+            // Reload profile and verify final state
+            profile = persistenceService.load(profile.getItemId(), Profile.class);
+            assertTrue("Profile should be in segment", profile.getSegments().contains("test-segment"));
+    
+            return null;
+        });
+    }}
