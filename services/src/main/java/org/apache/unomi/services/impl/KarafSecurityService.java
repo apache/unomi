@@ -314,4 +314,20 @@ public class KarafSecurityService implements SecurityService {
         return configuration;
     }
 
+    @Override
+    public Subject createSubject(String tenantId, boolean isPrivate) {
+        Subject subject = new Subject();
+        subject.getPrincipals().add(new TenantPrincipal(tenantId));
+        subject.getPrincipals().add(new UserPrincipal(tenantId));
+        if (isPrivate) {
+            subject.getPrincipals().add(new RolePrincipal(UnomiRoles.TENANT_ADMINISTRATOR));
+            subject.getPrincipals().add(new RolePrincipal(UnomiRoles.TENANT_ADMIN_PREFIX + tenantId));
+            subject.getPrincipals().add(new RolePrincipal(UnomiRoles.USER));
+            subject.getPrincipals().add(new RolePrincipal(UnomiRoles.TENANT_USER_PREFIX + tenantId));
+        } else {
+            subject.getPrincipals().add(new RolePrincipal(UnomiRoles.USER));
+            subject.getPrincipals().add(new RolePrincipal(UnomiRoles.TENANT_USER_PREFIX + tenantId));
+        }
+        return subject;
+    }
 }

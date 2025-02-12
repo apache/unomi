@@ -245,6 +245,8 @@ public abstract class BaseIT extends KarafTestSupport {
             }
         }
 
+        securityService.setCurrentSubject(securityService.createSubject(TEST_TENANT_ID, true));
+
         executionContextManager.setCurrentContext(executionContextManager.createContext(testTenant.getItemId()));
 
         // Set up test tenant for HttpClientThatWaitsForUnomi

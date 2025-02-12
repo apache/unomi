@@ -24,7 +24,6 @@ import org.apache.cxf.security.SecurityContext;
 import org.apache.karaf.jaas.boot.principal.RolePrincipal;
 import org.apache.karaf.jaas.boot.principal.UserPrincipal;
 import org.apache.unomi.api.security.SecurityService;
-import org.apache.unomi.api.security.TenantPrincipal;
 import org.apache.unomi.api.security.UnomiRoles;
 import org.apache.unomi.api.tenants.ApiKey;
 import org.apache.unomi.api.tenants.Tenant;
@@ -140,7 +139,7 @@ public class AuthenticationFilter implements ContainerRequestFilter {
                 Tenant tenant = tenantService.getTenantByApiKey(apiKey, ApiKey.ApiKeyType.PUBLIC);
                 if (tenant != null) {
                     // Create and set security context with tenant principal and public role
-                    Subject subject = createSubject(tenant.getItemId(), false);
+                    Subject subject = securityService.createSubject(tenant.getItemId(), false);
 
                     // Set CXF security context
                     JAXRSUtils.getCurrentMessage().put(SecurityContext.class,
@@ -166,7 +165,7 @@ public class AuthenticationFilter implements ContainerRequestFilter {
 
                     // Validate tenant credentials with private key type
                     if (tenantService.validateApiKeyWithType(tenantId, privateKey, ApiKey.ApiKeyType.PRIVATE)) {
-                        Subject subject = createSubject(tenantId, true);
+                        Subject subject = securityService.createSubject(tenantId, true);
 
                         // Set CXF security context
                         JAXRSUtils.getCurrentMessage().put(SecurityContext.class,
@@ -232,21 +231,5 @@ public class AuthenticationFilter implements ContainerRequestFilter {
         // check if current path is matching any public path patterns
         String currentPath = requestContext.getMethod() + " " + requestContext.getUriInfo().getPath();
         return restAuthenticationConfig.getPublicPathPatterns().stream().anyMatch(pattern -> pattern.matcher(currentPath).matches());
-    }
-
-    private Subject createSubject(String tenantId, boolean isPrivate) {
-        Subject subject = new Subject();
-        subject.getPrincipals().add(new TenantPrincipal(tenantId));
-        subject.getPrincipals().add(new UserPrincipal(tenantId));
-        if (isPrivate) {
-            subject.getPrincipals().add(new RolePrincipal(UnomiRoles.TENANT_ADMINISTRATOR));
-            subject.getPrincipals().add(new RolePrincipal(UnomiRoles.TENANT_ADMIN_PREFIX + tenantId));
-            subject.getPrincipals().add(new RolePrincipal(UnomiRoles.USER));
-            subject.getPrincipals().add(new RolePrincipal(UnomiRoles.TENANT_USER_PREFIX + tenantId));
-        } else {
-            subject.getPrincipals().add(new RolePrincipal(UnomiRoles.USER));
-            subject.getPrincipals().add(new RolePrincipal(UnomiRoles.TENANT_USER_PREFIX + tenantId));
-        }
-        return subject;
     }
 }

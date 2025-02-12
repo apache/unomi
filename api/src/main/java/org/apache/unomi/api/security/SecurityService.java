@@ -220,4 +220,15 @@ public interface SecurityService {
      * @see UnomiRoles
      */
     Set<String> getPermissionsForRole(String role);
+
+    /**
+     * Creates a new Subject with the appropriate principals for a tenant.
+     * The subject will be created with the tenant principal and appropriate roles
+     * based on whether it's a private or public access.
+     *
+     * @param tenantId the ID of the tenant to create the subject for
+     * @param isPrivate whether to create a subject with private (admin) access or public access
+     * @return a new Subject configured with the appropriate principals and roles
+     */
+    Subject createSubject(String tenantId, boolean isPrivate);
 }
