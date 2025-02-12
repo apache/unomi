@@ -321,6 +321,9 @@ public class Event extends Item implements TimestampedItem {
      * @param value the value of the property
      */
     public void setProperty(String name, Object value) {
+        if (properties == null) {
+            properties = new LinkedHashMap<>();
+        }
         properties.put(name, value);
     }
 
