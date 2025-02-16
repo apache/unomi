@@ -1,0 +1,97 @@
+{
+  "dynamic_templates": [
+    {
+      "all": {
+        "match": "*",
+        "match_mapping_type": "string",
+        "mapping": {
+          "type": "text",
+          "analyzer": "folding",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        }
+      }
+    }
+  ],
+  "properties": {
+    "taskType": {
+      "type": "keyword"
+    },
+    "enabled": {
+      "type": "boolean"
+    },
+    "persistent": {
+      "type": "boolean"
+    },
+    "status": {
+      "type": "keyword"
+    },
+    "initialDelay": {
+      "type": "long"
+    },
+    "period": {
+      "type": "long"
+    },
+    "timeUnit": {
+      "type": "keyword"
+    },
+    "fixedRate": {
+      "type": "boolean"
+    },
+    "oneShot": {
+      "type": "boolean"
+    },
+    "allowParallelExecution": {
+      "type": "boolean"
+    },
+    "runOnAllNodes": {
+      "type": "boolean"
+    },
+    "maxRetries": {
+      "type": "integer"
+    },
+    "retryDelay": {
+      "type": "long"
+    },
+    "failureCount": {
+      "type": "integer"
+    },
+    "lastError": {
+      "type": "text"
+    },
+    "currentStep": {
+      "type": "keyword"
+    },
+    "statusDetails": {
+      "type": "object",
+      "enabled": false
+    },
+    "checkpointData": {
+      "type": "object",
+      "enabled": false
+    },
+    "parameters": {
+      "type": "object",
+      "enabled": false
+    },
+    "lockOwner": {
+      "type": "keyword"
+    },
+    "lockDate": {
+      "type": "date"
+    },
+    "lastExecutionDate": {
+      "type": "date"
+    },
+    "lastExecutedBy": {
+      "type": "keyword"
+    },
+    "nextScheduledExecution": {
+      "type": "date"
+    }
+  }
+} 
