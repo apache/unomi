@@ -17,6 +17,7 @@
 package org.apache.unomi.services.impl.profiles;
 
 import org.apache.unomi.api.*;
+import org.apache.unomi.api.services.ConditionValidationService;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.conditions.ConditionEvaluatorDispatcher;
 import org.apache.unomi.services.TestHelper;
@@ -24,6 +25,7 @@ import org.apache.unomi.services.impl.*;
 import org.apache.unomi.services.impl.cache.MultiTypeCacheServiceImpl;
 import org.apache.unomi.services.impl.definitions.DefinitionsServiceImpl;
 import org.apache.unomi.services.impl.tenants.AuditServiceImpl;
+import org.apache.unomi.services.impl.validation.ConditionValidationServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -54,6 +56,7 @@ public class ProfileServiceImplTest {
     private KarafSecurityService securityService;
     private AuditServiceImpl auditService;
     private org.apache.unomi.api.services.SchedulerService schedulerService;
+    private ConditionValidationService conditionValidationService;
 
     private static final String TENANT_1 = "tenant1";
     private static final String SYSTEM_TENANT = "system";
@@ -67,12 +70,10 @@ public class ProfileServiceImplTest {
         securityService = TestHelper.createSecurityService();
         executionContextManager = TestHelper.createExecutionContextManager(securityService);
 
-        executionContextManager.executeAsSystem(() -> {
-            // Create tenants
-            tenantService.createTenant(SYSTEM_TENANT, Collections.singletonMap("description", "System tenant"));
-            tenantService.createTenant(TENANT_1, Collections.singletonMap("description", "Tenant 1"));
-            return null;
-        });
+        // Create tenants using TestHelper
+        TestHelper.setupCommonTestData(tenantService);
+
+        conditionValidationService = new ConditionValidationServiceImpl();
 
         // Set up condition evaluator dispatcher
         ConditionEvaluatorDispatcher conditionEvaluatorDispatcher = TestConditionEvaluators.createDispatcher();
@@ -86,7 +87,7 @@ public class ProfileServiceImplTest {
         schedulerService = TestHelper.createSchedulerService(persistenceService, executionContextManager);
 
         // Set up definitions service
-        definitionsService = TestHelper.createDefinitionService(persistenceService, bundleContext, schedulerService, multiTypeCacheService, executionContextManager, tenantService);
+        definitionsService = TestHelper.createDefinitionService(persistenceService, bundleContext, schedulerService, multiTypeCacheService, executionContextManager, tenantService, conditionValidationService);
 
         // Set up value types
         ValueType stringType = new ValueType();

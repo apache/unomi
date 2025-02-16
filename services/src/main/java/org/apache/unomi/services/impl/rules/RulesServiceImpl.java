@@ -28,6 +28,8 @@ import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.rules.Rule;
 import org.apache.unomi.api.rules.RuleStatistics;
 import org.apache.unomi.api.services.*;
+import org.apache.unomi.api.services.ConditionValidationService.ValidationError;
+import org.apache.unomi.api.services.ConditionValidationService.ValidationErrorType;
 import org.apache.unomi.api.tasks.ScheduledTask;
 import org.apache.unomi.api.tenants.Tenant;
 import org.apache.unomi.api.tenants.TenantService;
@@ -35,6 +37,8 @@ import org.apache.unomi.api.utils.ParserHelper;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.services.actions.ActionExecutorDispatcher;
 import org.apache.unomi.services.impl.AbstractContextAwareService;
+import org.apache.unomi.tracing.api.RequestTracer;
+import org.apache.unomi.tracing.api.TracerService;
 import org.osgi.framework.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,6 +49,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import static org.apache.unomi.api.tenants.TenantService.SYSTEM_TENANT;
 
@@ -76,6 +81,9 @@ public class RulesServiceImpl extends AbstractContextAwareService implements Rul
 
     private ScheduledTask rulesRefreshTask;
     private ScheduledTask statisticsRefreshTask;
+
+    private ConditionValidationService conditionValidationService;
+    private TracerService tracerService;
 
     public void setBundleContext(BundleContext bundleContext) {
         this.bundleContext = bundleContext;
@@ -111,6 +119,14 @@ public class RulesServiceImpl extends AbstractContextAwareService implements Rul
 
     public void setTenantService(TenantService tenantService) {
         this.tenantService = tenantService;
+    }
+
+    public void setConditionValidationService(ConditionValidationService conditionValidationService) {
+        this.conditionValidationService = conditionValidationService;
+    }
+
+    public void setTracerService(TracerService tracerService) {
+        this.tracerService = tracerService;
     }
 
     public void postConstruct() {
@@ -605,6 +621,54 @@ public class RulesServiceImpl extends AbstractContextAwareService implements Rul
             }
         }
 
+        if (rule.getCondition() != null) {
+            // Start validation operation in tracer
+            if (tracerService != null) {
+                RequestTracer tracer = tracerService.getCurrentTracer();
+                if (tracer != null && tracer.isEnabled()) {
+                    tracer.startOperation("rule-condition-validation", "Validating rule condition: " + rule.getItemId(), rule.getCondition());
+                }
+            }
+
+            List<ValidationError> validationErrors = conditionValidationService.validate(rule.getCondition());
+
+            // Add validation info to tracer
+            if (tracerService != null) {
+                RequestTracer tracer = tracerService.getCurrentTracer();
+                if (tracer != null && tracer.isEnabled()) {
+                    tracer.addValidationInfo(validationErrors, "rule-condition-validation");
+                    tracer.endOperation(!validationErrors.isEmpty(), String.format("Rule validation completed with %d errors", validationErrors.size()));
+                }
+            }
+
+            // Separate errors and warnings
+            List<ValidationError> errors = validationErrors.stream()
+                .filter(error -> error.getType() != ValidationErrorType.MISSING_RECOMMENDED_PARAMETER)
+                .collect(Collectors.toList());
+
+            List<ValidationError> warnings = validationErrors.stream()
+                .filter(error -> error.getType() == ValidationErrorType.MISSING_RECOMMENDED_PARAMETER)
+                .collect(Collectors.toList());
+
+            // Log warnings but don't block the operation
+            if (!warnings.isEmpty()) {
+                StringBuilder warningMessage = new StringBuilder("Rule condition has warnings:");
+                for (ValidationError warning : warnings) {
+                    warningMessage.append("\n- ").append(warning.getMessage());
+                }
+                LOGGER.warn(warningMessage.toString());
+            }
+
+            // Only throw exception for actual errors
+            if (!errors.isEmpty()) {
+                StringBuilder errorMessage = new StringBuilder("Invalid rule condition:");
+                for (ValidationError error : errors) {
+                    errorMessage.append("\n- ").append(error.getMessage());
+                }
+                throw new IllegalArgumentException(errorMessage.toString());
+            }
+        }
+
         try {
             saveWithTenant(rule);
             synchronized (cacheLock) {
@@ -828,7 +892,7 @@ public class RulesServiceImpl extends AbstractContextAwareService implements Rul
                     trackedCondition.getConditionType().getParameters().forEach(parameter -> {
                         try {
                             if (TRACKED_PARAMETER.equals(parameter.getId())) {
-                                Arrays.stream(StringUtils.split(parameter.getDefaultValue(), ",")).forEach(trackedParameter -> {
+                                Arrays.stream(StringUtils.split(parameter.getDefaultValue().toString(), ",")).forEach(trackedParameter -> {
                                     String[] param = StringUtils.split(StringUtils.trim(trackedParameter), ":");
                                     trackedParameters.put(StringUtils.trim(param[1]), trackedCondition.getParameter(StringUtils.trim(param[0])));
                                 });

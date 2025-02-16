@@ -21,12 +21,12 @@ import org.apache.unomi.api.Metadata;
 import org.apache.unomi.api.PartialList;
 import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.actions.Action;
-import org.apache.unomi.api.actions.ActionType;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.api.rules.Rule;
 import org.apache.unomi.api.segments.Segment;
 import org.apache.unomi.api.segments.SegmentsAndScores;
+import org.apache.unomi.api.services.ConditionValidationService;
 import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.api.services.cache.CacheableTypeConfig;
 import org.apache.unomi.persistence.spi.PersistenceService;
@@ -39,11 +39,11 @@ import org.apache.unomi.services.impl.events.EventServiceImpl;
 import org.apache.unomi.services.impl.rules.RulesServiceImpl;
 import org.apache.unomi.services.impl.rules.TestActionExecutorDispatcher;
 import org.apache.unomi.services.impl.rules.TestEvaluateProfileSegmentsAction;
+import org.apache.unomi.tracing.api.RequestTracer;
+import org.apache.unomi.tracing.api.TracerService;
 import org.junit.Before;
 import org.junit.Test;
-import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 
 import java.io.IOException;
@@ -52,7 +52,6 @@ import java.util.*;
 
 import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 public class SegmentServiceImplTest {
@@ -67,9 +66,12 @@ public class SegmentServiceImplTest {
     private KarafSecurityService securityService;
     private RulesServiceImpl rulesService;
     private TestActionExecutorDispatcher actionExecutorDispatcher;
+    private ConditionValidationService conditionValidationService;
 
-    @Mock
     private BundleContext bundleContext;
+    private TracerService tracerService;
+    private RequestTracer requestTracer;
+
     private org.apache.unomi.api.services.SchedulerService schedulerService;
 
     private static final String TENANT_1 = "tenant1";
@@ -82,24 +84,16 @@ public class SegmentServiceImplTest {
         tenantService = new TestTenantService();
         securityService = TestHelper.createSecurityService();
         executionContextManager = TestHelper.createExecutionContextManager(securityService);
+        conditionValidationService = TestHelper.createConditionValidationService();
+        TracerService tracerService = TestHelper.createTracerService();
 
-        // Register condition evaluators and condition types in system tenant.
-        executionContextManager.executeAsSystem(() -> {
-            // Create tenants
-            tenantService.createTenant(SYSTEM_TENANT, Collections.singletonMap("description", "System tenant"));
-            tenantService.createTenant(TENANT_1, Collections.singletonMap("description", "Tenant 1"));
-            tenantService.createTenant(TENANT_2, Collections.singletonMap("description", "Tenant 2"));
-            return null;
-        });
+        // Create tenants using TestHelper
+        TestHelper.setupCommonTestData(tenantService);
 
         ConditionEvaluatorDispatcher conditionEvaluatorDispatcher = TestConditionEvaluators.createDispatcher();
 
-        // Mock bundle context
-        Bundle bundle = mock(Bundle.class);
-        when(bundleContext.getBundle()).thenReturn(bundle);
-        when(bundle.getBundleContext()).thenReturn(bundleContext);
-        when(bundleContext.getBundle().findEntries(eq("META-INF/cxs/segments"), eq("*.json"), eq(true))).thenReturn(null);
-        when(bundleContext.getBundles()).thenReturn(new Bundle[0]);
+        // Set up bundle context using TestHelper
+        bundleContext = TestHelper.createMockBundleContext();
 
         persistenceService = new InMemoryPersistenceServiceImpl(executionContextManager, conditionEvaluatorDispatcher);
 
@@ -108,57 +102,45 @@ public class SegmentServiceImplTest {
 
         multiTypeCacheService = new MultiTypeCacheServiceImpl();
 
-        definitionsService = TestHelper.createDefinitionService(persistenceService, bundleContext, schedulerService, multiTypeCacheService, executionContextManager, tenantService);
+        definitionsService = TestHelper.createDefinitionService(persistenceService, bundleContext, schedulerService, multiTypeCacheService, executionContextManager, tenantService, conditionValidationService);
 
         TestConditionEvaluators.getConditionTypes().forEach((key, value) -> definitionsService.setConditionType(value));
 
-        // Set up event service
-        eventService = new EventServiceImpl();
-        eventService.setBundleContext(bundleContext);
-        eventService.setPersistenceService(persistenceService);
-        eventService.setDefinitionsService(definitionsService);
-        eventService.setTenantService(tenantService);
+        // Set up event service using TestHelper
+        eventService = TestHelper.createEventService(persistenceService, bundleContext, definitionsService, tenantService, tracerService);
         TestConditionEvaluators.setEventService(eventService);
 
         // Set up action executor dispatcher
         actionExecutorDispatcher = new TestActionExecutorDispatcher(definitionsService, persistenceService);
         actionExecutorDispatcher.setDefaultReturnValue(EventService.PROFILE_UPDATED);
-
+        actionExecutorDispatcher.setTracer(requestTracer);
 
         // Set up rules service using TestHelper
-        rulesService = TestHelper.createRulesService(persistenceService, bundleContext, schedulerService, definitionsService,
-            eventService, executionContextManager, tenantService);
-        rulesService.setActionExecutorDispatcher(actionExecutorDispatcher);
+        rulesService = TestHelper.createRulesService(persistenceService, bundleContext, schedulerService, definitionsService, eventService, executionContextManager, tenantService, conditionValidationService);
+        rulesService.setTracerService(tracerService);
 
         // Set up segment service
         segmentService = new SegmentServiceImpl();
         segmentService.setBundleContext(bundleContext);
         segmentService.setPersistenceService(persistenceService);
         segmentService.setDefinitionsService(definitionsService);
-        segmentService.setEventService(eventService);
         segmentService.setRulesService(rulesService);
-        segmentService.setTenantService(tenantService);
-        segmentService.setSchedulerService(schedulerService);
+        segmentService.setEventService(eventService);
         segmentService.setContextManager(executionContextManager);
+        segmentService.setSchedulerService(schedulerService);
         segmentService.setCacheService(multiTypeCacheService);
-        segmentService.setSegmentUpdateBatchSize(1000);
-        segmentService.setAggregateQueryBucketSize(5000);
-        segmentService.setMaximumIdsQueryCount(5000);
-        segmentService.setPastEventsDisablePartitions(false);
-        segmentService.setSegmentRefreshInterval(1000);
-        segmentService.setMaxRetriesForUpdateProfileSegment(3);
-        segmentService.setSecondsDelayForRetryUpdateProfileSegment(1);
-        segmentService.setBatchSegmentProfileUpdate(true);
-        segmentService.setSendProfileUpdateEventForSegmentUpdate(true);
-        segmentService.setDailyDateExprEvaluationHourUtc(5);
+        segmentService.setTenantService(tenantService);
+        segmentService.setConditionValidationService(conditionValidationService);
+        segmentService.setTracerService(tracerService);
 
-        // Initialize segment caches
+        // Register TestEvaluateProfileSegmentsAction
+        actionExecutorDispatcher.addExecutor("evaluateProfileSegments", new TestEvaluateProfileSegmentsAction(segmentService));
+
+        // Set up action types
+        TestHelper.setupSegmentActionTypes(definitionsService);
+
+        // Initialize services
         segmentService.postConstruct();
-
-        // Register the EvaluateProfileSegmentsAction
-        TestEvaluateProfileSegmentsAction evaluateProfileSegmentsAction = new TestEvaluateProfileSegmentsAction(segmentService);
-        actionExecutorDispatcher.setActionExecutor("evaluateProfileSegmentsAction", evaluateProfileSegmentsAction);
-        setupActionTypes();
 
         // Initialize rule caches
         rulesService.postConstruct();
@@ -191,40 +173,6 @@ public class SegmentServiceImplTest {
             rulesService.setRule(segmentEvaluationRule);
             return null;
         });
-    }
-
-    private void setupActionTypes() {
-        // Register the evaluateProfileSegmentsAction type
-        ActionType actionType = new ActionType();
-        actionType.setItemId("evaluateProfileSegmentsAction");
-        actionType.setActionExecutor("evaluateProfileSegments");
-
-        Metadata metadata = new Metadata();
-        metadata.setId("evaluateProfileSegmentsAction");
-        metadata.setName("Evaluate Profile Segments");
-        metadata.setDescription("Evaluates the segments for a profile and updates the profile with the matching segments");
-        metadata.setSystemTags(Collections.singleton("profileTags"));
-        metadata.setEnabled(true);
-        metadata.setHidden(false);
-        actionType.setMetadata(metadata);
-
-        definitionsService.setActionType(actionType);
-
-        // Register the profileUpdatedEventCondition type
-        ConditionType conditionType = new ConditionType();
-        conditionType.setItemId("profileUpdatedEventCondition");
-        conditionType.setConditionEvaluator("profileUpdatedEventConditionEvaluator");
-        conditionType.setQueryBuilder("eventTypeConditionESQueryBuilder");
-
-        Metadata conditionMetadata = new Metadata();
-        conditionMetadata.setId("profileUpdatedEventCondition");
-        conditionMetadata.setName("Profile Updated Event");
-        conditionMetadata.setDescription("Condition to match profile updated events");
-        conditionMetadata.setSystemTags(new HashSet<>(Arrays.asList("profileTags", "event", "condition", "eventCondition")));
-        conditionMetadata.setEnabled(true);
-        conditionType.setMetadata(conditionMetadata);
-
-        definitionsService.setConditionType(conditionType);
     }
 
     private Segment createTestSegment(String segmentId, String name) {
@@ -813,7 +761,7 @@ public class SegmentServiceImplTest {
             ConditionType customEventConditionType = new ConditionType();
             customEventConditionType.setItemId("customEventCondition");
             customEventConditionType.setConditionEvaluator("eventTypeConditionEvaluator"); // Required for proper evaluation
-            
+
             // Create simple boolean parent condition
             Condition booleanParent = new Condition(definitionsService.getConditionType("booleanCondition"));
             booleanParent.setParameter("operator", "and");
@@ -839,12 +787,12 @@ public class SegmentServiceImplTest {
 
             // Create segment
             Segment segment = createTestSegment("test-segment", "Test Segment");
-            
+
             // Create past event condition using the custom condition
             Condition pastEventCondition = new Condition(definitionsService.getConditionType("pastEventCondition"));
             Condition customCondition = new Condition(customEventConditionType);
             customCondition.setParameter("value", "test");
-            
+
             pastEventCondition.setParameter("eventCondition", customCondition);
             pastEventCondition.setParameter("numberOfDays", 30);
             segment.setCondition(pastEventCondition);
@@ -872,84 +820,252 @@ public class SegmentServiceImplTest {
             // Create profile
             Profile profile = createTestProfile();
             persistenceService.save(profile);
-    
+
             // Create segment with boolean condition combining two past event conditions
             Segment segment = new Segment();
             segment.setItemId("test-segment");
             segment.setTenantId(executionContextManager.getCurrentContext().getTenantId());
-    
+
             Metadata metadata = new Metadata();
             metadata.setId("test-segment");
             metadata.setName("Test Segment");
             metadata.setScope("systemscope");
             metadata.setEnabled(true);
             segment.setMetadata(metadata);
-    
+
             // Create first past event condition (view events)
             Condition eventCondition1 = new Condition(definitionsService.getConditionType("eventTypeCondition"));
             eventCondition1.setParameter("eventTypeId", "view");
             // Ensure event condition type is properly tagged
             eventCondition1.getConditionType().getMetadata().setSystemTags(Collections.singleton("eventCondition"));
-    
+
             Condition pastEventCondition1 = new Condition(definitionsService.getConditionType("pastEventCondition"));
             pastEventCondition1.setParameter("eventCondition", eventCondition1);
             pastEventCondition1.setParameter("numberOfDays", 30);
             pastEventCondition1.setParameter("minimumCount", 1);
             pastEventCondition1.setParameter("operator", "true");
-    
+
             // Create second past event condition (login events)
             Condition eventCondition2 = new Condition(definitionsService.getConditionType("eventTypeCondition"));
             eventCondition2.setParameter("eventTypeId", "login");
             // Ensure event condition type is properly tagged
             eventCondition2.getConditionType().getMetadata().setSystemTags(Collections.singleton("eventCondition"));
-    
+
             Condition pastEventCondition2 = new Condition(definitionsService.getConditionType("pastEventCondition"));
             pastEventCondition2.setParameter("eventCondition", eventCondition2);
             pastEventCondition2.setParameter("numberOfDays", 30);
             pastEventCondition2.setParameter("minimumCount", 1);
             pastEventCondition2.setParameter("operator", "true");
-    
+
             // Combine with boolean condition
             Condition booleanCondition = new Condition(definitionsService.getConditionType("booleanCondition"));
             booleanCondition.setParameter("operator", "and");
             booleanCondition.setParameter("subConditions", Arrays.asList(pastEventCondition1, pastEventCondition2));
-    
+
             segment.setCondition(booleanCondition);
             segmentService.setSegmentDefinition(segment);
-    
+
             // Send first matching event (view)
             Event viewEvent = createTestEvent(profile, "view");
             viewEvent.setPersistent(true);
             eventService.send(viewEvent);
             persistenceService.save(viewEvent);
-    
+
             // Force event indexing and recalculation
             persistenceService.refresh();
             segmentService.recalculatePastEventConditions();
-            
+
             // Reload profile and verify intermediate state
             profile = persistenceService.load(profile.getItemId(), Profile.class);
             assertFalse("Profile should not be in segment yet", profile.getSegments().contains("test-segment"));
-    
+
             // Send second matching event (login)
             Event loginEvent = createTestEvent(profile, "login");
             loginEvent.setPersistent(true);
             eventService.send(loginEvent);
             persistenceService.save(loginEvent);
-    
+
             // Force event indexing and recalculation
             persistenceService.refresh();
             segmentService.recalculatePastEventConditions();
-    
+
             // Trigger profile update to force segment evaluation
             Event profileUpdatedEvent = new Event("profileUpdated", null, profile, null, null, profile, new Date());
             profileUpdatedEvent.setPersistent(false);
             eventService.send(profileUpdatedEvent);
-    
+
             // Reload profile and verify final state
             profile = persistenceService.load(profile.getItemId(), Profile.class);
             assertTrue("Profile should be in segment", profile.getSegments().contains("test-segment"));
-    
+
             return null;
         });
-    }}
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testSetSegmentWithInvalidCondition() {
+        executionContextManager.executeAsTenant(TENANT_1, () -> {
+            // Create a segment with invalid condition
+            Segment segment = new Segment();
+            segment.setItemId("testSegment");
+            segment.setMetadata(new Metadata());
+            segment.getMetadata().setId("testSegment");
+            segment.getMetadata().setEnabled(true);
+
+            // Create an invalid condition (missing required parameters)
+            Condition condition = new Condition();
+            condition.setConditionTypeId("profilePropertyCondition");
+
+            // Get the condition type from definitions service
+            ConditionType conditionType = definitionsService.getConditionType("profilePropertyCondition");
+            assertNotNull("Condition type should exist", conditionType);
+            condition.setConditionType(conditionType);
+
+            // Don't set required parameters
+            segment.setCondition(condition);
+
+            // Should throw IllegalArgumentException since condition is missing required parameters
+            segmentService.setSegmentDefinition(segment);
+            return null;
+        });
+    }
+
+    @Test
+    public void testSetSegmentWithValidCondition() {
+        executionContextManager.executeAsTenant(TENANT_1, () -> {
+            // Create a segment with valid condition
+            Segment segment = new Segment();
+            Metadata metadata = new Metadata();
+            metadata.setId("testSegment");
+            metadata.setEnabled(true);
+            segment.setMetadata(metadata);
+
+            // Create a valid condition
+            Condition condition = new Condition();
+            condition.setConditionTypeId("profilePropertyCondition");
+
+            // Get the condition type from definitions service
+            ConditionType conditionType = definitionsService.getConditionType("profilePropertyCondition");
+            assertNotNull("Condition type should exist", conditionType);
+            condition.setConditionType(conditionType);
+
+            // Set all required parameters
+            condition.setParameter("propertyName", "properties.testProperty");
+            condition.setParameter("comparisonOperator", "equals");
+            condition.setParameter("propertyValue", "testValue");
+            segment.setCondition(condition);
+
+            // Should not throw any exceptions
+            segmentService.setSegmentDefinition(segment);
+
+            // Verify segment was saved
+            Segment savedSegment = segmentService.getSegmentDefinition("testSegment");
+            assertNotNull("Segment should be saved", savedSegment);
+            assertEquals("Should have correct condition type", "profilePropertyCondition",
+                savedSegment.getCondition().getConditionTypeId());
+            return null;
+        });
+    }
+
+    @Test
+    public void testSetSegmentWithNestedConditions() {
+        executionContextManager.executeAsTenant(TENANT_1, () -> {
+            // Create a segment with nested conditions
+            Segment segment = new Segment();
+            // We have to create the metadata before setting it because the metadata id will be used to set the itemId of the segment
+            Metadata metadata = new Metadata();
+            metadata.setId("testSegment");
+            metadata.setEnabled(true);
+            segment.setMetadata(metadata);
+
+            // Create parent condition
+            Condition parentCondition = new Condition();
+            parentCondition.setConditionTypeId("booleanCondition");
+
+            // Get the condition type from definitions service
+            ConditionType booleanConditionType = definitionsService.getConditionType("booleanCondition");
+            assertNotNull("Boolean condition type should exist", booleanConditionType);
+            parentCondition.setConditionType(booleanConditionType);
+            parentCondition.setParameter("operator", "and");
+
+            // Create child condition
+            Condition childCondition = new Condition();
+            childCondition.setConditionTypeId("profilePropertyCondition");
+
+            // Get the condition type from definitions service
+            ConditionType profilePropertyConditionType = definitionsService.getConditionType("profilePropertyCondition");
+            assertNotNull("Profile property condition type should exist", profilePropertyConditionType);
+            childCondition.setConditionType(profilePropertyConditionType);
+
+            childCondition.setParameter("propertyName", "properties.testProperty");
+            childCondition.setParameter("comparisonOperator", "equals");
+            childCondition.setParameter("propertyValue", "testValue");
+
+            // Set up nested structure
+            List<Condition> subConditions = new ArrayList<>();
+            subConditions.add(childCondition);
+            parentCondition.setParameter("subConditions", subConditions);
+
+            segment.setCondition(parentCondition);
+
+            // Should not throw any exceptions
+            segmentService.setSegmentDefinition(segment);
+
+            // Verify segment was saved with nested conditions
+            Segment savedSegment = segmentService.getSegmentDefinition("testSegment");
+            assertNotNull("Segment should be saved", savedSegment);
+            assertEquals("Should have boolean condition type", "booleanCondition",
+                savedSegment.getCondition().getConditionTypeId());
+            List<Condition> savedSubConditions = (List<Condition>) savedSegment.getCondition().getParameter("subConditions");
+            assertNotNull("Should have sub conditions", savedSubConditions);
+            assertEquals("Should have one sub condition", 1, savedSubConditions.size());
+            assertEquals("Sub condition should have correct type", "profilePropertyCondition",
+                    savedSubConditions.get(0).getConditionTypeId());
+            return null;
+        });
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testSetSegmentWithInvalidNestedCondition() {
+        executionContextManager.executeAsTenant(TENANT_1, () -> {
+            // Create a segment with nested conditions where child is invalid
+            Segment segment = new Segment();
+            segment.setItemId("testSegment");
+            segment.setMetadata(new Metadata());
+            segment.getMetadata().setId("testSegment");
+            segment.getMetadata().setEnabled(true);
+
+            // Create parent condition
+            Condition parentCondition = new Condition();
+            parentCondition.setConditionTypeId("booleanCondition");
+
+            // Get the condition type from definitions service
+            ConditionType booleanConditionType = definitionsService.getConditionType("booleanCondition");
+            assertNotNull("Boolean condition type should exist", booleanConditionType);
+            parentCondition.setConditionType(booleanConditionType);
+            parentCondition.setParameter("operator", "and");
+
+            // Create invalid child condition (missing required parameters)
+            Condition childCondition = new Condition();
+            childCondition.setConditionTypeId("profilePropertyCondition");
+
+            // Get the condition type from definitions service
+            ConditionType profilePropertyConditionType = definitionsService.getConditionType("profilePropertyCondition");
+            assertNotNull("Profile property condition type should exist", profilePropertyConditionType);
+            childCondition.setConditionType(profilePropertyConditionType);
+
+            // Don't set required parameters
+
+            // Set up nested structure
+            List<Condition> subConditions = new ArrayList<>();
+            subConditions.add(childCondition);
+            parentCondition.setParameter("subConditions", subConditions);
+
+            segment.setCondition(parentCondition);
+
+            // Should throw IllegalArgumentException since child condition is missing required parameters
+            segmentService.setSegmentDefinition(segment);
+            return null;
+        });
+    }
+}

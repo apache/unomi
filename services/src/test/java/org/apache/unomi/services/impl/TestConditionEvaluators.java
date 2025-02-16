@@ -20,10 +20,12 @@ import org.apache.commons.lang3.ObjectUtils;
 import org.apache.unomi.api.*;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.conditions.ConditionType;
+import org.apache.unomi.api.conditions.ConditionValidation;
 import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.persistence.spi.PropertyHelper;
 import org.apache.unomi.persistence.spi.conditions.*;
 import org.apache.unomi.persistence.spi.conditions.geo.DistanceUnit;
+import org.apache.unomi.tracing.api.RequestTracer;
 
 import java.lang.reflect.Method;
 import java.text.SimpleDateFormat;
@@ -41,7 +43,8 @@ public class TestConditionEvaluators {
     private static final SimpleDateFormat ISO_DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
     private static final SimpleDateFormat yearMonthDayDateFormat = new SimpleDateFormat("yyyyMMdd");
     private static EventService eventService;
-    private static TestConditionEvaluationTracer tracer = new TestConditionEvaluationTracer(true);
+    private static TestRequestTracer tracer = new TestRequestTracer(true);
+    private static Map<String, ConditionEvaluator> evaluators = new HashMap<>();
 
     static {
         ISO_DATE_FORMAT.setTimeZone(TimeZone.getTimeZone("UTC"));
@@ -52,7 +55,7 @@ public class TestConditionEvaluators {
         eventService = service;
     }
 
-    public static TestConditionEvaluationTracer getTracer() {
+    public static RequestTracer getTracer() {
         return tracer;
     }
 
@@ -73,31 +76,31 @@ public class TestConditionEvaluators {
 
     private static ConditionEvaluator createBooleanConditionEvaluator() {
         return (condition, item, context, dispatcher) -> {
-            tracer.startEvaluation(condition, "Evaluating boolean condition with operator: " + condition.getParameter("operator"));
+            tracer.startOperation("boolean", "Evaluating boolean condition with operator: " + condition.getParameter("operator"), condition);
             String operator = (String) condition.getParameter("operator");
             List<Condition> subConditions = (List<Condition>) condition.getParameter("subConditions");
 
             if (subConditions == null || subConditions.isEmpty()) {
-                tracer.endEvaluation(condition, true, "No subconditions found, returning true");
+                tracer.endOperation(true, "No subconditions found, returning true");
                 return true;
             }
 
             boolean isAnd = "and".equalsIgnoreCase(operator);
-            tracer.trace(condition, "Using " + (isAnd ? "AND" : "OR") + " operator for " + subConditions.size() + " subconditions");
+            tracer.trace("Using " + (isAnd ? "AND" : "OR") + " operator for " + subConditions.size() + " subconditions", condition);
 
             for (Condition subCondition : subConditions) {
                 boolean result = dispatcher.eval(subCondition, item, context);
                 if (isAnd && !result) {
-                    tracer.endEvaluation(condition, false, "AND condition failed on subcondition");
+                    tracer.endOperation(false, "AND condition failed on subcondition");
                     return false;
                 } else if (!isAnd && result) {
-                    tracer.endEvaluation(condition, true, "OR condition succeeded on subcondition");
+                    tracer.endOperation(true, "OR condition succeeded on subcondition");
                     return true;
                 }
             }
 
             boolean finalResult = isAnd;
-            tracer.endEvaluation(condition, finalResult, "All subconditions processed, returning " + finalResult);
+            tracer.endOperation(finalResult, "All subconditions processed, returning " + finalResult);
             return finalResult;
         };
     }
@@ -180,21 +183,14 @@ public class TestConditionEvaluators {
 
     private static ConditionEvaluator createPropertyConditionEvaluator() {
         return (condition, item, context, dispatcher) -> {
+            tracer.startOperation("property", "Evaluating property condition", condition);
             String propertyName = (String) condition.getParameter("propertyName");
             String comparisonOperator = (String) condition.getParameter("comparisonOperator");
 
-            tracer.startEvaluation(condition, "Evaluating property condition for property: " + propertyName + " with operator: " + comparisonOperator);
-
-            if (propertyName == null || comparisonOperator == null) {
-                tracer.endEvaluation(condition, false, "Missing property name or comparison operator");
-                return false;
-            }
-
             Object actualValue = getPropertyValue(item, propertyName);
-            tracer.trace(condition, "Property value retrieved: " + actualValue);
-
             boolean result = evaluateCondition(actualValue, comparisonOperator, condition);
-            tracer.endEvaluation(condition, result, "Property comparison result: " + result);
+
+            tracer.endOperation(result, "Property condition evaluation completed");
             return result;
         };
     }
@@ -437,21 +433,19 @@ public class TestConditionEvaluators {
 
     private static ConditionEvaluator createEventTypeConditionEvaluator() {
         return (condition, item, context, dispatcher) -> {
-            if (!(item instanceof Event)) {
-                return false;
-            }
-            Event event = (Event) item;
-            String expectedEventType = (String) condition.getParameter("eventTypeId");
-            return expectedEventType != null && expectedEventType.equals(event.getEventType());
+            tracer.startOperation("eventType", "Evaluating event type condition", condition);
+            String eventType = (String) condition.getParameter("eventTypeId");
+            boolean result = item instanceof Event && eventType.equals(((Event) item).getEventType());
+            tracer.endOperation(result, "Event type condition evaluation completed");
+            return result;
         };
     }
 
     private static ConditionEvaluator createPastEventConditionEvaluator() {
         return (condition, item, context, dispatcher) -> {
-            tracer.startEvaluation(condition, "Evaluating past event condition");
-
+            tracer.startOperation("pastEvent", "Evaluating past event condition", condition);
             if (!(item instanceof Profile)) {
-                tracer.endEvaluation(condition, false, "Item is not a Profile");
+                tracer.endOperation(false, "Item is not a profile");
                 return false;
             }
 
@@ -705,7 +699,119 @@ public class TestConditionEvaluators {
         conditionType.setConditionEvaluator(conditionEvaluatorId);
         conditionType.setQueryBuilder(queryBuilderId);
 
+        // Add parameter validation requirements based on condition type
+        switch (typeId) {
+            case "profilePropertyCondition":
+            case "sessionPropertyCondition":
+            case "eventPropertyCondition":
+                // Property conditions require propertyName, comparisonOperator, and one of the propertyValue* parameters
+                conditionType.setParameters(Arrays.asList(
+                    createParameter("propertyName", "string", true, null, false),
+                    createParameter("comparisonOperator", "string", true, null, false),
+                    createParameter("propertyValue", "string", false, "propertyValue", false),
+                    createParameter("propertyValueInteger", "integer", false, "propertyValue", false),
+                    createParameter("propertyValueDouble", "double", false, "propertyValue", false),
+                    createParameter("propertyValueDate", "date", false, "propertyValue", false)
+                ));
+                break;
+            case "booleanCondition":
+                // Boolean conditions require operator and subConditions (which is multivalued)
+                conditionType.setParameters(Arrays.asList(
+                    createParameter("operator", "string", true, null, false),
+                    createParameter("subConditions", "Condition", true, null, true)
+                ));
+                break;
+            case "pastEventCondition":
+                // Past event conditions require eventCondition, operator is recommended
+                conditionType.setParameters(Arrays.asList(
+                    createParameter("eventCondition", "Condition", true, null, false),
+                    createParameterRecommended("operator", "string", null, false),
+                    createParameter("numberOfDays", "integer", false, null, false),
+                    createParameter("minimumEventCount", "integer", false, null, false),
+                    createParameter("maximumEventCount", "integer", false, null, false)
+                ));
+                break;
+            case "eventTypeCondition":
+                // Event type conditions require eventTypeId
+                conditionType.setParameters(Arrays.asList(
+                    createParameter("eventTypeId", "string", true, null, false)
+                ));
+                break;
+            case "notCondition":
+                // Not conditions require subCondition (single condition, not multivalued)
+                conditionType.setParameters(Arrays.asList(
+                    createParameter("subCondition", "Condition", true, null, false)
+                ));
+                break;
+            case "nestedCondition":
+                // Nested conditions require path and subCondition (single condition, not multivalued)
+                conditionType.setParameters(Arrays.asList(
+                    createParameter("path", "string", true, null, false),
+                    createParameter("subCondition", "Condition", true, null, false)
+                ));
+                break;
+            case "idsCondition":
+                // Ids conditions require ids collection (which is multivalued)
+                conditionType.setParameters(Arrays.asList(
+                    createParameter("ids", "string", true, null, true)
+                ));
+                break;
+            case "matchAllCondition":
+                // Match all doesn't require any parameters
+                break;
+            case "profileUpdatedEventCondition":
+                // Profile updated event doesn't require any parameters
+                break;
+        }
+
         return conditionType;
+    }
+
+    private static Parameter createParameter(String name, String type, boolean required, String exclusiveGroup, boolean multivalued) {
+        Parameter parameter = new Parameter();
+        parameter.setId(name);
+        parameter.setType(type);
+        parameter.setMultivalued(multivalued);
+
+        // Create validation settings
+        ConditionValidation validation = new ConditionValidation();
+
+        // Set required flag
+        validation.setRequired(required);
+
+        // Set exclusive group if provided
+        if (exclusiveGroup != null) {
+            validation.setExclusive(true);
+            validation.setExclusiveGroup(exclusiveGroup);
+        }
+
+        parameter.setValidation(validation);
+
+        return parameter;
+    }
+
+    private static Parameter createParameterRecommended(String name, String type, String exclusiveGroup, boolean multivalued) {
+        Parameter parameter = new Parameter();
+        parameter.setId(name);
+        parameter.setType(type);
+        parameter.setMultivalued(multivalued);
+
+        // Create validation settings
+        ConditionValidation validation = new ConditionValidation();
+
+        // Set recommended flag instead of required
+        validation.setRequired(false);
+        validation.setRecommended(true);
+
+        // Set exclusive group if provided
+        if (exclusiveGroup != null) {
+            validation.setExclusive(true);
+            validation.setExclusiveGroup(exclusiveGroup);
+        }
+
+        parameter.setValidation(validation);
+
+        return parameter;
     }
 
     public static Map<String, ConditionType> getConditionTypes() {

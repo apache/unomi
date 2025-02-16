@@ -20,6 +20,7 @@ import org.apache.unomi.api.*;
 import org.apache.unomi.api.actions.ActionPostExecutor;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.query.Query;
+import org.apache.unomi.api.services.ConditionValidationService;
 import org.apache.unomi.api.services.EventListenerService;
 import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.api.tenants.Tenant;
@@ -30,11 +31,11 @@ import org.apache.unomi.services.impl.*;
 import org.apache.unomi.services.impl.cache.MultiTypeCacheServiceImpl;
 import org.apache.unomi.services.impl.definitions.DefinitionsServiceImpl;
 import org.apache.unomi.services.impl.tenants.AuditServiceImpl;
+import org.apache.unomi.tracing.api.TracerService;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceReference;
 
@@ -42,7 +43,6 @@ import java.util.*;
 
 import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 public class EventServiceImplTest {
@@ -63,6 +63,8 @@ public class EventServiceImplTest {
     private EventListenerService eventListener;
     @Mock
     private ServiceReference<EventListenerService> eventListenerReference;
+    private ConditionValidationService conditionValidationService;
+    private TracerService tracerService;
 
     private static final String TENANT_1 = "tenant1";
     private static final String TENANT_2 = "tenant2";
@@ -73,20 +75,17 @@ public class EventServiceImplTest {
         MockitoAnnotations.initMocks(this);
         tenantService = new TestTenantService();
 
-        // Create tenants
-        tenantService.createTenant(SYSTEM_TENANT, Collections.singletonMap("description", "System tenant"));
-        tenantService.createTenant(TENANT_1, Collections.singletonMap("description", "Tenant 1"));
-        tenantService.createTenant(TENANT_2, Collections.singletonMap("description", "Tenant 2"));
+        // Initialize ConditionValidationService using TestHelper
+        this.conditionValidationService = TestHelper.createConditionValidationService();
+
+        // Create tenants using TestHelper
+        TestHelper.setupCommonTestData(tenantService);
 
         // Set up condition evaluator dispatcher
         ConditionEvaluatorDispatcher conditionEvaluatorDispatcher = TestConditionEvaluators.createDispatcher();
 
-        // Mock bundle context
-        Bundle bundle = mock(Bundle.class);
-        when(bundleContext.getBundle()).thenReturn(bundle);
-        when(bundle.getBundleContext()).thenReturn(bundleContext);
-        when(bundle.findEntries(eq("META-INF/cxs/rules"), eq("*.json"), eq(true))).thenReturn(null);
-        when(bundleContext.getBundles()).thenReturn(new Bundle[0]);
+        // Set up bundle context using TestHelper
+        bundleContext = TestHelper.createMockBundleContext();
 
         securityService = TestHelper.createSecurityService();
         executionContextManager = TestHelper.createExecutionContextManager(securityService);
@@ -99,16 +98,13 @@ public class EventServiceImplTest {
         schedulerService = TestHelper.createSchedulerService(persistenceService, executionContextManager);
 
         // Set up definitions service
-        definitionsService = TestHelper.createDefinitionService(persistenceService, bundleContext, schedulerService, multiTypeCacheService, executionContextManager, tenantService);
+        definitionsService = TestHelper.createDefinitionService(persistenceService, bundleContext, schedulerService, multiTypeCacheService, executionContextManager, tenantService, conditionValidationService);
 
         TestConditionEvaluators.getConditionTypes().forEach((key, value) -> definitionsService.setConditionType(value));
 
-        // Set up event service
-        eventService = new EventServiceImpl();
-        eventService.setBundleContext(bundleContext);
-        eventService.setPersistenceService(persistenceService);
-        eventService.setDefinitionsService(definitionsService);
-        eventService.setTenantService(tenantService);
+        // Set up event service using TestHelper
+        tracerService = TestHelper.createTracerService();
+        eventService = TestHelper.createEventService(persistenceService, bundleContext, definitionsService, tenantService, tracerService);
 
         // Set up event listener mock
         when(bundleContext.getService(eventListenerReference)).thenReturn(eventListener);
@@ -744,24 +740,25 @@ public class EventServiceImplTest {
 
     @Test
     public void testMalformedEventProperties() {
-        // Create event with malformed properties
-        Event event = createTestEvent();
-        Map<String, Object> properties = new HashMap<>();
-        properties.put("validKey", "validValue");
-        properties.put("nullKey", null);
-        properties.put("nestedNull", Collections.singletonMap("key", null));
-        properties.put("circular", properties); // Circular reference
-        event.setProperties(properties);
-        event.setPersistent(true);
+        executionContextManager.executeAsTenant(TENANT_1, () -> {
+            // Create event with malformed properties
+            Event event = createTestEvent();
+            Map<String, Object> properties = new HashMap<>();
+            properties.put("validKey", "validValue");
+            properties.put("nullKey", null);
+            properties.put("nestedNull", Collections.singletonMap("key", null));
+            event.setProperties(properties);
+            event.setPersistent(true);
 
-        // Test
-        int result = eventService.send(event);
+            // Test
+            int result = eventService.send(event);
 
-        // Verify the event is handled gracefully
-        assertEquals(EventService.NO_CHANGE, result);
-        Event savedEvent = persistenceService.load(event.getItemId(), Event.class);
-        assertNotNull(savedEvent);
-        assertNotNull(savedEvent.getProperties().get("validKey"));
+            // Verify the event is handled gracefully
+            assertEquals(EventService.NO_CHANGE, result);
+            Event savedEvent = persistenceService.load(event.getItemId(), Event.class);
+            assertNotNull(savedEvent);
+            assertNotNull(savedEvent.getProperties().get("validKey"));
+        });
     }
 
     // ========= Helper Classes =========

@@ -31,7 +31,7 @@ public abstract class MetadataItem extends Item {
     }
 
     public MetadataItem(Metadata metadata) {
-        super(metadata.getId());
+        super(metadata != null ? metadata.getId() : null);
         this.metadata = metadata;
     }
 

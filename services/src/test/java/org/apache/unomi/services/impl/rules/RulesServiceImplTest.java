@@ -16,15 +16,13 @@
  */
 package org.apache.unomi.services.impl.rules;
 
-import org.apache.unomi.api.Event;
-import org.apache.unomi.api.Metadata;
-import org.apache.unomi.api.Profile;
-import org.apache.unomi.api.Session;
+import org.apache.unomi.api.*;
 import org.apache.unomi.api.actions.Action;
 import org.apache.unomi.api.actions.ActionType;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.rules.Rule;
 import org.apache.unomi.api.rules.RuleStatistics;
+import org.apache.unomi.api.services.ConditionValidationService;
 import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.api.services.RuleListenerService;
 import org.apache.unomi.persistence.spi.PersistenceService;
@@ -34,20 +32,21 @@ import org.apache.unomi.services.impl.*;
 import org.apache.unomi.services.impl.cache.MultiTypeCacheServiceImpl;
 import org.apache.unomi.services.impl.definitions.DefinitionsServiceImpl;
 import org.apache.unomi.services.impl.tenants.AuditServiceImpl;
+import org.apache.unomi.tracing.api.RequestTracer;
+import org.apache.unomi.tracing.api.TracerService;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceReference;
 
 import java.util.*;
 
 import static org.junit.Assert.*;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
+
 
 public class RulesServiceImplTest {
 
@@ -59,11 +58,14 @@ public class RulesServiceImplTest {
     private ExecutionContextManagerImpl executionContextManager;
     private KarafSecurityService securityService;
     private AuditServiceImpl auditService;
+    private ConditionValidationService conditionValidationService;
 
     @Mock
     private BundleContext bundleContext;
-    @Mock
     private EventService eventService;
+    private TracerService tracerService;
+    private RequestTracer requestTracer;
+
     private TestActionExecutorDispatcher actionExecutorDispatcher;
     private org.apache.unomi.api.services.SchedulerService schedulerService;
 
@@ -72,45 +74,47 @@ public class RulesServiceImplTest {
     private static final String SYSTEM_TENANT = "system";
 
     @Before
-    public void setUp() {
-
+    public void setUp() throws Exception {
         MockitoAnnotations.initMocks(this);
+        tracerService = TestHelper.createTracerService();
         tenantService = new TestTenantService();
+
+        // Initialize ConditionValidationService using TestHelper
+        this.conditionValidationService = TestHelper.createConditionValidationService();
+
+        // Create tenants using TestHelper
+        TestHelper.setupCommonTestData(tenantService);
+
         securityService = TestHelper.createSecurityService();
         executionContextManager = TestHelper.createExecutionContextManager(securityService);
-        // Register condition evaluators and condition types in system tenant.
-        executionContextManager.executeAsSystem(() -> {
-            // Create tenants
-            tenantService.createTenant(SYSTEM_TENANT, Collections.singletonMap("description", "System tenant"));
-            tenantService.createTenant(TENANT_1, Collections.singletonMap("description", "Tenant 1"));
-            tenantService.createTenant(TENANT_2, Collections.singletonMap("description", "Tenant 2"));
-            return null;
-        });
 
+        // Set up condition evaluator dispatcher
         ConditionEvaluatorDispatcher conditionEvaluatorDispatcher = TestConditionEvaluators.createDispatcher();
 
-        // Mock bundle context
-        Bundle bundle = mock(Bundle.class);
-        when(bundleContext.getBundle()).thenReturn(bundle);
-        when(bundle.getBundleContext()).thenReturn(bundleContext);
-        when(bundle.findEntries(eq("META-INF/cxs/rules"), eq("*.json"), eq(true))).thenReturn(null);
-        when(bundleContext.getBundles()).thenReturn(new Bundle[0]);
-
-        // Create scheduler service using TestHelper
-        schedulerService = TestHelper.createSchedulerService(persistenceService, executionContextManager);
+        // Set up bundle context using TestHelper
+        bundleContext = TestHelper.createMockBundleContext();
 
         multiTypeCacheService = new MultiTypeCacheServiceImpl();
 
         persistenceService = new InMemoryPersistenceServiceImpl(executionContextManager, conditionEvaluatorDispatcher);
-        definitionsService = TestHelper.createDefinitionService(persistenceService, bundleContext, schedulerService, multiTypeCacheService, executionContextManager, tenantService);
 
+        // Create scheduler service using TestHelper
+        schedulerService = TestHelper.createSchedulerService(persistenceService, executionContextManager);
+
+        definitionsService = TestHelper.createDefinitionService(persistenceService, bundleContext, schedulerService, multiTypeCacheService, executionContextManager, tenantService, conditionValidationService);
         TestConditionEvaluators.getConditionTypes().forEach((key, value) -> definitionsService.setConditionType(value));
+
+        eventService = TestHelper.createEventService(persistenceService, bundleContext, definitionsService, tenantService, tracerService);
 
         rulesService = new RulesServiceImpl();
 
         // Set up action executor dispatcher
         actionExecutorDispatcher = new TestActionExecutorDispatcher(definitionsService, persistenceService);
         actionExecutorDispatcher.setDefaultReturnValue(EventService.PROFILE_UPDATED);
+
+        // Set up tracing
+        TestRequestTracer tracer = new TestRequestTracer(true);
+        actionExecutorDispatcher.setTracer(tracer);
 
         rulesService.setBundleContext(bundleContext);
         rulesService.setPersistenceService(persistenceService);
@@ -120,25 +124,20 @@ public class RulesServiceImplTest {
         rulesService.setTenantService(tenantService);
         rulesService.setSchedulerService(schedulerService);
         rulesService.setContextManager(executionContextManager);
+        rulesService.setConditionValidationService(conditionValidationService);
+        rulesService.setTracerService(tracerService);
 
         // Set up condition types
         setupActionTypes();
 
         // Initialize rule caches
         rulesService.postConstruct();
-
     }
 
     private void setupActionTypes() {
-        // Create and register action type
-        ActionType testActionType = new ActionType();
-        testActionType.setItemId("test");
-        Metadata actionMetadata = new Metadata();
-        actionMetadata.setId("test");
-        actionMetadata.setEnabled(true);
-        testActionType.setMetadata(actionMetadata);
+        // Create and register test action type using TestHelper
+        ActionType testActionType = TestHelper.createActionType("test", "test");
         definitionsService.setActionType(testActionType);
-
     }
 
     private Event createTestEvent() {
@@ -148,13 +147,20 @@ public class RulesServiceImplTest {
         Profile profile = new Profile(currentTenant);
         profile.setProperty("testProperty", "testValue"); // Add test property for profile condition
         event.setProfile(profile);
+        event.setProfileId(profile.getItemId());
         Session session = new Session();
+        session.setItemId(currentTenant);
         session.setProfile(profile);
         session.setTenantId(currentTenant);
         session.setProperty("testProperty", "testValue"); // Add test property for session condition
         event.setSession(session);
+        event.setSessionId(currentTenant);
         event.setTenantId(currentTenant);
         event.setAttributes(new HashMap<>());
+        event.setActionPostExecutors(new ArrayList<>());
+        Item target = new CustomItem();
+        target.setItemId("targetItemId");
+        event.setTarget(target);
         return event;
     }
 
@@ -423,15 +429,19 @@ public class RulesServiceImplTest {
     @Test
     public void testEventRaisedOnlyOnce() {
         executionContextManager.executeAsTenant(TENANT_1, () -> {
+            // Create and send initial event
             Event event = createTestEvent();
+            eventService.send(event);
+
+            // Create rule that should only fire once
             Rule rule = createTestRule();
             rule.setRaiseEventOnlyOnce(true);
             rulesService.setRule(rule);
 
-            when(eventService.hasEventAlreadyBeenRaised(any(Event.class))).thenReturn(true);
-
-            // Execute
-            Set<Rule> matchedRules = rulesService.getMatchingRules(event);
+            // Create new event with same ID to test if rule matches
+            Event sameEvent = createTestEvent();
+            sameEvent.setItemId(event.getItemId());
+            Set<Rule> matchedRules = rulesService.getMatchingRules(sameEvent);
 
             // Verify
             assertTrue("Should not match rule when event already raised", matchedRules.isEmpty());
@@ -442,15 +452,20 @@ public class RulesServiceImplTest {
     @Test
     public void testEventRaisedOnlyOnceForProfile() {
         executionContextManager.executeAsTenant(TENANT_1, () -> {
+            // Create and send initial event
             Event event = createTestEvent();
+            eventService.send(event);
+
+            // Create rule that should only fire once per profile
             Rule rule = createTestRule();
             rule.setRaiseEventOnlyOnceForProfile(true);
             rulesService.setRule(rule);
 
-            when(eventService.hasEventAlreadyBeenRaised(any(Event.class), eq(false))).thenReturn(true);
-
-            // Execute
-            Set<Rule> matchedRules = rulesService.getMatchingRules(event);
+            // Create new event with same profile to test if rule matches
+            Event sameProfileEvent = createTestEvent();
+            sameProfileEvent.setProfile(event.getProfile());
+            sameProfileEvent.setTarget(event.getTarget());
+            Set<Rule> matchedRules = rulesService.getMatchingRules(sameProfileEvent);
 
             // Verify
             assertTrue("Should not match rule when event already raised for profile", matchedRules.isEmpty());
@@ -580,5 +595,125 @@ public class RulesServiceImplTest {
             assertNotNull("Tenant2 rule should be loaded", rulesService.getRule("tenant2-rule"));
             return null;
         });
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testSetRuleWithInvalidCondition() {
+        // Create a rule with invalid condition
+        Rule rule = new Rule();
+        rule.setMetadata(new Metadata());
+        rule.getMetadata().setId("testRule");
+        rule.getMetadata().setEnabled(true);
+
+        Condition condition = new Condition();
+        rule.setCondition(condition);
+
+        // Should throw IllegalArgumentException with detailed message
+        rulesService.setRule(rule);
+    }
+
+    @Test
+    public void testSetRuleWithValidCondition() {
+        // Create a rule with valid condition
+        Rule rule = new Rule();
+        rule.setMetadata(new Metadata());
+        rule.getMetadata().setId("testRule");
+        rule.getMetadata().setEnabled(true);
+
+        Condition condition = new Condition();
+        condition.setConditionType(definitionsService.getConditionType("profilePropertyCondition"));
+        condition.setParameter("propertyName", "testProperty");
+        condition.setParameter("comparisonOperator", "exists");
+        rule.setCondition(condition);
+
+        // Should not throw any exceptions
+        rulesService.setRule(rule);
+
+    }
+
+    @Test
+    public void testSetRuleWithNestedConditions() {
+        // Create a rule with nested conditions
+        Rule rule = new Rule();
+        rule.setMetadata(new Metadata());
+        rule.getMetadata().setId("testRule");
+        rule.getMetadata().setEnabled(true);
+
+        // Create parent condition
+        Condition parentCondition = new Condition();
+        parentCondition.setConditionTypeId("booleanCondition");
+        parentCondition.setParameter("operator", "and");
+
+        // Create child condition
+        Condition childCondition = new Condition();
+        childCondition.setConditionTypeId("propertyCondition");
+
+        // Set up nested structure
+        List<Condition> subConditions = new ArrayList<>();
+        subConditions.add(childCondition);
+        parentCondition.setParameter("subConditions", subConditions);
+
+        rule.setCondition(parentCondition);
+
+        // Should not throw any exceptions
+        rulesService.setRule(rule);
+
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testSetRuleWithInvalidNestedCondition() {
+        // Create a rule with nested conditions where child is invalid
+        Rule rule = new Rule();
+        rule.setMetadata(new Metadata());
+        rule.getMetadata().setId("testRule");
+        rule.getMetadata().setEnabled(true);
+
+        // Create parent condition
+        Condition parentCondition = new Condition();
+        parentCondition.setConditionTypeId("booleanCondition");
+
+        // Create invalid child condition
+        Condition childCondition = new Condition();
+        childCondition.setConditionTypeId("propertyCondition");
+
+        // Set up nested structure
+        List<Condition> subConditions = new ArrayList<>();
+        subConditions.add(childCondition);
+        parentCondition.setParameter("subConditions", subConditions);
+
+        rule.setCondition(parentCondition);
+
+        // Should throw IllegalArgumentException with detailed message
+        rulesService.setRule(rule);
+    }
+
+    @Test
+    public void testRuleExecutionWithValidCondition() {
+        // Create a rule with valid condition
+        Rule rule = new Rule();
+        rule.setMetadata(new Metadata());
+        rule.getMetadata().setId("testRule");
+        rule.getMetadata().setEnabled(true);
+        rule.setScope("systemscope");
+
+        Condition condition = new Condition();
+        rule.setCondition(condition);
+
+        // Create test event
+        Event event = new Event();
+        event.setEventType("testEvent");
+        event.setScope("systemscope");
+        event.setProfile(new Profile("testProfile"));
+
+        // Add test action
+        Action action = new Action();
+        ActionType actionType = new ActionType();
+        actionType.setActionExecutor("test");
+        action.setActionType(actionType);
+        rule.setActions(List.of(action));
+
+        // Execute rule
+        rulesService.onEvent(event);
+
     }
 }

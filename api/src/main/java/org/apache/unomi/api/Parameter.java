@@ -17,6 +17,8 @@
 
 package org.apache.unomi.api;
 
+import org.apache.unomi.api.conditions.ConditionValidation;
+
 import java.io.Serializable;
 
 /**
@@ -27,10 +29,11 @@ public class Parameter implements Serializable {
 
     private static final long serialVersionUID = 7446061538573517071L;
 
-    String id;
-    String type;
-    boolean multivalued = false;
-    String defaultValue = null;
+    private String id;
+    private String type;
+    private boolean multivalued;
+    private Object defaultValue;
+    private ConditionValidation validation;
 
     public Parameter() {
     }
@@ -45,12 +48,24 @@ public class Parameter implements Serializable {
         return id;
     }
 
+    public void setId(String id) {
+        this.id = id;
+    }
+
     public String getType() {
         return type;
     }
 
+    public void setType(String type) {
+        this.type = type;
+    }
+
     public boolean isMultivalued() {
         return multivalued;
+    }
+
+    public void setMultivalued(boolean multivalued) {
+        this.multivalued = multivalued;
     }
 
     /**
@@ -62,11 +77,30 @@ public class Parameter implements Serializable {
         // Avoid errors when deploying old definitions
     }
 
-    public String getDefaultValue() {
+    public Object getDefaultValue() {
         return defaultValue;
     }
 
-    public void setDefaultValue(String defaultValue) {
+    public void setDefaultValue(Object defaultValue) {
         this.defaultValue = defaultValue;
+    }
+
+    public ConditionValidation getValidation() {
+        return validation;
+    }
+
+    public void setValidation(ConditionValidation validation) {
+        this.validation = validation;
+    }
+
+    @Override
+    public String toString() {
+        return "Parameter{" +
+                "id='" + id + '\'' +
+                ", type='" + type + '\'' +
+                ", multivalued=" + multivalued +
+                ", defaultValue=" + defaultValue +
+                ", validation=" + validation +
+                '}';
     }
 }

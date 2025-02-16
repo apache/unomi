@@ -27,6 +27,7 @@ import org.apache.unomi.persistence.spi.conditions.ConditionEvaluatorDispatcher;
 import org.apache.unomi.services.TestHelper;
 import org.apache.unomi.services.impl.*;
 import org.apache.unomi.services.impl.cache.MultiTypeCacheServiceImpl;
+import org.apache.unomi.services.impl.validation.ConditionValidationServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -79,6 +80,7 @@ class DefinitionsServiceImplTest {
     private MultiTypeCacheServiceImpl multiTypeCacheService;
     private KarafSecurityService securityService;
     private ExecutionContextManagerImpl executionContextManager;
+    private ConditionValidationServiceImpl conditionValidationService;
 
     @BeforeEach
     void setUp() {
@@ -88,19 +90,13 @@ class DefinitionsServiceImplTest {
         securityService = TestHelper.createSecurityService();
         executionContextManager = TestHelper.createExecutionContextManager(securityService);
         persistenceService = new InMemoryPersistenceServiceImpl(executionContextManager, conditionEvaluatorDispatcher);
-
-        // Mock bundle context
-        Bundle bundle = mock(Bundle.class);
-        when(bundleContext.getBundle()).thenReturn(bundle);
-        when(bundle.getBundleContext()).thenReturn(bundleContext);
-        when(bundle.findEntries(eq("META-INF/cxs/rules"), eq("*.json"), eq(true))).thenReturn(null);
-        when(bundleContext.getBundles()).thenReturn(new Bundle[0]);
-
-        // Create scheduler service using TestHelper
+        conditionValidationService = new ConditionValidationServiceImpl();
         schedulerService = TestHelper.createSchedulerService(persistenceService, executionContextManager);
-
+        // Mock bundle context
+        bundleContext = TestHelper.createMockBundleContext();
+        // Create scheduler service using TestHelper
         multiTypeCacheService = new MultiTypeCacheServiceImpl();
-        definitionsService = TestHelper.createDefinitionService(persistenceService, bundleContext, schedulerService, multiTypeCacheService, executionContextManager, tenantService);
+        definitionsService = TestHelper.createDefinitionService(persistenceService, bundleContext, schedulerService, multiTypeCacheService, executionContextManager, tenantService, conditionValidationService);
     }
 
     @Nested

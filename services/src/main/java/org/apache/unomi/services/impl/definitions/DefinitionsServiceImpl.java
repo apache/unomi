@@ -24,6 +24,9 @@ import org.apache.unomi.api.ValueType;
 import org.apache.unomi.api.actions.ActionType;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.conditions.ConditionType;
+import org.apache.unomi.api.services.ConditionValidationService;
+import org.apache.unomi.api.services.ConditionValidationService.ValidationError;
+import org.apache.unomi.api.services.ConditionValidationService.ValidationErrorType;
 import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.TenantLifecycleListener;
 import org.apache.unomi.api.services.cache.CacheableTypeConfig;
@@ -32,6 +35,8 @@ import org.apache.unomi.api.utils.ConditionBuilder;
 import org.apache.unomi.api.utils.ParserHelper;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.services.impl.cache.AbstractMultiTypeCachingService;
+import org.apache.unomi.tracing.api.RequestTracer;
+import org.apache.unomi.tracing.api.TracerService;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleEvent;
@@ -47,6 +52,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 import static org.apache.unomi.api.tenants.TenantService.SYSTEM_TENANT;
 
@@ -71,8 +77,19 @@ public class DefinitionsServiceImpl extends AbstractMultiTypeCachingService impl
 
     private static final long TASK_TIMEOUT_MS = 60000; // 1 minute timeout for tasks
 
+    private ConditionValidationService conditionValidationService;
+    private TracerService tracerService;
+
     public void setCacheService(MultiTypeCacheService cacheService) {
         super.setCacheService(cacheService);
+    }
+
+    public void setConditionValidationService(ConditionValidationService conditionValidationService) {
+        this.conditionValidationService = conditionValidationService;
+    }
+
+    public void setTracerService(TracerService tracerService) {
+        this.tracerService = tracerService;
     }
 
     public DefinitionsServiceImpl() {
@@ -722,7 +739,56 @@ public class DefinitionsServiceImpl extends AbstractMultiTypeCachingService impl
 
     @Override
     public boolean resolveConditionType(Condition rootCondition) {
-        return ParserHelper.resolveConditionType(this, rootCondition, (rootCondition != null ? "condition type " + rootCondition.getConditionTypeId() : "unknown"));
+        boolean resolved = ParserHelper.resolveConditionType(this, rootCondition, (rootCondition != null ? "condition type " + rootCondition.getConditionTypeId() : "unknown"));
+        if (resolved) {
+            // Start validation operation in tracer
+            if (tracerService != null) {
+                RequestTracer tracer = tracerService.getCurrentTracer();
+                if (tracer != null && tracer.isEnabled()) {
+                    tracer.startOperation("condition-validation", "Validating condition: " + rootCondition.getConditionTypeId(), rootCondition);
+                }
+            }
+
+            // Validate the condition after resolving its type
+            List<ValidationError> validationErrors = conditionValidationService.validate(rootCondition);
+
+            // Add validation info to tracer
+            if (tracerService != null) {
+                RequestTracer tracer = tracerService.getCurrentTracer();
+                if (tracer != null && tracer.isEnabled()) {
+                    tracer.addValidationInfo(validationErrors, "condition-validation");
+                    tracer.endOperation(!validationErrors.isEmpty(), String.format("Validation completed with %d errors", validationErrors.size()));
+                }
+            }
+
+            // Separate errors and warnings
+            List<ValidationError> errors = validationErrors.stream()
+                .filter(error -> error.getType() != ValidationErrorType.MISSING_RECOMMENDED_PARAMETER)
+                .collect(Collectors.toList());
+
+            List<ValidationError> warnings = validationErrors.stream()
+                .filter(error -> error.getType() == ValidationErrorType.MISSING_RECOMMENDED_PARAMETER)
+                .collect(Collectors.toList());
+
+            // Log warnings but don't block the operation
+            if (!warnings.isEmpty()) {
+                StringBuilder warningMessage = new StringBuilder("Condition has warnings:");
+                for (ValidationError warning : warnings) {
+                    warningMessage.append("\n- ").append(warning.getMessage());
+                }
+                LOGGER.warn(warningMessage.toString());
+            }
+
+            // Only throw exception for actual errors
+            if (!errors.isEmpty()) {
+                StringBuilder errorMessage = new StringBuilder("Invalid condition:");
+                for (ValidationError error : errors) {
+                    errorMessage.append("\n- ").append(error.getMessage());
+                }
+                throw new IllegalArgumentException(errorMessage.toString());
+            }
+        }
+        return resolved;
     }
 
     @Override

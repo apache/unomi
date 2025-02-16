@@ -666,7 +666,8 @@ public class SchedulerServiceImpl implements SchedulerService {
 
     @Override
     public PartialList<ScheduledTask> getTasksByStatus(ScheduledTask.TaskStatus status, int offset, int size, String sortBy) {
-        return persistenceService.query(createPropertyCondition(STATUS_PROPERTY, status), sortBy, ScheduledTask.class, offset, size);
+        Condition condition = createPropertyCondition(STATUS_PROPERTY, status.name());
+        return persistenceService.query(condition, sortBy, ScheduledTask.class, offset, size);
     }
 
     @Override

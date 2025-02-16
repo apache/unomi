@@ -81,6 +81,23 @@
                            unbind-method="unbindListener"/>
     </reference-list>
 
+    <reference-list id="valueTypeValidators"
+                   interface="org.apache.unomi.api.services.ValueTypeValidator"
+                   availability="mandatory">
+        <reference-listener bind-method="bindValidator"
+                          unbind-method="unbindValidator"
+                          ref="conditionValidationService"/>
+    </reference-list>
+
+    <!-- Reference list for custom validators from plugins -->
+    <reference-list id="customValidators"
+                   interface="org.apache.unomi.api.services.ValueTypeValidator"
+                   availability="optional">
+        <reference-listener bind-method="bindValidator"
+                          unbind-method="unbindValidator"
+                          ref="conditionValidationService"/>
+    </reference-list>
+
     <!-- Configuration -->
     <cm:property-placeholder persistent-id="org.apache.unomi.services"
                              update-strategy="reload" placeholder-prefix="${services.">
@@ -176,14 +193,16 @@
     </bean>
 
     <bean id="definitionsServiceImpl" class="org.apache.unomi.services.impl.definitions.DefinitionsServiceImpl"
-          init-method="postConstruct" destroy-method="preDestroy">
+          init-method="postConstruct" destroy-method="preDestroy" depends-on="conditionValidationService">
         <property name="persistenceService" ref="persistenceService"/>
         <property name="bundleContext" ref="blueprintBundleContext"/>
         <property name="schedulerService" ref="schedulerServiceImpl"/>
         <property name="definitionsRefreshInterval" value="${services.definitions.refresh.interval}"/>
-        <property name="tenantService" ref="tenantServiceImpl" />
-        <property name="cacheService" ref="multiTypeCacheServiceImpl" />
-        <property name="contextManager" ref="executionContextManagerImpl" />
+        <property name="tenantService" ref="tenantServiceImpl"/>
+        <property name="cacheService" ref="multiTypeCacheServiceImpl"/>
+        <property name="contextManager" ref="executionContextManagerImpl"/>
+        <property name="conditionValidationService" ref="conditionValidationService"/>
+        <property name="tracerService" ref="tracerService"/>
     </bean>
 
     <bean id="eventServiceImpl" class="org.apache.unomi.services.impl.events.EventServiceImpl">
@@ -212,13 +231,15 @@
     </bean>
 
     <bean id="goalsServiceImpl" class="org.apache.unomi.services.impl.goals.GoalsServiceImpl"
-          init-method="postConstruct" destroy-method="preDestroy">
+          init-method="postConstruct" destroy-method="preDestroy" depends-on="conditionValidationService">
         <property name="persistenceService" ref="persistenceService"/>
         <property name="definitionsService" ref="definitionsServiceImpl"/>
         <property name="rulesService" ref="rulesServiceImpl"/>
         <property name="bundleContext" ref="blueprintBundleContext"/>
         <property name="tenantService" ref="tenantServiceImpl"/>
         <property name="contextManager" ref="executionContextManagerImpl"/>
+        <property name="conditionValidationService" ref="conditionValidationService"/>
+        <property name="tracerService" ref="tracerService"/>
     </bean>
 
     <bean id="scopeServiceImpl" class="org.apache.unomi.services.impl.scope.ScopeServiceImpl"
@@ -238,7 +259,7 @@
     </bean>
 
     <bean id="rulesServiceImpl" class="org.apache.unomi.services.impl.rules.RulesServiceImpl"
-          init-method="postConstruct" destroy-method="preDestroy">
+          init-method="postConstruct" destroy-method="preDestroy" depends-on="conditionValidationService">
         <property name="persistenceService" ref="persistenceService"/>
         <property name="definitionsService" ref="definitionsServiceImpl"/>
         <property name="eventService" ref="eventServiceImpl"/>
@@ -250,10 +271,12 @@
         <property name="optimizedRulesActivated" value="${services.rules.optimizationActivated}"/>
         <property name="tenantService" ref="tenantServiceImpl"/>
         <property name="contextManager" ref="executionContextManagerImpl"/>
+        <property name="conditionValidationService" ref="conditionValidationService"/>
+        <property name="tracerService" ref="tracerService"/>
     </bean>
 
     <bean id="segmentServiceImpl" class="org.apache.unomi.services.impl.segments.SegmentServiceImpl"
-          init-method="postConstruct" destroy-method="preDestroy">
+          init-method="postConstruct" destroy-method="preDestroy" depends-on="conditionValidationService">
         <property name="persistenceService" ref="persistenceService"/>
         <property name="definitionsService" ref="definitionsServiceImpl"/>
         <property name="eventService" ref="eventServiceImpl"/>
@@ -274,6 +297,8 @@
         <property name="tenantService" ref="tenantServiceImpl"/>
         <property name="contextManager" ref="executionContextManagerImpl"/>
         <property name="cacheService" ref="multiTypeCacheServiceImpl"/>
+        <property name="conditionValidationService" ref="conditionValidationService"/>
+        <property name="tracerService" ref="tracerService"/>
     </bean>
 
     <bean id="userListServiceImpl" class="org.apache.unomi.services.impl.lists.UserListServiceImpl"
@@ -359,6 +384,34 @@
         <property name="persistenceService" ref="persistenceService"/>
         <property name="tenantService" ref="tenantServiceImpl"/>
         <property name="contextManager" ref="executionContextManagerImpl"/>
+    </bean>
+
+    <!-- Value Type Validator Beans -->
+    <bean id="stringValueTypeValidator" class="org.apache.unomi.services.impl.validation.validators.StringValueTypeValidator"/>
+    <bean id="integerValueTypeValidator" class="org.apache.unomi.services.impl.validation.validators.IntegerValueTypeValidator"/>
+    <bean id="longValueTypeValidator" class="org.apache.unomi.services.impl.validation.validators.LongValueTypeValidator"/>
+    <bean id="floatValueTypeValidator" class="org.apache.unomi.services.impl.validation.validators.FloatValueTypeValidator"/>
+    <bean id="doubleValueTypeValidator" class="org.apache.unomi.services.impl.validation.validators.DoubleValueTypeValidator"/>
+    <bean id="booleanValueTypeValidator" class="org.apache.unomi.services.impl.validation.validators.BooleanValueTypeValidator"/>
+    <bean id="dateValueTypeValidator" class="org.apache.unomi.services.impl.validation.validators.DateValueTypeValidator"/>
+    <bean id="comparisonOperatorValueTypeValidator" class="org.apache.unomi.services.impl.validation.validators.ComparisonOperatorValueTypeValidator"/>
+    <bean id="conditionValueTypeValidator" class="org.apache.unomi.services.impl.validation.validators.ConditionValueTypeValidator"/>
+
+    <!-- Condition Validation Service -->
+    <bean id="conditionValidationService" class="org.apache.unomi.services.impl.validation.ConditionValidationServiceImpl">
+        <property name="builtInValidators">
+            <list>
+                <ref component-id="stringValueTypeValidator"/>
+                <ref component-id="integerValueTypeValidator"/>
+                <ref component-id="longValueTypeValidator"/>
+                <ref component-id="floatValueTypeValidator"/>
+                <ref component-id="doubleValueTypeValidator"/>
+                <ref component-id="booleanValueTypeValidator"/>
+                <ref component-id="dateValueTypeValidator"/>
+                <ref component-id="comparisonOperatorValueTypeValidator"/>
+                <ref component-id="conditionValueTypeValidator"/>
+            </list>
+        </property>
     </bean>
 
     <!-- Services -->
@@ -489,5 +542,19 @@
             <entry key="service.exported.interfaces" value="org.apache.unomi.api.security.SecurityService"/>
         </service-properties>
     </service>
+
+    <!-- Value Type Validator Services -->
+    <service ref="stringValueTypeValidator" interface="org.apache.unomi.api.services.ValueTypeValidator"/>
+    <service ref="integerValueTypeValidator" interface="org.apache.unomi.api.services.ValueTypeValidator"/>
+    <service ref="longValueTypeValidator" interface="org.apache.unomi.api.services.ValueTypeValidator"/>
+    <service ref="floatValueTypeValidator" interface="org.apache.unomi.api.services.ValueTypeValidator"/>
+    <service ref="doubleValueTypeValidator" interface="org.apache.unomi.api.services.ValueTypeValidator"/>
+    <service ref="booleanValueTypeValidator" interface="org.apache.unomi.api.services.ValueTypeValidator"/>
+    <service ref="dateValueTypeValidator" interface="org.apache.unomi.api.services.ValueTypeValidator"/>
+    <service ref="comparisonOperatorValueTypeValidator" interface="org.apache.unomi.api.services.ValueTypeValidator"/>
+    <service ref="conditionValueTypeValidator" interface="org.apache.unomi.api.services.ValueTypeValidator"/>
+
+    <!-- Condition Validation Service -->
+    <service id="conditionValidationServiceInterface" ref="conditionValidationService" interface="org.apache.unomi.api.services.ConditionValidationService"/>
 
 </blueprint>

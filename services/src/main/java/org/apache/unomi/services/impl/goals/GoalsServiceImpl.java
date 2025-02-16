@@ -31,16 +31,17 @@ import org.apache.unomi.api.goals.GoalReport;
 import org.apache.unomi.api.query.AggregateQuery;
 import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.rules.Rule;
-import org.apache.unomi.api.services.DefinitionsService;
-import org.apache.unomi.api.services.ExecutionContextManager;
-import org.apache.unomi.api.services.GoalsService;
-import org.apache.unomi.api.services.RulesService;
+import org.apache.unomi.api.services.*;
+import org.apache.unomi.api.services.ConditionValidationService.ValidationError;
+import org.apache.unomi.api.services.ConditionValidationService.ValidationErrorType;
 import org.apache.unomi.api.tenants.TenantService;
 import org.apache.unomi.api.utils.ParserHelper;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.aggregate.*;
 import org.apache.unomi.services.impl.AbstractContextAwareService;
+import org.apache.unomi.tracing.api.RequestTracer;
+import org.apache.unomi.tracing.api.TracerService;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleEvent;
@@ -51,6 +52,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.net.URL;
 import java.util.*;
+import java.util.stream.Collectors;
 
 
 public class GoalsServiceImpl extends AbstractContextAwareService implements GoalsService, SynchronousBundleListener {
@@ -67,6 +69,9 @@ public class GoalsServiceImpl extends AbstractContextAwareService implements Goa
     private TenantService tenantService;
 
     private ExecutionContextManager contextManager;
+
+    private ConditionValidationService conditionValidationService;
+    private TracerService tracerService;
 
     public void setBundleContext(BundleContext bundleContext) {
         this.bundleContext = bundleContext;
@@ -90,6 +95,14 @@ public class GoalsServiceImpl extends AbstractContextAwareService implements Goa
 
     public void setContextManager(ExecutionContextManager contextManager) {
         this.contextManager = contextManager;
+    }
+
+    public void setConditionValidationService(ConditionValidationService conditionValidationService) {
+        this.conditionValidationService = conditionValidationService;
+    }
+
+    public void setTracerService(TracerService tracerService) {
+        this.tracerService = tracerService;
     }
 
     public void postConstruct() {
@@ -251,6 +264,100 @@ public class GoalsServiceImpl extends AbstractContextAwareService implements Goa
         if (goal == null) {
             LOGGER.warn("Trying to save null goal, aborting...");
             return;
+        }
+        if (goal.getStartEvent() != null) {
+            // Start validation operation in tracer for start event
+            if (tracerService != null) {
+                RequestTracer tracer = tracerService.getCurrentTracer();
+                if (tracer != null && tracer.isEnabled()) {
+                    tracer.startOperation("goal-start-event-validation", "Validating goal start event: " + goal.getItemId(), goal.getStartEvent());
+                }
+            }
+
+            List<ValidationError> validationErrors = conditionValidationService.validate(goal.getStartEvent());
+
+            // Add validation info to tracer
+            if (tracerService != null) {
+                RequestTracer tracer = tracerService.getCurrentTracer();
+                if (tracer != null && tracer.isEnabled()) {
+                    tracer.addValidationInfo(validationErrors, "goal-start-event-validation");
+                    tracer.endOperation(!validationErrors.isEmpty(), String.format("Goal start event validation completed with %d errors", validationErrors.size()));
+                }
+            }
+
+            // Separate errors and warnings
+            List<ValidationError> errors = validationErrors.stream()
+                .filter(error -> error.getType() != ValidationErrorType.MISSING_RECOMMENDED_PARAMETER)
+                .collect(Collectors.toList());
+
+            List<ValidationError> warnings = validationErrors.stream()
+                .filter(error -> error.getType() == ValidationErrorType.MISSING_RECOMMENDED_PARAMETER)
+                .collect(Collectors.toList());
+
+            // Log warnings but don't block the operation
+            if (!warnings.isEmpty()) {
+                StringBuilder warningMessage = new StringBuilder("Goal start event has warnings:");
+                for (ValidationError warning : warnings) {
+                    warningMessage.append("\n- ").append(warning.getMessage());
+                }
+                LOGGER.warn(warningMessage.toString());
+            }
+
+            // Only throw exception for actual errors
+            if (!errors.isEmpty()) {
+                StringBuilder errorMessage = new StringBuilder("Invalid goal start event:");
+                for (ValidationError error : errors) {
+                    errorMessage.append("\n- ").append(error.getMessage());
+                }
+                throw new IllegalArgumentException(errorMessage.toString());
+            }
+        }
+        if (goal.getTargetEvent() != null) {
+            // Start validation operation in tracer for target event
+            if (tracerService != null) {
+                RequestTracer tracer = tracerService.getCurrentTracer();
+                if (tracer != null && tracer.isEnabled()) {
+                    tracer.startOperation("goal-target-event-validation", "Validating goal target event: " + goal.getItemId(), goal.getTargetEvent());
+                }
+            }
+
+            List<ValidationError> targetValidationErrors = conditionValidationService.validate(goal.getTargetEvent());
+
+            // Add validation info to tracer
+            if (tracerService != null) {
+                RequestTracer tracer = tracerService.getCurrentTracer();
+                if (tracer != null && tracer.isEnabled()) {
+                    tracer.addValidationInfo(targetValidationErrors, "goal-target-event-validation");
+                    tracer.endOperation(!targetValidationErrors.isEmpty(), String.format("Goal target event validation completed with %d errors", targetValidationErrors.size()));
+                }
+            }
+
+            // Separate errors and warnings
+            List<ValidationError> targetErrors = targetValidationErrors.stream()
+                .filter(error -> error.getType() != ValidationErrorType.MISSING_RECOMMENDED_PARAMETER)
+                .collect(Collectors.toList());
+
+            List<ValidationError> targetWarnings = targetValidationErrors.stream()
+                .filter(error -> error.getType() == ValidationErrorType.MISSING_RECOMMENDED_PARAMETER)
+                .collect(Collectors.toList());
+
+            // Log warnings but don't block the operation
+            if (!targetWarnings.isEmpty()) {
+                StringBuilder warningMessage = new StringBuilder("Goal target event has warnings:");
+                for (ValidationError warning : targetWarnings) {
+                    warningMessage.append("\n- ").append(warning.getMessage());
+                }
+                LOGGER.warn(warningMessage.toString());
+            }
+
+            // Only throw exception for actual errors
+            if (!targetErrors.isEmpty()) {
+                StringBuilder errorMessage = new StringBuilder("Invalid goal target event:");
+                for (ValidationError error : targetErrors) {
+                    errorMessage.append("\n- ").append(error.getMessage());
+                }
+                throw new IllegalArgumentException(errorMessage.toString());
+            }
         }
         ParserHelper.resolveConditionType(definitionsService, goal.getStartEvent(), "goal "+goal.getItemId()+" start event");
         ParserHelper.resolveConditionType(definitionsService, goal.getTargetEvent(), "goal "+goal.getItemId()+" start event");
