@@ -159,6 +159,43 @@ public class InMemoryPersistenceServiceImplTest {
             assertTrue(removed);
             assertNull(loaded);
         }
+
+        @Test
+        void shouldHandleVersioning() {
+            // Create a test item
+            TestMetadataItem item = new TestMetadataItem();
+            item.setItemId("test-version");
+            item.setName("Test Version");
+
+            // Initial save should set version to 1
+            persistenceService.save(item);
+            assertEquals(1L, item.getVersion());
+
+            // Subsequent saves should increment version
+            persistenceService.save(item);
+            assertEquals(2L, item.getVersion());
+
+            // Load and verify version persisted
+            TestMetadataItem loaded = persistenceService.load(item.getItemId(), TestMetadataItem.class);
+            assertEquals(2L, loaded.getVersion());
+        }
+
+        @Test
+        void shouldHandleVersioningWithExplicitVersion() {
+            // Create a test item with explicit version
+            TestMetadataItem item = new TestMetadataItem();
+            item.setItemId("test-explicit-version");
+            item.setName("Test Explicit Version");
+            item.setVersion(5L);
+
+            // Save should increment existing version
+            persistenceService.save(item);
+            assertEquals(6L, item.getVersion());
+
+            // Load and verify version persisted
+            TestMetadataItem loaded = persistenceService.load(item.getItemId(), TestMetadataItem.class);
+            assertEquals(6L, loaded.getVersion());
+        }
     }
 
     @Nested
@@ -2344,6 +2381,80 @@ public class InMemoryPersistenceServiceImplTest {
 
             // Store scripts should always return true for in-memory implementation
             assertTrue(persistenceService.storeScripts(scripts));
+        }
+
+        @Test
+        void shouldHandleVersioningInScriptUpdates() {
+            // Create a test profile
+            Profile profile = new Profile();
+            profile.setItemId("test-profile-version");
+            persistenceService.save(profile);
+            assertEquals(1L, profile.getVersion());
+
+            // Create script parameters
+            Map<String, Object> pastEventKeyValue = new HashMap<>();
+            pastEventKeyValue.put("pastEventKey", "test-event");
+            pastEventKeyValue.put("valueToAdd", 5L);
+
+            Map<String, Object> scriptParams = new HashMap<>();
+            scriptParams.put(profile.getItemId(), pastEventKeyValue);
+
+            // Execute script update
+            boolean result = persistenceService.updateWithScript(profile, Profile.class,
+                    "updatePastEventOccurences", scriptParams);
+            assertTrue(result);
+
+            // Verify version was incremented
+            Profile updatedProfile = persistenceService.load(profile.getItemId(), Profile.class);
+            assertNotNull(updatedProfile);
+            assertEquals(2L, updatedProfile.getVersion());
+        }
+
+        @Test
+        void shouldHandleVersioningInQueryAndScriptUpdates() {
+            // Create test profiles
+            Profile profile1 = new Profile();
+            profile1.setItemId("test-profile-version-1");
+            persistenceService.save(profile1);
+            assertEquals(1L, profile1.getVersion());
+
+            Profile profile2 = new Profile();
+            profile2.setItemId("test-profile-version-2");
+            persistenceService.save(profile2);
+            assertEquals(1L, profile2.getVersion());
+
+            // Create script parameters
+            Map<String, Object> pastEventKeyValue = new HashMap<>();
+            pastEventKeyValue.put("pastEventKey", "test-event");
+            pastEventKeyValue.put("valueToAdd", 5L);
+
+            Map<String, Object> scriptParams = new HashMap<>();
+            scriptParams.put(profile1.getItemId(), pastEventKeyValue);
+            scriptParams.put(profile2.getItemId(), pastEventKeyValue);
+
+            // Create condition that matches both profiles
+            Condition condition = new Condition();
+            ConditionType conditionType = new ConditionType();
+            conditionType.setItemId("matchAllCondition");
+            conditionType.setQueryBuilder("matchAllConditionESQueryBuilder");
+            conditionType.setConditionEvaluator("matchAllConditionEvaluator");
+            condition.setConditionType(conditionType);
+
+            // Execute script update
+            String[] scripts = new String[]{"updatePastEventOccurences"};
+            Map<String, Object>[] scriptParamsArray = new Map[]{scriptParams};
+            Condition[] conditions = new Condition[]{condition};
+
+            boolean result = persistenceService.updateWithQueryAndScript(Profile.class, scripts, scriptParamsArray, conditions);
+            assertTrue(result);
+
+            // Verify versions were incremented
+            Profile updatedProfile1 = persistenceService.load(profile1.getItemId(), Profile.class);
+            Profile updatedProfile2 = persistenceService.load(profile2.getItemId(), Profile.class);
+            assertNotNull(updatedProfile1);
+            assertNotNull(updatedProfile2);
+            assertEquals(2L, updatedProfile1.getVersion());
+            assertEquals(2L, updatedProfile2.getVersion());
         }
     }
 

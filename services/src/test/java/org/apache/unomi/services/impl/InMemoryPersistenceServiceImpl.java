@@ -259,21 +259,44 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
         if (item.getItemId() == null) {
             item.setItemId(UUID.randomUUID().toString());
         }
-        item.setTenantId(executionContextManager.getCurrentContext().getTenantId());
-        String key = getKey(item.getItemId(), item.getClass());
-        itemsById.put(key, item);
-        persistItem(item);
-        return true;
+        return save(item, false, true);
     }
 
     @Override
     public boolean save(Item item, boolean useBatching) {
-        return save(item);
+        return save(item, useBatching, true);
     }
 
     @Override
     public boolean save(Item item, Boolean useBatching, Boolean alwaysOverwrite) {
-        return save(item);
+        if (item == null) {
+            return false;
+        }
+
+        item.setTenantId(executionContextManager.getCurrentContext().getTenantId());
+
+        // Handle versioning
+        String key = getKey(item.getItemId(), item.getClass());
+        Item existingItem = itemsById.get(key);
+        if ((existingItem == null || existingItem.getVersion() == null) && (item.getVersion() == null)) {
+            // New item or item without version, set initial version
+            item.setVersion(1L);
+        } else {
+            // Existing item being updated, increment version
+            if (existingItem != null && existingItem.getVersion() != null) {
+                item.setVersion(existingItem.getVersion() + 1);
+            } else {
+                item.setVersion(item.getVersion() + 1);
+            }
+        }
+
+        itemsById.put(key, item);
+
+        if (fileStorageEnabled) {
+            persistItem(item);
+        }
+
+        return true;
     }
 
     @Override
@@ -755,21 +778,24 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
         }
 
         // Execute the script based on its name/content
+        boolean success = false;
         if (script.contains("updatePastEventOccurences")) {
-            return executeUpdatePastEventOccurrencesScript(item, scriptParams);
+            success = executeUpdatePastEventOccurrencesScript(item, scriptParams);
         } else if (script.contains("updateProfileId")) {
-            return executeUpdateProfileIdScript(item, scriptParams);
+            success = executeUpdateProfileIdScript(item, scriptParams);
         } else if (script.contains("resetScoringPlan")) {
-            return executeResetScoringPlanScript(item, scriptParams);
+            success = executeResetScoringPlanScript(item, scriptParams);
         } else if (script.contains("evaluateScoringPlanElement")) {
-            return executeEvaluateScoringPlanElementScript(item, scriptParams);
+            success = executeEvaluateScoringPlanElementScript(item, scriptParams);
         }
 
         // Log warning if script wasn't matched
-        String sanitizedScript = script.replaceAll("[\\r\\n]", "").substring(0, Math.min(script.length(), 100));
-        LOGGER.warn("No matching script handler found for script: {}", sanitizedScript);
+        if (!success) {
+            String sanitizedScript = script.replaceAll("[\\r\\n]", "").substring(0, Math.min(script.length(), 100));
+            LOGGER.warn("No matching script handler found for script: {}", sanitizedScript);
+        }
 
-        return false;
+        return success;
     }
 
     private boolean executeResetScoringPlanScript(Item item, Map<String, Object> params) {

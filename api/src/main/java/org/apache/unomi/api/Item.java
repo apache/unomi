@@ -67,7 +67,7 @@ public abstract class Item implements Serializable {
     protected Long version;
     protected Map<String, Object> systemMetadata = new HashMap<>();
     private String tenantId;
-    
+
     // Audit metadata fields
     private String createdBy;
     private String lastModifiedBy;
@@ -92,7 +92,7 @@ public abstract class Item implements Serializable {
     private void initializeAuditMetadata() {
         this.creationDate = new Date();
         this.lastModificationDate = this.creationDate;
-        this.version = 1L;
+        this.version = 0L;
     }
 
     /**
