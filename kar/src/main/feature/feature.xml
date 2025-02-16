@@ -62,7 +62,6 @@
         <bundle>mvn:org.apache.unomi/unomi-api/${project.version}</bundle>
         <bundle>mvn:org.apache.unomi/unomi-common/${project.version}</bundle>
         <bundle>mvn:org.apache.unomi/unomi-tracing-api/${project.version}</bundle>
-        <bundle>mvn:org.apache.unomi/unomi-tracing-impl/${project.version}</bundle>
         <bundle>mvn:org.apache.unomi/unomi-scripting/${project.version}</bundle>
         <bundle>mvn:org.apache.unomi/unomi-metrics/${project.version}</bundle>
         <bundle>mvn:org.apache.unomi/unomi-persistence-spi/${project.version}</bundle>
@@ -81,6 +80,7 @@
 
     <feature name="unomi-persistence-elasticsearch" description="ElasticSearch persistence implementation for Apache Unomi" version="${project.version}">
         <configfile finalname="/etc/org.apache.unomi.persistence.elasticsearch.cfg">mvn:org.apache.unomi/unomi-persistence-elasticsearch-core/${project.version}/cfg/elasticsearchcfg</configfile>
+        <bundle start="false">mvn:org.apache.unomi/unomi-tracing-impl/${project.version}</bundle>
         <bundle start="false">mvn:org.apache.unomi/unomi-persistence-elasticsearch-core/${project.version}</bundle>
         <bundle start="false">mvn:org.apache.unomi/unomi-services/${project.version}</bundle>
         <bundle start="false">mvn:org.apache.unomi/unomi-json-schema-services/${project.version}</bundle>
@@ -102,6 +102,7 @@
 
     <feature name="unomi-persistence-opensearch" description="OpenSearch persistence implementation for Apache Unomi" version="${project.version}">
         <configfile finalname="/etc/org.apache.unomi.persistence.opensearch.cfg">mvn:org.apache.unomi/unomi-persistence-opensearch-core/${project.version}/cfg/opensearchcfg</configfile>
+        <bundle start="false">mvn:org.apache.unomi/unomi-tracing-impl/${project.version}</bundle>
         <bundle start="false">mvn:org.apache.unomi/unomi-persistence-opensearch-core/${project.version}</bundle>
         <bundle start="false">mvn:org.apache.unomi/unomi-services/${project.version}</bundle>
         <bundle start="false">mvn:org.apache.unomi/unomi-json-schema-services/${project.version}</bundle>
