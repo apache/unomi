@@ -23,6 +23,7 @@ import org.apache.unomi.schema.api.JsonSchemaWrapper;
 import org.apache.unomi.schema.listener.JsonSchemaListener;
 import org.apache.unomi.services.TestHelper;
 import org.apache.unomi.services.impl.*;
+import org.apache.unomi.tracing.api.TracerService;
 import org.junit.Before;
 import org.junit.Test;
 import org.osgi.framework.Bundle;
@@ -43,6 +44,7 @@ public class SchemaServiceImplTest {
     private JsonSchemaListener schemaListener;
     private KarafSecurityService securityService;
     private ExecutionContextManager contextManager;
+    private TracerService tracerService;
 
     private static final String TENANT_1 = "tenant1";
     private static final String SYSTEM_TENANT = "system";
@@ -52,6 +54,7 @@ public class SchemaServiceImplTest {
         tenantService = new TestTenantService();
         securityService = TestHelper.createSecurityService();
         contextManager = TestHelper.createExecutionContextManager(securityService);
+        tracerService = TestHelper.createTracerService();
 
         // Create tenants
         contextManager.executeAsSystem(() -> {
@@ -85,6 +88,7 @@ public class SchemaServiceImplTest {
         schemaService.setPersistenceService(persistenceService);
         schemaService.setTenantService(tenantService);
         schemaService.setContextManager(contextManager);
+        schemaService.setTracerService(tracerService);
         schemaService.init();
 
         // Set up schema listener

@@ -978,6 +978,7 @@
         <module>api</module>
         <module>common</module>
         <module>metrics</module>
+        <module>tracing</module>
         <module>scripting</module>
         <module>persistence-spi</module>
         <module>lifecycle-watcher</module>

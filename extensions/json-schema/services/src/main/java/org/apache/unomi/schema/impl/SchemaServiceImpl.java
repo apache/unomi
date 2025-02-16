@@ -38,6 +38,8 @@ import org.apache.unomi.schema.api.SchemaService;
 import org.apache.unomi.schema.api.ValidationError;
 import org.apache.unomi.schema.api.ValidationException;
 import org.apache.unomi.schema.keyword.ScopeKeyword;
+import org.apache.unomi.tracing.api.RequestTracer;
+import org.apache.unomi.tracing.api.TracerService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -81,6 +83,7 @@ public class SchemaServiceImpl implements SchemaService {
     private ScopeService scopeService;
     private TenantService tenantService;
     private ExecutionContextManager contextManager;
+    private TracerService tracerService;
 
     private JsonSchemaFactory jsonSchemaFactory;
 
@@ -293,6 +296,14 @@ public class SchemaServiceImpl implements SchemaService {
                 LOGGER.warn("Schema validation found {} errors while validating against schema: {}", validationMessages.size(), jsonSchema.getCurrentUri());
                 for (ValidationMessage validationMessage : validationMessages) {
                     LOGGER.warn("Validation error: {}", validationMessage);
+                }
+            }
+
+            // Add validation info to trace if tracing is enabled
+            if (tracerService != null) {
+                RequestTracer tracer = tracerService.getCurrentTracer();
+                if (tracer != null && tracer.isEnabled()) {
+                    tracer.addValidationInfo(validationMessages, jsonSchema.getCurrentUri().toString());
                 }
             }
 
@@ -536,5 +547,9 @@ public class SchemaServiceImpl implements SchemaService {
 
     public void setJsonSchemaRefreshInterval(Integer jsonSchemaRefreshInterval) {
         this.jsonSchemaRefreshInterval = jsonSchemaRefreshInterval;
+    }
+
+    public void setTracerService(TracerService tracerService) {
+        this.tracerService = tracerService;
     }
 }

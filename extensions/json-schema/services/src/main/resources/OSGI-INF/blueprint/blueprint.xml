@@ -26,6 +26,7 @@
     <reference id="scopeService" interface="org.apache.unomi.api.services.ScopeService"/>
     <reference id="tenantService" interface="org.apache.unomi.api.tenants.TenantService"/>
     <reference id="contextManager" interface="org.apache.unomi.api.services.ExecutionContextManager"/>
+    <reference id="tracerService" interface="org.apache.unomi.api.services.TracerService"/>
 
     <!-- Configuration -->
     <cm:property-placeholder persistent-id="org.apache.unomi.schema" update-strategy="reload">
@@ -41,6 +42,7 @@
         <property name="scopeService" ref="scopeService"/>
         <property name="tenantService" ref="tenantService"/>
         <property name="contextManager" ref="contextManager"/>
+        <property name="tracerService" ref="tracerService"/>
         <property name="jsonSchemaRefreshInterval" value="${json.schema.refresh.interval}"/>
     </bean>
 

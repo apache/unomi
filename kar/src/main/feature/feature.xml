@@ -61,6 +61,8 @@
         <bundle>mvn:org.apache.unomi/unomi-lifecycle-watcher/${project.version}</bundle>
         <bundle>mvn:org.apache.unomi/unomi-api/${project.version}</bundle>
         <bundle>mvn:org.apache.unomi/unomi-common/${project.version}</bundle>
+        <bundle>mvn:org.apache.unomi/unomi-tracing-api/${project.version}</bundle>
+        <bundle>mvn:org.apache.unomi/unomi-tracing-impl/${project.version}</bundle>
         <bundle>mvn:org.apache.unomi/unomi-scripting/${project.version}</bundle>
         <bundle>mvn:org.apache.unomi/unomi-metrics/${project.version}</bundle>
         <bundle>mvn:org.apache.unomi/unomi-persistence-spi/${project.version}</bundle>

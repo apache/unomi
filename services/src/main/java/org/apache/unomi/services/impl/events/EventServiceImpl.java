@@ -32,6 +32,8 @@ import org.apache.unomi.api.tenants.TenantService;
 import org.apache.unomi.api.utils.ParserHelper;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.aggregate.TermsAggregate;
+import org.apache.unomi.tracing.api.RequestTracer;
+import org.apache.unomi.tracing.api.TracerService;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceReference;
 import org.slf4j.Logger;
@@ -58,6 +60,8 @@ public class EventServiceImpl implements EventService {
 
     private Set<String> restrictedEventTypeIds = new LinkedHashSet<String>();
 
+    private TracerService tracerService;
+
     public void setPredefinedEventTypeIds(Set<String> predefinedEventTypeIds) {
         this.predefinedEventTypeIds = predefinedEventTypeIds;
     }
@@ -80,6 +84,10 @@ public class EventServiceImpl implements EventService {
 
     public void setBundleContext(BundleContext bundleContext) {
         this.bundleContext = bundleContext;
+    }
+
+    public void setTracerService(TracerService tracerService) {
+        this.tracerService = tracerService;
     }
 
     @Override
@@ -151,11 +159,15 @@ public class EventServiceImpl implements EventService {
     }
 
     public int send(Event event) {
+        RequestTracer tracer = tracerService.getCurrentTracer();
+        tracer.trace("Sending event: " + event.getEventType(), event.getItemId());
         return send(event, 0);
     }
 
     private int send(Event event, int depth) {
+        RequestTracer tracer = tracerService.getCurrentTracer();
         if (depth > MAX_RECURSION_DEPTH) {
+            tracer.trace("Max recursion depth reached for event: " + event.getEventType(), event.getItemId());
             LOGGER.warn("Max recursion depth reached");
             return NO_CHANGE;
         }
@@ -163,11 +175,14 @@ public class EventServiceImpl implements EventService {
         boolean saveSucceeded = true;
         if (event.isPersistent()) {
             try {
+                tracer.trace("Saving persistent event: " + event.getEventType(), event.getItemId());
                 saveSucceeded = persistenceService.save(event, null, true);
             } catch (Throwable t) {
+                tracer.trace("Failed to save event: " + event.getEventType() + ", error: " + t.getMessage(), event.getItemId());
                 LOGGER.error("Failed to save event: ", t);
                 return NO_CHANGE;
-            }}
+            }
+        }
 
         int changes;
 
@@ -176,20 +191,25 @@ public class EventServiceImpl implements EventService {
             final Session session = event.getSession();
             if (event.isPersistent() && session != null) {
                 session.setLastEventDate(event.getTimeStamp());
+                tracer.trace("Updated session last event date", session.getItemId());
             }
 
             if (event.getProfile() != null) {
+                tracer.trace("Processing event for profile: " + event.getProfile().getItemId(), event.getItemId());
                 for (EventListenerService eventListenerService : eventListeners) {
                     if (eventListenerService.canHandle(event)) {
+                        tracer.trace("Event listener service handling event: " + eventListenerService.getClass().getSimpleName(), event.getItemId());
                         changes |= eventListenerService.onEvent(event);
                     }
                 }
                 // At the end of the processing event execute the post executor actions
                 for (ActionPostExecutor actionPostExecutor : event.getActionPostExecutors()) {
+                    tracer.trace("Executing post action executor", event.getItemId());
                     changes |= actionPostExecutor.execute() ? changes : NO_CHANGE;
                 }
 
                 if ((changes & PROFILE_UPDATED) == PROFILE_UPDATED) {
+                    tracer.trace("Profile updated, sending profileUpdated event", event.getItemId());
                     Event profileUpdated = new Event("profileUpdated", session, event.getProfile(), event.getScope(), event.getSource(), event.getProfile(), event.getTimeStamp());
                     profileUpdated.setPersistent(false);
                     profileUpdated.getAttributes().putAll(event.getAttributes());

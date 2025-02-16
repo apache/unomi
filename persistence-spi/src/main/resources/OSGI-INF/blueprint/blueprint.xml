@@ -17,15 +17,8 @@
   -->
 
 <blueprint xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-           xmlns:cm="http://aries.apache.org/blueprint/xmlns/blueprint-cm/v1.1.0"
            xmlns="http://www.osgi.org/xmlns/blueprint/v1.0.0"
-           xsi:schemaLocation="http://www.osgi.org/xmlns/blueprint/v1.0.0 http://www.osgi.org/xmlns/blueprint/v1.0.0/blueprint.xsd
-
-
-
-
-
-  http://aries.apache.org/blueprint/xmlns/blueprint-cm/v1.1.0 http://aries.apache.org/schemas/blueprint-cm/blueprint-cm-1.1.0.xsd">
+           xsi:schemaLocation="http://www.osgi.org/xmlns/blueprint/v1.0.0 http://www.osgi.org/xmlns/blueprint/v1.0.0/blueprint.xsd">
 
 
     <reference id="metricsService" interface="org.apache.unomi.metrics.MetricsService" />
@@ -41,6 +34,15 @@
         <interfaces>
             <value>org.apache.unomi.persistence.spi.conditions.ConditionEvaluatorDispatcher</value>
         </interfaces>
+    </service>
+
+    <!-- TracerService configuration -->
+    <bean id="defaultTracerService" class="org.apache.unomi.persistence.spi.conditions.DefaultTracerService" init-method="cleanup" />
+
+    <service id="tracerService" ref="defaultTracerService" interface="org.apache.unomi.api.services.TracerService">
+        <service-properties>
+            <entry key="immediate" value="true"/>
+        </service-properties>
     </service>
 
 </blueprint>
