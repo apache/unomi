@@ -2,7 +2,7 @@
   "metadata": {
     "id": "booleanCondition",
     "name": "booleanCondition",
-    "description": "",
+    "description": "Combines multiple conditions with a logical operator",
     "systemTags": [
       "profileTags",
       "logical",
@@ -19,14 +19,21 @@
   "parameters": [
     {
       "id": "operator",
-      "type": "String",
+      "type": "string",
       "multivalued": false,
-      "defaultValue": "and"
+      "defaultValue": "and",
+      "validation": {
+        "required": true,
+        "allowedValues": ["and", "or"]
+      }
     },
     {
       "id": "subConditions",
       "type": "Condition",
-      "multivalued": true
+      "multivalued": true,
+      "validation": {
+        "required": true
+      }
     }
   ]
 }

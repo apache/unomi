@@ -2,7 +2,7 @@
   "metadata": {
     "id": "pastEventCondition",
     "name": "pastEventCondition",
-    "description": "",
+    "description": "Evaluates past events that occurred within a specified time range",
     "systemTags": [
       "availableToEndUser",
       "behavioral",
@@ -17,6 +17,25 @@
   "queryBuilder": "pastEventConditionESQueryBuilder",
 
   "parameters": [
+    {
+      "id": "eventCondition",
+      "type": "Condition",
+      "multivalued": false,
+      "validation": {
+        "required": true,
+        "allowedConditionTags": ["eventCondition"]
+      }
+    },
+    {
+      "id": "operator",
+      "type": "string",
+      "multivalued": false,
+      "defaultValue": "true",
+      "validation": {
+        "recommended": true,
+        "allowedValues": ["true", "false"]
+      }
+    },
     {
       "id": "numberOfDays",
       "type": "integer",
@@ -35,22 +54,18 @@
     {
       "id": "minimumEventCount",
       "type": "integer",
-      "multivalued": false
+      "multivalued": false,
+      "validation": {
+        "recommended": true
+      }
     },
     {
       "id": "maximumEventCount",
       "type": "integer",
-      "multivalued": false
-    },
-    {
-      "id": "operator",
-      "type": "string",
-      "multivalued": false
-    },
-    {
-      "id": "eventCondition",
-      "type": "Condition",
-      "multivalued": false
+      "multivalued": false,
+      "validation": {
+        "recommended": true
+      }
     }
   ]
 }

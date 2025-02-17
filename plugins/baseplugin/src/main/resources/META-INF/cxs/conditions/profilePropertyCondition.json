@@ -2,7 +2,7 @@
     "metadata": {
         "id": "profilePropertyCondition",
         "name": "profilePropertyCondition",
-        "description": "",
+        "description": "Evaluates a profile property against various comparison criteria",
         "systemTags": [
             "availableToEndUser",
             "profileTags",
@@ -18,52 +18,114 @@
         {
             "id": "propertyName",
             "type": "string",
-            "multivalued": false
+            "multivalued": false,
+            "validation": {
+                "required": true
+            }
         },
         {
             "id": "comparisonOperator",
-            "type": "comparisonOperator",
-            "multivalued": false
+            "type": "string",
+            "multivalued": false,
+            "validation": {
+                "required": true,
+                "allowedValues": [
+                    "equals",
+                    "notEquals",
+                    "lessThan",
+                    "greaterThan",
+                    "lessThanOrEqualTo",
+                    "greaterThanOrEqualTo",
+                    "between",
+                    "exists",
+                    "missing",
+                    "contains",
+                    "notContains",
+                    "startsWith",
+                    "endsWith",
+                    "matchesRegex"
+                ]
+            }
         },
         {
             "id": "propertyValue",
             "type": "string",
-            "multivalued": false
+            "multivalued": false,
+            "validation": {
+                "recommended": true,
+                "exclusive": true,
+                "exclusiveGroup": "propertyValue"
+            }
         },
         {
             "id": "propertyValueInteger",
             "type": "integer",
-            "multivalued": false
+            "multivalued": false,
+            "validation": {
+                "recommended": true,
+                "exclusive": true,
+                "exclusiveGroup": "propertyValue"
+            }
         },
         {
             "id": "propertyValueDate",
             "type": "date",
-            "multivalued": false
+            "multivalued": false,
+            "validation": {
+                "recommended": true,
+                "exclusive": true,
+                "exclusiveGroup": "propertyValue"
+            }
         },
         {
             "id": "propertyValueDateExpr",
             "type": "string",
-            "multivalued": false
+            "multivalued": false,
+            "validation": {
+                "recommended": true,
+                "exclusive": true,
+                "exclusiveGroup": "propertyValue"
+            }
         },
         {
             "id": "propertyValues",
             "type": "string",
-            "multivalued": true
+            "multivalued": true,
+            "validation": {
+                "recommended": true,
+                "exclusive": true,
+                "exclusiveGroup": "propertyValues"
+            }
         },
         {
             "id": "propertyValuesInteger",
             "type": "integer",
-            "multivalued": true
+            "multivalued": true,
+            "validation": {
+                "recommended": true,
+                "exclusive": true,
+                "exclusiveGroup": "propertyValues"
+            }
         },
         {
             "id": "propertyValuesDate",
             "type": "date",
-            "multivalued": true
+            "multivalued": true,
+            "validation": {
+                "recommended": true,
+                "exclusive": true,
+                "exclusiveGroup": "propertyValues"
+            }
         },
         {
             "id": "propertyValuesDateExpr",
             "type": "string",
-            "multivalued": true
+            "multivalued": true,
+            "validation": {
+                "recommended": true,
+                "exclusive": true,
+                "exclusiveGroup": "propertyValues"
+            }
         }
     ]
 }

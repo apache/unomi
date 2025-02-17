@@ -50,6 +50,9 @@ public class ConditionValidationServiceImpl implements ConditionValidationServic
     }
 
     public void unbindValidator(ValueTypeValidator validator) {
+        if (validator == null) {
+            return;
+        }
         String typeId = validator.getValueTypeId().toLowerCase();
         // Only remove if it's not a built-in validator
         if (builtInValidators.stream().noneMatch(v -> v.getValueTypeId().equalsIgnoreCase(typeId))) {
@@ -61,26 +64,26 @@ public class ConditionValidationServiceImpl implements ConditionValidationServic
     private Map<String, Object> buildValidationContext(String paramName, Object value, Parameter param,
             String location, Map<String, Object> additionalContext) {
         Map<String, Object> context = new HashMap<>();
-        
+
         // Always include location information
         context.put("location", location);
-        
+
         // Add parameter type information
         if (param != null && param.getType() != null) {
             context.put("parameterType", param.getType().toLowerCase());
         }
-        
+
         // Add value information if present
         if (value != null) {
             context.put("actualValue", value);
             context.put("valueType", value.getClass().getSimpleName());
         }
-        
+
         // Add any additional context
         if (additionalContext != null) {
             context.putAll(additionalContext);
         }
-        
+
         return context;
     }
 
@@ -100,7 +103,7 @@ public class ConditionValidationServiceImpl implements ConditionValidationServic
 
         ConditionType type = condition.getConditionType();
         if (type == null) {
-            Map<String, Object> context = buildValidationContext(null, null, null, 
+            Map<String, Object> context = buildValidationContext(null, null, null,
                 "condition type", Collections.singletonMap("type", condition.getConditionTypeId()));
             errors.add(new ValidationError(null, "Condition type cannot be null",
                 ValidationErrorType.INVALID_CONDITION_TYPE, condition.getConditionTypeId(), null, context, null));
@@ -150,7 +153,7 @@ public class ConditionValidationServiceImpl implements ConditionValidationServic
                 String location = "condition[" + condition.getConditionTypeId() + "].exclusiveGroup[" + entry.getKey() + "]";
                 Map<String, Object> context = buildValidationContext(null, null, null, location,
                     Map.of("exclusiveGroup", entry.getKey(), "conflictingParameters", paramNames));
-                
+
                 errors.add(new ValidationError(null,
                     "Only one of these parameters can have a value: " + paramNames,
                     ValidationErrorType.EXCLUSIVE_PARAMETER_VIOLATION,
@@ -214,7 +217,7 @@ public class ConditionValidationServiceImpl implements ConditionValidationServic
             if (value instanceof Condition) {
                 Condition subCondition = (Condition) value;
                 ConditionType subConditionType = subCondition.getConditionType();
-                String subLocation = parentLocation + ".condition[" + 
+                String subLocation = parentLocation + ".condition[" +
                     (subCondition.getConditionTypeId() != null ? subCondition.getConditionTypeId() : "unknown") + "]";
 
                 // Check allowed condition tags
@@ -280,7 +283,7 @@ public class ConditionValidationServiceImpl implements ConditionValidationServic
                 return errors;
             }
             Collection<?> values = (Collection<?>) value;
-            
+
             // Add validation for empty collections when parameter is required
             if (param.getValidation() != null && param.getValidation().isRequired() && values.isEmpty()) {
                 errors.add(new ValidationError(paramName,
@@ -292,7 +295,7 @@ public class ConditionValidationServiceImpl implements ConditionValidationServic
                     null));
                 return errors;
             }
-            
+
             int index = 0;
             for (Object item : values) {
                 String itemLocation = parentLocation + "[" + index + "]";
@@ -379,7 +382,7 @@ public class ConditionValidationServiceImpl implements ConditionValidationServic
             } else {
                 isValid = validator.validate(value);
             }
-            
+
             if (!isValid) {
                 context.put("validatorType", validator.getClass().getSimpleName());
                 errors.add(new ValidationError(parameterDescription,
