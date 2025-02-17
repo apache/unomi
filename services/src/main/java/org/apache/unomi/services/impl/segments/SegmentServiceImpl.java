@@ -1068,15 +1068,15 @@ public class SegmentServiceImpl extends AbstractMultiTypeCachingService implemen
 
         if (numberOfDays != null) {
             Condition numberOfDaysCondition = new Condition();
-            numberOfDaysCondition.setConditionType(definitionsService.getConditionType("sessionPropertyCondition"));
+            numberOfDaysCondition.setConditionType(definitionsService.getConditionType("eventPropertyCondition"));
             numberOfDaysCondition.setParameter("propertyName", "timeStamp");
             numberOfDaysCondition.setParameter("comparisonOperator", "greaterThan");
-            numberOfDaysCondition.setParameter("propertyValue", "now-" + numberOfDays + "d");
+            numberOfDaysCondition.setParameter("propertyValueDateExpr", "now-" + numberOfDays + "d");
             l.add(numberOfDaysCondition);
         }
         if (fromDate != null) {
             Condition startDateCondition = new Condition();
-            startDateCondition.setConditionType(definitionsService.getConditionType("sessionPropertyCondition"));
+            startDateCondition.setConditionType(definitionsService.getConditionType("eventPropertyCondition"));
             startDateCondition.setParameter("propertyName", "timeStamp");
             startDateCondition.setParameter("comparisonOperator", "greaterThanOrEqualTo");
             startDateCondition.setParameter("propertyValueDate", fromDate);
@@ -1084,7 +1084,7 @@ public class SegmentServiceImpl extends AbstractMultiTypeCachingService implemen
         }
         if (toDate != null) {
             Condition endDateCondition = new Condition();
-            endDateCondition.setConditionType(definitionsService.getConditionType("sessionPropertyCondition"));
+            endDateCondition.setConditionType(definitionsService.getConditionType("eventPropertyCondition"));
             endDateCondition.setParameter("propertyName", "timeStamp");
             endDateCondition.setParameter("comparisonOperator", "lessThanOrEqualTo");
             endDateCondition.setParameter("propertyValueDate", toDate);
@@ -1187,7 +1187,9 @@ public class SegmentServiceImpl extends AbstractMultiTypeCachingService implemen
                 for (Action action : rule.getActions()) {
                     if (action.getActionTypeId().equals("setEventOccurenceCountAction")) {
                         Condition pastEventCondition = (Condition) action.getParameterValues().get("pastEventCondition");
-                        if (pastEventCondition.containsParameter("numberOfDays")) {
+                        if (pastEventCondition.containsParameter("numberOfDays") ||
+                                pastEventCondition.containsParameter("fromDate") ||
+                                pastEventCondition.containsParameter("toDate")) {
                             recalculatePastEventOccurrencesOnProfiles(rule.getCondition(), pastEventCondition, true, true);
                             LOGGER.info("Event occurrence count on profiles updated for rule: {}", rule.getItemId());
                             if (rule.getLinkedItems() != null && rule.getLinkedItems().size() > 0) {

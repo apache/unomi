@@ -222,7 +222,9 @@ public class SegmentServiceImplTest {
         pastEventCondition.setConditionType(definitionsService.getConditionType("pastEventCondition"));
         pastEventCondition.setConditionTypeId("pastEventCondition");
         pastEventCondition.setParameter("eventCondition", eventCondition);
-        pastEventCondition.setParameter("numberOfDays", numberOfDays);
+        if (numberOfDays > 0) {
+            pastEventCondition.setParameter("numberOfDays", numberOfDays);
+        }
         pastEventCondition.setParameter("operator", "true");
         segment.setCondition(pastEventCondition);
 
@@ -478,7 +480,7 @@ public class SegmentServiceImplTest {
             Condition condition = segment.getCondition();
             condition.setParameter("fromDate", "2024-01-01T00:00:00Z");
             condition.setParameter("toDate", "2024-12-31T23:59:59Z");
-            condition.setParameter("operator", "true");  // Add this line
+            condition.setParameter("operator", "true");
             segmentService.setSegmentDefinition(segment);
 
             // Create and save event within date range
@@ -489,7 +491,7 @@ public class SegmentServiceImplTest {
             eventService.send(event);
 
             // Force recalculation of past event conditions
-            segmentService.recalculatePastEventConditions();  // Add this line
+            segmentService.recalculatePastEventConditions();
 
             assertTrue("Profile should be in date range segment", profile.getSegments().contains("date-range-segment"));
 
