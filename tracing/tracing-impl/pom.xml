@@ -70,18 +70,9 @@
                         <Export-Package>
                             org.apache.unomi.tracing.impl
                         </Export-Package>
-                        <Import-Package>
-                            org.apache.unomi.tracing.api,
-                            org.apache.unomi.api.conditions,
-                            org.osgi.service.component.annotations,
-                            org.slf4j,
-                            com.fasterxml.jackson.databind,
-                            com.fasterxml.jackson.databind.node,
-                            com.fasterxml.jackson.core
-                        </Import-Package>
                     </instructions>
                 </configuration>
             </plugin>
         </plugins>
     </build>
-</project> 
+</project>

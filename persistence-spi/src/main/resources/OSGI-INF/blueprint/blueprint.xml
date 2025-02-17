@@ -35,14 +35,5 @@
             <value>org.apache.unomi.persistence.spi.conditions.ConditionEvaluatorDispatcher</value>
         </interfaces>
     </service>
-
-    <!-- TracerService configuration -->
-    <bean id="defaultTracerService" class="org.apache.unomi.persistence.spi.conditions.DefaultTracerService" init-method="cleanup" />
-
-    <service id="tracerService" ref="defaultTracerService" interface="org.apache.unomi.api.services.TracerService">
-        <service-properties>
-            <entry key="immediate" value="true"/>
-        </service-properties>
-    </service>
-
+    
 </blueprint>

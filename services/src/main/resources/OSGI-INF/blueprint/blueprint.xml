@@ -30,6 +30,7 @@
     <reference id="metricsService" interface="org.apache.unomi.metrics.MetricsService"/>
     <reference id="scriptExecutor" interface="org.apache.unomi.scripting.ScriptExecutor"/>
     <reference id="configAdmin" interface="org.osgi.service.cm.ConfigurationAdmin"/>
+    <reference id="tracerService" interface="org.apache.unomi.tracing.api.TracerService"/>
     <reference id="encryptionService" interface="org.apache.unomi.api.security.EncryptionService" availability="optional">
         <reference-listener ref="securityServiceImpl"
                            bind-method="bindEncryptionService"
@@ -79,14 +80,6 @@
         <reference-listener ref="tenantServiceImpl"
                            bind-method="bindListener"
                            unbind-method="unbindListener"/>
-    </reference-list>
-
-    <reference-list id="valueTypeValidators"
-                   interface="org.apache.unomi.api.services.ValueTypeValidator"
-                   availability="mandatory">
-        <reference-listener bind-method="bindValidator"
-                          unbind-method="unbindValidator"
-                          ref="conditionValidationService"/>
     </reference-list>
 
     <!-- Reference list for custom validators from plugins -->

@@ -26,7 +26,7 @@
     <reference id="scopeService" interface="org.apache.unomi.api.services.ScopeService"/>
     <reference id="tenantService" interface="org.apache.unomi.api.tenants.TenantService"/>
     <reference id="contextManager" interface="org.apache.unomi.api.services.ExecutionContextManager"/>
-    <reference id="tracerService" interface="org.apache.unomi.api.services.TracerService"/>
+    <reference id="tracerService" interface="org.apache.unomi.tracing.api.TracerService"/>
 
     <!-- Configuration -->
     <cm:property-placeholder persistent-id="org.apache.unomi.schema" update-strategy="reload">
