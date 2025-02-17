@@ -700,6 +700,13 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
             return Collections.emptyMap();
         }
 
+        String finalField;
+        if (field.endsWith(".keyword")) {
+            finalField = field.substring(0, field.length() - ".keyword".length());
+        } else {
+            finalField = field;
+        }
+
         // Get all items of the specified type that match the condition
         List<Item> matchingItems = itemsById.values().stream()
                 .filter(item -> item.getItemType().equals(itemType))
@@ -711,7 +718,7 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
         // Extract field values from matching items
         List<Number> numericValues = matchingItems.stream()
                 .map(item -> {
-                    Object value = getPropertyValue(item, field);
+                    Object value = getPropertyValue(item, finalField);
                     return value instanceof Number ? (Number) value : null;
                 })
                 .filter(Objects::nonNull)
@@ -722,7 +729,7 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
             switch (metric.toLowerCase()) {
                 case "card":
                     results.put("_card", (double) matchingItems.stream()
-                            .map(item -> getPropertyValue(item, field))
+                            .map(item -> getPropertyValue(item, finalField))
                             .filter(Objects::nonNull)
                             .distinct()
                             .count());
