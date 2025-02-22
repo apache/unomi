@@ -677,11 +677,11 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
     @Override public void purge(Date date) {}
     @Override public void purge(String scope) {}
     @Override public <T extends Item> void refreshIndex(Class<T> clazz, Date dateHint) {}
-    @Override public void createMapping(String itemType, String mappingConfig) {}
+    @Override public void createMapping(String itemType, String mappingConfig) { throw new UnsupportedOperationException("Not implemented");}
     @Override public boolean removeIndex(String itemType) { return true; }
     @Override public boolean createIndex(String itemType) { return true; }
     @Override public boolean removeQuery(String queryString) { return true; }
-    @Override public boolean saveQuery(String queryString, Condition condition) { return true; }
+    @Override public boolean saveQuery(String queryString, Condition condition) { throw new UnsupportedOperationException("Not implemented"); }
     @Override public boolean testMatch(Condition condition, Item item) {
         if (condition == null) {
             return true;
@@ -694,7 +694,7 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
         }
         return conditionEvaluatorDispatcher.eval(condition, item);
     }
-    @Override public long getAllItemsCount(String itemType) { return 0; }
+    @Override public long getAllItemsCount(String itemType) { throw new UnsupportedOperationException("Not implemented"); }
     @Override public Map<String, Double> getSingleValuesMetrics(Condition condition, String[] metrics, String field, String itemType) {
         if (metrics == null || metrics.length == 0 || field == null) {
             return Collections.emptyMap();
@@ -770,12 +770,84 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
 
         return results;
     }
-    @Override public boolean update(Item item, Date dateHint, Class<?> clazz, Map<?, ?> sourceMap) { return true; }
-    @Override public boolean update(Item item, Date dateHint, Class<?> clazz, String propertyName, Object propertyValue) { return true; }
-    @Override public boolean update(Item item, Date dateHint, Class<?> clazz, Map<?, ?> sourceMap, boolean noScriptCall) { return true; }
-    @Override public List<String> update(Map<Item, Map> items, Date dateHint, Class clazz) { return new ArrayList<>(); }
-    @Override public boolean updateWithScript(Item item, Class<?> clazz, String script, Map<String, Object> scriptParams) {
-        return updateWithScript(item, null, clazz, script, scriptParams);
+    @Override public boolean update(Item item, Date dateHint, Class<?> clazz, Map<?, ?> sourceMap) {
+        if (item == null || sourceMap == null || clazz == null) {
+            return false;
+        }
+
+        @SuppressWarnings("unchecked")
+        String key = getKey(item.getItemId(), (Class<? extends Item>) clazz);
+        Item existingItem = itemsById.get(key);
+        if (existingItem == null || !clazz.isAssignableFrom(existingItem.getClass()) ||
+            !executionContextManager.getCurrentContext().getTenantId().equals(existingItem.getTenantId())) {
+            return false;
+        }
+
+        try {
+            // Update properties using PropertyUtils
+            for (Map.Entry<?, ?> entry : sourceMap.entrySet()) {
+                String propertyName = entry.getKey().toString();
+                Object propertyValue = entry.getValue();
+                try {
+                    PropertyUtils.setProperty(existingItem, propertyName, propertyValue);
+                } catch (Exception e) {
+                    LOGGER.debug("Failed to set property: " + propertyName, e);
+                    return false;
+                }
+            }
+
+            // Increment version
+            if (existingItem.getVersion() != null) {
+                existingItem.setVersion(existingItem.getVersion() + 1);
+            } else {
+                existingItem.setVersion(1L);
+            }
+
+            // Save updated item
+            itemsById.put(key, existingItem);
+            if (fileStorageEnabled) {
+                persistItem(existingItem);
+            }
+            return true;
+        } catch (Exception e) {
+            LOGGER.error("Error updating item", e);
+            return false;
+        }
+    }
+
+    @Override
+    public boolean update(Item item, Date dateHint, Class<?> clazz, String propertyName, Object propertyValue) {
+        if (item == null || propertyName == null || clazz == null) {
+            return false;
+        }
+
+        return update(item, dateHint, clazz, Collections.singletonMap(propertyName, propertyValue));
+    }
+
+    @Override
+    public boolean update(Item item, Date dateHint, Class<?> clazz, Map<?, ?> sourceMap, boolean noScriptCall) {
+        // In this implementation, noScriptCall doesn't affect behavior since we don't execute scripts
+        return update(item, dateHint, clazz, sourceMap);
+    }
+
+    @Override
+    public List<String> update(Map<Item, Map> items, Date dateHint, Class clazz) {
+        if (items == null || clazz == null) {
+            return null;
+        }
+
+        List<String> failedUpdates = new ArrayList<>();
+        
+        for (Map.Entry<Item, Map> entry : items.entrySet()) {
+            Item item = entry.getKey();
+            Map sourceMap = entry.getValue();
+            
+            if (!update(item, dateHint, clazz, sourceMap)) {
+                failedUpdates.add(item.getItemId());
+            }
+        }
+        
+        return failedUpdates;
     }
 
     @Override
@@ -850,94 +922,6 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
         }
     }
 
-    private boolean executeViewEventPagePathMigrationScript(Item item, Map<String, Object> params) {
-        try {
-            if (!"view".equals(item.getItemType())) {
-                return false;
-            }
-
-            @SuppressWarnings("unchecked")
-            Map<String, Object> target = (Map<String, Object>) PropertyUtils.getProperty(item, "target");
-            if (target == null || !target.containsKey("properties")) {
-                return false;
-            }
-
-            @SuppressWarnings("unchecked")
-            Map<String, Object> properties = (Map<String, Object>) target.get("properties");
-            if (properties == null || !properties.containsKey("pageInfo")) {
-                return false;
-            }
-
-            @SuppressWarnings("unchecked")
-            Map<String, Object> pageInfo = (Map<String, Object>) properties.get("pageInfo");
-            if (pageInfo == null || !pageInfo.containsKey("parameters")) {
-                return false;
-            }
-
-            @SuppressWarnings("unchecked")
-            Map<String, Object> flattenedProperties = (Map<String, Object>) PropertyUtils.getProperty(item, "flattenedProperties");
-            if (flattenedProperties == null) {
-                flattenedProperties = new HashMap<>();
-                PropertyUtils.setProperty(item, "flattenedProperties", flattenedProperties);
-            }
-
-            flattenedProperties.put("URLParameters", pageInfo.get("parameters"));
-            pageInfo.remove("parameters");
-
-            save(item);
-            return true;
-        } catch (Exception e) {
-            LOGGER.error("Error executing view event page path migration script", e);
-            return false;
-        }
-    }
-
-    private boolean executeUpdatePastEventsProfileScript(Item item, Map<String, Object> params) {
-        try {
-            @SuppressWarnings("unchecked")
-            Map<String, Object> systemProperties = (Map<String, Object>) PropertyUtils.getProperty(item, "systemProperties");
-            if (systemProperties == null || !systemProperties.containsKey("pastEvents")) {
-                return false;
-            }
-
-            @SuppressWarnings("unchecked")
-            List<Map<String, Object>> pastEvents = (List<Map<String, Object>>) systemProperties.get("pastEvents");
-            if (pastEvents == null) {
-                return false;
-            }
-
-            // Update past events format if needed
-            for (Map<String, Object> pastEvent : pastEvents) {
-                if (pastEvent.containsKey("properties")) {
-                    pastEvent.remove("properties");
-                }
-            }
-
-            save(item);
-            return true;
-        } catch (Exception e) {
-            LOGGER.error("Error executing update past events profile script", e);
-            return false;
-        }
-    }
-
-    private boolean executeRemovePastEventsSessionScript(Item item, Map<String, Object> params) {
-        try {
-            @SuppressWarnings("unchecked")
-            Map<String, Object> systemProperties = (Map<String, Object>) PropertyUtils.getProperty(item, "systemProperties");
-            if (systemProperties == null) {
-                return false;
-            }
-
-            systemProperties.remove("pastEvents");
-            save(item);
-            return true;
-        } catch (Exception e) {
-            LOGGER.error("Error executing remove past events session script", e);
-            return false;
-        }
-    }
-
     @Override
     public boolean updateWithQueryAndScript(Class<?> clazz, String[] scripts, Map<String, Object>[] scriptParams, Condition[] conditions) {
         return updateWithQueryAndScript(null, clazz, scripts, scriptParams, conditions);
@@ -990,10 +974,10 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
         return true;
     }
 
-    @Override public PartialList<CustomItem> queryCustomItem(Condition condition, String itemType, String fieldName, int size, int offset, String sortBy) { return new PartialList<>(Collections.<CustomItem>emptyList(), offset, size, 0, PartialList.Relation.EQUAL); }
-    @Override public CustomItem loadCustomItem(String itemId, Date dateHint, String itemType) { return null; }
-    @Override public boolean removeCustomItem(String itemId, String itemType) { return true; }
-    @Override public PartialList<CustomItem> continueCustomItemScrollQuery(String scrollIdentifier, String itemType, String fieldName) { return new PartialList<>(Collections.<CustomItem>emptyList(), 0, 0, 0, PartialList.Relation.EQUAL); }
+    @Override public PartialList<CustomItem> queryCustomItem(Condition condition, String itemType, String fieldName, int size, int offset, String sortBy) { throw new UnsupportedOperationException("Not implemented"); }
+    @Override public CustomItem loadCustomItem(String itemId, Date dateHint, String itemType) { throw new UnsupportedOperationException("Not implemented"); }
+    @Override public boolean removeCustomItem(String itemId, String itemType) { throw new UnsupportedOperationException("Not implemented"); }
+    @Override public PartialList<CustomItem> continueCustomItemScrollQuery(String scrollIdentifier, String itemType, String fieldName) { throw new UnsupportedOperationException("Not implemented"); }
     @Override
     @SuppressWarnings("unchecked")
     public <T extends Item> PartialList<T> continueScrollQuery(Class<T> clazz, String scrollTimeValidity, String scrollIdentifier) {
@@ -1410,11 +1394,11 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
                 .filter(item -> condition == null || testMatch(condition, item))
                 .count();
     }
-    @Override public boolean isConsistent(Item item) { return true; }
-    @Override public <T extends Item> void purgeTimeBasedItems(int olderThanInDays, Class<T> clazz) { }
-    @Override public boolean migrateTenantData(String fromTenantId, String toTenantId, List<String> itemTypes) { return true; }
-    @Override public long getApiCallCount(String apiName) { return 0; }
-    @Override public long calculateStorageSize(String itemType) { return 0; }
+    @Override public boolean isConsistent(Item item) { throw new UnsupportedOperationException("Not implemented"); }
+    @Override public <T extends Item> void purgeTimeBasedItems(int olderThanInDays, Class<T> clazz) { throw new UnsupportedOperationException("Not implemented");}
+    @Override public boolean migrateTenantData(String fromTenantId, String toTenantId, List<String> itemTypes) { throw new UnsupportedOperationException("Not implemented"); }
+    @Override public long getApiCallCount(String apiName) { throw new UnsupportedOperationException("Not implemented"); }
+    @Override public long calculateStorageSize(String itemType) { throw new UnsupportedOperationException("Not implemented"); }
 
     private Object getPropertyValue(Item item, String field) {
         try {

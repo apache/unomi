@@ -2528,6 +2528,132 @@ public class InMemoryPersistenceServiceImplTest {
     }
 
     @Nested
+    class UpdateOperationTests {
+        @Test
+        void shouldUpdateItemWithSourceMap() {
+            // Create and save initial item
+            TestMetadataItem item = new TestMetadataItem();
+            item.setItemId("test-item");
+            item.setName("Initial Name");
+            item.setNumericValue(1.0);
+            persistenceService.save(item);
+
+            // Create update map
+            Map<String, Object> updates = new HashMap<>();
+            updates.put("name", "Updated Name");
+            updates.put("numericValue", 2.0);
+
+            // Perform update
+            boolean result = persistenceService.update(item, null, TestMetadataItem.class, updates);
+            assertTrue(result);
+
+            // Verify updates
+            TestMetadataItem updated = persistenceService.load(item.getItemId(), TestMetadataItem.class);
+            assertEquals("Updated Name", updated.getName());
+            assertEquals(2.0, updated.getNumericValue());
+            assertEquals(2, updated.getVersion());
+        }
+
+        @Test
+        void shouldUpdateItemWithSingleProperty() {
+            // Create and save initial item
+            TestMetadataItem item = new TestMetadataItem();
+            item.setItemId("test-item");
+            item.setName("Initial Name");
+            persistenceService.save(item);
+
+            // Perform update
+            boolean result = persistenceService.update(item, null, TestMetadataItem.class, "name", "Updated Name");
+            assertTrue(result);
+
+            // Verify update
+            TestMetadataItem updated = persistenceService.load(item.getItemId(), TestMetadataItem.class);
+            assertEquals("Updated Name", updated.getName());
+            assertEquals(2, updated.getVersion());
+        }
+
+        @Test
+        void shouldUpdateItemWithSourceMapAndNoScriptCall() {
+            // Create and save initial item
+            TestMetadataItem item = new TestMetadataItem();
+            item.setItemId("test-item");
+            item.setName("Initial Name");
+            persistenceService.save(item);
+
+            // Create update map
+            Map<String, Object> updates = new HashMap<>();
+            updates.put("name", "Updated Name");
+
+            // Perform update
+            boolean result = persistenceService.update(item, null, TestMetadataItem.class, updates, true);
+            assertTrue(result);
+
+            // Verify update
+            TestMetadataItem updated = persistenceService.load(item.getItemId(), TestMetadataItem.class);
+            assertEquals("Updated Name", updated.getName());
+            assertEquals(2, updated.getVersion());
+        }
+
+        @Test
+        void shouldUpdateMultipleItems() {
+            // Create and save initial items
+            TestMetadataItem item1 = new TestMetadataItem();
+            item1.setItemId("test-item-1");
+            item1.setName("Item 1");
+            persistenceService.save(item1);
+
+            TestMetadataItem item2 = new TestMetadataItem();
+            item2.setItemId("test-item-2");
+            item2.setName("Item 2");
+            persistenceService.save(item2);
+
+            // Create updates map
+            Map<Item, Map> updates = new HashMap<>();
+            updates.put(item1, Collections.singletonMap("name", "Updated Item 1"));
+            updates.put(item2, Collections.singletonMap("name", "Updated Item 2"));
+
+            // Perform updates
+            List<String> failedUpdates = persistenceService.update(updates, null, TestMetadataItem.class);
+            assertTrue(failedUpdates.isEmpty());
+
+            // Verify updates
+            TestMetadataItem updated1 = persistenceService.load(item1.getItemId(), TestMetadataItem.class);
+            TestMetadataItem updated2 = persistenceService.load(item2.getItemId(), TestMetadataItem.class);
+            assertEquals("Updated Item 1", updated1.getName());
+            assertEquals("Updated Item 2", updated2.getName());
+            assertEquals(2, updated1.getVersion());
+            assertEquals(2, updated2.getVersion());
+        }
+
+        @Test
+        void shouldHandleNonExistentItem() {
+            TestMetadataItem item = new TestMetadataItem();
+            item.setItemId("non-existent");
+
+            Map<String, Object> updates = new HashMap<>();
+            updates.put("name", "Updated Name");
+
+            boolean result = persistenceService.update(item, null, TestMetadataItem.class, updates);
+            assertFalse(result);
+        }
+
+        @Test
+        void shouldHandleInvalidPropertyName() {
+            TestMetadataItem item = new TestMetadataItem();
+            item.setItemId("test-item");
+            item.setName("Initial Name");
+            persistenceService.save(item);
+
+            boolean result = persistenceService.update(item, null, TestMetadataItem.class, "nonExistentProperty", "value");
+            assertFalse(result);
+
+            TestMetadataItem unchanged = persistenceService.load(item.getItemId(), TestMetadataItem.class);
+            assertEquals("Initial Name", unchanged.getName());
+            assertEquals(item.getVersion(), unchanged.getVersion());
+        }
+    }
+
+    @Nested
     class FileStorageConcurrencyTests {
         @Test
         void shouldHandleConcurrentFileOperations() throws InterruptedException {
