@@ -376,6 +376,13 @@ public class SegmentServiceImpl extends AbstractMultiTypeCachingService implemen
                 }
             }
 
+            if (segment.getMetadata().isEnabled()) {
+                ParserHelper.resolveConditionType(definitionsService, segment.getCondition(), "segment " + segment.getItemId());
+                if (!persistenceService.isValidCondition(segment.getCondition(), new Profile(VALIDATION_PROFILE_ID))) {
+                    throw new BadSegmentConditionException();
+                }
+            }
+
             List<ValidationError> validationErrors = conditionValidationService.validate(segment.getCondition());
 
             // Add validation info to tracer
@@ -400,7 +407,7 @@ public class SegmentServiceImpl extends AbstractMultiTypeCachingService implemen
             if (!warnings.isEmpty()) {
                 StringBuilder warningMessage = new StringBuilder("Segment condition has warnings:");
                 for (ValidationError warning : warnings) {
-                    warningMessage.append("\n- ").append(warning.getMessage());
+                    warningMessage.append("\n- ").append(warning.getDetailedMessage());
                 }
                 LOGGER.warn(warningMessage.toString());
             }
@@ -409,17 +416,11 @@ public class SegmentServiceImpl extends AbstractMultiTypeCachingService implemen
             if (!errors.isEmpty()) {
                 StringBuilder errorMessage = new StringBuilder("Invalid segment condition:");
                 for (ValidationError error : errors) {
-                    errorMessage.append("\n- ").append(error.getMessage());
+                    errorMessage.append("\n- ").append(error.getDetailedMessage());
                 }
                 throw new IllegalArgumentException(errorMessage.toString());
             }
 
-            if (segment.getMetadata().isEnabled()) {
-                ParserHelper.resolveConditionType(definitionsService, segment.getCondition(), "segment " + segment.getItemId());
-                if (!persistenceService.isValidCondition(segment.getCondition(), new Profile(VALIDATION_PROFILE_ID))) {
-                    throw new BadSegmentConditionException();
-                }
-            }
         }
 
         // Update auto-generated rules if metadata is enabled and no missing plugins

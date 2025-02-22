@@ -33,7 +33,7 @@
       "defaultValue": "true",
       "validation": {
         "recommended": true,
-        "allowedValues": ["true", "false"]
+        "allowedValues": ["eventsOccurred", "eventsNotOccurred"]
       }
     },
     {

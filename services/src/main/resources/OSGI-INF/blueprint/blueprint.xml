@@ -202,6 +202,7 @@
         <property name="persistenceService" ref="persistenceService"/>
         <property name="definitionsService" ref="definitionsServiceImpl"/>
         <property name="bundleContext" ref="blueprintBundleContext"/>
+        <property name="tracerService" ref="tracerService" />
         <property name="predefinedEventTypeIds">
             <set>
                 <value>view</value>
