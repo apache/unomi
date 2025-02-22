@@ -85,7 +85,7 @@ package "Persistence" {
   [Cache Service] <<persistence>>
 }
 
-package "REST API" {
+package "HTTP APIs" {
   [REST Server]
   [GraphQL API]
 }
@@ -132,6 +132,79 @@ note right of [Cache Service]
 end note
 @enduml
 ----
+
+=== Condition Evaluation Architecture
+
+[plantuml]
+----
+@startuml
+skinparam componentStyle uml2
+skinparam component {
+  BackgroundColor<<evaluation>> LightBlue
+  BackgroundColor<<query>> LightGreen
+  BackgroundColor<<persistence>> LightYellow
+}
+
+package "Condition Evaluation" {
+  [ConditionDispatcher] <<evaluation>>
+  [ConditionEvaluator] <<evaluation>>
+  [ConditionESQueryBuilder] <<query>>
+  [ConditionOSQueryBuilder] <<query>>
+}
+
+package "Query Building" {
+  interface "QueryBuilder" as QB
+  [ElasticSearchQueryBuilder] <<query>>
+  [OpenSearchQueryBuilder] <<query>>
+}
+
+package "Storage" {
+  [ElasticSearch] <<persistence>>
+  [OpenSearch] <<persistence>>
+}
+
+[ConditionDispatcher] --> [ConditionEvaluator]
+[ConditionDispatcher] --> QB
+
+QB <|.. [ConditionESQueryBuilder]
+QB <|.. [ConditionOSQueryBuilder]
+
+[ConditionESQueryBuilder] --> [ElasticSearchQueryBuilder]
+[ConditionOSQueryBuilder] --> [OpenSearchQueryBuilder]
+
+[ElasticSearchQueryBuilder] --> [ElasticSearch]
+[OpenSearchQueryBuilder] --> [OpenSearch]
+
+note right of [ConditionDispatcher]
+  Routes condition evaluation:
+  1. Direct evaluation
+  2. Query-based evaluation
+end note
+
+note right of QB
+  Abstract query building
+  for different search
+  engine implementations
+end note
+@enduml
+----
+
+==== Key Components
+
+1. *ConditionDispatcher*
+- Routes conditions to appropriate evaluators
+- Determines evaluation strategy (direct vs query-based)
+- Handles caching and optimization
+
+2. *ConditionEvaluator*
+- Performs direct condition evaluation
+- Handles boolean logic and property comparisons
+- Evaluates nested conditions
+
+3. *QueryBuilders*
+- Convert conditions to search engine queries
+- Handle search engine specific syntax
+- Optimize query performance
 
 === Data Flow
 

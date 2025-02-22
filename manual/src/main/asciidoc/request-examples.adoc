@@ -13,6 +13,145 @@
 //
 === Request examples
 
+==== Prerequisites
+
+Before running any of the examples below, you need to:
+
+===== 1. Create a tenant
+
+First, create a tenant that will own all the data:
+
+[source]
+----
+curl -X POST http://localhost:8181/cxs/tenants \
+--user karaf:karaf \
+-H "Content-Type: application/json" \
+-d '{
+    "itemId": "mytenant",
+    "scope": "system",
+    "properties": {
+        "name": "My Company",
+        "description": "My tenant description"
+    }
+}'
+----
+
+After creating the tenant, you will need to use these credentials in the examples:
+- Tenant ID: `mytenant`
+- Private API Key: Get this from the response of the tenant creation request
+
+===== 2. Create a scope
+
+Then, create a scope for your digital property (website, mobile app, etc.):
+
+[source]
+----
+curl -X POST http://localhost:8181/cxs/scopes \
+--user "mytenant:YOUR_PRIVATE_API_KEY" \
+-H "Content-Type: application/json" \
+-d '{
+    "metadata": {
+        "id": "mydigital",
+        "name": "My Digital Property",
+        "description": "My website scope"
+    }
+}'
+----
+
+TIP: The scope creation response will include a public API key that you should save for use with the public APIs.
+
+NOTE: In all the examples below, replace:
+- `YOUR_TENANT_ID` with `mytenant`
+- `YOUR_PRIVATE_API_KEY` with your actual private API key
+- `example` scope with `mydigital`
+- `YOUR_PUBLIC_API_KEY` with the public key from the scope creation response
+
+===== 3. Verify the scope
+
+You can verify the scope was created correctly by retrieving it:
+
+[source]
+----
+curl -X GET http://localhost:8181/cxs/scopes/mydigital \
+--user "mytenant:YOUR_PRIVATE_API_KEY"
+----
+
+Or list all scopes:
+
+[source]
+----
+curl -X GET http://localhost:8181/cxs/scopes \
+--user "mytenant:YOUR_PRIVATE_API_KEY"
+----
+
+[TIP]
+====
+To get nicely formatted JSON responses, you can pipe the curl output through `jq`:
+
+[source]
+----
+# Install jq if you don't have it:
+# macOS: brew install jq
+# Ubuntu/Debian: apt-get install jq
+# CentOS/RHEL: yum install jq
+
+# Then add | jq '.' to any curl command:
+curl -X GET http://localhost:8181/cxs/scopes \
+--user "mytenant:YOUR_PRIVATE_API_KEY" | jq '.'
+----
+
+For multi-line curl requests using heredoc syntax (`<<'EOF'`), you can still use jq:
+
+[source]
+----
+# With heredoc
+curl -X POST http://localhost:8181/cxs/context.json?sessionId=1234 \
+-H "Content-Type: application/json" \
+-d @- <<'EOF' | jq '.'
+{
+    "source": {
+        "itemId": "homepage",
+        "itemType": "page",
+        "scope": "mydigital"
+    },
+    "requiredProfileProperties": ["*"]
+}
+EOF
+
+# With inline JSON
+curl -X POST http://localhost:8181/cxs/profiles/search \
+--user "YOUR_TENANT_ID:YOUR_PRIVATE_API_KEY" \
+-H "Content-Type: application/json" \
+-d '{
+    "offset": 0,
+    "limit": 20
+}' | jq '.'
+----
+
+Useful jq options and filters:
+
+[source]
+----
+# Pretty print with specific indentation
+curl ... | jq '.' --indent 4
+
+# Only show specific fields
+curl ... | jq '.metadata'
+
+# Show array elements on separate lines
+curl ... | jq '.[]'
+
+# Filter and format specific data
+curl ... | jq '.profiles[] | {id: .itemId, name: .properties.firstName}'
+
+# Sort array elements
+curl ... | jq '.profiles | sort_by(.properties.lastName)'
+
+# Count array elements
+curl ... | jq '.profiles | length'
+----
+====
+
 ==== Retrieving your first context
 
 You can retrieve a context using curl like this :
@@ -53,7 +192,7 @@ curl -X POST http://localhost:8181/cxs/context.json?sessionId=1234 \
     "source": {
         "itemId":"homepage",
         "itemType":"page",
-        "scope":"example"
+        "scope":"mydigital"
     },
     "requiredProfileProperties":["*"],
     "requiredSessionProperties":["*"],
@@ -82,20 +221,20 @@ curl -X POST http://localhost:8181/cxs/context.json?sessionId=1234 \
     "source":{
         "itemId":"homepage",
         "itemType":"page",
-        "scope":"example"
+        "scope":"mydigital"
     },
     "events":[
         {
             "eventType":"view",
-            "scope": "example",
+            "scope": "mydigital",
             "source":{
                 "itemType": "site",
-                "scope":"example",
+                "scope":"mydigital",
                 "itemId": "mysite"
             },
             "target":{
                 "itemType":"page",
-                "scope":"example",
+                "scope":"mydigital",
                 "itemId":"homepage",
                 "properties":{
                     "pageInfo":{
@@ -129,15 +268,15 @@ curl -X POST http://localhost:8181/cxs/eventcollector \
     "events":[
         {
             "eventType":"view",
-            "scope": "example",
+            "scope": "mydigital",
             "source":{
                 "itemType": "site",
-                "scope":"example",
+                "scope":"mydigital",
                 "itemId": "mysite"
             },
             "target":{
                 "itemType":"page",
-                "scope":"example",
+                "scope":"mydigital",
                 "itemId":"homepage",
                 "properties":{
                     "pageInfo":{
@@ -173,20 +312,20 @@ curl -X POST http://localhost:8181/cxs/context.json?sessionId=1234 \
     "source":{
         "itemId":"homepage",
         "itemType":"page",
-        "scope":"example"
+        "scope":"mydigital"
     },
     "events":[
         {
             "eventType":"view",
-            "scope": "example",
+            "scope": "mydigital",
             "source":{
                 "itemType": "site",
-                "scope":"example",
+                "scope":"mydigital",
                 "itemId": "mysite"
             },
             "target":{
                 "itemType":"page",
-                "scope":"example",
+                "scope":"mydigital",
                 "itemId":"homepage",
                 "properties":{
                     "pageInfo":{
@@ -212,15 +351,15 @@ curl -X POST http://localhost:8181/cxs/eventcollector \
     "events":[
         {
             "eventType":"contactInfoSubmitted",
-            "scope": "example",
+            "scope": "mydigital",
             "source":{
                 "itemType": "site",
-                "scope": "example",
+                "scope": "mydigital",
                 "itemId": "mysite"
             },
             "target":{
                 "itemType": "form",
-                "scope": "example",
+                "scope": "mydigital",
                 "itemId": "contactForm"
             },
             "properties" : {
@@ -234,6 +373,380 @@ curl -X POST http://localhost:8181/cxs/eventcollector \
 ----
 
 === Private API Examples
+
+==== Setting up birthday personalization
+
+This example shows how to set up and test birthday-based personalization in Unomi.
+
+===== 1. Creating test profiles
+
+First, let's create two test profiles - one with today's birth date and another with a different date:
+
+[source]
+----
+# Create a profile with today's birth date
+curl -X POST http://localhost:8181/cxs/profiles \
+--user "YOUR_TENANT_ID:YOUR_PRIVATE_API_KEY" \
+-H "Content-Type: application/json" \
+-d '{
+    "itemId": "profile-1",
+    "itemType": "profile",
+    "scope": "mydigital",
+    "properties": {
+        "firstName": "John",
+        "lastName": "Birthday",
+        "email": "john.birthday@example.com",
+        "birthDate": "2000-03-24",
+        "birthday": "03-24"
+    }
+}'
+
+# Create a profile with a different birth date
+curl -X POST http://localhost:8181/cxs/profiles \
+--user "YOUR_TENANT_ID:YOUR_PRIVATE_API_KEY" \
+-H "Content-Type: application/json" \
+-d '{
+    "itemId": "profile-2",
+    "itemType": "profile",
+    "scope": "mydigital",
+    "properties": {
+        "firstName": "Jane",
+        "lastName": "Regular",
+        "email": "jane.regular@example.com",
+        "birthDate": "1995-12-31",
+        "birthday": "12-31"
+    }
+}'
+----
+
+NOTE: The `birthday` property stores just the month and day in `MM-DD` format for easy matching, while `birthDate` stores the full date.
+
+===== 2. Verifying the profiles
+
+You can verify that both profiles were created with their birth dates:
+
+[source]
+----
+curl -X POST http://localhost:8181/cxs/profiles/search \
+--user "YOUR_TENANT_ID:YOUR_PRIVATE_API_KEY" \
+-H "Content-Type: application/json" \
+-d '{
+  "offset": 0,
+  "limit": 20,
+  "condition": {
+    "type": "profilePropertyCondition",
+    "parameterValues": {
+      "propertyName": "properties.birthday",
+      "comparisonOperator": "exists"
+    }
+  }
+}'
+----
+
+===== 3. Finding profiles with birthdays today
+
+To find all profiles whose birthday matches today's date:
+
+[source]
+----
+curl -X POST http://localhost:8181/cxs/profiles/search \
+--user "YOUR_TENANT_ID:YOUR_PRIVATE_API_KEY" \
+-H "Content-Type: application/json" \
+-d '{
+  "offset": 0,
+  "limit": 20,
+  "condition": {
+    "type": "profilePropertyCondition",
+    "parameterValues": {
+      "propertyName": "properties.birthday",
+      "comparisonOperator": "equals",
+      "propertyValue": "03-24"
+    }
+  }
+}'
+----
+
+[IMPORTANT]
+====
+Replace `03-24` with the current month and day in zero-padded format. For example:
+- March 24th: `03-24`
+- December 31st: `12-31`
+
+The format is always `MM-DD` where:
+- `MM` is the two-digit month (01-12)
+- `DD` is the two-digit day (01-31)
+====
+
+You can also update the personalization example to use the birthday property:
+
+[source]
+----
+curl -X POST http://localhost:8181/cxs/context.json \
+-H "Content-Type: application/json" \
+-H "X-Unomi-API-Key: YOUR_PUBLIC_API_KEY" \
+-d '{
+    "sessionId": "birthday-session",
+    "profileId": "profile-1",
+    "source": {
+        "itemId": "homepage",
+        "itemType": "page",
+        "scope": "mydigital"
+    },
+    "requiredProfileProperties": ["properties.birthday"],
+    "personalizations": [
+        {
+            "id": "birthdayMessage",
+            "strategy": "matching-first",
+            "strategyOptions": {
+                "fallback": "Welcome to our site!"
+            },
+            "contents": [
+                {
+                    "id": "birthday-content",
+                    "path": "/birthday",
+                    "content": "🎉 Happy Birthday! Enjoy your special day!",
+                    "filters": [
+                        {
+                            "condition": {
+                                "type": "profilePropertyCondition",
+                                "parameterValues": {
+                                    "propertyName": "properties.birthday",
+                                    "comparisonOperator": "equals",
+                                    "propertyValue": "03-24"
+                                }
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}'
+----
+
+And similarly for the birthday segment:
+
+[source]
+----
+curl -X POST http://localhost:8181/cxs/segments \
+--user "YOUR_TENANT_ID:YOUR_PRIVATE_API_KEY" \
+-H "Content-Type: application/json" \
+-d '{
+  "metadata": {
+    "id": "birthdaySegment",
+    "name": "Users with Birthday Today",
+    "scope": "mydigital"
+  },
+  "condition": {
+    "type": "profilePropertyCondition",
+    "parameterValues": {
+      "propertyName": "properties.birthday",
+      "comparisonOperator": "equals",
+      "propertyValue": "03-24"
+    }
+  }
+}'
+----
+
+[TIP]
+====
+To make this more maintainable in a production environment, you can deploy a custom condition type that handles birthday matching:
+
+[source]
+----
+curl -X POST http://localhost:8181/cxs/definitions \
+--user "YOUR_TENANT_ID:YOUR_PRIVATE_API_KEY" \
+-H "Content-Type: application/json" \
+-d '{
+  "metadata": {
+    "id": "birthdayTodayCondition",
+    "name": "birthdayTodayCondition",
+    "description": "A condition that matches birthdays on current day",
+    "systemTags": [
+      "profileCondition",
+      "demographic",
+      "condition"
+    ]
+  },
+  "parentCondition": {
+    "type": "profilePropertyCondition",
+    "parameterValues": {
+      "propertyName": "properties.birthday",
+      "comparisonOperator": "equals",
+      "propertyValue": "parameter::monthDay"
+    }
+  },
+  "parameters": [
+    {
+      "id": "monthDay",
+      "type": "string",
+      "multivalued": false,
+      "defaultValue": "03-24"
+    }
+  ]
+}'
+----
+
+After deploying the condition, you can use it in your searches and segments like this:
+
+[source]
+----
+{
+  "type": "birthdayTodayCondition",
+  "parameterValues": {
+    "monthDay": "03-24"
+  }
+}
+----
+
+For example, to create a segment using this condition:
+
+[source]
+----
+curl -X POST http://localhost:8181/cxs/segments \
+--user "YOUR_TENANT_ID:YOUR_PRIVATE_API_KEY" \
+-H "Content-Type: application/json" \
+-d '{
+  "metadata": {
+    "id": "birthdaySegment",
+    "name": "Users with Birthday Today",
+    "scope": "mydigital"
+  },
+  "condition": {
+    "type": "birthdayTodayCondition",
+    "parameterValues": {
+      "monthDay": "03-24"
+    }
+  }
+}'
+----
+====
+
+===== 4. Testing personalization
+
+Now we can test how personalization works for both profiles. We'll use the context.json endpoint to get personalized content:
+
+For the birthday profile (should show birthday message):
+[source]
+----
+curl -X POST http://localhost:8181/cxs/context.json \
+-H "Content-Type: application/json" \
+-H "X-Unomi-API-Key: YOUR_PUBLIC_API_KEY" \
+-d '{
+    "sessionId": "birthday-session",
+    "profileId": "profile-1",
+    "source": {
+        "itemId": "homepage",
+        "itemType": "page",
+        "scope": "mydigital"
+    },
+    "requiredProfileProperties": ["properties.birthday"],
+    "personalizations": [
+        {
+            "id": "birthdayMessage",
+            "strategy": "matching-first",
+            "strategyOptions": {
+                "fallback": "Welcome to our site!"
+            },
+            "contents": [
+                {
+                    "id": "birthday-content",
+                    "path": "/birthday",
+                    "content": "🎉 Happy Birthday! Enjoy your special day!",
+                    "filters": [
+                        {
+                            "condition": {
+                                "type": "profilePropertyCondition",
+                                "parameterValues": {
+                                    "propertyName": "properties.birthday",
+                                    "comparisonOperator": "equals",
+                                    "propertyValue": "03-24"
+                                }
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}'
+----
+
+For the non-birthday profile (should show welcome message):
+[source]
+----
+curl -X POST http://localhost:8181/cxs/context.json \
+-H "Content-Type: application/json" \
+-H "X-Unomi-API-Key: YOUR_PUBLIC_API_KEY" \
+-d '{
+    "sessionId": "regular-session",
+    "profileId": "profile-2",
+    "source": {
+        "itemId": "homepage",
+        "itemType": "page",
+        "scope": "mydigital"
+    },
+    "requiredProfileProperties": ["properties.birthday"],
+    "personalizations": [
+        {
+            "id": "birthdayMessage",
+            "strategy": "matching-first",
+            "strategyOptions": {
+                "fallback": "Welcome to our site!"
+            },
+            "contents": [
+                {
+                    "id": "birthday-content",
+                    "path": "/birthday",
+                    "content": "🎉 Happy Birthday! Enjoy your special day!",
+                    "filters": [
+                        {
+                            "condition": {
+                                "type": "profilePropertyCondition",
+                                "parameterValues": {
+                                    "propertyName": "properties.birthday",
+                                    "comparisonOperator": "equals",
+                                    "propertyValue": "03-24"
+                                }
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}'
+----
+
+The responses will include a `personalizations` object that contains:
+- For profile-1: The birthday message "🎉 Happy Birthday! Enjoy your special day!"
+- For profile-2: The fallback message "Welcome to our site!"
+
+===== 5. Creating a birthday segment
+
+You can also create a segment to automatically group profiles with birthdays today:
+
+[source]
+----
+curl -X POST http://localhost:8181/cxs/segments \
+--user "YOUR_TENANT_ID:YOUR_PRIVATE_API_KEY" \
+-H "Content-Type: application/json" \
+-d '{
+  "metadata": {
+    "id": "birthdaySegment",
+    "name": "Users with Birthday Today",
+    "scope": "mydigital"
+  },
+  "condition": {
+    "type": "profilePropertyCondition",
+    "parameterValues": {
+      "propertyName": "properties.birthday",
+      "comparisonOperator": "equals",
+      "propertyValue": "03-24"
+    }
+  }
+}'
+----
 
 ==== Searching profiles
 
@@ -267,7 +780,7 @@ curl -X POST http://localhost:8181/cxs/segments \
   "metadata": {
     "id": "newSegment",
     "name": "New Segment",
-    "scope": "example"
+    "scope": "mydigital"
   },
   "condition": {
     "type": "profilePropertyCondition",
@@ -279,3 +792,533 @@ curl -X POST http://localhost:8181/cxs/segments \
   }
 }'
 ----
+
+==== Setting up product view tracking
+
+Before using the product view search examples, you need to send product view events to Unomi. Here's how to set it up:
+
+===== 1. Sending a product view event
+
+You can use the eventcollector endpoint to send product view events:
+
+[source]
+----
+curl -X POST http://localhost:8181/cxs/eventcollector \
+-H "Content-Type: application/json" \
+-H "X-Unomi-API-Key: YOUR_PUBLIC_API_KEY" \
+-d '{
+    "sessionId": "1234",
+    "events": [
+        {
+            "eventType": "view",
+            "scope": "mydigital",
+            "source": {
+                "itemType": "site",
+                "scope": "mydigital",
+                "itemId": "mysite"
+            },
+            "target": {
+                "itemType": "product",
+                "scope": "mydigital",
+                "itemId": "product-123",
+                "properties": {
+                    "pageInfo": {
+                        "referringURL": "https://www.google.com"
+                    }
+                }
+            }
+        }
+    ]
+}'
+----
+
+Key points about the event structure:
+1. Use `"eventType": "view"` for view events
+2. Set `target.itemType` to `"product"` for product views
+3. Include product details in `target.properties`
+4. Use consistent `itemId` values to track the same product
+
+===== 2. Using the context.json endpoint
+
+For web applications, you can also send product views through the context.json endpoint:
+
+[source]
+----
+curl -X POST http://localhost:8181/cxs/context.json?sessionId=1234 \
+-H "Content-Type: application/json" \
+-H "X-Unomi-API-Key: YOUR_PUBLIC_API_KEY" \
+-d '{
+    "source": {
+        "itemId": "product-page",
+        "itemType": "page",
+        "scope": "mydigital"
+    },
+    "events": [
+        {
+            "eventType": "view",
+            "scope": "mydigital",
+            "source": {
+                "itemType": "site",
+                "scope": "mydigital",
+                "itemId": "mysite"
+            },
+            "target": {
+                "itemType": "product",
+                "scope": "mydigital",
+                "itemId": "product-123",
+                "properties": {
+                    "pageInfo": {
+                        "referringURL": "https://www.google.com"
+                    }
+                }
+            }
+        }
+    ],
+    "requiredProfileProperties": ["*"]
+}'
+----
+
+===== 3. Product properties schema
+
+[IMPORTANT]
+====
+To simplify product view tracking, you can deploy a custom condition type that combines all the necessary event conditions:
+
+[source]
+----
+curl -X POST http://localhost:8181/cxs/definitions \
+--user "YOUR_TENANT_ID:YOUR_PRIVATE_API_KEY" \
+-H "Content-Type: application/json" \
+-d '{
+  "metadata": {
+    "id": "productViewEventCondition",
+    "name": "productViewEventCondition",
+    "description": "A condition that matches product view events",
+    "systemTags": [
+      "eventCondition",
+      "event",
+      "condition"
+    ]
+  },
+  "parentCondition": {
+    "type": "booleanCondition",
+    "parameterValues": {
+      "operator": "and",
+      "subConditions": [
+        {
+          "type": "eventTypeCondition",
+          "parameterValues": {
+            "eventTypeId": "view"
+          }
+        },
+        {
+          "type": "eventPropertyCondition",
+          "parameterValues": {
+            "propertyName": "target.itemType",
+            "comparisonOperator": "equals",
+            "propertyValue": "product"
+          }
+        },
+        {
+          "type": "eventPropertyCondition",
+          "parameterValues": {
+            "propertyName": "target.itemId",
+            "comparisonOperator": "equals",
+            "propertyValue": "parameter::productId"
+          }
+        }
+      ]
+    }
+  },
+  "parameters": [
+    {
+      "id": "productId",
+      "type": "string",
+      "multivalued": false
+    }
+  ]
+}'
+----
+
+After deploying the condition, you can use it in your searches like this:
+
+[source]
+----
+{
+  "type": "productViewEventCondition",
+  "parameterValues": {
+    "productId": "product-123"
+  }
+}
+----
+
+This custom condition type:
+1. Is properly tagged with `eventCondition` making it valid for use in `pastEventCondition`
+2. Combines all the necessary conditions using `booleanCondition` in its definition
+3. Provides a simple parameter interface (just specify the product ID)
+====
+
+Unomi is flexible with product properties - you don't need to declare a schema beforehand. However, for consistency, you should:
+1. Use consistent property names across events
+2. Use consistent value types (e.g., always use numbers for prices)
+3. Use consistent categories and other enumerated values
+
+Common product properties to consider:
+- `name`: Product name (string)
+- `category`: Product category (string)
+- `price`: Product price (number)
+- `brand`: Product brand (string)
+- `sku`: Stock keeping unit (string)
+- `color`: Product color (string)
+- `size`: Product size (string)
+- `inStock`: Stock status (boolean)
+
+===== 4. Testing the setup
+
+To verify your events are being recorded, you can:
+
+1. Send multiple view events for the same product
+2. Wait a few seconds for processing
+3. Use the profile search example below to check if the views were counted
+
+[source]
+----
+curl -X POST http://localhost:8181/cxs/profiles/search \
+--user "YOUR_TENANT_ID:YOUR_PRIVATE_API_KEY" \
+-H "Content-Type: application/json" \
+-d '{
+  "offset": 0,
+  "limit": 20,
+  "condition": {
+    "type": "pastEventCondition",
+    "parameterValues": {
+      "numberOfDays": 1,
+      "minimumEventCount": 1,
+      "eventCondition": {
+        "type": "productViewEventCondition",
+        "parameterValues": {
+          "productId": "product-123"
+        }
+      }
+    }
+  }
+}'
+----
+
+==== Searching profiles with frequent product views
+
+This example shows how to find profiles that have viewed a specific product at least 3 times in the last 7 days:
+
+[source]
+----
+curl -X POST http://localhost:8181/cxs/profiles/search \
+--user "YOUR_TENANT_ID:YOUR_PRIVATE_API_KEY" \
+-H "Content-Type: application/json" \
+-d '{
+  "offset": 0,
+  "limit": 20,
+  "condition": {
+    "type": "pastEventCondition",
+    "parameterValues": {
+      "numberOfDays": 7,
+      "minimumEventCount": 3,
+      "eventCondition": {
+        "type": "productViewEventCondition",
+        "parameterValues": {
+          "productId": "product-123"
+        }
+      }
+    }
+  }
+}'
+----
+
+This search will:
+1. Look for product view events in the past 7 days
+2. Match events that:
+   - Have type "view"
+   - Target a product (target.itemType = "product")
+   - Target the specific product ID (product-123)
+3. Return profiles that have at least 3 such events
+4. Results are paginated (20 results per page)
+
+You can adjust:
+- `minimumEventCount`: change the minimum number of views required
+- `maximumEventCount`: optionally set a maximum number of views
+- `numberOfDays`: modify the time period to look back
+- `operator`: use "eventsOccurred" (default) or "eventsNotOccurred"
+- `productId`: change which product to track
+
+For example, to find profiles that have viewed products in a specific category, you could create another custom condition type `productCategoryViewEventCondition.json`:
+
+[source,json]
+----
+{
+  "metadata": {
+    "id": "productCategoryViewEventCondition",
+    "name": "productCategoryViewEventCondition",
+    "description": "A condition that matches product views in a category",
+    "systemTags": [
+      "eventCondition",
+      "event",
+      "condition"
+    ]
+  },
+  "parentCondition": {
+    "type": "booleanCondition",
+    "parameterValues": {
+      "operator": "and",
+      "subConditions": [
+        {
+          "type": "eventTypeCondition",
+          "parameterValues": {
+            "eventTypeId": "view"
+          }
+        },
+        {
+          "type": "eventPropertyCondition",
+          "parameterValues": {
+            "propertyName": "target.itemType",
+            "comparisonOperator": "equals",
+            "propertyValue": "product"
+          }
+        },
+        {
+          "type": "eventPropertyCondition",
+          "parameterValues": {
+            "propertyName": "target.properties.category",
+            "comparisonOperator": "equals",
+            "propertyValue": "parameter::category"
+          }
+        }
+      ]
+    }
+  },
+  "parameters": [
+    {
+      "id": "category",
+      "type": "string",
+      "multivalued": false
+    }
+  ]
+}
+----
+
+Then use it like this:
+
+[source]
+----
+curl -X POST http://localhost:8181/cxs/profiles/search \
+--user "YOUR_TENANT_ID:YOUR_PRIVATE_API_KEY" \
+-H "Content-Type: application/json" \
+-d '{
+  "offset": 0,
+  "limit": 20,
+  "condition": {
+    "type": "pastEventCondition",
+    "parameterValues": {
+      "numberOfDays": 30,
+      "minimumEventCount": 5,
+      "eventCondition": {
+        "type": "productCategoryViewEventCondition",
+        "parameterValues": {
+          "category": "electronics"
+        }
+      }
+    }
+  }
+}'
+----
+
+=== Setting up Groovy Actions
+
+==== Deploying a Groovy Action
+
+This example shows how to deploy and use a Groovy action to automatically extract the birthday (MM-DD) from a full birthDate.
+
+===== 1. Create the Groovy action file
+
+First, create a file named `ExtractBirthdayAction.groovy` with this content:
+
+[source,groovy]
+----
+package org.apache.unomi.groovy.actions
+
+import org.apache.unomi.api.Event
+import org.apache.unomi.api.Profile
+import org.apache.unomi.api.actions.Action
+import org.apache.unomi.api.actions.ActionExecutor
+import org.apache.unomi.api.services.EventService
+
+class ExtractBirthdayAction implements ActionExecutor {
+    public int execute(Action action, Event event) {
+        Profile profile = event.getProfile()
+        def birthDate = profile.getProperty("birthDate")
+        
+        if (birthDate != null && birthDate instanceof String && birthDate.length() >= 10) {
+            try {
+                // Extract month-day part (e.g., "03-24" from "2000-03-24")
+                def monthDay = birthDate.substring(5, 10)
+                
+                // Only update if different to avoid unnecessary saves
+                if (monthDay != profile.getProperty("birthday")) {
+                    profile.setProperty("birthday", monthDay)
+                    return EventService.PROFILE_UPDATED
+                }
+            } catch (Exception e) {
+                // Log error or handle invalid date format
+            }
+        }
+        return EventService.NO_CHANGE
+    }
+}
+----
+
+===== 2. Deploy the Groovy action
+
+Use the Groovy actions endpoint to deploy the action:
+
+[source]
+----
+curl -X POST http://localhost:8181/cxs/groovyActions \
+--user "YOUR_TENANT_ID:YOUR_PRIVATE_API_KEY" \
+-H "Content-Type: multipart/form-data" \
+-F "file=@ExtractBirthdayAction.groovy"
+----
+
+NOTE: The action ID will be `extractBirthday` (derived from the filename without the .groovy extension).
+
+===== 3. Create the action definition
+
+After deploying the Groovy script, create the action definition:
+
+[source]
+----
+curl -X POST http://localhost:8181/cxs/definitions \
+--user "YOUR_TENANT_ID:YOUR_PRIVATE_API_KEY" \
+-H "Content-Type: application/json" \
+-d '{
+  "metadata": {
+    "id": "extractBirthdayAction",
+    "name": "Extract Birthday Action",
+    "description": "Extracts MM-DD from birthDate and sets it as birthday property",
+    "systemTags": [
+      "profileTags",
+      "demographic",
+      "event"
+    ]
+  },
+  "actionExecutor": "groovy:extractBirthday",
+  "parameters": []
+}'
+----
+
+===== 4. Create a rule to trigger the action
+
+Create a rule that will trigger the Groovy action whenever a profile's birthDate is set or modified:
+
+[source]
+----
+curl -X POST http://localhost:8181/cxs/rules \
+--user "YOUR_TENANT_ID:YOUR_PRIVATE_API_KEY" \
+-H "Content-Type: application/json" \
+-d '{
+  "metadata": {
+    "id": "setBirthdayRule",
+    "name": "Set Birthday Rule",
+    "description": "Sets birthday property when birthDate changes",
+    "scope": "mydigital"
+  },
+  "condition": {
+    "type": "booleanCondition",
+    "parameterValues": {
+      "operator": "and",
+      "subConditions": [
+        {
+          "type": "profilePropertyCondition",
+          "parameterValues": {
+            "propertyName": "properties.birthDate",
+            "comparisonOperator": "exists"
+          }
+        },
+        {
+          "type": "profileUpdatedEventCondition",
+          "parameterValues": {
+            "propertyName": "properties.birthDate"
+          }
+        }
+      ]
+    }
+  },
+  "actions": [
+    {
+      "type": "extractBirthdayAction",
+      "parameterValues": {}
+    }
+  ]
+}'
+----
+
+===== 5. Test with example profiles
+
+Create test profiles to verify the action works:
+
+[source]
+----
+# Create a profile with birthDate - should trigger the action
+curl -X POST http://localhost:8181/cxs/profiles \
+--user "YOUR_TENANT_ID:YOUR_PRIVATE_API_KEY" \
+-H "Content-Type: application/json" \
+-d '{
+    "itemId": "test-profile-1",
+    "properties": {
+        "firstName": "John",
+        "lastName": "Doe",
+        "birthDate": "1990-03-24"
+    }
+}'
+
+# Verify the birthday property was set
+curl -X GET http://localhost:8181/cxs/profiles/test-profile-1 \
+--user "YOUR_TENANT_ID:YOUR_PRIVATE_API_KEY" | jq '.'
+
+# Update an existing profile's birthDate - should trigger the action
+curl -X PATCH http://localhost:8181/cxs/profiles/test-profile-1 \
+--user "YOUR_TENANT_ID:YOUR_PRIVATE_API_KEY" \
+-H "Content-Type: application/json" \
+-d '{
+    "properties": {
+        "birthDate": "1990-12-31"
+    }
+}'
+
+# Verify the birthday property was updated
+curl -X GET http://localhost:8181/cxs/profiles/test-profile-1 \
+--user "YOUR_TENANT_ID:YOUR_PRIVATE_API_KEY" | jq '.'
+----
+
+The responses should show:
+1. First profile creation: `birthday` property set to "03-24"
+2. After update: `birthday` property changed to "12-31"
+
+===== 6. Remove the Groovy action (if needed)
+
+To remove the Groovy action:
+
+[source]
+----
+curl -X DELETE http://localhost:8181/cxs/groovyActions/extractBirthday \
+--user "YOUR_TENANT_ID:YOUR_PRIVATE_API_KEY"
+----
+
+NOTE: This will only remove the Groovy script. You'll need to separately delete the action definition and rule if desired.
+
+[TIP]
+====
+Best practices for Groovy actions:
+1. Always handle potential errors gracefully
+2. Check property existence and types
+3. Avoid unnecessary profile updates
+4. Use meaningful action and rule names
+5. Test with various date formats
+====

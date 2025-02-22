@@ -443,6 +443,48 @@ end note
 @enduml
 ----
 
+=== Query Strategy Selection
+
+[plantuml]
+----
+@startuml
+start
+:Past Event Condition;
+
+if (Has Generated Property Key?) then (yes)
+  :Use Property-Based Query;
+  :Check Profile Properties;
+  if (Count Found?) then (yes)
+    :Use Cached Count;
+  else (no)
+    :Calculate Initial Count;
+    :Store in Profile;
+  endif
+else (no)
+  :Use Direct Event Query;
+  :Query Event Store;
+  :Aggregate Results;
+endif
+
+:Return Result;
+stop
+@enduml
+----
+
+==== Performance Implications
+
+1. *Property-Based Evaluation*
+- Uses cached counts from profile properties
+- Minimal query overhead
+- Suitable for high-frequency conditions
+- Recommended for segments
+
+2. *Direct Query Evaluation*
+- Queries event store directly
+- Higher latency and resource usage
+- No caching mechanism
+- Use with caution in rules
+
 == Event Processing Flow
 
 [plantuml]

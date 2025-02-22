@@ -346,3 +346,74 @@ This will produce an output that looks like this:
 }
 ----
 
+=== Scroll Queries
+
+Scroll queries are useful when you need to retrieve large result sets efficiently. Instead of retrieving all results at once,
+which could be memory intensive, scroll queries allow you to retrieve results in batches while maintaining consistency
+between requests.
+
+==== Initial Scroll Query
+
+To start a scroll query, use the search endpoint with the following parameters:
+
+[source,bash]
+----
+# Initial scroll query
+curl -X POST http://localhost:8181/cxs/profiles/search \
+--user karaf:karaf \
+-H "Content-Type: application/json" \
+-d @- <<'EOF'
+{
+  "condition": {                    // Optional filtering condition
+    "type": "matchAllCondition",
+    "parameterValues": {}
+  },
+  "offset": 0,                     // Starting position
+  "limit": 50,                     // Number of items per batch
+  "sortby": "property:asc",        // Optional sorting
+  "scrollTimeValidity": "1m",      // How long to keep scroll context alive
+  "forceRefresh": false            // Whether to force index refresh
+}
+EOF
+----
+
+The response will include:
+- `scrollIdentifier`: A unique identifier for continuing the scroll
+- `list`: The first batch of results
+- `totalSize`: Total number of matching items
+- `offset`: Current position in the result set
+- `pageSize`: Size of the current batch
+
+==== Continue Scroll Query
+
+To retrieve subsequent batches, only the scroll identifier and validity are needed:
+
+[source,bash]
+----
+# Retrieve next batch
+curl -X POST http://localhost:8181/cxs/profiles/search \
+--user karaf:karaf \
+-H "Content-Type: application/json" \
+-d @- <<'EOF'
+{
+  "scrollIdentifier": "YOUR_SCROLL_ID",    // Required: the scroll ID from previous response
+  "scrollTimeValidity": "1m"               // Required: extends scroll context lifetime
+}
+EOF
+----
+
+IMPORTANT: When continuing a scroll query, you do not need to resend other query parameters (condition, sortby, etc.). The scroll context maintains the original query state.
+
+==== Query Parameters
+
+Initial query parameters:
+- `condition`: The filtering condition (optional)
+- `offset`: Starting position in results
+- `limit`: Number of results per batch
+- `sortby`: Property and direction for sorting (optional)
+- `scrollTimeValidity`: How long to keep the scroll context alive (e.g., "1m")
+- `forceRefresh`: Whether to force an index refresh before query (default: false)
+
+Continuation query parameters:
+- `scrollIdentifier`: The scroll ID returned from the previous request
+- `scrollTimeValidity`: How long to extend the scroll context

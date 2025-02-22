@@ -1,0 +1,131 @@
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+=== Condition Evaluation System
+
+The condition evaluation system in Apache Unomi provides flexible and efficient evaluation of conditions across different storage backends.
+
+==== Architecture Overview
+
+=== Condition Evaluation Architecture
+
+[plantuml]
+----
+@startuml
+skinparam componentStyle uml2
+skinparam component {
+  BackgroundColor<<evaluation>> LightBlue
+  BackgroundColor<<query>> LightGreen
+  BackgroundColor<<persistence>> LightYellow
+}
+
+package "Condition Evaluation" {
+  [ConditionDispatcher] <<evaluation>>
+  [ConditionEvaluator] <<evaluation>>
+  [ConditionESQueryBuilder] <<query>>
+  [ConditionOSQueryBuilder] <<query>>
+}
+
+package "Query Building" {
+  interface "QueryBuilder" as QB
+  [ElasticSearchQueryBuilder] <<query>>
+  [OpenSearchQueryBuilder] <<query>>
+}
+
+package "Storage" {
+  [ElasticSearch] <<persistence>>
+  [OpenSearch] <<persistence>>
+}
+
+[ConditionDispatcher] --> [ConditionEvaluator]
+[ConditionDispatcher] --> QB
+
+QB <|.. [ConditionESQueryBuilder]
+QB <|.. [ConditionOSQueryBuilder]
+
+[ConditionESQueryBuilder] --> [ElasticSearchQueryBuilder]
+[ConditionOSQueryBuilder] --> [OpenSearchQueryBuilder]
+
+[ElasticSearchQueryBuilder] --> [ElasticSearch]
+[OpenSearchQueryBuilder] --> [OpenSearch]
+
+note right of [ConditionDispatcher]
+  Routes condition evaluation:
+  1. Direct evaluation
+  2. Query-based evaluation
+end note
+
+note right of QB
+  Abstract query building
+  for different search
+  engine implementations
+end note
+@enduml
+----
+
+==== Key Components
+
+1. *ConditionDispatcher*
+- Routes conditions to appropriate evaluators
+- Determines evaluation strategy (direct vs query-based)
+- Handles caching and optimization
+
+2. *ConditionEvaluator*
+- Performs direct condition evaluation
+- Handles boolean logic and property comparisons
+- Evaluates nested conditions
+
+3. *QueryBuilders*
+- Convert conditions to search engine queries
+- Handle search engine specific syntax
+- Optimize query performance
+
+==== Evaluation Strategies
+
+1. *Direct Evaluation*
+- Used for simple conditions
+- Evaluates against in-memory data
+- No storage queries required
+- Fastest evaluation path
+
+2. *Query-Based Evaluation*
+- Used for complex conditions
+- Converts conditions to storage queries
+- Supports different search engines
+- Handles large data sets efficiently
+
+==== Query Builder Implementation
+
+Query builders provide storage-specific implementations:
+
+1. *ElasticSearch Implementation*
+- Optimized for ES query syntax
+- Handles ES-specific mappings
+- Supports ES versioning
+
+2. *OpenSearch Implementation*
+- Compatible with OS API
+- Maintains OS-specific features
+- Handles OS security model
+
+==== Best Practices
+
+1. *Performance Optimization*
+- Use direct evaluation when possible
+- Leverage caching for frequent queries
+- Consider query complexity impact
+
+2. *Implementation Guidelines*
+- Implement storage-specific query builders
+- Handle version compatibility
+- Consider security implications

@@ -30,7 +30,7 @@ services:
             - 9200:9200
     unomi:
         # Unomi version can be updated based on your needs
-        image: apache/unomi:2.0.0
+        image: apache/unomi:2.6.1
         environment:
             - UNOMI_ELASTICSEARCH_ADDRESSES=elasticsearch:9200
             - UNOMI_THIRDPARTY_PROVIDER1_IPADDRESSES=0.0.0.0/0,::1,127.0.0.1
