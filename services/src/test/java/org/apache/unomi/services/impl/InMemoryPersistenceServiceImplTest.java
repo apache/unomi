@@ -2521,22 +2521,155 @@ public class InMemoryPersistenceServiceImplTest {
     class RangeQueryTests {
         @Test
         void shouldHandleNumericRangeQueries() {
-            TestMetadataItem item1 = new TestMetadataItem();
-            item1.setItemId("item1");
-            item1.setNumericValue(10.0);
+            // given
+            List<TestMetadataItem> items = new ArrayList<>();
+            for (int i = 1; i <= 5; i++) {
+                TestMetadataItem item = new TestMetadataItem();
+                item.setItemId("item" + i);
+                item.setNumericValue((double) i);
+                items.add(item);
+                persistenceService.save(item);
+            }
 
-            TestMetadataItem item2 = new TestMetadataItem();
-            item2.setItemId("item2");
-            item2.setNumericValue(20.0);
-
-            persistenceService.save(item1);
-            persistenceService.save(item2);
-
+            // when - query with both bounds
             PartialList<TestMetadataItem> results = persistenceService.rangeQuery(
-                "numericValue", "15", "25", null, TestMetadataItem.class, 0, 10);
+                "numericValue", "2", "4", "numericValue:asc", TestMetadataItem.class, 0, -1);
 
-            assertNotNull(results);
-            assertEquals(0, results.size()); // In-memory implementation returns empty list
+            // then
+            assertEquals(3, results.getList().size());
+            assertEquals(2.0, results.getList().get(0).getNumericValue());
+            assertEquals(3.0, results.getList().get(1).getNumericValue());
+            assertEquals(4.0, results.getList().get(2).getNumericValue());
+
+            // when - query with lower bound only
+            results = persistenceService.rangeQuery(
+                "numericValue", "4", null, "numericValue:asc", TestMetadataItem.class, 0, -1);
+
+            // then
+            assertEquals(2, results.getList().size());
+            assertEquals(4.0, results.getList().get(0).getNumericValue());
+            assertEquals(5.0, results.getList().get(1).getNumericValue());
+
+            // when - query with upper bound only
+            results = persistenceService.rangeQuery(
+                "numericValue", null, "2", "numericValue:asc", TestMetadataItem.class, 0, -1);
+
+            // then
+            assertEquals(2, results.getList().size());
+            assertEquals(1.0, results.getList().get(0).getNumericValue());
+            assertEquals(2.0, results.getList().get(1).getNumericValue());
+        }
+
+        @Test
+        void shouldHandleStringRangeQueries() {
+            // given
+            List<TestMetadataItem> items = new ArrayList<>();
+            for (char c = 'A'; c <= 'E'; c++) {
+                TestMetadataItem item = new TestMetadataItem();
+                item.setItemId("item" + c);
+                item.setName(String.valueOf(c));
+                items.add(item);
+                persistenceService.save(item);
+            }
+
+            // when - query with both bounds
+            PartialList<TestMetadataItem> results = persistenceService.rangeQuery(
+                "name", "B", "D", "name:asc", TestMetadataItem.class, 0, -1);
+
+            // then
+            assertEquals(3, results.getList().size());
+            assertEquals("B", results.getList().get(0).getName());
+            assertEquals("C", results.getList().get(1).getName());
+            assertEquals("D", results.getList().get(2).getName());
+
+            // when - query with lower bound only
+            results = persistenceService.rangeQuery(
+                "name", "D", null, "name:asc", TestMetadataItem.class, 0, -1);
+
+            // then
+            assertEquals(2, results.getList().size());
+            assertEquals("D", results.getList().get(0).getName());
+            assertEquals("E", results.getList().get(1).getName());
+
+            // when - query with upper bound only
+            results = persistenceService.rangeQuery(
+                "name", null, "B", "name:asc", TestMetadataItem.class, 0, -1);
+
+            // then
+            assertEquals(2, results.getList().size());
+            assertEquals("A", results.getList().get(0).getName());
+            assertEquals("B", results.getList().get(1).getName());
+        }
+
+        @Test
+        void shouldHandlePaginationInRangeQueries() {
+            // given
+            List<TestMetadataItem> items = new ArrayList<>();
+            for (int i = 1; i <= 5; i++) {
+                TestMetadataItem item = new TestMetadataItem();
+                item.setItemId("item" + i);
+                item.setNumericValue((double) i);
+                items.add(item);
+                persistenceService.save(item);
+            }
+
+            // when - first page
+            PartialList<TestMetadataItem> page1 = persistenceService.rangeQuery(
+                "numericValue", "1", "5", "numericValue:asc", TestMetadataItem.class, 0, 2);
+
+            // then
+            assertEquals(2, page1.getList().size());
+            assertEquals(1.0, page1.getList().get(0).getNumericValue());
+            assertEquals(2.0, page1.getList().get(1).getNumericValue());
+
+            // when - second page
+            PartialList<TestMetadataItem> page2 = persistenceService.rangeQuery(
+                "numericValue", "1", "5", "numericValue:asc", TestMetadataItem.class, 2, 2);
+
+            // then
+            assertEquals(2, page2.getList().size());
+            assertEquals(3.0, page2.getList().get(0).getNumericValue());
+            assertEquals(4.0, page2.getList().get(1).getNumericValue());
+
+            // when - last page
+            PartialList<TestMetadataItem> page3 = persistenceService.rangeQuery(
+                "numericValue", "1", "5", "numericValue:asc", TestMetadataItem.class, 4, 2);
+
+            // then
+            assertEquals(1, page3.getList().size());
+            assertEquals(5.0, page3.getList().get(0).getNumericValue());
+        }
+
+        @Test
+        void shouldHandleNonExistentFieldInRangeQueries() {
+            // given
+            TestMetadataItem item = new TestMetadataItem();
+            item.setItemId("item1");
+            item.setNumericValue(1.0);
+            persistenceService.save(item);
+
+            // when
+            PartialList<TestMetadataItem> results = persistenceService.rangeQuery(
+                "nonexistentField", "1", "5", "numericValue:asc", TestMetadataItem.class, 0, -1);
+
+            // then
+            assertEquals(0, results.getList().size());
+        }
+
+        @Test
+        void shouldHandleInvalidRangeValues() {
+            // given
+            TestMetadataItem item = new TestMetadataItem();
+            item.setItemId("item1");
+            item.setNumericValue(1.0);
+            persistenceService.save(item);
+
+            // when - invalid numeric range
+            PartialList<TestMetadataItem> results = persistenceService.rangeQuery(
+                "numericValue", "invalid", "5", "numericValue:asc", TestMetadataItem.class, 0, -1);
+
+            // then
+            assertEquals(0, results.getList().size());
         }
     }
 
@@ -2809,6 +2942,181 @@ public class InMemoryPersistenceServiceImplTest {
             Map<String, Object> loadedElement = loadedArray.get(0);
 
             assertEquals("array-value", loadedElement.get("key.with.dots"));
+        }
+    }
+
+    @Nested
+    class SortingOperationsTests {
+        @Test
+        void shouldSortQueryResultsBySimpleProperty() {
+            // given
+            List<TestMetadataItem> items = new ArrayList<>();
+            for (int i = 3; i >= 1; i--) {
+                TestMetadataItem item = new TestMetadataItem();
+                item.setItemId("item" + i);
+                item.setProperty("simple", "value");
+                item.setName("Name" + i);
+                items.add(item);
+                persistenceService.save(item);
+            }
+
+            // when - ascending order
+            List<TestMetadataItem> ascResults = persistenceService.query("properties.simple", "value", "name:asc", TestMetadataItem.class);
+
+            // then
+            assertEquals(3, ascResults.size());
+            assertEquals("Name1", ascResults.get(0).getName());
+            assertEquals("Name2", ascResults.get(1).getName());
+            assertEquals("Name3", ascResults.get(2).getName());
+
+            // when - descending order
+            List<TestMetadataItem> descResults = persistenceService.query("properties.simple", "value", "name:desc", TestMetadataItem.class);
+
+            // then
+            assertEquals(3, descResults.size());
+            assertEquals("Name3", descResults.get(0).getName());
+            assertEquals("Name2", descResults.get(1).getName());
+            assertEquals("Name1", descResults.get(2).getName());
+        }
+
+        @Test
+        void shouldSortQueryResultsByNumericProperty() {
+            // given
+            List<TestMetadataItem> items = new ArrayList<>();
+            for (int i = 3; i >= 1; i--) {
+                TestMetadataItem item = new TestMetadataItem();
+                item.setItemId("item" + i);
+                item.setProperty("simple", "value");
+                item.setNumericValue((double) i);
+                items.add(item);
+                persistenceService.save(item);
+            }
+
+            // when - ascending order
+            List<TestMetadataItem> ascResults = persistenceService.query("properties.simple", "value", "numericValue:asc", TestMetadataItem.class);
+
+            // then
+            assertEquals(3, ascResults.size());
+            assertEquals(1.0, ascResults.get(0).getNumericValue());
+            assertEquals(2.0, ascResults.get(1).getNumericValue());
+            assertEquals(3.0, ascResults.get(2).getNumericValue());
+
+            // when - descending order
+            List<TestMetadataItem> descResults = persistenceService.query("properties.simple", "value", "numericValue:desc", TestMetadataItem.class);
+
+            // then
+            assertEquals(3, descResults.size());
+            assertEquals(3.0, descResults.get(0).getNumericValue());
+            assertEquals(2.0, descResults.get(1).getNumericValue());
+            assertEquals(1.0, descResults.get(2).getNumericValue());
+        }
+
+        @Test
+        void shouldHandleNullValuesInSorting() {
+            // given
+            TestMetadataItem item1 = new TestMetadataItem();
+            item1.setItemId("item1");
+            item1.setName("Name1");
+            item1.setProperty("simple", "value");
+            item1.setNumericValue(1.0);
+            persistenceService.save(item1);
+
+            TestMetadataItem item2 = new TestMetadataItem();
+            item2.setItemId("item2");
+            item2.setName("Name2");
+            item2.setProperty("simple", "value");
+            item2.setNumericValue(null);
+            persistenceService.save(item2);
+
+            TestMetadataItem item3 = new TestMetadataItem();
+            item3.setItemId("item3");
+            item3.setName("Name3");
+            item3.setProperty("simple", "value");
+            item3.setNumericValue(3.0);
+            persistenceService.save(item3);
+
+            // when - ascending order
+            List<TestMetadataItem> ascResults = persistenceService.query("properties.simple", "value", "numericValue:asc", TestMetadataItem.class);
+
+            // then
+            assertEquals(3, ascResults.size());
+            assertNull(ascResults.get(0).getNumericValue());
+            assertEquals(1.0, ascResults.get(1).getNumericValue());
+            assertEquals(3.0, ascResults.get(2).getNumericValue());
+
+            // when - descending order
+            List<TestMetadataItem> descResults = persistenceService.query("properties.simple", "value", "numericValue:desc", TestMetadataItem.class);
+
+            // then
+            assertEquals(3, descResults.size());
+            assertEquals(3.0, descResults.get(0).getNumericValue());
+            assertEquals(1.0, descResults.get(1).getNumericValue());
+            assertNull(descResults.get(2).getNumericValue());
+        }
+
+        @Test
+        void shouldSortQueryResultsWithCondition() {
+            // given
+            List<TestMetadataItem> items = new ArrayList<>();
+            for (int i = 3; i >= 1; i--) {
+                TestMetadataItem item = new TestMetadataItem();
+                item.setItemId("item" + i);
+                item.setName("Name" + i);
+                item.setProperty("active", i % 2 == 0);
+                items.add(item);
+                persistenceService.save(item);
+            }
+
+            // Create condition for active items
+            Condition condition = new Condition();
+            condition.setConditionType(TestConditionEvaluators.getConditionType("propertyCondition"));
+            condition.setParameter("propertyName", "properties.active");
+            condition.setParameter("comparisonOperator", "equals");
+            condition.setParameter("propertyValue", true);
+
+            // when
+            List<TestMetadataItem> results = persistenceService.query(condition, "name:asc", TestMetadataItem.class);
+
+            // then
+            assertEquals(1, results.size());
+            assertEquals("Name2", results.get(0).getName());
+        }
+
+        @Test
+        void shouldSortPaginatedQueryResults() {
+            // given
+            List<TestMetadataItem> items = new ArrayList<>();
+            for (int i = 5; i >= 1; i--) {
+                TestMetadataItem item = new TestMetadataItem();
+                item.setItemId("item" + i);
+                item.setProperty("simple", "value");
+                item.setName("Name" + i);
+                items.add(item);
+                persistenceService.save(item);
+            }
+
+            // when - first page
+            PartialList<TestMetadataItem> page1 = persistenceService.query("properties.simple", "value", "name:asc", TestMetadataItem.class, 0, 2);
+
+            // then
+            assertEquals(2, page1.getList().size());
+            assertEquals("Name1", page1.getList().get(0).getName());
+            assertEquals("Name2", page1.getList().get(1).getName());
+
+            // when - second page
+            PartialList<TestMetadataItem> page2 = persistenceService.query("properties.simple", "value", "name:asc", TestMetadataItem.class, 2, 2);
+
+            // then
+            assertEquals(2, page2.getList().size());
+            assertEquals("Name3", page2.getList().get(0).getName());
+            assertEquals("Name4", page2.getList().get(1).getName());
+
+            // when - last page
+            PartialList<TestMetadataItem> page3 = persistenceService.query("properties.simple", "value", "name:asc", TestMetadataItem.class, 4, 2);
+
+            // then
+            assertEquals(1, page3.getList().size());
+            assertEquals("Name5", page3.getList().get(0).getName());
         }
     }
 }

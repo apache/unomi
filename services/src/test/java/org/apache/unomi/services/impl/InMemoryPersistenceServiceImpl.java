@@ -338,292 +338,36 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
 
     @Override
     public <T extends Item> List<T> getAllItems(Class<T> clazz) {
-        return itemsById.values().stream()
-                .filter(item -> clazz.isAssignableFrom(item.getClass()) && executionContextManager.getCurrentContext().getTenantId().equals(item.getTenantId()))
-                .map(item -> (T) item)
-                .collect(Collectors.toList());
-    }
-
-    @Override
-    public <T extends Item> PartialList<T> getAllItems(Class<T> clazz, int offset, int size, String sortBy, String scrollTimeValidity) {
-        return getAllItems(clazz, offset, size, sortBy);
+        return filterItemsByClass(clazz);
     }
 
     @Override
     public <T extends Item> PartialList<T> getAllItems(Class<T> clazz, int offset, int size, String sortBy) {
-        List<T> items = itemsById.values().stream()
-                .filter(item -> clazz.isAssignableFrom(item.getClass()) && executionContextManager.getCurrentContext().getTenantId().equals(item.getTenantId()))
-                .map(item -> (T) item)
-                .collect(Collectors.toList());
-
-        if (sortBy != null) {
-            Collections.sort(items, (o1, o2) -> {
-                try {
-                    String[] sortByArray = sortBy.split(":");
-                    String propertyName = sortByArray[0];
-                    String sortOrder = sortByArray.length > 1 ? sortByArray[1] : "asc";
-                    Object propertyValue1 = PropertyUtils.getProperty(o1, propertyName);
-                    Object propertyValue2 = PropertyUtils.getProperty(o2, propertyName);
-                    if (propertyValue1 == null && propertyValue2 == null) {
-                        return 0;
-                    } else if (propertyValue1 == null) {
-                        return "desc".equals(sortOrder) ? 1 : -1;
-                    } else if (propertyValue2 == null) {
-                        return "desc".equals(sortOrder) ? -1 : 1;
-                    }
-                    if (!(propertyValue1 instanceof Comparable)) {
-                        return 0;
-                    }
-                    int comparisonResult = ((Comparable) propertyValue1).compareTo(propertyValue2);
-                    return "desc".equals(sortOrder) ? -comparisonResult : comparisonResult;
-                } catch (Exception e) {
-                    return 0;
-                }
-            });
-        }
-
-        int totalSize = items.size();
-        int fromIndex = Math.min(offset, totalSize);
-        int toIndex = size < 0 ? totalSize : Math.min(offset + size, totalSize);
-
-        items = items.subList(fromIndex, toIndex);
-
-        return new PartialList<>(items, offset, size, totalSize, PartialList.Relation.EQUAL);
+        List<T> items = filterItemsByClass(clazz);
+        items = sortItems(items, sortBy);
+        return createPartialList(items, offset, size);
     }
 
     @Override
     public <T extends Item> List<T> query(Condition condition, String sortBy, Class<T> clazz) {
-        List<T> allItems = getAllItems(clazz);
-        List<T> matchingItems = new ArrayList<>();
-
-        for (T item : allItems) {
-            if (testMatch(condition, item)) {
-                matchingItems.add(item);
-            }
-        }
-        return matchingItems;
+        List<T> items = filterItemsByClass(clazz);
+        items = filterItemsByCondition(items, condition);
+        return sortItems(items, sortBy);
     }
 
     @Override
     public <T extends Item> PartialList<T> query(Condition condition, String sortBy, Class<T> clazz, int offset, int size) {
-        List<T> allItems = getAllItems(clazz);
-        List<T> matchingItems = new ArrayList<>();
-
-        for (T item : allItems) {
-            if (testMatch(condition, item)) {
-                matchingItems.add(item);
-            }
-        }
-
-        int totalSize = matchingItems.size();
-        int fromIndex = Math.min(offset, totalSize);
-        int toIndex = size < 0 ? totalSize : Math.min(offset + size, totalSize);
-
-        List<T> pageItems = matchingItems.subList(fromIndex, toIndex);
-        return new PartialList<>(pageItems, offset, size, totalSize, PartialList.Relation.EQUAL);
+        List<T> items = query(condition, sortBy, clazz);
+        return createPartialList(items, offset, size);
     }
 
     @Override
     public <T extends Item> List<T> query(String fieldName, String fieldValue, String sortBy, Class<T> clazz) {
-        List<T> results = new ArrayList<>();
-        String prefix = clazz.getName() + ":";
-
-        for (Map.Entry<String, Item> entry : itemsById.entrySet()) {
-            if (entry.getKey().startsWith(prefix)) {
-                T item = (T) entry.getValue();
-                if (matchesField(item, fieldName, fieldValue)) {
-                    results.add(item);
-                }
-            }
-        }
-        return results;
-    }
-
-    private boolean matchesField(Item item, String fieldName, String fieldValue) {
-        if (item == null || fieldName == null || fieldValue == null) {
-            return false;
-        }
-
-        try {
-            Object value = getValueFromPath(item, fieldName);
-            if (value == null) {
-                return false;
-            }
-
-            if (value instanceof Collection) {
-                return ((Collection<?>) value).contains(fieldValue);
-            }
-
-            return value.toString().equals(fieldValue);
-        } catch (Exception e) {
-            LOGGER.debug("Error matching field: " + fieldName, e);
-            return false;
-        }
-    }
-
-    private Object getValueFromPath(Object obj, String path) {
-        if (obj == null || path == null) {
-            return null;
-        }
-
-        try {
-            Object current = obj;
-            StringBuilder currentPart = new StringBuilder();
-            boolean inQuotes = false;
-            boolean escaped = false;
-            char quoteChar = 0;
-
-            for (int i = 0; i < path.length(); i++) {
-                char c = path.charAt(i);
-
-                if (escaped) {
-                    if (c == '.' || c == '[' || c == ']' || c == '\'' || c == '"' || c == '\\') {
-                        currentPart.append(c);
-                    } else {
-                        currentPart.append('\\').append(c);
-                    }
-                    escaped = false;
-                    continue;
-                }
-
-                switch (c) {
-                    case '\\':
-                        if (!inQuotes) {
-                            escaped = true;
-                        } else {
-                            currentPart.append(c);
-                        }
-                        break;
-                    case '\'':
-                    case '"':
-                        if (!inQuotes) {
-                            inQuotes = true;
-                            quoteChar = c;
-                        } else if (c == quoteChar) {
-                            inQuotes = false;
-                            quoteChar = 0;
-                        } else {
-                            currentPart.append(c);
-                        }
-                        break;
-                    case '[':
-                        if (!inQuotes) {
-                            if (currentPart.length() > 0) {
-                                current = resolveValue(current, currentPart.toString());
-                                currentPart.setLength(0);
-                            }
-                        } else {
-                            currentPart.append(c);
-                        }
-                        break;
-                    case ']':
-                        if (!inQuotes) {
-                            if (currentPart.length() > 0) {
-                                String arrayIndex = currentPart.toString().trim();
-                                current = resolveArrayValue(current, arrayIndex);
-                                currentPart.setLength(0);
-                            }
-                        } else {
-                            currentPart.append(c);
-                        }
-                        break;
-                    case '.':
-                        if (!inQuotes && !escaped) {
-                            if (currentPart.length() > 0) {
-                                current = resolveValue(current, currentPart.toString());
-                                currentPart.setLength(0);
-                            }
-                        } else {
-                            currentPart.append(c);
-                        }
-                        break;
-                    default:
-                        currentPart.append(c);
-                }
-            }
-
-            // Handle any remaining part
-            if (currentPart.length() > 0) {
-                current = resolveValue(current, currentPart.toString());
-            }
-
-            return current;
-        } catch (Exception e) {
-            LOGGER.debug("Error accessing path: " + path, e);
-            return null;
-        }
-    }
-
-    private Object resolveArrayValue(Object obj, String index) {
-        if (obj == null) {
-            return null;
-        }
-        
-        if (obj instanceof List) {
-            try {
-                List<?> list = (List<?>) obj;
-                int idx = Integer.parseInt(index);
-                if (idx >= 0 && idx < list.size()) {
-                    return list.get(idx);
-                }
-            } catch (NumberFormatException e) {
-                // Fall through to try Map access
-            }
-        }
-        
-        if (obj instanceof Map) {
-            return ((Map<?, ?>) obj).get(index);
-        }
-        
-        return null;
-    }
-
-    private Object resolveValue(Object obj, String key) {
-        if (obj == null) {
-            return null;
-        }
-
-        if (obj instanceof Map) {
-            return ((Map<?, ?>) obj).get(key);
-        }
-
-        // Try getter method first
-        try {
-            String getterName = "get" + key.substring(0, 1).toUpperCase() + key.substring(1);
-            Method getter = obj.getClass().getMethod(getterName);
-            try {
-                return getter.invoke(obj);
-            } catch (IllegalAccessException | InvocationTargetException e) {
-                LOGGER.debug("Error invoking getter method: " + getterName, e);
-                return null;
-            }
-        } catch (NoSuchMethodException e) {
-            // Try boolean getter
-            try {
-                String isName = "is" + key.substring(0, 1).toUpperCase() + key.substring(1);
-                Method isGetter = obj.getClass().getMethod(isName);
-                try {
-                    return isGetter.invoke(obj);
-                } catch (IllegalAccessException | InvocationTargetException e2) {
-                    LOGGER.debug("Error invoking boolean getter method: " + isName, e2);
-                    return null;
-                }
-            } catch (NoSuchMethodException e2) {
-                // Try field access
-                try {
-                    Field field = obj.getClass().getDeclaredField(key);
-                    field.setAccessible(true);
-                    try {
-                        return field.get(obj);
-                    } catch (IllegalAccessException e3) {
-                        LOGGER.debug("Error accessing field: " + key, e3);
-                        return null;
-                    }
-                } catch (NoSuchFieldException e3) {
-                    return null;
-                }
-            }
-        }
+        List<T> items = filterItemsByClass(clazz);
+        items = items.stream()
+                .filter(item -> matchesField(item, fieldName, fieldValue))
+                .collect(Collectors.toList());
+        return sortItems(items, sortBy);
     }
 
     @Override
@@ -636,23 +380,61 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
         for (String fieldValue : fieldValues) {
             results.addAll(query(fieldName, fieldValue, sortBy, clazz));
         }
-        return results;
+        return sortItems(results, sortBy);
     }
 
     @Override
     public <T extends Item> PartialList<T> query(String fieldName, String fieldValue, String sortBy, Class<T> clazz, int offset, int size) {
         List<T> items = query(fieldName, fieldValue, sortBy, clazz);
-        int totalSize = items.size();
-        int fromIndex = Math.min(offset, totalSize);
-        int toIndex = size < 0 ? totalSize : Math.min(offset + size, totalSize);
-
-        List<T> pageItems = items.subList(fromIndex, toIndex);
-        return new PartialList<>(pageItems, offset, size, totalSize, PartialList.Relation.EQUAL);
+        return createPartialList(items, offset, size);
     }
 
     @Override
     public <T extends Item> PartialList<T> rangeQuery(String fieldName, String from, String to, String sortBy, Class<T> clazz, int offset, int size) {
-        return new PartialList<>(Collections.<T>emptyList(), offset, size, 0, PartialList.Relation.EQUAL);
+        List<T> items = filterItemsByClass(clazz);
+        items = items.stream()
+                .filter(item -> isInRange(item, fieldName, from, to))
+                .collect(Collectors.toList());
+        items = sortItems(items, sortBy);
+        return createPartialList(items, offset, size);
+    }
+
+    private boolean isInRange(Item item, String fieldName, String from, String to) {
+        try {
+            Object value = PropertyUtils.getProperty(item, fieldName);
+            if (value instanceof Comparable) {
+                Comparable comparableValue = (Comparable) value;
+                Comparable fromValue = from != null ? (Comparable) convertValue(from, value.getClass()) : null;
+                Comparable toValue = to != null ? (Comparable) convertValue(to, value.getClass()) : null;
+
+                boolean matches = true;
+                if (fromValue != null) {
+                    matches = matches && comparableValue.compareTo(fromValue) >= 0;
+                }
+                if (toValue != null) {
+                    matches = matches && comparableValue.compareTo(toValue) <= 0;
+                }
+                return matches;
+            }
+        } catch (Exception e) {
+            LOGGER.debug("Error checking range for field: " + fieldName, e);
+        }
+        return false;
+    }
+
+    private Object convertValue(String value, Class<?> targetType) {
+        if (targetType == Integer.class) {
+            return Integer.parseInt(value);
+        } else if (targetType == Long.class) {
+            return Long.parseLong(value);
+        } else if (targetType == Double.class) {
+            return Double.parseDouble(value);
+        } else if (targetType == Float.class) {
+            return Float.parseFloat(value);
+        } else if (targetType == String.class) {
+            return value;
+        }
+        return value;
     }
 
     @Override
@@ -1567,6 +1349,249 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
         } catch (Exception e) {
             LOGGER.error("Error executing updateProfileId script", e);
             return false;
+        }
+    }
+
+    // Add new utility methods for common operations
+    private <T extends Item> List<T> sortItems(List<T> items, String sortBy) {
+        if (sortBy == null) {
+            return items;
+        }
+
+        List<T> sortedItems = new ArrayList<>(items);
+        Collections.sort(sortedItems, (o1, o2) -> {
+            try {
+                String[] sortByArray = sortBy.split(":");
+                String propertyName = sortByArray[0];
+                String sortOrder = sortByArray.length > 1 ? sortByArray[1] : "asc";
+                Object propertyValue1 = PropertyUtils.getProperty(o1, propertyName);
+                Object propertyValue2 = PropertyUtils.getProperty(o2, propertyName);
+                if (propertyValue1 == null && propertyValue2 == null) {
+                    return 0;
+                } else if (propertyValue1 == null) {
+                    return "desc".equals(sortOrder) ? 1 : -1;
+                } else if (propertyValue2 == null) {
+                    return "desc".equals(sortOrder) ? -1 : 1;
+                }
+                if (!(propertyValue1 instanceof Comparable)) {
+                    return 0;
+                }
+                int comparisonResult = ((Comparable) propertyValue1).compareTo(propertyValue2);
+                return "desc".equals(sortOrder) ? -comparisonResult : comparisonResult;
+            } catch (Exception e) {
+                LOGGER.debug("Error comparing properties for sorting", e);
+                return 0;
+            }
+        });
+        return sortedItems;
+    }
+
+    private <T extends Item> List<T> filterItemsByClass(Class<T> clazz) {
+        return itemsById.values().stream()
+                .filter(item -> clazz.isAssignableFrom(item.getClass()) && 
+                        executionContextManager.getCurrentContext().getTenantId().equals(item.getTenantId()))
+                .map(item -> (T) item)
+                .collect(Collectors.toList());
+    }
+
+    private <T extends Item> List<T> filterItemsByCondition(List<T> items, Condition condition) {
+        if (condition == null) {
+            return items;
+        }
+        return items.stream()
+                .filter(item -> testMatch(condition, item))
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public <T extends Item> PartialList<T> getAllItems(Class<T> clazz, int offset, int size, String sortBy, String scrollTimeValidity) {
+        return getAllItems(clazz, offset, size, sortBy);
+    }
+
+    private boolean matchesField(Item item, String fieldName, String fieldValue) {
+        if (item == null || fieldName == null || fieldValue == null) {
+            return false;
+        }
+
+        try {
+            Object value = getValueFromPath(item, fieldName);
+            if (value == null) {
+                return false;
+            }
+
+            if (value instanceof Collection) {
+                return ((Collection<?>) value).contains(fieldValue);
+            }
+
+            return value.toString().equals(fieldValue);
+        } catch (Exception e) {
+            LOGGER.debug("Error matching field: " + fieldName, e);
+            return false;
+        }
+    }
+
+    private Object getValueFromPath(Object obj, String path) {
+        if (obj == null || path == null) {
+            return null;
+        }
+
+        try {
+            Object current = obj;
+            StringBuilder currentPart = new StringBuilder();
+            boolean inQuotes = false;
+            boolean escaped = false;
+            char quoteChar = 0;
+
+            for (int i = 0; i < path.length(); i++) {
+                char c = path.charAt(i);
+
+                if (escaped) {
+                    if (c == '.' || c == '[' || c == ']' || c == '\'' || c == '"' || c == '\\') {
+                        currentPart.append(c);
+                    } else {
+                        currentPart.append('\\').append(c);
+                    }
+                    escaped = false;
+                    continue;
+                }
+
+                switch (c) {
+                    case '\\':
+                        if (!inQuotes) {
+                            escaped = true;
+                        } else {
+                            currentPart.append(c);
+                        }
+                        break;
+                    case '\'':
+                    case '"':
+                        if (!inQuotes) {
+                            inQuotes = true;
+                            quoteChar = c;
+                        } else if (c == quoteChar) {
+                            inQuotes = false;
+                            quoteChar = 0;
+                        } else {
+                            currentPart.append(c);
+                        }
+                        break;
+                    case '[':
+                        if (!inQuotes) {
+                            if (currentPart.length() > 0) {
+                                current = resolveValue(current, currentPart.toString());
+                                currentPart.setLength(0);
+                            }
+                        } else {
+                            currentPart.append(c);
+                        }
+                        break;
+                    case ']':
+                        if (!inQuotes) {
+                            if (currentPart.length() > 0) {
+                                String arrayIndex = currentPart.toString().trim();
+                                current = resolveArrayValue(current, arrayIndex);
+                                currentPart.setLength(0);
+                            }
+                        } else {
+                            currentPart.append(c);
+                        }
+                        break;
+                    case '.':
+                        if (!inQuotes && !escaped) {
+                            if (currentPart.length() > 0) {
+                                current = resolveValue(current, currentPart.toString());
+                                currentPart.setLength(0);
+                            }
+                        } else {
+                            currentPart.append(c);
+                        }
+                        break;
+                    default:
+                        currentPart.append(c);
+                }
+            }
+
+            // Handle any remaining part
+            if (currentPart.length() > 0) {
+                current = resolveValue(current, currentPart.toString());
+            }
+
+            return current;
+        } catch (Exception e) {
+            LOGGER.debug("Error accessing path: " + path, e);
+            return null;
+        }
+    }
+
+    private Object resolveArrayValue(Object obj, String index) {
+        if (obj == null) {
+            return null;
+        }
+        
+        if (obj instanceof List) {
+            try {
+                List<?> list = (List<?>) obj;
+                int idx = Integer.parseInt(index);
+                if (idx >= 0 && idx < list.size()) {
+                    return list.get(idx);
+                }
+            } catch (NumberFormatException e) {
+                // Fall through to try Map access
+            }
+        }
+        
+        if (obj instanceof Map) {
+            return ((Map<?, ?>) obj).get(index);
+        }
+        
+        return null;
+    }
+
+    private Object resolveValue(Object obj, String key) {
+        if (obj == null) {
+            return null;
+        }
+
+        if (obj instanceof Map) {
+            return ((Map<?, ?>) obj).get(key);
+        }
+
+        // Try getter method first
+        try {
+            String getterName = "get" + key.substring(0, 1).toUpperCase() + key.substring(1);
+            Method getter = obj.getClass().getMethod(getterName);
+            try {
+                return getter.invoke(obj);
+            } catch (IllegalAccessException | InvocationTargetException e) {
+                LOGGER.debug("Error invoking getter method: " + getterName, e);
+                return null;
+            }
+        } catch (NoSuchMethodException e) {
+            // Try boolean getter
+            try {
+                String isName = "is" + key.substring(0, 1).toUpperCase() + key.substring(1);
+                Method isGetter = obj.getClass().getMethod(isName);
+                try {
+                    return isGetter.invoke(obj);
+                } catch (IllegalAccessException | InvocationTargetException e2) {
+                    LOGGER.debug("Error invoking boolean getter method: " + isName, e2);
+                    return null;
+                }
+            } catch (NoSuchMethodException e2) {
+                // Try field access
+                try {
+                    Field field = obj.getClass().getDeclaredField(key);
+                    field.setAccessible(true);
+                    try {
+                        return field.get(obj);
+                    } catch (IllegalAccessException e3) {
+                        LOGGER.debug("Error accessing field: " + key, e3);
+                        return null;
+                    }
+                } catch (NoSuchFieldException e3) {
+                    return null;
+                }
+            }
         }
     }
 }
