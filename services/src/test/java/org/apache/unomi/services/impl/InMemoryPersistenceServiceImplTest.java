@@ -66,6 +66,15 @@ public class InMemoryPersistenceServiceImplTest {
         private Set<String> tags;
         private Double numericValue;
 
+        public TestMetadataItem() {
+            setItemType(ITEM_TYPE);
+        }
+
+        @Override
+        public String getItemType() {
+            return ITEM_TYPE;
+        }
+
         @Override
         public Metadata getMetadata() {
             return metadata;
@@ -85,6 +94,10 @@ public class InMemoryPersistenceServiceImplTest {
 
         public Map<String, Object> getProperties() {
             return properties;
+        }
+
+        public void setProperties(Map<String, Object> properties) {
+            this.properties = properties;
         }
 
         public String getName() {
@@ -429,7 +442,7 @@ public class InMemoryPersistenceServiceImplTest {
 
             // Test different notation styles
             List<TestMetadataItem> results1 = persistenceService.query("properties.direct\\.key\\.with\\.dots", "direct-value", null, TestMetadataItem.class);
-            List<TestMetadataItem> results2 = persistenceService.query("properties.map[nested.field][key.with.dots]", "test-value", null, TestMetadataItem.class);
+            List<TestMetadataItem> results2 = persistenceService.query("properties.map['nested.field']['key.with.dots']", "test-value", null, TestMetadataItem.class);
             List<TestMetadataItem> results3 = persistenceService.query("properties.map.nested\\.field.regular\\.key", "another-value", null, TestMetadataItem.class);
 
             // Verify all notation styles work
@@ -2682,5 +2695,120 @@ public class InMemoryPersistenceServiceImplTest {
             assertTrue(exceptions.isEmpty(), "Concurrent operations should not throw exceptions");
         }
 
+    }
+
+    @Nested
+    class FieldAccessPatternTests {
+        private TestMetadataItem createTestItem(String id, Map<String, Object> properties) {
+            TestMetadataItem item = new TestMetadataItem();
+            item.setItemId(id);
+            item.setProperties(properties);
+            return item;
+        }
+
+        @Test
+        void shouldHandleDotNotationAccess() {
+            // Setup test data
+            Map<String, Object> nestedMap = new HashMap<>();
+            nestedMap.put("simple", "value");
+            nestedMap.put("nested.key", "nested-value");
+
+            Map<String, Object> properties = new HashMap<>();
+            properties.put("map", nestedMap);
+
+            TestMetadataItem item = createTestItem("test1", properties);
+            persistenceService.save(item);
+
+            // Test simple dot notation
+            TestMetadataItem loaded = persistenceService.load(item.getItemId(), TestMetadataItem.class);
+            Map<String, Object> loadedProps = loaded.getProperties();
+            Map<String, Object> loadedMap = (Map<String, Object>) loadedProps.get("map");
+
+            assertEquals("value", loadedMap.get("simple"));
+            assertEquals("nested-value", loadedMap.get("nested.key"));
+        }
+
+        @Test
+        void shouldHandleBackslashEscapedDots() {
+            // Setup test data
+            Map<String, Object> properties = new HashMap<>();
+            properties.put("user.name", "test-user");
+            properties.put("complex.key.value", "complex-value");
+
+            TestMetadataItem item = createTestItem("test2", properties);
+            persistenceService.save(item);
+
+            // Test accessing properties with dots
+            TestMetadataItem loaded = persistenceService.load(item.getItemId(), TestMetadataItem.class);
+            Map<String, Object> loadedProps = loaded.getProperties();
+
+            assertEquals("test-user", loadedProps.get("user.name"));
+            assertEquals("complex-value", loadedProps.get("complex.key.value"));
+        }
+
+        @Test
+        void shouldHandleMixedNotationAccess() {
+            // Setup test data
+            Map<String, Object> nestedMap = new HashMap<>();
+            nestedMap.put("key.with.dots", "dotted-value");
+
+            List<String> array = Arrays.asList("first", "second", "third");
+
+            Map<String, Object> properties = new HashMap<>();
+            properties.put("map", nestedMap);
+            properties.put("array", array);
+
+            TestMetadataItem item = createTestItem("test3", properties);
+            persistenceService.save(item);
+
+            // Test accessing nested properties
+            TestMetadataItem loaded = persistenceService.load(item.getItemId(), TestMetadataItem.class);
+            Map<String, Object> loadedProps = loaded.getProperties();
+            Map<String, Object> loadedMap = (Map<String, Object>) loadedProps.get("map");
+            List<String> loadedArray = (List<String>) loadedProps.get("array");
+
+            assertEquals("dotted-value", loadedMap.get("key.with.dots"));
+            assertEquals("second", loadedArray.get(1));
+        }
+
+        @Test
+        void shouldHandleNullAndNonExistentFields() {
+            // Setup test data
+            Map<String, Object> properties = new HashMap<>();
+            properties.put("nullValue", null);
+
+            TestMetadataItem item = createTestItem("test4", properties);
+            persistenceService.save(item);
+
+            // Test null and non-existent fields
+            TestMetadataItem loaded = persistenceService.load(item.getItemId(), TestMetadataItem.class);
+            Map<String, Object> loadedProps = loaded.getProperties();
+
+            assertNull(loadedProps.get("nullValue"));
+            assertNull(loadedProps.get("nonexistent.field"));
+        }
+
+        @Test
+        void shouldHandleArrayAccess() {
+            // Setup test data
+            List<Map<String, Object>> array = new ArrayList<>();
+            Map<String, Object> element = new HashMap<>();
+            element.put("key.with.dots", "array-value");
+            array.add(element);
+
+            Map<String, Object> properties = new HashMap<>();
+            properties.put("array", array);
+
+            TestMetadataItem item = createTestItem("test5", properties);
+            persistenceService.save(item);
+
+            // Test array access
+            TestMetadataItem loaded = persistenceService.load(item.getItemId(), TestMetadataItem.class);
+            Map<String, Object> loadedProps = loaded.getProperties();
+            List<Map<String, Object>> loadedArray = (List<Map<String, Object>>) loadedProps.get("array");
+            Map<String, Object> loadedElement = loadedArray.get(0);
+
+            assertEquals("array-value", loadedElement.get("key.with.dots"));
+        }
     }
 }

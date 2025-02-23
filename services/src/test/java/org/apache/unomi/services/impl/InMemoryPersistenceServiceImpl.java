@@ -33,6 +33,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -444,17 +445,7 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
         }
 
         try {
-            // Try direct map access first
             Object value = getValueFromPath(item, fieldName);
-            if (value != null) {
-                if (value instanceof Collection) {
-                    return ((Collection<?>) value).contains(fieldValue);
-                }
-                return value.toString().equals(fieldValue);
-            }
-
-            // If direct access fails, try path-based access
-            value = getValueFromPath(item, fieldName);
             if (value == null) {
                 return false;
             }
@@ -465,6 +456,7 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
 
             return value.toString().equals(fieldValue);
         } catch (Exception e) {
+            LOGGER.debug("Error matching field: " + fieldName, e);
             return false;
         }
     }
@@ -477,43 +469,69 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
         try {
             Object current = obj;
             StringBuilder currentPart = new StringBuilder();
-            boolean inBrackets = false;
+            boolean inQuotes = false;
             boolean escaped = false;
+            char quoteChar = 0;
 
             for (int i = 0; i < path.length(); i++) {
                 char c = path.charAt(i);
 
                 if (escaped) {
-                    currentPart.append(c);
+                    if (c == '.' || c == '[' || c == ']' || c == '\'' || c == '"' || c == '\\') {
+                        currentPart.append(c);
+                    } else {
+                        currentPart.append('\\').append(c);
+                    }
                     escaped = false;
                     continue;
                 }
 
                 switch (c) {
                     case '\\':
-                        escaped = true;
+                        if (!inQuotes) {
+                            escaped = true;
+                        } else {
+                            currentPart.append(c);
+                        }
+                        break;
+                    case '\'':
+                    case '"':
+                        if (!inQuotes) {
+                            inQuotes = true;
+                            quoteChar = c;
+                        } else if (c == quoteChar) {
+                            inQuotes = false;
+                            quoteChar = 0;
+                        } else {
+                            currentPart.append(c);
+                        }
                         break;
                     case '[':
-                        if (currentPart.length() > 0) {
-                            current = resolveValue(current, currentPart.toString());
-                            currentPart = new StringBuilder();
+                        if (!inQuotes) {
+                            if (currentPart.length() > 0) {
+                                current = resolveValue(current, currentPart.toString());
+                                currentPart.setLength(0);
+                            }
+                        } else {
+                            currentPart.append(c);
                         }
-                        inBrackets = true;
                         break;
                     case ']':
-                        if (inBrackets) {
-                            current = resolveValue(current, currentPart.toString());
-                            currentPart = new StringBuilder();
-                            inBrackets = false;
+                        if (!inQuotes) {
+                            if (currentPart.length() > 0) {
+                                String arrayIndex = currentPart.toString().trim();
+                                current = resolveArrayValue(current, arrayIndex);
+                                currentPart.setLength(0);
+                            }
                         } else {
                             currentPart.append(c);
                         }
                         break;
                     case '.':
-                        if (!inBrackets) {
+                        if (!inQuotes && !escaped) {
                             if (currentPart.length() > 0) {
                                 current = resolveValue(current, currentPart.toString());
-                                currentPart = new StringBuilder();
+                                currentPart.setLength(0);
                             }
                         } else {
                             currentPart.append(c);
@@ -536,7 +554,31 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
         }
     }
 
-    private Object resolveValue(Object obj, String key) throws Exception {
+    private Object resolveArrayValue(Object obj, String index) {
+        if (obj == null) {
+            return null;
+        }
+        
+        if (obj instanceof List) {
+            try {
+                List<?> list = (List<?>) obj;
+                int idx = Integer.parseInt(index);
+                if (idx >= 0 && idx < list.size()) {
+                    return list.get(idx);
+                }
+            } catch (NumberFormatException e) {
+                // Fall through to try Map access
+            }
+        }
+        
+        if (obj instanceof Map) {
+            return ((Map<?, ?>) obj).get(index);
+        }
+        
+        return null;
+    }
+
+    private Object resolveValue(Object obj, String key) {
         if (obj == null) {
             return null;
         }
@@ -549,19 +591,34 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
         try {
             String getterName = "get" + key.substring(0, 1).toUpperCase() + key.substring(1);
             Method getter = obj.getClass().getMethod(getterName);
-            return getter.invoke(obj);
+            try {
+                return getter.invoke(obj);
+            } catch (IllegalAccessException | InvocationTargetException e) {
+                LOGGER.debug("Error invoking getter method: " + getterName, e);
+                return null;
+            }
         } catch (NoSuchMethodException e) {
             // Try boolean getter
             try {
                 String isName = "is" + key.substring(0, 1).toUpperCase() + key.substring(1);
                 Method isGetter = obj.getClass().getMethod(isName);
-                return isGetter.invoke(obj);
+                try {
+                    return isGetter.invoke(obj);
+                } catch (IllegalAccessException | InvocationTargetException e2) {
+                    LOGGER.debug("Error invoking boolean getter method: " + isName, e2);
+                    return null;
+                }
             } catch (NoSuchMethodException e2) {
                 // Try field access
                 try {
                     Field field = obj.getClass().getDeclaredField(key);
                     field.setAccessible(true);
-                    return field.get(obj);
+                    try {
+                        return field.get(obj);
+                    } catch (IllegalAccessException e3) {
+                        LOGGER.debug("Error accessing field: " + key, e3);
+                        return null;
+                    }
                 } catch (NoSuchFieldException e3) {
                     return null;
                 }
