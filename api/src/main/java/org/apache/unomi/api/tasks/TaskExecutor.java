@@ -19,35 +19,65 @@ package org.apache.unomi.api.tasks;
 import java.util.Map;
 
 /**
- * Interface for task executors that can execute scheduled tasks
+ * Interface for task executors that can execute scheduled tasks.
+ * Task executors are responsible for the actual execution of tasks and provide:
+ * <ul>
+ *   <li>Task type identification</li>
+ *   <li>Task execution logic</li>
+ *   <li>Optional task resumption capabilities</li>
+ *   <li>Progress and status reporting through callbacks</li>
+ * </ul>
+ * 
+ * Implementations should be thread-safe as they may be called concurrently
+ * from multiple threads to execute different tasks of the same type.
  */
 public interface TaskExecutor {
     
     /**
-     * Get the type of tasks this executor can handle
-     * @return the task type string
+     * Gets the type of tasks this executor can handle.
+     * The task type is used to match tasks with their appropriate executor.
+     * Each executor must have a unique task type.
+     * 
+     * @return the task type string identifier
      */
     String getTaskType();
 
     /**
-     * Execute a scheduled task
+     * Executes a scheduled task.
+     * This method contains the core execution logic for the task.
+     * The implementation should:
+     * <ul>
+     *   <li>Use the task parameters to perform the required work</li>
+     *   <li>Report progress through the status callback</li>
+     *   <li>Handle errors appropriately</li>
+     *   <li>Call callback.complete() on successful completion</li>
+     *   <li>Call callback.fail() if execution fails</li>
+     * </ul>
+     * 
      * @param task the task to execute
-     * @param statusCallback callback to update task status
+     * @param statusCallback callback to update task status during execution
      * @throws Exception if task execution fails
      */
     void execute(ScheduledTask task, TaskStatusCallback statusCallback) throws Exception;
 
     /**
-     * Check if this executor can resume a crashed task from its checkpoint
+     * Checks if this executor can resume a crashed task from its checkpoint.
+     * Implementations should examine the task's checkpoint data to determine
+     * if resumption is possible.
+     * 
      * @param task the crashed task
-     * @return true if the task can be resumed
+     * @return true if the task can be resumed from its checkpoint
      */
     default boolean canResume(ScheduledTask task) {
         return false;
     }
 
     /**
-     * Resume a crashed task from its checkpoint
+     * Resumes a crashed task from its checkpoint.
+     * This method is called instead of execute() when resuming a crashed task.
+     * The default implementation simply calls execute(), but implementations
+     * can override this to provide custom resumption logic.
+     * 
      * @param task the crashed task
      * @param statusCallback callback to update task status
      * @throws Exception if task resumption fails
@@ -57,36 +87,52 @@ public interface TaskExecutor {
     }
 
     /**
-     * Callback interface for task status updates
+     * Callback interface for task status updates.
+     * This interface allows executors to report progress and status changes
+     * during task execution.
      */
     interface TaskStatusCallback {
         /**
-         * Update the current step of the task
+         * Updates the current step of the task.
+         * Use this to indicate progress through different phases of execution.
+         * 
          * @param step the current step name
-         * @param details optional step details
+         * @param details optional step details as key-value pairs
          */
         void updateStep(String step, Map<String, Object> details);
 
         /**
-         * Save a checkpoint for the task
-         * @param checkpointData the checkpoint data
+         * Saves a checkpoint for the task.
+         * Checkpoints allow long-running tasks to be resumed after crashes.
+         * The checkpoint data should contain sufficient information to
+         * resume execution from this point.
+         * 
+         * @param checkpointData the checkpoint data as key-value pairs
          */
         void checkpoint(Map<String, Object> checkpointData);
 
         /**
-         * Update task status details
-         * @param details the status details
+         * Updates task status details.
+         * Use this to provide additional information about the task's
+         * current state or progress.
+         * 
+         * @param details the status details as key-value pairs
          */
         void updateStatusDetails(Map<String, Object> details);
 
         /**
-         * Mark task as completed
+         * Marks task as completed.
+         * This should be called when the task has successfully finished
+         * all its work.
          */
         void complete();
 
         /**
-         * Mark task as failed
-         * @param error the error message
+         * Marks task as failed.
+         * This should be called when the task encounters an error that
+         * prevents successful completion.
+         * 
+         * @param error the error message describing the failure
          */
         void fail(String error);
     }

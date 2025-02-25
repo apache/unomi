@@ -147,30 +147,6 @@ public class TaskEndpoint {
     }
 
     /**
-     * Updates task configuration.
-     *
-     * @param taskId the ID of the task to update
-     * @param maxRetries new maximum retry count
-     * @param retryDelay new retry delay in milliseconds
-     * @return the updated task
-     * @throws WebApplicationException with 404 status if task is not found
-     */
-    @PUT
-    @Path("/{taskId}/config")
-    @Produces(MediaType.APPLICATION_JSON)
-    public ScheduledTask updateTaskConfig(
-            @PathParam("taskId") String taskId,
-            @QueryParam("maxRetries") int maxRetries,
-            @QueryParam("retryDelay") long retryDelay) {
-        ScheduledTask task = schedulerService.getTask(taskId);
-        if (task == null) {
-            throw new WebApplicationException("Task not found", Response.Status.NOT_FOUND);
-        }
-        schedulerService.updateTaskConfig(taskId, maxRetries, retryDelay);
-        return schedulerService.getTask(taskId);
-    }
-
-    /**
      * Resumes a crashed task.
      *
      * @param taskId the ID of the task to resume

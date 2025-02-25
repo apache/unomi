@@ -151,23 +151,6 @@ public class SchedulerIT extends BaseIT {
         assertEquals("Failure count should be reset", 0, task.getFailureCount());
     }
 
-    @Test
-    public void testUpdateTaskConfig() throws Exception {
-        Map<String, Object> config = new HashMap<>();
-        config.put("maxRetries", 5);
-        config.put("retryDelay", 60000);
-        String configJson = objectMapper.writeValueAsString(config);
-
-        CloseableHttpResponse response = post("/cxs/tasks/" + testTaskId + "/config", configJson);
-        assertEquals("Response should be OK", 200, response.getStatusLine().getStatusCode());
-
-        String responseBody = EntityUtils.toString(response.getEntity());
-        ScheduledTask task = objectMapper.readValue(responseBody, ScheduledTask.class);
-        assertNotNull("Task should not be null", task);
-        assertEquals("Max retries should be updated", 5, task.getMaxRetries());
-        assertEquals("Retry delay should be updated", 60000, task.getRetryDelay());
-    }
-
     private static class TestTaskExecutor implements TaskExecutor {
         static final AtomicBoolean shouldFail = new AtomicBoolean(false);
 
@@ -184,4 +167,4 @@ public class SchedulerIT extends BaseIT {
             callback.complete();
         }
     }
-} 
+}

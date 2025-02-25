@@ -16,22 +16,28 @@
  */
 package org.apache.unomi.services;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.unomi.api.Metadata;
 import org.apache.unomi.api.actions.ActionType;
 import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.api.security.SecurityServiceConfiguration;
 import org.apache.unomi.api.services.*;
 import org.apache.unomi.api.services.cache.MultiTypeCacheService;
+import org.apache.unomi.api.tasks.ScheduledTask;
+import org.apache.unomi.api.tasks.TaskExecutor;
+import org.apache.unomi.api.tasks.TaskExecutor.TaskStatusCallback;
 import org.apache.unomi.api.tenants.AuditService;
 import org.apache.unomi.api.tenants.TenantService;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.services.impl.ExecutionContextManagerImpl;
+import org.apache.unomi.services.impl.InMemoryPersistenceServiceImpl;
 import org.apache.unomi.services.impl.KarafSecurityService;
 import org.apache.unomi.services.impl.TestRequestTracer;
 import org.apache.unomi.services.impl.definitions.DefinitionsServiceImpl;
 import org.apache.unomi.services.impl.events.EventServiceImpl;
 import org.apache.unomi.services.impl.rules.RulesServiceImpl;
 import org.apache.unomi.services.impl.rules.TestActionExecutorDispatcher;
+import org.apache.unomi.services.impl.scheduler.SchedulerServiceImpl;
 import org.apache.unomi.services.impl.tenants.AuditServiceImpl;
 import org.apache.unomi.services.impl.validation.ConditionValidationServiceImpl;
 import org.apache.unomi.services.impl.validation.validators.*;
@@ -39,15 +45,24 @@ import org.apache.unomi.tracing.api.RequestTracer;
 import org.apache.unomi.tracing.api.TracerService;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.function.BooleanSupplier;
 
 import static org.mockito.Mockito.*;
 
 public class TestHelper {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(TestHelper.class);
 
     public static KarafSecurityService createSecurityService() {
         KarafSecurityService securityService = new KarafSecurityService();
@@ -147,13 +162,21 @@ public class TestHelper {
     public static SchedulerService createSchedulerService(
             PersistenceService persistenceService,
             ExecutionContextManager executionContextManager) {
+        return createSchedulerService(persistenceService, executionContextManager, true);
+    }
+    public static SchedulerService createSchedulerService(
+            PersistenceService persistenceService,
+            ExecutionContextManager executionContextManager, boolean construct) {
         org.apache.unomi.services.impl.scheduler.SchedulerServiceImpl schedulerService =
             new org.apache.unomi.services.impl.scheduler.SchedulerServiceImpl();
         schedulerService.setPersistenceService(persistenceService);
         schedulerService.setThreadPoolSize(4); // Ensure enough threads for parallel execution
         schedulerService.setExecutorNode(true);
+        schedulerService.setNodeId("test-scheduler-node");
         schedulerService.setPurgeTaskEnabled(false); // Disable purge task by default for tests
-        schedulerService.postConstruct();
+        if (construct) {
+            schedulerService.postConstruct();
+        }
         return schedulerService;
     }
 
@@ -305,5 +328,69 @@ public class TestHelper {
         conditionType.setMetadata(conditionMetadata);
 
         definitionsService.setConditionType(conditionType);
+    }
+
+    public static TaskExecutor createTestExecutor(String taskType, Runnable execution) {
+        return new TaskExecutor() {
+            @Override
+            public String getTaskType() {
+                return taskType;
+            }
+
+            @Override
+            public void execute(ScheduledTask task, TaskStatusCallback callback) {
+                try {
+                    execution.run();
+                    callback.complete();
+                } catch (Exception e) {
+                    callback.fail(e.getMessage());
+                }
+            }
+        };
+    }
+
+    public static ScheduledTask createTestTask(String taskId, String taskType, boolean persistent) {
+        ScheduledTask task = new ScheduledTask();
+        task.setItemId(taskId);
+        task.setTaskType(taskType);
+        task.setEnabled(true);
+        task.setPersistent(persistent);
+        task.setStatus(ScheduledTask.TaskStatus.SCHEDULED);
+        return task;
+    }
+
+    public static SchedulerServiceImpl createTestNode(PersistenceService persistenceService, String nodeId, boolean executorNode, long lockTimeout) {
+        SchedulerServiceImpl node = new SchedulerServiceImpl();
+        if (lockTimeout > 0) {
+            node.setLockTimeout(lockTimeout);
+        }
+        node.setPersistenceService(persistenceService);
+        node.setExecutorNode(executorNode);
+        node.setThreadPoolSize(2);
+        node.setPurgeTaskEnabled(false);
+        node.setNodeId(nodeId);
+        node.postConstruct();
+        return node;
+    }
+
+    public static void cleanDefaultStorageDirectory(int maxRetries) {
+        Path defaultStorageDir = Paths.get(InMemoryPersistenceServiceImpl.DEFAULT_STORAGE_DIR).toAbsolutePath().normalize();
+        int count = 0;
+        while (Files.exists(defaultStorageDir) && count < maxRetries) {
+        try {
+            FileUtils.deleteDirectory(defaultStorageDir.toFile());
+        } catch (IOException e) {
+            LOGGER.warn("Error deleting default storage directory, will retry in 1 second", e);
+        }
+        try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+            count++;
+        }
+        if (count == maxRetries) {
+            throw new RuntimeException("Failed to delete default storage directory after " + maxRetries + " retries");
+        }
     }
 }

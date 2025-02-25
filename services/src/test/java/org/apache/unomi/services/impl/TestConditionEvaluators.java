@@ -43,7 +43,7 @@ public class TestConditionEvaluators {
     private static final SimpleDateFormat ISO_DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
     private static final SimpleDateFormat yearMonthDayDateFormat = new SimpleDateFormat("yyyyMMdd");
     private static EventService eventService;
-    private static TestRequestTracer tracer = new TestRequestTracer(true);
+    private static TestRequestTracer tracer = new TestRequestTracer(false);
     private static Map<String, ConditionEvaluator> evaluators = new HashMap<>();
 
     static {
@@ -167,11 +167,16 @@ public class TestConditionEvaluators {
                     Method getter = current.getClass().getMethod("get" + field.substring(0, 1).toUpperCase() + field.substring(1));
                     current = getter.invoke(current);
                 } catch (Exception e) {
-                    // If getter fails, try direct field access
                     try {
-                        current = current.getClass().getField(field).get(current);
-                    } catch (Exception ex) {
-                        return null;
+                        Method getter = current.getClass().getMethod("is" + field.substring(0, 1).toUpperCase() + field.substring(1));
+                        current = getter.invoke(current);
+                    } catch (Exception e2) {
+                        // If getter fails, try direct field access
+                        try {
+                            current = current.getClass().getField(field).get(current);
+                        } catch (Exception ex) {
+                            return null;
+                        }
                     }
                 }
             }
