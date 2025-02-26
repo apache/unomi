@@ -226,7 +226,7 @@ public class ClusterServiceImpl implements ClusterService {
         staleNodesCondition.setConditionTypeId("propertyCondition");
         staleNodesCondition.setParameter("propertyName", "lastHeartbeat");
         staleNodesCondition.setParameter("comparisonOperator", "lessThan");
-        staleNodesCondition.setParameter("propertyValueDate", new Date(cutoffTime));
+        staleNodesCondition.setParameter("propertyValueInteger", cutoffTime);
 
         PartialList<ClusterNode> staleNodes = persistenceService.query(staleNodesCondition, null, ClusterNode.class, 0, -1);
 
