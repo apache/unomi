@@ -156,18 +156,4 @@ public class TaskHistoryManager {
         List<Map<String, Object>> history = (List<Map<String, Object>>) details.get("executionHistory");
         return history != null ? history : Collections.emptyList();
     }
-
-    /**
-     * Cleans up old history entries
-     */
-    public void cleanupHistory(ScheduledTask task) {
-        Map<String, Object> details = task.getStatusDetails();
-        if (details != null) {
-            @SuppressWarnings("unchecked")
-            List<Map<String, Object>> history = (List<Map<String, Object>>) details.get("executionHistory");
-            if (history != null && history.size() > MAX_HISTORY_SIZE) {
-                history.subList(0, history.size() - MAX_HISTORY_SIZE).clear();
-            }
-        }
-    }
 } 

@@ -18,6 +18,7 @@ package org.apache.unomi.services.impl.scheduler;
 
 import org.apache.unomi.api.tasks.ScheduledTask;
 import org.apache.unomi.api.tasks.TaskExecutor;
+import org.apache.unomi.api.services.SchedulerService;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,13 +47,15 @@ public class TaskExecutionManager {
     private final PersistenceService persistenceService;
     private final AtomicBoolean running = new AtomicBoolean(false);
     private ScheduledFuture<?> taskCheckerFuture;
+    private final SchedulerServiceImpl schedulerService;
 
     public TaskExecutionManager(String nodeId, int threadPoolSize,
                               TaskStateManager stateManager,
                               TaskLockManager lockManager,
                               TaskMetricsManager metricsManager,
                               TaskHistoryManager historyManager,
-                              PersistenceService persistenceService) {
+                              PersistenceService persistenceService,
+                              SchedulerServiceImpl schedulerService) {
         this.nodeId = nodeId;
         this.stateManager = stateManager;
         this.lockManager = lockManager;
@@ -62,6 +65,7 @@ public class TaskExecutionManager {
         this.taskExecutors = new ConcurrentHashMap<>();
         this.executingTasksByType = new ConcurrentHashMap<>();
         this.persistenceService = persistenceService;
+        this.schedulerService = schedulerService;
 
         // Initialize scheduler
         this.scheduler = Executors.newScheduledThreadPool(
@@ -105,42 +109,26 @@ public class TaskExecutionManager {
      * Schedules a task for execution based on its configuration
      */
     public void scheduleTask(ScheduledTask task, Runnable taskRunner) {
-        if (task.getPeriod() > 0 && !task.isOneShot()) {
-            schedulePeriodicTask(task, taskRunner);
-        } else {
-            scheduleOneTimeTask(task, taskRunner);
+        // Calculate initial execution time if not set
+        if (task.getNextScheduledExecution() == null) {
+            if (task.getInitialDelay() > 0) {
+                // If initial delay is specified, calculate from now
+                long nextExecution = System.currentTimeMillis() +
+                    task.getTimeUnit().toMillis(task.getInitialDelay());
+                task.setNextScheduledExecution(new Date(nextExecution));
+            } else {
+                // Start immediately
+                task.setNextScheduledExecution(new Date());
+            }
         }
-    }
 
-    private void schedulePeriodicTask(ScheduledTask task, Runnable taskRunner) {
-        ScheduledFuture<?> future;
-        long initialDelay = calculateInitialDelay(task);
-
-        if (task.isFixedRate()) {
-            future = scheduler.scheduleAtFixedRate(
-                taskRunner,
-                initialDelay,
-                task.getPeriod(),
-                task.getTimeUnit()
-            );
-        } else {
-            future = scheduler.scheduleWithFixedDelay(
-                taskRunner,
-                initialDelay,
-                task.getPeriod(),
-                task.getTimeUnit()
-            );
+        // Set task to SCHEDULED state
+        if (!ScheduledTask.TaskStatus.SCHEDULED.equals(task.getStatus())) {
+            stateManager.updateTaskState(task, ScheduledTask.TaskStatus.SCHEDULED, null, nodeId);
         }
-        scheduledTasks.put(task.getItemId(), future);
-        LOGGER.debug("Scheduled periodic task {} with initial delay {} and period {}",
-            task.getItemId(), initialDelay, task.getPeriod());
-    }
 
-    private void scheduleOneTimeTask(ScheduledTask task, Runnable taskRunner) {
-        long initialDelay = calculateInitialDelay(task);
-        ScheduledFuture<?> future = scheduler.schedule(taskRunner, initialDelay, task.getTimeUnit());
-        scheduledTasks.put(task.getItemId(), future);
-        LOGGER.debug("Scheduled one-time task {} with delay {}", task.getItemId(), initialDelay);
+        // Save the task
+        schedulerService.saveTask(task);
     }
 
     /**
@@ -165,17 +153,10 @@ public class TaskExecutionManager {
             TaskExecutor.TaskStatusCallback statusCallback = createStatusCallback(task);
             Runnable taskWrapper = createTaskWrapper(task, executor, statusCallback);
 
-            if (!task.isPersistent()) {
-                // For in-memory tasks, execute directly and store actual future
-                ScheduledFuture<?> future = scheduler.schedule(taskWrapper, 0, TimeUnit.MILLISECONDS);
-                scheduledTasks.put(task.getItemId(), future);
-                executingTasksByType.get(taskType).add(task.getItemId());
-            } else {
-                // For persistent tasks, execute if ready
-                ScheduledFuture<?> future = scheduler.schedule(taskWrapper, 0, TimeUnit.MILLISECONDS);
-                scheduledTasks.put(task.getItemId(), future);
-                executingTasksByType.get(taskType).add(task.getItemId());
-            }
+            // Execute task immediately using the scheduler
+            ScheduledFuture<?> future = scheduler.schedule(taskWrapper, 0, TimeUnit.MILLISECONDS);
+            scheduledTasks.put(task.getItemId(), future);
+            executingTasksByType.get(taskType).add(task.getItemId());
         } catch (Exception e) {
             LOGGER.error("Node "+nodeId+", Error executing task: " + task.getItemId(), e);
             handleTaskError(task, e.getMessage(), System.currentTimeMillis());
@@ -205,9 +186,7 @@ public class TaskExecutionManager {
         }
 
         stateManager.updateTaskState(task, ScheduledTask.TaskStatus.RUNNING, null, nodeId);
-        if (task.isPersistent()) {
-            updateTaskInPersistence(task);
-        }
+        schedulerService.saveTask(task);
         return true;
     }
 
@@ -220,19 +199,19 @@ public class TaskExecutionManager {
             public void updateStep(String step, Map<String, Object> details) {
                 task.setCurrentStep(step);
                 task.setStatusDetails(details);
-                updateTaskInPersistence(task);
+                schedulerService.saveTask(task);
             }
 
             @Override
             public void checkpoint(Map<String, Object> checkpointData) {
                 task.setCheckpointData(checkpointData);
-                updateTaskInPersistence(task);
+                schedulerService.saveTask(task);
             }
 
             @Override
             public void updateStatusDetails(Map<String, Object> details) {
                 task.setStatusDetails(details);
-                updateTaskInPersistence(task);
+                schedulerService.saveTask(task);
             }
 
             @Override
@@ -287,9 +266,7 @@ public class TaskExecutionManager {
 
                 // Set the executing node ID
                 task.setExecutingNodeId(nodeId);
-                if (task.isPersistent()) {
-                    updateTaskInPersistence(task);
-                }
+                schedulerService.saveTask(task);
 
                 long startTime = System.currentTimeMillis();
                 try {
@@ -312,9 +289,7 @@ public class TaskExecutionManager {
             } finally {
                 // Clear executing node ID
                 task.setExecutingNodeId(null);
-                if (task.isPersistent()) {
-                    updateTaskInPersistence(task);
-                }
+                schedulerService.saveTask(task);
 
                 // Remove task from executing set
                 try {
@@ -330,25 +305,6 @@ public class TaskExecutionManager {
     }
 
     /**
-     * Calculates initial delay for task execution
-     */
-    private long calculateInitialDelay(ScheduledTask task) {
-        if (task.getInitialDelay() > 0) {
-            // If initial delay is specified, use it
-            return task.getInitialDelay();
-        }
-
-        if (task.getNextScheduledExecution() != null) {
-            // If next execution time is set, calculate delay from now
-            long now = System.currentTimeMillis();
-            long nextExecution = task.getNextScheduledExecution().getTime();
-            return Math.max(0, nextExecution - now);
-        }
-
-        return 0;
-    }
-
-    /**
      * Handles task completion
      */
     private void handleTaskCompletion(ScheduledTask task, long startTime) {
@@ -360,6 +316,7 @@ public class TaskExecutionManager {
             task.setLastExecutionDate(new Date());
             task.setLastExecutedBy(nodeId);
             task.setFailureCount(0);
+            task.setSuccessCount(task.getSuccessCount() + 1);
 
             historyManager.recordSuccess(task, executionTime);
             metricsManager.updateMetric(TaskMetricsManager.METRIC_TASKS_COMPLETED);
@@ -371,13 +328,11 @@ public class TaskExecutionManager {
                 task.setNextScheduledExecution(null);  // Clear next execution time
                 scheduledTasks.remove(task.getItemId());
             } else if (task.getPeriod() > 0) {
-                if (task.isPersistent()) {
-                    // For persistent periodic tasks, calculate next execution time
-                    stateManager.calculateNextExecutionTime(task);
-                    // Only transition to SCHEDULED if next execution is set (task might be disabled)
-                    if (task.getNextScheduledExecution() != null) {
-                        stateManager.updateTaskState(task, ScheduledTask.TaskStatus.SCHEDULED, null, nodeId);
-                    }
+                // For periodic tasks, calculate next execution time
+                stateManager.calculateNextExecutionTime(task);
+                // Only transition to SCHEDULED if next execution is set (task might be disabled)
+                if (task.getNextScheduledExecution() != null) {
+                    stateManager.updateTaskState(task, ScheduledTask.TaskStatus.SCHEDULED, null, nodeId);
                 }
             }
 
@@ -392,7 +347,7 @@ public class TaskExecutionManager {
                 executingTasks.remove(task.getItemId());
             }
 
-            updateTaskInPersistence(task);
+            schedulerService.saveTask(task);
         }
     }
 
@@ -412,7 +367,7 @@ public class TaskExecutionManager {
             metricsManager.updateMetric(TaskMetricsManager.METRIC_TASKS_EXECUTION_TIME, executionTime);
 
             // Check if we should retry
-            if (task.getFailureCount() < task.getMaxRetries()) {
+            if (task.getFailureCount() <= task.getMaxRetries()) {
                 // Calculate next retry time
                 stateManager.calculateNextExecutionTime(task, true);
                 stateManager.updateTaskState(task, ScheduledTask.TaskStatus.SCHEDULED, null, nodeId);
@@ -430,7 +385,7 @@ public class TaskExecutionManager {
                     task.getFailureCount(), task.getItemId(), retryDelay);
             } else if (!task.isOneShot()) {
                 LOGGER.debug("Periodic task {} failed all retries but scheduling for next period in {} ms", task.getItemId(), task.getPeriod());
-                updateTaskInPersistence(task); // persist failure state before going back to scheduled state
+                schedulerService.saveTask(task); // persist failure state before going back to scheduled state
                 task.setLastExecutionDate(new Date());
                 task.setLastExecutedBy(nodeId);
                 stateManager.calculateNextExecutionTime(task, false);
@@ -444,7 +399,7 @@ public class TaskExecutionManager {
                 lockManager.releaseLock(task);
             }
 
-            updateTaskInPersistence(task);
+            schedulerService.saveTask(task);
             scheduledTasks.remove(task.getItemId());
         }
     }
@@ -466,37 +421,6 @@ public class TaskExecutionManager {
         } else if (task.getStatus() == ScheduledTask.TaskStatus.RUNNING) {
             metricsManager.updateMetric(TaskMetricsManager.METRIC_TASKS_RUNNING);
         }
-    }
-
-    /**
-     * Records task execution history
-     */
-    private void recordTaskExecution(ScheduledTask task, boolean success, String error) {
-        Map<String, Object> execution = new HashMap<>();
-        execution.put("timestamp", new Date());
-        execution.put("success", success);
-        execution.put("nodeId", nodeId);
-        if (error != null) {
-            execution.put("error", error);
-        }
-
-        Map<String, Object> details = task.getStatusDetails();
-        if (details == null) {
-            details = new HashMap<>();
-            task.setStatusDetails(details);
-        }
-
-        @SuppressWarnings("unchecked")
-        List<Map<String, Object>> history = (List<Map<String, Object>>) details.get("executionHistory");
-        if (history == null) {
-            history = new ArrayList<>();
-            details.put("executionHistory", history);
-        }
-
-        if (history.size() >= 10) { // Keep last 10 executions
-            history.remove(0);
-        }
-        history.add(execution);
     }
 
     /**
@@ -561,55 +485,8 @@ public class TaskExecutionManager {
         }
     }
 
-    private void updateTaskInPersistence(ScheduledTask task) {
-        if (task.isPersistent()) {
-            persistenceService.save(task);
-        }
-    }
-
     public ScheduledExecutorService getScheduler() {
         return scheduler;
     }
 
-    /**
-     * Creates a dummy future for one-time tasks
-     */
-    private ScheduledFuture<?> createDummyFuture() {
-        return new ScheduledFuture<Object>() {
-            @Override
-            public long getDelay(TimeUnit unit) {
-                return 0;
-            }
-
-            @Override
-            public int compareTo(Delayed o) {
-                return 0;
-            }
-
-            @Override
-            public boolean cancel(boolean mayInterruptIfRunning) {
-                return true;
-            }
-
-            @Override
-            public boolean isCancelled() {
-                return false;
-            }
-
-            @Override
-            public boolean isDone() {
-                return true;
-            }
-
-            @Override
-            public Object get() {
-                return null;
-            }
-
-            @Override
-            public Object get(long timeout, TimeUnit unit) {
-                return null;
-            }
-        };
-    }
 }

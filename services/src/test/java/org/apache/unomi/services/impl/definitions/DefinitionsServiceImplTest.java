@@ -1749,6 +1749,15 @@ class DefinitionsServiceImplTest {
         return valueType;
     }
 
+    /**
+     * Creates a test condition type with specified configuration.
+     * Initializes a condition type with the provided ID, tags, and plugin ID.
+     *
+     * @param id The unique identifier for the condition type
+     * @param tags The set of tags to associate with the condition type
+     * @param pluginId The ID of the plugin that owns this condition type, or null if none
+     * @return A configured ConditionType instance
+     */
     private ConditionType createTestConditionType(String id, Set<String> tags, Long pluginId) {
         ConditionType conditionType = new ConditionType();
         conditionType.setItemId(id);
@@ -1762,6 +1771,15 @@ class DefinitionsServiceImplTest {
         return conditionType;
     }
 
+    /**
+     * Creates a test action type with specified configuration.
+     * Initializes an action type with the provided ID, tags, and plugin ID.
+     *
+     * @param id The unique identifier for the action type
+     * @param tags The set of tags to associate with the action type
+     * @param pluginId The ID of the plugin that owns this action type, or null if none
+     * @return A configured ActionType instance
+     */
     private ActionType createTestActionType(String id, Set<String> tags, Long pluginId) {
         ActionType actionType = new ActionType();
         actionType.setItemId(id);
@@ -1775,6 +1793,14 @@ class DefinitionsServiceImplTest {
         return actionType;
     }
 
+    /**
+     * Creates a test property merge strategy type with specified configuration.
+     * Initializes a property merge strategy type with the provided ID and plugin ID.
+     *
+     * @param id The unique identifier for the merge strategy type
+     * @param pluginId The ID of the plugin that owns this strategy type, or null if none
+     * @return A configured PropertyMergeStrategyType instance
+     */
     private PropertyMergeStrategyType createTestPropertyMergeStrategyType(String id, Long pluginId) {
         PropertyMergeStrategyType type = new PropertyMergeStrategyType();
         if (pluginId != null) {
@@ -1784,7 +1810,13 @@ class DefinitionsServiceImplTest {
         return type;
     }
 
-    // Helper method to register plugin types
+    /**
+     * Registers a plugin type with the definitions service.
+     * Sets up the bundle context if needed and adds the type to plugin tracking.
+     *
+     * @param type The plugin type to register (ConditionType, ActionType, ValueType, or PropertyMergeStrategyType)
+     * @param bundleId The ID of the bundle that owns this plugin type
+     */
     private void registerPluginType(PluginType type, Long bundleId) {
         if (type == null || bundleId == null) {
             return;
@@ -1816,6 +1848,12 @@ class DefinitionsServiceImplTest {
         }
     }
 
+    /**
+     * Safely closes an input stream, logging any errors.
+     * Helper method to ensure streams are properly closed in tests.
+     *
+     * @param stream The input stream to close
+     */
     private void closeQuietly(InputStream stream) {
         if (stream != null) {
             try {
@@ -1826,13 +1864,22 @@ class DefinitionsServiceImplTest {
         }
     }
 
-    // Test utilities for concurrent testing
+    /**
+     * Helper class for managing concurrent test execution.
+     * Provides utilities for synchronizing threads and tracking test failures.
+     */
     private static class ConcurrentTestHelper {
         private final CyclicBarrier barrier;
         private final CountDownLatch endLatch;
         private final AtomicBoolean failed;
         private final List<Thread> threads;
 
+        /**
+         * Creates a new concurrent test helper.
+         * Initializes synchronization primitives for the specified number of threads.
+         *
+         * @param threadCount The number of threads that will participate in the test
+         */
         public ConcurrentTestHelper(int threadCount) {
             this.barrier = new CyclicBarrier(threadCount);
             this.endLatch = new CountDownLatch(threadCount);
@@ -1840,6 +1887,14 @@ class DefinitionsServiceImplTest {
             this.threads = Collections.synchronizedList(new ArrayList<>());
         }
 
+        /**
+         * Executes test threads and verifies their completion.
+         * Waits for all threads to complete and checks for failures.
+         *
+         * @param testName The name of the test for error reporting
+         * @param timeoutSeconds Maximum time to wait for thread completion
+         * @throws InterruptedException if the wait is interrupted
+         */
         public void executeAndVerify(String testName, int timeoutSeconds) throws InterruptedException {
             try {
                 assertTrue(endLatch.await(timeoutSeconds, TimeUnit.SECONDS),
@@ -1850,6 +1905,13 @@ class DefinitionsServiceImplTest {
             }
         }
 
+        /**
+         * Starts a new test thread with the specified task.
+         * The thread will wait at the barrier before executing the task.
+         *
+         * @param name The name of the thread for identification
+         * @param task The task to execute in the thread
+         */
         public void startThread(String name, ThrowingRunnable task) {
             Thread thread = new Thread(() -> {
                 try {
@@ -1866,6 +1928,10 @@ class DefinitionsServiceImplTest {
             thread.start();
         }
 
+        /**
+         * Cleans up any remaining test threads.
+         * Interrupts and waits for threads to complete.
+         */
         private void cleanupThreads() {
             for (Thread thread : threads) {
                 if (thread.isAlive()) {

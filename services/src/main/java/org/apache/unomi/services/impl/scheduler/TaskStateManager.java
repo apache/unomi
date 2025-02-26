@@ -34,13 +34,13 @@ public class TaskStateManager {
      * Enum defining valid task state transitions.
      * This ensures tasks move through states in a controlled manner.
      */
-    private enum TaskTransition {
-        SCHEDULE(TaskStatus.SCHEDULED, EnumSet.of(TaskStatus.WAITING, TaskStatus.CRASHED, TaskStatus.FAILED, TaskStatus.SCHEDULED, TaskStatus.COMPLETED)),
-        EXECUTE(TaskStatus.RUNNING, EnumSet.of(TaskStatus.SCHEDULED, TaskStatus.CRASHED, TaskStatus.WAITING, TaskStatus.RUNNING)),
+    public enum TaskTransition {
+        SCHEDULE(TaskStatus.SCHEDULED, EnumSet.of(TaskStatus.WAITING, TaskStatus.CRASHED, TaskStatus.FAILED, TaskStatus.COMPLETED)),
+        EXECUTE(TaskStatus.RUNNING, EnumSet.of(TaskStatus.SCHEDULED, TaskStatus.CRASHED, TaskStatus.WAITING)),
         COMPLETE(TaskStatus.COMPLETED, EnumSet.of(TaskStatus.RUNNING)),
         FAIL(TaskStatus.FAILED, EnumSet.of(TaskStatus.RUNNING)),
         CANCEL(TaskStatus.CANCELLED, EnumSet.of(TaskStatus.RUNNING, TaskStatus.SCHEDULED, TaskStatus.WAITING)),
-        CRASH(TaskStatus.CRASHED, EnumSet.of(TaskStatus.RUNNING, TaskStatus.CRASHED)),
+        CRASH(TaskStatus.CRASHED, EnumSet.of(TaskStatus.RUNNING)),
         WAIT(TaskStatus.WAITING, EnumSet.of(TaskStatus.SCHEDULED, TaskStatus.RUNNING));
 
         private final TaskStatus endState;
@@ -51,7 +51,7 @@ public class TaskStateManager {
             this.validStartStates = validStartStates;
         }
 
-        static boolean isValidTransition(TaskStatus from, TaskStatus to) {
+        public static boolean isValidTransition(TaskStatus from, TaskStatus to) {
             // Allow same state transitions during recovery
             if (from == to && from == TaskStatus.RUNNING) {
                 return true;

@@ -25,7 +25,6 @@ import org.apache.unomi.api.services.*;
 import org.apache.unomi.api.services.cache.MultiTypeCacheService;
 import org.apache.unomi.api.tasks.ScheduledTask;
 import org.apache.unomi.api.tasks.TaskExecutor;
-import org.apache.unomi.api.tasks.TaskExecutor.TaskStatusCallback;
 import org.apache.unomi.api.tenants.AuditService;
 import org.apache.unomi.api.tenants.TenantService;
 import org.apache.unomi.persistence.spi.PersistenceService;
@@ -57,14 +56,23 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
-import java.util.function.BooleanSupplier;
+import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 import static org.mockito.Mockito.*;
 
 public class TestHelper {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(TestHelper.class);
+    private static final int MAX_RETRIES = 20;
+    private static final long RETRY_DELAY_MS = 100;
 
+    /**
+     * Creates a security service instance for testing purposes.
+     * Initializes a new KarafSecurityService with audit service and default configuration.
+     *
+     * @return A configured KarafSecurityService instance
+     */
     public static KarafSecurityService createSecurityService() {
         KarafSecurityService securityService = new KarafSecurityService();
         AuditService auditService = new AuditServiceImpl();
@@ -74,6 +82,13 @@ public class TestHelper {
         return securityService;
     }
 
+    /**
+     * Creates an execution context manager for testing purposes.
+     * Sets up an ExecutionContextManagerImpl with the provided security service.
+     *
+     * @param securityService The security service to use in the context manager
+     * @return A configured ExecutionContextManagerImpl instance
+     */
     public static ExecutionContextManagerImpl createExecutionContextManager(KarafSecurityService securityService) {
         ExecutionContextManagerImpl executionContextManager = new ExecutionContextManagerImpl();
         executionContextManager.setSecurityService(securityService);
@@ -203,6 +218,10 @@ public class TestHelper {
         return new TestTracerService();
     }
 
+    /**
+     * Test implementation of TracerService for testing purposes.
+     * Provides basic tracing functionality with a test request tracer.
+     */
     private static class TestTracerService implements TracerService {
         private final RequestTracer requestTracer = new TestRequestTracer(true);
 
@@ -232,6 +251,14 @@ public class TestHelper {
         }
     }
 
+    /**
+     * Creates a test action type with specified configuration.
+     * Initializes an ActionType with the provided ID and action executor.
+     *
+     * @param id The unique identifier for the action type
+     * @param actionExecutor The name of the action executor to use
+     * @return A configured ActionType instance
+     */
     public static ActionType createActionType(String id, String actionExecutor) {
         ActionType actionType = new ActionType() {
             private Metadata metadata = new Metadata();
@@ -266,6 +293,12 @@ public class TestHelper {
         return actionType;
     }
 
+    /**
+     * Sets up common test data in the tenant service.
+     * Creates standard test tenants with basic configuration.
+     *
+     * @param tenantService The tenant service to populate with test data
+     */
     public static void setupCommonTestData(TenantService tenantService) {
         // Create standard test tenants
         tenantService.createTenant("system", Collections.singletonMap("description", "System tenant"));
@@ -273,6 +306,12 @@ public class TestHelper {
         tenantService.createTenant("tenant2", Collections.singletonMap("description", "Tenant 2"));
     }
 
+    /**
+     * Creates a mock bundle context for testing purposes.
+     * Sets up a mock BundleContext with basic behavior for bundle operations.
+     *
+     * @return A configured mock BundleContext instance
+     */
     public static BundleContext createMockBundleContext() {
         BundleContext bundleContext = mock(BundleContext.class);
         Bundle bundle = mock(Bundle.class);
@@ -283,6 +322,17 @@ public class TestHelper {
         return bundleContext;
     }
 
+    /**
+     * Creates an event service instance for testing purposes.
+     * Initializes an EventServiceImpl with all required dependencies.
+     *
+     * @param persistenceService The persistence service to use
+     * @param bundleContext The bundle context to use
+     * @param definitionsService The definitions service to use
+     * @param tenantService The tenant service to use
+     * @param tracerService The tracer service to use
+     * @return A configured EventServiceImpl instance
+     */
     public static EventServiceImpl createEventService(
             PersistenceService persistenceService,
             BundleContext bundleContext,
@@ -332,6 +382,14 @@ public class TestHelper {
         definitionsService.setConditionType(conditionType);
     }
 
+    /**
+     * Creates a test task executor with specified behavior.
+     * The executor will run the provided execution and handle success/failure callbacks.
+     *
+     * @param taskType The type identifier for the task executor
+     * @param execution The runnable containing the execution logic
+     * @return A configured TaskExecutor instance
+     */
     public static TaskExecutor createTestExecutor(String taskType, Runnable execution) {
         return new TaskExecutor() {
             @Override
@@ -351,6 +409,15 @@ public class TestHelper {
         };
     }
 
+    /**
+     * Creates a test task with specified configuration.
+     * Initializes a new ScheduledTask with the provided parameters and default settings.
+     *
+     * @param taskId The unique identifier for the task
+     * @param taskType The type of task to create
+     * @param persistent Whether the task should be persistent
+     * @return A configured ScheduledTask instance
+     */
     public static ScheduledTask createTestTask(String taskId, String taskType, boolean persistent) {
         ScheduledTask task = new ScheduledTask();
         task.setItemId(taskId);
@@ -361,6 +428,16 @@ public class TestHelper {
         return task;
     }
 
+    /**
+     * Creates a test scheduler node with specified configuration.
+     * Sets up a SchedulerServiceImpl instance with the provided parameters and initializes it.
+     *
+     * @param persistenceService The persistence service to use
+     * @param nodeId The unique identifier for this node
+     * @param executorNode Whether this node should execute tasks
+     * @param lockTimeout The timeout duration for task locks (in milliseconds)
+     * @return A configured SchedulerServiceImpl instance
+     */
     public static SchedulerServiceImpl createTestNode(PersistenceService persistenceService, String nodeId, boolean executorNode, long lockTimeout) {
         SchedulerServiceImpl node = new SchedulerServiceImpl();
         if (lockTimeout > 0) {
@@ -375,6 +452,13 @@ public class TestHelper {
         return node;
     }
 
+    /**
+     * Cleans up the default storage directory used in tests.
+     * Attempts to delete the directory with retries in case of failures.
+     *
+     * @param maxRetries The maximum number of deletion attempts
+     * @throws RuntimeException if the directory cannot be deleted after all retries
+     */
     public static void cleanDefaultStorageDirectory(int maxRetries) {
         Path defaultStorageDir = Paths.get(InMemoryPersistenceServiceImpl.DEFAULT_STORAGE_DIR).toAbsolutePath().normalize();
         int count = 0;
@@ -395,4 +479,40 @@ public class TestHelper {
             throw new RuntimeException("Failed to delete default storage directory after " + maxRetries + " retries");
         }
     }
+
+    /**
+     * Generic retry method that will retry an operation until it succeeds or reaches max retries.
+     * @param operation The operation to retry that returns a result
+     * @param successCondition The predicate to test if the operation was successful
+     * @param <T> The type of result returned by the operation
+     * @return The result of the successful operation
+     * @throws RuntimeException if max retries are reached without success
+     */
+    public static <T> T retryUntil(Supplier<T> operation, Predicate<T> successCondition) {
+        int attempts = 0;
+        T result = null;
+        boolean success = false;
+
+        while (!success && attempts < MAX_RETRIES) {
+            result = operation.get();
+            success = successCondition.test(result);
+
+            if (!success) {
+                attempts++;
+                try {
+                    Thread.sleep(RETRY_DELAY_MS);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    throw new RuntimeException("Retry interrupted", e);
+                }
+            }
+        }
+
+        if (!success) {
+            throw new RuntimeException("Operation failed after " + MAX_RETRIES + " attempts");
+        }
+
+        return result;
+    }
+
 }

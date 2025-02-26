@@ -39,6 +39,8 @@ public class TaskMetricsManager {
     public static final String METRIC_TASKS_LOCK_TIMEOUTS = "tasks.lock.timeouts";
     public static final String METRIC_TASKS_LOCK_CONFLICTS = "tasks.lock.conflicts";
     public static final String METRIC_TASKS_LOCK_ATTEMPTS = "tasks.lock.attempts";
+    public static final String METRIC_TASKS_LOCK_ACQUIRED = "tasks.lock.acquired";
+    public static final String METRIC_TASKS_LOCK_RELEASED = "tasks.lock.released";
     public static final String METRIC_TASKS_EXECUTION_TIME = "tasks.execution.time";
     public static final String METRIC_TASKS_RECOVERY_ATTEMPTS = "tasks.recovery.attempts";
     public static final String METRIC_TASKS_RECOVERY_SUCCESSES = "tasks.recovery.successes";

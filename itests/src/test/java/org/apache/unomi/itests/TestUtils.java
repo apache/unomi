@@ -43,6 +43,15 @@ public class TestUtils {
 	private static final String JSON_MYME_TYPE = "application/json";
 	private final static Logger LOGGER = LoggerFactory.getLogger(TestUtils.class);
 
+	/**
+	 * Retrieves and deserializes a resource from an HTTP response.
+	 * Converts the JSON response body into the specified class type.
+	 *
+	 * @param response The HTTP response containing the resource
+	 * @param clazz The class type to deserialize the resource into
+	 * @return The deserialized resource object, or null if the response or entity is null
+	 * @throws IOException if there is an error reading or parsing the response
+	 */
 	public static <T> T retrieveResourceFromResponse(HttpResponse response, Class<T> clazz) throws IOException {
 		if (response == null) {
 			return null;
@@ -62,6 +71,15 @@ public class TestUtils {
 		return null;
 	}
 
+	/**
+	 * Executes a JSON request to the context service and processes the response.
+	 * Validates the response MIME type and handles cookies if a session ID is provided.
+	 *
+	 * @param request The HTTP request to execute
+	 * @param sessionId The session ID to use for cookie handling, or null if not needed
+	 * @return A RequestResponse object containing the response details
+	 * @throws IOException if there is an error executing the request or processing the response
+	 */
 	public static RequestResponse executeContextJSONRequest(HttpUriRequest request, String sessionId) throws IOException {
 		try (CloseableHttpResponse response = HttpClientThatWaitsForUnomi.doRequest(request)) {
 			// validate mimeType
@@ -94,10 +112,26 @@ public class TestUtils {
 		}
 	}
 
+	/**
+	 * Executes a JSON request to the context service without session handling.
+	 * Convenience method that calls executeContextJSONRequest with a null session ID.
+	 *
+	 * @param request The HTTP POST request to execute
+	 * @return A RequestResponse object containing the response details
+	 * @throws IOException if there is an error executing the request or processing the response
+	 */
 	public static RequestResponse executeContextJSONRequest(HttpPost request) throws IOException {
 		return executeContextJSONRequest(request, null);
 	}
 
+	/**
+	 * Removes all profiles from the persistence service.
+	 * Creates and executes a query to delete all items of type 'profile'.
+	 *
+	 * @param definitionsService The service providing condition type definitions
+	 * @param persistenceService The service handling data persistence
+	 * @return true if the removal was successful, false otherwise
+	 */
 	public static boolean removeAllProfiles(DefinitionsService definitionsService, PersistenceService persistenceService) {
 		Condition condition = new Condition(definitionsService.getConditionType("profilePropertyCondition"));
 		condition.setParameter("propertyName","itemType");
@@ -107,6 +141,14 @@ public class TestUtils {
 		return persistenceService.removeByQuery(condition, Profile.class);
 	}
 
+	/**
+	 * Removes all events from the persistence service.
+	 * Creates and executes a query to delete all items of type 'event'.
+	 *
+	 * @param definitionsService The service providing condition type definitions
+	 * @param persistenceService The service handling data persistence
+	 * @return true if the removal was successful, false otherwise
+	 */
 	public static boolean removeAllEvents(DefinitionsService definitionsService, PersistenceService persistenceService) {
 		Condition condition = new Condition(definitionsService.getConditionType("eventPropertyCondition"));
 		condition.setParameter("propertyName","itemType");
@@ -116,6 +158,14 @@ public class TestUtils {
 		return persistenceService.removeByQuery(condition, Event.class);
 	}
 
+	/**
+	 * Removes all sessions from the persistence service.
+	 * Creates and executes a query to delete all items of type 'session'.
+	 *
+	 * @param definitionsService The service providing condition type definitions
+	 * @param persistenceService The service handling data persistence
+	 * @return true if the removal was successful, false otherwise
+	 */
 	public static boolean removeAllSessions(DefinitionsService definitionsService, PersistenceService persistenceService) {
 		Condition condition = new Condition(definitionsService.getConditionType("sessionPropertyCondition"));
 		condition.setParameter("propertyName","itemType");
@@ -125,6 +175,14 @@ public class TestUtils {
 		return persistenceService.removeByQuery(condition, Session.class);
 	}
 
+	/**
+	 * Creates a new scope in the scope service.
+	 * Initializes a scope with the provided ID and name, and saves it to the service.
+	 *
+	 * @param scopeId The unique identifier for the scope
+	 * @param scopeName The display name for the scope
+	 * @param scopeService The service to save the scope to
+	 */
 	public static void createScope(String scopeId, String scopeName, ScopeService scopeService) {
 		Scope scope = new Scope();
 		scope.setItemId(scopeId);

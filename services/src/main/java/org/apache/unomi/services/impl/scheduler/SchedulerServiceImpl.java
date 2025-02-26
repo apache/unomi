@@ -17,7 +17,6 @@
 
 package org.apache.unomi.services.impl.scheduler;
 
-import org.apache.unomi.api.Item;
 import org.apache.unomi.api.PartialList;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.conditions.ConditionType;
@@ -192,7 +191,7 @@ public class SchedulerServiceImpl implements SchedulerService {
             details.put("executingNode", nodeId);
         }
 
-        updateTaskInPersistence(task);
+        saveTask(task);
         LOGGER.debug("Task {} state changed from {} to {}", task.getItemId(), currentStatus, newStatus);
     }
 
@@ -263,13 +262,13 @@ public class SchedulerServiceImpl implements SchedulerService {
         // Initialize managers
         this.metricsManager = new TaskMetricsManager();
         this.stateManager = new TaskStateManager();
-        this.lockManager = new TaskLockManager(nodeId, lockTimeout, persistenceService, metricsManager);
+        this.lockManager = new TaskLockManager(nodeId, lockTimeout, metricsManager, this);
         this.historyManager = new TaskHistoryManager(nodeId, metricsManager);
         this.validationManager = new TaskValidationManager();
         this.executionManager = new TaskExecutionManager(nodeId, threadPoolSize, stateManager,
-            lockManager, metricsManager, historyManager, persistenceService);
+            lockManager, metricsManager, historyManager, persistenceService, this);
         this.recoveryManager = new TaskRecoveryManager(nodeId, persistenceService, stateManager,
-            lockManager, metricsManager, executionManager);
+            lockManager, metricsManager, executionManager, this);
 
         if (executorNode) {
             running.set(true);
@@ -374,11 +373,25 @@ public class SchedulerServiceImpl implements SchedulerService {
 
             // Get all enabled tasks that are either scheduled or waiting
             List<ScheduledTask> tasks = findEnabledScheduledOrWaitingTasks();
+
+            // Also check in-memory tasks
+            List<ScheduledTask> inMemoryTasks = nonPersistentTasks.values().stream()
+                .filter(task -> task.isEnabled() &&
+                    (task.getStatus() == ScheduledTask.TaskStatus.SCHEDULED ||
+                     task.getStatus() == ScheduledTask.TaskStatus.WAITING))
+                .collect(Collectors.toList());
+
+            // Add in-memory tasks to the list of tasks to check
+            if (!inMemoryTasks.isEmpty()) {
+                LOGGER.debug("Node {} found {} in-memory tasks to check", nodeId, inMemoryTasks.size());
+                tasks.addAll(inMemoryTasks);
+            }
+
             if (tasks.isEmpty()) {
                 return;
             }
 
-            LOGGER.debug("Node {} found {} tasks to check", nodeId, tasks.size());
+            LOGGER.debug("Node {} found {} total tasks to check", nodeId, tasks.size());
 
             // Sort and group tasks
             sortTasksByPriority(tasks);
@@ -608,13 +621,9 @@ public class SchedulerServiceImpl implements SchedulerService {
         validationManager.validateTask(task, existingTasks);
 
         // Store task
-        if (task.isPersistent()) {
-            if (!persistenceService.save(task)) {
-                LOGGER.error("Failed to save task: {}", task.getItemId());
-                return;
-            }
-        } else {
-            nonPersistentTasks.put(task.getItemId(), task);
+        if (!saveTask(task)) {
+            LOGGER.error("Failed to save task: {}", task.getItemId());
+            return;
         }
 
         // Get executor and schedule task
@@ -641,10 +650,8 @@ public class SchedulerServiceImpl implements SchedulerService {
                 executionManager.cancelTask(taskId);
                 lockManager.releaseLock(task);
 
-                if (task.isPersistent()) {
-                    persistenceService.save(task);
-                } else {
-                    nonPersistentTasks.remove(taskId);
+                if (!saveTask(task)) {
+                    LOGGER.error("Failed to save cancelled task state: {}", taskId);
                 }
             }
         }
@@ -859,13 +866,34 @@ public class SchedulerServiceImpl implements SchedulerService {
         return new TaskBuilder(this, taskType);
     }
 
-    private void updateTaskInPersistence(ScheduledTask task) {
+    private boolean updateTaskInPersistence(ScheduledTask task) {
+        return saveTask(task);
+    }
+
+    /**
+     * Saves a task to the persistence service if it's persistent.
+     * @param task The task to save
+     * @return true if the task was successfully saved, false otherwise
+     */
+    public boolean saveTask(ScheduledTask task) {
+        if (task == null) {
+            LOGGER.warn("Attempted to save null task, ignoring");
+            return false;
+        }
+
         if (task.isPersistent()) {
-            if (!persistenceService.save(task)) {
-                LOGGER.error("Failed to update task in storage: {}", task.getItemId());
+            try {
+                persistenceService.save(task);
+                LOGGER.debug("Saved task {} to persistence", task.getItemId());
+                return true;
+            } catch (Exception e) {
+                LOGGER.error("Error saving task {} to persistence", task.getItemId(), e);
+                return false;
             }
         } else {
+            LOGGER.debug("Saving task {} in memory", task.getItemId());
             nonPersistentTasks.put(task.getItemId(), task);
+            return true;
         }
     }
 

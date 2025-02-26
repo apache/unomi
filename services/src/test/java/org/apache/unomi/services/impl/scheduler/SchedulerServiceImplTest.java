@@ -555,6 +555,9 @@ public class SchedulerServiceImplTest {
 
         assertNotNull("Should have execution history", history);
         assertEquals("Should have 3 history entries", 3, history.size());
+        assertEquals("Should have 2 successful executions", 2, finalTask.getSuccessCount());
+        assertEquals("Should have 1 failed execution", 1, finalTask.getFailureCount());
+        assertEquals("Total executions should be 3", 3, finalTask.getSuccessCount() + finalTask.getFailureCount());
 
         // Verify history entries
         int successEntries = 0;
@@ -626,7 +629,7 @@ public class SchedulerServiceImplTest {
     }
 
     private void testOneShotRetryBehavior(boolean persistent) throws Exception {
-        CountDownLatch executionLatch = new CountDownLatch(TEST_MAX_RETRIES);
+        CountDownLatch executionLatch = new CountDownLatch(TEST_MAX_RETRIES+1);
         AtomicInteger executionCount = new AtomicInteger(0);
         List<Long> executionTimes = Collections.synchronizedList(new ArrayList<>());
 
@@ -643,7 +646,7 @@ public class SchedulerServiceImplTest {
                 LOGGER.info("Execution #{} of task type {}", count, task.getTaskType());
                 executionLatch.countDown();
 
-                if (count == TEST_MAX_RETRIES) {
+                if (count == TEST_MAX_RETRIES+1) {
                     callback.complete(); // Succeed on last retry
                 } else {
                     callback.fail("Simulated failure #" + count);
@@ -679,7 +682,7 @@ public class SchedulerServiceImplTest {
         assertEquals("Task should be completed",
             ScheduledTask.TaskStatus.COMPLETED, task.getStatus());
         assertEquals("Should have executed expected number of times",
-            TEST_MAX_RETRIES, executionCount.get());
+            TEST_MAX_RETRIES+1, executionCount.get());
     }
 
     @Test
@@ -692,7 +695,7 @@ public class SchedulerServiceImplTest {
 
     private void testPeriodicRetryBehavior(boolean fixedRate) throws Exception {
         LOGGER.info("Testing periodic task retry scenarios with fixed rate: {}", fixedRate);
-        CountDownLatch firstPeriodLatch = new CountDownLatch(TEST_MAX_RETRIES);
+        CountDownLatch firstPeriodLatch = new CountDownLatch(TEST_MAX_RETRIES+1);
         CountDownLatch secondPeriodLatch = new CountDownLatch(1);
         AtomicInteger periodCount = new AtomicInteger(0);
         AtomicInteger executionCount = new AtomicInteger(0);
@@ -711,7 +714,7 @@ public class SchedulerServiceImplTest {
                 LOGGER.info("Execution #{} of task type {} with period {}", count, task.getTaskType(), periodCount.get());
 
                 // Transition to next period after exhausting retries
-                if (count == TEST_MAX_RETRIES+1) {
+                if (count == TEST_MAX_RETRIES+2) {
                     periodCount.incrementAndGet();
                 }
 
@@ -745,7 +748,7 @@ public class SchedulerServiceImplTest {
             firstPeriodLatch.await(TEST_TIMEOUT, TimeUnit.MILLISECONDS));
 
         // Verify retry delays in first period
-        for (int i = 1; i < TEST_MAX_RETRIES; i++) {
+        for (int i = 1; i <= TEST_MAX_RETRIES; i++) {
             long delay = executionTimes.get(i) - executionTimes.get(i-1);
             assertTrue("Retry delay should be at least " + TEST_RETRY_DELAY + "ms",
                 delay >= TEST_RETRY_DELAY);
@@ -756,8 +759,8 @@ public class SchedulerServiceImplTest {
             secondPeriodLatch.await(TEST_TIMEOUT, TimeUnit.MILLISECONDS));
 
         // Verify period transition
-        long periodTransitionDelay = executionTimes.get(TEST_MAX_RETRIES) -
-            executionTimes.get(TEST_MAX_RETRIES-1);
+        long periodTransitionDelay = executionTimes.get(TEST_MAX_RETRIES+1) -
+            executionTimes.get(TEST_MAX_RETRIES);
         assertTrue("Period transition delay should be at least 2000ms",
             periodTransitionDelay >= 2000);
 
@@ -781,7 +784,7 @@ public class SchedulerServiceImplTest {
     @Category(RetryTests.class)
     public void testManualRetryAfterExhaustion() throws Exception {
         AtomicInteger executionCount = new AtomicInteger(0);
-        CountDownLatch exhaustionLatch = new CountDownLatch(TEST_MAX_RETRIES);
+        CountDownLatch exhaustionLatch = new CountDownLatch(TEST_MAX_RETRIES+1);
         CountDownLatch manualRetryLatch = new CountDownLatch(1);
 
         TaskExecutor executor = new TaskExecutor() {
@@ -795,7 +798,7 @@ public class SchedulerServiceImplTest {
                 int count = executionCount.incrementAndGet();
                 LOGGER.info("Execution #{} of task type {}", count, task.getTaskType());
 
-                if (count <= TEST_MAX_RETRIES) {
+                if (count <= TEST_MAX_RETRIES+1) {
                     exhaustionLatch.countDown();
                     callback.fail("Initial failures");
                 } else {
@@ -822,7 +825,7 @@ public class SchedulerServiceImplTest {
         assertEquals("Task should be in failed state",
             ScheduledTask.TaskStatus.FAILED, task.getStatus());
         assertEquals("Should have correct failure count",
-            TEST_MAX_RETRIES, task.getFailureCount());
+            TEST_MAX_RETRIES+1, task.getFailureCount());
 
         // Manually retry with reset
         schedulerService.retryTask(task.getItemId(), true);

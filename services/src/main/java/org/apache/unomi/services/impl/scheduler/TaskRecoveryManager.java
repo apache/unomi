@@ -32,6 +32,7 @@ import java.util.*;
  */
 public class TaskRecoveryManager {
     private static final Logger LOGGER = LoggerFactory.getLogger(TaskRecoveryManager.class);
+    private static final int MAX_CRASH_RECOVERY_AGE_MINUTES = 60; // 1 hour
 
     private final String nodeId;
     private final PersistenceService persistenceService;
@@ -39,19 +40,22 @@ public class TaskRecoveryManager {
     private final TaskLockManager lockManager;
     private final TaskMetricsManager metricsManager;
     private final TaskExecutionManager executionManager;
+    private final SchedulerServiceImpl schedulerService;
 
     public TaskRecoveryManager(String nodeId,
                              PersistenceService persistenceService,
                              TaskStateManager stateManager,
                              TaskLockManager lockManager,
                              TaskMetricsManager metricsManager,
-                             TaskExecutionManager executionManager) {
+                             TaskExecutionManager executionManager,
+                             SchedulerServiceImpl schedulerService) {
         this.nodeId = nodeId;
         this.persistenceService = persistenceService;
         this.stateManager = stateManager;
         this.lockManager = lockManager;
         this.metricsManager = metricsManager;
         this.executionManager = executionManager;
+        this.schedulerService = schedulerService;
     }
 
     /**
@@ -269,6 +273,55 @@ public class TaskRecoveryManager {
             }
         }
         return dependencies;
+    }
+
+    /**
+     * Update running task to crashed state
+     */
+    private void markAsCrashed(ScheduledTask task) {
+        try {
+            if (task != null) {
+                // Mark the task as crashed so it can be recovered
+                task.setStatus(ScheduledTask.TaskStatus.CRASHED);
+                task.setCurrentStep("CRASHED");
+                if (task.getStatusDetails() == null) {
+                    task.setStatusDetails(new HashMap<>());
+                }
+                task.getStatusDetails().put("crashTime", new Date());
+                task.getStatusDetails().put("crashedNode", task.getLockOwner());
+
+                // Release the lock but preserve the lock owner for reference
+                String lockOwner = task.getLockOwner();
+                lockManager.releaseLock(task);
+                task.getStatusDetails().put("crashedNode", lockOwner);
+
+                if (schedulerService.saveTask(task)) {
+                    LOGGER.info("Task {} marked as crashed (previous lock owner: {})", task.getItemId(), lockOwner);
+                    metricsManager.updateMetric(TaskMetricsManager.METRIC_TASKS_CRASHED);
+                }
+            }
+        } catch (Exception e) {
+            LOGGER.error("Failed to mark task as crashed: {}", task.getItemId(), e);
+        }
+    }
+
+    /**
+     * Resets a task that has been in running state for too long
+     */
+    private void resetStalledTask(ScheduledTask task) {
+        try {
+            if (task != null) {
+                // Mark the task as failed due to timeout
+                stateManager.updateTaskState(task, ScheduledTask.TaskStatus.FAILED, "Task execution timeout exceeded", nodeId);
+                metricsManager.updateMetric(TaskMetricsManager.METRIC_TASKS_FAILED);
+
+                if (schedulerService.saveTask(task)) {
+                    LOGGER.info("Stalled task {} reset to FAILED state", task.getItemId());
+                }
+            }
+        } catch (Exception e) {
+            LOGGER.error("Failed to reset stalled task: {}", task.getItemId(), e);
+        }
     }
 
     // Condition types for persistence queries

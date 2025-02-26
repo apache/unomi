@@ -120,6 +120,12 @@ public class ScheduledTask extends Item implements Serializable {
      */
     private int failureCount;
     /**
+     * Gets the number of successful executions.
+     * 
+     * @return the success count
+     */
+    private int successCount;
+    /**
      * Gets the maximum number of retry attempts after failures.
      * For one-shot tasks:
      * - When a task fails, it will be automatically retried up to this many times
@@ -536,6 +542,24 @@ public class ScheduledTask extends Item implements Serializable {
     }
 
     /**
+     * Gets the number of successful executions.
+     * 
+     * @return the success count
+     */
+    public int getSuccessCount() {
+        return successCount;
+    }
+
+    /**
+     * Sets the number of successful executions.
+     * 
+     * @param successCount the new success count
+     */
+    public void setSuccessCount(int successCount) {
+        this.successCount = successCount;
+    }
+
+    /**
      * Gets the maximum number of retry attempts after failures.
      * For one-shot tasks:
      * - When a task fails, it will be automatically retried up to this many times
@@ -807,6 +831,7 @@ public class ScheduledTask extends Item implements Serializable {
                 ", statusDetails=" + statusDetails +
                 ", nextScheduledExecution=" + nextScheduledExecution +
                 ", failureCount=" + failureCount +
+                ", successCount=" + successCount +
                 ", maxRetries=" + maxRetries +
                 ", retryDelay=" + retryDelay +
                 ", currentStep='" + currentStep + '\'' +

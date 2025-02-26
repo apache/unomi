@@ -58,6 +58,8 @@ public class ListTasksCommand implements Action {
         table.column(new Col("Next Run").maxSize(19));
         table.column(new Col("Last Run").maxSize(19));
         table.column(new Col("Failures").alignRight());
+        table.column(new Col("Successes").alignRight());
+        table.column(new Col("Total Exec").alignRight());
         table.column(new Col("Persistent").maxSize(10));
 
         // Get tasks based on filters
@@ -100,6 +102,8 @@ public class ListTasksCommand implements Action {
 
         // Add rows to table
         for (ScheduledTask task : tasks) {
+            int totalExecutions = task.getSuccessCount() + task.getFailureCount();
+            
             table.addRow().addContent(
                 task.getItemId(),
                 task.getTaskType(),
@@ -107,6 +111,8 @@ public class ListTasksCommand implements Action {
                 task.getNextScheduledExecution() != null ? dateFormat.format(task.getNextScheduledExecution()) : "-",
                 task.getLastExecutionDate() != null ? dateFormat.format(task.getLastExecutionDate()) : "-",
                 task.getFailureCount(),
+                task.getSuccessCount(),
+                totalExecutions,
                 task.isPersistent() ? "Storage" : "Memory"
             );
         }
