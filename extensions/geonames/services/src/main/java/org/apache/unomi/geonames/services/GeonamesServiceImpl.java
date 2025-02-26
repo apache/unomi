@@ -23,6 +23,9 @@ import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.ExecutionContextManager;
 import org.apache.unomi.api.services.SchedulerService;
+import org.apache.unomi.api.tasks.TaskExecutor;
+import org.apache.unomi.api.tasks.TaskExecutor.TaskStatusCallback;
+import org.apache.unomi.api.tasks.ScheduledTask;
 import org.apache.unomi.api.tenants.TenantService;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.slf4j.Logger;
@@ -90,6 +93,56 @@ public class GeonamesServiceImpl implements GeonamesService {
     public void stop() {
     }
 
+    private static class GeonamesImportTaskExecutor implements TaskExecutor {
+        private final GeonamesServiceImpl service;
+        private final File databaseFile;
+
+        public GeonamesImportTaskExecutor(GeonamesServiceImpl service, File databaseFile) {
+            this.service = service;
+            this.databaseFile = databaseFile;
+        }
+
+        @Override
+        public String getTaskType() {
+            return "geonames-import";
+        }
+
+        @Override
+        public void execute(ScheduledTask task, TaskStatusCallback statusCallback) throws Exception {
+            service.contextManager.executeAsSystem(() -> {
+                try {
+                    service.importGeoNameDatabase(databaseFile);
+                    statusCallback.complete();
+                } catch (Exception e) {
+                    LOGGER.error("Error importing geoname database", e);
+                    statusCallback.fail(e.getMessage());
+                }
+                return null;
+            });
+        }
+    }
+
+    private static class GeonamesImportRetryTaskExecutor implements TaskExecutor {
+        private final GeonamesServiceImpl service;
+        private final File databaseFile;
+
+        public GeonamesImportRetryTaskExecutor(GeonamesServiceImpl service, File databaseFile) {
+            this.service = service;
+            this.databaseFile = databaseFile;
+        }
+
+        @Override
+        public String getTaskType() {
+            return "geonames-import-retry";
+        }
+
+        @Override
+        public void execute(ScheduledTask task, TaskStatusCallback statusCallback) throws Exception {
+            service.importGeoNameDatabase(databaseFile);
+            statusCallback.complete();
+        }
+    }
+
     public void importDatabase() {
         contextManager.executeAsSystem(() -> {
             if (!persistenceService.createIndex(GeonameEntry.ITEM_TYPE)) {
@@ -113,16 +166,7 @@ public class GeonamesServiceImpl implements GeonamesService {
                 schedulerService.newTask("geonames-import")
                     .withInitialDelay(refreshDbInterval, TimeUnit.MILLISECONDS)
                     .asOneShot()
-                    .withSimpleExecutor(() -> {
-                        contextManager.executeAsSystem(() -> {
-                            try {
-                                importGeoNameDatabase(f);
-                            } catch (Exception e) {
-                                LOGGER.error("Error importing geoname database", e);
-                            }
-                            return null;
-                        });
-                    })
+                    .withExecutor(new GeonamesImportTaskExecutor(this, f))
                     .nonPersistent()
                     .schedule();
             }
@@ -136,7 +180,7 @@ public class GeonamesServiceImpl implements GeonamesService {
             schedulerService.newTask("geonames-import-retry")
                 .withInitialDelay(refreshDbInterval, TimeUnit.MILLISECONDS)
                 .asOneShot()
-                .withSimpleExecutor(() -> importGeoNameDatabase(f))
+                .withExecutor(new GeonamesImportRetryTaskExecutor(this, f))
                 .nonPersistent()
                 .schedule();
             return;

@@ -31,6 +31,9 @@ import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.TenantLifecycleListener;
 import org.apache.unomi.api.services.cache.CacheableTypeConfig;
 import org.apache.unomi.api.services.cache.MultiTypeCacheService;
+import org.apache.unomi.api.tasks.TaskExecutor;
+import org.apache.unomi.api.tasks.TaskExecutor.TaskStatusCallback;
+import org.apache.unomi.api.tasks.ScheduledTask;
 import org.apache.unomi.api.utils.ConditionBuilder;
 import org.apache.unomi.api.utils.ParserHelper;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
@@ -82,7 +85,6 @@ public class DefinitionsServiceImpl extends AbstractMultiTypeCachingService impl
 
     private ConditionValidationService conditionValidationService;
     private TracerService tracerService;
-    private SchedulerService schedulerService;
 
     public void setCacheService(MultiTypeCacheService cacheService) {
         super.setCacheService(cacheService);
@@ -94,10 +96,6 @@ public class DefinitionsServiceImpl extends AbstractMultiTypeCachingService impl
 
     public void setTracerService(TracerService tracerService) {
         this.tracerService = tracerService;
-    }
-
-    public void setSchedulerService(SchedulerService schedulerService) {
-        this.schedulerService = schedulerService;
     }
 
     public DefinitionsServiceImpl() {
@@ -143,7 +141,7 @@ public class DefinitionsServiceImpl extends AbstractMultiTypeCachingService impl
                 .withInitialDelay(10000, TimeUnit.MILLISECONDS)
                 .withPeriod(definitionsRefreshInterval, TimeUnit.MILLISECONDS)
                 .withFixedRate()
-                .withSimpleExecutor(new TypeReloadTask())
+                .withExecutor(new TypeReloadTaskExecutor(this, TASK_TIMEOUT_MS))
                 .nonPersistent() // In-memory task since it's node-specific
                 .schedule();
             LOGGER.info("Scheduled type reload task with interval: {}ms", definitionsRefreshInterval);
@@ -914,29 +912,43 @@ public class DefinitionsServiceImpl extends AbstractMultiTypeCachingService impl
         return conditionBuilder;
     }
 
-    private class TypeReloadTask implements Runnable {
+    private static class TypeReloadTaskExecutor implements TaskExecutor {
+        private final DefinitionsServiceImpl definitionsService;
+        private final long taskTimeoutMs;
+
+        public TypeReloadTaskExecutor(DefinitionsServiceImpl definitionsService, long taskTimeoutMs) {
+            this.definitionsService = definitionsService;
+            this.taskTimeoutMs = taskTimeoutMs;
+        }
+
         @Override
-        public void run() {
+        public String getTaskType() {
+            return "type-reload";
+        }
+
+        @Override
+        public void execute(ScheduledTask task, TaskStatusCallback statusCallback) throws Exception {
             Thread currentThread = Thread.currentThread();
             String originalName = currentThread.getName();
             try {
                 currentThread.setName("TypeReloadTask-" + System.currentTimeMillis());
                 ScheduledTask timeoutTask = null;
-                if (!isShutdown) {
-                    timeoutTask = schedulerService.newTask("type-reload-timeout")
-                        .withInitialDelay(TASK_TIMEOUT_MS, TimeUnit.MILLISECONDS)
+                if (!definitionsService.isShutdown) {
+                    timeoutTask = definitionsService.schedulerService.newTask("type-reload-timeout")
+                        .withInitialDelay(taskTimeoutMs, TimeUnit.MILLISECONDS)
                         .asOneShot()
                         .withSimpleExecutor(() -> {
-                            LOGGER.warn("Type reload task timed out after {} ms", TASK_TIMEOUT_MS);
+                            LOGGER.warn("Type reload task timed out after {} ms", taskTimeoutMs);
                             currentThread.interrupt();
                         })
                         .nonPersistent()
                         .schedule();
                     try {
-                        contextManager.executeAsSystem(() -> reloadTypes(false));
+                        definitionsService.contextManager.executeAsSystem(() -> definitionsService.reloadTypes(false));
+                        statusCallback.complete();
                     } finally {
                         if (timeoutTask != null) {
-                            schedulerService.cancelTask(timeoutTask.getItemId());
+                            definitionsService.schedulerService.cancelTask(timeoutTask.getItemId());
                         }
                     }
                 }
@@ -944,9 +956,12 @@ public class DefinitionsServiceImpl extends AbstractMultiTypeCachingService impl
                 if (e instanceof InterruptedException || Thread.currentThread().isInterrupted()) {
                     LOGGER.warn("Type reload task was interrupted");
                     Thread.currentThread().interrupt();
+                    statusCallback.fail("Task was interrupted");
                 } else {
                     LOGGER.error("Error in scheduled type reload task", e);
+                    statusCallback.fail(e.getMessage());
                 }
+                throw e;
             } finally {
                 currentThread.setName(originalName);
             }
