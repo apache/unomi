@@ -128,7 +128,7 @@
     <cm:property-placeholder persistent-id="org.apache.unomi.cluster"
                              update-strategy="reload" placeholder-prefix="${cluster.">
         <cm:default-properties>
-            <cm:property name="group" value="default"/>
+            <cm:property name="nodeId" value="unomi-node-1"/>
             <cm:property name="contextserver.publicAddress" value="https://localhost:9443"/>
             <cm:property name="contextserver.internalAddress" value="http://127.0.0.1:8181"/>
             <cm:property name="nodeStatisticsUpdateFrequency" value="10000"/>
@@ -180,7 +180,7 @@
         <property name="securityService" ref="securityServiceImpl"/>
     </bean>
 
-    <bean id="schedulerServiceImpl" class="org.apache.unomi.services.impl.scheduler.SchedulerServiceImpl" 
+    <bean id="schedulerServiceImpl" class="org.apache.unomi.services.impl.scheduler.SchedulerServiceImpl"
         init-method="postConstruct" destroy-method="preDestroy">
         <property name="threadPoolSize" value="${services.scheduler.thread.poolSize}"/>
         <property name="persistenceService" ref="persistenceService"/>
@@ -331,6 +331,16 @@
           init-method="postConstruct" destroy-method="preDestroy">
         <property name="persistenceService" ref="persistenceService"/>
         <property name="definitionsService" ref="definitionsServiceImpl"/>
+    </bean>
+
+    <bean id="clusterServiceImpl" class="org.apache.unomi.services.impl.cluster.ClusterServiceImpl"
+          init-method="init" destroy-method="destroy">
+        <property name="publicAddress" value="${cluster.contextserver.publicAddress}"/>
+        <property name="internalAddress" value="${cluster.contextserver.internalAddress}"/>
+        <property name="persistenceService" ref="persistenceService"/>
+        <property name="nodeId" value="${cluster.nodeId}"/>
+        <property name="nodeStatisticsUpdateFrequency" value="${cluster.nodeStatisticsUpdateFrequency}"/>
+        <property name="schedulerService" ref="schedulerServiceImpl"/>
     </bean>
 
     <bean id="personalizationServiceImpl"
@@ -543,6 +553,8 @@
             <entry key="service.exported.interfaces" value="org.apache.unomi.api.security.SecurityService"/>
         </service-properties>
     </service>
+
+    <service id="clusterService" ref="clusterServiceImpl" interface="org.apache.unomi.api.services.ClusterService"/>
 
     <!-- Value Type Validator Services -->
     <service ref="stringValueTypeValidator" interface="org.apache.unomi.api.services.ValueTypeValidator"/>
