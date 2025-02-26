@@ -54,13 +54,13 @@ public class PropertyConditionOSQueryBuilder implements ConditionOSQueryBuilder 
             throw new IllegalArgumentException("Impossible to build ES filter, condition is not valid, comparisonOperator and propertyName properties should be provided");
         }
 
-        String expectedValue = ConditionContextHelper.foldToASCII((String) condition.getParameter("propertyValue"));
+        String expectedValue = ConditionContextHelper.forceFoldToASCII(condition.getParameter("propertyValue"));
         Object expectedValueInteger = condition.getParameter("propertyValueInteger");
         Object expectedValueDouble = condition.getParameter("propertyValueDouble");
         Object expectedValueDate = convertDateToISO(condition.getParameter("propertyValueDate"));
         Object expectedValueDateExpr = condition.getParameter("propertyValueDateExpr");
 
-        Collection<?> expectedValues = ConditionContextHelper.foldToASCII((Collection<?>) condition.getParameter("propertyValues"));
+        Collection<?> expectedValues = ConditionContextHelper.forceFoldToASCII((Collection<?>) condition.getParameter("propertyValues"));
         Collection<?> expectedValuesInteger = (Collection<?>) condition.getParameter("propertyValuesInteger");
         Collection<?> expectedValuesDouble = (Collection<?>) condition.getParameter("propertyValuesDouble");
         Collection<?> expectedValuesDate = convertDatesToISO((Collection<?>) condition.getParameter("propertyValuesDate"));

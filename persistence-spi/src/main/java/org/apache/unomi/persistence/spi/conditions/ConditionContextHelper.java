@@ -126,6 +126,20 @@ public class ConditionContextHelper {
         return s;
     }
 
+    public static String forceFoldToASCII(Object object) {
+        if (object != null) {
+            return foldToASCII(object.toString());
+        }
+        return null;
+    }
+
+    public static Collection<String> forceFoldToASCII(Collection<?> collection) {
+        if (collection != null) {
+            return collection.stream().map(ConditionContextHelper::forceFoldToASCII).collect(Collectors.toList());
+        }
+        return null;
+    }
+
     public static String foldToASCII(String s) {
         if (s != null) {
             s = s.toLowerCase();
