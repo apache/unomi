@@ -28,6 +28,12 @@ import org.apache.unomi.api.tasks.TaskExecutor;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.osgi.framework.BundleContext;
+import org.osgi.framework.ServiceReference;
+import org.osgi.util.tracker.ServiceTracker;
+import org.osgi.util.tracker.ServiceTrackerCustomizer;
+import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
 
 import java.time.Duration;
 import java.time.ZonedDateTime;
@@ -95,6 +101,9 @@ public class SchedulerServiceImpl implements SchedulerService {
     private TaskMetricsManager metricsManager;
     private TaskHistoryManager historyManager;
     private TaskValidationManager validationManager;
+
+    private BundleContext bundleContext;
+    private ServiceTracker<TaskExecutor, TaskExecutor> taskExecutorTracker;
 
     /**
      * Enum defining valid task state transitions.
@@ -245,6 +254,11 @@ public class SchedulerServiceImpl implements SchedulerService {
     public SchedulerServiceImpl() {
     }
 
+    public void setBundleContext(BundleContext bundleContext) {
+        this.bundleContext = bundleContext;
+    }
+
+    @PostConstruct
     public void postConstruct() {
         // Initialize managers
         this.metricsManager = new TaskMetricsManager();
@@ -271,6 +285,40 @@ public class SchedulerServiceImpl implements SchedulerService {
 
         LOGGER.info("Scheduler service initialized. Node ID: {}, Executor node: {}, Thread pool size: {}",
             nodeId, executorNode, Math.max(MIN_THREAD_POOL_SIZE, threadPoolSize));
+
+        // Initialize service tracker for TaskExecutors
+        if (bundleContext != null) {
+            taskExecutorTracker = new ServiceTracker<>(bundleContext, TaskExecutor.class,
+                    new ServiceTrackerCustomizer<TaskExecutor, TaskExecutor>() {
+                        @Override
+                        public TaskExecutor addingService(ServiceReference<TaskExecutor> reference) {
+                            TaskExecutor executor = bundleContext.getService(reference);
+                            if (executor != null) {
+                                registerTaskExecutor(executor);
+                                LOGGER.info("Registered TaskExecutor for type: {}", executor.getTaskType());
+                            }
+                            return executor;
+                        }
+
+                        @Override
+                        public void modifiedService(ServiceReference<TaskExecutor> reference, TaskExecutor service) {
+                            // Re-register in case task type changed
+                            unregisterTaskExecutor(service);
+                            registerTaskExecutor(service);
+                            LOGGER.info("Updated TaskExecutor for type: {}", service.getTaskType());
+                        }
+
+                        @Override
+                        public void removedService(ServiceReference<TaskExecutor> reference, TaskExecutor service) {
+                            unregisterTaskExecutor(service);
+                            bundleContext.ungetService(reference);
+                            LOGGER.info("Unregistered TaskExecutor for type: {}", service.getTaskType());
+                        }
+                    });
+            taskExecutorTracker.open();
+        } else {
+            LOGGER.warn("No bundle context provided, cannot initialize task executor service tracker");
+        }
     }
 
     void simulateCrash() {
@@ -284,6 +332,7 @@ public class SchedulerServiceImpl implements SchedulerService {
         executionManager.shutdown();
     }
 
+    @PreDestroy
     public void preDestroy() {
         running.set(false);
 
@@ -301,6 +350,11 @@ public class SchedulerServiceImpl implements SchedulerService {
 
         // Shutdown execution manager
         executionManager.shutdown();
+
+        if (taskExecutorTracker != null) {
+            taskExecutorTracker.close();
+            taskExecutorTracker = null;
+        }
     }
 
     void checkTasks() {

@@ -95,7 +95,7 @@ public class EventServiceImplTest {
         persistenceService = new InMemoryPersistenceServiceImpl(executionContextManager, conditionEvaluatorDispatcher);
 
         // Create scheduler service using TestHelper
-        schedulerService = TestHelper.createSchedulerService(persistenceService, executionContextManager);
+        schedulerService = TestHelper.createSchedulerService(persistenceService, executionContextManager, bundleContext);
 
         // Set up definitions service
         definitionsService = TestHelper.createDefinitionService(persistenceService, bundleContext, schedulerService, multiTypeCacheService, executionContextManager, tenantService, conditionValidationService);

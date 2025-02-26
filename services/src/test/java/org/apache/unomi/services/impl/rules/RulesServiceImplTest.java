@@ -99,7 +99,7 @@ public class RulesServiceImplTest {
         persistenceService = new InMemoryPersistenceServiceImpl(executionContextManager, conditionEvaluatorDispatcher);
 
         // Create scheduler service using TestHelper
-        schedulerService = TestHelper.createSchedulerService(persistenceService, executionContextManager);
+        schedulerService = TestHelper.createSchedulerService(persistenceService, executionContextManager, bundleContext);
 
         definitionsService = TestHelper.createDefinitionService(persistenceService, bundleContext, schedulerService, multiTypeCacheService, executionContextManager, tenantService, conditionValidationService);
         TestConditionEvaluators.getConditionTypes().forEach((key, value) -> definitionsService.setConditionType(value));

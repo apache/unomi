@@ -98,7 +98,7 @@ public class SegmentServiceImplTest {
         persistenceService = new InMemoryPersistenceServiceImpl(executionContextManager, conditionEvaluatorDispatcher);
 
         // Create scheduler service using TestHelper
-        schedulerService = TestHelper.createSchedulerService(persistenceService, executionContextManager);
+        schedulerService = TestHelper.createSchedulerService(persistenceService, executionContextManager, bundleContext);
 
         multiTypeCacheService = new MultiTypeCacheServiceImpl();
 

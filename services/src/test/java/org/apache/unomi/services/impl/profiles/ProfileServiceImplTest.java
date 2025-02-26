@@ -83,8 +83,16 @@ public class ProfileServiceImplTest {
         // Set up persistence service
         persistenceService = new InMemoryPersistenceServiceImpl(executionContextManager, conditionEvaluatorDispatcher);
 
+        // Set up bundle context with predefined data
+        bundleContext = new TestBundleContext();
+        Bundle systemBundle = mock(Bundle.class);
+        when(systemBundle.getBundleContext()).thenReturn(bundleContext);
+        when(systemBundle.getBundleId()).thenReturn(0L);
+        when(systemBundle.getSymbolicName()).thenReturn("org.apache.unomi.predefined");
+        bundleContext.addBundle(systemBundle);
+
         // Create scheduler service using TestHelper
-        schedulerService = TestHelper.createSchedulerService(persistenceService, executionContextManager);
+        schedulerService = TestHelper.createSchedulerService(persistenceService, executionContextManager, bundleContext);
 
         // Set up definitions service
         definitionsService = TestHelper.createDefinitionService(persistenceService, bundleContext, schedulerService, multiTypeCacheService, executionContextManager, tenantService, conditionValidationService);
@@ -93,15 +101,6 @@ public class ProfileServiceImplTest {
         ValueType stringType = new ValueType();
         stringType.setId("string");
         definitionsService.setValueType(stringType);
-
-        // Set up bundle context with predefined data
-        bundleContext = new TestBundleContext();
-        Bundle systemBundle = mock(Bundle.class);
-        when(systemBundle.getBundleContext()).thenReturn(bundleContext);
-        when(systemBundle.getBundleId()).thenReturn(0L);
-        when(systemBundle.getSymbolicName()).thenReturn("org.apache.unomi.predefined");
-
-        bundleContext.addBundle(systemBundle);
 
         // Create predefined property types
         URL propertyTypesUrl = getClass().getResource("/META-INF/cxs/properties/predefined-properties.json");

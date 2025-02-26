@@ -162,7 +162,7 @@ public class ConditionValidationServiceImplTest {
         persistenceService = new InMemoryPersistenceServiceImpl(executionContextManager, conditionEvaluatorDispatcher);
 
         // Create scheduler service using TestHelper
-        schedulerService = TestHelper.createSchedulerService(persistenceService, executionContextManager);
+        schedulerService = TestHelper.createSchedulerService(persistenceService, executionContextManager, bundleContext);
 
         conditionValidationService = (ConditionValidationServiceImpl) TestHelper.createConditionValidationService();
 

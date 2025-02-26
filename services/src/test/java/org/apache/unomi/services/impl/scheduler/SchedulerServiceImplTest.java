@@ -122,7 +122,7 @@ public class SchedulerServiceImplTest {
 
         TestHelper.cleanDefaultStorageDirectory(MAX_RETRIES);
         persistenceService = new InMemoryPersistenceServiceImpl(executionContextManager, conditionEvaluatorDispatcher);
-        schedulerService = (SchedulerServiceImpl) TestHelper.createSchedulerService(persistenceService, executionContextManager, false);
+        schedulerService = (SchedulerServiceImpl) TestHelper.createSchedulerService(persistenceService, executionContextManager, bundleContext,false);
 
         // Configure scheduler for testing
         schedulerService.setThreadPoolSize(TEST_THREAD_POOL_SIZE);

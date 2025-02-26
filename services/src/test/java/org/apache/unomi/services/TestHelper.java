@@ -43,6 +43,7 @@ import org.apache.unomi.services.impl.validation.ConditionValidationServiceImpl;
 import org.apache.unomi.services.impl.validation.validators.*;
 import org.apache.unomi.tracing.api.RequestTracer;
 import org.apache.unomi.tracing.api.TracerService;
+import org.apache.unomi.tracing.api.TraceNode;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.slf4j.Logger;
@@ -161,15 +162,16 @@ public class TestHelper {
 
     public static SchedulerService createSchedulerService(
             PersistenceService persistenceService,
-            ExecutionContextManager executionContextManager) {
-        return createSchedulerService(persistenceService, executionContextManager, true);
+            ExecutionContextManager executionContextManager, BundleContext bundleContext) {
+        return createSchedulerService(persistenceService, executionContextManager, bundleContext, true);
     }
     public static SchedulerService createSchedulerService(
             PersistenceService persistenceService,
-            ExecutionContextManager executionContextManager, boolean construct) {
+            ExecutionContextManager executionContextManager, BundleContext bundleContext, boolean construct) {
         org.apache.unomi.services.impl.scheduler.SchedulerServiceImpl schedulerService =
             new org.apache.unomi.services.impl.scheduler.SchedulerServiceImpl();
         schedulerService.setPersistenceService(persistenceService);
+        schedulerService.setBundleContext(bundleContext);
         schedulerService.setThreadPoolSize(4); // Ensure enough threads for parallel execution
         schedulerService.setExecutorNode(true);
         schedulerService.setNodeId("test-scheduler-node");
@@ -225,8 +227,8 @@ public class TestHelper {
         }
 
         @Override
-        public String getTraceAsJson() {
-            return requestTracer.getTraceAsJson();
+        public TraceNode getTraceNode() {
+            return requestTracer.getTraceNode();
         }
     }
 
