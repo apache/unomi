@@ -19,6 +19,7 @@ package org.apache.unomi.api;
 
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.services.RulesService;
+import org.apache.unomi.tracing.api.TraceNode;
 
 import javax.xml.bind.annotation.XmlTransient;
 import java.io.Serializable;
@@ -60,6 +61,8 @@ public class ContextResponse implements Serializable {
     private boolean anonymousBrowsing;
 
     private Map<String, Consent> consents = new LinkedHashMap<>();
+
+    private TraceNode requestTracing;
 
     /**
      * Retrieves the profile identifier associated with the profile of the user on behalf of which the client performed the context request.
@@ -286,5 +289,13 @@ public class ContextResponse implements Serializable {
      */
     public void setConsents(Map<String, Consent> consents) {
         this.consents = consents;
+    }
+
+    public TraceNode getRequestTracing() {
+        return requestTracing;
+    }
+
+    public void setRequestTracing(TraceNode requestTracing) {
+        this.requestTracing = requestTracing;
     }
 }

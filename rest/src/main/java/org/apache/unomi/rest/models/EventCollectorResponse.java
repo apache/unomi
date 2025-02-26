@@ -17,10 +17,12 @@
 
 package org.apache.unomi.rest.models;
 
+import org.apache.unomi.tracing.api.TraceNode;
 import java.io.Serializable;
 
 public class EventCollectorResponse implements Serializable {
     private int updated;
+    private TraceNode requestTracing;
 
     public EventCollectorResponse(int updated) {
         this.updated = updated;
@@ -28,5 +30,13 @@ public class EventCollectorResponse implements Serializable {
 
     public int getUpdated() {
         return updated;
+    }
+
+    public TraceNode getRequestTracing() {
+        return requestTracing;
+    }
+
+    public void setRequestTracing(TraceNode requestTracing) {
+        this.requestTracing = requestTracing;
     }
 }

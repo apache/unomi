@@ -16,9 +16,8 @@
  */
 package org.apache.unomi.tracing.impl;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
 import org.apache.unomi.tracing.api.RequestTracer;
+import org.apache.unomi.tracing.api.TraceNode;
 
 import java.util.*;
 
@@ -27,57 +26,10 @@ import java.util.*;
  */
 public class DefaultRequestTracer implements RequestTracer {
 
-    private static final ObjectMapper objectMapper = new ObjectMapper()
-            .enable(SerializationFeature.INDENT_OUTPUT);
-
     private final ThreadLocal<Boolean> enabled = ThreadLocal.withInitial(() -> false);
     private final ThreadLocal<TraceNode> currentNode = new ThreadLocal<>();
     private final ThreadLocal<TraceNode> rootNode = new ThreadLocal<>();
     private final ThreadLocal<Stack<TraceNode>> nodeStack = ThreadLocal.withInitial(Stack::new);
-
-    private static class TraceNode {
-        String operationType;
-        String description;
-        Object context;
-        Object result;
-        long startTime;
-        long endTime;
-        List<String> traces;
-        List<TraceNode> children;
-
-        TraceNode(String operationType, String description, Object context) {
-            this.operationType = operationType;
-            this.description = description;
-            this.context = context;
-            this.startTime = System.currentTimeMillis();
-            this.traces = new ArrayList<>();
-            this.children = new ArrayList<>();
-        }
-
-        Map<String, Object> toMap() {
-            Map<String, Object> map = new HashMap<>();
-            map.put("operationType", operationType);
-            map.put("description", description);
-            if (context != null) {
-                map.put("context", context);
-            }
-            if (result != null) {
-                map.put("result", result);
-            }
-            map.put("duration", endTime - startTime);
-            if (!traces.isEmpty()) {
-                map.put("traces", traces);
-            }
-            if (!children.isEmpty()) {
-                List<Map<String, Object>> childMaps = new ArrayList<>();
-                for (TraceNode child : children) {
-                    childMaps.add(child.toMap());
-                }
-                map.put("children", childMaps);
-            }
-            return map;
-        }
-    }
 
     @Override
     public void startOperation(String operationType, String description, Object context) {
@@ -85,14 +37,18 @@ public class DefaultRequestTracer implements RequestTracer {
             return;
         }
 
-        TraceNode node = new TraceNode(operationType, description, context);
+        TraceNode node = new TraceNode();
+        node.setOperationType(operationType);
+        node.setDescription(description);
+        node.setContext(context);
+        node.setStartTime(System.currentTimeMillis());
         
         if (rootNode.get() == null) {
             rootNode.set(node);
             currentNode.set(node);
         } else {
             TraceNode parent = currentNode.get();
-            parent.children.add(node);
+            parent.getChildren().add(node);
             nodeStack.get().push(currentNode.get());
             currentNode.set(node);
         }
@@ -106,9 +62,9 @@ public class DefaultRequestTracer implements RequestTracer {
 
         TraceNode node = currentNode.get();
         if (node != null) {
-            node.result = result;
-            node.description = description;
-            node.endTime = System.currentTimeMillis();
+            node.setResult(result);
+            node.setDescription(description);
+            node.setEndTime(System.currentTimeMillis());
 
             if (!nodeStack.get().isEmpty()) {
                 currentNode.set(nodeStack.get().pop());
@@ -125,9 +81,9 @@ public class DefaultRequestTracer implements RequestTracer {
         TraceNode node = currentNode.get();
         if (node != null) {
             if (context != null) {
-                node.traces.add(message + " - Context: " + context);
+                node.getTraces().add(message + " - Context: " + context);
             } else {
-                node.traces.add(message);
+                node.getTraces().add(message);
             }
         }
     }
@@ -140,20 +96,16 @@ public class DefaultRequestTracer implements RequestTracer {
 
         TraceNode node = currentNode.get();
         if (node != null) {
-            node.traces.add("Validation against schema " + schemaId + ": " + validationMessages);
+            node.getTraces().add("Validation against schema " + schemaId + ": " + validationMessages);
         }
     }
 
     @Override
-    public String getTraceAsJson() {
+    public TraceNode getTraceNode() {
         if (!isEnabled() || rootNode.get() == null) {
-            return "{}";
+            return null;
         }
-        try {
-            return objectMapper.writeValueAsString(rootNode.get().toMap());
-        } catch (Exception e) {
-            return "{\"error\": \"Failed to serialize trace: " + e.getMessage() + "\"}";
-        }
+        return rootNode.get();
     }
 
     @Override

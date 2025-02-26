@@ -21,9 +21,11 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.EventsCollectorRequest;
+import org.apache.unomi.api.security.UnomiRoles;
 import org.apache.unomi.rest.exception.InvalidRequestException;
 import org.apache.unomi.rest.models.EventCollectorResponse;
 import org.apache.unomi.rest.service.RestServiceUtils;
+import org.apache.unomi.tracing.api.TracerService;
 import org.apache.unomi.utils.EventsRequestContext;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
@@ -31,16 +33,11 @@ import org.osgi.service.component.annotations.Reference;
 import javax.jws.WebService;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.ws.rs.Consumes;
-import javax.ws.rs.GET;
-import javax.ws.rs.OPTIONS;
-import javax.ws.rs.POST;
-import javax.ws.rs.Path;
-import javax.ws.rs.Produces;
-import javax.ws.rs.QueryParam;
+import javax.ws.rs.*;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.SecurityContext;
 import java.util.Date;
 import java.util.List;
 
@@ -56,6 +53,9 @@ public class EventsCollectorEndpoint {
     @Reference
     private RestServiceUtils restServiceUtils;
 
+    @Reference
+    private TracerService tracerService;
+
     @Context
     HttpServletRequest request;
     @Context
@@ -70,58 +70,86 @@ public class EventsCollectorEndpoint {
     @GET
     @Path("/eventcollector")
     public EventCollectorResponse collectAsGet(@QueryParam("payload") EventsCollectorRequest eventsCollectorRequest,
-            @QueryParam("timestamp") Long timestampAsString) {
-        return doEvent(eventsCollectorRequest, timestampAsString);
+            @QueryParam("timestamp") Long timestampAsString,
+            @QueryParam("explain") boolean explain,
+            @Context SecurityContext securityContext) {
+        return doEvent(eventsCollectorRequest, timestampAsString, explain, securityContext);
     }
 
     @POST
     @Path("/eventcollector")
     public EventCollectorResponse collectAsPost(EventsCollectorRequest eventsCollectorRequest,
-            @QueryParam("timestamp") Long timestampAsLong) {
-        return doEvent(eventsCollectorRequest, timestampAsLong);
+            @QueryParam("timestamp") Long timestampAsLong,
+            @QueryParam("explain") boolean explain,
+            @Context SecurityContext securityContext) {
+        return doEvent(eventsCollectorRequest, timestampAsLong, explain, securityContext);
     }
 
-    private EventCollectorResponse doEvent(EventsCollectorRequest eventsCollectorRequest, Long timestampAsLong) {
+    private EventCollectorResponse doEvent(EventsCollectorRequest eventsCollectorRequest, Long timestampAsLong, boolean explain, SecurityContext securityContext) {
         if (eventsCollectorRequest == null) {
             throw new InvalidRequestException("events collector cannot be empty", "Invalid received data");
         }
-        Date timestamp = new Date();
-        if (timestampAsLong != null) {
-            timestamp = new Date(timestampAsLong);
+
+        // Check if tracing is requested and user has required role
+        if (explain && !(securityContext.isUserInRole(UnomiRoles.ADMINISTRATOR) || 
+                        securityContext.isUserInRole(UnomiRoles.TENANT_ADMINISTRATOR))) {
+            throw new ForbiddenException("Insufficient privileges to access tracing information");
         }
 
-        String sessionId = eventsCollectorRequest.getSessionId();
-        if (sessionId == null) {
-            sessionId = request.getParameter("sessionId");
+        if (explain) {
+            tracerService.enableTracing();
         }
 
-        String profileId = eventsCollectorRequest.getProfileId();
-        // Get the first available scope that is not equal to systemscope otherwise systemscope will be used
-        String scope = SYSTEMSCOPE;
-        List<Event> events = eventsCollectorRequest.getEvents();
-        for (Event event : events) {
-            if (StringUtils.isNotBlank(event.getEventType())) {
-                if (StringUtils.isNotBlank(event.getScope()) && !event.getScope().equals(SYSTEMSCOPE)) {
-                    scope = event.getScope();
-                    break;
-                } else if (event.getSource() != null && StringUtils.isNotBlank(event.getSource().getScope()) && !event.getSource()
-                        .getScope().equals(SYSTEMSCOPE)) {
-                    scope = event.getSource().getScope();
-                    break;
+        try {
+            Date timestamp = new Date();
+            if (timestampAsLong != null) {
+                timestamp = new Date(timestampAsLong);
+            }
+
+            String sessionId = eventsCollectorRequest.getSessionId();
+            if (sessionId == null) {
+                sessionId = request.getParameter("sessionId");
+            }
+
+            String profileId = eventsCollectorRequest.getProfileId();
+            // Get the first available scope that is not equal to systemscope otherwise systemscope will be used
+            String scope = SYSTEMSCOPE;
+            List<Event> events = eventsCollectorRequest.getEvents();
+            for (Event event : events) {
+                if (StringUtils.isNotBlank(event.getEventType())) {
+                    if (StringUtils.isNotBlank(event.getScope()) && !event.getScope().equals(SYSTEMSCOPE)) {
+                        scope = event.getScope();
+                        break;
+                    } else if (event.getSource() != null && StringUtils.isNotBlank(event.getSource().getScope()) && !event.getSource()
+                            .getScope().equals(SYSTEMSCOPE)) {
+                        scope = event.getSource().getScope();
+                        break;
+                    }
                 }
             }
+
+            // build public context, profile + session creation/anonymous etc ...
+            EventsRequestContext eventsRequestContext = restServiceUtils.initEventsRequest(scope, sessionId, profileId, null, false, false,
+                    request, response, timestamp);
+
+            // process events
+            eventsRequestContext = restServiceUtils.performEventsRequest(eventsCollectorRequest.getEvents(), eventsRequestContext);
+
+            // finalize request
+            restServiceUtils.finalizeEventsRequest(eventsRequestContext, true);
+
+            EventCollectorResponse response = new EventCollectorResponse(eventsRequestContext.getChanges());
+
+            // Add tracing information if requested
+            if (explain) {
+                response.setRequestTracing(tracerService.getTraceNode());
+            }
+
+            return response;
+        } finally {
+            if (explain) {
+                tracerService.disableTracing();
+            }
         }
-
-        // build public context, profile + session creation/anonymous etc ...
-        EventsRequestContext eventsRequestContext = restServiceUtils.initEventsRequest(scope, sessionId, profileId, null, false, false,
-                request, response, timestamp);
-
-        // process events
-        eventsRequestContext = restServiceUtils.performEventsRequest(eventsCollectorRequest.getEvents(), eventsRequestContext);
-
-        // finalize request
-        restServiceUtils.finalizeEventsRequest(eventsRequestContext, true);
-
-        return new EventCollectorResponse(eventsRequestContext.getChanges());
     }
 }

@@ -60,10 +60,10 @@ public interface RequestTracer {
     void addValidationInfo(Collection<?> validationMessages, String schemaId);
 
     /**
-     * Get the complete trace tree as a JSON string
-     * @return JSON representation of the trace tree
+     * Get the root trace node
+     * @return the root trace node or null if tracing is not enabled
      */
-    String getTraceAsJson();
+    TraceNode getTraceNode();
 
     /**
      * Check if tracing is enabled

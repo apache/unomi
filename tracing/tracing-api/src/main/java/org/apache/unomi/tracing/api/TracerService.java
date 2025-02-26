@@ -45,8 +45,8 @@ public interface TracerService {
     boolean isTracingEnabled();
 
     /**
-     * Get the trace for the current request as JSON
-     * @return JSON representation of the trace
+     * Get the root trace node for the current request
+     * @return the root trace node or null if tracing is not enabled
      */
-    String getTraceAsJson();
+    TraceNode getTraceNode();
 } 

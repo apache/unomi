@@ -18,6 +18,7 @@ package org.apache.unomi.tracing.impl;
 
 import org.apache.unomi.tracing.api.RequestTracer;
 import org.apache.unomi.tracing.api.TracerService;
+import org.apache.unomi.tracing.api.TraceNode;
 import org.osgi.service.component.annotations.Component;
 
 /**
@@ -58,8 +59,8 @@ public class DefaultTracerService implements TracerService {
     }
 
     @Override
-    public String getTraceAsJson() {
-        return getCurrentTracer().getTraceAsJson();
+    public TraceNode getTraceNode() {
+        return getCurrentTracer().getTraceNode();
     }
 
     public void cleanup() {
