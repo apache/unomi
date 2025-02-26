@@ -154,9 +154,16 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
     }
 
     private void reassignPersistedBrowsingDatasAsync(boolean anonymousBrowsing, List<String> mergedProfileIds, String masterProfileId) {
-        schedulerService.getSharedScheduleExecutorService().schedule(new TimerTask() {
-            @Override
-            public void run() {
+        // Create a one-shot task for async data reassignment
+        schedulerService.newTask("merge-profiles-reassign-data")
+            .withParameters(Map.of(
+                "anonymousBrowsing", anonymousBrowsing,
+                "mergedProfileIds", mergedProfileIds,
+                "masterProfileId", masterProfileId
+            ))
+            .withInitialDelay(1000, TimeUnit.MILLISECONDS)
+            .asOneShot()
+            .withSimpleExecutor(() -> {
                 if (!anonymousBrowsing) {
                     Condition profileIdsCondition = new Condition(definitionsService.getConditionType("eventPropertyCondition"));
                     profileIdsCondition.setParameter("propertyName","profileId");
@@ -173,8 +180,9 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
                         privacyService.anonymizeBrowsingData(mergedProfileId);
                     }
                 }
-            }
-        }, 1000, TimeUnit.MILLISECONDS);
+            })
+            .nonPersistent()
+            .schedule();
     }
 
     private void reassignCurrentBrowsingData(Event event, List<Profile> existingMergedProfiles, boolean forceEventProfileAsMaster, String mergePropName, String mergePropValue) {

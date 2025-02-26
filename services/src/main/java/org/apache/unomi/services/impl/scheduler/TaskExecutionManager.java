@@ -24,17 +24,19 @@ import org.slf4j.LoggerFactory;
 
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * Manages task execution, including scheduling, execution tracking, and completion handling.
+ * Manages task execution and scheduling, including task checking, execution tracking, and completion handling.
  */
 public class TaskExecutionManager {
     private static final Logger LOGGER = LoggerFactory.getLogger(TaskExecutionManager.class);
     private static final int MIN_THREAD_POOL_SIZE = 4;
+    private static final long TASK_CHECK_INTERVAL = 1000; // 1 second
 
     private final String nodeId;
-    private final ScheduledExecutorService sharedScheduler;
-    private final Map<String, ScheduledFuture<?>> runningTasks;
+    private final ScheduledExecutorService scheduler;
+    private final Map<String, ScheduledFuture<?>> scheduledTasks;
     private final TaskStateManager stateManager;
     private final TaskLockManager lockManager;
     private final TaskMetricsManager metricsManager;
@@ -42,33 +44,103 @@ public class TaskExecutionManager {
     private final TaskHistoryManager historyManager;
     private final Map<String, Set<String>> executingTasksByType;
     private final PersistenceService persistenceService;
+    private final AtomicBoolean running = new AtomicBoolean(false);
+    private ScheduledFuture<?> taskCheckerFuture;
 
     public TaskExecutionManager(String nodeId, int threadPoolSize,
                               TaskStateManager stateManager,
                               TaskLockManager lockManager,
                               TaskMetricsManager metricsManager,
                               TaskHistoryManager historyManager,
-                                PersistenceService persistenceService) {
+                              PersistenceService persistenceService) {
         this.nodeId = nodeId;
         this.stateManager = stateManager;
         this.lockManager = lockManager;
         this.metricsManager = metricsManager;
         this.historyManager = historyManager;
-        this.runningTasks = new ConcurrentHashMap<>();
+        this.scheduledTasks = new ConcurrentHashMap<>();
         this.taskExecutors = new ConcurrentHashMap<>();
         this.executingTasksByType = new ConcurrentHashMap<>();
         this.persistenceService = persistenceService;
 
-        // Initialize shared scheduler
-        this.sharedScheduler = Executors.newScheduledThreadPool(
+        // Initialize scheduler
+        this.scheduler = Executors.newScheduledThreadPool(
             Math.max(MIN_THREAD_POOL_SIZE, threadPoolSize),
             r -> {
                 Thread t = new Thread(r);
-                t.setName("UnomiSharedScheduler-" + t.getId());
+                t.setName("UnomiScheduler-" + t.getId());
                 t.setDaemon(true);
                 return t;
             }
         );
+    }
+
+    /**
+     * Starts the task checking service if this is an executor node
+     */
+    public void startTaskChecker(Runnable taskChecker) {
+        if (running.compareAndSet(false, true)) {
+            taskCheckerFuture = scheduler.scheduleAtFixedRate(
+                taskChecker,
+                0,
+                TASK_CHECK_INTERVAL,
+                TimeUnit.MILLISECONDS
+            );
+            LOGGER.info("Task checker started with interval {} ms", TASK_CHECK_INTERVAL);
+        }
+    }
+
+    /**
+     * Stops the task checking service
+     */
+    public void stopTaskChecker() {
+        if (running.compareAndSet(true, false) && taskCheckerFuture != null) {
+            taskCheckerFuture.cancel(false);
+            taskCheckerFuture = null;
+            LOGGER.info("Task checker stopped");
+        }
+    }
+
+    /**
+     * Schedules a task for execution based on its configuration
+     */
+    public void scheduleTask(ScheduledTask task, Runnable taskRunner) {
+        if (task.getPeriod() > 0 && !task.isOneShot()) {
+            schedulePeriodicTask(task, taskRunner);
+        } else {
+            scheduleOneTimeTask(task, taskRunner);
+        }
+    }
+
+    private void schedulePeriodicTask(ScheduledTask task, Runnable taskRunner) {
+        ScheduledFuture<?> future;
+        long initialDelay = calculateInitialDelay(task);
+
+        if (task.isFixedRate()) {
+            future = scheduler.scheduleAtFixedRate(
+                taskRunner,
+                initialDelay,
+                task.getPeriod(),
+                task.getTimeUnit()
+            );
+        } else {
+            future = scheduler.scheduleWithFixedDelay(
+                taskRunner,
+                initialDelay,
+                task.getPeriod(),
+                task.getTimeUnit()
+            );
+        }
+        scheduledTasks.put(task.getItemId(), future);
+        LOGGER.debug("Scheduled periodic task {} with initial delay {} and period {}",
+            task.getItemId(), initialDelay, task.getPeriod());
+    }
+
+    private void scheduleOneTimeTask(ScheduledTask task, Runnable taskRunner) {
+        long initialDelay = calculateInitialDelay(task);
+        ScheduledFuture<?> future = scheduler.schedule(taskRunner, initialDelay, task.getTimeUnit());
+        scheduledTasks.put(task.getItemId(), future);
+        LOGGER.debug("Scheduled one-time task {} with delay {}", task.getItemId(), initialDelay);
     }
 
     /**
@@ -95,51 +167,18 @@ public class TaskExecutionManager {
 
             if (!task.isPersistent()) {
                 // For in-memory tasks, execute directly and store actual future
-                ScheduledFuture<?> future = sharedScheduler.schedule(taskWrapper, 0, TimeUnit.MILLISECONDS);
-                runningTasks.put(task.getItemId(), future);
+                ScheduledFuture<?> future = scheduler.schedule(taskWrapper, 0, TimeUnit.MILLISECONDS);
+                scheduledTasks.put(task.getItemId(), future);
                 executingTasksByType.get(taskType).add(task.getItemId());
             } else {
                 // For persistent tasks, execute if ready
-                ScheduledFuture<?> future = sharedScheduler.schedule(taskWrapper, 0, TimeUnit.MILLISECONDS);
-                runningTasks.put(task.getItemId(), future);
+                ScheduledFuture<?> future = scheduler.schedule(taskWrapper, 0, TimeUnit.MILLISECONDS);
+                scheduledTasks.put(task.getItemId(), future);
                 executingTasksByType.get(taskType).add(task.getItemId());
             }
         } catch (Exception e) {
             LOGGER.error("Node "+nodeId+", Error executing task: " + task.getItemId(), e);
             handleTaskError(task, e.getMessage(), System.currentTimeMillis());
-        }
-    }
-
-    /**
-     * Schedules a recurring in-memory task using the shared scheduler.
-     * This method should only be used for non-persistent tasks.
-     * If the task is already scheduled, it will not be rescheduled unless it has crashed.
-     */
-    public void scheduleRecurringTask(ScheduledTask task, Runnable taskWrapper) {
-        if (!task.isPersistent() && task.getPeriod() > 0 && !task.isOneShot()) {
-            // Check if task is already scheduled
-            ScheduledFuture<?> existingFuture = runningTasks.get(task.getItemId());
-            if (existingFuture != null && !existingFuture.isDone() && !existingFuture.isCancelled()) {
-                LOGGER.debug("Node {}, Task {} is already scheduled, skipping scheduling", nodeId, task.getItemId());
-                return;
-            }
-
-            long initialDelay = calculateInitialDelay(task);
-            ScheduledFuture<?> future;
-
-            if (task.isFixedRate()) {
-                future = sharedScheduler.scheduleAtFixedRate(
-                    taskWrapper, initialDelay, task.getPeriod(), task.getTimeUnit());
-            } else {
-                future = sharedScheduler.scheduleWithFixedDelay(
-                    taskWrapper, initialDelay, task.getPeriod(), task.getTimeUnit());
-            }
-            runningTasks.put(task.getItemId(), future);
-            LOGGER.debug("Scheduled recurring task {} with initial delay {} and period {}",
-                task.getItemId(), initialDelay, task.getPeriod());
-        } else {
-            LOGGER.warn("Attempted to schedule recurring task {} with shared scheduler, but task is persistent or not recurring",
-                task.getItemId());
         }
     }
 
@@ -330,7 +369,7 @@ public class TaskExecutionManager {
             if (task.isOneShot()) {
                 task.setEnabled(false);
                 task.setNextScheduledExecution(null);  // Clear next execution time
-                runningTasks.remove(task.getItemId());
+                scheduledTasks.remove(task.getItemId());
             } else if (task.getPeriod() > 0) {
                 if (task.isPersistent()) {
                     // For persistent periodic tasks, calculate next execution time
@@ -386,7 +425,7 @@ public class TaskExecutionManager {
                     }
                 };
                 long retryDelay = task.getNextScheduledExecution().getTime() - System.currentTimeMillis();
-                sharedScheduler.schedule(retryTask, retryDelay, TimeUnit.MILLISECONDS);
+                scheduler.schedule(retryTask, retryDelay, TimeUnit.MILLISECONDS);
                 LOGGER.debug("Scheduled retry #{} for task {} in {} ms",
                     task.getFailureCount(), task.getItemId(), retryDelay);
             } else if (!task.isOneShot()) {
@@ -406,7 +445,7 @@ public class TaskExecutionManager {
             }
 
             updateTaskInPersistence(task);
-            runningTasks.remove(task.getItemId());
+            scheduledTasks.remove(task.getItemId());
         }
     }
 
@@ -485,7 +524,7 @@ public class TaskExecutionManager {
      * Cancels a running task
      */
     public void cancelTask(String taskId) {
-        ScheduledFuture<?> future = runningTasks.remove(taskId);
+        ScheduledFuture<?> future = scheduledTasks.remove(taskId);
         if (future != null) {
             future.cancel(true);
         }
@@ -500,23 +539,25 @@ public class TaskExecutionManager {
      * Shuts down the execution manager
      */
     public void shutdown() {
-        // Cancel all running tasks
-        for (ScheduledFuture<?> future : runningTasks.values()) {
+        stopTaskChecker();
+
+        // Cancel all scheduled and running tasks
+        for (ScheduledFuture<?> future : scheduledTasks.values()) {
             future.cancel(true);
         }
-        runningTasks.clear();
+        scheduledTasks.clear();
         taskExecutors.clear();
         executingTasksByType.clear();
 
         // Shutdown scheduler
-        sharedScheduler.shutdown();
+        scheduler.shutdown();
         try {
-            if (!sharedScheduler.awaitTermination(5, TimeUnit.SECONDS)) {
-                sharedScheduler.shutdownNow();
+            if (!scheduler.awaitTermination(5, TimeUnit.SECONDS)) {
+                scheduler.shutdownNow();
             }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            sharedScheduler.shutdownNow();
+            scheduler.shutdownNow();
         }
     }
 
@@ -526,8 +567,8 @@ public class TaskExecutionManager {
         }
     }
 
-    public ScheduledExecutorService getSharedScheduler() {
-        return sharedScheduler;
+    public ScheduledExecutorService getScheduler() {
+        return scheduler;
     }
 
     /**

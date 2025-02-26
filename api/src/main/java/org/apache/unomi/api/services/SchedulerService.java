@@ -44,24 +44,6 @@ import java.util.concurrent.TimeUnit;
 public interface SchedulerService {
 
     /**
-     * Gets the single-threaded scheduler for local tasks.
-     * This scheduler is suitable for tasks that must be executed sequentially
-     * or require strict ordering.
-     * 
-     * @return the single-threaded scheduler instance
-     */
-    ScheduledExecutorService getScheduleExecutorService();
-
-    /**
-     * Gets the multi-threaded shared scheduler for local tasks.
-     * This scheduler is suitable for tasks that can be executed in parallel
-     * to improve throughput.
-     * 
-     * @return the shared multi-threaded scheduler instance
-     */
-    ScheduledExecutorService getSharedScheduleExecutorService();
-
-    /**
      * Creates a new scheduled task.
      * This method provides full control over task configuration including
      * execution timing, persistence, and parallel execution settings.

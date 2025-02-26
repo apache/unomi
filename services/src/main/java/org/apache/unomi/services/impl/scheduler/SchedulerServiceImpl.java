@@ -67,7 +67,6 @@ import java.util.stream.Collectors;
 public class SchedulerServiceImpl implements SchedulerService {
     private static final Logger LOGGER = LoggerFactory.getLogger(SchedulerServiceImpl.class.getName());
     private static final long DEFAULT_LOCK_TIMEOUT = 5 * 60 * 1000; // 5 minutes
-    private static final long TASK_CHECK_INTERVAL = 1000; // 1 second
     private static final long DEFAULT_COMPLETED_TASK_TTL_DAYS = 30; // 30 days default retention for completed tasks
     private static final boolean DEFAULT_PURGE_TASK_ENABLED = true;
     private static final int MIN_THREAD_POOL_SIZE = 4;
@@ -83,10 +82,8 @@ public class SchedulerServiceImpl implements SchedulerService {
     // Core services
     private PersistenceService persistenceService;
     private final Map<String, TaskExecutor> taskExecutors = new ConcurrentHashMap<>();
-    private final Map<String, ScheduledFuture<?>> runningTasks = new ConcurrentHashMap<>();
     private final Map<String, ScheduledTask> nonPersistentTasks = new ConcurrentHashMap<>();
     private final AtomicBoolean running = new AtomicBoolean(false);
-    private final Map<String, String> runningTaskTypes = new ConcurrentHashMap<>();
     private final Map<String, Queue<ScheduledTask>> waitingNonPersistentTasks = new ConcurrentHashMap<>();
     private final AtomicBoolean checkTasksRunning = new AtomicBoolean(false);
 
@@ -96,7 +93,6 @@ public class SchedulerServiceImpl implements SchedulerService {
     private TaskExecutionManager executionManager;
     private TaskRecoveryManager recoveryManager;
     private TaskMetricsManager metricsManager;
-    private TaskSchedulingManager schedulingManager;
     private TaskHistoryManager historyManager;
     private TaskValidationManager validationManager;
 
@@ -254,7 +250,6 @@ public class SchedulerServiceImpl implements SchedulerService {
         this.metricsManager = new TaskMetricsManager();
         this.stateManager = new TaskStateManager();
         this.lockManager = new TaskLockManager(nodeId, lockTimeout, persistenceService, metricsManager);
-        this.schedulingManager = new TaskSchedulingManager(threadPoolSize, metricsManager);
         this.historyManager = new TaskHistoryManager(nodeId, metricsManager);
         this.validationManager = new TaskValidationManager();
         this.executionManager = new TaskExecutionManager(nodeId, threadPoolSize, stateManager,
@@ -264,8 +259,8 @@ public class SchedulerServiceImpl implements SchedulerService {
 
         if (executorNode) {
             running.set(true);
-            // Start task checking thread
-            schedulingManager.getScheduler().scheduleAtFixedRate(this::checkTasks, 0, TASK_CHECK_INTERVAL, TimeUnit.MILLISECONDS);
+            // Start task checking thread using the execution manager
+            executionManager.startTaskChecker(this::checkTasks);
             // Initialize purge tasks
             initializePurgeTasks();
         }
@@ -286,10 +281,7 @@ public class SchedulerServiceImpl implements SchedulerService {
         }
 
         taskExecutors.clear();
-
-        // Shutdown all managers
         executionManager.shutdown();
-        schedulingManager.shutdown();
     }
 
     public void preDestroy() {
@@ -307,9 +299,8 @@ public class SchedulerServiceImpl implements SchedulerService {
             cancelTask(taskPurgeTask.getItemId());
         }
 
-        // Shutdown all managers
+        // Shutdown execution manager
         executionManager.shutdown();
-        schedulingManager.shutdown();
     }
 
     void checkTasks() {
@@ -438,17 +429,12 @@ public class SchedulerServiceImpl implements SchedulerService {
             return;
         }
 
+        // Create task wrapper that will execute the task
+        Runnable taskWrapper = () -> executionManager.executeTask(task, executor);
+
         if (!task.isPersistent()) {
-            // For in-memory tasks, use the execution manager's scheduler
-            Runnable taskWrapper = () -> executionManager.executeTask(task, executor);
-            if (task.getPeriod() > 0 && !task.isOneShot()) {
-                // For recurring in-memory tasks, schedule with the execution manager
-                // The execution manager will handle checking if it's already scheduled
-                executionManager.scheduleRecurringTask(task, taskWrapper);
-            } else if (task.getStatus() != TaskStatus.RUNNING) {
-                // For one-shot in-memory tasks, execute only if not already running
-                executionManager.executeTask(task, executor);
-            }
+            // For in-memory tasks, schedule directly with the execution manager
+            executionManager.scheduleTask(task, taskWrapper);
         } else {
             // For persistent tasks, calculate next execution time and update state
             stateManager.calculateNextExecutionTime(task);
@@ -599,7 +585,6 @@ public class SchedulerServiceImpl implements SchedulerService {
                 historyManager.recordCancellation(task);
 
                 executionManager.cancelTask(taskId);
-                schedulingManager.cancelTask(taskId);
                 lockManager.releaseLock(task);
 
                 if (task.isPersistent()) {
@@ -684,16 +669,6 @@ public class SchedulerServiceImpl implements SchedulerService {
     @Override
     public String getNodeId() {
         return nodeId;
-    }
-
-    @Override
-    public ScheduledExecutorService getScheduleExecutorService() {
-        return schedulingManager.getScheduler();
-    }
-
-    @Override
-    public ScheduledExecutorService getSharedScheduleExecutorService() {
-        return executionManager.getSharedScheduler();
     }
 
     public void setThreadPoolSize(int threadPoolSize) {

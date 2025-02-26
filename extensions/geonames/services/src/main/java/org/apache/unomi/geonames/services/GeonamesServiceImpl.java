@@ -110,9 +110,10 @@ public class GeonamesServiceImpl implements GeonamesService {
             }
             final File f = new File(pathToGeonamesDatabase);
             if (f.exists()) {
-                schedulerService.getSharedScheduleExecutorService().schedule(new TimerTask() {
-                    @Override
-                    public void run() {
+                schedulerService.newTask("geonames-import")
+                    .withInitialDelay(refreshDbInterval, TimeUnit.MILLISECONDS)
+                    .asOneShot()
+                    .withSimpleExecutor(() -> {
                         contextManager.executeAsSystem(() -> {
                             try {
                                 importGeoNameDatabase(f);
@@ -121,8 +122,9 @@ public class GeonamesServiceImpl implements GeonamesService {
                             }
                             return null;
                         });
-                    }
-                }, refreshDbInterval, TimeUnit.MILLISECONDS);
+                    })
+                    .nonPersistent()
+                    .schedule();
             }
         });
     }
@@ -131,15 +133,15 @@ public class GeonamesServiceImpl implements GeonamesService {
         Map<String,Map<String,Object>> typeMappings = persistenceService.getPropertiesMapping(GeonameEntry.ITEM_TYPE);
         if (typeMappings == null || typeMappings.size() == 0) {
             LOGGER.warn("Type mappings for type {} are not yet installed, delaying import until they are ready!", GeonameEntry.ITEM_TYPE);
-            schedulerService.getSharedScheduleExecutorService().schedule(new TimerTask() {
-                @Override
-                public void run() {
-                    importGeoNameDatabase(f);
-                }
-            }, refreshDbInterval, TimeUnit.MILLISECONDS);
+            schedulerService.newTask("geonames-import-retry")
+                .withInitialDelay(refreshDbInterval, TimeUnit.MILLISECONDS)
+                .asOneShot()
+                .withSimpleExecutor(() -> importGeoNameDatabase(f))
+                .nonPersistent()
+                .schedule();
             return;
         } else {
-            // let's check that the mappings are correct
+            // @TODO: let's check that the mappings are correct
         }
         try {
 
