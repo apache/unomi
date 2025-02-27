@@ -71,7 +71,7 @@ public class ParserHelper {
         return resolveConditionType(definitionsService, rootCondition, contextObjectName, new HashSet<>());
     }
 
-    private static boolean resolveConditionType(final DefinitionsService definitionsService, Condition rootCondition, 
+    private static boolean resolveConditionType(final DefinitionsService definitionsService, Condition rootCondition,
             String contextObjectName, Set<String> resolutionPath) {
         if (rootCondition == null) {
             LOGGER.warn("Couldn't resolve null condition for {}", contextObjectName);
@@ -99,10 +99,10 @@ public class ParserHelper {
                 rootCondition.setConditionType(conditionType);
 
                 // Resolve parent condition if it exists
-                if (conditionType.getParentCondition() != null && 
+                if (conditionType.getParentCondition() != null &&
                     !resolveConditionType(definitionsService, conditionType.getParentCondition(), contextObjectName, resolutionPath)) {
                     rootCondition.setConditionType(null);
-                    LOGGER.warn("Failed to resolve parent condition for type: {} in {}", 
+                    LOGGER.warn("Failed to resolve parent condition for type: {} in {}",
                         rootCondition.getConditionTypeId(), contextObjectName);
                     return false;
                 }
@@ -301,7 +301,12 @@ public class ParserHelper {
         String valueAsString = StringUtils.substringAfter(s, VALUE_NAME_SEPARATOR);
         ValueExtractor extractor = valueExtractors.get(valueType);
         if (extractor != null) {
-            value = extractor.extract(valueAsString, event);
+            try {
+                value = extractor.extract(valueAsString, event);
+            } catch (Exception e) {
+                LOGGER.warn("Failed to extract value from event type {} using {} : {}, will return null instead", event.getEventType(), valueAsString, e.getMessage());
+                return null;
+            }
         }
 
         return value;
