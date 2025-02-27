@@ -181,7 +181,7 @@ public class DefinitionsServiceImpl extends AbstractMultiTypeCachingService impl
                         for (ConditionType conditionType : types) {
                             if (conditionType != null && conditionType.getItemId() != null) {
                                 if (conditionType.getParentCondition() != null) {
-                                    ParserHelper.resolveConditionType(this, conditionType.getParentCondition(), "condition type " + conditionType.getItemId())
+                                    ParserHelper.resolveConditionType(this, conditionType.getParentCondition(), "condition type " + conditionType.getItemId());
                                 }
                                 cacheService.put(ConditionType.ITEM_TYPE, conditionType.getItemId(), SYSTEM_TENANT, conditionType);
                             }
