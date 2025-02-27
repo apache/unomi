@@ -350,6 +350,14 @@ public class RulesServiceImpl extends AbstractContextAwareService implements Rul
                         tenantEventTypeRules.clear();
 
                         for (Rule rule : rules) {
+                            // validate rule
+                            boolean isValid = ParserHelper.resolveConditionType(definitionsService, rule.getCondition(), "rule " + rule.getItemId());
+                            isValid = isValid && ParserHelper.resolveActionTypes(definitionsService, rule, invalidRulesId.contains(rule.getItemId()));
+                            if (!isValid) {
+                                invalidRulesId.add(rule.getItemId());
+                            } else {
+                                invalidRulesId.remove(rule.getItemId());
+                            }
                             tenantCache.put(rule.getItemId(), rule);
                             updateRulesByEventType(tenantEventTypeRules, rule);
                         }
@@ -372,6 +380,17 @@ public class RulesServiceImpl extends AbstractContextAwareService implements Rul
                 if (rules.stream().noneMatch(r -> r.getItemId().equals(systemRule.getItemId()))) {
                     rules.add(systemRule);
                 }
+            }
+        }
+
+        // Validate rules
+        for (Rule rule : rules) {
+            boolean isValid = ParserHelper.resolveConditionType(definitionsService, rule.getCondition(), "rule " + rule.getItemId());
+            isValid = isValid && ParserHelper.resolveActionTypes(definitionsService, rule, invalidRulesId.contains(rule.getItemId()));
+            if (!isValid) {
+                invalidRulesId.add(rule.getItemId());
+            } else {
+                invalidRulesId.remove(rule.getItemId());
             }
         }
 

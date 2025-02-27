@@ -515,6 +515,75 @@
         </interfaces>
     </service>
 
+    <!-- Property merge strategy executors -->
+
+    <service interface="org.apache.unomi.api.PropertyMergeStrategyExecutor">
+        <service-properties>
+            <entry key="propertyMergeStrategyExecutorId" value="defaultPropertyMergeStrategyExecutor"/>
+        </service-properties>
+        <bean class="org.apache.unomi.services.mergers.DefaultPropertyMergeStrategyExecutor">
+        </bean>
+    </service>
+
+    <service interface="org.apache.unomi.api.PropertyMergeStrategyExecutor">
+        <service-properties>
+            <entry key="propertyMergeStrategyExecutorId" value="addPropertyMergeStrategyExecutor"/>
+        </service-properties>
+        <bean class="org.apache.unomi.services.mergers.AddPropertyMergeStrategyExecutor">
+        </bean>
+    </service>
+
+    <service interface="org.apache.unomi.api.PropertyMergeStrategyExecutor">
+        <service-properties>
+            <entry key="propertyMergeStrategyExecutorId" value="mostRecentPropertyMergeStrategyExecutor"/>
+        </service-properties>
+        <bean class="org.apache.unomi.services.mergers.MostRecentPropertyMergeStrategyExecutor">
+        </bean>
+    </service>
+
+    <service interface="org.apache.unomi.api.PropertyMergeStrategyExecutor">
+        <service-properties>
+            <entry key="propertyMergeStrategyExecutorId" value="oldestPropertyMergeStrategyExecutor"/>
+        </service-properties>
+        <bean class="org.apache.unomi.services.mergers.OldestPropertyMergeStrategyExecutor">
+        </bean>
+    </service>
+
+    <service interface="org.apache.unomi.api.PropertyMergeStrategyExecutor">
+        <service-properties>
+            <entry key="propertyMergeStrategyExecutorId" value="nonEmptyPropertyMergeStrategyExecutor"/>
+        </service-properties>
+        <bean class="org.apache.unomi.services.mergers.NonEmptyPropertyMergeStrategyExecutor">
+        </bean>
+    </service>
+
+    <service interface="org.apache.unomi.api.PersonalizationStrategy">
+        <service-properties>
+            <entry key="personalizationStrategyId" value="matching-first"/>
+        </service-properties>
+        <bean class="org.apache.unomi.services.sorts.FilterPersonalizationStrategy">
+            <property name="profileService" ref="profileServiceImpl"/>
+        </bean>
+    </service>
+
+    <service interface="org.apache.unomi.api.PersonalizationStrategy">
+        <service-properties>
+            <entry key="personalizationStrategyId" value="random"/>
+        </service-properties>
+        <bean class="org.apache.unomi.services.sorts.RandomPersonalizationStrategy">
+            <property name="profileService" ref="profileServiceImpl"/>
+        </bean>
+    </service>
+
+    <service interface="org.apache.unomi.api.PersonalizationStrategy">
+        <service-properties>
+            <entry key="personalizationStrategyId" value="score-sorted"/>
+        </service-properties>
+        <bean class="org.apache.unomi.services.sorts.ScorePersonalizationStrategy">
+            <property name="profileService" ref="profileServiceImpl"/>
+        </bean>
+    </service>
+
     <service id="tenantService" ref="tenantServiceImpl" interface="org.apache.unomi.api.tenants.TenantService">
         <service-properties>
             <entry key="service.exported.interfaces" value="org.apache.unomi.api.tenants.TenantService"/>

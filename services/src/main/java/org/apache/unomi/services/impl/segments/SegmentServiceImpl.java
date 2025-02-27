@@ -154,23 +154,41 @@ public class SegmentServiceImpl extends AbstractMultiTypeCachingService implemen
     @Override
     protected Set<CacheableTypeConfig<?>> getTypeConfigs() {
         Set<CacheableTypeConfig<?>> configs = new HashSet<>();
+        // Post-processor for Segment to resolve condition types
         configs.add(new CacheableTypeConfig<>(
             Segment.class,
             Segment.ITEM_TYPE,
             "segments",
             true,
             true,
-            1000L,
-            segment -> segment.getMetadata().getId()
+            segmentRefreshInterval,
+            segment -> segment.getMetadata().getId(),
+            segment -> {
+                if (segment.getCondition() != null) {
+                    ParserHelper.resolveConditionType(definitionsService, segment.getCondition(), "segment " + segment.getMetadata().getId());
+                }
+            }
         ));
+        
+        // Post-processor for Scoring to resolve condition types in scoring elements
         configs.add(new CacheableTypeConfig<>(
             Scoring.class,
             "scoring",
             "scoring",
             true,
             true,
-            1000L,
-            scoring -> scoring.getMetadata().getId()
+            segmentRefreshInterval,
+            scoring -> scoring.getMetadata().getId(),
+            scoring -> {
+                if (scoring.getElements() != null) {
+                    for (ScoringElement scoringElement : scoring.getElements()) {
+                        if (scoringElement.getCondition() != null) {
+                            ParserHelper.resolveConditionType(definitionsService, scoringElement.getCondition(), 
+                                "scoring element for scoring " + scoring.getMetadata().getId());
+                        }
+                    }
+                }
+            }
         ));
         return configs;
     }

@@ -227,6 +227,11 @@ public abstract class AbstractMultiTypeCachingService extends AbstractContextAwa
 
     protected <T extends Serializable> void processAndCacheItems(String tenantId, List<T> items, CacheableTypeConfig<T> config) {
         for (T item : items) {
+            // Apply post-processor if defined
+            if (config.getPostProcessor() != null) {
+                config.getPostProcessor().accept(item);
+            }
+            
             String id = config.getIdExtractor().apply(item);
             cacheService.put(config.getItemType(), id, tenantId, item);
         }
@@ -262,6 +267,12 @@ public abstract class AbstractMultiTypeCachingService extends AbstractContextAwa
 
             try {
                 T item = CustomObjectMapper.getObjectMapper().readValue(entryURL, config.getType());
+                
+                // Apply post-processor if defined
+                if (config.getPostProcessor() != null) {
+                    config.getPostProcessor().accept(item);
+                }
+                
                 String id = config.getIdExtractor().apply(item);
                 cacheService.put(config.getItemType(), id, SYSTEM_TENANT, item);
                 logger.info("Predefined {} registered: {}",

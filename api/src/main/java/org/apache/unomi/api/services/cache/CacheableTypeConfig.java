@@ -19,6 +19,7 @@ package org.apache.unomi.api.services.cache;
 import org.apache.unomi.api.Item;
 
 import java.io.Serializable;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 /**
@@ -34,6 +35,7 @@ public class CacheableTypeConfig<T extends Serializable> {
     private final boolean requiresRefresh;
     private final long refreshInterval;
     private final Function<T, String> idExtractor;
+    private final Consumer<T> postProcessor;
 
     /**
      * Creates a new configuration for a cacheable type.
@@ -48,6 +50,24 @@ public class CacheableTypeConfig<T extends Serializable> {
      */
     public CacheableTypeConfig(Class<T> type, String itemType, String metaInfPath, boolean inheritFromSystemTenant, 
                              boolean requiresRefresh, long refreshInterval, Function<T, String> idExtractor) {
+        this(type, itemType, metaInfPath, inheritFromSystemTenant, requiresRefresh, refreshInterval, idExtractor, null);
+    }
+
+    /**
+     * Creates a new configuration for a cacheable type with a post processor.
+     *
+     * @param type the class of the type to cache
+     * @param itemType the string identifier for the item type
+     * @param metaInfPath the path in META-INF where predefined items are stored
+     * @param inheritFromSystemTenant whether values should be inherited from the system tenant
+     * @param requiresRefresh whether the type requires periodic refresh
+     * @param refreshInterval the refresh interval in milliseconds
+     * @param idExtractor function to extract the ID from an item
+     * @param postProcessor optional consumer function to process items after loading
+     */
+    public CacheableTypeConfig(Class<T> type, String itemType, String metaInfPath, boolean inheritFromSystemTenant, 
+                             boolean requiresRefresh, long refreshInterval, Function<T, String> idExtractor,
+                             Consumer<T> postProcessor) {
         this.type = type;
         this.itemType = itemType;
         this.metaInfPath = metaInfPath;
@@ -55,6 +75,7 @@ public class CacheableTypeConfig<T extends Serializable> {
         this.requiresRefresh = requiresRefresh;
         this.refreshInterval = refreshInterval;
         this.idExtractor = idExtractor;
+        this.postProcessor = postProcessor;
     }
 
     public Class<T> getType() {
@@ -88,6 +109,15 @@ public class CacheableTypeConfig<T extends Serializable> {
      */
     public Function<T, String> getIdExtractor() {
         return idExtractor;
+    }
+
+    /**
+     * Gets the post-processor function for processing items after loading.
+     *
+     * @return the post-processor function, or null if none is configured
+     */
+    public Consumer<T> getPostProcessor() {
+        return postProcessor;
     }
 
     /**
