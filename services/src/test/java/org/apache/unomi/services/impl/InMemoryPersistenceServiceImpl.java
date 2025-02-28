@@ -713,7 +713,17 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
 
     @Override
     public long getAllItemsCount(String itemType) {
-        throw new UnsupportedOperationException("Not implemented");
+        if (itemType == null) {
+            return 0;
+        }
+
+        String currentTenantId = executionContextManager.getCurrentContext().getTenantId();
+        LOGGER.debug("Counting all items of type {} for tenant {}", itemType, currentTenantId);
+        
+        return itemsById.values().stream()
+                .filter(item -> itemType.equals(item.getItemType()))
+                .filter(item -> currentTenantId.equals(item.getTenantId()))
+                .count();
     }
 
     @Override
@@ -1581,7 +1591,7 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
 
     @Override
     public boolean isConsistent(Item item) {
-        throw new UnsupportedOperationException("Not implemented");
+        return true; // as we work in memory this is always true
     }
 
     @Override

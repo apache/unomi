@@ -1092,6 +1092,82 @@ public class InMemoryPersistenceServiceImplTest {
             // then
             assertEquals(0, count);
         }
+
+        @Test
+        void shouldRespectTenantIsolationInGetAllItemsCount() {
+            // Given - items of different types for different tenants
+            String itemType1 = "tenant-test-type1";
+            String itemType2 = "tenant-test-type2";
+
+            // Create items in tenant1
+            executionContextManager.executeAsTenant("tenant1", () -> {
+                for (int i = 0; i < 5; i++) {
+                    CustomItem item = new CustomItem();
+                    item.setItemId("tenant1-" + itemType1 + "-" + i);
+                    item.setItemType(itemType1);
+                    persistenceService.save(item);
+                }
+
+                for (int i = 0; i < 3; i++) {
+                    CustomItem item = new CustomItem();
+                    item.setItemId("tenant1-" + itemType2 + "-" + i);
+                    item.setItemType(itemType2);
+                    persistenceService.save(item);
+                }
+                return null;
+            });
+
+            // Create items in tenant2
+            executionContextManager.executeAsTenant("tenant2", () -> {
+                for (int i = 0; i < 7; i++) {
+                    CustomItem item = new CustomItem();
+                    item.setItemId("tenant2-" + itemType1 + "-" + i);
+                    item.setItemType(itemType1);
+                    persistenceService.save(item);
+                }
+
+                for (int i = 0; i < 4; i++) {
+                    CustomItem item = new CustomItem();
+                    item.setItemId("tenant2-" + itemType2 + "-" + i);
+                    item.setItemType(itemType2);
+                    persistenceService.save(item);
+                }
+                return null;
+            });
+
+            // When - count items from different tenant contexts
+            long tenant1Type1Count = executionContextManager.executeAsTenant("tenant1", () ->
+                persistenceService.getAllItemsCount(itemType1));
+
+            long tenant1Type2Count = executionContextManager.executeAsTenant("tenant1", () ->
+                persistenceService.getAllItemsCount(itemType2));
+
+            long tenant2Type1Count = executionContextManager.executeAsTenant("tenant2", () ->
+                persistenceService.getAllItemsCount(itemType1));
+
+            long tenant2Type2Count = executionContextManager.executeAsTenant("tenant2", () ->
+                persistenceService.getAllItemsCount(itemType2));
+
+            // Then - counts should reflect tenant isolation
+            assertEquals(5, tenant1Type1Count, "Tenant1 should see 5 items of type1");
+            assertEquals(3, tenant1Type2Count, "Tenant1 should see 3 items of type2");
+            assertEquals(7, tenant2Type1Count, "Tenant2 should see 7 items of type1");
+            assertEquals(4, tenant2Type2Count, "Tenant2 should see 4 items of type2");
+
+            // And - tenant1 should not see tenant2's items and vice versa
+            executionContextManager.executeAsTenant("tenant1", () -> {
+                assertEquals(0, persistenceService.getAllItemsCount("non-existent-type"),
+                    "Should return 0 for non-existent item type");
+                return null;
+            });
+
+            // Test null item type
+            executionContextManager.executeAsTenant("tenant1", () -> {
+                assertEquals(0, persistenceService.getAllItemsCount(null),
+                    "Should handle null item type gracefully");
+                return null;
+            });
+        }
     }
 
     @Nested
