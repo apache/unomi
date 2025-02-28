@@ -39,6 +39,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -3117,6 +3118,279 @@ public class InMemoryPersistenceServiceImplTest {
             // then
             assertEquals(1, page3.getList().size());
             assertEquals("Name5", page3.getList().get(0).getName());
+        }
+    }
+
+    @Nested
+    class IndexAndPurgeOperations {
+
+        @Test
+        void shouldPurgeItemsByDate() {
+            // Create items with different creation dates
+            TestMetadataItem item1 = new TestMetadataItem();
+            item1.setItemId("item1");
+            item1.setScope("scope1");
+            Calendar cal1 = Calendar.getInstance();
+            cal1.add(Calendar.DAY_OF_YEAR, -10); // 10 days ago
+            item1.setCreationDate(cal1.getTime());
+            persistenceService.save(item1);
+
+            TestMetadataItem item2 = new TestMetadataItem();
+            item2.setItemId("item2");
+            item2.setScope("scope1");
+            Calendar cal2 = Calendar.getInstance();
+            cal2.add(Calendar.DAY_OF_YEAR, -5); // 5 days ago
+            item2.setCreationDate(cal2.getTime());
+            persistenceService.save(item2);
+
+            TestMetadataItem item3 = new TestMetadataItem();
+            item3.setItemId("item3");
+            item3.setScope("scope1");
+            Calendar cal3 = Calendar.getInstance();
+            cal3.add(Calendar.DAY_OF_YEAR, -1); // 1 day ago
+            item3.setCreationDate(cal3.getTime());
+            persistenceService.save(item3);
+
+            // Purge items older than 7 days
+            Calendar purgeDate = Calendar.getInstance();
+            purgeDate.add(Calendar.DAY_OF_YEAR, -7);
+            persistenceService.purge(purgeDate.getTime());
+
+            // Check that only item1 was purged
+            assertNull(persistenceService.load("item1", TestMetadataItem.class));
+            assertNotNull(persistenceService.load("item2", TestMetadataItem.class));
+            assertNotNull(persistenceService.load("item3", TestMetadataItem.class));
+        }
+
+        @Test
+        void shouldPurgeItemsByScope() {
+            // Create items with different scopes
+            TestMetadataItem item1 = new TestMetadataItem();
+            item1.setItemId("item1");
+            item1.setScope("scope1");
+            persistenceService.save(item1);
+
+            TestMetadataItem item2 = new TestMetadataItem();
+            item2.setItemId("item2");
+            item2.setScope("scope2");
+            persistenceService.save(item2);
+
+            TestMetadataItem item3 = new TestMetadataItem();
+            item3.setItemId("item3");
+            item3.setScope("scope1");
+            persistenceService.save(item3);
+
+            // Purge items with scope1
+            persistenceService.purge("scope1");
+
+            // Check that only scope1 items were purged
+            assertNull(persistenceService.load("item1", TestMetadataItem.class));
+            assertNotNull(persistenceService.load("item2", TestMetadataItem.class));
+            assertNull(persistenceService.load("item3", TestMetadataItem.class));
+        }
+
+        @Test
+        void shouldCreateAndRemoveIndex() {
+            // Create an index
+            boolean created = persistenceService.createIndex(TestMetadataItem.ITEM_TYPE);
+
+            // Verify the index was created
+            assertTrue(created);
+
+            // Create items with the test item type
+            TestMetadataItem item1 = new TestMetadataItem();
+            item1.setItemId("item1");
+            persistenceService.save(item1);
+
+            // Remove the index
+            boolean removed = persistenceService.removeIndex(TestMetadataItem.ITEM_TYPE);
+
+            // Verify the index was removed
+            assertTrue(removed);
+
+            // Check that only the item with the specified item type was removed
+            assertNull(persistenceService.load("item1", TestMetadataItem.class));
+        }
+
+        @Test
+        void shouldCreateMapping() {
+            // Create a mapping
+            String itemType = "testItemType";
+            String mappingConfig = "{\"properties\":{\"field1\":{\"type\":\"keyword\"},\"field2\":{\"type\":\"text\"}}}";
+
+            // Verify no exception is thrown
+            assertDoesNotThrow(() -> persistenceService.createMapping(itemType, mappingConfig));
+
+            // Verify the mapping was stored
+            Map<String, Map<String, Object>> mapping = persistenceService.getPropertiesMapping(itemType);
+            assertNotNull(mapping, "Mapping should not be null");
+
+            // Verify mapping contains expected properties structure
+            assertTrue(mapping.containsKey("properties"), "Mapping should contain 'properties' key");
+        }
+
+        @Test
+        void shouldHandleNullArgumentsGracefully() {
+            // Test purge with null date
+            assertDoesNotThrow(() -> persistenceService.purge((Date) null));
+
+            // Test purge with null scope
+            assertDoesNotThrow(() -> persistenceService.purge((String) null));
+
+            // Test refresh index with null class
+            assertDoesNotThrow(() -> persistenceService.refreshIndex(null, null));
+
+            // Test create index with null item type
+            assertFalse(persistenceService.createIndex(null));
+
+            // Test remove index with null item type
+            assertFalse(persistenceService.removeIndex(null));
+
+            // Test create mapping with null arguments
+            assertThrows(IllegalArgumentException.class, () -> persistenceService.createMapping(null, "config"));
+            assertThrows(IllegalArgumentException.class, () -> persistenceService.createMapping("type", null));
+        }
+
+        @Test
+        void shouldPurgeTimeBasedItems() {
+            // Create items with different creation dates
+            TestMetadataItem item1 = new TestMetadataItem();
+            item1.setItemId("item1");
+            Calendar cal1 = Calendar.getInstance();
+            cal1.add(Calendar.DAY_OF_YEAR, -30); // 30 days ago
+            item1.setCreationDate(cal1.getTime());
+            persistenceService.save(item1);
+
+            TestMetadataItem item2 = new TestMetadataItem();
+            item2.setItemId("item2");
+            Calendar cal2 = Calendar.getInstance();
+            cal2.add(Calendar.DAY_OF_YEAR, -15); // 15 days ago
+            item2.setCreationDate(cal2.getTime());
+            persistenceService.save(item2);
+
+            TestMetadataItem item3 = new TestMetadataItem();
+            item3.setItemId("item3");
+            Calendar cal3 = Calendar.getInstance();
+            cal3.add(Calendar.DAY_OF_YEAR, -5); // 5 days ago
+            item3.setCreationDate(cal3.getTime());
+            persistenceService.save(item3);
+
+            // Purge items older than 10 days
+            persistenceService.purgeTimeBasedItems(10, TestMetadataItem.class);
+
+            // Check that items older than 10 days were purged
+            assertNull(persistenceService.load("item1", TestMetadataItem.class));
+            assertNull(persistenceService.load("item2", TestMetadataItem.class));
+            assertNotNull(persistenceService.load("item3", TestMetadataItem.class));
+        }
+
+        @Test
+        void shouldHandleRefreshOperationsSafely() {
+            // Test refresh
+            assertDoesNotThrow(() -> persistenceService.refresh());
+
+            // Test refresh index with a specific class
+            assertDoesNotThrow(() -> persistenceService.refreshIndex(TestMetadataItem.class, new Date()));
+        }
+
+        @Test
+        void shouldRespectTenantIsolationInPurgeOperations() throws Exception {
+            // Create items for different tenants
+            TestMetadataItem itemTenant1 = executionContextManager.executeAsTenant("tenant1", () -> {
+                TestMetadataItem item = new TestMetadataItem();
+                item.setItemId("item1");
+                item.setScope("scope1");
+                persistenceService.save(item);
+                return item;
+            });
+
+            TestMetadataItem itemTenant2 = executionContextManager.executeAsTenant("tenant2", () -> {
+                TestMetadataItem item = new TestMetadataItem();
+                item.setItemId("item2");
+                item.setScope("scope1");
+                persistenceService.save(item);
+                return item;
+            });
+
+            // Verify both items were saved
+            executionContextManager.executeAsTenant("tenant1", () -> {
+                assertNotNull(persistenceService.load(itemTenant1.getItemId(), TestMetadataItem.class));
+                return null;
+            });
+
+            executionContextManager.executeAsTenant("tenant2", () -> {
+                assertNotNull(persistenceService.load(itemTenant2.getItemId(), TestMetadataItem.class));
+                return null;
+            });
+
+            // Purge items with scope1 but only in tenant1's context
+            executionContextManager.executeAsTenant("tenant1", () -> {
+                persistenceService.purge("scope1");
+                return null;
+            });
+
+            // Verify item from tenant1 is gone but tenant2's item is still there
+            executionContextManager.executeAsTenant("tenant1", () -> {
+                assertNull(persistenceService.load(itemTenant1.getItemId(), TestMetadataItem.class));
+                return null;
+            });
+
+            executionContextManager.executeAsTenant("tenant2", () -> {
+                assertNotNull(persistenceService.load(itemTenant2.getItemId(), TestMetadataItem.class));
+                return null;
+            });
+        }
+
+        @Test
+        void shouldRespectTenantIsolationInTimeBasedPurge() throws Exception {
+            // Create items for different tenants with dates in the past
+            Calendar pastCal = Calendar.getInstance();
+            pastCal.add(Calendar.DAY_OF_YEAR, -10);
+            Date pastDate = pastCal.getTime();
+
+            TestMetadataItem itemTenant1 = executionContextManager.executeAsTenant("tenant1", () -> {
+                TestMetadataItem item = new TestMetadataItem();
+                item.setItemId("item1");
+                item.setCreationDate(pastDate);
+                persistenceService.save(item);
+                return item;
+            });
+
+            TestMetadataItem itemTenant2 = executionContextManager.executeAsTenant("tenant2", () -> {
+                TestMetadataItem item = new TestMetadataItem();
+                item.setItemId("item2");
+                item.setCreationDate(pastDate);
+                persistenceService.save(item);
+                return item;
+            });
+
+            // Verify both items were saved
+            executionContextManager.executeAsTenant("tenant1", () -> {
+                assertNotNull(persistenceService.load(itemTenant1.getItemId(), TestMetadataItem.class));
+                return null;
+            });
+
+            executionContextManager.executeAsTenant("tenant2", () -> {
+                assertNotNull(persistenceService.load(itemTenant2.getItemId(), TestMetadataItem.class));
+                return null;
+            });
+
+            // Purge items older than 5 days but only in tenant1's context
+            executionContextManager.executeAsTenant("tenant1", () -> {
+                persistenceService.purgeTimeBasedItems(5, TestMetadataItem.class);
+                return null;
+            });
+
+            // Verify item from tenant1 is gone but tenant2's item is still there
+            executionContextManager.executeAsTenant("tenant1", () -> {
+                assertNull(persistenceService.load(itemTenant1.getItemId(), TestMetadataItem.class));
+                return null;
+            });
+
+            executionContextManager.executeAsTenant("tenant2", () -> {
+                assertNotNull(persistenceService.load(itemTenant2.getItemId(), TestMetadataItem.class));
+                return null;
+            });
         }
     }
 }

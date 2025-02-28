@@ -511,17 +511,178 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
         return (Map<String,Object>) fieldProperties.get(property);
     }
 
-    // Other required methods with default no-op implementations
-    @Override public void refresh() {}
-    @Override public void purge(Date date) {}
-    @Override public void purge(String scope) {}
-    @Override public <T extends Item> void refreshIndex(Class<T> clazz, Date dateHint) {}
-    @Override public void createMapping(String itemType, String mappingConfig) { throw new UnsupportedOperationException("Not implemented");}
-    @Override public boolean removeIndex(String itemType) { return true; }
-    @Override public boolean createIndex(String itemType) { return true; }
-    @Override public boolean removeQuery(String queryString) { return true; }
-    @Override public boolean saveQuery(String queryString, Condition condition) { throw new UnsupportedOperationException("Not implemented"); }
-    @Override public boolean testMatch(Condition condition, Item item) {
+    @Override
+    public void refresh() {
+        // No-op for in-memory implementation
+        // In a real implementation, this would refresh all indexes
+        LOGGER.debug("Refresh called on in-memory persistence service");
+    }
+
+    @Override
+    public void purge(Date date) {
+        if (date == null) {
+            return;
+        }
+        
+        String currentTenantId = executionContextManager.getCurrentContext().getTenantId();
+        List<String> keysToRemove = new ArrayList<>();
+        
+        for (Map.Entry<String, Item> entry : itemsById.entrySet()) {
+            Item item = entry.getValue();
+            // Only purge items for the current tenant
+            if (currentTenantId.equals(item.getTenantId()) && 
+                item.getCreationDate() != null && 
+                item.getCreationDate().before(date)) {
+                keysToRemove.add(entry.getKey());
+                if (fileStorageEnabled) {
+                    deleteItemFile(item);
+                }
+            }
+        }
+        
+        for (String key : keysToRemove) {
+            itemsById.remove(key);
+        }
+        
+        LOGGER.info("Purged {} items older than {} for tenant {}", keysToRemove.size(), date, currentTenantId);
+    }
+
+    @Override
+    public void purge(String scope) {
+        if (scope == null) {
+            return;
+        }
+        
+        String currentTenantId = executionContextManager.getCurrentContext().getTenantId();
+        List<String> keysToRemove = new ArrayList<>();
+        
+        for (Map.Entry<String, Item> entry : itemsById.entrySet()) {
+            Item item = entry.getValue();
+            // Only purge items for the current tenant
+            if (currentTenantId.equals(item.getTenantId()) && 
+                scope.equals(item.getScope())) {
+                keysToRemove.add(entry.getKey());
+                if (fileStorageEnabled) {
+                    deleteItemFile(item);
+                }
+            }
+        }
+        
+        for (String key : keysToRemove) {
+            itemsById.remove(key);
+        }
+        
+        LOGGER.info("Purged {} items with scope {} for tenant {}", keysToRemove.size(), scope, currentTenantId);
+    }
+
+    @Override
+    public <T extends Item> void refreshIndex(Class<T> clazz, Date dateHint) {
+        // No-op for in-memory implementation
+        // In a real implementation, this would refresh the index for the specified item type
+        if (clazz != null) {
+            LOGGER.debug("RefreshIndex called for class {} with date hint {}", clazz.getName(), dateHint);
+        }
+    }
+
+    @Override
+    public void createMapping(String itemType, String mappingConfig) {
+        if (itemType == null || mappingConfig == null) {
+            throw new IllegalArgumentException("Item type and mapping configuration cannot be null");
+        }
+        
+        try {
+            // Parse the mapping configuration using the object mapper
+            if (objectMapper != null) {
+                @SuppressWarnings("unchecked")
+                Map<String, Map<String, Object>> mappingMap = objectMapper.readValue(mappingConfig, Map.class);
+                // Store the mapping configuration
+                propertyMappings.put(itemType, mappingMap);
+                LOGGER.info("Created mapping for item type: {}", itemType);
+            } else {
+                // If object mapper is null (file storage disabled), use a simple HashMap
+                Map<String, Map<String, Object>> mappingMap = new HashMap<>();
+                Map<String, Object> properties = new HashMap<>();
+                properties.put("mappingConfig", mappingConfig);
+                mappingMap.put("properties", properties);
+                propertyMappings.put(itemType, mappingMap);
+                LOGGER.info("Created simple mapping for item type: {}", itemType);
+            }
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to parse mapping configuration: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public boolean removeIndex(String itemType) {
+        if (itemType == null) {
+            return false;
+        }
+        
+        String currentTenantId = executionContextManager.getCurrentContext().getTenantId();
+        
+        // We don't remove mappings as they are shared across tenants
+        // But we remove items of the specified type for the current tenant only
+        List<String> keysToRemove = new ArrayList<>();
+        for (Map.Entry<String, Item> entry : itemsById.entrySet()) {
+            Item item = entry.getValue();
+            if (itemType.equals(item.getItemType()) && 
+                currentTenantId.equals(item.getTenantId())) {
+                keysToRemove.add(entry.getKey());
+                if (fileStorageEnabled) {
+                    deleteItemFile(item);
+                }
+            }
+        }
+        
+        for (String key : keysToRemove) {
+            itemsById.remove(key);
+        }
+        
+        LOGGER.info("Removed index for item type {}, deleted {} items for tenant {}", 
+                itemType, keysToRemove.size(), currentTenantId);
+        return true;
+    }
+
+    @Override
+    public boolean createIndex(String itemType) {
+        if (itemType == null) {
+            return false;
+        }
+        
+        // For in-memory implementation, creating an index just means ensuring we have a mapping
+        if (!propertyMappings.containsKey(itemType)) {
+            propertyMappings.put(itemType, new HashMap<>());
+            LOGGER.info("Created index for item type: {}", itemType);
+        } else {
+            LOGGER.debug("Index for item type {} already exists", itemType);
+        }
+        
+        // If file storage is enabled, ensure the directory exists
+        if (fileStorageEnabled) {
+            try {
+                Path indexPath = storageRootPath.resolve(sanitizePathComponent(itemType));
+                Files.createDirectories(indexPath);
+            } catch (IOException e) {
+                LOGGER.error("Failed to create directory for item type: {}", itemType, e);
+                return false;
+            }
+        }
+        
+        return true;
+    }
+
+    @Override
+    public boolean removeQuery(String queryString) {
+        return true;
+    }
+
+    @Override
+    public boolean saveQuery(String queryString, Condition condition) {
+        throw new UnsupportedOperationException("Not implemented");
+    }
+
+    @Override
+    public boolean testMatch(Condition condition, Item item) {
         if (condition == null) {
             return true;
         }
@@ -533,8 +694,14 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
         }
         return conditionEvaluatorDispatcher.eval(condition, item);
     }
-    @Override public long getAllItemsCount(String itemType) { throw new UnsupportedOperationException("Not implemented"); }
-    @Override public Map<String, Double> getSingleValuesMetrics(Condition condition, String[] metrics, String field, String itemType) {
+
+    @Override
+    public long getAllItemsCount(String itemType) {
+        throw new UnsupportedOperationException("Not implemented");
+    }
+
+    @Override
+    public Map<String, Double> getSingleValuesMetrics(Condition condition, String[] metrics, String field, String itemType) {
         if (metrics == null || metrics.length == 0 || field == null) {
             return Collections.emptyMap();
         }
@@ -609,7 +776,9 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
 
         return results;
     }
-    @Override public boolean update(Item item, Date dateHint, Class<?> clazz, Map<?, ?> sourceMap) {
+
+    @Override
+    public boolean update(Item item, Date dateHint, Class<?> clazz, Map<?, ?> sourceMap) {
         if (item == null || sourceMap == null || clazz == null) {
             return false;
         }
@@ -813,10 +982,26 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
         return true;
     }
 
-    @Override public PartialList<CustomItem> queryCustomItem(Condition condition, String itemType, String fieldName, int size, int offset, String sortBy) { throw new UnsupportedOperationException("Not implemented"); }
-    @Override public CustomItem loadCustomItem(String itemId, Date dateHint, String itemType) { throw new UnsupportedOperationException("Not implemented"); }
-    @Override public boolean removeCustomItem(String itemId, String itemType) { throw new UnsupportedOperationException("Not implemented"); }
-    @Override public PartialList<CustomItem> continueCustomItemScrollQuery(String scrollIdentifier, String itemType, String fieldName) { throw new UnsupportedOperationException("Not implemented"); }
+    @Override
+    public PartialList<CustomItem> queryCustomItem(Condition condition, String itemType, String fieldName, int size, int offset, String sortBy) {
+        throw new UnsupportedOperationException("Not implemented");
+    }
+
+    @Override
+    public CustomItem loadCustomItem(String itemId, Date dateHint, String itemType) {
+        throw new UnsupportedOperationException("Not implemented");
+    }
+
+    @Override
+    public boolean removeCustomItem(String itemId, String itemType) {
+        throw new UnsupportedOperationException("Not implemented");
+    }
+
+    @Override
+    public PartialList<CustomItem> continueCustomItemScrollQuery(String scrollIdentifier, String itemType, String fieldName) {
+        throw new UnsupportedOperationException("Not implemented");
+    }
+
     @Override
     @SuppressWarnings("unchecked")
     public <T extends Item> PartialList<T> continueScrollQuery(Class<T> clazz, String scrollTimeValidity, String scrollIdentifier) {
@@ -861,7 +1046,9 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
         }
         return partialList;
     }
-    @Override public Map<String, Long> aggregateQuery(Condition condition, BaseAggregate aggregate, String itemType) {
+
+    @Override
+    public Map<String, Long> aggregateQuery(Condition condition, BaseAggregate aggregate, String itemType) {
         // This is the deprecated version, delegate to the optimized version
         return aggregateWithOptimizedQuery(condition, aggregate, itemType);
     }
@@ -1227,17 +1414,70 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
         return result;
     }
 
-    @Override public long queryCount(Condition condition, String itemType) {
+    @Override
+    public long queryCount(Condition condition, String itemType) {
         return itemsById.values().stream()
                 .filter(item -> item.getItemType().equals(itemType))
                 .filter(item -> condition == null || testMatch(condition, item))
                 .count();
     }
-    @Override public boolean isConsistent(Item item) { throw new UnsupportedOperationException("Not implemented"); }
-    @Override public <T extends Item> void purgeTimeBasedItems(int olderThanInDays, Class<T> clazz) { throw new UnsupportedOperationException("Not implemented");}
-    @Override public boolean migrateTenantData(String fromTenantId, String toTenantId, List<String> itemTypes) { throw new UnsupportedOperationException("Not implemented"); }
-    @Override public long getApiCallCount(String apiName) { throw new UnsupportedOperationException("Not implemented"); }
-    @Override public long calculateStorageSize(String itemType) { throw new UnsupportedOperationException("Not implemented"); }
+
+    @Override
+    public boolean isConsistent(Item item) {
+        throw new UnsupportedOperationException("Not implemented");
+    }
+
+    @Override
+    public <T extends Item> void purgeTimeBasedItems(int olderThanInDays, Class<T> clazz) {
+        if (olderThanInDays <= 0 || clazz == null) {
+            return;
+        }
+        
+        // Calculate the date olderThanInDays days ago
+        Calendar calendar = Calendar.getInstance();
+        calendar.add(Calendar.DAY_OF_YEAR, -olderThanInDays);
+        Date cutoffDate = calendar.getTime();
+        
+        String currentTenantId = executionContextManager.getCurrentContext().getTenantId();
+        String itemType = getIndex(clazz);
+        List<String> keysToRemove = new ArrayList<>();
+        
+        for (Map.Entry<String, Item> entry : itemsById.entrySet()) {
+            Item item = entry.getValue();
+            // Use creation date instead of timestamp, and check tenant
+            if (currentTenantId.equals(item.getTenantId()) && 
+                item.getItemType().equals(itemType) && 
+                item.getCreationDate() != null && 
+                item.getCreationDate().before(cutoffDate)) {
+                keysToRemove.add(entry.getKey());
+                if (fileStorageEnabled) {
+                    deleteItemFile(item);
+                }
+            }
+        }
+        
+        for (String key : keysToRemove) {
+            itemsById.remove(key);
+        }
+        
+        LOGGER.info("Purged {} items of type {} older than {} days for tenant {}", 
+                keysToRemove.size(), itemType, olderThanInDays, currentTenantId);
+    }
+
+    @Override
+    public boolean migrateTenantData(String fromTenantId, String toTenantId, List<String> itemTypes) {
+        throw new UnsupportedOperationException("Not implemented");
+    }
+
+    @Override
+    public long getApiCallCount(String apiName) {
+        throw new UnsupportedOperationException("Not implemented");
+    }
+
+    @Override
+    public long calculateStorageSize(String itemType) {
+        throw new UnsupportedOperationException("Not implemented");
+    }
 
     private Object getPropertyValue(Item item, String field) {
         try {
