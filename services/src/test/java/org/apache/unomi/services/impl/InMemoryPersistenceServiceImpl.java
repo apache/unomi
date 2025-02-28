@@ -153,7 +153,7 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
         try {
             String json = Files.readString(filePath, StandardCharsets.UTF_8);
             Item item = objectMapper.readValue(json, Item.class);
-            itemsById.put(getKey(item.getItemId(), item.getClass()), item);
+            itemsById.put(getKey(item.getItemId(), getIndex(item.getClass())), item);
         } catch (IOException e) {
             LOGGER.error("Failed to load item from file: {}", filePath, e);
         }
@@ -181,11 +181,11 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
     }
 
     private Path getItemPath(Item item) {
-        String className = sanitizePathComponent(item.getClass().getName());
+        String indexName = sanitizePathComponent(getIndex(item.getClass()));
         String tenantId = sanitizePathComponent(item.getTenantId());
         String itemId = sanitizePathComponent(item.getItemId());
 
-        return storageRootPath.resolve(className)
+        return storageRootPath.resolve(indexName)
             .resolve(tenantId)
             .resolve(itemId + ".json");
     }
@@ -246,8 +246,8 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
         return true;
     }
 
-    private <T extends Item> String getKey(String itemId, Class<T> clazz) {
-        return clazz.getName() + ":" + itemId + ":" + executionContextManager.getCurrentContext().getTenantId();
+    private <T extends Item> String getKey(String itemId, String index) {
+        return index + ":" + itemId + ":" + executionContextManager.getCurrentContext().getTenantId();
     }
 
     @Override
@@ -277,7 +277,7 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
         item.setTenantId(executionContextManager.getCurrentContext().getTenantId());
 
         // Handle versioning
-        String key = getKey(item.getItemId(), item.getClass());
+        String key = getKey(item.getItemId(), getIndex(item.getClass()));
         Item existingItem = itemsById.get(key);
         if ((existingItem == null || existingItem.getVersion() == null) && (item.getVersion() == null)) {
             // New item or item without version, set initial version
@@ -302,7 +302,7 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
 
     @Override
     public <T extends Item> T load(String itemId, Class<T> clazz) {
-        Item item = itemsById.get(getKey(itemId, clazz));
+        Item item = itemsById.get(getKey(itemId, getIndex(clazz)));
         if (item != null && clazz.isAssignableFrom(item.getClass()) && executionContextManager.getCurrentContext().getTenantId().equals(item.getTenantId())) {
             return (T) item;
         }
@@ -316,7 +316,7 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
 
     @Override
     public <T extends Item> boolean remove(String itemId, Class<T> clazz) {
-        String key = getKey(itemId, clazz);
+        String key = getKey(itemId, getIndex(clazz));
         Item item = itemsById.get(key);
         if (item != null && clazz.isAssignableFrom(item.getClass()) &&
             executionContextManager.getCurrentContext().getTenantId().equals(item.getTenantId())) {
@@ -615,7 +615,7 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
         }
 
         @SuppressWarnings("unchecked")
-        String key = getKey(item.getItemId(), (Class<? extends Item>) clazz);
+        String key = getKey(item.getItemId(), getIndex((Class<? extends Item>) clazz));
         Item existingItem = itemsById.get(key);
         if (existingItem == null || !clazz.isAssignableFrom(existingItem.getClass()) ||
             !executionContextManager.getCurrentContext().getTenantId().equals(existingItem.getTenantId())) {
@@ -676,16 +676,16 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
         }
 
         List<String> failedUpdates = new ArrayList<>();
-        
+
         for (Map.Entry<Item, Map> entry : items.entrySet()) {
             Item item = entry.getKey();
             Map sourceMap = entry.getValue();
-            
+
             if (!update(item, dateHint, clazz, sourceMap)) {
                 failedUpdates.add(item.getItemId());
             }
         }
-        
+
         return failedUpdates;
     }
 
@@ -1388,7 +1388,7 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
 
     private <T extends Item> List<T> filterItemsByClass(Class<T> clazz) {
         return itemsById.values().stream()
-                .filter(item -> clazz.isAssignableFrom(item.getClass()) && 
+                .filter(item -> clazz.isAssignableFrom(item.getClass()) &&
                         executionContextManager.getCurrentContext().getTenantId().equals(item.getTenantId()))
                 .map(item -> (T) item)
                 .collect(Collectors.toList());
@@ -1527,7 +1527,7 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
         if (obj == null) {
             return null;
         }
-        
+
         if (obj instanceof List) {
             try {
                 List<?> list = (List<?>) obj;
@@ -1539,11 +1539,11 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
                 // Fall through to try Map access
             }
         }
-        
+
         if (obj instanceof Map) {
             return ((Map<?, ?>) obj).get(index);
         }
-        
+
         return null;
     }
 
@@ -1593,6 +1593,10 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
                 }
             }
         }
+    }
+
+    private String getIndex(Class clazz) {
+        return Item.getItemType(clazz);
     }
 }
 

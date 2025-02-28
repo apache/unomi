@@ -1892,7 +1892,7 @@ public class InMemoryPersistenceServiceImplTest {
             persistenceService.save(profile);
 
             // then
-            Path expectedPath = tempDir.resolve("org_apache_unomi_api_Profile")
+            Path expectedPath = tempDir.resolve(Profile.ITEM_TYPE)
                 .resolve(executionContextManager.getCurrentContext().getTenantId())
                 .resolve("test-profile.json");
             assertTrue(Files.exists(expectedPath));
@@ -1939,7 +1939,7 @@ public class InMemoryPersistenceServiceImplTest {
             persistenceService.save(profile);
 
             // then
-            Path expectedPath = tempDir.resolve("org.apache.unomi.api.Profile")
+            Path expectedPath = tempDir.resolve(Profile.ITEM_TYPE)
                 .resolve(executionContextManager.getCurrentContext().getTenantId())
                 .resolve("test_profile.json");
             assertFalse(Files.exists(expectedPath));
@@ -1962,7 +1962,7 @@ public class InMemoryPersistenceServiceImplTest {
             persistenceService.save(profile);
 
             // then
-            Path expectedPath = tempDir.resolve("org_apache_unomi_api_Profile")
+            Path expectedPath = tempDir.resolve(Profile.ITEM_TYPE)
                 .resolve(executionContextManager.getCurrentContext().getTenantId())
                 .resolve("test_profile_with_special_chars.json");
             assertTrue(Files.exists(expectedPath));
@@ -1981,7 +1981,7 @@ public class InMemoryPersistenceServiceImplTest {
             profile.setItemId("test-profile");
             persistenceService.save(profile);
 
-            Path expectedPath = tempDir.resolve("org_apache_unomi_api_Profile")
+            Path expectedPath = tempDir.resolve(Profile.ITEM_TYPE)
                 .resolve(executionContextManager.getCurrentContext().getTenantId())
                 .resolve("test-profile.json");
             assertTrue(Files.exists(expectedPath));
@@ -2002,7 +2002,7 @@ public class InMemoryPersistenceServiceImplTest {
             profile.setItemId("test-profile");
             persistenceService.save(profile);
 
-            Path tenantDir = tempDir.resolve("org_apache_unomi_api_Profile")
+            Path tenantDir = tempDir.resolve(Profile.ITEM_TYPE)
                 .resolve(executionContextManager.getCurrentContext().getTenantId());
             assertTrue(Files.exists(tenantDir));
 
@@ -2037,13 +2037,13 @@ public class InMemoryPersistenceServiceImplTest {
             persistenceService.save(item);
 
             // then
-            assertTrue(Files.exists(tempDir.resolve("org_apache_unomi_api_Profile")
+            assertTrue(Files.exists(tempDir.resolve(Profile.ITEM_TYPE)
                 .resolve(SYSTEM_TENANT)
                 .resolve("profile1.json")));
-            assertTrue(Files.exists(tempDir.resolve("org_apache_unomi_api_Profile")
+            assertTrue(Files.exists(tempDir.resolve(Profile.ITEM_TYPE)
                 .resolve("tenant2")
                 .resolve("profile2.json")));
-            assertTrue(Files.exists(tempDir.resolve(TestMetadataItem.class.getName().replaceAll("\\$", "_").replaceAll("\\.", "_"))
+            assertTrue(Files.exists(tempDir.resolve(TestMetadataItem.ITEM_TYPE)
                 .resolve(SYSTEM_TENANT)
                 .resolve("item1.json")));
         }
@@ -2084,7 +2084,7 @@ public class InMemoryPersistenceServiceImplTest {
 
             // Verify file was created with underscores
             Path expectedPath = tempDir
-                .resolve(TestMetadataItem.class.getName().replace('.', '_').replaceAll("\\$", "_"))
+                .resolve(TestMetadataItem.ITEM_TYPE)
                 .resolve(SYSTEM_TENANT)
                 .resolve("test_item_with_dots.json");
             assertTrue(Files.exists(expectedPath), "File should exist at: " + expectedPath);
