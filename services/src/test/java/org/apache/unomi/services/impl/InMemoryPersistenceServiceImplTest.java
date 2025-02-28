@@ -46,6 +46,7 @@ import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import static org.apache.unomi.api.tenants.TenantService.SYSTEM_TENANT;
 import static org.junit.jupiter.api.Assertions.*;
@@ -3391,6 +3392,318 @@ public class InMemoryPersistenceServiceImplTest {
                 assertNotNull(persistenceService.load(itemTenant2.getItemId(), TestMetadataItem.class));
                 return null;
             });
+        }
+    }
+
+    @Nested
+    class CustomItemOperations {
+
+        private CustomItem createCustomItem(String id, String itemType, Map<String, Object> properties) {
+            CustomItem item = new CustomItem(id, itemType);
+            if (properties != null) {
+                item.getProperties().putAll(properties);
+            }
+            return item;
+        }
+
+        @Test
+        void shouldSaveAndLoadCustomItem() {
+            // Given
+            String itemType = "testCustomType";
+            String itemId = "customItem1";
+            Map<String, Object> properties = new HashMap<>();
+            properties.put("prop1", "value1");
+            properties.put("prop2", 42);
+
+            CustomItem item = createCustomItem(itemId, itemType, properties);
+
+            // When
+            persistenceService.save(item);
+            CustomItem loaded = persistenceService.loadCustomItem(itemId, itemType);
+
+            // Then
+            assertNotNull(loaded);
+            assertEquals(itemId, loaded.getItemId());
+            assertEquals(itemType, loaded.getItemType());
+            assertEquals("value1", loaded.getProperties().get("prop1"));
+            assertEquals(42, loaded.getProperties().get("prop2"));
+        }
+
+        @Test
+        void shouldRespectTenantIsolationInLoadCustomItem() {
+            // Given
+            String itemType = "testCustomType";
+            String itemId = "customItemTenant";
+            Map<String, Object> properties = new HashMap<>();
+            properties.put("prop1", "tenant1Value");
+
+            final CustomItem itemTenant1 = createCustomItem(itemId, itemType, properties);
+
+            // First save in tenant1 context
+            executionContextManager.executeAsTenant("tenant1", () -> {
+                persistenceService.save(itemTenant1);
+                return null;
+            });
+
+            // Then try to load in tenant2 context
+            CustomItem loadedInOtherTenant = executionContextManager.executeAsTenant("tenant2", () -> {
+                return persistenceService.loadCustomItem(itemId, itemType);
+            });
+
+            // And load in original tenant context
+            CustomItem loadedInOriginalTenant = executionContextManager.executeAsTenant("tenant1", () -> {
+                return persistenceService.loadCustomItem(itemId, itemType);
+            });
+
+            // Then
+            assertNull(loadedInOtherTenant, "Item should not be accessible in different tenant");
+            assertNotNull(loadedInOriginalTenant, "Item should be accessible in original tenant");
+            assertEquals("tenant1Value", loadedInOriginalTenant.getProperties().get("prop1"));
+        }
+
+        @Test
+        void shouldRemoveCustomItem() {
+            // Given
+            String itemType = "testCustomType";
+            String itemId = "customItemToRemove";
+
+            CustomItem item = createCustomItem(itemId, itemType, null);
+            persistenceService.save(item);
+
+            // When
+            boolean removeResult = persistenceService.removeCustomItem(itemId, itemType);
+            CustomItem afterRemove = persistenceService.loadCustomItem(itemId, itemType);
+
+            // Then
+            assertTrue(removeResult);
+            assertNull(afterRemove);
+        }
+
+        @Test
+        void shouldRespectTenantIsolationInRemoveCustomItem() {
+            // Given
+            String itemType = "testCustomType";
+            String itemId = "customItemMultiTenant";
+
+            final CustomItem itemTenant1 = createCustomItem(itemId, itemType, null);
+
+            // Save in tenant1 context
+            executionContextManager.executeAsTenant("tenant1", () -> {
+                persistenceService.save(itemTenant1);
+                return null;
+            });
+
+            // Try to remove in tenant2 context
+            boolean removeResultWrongTenant = executionContextManager.executeAsTenant("tenant2", () -> {
+                return persistenceService.removeCustomItem(itemId, itemType);
+            });
+
+            // Verify item still exists in tenant1
+            CustomItem stillExistsInTenant1 = executionContextManager.executeAsTenant("tenant1", () -> {
+                return persistenceService.loadCustomItem(itemId, itemType);
+            });
+
+            // Then remove in correct tenant
+            boolean removeResultCorrectTenant = executionContextManager.executeAsTenant("tenant1", () -> {
+                return persistenceService.removeCustomItem(itemId, itemType);
+            });
+
+            // Then
+            assertFalse(removeResultWrongTenant, "Should not be able to remove item from different tenant");
+            assertNotNull(stillExistsInTenant1, "Item should still exist in original tenant");
+            assertTrue(removeResultCorrectTenant, "Should be able to remove item in original tenant");
+
+            // Verify item is gone in tenant1
+            CustomItem afterRemoveInTenant1 = executionContextManager.executeAsTenant("tenant1", () -> {
+                return persistenceService.loadCustomItem(itemId, itemType);
+            });
+            assertNull(afterRemoveInTenant1);
+        }
+
+        @Test
+        void shouldQueryCustomItems() {
+            // Given
+            String itemType = "testQueryCustomType";
+
+            // Create multiple items
+            for (int i = 0; i < 10; i++) {
+                Map<String, Object> props = new HashMap<>();
+                props.put("index", i);
+                props.put("even", i % 2 == 0);
+
+                CustomItem item = createCustomItem("queryItem" + i, itemType, props);
+                persistenceService.save(item);
+            }
+
+            // Create a condition to match only even items
+            Condition condition = new Condition();
+            condition.setConditionType(TestConditionEvaluators.getConditionType("propertyCondition"));
+            condition.setParameter("propertyName", "properties.even");
+            condition.setParameter("comparisonOperator", "equals");
+            condition.setParameter("propertyValue", true);
+
+            // When
+            PartialList<CustomItem> results = persistenceService.queryCustomItem(condition, null, itemType, 1, 3, null);
+
+            // Then
+            assertEquals(5, results.getTotalSize(), "Should find 5 items with even index");
+            assertEquals(3, results.getList().size(), "Should return 3 items with offset 1");
+            assertEquals(1, results.getOffset());
+
+            // Verify the returned items have the expected property values
+            assertTrue((Boolean) results.getList().get(0).getProperties().get("even"));
+            assertTrue((Boolean) results.getList().get(1).getProperties().get("even"));
+            assertTrue((Boolean) results.getList().get(2).getProperties().get("even"));
+        }
+
+        @Test
+        void shouldSupportCustomItemScrollQueries() {
+            // Given
+            String itemType = "testScrollCustomType";
+
+            // Create multiple items
+            for (int i = 0; i < 20; i++) {
+                Map<String, Object> props = new HashMap<>();
+                props.put("index", i);
+
+                CustomItem item = createCustomItem("scrollItem" + i, itemType, props);
+                persistenceService.save(item);
+            }
+
+            // When - Start a scroll query
+            PartialList<CustomItem> firstPage = persistenceService.queryCustomItem(null, "index:asc", itemType, 0, 5, "1m");
+            String scrollId = firstPage.getScrollIdentifier();
+
+            assertNotNull(scrollId, "Should have a scroll identifier");
+            assertEquals(5, firstPage.getList().size());
+
+            // When - Continue the scroll query
+            PartialList<CustomItem> secondPage = persistenceService.continueCustomItemScrollQuery(itemType, scrollId, "1m");
+            String scrollId2 = secondPage.getScrollIdentifier();
+
+            // Then
+            assertNotNull(scrollId2, "Should have a scroll identifier for second page");
+            assertEquals(5, secondPage.getList().size());
+
+            // Verify these are different items than the first page
+            Set<String> firstPageIds = firstPage.getList().stream()
+                    .map(Item::getItemId)
+                    .collect(Collectors.toSet());
+
+            Set<String> secondPageIds = secondPage.getList().stream()
+                    .map(Item::getItemId)
+                    .collect(Collectors.toSet());
+
+            assertTrue(Collections.disjoint(firstPageIds, secondPageIds),
+                    "First and second page should contain different items");
+
+            // Complete the scroll
+            PartialList<CustomItem> thirdPage = persistenceService.continueCustomItemScrollQuery(itemType, scrollId2, "1m");
+            PartialList<CustomItem> fourthPage = persistenceService.continueCustomItemScrollQuery(itemType, thirdPage.getScrollIdentifier(), "1m");
+
+            // Final page, should be no more scroll ID
+            assertNull(fourthPage.getScrollIdentifier(), "Last page should not have a scroll identifier");
+        }
+
+        @Test
+        void shouldRespectTenantIsolationInQueryCustomItem() {
+            // Given - items for two different tenants
+            String itemType = "testMultiTenantQueryType";
+
+            // Create items in tenant1
+            executionContextManager.executeAsTenant("tenant1", () -> {
+                for (int i = 0; i < 5; i++) {
+                    Map<String, Object> props = new HashMap<>();
+                    props.put("tenant", "tenant1");
+                    props.put("index", i);
+
+                    CustomItem item = createCustomItem("tenant1Item" + i, itemType, props);
+                    persistenceService.save(item);
+                }
+                return null;
+            });
+
+            // Create items in tenant2
+            executionContextManager.executeAsTenant("tenant2", () -> {
+                for (int i = 0; i < 7; i++) {
+                    Map<String, Object> props = new HashMap<>();
+                    props.put("tenant", "tenant2");
+                    props.put("index", i);
+
+                    CustomItem item = createCustomItem("tenant2Item" + i, itemType, props);
+                    persistenceService.save(item);
+                }
+                return null;
+            });
+
+            // When - query from tenant1
+            PartialList<CustomItem> tenant1Results = executionContextManager.executeAsTenant("tenant1", () -> {
+                return persistenceService.queryCustomItem(null, null, itemType, 0, 100, null);
+            });
+
+            // When - query from tenant2
+            PartialList<CustomItem> tenant2Results = executionContextManager.executeAsTenant("tenant2", () -> {
+                return persistenceService.queryCustomItem(null, null, itemType, 0, 100, null);
+            });
+
+            // Then
+            assertEquals(5, tenant1Results.getTotalSize(), "Tenant1 should only see its 5 items");
+            assertEquals(7, tenant2Results.getTotalSize(), "Tenant2 should only see its 7 items");
+
+            // Verify tenant isolation in scroll queries
+            PartialList<CustomItem> tenant1ScrollResults = executionContextManager.executeAsTenant("tenant1", () -> {
+                PartialList<CustomItem> firstPage = persistenceService.queryCustomItem(null, "index:asc", itemType, 0, 2, "1m");
+                String scrollId = firstPage.getScrollIdentifier();
+                return persistenceService.continueCustomItemScrollQuery(itemType, scrollId, "1m");
+            });
+
+            assertEquals(2, tenant1ScrollResults.getList().size(), "Tenant1 should get correct page size in scroll query");
+
+            for (CustomItem item : tenant1ScrollResults.getList()) {
+                assertEquals("tenant1", item.getProperties().get("tenant"), "Items should belong to tenant1");
+            }
+        }
+
+        @Test
+        void shouldRespectScrollTimeValidity() throws InterruptedException {
+            // Given
+            String itemType = "testScrollTimeValidityType";
+
+            // Create multiple items
+            for (int i = 0; i < 10; i++) {
+                Map<String, Object> props = new HashMap<>();
+                props.put("index", i);
+
+                CustomItem item = createCustomItem("validityItem" + i, itemType, props);
+                persistenceService.save(item);
+            }
+
+            // When - Start a scroll query with very short validity (100ms)
+            Condition matchAllCondition = new Condition(TestConditionEvaluators.getConditionType("matchAllCondition"));
+            PartialList<CustomItem> firstPage = persistenceService.queryCustomItem(matchAllCondition, "index:asc", itemType, 0, 3, "100ms");
+            String scrollId = firstPage.getScrollIdentifier();
+
+            assertNotNull(scrollId, "Should have a scroll identifier");
+            assertEquals(3, firstPage.getList().size());
+
+            // Wait for scroll to expire
+            Thread.sleep(200);
+
+            // When - Try to continue the expired scroll query
+            PartialList<CustomItem> secondPage = persistenceService.continueCustomItemScrollQuery(itemType, scrollId, "100ms");
+
+            // Then - Should return empty result as scroll has expired
+            assertEquals(0, secondPage.getList().size(), "Should return empty list for expired scroll");
+            assertNull(secondPage.getScrollIdentifier(), "Should not have a scroll identifier for expired scroll");
+
+            // When - Start a new scroll query with longer validity
+            PartialList<CustomItem> newFirstPage = persistenceService.queryCustomItem(null, "index:asc", itemType, 0, 3, "10s");
+            String newScrollId = newFirstPage.getScrollIdentifier();
+
+            // Then - Continue the scroll immediately should work
+            PartialList<CustomItem> newSecondPage = persistenceService.continueCustomItemScrollQuery(itemType, newScrollId, "10s");
+            assertNotNull(newSecondPage.getScrollIdentifier(), "Should have a scroll identifier for valid scroll");
+            assertEquals(3, newSecondPage.getList().size(), "Should return items for valid scroll");
         }
     }
 }

@@ -181,7 +181,8 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
     }
 
     private Path getItemPath(Item item) {
-        String indexName = sanitizePathComponent(getIndex(item.getClass()));
+        String indexName = getIndexName(item);
+        indexName = sanitizePathComponent(indexName);
         String tenantId = sanitizePathComponent(item.getTenantId());
         String itemId = sanitizePathComponent(item.getItemId());
 
@@ -276,8 +277,10 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
 
         item.setTenantId(executionContextManager.getCurrentContext().getTenantId());
 
+        String indexName = getIndexName(item);
+
         // Handle versioning
-        String key = getKey(item.getItemId(), getIndex(item.getClass()));
+        String key = getKey(item.getItemId(), indexName);
         Item existingItem = itemsById.get(key);
         if ((existingItem == null || existingItem.getVersion() == null) && (item.getVersion() == null)) {
             // New item or item without version, set initial version
@@ -298,6 +301,19 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
         }
 
         return true;
+    }
+
+    private String getIndexName(Item item) {
+        String indexName = getIndex(item.getClass());
+        if (item instanceof CustomItem) {
+            String customItemType = ((CustomItem) item).getCustomItemType();
+            if (customItemType != null) {
+                indexName = customItemType;
+            } else {
+                indexName = item.getItemType();
+            }
+        }
+        return indexName;
     }
 
     @Override
@@ -458,7 +474,7 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
             // Generate a unique scroll ID
             String scrollId = UUID.randomUUID().toString();
             // Parse scroll time validity (assuming it's in milliseconds)
-            long validityTime = Long.parseLong(scrollTimeValidity);
+            long validityTime = getScrollTimeValidityMs(scrollTimeValidity);
             // Store scroll state with filtered items
             scrollStates.put(scrollId, new ScrollState(new ArrayList<>(matchingItems), size, System.currentTimeMillis() + validityTime, size));
             // Return first page with scroll ID
@@ -523,15 +539,15 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
         if (date == null) {
             return;
         }
-        
+
         String currentTenantId = executionContextManager.getCurrentContext().getTenantId();
         List<String> keysToRemove = new ArrayList<>();
-        
+
         for (Map.Entry<String, Item> entry : itemsById.entrySet()) {
             Item item = entry.getValue();
             // Only purge items for the current tenant
-            if (currentTenantId.equals(item.getTenantId()) && 
-                item.getCreationDate() != null && 
+            if (currentTenantId.equals(item.getTenantId()) &&
+                item.getCreationDate() != null &&
                 item.getCreationDate().before(date)) {
                 keysToRemove.add(entry.getKey());
                 if (fileStorageEnabled) {
@@ -539,11 +555,11 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
                 }
             }
         }
-        
+
         for (String key : keysToRemove) {
             itemsById.remove(key);
         }
-        
+
         LOGGER.info("Purged {} items older than {} for tenant {}", keysToRemove.size(), date, currentTenantId);
     }
 
@@ -552,14 +568,14 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
         if (scope == null) {
             return;
         }
-        
+
         String currentTenantId = executionContextManager.getCurrentContext().getTenantId();
         List<String> keysToRemove = new ArrayList<>();
-        
+
         for (Map.Entry<String, Item> entry : itemsById.entrySet()) {
             Item item = entry.getValue();
             // Only purge items for the current tenant
-            if (currentTenantId.equals(item.getTenantId()) && 
+            if (currentTenantId.equals(item.getTenantId()) &&
                 scope.equals(item.getScope())) {
                 keysToRemove.add(entry.getKey());
                 if (fileStorageEnabled) {
@@ -567,11 +583,11 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
                 }
             }
         }
-        
+
         for (String key : keysToRemove) {
             itemsById.remove(key);
         }
-        
+
         LOGGER.info("Purged {} items with scope {} for tenant {}", keysToRemove.size(), scope, currentTenantId);
     }
 
@@ -589,7 +605,7 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
         if (itemType == null || mappingConfig == null) {
             throw new IllegalArgumentException("Item type and mapping configuration cannot be null");
         }
-        
+
         try {
             // Parse the mapping configuration using the object mapper
             if (objectMapper != null) {
@@ -617,15 +633,15 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
         if (itemType == null) {
             return false;
         }
-        
+
         String currentTenantId = executionContextManager.getCurrentContext().getTenantId();
-        
+
         // We don't remove mappings as they are shared across tenants
         // But we remove items of the specified type for the current tenant only
         List<String> keysToRemove = new ArrayList<>();
         for (Map.Entry<String, Item> entry : itemsById.entrySet()) {
             Item item = entry.getValue();
-            if (itemType.equals(item.getItemType()) && 
+            if (itemType.equals(item.getItemType()) &&
                 currentTenantId.equals(item.getTenantId())) {
                 keysToRemove.add(entry.getKey());
                 if (fileStorageEnabled) {
@@ -633,12 +649,12 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
                 }
             }
         }
-        
+
         for (String key : keysToRemove) {
             itemsById.remove(key);
         }
-        
-        LOGGER.info("Removed index for item type {}, deleted {} items for tenant {}", 
+
+        LOGGER.info("Removed index for item type {}, deleted {} items for tenant {}",
                 itemType, keysToRemove.size(), currentTenantId);
         return true;
     }
@@ -648,7 +664,7 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
         if (itemType == null) {
             return false;
         }
-        
+
         // For in-memory implementation, creating an index just means ensuring we have a mapping
         if (!propertyMappings.containsKey(itemType)) {
             propertyMappings.put(itemType, new HashMap<>());
@@ -656,7 +672,7 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
         } else {
             LOGGER.debug("Index for item type {} already exists", itemType);
         }
-        
+
         // If file storage is enabled, ensure the directory exists
         if (fileStorageEnabled) {
             try {
@@ -667,7 +683,7 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
                 return false;
             }
         }
-        
+
         return true;
     }
 
@@ -983,23 +999,164 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
     }
 
     @Override
-    public PartialList<CustomItem> queryCustomItem(Condition condition, String itemType, String fieldName, int size, int offset, String sortBy) {
-        throw new UnsupportedOperationException("Not implemented");
+    public PartialList<CustomItem> queryCustomItem(Condition condition, String sortBy, String customItemType, int offset, int size, String scrollTimeValidity) {
+        // Get all items that match the item type
+        List<CustomItem> customItems = itemsById.values().stream()
+                .filter(item -> item instanceof CustomItem)
+                .filter(item -> customItemType.equals(item.getItemType()))
+                .filter(item -> executionContextManager.getCurrentContext().getTenantId().equals(item.getTenantId()))
+                .filter(item -> condition == null || testMatch(condition, item))
+                .map(item -> (CustomItem) item)
+                .collect(Collectors.toList());
+
+        // Sort items if needed
+        if (sortBy != null) {
+            customItems = sortItems(customItems, sortBy);
+        }
+
+        // Apply offset and size
+        int totalSize = customItems.size();
+        int fromIndex = Math.min(offset, totalSize);
+        int toIndex = size < 0 ? totalSize : Math.min(offset + size, totalSize);
+        List<CustomItem> pagedItems = customItems.subList(fromIndex, toIndex);
+
+        PartialList<CustomItem> result = new PartialList<>(pagedItems, offset, size, totalSize, PartialList.Relation.EQUAL);
+
+        // Setup scroll state if scrollTimeValidity is provided
+        if (scrollTimeValidity != null && !scrollTimeValidity.isEmpty()) {
+            // Generate a unique scroll ID
+            String scrollId = UUID.randomUUID().toString();
+
+            // Parse the scroll time validity (in milliseconds)
+            long scrollTimeValidityMs = getScrollTimeValidityMs(scrollTimeValidity);
+
+            // Calculate expiry time
+            long expiryTime = System.currentTimeMillis() + scrollTimeValidityMs;
+
+            // Store the scroll state
+            scrollStates.put(scrollId, new ScrollState((List<Item>)(List<?>)customItems, toIndex, expiryTime, size));
+
+            // Add scroll information to the result
+            result.setScrollIdentifier(scrollId);
+            result.setScrollTimeValidity(scrollTimeValidity);
+        }
+
+        return result;
+    }
+
+    private static long getScrollTimeValidityMs(String scrollTimeValidity) {
+        long scrollTimeValidityMs = 60000; // Default to 1 minute if parsing fails
+        try {
+            if (scrollTimeValidity.endsWith("ms")) {
+                scrollTimeValidityMs = Long.parseLong(scrollTimeValidity.substring(0, scrollTimeValidity.length() - 2));
+            } else if (scrollTimeValidity.endsWith("m")) {
+                scrollTimeValidityMs = Long.parseLong(scrollTimeValidity.substring(0, scrollTimeValidity.length() - 1)) * 60 * 1000L;
+            } else if (scrollTimeValidity.endsWith("s")) {
+                scrollTimeValidityMs = Long.parseLong(scrollTimeValidity.substring(0, scrollTimeValidity.length() - 1)) * 1000L;
+            } else if (scrollTimeValidity.endsWith("h")) {
+                scrollTimeValidityMs = Long.parseLong(scrollTimeValidity.substring(0, scrollTimeValidity.length() - 1)) * 60 * 60 * 1000L;
+            } else {
+                scrollTimeValidityMs = Long.parseLong(scrollTimeValidity);
+            }
+        } catch (NumberFormatException e) {
+            LOGGER.error("Invalid scroll time validity string: {}", scrollTimeValidity, e);
+        }
+        return scrollTimeValidityMs;
+    }
+
+    @Override
+    public PartialList<CustomItem> continueCustomItemScrollQuery(String customItemType, String scrollIdentifier, String scrollTimeValidity) {
+        if (scrollIdentifier == null) {
+            return new PartialList<>(Collections.emptyList(), 0, 0, 0, PartialList.Relation.EQUAL);
+        }
+
+        // Clean up expired scroll states
+        scrollStates.entrySet().removeIf(entry -> entry.getValue().expiryTime < System.currentTimeMillis());
+
+        ScrollState state = scrollStates.get(scrollIdentifier);
+        if (state == null) {
+            return new PartialList<>(Collections.emptyList(), 0, 0, 0, PartialList.Relation.EQUAL);
+        }
+
+        // Get next page of items, filtering by type and converting to CustomItem
+        int fromIndex = state.currentPosition;
+        int remainingItems = state.items.size() - fromIndex;
+        int pageSize = state.pageSize < 0 ? remainingItems : Math.min(state.pageSize, remainingItems);
+        int toIndex = fromIndex + pageSize;
+
+        List<CustomItem> pageItems = state.items.subList(fromIndex, toIndex).stream()
+                .filter(item -> item instanceof CustomItem)
+                .filter(item -> customItemType.equals(item.getItemType()))
+                .filter(item -> executionContextManager.getCurrentContext().getTenantId().equals(item.getTenantId()))
+                .map(item -> (CustomItem) item)
+                .collect(Collectors.toList());
+
+        // Update scroll state with new position
+        if (toIndex >= state.items.size()) {
+            // End of scroll, remove the state
+            scrollStates.remove(scrollIdentifier);
+        } else {
+            // Parse the new scroll time validity if provided
+            long scrollTimeValidityMs = getScrollTimeValidityMs(scrollTimeValidity);
+
+            // Extend the scroll timeout
+            scrollStates.put(scrollIdentifier, new ScrollState((List<Item>)(List<?>)state.items, toIndex,
+                    System.currentTimeMillis() + scrollTimeValidityMs, state.pageSize));
+        }
+
+        PartialList<CustomItem> partialList = new PartialList<>(pageItems, fromIndex, pageSize, state.items.size(), PartialList.Relation.EQUAL);
+        if (toIndex < state.items.size()) {
+            partialList.setScrollIdentifier(scrollIdentifier);
+            partialList.setScrollTimeValidity(scrollTimeValidity);
+        }
+
+        return partialList;
     }
 
     @Override
     public CustomItem loadCustomItem(String itemId, Date dateHint, String itemType) {
-        throw new UnsupportedOperationException("Not implemented");
+        return loadCustomItem(itemId, itemType);
+    }
+
+    @Override
+    public CustomItem loadCustomItem(String itemId, String itemType) {
+        if (itemId == null || itemType == null) {
+            return null;
+        }
+
+        // Create a key that includes the item type and tenant ID
+        String key = getKey(itemId, itemType);
+        Item item = itemsById.get(key);
+
+        if (item instanceof CustomItem &&
+            itemType.equals(item.getItemType()) &&
+            executionContextManager.getCurrentContext().getTenantId().equals(item.getTenantId())) {
+            return (CustomItem) item;
+        }
+
+        return null;
     }
 
     @Override
     public boolean removeCustomItem(String itemId, String itemType) {
-        throw new UnsupportedOperationException("Not implemented");
-    }
+        if (itemId == null || itemType == null) {
+            return false;
+        }
 
-    @Override
-    public PartialList<CustomItem> continueCustomItemScrollQuery(String scrollIdentifier, String itemType, String fieldName) {
-        throw new UnsupportedOperationException("Not implemented");
+        String key = getKey(itemId, itemType);
+        Item item = itemsById.get(key);
+
+        if (item instanceof CustomItem &&
+            itemType.equals(item.getItemType()) &&
+            executionContextManager.getCurrentContext().getTenantId().equals(item.getTenantId())) {
+            itemsById.remove(key);
+            if (fileStorageEnabled) {
+                deleteItemFile(item);
+            }
+            return true;
+        }
+
+        return false;
     }
 
     @Override
@@ -1018,7 +1175,7 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
         }
 
         // Parse scroll time validity
-        long validityTime = Long.parseLong(scrollTimeValidity);
+        long validityTime = getScrollTimeValidityMs(scrollTimeValidity);
 
         // Get next page of items
         int fromIndex = state.currentPosition;
@@ -1432,22 +1589,22 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
         if (olderThanInDays <= 0 || clazz == null) {
             return;
         }
-        
+
         // Calculate the date olderThanInDays days ago
         Calendar calendar = Calendar.getInstance();
         calendar.add(Calendar.DAY_OF_YEAR, -olderThanInDays);
         Date cutoffDate = calendar.getTime();
-        
+
         String currentTenantId = executionContextManager.getCurrentContext().getTenantId();
         String itemType = getIndex(clazz);
         List<String> keysToRemove = new ArrayList<>();
-        
+
         for (Map.Entry<String, Item> entry : itemsById.entrySet()) {
             Item item = entry.getValue();
             // Use creation date instead of timestamp, and check tenant
-            if (currentTenantId.equals(item.getTenantId()) && 
-                item.getItemType().equals(itemType) && 
-                item.getCreationDate() != null && 
+            if (currentTenantId.equals(item.getTenantId()) &&
+                item.getItemType().equals(itemType) &&
+                item.getCreationDate() != null &&
                 item.getCreationDate().before(cutoffDate)) {
                 keysToRemove.add(entry.getKey());
                 if (fileStorageEnabled) {
@@ -1455,12 +1612,12 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
                 }
             }
         }
-        
+
         for (String key : keysToRemove) {
             itemsById.remove(key);
         }
-        
-        LOGGER.info("Purged {} items of type {} older than {} days for tenant {}", 
+
+        LOGGER.info("Purged {} items of type {} older than {} days for tenant {}",
                 keysToRemove.size(), itemType, olderThanInDays, currentTenantId);
     }
 
