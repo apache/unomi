@@ -488,6 +488,43 @@ upon successful login using an email, Unomi will look for other profiles that ha
 a single profile. Because of the merge, this should only be done for authenticated profiles, otherwise this could be a
 security issue since it could be a way to load data from other profiles by merging their data !
 
+==== Technical Implementation Details
+
+===== Profile Selection Strategy
+
+By default, profiles are merged with the oldest profile (determined by the `firstVisit` property) becoming the master profile. This behavior can be overridden by setting `forceEventProfileAsMaster` to true in the action parameters, which forces the current event's profile to become the master.
+
+===== Property Merge Strategy
+
+When merging profile properties, Unomi follows these rules:
+
+1. Properties from all profiles are combined into the master profile
+2. When conflicting values exist for a property, the master profile's value takes precedence
+3. Multi-valued properties (arrays/collections) are merged together
+4. Profile segments and scores are recalculated after the merge
+
+A custom property merge strategy can be implemented by:
+
+1. Creating a class that implements `PropertyMergeStrategyType`
+2. Registering it as an OSGi service
+3. Configuring it in your merge action
+
+===== Asynchronous Processing
+
+To ensure performance, Unomi processes resource-intensive operations asynchronously:
+
+1. The profile merge itself happens synchronously during event processing
+2. Session and event reassignment is scheduled asynchronously via the SchedulerService
+3. Property updates triggered by the merge may cause delayed rule evaluation
+
+===== Result Codes
+
+The `MergeProfilesOnPropertyAction` returns one of the following result codes:
+
+* `EventService.NO_CHANGE` - No merge was performed
+* `EventService.PROFILE_UPDATED` - A profile was updated during the merge
+* `EventService.PROFILE_UPDATED + EventService.SESSION_UPDATED` - Both profile and session were updated
+
 ==== What profile aliases are and how to use them
 
 Profile aliases make it possible to reference profiles using multiple identifiers.
@@ -546,3 +583,97 @@ Upon merge:
 | DELETE | /cxs/profiles/PROFILE_ID/aliases/ALIAS_ID | Remove an alias from a profile
 
 |===
+
+==== Common Issues and Best Practices
+
+===== Decision Guide for Profile Merging
+
+[plantuml]
+....
+@startuml
+title When to Use Profile Merges
+
+start
+:Evaluate Use Case;
+
+if (Do you need to combine visitor data\nafter authentication?) then (yes)
+  :Profile merging is appropriate;
+else (no)
+  :Consider alternative solutions;
+  stop
+endif
+
+if (Is the identifier unique per user?) then (yes)
+  :Continue;
+else (no)
+  :Choose a more unique identifier;
+  note right: Email, CRM ID, or verified account ID
+  stop
+endif
+
+if (Is the merge happening in a\nsecure/authenticated context?) then (yes)
+  :Continue;
+else (no)
+  :Secure the context first;
+  note right: Require login or verification
+  stop
+endif
+
+:Implement profile merging with
+MergeProfilesOnPropertyAction;
+stop
+@enduml
+....
+
+===== Troubleshooting Common Issues
+
+====== Merge Not Happening
+
+If profiles aren't merging as expected, check:
+
+1. The merge property exists on both profiles with exactly matching values
+2. The merge property is stored as a system property (`systemProperties.mergeIdentifier`)
+3. The rule containing the merge action is correctly triggered
+4. The profiles aren't personas or anonymous profiles (which are skipped)
+5. Ensure the `maxProfilesInOneMerge` limit (default 50) is not being exceeded
+
+====== Data Loss During Merge
+
+By default, when property values conflict, the master profile's values take precedence. This can appear as data loss from secondary profiles.
+
+Consider:
+
+1. Implementing a custom PropertyMergeStrategy for complex merging logic
+2. Pre-processing profiles to ensure critical data is preserved
+3. Logging pre-merge state for audit purposes
+
+====== Performance Issues
+
+Profile merges can impact performance, especially in high-traffic sites:
+
+1. Monitor Elasticsearch load during merge operations
+2. Consider batch processing for bulk merges
+3. Adjust the `maxProfilesInOneMerge` parameter based on your system capabilities
+4. Schedule large merge operations during off-peak hours
+
+===== Testing Recommendations
+
+To properly test profile merges, consider:
+
+1. *Test Environment*: Set up a separate testing environment that closely mirrors production
+2. *Test Scenarios*:
+   a. Simple merge of two profiles
+   b. Merge of profiles with conflicting property values
+   c. Merge with session data and event history
+   d. Race condition testing (simultaneous merges)
+3. *Data Verification*: Verify that all important data is preserved after merges
+4. *Performance Testing*: Test merge operations under load to identify bottlenecks
+
+===== Implementation Best Practices
+
+1. *Security First*: Always implement merges in authenticated contexts only
+2. *Clear Audit Trail*: Maintain logs of merge operations for troubleshooting
+3. *Graceful Degradation*: Handle merge failures gracefully without disrupting the user experience
+4. *Monitoring*: Set up alerts for unusual merge patterns that might indicate security issues
+5. *Data Protection*: Consider regulations like GDPR when merging personal data
+6. *Backup Strategy*: Ensure you have a strategy to recover from problematic merges

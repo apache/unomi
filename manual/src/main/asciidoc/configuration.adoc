@@ -921,13 +921,213 @@ versions will of course maintain compatibility with existing scripting solutions
 
 Apache Unomi is capable of merging profiles based on a common property value. In order to use this, you must
 add the MergeProfileOnPropertyAction to a rule (such as a login rule for example), and configure it with the name
- of the property that will be used to identify the profiles to be merged. An example could be the "email" property,
- meaning that if two (or more) profiles are found to have the same value for the "email" property they will be merged
- by this action.
+of the property that will be used to identify the profiles to be merged. An example could be the "email" property,
+meaning that if two (or more) profiles are found to have the same value for the "email" property they will be merged
+by this action.
 
-Upon merge, the old profiles are marked with a "mergedWith" property that will be used on next profile access to delete
-the original profile and replace it with the merged profile (aka "master" profile). Once this is done, all cookie tracking
-will use the merged profile.
+==== How profile merging works
+
+When a profile merge is triggered, the following process takes place:
+
+[plantuml]
+....
+@startuml
+title Apache Unomi Profile Merge Workflow
+
+actor "User/Website" as User
+participant "Event\nProcessor" as Event
+participant "MergeProfilesOnPropertyAction" as Action
+participant "ProfileService" as Profile
+participant "SchedulerService" as Scheduler
+database "Elasticsearch" as ES
+
+User -> Event: Sends event (e.g., login)
+activate Event
+
+Event -> Action: Triggers action via rule
+activate Action
+
+Action -> ES: Query profiles with matching property
+ES --> Action: Return matching profiles
+
+alt No matches found
+    Action --> Event: No merge needed
+else Matches found
+    Action -> Profile: mergeProfiles(master, profileList)
+    activate Profile
+    
+    Profile -> Profile: Merge properties according to strategy
+    Profile -> Profile: Create aliases for merged profiles
+    Profile -> ES: Save master profile with updated properties
+    Profile -> ES: Save aliases
+    Profile -> ES: Delete merged profiles
+    Profile --> Action: Return master profile
+    deactivate Profile
+    
+    Action -> Event: Update event's profile reference
+    
+    Action -> Scheduler: Schedule async browsing data reassignment
+    activate Scheduler
+    Scheduler -> ES: Update sessions and events for merged profiles
+    Scheduler --> Action: Confirmation
+    deactivate Scheduler
+end
+
+Action --> Event: Return result code
+deactivate Action
+
+Event --> User: Event processed
+deactivate Event
+@enduml
+....
+
+==== Before and after a profile merge
+
+This diagram illustrates the state of profiles before and after a merge:
+
+[plantuml]
+....
+@startuml
+title Before and After Profile Merge
+
+package "Before Merge" {
+  object "Profile A" as PA {
+    id = "profile-a-123"
+    email = "user@example.com"
+    firstName = "John"
+    sessions = [session-a1, session-a2]
+    events = [event-a1, event-a2, event-a3]
+  }
+  
+  object "Profile B" as PB {
+    id = "profile-b-456"
+    email = "user@example.com"
+    lastName = "Doe"
+    sessions = [session-b1]
+    events = [event-b1, event-b2]
+  }
+}
+
+package "After Merge" {
+  object "Master Profile" as MP {
+    id = "profile-a-123"
+    email = "user@example.com"
+    firstName = "John"
+    lastName = "Doe"
+    sessions = [session-a1, session-a2, session-b1]
+    events = [event-a1, event-a2, event-a3, event-b1, event-b2]
+  }
+  
+  object "Profile Alias" as AL {
+    aliasId = "profile-b-456"
+    profileId = "profile-a-123"
+  }
+  
+  MP -- AL : references
+}
+
+PA ..> MP : becomes
+PB ..> AL : becomes alias for Master
+@enduml
+....
+
+Starting from Unomi 2:
+
+* The oldest profile (by firstVisit timestamp) becomes the master profile by default
+* All properties from merged profiles are combined into the master profile
+* An alias is created for each merged profile, pointing to the master profile
+* The original merged profiles are deleted
+* All sessions and events from merged profiles are reassigned to the master profile asynchronously
+
+==== Configuration parameters
+
+The `MergeProfilesOnPropertyAction` supports the following parameters:
+
+|===
+|Parameter |Type |Description |Required
+
+|mergeProfilePropertyName
+|String
+|The system property name used to identify profiles for merging
+|Yes
+
+|mergeProfilePropertyValue
+|String
+|The value to match against the property. Often set dynamically from event properties using `eventProperty::target.properties(propertyName)`
+|Yes
+
+|forceEventProfileAsMaster
+|Boolean
+|If true, forces the current event's profile to be the master profile after merging. If false, the oldest profile (by firstVisit) becomes the master.
+|No (defaults to false)
+|===
+
+==== Security considerations
+
+IMPORTANT: Never trigger profile merges from unauthenticated operations such as form submissions or public-facing APIs. Always verify user identity before performing a merge.
+
+The following diagram highlights key security considerations:
+
+[plantuml]
+....
+@startuml
+title Profile Merge Security Considerations
+
+start
+:Evaluate Merge Strategy;
+
+if (Is the event from an authenticated user?) then (yes)
+  :Safe to proceed;
+else (no)
+  :SECURITY RISK!;
+  note right: Unauthenticated merges can lead to\nprofile information stealing
+  stop
+endif
+
+if (Is the merge property sufficiently unique?) then (yes)
+  :Safe to proceed;
+else (no)
+  :SECURITY RISK!;
+  note right: Common values could cause\nunrelated profiles to merge
+  stop
+endif
+
+if (Is the merge property protected?) then (yes)
+  :Safe to proceed;
+else (no)
+  :SECURITY RISK!;
+  note right: Unprotected properties can be\nmanipulated by malicious users
+  stop
+endif
+
+:Proceed with Profile Merge;
+stop
+@enduml
+....
+
+Key security recommendations:
+
+* *Always authenticate users* before performing profile merges
+* *Use protected properties* that require authentication to modify
+* *Choose unique identifiers* like verified email or account ID
+* *Implement rate limiting* for merge operations to prevent abuse
+* *Consider additional verification* before merging profiles with sensitive data
+
+==== Troubleshooting profile merges
+
+If profiles aren't merging as expected, check:
+
+1. The merge property exists on both profiles with exactly matching values
+2. The merge property is stored as a system property (`systemProperties.mergeIdentifier`)
+3. The rule containing the merge action is correctly triggered
+4. The profiles aren't personas or anonymous profiles (which are skipped)
+
+==== Performance considerations
+
+* The `maxProfilesInOneMerge` parameter (default: 50) limits how many profiles are merged in a single operation
+* Large numbers of merges can impact system performance
+* Session and event reassignment happens asynchronously to prevent blocking the event processing pipeline
+* Consider the impact of merges on your Elasticsearch cluster, especially for high-traffic sites
 
 To test, simply configure the action in the "login" or "facebookLogin" rules and set it up on the "email" property.
 Upon sending one of the events, all matching profiles will be merged.
