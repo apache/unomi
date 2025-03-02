@@ -45,6 +45,8 @@ import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.apache.unomi.api.tasks.ScheduledTask;
+import org.apache.unomi.api.tasks.TaskExecutor;
 
 import java.io.IOException;
 import java.net.URL;
@@ -1486,26 +1488,54 @@ public class SegmentServiceImpl extends AbstractMultiTypeCachingService implemen
     private void initializeTimer() {
         long initialDelay = SchedulerServiceImpl.getTimeDiffInSeconds(dailyDateExprEvaluationHourUtc, ZonedDateTime.now(ZoneOffset.UTC));
 
-        LOGGER.info("daily recalculation job for segments and scoring that contains date relative conditions will run at fixed rate, " +
-                "initialDelay={}, taskExecutionPeriod={} in seconds", initialDelay, TimeUnit.DAYS.toSeconds(taskExecutionPeriod));
+        // Register the task executor for segment date recalculation
+        TaskExecutor segmentDateRecalculationExecutor = new TaskExecutor() {
+            @Override
+            public String getTaskType() {
+                return "segment-date-recalculation";
+            }
 
-        schedulerService.newTask("segment-date-recalculation")
-            .withInitialDelay(initialDelay, TimeUnit.SECONDS)
-            .withPeriod(taskExecutionPeriod, TimeUnit.DAYS)
-            .withFixedRate()  // Run at fixed intervals
-            .withSimpleExecutor(() -> {
+            @Override
+            public void execute(ScheduledTask task, TaskExecutor.TaskStatusCallback callback) {
                 contextManager.executeAsSystem(() -> {
                     try {
                         long currentTimeMillis = System.currentTimeMillis();
-                        LOGGER.info("running scheduled task to recalculate segments and scoring that contains date relative conditions");
+                        LOGGER.info("Running scheduled task to recalculate segments and scoring that contains date relative conditions...");
                         recalculatePastEventConditions();
-                        LOGGER.info("finished recalculate segments and scoring that contains date relative conditions in {}ms. ", System.currentTimeMillis() - currentTimeMillis);
+                        LOGGER.info("...Finished recalculate segments and scoring that contains date relative conditions in {}ms. ", System.currentTimeMillis() - currentTimeMillis);
+                        callback.complete();
                     } catch (Throwable t) {
                         LOGGER.error("Error while updating profiles for segments and scoring that contains date relative conditions", t);
+                        callback.fail(t.getMessage());
                     }
                 });
-            })
-            .schedule();
+            }
+        };
+        
+        schedulerService.registerTaskExecutor(segmentDateRecalculationExecutor);
+
+        // Check if a segment date recalculation task already exists
+        List<ScheduledTask> existingTasks = schedulerService.getTasksByType("segment-date-recalculation", 0, 1, null).getList();
+        if (!existingTasks.isEmpty() && existingTasks.get(0).isSystemTask()) {
+            // Reuse the existing task if it's a system task
+            ScheduledTask existingTask = existingTasks.get(0);
+            // Update task configuration if needed
+            existingTask.setPeriod(taskExecutionPeriod);
+            existingTask.setTimeUnit(TimeUnit.DAYS);
+            existingTask.setFixedRate(true);
+            existingTask.setEnabled(true);
+            schedulerService.saveTask(existingTask);
+            LOGGER.info("Reusing existing system segment date recalculation task: {}", existingTask.getItemId());
+        } else {
+            // Create a new task if none exists or existing one isn't a system task
+            schedulerService.newTask("segment-date-recalculation")
+                .withInitialDelay(initialDelay, TimeUnit.SECONDS)
+                .withPeriod(taskExecutionPeriod, TimeUnit.DAYS)
+                .withFixedRate()  // Run at fixed intervals
+                .asSystemTask() // Mark as a system task
+                .schedule();
+            LOGGER.info("Created new system segment date recalculation task");
+        }
     }
     public void setTaskExecutionPeriod(long taskExecutionPeriod) {
         this.taskExecutionPeriod = taskExecutionPeriod;

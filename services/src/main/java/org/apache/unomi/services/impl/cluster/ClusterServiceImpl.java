@@ -203,12 +203,22 @@ public class ClusterServiceImpl implements ClusterService {
         double systemCpuLoad = 0.0;
         try {
             systemCpuLoad = ((com.sun.management.OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean()).getSystemCpuLoad();
+            // Check for NaN value which Elasticsearch and OpenSearch don't support for float fields
+            if (Double.isNaN(systemCpuLoad)) {
+                LOGGER.debug("System CPU load is NaN, setting to 0.0");
+                systemCpuLoad = 0.0;
+            }
         } catch (Exception e) {
             LOGGER.debug("Error retrieving system CPU load", e);
         }
 
         final OperatingSystemMXBean operatingSystemMXBean = ManagementFactory.getOperatingSystemMXBean();
         double systemLoadAverage = operatingSystemMXBean.getSystemLoadAverage();
+        // Check for NaN value which Elasticsearch/OpenSearch doesn't support for float fields
+        if (Double.isNaN(systemLoadAverage)) {
+            LOGGER.debug("System load average is NaN, setting to 0.0");
+            systemLoadAverage = 0.0;
+        }
 
         node.setCpuLoad(systemCpuLoad);
         node.setUptime(uptime);
@@ -237,14 +247,18 @@ public class ClusterServiceImpl implements ClusterService {
             return;
         }
 
-        // Update its stats
-        updateSystemStatsForNode(node);
-        node.setLastHeartbeat(System.currentTimeMillis());
+        try {
+            // Update its stats
+            updateSystemStatsForNode(node);
+            node.setLastHeartbeat(System.currentTimeMillis());
 
-        // Save back to persistence
-        boolean success = persistenceService.save(node);
-        if (!success) {
-            LOGGER.error("Failed to update node {} statistics", nodeId);
+            // Save back to persistence
+            boolean success = persistenceService.save(node);
+            if (!success) {
+                LOGGER.error("Failed to update node {} statistics", nodeId);
+            }
+        } catch (Exception e) {
+            LOGGER.error("Error updating system statistics for node {}: {}", nodeId, e.getMessage(), e);
         }
     }
 

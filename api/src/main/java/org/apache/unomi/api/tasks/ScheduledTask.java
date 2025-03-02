@@ -172,6 +172,12 @@ public class ScheduledTask extends Item implements Serializable {
     private boolean persistent = true;  // By default tasks are persistent
     private boolean runOnAllNodes = false;  // By default tasks run on a single node
     /**
+     * Indicates if this is a system task that should not be recreated on startup.
+     * System tasks are created by the system during initialization and should be
+     * preserved across restarts.
+     */
+    private boolean systemTask = false;  // By default tasks are not system tasks
+    /**
      * Gets the task type that this task is waiting for a lock on.
      * This is used when tasks of the same type cannot run in parallel.
      * 
@@ -686,6 +692,26 @@ public class ScheduledTask extends Item implements Serializable {
     }
 
     /**
+     * Gets whether this task is a system task.
+     * System tasks are created by the system during initialization and should be 
+     * preserved across restarts rather than being recreated.
+     * 
+     * @return true if the task is a system task
+     */
+    public boolean isSystemTask() {
+        return systemTask;
+    }
+
+    /**
+     * Sets whether this task is a system task.
+     * 
+     * @param systemTask true to mark the task as a system task
+     */
+    public void setSystemTask(boolean systemTask) {
+        this.systemTask = systemTask;
+    }
+
+    /**
      * Gets the task type that this task is waiting for a lock on.
      * This is used when tasks of the same type cannot run in parallel.
      * 
@@ -838,6 +864,7 @@ public class ScheduledTask extends Item implements Serializable {
                 ", checkpointData=" + checkpointData +
                 ", persistent=" + persistent +
                 ", runOnAllNodes=" + runOnAllNodes +
+                ", systemTask=" + systemTask +
                 ", waitingForTaskType='" + waitingForTaskType + '\'' +
                 ", dependsOn=" + dependsOn +
                 ", waitingOnTasks=" + waitingOnTasks +

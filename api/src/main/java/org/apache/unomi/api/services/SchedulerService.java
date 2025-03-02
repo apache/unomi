@@ -212,6 +212,15 @@ public interface SchedulerService {
     void recoverCrashedTasks();
 
     /**
+     * Saves changes to an existing task.
+     * This persists the task state and configuration changes to storage.
+     * 
+     * @param task the task to save
+     * @return true if the save was successful, false otherwise
+     */
+    boolean saveTask(ScheduledTask task);
+
+    /**
      * Creates a simple recurring task with default settings.
      * This is a convenience method for services that just need periodic execution.
      * The task will use fixed rate scheduling and allow parallel execution.
@@ -331,10 +340,19 @@ public interface SchedulerService {
         TaskBuilder nonPersistent();
         
         /**
-         * Makes this task run on all cluster nodes.
-         * By default tasks only run on executor nodes.
+         * Runs the task on all nodes in the cluster rather than just executor nodes.
+         * This is helpful for distributed cache refreshes or local data maintenance.
          */
         TaskBuilder runOnAllNodes();
+
+        /**
+         * Marks this task as a system task.
+         * System tasks are created during system initialization and should be
+         * preserved across restarts rather than being recreated.
+         * 
+         * @return this builder for method chaining
+         */
+        TaskBuilder asSystemTask();
 
         /**
          * Sets the maximum number of retry attempts after failures.

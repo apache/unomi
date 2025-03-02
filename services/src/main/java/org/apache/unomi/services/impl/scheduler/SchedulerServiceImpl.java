@@ -278,7 +278,7 @@ public class SchedulerServiceImpl implements SchedulerService {
             // Start task checking thread using the execution manager
             executionManager.startTaskChecker(this::checkTasks);
             // Initialize purge tasks
-            initializePurgeTasks();
+            initializeTaskPurge();
         }
 
         if (nodeId == null) {
@@ -832,16 +832,55 @@ public class SchedulerServiceImpl implements SchedulerService {
         return persistenceService.query(condition, sortBy, ScheduledTask.class, offset, size);
     }
 
-    private void initializePurgeTasks() {
+    private void initializeTaskPurge() {
         if (!purgeTaskEnabled) {
             return;
         }
+        
+        // Register the task executor for task purge
+        TaskExecutor taskPurgeExecutor = new TaskExecutor() {
+            @Override
+            public String getTaskType() {
+                return "task-purge";
+            }
 
-        taskPurgeTask = newTask("task-purge")
-            .withPeriod(1, TimeUnit.DAYS)
-            .withFixedRate()
-            .withSimpleExecutor(() -> purgeOldTasks())
-            .schedule();
+            @Override
+            public void execute(ScheduledTask task, TaskExecutor.TaskStatusCallback callback) {
+                try {
+                    purgeOldTasks();
+                    callback.complete();
+                } catch (Throwable t) {
+                    LOGGER.error("Error while purging old tasks", t);
+                    callback.fail(t.getMessage());
+                }
+            }
+        };
+        
+        registerTaskExecutor(taskPurgeExecutor);
+
+        // Check if a task purge task already exists
+        List<ScheduledTask> existingTasks = getTasksByType("task-purge", 0, 1, null).getList();
+        ScheduledTask taskPurgeTask = null;
+        
+        if (!existingTasks.isEmpty() && existingTasks.get(0).isSystemTask()) {
+            // Reuse the existing task if it's a system task
+            taskPurgeTask = existingTasks.get(0);
+            // Update task configuration if needed
+            taskPurgeTask.setPeriod(1);
+            taskPurgeTask.setTimeUnit(TimeUnit.DAYS);
+            taskPurgeTask.setFixedRate(true);
+            taskPurgeTask.setEnabled(true);
+            saveTask(taskPurgeTask);
+            LOGGER.info("Reusing existing system task purge task: {}", taskPurgeTask.getItemId());
+        } else {
+            // Create a new task if none exists or existing one isn't a system task
+            taskPurgeTask = newTask("task-purge")
+                .withPeriod(1, TimeUnit.DAYS)
+                .withFixedRate()
+                .asSystemTask()
+                .schedule();
+            LOGGER.info("Created new system task purge task: {}", taskPurgeTask.getItemId());
+        }
     }
 
     void purgeOldTasks() {
@@ -891,6 +930,7 @@ public class SchedulerServiceImpl implements SchedulerService {
      * @param task The task to save
      * @return true if the task was successfully saved, false otherwise
      */
+    @Override
     public boolean saveTask(ScheduledTask task) {
         if (task == null) {
             LOGGER.warn("Attempted to save null task, ignoring");
@@ -1074,6 +1114,7 @@ public class SchedulerServiceImpl implements SchedulerService {
         private int maxRetries = 3;  // Default value from ScheduledTask
         private long retryDelay = 60000;  // Default value from ScheduledTask (1 minute)
         private Set<String> dependsOn = new HashSet<>();
+        private boolean systemTask = false;
 
         private TaskBuilder(SchedulerServiceImpl schedulerService, String taskType) {
             this.schedulerService = schedulerService;
@@ -1164,6 +1205,15 @@ public class SchedulerServiceImpl implements SchedulerService {
         }
 
         @Override
+        public TaskBuilder asSystemTask() {
+            if (!persistent) {
+                throw new IllegalStateException("System tasks must be persistent. Cannot use asSystemTask() with nonPersistent().");
+            }
+            this.systemTask = true;
+            return this;
+        }
+
+        @Override
         public TaskBuilder withMaxRetries(int maxRetries) {
             if (maxRetries < 0) {
                 throw new IllegalArgumentException("Max retries cannot be negative");
@@ -1200,6 +1250,20 @@ public class SchedulerServiceImpl implements SchedulerService {
                 schedulerService.registerTaskExecutor(executor);
             }
 
+            // Check for existing system tasks of the same type if this is a system task
+            if (systemTask) {
+                List<ScheduledTask> existingTasks = schedulerService.getTasksByType(taskType, 0, 1, null).getList();
+                if (!existingTasks.isEmpty() && existingTasks.get(0).isSystemTask()) {
+                    // Reuse the existing system task
+                    ScheduledTask existingTask = existingTasks.get(0);
+                    LOGGER.info("Reusing existing system task: {}", existingTask.getItemId());
+                    
+                    // Schedule the existing task
+                    schedulerService.scheduleTask(existingTask);
+                    return existingTask;
+                }
+            }
+
             ScheduledTask task = schedulerService.createTask(
                 taskType,
                 parameters,
@@ -1218,6 +1282,7 @@ public class SchedulerServiceImpl implements SchedulerService {
             if (!dependsOn.isEmpty()) {
                 task.setDependsOn(dependsOn);
             }
+            task.setSystemTask(systemTask);
             schedulerService.scheduleTask(task);
             return task;
         }

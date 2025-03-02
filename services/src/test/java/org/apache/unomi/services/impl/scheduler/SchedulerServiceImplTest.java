@@ -1524,4 +1524,455 @@ public class SchedulerServiceImplTest {
         task.setStatus(ScheduledTask.TaskStatus.RUNNING);
         persistenceService.save(task);
     }
+
+    public interface SystemTaskTests {}
+    
+    public interface RestartTests {}
+
+    /**
+     * Tests that system tasks are properly handled when the scheduler restarts.
+     * System tasks should be reused rather than duplicated.
+     */
+    @Test
+    @Category(SystemTaskTests.class)
+    public void testSystemTaskReuse() throws Exception {
+        // Create a system task
+        String taskType = "system-task-reuse-test";
+        AtomicInteger executionCount = new AtomicInteger(0);
+        CountDownLatch executionLatch = new CountDownLatch(1);
+        
+        TaskExecutor executor = new TaskExecutor() {
+            @Override
+            public String getTaskType() {
+                return taskType;
+            }
+
+            @Override
+            public void execute(ScheduledTask task, TaskStatusCallback callback) {
+                executionCount.incrementAndGet();
+                executionLatch.countDown();
+                callback.complete();
+            }
+        };
+        
+        schedulerService.registerTaskExecutor(executor);
+        
+        // Schedule a system task
+        ScheduledTask systemTask = schedulerService.newTask(taskType)
+            .withPeriod(1, TimeUnit.DAYS)
+            .withFixedRate()
+            .asSystemTask()
+            .schedule();
+        
+        // Wait for task to execute once
+        assertTrue("Task should execute", executionLatch.await(TEST_TIMEOUT, TEST_TIME_UNIT));
+        assertEquals("Task should have executed once", 1, executionCount.get());
+        
+        // Force persistence to ensure the task is saved
+        persistenceService.refreshIndex(ScheduledTask.class);
+        
+        // Now create a new task with the same type
+        ScheduledTask secondTask = schedulerService.newTask(taskType)
+            .withPeriod(1, TimeUnit.DAYS)
+            .withFixedRate()
+            .asSystemTask()
+            .schedule();
+        
+        // The task ID should be the same as the first one since it's reused
+        assertEquals("System task should be reused, not duplicated", 
+            systemTask.getItemId(), secondTask.getItemId());
+        
+        // Check that there's only one task of this type
+        persistenceService.refreshIndex(ScheduledTask.class);
+        List<ScheduledTask> tasks = schedulerService.getTasksByType(taskType, 0, -1, null).getList();
+        assertEquals("Should only be one system task of this type", 1, tasks.size());
+    }
+    
+    /**
+     * Tests that scheduler correctly handles tasks across shutdown and restart.
+     * Persistent tasks should be properly reloaded and continue execution.
+     */
+    @Test
+    @Category(RestartTests.class)
+    public void testSchedulerRestartWithPersistentTasks() throws Exception {
+        // Create a persistent task
+        String taskType = "restart-test";
+        AtomicInteger executionCount = new AtomicInteger(0);
+        CountDownLatch firstExecutionLatch = new CountDownLatch(1);
+        CountDownLatch secondExecutionLatch = new CountDownLatch(1);
+        
+        TaskExecutor executor = new TaskExecutor() {
+            @Override
+            public String getTaskType() {
+                return taskType;
+            }
+
+            @Override
+            public void execute(ScheduledTask task, TaskStatusCallback callback) {
+                int count = executionCount.incrementAndGet();
+                if (count == 1) {
+                    firstExecutionLatch.countDown();
+                } else if (count == 2) {
+                    secondExecutionLatch.countDown();
+                }
+                callback.complete();
+            }
+        };
+        
+        schedulerService.registerTaskExecutor(executor);
+        
+        // Schedule a persistent task with short period
+        ScheduledTask persistentTask = schedulerService.newTask(taskType)
+            .withPeriod(500, TimeUnit.MILLISECONDS)
+            .withFixedRate()
+            .schedule();
+        
+        // Wait for first execution to complete
+        assertTrue("Task should execute first time", 
+            firstExecutionLatch.await(TEST_TIMEOUT, TEST_TIME_UNIT));
+        
+        // Force refresh to ensure the task is properly saved
+        persistenceService.refreshIndex(ScheduledTask.class);
+        
+        // Shutdown the scheduler service
+        schedulerService.preDestroy();
+        
+        // Create a new scheduler service that will reload existing tasks
+        SchedulerServiceImpl newSchedulerService = (SchedulerServiceImpl) TestHelper.createSchedulerService(
+            persistenceService, 
+            executionContextManager, 
+            bundleContext, 
+            clusterService, 
+            false);
+        
+        newSchedulerService.setThreadPoolSize(TEST_THREAD_POOL_SIZE);
+        newSchedulerService.setLockTimeout(TEST_LOCK_TIMEOUT);
+        
+        // Initialize first, then register executor
+        newSchedulerService.postConstruct();
+        newSchedulerService.registerTaskExecutor(executor);
+        
+        // Wait for second execution to complete on restarted scheduler
+        boolean executed = secondExecutionLatch.await(TEST_TIMEOUT * 2, TEST_TIME_UNIT);
+        
+        // Clean up the new scheduler service
+        newSchedulerService.preDestroy();
+        
+        assertTrue("Task should execute after scheduler restart", executed);
+        assertEquals("Task should have executed twice", 2, executionCount.get());
+        
+        // Verify the reloaded task has same ID
+        ScheduledTask reloadedTask = persistenceService.load(persistentTask.getItemId(), ScheduledTask.class);
+        assertNotNull("Persistent task should still exist", reloadedTask);
+        assertEquals("Task ID should be preserved", persistentTask.getItemId(), reloadedTask.getItemId());
+    }
+    
+    /**
+     * Tests that system tasks properly preserve their state and configuration
+     * across scheduler restarts.
+     */
+    @Test
+    @Category({SystemTaskTests.class, RestartTests.class})
+    public void testSystemTaskAcrossRestart() throws Exception {
+        // Create a system task with specific configuration
+        String taskType = "system-task-restart-test";
+        Map<String, Object> taskParams = new HashMap<>();
+        taskParams.put("configParam", "testValue");
+        taskParams.put("numericParam", 123);
+        
+        AtomicInteger executionCount = new AtomicInteger(0);
+        AtomicReference<Map<String, Object>> executedParams = new AtomicReference<>();
+        CountDownLatch executionLatch = new CountDownLatch(1);
+        
+        TaskExecutor executor = new TaskExecutor() {
+            @Override
+            public String getTaskType() {
+                return taskType;
+            }
+
+            @Override
+            public void execute(ScheduledTask task, TaskStatusCallback callback) {
+                executionCount.incrementAndGet();
+                executedParams.set(new HashMap<>(task.getParameters()));
+                executionLatch.countDown();
+                callback.complete();
+            }
+        };
+        
+        schedulerService.registerTaskExecutor(executor);
+        
+        // Schedule the system task with parameters
+        ScheduledTask systemTask = schedulerService.newTask(taskType)
+            .withParameters(taskParams)
+            .withPeriod(1, TimeUnit.DAYS)
+            .withFixedRate()
+            .asSystemTask()
+            .schedule();
+        
+        // Force refresh to ensure the task is properly saved
+        persistenceService.refreshIndex(ScheduledTask.class);
+        
+        // Shutdown the scheduler service
+        schedulerService.preDestroy();
+        
+        // Create a new scheduler service
+        SchedulerServiceImpl newSchedulerService = (SchedulerServiceImpl) TestHelper.createSchedulerService(
+            persistenceService, 
+            executionContextManager, 
+            bundleContext, 
+            clusterService, 
+            false);
+        
+        newSchedulerService.setThreadPoolSize(TEST_THREAD_POOL_SIZE);
+        newSchedulerService.setLockTimeout(TEST_LOCK_TIMEOUT);
+        newSchedulerService.postConstruct();
+        
+        // Create a duplicate task during scheduler initialization
+        // This simulates code that always creates its task during initialization
+        TaskExecutor newExecutor = new TaskExecutor() {
+            @Override
+            public String getTaskType() {
+                return taskType;
+            }
+
+            @Override
+            public void execute(ScheduledTask task, TaskStatusCallback callback) {
+                executionCount.incrementAndGet();
+                executedParams.set(new HashMap<>(task.getParameters()));
+                executionLatch.countDown();
+                callback.complete();
+            }
+        };
+        
+        newSchedulerService.registerTaskExecutor(newExecutor);
+        
+        // Force refresh to ensure tasks are properly loaded
+        persistenceService.refreshIndex(ScheduledTask.class);
+        
+        // Attempt to create the same system task (should reuse existing one)
+        Map<String, Object> newTaskParams = new HashMap<>();
+        newTaskParams.put("configParam", "newValue"); // Different param value
+        
+        ScheduledTask recreatedTask = newSchedulerService.newTask(taskType)
+            .withParameters(newTaskParams)
+            .withPeriod(2, TimeUnit.DAYS) // Different period
+            .withFixedRate()
+            .asSystemTask()
+            .schedule();
+        
+        // Verify task was reused, not recreated
+        assertEquals("System task ID should be preserved", 
+            systemTask.getItemId(), recreatedTask.getItemId());
+        
+        // Verify original parameters were preserved
+        assertEquals("Original parameter should be preserved", 
+            "testValue", recreatedTask.getParameters().get("configParam"));
+        assertEquals("Original parameter should be preserved", 
+            123, recreatedTask.getParameters().get("numericParam"));
+        
+        // Clean up
+        newSchedulerService.preDestroy();
+    }
+
+    /**
+     * Tests that system purge tasks are properly handled and can be reused.
+     * This simulates the behavior in SchedulerServiceImpl and ProfileServiceImpl.
+     */
+    @Test
+    @Category({SystemTaskTests.class, MaintenanceTests.class})
+    public void testSystemPurgeTasks() throws Exception {
+        CountDownLatch executionLatch = new CountDownLatch(1);
+        AtomicInteger executionCount = new AtomicInteger(0);
+        
+        // Create a TaskExecutor for "task-purge" (similar to SchedulerServiceImpl's purge task)
+        TaskExecutor taskPurgeExecutor = new TaskExecutor() {
+            @Override
+            public String getTaskType() {
+                return "task-purge";
+            }
+
+            @Override
+            public void execute(ScheduledTask task, TaskStatusCallback callback) {
+                executionCount.incrementAndGet();
+                executionLatch.countDown();
+                callback.complete();
+            }
+        };
+        
+        // Register the task executor
+        schedulerService.registerTaskExecutor(taskPurgeExecutor);
+        
+        // Create the initial task-purge task
+        ScheduledTask taskPurgeTask = schedulerService.newTask("task-purge")
+            .withPeriod(1, TimeUnit.DAYS)
+            .withFixedRate()
+            .asSystemTask()
+            .schedule();
+        
+        // Verify the task is correctly created and scheduled
+        assertNotNull("Task should be created", taskPurgeTask);
+        assertTrue("Task should be a system task", taskPurgeTask.isSystemTask());
+        
+        // Wait for the task to execute
+        assertTrue("Task should execute", executionLatch.await(TEST_TIMEOUT, TEST_TIME_UNIT));
+        assertEquals("Task should have executed once", 1, executionCount.get());
+        
+        // Force refresh to ensure the task is properly saved
+        persistenceService.refreshIndex(ScheduledTask.class);
+        
+        // Now simulate the scheduler restart by destroying and recreating it
+        schedulerService.preDestroy();
+        
+        // Create a new scheduler service
+        SchedulerServiceImpl newSchedulerService = (SchedulerServiceImpl) TestHelper.createSchedulerService(
+            persistenceService, 
+            executionContextManager, 
+            bundleContext, 
+            clusterService, 
+            false);
+        
+        newSchedulerService.setThreadPoolSize(TEST_THREAD_POOL_SIZE);
+        newSchedulerService.setLockTimeout(TEST_LOCK_TIMEOUT);
+        newSchedulerService.postConstruct();
+        
+        // Register the executor
+        newSchedulerService.registerTaskExecutor(taskPurgeExecutor);
+        
+        // Force refresh to ensure tasks are properly loaded
+        persistenceService.refreshIndex(ScheduledTask.class);
+        
+        // Now simulate the initializeTaskPurge method in SchedulerServiceImpl
+        // This checks for existing system tasks of type "task-purge"
+        List<ScheduledTask> existingTasks = newSchedulerService.getTasksByType("task-purge", 0, 1, null).getList();
+        ScheduledTask reuseTask = null;
+        
+        // Check if there's an existing system task
+        if (!existingTasks.isEmpty() && existingTasks.get(0).isSystemTask()) {
+            // Reuse the existing task
+            reuseTask = existingTasks.get(0);
+            // Update task configuration
+            reuseTask.setPeriod(1);
+            reuseTask.setTimeUnit(TimeUnit.DAYS);
+            reuseTask.setFixedRate(true);
+            reuseTask.setEnabled(true);
+            newSchedulerService.saveTask(reuseTask);
+        } else {
+            // Create a new task if none exists or existing one isn't a system task
+            reuseTask = newSchedulerService.newTask("task-purge")
+                .withPeriod(1, TimeUnit.DAYS)
+                .withFixedRate()
+                .asSystemTask()
+                .schedule();
+        }
+        
+        // Verify task was reused, not recreated
+        assertEquals("System task ID should be preserved", taskPurgeTask.getItemId(), reuseTask.getItemId());
+        
+        // Finally, verify the task state is preserved after all operations
+        ScheduledTask finalTask = persistenceService.load(taskPurgeTask.getItemId(), ScheduledTask.class);
+        assertNotNull("Task should still exist in persistence", finalTask);
+        assertTrue("Task should still be a system task", finalTask.isSystemTask());
+        assertEquals("Task type should be preserved", "task-purge", finalTask.getTaskType());
+        
+        // Clean up
+        newSchedulerService.preDestroy();
+    }
+
+    /**
+     * Tests that a dedicated TaskExecutor for system tasks works properly
+     * and is reused after scheduler restart. This simulates the pattern we've 
+     * implemented for previously using withSimpleExecutor() in system tasks.
+     */
+    @Test
+    @Category({SystemTaskTests.class, RestartTests.class})
+    public void testDedicatedTaskExecutorForSystemTasks() throws Exception {
+        String taskType = "dedicated-executor-test";
+        CountDownLatch firstExecutionLatch = new CountDownLatch(1);
+        CountDownLatch secondExecutionLatch = new CountDownLatch(1);
+        AtomicInteger executionCount = new AtomicInteger(0);
+        
+        // Create a dedicated TaskExecutor that counts executions and signals via latches
+        TaskExecutor dedicatedExecutor = new TaskExecutor() {
+            @Override
+            public String getTaskType() {
+                return taskType;
+            }
+
+            @Override
+            public void execute(ScheduledTask task, TaskStatusCallback callback) {
+                try {
+                    int count = executionCount.incrementAndGet();
+                    LOGGER.info("Executing task {} (execution #{})", task.getItemId(), count);
+                    
+                    // Get parameter from task
+                    Map<String, Object> params = task.getParameters();
+                    String testParam = (String) params.get("testParam");
+                    assertNotNull("Task should have testParam", testParam);
+                    
+                    if (count == 1) {
+                        firstExecutionLatch.countDown();
+                    } else if (count == 2) {
+                        secondExecutionLatch.countDown();
+                    }
+                    
+                    callback.complete();
+                } catch (Exception e) {
+                    LOGGER.error("Error executing task", e);
+                    callback.fail(e.getMessage());
+                }
+            }
+        };
+        
+        // Register the executor and create the system task
+        schedulerService.registerTaskExecutor(dedicatedExecutor);
+        
+        // Setup parameters for the task
+        Map<String, Object> taskParams = new HashMap<>();
+        taskParams.put("testParam", "initialValue");
+        
+        // Create a system task using the dedicated executor
+        ScheduledTask systemTask = schedulerService.newTask(taskType)
+            .withParameters(taskParams)
+            .withPeriod(100, TimeUnit.MILLISECONDS) // Short period for testing
+            .withFixedRate()
+            .asSystemTask()
+            .schedule();
+        
+        // Verify the task executes with the dedicated executor
+        assertTrue("Task should execute with dedicated executor", 
+            firstExecutionLatch.await(TEST_TIMEOUT, TEST_TIME_UNIT));
+        assertEquals("Task should execute once", 1, executionCount.get());
+        
+        // Force refresh to ensure the task is properly saved
+        persistenceService.refreshIndex(ScheduledTask.class);
+        
+        // Now shut down and restart the scheduler
+        schedulerService.preDestroy();
+        
+        // Create a new scheduler service
+        SchedulerServiceImpl newSchedulerService = (SchedulerServiceImpl) TestHelper.createSchedulerService(
+            persistenceService, 
+            executionContextManager, 
+            bundleContext, 
+            clusterService, 
+            false);
+        
+        newSchedulerService.setThreadPoolSize(TEST_THREAD_POOL_SIZE);
+        newSchedulerService.setLockTimeout(TEST_LOCK_TIMEOUT);
+        
+        // Initialize the scheduler before registering the executor
+        newSchedulerService.postConstruct();
+        newSchedulerService.registerTaskExecutor(dedicatedExecutor);
+        
+        // Force refresh to ensure tasks are properly loaded
+        persistenceService.refreshIndex(ScheduledTask.class);
+        
+        // The task should automatically resume and execute with the dedicated executor
+        assertTrue("Task should execute after restart with dedicated executor", 
+            secondExecutionLatch.await(TEST_TIMEOUT * 2, TEST_TIME_UNIT));
+        assertEquals("Task should execute twice", 2, executionCount.get());
+        
+        // Clean up
+        newSchedulerService.preDestroy();
+    }
 }

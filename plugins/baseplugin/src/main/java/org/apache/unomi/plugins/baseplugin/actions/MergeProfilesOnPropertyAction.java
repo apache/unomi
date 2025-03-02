@@ -29,6 +29,8 @@ import org.apache.unomi.api.services.*;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.apache.unomi.api.tasks.ScheduledTask;
+import org.apache.unomi.api.tasks.TaskExecutor;
 
 import java.util.*;
 import java.util.concurrent.TimeUnit;
@@ -154,8 +156,58 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
     }
 
     private void reassignPersistedBrowsingDatasAsync(boolean anonymousBrowsing, List<String> mergedProfileIds, String masterProfileId) {
+        // Register task executor for data reassignment
+        String taskType = "merge-profiles-reassign-data";
+        
+        // Create a reusable executor that can handle the parameters
+        TaskExecutor mergeProfilesReassignDataExecutor = new TaskExecutor() {
+            @Override
+            public String getTaskType() {
+                return taskType;
+            }
+
+            @Override
+            public void execute(ScheduledTask task, TaskExecutor.TaskStatusCallback callback) {
+                try {
+                    Map<String, Object> parameters = task.getParameters();
+                    boolean isAnonymousBrowsing = (boolean) parameters.get("anonymousBrowsing");
+                    @SuppressWarnings("unchecked")
+                    List<String> profilesIds = (List<String>) parameters.get("mergedProfileIds");
+                    String masterProfile = (String) parameters.get("masterProfileId");
+                    
+                    if (!isAnonymousBrowsing) {
+                        Condition profileIdsCondition = new Condition(definitionsService.getConditionType("eventPropertyCondition"));
+                        profileIdsCondition.setParameter("propertyName","profileId");
+                        profileIdsCondition.setParameter("comparisonOperator","in");
+                        profileIdsCondition.setParameter("propertyValues", profilesIds);
+                        Map<String, Object> eventParams = new HashMap<>();
+                        eventParams.put("mergeProfilePreviousIds", profilesIds);
+                        eventParams.put("mergeProfileTargetId", masterProfile);
+                        
+                        String[] scripts = new String[]{"updateProfileId"};
+                        Map<String, Object>[] scriptParams = new Map[]{Collections.singletonMap("profileId", masterProfile)};
+                        Condition[] conditions = new Condition[]{profileIdsCondition};
+                        
+                        persistenceService.updateWithQueryAndStoredScript(new Class[]{Session.class, Event.class}, scripts, scriptParams, conditions, false);
+                    } else {
+                        for (String mergedProfileId : profilesIds) {
+                            privacyService.anonymizeBrowsingData(mergedProfileId);
+                        }
+                    }
+                    
+                    callback.complete();
+                } catch (Exception e) {
+                    LOGGER.error("Error while reassigning profile data", e);
+                    callback.fail(e.getMessage());
+                }
+            }
+        };
+        
+        // Register the executor
+        schedulerService.registerTaskExecutor(mergeProfilesReassignDataExecutor);
+
         // Create a one-shot task for async data reassignment
-        schedulerService.newTask("merge-profiles-reassign-data")
+        schedulerService.newTask(taskType)
             .withParameters(Map.of(
                 "anonymousBrowsing", anonymousBrowsing,
                 "mergedProfileIds", mergedProfileIds,
@@ -163,25 +215,6 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
             ))
             .withInitialDelay(1000, TimeUnit.MILLISECONDS)
             .asOneShot()
-            .withSimpleExecutor(() -> {
-                if (!anonymousBrowsing) {
-                    Condition profileIdsCondition = new Condition(definitionsService.getConditionType("eventPropertyCondition"));
-                    profileIdsCondition.setParameter("propertyName","profileId");
-                    profileIdsCondition.setParameter("comparisonOperator","in");
-                    profileIdsCondition.setParameter("propertyValues", mergedProfileIds);
-
-                    String[] scripts = new String[]{"updateProfileId"};
-                    Map<String, Object>[] scriptParams = new Map[]{Collections.singletonMap("profileId", masterProfileId)};
-                    Condition[] conditions = new Condition[]{profileIdsCondition};
-
-                    persistenceService.updateWithQueryAndStoredScript(new Class[]{Session.class, Event.class}, scripts, scriptParams, conditions, false);
-                } else {
-                    for (String mergedProfileId : mergedProfileIds) {
-                        privacyService.anonymizeBrowsingData(mergedProfileId);
-                    }
-                }
-            })
-            .nonPersistent()
             .schedule();
     }
 

@@ -40,7 +40,7 @@ public class TaskStateManager {
         COMPLETE(TaskStatus.COMPLETED, EnumSet.of(TaskStatus.RUNNING)),
         FAIL(TaskStatus.FAILED, EnumSet.of(TaskStatus.RUNNING)),
         CANCEL(TaskStatus.CANCELLED, EnumSet.of(TaskStatus.RUNNING, TaskStatus.SCHEDULED, TaskStatus.WAITING)),
-        CRASH(TaskStatus.CRASHED, EnumSet.of(TaskStatus.RUNNING)),
+        CRASH(TaskStatus.CRASHED, EnumSet.of(TaskStatus.RUNNING, TaskStatus.SCHEDULED)),
         WAIT(TaskStatus.WAITING, EnumSet.of(TaskStatus.SCHEDULED, TaskStatus.RUNNING));
 
         private final TaskStatus endState;

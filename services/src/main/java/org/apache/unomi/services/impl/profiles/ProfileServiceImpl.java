@@ -27,6 +27,7 @@ import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.segments.Segment;
 import org.apache.unomi.api.services.*;
 import org.apache.unomi.api.tasks.ScheduledTask;
+import org.apache.unomi.api.tasks.TaskExecutor;
 import org.apache.unomi.api.utils.ParserHelper;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.persistence.spi.PersistenceService;
@@ -396,20 +397,57 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
             return;
         }
 
-        purgeTask = schedulerService.newTask("profile-purge")
-            .withPeriod(purgeProfileInterval, TimeUnit.DAYS)
-            .withFixedRate()  // Run at fixed intervals
-            // By default tasks run on a single node, no need to explicitly set it
-            .withSimpleExecutor(() -> contextManager.executeAsSystem(() -> {
-                purgeProfiles(purgeProfileInactiveTime, purgeProfileExistTime);
-                if (purgeSessionExistTime > 0) {
-                    purgeSessionItems(purgeSessionExistTime);
-                }
-                if (purgeEventExistTime > 0) {
-                    purgeEventItems(purgeEventExistTime);
-                }
-            }))
-            .schedule();
+        // Register the task executor for profile purge
+        TaskExecutor profilePurgeExecutor = new TaskExecutor() {
+            @Override
+            public String getTaskType() {
+                return "profile-purge";
+            }
+
+            @Override
+            public void execute(ScheduledTask task, TaskExecutor.TaskStatusCallback callback) {
+                contextManager.executeAsSystem(() -> {
+                    try {
+                        purgeProfiles(purgeProfileInactiveTime, purgeProfileExistTime);
+                        if (purgeSessionExistTime > 0) {
+                            purgeSessionItems(purgeSessionExistTime);
+                        }
+                        if (purgeEventExistTime > 0) {
+                            purgeEventItems(purgeEventExistTime);
+                        }
+                        callback.complete();
+                    } catch (Throwable t) {
+                        LOGGER.error("Error while purging profiles, sessions, or events", t);
+                        callback.fail(t.getMessage());
+                    }
+                });
+            }
+        };
+        
+        schedulerService.registerTaskExecutor(profilePurgeExecutor);
+
+        // Check if a purge task already exists
+        List<ScheduledTask> existingTasks = schedulerService.getTasksByType("profile-purge", 0, 1, null).getList();
+        if (!existingTasks.isEmpty() && existingTasks.get(0).isSystemTask()) {
+            // Reuse the existing task if it's a system task
+            purgeTask = existingTasks.get(0);
+            // Update task configuration if needed
+            purgeTask.setPeriod(purgeProfileInterval);
+            purgeTask.setTimeUnit(TimeUnit.DAYS);
+            purgeTask.setFixedRate(true);
+            purgeTask.setEnabled(true);
+            schedulerService.saveTask(purgeTask);
+            LOGGER.info("Reusing existing system purge task: {}", purgeTask.getItemId());
+        } else {
+            // Create a new task if none exists or existing one isn't a system task
+            purgeTask = schedulerService.newTask("profile-purge")
+                .withPeriod(purgeProfileInterval, TimeUnit.DAYS)
+                .withFixedRate()  // Run at fixed intervals
+                // By default tasks run on a single node, no need to explicitly set it
+                .asSystemTask() // Mark as a system task
+                .schedule();
+            LOGGER.info("Created new system purge task: {}", purgeTask.getItemId());
+        }
     }
 
 
