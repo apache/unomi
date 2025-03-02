@@ -89,17 +89,21 @@ public class ClusterServiceImplTest {
         // Set up persistence service
         persistenceService = new InMemoryPersistenceServiceImpl(executionContextManager, conditionEvaluatorDispatcher);
 
-        // Create scheduler service using TestHelper
-        schedulerService = (SchedulerServiceImpl) TestHelper.createSchedulerService(persistenceService, executionContextManager, bundleContext);
-
-        // Create and configure cluster service
-        clusterService = new ClusterServiceImpl();
-        clusterService.setPersistenceService(persistenceService);
-        clusterService.setPublicAddress(PUBLIC_ADDRESS);
-        clusterService.setInternalAddress(INTERNAL_ADDRESS);
+        // Create cluster service using TestHelper
+        clusterService = TestHelper.createClusterService(persistenceService, TEST_NODE_ID, PUBLIC_ADDRESS, INTERNAL_ADDRESS);
+        
+        // Configure cluster service (additional configurations not covered by helper method)
         clusterService.setNodeStatisticsUpdateFrequency(NODE_STATISTICS_UPDATE_FREQUENCY);
+        
+        // Create scheduler service using TestHelper
+        schedulerService = (SchedulerServiceImpl) TestHelper.createSchedulerService(
+            persistenceService, executionContextManager, bundleContext, clusterService, true);
+
+        // Set scheduler in cluster service - this would normally be done by OSGi but we need to do it manually in tests
         clusterService.setSchedulerService(schedulerService);
-        clusterService.setNodeId(TEST_NODE_ID);
+        
+        // Explicitly initialize scheduled tasks to handle the circular dependency properly
+        clusterService.initializeScheduledTasks();
     }
 
     @Test

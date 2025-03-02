@@ -71,6 +71,24 @@ public class ClusterServiceImpl implements ClusterService {
 
     public void setSchedulerService(SchedulerService schedulerService) {
         this.schedulerService = schedulerService;
+        
+        // If we're already initialized, initialize scheduled tasks now
+        // This handles the case when ClusterService was initialized before SchedulerService was set
+        if (schedulerService != null && System.currentTimeMillis() > nodeStartTime && nodeStartTime > 0) {
+            LOGGER.info("SchedulerService was set after ClusterService initialization, initializing scheduled tasks now");
+            initializeScheduledTasks();
+        }
+    }
+
+    /**
+     * Unbind method for the scheduler service, called by the OSGi framework when the service is unregistered
+     * @param schedulerService The scheduler service being unregistered
+     */
+    public void unsetSchedulerService(SchedulerService schedulerService) {
+        if (this.schedulerService == schedulerService) {
+            LOGGER.info("SchedulerService was unset");
+            this.schedulerService = null;
+        }
     }
 
     public void setNodeId(String nodeId) {
@@ -94,6 +112,26 @@ public class ClusterServiceImpl implements ClusterService {
         // Register this node in the persistence service
         registerNodeInPersistence();
 
+        // Only initialize scheduled tasks if scheduler service is available
+        if (schedulerService != null) {
+            initializeScheduledTasks();
+        } else {
+            LOGGER.warn("SchedulerService not available during ClusterService initialization. Scheduled tasks will not be registered. They will be registered when SchedulerService becomes available.");
+        }
+
+        LOGGER.info("Cluster service initialized with node ID: {}", nodeId);
+    }
+
+    /**
+     * Initializes scheduled tasks for cluster management.
+     * This method can be called later if schedulerService wasn't available during init.
+     */
+    public void initializeScheduledTasks() {
+        if (schedulerService == null) {
+            LOGGER.error("Cannot initialize scheduled tasks: SchedulerService is not set");
+            return;
+        }
+        
         // Schedule regular updates of the node statistics
         TimerTask statisticsTask = new TimerTask() {
             @Override
@@ -119,8 +157,8 @@ public class ClusterServiceImpl implements ClusterService {
             }
         };
         schedulerService.createRecurringTask("clusterStaleNodesCleanup", 60000, TimeUnit.MILLISECONDS, cleanupTask, false);
-
-        LOGGER.info("Cluster service initialized with node ID: {}", nodeId);
+        
+        LOGGER.info("Cluster service scheduled tasks initialized");
     }
 
     public void destroy() {

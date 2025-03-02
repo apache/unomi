@@ -47,6 +47,7 @@ import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.apache.unomi.services.impl.cluster.ClusterServiceImpl;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -183,6 +184,25 @@ public class TestHelper {
     public static SchedulerService createSchedulerService(
             PersistenceService persistenceService,
             ExecutionContextManager executionContextManager, BundleContext bundleContext, boolean construct) {
+        return createSchedulerService(persistenceService, executionContextManager, bundleContext, null, construct);
+    }
+
+    /**
+     * Creates a scheduler service instance for testing purposes with ClusterService support.
+     * 
+     * @param persistenceService The persistence service to use
+     * @param executionContextManager The execution context manager to use
+     * @param bundleContext The bundle context to use
+     * @param clusterService The cluster service to use (can be null)
+     * @param construct Whether to call postConstruct on the service
+     * @return A configured SchedulerServiceImpl instance
+     */
+    public static SchedulerService createSchedulerService(
+            PersistenceService persistenceService,
+            ExecutionContextManager executionContextManager, 
+            BundleContext bundleContext,
+            ClusterService clusterService,
+            boolean construct) {
         org.apache.unomi.services.impl.scheduler.SchedulerServiceImpl schedulerService =
             new org.apache.unomi.services.impl.scheduler.SchedulerServiceImpl();
         schedulerService.setPersistenceService(persistenceService);
@@ -191,6 +211,12 @@ public class TestHelper {
         schedulerService.setExecutorNode(true);
         schedulerService.setNodeId("test-scheduler-node");
         schedulerService.setPurgeTaskEnabled(false); // Disable purge task by default for tests
+        
+        // Set the cluster service if provided
+        if (clusterService != null) {
+            schedulerService.setClusterService(clusterService);
+        }
+        
         if (construct) {
             schedulerService.postConstruct();
         }
@@ -216,6 +242,55 @@ public class TestHelper {
 
     public static TracerService createTracerService() {
         return new TestTracerService();
+    }
+
+    /**
+     * Creates a cluster service instance for testing purposes.
+     * Initializes a new ClusterServiceImpl with the specified persistence service and node ID.
+     * 
+     * NOTE: Due to circular dependency between ClusterService and SchedulerService,
+     * when using both services together:
+     * 1. Create the ClusterService first using this method
+     * 2. Create the SchedulerService using createSchedulerService() and pass the ClusterService
+     * 3. If tasks were not initialized during startup, call clusterService.initializeScheduledTasks()
+     * 
+     * @param persistenceService The persistence service to use
+     * @param nodeId The unique identifier for this node
+     * @return A configured ClusterServiceImpl instance
+     */
+    public static ClusterServiceImpl createClusterService(PersistenceService persistenceService, String nodeId) {
+        return createClusterService(persistenceService, nodeId, "127.0.0.1", "127.0.0.1");
+    }
+    
+    /**
+     * Creates a cluster service instance for testing purposes with custom addresses.
+     * Initializes a new ClusterServiceImpl with the specified persistence service, node ID, and addresses.
+     * 
+     * NOTE: Due to circular dependency between ClusterService and SchedulerService,
+     * when using both services together:
+     * 1. Create the ClusterService first using this method
+     * 2. Create the SchedulerService using createSchedulerService() and pass the ClusterService
+     * 3. If tasks were not initialized during startup, call clusterService.initializeScheduledTasks()
+     * 
+     * @param persistenceService The persistence service to use
+     * @param nodeId The unique identifier for this node
+     * @param publicAddress The public address for the node
+     * @param internalAddress The internal address for the node
+     * @return A configured ClusterServiceImpl instance
+     */
+    public static ClusterServiceImpl createClusterService(
+            PersistenceService persistenceService, 
+            String nodeId, 
+            String publicAddress, 
+            String internalAddress) {
+        ClusterServiceImpl clusterService = new ClusterServiceImpl();
+        clusterService.setPersistenceService(persistenceService);
+        clusterService.setPublicAddress(publicAddress);
+        clusterService.setInternalAddress(internalAddress);
+        clusterService.setNodeStatisticsUpdateFrequency(60000);
+        clusterService.setNodeId(nodeId);
+        
+        return clusterService;
     }
 
     /**
@@ -439,6 +514,21 @@ public class TestHelper {
      * @return A configured SchedulerServiceImpl instance
      */
     public static SchedulerServiceImpl createTestNode(PersistenceService persistenceService, String nodeId, boolean executorNode, long lockTimeout) {
+        return createTestNode(persistenceService, nodeId, executorNode, lockTimeout, null);
+    }
+
+    /**
+     * Creates a test scheduler node with cluster service support
+     * 
+     * @param persistenceService The persistence service to use
+     * @param nodeId The node identifier
+     * @param executorNode Whether this node should execute tasks
+     * @param lockTimeout Lock timeout in milliseconds (-1 for default)
+     * @param clusterService The cluster service to use (can be null)
+     * @return Configured SchedulerServiceImpl instance
+     */
+    public static SchedulerServiceImpl createTestNode(PersistenceService persistenceService, String nodeId, boolean executorNode, 
+                                                   long lockTimeout, ClusterService clusterService) {
         SchedulerServiceImpl node = new SchedulerServiceImpl();
         if (lockTimeout > 0) {
             node.setLockTimeout(lockTimeout);
@@ -448,6 +538,12 @@ public class TestHelper {
         node.setThreadPoolSize(2);
         node.setPurgeTaskEnabled(false);
         node.setNodeId(nodeId);
+        
+        // Set the cluster service if provided
+        if (clusterService != null) {
+            node.setClusterService(clusterService);
+        }
+        
         node.postConstruct();
         return node;
     }

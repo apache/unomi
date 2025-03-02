@@ -116,6 +116,36 @@ Note: When using OpenSearch 2.18:
 - The initial admin password can be set via OPENSEARCH_INITIAL_ADMIN_PASSWORD environment variable
 - You might see log messages about "QueryGroup _id can't be null". This is a known issue that doesn't affect functionality and is being tracked at: https://github.com/opensearch-project/OpenSearch/issues/16874
 
+=== Refresh Policy Configuration
+
+Apache Unomi provides the ability to configure refresh policies for different item types in both ElasticSearch and OpenSearch. This feature allows you to optimize when changes to documents are made visible to search.
+
+For ElasticSearch:
+[source]
+----
+# refresh policy per item type in Json format.
+# Valid values are WAIT_UNTIL/IMMEDIATE/NONE. The default refresh policy is NONE.
+# Example: {"event":"WAIT_UNTIL","rule":"NONE"}
+org.apache.unomi.elasticsearch.itemTypeToRefreshPolicy={"scheduledTask":"WAIT_UNTIL"}
+----
+
+For OpenSearch:
+[source]
+----
+# refresh policy per item type in Json format.
+# Valid values are WaitForRefresh/Immediate/NoRefresh. The default refresh policy is NoRefresh.
+# Example: {"event":"WaitForRefresh","rule":"NoRefresh"}
+org.apache.unomi.opensearch.itemTypeToRefreshPolicy={"scheduledTask":"WaitForRefresh"}
+----
+
+The refresh policy can be configured per item type and affects when changes to documents of that type become visible:
+
+- *WAIT_UNTIL/WaitForRefresh*: Changes will be visible after the operation completes but will wait for a refresh. This ensures changes are immediately visible while being more efficient than an immediate refresh.
+- *IMMEDIATE/Immediate*: Changes will be made visible immediately (forces an index refresh). This is the most resource-intensive option but guarantees immediate visibility.
+- *NONE/NoRefresh*: Changes will be made visible when a refresh happens, either from the configured refresh interval or when manually triggered. This is the most efficient option but doesn't guarantee when changes will be visible.
+
+For distributed task management, it's recommended to use *WAIT_UNTIL/WaitForRefresh* for the `scheduledTask` item type to ensure lock state changes are immediately visible to all nodes without requiring explicit refresh calls in the code.
+
 Authentication Rules:
 
 1. If JAAS authentication is provided (username/password), it grants full access to all endpoints

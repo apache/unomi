@@ -18,6 +18,7 @@
 package org.apache.unomi.services.impl.scheduler;
 
 import org.apache.unomi.api.PartialList;
+import org.apache.unomi.api.ClusterNode;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.api.services.SchedulerService;
@@ -25,6 +26,7 @@ import org.apache.unomi.api.tasks.ScheduledTask;
 import org.apache.unomi.api.tasks.ScheduledTask.TaskStatus;
 import org.apache.unomi.api.tasks.TaskExecutor;
 import org.apache.unomi.persistence.spi.PersistenceService;
+import org.apache.unomi.api.services.ClusterService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.osgi.framework.BundleContext;
@@ -86,6 +88,7 @@ public class SchedulerServiceImpl implements SchedulerService {
 
     // Core services
     private PersistenceService persistenceService;
+    private ClusterService clusterService;
     private final Map<String, TaskExecutor> taskExecutors = new ConcurrentHashMap<>();
     private final Map<String, ScheduledTask> nonPersistentTasks = new ConcurrentHashMap<>();
     private final AtomicBoolean running = new AtomicBoolean(false);
@@ -744,6 +747,19 @@ public class SchedulerServiceImpl implements SchedulerService {
         this.persistenceService = persistenceService;
     }
 
+    public void setClusterService(ClusterService clusterService) {
+        this.clusterService = clusterService;
+        // Handle case where the ClusterService is set after SchedulerService is initialized
+        if (clusterService instanceof org.apache.unomi.services.impl.cluster.ClusterServiceImpl && running.get()) {
+            LOGGER.info("ClusterService set after initialization. Initializing ClusterService scheduled tasks...");
+            try {
+                ((org.apache.unomi.services.impl.cluster.ClusterServiceImpl) clusterService).initializeScheduledTasks();
+            } catch (Exception e) {
+                LOGGER.error("Error initializing ClusterService scheduled tasks", e);
+            }
+        }
+    }
+
     public void setLockTimeout(long lockTimeout) {
         this.lockTimeout = lockTimeout;
     }
@@ -920,6 +936,126 @@ public class SchedulerServiceImpl implements SchedulerService {
     @Override
     public Map<String, Long> getAllMetrics() {
         return metricsManager.getAllMetrics();
+    }
+
+    /**
+     * Refreshes the task indices to ensure up-to-date view.
+     * This is used by the distributed locking mechanism to ensure
+     * all nodes see the latest task state.
+     */
+    public void refreshTasks() {
+        if (persistenceService != null) {
+            try {
+                persistenceService.refreshIndex(ScheduledTask.class);
+            } catch (Exception e) {
+                LOGGER.error("Error refreshing task indices", e);
+            }
+        }
+    }
+
+    /**
+     * Saves a task with immediate refresh to ensure changes are visible.
+     * This is used by the distributed locking mechanism to ensure lock
+     * information is immediately visible to all nodes.
+     *
+     * @param task The task to save
+     * @return true if the operation was successful
+     */
+    public boolean saveTaskWithRefresh(ScheduledTask task) {
+        if (task == null) {
+            return false;
+        }
+
+        if (task.isPersistent()) {
+            try {
+                // Save with optimistic concurrency control
+                // Refresh is now handled automatically by the refresh policy
+                return persistenceService.save(task);
+            } catch (Exception e) {
+                LOGGER.error("Error saving task {}", task.getItemId(), e);
+                return false;
+            }
+        } else {
+            // For non-persistent tasks, just save normally
+            return saveTask(task);
+        }
+    }
+
+    /**
+     * Returns the list of currently active cluster nodes.
+     * This is used for node affinity in the distributed locking mechanism.
+     * 
+     * This method is designed to handle the case when ClusterService is not available (null),
+     * which can happen during startup when services are being initialized in a particular order,
+     * or in standalone mode. When ClusterService is null, this method will return just the current
+     * node, effectively making this a single-node operation.
+     *
+     * @return List of active node IDs
+     */
+    public List<String> getActiveNodes() {
+        Set<String> activeNodes = new HashSet<>();
+        
+        // Add this node
+        activeNodes.add(nodeId);
+        
+        // Use ClusterService if available to get cluster nodes
+        if (clusterService != null) {
+            try {
+                List<ClusterNode> clusterNodes = clusterService.getClusterNodes();
+                if (clusterNodes != null && !clusterNodes.isEmpty()) {
+                    // Consider nodes with recent heartbeats as active
+                    long cutoffTime = System.currentTimeMillis() - (5 * 60 * 1000); // 5 minutes threshold
+                    
+                    for (ClusterNode node : clusterNodes) {
+                        if (node.getLastHeartbeat() > cutoffTime) {
+                            activeNodes.add(node.getItemId());
+                        }
+                    }
+                    
+                    LOGGER.debug("Detected active cluster nodes via ClusterService: {}", activeNodes);
+                    return new ArrayList<>(activeNodes);
+                }
+            } catch (Exception e) {
+                LOGGER.warn("Error retrieving cluster nodes from ClusterService: {}", e.getMessage());
+                if (LOGGER.isDebugEnabled()) {
+                    LOGGER.debug("Error details:", e);
+                }
+            }
+        }
+        
+        // Fallback: Look for other active nodes by checking tasks with recent locks
+        try {
+            // Create a condition to find tasks with recent locks
+            Condition recentLocksCondition = new Condition();
+            recentLocksCondition.setConditionType(PROPERTY_CONDITION_TYPE);
+            Map<String, Object> parameters = new HashMap<>();
+            parameters.put("propertyName", "lockDate");
+            parameters.put("comparisonOperator", "exists");
+            recentLocksCondition.setParameterValues(parameters);
+            
+            // Query for tasks with lock information
+            List<ScheduledTask> recentlyLockedTasks = persistenceService.query(recentLocksCondition, "lockDate", ScheduledTask.class);
+            
+            // Get current time for filtering
+            long fiveMinutesAgo = System.currentTimeMillis() - (5 * 60 * 1000);
+            
+            // Extract unique node IDs from lock owners with recent locks
+            for (ScheduledTask task : recentlyLockedTasks) {
+                if (task.getLockOwner() != null && task.getLockDate() != null &&
+                    task.getLockDate().getTime() > fiveMinutesAgo) {
+                    activeNodes.add(task.getLockOwner());
+                }
+            }
+        } catch (Exception e) {
+            // If we can't determine active nodes, just fall back to this node only
+            LOGGER.warn("Error detecting active cluster nodes: {}", e.getMessage());
+            if (LOGGER.isDebugEnabled()) {
+                LOGGER.debug("Error details:", e);
+            }
+        }
+        
+        LOGGER.debug("Detected active cluster nodes: {}", activeNodes);
+        return new ArrayList<>(activeNodes);
     }
 
     public static class TaskBuilder implements SchedulerService.TaskBuilder {

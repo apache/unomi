@@ -190,6 +190,7 @@
         <property name="nodeId" value="${services.scheduler.nodeId}"/>
         <property name="lockTimeout" value="${services.scheduler.lockTimeout}"/>
         <property name="purgeTaskEnabled" value="${services.scheduler.purgeTaskEnabled}"/>
+        <property name="clusterService" ref="clusterServiceImpl"/>
     </bean>
 
     <bean id="definitionsServiceImpl" class="org.apache.unomi.services.impl.definitions.DefinitionsServiceImpl"
@@ -340,8 +341,14 @@
         <property name="persistenceService" ref="persistenceService"/>
         <property name="nodeId" value="${cluster.nodeId}"/>
         <property name="nodeStatisticsUpdateFrequency" value="${cluster.nodeStatisticsUpdateFrequency}"/>
-        <property name="schedulerService" ref="schedulerServiceImpl"/>
     </bean>
+
+    <reference id="schedulerServiceReference" interface="org.apache.unomi.api.services.SchedulerService" 
+               availability="optional">
+        <reference-listener ref="clusterServiceImpl" 
+                           bind-method="setSchedulerService" 
+                           unbind-method="unsetSchedulerService"/>
+    </reference>
 
     <bean id="personalizationServiceImpl"
           class="org.apache.unomi.services.impl.personalization.PersonalizationServiceImpl">
