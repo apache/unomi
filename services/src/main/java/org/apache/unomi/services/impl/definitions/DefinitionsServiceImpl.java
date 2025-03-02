@@ -881,7 +881,7 @@ public class DefinitionsServiceImpl extends AbstractMultiTypeCachingService impl
         CacheableTypeConfig<PropertyMergeStrategyType> propertyMergeStrategyTypeConfig = new CacheableTypeConfig<>(
             PropertyMergeStrategyType.class,
             PropertyMergeStrategyType.class.getSimpleName(),
-            "properties",
+            "mergers",
             true,
             true,
             definitionsRefreshInterval,

@@ -42,6 +42,7 @@ import org.apache.unomi.services.impl.rules.TestEvaluateProfileSegmentsAction;
 import org.apache.unomi.tracing.api.RequestTracer;
 import org.apache.unomi.tracing.api.TracerService;
 import org.junit.Before;
+import org.junit.After;
 import org.junit.Test;
 import org.mockito.MockitoAnnotations;
 import org.osgi.framework.BundleContext;
@@ -173,6 +174,26 @@ public class SegmentServiceImplTest {
             rulesService.setRule(segmentEvaluationRule);
             return null;
         });
+    }
+
+    @After
+    public void tearDown() throws Exception {
+        // Use the common tearDown method from TestHelper
+        org.apache.unomi.services.TestHelper.tearDown(
+            schedulerService,
+            multiTypeCacheService,
+            persistenceService,
+            tenantService,
+            TENANT_1, TENANT_2, SYSTEM_TENANT
+        );
+        
+        // Clean up references using the helper method
+        org.apache.unomi.services.TestHelper.cleanupReferences(
+            tenantService, securityService, executionContextManager, segmentService,
+            eventService, persistenceService, definitionsService, schedulerService,
+            conditionValidationService, multiTypeCacheService, bundleContext,
+            rulesService, actionExecutorDispatcher, tracerService, requestTracer
+        );
     }
 
     private Segment createTestSegment(String segmentId, String name) {

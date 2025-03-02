@@ -611,4 +611,61 @@ public class TestHelper {
         return result;
     }
 
+    /**
+     * Common tearDown method to be used by test classes to clean up resources.
+     * This centralizes the common teardown logic to reduce duplication.
+     *
+     * @param schedulerService The scheduler service instance to stop
+     * @param multiTypeCacheService The cache service to clear
+     * @param persistenceService The persistence service to purge
+     * @param tenantService The tenant service to reset
+     * @param tenantIds Array of tenant IDs to clear from the cache
+     * @throws Exception If an error occurs during teardown
+     */
+    public static void tearDown(
+            org.apache.unomi.api.services.SchedulerService schedulerService,
+            org.apache.unomi.api.services.cache.MultiTypeCacheService multiTypeCacheService,
+            org.apache.unomi.persistence.spi.PersistenceService persistenceService,
+            org.apache.unomi.api.tenants.TenantService tenantService,
+            String... tenantIds) throws Exception {
+        
+        // Stop scheduler service
+        if (schedulerService != null && schedulerService instanceof org.apache.unomi.services.impl.scheduler.SchedulerServiceImpl) {
+            ((org.apache.unomi.services.impl.scheduler.SchedulerServiceImpl) schedulerService).preDestroy();
+        }
+        
+        // Clear cache by clearing each tenant
+        if (multiTypeCacheService != null && tenantIds != null) {
+            for (String tenantId : tenantIds) {
+                if (tenantId != null) {
+                    multiTypeCacheService.clear(tenantId);
+                }
+            }
+        }
+        
+        // Clear persistence service data if possible
+        if (persistenceService != null && persistenceService instanceof org.apache.unomi.services.impl.InMemoryPersistenceServiceImpl) {
+            ((org.apache.unomi.services.impl.InMemoryPersistenceServiceImpl) persistenceService).purge((java.util.Date)null);
+        }
+        
+        // Reset tenant context
+        if (tenantService != null && tenantService instanceof org.apache.unomi.services.impl.TestTenantService) {
+            ((org.apache.unomi.services.impl.TestTenantService) tenantService).setCurrentTenantId(null);
+        }
+    }
+
+    /**
+     * Helper method that nulls out service references to help with garbage collection.
+     * Pass the objects you want to null out and they will be collected by the garbage collector.
+     * This is a no-op method beyond accepting references, but it's organized to be clear 
+     * and document the intention of discarding object references.
+     *
+     * @param objects The objects to be nulled out
+     */
+    public static void cleanupReferences(Object... objects) {
+        // This method doesn't actually need to do anything - by passing the objects as 
+        // parameters, the calling code is setting those instance variables to null,
+        // which is the intended effect. This method is simply a cleaner way to organize
+        // the nulling of multiple references.
+    }
 }

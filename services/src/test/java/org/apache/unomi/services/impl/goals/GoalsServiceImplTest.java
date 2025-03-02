@@ -30,8 +30,10 @@ import org.apache.unomi.services.impl.*;
 import org.apache.unomi.services.impl.cache.MultiTypeCacheServiceImpl;
 import org.apache.unomi.services.impl.definitions.DefinitionsServiceImpl;
 import org.apache.unomi.services.impl.events.EventServiceImpl;
+import org.apache.unomi.services.impl.scheduler.SchedulerServiceImpl;
 import org.apache.unomi.tracing.api.TracerService;
 import org.junit.Before;
+import org.junit.After;
 import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
@@ -120,6 +122,45 @@ public class GoalsServiceImplTest {
         };
         goalActionType.getMetadata().setId("goalMatchedAction");
         definitionsService.setActionType(goalActionType);
+    }
+
+    @After
+    public void tearDown() throws Exception {
+        // Stop scheduler service
+        if (schedulerService != null && schedulerService instanceof SchedulerServiceImpl) {
+            ((SchedulerServiceImpl) schedulerService).preDestroy();
+        }
+        
+        // Clear cache by clearing each tenant
+        if (multiTypeCacheService != null) {
+            multiTypeCacheService.clear("test-tenant");
+            multiTypeCacheService.clear("system");
+        }
+        
+        // Clear persistence service data if possible
+        if (persistenceService != null && persistenceService instanceof InMemoryPersistenceServiceImpl) {
+            // For test cleanup, we'll pass null which is accepted by the implementation for purging all data
+            ((InMemoryPersistenceServiceImpl) persistenceService).purge((java.util.Date)null);
+        }
+        
+        // Reset tenant context
+        if (tenantService != null) {
+            tenantService.setCurrentTenantId(null);
+        }
+        
+        // Null out references to help with garbage collection
+        tenantService = null;
+        securityService = null;
+        executionContextManager = null;
+        goalsService = null;
+        persistenceService = null;
+        definitionsService = null;
+        rulesService = null;
+        eventService = null;
+        schedulerService = null;
+        conditionValidationService = null;
+        multiTypeCacheService = null;
+        bundleContext = null;
     }
 
     @Test(expected = IllegalArgumentException.class)

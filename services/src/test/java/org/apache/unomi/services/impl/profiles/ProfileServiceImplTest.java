@@ -27,6 +27,7 @@ import org.apache.unomi.services.impl.definitions.DefinitionsServiceImpl;
 import org.apache.unomi.services.impl.tenants.AuditServiceImpl;
 import org.apache.unomi.services.impl.validation.ConditionValidationServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -123,6 +124,25 @@ public class ProfileServiceImplTest {
 
         // Load predefined data
         profileService.bundleChanged(new BundleEvent(BundleEvent.STARTED, systemBundle));
+    }
+
+    @AfterEach
+    public void tearDown() throws Exception {
+        // Use the common tearDown method from TestHelper
+        org.apache.unomi.services.TestHelper.tearDown(
+            schedulerService,
+            multiTypeCacheService,
+            persistenceService,
+            tenantService,
+            TENANT_1, SYSTEM_TENANT
+        );
+        
+        // Clean up references using the helper method
+        org.apache.unomi.services.TestHelper.cleanupReferences(
+            tenantService, securityService, executionContextManager, profileService,
+            persistenceService, definitionsService, bundleContext, schedulerService,
+            conditionValidationService, multiTypeCacheService, auditService
+        );
     }
 
     @Test

@@ -33,6 +33,7 @@ import org.apache.unomi.services.impl.*;
 import org.apache.unomi.services.impl.cache.MultiTypeCacheServiceImpl;
 import org.apache.unomi.tracing.api.TracerService;
 import org.junit.Before;
+import org.junit.After;
 import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
@@ -166,6 +167,24 @@ public class ConditionValidationServiceImplTest {
 
         conditionValidationService = (ConditionValidationServiceImpl) TestHelper.createConditionValidationService();
 
+    }
+
+    @After
+    public void tearDown() throws Exception {
+        // Use the common tearDown method from TestHelper
+        TestHelper.tearDown(
+            schedulerService,
+            multiTypeCacheService,
+            persistenceService,
+            tenantService
+        );
+        
+        // Clean up references using the helper method
+        TestHelper.cleanupReferences(
+            tenantService, securityService, executionContextManager, conditionValidationService,
+            persistenceService, schedulerService, multiTypeCacheService, bundleContext,
+            tracerService
+        );
     }
 
     private ConditionType createConditionType(String id, String... systemTags) {

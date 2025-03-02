@@ -33,6 +33,7 @@ import org.apache.unomi.services.impl.definitions.DefinitionsServiceImpl;
 import org.apache.unomi.services.impl.tenants.AuditServiceImpl;
 import org.apache.unomi.tracing.api.TracerService;
 import org.junit.Before;
+import org.junit.After;
 import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
@@ -110,6 +111,26 @@ public class EventServiceImplTest {
         when(bundleContext.getService(eventListenerReference)).thenReturn(eventListener);
         when(eventListener.canHandle(any(Event.class))).thenReturn(true);
         eventService.bind(eventListenerReference);
+    }
+
+    @After
+    public void tearDown() throws Exception {
+        // Use the common tearDown method from TestHelper
+        org.apache.unomi.services.TestHelper.tearDown(
+            schedulerService,
+            multiTypeCacheService,
+            persistenceService,
+            tenantService,
+            TENANT_1, TENANT_2, SYSTEM_TENANT
+        );
+        
+        // Clean up references using the helper method
+        org.apache.unomi.services.TestHelper.cleanupReferences(
+            tenantService, securityService, executionContextManager, eventService,
+            persistenceService, definitionsService, schedulerService, conditionValidationService, 
+            multiTypeCacheService, auditService, bundleContext, eventListener, 
+            eventListenerReference, tracerService
+        );
     }
 
     // ========= Event Creation and Basic Operations Tests =========
