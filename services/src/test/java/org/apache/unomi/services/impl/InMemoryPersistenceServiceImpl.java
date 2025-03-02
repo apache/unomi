@@ -57,6 +57,8 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
     private final Map<String, Item> itemsById = new ConcurrentHashMap<>();
     private final Map<String, Map<String, Map<String, Object>>> propertyMappings = new ConcurrentHashMap<>();
     private final Map<String, ScrollState> scrollStates = new ConcurrentHashMap<>();
+    private final Map<String, Long> sequenceNumbersByIndex = new ConcurrentHashMap<>();
+    private final Map<String, Long> primaryTermsByIndex = new ConcurrentHashMap<>();
     private final ConditionEvaluatorDispatcher conditionEvaluatorDispatcher;
     private final ExecutionContextManager executionContextManager;
     private final CustomObjectMapper objectMapper;
@@ -251,6 +253,29 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
         return index + ":" + itemId + ":" + executionContextManager.getCurrentContext().getTenantId();
     }
 
+    /**
+     * Get the sequence number for an item, incrementing it if necessary
+     * @param indexName the index name
+     * @param increment whether to increment the sequence number
+     * @return the sequence number
+     */
+    private Long getSequenceNumber(String indexName, boolean increment) {
+        if (increment) {
+            return sequenceNumbersByIndex.compute(indexName, (k, v) -> v != null ? v + 1 : 1L);
+        } else {
+            return sequenceNumbersByIndex.computeIfAbsent(indexName, k -> 0L);
+        }
+    }
+
+    /**
+     * Get the primary term for an index
+     * @param indexName the index name
+     * @return the primary term
+     */
+    private Long getPrimaryTerm(String indexName) {
+        return primaryTermsByIndex.computeIfAbsent(indexName, k -> 1L);
+    }
+
     @Override
     public String getName() {
         return "InMemoryPersistenceServiceImpl";
@@ -276,12 +301,50 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
         }
 
         item.setTenantId(executionContextManager.getCurrentContext().getTenantId());
-
         String indexName = getIndexName(item);
-
-        // Handle versioning
         String key = getKey(item.getItemId(), indexName);
         Item existingItem = itemsById.get(key);
+        
+        // Handle _seq_no and _primary_term fields using system metadata
+        // Check for optimistic concurrency control
+        if (existingItem != null) {
+            Object existingSeqNo = existingItem.getSystemMetadata("_seq_no");
+            Object existingPrimaryTerm = existingItem.getSystemMetadata("_primary_term");
+            
+            // If the item has _seq_no and _primary_term specified, check them against the existing item
+            Object requestedSeqNo = item.getSystemMetadata("_seq_no");
+            Object requestedPrimaryTerm = item.getSystemMetadata("_primary_term");
+            
+            if (requestedSeqNo != null && requestedPrimaryTerm != null) {
+                // If sequence numbers don't match the existing ones, it's a conflict
+                if (existingSeqNo != null && 
+                    ((Number) requestedSeqNo).longValue() != ((Number) existingSeqNo).longValue()) {
+                    LOGGER.warn("Sequence number conflict detected for item {}: requested={}, current={}", 
+                               item.getItemId(), requestedSeqNo, existingSeqNo);
+                    return false;
+                }
+                
+                // If primary terms don't match, it's a conflict
+                if (existingPrimaryTerm != null && 
+                    ((Number) requestedPrimaryTerm).longValue() != ((Number) existingPrimaryTerm).longValue()) {
+                    LOGGER.warn("Primary term conflict detected for item {}: requested={}, current={}", 
+                               item.getItemId(), requestedPrimaryTerm, existingPrimaryTerm);
+                    return false;
+                }
+            }
+        }
+        
+        // Get sequence number for this item
+        Long currentSeqNo = getSequenceNumber(indexName, true);
+        
+        // Get primary term for this index
+        Long currentPrimaryTerm = getPrimaryTerm(indexName);
+        
+        // Set the new sequence number and primary term on the item
+        item.setSystemMetadata("_seq_no", currentSeqNo);
+        item.setSystemMetadata("_primary_term", currentPrimaryTerm);
+        
+        // Handle item versioning (the existing version system)
         if ((existingItem == null || existingItem.getVersion() == null) && (item.getVersion() == null)) {
             // New item or item without version, set initial version
             item.setVersion(1L);
@@ -721,7 +784,7 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
         LOGGER.debug("Counting all items of type {} for tenant {}", itemType, currentTenantId);
         
         return itemsById.values().stream()
-                .filter(item -> itemType.equals(item.getItemType()))
+                .filter(item -> item.getItemType().equals(itemType))
                 .filter(item -> currentTenantId.equals(item.getTenantId()))
                 .count();
     }
