@@ -1,0 +1,57 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+// Default to current timestamp for creation and modification dates
+// For sessions, use timeStamp as creation date if available
+if (ctx._source.creationDate == null) {
+    if (ctx._source.timeStamp != null) {
+        ctx._source.creationDate = ctx._source.timeStamp;
+    } else {
+        ctx._source.creationDate = new Date().getTime();
+    }
+}
+
+if (ctx._source.lastModificationDate == null) {
+    if (ctx._source.lastEventDate != null) {
+        ctx._source.lastModificationDate = ctx._source.lastEventDate;
+    } else {
+        ctx._source.lastModificationDate = ctx._source.creationDate;
+    }
+}
+
+// Set default values for creator fields
+if (ctx._source.createdBy == null) {
+    ctx._source.createdBy = "system-migration-3.0.0";
+}
+
+if (ctx._source.lastModifiedBy == null) {
+    ctx._source.lastModifiedBy = "system-migration-3.0.0";
+}
+
+// Add tenantId if not present (default to null, to be filled by application logic later)
+if (ctx._source.tenantId == null) {
+    ctx._source.tenantId = null;
+}
+
+// Initialize source tracking fields
+if (ctx._source.sourceInstanceId == null) {
+    ctx._source.sourceInstanceId = null;
+}
+
+if (ctx._source.lastSyncDate == null) {
+    ctx._source.lastSyncDate = null;
+}
