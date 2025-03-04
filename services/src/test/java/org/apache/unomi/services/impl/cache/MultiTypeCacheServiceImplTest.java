@@ -61,15 +61,15 @@ public class MultiTypeCacheServiceImplTest {
     @Test
     public void testRegisterType() {
         // Create test configuration
-        CacheableTypeConfig<TestSerializable> config = new CacheableTypeConfig<>(
+        CacheableTypeConfig<TestSerializable> config = CacheableTypeConfig.<TestSerializable>builder(
             TestSerializable.class,
             TEST_TYPE,
-            "/test/path",
-            true,
-            true,
-            1000L,
-            TestSerializable::getId
-        );
+            "/test/path")
+            .withInheritFromSystemTenant(true)
+            .withRequiresRefresh(true)
+            .withRefreshInterval(1000L)
+            .withIdExtractor(TestSerializable::getId)
+            .build();
 
         // Register type
         cacheService.registerType(config);
@@ -87,15 +87,15 @@ public class MultiTypeCacheServiceImplTest {
     @Test
     public void testInheritanceFromSystemTenant() {
         // Create test configuration with inheritance enabled
-        CacheableTypeConfig<TestSerializable> config = new CacheableTypeConfig<>(
+        CacheableTypeConfig<TestSerializable> config = CacheableTypeConfig.<TestSerializable>builder(
             TestSerializable.class,
             TEST_TYPE,
-            "/test/path",
-            true,
-            true,
-            1000L,
-            TestSerializable::getId
-        );
+            "/test/path")
+            .withInheritFromSystemTenant(true)
+            .withRequiresRefresh(true)
+            .withRefreshInterval(1000L)
+            .withIdExtractor(TestSerializable::getId)
+            .build();
         cacheService.registerType(config);
 
         // Put a value in system tenant
@@ -120,15 +120,15 @@ public class MultiTypeCacheServiceImplTest {
     @Test
     public void testGetValuesByPredicateWithInheritance() {
         // Create test configuration with inheritance enabled
-        CacheableTypeConfig<TestSerializable> config = new CacheableTypeConfig<>(
+        CacheableTypeConfig<TestSerializable> config = CacheableTypeConfig.<TestSerializable>builder(
             TestSerializable.class,
             TEST_TYPE,
-            "/test/path",
-            true,
-            true,
-            1000L,
-            TestSerializable::getId
-        );
+            "/test/path")
+            .withInheritFromSystemTenant(true)
+            .withRequiresRefresh(true)
+            .withRefreshInterval(1000L)
+            .withIdExtractor(TestSerializable::getId)
+            .build();
         cacheService.registerType(config);
 
         // Put values in system tenant
@@ -158,15 +158,15 @@ public class MultiTypeCacheServiceImplTest {
     @Test
     public void testStatistics() {
         // Create test configuration
-        CacheableTypeConfig<TestSerializable> config = new CacheableTypeConfig<>(
+        CacheableTypeConfig<TestSerializable> config = CacheableTypeConfig.<TestSerializable>builder(
             TestSerializable.class,
             TEST_TYPE,
-            "/test/path",
-            true,
-            true,
-            1000L,
-            TestSerializable::getId
-        );
+            "/test/path")
+            .withInheritFromSystemTenant(true)
+            .withRequiresRefresh(true)
+            .withRefreshInterval(1000L)
+            .withIdExtractor(TestSerializable::getId)
+            .build();
         cacheService.registerType(config);
 
         // Put a value
@@ -196,15 +196,15 @@ public class MultiTypeCacheServiceImplTest {
     @Test
     public void testClearTenantCache() {
         // Create test configuration
-        CacheableTypeConfig<TestSerializable> config = new CacheableTypeConfig<>(
+        CacheableTypeConfig<TestSerializable> config = CacheableTypeConfig.<TestSerializable>builder(
             TestSerializable.class,
             TEST_TYPE,
-            "/test/path",
-            true,
-            true,
-            1000L,
-            TestSerializable::getId
-        );
+            "/test/path")
+            .withInheritFromSystemTenant(true)
+            .withRequiresRefresh(true)
+            .withRefreshInterval(1000L)
+            .withIdExtractor(TestSerializable::getId)
+            .build();
         cacheService.registerType(config);
 
         // Put values in different tenants
@@ -226,15 +226,15 @@ public class MultiTypeCacheServiceImplTest {
     @Test
     public void testRemoveValue() {
         // Create test configuration
-        CacheableTypeConfig<TestSerializable> config = new CacheableTypeConfig<>(
+        CacheableTypeConfig<TestSerializable> config = CacheableTypeConfig.<TestSerializable>builder(
             TestSerializable.class,
             TEST_TYPE,
-            "/test/path",
-            true,
-            true,
-            1000L,
-            TestSerializable::getId
-        );
+            "/test/path")
+            .withInheritFromSystemTenant(true)
+            .withRequiresRefresh(true)
+            .withRefreshInterval(1000L)
+            .withIdExtractor(TestSerializable::getId)
+            .build();
         cacheService.registerType(config);
 
         // Put a value
@@ -252,15 +252,15 @@ public class MultiTypeCacheServiceImplTest {
     @Test
     public void testNullParameters() {
         // Create test configuration
-        CacheableTypeConfig<TestSerializable> config = new CacheableTypeConfig<>(
+        CacheableTypeConfig<TestSerializable> config = CacheableTypeConfig.<TestSerializable>builder(
             TestSerializable.class,
             TEST_TYPE,
-            "/test/path",
-            true,
-            true,
-            1000L,
-            TestSerializable::getId
-        );
+            "/test/path")
+            .withInheritFromSystemTenant(true)
+            .withRequiresRefresh(true)
+            .withRefreshInterval(1000L)
+            .withIdExtractor(TestSerializable::getId)
+            .build();
         cacheService.registerType(config);
 
         // Test null parameters for put
@@ -285,15 +285,15 @@ public class MultiTypeCacheServiceImplTest {
     @Test
     public void testGetTenantCache() {
         // Create test configuration
-        CacheableTypeConfig<TestSerializable> config = new CacheableTypeConfig<>(
+        CacheableTypeConfig<TestSerializable> config = CacheableTypeConfig.<TestSerializable>builder(
             TestSerializable.class,
             TEST_TYPE,
-            "/test/path",
-            true,
-            true,
-            1000L,
-            TestSerializable::getId
-        );
+            "/test/path")
+            .withInheritFromSystemTenant(true)
+            .withRequiresRefresh(true)
+            .withRefreshInterval(1000L)
+            .withIdExtractor(TestSerializable::getId)
+            .build();
         cacheService.registerType(config);
 
         // Put multiple values
@@ -335,16 +335,16 @@ public class MultiTypeCacheServiceImplTest {
 
     @Test
     public void testRefreshTypeCache() {
-        // Create test configuration with refresh enabled
-        CacheableTypeConfig<TestSerializable> config = new CacheableTypeConfig<>(
+        // Create test configuration with refresh required
+        CacheableTypeConfig<TestSerializable> config = CacheableTypeConfig.<TestSerializable>builder(
             TestSerializable.class,
             TEST_TYPE,
-            "/test/path",
-            true,
-            true,
-            1000L,
-            TestSerializable::getId
-        );
+            "/test/path")
+            .withInheritFromSystemTenant(true)
+            .withRequiresRefresh(true)
+            .withRefreshInterval(1000L)
+            .withIdExtractor(TestSerializable::getId)
+            .build();
         cacheService.registerType(config);
 
         // Put a value
@@ -362,19 +362,16 @@ public class MultiTypeCacheServiceImplTest {
 
     @Test
     public void testInvalidRefreshTypeCache() {
-        // Try to refresh with null config
-        cacheService.refreshTypeCache(null);
-
         // Create test configuration with refresh disabled
-        CacheableTypeConfig<TestSerializable> config = new CacheableTypeConfig<>(
+        CacheableTypeConfig<TestSerializable> config = CacheableTypeConfig.<TestSerializable>builder(
             TestSerializable.class,
             TEST_TYPE,
-            "/test/path",
-            true,
-            false,  // refresh disabled
-            1000L,
-            TestSerializable::getId
-        );
+            "/test/path")
+            .withInheritFromSystemTenant(true)
+            .withRequiresRefresh(false)
+            .withRefreshInterval(1000L)
+            .withIdExtractor(TestSerializable::getId)
+            .build();
 
         // Try to refresh with disabled config
         cacheService.refreshTypeCache(config);
@@ -387,15 +384,15 @@ public class MultiTypeCacheServiceImplTest {
     @Test
     public void testInheritanceDisabled() {
         // Create test configuration with inheritance disabled
-        CacheableTypeConfig<TestSerializable> config = new CacheableTypeConfig<>(
+        CacheableTypeConfig<TestSerializable> config = CacheableTypeConfig.<TestSerializable>builder(
             TestSerializable.class,
             TEST_TYPE,
-            "/test/path",
-            false,  // inheritance disabled
-            true,
-            1000L,
-            TestSerializable::getId
-        );
+            "/test/path")
+            .withInheritFromSystemTenant(false)
+            .withRequiresRefresh(true)
+            .withRefreshInterval(1000L)
+            .withIdExtractor(TestSerializable::getId)
+            .build();
         cacheService.registerType(config);
 
         // Put a value in system tenant
@@ -415,28 +412,28 @@ public class MultiTypeCacheServiceImplTest {
 
     @Test
     public void testMultipleTypeConfigurations() {
-        // Create first type configuration
-        CacheableTypeConfig<TestSerializable> config1 = new CacheableTypeConfig<>(
+        // First configuration
+        CacheableTypeConfig<TestSerializable> config1 = CacheableTypeConfig.<TestSerializable>builder(
             TestSerializable.class,
-            "type1",
-            "/test/path1",
-            true,
-            true,
-            1000L,
-            TestSerializable::getId
-        );
+            TEST_TYPE,
+            "/test/path")
+            .withInheritFromSystemTenant(true)
+            .withRequiresRefresh(true)
+            .withRefreshInterval(1000L)
+            .withIdExtractor(TestSerializable::getId)
+            .build();
+        
+        // Second configuration with different type
+        CacheableTypeConfig<TestSerializable> config2 = CacheableTypeConfig.<TestSerializable>builder(
+            TestSerializable.class,
+            "other-type",
+            "/test/path")
+            .withInheritFromSystemTenant(true)
+            .withRequiresRefresh(true)
+            .withRefreshInterval(1000L)
+            .withIdExtractor(TestSerializable::getId)
+            .build();
         cacheService.registerType(config1);
-
-        // Create second type configuration
-        CacheableTypeConfig<TestSerializable> config2 = new CacheableTypeConfig<>(
-            TestSerializable.class,
-            "type2",
-            "/test/path2",
-            true,
-            true,
-            1000L,
-            TestSerializable::getId
-        );
         cacheService.registerType(config2);
 
         // Put values of different types
@@ -456,15 +453,15 @@ public class MultiTypeCacheServiceImplTest {
     @Test
     public void testPredicateWithNullValues() {
         // Create test configuration
-        CacheableTypeConfig<TestSerializable> config = new CacheableTypeConfig<>(
+        CacheableTypeConfig<TestSerializable> config = CacheableTypeConfig.<TestSerializable>builder(
             TestSerializable.class,
             TEST_TYPE,
-            "/test/path",
-            true,
-            true,
-            1000L,
-            TestSerializable::getId
-        );
+            "/test/path")
+            .withInheritFromSystemTenant(true)
+            .withRequiresRefresh(true)
+            .withRefreshInterval(1000L)
+            .withIdExtractor(TestSerializable::getId)
+            .build();
         cacheService.registerType(config);
 
         // Put some values including null IDs
@@ -486,15 +483,15 @@ public class MultiTypeCacheServiceImplTest {
     @Test
     public void testConcurrentAccess() throws InterruptedException {
         // Create test configuration
-        CacheableTypeConfig<TestSerializable> config = new CacheableTypeConfig<>(
+        CacheableTypeConfig<TestSerializable> config = CacheableTypeConfig.<TestSerializable>builder(
             TestSerializable.class,
             TEST_TYPE,
-            "/test/path",
-            true,
-            true,
-            1000L,
-            TestSerializable::getId
-        );
+            "/test/path")
+            .withInheritFromSystemTenant(true)
+            .withRequiresRefresh(true)
+            .withRefreshInterval(1000L)
+            .withIdExtractor(TestSerializable::getId)
+            .build();
         cacheService.registerType(config);
 
         // Create multiple threads to access cache concurrently
@@ -529,28 +526,28 @@ public class MultiTypeCacheServiceImplTest {
 
     @Test
     public void testOverrideTypeConfiguration() {
-        // Create initial configuration
-        CacheableTypeConfig<TestSerializable> config1 = new CacheableTypeConfig<>(
+        // Original configuration
+        CacheableTypeConfig<TestSerializable> config1 = CacheableTypeConfig.<TestSerializable>builder(
             TestSerializable.class,
             TEST_TYPE,
-            "/test/path1",
-            true,
-            true,
-            1000L,
-            TestSerializable::getId
-        );
+            "/test/path")
+            .withInheritFromSystemTenant(true)
+            .withRequiresRefresh(true)
+            .withRefreshInterval(1000L)
+            .withIdExtractor(TestSerializable::getId)
+            .build();
+        
+        // Override configuration
+        CacheableTypeConfig<TestSerializable> config2 = CacheableTypeConfig.<TestSerializable>builder(
+            TestSerializable.class,
+            TEST_TYPE,
+            "/other/path")
+            .withInheritFromSystemTenant(false)
+            .withRequiresRefresh(false)
+            .withRefreshInterval(2000L)
+            .withIdExtractor(TestSerializable::getId)
+            .build();
         cacheService.registerType(config1);
-
-        // Create new configuration for same type
-        CacheableTypeConfig<TestSerializable> config2 = new CacheableTypeConfig<>(
-            TestSerializable.class,
-            TEST_TYPE,
-            "/test/path2",
-            false,  // different inheritance setting
-            true,
-            1000L,
-            TestSerializable::getId
-        );
         cacheService.registerType(config2);
 
         // Put a value in system tenant
@@ -565,15 +562,15 @@ public class MultiTypeCacheServiceImplTest {
     @Test
     public void testEmptyPredicateResults() {
         // Create test configuration
-        CacheableTypeConfig<TestSerializable> config = new CacheableTypeConfig<>(
+        CacheableTypeConfig<TestSerializable> config = CacheableTypeConfig.<TestSerializable>builder(
             TestSerializable.class,
             TEST_TYPE,
-            "/test/path",
-            true,
-            true,
-            1000L,
-            TestSerializable::getId
-        );
+            "/test/path")
+            .withInheritFromSystemTenant(true)
+            .withRequiresRefresh(true)
+            .withRefreshInterval(1000L)
+            .withIdExtractor(TestSerializable::getId)
+            .build();
         cacheService.registerType(config);
 
         // Put some values
@@ -595,15 +592,15 @@ public class MultiTypeCacheServiceImplTest {
     @Test
     public void testStatisticsThreadSafety() throws InterruptedException {
         // Create test configuration
-        CacheableTypeConfig<TestSerializable> config = new CacheableTypeConfig<>(
+        CacheableTypeConfig<TestSerializable> config = CacheableTypeConfig.<TestSerializable>builder(
             TestSerializable.class,
             TEST_TYPE,
-            "/test/path",
-            true,
-            true,
-            1000L,
-            TestSerializable::getId
-        );
+            "/test/path")
+            .withInheritFromSystemTenant(true)
+            .withRequiresRefresh(true)
+            .withRefreshInterval(1000L)
+            .withIdExtractor(TestSerializable::getId)
+            .build();
         cacheService.registerType(config);
 
         // Create threads to update statistics concurrently

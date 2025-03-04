@@ -18,7 +18,9 @@ package org.apache.unomi.services.impl.cache;
 
 import org.apache.unomi.api.Item;
 import org.apache.unomi.api.Metadata;
+import org.apache.unomi.api.MetadataItem;
 import org.apache.unomi.api.Parameter;
+import org.apache.unomi.api.PluginType;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.api.services.SchedulerService;
@@ -35,11 +37,18 @@ import org.osgi.framework.SynchronousBundleListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.Serializable;
+import java.lang.reflect.Method;
 import java.net.URL;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static org.apache.unomi.api.tenants.TenantService.SYSTEM_TENANT;
@@ -54,6 +63,19 @@ public abstract class AbstractMultiTypeCachingService extends AbstractContextAwa
     protected SchedulerService schedulerService;
     protected MultiTypeCacheService cacheService;
     protected TenantService tenantService;
+    
+    /**
+     * Map tracking which plugin/bundle contributed which items.
+     * Key is the bundle ID, value is the list of items contributed by that bundle.
+     */
+    protected final Map<Long, List<Object>> pluginContributions = new ConcurrentHashMap<>();
+    
+    /**
+     * Map tracking which plugin/bundle contributed which PluginType items.
+     * Key is the bundle ID, value is the list of PluginType items contributed by that bundle.
+     */
+    protected final Map<Long, List<PluginType>> pluginTypes = new ConcurrentHashMap<>();
+    
     // Each service defines its supported types
     protected abstract Set<CacheableTypeConfig<?>> getTypeConfigs();
 
@@ -250,12 +272,39 @@ public abstract class AbstractMultiTypeCachingService extends AbstractContextAwa
         if (bundleContext == null) return;
 
         for (CacheableTypeConfig<?> config : getTypeConfigs()) {
-            loadPredefinedItemsForType(bundleContext, config);
+            if (config.hasPredefinedItems()) {
+                loadPredefinedItemsForType(bundleContext, config);
+            }
         }
+    }
+
+    /**
+     * Get all items contributed by a specific bundle.
+     *
+     * @param bundleId the ID of the bundle
+     * @return a list of items contributed by that bundle, or an empty list if none
+     */
+    protected List<Object> getItemsForBundle(long bundleId) {
+        return pluginContributions.getOrDefault(bundleId, Collections.emptyList());
+    }
+    
+    /**
+     * Track a new item as being contributed by a specific bundle.
+     *
+     * @param bundleId the ID of the contributing bundle
+     * @param item the item being contributed
+     */
+    protected void addPluginContribution(long bundleId, Object item) {
+        pluginContributions.computeIfAbsent(bundleId, k -> new CopyOnWriteArrayList<>()).add(item);
     }
 
     @SuppressWarnings("unchecked")
     protected <T extends Serializable> void loadPredefinedItemsForType(BundleContext bundleContext, CacheableTypeConfig<T> config) {
+        // Skip if this type doesn't have predefined items
+        if (!config.hasPredefinedItems()) {
+            return;
+        }
+        
         Enumeration<URL> entries = bundleContext.getBundle()
             .findEntries("META-INF/cxs/" + config.getMetaInfPath(), "*.json", true);
         if (entries == null) return;
@@ -265,18 +314,60 @@ public abstract class AbstractMultiTypeCachingService extends AbstractContextAwa
             logger.debug("Found predefined {} at {}, loading... ",
                 config.getType().getSimpleName(), entryURL);
 
-            try {
-                T item = CustomObjectMapper.getObjectMapper().readValue(entryURL, config.getType());
+            try (BufferedInputStream bis = new BufferedInputStream(entryURL.openStream())) {
+                T item = CustomObjectMapper.getObjectMapper().readValue(bis, config.getType());
                 
-                // Apply post-processor if defined
-                if (config.getPostProcessor() != null) {
-                    config.getPostProcessor().accept(item);
-                }
+                // Track this item as contributed by this bundle
+                final long bundleId = bundleContext.getBundle().getBundleId();
                 
-                String id = config.getIdExtractor().apply(item);
-                cacheService.put(config.getItemType(), id, SYSTEM_TENANT, item);
-                logger.info("Predefined {} registered: {}",
-                    config.getType().getSimpleName(), id);
+                // Process in system context to ensure permissions
+                contextManager.executeAsSystem(() -> {
+                    try {
+                        // Set plugin ID if item supports it
+                        if (item instanceof Item) {
+                            try {
+                                // Use reflection to set the plugin ID if the method exists
+                                // This avoids direct dependency on specific Item implementations
+                                Item itemObj = (Item) item;
+                                itemObj.getClass().getMethod("setPluginId", long.class).invoke(itemObj, bundleId);
+                            } catch (NoSuchMethodException e) {
+                                // Not all Item implementations have this method, ignore
+                                logger.debug("Item type {} does not support setPluginId", item.getClass().getSimpleName());
+                            } catch (Exception e) {
+                                logger.warn("Error setting plugin ID on item {}: {}", item, e.getMessage());
+                            }
+                        }
+                        
+                        // Apply the bundle-aware processor if configured
+                        if (config.hasBundleItemProcessor()) {
+                            config.getBundleItemProcessor().accept(bundleContext, item);
+                        }
+                        // Apply post-processor if defined
+                        else if (config.getPostProcessor() != null) {
+                            config.getPostProcessor().accept(item);
+                        }
+                        
+                        // Track contribution
+                        addPluginContribution(bundleId, item);
+                        
+                        // Also track as PluginType if applicable
+                        if (item instanceof PluginType) {
+                            PluginType pluginTypeItem = (PluginType) item;
+                            pluginTypes.computeIfAbsent(bundleId, k -> new CopyOnWriteArrayList<>()).add(pluginTypeItem);
+                        }
+                                
+                        // Add to cache
+                        String id = config.getIdExtractor().apply(item);
+                        cacheService.put(config.getItemType(), id, SYSTEM_TENANT, item);
+                        
+                        logger.info("Predefined {} registered: {}",
+                            config.getType().getSimpleName(), id);
+                    } catch (Exception e) {
+                        logger.error("Error processing {} definition {}",
+                            config.getType().getSimpleName(), entryURL, e);
+                    }
+                    return null;
+                });
             } catch (IOException e) {
                 logger.error("Error loading {} definition {}",
                     config.getType().getSimpleName(), entryURL, e);
@@ -289,13 +380,195 @@ public abstract class AbstractMultiTypeCachingService extends AbstractContextAwa
         contextManager.executeAsSystem(() -> {
             switch (event.getType()) {
                 case BundleEvent.STARTED:
-                    loadPredefinedItems(event.getBundle().getBundleContext());
+                    processBundleStartup(event.getBundle().getBundleContext());
                     break;
                 case BundleEvent.STOPPING:
-                    // Handle bundle stop if needed
+                    processBundleStop(event.getBundle());
                     break;
             }
             return null;
         });
+    }
+    
+    /**
+     * Process bundle startup, loading any predefined items from the bundle.
+     * Override to add additional processing.
+     *
+     * @param bundleContext the context of the started bundle
+     */
+    protected void processBundleStartup(BundleContext bundleContext) {
+        if (bundleContext != null) {
+            loadPredefinedItems(bundleContext);
+        }
+    }
+    
+    /**
+     * Process bundle stop, removing any items contributed by the bundle.
+     * Override to add additional processing.
+     *
+     * @param bundle the stopping bundle
+     */
+    protected void processBundleStop(Bundle bundle) {
+        if (bundle != null) {
+            long bundleId = bundle.getBundleId();
+            List<Object> bundleItems = getItemsForBundle(bundleId);
+            
+            for (Object item : bundleItems) {
+                // Handle removal of cached items - details would depend on item type
+                if (item instanceof Item) {
+                    Item typedItem = (Item) item;
+                    removeItemOnBundleStop(typedItem, typedItem.getItemId(), typedItem.getItemType());
+                }
+            }
+            
+            // Allow subclasses to perform additional cleanup
+            onBundleStop(bundle);
+            
+            // Clean up the tracking maps
+            pluginContributions.remove(bundleId);
+            pluginTypes.remove(bundleId);
+        }
+    }
+    
+    /**
+     * Hook method for subclasses to perform additional cleanup when a bundle stops.
+     * Default implementation does nothing.
+     *
+     * @param bundle the stopping bundle
+     */
+    protected void onBundleStop(Bundle bundle) {
+        // Default implementation does nothing
+    }
+    
+    /**
+     * Remove an item from caches and persistence when its contributing bundle stops.
+     * Override in subclasses for type-specific handling as needed.
+     *
+     * @param item the item to remove
+     * @param itemId the ID of the item
+     * @param itemType the type of the item
+     */
+    @SuppressWarnings("unchecked")
+    protected void removeItemOnBundleStop(Object item, String itemId, String itemType) {
+        if (itemId != null && itemType != null) {
+            try {
+                // Remove from cache with system tenant (predefined items use system tenant)
+                Class<?> itemClass = item.getClass();
+                
+                // We need to use raw types here due to Java's type erasure
+                // and how the remove method is typed - this is safe because
+                // the cache service checks types at runtime
+                cacheService.remove(itemType, itemId, SYSTEM_TENANT, (Class) itemClass);
+                
+                // If persistable, also remove from persistence
+                if (item instanceof Item) {
+                    persistenceService.remove(itemId, (Class) itemClass);
+                }
+            } catch (Exception e) {
+                logger.error("Error removing {} with ID {} on bundle stop", 
+                    item.getClass().getSimpleName(), itemId, e);
+            }
+        }
+    }
+
+    /**
+     * Get a map of all plugin types indexed by plugin ID (bundle ID).
+     * 
+     * @return Map where key is the bundle ID, value is the list of plugin types from that bundle
+     */
+    public Map<Long, List<PluginType>> getTypesByPlugin() {
+        return pluginTypes;
+    }
+    
+    /**
+     * Get all items of a specific type for the current tenant.
+     *
+     * @param <T> the type of items to retrieve
+     * @param itemClass the class of the items to retrieve
+     * @return a collection of all items of the specified type
+     */
+    protected <T extends Serializable> Collection<T> getAllItems(Class<T> itemClass) {
+        String tenantId = contextManager.getCurrentContext().getTenantId();
+        return new ArrayList<>(cacheService.getTenantCache(tenantId, itemClass).values());
+    }
+
+    /**
+     * Get items of a specific type filtered by tag.
+     *
+     * @param <T> the type of items to retrieve
+     * @param itemClass the class of the items to retrieve
+     * @param tag the tag to filter by
+     * @return a set of items matching the specified tag
+     */
+    protected <T extends Item & Serializable> Set<T> getItemsByTag(Class<T> itemClass, String tag) {
+        String tenantId = contextManager.getCurrentContext().getTenantId();
+        return cacheService.getValuesByPredicateWithInheritance(
+            tenantId,
+            itemClass,
+            item -> item instanceof MetadataItem && ((MetadataItem) item).getMetadata() != null && ((MetadataItem) item).getMetadata().getTags().contains(tag)
+        );
+    }
+
+    /**
+     * Get items of a specific type filtered by system tag.
+     *
+     * @param <T> the type of items to retrieve
+     * @param itemClass the class of the items to retrieve
+     * @param systemTag the system tag to filter by
+     * @return a set of items matching the specified system tag
+     */
+    protected <T extends Item & Serializable> Set<T> getItemsBySystemTag(Class<T> itemClass, String systemTag) {
+        String tenantId = contextManager.getCurrentContext().getTenantId();
+        return cacheService.getValuesByPredicateWithInheritance(
+            tenantId,
+            itemClass,
+            item -> item instanceof MetadataItem && ((MetadataItem) item).getMetadata() != null && ((MetadataItem) item).getMetadata().getSystemTags().contains(systemTag)
+        );
+    }
+
+    /**
+     * Get a specific item by ID.
+     *
+     * @param <T> the type of item to retrieve
+     * @param id the ID of the item
+     * @param itemClass the class of the item
+     * @return the item with the specified ID, or null if not found
+     */
+    protected <T extends Serializable> T getItem(String id, Class<T> itemClass) {
+        String tenantId = contextManager.getCurrentContext().getTenantId();
+        return cacheService.getWithInheritance(id, tenantId, itemClass);
+    }
+
+    /**
+     * Save an item to the cache and persistence.
+     *
+     * @param <T> the type of item to save
+     * @param item the item to save
+     * @param idExtractor function to extract the ID from the item
+     * @param itemType the type identifier for the item
+     */
+    protected <T extends Item & Serializable> void saveItem(T item, Function<T, String> idExtractor, String itemType) {
+        if (item instanceof MetadataItem && ((MetadataItem) item).getMetadata() == null || ((MetadataItem) item).getMetadata().getId() == null) {
+            logger.warn("Cannot save item without metadata ID");
+            return;
+        }
+
+        String currentTenant = contextManager.getCurrentContext().getTenantId();
+        persistenceService.save(item);
+        cacheService.put(itemType, idExtractor.apply(item), currentTenant, item);
+    }
+
+    /**
+     * Remove an item from the cache and persistence.
+     *
+     * @param <T> the type of item to remove
+     * @param id the ID of the item to remove
+     * @param itemClass the class of the item
+     * @param itemType the type identifier for the item
+     */
+    protected <T extends Item & Serializable> void removeItem(String id, Class<T> itemClass, String itemType) {
+        String currentTenant = contextManager.getCurrentContext().getTenantId();
+        persistenceService.remove(id, itemClass);
+        cacheService.remove(itemType, id, currentTenant, itemClass);
     }
 }

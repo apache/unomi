@@ -31,17 +31,12 @@ import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.TenantLifecycleListener;
 import org.apache.unomi.api.services.cache.CacheableTypeConfig;
 import org.apache.unomi.api.services.cache.MultiTypeCacheService;
-import org.apache.unomi.api.tasks.TaskExecutor;
-import org.apache.unomi.api.tasks.TaskExecutor.TaskStatusCallback;
-import org.apache.unomi.api.tasks.ScheduledTask;
 import org.apache.unomi.api.utils.ConditionBuilder;
 import org.apache.unomi.api.utils.ParserHelper;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.services.impl.cache.AbstractMultiTypeCachingService;
 import org.apache.unomi.tracing.api.RequestTracer;
 import org.apache.unomi.tracing.api.TracerService;
-import org.apache.unomi.api.services.SchedulerService;
-import org.apache.unomi.api.tasks.ScheduledTask;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
@@ -52,11 +47,12 @@ import org.slf4j.LoggerFactory;
 
 import java.io.BufferedInputStream;
 import java.io.IOException;
+import java.io.Serializable;
 import java.net.URL;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.TimeUnit;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
@@ -67,9 +63,6 @@ public class DefinitionsServiceImpl extends AbstractMultiTypeCachingService impl
     private static final Logger LOGGER = LoggerFactory.getLogger(DefinitionsServiceImpl.class.getName());
 
     private volatile boolean isShutdown = false;
-    private volatile ScheduledTask task;
-
-    private final Map<Long, List<PluginType>> pluginTypes = new ConcurrentHashMap<>();
 
     private long definitionsRefreshInterval = 10000;
 
@@ -122,7 +115,6 @@ public class DefinitionsServiceImpl extends AbstractMultiTypeCachingService impl
             bundleContext.addBundleListener(this);
         }
 
-        scheduleTypeReloads();
         LOGGER.info("Definitions service initialized.");
     }
 
@@ -130,126 +122,13 @@ public class DefinitionsServiceImpl extends AbstractMultiTypeCachingService impl
         this.definitionsRefreshInterval = definitionsRefreshInterval;
     }
 
-    private void scheduleTypeReloads() {
-        if (isShutdown || schedulerService == null) {
-            return;
-        }
-
-        try {
-            // Create a recurring task for type reloading
-            task = schedulerService.newTask("type-reload")
-                .withInitialDelay(10000, TimeUnit.MILLISECONDS)
-                .withPeriod(definitionsRefreshInterval, TimeUnit.MILLISECONDS)
-                .withFixedRate()
-                .withExecutor(new TypeReloadTaskExecutor(this, TASK_TIMEOUT_MS))
-                .nonPersistent() // In-memory task since it's node-specific
-                .schedule();
-            LOGGER.info("Scheduled type reload task with interval: {}ms", definitionsRefreshInterval);
-        } catch (Exception e) {
-            LOGGER.error("Failed to schedule type reload task", e);
-        }
-    }
-
-    public void reloadTypes(boolean refresh) {
-        if (isShutdown) {
-            return;
-        }
-
-        try {
-            if (refresh && persistenceService != null) {
-                persistenceService.refreshIndex(ConditionType.class);
-                persistenceService.refreshIndex(ActionType.class);
-            }
-            loadConditionTypesFromPersistence();
-            loadActionTypesFromPersistence();
-        } catch (Throwable t) {
-            LOGGER.error("Error loading definitions from persistence back-end", t);
-        }
-    }
-
-    private void loadConditionTypesFromPersistence() {
-        if (persistenceService == null || contextManager == null) {
-            LOGGER.warn("Cannot load condition types - required services not available");
-            return;
-        }
-
-        try {
-            contextManager.executeAsSystem(() -> {
-                try {
-                    Collection<ConditionType> types = persistenceService.getAllItems(ConditionType.class);
-                    if (types != null) {
-                        for (ConditionType conditionType : types) {
-                            if (conditionType != null && conditionType.getItemId() != null) {
-                                if (conditionType.getParentCondition() != null) {
-                                    ParserHelper.resolveConditionType(this, conditionType.getParentCondition(), "condition type " + conditionType.getItemId());
-                                }
-                                cacheService.put(ConditionType.ITEM_TYPE, conditionType.getItemId(), SYSTEM_TENANT, conditionType);
-                            }
-                        }
-                    }
-                } catch (Exception e) {
-                    LOGGER.error("Error loading condition types from persistence service", e);
-                }
-            });
-        } catch (Exception e) {
-            LOGGER.error("Error executing in system context while loading condition types", e);
-        }
-    }
-
-    private void loadActionTypesFromPersistence() {
-        if (persistenceService == null || contextManager == null) {
-            LOGGER.warn("Cannot load action types - required services not available");
-            return;
-        }
-
-        try {
-            contextManager.executeAsSystem(() -> {
-                try {
-                    Collection<ActionType> types = persistenceService.getAllItems(ActionType.class);
-                    if (types != null) {
-                        for (ActionType actionType : types) {
-                            if (actionType != null && actionType.getItemId() != null) {
-                                cacheService.put(ActionType.ITEM_TYPE, actionType.getItemId(), SYSTEM_TENANT, actionType);
-                            }
-                        }
-                    }
-                } catch (Exception e) {
-                    LOGGER.error("Error loading action types from persistence service", e);
-                }
-            });
-        } catch (Exception e) {
-            LOGGER.error("Error executing in system context while loading action types", e);
-        }
-    }
-
     protected void processBundleStartup(BundleContext bundleContext) {
         if (bundleContext == null || isShutdown) {
             return;
         }
 
-        Bundle bundle = bundleContext.getBundle();
-        if (bundle == null) {
-            LOGGER.warn("No bundle found in context during startup");
-            return;
-        }
-
-        final Long bundleId = bundle.getBundleId();
-        try {
-            contextManager.executeAsSystem(() -> {
-                try {
-                    loadPredefinedConditionTypes(bundleContext);
-                    loadPredefinedActionTypes(bundleContext);
-                    loadPredefinedValueTypes(bundleContext);
-                    loadPredefinedPropertyMergeStrategyTypes(bundleContext);
-                } catch (Exception e) {
-                    LOGGER.error("Error loading predefined types for bundle: {}", bundleId, e);
-                }
-            });
-        } catch (Exception e) {
-            LOGGER.error("Error during bundle startup processing for bundle: {}", bundleId, e);
-            // Cleanup on failure
-            pluginTypes.remove(bundleId);
-        }
+        // Call the base class implementation which will use our bundle processors
+        super.processBundleStartup(bundleContext);
     }
 
     protected void processBundleStop(BundleContext bundleContext) {
@@ -257,241 +136,83 @@ public class DefinitionsServiceImpl extends AbstractMultiTypeCachingService impl
             return;
         }
 
-        Long bundleId = bundleContext.getBundle().getBundleId();
-        List<PluginType> types = pluginTypes.remove(bundleId);
-        if (types == null || types.isEmpty()) {
-            return;
-        }
-
-        try {
-            contextManager.executeAsSystem(() -> {
-                // Process each type based on its actual class
-                for (PluginType type : types) {
-                    if (type instanceof ConditionType) {
-                        ConditionType conditionType = (ConditionType) type;
-                        cacheService.remove(ConditionType.ITEM_TYPE, conditionType.getItemId(), SYSTEM_TENANT, ConditionType.class);
-                    } else if (type instanceof ActionType) {
-                        ActionType actionType = (ActionType) type;
-                        cacheService.remove(ActionType.ITEM_TYPE, actionType.getItemId(), SYSTEM_TENANT, ActionType.class);
-                    } else if (type instanceof ValueType) {
-                        ValueType valueType = (ValueType) type;
-                        cacheService.remove(ValueType.class.getSimpleName(), valueType.getId(), SYSTEM_TENANT, ValueType.class);
-                    } else if (type instanceof PropertyMergeStrategyType) {
-                        PropertyMergeStrategyType strategyType = (PropertyMergeStrategyType) type;
-                        cacheService.remove(PropertyMergeStrategyType.class.getSimpleName(), strategyType.getId(), SYSTEM_TENANT, PropertyMergeStrategyType.class);
-                    }
-                }
-            });
-        } catch (Exception e) {
-            LOGGER.error("Error during bundle stop processing for bundle ID: {}", bundleId, e);
-        }
+        // Call the base class implementation which will handle removing items
+        super.processBundleStop(bundleContext.getBundle());
     }
 
     @Override
     public void preDestroy() {
         super.preDestroy();
         isShutdown = true;
-        if (task != null) {
-            schedulerService.cancelTask(task.getItemId());
-        }
         if (bundleContext != null) {
             bundleContext.removeBundleListener(this);
         }
         LOGGER.info("Definitions service shutdown.");
     }
 
-    // Generic method for loading predefined types
-    private <T> void loadPredefinedTypes(BundleContext bundleContext, String path, Class<T> typeClass,
-            Consumer<T> typeProcessor) {
-        if (bundleContext == null || path == null || typeClass == null || typeProcessor == null) {
-            LOGGER.warn("Invalid parameters provided for loading predefined types");
-            return;
-        }
-
-        Bundle bundle = bundleContext.getBundle();
-        if (bundle == null) {
-            LOGGER.warn("No bundle found in context");
-            return;
-        }
-
-        Enumeration<URL> entries = bundle.findEntries(path, "*.json", true);
-        if (entries == null) {
-            return;
-        }
-
-        while (entries.hasMoreElements()) {
-            URL entryURL = entries.nextElement();
-            if (entryURL == null) {
-                continue;
-            }
-
-            LOGGER.debug("Found predefined {} at {}, loading... ", typeClass.getSimpleName(), entryURL);
-
-            try (BufferedInputStream bis = new BufferedInputStream(entryURL.openStream())) {
-                T type = CustomObjectMapper.getObjectMapper().readValue(bis, typeClass);
-                if (type != null) {
-                    try {
-                        // Ensure type processing happens in system context
-                        contextManager.executeAsSystem(() -> {
-                            try {
-                                typeProcessor.accept(type);
-                                LOGGER.info("Predefined {} registered", typeClass.getSimpleName());
-                            } catch (Exception e) {
-                                LOGGER.error("Error processing {} definition {}", typeClass.getSimpleName(), entryURL, e);
-                            }
-                        });
-                    } catch (Exception e) {
-                        LOGGER.error("Error in system context execution for {} definition {}", typeClass.getSimpleName(), entryURL, e);
-                    }
-                }
-            } catch (IOException e) {
-                LOGGER.error("Error while loading {} definition {}", typeClass.getSimpleName(), entryURL, e);
-            }
-        }
-    }
-
-    private void loadPredefinedConditionTypes(BundleContext bundleContext) {
-        loadPredefinedTypes(bundleContext, "META-INF/cxs/conditions", ConditionType.class, type -> {
-            synchronized(pluginTypes) {
-                type.setPluginId(bundleContext.getBundle().getBundleId());
-                type.setTenantId(SYSTEM_TENANT);
-                setConditionType(type);
-                List<PluginType> bundlePluginTypes = pluginTypes.computeIfAbsent(
-                    bundleContext.getBundle().getBundleId(), k -> new CopyOnWriteArrayList<>());
-                bundlePluginTypes.add(type);
-            }
-        });
-    }
-
-    private void loadPredefinedActionTypes(BundleContext bundleContext) {
-        loadPredefinedTypes(bundleContext, "META-INF/cxs/actions", ActionType.class, type -> {
-            synchronized(pluginTypes) {
-                type.setPluginId(bundleContext.getBundle().getBundleId());
-                type.setTenantId(SYSTEM_TENANT);
-                setActionType(type);
-                List<PluginType> bundlePluginTypes = pluginTypes.computeIfAbsent(
-                    bundleContext.getBundle().getBundleId(), k -> new CopyOnWriteArrayList<>());
-                bundlePluginTypes.add(type);
-            }
-        });
-    }
-
-    private void loadPredefinedValueTypes(BundleContext bundleContext) {
-        loadPredefinedTypes(bundleContext, "META-INF/cxs/values", ValueType.class, type -> {
-            synchronized(pluginTypes) {
-                type.setPluginId(bundleContext.getBundle().getBundleId());
-                setValueType(type);
-                List<PluginType> bundlePluginTypes = pluginTypes.computeIfAbsent(
-                    bundleContext.getBundle().getBundleId(), k -> new CopyOnWriteArrayList<>());
-                bundlePluginTypes.add(type);
-            }
-        });
-    }
-
-    private void loadPredefinedPropertyMergeStrategyTypes(BundleContext bundleContext) {
-        loadPredefinedTypes(bundleContext, "META-INF/cxs/mergers", PropertyMergeStrategyType.class, type -> {
-            synchronized(pluginTypes) {
-                type.setPluginId(bundleContext.getBundle().getBundleId());
-                List<PluginType> bundlePluginTypes = pluginTypes.computeIfAbsent(
-                    bundleContext.getBundle().getBundleId(), k -> new CopyOnWriteArrayList<>());
-                bundlePluginTypes.add(type);
-                cacheService.put(PropertyMergeStrategyType.class.getSimpleName(), type.getId(), SYSTEM_TENANT, type);
-            }
-        });
-    }
-
-    @Override
-    public Map<Long, List<PluginType>> getTypesByPlugin() {
-        return pluginTypes;
-    }
-
     @Override
     public Collection<ConditionType> getAllConditionTypes() {
-        return new ArrayList<>(cacheService.getTenantCache(contextManager.getCurrentContext().getTenantId(), ConditionType.class).values());
+        return getAllItems(ConditionType.class);
     }
 
     @Override
     public Set<ConditionType> getConditionTypesByTag(String tag) {
-        return cacheService.getValuesByPredicateWithInheritance(
-            contextManager.getCurrentContext().getTenantId(),
-            ConditionType.class,
-            conditionType -> conditionType.getMetadata() != null && conditionType.getMetadata().getTags().contains(tag)
-        );
+        return getItemsByTag(ConditionType.class, tag);
     }
 
     @Override
     public Set<ConditionType> getConditionTypesBySystemTag(String tag) {
-        return cacheService.getValuesByPredicateWithInheritance(
-            contextManager.getCurrentContext().getTenantId(),
-            ConditionType.class,
-            conditionType -> conditionType.getMetadata() != null && conditionType.getMetadata().getSystemTags().contains(tag)
-        );
+        return getItemsBySystemTag(ConditionType.class, tag);
     }
 
     @Override
     public ConditionType getConditionType(String id) {
-        return cacheService.getWithInheritance(id, contextManager.getCurrentContext().getTenantId(), ConditionType.class);
+        return getItem(id, ConditionType.class);
     }
 
     @Override
     public void setConditionType(ConditionType conditionType) {
-        if (conditionType.getMetadata().getId() == null) {
-            return;
-        }
+        saveItem(conditionType, ConditionType::getItemId, ConditionType.ITEM_TYPE);
+    }
 
-        String currentTenant = contextManager.getCurrentContext().getTenantId();
-        persistenceService.save(conditionType);
-        cacheService.put(ConditionType.ITEM_TYPE, conditionType.getItemId(), currentTenant, conditionType);
+    @Override
+    public void removeConditionType(String id) {
+        removeItem(id, ConditionType.class, ConditionType.ITEM_TYPE);
     }
 
     @Override
     public Collection<ActionType> getAllActionTypes() {
-        return new ArrayList<>(cacheService.getTenantCache(contextManager.getCurrentContext().getTenantId(), ActionType.class).values());
+        return getAllItems(ActionType.class);
     }
 
     @Override
     public Set<ActionType> getActionTypeByTag(String tag) {
-        return cacheService.getValuesByPredicateWithInheritance(
-            contextManager.getCurrentContext().getTenantId(),
-            ActionType.class,
-            actionType -> actionType.getMetadata() != null && actionType.getMetadata().getTags().contains(tag)
-        );
+        return getItemsByTag(ActionType.class, tag);
     }
 
     @Override
     public Set<ActionType> getActionTypeBySystemTag(String tag) {
-        return cacheService.getValuesByPredicateWithInheritance(
-            contextManager.getCurrentContext().getTenantId(),
-            ActionType.class,
-            actionType -> actionType.getMetadata() != null && actionType.getMetadata().getSystemTags().contains(tag)
-        );
+        return getItemsBySystemTag(ActionType.class, tag);
     }
 
     @Override
     public ActionType getActionType(String id) {
-        return cacheService.getWithInheritance(id, contextManager.getCurrentContext().getTenantId(), ActionType.class);
+        return getItem(id, ActionType.class);
     }
 
     @Override
     public void setActionType(ActionType actionType) {
-        if (actionType.getMetadata().getId() == null) {
-            return;
-        }
-
-        String currentTenant = contextManager.getCurrentContext().getTenantId();
-        persistenceService.save(actionType);
-        cacheService.put(ActionType.ITEM_TYPE, actionType.getItemId(), currentTenant, actionType);
+        saveItem(actionType, ActionType::getItemId, ActionType.ITEM_TYPE);
     }
 
     @Override
     public void removeActionType(String id) {
-        cacheService.remove(ActionType.ITEM_TYPE, id, contextManager.getCurrentContext().getTenantId(), ActionType.class);
-        persistenceService.remove(id, ActionType.class);
+        removeItem(id, ActionType.class, ActionType.ITEM_TYPE);
     }
 
     @Override
     public Collection<ValueType> getAllValueTypes() {
-        return new ArrayList<>(cacheService.getTenantCache(contextManager.getCurrentContext().getTenantId(), ValueType.class).values());
+        return getAllItems(ValueType.class);
     }
 
     @Override
@@ -505,7 +226,7 @@ public class DefinitionsServiceImpl extends AbstractMultiTypeCachingService impl
 
     @Override
     public ValueType getValueType(String id) {
-        return cacheService.getWithInheritance(id, contextManager.getCurrentContext().getTenantId(), ValueType.class);
+        return getItem(id, ValueType.class);
     }
 
     @Override
@@ -529,7 +250,7 @@ public class DefinitionsServiceImpl extends AbstractMultiTypeCachingService impl
 
     @Override
     public PropertyMergeStrategyType getPropertyMergeStrategyType(String id) {
-        return cacheService.getWithInheritance(id, contextManager.getCurrentContext().getTenantId(), PropertyMergeStrategyType.class);
+        return getItem(id, PropertyMergeStrategyType.class);
     }
 
     @Override
@@ -554,42 +275,7 @@ public class DefinitionsServiceImpl extends AbstractMultiTypeCachingService impl
 
     @Override
     public Collection<PropertyMergeStrategyType> getAllPropertyMergeStrategyTypes() {
-        return new ArrayList<>(cacheService.getTenantCache(contextManager.getCurrentContext().getTenantId(), PropertyMergeStrategyType.class).values());
-    }
-
-    public void bundleChanged(BundleEvent event) {
-        if (event == null) {
-            return;
-        }
-
-        Bundle bundle = event.getBundle();
-        if (bundle == null) {
-            LOGGER.warn("Received bundle event with null bundle");
-            return;
-        }
-
-        contextManager.executeAsSystem(() -> {
-            try {
-                BundleContext context = bundle.getBundleContext();
-                if (context == null) {
-                    LOGGER.warn("Bundle {} has no context", bundle.getBundleId());
-                    return;
-                }
-
-                switch (event.getType()) {
-                    case BundleEvent.STARTED:
-                        processBundleStartup(context);
-                        break;
-                    case BundleEvent.STOPPING:
-                        processBundleStop(context);
-                        break;
-                    default:
-                        // Ignore other event types
-                }
-            } catch (Exception e) {
-                LOGGER.error("Error handling bundle event for bundle: {}", bundle.getBundleId(), e);
-            }
-        });
+        return getAllItems(PropertyMergeStrategyType.class);
     }
 
     @Override
@@ -806,12 +492,6 @@ public class DefinitionsServiceImpl extends AbstractMultiTypeCachingService impl
     }
 
     @Override
-    public void removeConditionType(String id) {
-        cacheService.remove(ConditionType.ITEM_TYPE, id, contextManager.getCurrentContext().getTenantId(), ConditionType.class);
-        persistenceService.remove(id, ConditionType.class);
-    }
-
-    @Override
     public void onTenantRemoved(String tenantId) {
         if (tenantId == null || SYSTEM_TENANT.equals(tenantId)) {
             LOGGER.warn("Invalid tenant removal attempt: {}", tenantId);
@@ -853,52 +533,85 @@ public class DefinitionsServiceImpl extends AbstractMultiTypeCachingService impl
         }
     }
 
+    /**
+     * Creates a base builder with common configuration settings
+     * @param type the class of items to cache
+     * @param itemType the type identifier
+     * @param metaInfPath the path in META-INF/cxs for predefined items
+     * @return a builder with common settings applied
+     * @param <T> the type of items to cache
+     */
+    private <T extends Serializable> CacheableTypeConfig.Builder<T> createBaseBuilder(
+            Class<T> type, 
+            String itemType, 
+            String metaInfPath) {
+        return CacheableTypeConfig.<T>builder(type, itemType, metaInfPath)
+            .withInheritFromSystemTenant(true)
+            .withRequiresRefresh(true)
+            .withRefreshInterval(definitionsRefreshInterval)
+            .withPredefinedItems(true);
+    }
+
     @Override
     protected Set<CacheableTypeConfig<?>> getTypeConfigs() {
         Set<CacheableTypeConfig<?>> configs = new HashSet<>();
-        CacheableTypeConfig<ActionType> actionTypeConfig = new CacheableTypeConfig<>(
-            ActionType.class,
-            ActionType.ITEM_TYPE,
-            "actions",
-            true,
-            true,
-            definitionsRefreshInterval,
-            item -> item.getItemId()
-        );
-        configs.add(actionTypeConfig);
+        
+        // Action Type configuration with bundle processor
+        BiConsumer<BundleContext, ActionType> actionTypeProcessor = (bundleContext, type) -> {
+            type.setPluginId(bundleContext.getBundle().getBundleId());
+            type.setTenantId(SYSTEM_TENANT);
+            setActionType(type);
+        };
+        
+        configs.add(createBaseBuilder(ActionType.class, ActionType.ITEM_TYPE, "actions")
+            .withIdExtractor(ActionType::getItemId)
+            .withBundleItemProcessor(actionTypeProcessor)
+            .build());
 
-        CacheableTypeConfig<ValueType> valueTypeConfig = new CacheableTypeConfig<>(
-            ValueType.class,
-            ValueType.class.getSimpleName(),
-            "values",
-            true,
-            true,
-            definitionsRefreshInterval,
-            item -> item.getId()
-        );
-        configs.add(valueTypeConfig);
+        // Value Type configuration with bundle processor
+        BiConsumer<BundleContext, ValueType> valueTypeProcessor = (bundleContext, type) -> {
+            type.setPluginId(bundleContext.getBundle().getBundleId());
+            setValueType(type);
+        };
+        
+        configs.add(createBaseBuilder(ValueType.class, ValueType.class.getSimpleName(), "values")
+            .withIdExtractor(ValueType::getId)
+            .withBundleItemProcessor(valueTypeProcessor)
+            .build());
 
-        CacheableTypeConfig<PropertyMergeStrategyType> propertyMergeStrategyTypeConfig = new CacheableTypeConfig<>(
-            PropertyMergeStrategyType.class,
-            PropertyMergeStrategyType.class.getSimpleName(),
-            "mergers",
-            true,
-            true,
-            definitionsRefreshInterval,
-            item -> item.getId()
-        );
-        configs.add(propertyMergeStrategyTypeConfig);
+        // PropertyMergeStrategyType configuration with bundle processor
+        BiConsumer<BundleContext, PropertyMergeStrategyType> mergeStrategyProcessor = (bundleContext, type) -> {
+            type.setPluginId(bundleContext.getBundle().getBundleId());
+            cacheService.put(PropertyMergeStrategyType.class.getSimpleName(), type.getId(), SYSTEM_TENANT, type);
+        };
+        
+        configs.add(createBaseBuilder(
+                PropertyMergeStrategyType.class, 
+                PropertyMergeStrategyType.class.getSimpleName(), 
+                "mergers")
+            .withIdExtractor(PropertyMergeStrategyType::getId)
+            .withBundleItemProcessor(mergeStrategyProcessor)
+            .build());
 
-        CacheableTypeConfig<ConditionType> conditionTypeConfig = new CacheableTypeConfig<>(
-            ConditionType.class,
-            ConditionType.ITEM_TYPE,
-            "conditions",
-            true,
-            true,
-            definitionsRefreshInterval,
-            item -> item.getItemId()
-        );
-        configs.add(conditionTypeConfig);
+        // Condition Type configuration with bundle processor and post-processor for resolving parent conditions
+        BiConsumer<BundleContext, ConditionType> conditionTypeProcessor = (bundleContext, type) -> {
+            type.setPluginId(bundleContext.getBundle().getBundleId());
+            type.setTenantId(SYSTEM_TENANT);
+            setConditionType(type);
+        };
+        
+        Consumer<ConditionType> conditionPostProcessor = conditionType -> {
+            if (conditionType != null && conditionType.getParentCondition() != null) {
+                ParserHelper.resolveConditionType(this, conditionType.getParentCondition(), 
+                    "condition type " + conditionType.getItemId());
+            }
+        };
+        
+        configs.add(createBaseBuilder(ConditionType.class, ConditionType.ITEM_TYPE, "conditions")
+            .withIdExtractor(ConditionType::getItemId)
+            .withPostProcessor(conditionPostProcessor)
+            .withBundleItemProcessor(conditionTypeProcessor)
+            .build());
 
         return configs;
     }
@@ -913,61 +626,5 @@ public class DefinitionsServiceImpl extends AbstractMultiTypeCachingService impl
     @Override
     public ConditionBuilder getConditionBuilder() {
         return conditionBuilder;
-    }
-
-    private static class TypeReloadTaskExecutor implements TaskExecutor {
-        private final DefinitionsServiceImpl definitionsService;
-        private final long taskTimeoutMs;
-
-        public TypeReloadTaskExecutor(DefinitionsServiceImpl definitionsService, long taskTimeoutMs) {
-            this.definitionsService = definitionsService;
-            this.taskTimeoutMs = taskTimeoutMs;
-        }
-
-        @Override
-        public String getTaskType() {
-            return "type-reload";
-        }
-
-        @Override
-        public void execute(ScheduledTask task, TaskStatusCallback statusCallback) throws Exception {
-            Thread currentThread = Thread.currentThread();
-            String originalName = currentThread.getName();
-            try {
-                currentThread.setName("TypeReloadTask-" + System.currentTimeMillis());
-                ScheduledTask timeoutTask = null;
-                if (!definitionsService.isShutdown) {
-                    timeoutTask = definitionsService.schedulerService.newTask("type-reload-timeout")
-                        .withInitialDelay(taskTimeoutMs, TimeUnit.MILLISECONDS)
-                        .asOneShot()
-                        .withSimpleExecutor(() -> {
-                            LOGGER.warn("Type reload task timed out after {} ms", taskTimeoutMs);
-                            currentThread.interrupt();
-                        })
-                        .nonPersistent()
-                        .schedule();
-                    try {
-                        definitionsService.contextManager.executeAsSystem(() -> definitionsService.reloadTypes(false));
-                        statusCallback.complete();
-                    } finally {
-                        if (timeoutTask != null) {
-                            definitionsService.schedulerService.cancelTask(timeoutTask.getItemId());
-                        }
-                    }
-                }
-            } catch (Exception e) {
-                if (e instanceof InterruptedException || Thread.currentThread().isInterrupted()) {
-                    LOGGER.warn("Type reload task was interrupted");
-                    Thread.currentThread().interrupt();
-                    statusCallback.fail("Task was interrupted");
-                } else {
-                    LOGGER.error("Error in scheduled type reload task", e);
-                    statusCallback.fail(e.getMessage());
-                }
-                throw e;
-            } finally {
-                currentThread.setName(originalName);
-            }
-        }
     }
 }

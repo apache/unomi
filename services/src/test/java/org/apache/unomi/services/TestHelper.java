@@ -53,6 +53,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
@@ -225,17 +226,16 @@ public class TestHelper {
 
     public static ConditionValidationService createConditionValidationService() {
         ConditionValidationServiceImpl conditionValidationService = new ConditionValidationServiceImpl();
-        List<ValueTypeValidator> validators = Arrays.asList(
-                new StringValueTypeValidator(),
-                new IntegerValueTypeValidator(),
-                new LongValueTypeValidator(),
-                new FloatValueTypeValidator(),
-                new DoubleValueTypeValidator(),
-                new BooleanValueTypeValidator(),
-                new DateValueTypeValidator(),
-                new ComparisonOperatorValueTypeValidator(),
-                new ConditionValueTypeValidator()
-        );
+        List<ValueTypeValidator> validators = new ArrayList<>();
+        validators.add(new StringValueTypeValidator());
+        validators.add(new IntegerValueTypeValidator());
+        validators.add(new LongValueTypeValidator());
+        validators.add(new FloatValueTypeValidator());
+        validators.add(new DoubleValueTypeValidator());
+        validators.add(new BooleanValueTypeValidator());
+        validators.add(new DateValueTypeValidator());
+        validators.add(new ComparisonOperatorValueTypeValidator());
+        validators.add(new ConditionValueTypeValidator());
         conditionValidationService.setBuiltInValidators(validators);
         return conditionValidationService;
     }

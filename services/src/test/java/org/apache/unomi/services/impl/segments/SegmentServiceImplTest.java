@@ -333,15 +333,15 @@ public class SegmentServiceImplTest {
             segmentService.setSegmentDefinition(segment2);
 
             // Force a reload and an update of the caches
-            CacheableTypeConfig<Segment> segmentConfig = new CacheableTypeConfig<>(
+            CacheableTypeConfig<Segment> segmentConfig = CacheableTypeConfig.<Segment>builder(
                 Segment.class,
                 Segment.ITEM_TYPE,
-                "segments",
-                true,
-                true,
-                1000L,
-                segment -> segment.getMetadata().getId()
-            );
+                "segments")
+                .withInheritFromSystemTenant(true)
+                .withRequiresRefresh(true)
+                .withRefreshInterval(1000L)
+                .withIdExtractor(s -> s.getMetadata().getId())
+                .build();
             multiTypeCacheService.refreshTypeCache(segmentConfig);
 
             // Create profile that matches both segments

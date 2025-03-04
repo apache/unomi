@@ -49,6 +49,7 @@ import org.apache.unomi.api.tasks.ScheduledTask;
 import org.apache.unomi.api.tasks.TaskExecutor;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.net.URL;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -153,35 +154,43 @@ public class SegmentServiceImpl extends AbstractMultiTypeCachingService implemen
         this.tenantService = tenantService;
     }
 
+    /**
+     * Creates a base configuration builder with common settings for cacheable types
+     * 
+     * @param <T> the type of the cacheable item
+     * @param type the class of the cacheable item
+     * @param itemType the item type identifier
+     * @param metaInfPath the path for predefined items
+     * @return a builder with common settings applied
+     */
+    private <T extends Serializable> CacheableTypeConfig.Builder<T> createBaseBuilder(
+            Class<T> type, 
+            String itemType, 
+            String metaInfPath) {
+        return CacheableTypeConfig.<T>builder(type, itemType, metaInfPath)
+            .withInheritFromSystemTenant(true)
+            .withRequiresRefresh(true)
+            .withRefreshInterval(segmentRefreshInterval);
+    }
+
     @Override
     protected Set<CacheableTypeConfig<?>> getTypeConfigs() {
         Set<CacheableTypeConfig<?>> configs = new HashSet<>();
+        
         // Post-processor for Segment to resolve condition types
-        configs.add(new CacheableTypeConfig<>(
-            Segment.class,
-            Segment.ITEM_TYPE,
-            "segments",
-            true,
-            true,
-            segmentRefreshInterval,
-            segment -> segment.getMetadata().getId(),
-            segment -> {
+        configs.add(createBaseBuilder(Segment.class, Segment.ITEM_TYPE, "segments")
+            .withIdExtractor(s -> s.getMetadata().getId())
+            .withPostProcessor(segment -> {
                 if (segment.getCondition() != null) {
                     ParserHelper.resolveConditionType(definitionsService, segment.getCondition(), "segment " + segment.getMetadata().getId());
                 }
-            }
-        ));
+            })
+            .build());
         
         // Post-processor for Scoring to resolve condition types in scoring elements
-        configs.add(new CacheableTypeConfig<>(
-            Scoring.class,
-            "scoring",
-            "scoring",
-            true,
-            true,
-            segmentRefreshInterval,
-            scoring -> scoring.getMetadata().getId(),
-            scoring -> {
+        configs.add(createBaseBuilder(Scoring.class, "scoring", "scoring")
+            .withIdExtractor(s -> s.getMetadata().getId())
+            .withPostProcessor(scoring -> {
                 if (scoring.getElements() != null) {
                     for (ScoringElement scoringElement : scoring.getElements()) {
                         if (scoringElement.getCondition() != null) {
@@ -190,8 +199,8 @@ public class SegmentServiceImpl extends AbstractMultiTypeCachingService implemen
                         }
                     }
                 }
-            }
-        ));
+            })
+            .build());
         return configs;
     }
 
@@ -207,7 +216,7 @@ public class SegmentServiceImpl extends AbstractMultiTypeCachingService implemen
         LOGGER.info("Segment service shutdown.");
     }
 
-    private void processBundleStartup(BundleContext bundleContext) {
+    protected void processBundleStartup(BundleContext bundleContext) {
         if (bundleContext == null) {
             return;
         }
@@ -215,7 +224,7 @@ public class SegmentServiceImpl extends AbstractMultiTypeCachingService implemen
         loadPredefinedScorings(bundleContext);
     }
 
-    private void processBundleStop(BundleContext bundleContext) {
+    protected void processBundleStop(BundleContext bundleContext) {
         if (bundleContext == null) {
             return;
         }
