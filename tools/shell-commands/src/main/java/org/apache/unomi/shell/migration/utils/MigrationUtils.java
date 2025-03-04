@@ -97,6 +97,23 @@ public class MigrationUtils {
         }
     }
 
+    public static void configureAlias(CloseableHttpClient httpClient, String esAddress, String alias, String writeIndex, Set<String> readIndices, String configureAliasBody, MigrationContext context) throws IOException {
+        String readIndicesToAdd = "";
+        if (!readIndices.isEmpty()) {
+            readIndicesToAdd = "," + readIndices.stream().map(index -> "{\"add\": {\"index\": \"" + index + "\", \"alias\": \"" + alias + "\", \"is_write_index\": false}}").collect(Collectors.joining(","));
+        }
+        if (context != null) {
+            context.printMessage("Will set " + writeIndex + " as write index for alias " + alias);
+            context.printMessage("Will set " + readIndices.toString() + " as read indices");
+        } else {
+            LOGGER.info("Will set {} as write index for alias {}", writeIndex, alias);
+            LOGGER.info("Will set {} as read indices", readIndices.toString());
+        }
+        String requestBody = configureAliasBody.replace("#writeIndexName", writeIndex).replace("#aliasName", alias).replace("#readIndicesToAdd", readIndicesToAdd);
+
+        HttpUtils.executePostRequest(httpClient, esAddress + "/_aliases", requestBody, null);
+    }
+
     public static Set<String> getIndexesPrefixedBy(CloseableHttpClient httpClient, String esAddress, String prefix) throws IOException {
         try (CloseableHttpResponse response = httpClient.execute(new HttpGet(esAddress + "/_aliases"))) {
             if (response.getStatusLine().getStatusCode() == HttpStatus.SC_OK) {
@@ -300,9 +317,9 @@ public class MigrationUtils {
      * <p>This method sends a request to update documents that match the provided query in the specified index. The update operation is
      * performed asynchronously, and the method waits for the task to complete before returning.</p>
      *
-     * @param httpClient the CloseableHttpClient used to send the request to the Elasticsearch server
-     * @param esAddress the address of the Elasticsearch server
-     * @param indexName the name of the index where documents should be updated
+     * @param httpClient  the CloseableHttpClient used to send the request to the Elasticsearch server
+     * @param esAddress   the address of the Elasticsearch server
+     * @param indexName   the name of the index where documents should be updated
      * @param requestBody the JSON body containing the query and update instructions for the documents
      * @throws Exception if there is an error during the HTTP request or while waiting for the task to finish
      */
@@ -332,22 +349,65 @@ public class MigrationUtils {
         waitForTaskToFinish(httpClient, esAddress, task.getString("task"), null);
     }
 
+    private static void printResponseDetail(JSONObject response, MigrationContext migrationContext){
+        StringBuilder sb = new StringBuilder();
+        if (response.has("total")) {
+            sb.append("Total: ").append(response.getInt("total")).append(" ");
+        }
+        if (response.has("updated")) {
+            sb.append("Updated: ").append(response.getInt("updated")).append(" ");
+        }
+        if (response.has("created")) {
+            sb.append("Created: ").append(response.getInt("created")).append(" ");
+        }
+        if (response.has("deleted")) {
+            sb.append("Deleted: ").append(response.getInt("deleted")).append(" ");
+        }
+        if (response.has("batches")) {
+            sb.append("Batches: ").append(response.getInt("batches")).append(" ");
+        }
+        if (migrationContext != null) {
+            migrationContext.printMessage(sb.toString());
+        } else {
+            LOGGER.info(sb.toString());
+        }
+    }
+
     public static void waitForTaskToFinish(CloseableHttpClient httpClient, String esAddress, String taskId, MigrationContext migrationContext) throws IOException {
         while (true) {
             final JSONObject status = new JSONObject(
                     HttpUtils.executeGetRequest(httpClient, esAddress + "/_tasks/" + taskId,
                             null));
+            if (status.has("error")) {
+                final JSONObject error = status.getJSONObject("error");
+                throw new IOException("Task error: " + error.getString("type") + " - " + error.getString("reason"));
+            }
             if (status.has("completed") && status.getBoolean("completed")) {
                 if (migrationContext != null) {
                     migrationContext.printMessage("Task is completed");
                 } else {
                     LOGGER.info("Task is completed");
                 }
+                if (status.has("response")) {
+                    final JSONObject response = status.getJSONObject("response");
+                    printResponseDetail(response, migrationContext);
+                    if (response.has("failures")) {
+                        final JSONArray failures = response.getJSONArray("failures");
+                        if (!failures.isEmpty()) {
+                            for (int i = 0; i < failures.length(); i++) {
+                                JSONObject failure = failures.getJSONObject(i);
+                                JSONObject cause = failure.getJSONObject("cause");
+                                if (migrationContext != null) {
+                                    migrationContext.printMessage("Cause of failure: " + cause.toString());
+                                } else {
+                                    LOGGER.error("Cause of failure: {}", cause.toString());
+                                }
+                            }
+                            throw new IOException("Task completed with failures, check previous log for details");
+                        }
+                    }
+                }
                 break;
-            }
-            if (status.has("error")) {
-                final JSONObject error = status.getJSONObject("error");
-                throw new IOException("Task error: " + error.getString("type") + " - " + error.getString("reason"));
             }
             if (migrationContext != null) {
                 migrationContext.printMessage("Waiting for Task " + taskId + " to complete");

@@ -1,8 +1,5 @@
 import org.apache.unomi.shell.migration.service.MigrationContext
-import org.apache.unomi.shell.migration.utils.HttpUtils
 import org.apache.unomi.shell.migration.utils.MigrationUtils
-import org.osgi.framework.BundleContext
-import org.osgi.framework.Bundle
 
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
@@ -25,7 +22,7 @@ MigrationContext context = migrationContext
 String esAddress = context.getConfigString("esAddress")
 String indexPrefix = context.getConfigString("indexPrefix")
 String rolloverPolicyName = indexPrefix + "-unomi-rollover-policy"
-String rolloverEventAlias = indexPrefix + "-session"
+String rolloverSessionAlias = indexPrefix + "-session"
 
 context.performMigrationStep("2.5.0-clean-profile-mapping", () -> {
     String baseSettings = MigrationUtils.resourceAsString(bundleContext, "requestBody/2.0.0/base_index_mapping.json")
@@ -39,10 +36,17 @@ context.performMigrationStep("2.5.0-clean-session-mapping", () -> {
     String baseSettings = MigrationUtils.resourceAsString(bundleContext, "requestBody/2.2.0/base_index_withRollover_request.json")
     String cleanPastEventScript = MigrationUtils.getFileWithoutComments(bundleContext, "requestBody/2.5.0/remove_pastEvents_session.painless")
     String mapping = MigrationUtils.extractMappingFromBundles(bundleContext, "session.json")
-    String newIndexSettings = MigrationUtils.buildIndexCreationRequestWithRollover(baseSettings, mapping, context, rolloverPolicyName, rolloverEventAlias)
+    String newIndexSettings = MigrationUtils.buildIndexCreationRequestWithRollover(baseSettings, mapping, context, rolloverPolicyName, rolloverSessionAlias)
     Set<String> sessionIndices = MigrationUtils.getIndexesPrefixedBy(context.getHttpClient(), esAddress, "${indexPrefix}-session-")
+    String configureAliasBody = MigrationUtils.resourceAsString(bundleContext, "requestBody/2.2.0/configure_alias_body.json")
 
-    sessionIndices.each { sessionIndex ->
+    Set<String> sortedSet = new TreeSet<>(sessionIndices)
+    sortedSet.each { sessionIndex ->
         MigrationUtils.reIndex(context.getHttpClient(), bundleContext, esAddress, sessionIndex, newIndexSettings, cleanPastEventScript, context, "2.5.0-clean-session-mapping")
     }
+    SortedSet<String> allExceptLast = Collections.emptySortedSet();
+    if (sortedSet.size() > 1){
+         allExceptLast = sortedSet.headSet(sortedSet.last());
+    }
+    MigrationUtils.configureAlias(context.getHttpClient(), esAddress, rolloverSessionAlias, sortedSet.last(), allExceptLast, configureAliasBody, context)
 })

@@ -37,13 +37,13 @@ jobs:
       - name: Integration tests
         run: mvn -ntp clean install -Pintegration-tests
       - name: Archive code coverage logs
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: false # UNOMI-746 Reactivate if necessary
         with:
           name: unomi-code-coverage-jdk11-${{ github.run_number }}
           path: itests/target/site/jacoco
       - name: Archive unomi logs
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         if: failure()
         with:
           name: unomi-log-jdk11-${{ github.run_number }}
