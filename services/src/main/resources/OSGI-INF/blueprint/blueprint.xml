@@ -275,6 +275,7 @@
         <property name="contextManager" ref="executionContextManagerImpl"/>
         <property name="conditionValidationService" ref="conditionValidationService"/>
         <property name="tracerService" ref="tracerService"/>
+        <property name="cacheService" ref="multiTypeCacheServiceImpl"/>
     </bean>
 
     <bean id="segmentServiceImpl" class="org.apache.unomi.services.impl.segments.SegmentServiceImpl"
@@ -343,10 +344,10 @@
         <property name="nodeStatisticsUpdateFrequency" value="${cluster.nodeStatisticsUpdateFrequency}"/>
     </bean>
 
-    <reference id="schedulerServiceReference" interface="org.apache.unomi.api.services.SchedulerService" 
+    <reference id="schedulerServiceReference" interface="org.apache.unomi.api.services.SchedulerService"
                availability="optional">
-        <reference-listener ref="clusterServiceImpl" 
-                           bind-method="setSchedulerService" 
+        <reference-listener ref="clusterServiceImpl"
+                           bind-method="setSchedulerService"
                            unbind-method="unsetSchedulerService"/>
     </reference>
 

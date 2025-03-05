@@ -202,6 +202,12 @@ public class CacheableTypeConfig<T extends Serializable> {
 
         /**
          * Set whether items should be inherited from the system tenant.
+         * 
+         * <p>When set to true, items defined in the system tenant will be available to all tenants.
+         * This is useful for sharing base configurations across multiple tenants.</p>
+         *
+         * @param inheritFromSystemTenant whether items should be inherited from the system tenant
+         * @return this builder for method chaining
          */
         public Builder<T> withInheritFromSystemTenant(boolean inheritFromSystemTenant) {
             this.inheritFromSystemTenant = inheritFromSystemTenant;
@@ -210,6 +216,13 @@ public class CacheableTypeConfig<T extends Serializable> {
 
         /**
          * Set whether the cache requires periodic refresh.
+         * 
+         * <p>When set to true, the cache will be refreshed at regular intervals defined by
+         * {@link #withRefreshInterval(long)}. This is useful for items that change frequently
+         * or need to be synchronized with external systems.</p>
+         *
+         * @param requiresRefresh whether the cache requires periodic refresh
+         * @return this builder for method chaining
          */
         public Builder<T> withRequiresRefresh(boolean requiresRefresh) {
             this.requiresRefresh = requiresRefresh;
@@ -218,6 +231,12 @@ public class CacheableTypeConfig<T extends Serializable> {
 
         /**
          * Set the refresh interval in milliseconds.
+         * 
+         * <p>This setting is only used when {@link #withRequiresRefresh(boolean)} is set to true.
+         * The cache will be refreshed at this interval after the initial loading.</p>
+         *
+         * @param refreshInterval the refresh interval in milliseconds
+         * @return this builder for method chaining
          */
         public Builder<T> withRefreshInterval(long refreshInterval) {
             this.refreshInterval = refreshInterval;
@@ -226,6 +245,19 @@ public class CacheableTypeConfig<T extends Serializable> {
 
         /**
          * Set the ID extractor function.
+         * 
+         * <p>This function is called during item loading and caching to extract a unique identifier
+         * from each item. The extracted ID is used as the cache key for retrieving items.</p>
+         * 
+         * <p>This function is invoked:</p>
+         * <ul>
+         *   <li>When loading predefined items from bundles</li>
+         *   <li>When adding new items to the cache</li>
+         *   <li>When retrieving items by their ID</li>
+         * </ul>
+         *
+         * @param idExtractor the function that extracts a unique ID from an item of type T
+         * @return this builder for method chaining
          */
         public Builder<T> withIdExtractor(Function<T, String> idExtractor) {
             this.idExtractor = idExtractor;
@@ -234,6 +266,21 @@ public class CacheableTypeConfig<T extends Serializable> {
 
         /**
          * Set the post-processor for items.
+         * 
+         * <p>This consumer is called after an item is loaded but before it is cached. It allows
+         * for additional processing, validation, or enrichment of items.</p>
+         * 
+         * <p>The post-processor is invoked:</p>
+         * <ul>
+         *   <li>After loading predefined items from bundles or JSON files</li>
+         *   <li>After deserializing items from persistence</li>
+         *   <li>Before adding new or updated items to the cache</li>
+         * </ul>
+         * 
+         * <p>Note: Modifications made by the post-processor will be reflected in the cached item.</p>
+         *
+         * @param postProcessor the consumer that processes items after loading but before caching
+         * @return this builder for method chaining
          */
         public Builder<T> withPostProcessor(Consumer<T> postProcessor) {
             this.postProcessor = postProcessor;
@@ -242,6 +289,13 @@ public class CacheableTypeConfig<T extends Serializable> {
 
         /**
          * Set whether the type has predefined items.
+         * 
+         * <p>When set to true, the cache service will look for predefined items in the META-INF
+         * path specified when creating the builder. When set to false, only programmatically
+         * added items will be available in the cache.</p>
+         *
+         * @param hasPredefinedItems whether the type has predefined items to load from bundles
+         * @return this builder for method chaining
          */
         public Builder<T> withPredefinedItems(boolean hasPredefinedItems) {
             this.hasPredefinedItems = hasPredefinedItems;
@@ -250,6 +304,24 @@ public class CacheableTypeConfig<T extends Serializable> {
 
         /**
          * Set the bundle item processor.
+         * 
+         * <p>This processor is called during the bundle scanning phase, when predefined items
+         * are being loaded from OSGi bundles. It provides access to the BundleContext along
+         * with each item being processed.</p>
+         * 
+         * <p>The bundle item processor is invoked:</p>
+         * <ul>
+         *   <li>When a bundle is installed or updated and contains predefined items</li>
+         *   <li>During system initialization when scanning all active bundles</li>
+         *   <li>Before the post-processor (if defined) is called</li>
+         * </ul>
+         * 
+         * <p>This processor is particularly useful for bundle-specific initialization that
+         * requires access to the bundle context, such as registering services or retrieving
+         * bundle-specific configuration.</p>
+         *
+         * @param bundleItemProcessor the bi-consumer that processes items with the bundle context
+         * @return this builder for method chaining
          */
         public Builder<T> withBundleItemProcessor(BiConsumer<BundleContext, T> bundleItemProcessor) {
             this.bundleItemProcessor = bundleItemProcessor;
@@ -257,9 +329,17 @@ public class CacheableTypeConfig<T extends Serializable> {
         }
 
         /**
-         * Build the config
+         * Build the config.
+         * 
+         * <p>Creates a new immutable CacheableTypeConfig instance with the current builder settings.</p>
+         * 
+         * @return a new CacheableTypeConfig instance
+         * @throws IllegalStateException if mandatory settings like idExtractor are missing
          */
         public CacheableTypeConfig<T> build() {
+            if (idExtractor == null) {
+                throw new IllegalStateException("idExtractor is required for CacheableTypeConfig");
+            }
             return new CacheableTypeConfig<>(this);
         }
     }

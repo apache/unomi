@@ -86,7 +86,7 @@ public class GoalsServiceImplTest {
         ActionType sendEventAction = TestHelper.createActionType("sendEventAction", "sendEventActionExecutor");
         definitionsService.setActionType(sendEventAction);
         eventService = TestHelper.createEventService(persistenceService, bundleContext, definitionsService, tenantService, tracerService);
-        rulesService = TestHelper.createRulesService(persistenceService, bundleContext, schedulerService, definitionsService, eventService, executionContextManager, tenantService, conditionValidationService);
+        rulesService = TestHelper.createRulesService(persistenceService, bundleContext, schedulerService, definitionsService, eventService, executionContextManager, tenantService, conditionValidationService, multiTypeCacheService);
 
         // Set the services
         goalsService = new GoalsServiceImpl();
@@ -130,24 +130,24 @@ public class GoalsServiceImplTest {
         if (schedulerService != null && schedulerService instanceof SchedulerServiceImpl) {
             ((SchedulerServiceImpl) schedulerService).preDestroy();
         }
-        
+
         // Clear cache by clearing each tenant
         if (multiTypeCacheService != null) {
             multiTypeCacheService.clear("test-tenant");
             multiTypeCacheService.clear("system");
         }
-        
+
         // Clear persistence service data if possible
         if (persistenceService != null && persistenceService instanceof InMemoryPersistenceServiceImpl) {
             // For test cleanup, we'll pass null which is accepted by the implementation for purging all data
             ((InMemoryPersistenceServiceImpl) persistenceService).purge((java.util.Date)null);
         }
-        
+
         // Reset tenant context
         if (tenantService != null) {
             tenantService.setCurrentTenantId(null);
         }
-        
+
         // Null out references to help with garbage collection
         tenantService = null;
         securityService = null;

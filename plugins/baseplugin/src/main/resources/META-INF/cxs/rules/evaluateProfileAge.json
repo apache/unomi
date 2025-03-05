@@ -1,6 +1,6 @@
 {
   "metadata" : {
-    "id": "_ed2tvbd9p_evaluateProfileAge.json",
+    "id": "_ed2tvbd9p_evaluateProfileAge",
     "name": "Evaluate profile age",
     "description" : "Evaluate age when a profile is modified",
     "readOnly":true

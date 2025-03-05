@@ -30,13 +30,14 @@ import org.apache.unomi.api.rules.RuleStatistics;
 import org.apache.unomi.api.services.*;
 import org.apache.unomi.api.services.ConditionValidationService.ValidationError;
 import org.apache.unomi.api.services.ConditionValidationService.ValidationErrorType;
+import org.apache.unomi.api.services.cache.CacheableTypeConfig;
 import org.apache.unomi.api.tasks.ScheduledTask;
 import org.apache.unomi.api.tenants.Tenant;
 import org.apache.unomi.api.tenants.TenantService;
 import org.apache.unomi.api.utils.ParserHelper;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.services.actions.ActionExecutorDispatcher;
-import org.apache.unomi.services.impl.AbstractContextAwareService;
+import org.apache.unomi.services.impl.cache.AbstractMultiTypeCachingService;
 import org.apache.unomi.tracing.api.RequestTracer;
 import org.apache.unomi.tracing.api.TracerService;
 import org.osgi.framework.*;
@@ -44,6 +45,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.net.URL;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -53,19 +55,17 @@ import java.util.stream.Collectors;
 
 import static org.apache.unomi.api.tenants.TenantService.SYSTEM_TENANT;
 
-public class RulesServiceImpl extends AbstractContextAwareService implements RulesService, EventListenerService, SynchronousBundleListener {
+public class RulesServiceImpl extends AbstractMultiTypeCachingService implements RulesService, EventListenerService {
 
     public static final String TRACKED_PARAMETER = "trackedConditionParameters";
     private static final Logger LOGGER = LoggerFactory.getLogger(RulesServiceImpl.class.getName());
 
-    private BundleContext bundleContext;
-
     private DefinitionsService definitionsService;
     private EventService eventService;
-    private SchedulerService schedulerService;
-    private TenantService tenantService;
-
     private ActionExecutorDispatcher actionExecutorDispatcher;
+    private ConditionValidationService conditionValidationService;
+    private TracerService tracerService;
+
     private final Set<String> invalidRulesId = Collections.synchronizedSet(new HashSet<>());
 
     private Integer rulesRefreshInterval = 1000;
@@ -74,20 +74,11 @@ public class RulesServiceImpl extends AbstractContextAwareService implements Rul
     private final List<RuleListenerService> ruleListeners = new CopyOnWriteArrayList<>();
 
     private final Object cacheLock = new Object();
-    private final Map<String, Map<String, Rule>> rulesByTenantId = new ConcurrentHashMap<>();
     private final Map<String, Map<String, Set<Rule>>> rulesByEventTypeByTenant = new ConcurrentHashMap<>();
     private final Map<String, Map<String, RuleStatistics>> ruleStatisticsByTenant = new ConcurrentHashMap<>();
     private volatile Boolean optimizedRulesActivated = true;
 
-    private ScheduledTask rulesRefreshTask;
     private ScheduledTask statisticsRefreshTask;
-
-    private ConditionValidationService conditionValidationService;
-    private TracerService tracerService;
-
-    public void setBundleContext(BundleContext bundleContext) {
-        this.bundleContext = bundleContext;
-    }
 
     public void setDefinitionsService(DefinitionsService definitionsService) {
         this.definitionsService = definitionsService;
@@ -95,10 +86,6 @@ public class RulesServiceImpl extends AbstractContextAwareService implements Rul
 
     public void setEventService(EventService eventService) {
         this.eventService = eventService;
-    }
-
-    public void setSchedulerService(SchedulerService schedulerService) {
-        this.schedulerService = schedulerService;
     }
 
     public void setActionExecutorDispatcher(ActionExecutorDispatcher actionExecutorDispatcher) {
@@ -117,10 +104,6 @@ public class RulesServiceImpl extends AbstractContextAwareService implements Rul
         this.optimizedRulesActivated = optimizedRulesActivated;
     }
 
-    public void setTenantService(TenantService tenantService) {
-        this.tenantService = tenantService;
-    }
-
     public void setConditionValidationService(ConditionValidationService conditionValidationService) {
         this.conditionValidationService = conditionValidationService;
     }
@@ -129,65 +112,132 @@ public class RulesServiceImpl extends AbstractContextAwareService implements Rul
         this.tracerService = tracerService;
     }
 
-    public void postConstruct() {
-        LOGGER.debug("postConstruct {{}}", bundleContext.getBundle());
+    /**
+     * Creates a base configuration builder with common settings for cacheable types
+     *
+     * @param <T> the type of the cacheable item
+     * @param type the class of the cacheable item
+     * @param itemType the item type identifier
+     * @param metaInfPath the path for predefined items
+     * @return a builder with common settings applied
+     */
+    private <T extends Serializable> CacheableTypeConfig.Builder<T> createBaseBuilder(
+            Class<T> type,
+            String itemType,
+            String metaInfPath) {
+        return CacheableTypeConfig.<T>builder(type, itemType, metaInfPath)
+            .withInheritFromSystemTenant(true)
+            .withRequiresRefresh(true)
+            .withRefreshInterval(rulesRefreshInterval);
+    }
 
-        contextManager.executeAsSystem(() -> {
-            loadPredefinedRules(bundleContext);
-            for (Bundle bundle : bundleContext.getBundles()) {
-                if (bundle.getBundleContext() != null && bundle.getBundleId() != bundleContext.getBundle().getBundleId()) {
-                    loadPredefinedRules(bundle.getBundleContext());
+    @Override
+    protected Set<CacheableTypeConfig<?>> getTypeConfigs() {
+        Set<CacheableTypeConfig<?>> configs = new HashSet<>();
+
+        // Configure Rule type
+        configs.add(createBaseBuilder(Rule.class, Rule.ITEM_TYPE, "rules")
+            .withIdExtractor(r -> r.getItemId())
+            .withPostProcessor(rule -> {
+                boolean isValid = ParserHelper.resolveConditionType(definitionsService, rule.getCondition(), "rule " + rule.getItemId());
+                isValid = isValid && ParserHelper.resolveActionTypes(definitionsService, rule, invalidRulesId.contains(rule.getItemId()));
+                if (!isValid) {
+                    invalidRulesId.add(rule.getItemId());
+                } else {
+                    invalidRulesId.remove(rule.getItemId());
                 }
-            }
-        });
+                setRule(rule);
+                // Update rule by event type cache
+                String tenantId = rule.getTenantId();
+                Map<String, Set<Rule>> tenantEventTypeRules = getRulesByEventTypeForTenant(tenantId);
+                updateRulesByEventType(tenantEventTypeRules, rule);
+            })
+            .build());
 
-        bundleContext.addBundleListener(this);
+        return configs;
+    }
 
-        initializeTimers();
+    @Override
+    public void postConstruct() {
+        super.postConstruct();
+
+        // Initialize statistics refresh task (separate from rule refresh task)
+        statisticsRefreshTask = schedulerService.newTask("rules-statistics-refresh")
+            .nonPersistent()
+            .withPeriod(rulesStatisticsRefreshInterval, TimeUnit.MILLISECONDS)
+            .withFixedDelay()
+            .withSimpleExecutor(() -> contextManager.executeAsSystem(() -> syncRuleStatistics()))
+            .schedule();
+
         LOGGER.info("Rule service initialized.");
     }
 
+    @Override
     public void preDestroy() {
-        bundleContext.removeBundleListener(this);
-        if (rulesRefreshTask != null) {
-            schedulerService.cancelTask(rulesRefreshTask.getItemId());
-        }
+        super.preDestroy();
         if (statisticsRefreshTask != null) {
             schedulerService.cancelTask(statisticsRefreshTask.getItemId());
         }
         LOGGER.info("Rule service shutdown.");
     }
 
-    private void processBundleStartup(BundleContext bundleContext) {
-        if (bundleContext == null) {
-            return;
-        }
-        loadPredefinedRules(bundleContext);
+    @Override
+    public void bundleChanged(BundleEvent event) {
+        // Let the parent class handle the basic bundle lifecycle
+        super.bundleChanged(event);
     }
 
-    private void processBundleStop(BundleContext bundleContext) {
-        if (bundleContext == null) {
-            return;
-        }
+    @Override
+    protected void processBundleStartup(BundleContext bundleContext) {
+        // Additional processing specific to RulesService
+        super.processBundleStartup(bundleContext);
     }
 
-    private void loadPredefinedRules(BundleContext bundleContext) {
-        Enumeration<URL> predefinedRuleEntries = bundleContext.getBundle().findEntries("META-INF/cxs/rules", "*.json", true);
-        if (predefinedRuleEntries == null) {
-            return;
-        }
+    @Override
+    protected void processBundleStop(Bundle bundle) {
+        // Additional processing specific to RulesService
+        super.processBundleStop(bundle);
+    }
 
-        while (predefinedRuleEntries.hasMoreElements()) {
-            URL predefinedRuleURL = predefinedRuleEntries.nextElement();
-            LOGGER.debug("Found predefined rule at {}, loading... ", predefinedRuleURL);
-
-            try {
-                Rule rule = CustomObjectMapper.getObjectMapper().readValue(predefinedRuleURL, Rule.class);
-                setRule(rule);
-                LOGGER.info("Predefined rule with id {} registered", rule.getMetadata().getId());
-            } catch (IOException e) {
-                LOGGER.error("Error while loading rule definition {}", predefinedRuleURL, e);
+    public void refreshRules() {
+        try {
+            // Get all tenants and ensure system tenant is included
+            Set<String> tenants = new HashSet<>();
+            for (Tenant tenant : tenantService.getAllTenants()) {
+                tenants.add(tenant.getItemId());
             }
+            tenants.add(SYSTEM_TENANT);
+
+            synchronized (cacheLock) {
+                for (String tenantId : tenants) {
+                    // Set current tenant for querying
+                    contextManager.executeAsTenant(tenantId, () -> {
+                        // Query rules for current tenant
+                        List<Rule> rules = persistenceService.query("tenantId", tenantId, "priority", Rule.class);
+
+                        // Update tenant event type rules cache
+                        Map<String, Set<Rule>> tenantEventTypeRules = getRulesByEventTypeForTenant(tenantId);
+                        tenantEventTypeRules.clear();
+
+                        for (Rule rule : rules) {
+                            // validate rule
+                            boolean isValid = ParserHelper.resolveConditionType(definitionsService, rule.getCondition(), "rule " + rule.getItemId());
+                            isValid = isValid && ParserHelper.resolveActionTypes(definitionsService, rule, invalidRulesId.contains(rule.getItemId()));
+                            if (!isValid) {
+                                invalidRulesId.add(rule.getItemId());
+                            } else {
+                                invalidRulesId.remove(rule.getItemId());
+                            }
+                            // Update cache service
+                            cacheService.put(Rule.ITEM_TYPE, rule.getItemId(), tenantId, rule);
+                            // Update event type index
+                            updateRulesByEventType(tenantEventTypeRules, rule);
+                        }
+                    });
+                }
+            }
+        } catch (Throwable t) {
+            LOGGER.error("Error loading rules from persistence back-end", t);
         }
     }
 
@@ -231,10 +281,7 @@ public class RulesServiceImpl extends AbstractContextAwareService implements Rul
             }
         } else {
             // Get all rules from current tenant and system tenant if needed
-            eventTypeRules.addAll(getRuleCache(currentTenant).values());
-            if (!SYSTEM_TENANT.equals(currentTenant)) {
-                eventTypeRules.addAll(getRuleCache(SYSTEM_TENANT).values());
-            }
+            eventTypeRules.addAll(getAllItems(Rule.class, true));
         }
 
         // Rest of the existing matching logic
@@ -245,7 +292,9 @@ public class RulesServiceImpl extends AbstractContextAwareService implements Rul
             RuleStatistics ruleStatistics = getLocalRuleStatistics(rule);
             long ruleConditionStartTime = System.currentTimeMillis();
             String scope = rule.getMetadata().getScope();
-            if (scope.equals(Metadata.SYSTEM_SCOPE) || scope.equals(event.getScope())) {
+            if (scope == null) {
+                LOGGER.warn("No scope defined for rule " + rule.getItemId());
+            } else if (scope.equals(Metadata.SYSTEM_SCOPE) || scope.equals(event.getScope())) {
                 Condition eventCondition = definitionsService.extractConditionBySystemTag(rule.getCondition(), "eventCondition");
 
                 if (eventCondition == null) {
@@ -327,128 +376,8 @@ public class RulesServiceImpl extends AbstractContextAwareService implements Rul
         }
     }
 
-    public void refreshRules() {
-        try {
-            // Get all tenants and ensure system tenant is included
-            Set<String> tenants = new HashSet<>();
-            for (Tenant tenant : tenantService.getAllTenants()) {
-                tenants.add(tenant.getItemId());
-            }
-            tenants.add(SYSTEM_TENANT);
-
-            synchronized (cacheLock) {
-                for (String tenantId : tenants) {
-                    // Set current tenant for querying
-                    contextManager.executeAsTenant(tenantId, () -> {
-                        // Query rules for current tenant
-                        List<Rule> rules = persistenceService.query("tenantId", tenantId, "priority", Rule.class);
-
-                        // Update tenant cache
-                        Map<String, Rule> tenantCache = getRuleCache(tenantId);
-                        Map<String, Set<Rule>> tenantEventTypeRules = getRulesByEventTypeForTenant(tenantId);
-                        tenantCache.clear();
-                        tenantEventTypeRules.clear();
-
-                        for (Rule rule : rules) {
-                            // validate rule
-                            boolean isValid = ParserHelper.resolveConditionType(definitionsService, rule.getCondition(), "rule " + rule.getItemId());
-                            isValid = isValid && ParserHelper.resolveActionTypes(definitionsService, rule, invalidRulesId.contains(rule.getItemId()));
-                            if (!isValid) {
-                                invalidRulesId.add(rule.getItemId());
-                            } else {
-                                invalidRulesId.remove(rule.getItemId());
-                            }
-                            tenantCache.put(rule.getItemId(), rule);
-                            updateRulesByEventType(tenantEventTypeRules, rule);
-                        }
-                    });
-                }
-            }
-        } catch (Throwable t) {
-            LOGGER.error("Error loading rules from persistence back-end", t);
-        }
-    }
-
     public List<Rule> getAllRules() {
-        String currentTenant = contextManager.getCurrentContext().getTenantId();
-        List<Rule> rules = new ArrayList<>(getRuleCache(currentTenant).values());
-
-        // If not in system tenant, also get inherited rules
-        if (!SYSTEM_TENANT.equals(currentTenant)) {
-            Map<String, Rule> systemRules = getRuleCache(SYSTEM_TENANT);
-            for (Rule systemRule : systemRules.values()) {
-                if (rules.stream().noneMatch(r -> r.getItemId().equals(systemRule.getItemId()))) {
-                    rules.add(systemRule);
-                }
-            }
-        }
-
-        // Validate rules
-        for (Rule rule : rules) {
-            boolean isValid = ParserHelper.resolveConditionType(definitionsService, rule.getCondition(), "rule " + rule.getItemId());
-            isValid = isValid && ParserHelper.resolveActionTypes(definitionsService, rule, invalidRulesId.contains(rule.getItemId()));
-            if (!isValid) {
-                invalidRulesId.add(rule.getItemId());
-            } else {
-                invalidRulesId.remove(rule.getItemId());
-            }
-        }
-
-        return Collections.unmodifiableList(rules);
-    }
-
-    private List<Rule> queryAllRules() {
-        String currentTenant = contextManager.getCurrentContext().getTenantId();
-
-        List<Rule> rules = new ArrayList<>();
-
-        // Get tenant-specific rules
-        List<Rule> tenantRules = persistenceService.query("tenantId", currentTenant, "priority", Rule.class);
-        rules.addAll(tenantRules);
-
-        // If not in system tenant, also get inherited rules from system tenant
-        if (!SYSTEM_TENANT.equals(currentTenant)) {
-            contextManager.executeAsTenant(SYSTEM_TENANT, () -> {
-                List<Rule> systemRules = persistenceService.query("tenantId", SYSTEM_TENANT, "priority", Rule.class);
-                // Only add system rules that don't have a tenant override
-                for (Rule systemRule : systemRules) {
-                    if (rules.stream().noneMatch(r -> r.getItemId().equals(systemRule.getItemId()))) {
-                        rules.add(systemRule);
-                    }
-                }
-            });
-        }
-
-        // Validate rules
-        for (Rule rule : rules) {
-            boolean isValid = ParserHelper.resolveConditionType(definitionsService, rule.getCondition(), "rule " + rule.getItemId());
-            isValid = isValid && ParserHelper.resolveActionTypes(definitionsService, rule, invalidRulesId.contains(rule.getItemId()));
-            if (!isValid) {
-                invalidRulesId.add(rule.getItemId());
-            } else {
-                invalidRulesId.remove(rule.getItemId());
-            }
-        }
-
-        return rules;
-    }
-
-    private Map<String, Set<Rule>> getRulesByEventTypeForTenant(String tenantId) {
-        if (tenantId == null) {
-            throw new IllegalArgumentException("Tenant ID cannot be null");
-        }
-        synchronized (cacheLock) {
-            return rulesByEventTypeByTenant.computeIfAbsent(tenantId, k -> new ConcurrentHashMap<>());
-        }
-    }
-
-    private Map<String, RuleStatistics> getRuleStatisticsForTenant(String tenantId) {
-        if (tenantId == null) {
-            throw new IllegalArgumentException("Tenant ID cannot be null");
-        }
-        synchronized (cacheLock) {
-            return ruleStatisticsByTenant.computeIfAbsent(tenantId, k -> new ConcurrentHashMap<>());
-        }
+        return new ArrayList<>(getAllItems(Rule.class, true));
     }
 
     public boolean canHandle(Event event) {
@@ -547,25 +476,11 @@ public class RulesServiceImpl extends AbstractContextAwareService implements Rul
     }
 
     public Set<Metadata> getRuleMetadatas() {
+        Collection<Rule> rules = getAllItems(Rule.class, true);
         Set<Metadata> metadatas = new HashSet<>();
-        String currentTenant = contextManager.getCurrentContext().getTenantId();
-
-        // Get rules from current tenant
-        Collection<Rule> rules = getRuleCache(currentTenant).values();
         for (Rule rule : rules) {
             metadatas.add(rule.getMetadata());
         }
-
-        // If not in system tenant, also get inherited rules
-        if (!SYSTEM_TENANT.equals(currentTenant)) {
-            Collection<Rule> systemRules = getRuleCache(SYSTEM_TENANT).values();
-            for (Rule rule : systemRules) {
-                if (!rules.stream().anyMatch(r -> r.getItemId().equals(rule.getItemId()))) {
-                    metadatas.add(rule.getMetadata());
-                }
-            }
-        }
-
         return metadatas;
     }
 
@@ -595,23 +510,7 @@ public class RulesServiceImpl extends AbstractContextAwareService implements Rul
 
     @Override
     public Rule getRule(String ruleId) {
-        if (ruleId == null) {
-            return null;
-        }
-        String currentTenant = contextManager.getCurrentContext().getTenantId();
-
-        Rule rule = getFromCacheWithInheritance(ruleId, currentTenant);
-        if (rule == null || rule.getVersion() == null) {
-            rule = loadWithInheritance(ruleId, Rule.class);
-            if (rule != null) {
-                getRuleCache(rule.getTenantId()).put(ruleId, rule);
-            }
-        }
-        if (rule != null) {
-            ParserHelper.resolveConditionType(definitionsService, rule.getCondition(), "rule " + rule.getItemId());
-            ParserHelper.resolveActionTypes(definitionsService, rule, invalidRulesId.contains(rule.getItemId()));
-        }
-        return rule;
+        return getItem(ruleId, Rule.class);
     }
 
     @Override
@@ -688,56 +587,14 @@ public class RulesServiceImpl extends AbstractContextAwareService implements Rul
             }
         }
 
-        try {
-            saveWithTenant(rule);
-            synchronized (cacheLock) {
-                // Update rule cache
-                getRuleCache(tenantId).put(rule.getItemId(), rule);
-                // Update event type cache
-                Map<String, Set<Rule>> tenantEventTypeRules = getRulesByEventTypeForTenant(tenantId);
-                updateRulesByEventType(tenantEventTypeRules, rule);
-            }
-        } catch (Exception e) {
-            LOGGER.error("Error setting rule: {}", rule.getItemId(), e);
-        }
+        // Save the rule using the parent class method
+        saveItem(rule, Rule::getItemId, Rule.ITEM_TYPE);
+        Map<String, Set<Rule>> tenantEventTypeRules = getRulesByEventTypeForTenant(tenantId);
+        updateRulesByEventType(tenantEventTypeRules, rule);
     }
 
     public void removeRule(String ruleId) {
-        String currentTenant = contextManager.getCurrentContext().getTenantId();
-
-        getRuleCache(currentTenant).remove(ruleId);
-        persistenceService.remove(ruleId, Rule.class);
-    }
-
-    private void initializeTimers() {
-        // Rules refresh task - cache-like behavior
-        rulesRefreshTask = schedulerService.newTask("rules-refresh")
-            .nonPersistent()  // Cache-like refresh, should not be persisted
-            .withPeriod(rulesRefreshInterval, TimeUnit.MILLISECONDS)
-            .withFixedDelay() // Sequential execution
-            .withSimpleExecutor(() -> contextManager.executeAsSystem(() -> refreshRules()))
-            .schedule();
-
-        // Statistics refresh task - cache-like behavior
-        statisticsRefreshTask = schedulerService.newTask("rules-statistics-refresh")
-            .nonPersistent()  // Cache-like refresh, should not be persisted
-            .withPeriod(rulesStatisticsRefreshInterval, TimeUnit.MILLISECONDS)
-            .withFixedDelay() // Sequential execution
-            .withSimpleExecutor(() -> contextManager.executeAsSystem(() -> syncRuleStatistics()))
-            .schedule();
-    }
-
-    public void bundleChanged(BundleEvent event) {
-        contextManager.executeAsSystem(() -> {
-            switch (event.getType()) {
-                case BundleEvent.STARTED:
-                    processBundleStartup(event.getBundle().getBundleContext());
-                    break;
-                case BundleEvent.STOPPING:
-                    processBundleStop(event.getBundle().getBundleContext());
-                    break;
-            }
-        });
+        removeItem(ruleId, Rule.class, Rule.ITEM_TYPE);
     }
 
     private void syncRuleStatistics() {
@@ -859,35 +716,27 @@ public class RulesServiceImpl extends AbstractContextAwareService implements Rul
         }
     }
 
-    private Map<String, Rule> getRuleCache(String tenantId) {
+    private Map<String, Set<Rule>> getRulesByEventTypeForTenant(String tenantId) {
         if (tenantId == null) {
             throw new IllegalArgumentException("Tenant ID cannot be null");
         }
         synchronized (cacheLock) {
-            return rulesByTenantId.computeIfAbsent(tenantId, k -> new ConcurrentHashMap<>());
+            return rulesByEventTypeByTenant.computeIfAbsent(tenantId, k -> new ConcurrentHashMap<>());
         }
     }
 
-    private Rule getFromCacheWithInheritance(String id, String tenantId) {
-        if (id == null) {
-            return null;
+    private Map<String, RuleStatistics> getRuleStatisticsForTenant(String tenantId) {
+        if (tenantId == null) {
+            throw new IllegalArgumentException("Tenant ID cannot be null");
         }
-        Rule rule = getRuleCache(tenantId).get(id);
-        if (rule == null && !SYSTEM_TENANT.equals(tenantId)) {
-            rule = getRuleCache(SYSTEM_TENANT).get(id);
+        synchronized (cacheLock) {
+            return ruleStatisticsByTenant.computeIfAbsent(tenantId, k -> new ConcurrentHashMap<>());
         }
-        return rule;
     }
 
     public Set<Condition> getTrackedConditions(Item source) {
         Set<Condition> trackedConditions = new HashSet<>();
-        String currentTenant = contextManager.getCurrentContext().getTenantId();
-
-        // Get rules from current tenant and system tenant
-        List<Rule> rules = new ArrayList<>(getRuleCache(currentTenant).values());
-        if (!SYSTEM_TENANT.equals(currentTenant)) {
-            rules.addAll(getRuleCache(SYSTEM_TENANT).values());
-        }
+        Collection<Rule> rules = getAllItems(Rule.class, true);
 
         for (Rule r : rules) {
             if (!r.getMetadata().isEnabled()) {

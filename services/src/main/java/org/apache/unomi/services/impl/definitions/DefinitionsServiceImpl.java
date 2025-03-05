@@ -152,7 +152,7 @@ public class DefinitionsServiceImpl extends AbstractMultiTypeCachingService impl
 
     @Override
     public Collection<ConditionType> getAllConditionTypes() {
-        return getAllItems(ConditionType.class);
+        return getAllItems(ConditionType.class, true);
     }
 
     @Override
@@ -182,7 +182,7 @@ public class DefinitionsServiceImpl extends AbstractMultiTypeCachingService impl
 
     @Override
     public Collection<ActionType> getAllActionTypes() {
-        return getAllItems(ActionType.class);
+        return getAllItems(ActionType.class, true);
     }
 
     @Override
@@ -212,7 +212,7 @@ public class DefinitionsServiceImpl extends AbstractMultiTypeCachingService impl
 
     @Override
     public Collection<ValueType> getAllValueTypes() {
-        return getAllItems(ValueType.class);
+        return getAllItems(ValueType.class, true);
     }
 
     @Override
@@ -275,7 +275,7 @@ public class DefinitionsServiceImpl extends AbstractMultiTypeCachingService impl
 
     @Override
     public Collection<PropertyMergeStrategyType> getAllPropertyMergeStrategyTypes() {
-        return getAllItems(PropertyMergeStrategyType.class);
+        return getAllItems(PropertyMergeStrategyType.class, true);
     }
 
     @Override
@@ -542,8 +542,8 @@ public class DefinitionsServiceImpl extends AbstractMultiTypeCachingService impl
      * @param <T> the type of items to cache
      */
     private <T extends Serializable> CacheableTypeConfig.Builder<T> createBaseBuilder(
-            Class<T> type, 
-            String itemType, 
+            Class<T> type,
+            String itemType,
             String metaInfPath) {
         return CacheableTypeConfig.<T>builder(type, itemType, metaInfPath)
             .withInheritFromSystemTenant(true)
@@ -555,14 +555,14 @@ public class DefinitionsServiceImpl extends AbstractMultiTypeCachingService impl
     @Override
     protected Set<CacheableTypeConfig<?>> getTypeConfigs() {
         Set<CacheableTypeConfig<?>> configs = new HashSet<>();
-        
+
         // Action Type configuration with bundle processor
         BiConsumer<BundleContext, ActionType> actionTypeProcessor = (bundleContext, type) -> {
             type.setPluginId(bundleContext.getBundle().getBundleId());
             type.setTenantId(SYSTEM_TENANT);
             setActionType(type);
         };
-        
+
         configs.add(createBaseBuilder(ActionType.class, ActionType.ITEM_TYPE, "actions")
             .withIdExtractor(ActionType::getItemId)
             .withBundleItemProcessor(actionTypeProcessor)
@@ -573,7 +573,7 @@ public class DefinitionsServiceImpl extends AbstractMultiTypeCachingService impl
             type.setPluginId(bundleContext.getBundle().getBundleId());
             setValueType(type);
         };
-        
+
         configs.add(createBaseBuilder(ValueType.class, ValueType.class.getSimpleName(), "values")
             .withIdExtractor(ValueType::getId)
             .withBundleItemProcessor(valueTypeProcessor)
@@ -584,10 +584,10 @@ public class DefinitionsServiceImpl extends AbstractMultiTypeCachingService impl
             type.setPluginId(bundleContext.getBundle().getBundleId());
             cacheService.put(PropertyMergeStrategyType.class.getSimpleName(), type.getId(), SYSTEM_TENANT, type);
         };
-        
+
         configs.add(createBaseBuilder(
-                PropertyMergeStrategyType.class, 
-                PropertyMergeStrategyType.class.getSimpleName(), 
+                PropertyMergeStrategyType.class,
+                PropertyMergeStrategyType.class.getSimpleName(),
                 "mergers")
             .withIdExtractor(PropertyMergeStrategyType::getId)
             .withBundleItemProcessor(mergeStrategyProcessor)
@@ -599,14 +599,14 @@ public class DefinitionsServiceImpl extends AbstractMultiTypeCachingService impl
             type.setTenantId(SYSTEM_TENANT);
             setConditionType(type);
         };
-        
+
         Consumer<ConditionType> conditionPostProcessor = conditionType -> {
             if (conditionType != null && conditionType.getParentCondition() != null) {
-                ParserHelper.resolveConditionType(this, conditionType.getParentCondition(), 
+                ParserHelper.resolveConditionType(this, conditionType.getParentCondition(),
                     "condition type " + conditionType.getItemId());
             }
         };
-        
+
         configs.add(createBaseBuilder(ConditionType.class, ConditionType.ITEM_TYPE, "conditions")
             .withIdExtractor(ConditionType::getItemId)
             .withPostProcessor(conditionPostProcessor)

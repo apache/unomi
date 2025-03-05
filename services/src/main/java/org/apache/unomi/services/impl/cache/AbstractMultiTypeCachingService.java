@@ -40,7 +40,6 @@ import org.slf4j.LoggerFactory;
 import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.Serializable;
-import java.lang.reflect.Method;
 import java.net.URL;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -63,19 +62,19 @@ public abstract class AbstractMultiTypeCachingService extends AbstractContextAwa
     protected SchedulerService schedulerService;
     protected MultiTypeCacheService cacheService;
     protected TenantService tenantService;
-    
+
     /**
      * Map tracking which plugin/bundle contributed which items.
      * Key is the bundle ID, value is the list of items contributed by that bundle.
      */
     protected final Map<Long, List<Object>> pluginContributions = new ConcurrentHashMap<>();
-    
+
     /**
      * Map tracking which plugin/bundle contributed which PluginType items.
      * Key is the bundle ID, value is the list of PluginType items contributed by that bundle.
      */
     protected final Map<Long, List<PluginType>> pluginTypes = new ConcurrentHashMap<>();
-    
+
     // Each service defines its supported types
     protected abstract Set<CacheableTypeConfig<?>> getTypeConfigs();
 
@@ -253,7 +252,7 @@ public abstract class AbstractMultiTypeCachingService extends AbstractContextAwa
             if (config.getPostProcessor() != null) {
                 config.getPostProcessor().accept(item);
             }
-            
+
             String id = config.getIdExtractor().apply(item);
             cacheService.put(config.getItemType(), id, tenantId, item);
         }
@@ -287,7 +286,7 @@ public abstract class AbstractMultiTypeCachingService extends AbstractContextAwa
     protected List<Object> getItemsForBundle(long bundleId) {
         return pluginContributions.getOrDefault(bundleId, Collections.emptyList());
     }
-    
+
     /**
      * Track a new item as being contributed by a specific bundle.
      *
@@ -304,7 +303,7 @@ public abstract class AbstractMultiTypeCachingService extends AbstractContextAwa
         if (!config.hasPredefinedItems()) {
             return;
         }
-        
+
         Enumeration<URL> entries = bundleContext.getBundle()
             .findEntries("META-INF/cxs/" + config.getMetaInfPath(), "*.json", true);
         if (entries == null) return;
@@ -316,28 +315,29 @@ public abstract class AbstractMultiTypeCachingService extends AbstractContextAwa
 
             try (BufferedInputStream bis = new BufferedInputStream(entryURL.openStream())) {
                 T item = CustomObjectMapper.getObjectMapper().readValue(bis, config.getType());
-                
+
                 // Track this item as contributed by this bundle
                 final long bundleId = bundleContext.getBundle().getBundleId();
-                
+
                 // Process in system context to ensure permissions
                 contextManager.executeAsSystem(() -> {
                     try {
                         // Set plugin ID if item supports it
-                        if (item instanceof Item) {
+                        if (item instanceof PluginType) {
                             try {
-                                // Use reflection to set the plugin ID if the method exists
-                                // This avoids direct dependency on specific Item implementations
-                                Item itemObj = (Item) item;
-                                itemObj.getClass().getMethod("setPluginId", long.class).invoke(itemObj, bundleId);
-                            } catch (NoSuchMethodException e) {
-                                // Not all Item implementations have this method, ignore
-                                logger.debug("Item type {} does not support setPluginId", item.getClass().getSimpleName());
+                                PluginType pluginTypeItem = (PluginType) item;
+                                pluginTypeItem.setPluginId(bundleId);
                             } catch (Exception e) {
                                 logger.warn("Error setting plugin ID on item {}: {}", item, e.getMessage());
                             }
                         }
-                        
+                        if (item instanceof Item) {
+                            Item itemObj = (Item) item;
+                            if (itemObj.getTenantId() == null) {
+                                itemObj.setTenantId(SYSTEM_TENANT);
+                            }
+                        }
+
                         // Apply the bundle-aware processor if configured
                         if (config.hasBundleItemProcessor()) {
                             config.getBundleItemProcessor().accept(bundleContext, item);
@@ -346,20 +346,20 @@ public abstract class AbstractMultiTypeCachingService extends AbstractContextAwa
                         else if (config.getPostProcessor() != null) {
                             config.getPostProcessor().accept(item);
                         }
-                        
+
                         // Track contribution
                         addPluginContribution(bundleId, item);
-                        
+
                         // Also track as PluginType if applicable
                         if (item instanceof PluginType) {
                             PluginType pluginTypeItem = (PluginType) item;
                             pluginTypes.computeIfAbsent(bundleId, k -> new CopyOnWriteArrayList<>()).add(pluginTypeItem);
                         }
-                                
+
                         // Add to cache
                         String id = config.getIdExtractor().apply(item);
                         cacheService.put(config.getItemType(), id, SYSTEM_TENANT, item);
-                        
+
                         logger.info("Predefined {} registered: {}",
                             config.getType().getSimpleName(), id);
                     } catch (Exception e) {
@@ -389,7 +389,7 @@ public abstract class AbstractMultiTypeCachingService extends AbstractContextAwa
             return null;
         });
     }
-    
+
     /**
      * Process bundle startup, loading any predefined items from the bundle.
      * Override to add additional processing.
@@ -401,7 +401,7 @@ public abstract class AbstractMultiTypeCachingService extends AbstractContextAwa
             loadPredefinedItems(bundleContext);
         }
     }
-    
+
     /**
      * Process bundle stop, removing any items contributed by the bundle.
      * Override to add additional processing.
@@ -412,7 +412,7 @@ public abstract class AbstractMultiTypeCachingService extends AbstractContextAwa
         if (bundle != null) {
             long bundleId = bundle.getBundleId();
             List<Object> bundleItems = getItemsForBundle(bundleId);
-            
+
             for (Object item : bundleItems) {
                 // Handle removal of cached items - details would depend on item type
                 if (item instanceof Item) {
@@ -420,16 +420,16 @@ public abstract class AbstractMultiTypeCachingService extends AbstractContextAwa
                     removeItemOnBundleStop(typedItem, typedItem.getItemId(), typedItem.getItemType());
                 }
             }
-            
+
             // Allow subclasses to perform additional cleanup
             onBundleStop(bundle);
-            
+
             // Clean up the tracking maps
             pluginContributions.remove(bundleId);
             pluginTypes.remove(bundleId);
         }
     }
-    
+
     /**
      * Hook method for subclasses to perform additional cleanup when a bundle stops.
      * Default implementation does nothing.
@@ -439,7 +439,7 @@ public abstract class AbstractMultiTypeCachingService extends AbstractContextAwa
     protected void onBundleStop(Bundle bundle) {
         // Default implementation does nothing
     }
-    
+
     /**
      * Remove an item from caches and persistence when its contributing bundle stops.
      * Override in subclasses for type-specific handling as needed.
@@ -454,18 +454,18 @@ public abstract class AbstractMultiTypeCachingService extends AbstractContextAwa
             try {
                 // Remove from cache with system tenant (predefined items use system tenant)
                 Class<?> itemClass = item.getClass();
-                
+
                 // We need to use raw types here due to Java's type erasure
                 // and how the remove method is typed - this is safe because
                 // the cache service checks types at runtime
                 cacheService.remove(itemType, itemId, SYSTEM_TENANT, (Class) itemClass);
-                
+
                 // If persistable, also remove from persistence
                 if (item instanceof Item) {
                     persistenceService.remove(itemId, (Class) itemClass);
                 }
             } catch (Exception e) {
-                logger.error("Error removing {} with ID {} on bundle stop", 
+                logger.error("Error removing {} with ID {} on bundle stop",
                     item.getClass().getSimpleName(), itemId, e);
             }
         }
@@ -473,13 +473,13 @@ public abstract class AbstractMultiTypeCachingService extends AbstractContextAwa
 
     /**
      * Get a map of all plugin types indexed by plugin ID (bundle ID).
-     * 
+     *
      * @return Map where key is the bundle ID, value is the list of plugin types from that bundle
      */
     public Map<Long, List<PluginType>> getTypesByPlugin() {
         return pluginTypes;
     }
-    
+
     /**
      * Get all items of a specific type for the current tenant.
      *
@@ -487,8 +487,11 @@ public abstract class AbstractMultiTypeCachingService extends AbstractContextAwa
      * @param itemClass the class of the items to retrieve
      * @return a collection of all items of the specified type
      */
-    protected <T extends Serializable> Collection<T> getAllItems(Class<T> itemClass) {
+    protected <T extends Serializable> Collection<T> getAllItems(Class<T> itemClass, boolean withInherited) {
         String tenantId = contextManager.getCurrentContext().getTenantId();
+        if (withInherited) {
+            return new ArrayList<>(cacheService.getValuesByPredicateWithInheritance(tenantId, itemClass, t -> true));
+        }
         return new ArrayList<>(cacheService.getTenantCache(tenantId, itemClass).values());
     }
 

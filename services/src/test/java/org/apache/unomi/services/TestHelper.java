@@ -128,7 +128,8 @@ public class TestHelper {
         EventServiceImpl eventService,
         ExecutionContextManager executionContextManager,
         TenantService tenantService,
-        ConditionValidationService conditionValidationService
+        ConditionValidationService conditionValidationService,
+        MultiTypeCacheService multiTypeCacheService
     ) {
         RulesServiceImpl rulesService = new RulesServiceImpl();
         TestActionExecutorDispatcher actionExecutorDispatcher = new TestActionExecutorDispatcher(definitionsService, persistenceService);
@@ -149,6 +150,7 @@ public class TestHelper {
         rulesService.setContextManager(executionContextManager);
         rulesService.setConditionValidationService(conditionValidationService);
         rulesService.setTracerService(tracerService);
+        rulesService.setCacheService(multiTypeCacheService);
 
         // Create and register test action type
         ActionType testActionType = new ActionType();
@@ -190,7 +192,7 @@ public class TestHelper {
 
     /**
      * Creates a scheduler service instance for testing purposes with ClusterService support.
-     * 
+     *
      * @param persistenceService The persistence service to use
      * @param executionContextManager The execution context manager to use
      * @param bundleContext The bundle context to use
@@ -200,7 +202,7 @@ public class TestHelper {
      */
     public static SchedulerService createSchedulerService(
             PersistenceService persistenceService,
-            ExecutionContextManager executionContextManager, 
+            ExecutionContextManager executionContextManager,
             BundleContext bundleContext,
             ClusterService clusterService,
             boolean construct) {
@@ -212,12 +214,12 @@ public class TestHelper {
         schedulerService.setExecutorNode(true);
         schedulerService.setNodeId("test-scheduler-node");
         schedulerService.setPurgeTaskEnabled(false); // Disable purge task by default for tests
-        
+
         // Set the cluster service if provided
         if (clusterService != null) {
             schedulerService.setClusterService(clusterService);
         }
-        
+
         if (construct) {
             schedulerService.postConstruct();
         }
@@ -247,13 +249,13 @@ public class TestHelper {
     /**
      * Creates a cluster service instance for testing purposes.
      * Initializes a new ClusterServiceImpl with the specified persistence service and node ID.
-     * 
+     *
      * NOTE: Due to circular dependency between ClusterService and SchedulerService,
      * when using both services together:
      * 1. Create the ClusterService first using this method
      * 2. Create the SchedulerService using createSchedulerService() and pass the ClusterService
      * 3. If tasks were not initialized during startup, call clusterService.initializeScheduledTasks()
-     * 
+     *
      * @param persistenceService The persistence service to use
      * @param nodeId The unique identifier for this node
      * @return A configured ClusterServiceImpl instance
@@ -261,17 +263,17 @@ public class TestHelper {
     public static ClusterServiceImpl createClusterService(PersistenceService persistenceService, String nodeId) {
         return createClusterService(persistenceService, nodeId, "127.0.0.1", "127.0.0.1");
     }
-    
+
     /**
      * Creates a cluster service instance for testing purposes with custom addresses.
      * Initializes a new ClusterServiceImpl with the specified persistence service, node ID, and addresses.
-     * 
+     *
      * NOTE: Due to circular dependency between ClusterService and SchedulerService,
      * when using both services together:
      * 1. Create the ClusterService first using this method
      * 2. Create the SchedulerService using createSchedulerService() and pass the ClusterService
      * 3. If tasks were not initialized during startup, call clusterService.initializeScheduledTasks()
-     * 
+     *
      * @param persistenceService The persistence service to use
      * @param nodeId The unique identifier for this node
      * @param publicAddress The public address for the node
@@ -279,9 +281,9 @@ public class TestHelper {
      * @return A configured ClusterServiceImpl instance
      */
     public static ClusterServiceImpl createClusterService(
-            PersistenceService persistenceService, 
-            String nodeId, 
-            String publicAddress, 
+            PersistenceService persistenceService,
+            String nodeId,
+            String publicAddress,
             String internalAddress) {
         ClusterServiceImpl clusterService = new ClusterServiceImpl();
         clusterService.setPersistenceService(persistenceService);
@@ -289,7 +291,7 @@ public class TestHelper {
         clusterService.setInternalAddress(internalAddress);
         clusterService.setNodeStatisticsUpdateFrequency(60000);
         clusterService.setNodeId(nodeId);
-        
+
         return clusterService;
     }
 
@@ -519,7 +521,7 @@ public class TestHelper {
 
     /**
      * Creates a test scheduler node with cluster service support
-     * 
+     *
      * @param persistenceService The persistence service to use
      * @param nodeId The node identifier
      * @param executorNode Whether this node should execute tasks
@@ -527,7 +529,7 @@ public class TestHelper {
      * @param clusterService The cluster service to use (can be null)
      * @return Configured SchedulerServiceImpl instance
      */
-    public static SchedulerServiceImpl createTestNode(PersistenceService persistenceService, String nodeId, boolean executorNode, 
+    public static SchedulerServiceImpl createTestNode(PersistenceService persistenceService, String nodeId, boolean executorNode,
                                                    long lockTimeout, ClusterService clusterService) {
         SchedulerServiceImpl node = new SchedulerServiceImpl();
         if (lockTimeout > 0) {
@@ -538,12 +540,12 @@ public class TestHelper {
         node.setThreadPoolSize(2);
         node.setPurgeTaskEnabled(false);
         node.setNodeId(nodeId);
-        
+
         // Set the cluster service if provided
         if (clusterService != null) {
             node.setClusterService(clusterService);
         }
-        
+
         node.postConstruct();
         return node;
     }
@@ -628,12 +630,12 @@ public class TestHelper {
             org.apache.unomi.persistence.spi.PersistenceService persistenceService,
             org.apache.unomi.api.tenants.TenantService tenantService,
             String... tenantIds) throws Exception {
-        
+
         // Stop scheduler service
         if (schedulerService != null && schedulerService instanceof org.apache.unomi.services.impl.scheduler.SchedulerServiceImpl) {
             ((org.apache.unomi.services.impl.scheduler.SchedulerServiceImpl) schedulerService).preDestroy();
         }
-        
+
         // Clear cache by clearing each tenant
         if (multiTypeCacheService != null && tenantIds != null) {
             for (String tenantId : tenantIds) {
@@ -642,12 +644,12 @@ public class TestHelper {
                 }
             }
         }
-        
+
         // Clear persistence service data if possible
         if (persistenceService != null && persistenceService instanceof org.apache.unomi.services.impl.InMemoryPersistenceServiceImpl) {
             ((org.apache.unomi.services.impl.InMemoryPersistenceServiceImpl) persistenceService).purge((java.util.Date)null);
         }
-        
+
         // Reset tenant context
         if (tenantService != null && tenantService instanceof org.apache.unomi.services.impl.TestTenantService) {
             ((org.apache.unomi.services.impl.TestTenantService) tenantService).setCurrentTenantId(null);
@@ -657,13 +659,13 @@ public class TestHelper {
     /**
      * Helper method that nulls out service references to help with garbage collection.
      * Pass the objects you want to null out and they will be collected by the garbage collector.
-     * This is a no-op method beyond accepting references, but it's organized to be clear 
+     * This is a no-op method beyond accepting references, but it's organized to be clear
      * and document the intention of discarding object references.
      *
      * @param objects The objects to be nulled out
      */
     public static void cleanupReferences(Object... objects) {
-        // This method doesn't actually need to do anything - by passing the objects as 
+        // This method doesn't actually need to do anything - by passing the objects as
         // parameters, the calling code is setting those instance variables to null,
         // which is the intended effect. This method is simply a cleaner way to organize
         // the nulling of multiple references.

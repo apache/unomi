@@ -117,7 +117,7 @@ public class SegmentServiceImplTest {
         actionExecutorDispatcher.setTracer(requestTracer);
 
         // Set up rules service using TestHelper
-        rulesService = TestHelper.createRulesService(persistenceService, bundleContext, schedulerService, definitionsService, eventService, executionContextManager, tenantService, conditionValidationService);
+        rulesService = TestHelper.createRulesService(persistenceService, bundleContext, schedulerService, definitionsService, eventService, executionContextManager, tenantService, conditionValidationService, multiTypeCacheService);
         rulesService.setTracerService(tracerService);
 
         // Set up segment service
@@ -186,7 +186,7 @@ public class SegmentServiceImplTest {
             tenantService,
             TENANT_1, TENANT_2, SYSTEM_TENANT
         );
-        
+
         // Clean up references using the helper method
         org.apache.unomi.services.TestHelper.cleanupReferences(
             tenantService, securityService, executionContextManager, segmentService,

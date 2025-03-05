@@ -126,6 +126,7 @@ public class RulesServiceImplTest {
         rulesService.setContextManager(executionContextManager);
         rulesService.setConditionValidationService(conditionValidationService);
         rulesService.setTracerService(tracerService);
+        rulesService.setCacheService(multiTypeCacheService);
 
         // Set up condition types
         setupActionTypes();
@@ -322,8 +323,8 @@ public class RulesServiceImplTest {
 
             // Execute test
             Set<Rule> matchingRules = rulesService.getMatchingRules(event);
-            assertNotNull("Rule statistics should exist", matchingRules);
-            assertTrue("Rule statistics should exist", !matchingRules.isEmpty());
+            assertNotNull("Matching rules should exist", matchingRules);
+            assertTrue("Matching rules should not be empty", !matchingRules.isEmpty());
 
             // Verify statistics were updated
             RuleStatistics stats = rulesService.getRuleStatistics(rule.getItemId());
