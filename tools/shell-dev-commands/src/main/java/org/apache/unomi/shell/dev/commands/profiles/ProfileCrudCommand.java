@@ -26,6 +26,7 @@ import org.apache.unomi.shell.dev.services.BaseCrudCommand;
 import org.apache.unomi.shell.dev.services.CrudCommand;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
+import org.apache.unomi.api.conditions.Condition;
 
 import java.util.Arrays;
 import java.util.List;
@@ -54,7 +55,7 @@ public class ProfileCrudCommand extends BaseCrudCommand {
         "Email",
         "Segments",
         "Last Updated",
-        "Tenant"
+        "Scope"
     };
 
     @Reference
@@ -67,7 +68,7 @@ public class ProfileCrudCommand extends BaseCrudCommand {
 
     @Override
     public String[] getHeaders() {
-        return TABLE_HEADERS;
+        return prependTenantIdHeader(TABLE_HEADERS);
     }
 
     @Override
@@ -146,5 +147,39 @@ public class ProfileCrudCommand extends BaseCrudCommand {
         return PROPERTY_NAMES.stream()
             .filter(name -> name.startsWith(prefix))
             .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<String> completeId(String prefix) {
+        // Create a query with filter by ID prefix if provided
+        Query query = new Query();
+        query.setLimit(20); // Reasonable limit for auto-completion
+
+        try {
+            // If prefix is not empty, filter by it
+            if (!prefix.isEmpty()) {
+                Condition condition = new Condition(definitionsService.getConditionType("profilePropertyCondition"));
+                condition.setParameter("propertyName", "itemId");
+                condition.setParameter("comparisonOperator", "startsWith");
+                condition.setParameter("propertyValue", prefix);
+                query.setCondition(condition);
+            } else {
+                // Otherwise, match all
+                Condition matchAllCondition = new Condition(definitionsService.getConditionType("matchAllCondition"));
+                query.setCondition(matchAllCondition);
+            }
+
+            query.setSortby("properties.lastVisit:desc"); // Sort by last visit to show most recent profiles first
+
+            // Execute the query
+            PartialList<Profile> profiles = profileService.search(query, Profile.class);
+
+            // Extract IDs
+            return profiles.getList().stream()
+                .map(Profile::getItemId)
+                .collect(Collectors.toList());
+        } catch (Exception e) {
+            return List.of(); // Return empty list on error
+        }
     }
 }

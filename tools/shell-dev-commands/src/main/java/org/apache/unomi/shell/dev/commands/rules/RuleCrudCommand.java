@@ -27,6 +27,7 @@ import org.apache.unomi.api.services.RulesService;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.shell.dev.services.BaseCrudCommand;
 import org.apache.unomi.shell.dev.services.CrudCommand;
+import org.apache.unomi.api.conditions.Condition;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 
@@ -57,7 +58,7 @@ public class RuleCrudCommand extends BaseCrudCommand {
 
     @Override
     public String[] getHeaders() {
-        return new String[] {
+        return prependTenantIdHeader(new String[] {
             "Activated",
             "Hidden",
             "Read-only",
@@ -69,29 +70,29 @@ public class RuleCrudCommand extends BaseCrudCommand {
             "Executions",
             "Conditions [ms]",
             "Actions [ms]"
-        };
+        });
     }
 
     @Override
     protected PartialList<?> getItems(Query query) {
-        return rulesService.getRuleMetadatas(query);
+        return rulesService.getRuleDetails(query);
     }
 
     @Override
     protected Comparable[] buildRow(Object item) {
-        Metadata ruleMetadata = (Metadata) item;
-        String ruleId = ruleMetadata.getId();
+        Rule rule = (Rule) item;
+        String ruleId = rule.getItemId();
         Map<String,RuleStatistics> allRuleStatistics = rulesService.getAllRuleStatistics();
 
         ArrayList<Comparable> rowData = new ArrayList<>();
-        rowData.add(ruleMetadata.isEnabled() ? "x" : "");
-        rowData.add(ruleMetadata.isHidden() ? "x" : "");
-        rowData.add(ruleMetadata.isReadOnly() ? "x" : "");
+        rowData.add(rule.getMetadata().isEnabled() ? "x" : "");
+        rowData.add(rule.getMetadata().isHidden() ? "x" : "");
+        rowData.add(rule.getMetadata().isReadOnly() ? "x" : "");
         rowData.add(ruleId);
-        rowData.add(ruleMetadata.getScope());
-        rowData.add(ruleMetadata.getName());
-        rowData.add(StringUtils.join(ruleMetadata.getTags(), ","));
-        rowData.add(StringUtils.join(ruleMetadata.getSystemTags(), ","));
+        rowData.add(rule.getMetadata().getScope());
+        rowData.add(rule.getMetadata().getName());
+        rowData.add(StringUtils.join(rule.getMetadata().getTags(), ","));
+        rowData.add(StringUtils.join(rule.getMetadata().getSystemTags(), ","));
         RuleStatistics ruleStatistics = allRuleStatistics.get(ruleId);
         if (ruleStatistics != null) {
             rowData.add(ruleStatistics.getExecutionCount());
@@ -175,6 +176,36 @@ public class RuleCrudCommand extends BaseCrudCommand {
                     .collect(Collectors.toList());
         }
         return List.of();
+    }
+
+    @Override
+    public List<String> completeId(String prefix) {
+        // Create a query to find rules that match the prefix
+        Query query = new Query();
+        query.setLimit(20); // Reasonable limit for auto-completion
+        
+        // If prefix is not empty, use it to filter results
+        if (!prefix.isEmpty()) {
+            Condition condition = new Condition(definitionsService.getConditionType("sessionPropertyCondition"));
+            condition.setParameter("comparisonOperator", "startsWith");
+            condition.setParameter("propertyName", "itemId");
+            condition.setParameter("propertyValue", prefix);
+            query.setCondition(condition);
+        } else {
+            // Otherwise, match all
+            Condition matchAllCondition = new Condition(definitionsService.getConditionType("matchAllCondition"));
+            query.setCondition(matchAllCondition);
+        }
+        
+        // Execute the query and extract rule IDs
+        try {
+            PartialList<Metadata> metadatas = rulesService.getRuleMetadatas(query);
+            return metadatas.getList().stream()
+                .map(Metadata::getId)
+                .collect(Collectors.toList());
+        } catch (Exception e) {
+            return List.of(); // Return empty list on error
+        }
     }
 
 }

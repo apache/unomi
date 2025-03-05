@@ -27,11 +27,11 @@ import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.common.DataTable;
 import org.apache.unomi.shell.dev.commands.ListCommandSupport;
 import org.osgi.service.component.annotations.Reference;
-import org.osgi.service.component.annotations.ReferenceCardinality;
-import org.osgi.service.component.annotations.ReferencePolicy;
-import org.osgi.service.component.annotations.ReferencePolicyOption;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Base class for CRUD command implementations that provides common functionality
@@ -41,11 +41,7 @@ public abstract class BaseCrudCommand extends ListCommandSupport implements Crud
 
     private static final Logger LOGGER = LoggerFactory.getLogger(BaseCrudCommand.class.getName());
 
-    @Reference(
-        cardinality = ReferenceCardinality.MANDATORY,
-        policy = ReferencePolicy.DYNAMIC,
-        policyOption = ReferencePolicyOption.GREEDY
-    )
+    @Reference
     protected volatile DefinitionsService definitionsService;
 
     @Argument(index = 0, name = "maxEntries", description = "The maximum number of entries to retrieve (defaults to 100)", required = false, multiValued = false)
@@ -53,16 +49,6 @@ public abstract class BaseCrudCommand extends ListCommandSupport implements Crud
 
     @Option(name = "--csv", description = "Output in CSV format", required = false)
     protected boolean csv;
-
-    protected void bindDefinitionsService(DefinitionsService definitionsService) {
-        this.definitionsService = definitionsService;
-    }
-
-    protected void unbindDefinitionsService(DefinitionsService definitionsService) {
-        if (this.definitionsService == definitionsService) {
-            this.definitionsService = null;
-        }
-    }
 
     @Override
     protected DataTable buildDataTable() {
@@ -79,7 +65,17 @@ public abstract class BaseCrudCommand extends ListCommandSupport implements Crud
 
         DataTable dataTable = new DataTable();
         for (Object item : items.getList()) {
-            dataTable.addRow(buildRow(item));
+            Comparable[] rowData = buildRow(item);
+
+            // Get tenant ID from the item if possible
+            String tenantId = getTenantIdFromItem(item);
+
+            // Create a new array with tenantId as the first element
+            Comparable[] rowWithTenant = new Comparable[rowData.length + 1];
+            rowWithTenant[0] = tenantId;
+            System.arraycopy(rowData, 0, rowWithTenant, 1, rowData.length);
+
+            dataTable.addRow(rowWithTenant);
         }
 
         return dataTable;
@@ -123,6 +119,20 @@ public abstract class BaseCrudCommand extends ListCommandSupport implements Crud
     @Override
     public abstract String[] getHeaders();
 
+    /**
+     * Returns the headers with "TenantId" as the first column.
+     * This method should be used by subclasses to ensure tenant ID is always displayed first.
+     *
+     * @param originalHeaders the original headers from the implementation
+     * @return array of column headers with "TenantId" as the first element
+     */
+    protected String[] prependTenantIdHeader(String[] originalHeaders) {
+        String[] headersWithTenant = new String[originalHeaders.length + 1];
+        headersWithTenant[0] = "Tenant";
+        System.arraycopy(originalHeaders, 0, headersWithTenant, 1, originalHeaders.length);
+        return headersWithTenant;
+    }
+
     @Override
     public void buildRows(ShellTable table, int maxEntries) {
         Query query = new Query();
@@ -147,7 +157,135 @@ public abstract class BaseCrudCommand extends ListCommandSupport implements Crud
         }
 
         for (Object item : items.getList()) {
-            table.addRow().addContent(buildRow(item));
+            Comparable[] rowData = buildRow(item);
+
+            // Get tenant ID from the item if possible
+            String tenantId = getTenantIdFromItem(item);
+
+            // Create a new array with tenantId as the first element
+            Comparable[] rowWithTenant = new Comparable[rowData.length + 1];
+            rowWithTenant[0] = tenantId;
+            System.arraycopy(rowData, 0, rowWithTenant, 1, rowData.length);
+
+            table.addRow().addContent(rowWithTenant);
         }
+    }
+
+    /**
+     * Extract the tenant ID from an item.
+     *
+     * @param item the item to extract tenant ID from
+     * @return the tenant ID or a default value if it can't be determined
+     */
+    protected String getTenantIdFromItem(Object item) {
+
+        // Handle tenant-specific objects
+        if (item instanceof org.apache.unomi.api.tenants.Tenant) {
+            return ((org.apache.unomi.api.tenants.Tenant) item).getItemId();
+        }
+
+        // Handle Item subclasses that directly have tenantId
+        if (item instanceof org.apache.unomi.api.Item) {
+            String tenantId = ((org.apache.unomi.api.Item) item).getTenantId();
+            return tenantId;
+        }
+
+        return "n/a";
+    }
+
+    /**
+     * Default implementation of ID completion for all CRUD commands.
+     * This method fetches a limited number of items and filters their IDs based on the given prefix.
+     *
+     * @param prefix the prefix to filter IDs by
+     * @return a list of matching item IDs
+     */
+    @Override
+    public List<String> completeId(String prefix) {
+        // Create a query with increased limit to provide more completions
+        Query query = new Query();
+        query.setLimit(50); // Higher limit for completions
+
+        if (definitionsService == null) {
+            LOGGER.error("Definition service is not available, unable to complete IDs");
+            return List.of();
+        }
+
+        try {
+            Condition matchAllCondition = new Condition(definitionsService.getConditionType("matchAllCondition"));
+            query.setCondition(matchAllCondition);
+            query.setSortby(getSortBy());
+
+            // Get items using the appropriate service method
+            PartialList<?> items = getItems(query);
+
+            // Extract IDs from the items
+            List<String> ids = new ArrayList<>();
+            for (Object item : items.getList()) {
+                String id = extractIdFromItem(item);
+                if (id != null && (prefix.isEmpty() || id.startsWith(prefix))) {
+                    ids.add(id);
+                }
+            }
+
+            return ids;
+        } catch (Exception e) {
+            LOGGER.error("Error completing IDs", e);
+            return List.of();
+        }
+    }
+
+    /**
+     * Extract the ID from an item. This method attempts to extract the ID using common patterns.
+     * Subclasses can override this method to provide specialized ID extraction for specific item types.
+     *
+     * @param item the item to extract the ID from
+     * @return the extracted ID, or null if it couldn't be extracted
+     */
+    protected String extractIdFromItem(Object item) {
+        // Handle Item subclasses
+        if (item instanceof org.apache.unomi.api.Item) {
+            return ((org.apache.unomi.api.Item) item).getItemId();
+        }
+
+        // Handle Metadata objects
+        if (item instanceof org.apache.unomi.api.Metadata) {
+            return ((org.apache.unomi.api.Metadata) item).getId();
+        }
+
+        // Try reflection as a fallback
+        try {
+            // Try common getter method names for ID
+            for (String methodName : new String[]{"getId", "getItemId", "getIdentifier", "getKey", "getName"}) {
+                try {
+                    java.lang.reflect.Method method = item.getClass().getMethod(methodName);
+                    Object result = method.invoke(item);
+                    if (result != null) {
+                        return result.toString();
+                    }
+                } catch (NoSuchMethodException e) {
+                    // Method doesn't exist, try the next one
+                }
+            }
+
+            // Try direct field access as a last resort
+            for (String fieldName : new String[]{"id", "itemId", "identifier", "key", "name"}) {
+                try {
+                    java.lang.reflect.Field field = item.getClass().getDeclaredField(fieldName);
+                    field.setAccessible(true);
+                    Object value = field.get(item);
+                    if (value != null) {
+                        return value.toString();
+                    }
+                } catch (NoSuchFieldException e) {
+                    // Field doesn't exist, try the next one
+                }
+            }
+        } catch (Exception e) {
+            // Ignore reflection errors
+        }
+
+        // If all else fails, use toString and hope it's meaningful
+        return item.toString();
     }
 }

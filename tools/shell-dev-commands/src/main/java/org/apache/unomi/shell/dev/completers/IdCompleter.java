@@ -48,8 +48,8 @@ public class IdCompleter implements Completer {
     public int complete(Session session, CommandLine commandLine, List<String> candidates) {
         // Get the type argument from the command line
         String type = null;
-        if (commandLine.getArguments().length > 1) {
-            type = commandLine.getArguments()[1];
+        if (commandLine.getArguments().length > 2) {
+            type = commandLine.getArguments()[2];
         }
         if (type == null) {
             return -1;
@@ -64,7 +64,7 @@ public class IdCompleter implements Completer {
                     try {
                         if (cmd.getObjectType().equals(type)) {
                             // Get completions from the command
-                            String prefix = commandLine.getArguments().length > 2 ? commandLine.getArguments()[2] : "";
+                            String prefix = commandLine.getArguments().length > 3 ? commandLine.getArguments()[3] : "";
                             List<String> completions = cmd.completeId(prefix);
 
                             StringsCompleter delegate = new StringsCompleter();

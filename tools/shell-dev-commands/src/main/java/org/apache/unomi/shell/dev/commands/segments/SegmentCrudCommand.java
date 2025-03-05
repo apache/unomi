@@ -28,6 +28,7 @@ import org.apache.unomi.shell.dev.services.BaseCrudCommand;
 import org.apache.unomi.shell.dev.services.CrudCommand;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
+import org.apache.unomi.api.conditions.Condition;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -57,7 +58,7 @@ public class SegmentCrudCommand extends BaseCrudCommand {
 
     @Override
     public String[] getHeaders() {
-        return new String[] {
+        return prependTenantIdHeader(new String[] {
             "Activated",
             "Hidden",
             "Read-only",
@@ -66,7 +67,7 @@ public class SegmentCrudCommand extends BaseCrudCommand {
             "Name",
             "Tags",
             "System tags"
-        };
+        });
     }
 
     @Override
@@ -162,5 +163,35 @@ public class SegmentCrudCommand extends BaseCrudCommand {
             return List.of();
         }
         return List.of();
+    }
+
+    @Override
+    public List<String> completeId(String prefix) {
+        // Create a query to find segments that match the prefix
+        Query query = new Query();
+        query.setLimit(20); // Reasonable limit for auto-completion
+        
+        try {
+            // If prefix is not empty, use it to filter results
+            if (!prefix.isEmpty()) {
+                Condition condition = new Condition(definitionsService.getConditionType("booleanCondition"));
+                condition.setParameter("operator", "startsWith");
+                condition.setParameter("propertyName", "itemId");
+                condition.setParameter("propertyValue", prefix);
+                query.setCondition(condition);
+            } else {
+                // Otherwise, match all
+                Condition matchAllCondition = new Condition(definitionsService.getConditionType("matchAllCondition"));
+                query.setCondition(matchAllCondition);
+            }
+            
+            // Execute the query and extract segment IDs
+            PartialList<Metadata> metadatas = segmentService.getSegmentMetadatas(query);
+            return metadatas.getList().stream()
+                .map(Metadata::getId)
+                .collect(Collectors.toList());
+        } catch (Exception e) {
+            return List.of(); // Return empty list on error
+        }
     }
 }

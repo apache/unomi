@@ -50,7 +50,7 @@ public class TenantCrudCommand extends BaseCrudCommand {
 
     @Override
     public String[] getHeaders() {
-        return new String[]{"ID", "Name", "Description", "Status", "Created", "Modified"};
+        return prependTenantIdHeader(new String[]{"ID", "Name", "Description", "Status", "Created", "Modified"});
     }
 
     @Override
@@ -74,6 +74,18 @@ public class TenantCrudCommand extends BaseCrudCommand {
             tenant.getCreationDate() != null ? tenant.getCreationDate().toString() : "",
             tenant.getLastModificationDate() != null ? tenant.getLastModificationDate().toString() : ""
         };
+    }
+
+    /**
+     * Special case for tenants: the tenant ID is the same as the item ID for tenant objects.
+     */
+    @Override
+    protected String getTenantIdFromItem(Object item) {
+        if (item instanceof Tenant) {
+            Tenant tenant = (Tenant) item;
+            return tenant.getItemId();
+        }
+        return super.getTenantIdFromItem(item);
     }
 
     @Override
@@ -183,5 +195,22 @@ public class TenantCrudCommand extends BaseCrudCommand {
             "- restrictedEventPermissions: List of event types that require special permissions",
             "- authorizedIPs: List of IP addresses or CIDR ranges authorized to make requests"
         );
+    }
+
+    @Override
+    public List<String> completeId(String prefix) {
+        try {
+            // Get all tenants (typically not too many to need complex filtering)
+            List<Tenant> tenants = tenantService.getAllTenants();
+            
+            // Filter out system tenant and any that don't match the prefix
+            return tenants.stream()
+                .filter(tenant -> !TenantService.SYSTEM_TENANT.equals(tenant.getItemId()))
+                .map(Tenant::getItemId)
+                .filter(id -> prefix.isEmpty() || id.startsWith(prefix))
+                .collect(Collectors.toList());
+        } catch (Exception e) {
+            return List.of(); // Return empty list on error
+        }
     }
 }
