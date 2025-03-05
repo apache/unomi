@@ -31,7 +31,7 @@ import org.junit.Test;
 import java.io.IOException;
 import java.util.*;
 
-public class Migrate16xTo220IT extends BaseIT {
+public class Migrate16xToCurrentVersionIT extends BaseIT {
 
     private int eventCount = 0;
     private int sessionCount = 0;
@@ -100,6 +100,7 @@ public class Migrate16xTo220IT extends BaseIT {
         checkPagePathForEventView();
         checkPastEvents();
         checkScopeEventHaveBeenUpdated();
+        countNumberOfSessionIndices();
     }
 
     /**
@@ -339,6 +340,14 @@ public class Migrate16xTo220IT extends BaseIT {
         }
     }
 
+    private void countNumberOfSessionIndices() {
+        try {
+           Set<String> sessionIndices = MigrationUtils.getIndexesPrefixedBy(httpClient, "http://localhost:9400", "context-session");
+            Assert.assertEquals(2, sessionIndices.size());
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
     private void getScopeFromEvents(CloseableHttpClient httpClient, String eventIndex) throws IOException {
         String requestBody = resourceAsString("migration/match_all_login_event_request.json");
         JsonNode jsonNode = objectMapper.readTree(HttpUtils.executePostRequest(httpClient, "http://localhost:9400" + "/" + eventIndex + "/_search", requestBody, null));
