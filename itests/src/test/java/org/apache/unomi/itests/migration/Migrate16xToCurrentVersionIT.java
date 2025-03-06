@@ -38,7 +38,6 @@ public class Migrate16xToCurrentVersionIT extends BaseIT {
     private Set<String[]> initialScopes = new HashSet<>();
 
     private static final String SCOPE_NOT_EXIST = "SCOPE_NOT_EXIST";
-    private static final int NUMBER_DUPLICATE_SESSIONS = 3;
     private static final List<String> oldSystemItemsIndices = Arrays.asList("context-actiontype", "context-campaign", "context-campaignevent", "context-goal",
             "context-userlist", "context-propertytype", "context-scope", "context-conditiontype", "context-rule", "context-scoring", "context-segment", "context-groovyaction", "context-topic",
             "context-patch", "context-jsonschema", "context-importconfig", "context-exportconfig", "context-rulestats");
@@ -106,7 +105,6 @@ public class Migrate16xToCurrentVersionIT extends BaseIT {
     /**
      * Checks if at least the new index for events and sessions exists.
      * Also checks:
-     * - duplicated sessions are correctly removed (-3 sessions in final count)
      * - persona sessions are now merged in session index due to index reduction in 2_2_0 (+2 sessions in final count)
      */
     private void checkEventSessionRollover2_2_0() throws IOException {
@@ -123,7 +121,7 @@ public class Migrate16xToCurrentVersionIT extends BaseIT {
             newSessioncount += countItems(httpClient, sessionIndex, null);
         }
         Assert.assertEquals(eventCount, newEventcount);
-        Assert.assertEquals(sessionCount - NUMBER_DUPLICATE_SESSIONS, newSessioncount);
+        Assert.assertEquals(sessionCount, newSessioncount);
     }
 
     private void checkIndexReductions2_2_0() throws IOException {
