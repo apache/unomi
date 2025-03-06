@@ -137,22 +137,26 @@ public class RulesServiceImpl extends AbstractMultiTypeCachingService implements
 
         // Configure Rule type
         configs.add(createBaseBuilder(Rule.class, Rule.ITEM_TYPE, "rules")
-            .withIdExtractor(r -> r.getItemId())
-            .withPostProcessor(rule -> {
-                boolean isValid = ParserHelper.resolveConditionType(definitionsService, rule.getCondition(), "rule " + rule.getItemId());
-                isValid = isValid && ParserHelper.resolveActionTypes(definitionsService, rule, invalidRulesId.contains(rule.getItemId()));
-                if (!isValid) {
-                    invalidRulesId.add(rule.getItemId());
-                } else {
-                    invalidRulesId.remove(rule.getItemId());
-                }
-                setRule(rule);
-                // Update rule by event type cache
-                String tenantId = rule.getTenantId();
-                Map<String, Set<Rule>> tenantEventTypeRules = getRulesByEventTypeForTenant(tenantId);
-                updateRulesByEventType(tenantEventTypeRules, rule);
-            })
-            .build());
+                .withIdExtractor(r -> r.getItemId())
+                .withBundleItemProcessor((bundleContext, rule) -> {
+                    // Bundle item processor is called before post processor when loading predefined types
+                    setRule(rule);
+                })
+                .withPostProcessor(rule -> {
+                    // post processor is called when loading predefined types or when reloading from persistence
+                    boolean isValid = ParserHelper.resolveConditionType(definitionsService, rule.getCondition(), "rule " + rule.getItemId());
+                    isValid = isValid && ParserHelper.resolveActionTypes(definitionsService, rule, invalidRulesId.contains(rule.getItemId()));
+                    if (!isValid) {
+                        invalidRulesId.add(rule.getItemId());
+                    } else {
+                        invalidRulesId.remove(rule.getItemId());
+                    }
+                    // Update rule by event type cache
+                    String tenantId = rule.getTenantId();
+                    Map<String, Set<Rule>> tenantEventTypeRules = getRulesByEventTypeForTenant(tenantId);
+                    updateRulesByEventType(tenantEventTypeRules, rule);
+                })
+                .build());
 
         return configs;
     }

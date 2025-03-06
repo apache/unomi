@@ -28,6 +28,7 @@ import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -51,7 +52,7 @@ public class PropertyTypeCrudCommand extends BaseCrudCommand {
 
     @Override
     public String[] getHeaders() {
-        return new String[] {
+        return prependTenantIdHeader(new String[] {
             "Identifier",
             "Name",
             "Description",
@@ -65,12 +66,19 @@ public class PropertyTypeCrudCommand extends BaseCrudCommand {
             "Scope",
             "Tags",
             "System Tags"
-        };
+        });
     }
 
     @Override
     public PartialList<?> getItems(Query query) {
-        List<PropertyType> propertyTypes = new ArrayList<>(profileService.getPropertyTypeByTag("*"));
+        Map<String, Collection<PropertyType>> propertyTypesByTarget = profileService.getTargetPropertyTypes();
+        List<PropertyType> propertyTypes = new ArrayList<>();
+        
+        // Combine all property types from all targets
+        for (Collection<PropertyType> typeCollection : propertyTypesByTarget.values()) {
+            propertyTypes.addAll(typeCollection);
+        }
+        
         Integer start = query.getOffset();
         Integer size = query.getLimit();
         if (start == null) {
@@ -85,9 +93,9 @@ public class PropertyTypeCrudCommand extends BaseCrudCommand {
     }
 
     @Override
-    protected String[] buildRow(Object item) {
+    protected Comparable[] buildRow(Object item) {
         PropertyType propertyType = (PropertyType) item;
-        return new String[] {
+        return new Comparable[] {
             propertyType.getItemId(),
             propertyType.getMetadata().getName(),
             propertyType.getMetadata().getDescription(),

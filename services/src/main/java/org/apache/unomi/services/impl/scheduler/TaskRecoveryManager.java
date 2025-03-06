@@ -95,8 +95,10 @@ public class TaskRecoveryManager {
     private void recoverCrashedTask(ScheduledTask task) {
         // First mark as crashed and release lock
         String previousOwner = task.getLockOwner();
-        stateManager.updateTaskState(task, ScheduledTask.TaskStatus.CRASHED,
-            "Node failure detected: " + previousOwner, nodeId);
+        if (task.getStatus() != ScheduledTask.TaskStatus.CRASHED) {
+            stateManager.updateTaskState(task, ScheduledTask.TaskStatus.CRASHED,
+                "Node failure detected: " + previousOwner, nodeId);
+        }
 
         // Record the crash in execution history
         recordCrash(task, previousOwner);

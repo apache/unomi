@@ -120,6 +120,7 @@ public class ProfileServiceImplTest {
         profileService.setDefinitionsService(definitionsService);
         profileService.setContextManager(executionContextManager);
         profileService.setSchedulerService(schedulerService);
+        profileService.setCacheService(multiTypeCacheService);
         profileService.postConstruct();
 
         // Load predefined data
@@ -136,7 +137,7 @@ public class ProfileServiceImplTest {
             tenantService,
             TENANT_1, SYSTEM_TENANT
         );
-        
+
         // Clean up references using the helper method
         org.apache.unomi.services.TestHelper.cleanupReferences(
             tenantService, securityService, executionContextManager, profileService,
@@ -477,13 +478,13 @@ public class ProfileServiceImplTest {
             PropertyType systemOnlyProp = new PropertyType();
             systemOnlyProp.setMetadata(new Metadata("system-only-prop"));
             systemOnlyProp.setTarget("profiles");
-            persistenceService.save(systemOnlyProp);
+            profileService.setPropertyType(systemOnlyProp);
 
             PropertyType systemOverrideProp = new PropertyType();
             systemOverrideProp.setMetadata(new Metadata("override-prop"));
             systemOverrideProp.setTarget("profiles");
             systemOverrideProp.getMetadata().setSystemTags(Collections.singleton("system"));
-            persistenceService.save(systemOverrideProp);
+            profileService.setPropertyType(systemOverrideProp);
             return null;
         });
 
@@ -493,12 +494,12 @@ public class ProfileServiceImplTest {
             tenantOverrideProp.setMetadata(new Metadata("override-prop"));
             tenantOverrideProp.setTarget("profiles");
             tenantOverrideProp.getMetadata().setSystemTags(Collections.singleton("tenant"));
-            persistenceService.save(tenantOverrideProp);
+            profileService.setPropertyType(tenantOverrideProp);
 
             PropertyType tenantOnlyProp = new PropertyType();
             tenantOnlyProp.setMetadata(new Metadata("tenant-only-prop"));
             tenantOnlyProp.setTarget("profiles");
-            persistenceService.save(tenantOnlyProp);
+            profileService.setPropertyType(tenantOnlyProp);
 
             // Test
             Collection<PropertyType> result = profileService.getTargetPropertyTypes("profiles");

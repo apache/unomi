@@ -327,6 +327,8 @@
         <property name="forceRefreshOnSave" value="${services.profile.forceRefreshOnSave}"/>
         <property name="propertiesRefreshInterval" value="${services.properties.refresh.interval}"/>
         <property name="contextManager" ref="executionContextManagerImpl"/>
+        <property name="cacheService" ref="multiTypeCacheServiceImpl"/>
+        <property name="tenantService" ref="tenantServiceImpl"/>
     </bean>
 
     <bean id="queryServiceImpl" class="org.apache.unomi.services.impl.queries.QueryServiceImpl"

@@ -29,10 +29,11 @@ import org.apache.unomi.api.services.*;
 import org.apache.unomi.api.tasks.ScheduledTask;
 import org.apache.unomi.api.tasks.TaskExecutor;
 import org.apache.unomi.api.utils.ParserHelper;
-import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.PropertyHelper;
+import org.apache.unomi.services.impl.cache.AbstractMultiTypeCachingService;
 import org.apache.unomi.services.sorts.ControlGroupPersonalizationStrategy;
+import org.apache.unomi.api.services.cache.CacheableTypeConfig;
 import org.osgi.framework.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,128 +42,17 @@ import java.io.IOException;
 import java.net.URL;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.apache.unomi.persistence.spi.CustomObjectMapper.getObjectMapper;
 
-public class ProfileServiceImpl implements ProfileService, SynchronousBundleListener {
-
-    /**
-     * This class is responsible for storing property types and permits optimized access to them.
-     * In order to assure data consistency, thread-safety and performance, this class is immutable and every operation on
-     * property types requires creating a new instance (copy-on-write).
-     */
-    private static class PropertyTypes {
-        private List<PropertyType> allPropertyTypes;
-        private Map<String, PropertyType> propertyTypesById = new HashMap<>();
-        private Map<String, List<PropertyType>> propertyTypesByTags = new HashMap<>();
-        private Map<String, List<PropertyType>> propertyTypesBySystemTags = new HashMap<>();
-        private Map<String, List<PropertyType>> propertyTypesByTarget = new HashMap<>();
-
-        public PropertyTypes(List<PropertyType> allPropertyTypes) {
-            this.allPropertyTypes = new ArrayList<>(allPropertyTypes);
-            propertyTypesById = new HashMap<>();
-            propertyTypesByTags = new HashMap<>();
-            propertyTypesBySystemTags = new HashMap<>();
-            propertyTypesByTarget = new HashMap<>();
-            for (PropertyType propertyType : allPropertyTypes) {
-                propertyTypesById.put(propertyType.getItemId(), propertyType);
-                for (String propertyTypeTag : propertyType.getMetadata().getTags()) {
-                    updateListMap(propertyTypesByTags, propertyType, propertyTypeTag);
-                }
-                for (String propertyTypeSystemTag : propertyType.getMetadata().getSystemTags()) {
-                    updateListMap(propertyTypesBySystemTags, propertyType, propertyTypeSystemTag);
-                }
-                updateListMap(propertyTypesByTarget, propertyType, propertyType.getTarget());
-            }
-        }
-
-        public List<PropertyType> getAll() {
-            return allPropertyTypes;
-        }
-
-        public PropertyType get(String propertyId) {
-            return propertyTypesById.get(propertyId);
-        }
-
-        public Map<String, List<PropertyType>> getAllByTarget() {
-            return propertyTypesByTarget;
-        }
-
-        public List<PropertyType> getByTag(String tag) {
-            return propertyTypesByTags.get(tag);
-        }
-
-        public List<PropertyType> getBySystemTag(String systemTag) {
-            return propertyTypesBySystemTags.get(systemTag);
-        }
-
-        public List<PropertyType> getByTarget(String target) {
-            return propertyTypesByTarget.get(target);
-        }
-
-        public PropertyTypes with(PropertyType newProperty) {
-            return with(Collections.singletonList(newProperty));
-        }
-
-        /**
-         * Creates a new instance of this class containing given property types.
-         * If property types with the same ID existed before, they will be replaced by the new ones.
-         *
-         * @param newProperties list of property types to change
-         * @return new instance
-         */
-        public PropertyTypes with(List<PropertyType> newProperties) {
-            Map<String, PropertyType> updatedProperties = new HashMap<>();
-            for (PropertyType property : newProperties) {
-                if (propertyTypesById.containsKey(property.getItemId())) {
-                    updatedProperties.put(property.getItemId(), property);
-                }
-            }
-
-            List<PropertyType> newPropertyTypes = Stream.concat(
-                    allPropertyTypes.stream().map(property -> updatedProperties.getOrDefault(property.getItemId(), property)),
-                    newProperties.stream().filter(property -> !propertyTypesById.containsKey(property.getItemId()))
-            ).collect(Collectors.toList());
-
-            return new PropertyTypes(newPropertyTypes);
-        }
-
-        /**
-         * Creates a new instance of this class containing all property types except the one with given ID.
-         *
-         * @param propertyId ID of the property to delete
-         * @return new instance
-         */
-        public PropertyTypes without(String propertyId) {
-            List<PropertyType> newPropertyTypes = allPropertyTypes.stream()
-                    .filter(property -> !property.getItemId().equals(propertyId))
-                    .collect(Collectors.toList());
-
-            return new PropertyTypes(newPropertyTypes);
-        }
-
-        private void updateListMap(Map<String, List<PropertyType>> listMap, PropertyType propertyType, String key) {
-            List<PropertyType> propertyTypes = listMap.get(key);
-            if (propertyTypes == null) {
-                propertyTypes = new ArrayList<>();
-            }
-            propertyTypes.add(propertyType);
-            listMap.put(key, propertyTypes);
-        }
-
-    }
+public class ProfileServiceImpl extends AbstractMultiTypeCachingService implements ProfileService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ProfileServiceImpl.class.getName());
 
-    private BundleContext bundleContext;
-
-    private PersistenceService persistenceService;
-
     private DefinitionsService definitionsService;
-
-    private SchedulerService schedulerService;
 
     private SegmentService segmentService;
 
@@ -177,34 +67,17 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
     private Integer purgeSessionExistTime = 0;
     private Integer purgeEventExistTime = 0;
     private Integer purgeProfileInterval = 0;
-    private ScheduledTask propertyTypeLoadTask;
     private ScheduledTask purgeTask;
     private long propertiesRefreshInterval = 10000;
 
-    private PropertyTypes propertyTypes;
-
     private boolean forceRefreshOnSave = false;
 
-    private ExecutionContextManager contextManager;
-
     public ProfileServiceImpl() {
-        LOGGER.info("Initializing profile service...");
-    }
-
-    public void setBundleContext(BundleContext bundleContext) {
-        this.bundleContext = bundleContext;
-    }
-
-    public void setPersistenceService(PersistenceService persistenceService) {
-        this.persistenceService = persistenceService;
+        super();
     }
 
     public void setDefinitionsService(DefinitionsService definitionsService) {
         this.definitionsService = definitionsService;
-    }
-
-    public void setSchedulerService(SchedulerService schedulerService) {
-        this.schedulerService = schedulerService;
     }
 
     public void setSegmentService(SegmentService segmentService) {
@@ -219,15 +92,11 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         this.propertiesRefreshInterval = propertiesRefreshInterval;
     }
 
-    public void setContextManager(ExecutionContextManager contextManager) {
-        this.contextManager = contextManager;
-    }
-
     public void postConstruct() {
+        super.postConstruct();
         LOGGER.debug("postConstruct {{}}", bundleContext.getBundle());
 
         contextManager.executeAsSystem(() -> {
-            loadPropertyTypesFromPersistence();
             processBundleStartup(bundleContext);
             for (Bundle bundle : bundleContext.getBundles()) {
                 if (bundle.getBundleContext() != null && bundle.getBundleId() != bundleContext.getBundle().getBundleId()) {
@@ -237,15 +106,12 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
             bundleContext.addBundleListener(this);
             initializeDefaultPurgeValuesIfNecessary();
             initializePurge();
-            schedulePropertyTypeLoad();
         });
         LOGGER.info("Profile service initialized.");
     }
 
     public void preDestroy() {
-        if (propertyTypeLoadTask != null) {
-            schedulerService.cancelTask(propertyTypeLoadTask.getItemId());
-        }
+        super.preDestroy();
         if (purgeTask != null) {
             schedulerService.cancelTask(purgeTask.getItemId());
         }
@@ -253,15 +119,12 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         LOGGER.info("Profile service shutdown.");
     }
 
-    private void processBundleStartup(BundleContext bundleContext) {
+    protected void processBundleStartup(BundleContext bundleContext) {
+        super.processBundleStartup(bundleContext);
         if (bundleContext == null) {
             return;
         }
         loadPredefinedPersonas(bundleContext);
-        loadPredefinedPropertyTypes(bundleContext);
-    }
-
-    private void processBundleStop(BundleContext bundleContext) {
     }
 
     /**
@@ -303,34 +166,6 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
 
     public void setPurgeEventExistTime(Integer purgeEventExistTime) {
         this.purgeEventExistTime = purgeEventExistTime;
-    }
-
-    private void schedulePropertyTypeLoad() {
-        propertyTypeLoadTask = schedulerService.newTask("property-type-load")
-            .nonPersistent()  // Cache-like refresh, should not be persisted
-            .withPeriod(propertiesRefreshInterval, TimeUnit.MILLISECONDS)
-            .withFixedDelay() // Sequential execution
-            .withSimpleExecutor(() -> contextManager.executeAsSystem(() -> reloadPropertyTypes(true)))
-            .schedule();
-    }
-
-    public void reloadPropertyTypes(boolean refresh) {
-        try {
-            if (refresh) {
-                persistenceService.refreshIndex(PropertyType.class);
-            }
-            loadPropertyTypesFromPersistence();
-        } catch (Throwable t) {
-            LOGGER.error("Error loading property types from persistence back-end", t);
-        }
-    }
-
-    private void loadPropertyTypesFromPersistence() {
-        try {
-            this.propertyTypes = new PropertyTypes(persistenceService.getAllItems(PropertyType.class, 0, -1, "rank").getList());
-        } catch (Exception e) {
-            LOGGER.error("Error loading property types from persistence service", e);
-        }
     }
 
     @Override
@@ -423,7 +258,7 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
                 });
             }
         };
-        
+
         schedulerService.registerTaskExecutor(profilePurgeExecutor);
 
         // Check if a purge task already exists
@@ -489,13 +324,13 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         if (previousProperty == null) {
             persistenceService.setPropertyMapping(property, Profile.ITEM_TYPE);
             property.setTenantId(contextManager.getCurrentContext().getTenantId());
-            result = persistenceService.save(property);
-            propertyTypes = propertyTypes.with(property);
+            saveItem(property, PropertyType::getItemId, PropertyType.ITEM_TYPE);
+            result = true;
         } else if (merge(previousProperty, property)) {
             persistenceService.setPropertyMapping(previousProperty, Profile.ITEM_TYPE);
             previousProperty.setTenantId(contextManager.getCurrentContext().getTenantId());
-            result = persistenceService.save(previousProperty);
-            propertyTypes = propertyTypes.with(previousProperty);
+            saveItem(previousProperty, PropertyType::getItemId, PropertyType.ITEM_TYPE);
+            result = true;
         }
 
         return result;
@@ -503,9 +338,8 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
 
     @Override
     public boolean deletePropertyType(String propertyId) {
-        boolean result = persistenceService.remove(propertyId, PropertyType.class);
-        propertyTypes = propertyTypes.without(propertyId);
-        return result;
+        removeItem(propertyId, PropertyType.class, PropertyType.ITEM_TYPE);
+        return true;
     }
 
     @Override
@@ -1023,37 +857,33 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         if (target == null) {
             return null;
         }
-
-        // Get system tenant results first
-        Collection<PropertyType> systemResult = contextManager.executeAsSystem(() -> {
-            return persistenceService.getAllItems(PropertyType.class).stream()
-                    .filter(p -> target.equals(p.getTarget()))
-                    .collect(Collectors.toList());
-        });
-
-        // Get current tenant results
-        Collection<PropertyType> tenantResult = persistenceService.getAllItems(PropertyType.class).stream()
-                .filter(p -> target.equals(p.getTarget()))
-                .collect(Collectors.toList());
-
-        // Merge results with tenant overriding system
-        Map<String, PropertyType> mergedMap = new LinkedHashMap<>();
-        if (systemResult != null) {
-            for (PropertyType prop : systemResult) {
-                mergedMap.put(prop.getItemId(), prop);
-            }
-        }
-        if (tenantResult != null) {
-            for (PropertyType prop : tenantResult) {
-                mergedMap.put(prop.getItemId(), prop);
-            }
-        }
-
-        return mergedMap.isEmpty() ? new ArrayList<>() : new ArrayList<>(mergedMap.values());
+        return getTargetPropertyTypes().get(target);
     }
 
+    @Override
     public Map<String, Collection<PropertyType>> getTargetPropertyTypes() {
-        return new HashMap<>(propertyTypes.getAllByTarget());
+        List<PropertyType> allPropertyTypes = new ArrayList<>(getAllItems(PropertyType.class, true));
+        
+        // Separate PropertyTypes with null targets from those with non-null targets
+        List<PropertyType> nullTargetProperties = allPropertyTypes.stream()
+                .filter(propertyType -> propertyType.getTarget() == null)
+                .collect(Collectors.toList());
+        
+        // Group PropertyTypes with non-null targets
+        Map<String, List<PropertyType>> groupedMap = allPropertyTypes.stream()
+                .filter(propertyType -> propertyType.getTarget() != null)
+                .collect(Collectors.groupingBy(PropertyType::getTarget));
+
+        // Convert from Map<String, List<PropertyType>> to Map<String, Collection<PropertyType>>
+        Map<String, Collection<PropertyType>> result = new HashMap<>();
+        groupedMap.forEach((key, value) -> result.put(key, value));
+        
+        // Add PropertyTypes with null targets under the "undefined" key
+        if (!nullTargetProperties.isEmpty()) {
+            result.put("undefined", nullTargetProperties);
+        }
+        
+        return result;
     }
 
     @Override
@@ -1061,33 +891,7 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         if (tag == null) {
             return null;
         }
-
-        // Get system tenant results first
-        Set<PropertyType> systemResult = contextManager.executeAsSystem(() -> {
-            return persistenceService.getAllItems(PropertyType.class).stream()
-                    .filter(p -> p.getMetadata().getTags().contains(tag))
-                    .collect(Collectors.toSet());
-        });
-
-        // Get current tenant results
-        Set<PropertyType> tenantResult = persistenceService.getAllItems(PropertyType.class).stream()
-                .filter(p -> p.getMetadata().getTags().contains(tag))
-                .collect(Collectors.toSet());
-
-        // Merge results with tenant overriding system
-        Map<String, PropertyType> mergedMap = new LinkedHashMap<>();
-        if (systemResult != null) {
-            for (PropertyType prop : systemResult) {
-                mergedMap.put(prop.getItemId(), prop);
-            }
-        }
-        if (tenantResult != null) {
-            for (PropertyType prop : tenantResult) {
-                mergedMap.put(prop.getItemId(), prop);
-            }
-        }
-
-        return mergedMap.isEmpty() ? new LinkedHashSet<>() : new LinkedHashSet<>(mergedMap.values());
+        return getItemsByTag(PropertyType.class, tag);
     }
 
     @Override
@@ -1095,33 +899,7 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         if (tag == null) {
             return null;
         }
-
-        // Get system tenant results first
-        Set<PropertyType> systemResult = contextManager.executeAsSystem(() -> {
-            return persistenceService.getAllItems(PropertyType.class).stream()
-                    .filter(p -> p.getMetadata().getSystemTags().contains(tag))
-                    .collect(Collectors.toSet());
-        });
-
-        // Get current tenant results
-        Set<PropertyType> tenantResult = persistenceService.getAllItems(PropertyType.class).stream()
-                .filter(p -> p.getMetadata().getSystemTags().contains(tag))
-                .collect(Collectors.toSet());
-
-        // Merge results with tenant overriding system
-        Map<String, PropertyType> mergedMap = new LinkedHashMap<>();
-        if (systemResult != null) {
-            for (PropertyType prop : systemResult) {
-                mergedMap.put(prop.getItemId(), prop);
-            }
-        }
-        if (tenantResult != null) {
-            for (PropertyType prop : tenantResult) {
-                mergedMap.put(prop.getItemId(), prop);
-            }
-        }
-
-        return mergedMap.isEmpty() ? new LinkedHashSet<>() : new LinkedHashSet<>(mergedMap.values());
+        return getItemsBySystemTag(PropertyType.class, tag);
     }
 
     public Collection<PropertyType> getPropertyTypeByMapping(String propertyName) {
@@ -1138,7 +916,7 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
             }
         });
 
-        for (PropertyType propertyType : propertyTypes.getAll()) {
+        for (PropertyType propertyType : getAllItems(PropertyType.class, true)) {
             if (propertyType.getAutomaticMappingsFrom() != null && propertyType.getAutomaticMappingsFrom().contains(propertyName)) {
                 l.add(propertyType);
             }
@@ -1148,22 +926,7 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
 
     @Override
     public PropertyType getPropertyType(String id) {
-        if (id == null) {
-            return null;
-        }
-
-        // Try current tenant first
-        PropertyType result = persistenceService.load(id, PropertyType.class);
-        if (result != null) {
-            return result;
-        }
-
-        // If not found and not in system tenant, try system tenant
-        contextManager.executeAsSystem(() -> {
-            return persistenceService.load(id, PropertyType.class);
-        });
-
-        return null;
+        return getItem(id, PropertyType.class);
     }
 
     public PartialList<Session> getPersonaSessions(String personaId, int offset, int size, String sortBy) {
@@ -1234,33 +997,6 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         }
     }
 
-    private void loadPredefinedPropertyTypes(BundleContext bundleContext) {
-        Enumeration<URL> predefinedPropertyTypeEntries = bundleContext.getBundle().findEntries("META-INF/cxs/properties", "*.json", true);
-        if (predefinedPropertyTypeEntries == null) {
-            return;
-        }
-
-        List<PropertyType> bundlePropertyTypes = new ArrayList<>();
-        while (predefinedPropertyTypeEntries.hasMoreElements()) {
-            URL predefinedPropertyTypeURL = predefinedPropertyTypeEntries.nextElement();
-            LOGGER.debug("Found predefined property type at {}, loading... ", predefinedPropertyTypeURL);
-
-            try {
-                PropertyType propertyType = CustomObjectMapper.getObjectMapper().readValue(predefinedPropertyTypeURL, PropertyType.class);
-
-                setPropertyTypeTarget(predefinedPropertyTypeURL, propertyType);
-
-                persistenceService.save(propertyType);
-                bundlePropertyTypes.add(propertyType);
-                LOGGER.info("Predefined property type with id {} registered", propertyType.getMetadata().getId());
-            } catch (IOException e) {
-                LOGGER.error("Error while loading properties {}", predefinedPropertyTypeURL, e);
-            }
-        }
-        propertyTypes = propertyTypes.with(bundlePropertyTypes);
-    }
-
-
     public void bundleChanged(BundleEvent event) {
         contextManager.executeAsSystem(() -> {
             switch (event.getType()) {
@@ -1268,7 +1004,8 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
                     processBundleStartup(event.getBundle().getBundleContext());
                     break;
                 case BundleEvent.STOPPING:
-                    processBundleStop(event.getBundle().getBundleContext());
+                    // process bundle stopping event to unregister predefined items
+                    processBundleStop(event.getBundle());
                     break;
             }
         });
@@ -1396,13 +1133,39 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
         return changed;
     }
 
-    public void refresh() {
-        reloadPropertyTypes(true);
-    }
 
     @Override
     public void deleteSession(String sessionIdentifier) {
         persistenceService.remove(sessionIdentifier, Session.class);
+    }
+
+    @Override
+    protected Set<CacheableTypeConfig<?>> getTypeConfigs() {
+        Set<CacheableTypeConfig<?>> configs = new HashSet<>();
+
+        // Property Type configuration
+        configs.add(CacheableTypeConfig.<PropertyType>builder(PropertyType.class,
+                        PropertyType.ITEM_TYPE,
+                        "properties")
+                .withInheritFromSystemTenant(true)
+                .withPredefinedItems(true)
+                .withRequiresRefresh(true)
+                .withRefreshInterval(propertiesRefreshInterval)
+                .withIdExtractor(PropertyType::getItemId)
+                .withBundleItemProcessor((bundleContext, propertyType) -> {
+                    setPropertyType(propertyType);
+                })
+                .build());
+
+        return configs;
+    }
+
+    @Override
+    public void refresh() {
+        // Refresh the cache for all registered types
+        for (CacheableTypeConfig<?> config : getTypeConfigs()) {
+            refreshTypeCache(config);
+        }
     }
 
 }
