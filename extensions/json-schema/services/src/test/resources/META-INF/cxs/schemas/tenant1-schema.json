@@ -1,0 +1,15 @@
+{
+  "$id": "https://unomi.apache.org/schemas/json/test/dual-tenant-schema-tenant1",
+  "$schema": "https://json-schema.org/draft/2019-09/schema",
+  "self": {
+    "name": "tenant1-schema",
+    "target": "test"
+  },
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string"
+    }
+  },
+  "required": ["name"]
+} 

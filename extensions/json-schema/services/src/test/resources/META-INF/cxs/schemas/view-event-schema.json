@@ -1,0 +1,22 @@
+{
+  "$id": "https://unomi.apache.org/schemas/json/events/view/properties/1-0-0",
+  "$schema": "https://json-schema.org/draft/2019-09/schema",
+  "self": {
+    "vendor": "org.apache.unomi",
+    "name": "view",
+    "format": "jsonschema",
+    "target": "events",
+    "version": "1-0-0"
+  },
+  "title": "ViewEvent",
+  "type": "object",
+  "properties": {
+    "source": {
+      "type": "string"
+    },
+    "url": {
+      "type": "string"
+    }
+  },
+  "required": ["source", "url"]
+} 

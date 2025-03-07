@@ -1,0 +1,15 @@
+{
+  "$id": "tenant-only",
+  "$schema": "https://json-schema.org/draft/2019-09/schema",
+  "self": {
+    "name": "tenant-only",
+    "target": "test"
+  },
+  "type": "object",
+  "properties": {
+    "tenantOnlyProp": {
+      "type": "string"
+    }
+  },
+  "required": ["tenantOnlyProp"]
+} 

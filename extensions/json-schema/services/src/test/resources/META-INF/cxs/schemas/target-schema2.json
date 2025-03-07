@@ -1,0 +1,15 @@
+{
+  "$id": "https://unomi.apache.org/schemas/json/test/target/system-schema-2",
+  "$schema": "https://json-schema.org/draft/2019-09/schema",
+  "self": {
+    "name": "system2",
+    "target": "test-target"
+  },
+  "type": "object",
+  "properties": {
+    "system2Property": {
+      "type": "string"
+    }
+  },
+  "required": ["system2Property"]
+} 

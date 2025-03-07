@@ -1,0 +1,15 @@
+{
+  "$id": "https://unomi.apache.org/schemas/json/test/shared-id-schema",
+  "$schema": "https://json-schema.org/draft/2019-09/schema",
+  "self": {
+    "name": "tenant1-version",
+    "target": "test"
+  },
+  "type": "object",
+  "properties": {
+    "tenantVersion": {
+      "type": "string"
+    }
+  },
+  "required": ["tenantVersion"]
+} 

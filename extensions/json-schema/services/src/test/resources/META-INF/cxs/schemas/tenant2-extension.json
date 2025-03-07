@@ -1,0 +1,19 @@
+{
+  "$id": "https://tenant2.test.com/schemas/json/events/tenant2/extension/1-0-0",
+  "$schema": "https://json-schema.org/draft/2019-09/schema",
+  "self": {
+    "vendor": "com.tenant2.test",
+    "name": "tenant2Extension",
+    "format": "jsonschema",
+    "extends": "https://unomi.apache.org/schemas/json/events/view/properties/1-0-0",
+    "version": "1-0-0"
+  },
+  "title": "Tenant2Extension",
+  "type": "object",
+  "properties": {
+    "tenant2Prop": {
+      "type": "string"
+    }
+  },
+  "required": ["tenant2Prop"]
+} 

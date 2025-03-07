@@ -1,0 +1,27 @@
+{
+  "$id": "https://unomi.apache.org/schemas/json/events/autodetect-tenant-event-schema",
+  "$schema": "https://json-schema.org/draft/2019-09/schema",
+  "self": {
+    "name": "tenant",
+    "target": "events"
+  },
+  "type": "object",
+  "properties": {
+    "eventType": {
+      "type": "string"
+    },
+    "scope": {
+      "type": "string"
+    },
+    "properties" : {
+      "type" : "object",
+      "properties" : {
+        "tenantProperty" : {
+          "type" : "string"
+        }
+      },
+      "required" : ["tenantProperty"]
+    }
+  },
+  "required": ["eventType", "scope"]
+}

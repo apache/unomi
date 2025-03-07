@@ -1,0 +1,15 @@
+{
+  "$id": "https://unomi.apache.org/schemas/json/test/override-schema",
+  "$schema": "https://json-schema.org/draft/2019-09/schema",
+  "self": {
+    "name": "system-version",
+    "target": "test"
+  },
+  "type": "object",
+  "properties": {
+    "systemProperty": {
+      "type": "string"
+    }
+  },
+  "required": ["systemProperty"]
+} 

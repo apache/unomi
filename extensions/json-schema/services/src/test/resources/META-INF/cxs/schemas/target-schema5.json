@@ -1,0 +1,15 @@
+{
+  "$id": "https://unomi.apache.org/schemas/json/test/target/system-diff-target",
+  "$schema": "https://json-schema.org/draft/2019-09/schema",
+  "self": {
+    "name": "system-other",
+    "target": "different-target"
+  },
+  "type": "object",
+  "properties": {
+    "differentProperty": {
+      "type": "string"
+    }
+  },
+  "required": ["differentProperty"]
+} 

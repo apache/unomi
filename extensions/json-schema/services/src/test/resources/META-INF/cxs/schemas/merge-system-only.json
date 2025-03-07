@@ -1,0 +1,15 @@
+{
+  "$id": "system-only",
+  "$schema": "https://json-schema.org/draft/2019-09/schema",
+  "self": {
+    "name": "system-only",
+    "target": "test"
+  },
+  "type": "object",
+  "properties": {
+    "systemOnlyProp": {
+      "type": "string"
+    }
+  },
+  "required": ["systemOnlyProp"]
+} 
