@@ -984,6 +984,7 @@
         <module>lifecycle-watcher</module>
         <module>persistence-elasticsearch</module>
         <module>persistence-opensearch</module>
+        <module>services-common</module>
         <module>services</module>
         <module>rest</module>
         <module>graphql</module>

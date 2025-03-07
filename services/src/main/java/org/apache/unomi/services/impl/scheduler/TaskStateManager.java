@@ -83,6 +83,12 @@ public class TaskStateManager {
      * Validates a state transition
      */
     private void validateStateTransition(TaskStatus currentStatus, TaskStatus newStatus) {
+        if (currentStatus == TaskStatus.CANCELLED && newStatus == TaskStatus.CRASHED) {
+            throw new IllegalStateException(
+                String.format("Cannot recover a cancelled task: Invalid state transition from %s to %s",
+                    currentStatus, newStatus));
+        }
+        
         if (!TaskTransition.isValidTransition(currentStatus, newStatus)) {
             throw new IllegalStateException(
                 String.format("Invalid state transition from %s to %s",

@@ -89,7 +89,7 @@ public class ConditionESQueryBuilderDispatcher {
             }
         } else {
             // if no matching
-            LOGGER.warn("No matching query builder. See debug log level for more information");
+            LOGGER.warn("No matching query builder for key {}. See debug log level for more information", queryBuilderKey);
             LOGGER.debug("No matching query builder for condition {} and context {}", condition, context);
         }
 
@@ -124,7 +124,7 @@ public class ConditionESQueryBuilderDispatcher {
         }
 
         // if no matching
-        LOGGER.warn("No matching query builder. See debug log level for more information");
+        LOGGER.warn("No matching query builder for key {}. See debug log level for more information", queryBuilderKey);
         LOGGER.debug("No matching query builder for condition {} and context {}", condition, context);
         throw new UnsupportedOperationException();
     }

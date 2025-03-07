@@ -93,6 +93,12 @@ public class TaskRecoveryManager {
      * Recovers a single crashed task
      */
     private void recoverCrashedTask(ScheduledTask task) {
+        // Skip cancelled tasks - they should not be recovered
+        if (task.getStatus() == ScheduledTask.TaskStatus.CANCELLED) {
+            LOGGER.debug("Node {} Skipping recovery of cancelled task {} : {}", nodeId, task.getTaskType(), task.getItemId());
+            return;
+        }
+
         // First mark as crashed and release lock
         String previousOwner = task.getLockOwner();
         if (task.getStatus() != ScheduledTask.TaskStatus.CRASHED) {
@@ -228,12 +234,12 @@ public class TaskRecoveryManager {
      * Finds tasks by status
      */
     private List<ScheduledTask> findTasksByStatus(ScheduledTask.TaskStatus status) {
-        Condition condition = new Condition(PROPERTY_CONDITION_TYPE);
-        condition.setParameter("propertyName", "status");
-        condition.setParameter("comparisonOperator", "equals");
-        condition.setParameter("propertyValue", status);
+        Condition statusCondition = new Condition(PROPERTY_CONDITION_TYPE);
+        statusCondition.setParameter("propertyName", "status");
+        statusCondition.setParameter("comparisonOperator", "equals");
+        statusCondition.setParameter("propertyValue", status);
 
-        return persistenceService.query(condition, null, ScheduledTask.class, 0, -1).getList();
+        return persistenceService.query(statusCondition, null, ScheduledTask.class, 0, -1).getList();
     }
 
     /**

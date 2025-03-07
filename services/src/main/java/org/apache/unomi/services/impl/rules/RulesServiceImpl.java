@@ -33,20 +33,16 @@ import org.apache.unomi.api.services.ConditionValidationService.ValidationErrorT
 import org.apache.unomi.api.services.cache.CacheableTypeConfig;
 import org.apache.unomi.api.tasks.ScheduledTask;
 import org.apache.unomi.api.tenants.Tenant;
-import org.apache.unomi.api.tenants.TenantService;
 import org.apache.unomi.api.utils.ParserHelper;
-import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.services.actions.ActionExecutorDispatcher;
-import org.apache.unomi.services.impl.cache.AbstractMultiTypeCachingService;
+import org.apache.unomi.services.common.cache.AbstractMultiTypeCachingService;
 import org.apache.unomi.tracing.api.RequestTracer;
 import org.apache.unomi.tracing.api.TracerService;
 import org.osgi.framework.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
 import java.io.Serializable;
-import java.net.URL;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;

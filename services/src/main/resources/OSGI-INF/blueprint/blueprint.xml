@@ -122,6 +122,8 @@
             <cm:property name="scheduler.lockTimeout" value="10000" />
             <cm:property name="scheduler.purgeTaskEnabled" value="true" />
             <cm:property name="scopes.refresh.interval" value="1000"/>
+            <cm:property name="goals.refresh.interval" value="5000" />
+            <cm:property name="campaigns.refresh.interval" value="5000" />
         </cm:default-properties>
     </cm:property-placeholder>
 
@@ -242,6 +244,12 @@
         <property name="contextManager" ref="executionContextManagerImpl"/>
         <property name="conditionValidationService" ref="conditionValidationService"/>
         <property name="tracerService" ref="tracerService"/>
+        <property name="contextManager" ref="executionContextManagerImpl"/>
+        <property name="cacheService" ref="multiTypeCacheServiceImpl"/>
+        <property name="tenantService" ref="tenantServiceImpl"/>
+        <property name="schedulerService" ref="schedulerServiceImpl"/>
+        <property name="goalRefreshInterval" value="${services.goals.refresh.interval}" />
+        <property name="campaignRefreshInterval" value="${services.campaigns.refresh.interval}" />
     </bean>
 
     <bean id="scopeServiceImpl" class="org.apache.unomi.services.impl.scope.ScopeServiceImpl"
@@ -251,6 +259,8 @@
         <property name="scopesRefreshInterval" value="${services.scopes.refresh.interval}"/>
         <property name="tenantService" ref="tenantServiceImpl"/>
         <property name="contextManager" ref="executionContextManagerImpl"/>
+        <property name="bundleContext" ref="blueprintBundleContext"/>
+        <property name="cacheService" ref="multiTypeCacheServiceImpl"/>
     </bean>
 
     <bean id="actionExecutorDispatcherImpl"
@@ -364,6 +374,8 @@
         <property name="persistenceService" ref="persistenceService"/>
         <property name="bundleContext" ref="blueprintBundleContext"/>
         <property name="contextManager" ref="executionContextManagerImpl"/>
+        <property name="cacheService" ref="multiTypeCacheServiceImpl"/>
+        <property name="tenantService" ref="tenantServiceImpl"/>
     </bean>
 
     <bean id="topicServiceImpl" class="org.apache.unomi.services.impl.topics.TopicServiceImpl"

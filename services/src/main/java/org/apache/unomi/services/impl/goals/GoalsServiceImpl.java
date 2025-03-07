@@ -34,52 +34,31 @@ import org.apache.unomi.api.rules.Rule;
 import org.apache.unomi.api.services.*;
 import org.apache.unomi.api.services.ConditionValidationService.ValidationError;
 import org.apache.unomi.api.services.ConditionValidationService.ValidationErrorType;
-import org.apache.unomi.api.tenants.TenantService;
+import org.apache.unomi.api.services.cache.CacheableTypeConfig;
 import org.apache.unomi.api.utils.ParserHelper;
-import org.apache.unomi.persistence.spi.CustomObjectMapper;
-import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.aggregate.*;
-import org.apache.unomi.services.impl.AbstractContextAwareService;
+import org.apache.unomi.services.common.cache.AbstractMultiTypeCachingService;
 import org.apache.unomi.tracing.api.RequestTracer;
 import org.apache.unomi.tracing.api.TracerService;
-import org.osgi.framework.Bundle;
-import org.osgi.framework.BundleContext;
-import org.osgi.framework.BundleEvent;
-import org.osgi.framework.SynchronousBundleListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.net.URL;
 import java.util.*;
 import java.util.stream.Collectors;
 
 
-public class GoalsServiceImpl extends AbstractContextAwareService implements GoalsService, SynchronousBundleListener {
+public class GoalsServiceImpl extends AbstractMultiTypeCachingService implements GoalsService {
     private static final Logger LOGGER = LoggerFactory.getLogger(GoalsServiceImpl.class.getName());
-
-    private BundleContext bundleContext;
-
-    private PersistenceService persistenceService;
 
     private DefinitionsService definitionsService;
 
     private RulesService rulesService;
 
-    private TenantService tenantService;
-
-    private ExecutionContextManager contextManager;
-
     private ConditionValidationService conditionValidationService;
     private TracerService tracerService;
 
-    public void setBundleContext(BundleContext bundleContext) {
-        this.bundleContext = bundleContext;
-    }
-
-    public void setPersistenceService(PersistenceService persistenceService) {
-        this.persistenceService = persistenceService;
-    }
+    private long goalRefreshInterval = 5000; // 5 seconds
+    private long campaignRefreshInterval = 5000; // 5 seconds
 
     public void setDefinitionsService(DefinitionsService definitionsService) {
         this.definitionsService = definitionsService;
@@ -87,14 +66,6 @@ public class GoalsServiceImpl extends AbstractContextAwareService implements Goa
 
     public void setRulesService(RulesService rulesService) {
         this.rulesService = rulesService;
-    }
-
-    public void setTenantService(TenantService tenantService) {
-        this.tenantService = tenantService;
-    }
-
-    public void setContextManager(ExecutionContextManager contextManager) {
-        this.contextManager = contextManager;
     }
 
     public void setConditionValidationService(ConditionValidationService conditionValidationService) {
@@ -105,61 +76,22 @@ public class GoalsServiceImpl extends AbstractContextAwareService implements Goa
         this.tracerService = tracerService;
     }
 
-    public void postConstruct() {
-        LOGGER.debug("postConstruct {{}}", bundleContext.getBundle());
+    public void setGoalRefreshInterval(long goalRefreshInterval) {
+        this.goalRefreshInterval = goalRefreshInterval;
+    }
 
-        contextManager.executeAsSystem(() -> {
-            loadPredefinedGoals(bundleContext);
-            loadPredefinedCampaigns(bundleContext);
-            for (Bundle bundle : bundleContext.getBundles()) {
-                if (bundle.getBundleContext() != null && bundle.getBundleId() != bundleContext.getBundle().getBundleId()) {
-                    loadPredefinedGoals(bundle.getBundleContext());
-                    loadPredefinedCampaigns(bundle.getBundleContext());
-                }
-            }
-        });
-        bundleContext.addBundleListener(this);
+    public void setCampaignRefreshInterval(long campaignRefreshInterval) {
+        this.campaignRefreshInterval = campaignRefreshInterval;
+    }
+
+    public void postConstruct() {
+        super.postConstruct();
         LOGGER.info("Goal service initialized.");
     }
 
     public void preDestroy() {
-        bundleContext.removeBundleListener(this);
+        super.preDestroy();
         LOGGER.info("Goal service shutdown.");
-    }
-
-    private void processBundleStartup(BundleContext bundleContext) {
-        if (bundleContext == null) {
-            return;
-        }
-        loadPredefinedGoals(bundleContext);
-        loadPredefinedCampaigns(bundleContext);
-    }
-
-    private void processBundleStop(BundleContext bundleContext) {
-    }
-
-    private void loadPredefinedGoals(BundleContext bundleContext) {
-        Enumeration<URL> predefinedRuleEntries = bundleContext.getBundle().findEntries("META-INF/cxs/goals", "*.json", true);
-        if (predefinedRuleEntries == null) {
-            return;
-        }
-
-        while (predefinedRuleEntries.hasMoreElements()) {
-            URL predefinedGoalURL = predefinedRuleEntries.nextElement();
-            LOGGER.debug("Found predefined goals at {}, loading... ", predefinedGoalURL);
-
-            try {
-                Goal goal = CustomObjectMapper.getObjectMapper().readValue(predefinedGoalURL, Goal.class);
-                if (goal.getMetadata().getScope() == null) {
-                    goal.getMetadata().setScope("systemscope");
-                }
-
-                setGoal(goal);
-                LOGGER.info("Predefined goal with id {} registered", goal.getMetadata().getId());
-            } catch (IOException e) {
-                LOGGER.error("Error while loading segment definition {}", predefinedGoalURL, e);
-            }
-        }
     }
 
     private void createRule(Goal goal, Condition event, String id, boolean testStart) {
@@ -223,11 +155,10 @@ public class GoalsServiceImpl extends AbstractContextAwareService implements Goa
     }
 
     public Set<Metadata> getGoalMetadatas() {
-        Set<Metadata> descriptions = new HashSet<Metadata>();
-        for (Goal definition : persistenceService.getAllItems(Goal.class, 0, 50, null).getList()) {
-            descriptions.add(definition.getMetadata());
-        }
-        return descriptions;
+        Collection<Goal> goals = getAllItems(Goal.class, true);
+        return goals.stream()
+            .map(Goal::getMetadata)
+            .collect(Collectors.toSet());
     }
 
     public Set<Metadata> getGoalMetadatas(Query query) {
@@ -244,7 +175,7 @@ public class GoalsServiceImpl extends AbstractContextAwareService implements Goa
 
 
     public Goal getGoal(String goalId) {
-        Goal goal = persistenceService.load(goalId, Goal.class);
+        Goal goal = getItem(goalId, Goal.class);
         if (goal != null) {
             ParserHelper.resolveConditionType(definitionsService, goal.getStartEvent(), "goal "+goalId+" start event");
             ParserHelper.resolveConditionType(definitionsService, goal.getTargetEvent(), "goal "+goalId+" target event");
@@ -254,7 +185,7 @@ public class GoalsServiceImpl extends AbstractContextAwareService implements Goa
 
     @Override
     public void removeGoal(String goalId) {
-        persistenceService.remove(goalId, Goal.class);
+        removeItem(goalId, Goal.class, Goal.ITEM_TYPE);
         rulesService.removeRule(goalId + "StartEvent");
         rulesService.removeRule(goalId + "TargetEvent");
     }
@@ -374,35 +305,15 @@ public class GoalsServiceImpl extends AbstractContextAwareService implements Goa
             rulesService.removeRule(goal.getMetadata().getId() + "TargetEvent");
         }
 
-        persistenceService.save(goal);
+        saveItem(goal, Goal::getItemId, Goal.ITEM_TYPE);
     }
 
     public Set<Metadata> getCampaignGoalMetadatas(String campaignId) {
-        Set<Metadata> descriptions = new HashSet<Metadata>();
-        for (Goal definition : persistenceService.query("campaignId", campaignId, null, Goal.class,0,50).getList()) {
-            descriptions.add(definition.getMetadata());
-        }
-        return descriptions;
-    }
-
-    private void loadPredefinedCampaigns(BundleContext bundleContext) {
-        Enumeration<URL> predefinedRuleEntries = bundleContext.getBundle().findEntries("META-INF/cxs/campaigns", "*.json", true);
-        if (predefinedRuleEntries == null) {
-            return;
-        }
-
-        while (predefinedRuleEntries.hasMoreElements()) {
-            URL predefinedCampaignURL = predefinedRuleEntries.nextElement();
-            LOGGER.debug("Found predefined campaigns at {}, loading... ", predefinedCampaignURL);
-
-            try {
-                Campaign campaign = CustomObjectMapper.getObjectMapper().readValue(predefinedCampaignURL, Campaign.class);
-                setCampaign(campaign);
-                LOGGER.info("Predefined campaign with id {} registered", campaign.getMetadata().getId());
-            } catch (IOException e) {
-                LOGGER.error("Error while loading segment definition {}", predefinedCampaignURL, e);
-            }
-        }
+        Collection<Goal> goals = getAllItems(Goal.class, true);
+        return goals.stream()
+            .filter(goal -> campaignId.equals(goal.getCampaignId()))
+            .map(Goal::getMetadata)
+            .collect(Collectors.toSet());
     }
 
     private void createRule(Campaign campaign, Condition event) {
@@ -454,11 +365,10 @@ public class GoalsServiceImpl extends AbstractContextAwareService implements Goa
 
 
     public Set<Metadata> getCampaignMetadatas() {
-        Set<Metadata> descriptions = new HashSet<Metadata>();
-        for (Campaign definition : persistenceService.getAllItems(Campaign.class, 0, 50, null).getList()) {
-            descriptions.add(definition.getMetadata());
-        }
-        return descriptions;
+        Collection<Campaign> campaigns = getAllItems(Campaign.class, true);
+        return campaigns.stream()
+            .map(Campaign::getMetadata)
+            .collect(Collectors.toSet());
     }
 
     public Set<Metadata> getCampaignMetadatas(Query query) {
@@ -525,7 +435,7 @@ public class GoalsServiceImpl extends AbstractContextAwareService implements Goa
     }
 
     public Campaign getCampaign(String id) {
-        Campaign campaign = persistenceService.load(id, Campaign.class);
+        Campaign campaign = getItem(id, Campaign.class);
         if (campaign != null) {
             ParserHelper.resolveConditionType(definitionsService, campaign.getEntryCondition(), "campaign " + id);
         }
@@ -537,7 +447,7 @@ public class GoalsServiceImpl extends AbstractContextAwareService implements Goa
             removeGoal(m.getId());
         }
         rulesService.removeRule(id + "EntryEvent");
-        persistenceService.remove(id, Campaign.class);
+        removeItem(id, Campaign.class, Campaign.ITEM_TYPE);
     }
 
     public void setCampaign(Campaign campaign) {
@@ -553,7 +463,7 @@ public class GoalsServiceImpl extends AbstractContextAwareService implements Goa
             }
         }
 
-        persistenceService.save(campaign);
+        saveItem(campaign, Campaign::getItemId, Campaign.ITEM_TYPE);
     }
 
     public GoalReport getGoalReport(String goalId) {
@@ -681,18 +591,29 @@ public class GoalsServiceImpl extends AbstractContextAwareService implements Goa
     }
 
     @Override
-    public void bundleChanged(BundleEvent event) {
-        if (event.getType() == BundleEvent.STARTING) {
-            contextManager.executeAsSystem(() -> {
-                processBundleStartup(event.getBundle().getBundleContext());
-                return null;
-            });
-        } else if (event.getType() == BundleEvent.STOPPING) {
-            contextManager.executeAsSystem(() -> {
-                processBundleStop(event.getBundle().getBundleContext());
-                return null;
-            });
-        }
+    protected Set<CacheableTypeConfig<?>> getTypeConfigs() {
+        Set<CacheableTypeConfig<?>> configs = new HashSet<>();
+        configs.add(CacheableTypeConfig.builder(Goal.class, Goal.ITEM_TYPE, "goals")
+            .withRequiresRefresh(true)  // Add this line
+            .withRefreshInterval(goalRefreshInterval)
+            .withPredefinedItems(true)
+            .withIdExtractor(Goal::getItemId)
+            .withBundleItemProcessor((bundleContext, goal) -> {
+                if (goal.getMetadata().getScope() == null) {
+                    goal.getMetadata().setScope("systemscope");
+                }
+                setGoal(goal);
+            })
+            .build());
+        configs.add(CacheableTypeConfig.builder(Campaign.class, Campaign.ITEM_TYPE, "campaigns")
+            .withRequiresRefresh(true)  // Add this line
+            .withRefreshInterval(campaignRefreshInterval)
+            .withPredefinedItems(true)
+            .withIdExtractor(Campaign::getItemId)
+            .withBundleItemProcessor((bundleContext, campaign) -> {
+                setCampaign(campaign);
+            })
+            .build());
+        return configs;
     }
-
 }

@@ -17,45 +17,26 @@
 package org.apache.unomi.services.impl.scope;
 
 import org.apache.unomi.api.Scope;
-import org.apache.unomi.api.services.ExecutionContextManager;
-import org.apache.unomi.api.services.SchedulerService;
 import org.apache.unomi.api.services.ScopeService;
-import org.apache.unomi.api.tasks.ScheduledTask;
-import org.apache.unomi.api.tenants.TenantService;
-import org.apache.unomi.persistence.spi.PersistenceService;
+import org.apache.unomi.api.services.cache.CacheableTypeConfig;
+import org.apache.unomi.services.common.cache.AbstractMultiTypeCachingService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
+import java.util.HashSet;
+import java.util.Set;
 
-public class ScopeServiceImpl implements ScopeService {
+public class ScopeServiceImpl extends AbstractMultiTypeCachingService implements ScopeService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ScopeServiceImpl.class.getName());
 
-    private PersistenceService persistenceService;
-    private SchedulerService schedulerService;
-    private TenantService tenantService;
     private Integer scopesRefreshInterval = 1000;
-    private ExecutionContextManager contextManager;
-
-    // Map of tenant ID to its scopes map
-    private ConcurrentMap<String, ConcurrentMap<String, Scope>> tenantScopes = new ConcurrentHashMap<>();
-    private ScheduledTask scheduledTask;
 
     @Override
     public List<Scope> getScopes() {
-        String currentTenant = contextManager.getCurrentContext().getTenantId();
-        if (currentTenant == null) {
-            return Collections.emptyList();
-        }
-        ConcurrentMap<String, Scope> scopesForTenant = tenantScopes.get(currentTenant);
-        return scopesForTenant != null ? new ArrayList<>(scopesForTenant.values()) : Collections.emptyList();
+        return new ArrayList<>(getAllItems(Scope.class, true));
     }
 
     @Override
@@ -65,89 +46,33 @@ public class ScopeServiceImpl implements ScopeService {
             throw new IllegalStateException("Cannot save scope: no tenant specified");
         }
         scope.setTenantId(currentTenant);
-        persistenceService.save(scope);
+        saveItem(scope, Scope::getItemId, Scope.ITEM_TYPE);
     }
 
     @Override
     public boolean delete(String id) {
-        return persistenceService.remove(id, Scope.class);
+        removeItem(id, Scope.class, Scope.ITEM_TYPE);
+        return true;
     }
 
     @Override
     public Scope getScope(String id) {
-        String currentTenant = contextManager.getCurrentContext().getTenantId();
-        if (currentTenant == null) {
-            return null;
-        }
-        ConcurrentMap<String, Scope> scopesForTenant = tenantScopes.get(currentTenant);
-        return scopesForTenant != null ? scopesForTenant.get(id) : null;
-    }
-
-    private void refreshScopes() {
-        // Get all tenants including system tenant
-        List<String> allTenants = new ArrayList<>();
-        allTenants.add(TenantService.SYSTEM_TENANT);
-        allTenants.addAll(tenantService.getAllTenants().stream()
-                .map(tenant -> tenant.getItemId())
-                .collect(Collectors.toList()));
-
-        // Create new tenant scopes map
-        ConcurrentMap<String, ConcurrentMap<String, Scope>> newTenantScopes = new ConcurrentHashMap<>();
-
-        // For each tenant, load its scopes
-        for (String tenantId : allTenants) {
-            contextManager.executeAsTenant(tenantId, () -> {
-                List<Scope> tenantScopes = persistenceService.getAllItems(Scope.class);
-                if (!tenantScopes.isEmpty()) {
-                    ConcurrentMap<String, Scope> scopeMap = new ConcurrentHashMap<>();
-                    for (Scope scope : tenantScopes) {
-                        scopeMap.put(scope.getItemId(), scope);
-                    }
-                    newTenantScopes.put(tenantId, scopeMap);
-                }
-            });
-        }
-
-        // Atomic update of the tenant scopes map
-        this.tenantScopes = newTenantScopes;
-    }
-
-    public void setPersistenceService(PersistenceService persistenceService) {
-        this.persistenceService = persistenceService;
-    }
-
-    public void setSchedulerService(SchedulerService schedulerService) {
-        this.schedulerService = schedulerService;
-    }
-
-    public void setTenantService(TenantService tenantService) {
-        this.tenantService = tenantService;
+        return getItem(id, Scope.class);
     }
 
     public void setScopesRefreshInterval(Integer scopesRefreshInterval) {
         this.scopesRefreshInterval = scopesRefreshInterval;
     }
 
-    public void setContextManager(ExecutionContextManager contextManager) {
-        this.contextManager = contextManager;
-    }
-
-    public void postConstruct() {
-        initializeTimers();
-    }
-
-    public void preDestroy() {
-        if (scheduledTask != null) {
-            schedulerService.cancelTask(scheduledTask.getItemId());
-        }
-    }
-
-    private void initializeTimers() {
-        scheduledTask = schedulerService.newTask("scope-refresh")
-            .nonPersistent()  // Cache-like refresh, should not be persisted
-            .withPeriod(scopesRefreshInterval, TimeUnit.MILLISECONDS)
-            .withFixedDelay() // Sequential execution
-            .withSimpleExecutor(() -> contextManager.executeAsSystem(() -> refreshScopes()))
-            .schedule();
+    @Override
+    protected Set<CacheableTypeConfig<?>> getTypeConfigs() {
+        Set<CacheableTypeConfig<?>> configs = new HashSet<>();
+        configs.add(CacheableTypeConfig.builder(Scope.class, Scope.ITEM_TYPE, null)
+            .withPredefinedItems(false)
+            .withRequiresRefresh(true)
+            .withRefreshInterval(scopesRefreshInterval)
+            .withIdExtractor(Scope::getItemId)
+            .build());
+        return configs;
     }
 }

@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.services.impl.cache;
+package org.apache.unomi.services.common.cache;
 
 import org.apache.unomi.api.Item;
 import org.apache.unomi.api.Metadata;
@@ -29,7 +29,7 @@ import org.apache.unomi.api.services.cache.MultiTypeCacheService;
 import org.apache.unomi.api.tenants.Tenant;
 import org.apache.unomi.api.tenants.TenantService;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
-import org.apache.unomi.services.impl.AbstractContextAwareService;
+import org.apache.unomi.services.common.service.AbstractContextAwareService;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleEvent;
@@ -45,8 +45,6 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
-import java.util.function.BiConsumer;
-import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -308,8 +306,16 @@ public abstract class AbstractMultiTypeCachingService extends AbstractContextAwa
             .findEntries("META-INF/cxs/" + config.getMetaInfPath(), "*.json", true);
         if (entries == null) return;
 
-        while (entries.hasMoreElements()) {
-            URL entryURL = entries.nextElement();
+        // If a URL comparator is defined, sort the URLs
+        List<URL> entryList;
+        if (config.hasUrlComparator()) {
+            entryList = Collections.list(entries);
+            entryList.sort(config.getUrlComparator());
+        } else {
+            entryList = Collections.list(entries);
+        }
+
+        for (URL entryURL : entryList) {
             logger.debug("Found predefined {} at {}, loading... ",
                 config.getType().getSimpleName(), entryURL);
 

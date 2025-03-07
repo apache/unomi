@@ -29,9 +29,8 @@ import org.apache.unomi.api.services.*;
 import org.apache.unomi.api.tasks.ScheduledTask;
 import org.apache.unomi.api.tasks.TaskExecutor;
 import org.apache.unomi.api.utils.ParserHelper;
-import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.PropertyHelper;
-import org.apache.unomi.services.impl.cache.AbstractMultiTypeCachingService;
+import org.apache.unomi.services.common.cache.AbstractMultiTypeCachingService;
 import org.apache.unomi.services.sorts.ControlGroupPersonalizationStrategy;
 import org.apache.unomi.api.services.cache.CacheableTypeConfig;
 import org.osgi.framework.*;
@@ -42,9 +41,7 @@ import java.io.IOException;
 import java.net.URL;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Function;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import static org.apache.unomi.persistence.spi.CustomObjectMapper.getObjectMapper;
 
@@ -863,12 +860,12 @@ public class ProfileServiceImpl extends AbstractMultiTypeCachingService implemen
     @Override
     public Map<String, Collection<PropertyType>> getTargetPropertyTypes() {
         List<PropertyType> allPropertyTypes = new ArrayList<>(getAllItems(PropertyType.class, true));
-        
+
         // Separate PropertyTypes with null targets from those with non-null targets
         List<PropertyType> nullTargetProperties = allPropertyTypes.stream()
                 .filter(propertyType -> propertyType.getTarget() == null)
                 .collect(Collectors.toList());
-        
+
         // Group PropertyTypes with non-null targets
         Map<String, List<PropertyType>> groupedMap = allPropertyTypes.stream()
                 .filter(propertyType -> propertyType.getTarget() != null)
@@ -877,12 +874,12 @@ public class ProfileServiceImpl extends AbstractMultiTypeCachingService implemen
         // Convert from Map<String, List<PropertyType>> to Map<String, Collection<PropertyType>>
         Map<String, Collection<PropertyType>> result = new HashMap<>();
         groupedMap.forEach((key, value) -> result.put(key, value));
-        
+
         // Add PropertyTypes with null targets under the "undefined" key
         if (!nullTargetProperties.isEmpty()) {
             result.put("undefined", nullTargetProperties);
         }
-        
+
         return result;
     }
 

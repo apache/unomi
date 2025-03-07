@@ -82,6 +82,7 @@
         <configfile finalname="/etc/org.apache.unomi.persistence.elasticsearch.cfg">mvn:org.apache.unomi/unomi-persistence-elasticsearch-core/${project.version}/cfg/elasticsearchcfg</configfile>
         <bundle start="false">mvn:org.apache.unomi/unomi-tracing-impl/${project.version}</bundle>
         <bundle start="false">mvn:org.apache.unomi/unomi-persistence-elasticsearch-core/${project.version}</bundle>
+        <bundle start="false">mvn:org.apache.unomi/unomi-services-common/${project.version}</bundle>
         <bundle start="false">mvn:org.apache.unomi/unomi-services/${project.version}</bundle>
         <bundle start="false">mvn:org.apache.unomi/unomi-json-schema-services/${project.version}</bundle>
         <bundle start="false">mvn:org.apache.unomi/unomi-json-schema-rest/${project.version}</bundle>
@@ -104,6 +105,7 @@
         <configfile finalname="/etc/org.apache.unomi.persistence.opensearch.cfg">mvn:org.apache.unomi/unomi-persistence-opensearch-core/${project.version}/cfg/opensearchcfg</configfile>
         <bundle start="false">mvn:org.apache.unomi/unomi-tracing-impl/${project.version}</bundle>
         <bundle start="false">mvn:org.apache.unomi/unomi-persistence-opensearch-core/${project.version}</bundle>
+        <bundle start="false">mvn:org.apache.unomi/unomi-services-common/${project.version}</bundle>
         <bundle start="false">mvn:org.apache.unomi/unomi-services/${project.version}</bundle>
         <bundle start="false">mvn:org.apache.unomi/unomi-json-schema-services/${project.version}</bundle>
         <bundle start="false">mvn:org.apache.unomi/unomi-json-schema-rest/${project.version}</bundle>

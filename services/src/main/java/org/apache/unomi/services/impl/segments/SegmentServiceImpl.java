@@ -37,7 +37,7 @@ import org.apache.unomi.api.utils.ConditionBuilder;
 import org.apache.unomi.api.utils.ParserHelper;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.persistence.spi.aggregate.TermsAggregate;
-import org.apache.unomi.services.impl.cache.AbstractMultiTypeCachingService;
+import org.apache.unomi.services.common.cache.AbstractMultiTypeCachingService;
 import org.apache.unomi.services.impl.scheduler.SchedulerServiceImpl;
 import org.apache.unomi.tracing.api.RequestTracer;
 import org.apache.unomi.tracing.api.TracerService;
@@ -156,7 +156,7 @@ public class SegmentServiceImpl extends AbstractMultiTypeCachingService implemen
 
     /**
      * Creates a base configuration builder with common settings for cacheable types
-     * 
+     *
      * @param <T> the type of the cacheable item
      * @param type the class of the cacheable item
      * @param itemType the item type identifier
@@ -164,8 +164,8 @@ public class SegmentServiceImpl extends AbstractMultiTypeCachingService implemen
      * @return a builder with common settings applied
      */
     private <T extends Serializable> CacheableTypeConfig.Builder<T> createBaseBuilder(
-            Class<T> type, 
-            String itemType, 
+            Class<T> type,
+            String itemType,
             String metaInfPath) {
         return CacheableTypeConfig.<T>builder(type, itemType, metaInfPath)
             .withInheritFromSystemTenant(true)
@@ -176,7 +176,7 @@ public class SegmentServiceImpl extends AbstractMultiTypeCachingService implemen
     @Override
     protected Set<CacheableTypeConfig<?>> getTypeConfigs() {
         Set<CacheableTypeConfig<?>> configs = new HashSet<>();
-        
+
         // Post-processor for Segment to resolve condition types
         configs.add(createBaseBuilder(Segment.class, Segment.ITEM_TYPE, "segments")
             .withIdExtractor(s -> s.getMetadata().getId())
@@ -186,7 +186,7 @@ public class SegmentServiceImpl extends AbstractMultiTypeCachingService implemen
                 }
             })
             .build());
-        
+
         // Post-processor for Scoring to resolve condition types in scoring elements
         configs.add(createBaseBuilder(Scoring.class, "scoring", "scoring")
             .withIdExtractor(s -> s.getMetadata().getId())
@@ -194,7 +194,7 @@ public class SegmentServiceImpl extends AbstractMultiTypeCachingService implemen
                 if (scoring.getElements() != null) {
                     for (ScoringElement scoringElement : scoring.getElements()) {
                         if (scoringElement.getCondition() != null) {
-                            ParserHelper.resolveConditionType(definitionsService, scoringElement.getCondition(), 
+                            ParserHelper.resolveConditionType(definitionsService, scoringElement.getCondition(),
                                 "scoring element for scoring " + scoring.getMetadata().getId());
                         }
                     }
@@ -1520,7 +1520,7 @@ public class SegmentServiceImpl extends AbstractMultiTypeCachingService implemen
                 });
             }
         };
-        
+
         schedulerService.registerTaskExecutor(segmentDateRecalculationExecutor);
 
         // Check if a segment date recalculation task already exists

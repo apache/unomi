@@ -95,6 +95,8 @@ public class GoalsServiceImplTest {
         goalsService.setRulesService(rulesService);
         goalsService.setConditionValidationService(conditionValidationService);
         goalsService.setTracerService(tracerService);
+        goalsService.setCacheService(multiTypeCacheService);
+        goalsService.setContextManager(executionContextManager);
 
         // Mock action type for goal rules
         ActionType goalActionType = new ActionType() {

@@ -18,7 +18,6 @@
 package org.apache.unomi.services.impl.definitions;
 
 import org.apache.unomi.api.Metadata;
-import org.apache.unomi.api.PluginType;
 import org.apache.unomi.api.PropertyMergeStrategyType;
 import org.apache.unomi.api.ValueType;
 import org.apache.unomi.api.actions.ActionType;
@@ -33,25 +32,17 @@ import org.apache.unomi.api.services.cache.CacheableTypeConfig;
 import org.apache.unomi.api.services.cache.MultiTypeCacheService;
 import org.apache.unomi.api.utils.ConditionBuilder;
 import org.apache.unomi.api.utils.ParserHelper;
-import org.apache.unomi.persistence.spi.CustomObjectMapper;
-import org.apache.unomi.services.impl.cache.AbstractMultiTypeCachingService;
+import org.apache.unomi.services.common.cache.AbstractMultiTypeCachingService;
 import org.apache.unomi.tracing.api.RequestTracer;
 import org.apache.unomi.tracing.api.TracerService;
-import org.apache.unomi.persistence.spi.PersistenceService;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
-import org.osgi.framework.BundleEvent;
 import org.osgi.framework.SynchronousBundleListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.BufferedInputStream;
-import java.io.IOException;
 import java.io.Serializable;
-import java.net.URL;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;

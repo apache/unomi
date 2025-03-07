@@ -20,9 +20,11 @@ import org.apache.unomi.api.Item;
 import org.osgi.framework.BundleContext;
 
 import java.io.Serializable;
+import java.util.Comparator;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.net.URL;
 
 /**
  * Configuration for a cacheable type in the multi-type cache service.
@@ -40,6 +42,7 @@ public class CacheableTypeConfig<T extends Serializable> {
     private final Consumer<T> postProcessor;
     private final boolean hasPredefinedItems;
     private final BiConsumer<BundleContext, T> bundleItemProcessor;
+    private final Comparator<URL> urlComparator;
 
     /**
      * Private constructor used by the builder
@@ -55,6 +58,7 @@ public class CacheableTypeConfig<T extends Serializable> {
         this.postProcessor = builder.postProcessor;
         this.hasPredefinedItems = builder.hasPredefinedItems;
         this.bundleItemProcessor = builder.bundleItemProcessor;
+        this.urlComparator = builder.urlComparator;
     }
 
     /**
@@ -179,6 +183,24 @@ public class CacheableTypeConfig<T extends Serializable> {
     }
 
     /**
+     * Get the URL comparator for sorting predefined items.
+     *
+     * @return the URL comparator, or null if none is defined
+     */
+    public Comparator<URL> getUrlComparator() {
+        return urlComparator;
+    }
+
+    /**
+     * Check if this type config has a custom URL comparator.
+     *
+     * @return true if a URL comparator is defined, false otherwise
+     */
+    public boolean hasUrlComparator() {
+        return urlComparator != null;
+    }
+
+    /**
      * Builder for CacheableTypeConfig
      * @param <T> the type parameter for the cacheable type
      */
@@ -193,6 +215,7 @@ public class CacheableTypeConfig<T extends Serializable> {
         private Consumer<T> postProcessor = null;
         private boolean hasPredefinedItems = true;
         private BiConsumer<BundleContext, T> bundleItemProcessor = null;
+        private Comparator<URL> urlComparator = null;
 
         private Builder(Class<T> type, String itemType, String metaInfPath) {
             this.type = type;
@@ -325,6 +348,24 @@ public class CacheableTypeConfig<T extends Serializable> {
          */
         public Builder<T> withBundleItemProcessor(BiConsumer<BundleContext, T> bundleItemProcessor) {
             this.bundleItemProcessor = bundleItemProcessor;
+            return this;
+        }
+
+        /**
+         * Set a custom comparator for sorting URLs when loading predefined items.
+         * 
+         * <p>This comparator determines the order in which predefined items are loaded from bundles.
+         * When defined, the URLs of predefined items will be sorted using this comparator before
+         * loading the items.</p>
+         * 
+         * <p>This is particularly useful for items that need to be processed in a specific order,
+         * such as patches or migrations that must be applied sequentially.</p>
+         *
+         * @param urlComparator the comparator for sorting URLs
+         * @return this builder for method chaining
+         */
+        public Builder<T> withUrlComparator(Comparator<URL> urlComparator) {
+            this.urlComparator = urlComparator;
             return this;
         }
 

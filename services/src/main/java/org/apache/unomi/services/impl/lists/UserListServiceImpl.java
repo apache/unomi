@@ -23,7 +23,7 @@ import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.lists.UserList;
 import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.UserListService;
-import org.apache.unomi.services.impl.AbstractContextAwareService;
+import org.apache.unomi.services.common.service.AbstractContextAwareService;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleEvent;
 import org.osgi.framework.SynchronousBundleListener;
