@@ -31,6 +31,7 @@ import org.apache.unomi.api.ContextRequest;
 import org.apache.unomi.api.EventsCollectorRequest;
 import org.apache.unomi.api.security.SecurityService;
 import org.apache.unomi.api.services.ConfigSharingService;
+import org.apache.unomi.api.services.ExecutionContextManager;
 import org.apache.unomi.api.tenants.TenantService;
 import org.apache.unomi.rest.authentication.AuthenticationFilter;
 import org.apache.unomi.rest.authentication.AuthorizingInterceptor;
@@ -76,6 +77,7 @@ public class RestServer {
     private TenantService tenantService;
     private SecurityService securityService;
     private SecurityFilter securityFilter;
+    private ExecutionContextManager executionContextManager;
 
     // refresh
     private long timeOfLastUpdate = System.currentTimeMillis();
@@ -112,6 +114,11 @@ public class RestServer {
     @Reference(cardinality = ReferenceCardinality.MANDATORY)
     public void setSecurityService(SecurityService securityService) {
         this.securityService = securityService;
+    }
+
+    @Reference(cardinality = ReferenceCardinality.MANDATORY)
+    public void setExecutionContextManager(ExecutionContextManager executionContextManager) {
+        this.executionContextManager = executionContextManager;
     }
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY)
@@ -245,7 +252,7 @@ public class RestServer {
         jaxrsServerFactoryBean.setProvider(simpleAuthorizingFilter);
 
         // 4. Security context cleanup filter (same priority as Authentication but runs during response)
-        jaxrsServerFactoryBean.setProvider(new SecurityContextCleanupFilter(securityService));
+        jaxrsServerFactoryBean.setProvider(new SecurityContextCleanupFilter(securityService, executionContextManager));
 
         // Exception mappers
         for (ExceptionMapper exceptionMapper : exceptionMappers) {

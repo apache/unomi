@@ -49,7 +49,6 @@ public class ExecutionContextManagerImpl implements ExecutionContextManager {
         if (context == null) {
             context = createContext(securityService.getCurrentSubject());
             currentContext.set(context);
-
         }
         return context;
     }

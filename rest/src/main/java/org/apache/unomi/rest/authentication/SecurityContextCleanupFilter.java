@@ -17,6 +17,7 @@
 package org.apache.unomi.rest.authentication;
 
 import org.apache.unomi.api.security.SecurityService;
+import org.apache.unomi.api.services.ExecutionContextManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,15 +36,18 @@ public class SecurityContextCleanupFilter implements ContainerResponseFilter {
 
     private static final Logger logger = LoggerFactory.getLogger(SecurityContextCleanupFilter.class);
     private final SecurityService securityService;
+    private final ExecutionContextManager executionContextManager;
 
-    public SecurityContextCleanupFilter(SecurityService securityService) {
+    public SecurityContextCleanupFilter(SecurityService securityService, ExecutionContextManager executionContextManager) {
         this.securityService = securityService;
+        this.executionContextManager = executionContextManager;
     }
 
     @Override
     public void filter(ContainerRequestContext requestContext, ContainerResponseContext responseContext) throws IOException {
         try {
             securityService.clearCurrentSubject();
+            executionContextManager.setCurrentContext(null);
             if (logger.isDebugEnabled()) {
                 logger.debug("Cleared security context after request processing");
             }
