@@ -27,6 +27,8 @@ import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.ExecutionContextManager;
 import org.apache.unomi.api.services.SchedulerService;
 import org.apache.unomi.api.tasks.ScheduledTask;
+import org.apache.unomi.api.tenants.Tenant;
+import org.apache.unomi.api.tenants.TenantService;
 import org.apache.unomi.groovy.actions.GroovyAction;
 import org.apache.unomi.groovy.actions.GroovyBundleResourceConnector;
 import org.apache.unomi.groovy.actions.annotations.Action;
@@ -73,7 +75,7 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
     private BundleContext bundleContext;
     private GroovyScriptEngine groovyScriptEngine;
     private GroovyShell groovyShell;
-    private Map<String, GroovyCodeSource> groovyCodeSourceMap;
+    private Map<String, Map<String, GroovyCodeSource>> groovyCodeSourceMapByTenant;
     private ScheduledFuture<?> scheduledFuture;
     private ScheduledTask scheduledTask;
 
@@ -86,6 +88,7 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
     private ExecutionContextManager contextManager;
     private ActionExecutorDispatcher actionExecutorDispatcher;
     private GroovyActionsServiceConfig config;
+    private TenantService tenantService;
 
     @Reference
     public void setDefinitionsService(DefinitionsService definitionsService) {
@@ -95,6 +98,11 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
     @Reference
     public void setPersistenceService(PersistenceService persistenceService) {
         this.persistenceService = persistenceService;
+    }
+
+    @Reference
+    public void setTenantService(TenantService tenantService) {
+        this.tenantService = tenantService;
     }
 
     @Reference
@@ -122,7 +130,7 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
 
         this.config = config;
         this.bundleContext = bundleContext;
-        this.groovyCodeSourceMap = new HashMap<>();
+        this.groovyCodeSourceMapByTenant = new HashMap<>();
 
         GroovyBundleResourceConnector bundleResourceConnector = new GroovyBundleResourceConnector(bundleContext);
         GroovyClassLoader groovyLoader = new GroovyClassLoader(bundleContext.getBundle().adapt(BundleWiring.class).getClassLoader());
@@ -225,6 +233,8 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
 
     @Override
     public void remove(String id) {
+        String tenantId = contextManager.getCurrentContext().getTenantId();
+        Map<String, GroovyCodeSource> groovyCodeSourceMap = groovyCodeSourceMapByTenant.computeIfAbsent(tenantId, k -> new HashMap<>());
         if (groovyCodeSourceMap.containsKey(id)) {
             try {
                 definitionsService.removeActionType(
@@ -233,11 +243,14 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
                 LOGGER.error("Failed to delete the action type for the id {}", id, e);
             }
             persistenceService.remove(id, GroovyAction.class);
+            groovyCodeSourceMap.remove(id);
         }
     }
 
     @Override
     public GroovyCodeSource getGroovyCodeSource(String id) {
+        String tenantId = contextManager.getCurrentContext().getTenantId();
+        Map<String, GroovyCodeSource> groovyCodeSourceMap = groovyCodeSourceMapByTenant.computeIfAbsent(tenantId, k -> new HashMap<>());
         return groovyCodeSourceMap.get(id);
     }
 
@@ -259,10 +272,14 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
     }
 
     private void refreshGroovyActions() {
-        Map<String, GroovyCodeSource> refreshedGroovyCodeSourceMap = new HashMap<>();
-        persistenceService.getAllItems(GroovyAction.class).forEach(groovyAction -> refreshedGroovyCodeSourceMap
-                .put(groovyAction.getName(), buildClassScript(groovyAction.getScript(), groovyAction.getName())));
-        groovyCodeSourceMap = refreshedGroovyCodeSourceMap;
+        for (Tenant tenant : tenantService.getAllTenants()) {
+            Map<String, GroovyCodeSource> refreshedGroovyCodeSourceMap = new HashMap<>();
+            contextManager.executeAsTenant(tenant.getItemId(), () -> {
+                persistenceService.getAllItems(GroovyAction.class).forEach(groovyAction -> refreshedGroovyCodeSourceMap
+                        .put(groovyAction.getName(), buildClassScript(groovyAction.getScript(), groovyAction.getName())));
+                groovyCodeSourceMapByTenant.put(tenant.getItemId(), refreshedGroovyCodeSourceMap);
+            });
+        }
     }
 
     private void initializeTimers() {
