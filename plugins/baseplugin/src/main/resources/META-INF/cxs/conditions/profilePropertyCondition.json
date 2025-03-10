@@ -52,7 +52,6 @@
             "type": "string",
             "multivalued": false,
             "validation": {
-                "recommended": true,
                 "exclusive": true,
                 "exclusiveGroup": "propertyValue"
             }
@@ -62,7 +61,6 @@
             "type": "integer",
             "multivalued": false,
             "validation": {
-                "recommended": true,
                 "exclusive": true,
                 "exclusiveGroup": "propertyValue"
             }
@@ -72,7 +70,6 @@
             "type": "date",
             "multivalued": false,
             "validation": {
-                "recommended": true,
                 "exclusive": true,
                 "exclusiveGroup": "propertyValue"
             }
@@ -82,7 +79,6 @@
             "type": "string",
             "multivalued": false,
             "validation": {
-                "recommended": true,
                 "exclusive": true,
                 "exclusiveGroup": "propertyValue"
             }
@@ -92,7 +88,6 @@
             "type": "string",
             "multivalued": true,
             "validation": {
-                "recommended": true,
                 "exclusive": true,
                 "exclusiveGroup": "propertyValues"
             }
@@ -102,7 +97,6 @@
             "type": "integer",
             "multivalued": true,
             "validation": {
-                "recommended": true,
                 "exclusive": true,
                 "exclusiveGroup": "propertyValues"
             }
@@ -112,7 +106,6 @@
             "type": "date",
             "multivalued": true,
             "validation": {
-                "recommended": true,
                 "exclusive": true,
                 "exclusiveGroup": "propertyValues"
             }
@@ -122,7 +115,6 @@
             "type": "string",
             "multivalued": true,
             "validation": {
-                "recommended": true,
                 "exclusive": true,
                 "exclusiveGroup": "propertyValues"
             }
