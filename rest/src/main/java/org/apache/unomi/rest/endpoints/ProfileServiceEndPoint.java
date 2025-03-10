@@ -174,9 +174,28 @@ public class ProfileServiceEndPoint {
     }
 
     /**
-     * Update all profiles in batch according to the specified {@link BatchUpdate}
+     * Update all profiles in batch according to the specified {@link BatchUpdate}. The update supports different
+     * strategies for modifying properties:
+     * 
+     * <ul>
+     *   <li><b>null or "alwaysSet"</b>: Always sets the property value if different from the current value</li>
+     *   <li><b>"setIfMissing"</b>: Sets the property value only if the current value is null</li>
+     *   <li><b>"remove"</b>: Removes the property from its parent Map if it exists. For nested properties,
+     *       removes the last property segment from its parent Map. Only works with Map type properties.</li>
+     *   <li><b>"addValue" or "addValues"</b>: Adds the new value(s) to the existing collection if not already present.
+     *       Creates a new collection if the property doesn't exist. Both existing and new values are converted to Lists.</li>
+     *   <li><b>"removeValue" or "removeValues"</b>: Removes the specified value(s) from the existing collection.
+     *       Both existing and removal values are converted to Lists.</li>
+     * </ul>
+     * 
+     * For nested properties (using dot notation like "parent.child.property"):
+     * <ul>
+     *   <li>Missing intermediate objects are automatically created as LinkedHashMaps</li>
+     *   <li>The "remove" strategy works on the last property segment</li>
+     *   <li>Collection operations maintain uniqueness using HashSet internally</li>
+     * </ul>
      *
-     * @param update the batch update specification
+     * @param update the batch update specification containing the property updates and strategies
      */
     @POST
     @Path("/batchProfilesUpdate")

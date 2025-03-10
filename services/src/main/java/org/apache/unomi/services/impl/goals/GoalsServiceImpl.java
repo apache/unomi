@@ -197,6 +197,7 @@ public class GoalsServiceImpl extends AbstractMultiTypeCachingService implements
             return;
         }
         if (goal.getStartEvent() != null) {
+            ParserHelper.resolveConditionType(definitionsService, goal.getStartEvent(), "goal "+goal.getItemId()+" start event");
             // Start validation operation in tracer for start event
             if (tracerService != null) {
                 RequestTracer tracer = tracerService.getCurrentTracer();
@@ -244,6 +245,7 @@ public class GoalsServiceImpl extends AbstractMultiTypeCachingService implements
             }
         }
         if (goal.getTargetEvent() != null) {
+            ParserHelper.resolveConditionType(definitionsService, goal.getTargetEvent(), "goal "+goal.getItemId()+" target event");
             // Start validation operation in tracer for target event
             if (tracerService != null) {
                 RequestTracer tracer = tracerService.getCurrentTracer();
@@ -290,8 +292,6 @@ public class GoalsServiceImpl extends AbstractMultiTypeCachingService implements
                 throw new IllegalArgumentException(errorMessage.toString());
             }
         }
-        ParserHelper.resolveConditionType(definitionsService, goal.getStartEvent(), "goal "+goal.getItemId()+" start event");
-        ParserHelper.resolveConditionType(definitionsService, goal.getTargetEvent(), "goal "+goal.getItemId()+" start event");
 
         if (goal.getMetadata().isEnabled()) {
             if (goal.getStartEvent() != null) {
