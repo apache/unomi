@@ -1322,3 +1322,215 @@ Best practices for Groovy actions:
 4. Use meaningful action and rule names
 5. Test with various date formats
 ====
+
+==== Using the explain parameter for request tracing
+
+Apache Unomi provides a powerful request tracing feature through the `explain` query parameter. This feature helps administrators understand how requests are processed internally, including event processing, condition evaluations, and rule executions.
+
+===== Prerequisites
+
+To use the explain parameter, you must have one of the following roles:
+- ADMINISTRATOR
+- TENANT_ADMINISTRATOR
+
+===== Request examples
+
+====== Context request with explain
+
+[source]
+----
+curl -X POST http://localhost:8181/cxs/context.json?sessionId=1234&explain=true \
+--user "karaf:karaf" \
+-H "Content-Type: application/json" \
+-d @- <<'EOF'
+{
+    "source": {
+        "itemId":"homepage",
+        "itemType":"page",
+        "scope":"mydigital"
+    },
+    "requiredProfileProperties":["*"],
+    "requireSegments":true
+}
+EOF
+----
+
+====== Event collector request with explain
+
+[source]
+----
+curl -X POST http://localhost:8181/cxs/eventcollector?explain=true \
+--user "karaf:karaf" \
+-H "Content-Type: application/json" \
+-d @- <<'EOF'
+{
+    "sessionId": "1234",
+    "events": [
+        {
+            "eventType":"view",
+            "scope": "mydigital",
+            "source":{
+                "itemType": "site",
+                "scope":"mydigital",
+                "itemId": "mysite"
+            },
+            "target":{
+                "itemType":"page",
+                "scope":"mydigital",
+                "itemId":"homepage"
+            }
+        }
+    ]
+}
+EOF
+----
+
+===== Understanding the trace output
+
+The explain parameter adds a `requestTracing` field to the response that contains a tree structure of all operations performed during request processing. Here's an example trace output:
+
+[source,json]
+----
+{
+    "profileId": "12345",
+    "sessionId": "1234",
+    // ... other response fields ...
+    "requestTracing": {
+        "operationType": "request-processing",
+        "description": "Processing context request",
+        "startTime": 1234567890,
+        "endTime": 1234567899,
+        "children": [
+            {
+                "operationType": "event-validation",
+                "description": "Validating event: view",
+                "startTime": 1234567891,
+                "endTime": 1234567892,
+                "traces": [
+                    "Validating against schema event/1-0-0",
+                    "Event validation successful"
+                ]
+            },
+            {
+                "operationType": "rule-evaluation",
+                "description": "Evaluating rules for event",
+                "startTime": 1234567893,
+                "endTime": 1234567895,
+                "children": [
+                    {
+                        "operationType": "condition-evaluation",
+                        "description": "Evaluating condition: matchAll",
+                        "startTime": 1234567894,
+                        "endTime": 1234567894,
+                        "result": true
+                    }
+                ]
+            }
+        ]
+    }
+}
+----
+
+===== Request processing flow
+
+The following diagram shows the high-level flow of request processing when explain is enabled:
+
+[plantuml]
+----
+@startuml
+participant "Client" as client
+participant "ContextJsonEndpoint" as context
+participant "EventsCollectorEndpoint" as collector
+participant "TracerService" as tracer
+participant "RequestTracer" as requestTracer
+
+alt Context Request
+    client -> context: POST /context.json?explain=true
+    activate context
+    context -> context: Check admin role
+    context -> tracer: enableTracing()
+    activate tracer
+    tracer -> requestTracer: setEnabled(true)
+    activate requestTracer
+    context -> context: Process request
+    context -> requestTracer: startOperation()
+    requestTracer -> requestTracer: Create trace node
+    context -> requestTracer: endOperation()
+    context -> tracer: getTraceNode()
+    tracer --> context: TraceNode
+    context --> client: ContextResponse with traces
+    deactivate requestTracer
+    deactivate tracer
+    deactivate context
+else Event Collector Request
+    client -> collector: POST /eventcollector?explain=true
+    activate collector
+    collector -> collector: Check admin role
+    collector -> tracer: enableTracing()
+    activate tracer
+    tracer -> requestTracer: setEnabled(true)
+    activate requestTracer
+    collector -> collector: Process events
+    collector -> requestTracer: startOperation()
+    requestTracer -> requestTracer: Create trace node
+    collector -> requestTracer: endOperation()
+    collector -> tracer: getTraceNode()
+    tracer --> collector: TraceNode
+    collector --> client: EventCollectorResponse with traces
+    deactivate requestTracer
+    deactivate tracer
+    deactivate collector
+end
+@enduml
+----
+
+===== Common trace operations
+
+The tracing system captures various types of operations:
+
+1. Request Processing
+- Overall request handling
+- Parameter validation
+- Schema validation
+
+2. Event Processing
+- Event validation
+- Event type resolution
+- Event property processing
+
+3. Rule Evaluation
+- Condition evaluation
+- Action execution
+- Score updates
+
+4. Profile Operations
+- Profile merging
+- Property updates
+- Segment evaluation
+
+Each operation in the trace contains:
+- Operation type
+- Description
+- Start time
+- End time
+- Result (if applicable)
+- Child operations
+- Trace messages
+
+===== Best practices
+
+1. Use explain parameter selectively
+- Only enable when debugging or troubleshooting
+- Disable in production environments
+- Consider performance impact
+
+2. Analyze trace output
+- Look for unexpected operations
+- Check operation timing
+- Review validation results
+- Monitor rule evaluations
+
+3. Security considerations
+- Only grant admin access to trusted users
+- Monitor explain parameter usage
+- Review trace data for sensitive information
