@@ -1534,3 +1534,235 @@ Each operation in the trace contains:
 - Only grant admin access to trusted users
 - Monitor explain parameter usage
 - Review trace data for sensitive information
+
+===== Complex personalization example with explain
+
+This example demonstrates using the explain parameter to understand how personalization filters are evaluated:
+
+[source]
+----
+curl -X POST http://localhost:8181/cxs/context.json?sessionId=1234&explain=true \
+--user "karaf:karaf" \
+-H "Content-Type: application/json" \
+-d @- <<'EOF'
+{
+    "source": {
+        "itemId": "homepage",
+        "itemType": "page",
+        "scope": "mydigital"
+    },
+    "requiredProfileProperties": ["*"],
+    "requireSegments": true,
+    "personalizations": [
+        {
+            "id": "homepage-hero",
+            "strategy": "matching-first",
+            "strategyOptions": {
+                "fallback": "default-content"
+            },
+            "contents": [
+                {
+                    "id": "premium-user-content",
+                    "filters": [
+                        {
+                            "condition": {
+                                "type": "profileSegmentCondition",
+                                "parameterValues": {
+                                    "segments": ["premium-users"]
+                                }
+                            }
+                        },
+                        {
+                            "condition": {
+                                "type": "pastEventCondition",
+                                "parameterValues": {
+                                    "eventType": "purchase",
+                                    "minimumEventCount": 1,
+                                    "numberOfDays": 30
+                                }
+                            }
+                        }
+                    ]
+                },
+                {
+                    "id": "new-visitor-content",
+                    "filters": [
+                        {
+                            "condition": {
+                                "type": "sessionPropertyCondition",
+                                "parameterValues": {
+                                    "propertyName": "duration",
+                                    "comparisonOperator": "lessThan",
+                                    "propertyValueInteger": 300
+                                }
+                            }
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}
+EOF
+----
+
+The response will include detailed tracing of the personalization evaluation process:
+
+[source,json]
+----
+{
+    "profileId": "12345",
+    "sessionId": "1234",
+    "requestTracing": {
+        "operationType": "request-processing",
+        "description": "Processing context request with personalization",
+        "startTime": 1234567890,
+        "endTime": 1234567899,
+        "children": [
+            {
+                "operationType": "personalization-evaluation",
+                "description": "Evaluating personalization: homepage-hero",
+                "startTime": 1234567891,
+                "endTime": 1234567895,
+                "children": [
+                    {
+                        "operationType": "content-filter-evaluation",
+                        "description": "Evaluating filters for content: premium-user-content",
+                        "startTime": 1234567892,
+                        "endTime": 1234567893,
+                        "children": [
+                            {
+                                "operationType": "condition-evaluation",
+                                "description": "Evaluating segment condition",
+                                "startTime": 1234567892,
+                                "endTime": 1234567892,
+                                "result": false,
+                                "traces": [
+                                    "Profile not in segment: premium-users"
+                                ]
+                            },
+                            {
+                                "operationType": "condition-evaluation",
+                                "description": "Evaluating past event condition",
+                                "startTime": 1234567892,
+                                "endTime": 1234567893,
+                                "result": false,
+                                "traces": [
+                                    "No purchase events found in last 30 days"
+                                ]
+                            }
+                        ],
+                        "result": false
+                    },
+                    {
+                        "operationType": "content-filter-evaluation",
+                        "description": "Evaluating filters for content: new-visitor-content",
+                        "startTime": 1234567893,
+                        "endTime": 1234567894,
+                        "children": [
+                            {
+                                "operationType": "condition-evaluation",
+                                "description": "Evaluating session duration condition",
+                                "startTime": 1234567893,
+                                "endTime": 1234567894,
+                                "result": true,
+                                "traces": [
+                                    "Session duration: 120 seconds, threshold: 300 seconds"
+                                ]
+                            }
+                        ],
+                        "result": true
+                    }
+                ]
+            }
+        ]
+    },
+    "personalizations": {
+        "homepage-hero": "new-visitor-content"
+    }
+}
+----
+
+This example demonstrates:
+
+1. Complex personalization setup
+- Multiple content variants
+- Different condition types
+- Fallback content
+- Strategy configuration
+
+2. Detailed tracing of
+- Personalization evaluation flow
+- Filter condition evaluation
+- Segment membership checks
+- Past event queries
+- Session property checks
+
+3. Trace node hierarchy showing
+- Parent-child relationships
+- Timing information
+- Decision points
+- Result propagation
+
+The trace output helps understand:
+- Why specific content was selected
+- Which conditions failed/passed
+- Performance of different operations
+- Order of evaluation
+
+[plantuml]
+----
+@startuml
+participant "Client" as client
+participant "ContextEndpoint" as context
+participant "PersonalizationService" as perso
+participant "TracerService" as tracer
+participant "RequestTracer" as requestTracer
+
+client -> context: POST /context.json?explain=true
+activate context
+
+context -> tracer: enableTracing()
+activate tracer
+
+context -> perso: filter(profile, session, content)
+activate perso
+
+perso -> requestTracer: startOperation("personalization-evaluation")
+activate requestTracer
+
+loop for each content
+    perso -> requestTracer: startOperation("content-filter-evaluation")
+    
+    loop for each filter
+        perso -> requestTracer: startOperation("condition-evaluation")
+        perso -> perso: evaluate condition
+        perso -> requestTracer: trace(result details)
+        perso -> requestTracer: endOperation(result)
+    end
+    
+    perso -> requestTracer: endOperation(filter result)
+end
+
+perso -> requestTracer: endOperation(selected content)
+deactivate requestTracer
+
+perso --> context: PersonalizationResult
+deactivate perso
+
+context -> tracer: getTraceNode()
+tracer --> context: TraceNode
+
+context --> client: ContextResponse with traces
+deactivate tracer
+deactivate context
+
+@enduml
+----
+
+This sequence diagram shows the detailed flow of personalization evaluation with tracing enabled, including:
+1. Initial request handling
+2. Personalization service interaction
+3. Filter evaluation loops
+4. Trace node creation and updates
+5. Result aggregation and response
