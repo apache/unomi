@@ -218,40 +218,23 @@ public class GroovyActionsServiceImplTest {
             assertNotNull("Action type should be registered", actionType);
             assertEquals("Action should have 2 parameters", 2, actionType.getParameters().size());
             
-            // Set up a mock ActionExecutorDispatcher to intercept the execution
-            ActionExecutorDispatcher originalDispatcher = getActionExecutorDispatcher();
-            ActionExecutorDispatcher mockDispatcher = mock(ActionExecutorDispatcher.class);
+            // Create a GroovyActionDispatcher to execute the action directly
+            GroovyActionDispatcher groovyDispatcher = new GroovyActionDispatcher();
+            groovyDispatcher.setGroovyActionsService(groovyActionsService);
+            
+            // Create an event 
+            Event event = new Event();
+            event.setEventType("test");
+            event.setScope("testScope");
             
             try {
-                // Set up the mock to properly execute our Groovy action
-                when(mockDispatcher.execute(any(org.apache.unomi.api.actions.Action.class), any(Event.class)))
-                    .thenAnswer(invocation -> {
-                        org.apache.unomi.api.actions.Action action = invocation.getArgument(0);
-                        Event event = invocation.getArgument(1);
-                        
-                        // Create a GroovyActionDispatcher to execute the action
-                        GroovyActionDispatcher groovyDispatcher = new GroovyActionDispatcher();
-                        groovyDispatcher.setGroovyActionsService(groovyActionsService);
-                        
-                        // Execute using the actionTypeId which should match our action name
-                        return groovyDispatcher.execute(action, event, action.getActionTypeId());
-                    });
-                
-                // Replace the dispatcher
-                setActionExecutorDispatcher(mockDispatcher);
-                
-                // Create an event and actions with different parameters
-                Event event = new Event();
-                event.setEventType("test");
-                event.setScope("testScope");
-                
                 // Test 1: SESSION_UPDATED return value
                 org.apache.unomi.api.actions.Action action1 = new org.apache.unomi.api.actions.Action();
                 action1.setActionTypeId(actionName);
                 action1.setParameter("returnType", "SESSION_UPDATED");
                 action1.setParameter("shouldFail", false);
                 
-                int result1 = mockDispatcher.execute(action1, event);
+                int result1 = groovyDispatcher.execute(action1, event, actionName);
                 assertEquals("Action should return SESSION_UPDATED", EventService.SESSION_UPDATED, result1);
                 
                 // Test 2: NO_CHANGE return value
@@ -260,7 +243,7 @@ public class GroovyActionsServiceImplTest {
                 action2.setParameter("returnType", "NO_CHANGE");
                 action2.setParameter("shouldFail", false);
                 
-                int result2 = mockDispatcher.execute(action2, event);
+                int result2 = groovyDispatcher.execute(action2, event, actionName);
                 assertEquals("Action should return NO_CHANGE", EventService.NO_CHANGE, result2);
                 
                 // Test 3: ERROR return value
@@ -269,36 +252,258 @@ public class GroovyActionsServiceImplTest {
                 action3.setParameter("returnType", "SESSION_UPDATED");
                 action3.setParameter("shouldFail", true);
                 
-                int result3 = mockDispatcher.execute(action3, event);
+                int result3 = groovyDispatcher.execute(action3, event, actionName);
                 assertEquals("Action should return ERROR", EventService.ERROR, result3);
-                
-            } finally {
-                // Restore the original dispatcher
-                setActionExecutorDispatcher(originalDispatcher);
+            } catch (Exception e) {
+                fail("Failed to execute Groovy action: " + e.getMessage());
             }
         });
     }
     
-    private ActionExecutorDispatcher getActionExecutorDispatcher() {
+    @Test
+    public void testGroovyShell() {
+        // Verify that the Groovy shell is properly initialized
+        groovy.lang.GroovyShell shell = groovyActionsService.getGroovyShell();
+        assertNotNull("Groovy shell should be initialized", shell);
+        
+        // Don't check specific variables as they might be implementation details
+        // Instead, test the functionality
+        
+        // Test evaluating a simple script
         try {
-            // Get the private field with reflection
-            java.lang.reflect.Field field = GroovyActionsServiceImpl.class.getDeclaredField("actionExecutorDispatcher");
-            field.setAccessible(true);
-            return (ActionExecutorDispatcher) field.get(groovyActionsService);
+            Object result = shell.evaluate("2 + 2");
+            assertEquals("Simple script should evaluate correctly", 4, result);
         } catch (Exception e) {
-            fail("Failed to get actionExecutorDispatcher: " + e.getMessage());
-            return null;
+            fail("Failed to evaluate simple script: " + e.getMessage());
+        }
+        
+        // Test importing classes that should be available through the ImportCustomizer
+        try {
+            Object result = shell.evaluate(
+                "import org.apache.unomi.api.services.EventService\n" +
+                "return EventService.NO_CHANGE");
+            assertEquals("Should be able to import and use EventService", EventService.NO_CHANGE, result);
+        } catch (Exception e) {
+            fail("Failed to test imports: " + e.getMessage());
         }
     }
     
-    private void setActionExecutorDispatcher(ActionExecutorDispatcher dispatcher) {
+    @Test
+    public void testLoadPredefinedGroovyActions() {
+        // We'll use the existing service instance instead of creating a new one
+        // Set up the bundle to find our test Groovy actions
+        URL action1Url = getClass().getResource("/META-INF/cxs/actions/testSaveAction.groovy");
+        URL action2Url = getClass().getResource("/META-INF/cxs/actions/testExecuteAction.groovy");
+        
+        // Mock the bundle context to return our test actions
+        when(bundleContext.getBundle().findEntries("META-INF/cxs/actions", "*.groovy", true))
+            .thenReturn(Collections.enumeration(Arrays.asList(action1Url, action2Url)));
+        
+        // Reset the service to force loading of predefined items
+        groovyActionsService.preDestroy();
+        
+        // Re-activate the service with the existing bundle context
+        GroovyActionsServiceImpl.GroovyActionsServiceConfig config = mock(GroovyActionsServiceImpl.GroovyActionsServiceConfig.class);
+        when(config.services_groovy_actions_refresh_interval()).thenReturn(1000);
+        groovyActionsService.activate(config, bundleContext);
+        
+        // Verify that the actions were loaded in the system tenant
+        contextManager.executeAsSystem(() -> {
+            // Test action types were registered properly
+            ActionType saveActionType = definitionsService.getActionType("testSaveAction");
+            assertNotNull("testSaveAction should be registered", saveActionType);
+            
+            ActionType executeActionType = definitionsService.getActionType("testExecuteAction");
+            assertNotNull("testExecuteAction should be registered", executeActionType);
+            return null;
+        });
+        
+        // Verify we can get the GroovyCodeSource for the loaded actions
+        contextManager.executeAsSystem(() -> {
+            assertNotNull("Should have GroovyCodeSource for testSaveAction in system tenant", 
+                        groovyActionsService.getGroovyCodeSource("testSaveAction"));
+            return null;
+        });
+    }
+    
+    @Test
+    public void testDetailedActionAnnotation() {
+        // Create a Groovy script with a detailed action annotation
+        String actionName = "testDetailedAction";
+        String groovyScript = 
+            "import org.apache.unomi.api.services.EventService\n" +
+            "import org.apache.unomi.groovy.actions.annotations.Action\n" +
+            "import org.apache.unomi.groovy.actions.annotations.Parameter\n\n" +
+            "@Action(\n" +
+            "    id = \"testDetailedAction\",\n" +
+            "    name = \"Test Detailed Action\",\n" +
+            "    description = \"A detailed action for testing annotations\",\n" +
+            "    actionExecutor = \"groovy:testDetailedAction\",\n" +
+            "    systemTags = [\"test\", \"groovy\"],\n" +
+            "    hidden = true,\n" +
+            "    parameters = [\n" +
+            "        @Parameter(id = \"stringParam\", type = \"string\", multivalued = false),\n" +
+            "        @Parameter(id = \"intParam\", type = \"integer\", multivalued = true),\n" +
+            "        @Parameter(id = \"boolParam\", type = \"boolean\", multivalued = false)\n" +
+            "    ]\n" +
+            ")\n" +
+            "def execute() {\n" +
+            "    logger.info(\"Executing detailed test action\")\n" +
+            "    return EventService.NO_CHANGE\n" +
+            "}";
+        
+        // Save the action
+        contextManager.executeAsTenant(TENANT_1, () -> {
+            groovyActionsService.save(actionName, groovyScript);
+            
+            // Verify action type is created with all the details
+            ActionType actionType = definitionsService.getActionType(actionName);
+            assertNotNull("Action type should be created", actionType);
+            
+            // Check metadata
+            assertEquals("Action name should match", "Test Detailed Action", actionType.getMetadata().getName());
+            assertEquals("Action description should match", "A detailed action for testing annotations", 
+                        actionType.getMetadata().getDescription());
+            assertEquals("Action executor should match", "groovy:testDetailedAction", 
+                        actionType.getActionExecutor());
+            assertTrue("Action should be hidden", actionType.getMetadata().isHidden());
+            
+            // Check system tags
+            Set<String> systemTags = actionType.getMetadata().getSystemTags();
+            assertTrue("Should have 'test' system tag", systemTags.contains("test"));
+            assertTrue("Should have 'groovy' system tag", systemTags.contains("groovy"));
+            
+            // Check parameters
+            assertEquals("Should have 3 parameters", 3, actionType.getParameters().size());
+            
+            // Check parameters by id
+            Map<String, org.apache.unomi.api.Parameter> paramsById = new HashMap<>();
+            for (org.apache.unomi.api.Parameter param : actionType.getParameters()) {
+                paramsById.put(param.getId(), param);
+            }
+            
+            assertTrue("Should have stringParam", paramsById.containsKey("stringParam"));
+            org.apache.unomi.api.Parameter stringParam = paramsById.get("stringParam");
+            assertEquals("String parameter type should match", "string", stringParam.getType());
+            assertFalse("String parameter should not be multivalued", stringParam.isMultivalued());
+            
+            assertTrue("Should have intParam", paramsById.containsKey("intParam"));
+            org.apache.unomi.api.Parameter intParam = paramsById.get("intParam");
+            assertEquals("Integer parameter type should match", "integer", intParam.getType());
+            assertTrue("Integer parameter should be multivalued", intParam.isMultivalued());
+            
+            assertTrue("Should have boolParam", paramsById.containsKey("boolParam"));
+            org.apache.unomi.api.Parameter boolParam = paramsById.get("boolParam");
+            assertEquals("Boolean parameter type should match", "boolean", boolParam.getType());
+            assertFalse("Boolean parameter should not be multivalued", boolParam.isMultivalued());
+            
+            // Clean up
+            groovyActionsService.remove(actionName);
+            assertNull("Action should be removed", definitionsService.getActionType(actionName));
+        });
+    }
+    
+    @Test
+    public void testMultiTenantIsolation() {
+        // Create a second tenant for testing isolation
+        final String TENANT_2 = "tenant2";
+        
+        contextManager.executeAsSystem(() -> {
+            tenantService.createTenant(TENANT_2, Collections.singletonMap("description", "Tenant 2"));
+            return null;
+        });
+        
+        // Create a simple action
+        String actionName = "isolatedAction";
+        String tenant1Script = 
+            "import org.apache.unomi.api.services.EventService\n" +
+            "import org.apache.unomi.groovy.actions.annotations.Action\n\n" +
+            "@Action(id = \"isolatedAction\", actionExecutor = \"groovy:isolatedAction\")\n" +
+            "def execute() {\n" +
+            "    return EventService.NO_CHANGE\n" +
+            "}";
+            
+        String tenant2Script = 
+            "import org.apache.unomi.api.services.EventService\n" +
+            "import org.apache.unomi.groovy.actions.annotations.Action\n\n" +
+            "@Action(id = \"isolatedAction\", actionExecutor = \"groovy:isolatedAction\")\n" +
+            "def execute() {\n" +
+            "    return EventService.SESSION_UPDATED\n" +
+            "}";
+            
         try {
-            // Set the private field with reflection
-            java.lang.reflect.Field field = GroovyActionsServiceImpl.class.getDeclaredField("actionExecutorDispatcher");
-            field.setAccessible(true);
-            field.set(groovyActionsService, dispatcher);
-        } catch (Exception e) {
-            fail("Failed to set actionExecutorDispatcher: " + e.getMessage());
+            // Save actions for each tenant
+            contextManager.executeAsTenant(TENANT_1, () -> {
+                groovyActionsService.save(actionName, tenant1Script);
+                assertNotNull("Action should be registered for tenant1", 
+                             groovyActionsService.getGroovyCodeSource(actionName));
+            });
+            
+            contextManager.executeAsTenant(TENANT_2, () -> {
+                groovyActionsService.save(actionName, tenant2Script);
+                assertNotNull("Action should be registered for tenant2", 
+                             groovyActionsService.getGroovyCodeSource(actionName));
+            });
+            
+            // Create a dispatcher to test execution
+            GroovyActionDispatcher dispatcher = new GroovyActionDispatcher();
+            dispatcher.setGroovyActionsService(groovyActionsService);
+            
+            Event event = new Event();
+            org.apache.unomi.api.actions.Action action = new org.apache.unomi.api.actions.Action();
+            action.setActionTypeId(actionName);
+            
+            // Test execution in tenant1
+            final int[] tenant1Result = new int[1];
+            contextManager.executeAsTenant(TENANT_1, () -> {
+                try {
+                    tenant1Result[0] = dispatcher.execute(action, event, actionName);
+                } catch (Exception e) {
+                    fail("Failed to execute action in tenant1: " + e.getMessage());
+                }
+            });
+            
+            // Test execution in tenant2
+            final int[] tenant2Result = new int[1];
+            contextManager.executeAsTenant(TENANT_2, () -> {
+                try {
+                    tenant2Result[0] = dispatcher.execute(action, event, actionName);
+                } catch (Exception e) {
+                    fail("Failed to execute action in tenant2: " + e.getMessage());
+                }
+            });
+            
+            // Verify different results
+            assertEquals("Tenant1 action should return NO_CHANGE", EventService.NO_CHANGE, tenant1Result[0]);
+            assertEquals("Tenant2 action should return SESSION_UPDATED", EventService.SESSION_UPDATED, tenant2Result[0]);
+            
+            // Check tenant isolation - remove tenant1's action
+            contextManager.executeAsTenant(TENANT_1, () -> {
+                // Remove tenant1's action
+                groovyActionsService.remove(actionName);
+                
+                // Verify tenant1's action is gone
+                assertNull("Tenant1's action should be removed", 
+                          groovyActionsService.getGroovyCodeSource(actionName));
+            });
+            
+            // Verify tenant2's action is still available
+            contextManager.executeAsTenant(TENANT_2, () -> {
+                // Tenant2's action should still be available
+                assertNotNull("Tenant2's action should still be available", 
+                           groovyActionsService.getGroovyCodeSource(actionName));
+                
+                // Cleanup
+                groovyActionsService.remove(actionName);
+            });
+            
+        } finally {
+            // Clean up tenant2
+            contextManager.executeAsSystem(() -> {
+                tenantService.deleteTenant(TENANT_2);
+                return null;
+            });
         }
     }
 }
+
