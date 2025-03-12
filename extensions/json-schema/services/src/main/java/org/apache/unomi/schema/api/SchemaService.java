@@ -120,21 +120,6 @@ public interface SchemaService {
     boolean deleteSchema(String schemaId);
 
     /**
-     * Load a predefined schema into memory
-     *
-     * @param schemaStream inputStream of the schema
-     */
-    void loadPredefinedSchema(InputStream schemaStream) throws IOException;
-
-    /**
-     * Unload a predefined schema into memory
-     *
-     * @param schemaStream inputStream of the schema to delete
-     * @return true if the schema has been deleted
-     */
-    boolean unloadPredefinedSchema(InputStream schemaStream);
-
-    /**
      * Refresh the JSON schemas
      */
     void refreshJSONSchemas();

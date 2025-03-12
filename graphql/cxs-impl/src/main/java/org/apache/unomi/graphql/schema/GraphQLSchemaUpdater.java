@@ -84,6 +84,9 @@ public class GraphQLSchemaUpdater {
 
     private int schemaUpdateDelay;
 
+    // Add tenant schema cache
+    private final ConcurrentMap<String, GraphQL> tenantSchemas = new ConcurrentHashMap<>();
+
     @Activate
     public void activate(final SchemaConfig config) {
         this.isActivated = true;
@@ -308,6 +311,7 @@ public class GraphQLSchemaUpdater {
 
     private void doUpdateSchema() {
         try {
+            // Update the default system schema
             contextManager.executeAsSystem(() -> {
                 final GraphQLSchema graphQLSchema = createGraphQLSchema();
 
@@ -316,11 +320,63 @@ public class GraphQLSchemaUpdater {
                         .build();
                 return null;
             });
+            
+            // Clear tenant schemas cache to force recreation on next request
+            tenantSchemas.clear();
         } catch (Exception e) {
             LOGGER.error("Error executing GraphQL schema update as system subject", e);
         }
     }
 
+    /**
+     * Get the GraphQL instance for a specific tenant
+     * @param tenantId The tenant ID
+     * @return GraphQL instance configured for the tenant
+     */
+    public GraphQL getGraphQLForTenant(String tenantId) {
+        if (tenantId == null) {
+            // Fall back to system schema for null tenant
+            return getGraphQL();
+        }
+        
+        return tenantSchemas.computeIfAbsent(tenantId, this::createGraphQLForTenant);
+    }
+    
+    /**
+     * Create a tenant-specific GraphQL instance
+     * @param tenantId The tenant ID
+     * @return GraphQL instance for the tenant
+     */
+    private GraphQL createGraphQLForTenant(String tenantId) {
+        try {
+            return contextManager.executeAsTenant(tenantId, () -> {
+                LOGGER.info("Creating GraphQL schema for tenant: {}", tenantId);
+                final GraphQLSchema graphQLSchema = createGraphQLSchemaForTenant(tenantId);
+                return GraphQL.newGraphQL(graphQLSchema)
+                        .subscriptionExecutionStrategy(new SubscriptionExecutionStrategy())
+                        .build();
+            });
+        } catch (Exception e) {
+            LOGGER.error("Error creating GraphQL schema for tenant: " + tenantId, e);
+            // Fall back to system schema if tenant schema creation fails
+            return getGraphQL();
+        }
+    }
+    
+    /**
+     * Invalidate the schema for a specific tenant
+     * @param tenantId The tenant ID to invalidate
+     */
+    public void invalidateTenantSchema(String tenantId) {
+        if (tenantId != null) {
+            tenantSchemas.remove(tenantId);
+            LOGGER.debug("Invalidated GraphQL schema for tenant: {}", tenantId);
+        }
+    }
+
+    /**
+     * Get the default GraphQL instance (system tenant)
+     */
     public GraphQL getGraphQL() {
         return graphQL;
     }
@@ -341,6 +397,42 @@ public class GraphQLSchemaUpdater {
 
         final GraphQLSchema schema = schemaProvider.createSchema();
 
+        registerInterfaces(schemaProvider);
+
+        return schema;
+    }
+    
+    /**
+     * Create a tenant-specific GraphQL schema
+     * @param tenantId The tenant ID
+     * @return GraphQL schema for the tenant
+     */
+    @SuppressWarnings("unchecked")
+    private GraphQLSchema createGraphQLSchemaForTenant(String tenantId) {
+        final GraphQLSchemaProvider schemaProvider = GraphQLSchemaProvider.create(profileService, schemaService)
+                .typeFunctionProviders(typeFunctionProviders)
+                .extensionsProviders(extensionsProviders)
+                .additionalTypesProviders(additionalTypesProviders)
+                .queryProviders(queryProviders)
+                .mutationProviders(mutationProviders)
+                .subscriptionProviders(subscriptionProviders)
+                .eventPublisher(eventPublisher)
+                .codeRegistryProvider(codeRegistryProvider)
+                .fieldVisibilityProviders(fieldVisibilityProviders)
+                .tenantId(tenantId)  // Pass tenant ID to schema provider
+                .build();
+
+        final GraphQLSchema schema = schemaProvider.createSchemaForTenant(tenantId);
+
+        registerInterfaces(schemaProvider);
+
+        return schema;
+    }
+    
+    /**
+     * Register interfaces for the schema provider
+     */
+    private void registerInterfaces(GraphQLSchemaProvider schemaProvider) {
         profilesInterfaceRegister.register(CDPProfile.class);
         profilesInterfaceRegister.register(CDPPersona.class);
 
@@ -359,8 +451,6 @@ public class GraphQLSchemaUpdater {
                 }
             });
         }
-
-        return schema;
     }
 
 }

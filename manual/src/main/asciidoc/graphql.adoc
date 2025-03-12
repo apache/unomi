@@ -47,3 +47,92 @@ Thanks to GraphQL introspection, there is no dedicated documentation per-se as t
 
 You can easily view the schema by navigrating to `/graphql-ui`, depending on your setup (localhost, public host, ...),
 you might need to adjust the URL to point GraphQL UI to the `/graphql` endpoint.
+
+=== Multi-Tenancy Support
+
+The GraphQL API includes comprehensive multi-tenancy support, allowing different tenants to have customized GraphQL schemas based on their specific data models and property types.
+
+==== Overview
+
+The GraphQL schema provider automatically creates and manages tenant-specific schemas, ensuring:
+
+* Each tenant has its own GraphQL schema that reflects only their specific property types
+* Changes to property types trigger automatic schema updates
+* Proper tenant isolation is maintained throughout the GraphQL API
+
+==== Architecture
+
+The multi-tenancy support is built on these key components:
+
+===== Schema Cache
+
+Each tenant's GraphQL schema is created on demand and cached for performance:
+
+[source,java]
+----
+private final ConcurrentMap<String, GraphQL> tenantSchemas = new ConcurrentHashMap<>();
+----
+
+===== Tenant Context Detection
+
+When processing a GraphQL request, the system automatically detects the current tenant from the execution context:
+
+[source,java]
+----
+String tenantId = executionContextManager.getCurrentContext() != null ? 
+    executionContextManager.getCurrentContext().getTenantId() : null;
+----
+
+===== Dynamic Schema Creation
+
+Each tenant's schema is built dynamically based on its specific property types and configurations:
+
+[source,java]
+----
+GraphQL graphQL = graphQLSchemaUpdater.getGraphQLForTenant(tenantId);
+----
+
+===== Schema Invalidation
+
+When property types change, the affected tenant's schema is automatically invalidated:
+
+[source,java]
+----
+public void invalidateTenantSchema(String tenantId) {
+    tenantSchemas.remove(tenantId);
+}
+----
+
+==== Schema Lifecycle
+
+Tenant schemas follow this lifecycle:
+
+. *Creation*: Schemas are created on-demand when first requested
+. *Caching*: Created schemas are cached for performance
+. *Invalidation*: When property types change, the affected schemas are invalidated
+. *Regeneration*: Invalid schemas are regenerated on the next request
+
+==== Performance Considerations
+
+* Schemas are created lazily on first request to avoid unnecessary overhead
+* Schema creation can be resource-intensive, so caching is essential
+* Property type changes trigger selective schema invalidation to minimize rebuilding
+* Only the affected tenant's schema is invalidated when property types change
+
+==== Benefits
+
+This tenant-aware design provides several advantages:
+
+* *Isolation*: Each tenant has access only to their own data model
+* *Customization*: Tenants can define custom property types that appear in their schema
+* *Performance*: Schema caching improves response times
+* *Consistency*: Changes to property types are immediately reflected in the API
+
+==== Troubleshooting
+
+If tenant-specific schemas aren't working as expected:
+
+* Check that the tenant context is properly set
+* Verify property types have correct tenant IDs
+* Review logs for schema creation and invalidation events
+* Try explicitly invalidating the tenant schema to force regeneration

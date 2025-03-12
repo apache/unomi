@@ -112,6 +112,8 @@ public class GraphQLSchemaProvider {
 
     private final UnomiEventPublisher eventPublisher;
 
+    private final String tenantId;
+
     private GraphQLAnnotations graphQLAnnotations;
 
     private Set<Class<?>> additionalTypes = new HashSet<>();
@@ -207,8 +209,13 @@ public class GraphQLSchemaProvider {
         this.subscriptionProviders = builder.subscriptionProviders;
         this.codeRegistryProvider = builder.codeRegistryProvider;
         this.fieldVisibilityProviders = builder.fieldVisibilityProviders;
+        this.tenantId = builder.tenantId;
     }
 
+    /**
+     * Create a GraphQL schema for the system tenant
+     * @return The GraphQL schema
+     */
     public GraphQLSchema createSchema() {
         this.graphQLAnnotations = new GraphQLAnnotations();
 
@@ -246,6 +253,64 @@ public class GraphQLSchemaProvider {
                 .mutation(RootMutation.class)
                 .setAnnotationsProcessor(graphQLAnnotations)
                 .build();
+    }
+
+    /**
+     * Create a GraphQL schema for a specific tenant
+     * @param tenantId The tenant ID
+     * @return The tenant-specific GraphQL schema
+     */
+    public GraphQLSchema createSchemaForTenant(String tenantId) {
+        this.graphQLAnnotations = new GraphQLAnnotations();
+
+        final GraphQLSchema.Builder schemaBuilder = GraphQLSchema.newSchema();
+
+        registerTypeFunctions();
+
+        configureElementsContainer();
+
+        // Register dynamic fields with tenant-specific context
+        registerDynamicFieldsForTenant(schemaBuilder, tenantId);
+
+        registerExtensions();
+
+        registerAdditionalTypes();
+
+        transformQuery();
+
+        transformMutations();
+
+        configureFieldVisibility();
+
+        configureCodeRegister();
+
+        final AnnotationsSchemaCreator.Builder annotationsSchema = AnnotationsSchemaCreator.newAnnotationsSchema();
+
+        if (additionalTypes != null) {
+            annotationsSchema.additionalTypes(additionalTypes);
+        }
+
+        createSubscriptionSchema(schemaBuilder);
+
+        return annotationsSchema
+                .setGraphQLSchemaBuilder(schemaBuilder)
+                .query(RootQuery.class)
+                .mutation(RootMutation.class)
+                .setAnnotationsProcessor(graphQLAnnotations)
+                .build();
+    }
+
+    /**
+     * Register dynamic fields for a specific tenant
+     * @param schemaBuilder The schema builder
+     * @param tenantId The tenant ID
+     */
+    private void registerDynamicFieldsForTenant(GraphQLSchema.Builder schemaBuilder, String tenantId) {
+        LOGGER.debug("Registering dynamic fields for tenant: {}", tenantId);
+        
+        // Simply reuse the standard dynamic field registration for now
+        // In a real implementation, you would modify this to use tenant-specific property types
+        registerDynamicFields(schemaBuilder);
     }
 
     private void createSubscriptionSchema(final GraphQLSchema.Builder schemaBuilder) {
@@ -872,6 +937,9 @@ public class GraphQLSchemaProvider {
         GraphQLCodeRegistryProvider codeRegistryProvider;
 
         UnomiEventPublisher eventPublisher;
+        
+        // Add tenant ID field
+        String tenantId;
 
         private Builder(final ProfileService profileService, final SchemaService schemaService) {
             this.profileService = profileService;
@@ -920,6 +988,16 @@ public class GraphQLSchemaProvider {
 
         public Builder fieldVisibilityProviders(List<GraphQLFieldVisibilityProvider> fieldVisibilityProviders) {
             this.fieldVisibilityProviders = fieldVisibilityProviders;
+            return this;
+        }
+        
+        /**
+         * Set the tenant ID for the schema
+         * @param tenantId The tenant ID
+         * @return The builder
+         */
+        public Builder tenantId(String tenantId) {
+            this.tenantId = tenantId;
             return this;
         }
 

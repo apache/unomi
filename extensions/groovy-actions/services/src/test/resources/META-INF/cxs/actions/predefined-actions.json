@@ -1,0 +1,8 @@
+{
+  "actions": [
+    {
+      "name": "predefinedAction",
+      "script": "import org.apache.unomi.groovy.actions.annotations.Action\n@Action(id = \"predefinedAction\", name = \"Predefined Action\")\ndef execute() {\n  logger.info(\"Executing predefined action\")\n  return true\n}"
+    }
+  ]
+} 

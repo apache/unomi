@@ -39,6 +39,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.BufferedInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.Serializable;
 import java.net.URL;
 import java.util.*;
@@ -159,13 +160,84 @@ public abstract class AbstractMultiTypeCachingService extends AbstractContextAwa
 
     @SuppressWarnings("unchecked")
     protected <T extends Serializable> void refreshTypeCache(CacheableTypeConfig<T> config) {
-        Set<String> tenants = getTenants();
+        if (!config.isRequiresRefresh()) {
+            return;
+        }
 
+        // Only create the global state maps if we need them
+        Map<String, Map<String, T>> oldGlobalState = null;
+        Map<String, Map<String, T>> newGlobalState = null;
+        boolean hasGlobalChanges = false;
+        
+        // Initialize global state map if using global callback
+        if (config.hasPostRefreshCallback()) {
+            oldGlobalState = new HashMap<>();
+            newGlobalState = new HashMap<>();
+        }
+
+        // Get all tenants
+        Set<String> tenants = getTenants();
+        
+        // Process each tenant
         for (String tenantId : tenants) {
+            // For each tenant, only create the snapshot if we need it for a callback
+            Map<String, T> oldTenantState = null;
+            
+            // Create snapshot of tenant's current state if needed
+            if (config.hasTenantRefreshCallback() || config.hasPostRefreshCallback()) {
+                oldTenantState = new HashMap<>(cacheService.getTenantCache(tenantId, config.getType()));
+                
+                // If using global callback, add to old global state
+                if (config.hasPostRefreshCallback() && !oldTenantState.isEmpty()) {
+                    oldGlobalState.put(tenantId, oldTenantState);
+                }
+            }
+            
+            // Reload tenant data
             contextManager.executeAsTenant(tenantId, () -> {
                 List<T> items = loadItemsForTenant(tenantId, config);
                 processAndCacheItems(tenantId, items, config);
             });
+            
+            // Process tenant-specific changes if needed
+            if (config.hasTenantRefreshCallback() || config.hasPostRefreshCallback()) {
+                // Get the updated tenant state
+                Map<String, T> newTenantState = new HashMap<>(cacheService.getTenantCache(tenantId, config.getType()));
+                
+                // Add to new global state if using global callback
+                if (config.hasPostRefreshCallback() && !newTenantState.isEmpty()) {
+                    newGlobalState.put(tenantId, newTenantState);
+                }
+                
+                // Call tenant-specific callback if configured
+                if (config.hasTenantRefreshCallback()) {
+                    boolean tenantChanges = !oldTenantState.equals(newTenantState);
+                    if (tenantChanges) {
+                        try {
+                            config.getTenantRefreshCallback().accept(tenantId, oldTenantState, newTenantState);
+                        } catch (Exception e) {
+                            logger.error("Error executing tenant refresh callback for type {} and tenant {}", 
+                                config.getType().getName(), tenantId, e);
+                        }
+                        // Mark that we had changes at the global level
+                        hasGlobalChanges = true;
+                    }
+                } else {
+                    // Still need to track if there were changes for the global callback
+                    if (config.hasPostRefreshCallback() && !oldTenantState.equals(newTenantState)) {
+                        hasGlobalChanges = true;
+                    }
+                }
+            }
+        }
+
+        // Call global post-refresh callback if configured and there were changes
+        if (config.hasPostRefreshCallback() && hasGlobalChanges) {
+            try {
+                config.getPostRefreshCallback().accept(oldGlobalState, newGlobalState);
+            } catch (Exception e) {
+                logger.error("Error executing post-refresh callback for type {}", config.getType().getName(), e);
+            }
         }
     }
 
@@ -319,52 +391,81 @@ public abstract class AbstractMultiTypeCachingService extends AbstractContextAwa
             logger.debug("Found predefined {} at {}, loading... ",
                 config.getType().getSimpleName(), entryURL);
 
-            try (BufferedInputStream bis = new BufferedInputStream(entryURL.openStream())) {
-                T item = CustomObjectMapper.getObjectMapper().readValue(bis, config.getType());
-
-                // Track this item as contributed by this bundle
+            try {
                 final long bundleId = bundleContext.getBundle().getBundleId();
+                T item = null;
+
+                // Use the stream processor if available, otherwise use standard deserialization
+                if (config.hasStreamProcessor()) {
+                    try (InputStream inputStream = entryURL.openStream()) {
+                        item = config.getStreamProcessor().apply(bundleContext, entryURL, inputStream);
+                        if (item == null) {
+                            logger.warn("Stream processor returned null for {}", entryURL);
+                            continue;
+                        }
+                    } catch (Exception e) {
+                        logger.error("Error processing {} with stream processor: {}",
+                            entryURL, e.getMessage(), e);
+                        continue;
+                    }
+                } else {
+                    // Standard deserialization
+                    try (BufferedInputStream bis = new BufferedInputStream(entryURL.openStream())) {
+                        item = CustomObjectMapper.getObjectMapper().readValue(bis, config.getType());
+                    } catch (Exception e) {
+                        logger.error("Error deserializing {}: {}",
+                            entryURL, e.getMessage(), e);
+                        continue;
+                    }
+                }
+
+                // Final item variable for lambda
+                final T finalItem = item;
 
                 // Process in system context to ensure permissions
                 contextManager.executeAsSystem(() -> {
                     try {
                         // Set plugin ID if item supports it
-                        if (item instanceof PluginType) {
+                        if (finalItem instanceof PluginType) {
                             try {
-                                PluginType pluginTypeItem = (PluginType) item;
+                                PluginType pluginTypeItem = (PluginType) finalItem;
                                 pluginTypeItem.setPluginId(bundleId);
                             } catch (Exception e) {
-                                logger.warn("Error setting plugin ID on item {}: {}", item, e.getMessage());
+                                logger.warn("Error setting plugin ID on item {}: {}", finalItem, e.getMessage());
                             }
                         }
-                        if (item instanceof Item) {
-                            Item itemObj = (Item) item;
+                        if (finalItem instanceof Item) {
+                            Item itemObj = (Item) finalItem;
                             if (itemObj.getTenantId() == null) {
                                 itemObj.setTenantId(SYSTEM_TENANT);
                             }
                         }
 
+                        // Apply the URL-aware bundle processor if configured
+                        if (config.hasUrlAwareBundleItemProcessor()) {
+                            config.getUrlAwareBundleItemProcessor().accept(bundleContext, finalItem, entryURL);
+                        }
                         // Apply the bundle-aware processor if configured
-                        if (config.hasBundleItemProcessor()) {
-                            config.getBundleItemProcessor().accept(bundleContext, item);
+                        else if (config.hasBundleItemProcessor()) {
+                            config.getBundleItemProcessor().accept(bundleContext, finalItem);
                         }
                         // Apply post-processor if defined
                         else if (config.getPostProcessor() != null) {
-                            config.getPostProcessor().accept(item);
+                            config.getPostProcessor().accept(finalItem);
                         }
 
                         // Track contribution
-                        addPluginContribution(bundleId, item);
+                        addPluginContribution(bundleId, finalItem);
 
                         // Also track as PluginType if applicable
-                        if (item instanceof PluginType) {
-                            PluginType pluginTypeItem = (PluginType) item;
+                        if (finalItem instanceof PluginType) {
+                            PluginType pluginTypeItem = (PluginType) finalItem;
                             pluginTypes.computeIfAbsent(bundleId, k -> new CopyOnWriteArrayList<>()).add(pluginTypeItem);
                         }
 
                         // Add to cache
-                        String id = config.getIdExtractor().apply(item);
-                        cacheService.put(config.getItemType(), id, SYSTEM_TENANT, item);
+                        String id = config.getIdExtractor().apply(finalItem);
+                        cacheService.put(config.getItemType(), id, SYSTEM_TENANT, finalItem);
 
                         logger.info("Predefined {} registered: {}",
                             config.getType().getSimpleName(), id);
@@ -374,7 +475,7 @@ public abstract class AbstractMultiTypeCachingService extends AbstractContextAwa
                     }
                     return null;
                 });
-            } catch (IOException e) {
+            } catch (Exception e) {
                 logger.error("Error loading {} definition {}",
                     config.getType().getSimpleName(), entryURL, e);
             }

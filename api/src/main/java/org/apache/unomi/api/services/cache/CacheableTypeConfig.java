@@ -18,6 +18,7 @@ package org.apache.unomi.api.services.cache;
 
 import org.apache.unomi.api.Item;
 import org.osgi.framework.BundleContext;
+import org.apache.unomi.api.services.TriFunction;
 
 import java.io.Serializable;
 import java.util.Comparator;
@@ -25,11 +26,82 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.net.URL;
+import java.util.Map;
+import java.io.InputStream;
 
 /**
- * Configuration for a cacheable type in the multi-type cache service.
+ * Configuration for a cacheable item type in Unomi.
+ * 
+ * <p>This class defines how a specific type of item is cached, loaded, and processed within
+ * the Unomi caching system. It supports a comprehensive callback system for processing items
+ * at different stages of their lifecycle:</p>
+ * 
+ * <h2>Callback System Overview</h2>
+ * 
+ * <p>The callback system includes two major categories of callbacks:</p>
+ * 
+ * <h3>1. Item-Level Processing Callbacks</h3>
+ * <p>These callbacks operate on individual items during loading and are executed in the following
+ * order of precedence (only the first applicable callback is called):</p>
+ * <ul>
+ *   <li><b>urlAwareBundleItemProcessor</b>: Most specific, gets item, bundle context, and resource URL</li>
+ *   <li><b>bundleItemProcessor</b>: Gets item and bundle context</li>
+ *   <li><b>postProcessor</b>: Most general, gets only the item</li>
+ * </ul>
+ * 
+ * <h3>2. Cache Refresh Callbacks</h3>
+ * <p>These callbacks operate after items are loaded and cached:</p>
+ * <ul>
+ *   <li><b>tenantRefreshCallback</b>: Called for each tenant that has changes after refresh</li>
+ *   <li><b>postRefreshCallback</b>: Called once after all tenants are processed if any changes occurred</li>
+ * </ul>
+ * 
+ * <h2>Example Usage</h2>
+ * 
+ * <pre>{@code
+ * // Define a cacheable type for PropertyType
+ * CacheableTypeConfig.<PropertyType>builder(PropertyType.class, "propertyType", "properties")
+ *     .withInheritFromSystemTenant(true)
+ *     .withRequiresRefresh(true)
+ *     .withRefreshInterval(10000)
+ *     .withIdExtractor(PropertyType::getItemId)
+ *     
+ *     // Simple post-processor example
+ *     .withPostProcessor(propertyType -> {
+ *         // Normalize or initialize fields
+ *         if (propertyType.getPriority() == 0) {
+ *             propertyType.setPriority(1);
+ *         }
+ *     })
+ *     
+ *     // URL-aware processor example
+ *     .withUrlAwareBundleItemProcessor((bundleContext, propertyType, url) -> {
+ *         // Extract information from the URL path
+ *         if (url.getPath().contains("/profiles/")) {
+ *             propertyType.setTarget("profiles");
+ *         }
+ *     })
+ *     
+ *     // Tenant-specific callback example
+ *     .withTenantRefreshCallback((tenantId, oldState, newState) -> {
+ *         // Process tenant-specific changes efficiently
+ *         boolean hasChanges = !oldState.equals(newState);
+ *         if (hasChanges) {
+ *             System.out.println("Tenant " + tenantId + " property types updated");
+ *             // Update tenant-specific caches or indices
+ *         }
+ *     })
+ *     
+ *     // Global callback example
+ *     .withPostRefreshCallback((oldState, newState) -> {
+ *         // Process cross-tenant relationships or global state
+ *         System.out.println("All property types refreshed, updating type registry");
+ *         // Update cross-tenant registries or perform global operations
+ *     })
+ *     .build();
+ * }</pre>
  *
- * @param <T> the type of plugin that can be cached with this configuration
+ * @param <T> the type of the cacheable item
  */
 public class CacheableTypeConfig<T extends Serializable> {
     private final Class<T> type;
@@ -42,7 +114,11 @@ public class CacheableTypeConfig<T extends Serializable> {
     private final Consumer<T> postProcessor;
     private final boolean hasPredefinedItems;
     private final BiConsumer<BundleContext, T> bundleItemProcessor;
+    private final TriConsumer<BundleContext, T, URL> urlAwareBundleItemProcessor;
     private final Comparator<URL> urlComparator;
+    private final BiConsumer<Map<String, Map<String, T>>, Map<String, Map<String, T>>> postRefreshCallback;
+    private final TriConsumer<String, Map<String, T>, Map<String, T>> tenantRefreshCallback;
+    private final TriFunction<BundleContext, URL, InputStream, T> streamProcessor;
 
     /**
      * Private constructor used by the builder
@@ -58,7 +134,11 @@ public class CacheableTypeConfig<T extends Serializable> {
         this.postProcessor = builder.postProcessor;
         this.hasPredefinedItems = builder.hasPredefinedItems;
         this.bundleItemProcessor = builder.bundleItemProcessor;
+        this.urlAwareBundleItemProcessor = builder.urlAwareBundleItemProcessor;
         this.urlComparator = builder.urlComparator;
+        this.postRefreshCallback = builder.postRefreshCallback;
+        this.tenantRefreshCallback = builder.tenantRefreshCallback;
+        this.streamProcessor = builder.streamProcessor;
     }
 
     /**
@@ -201,6 +281,80 @@ public class CacheableTypeConfig<T extends Serializable> {
     }
 
     /**
+     * Check if this type config has a URL-aware bundle item processor.
+     *
+     * @return true if a URL-aware bundle item processor is defined, false otherwise
+     */
+    public boolean hasUrlAwareBundleItemProcessor() {
+        return urlAwareBundleItemProcessor != null;
+    }
+
+    /**
+     * Get the URL-aware bundle item processor that handles bundle-specific processing.
+     *
+     * @return the URL-aware bundle item processor
+     */
+    public TriConsumer<BundleContext, T, URL> getUrlAwareBundleItemProcessor() {
+        return urlAwareBundleItemProcessor;
+    }
+
+    /**
+     * Check if this type config has a post-refresh callback.
+     *
+     * @return true if a post-refresh callback is defined, false otherwise
+     */
+    public boolean hasPostRefreshCallback() {
+        return postRefreshCallback != null;
+    }
+
+    /**
+     * Get the post-refresh callback that is executed after all items across all tenants have been reloaded.
+     * The callback receives both old and new states for change detection.
+     *
+     * @return the post-refresh callback
+     */
+    public BiConsumer<Map<String, Map<String, T>>, Map<String, Map<String, T>>> getPostRefreshCallback() {
+        return postRefreshCallback;
+    }
+
+    /**
+     * Check if this type config has a tenant-specific refresh callback.
+     *
+     * @return true if a tenant-specific refresh callback is defined, false otherwise
+     */
+    public boolean hasTenantRefreshCallback() {
+        return tenantRefreshCallback != null;
+    }
+
+    /**
+     * Get the tenant-specific refresh callback that is executed after each tenant's items have been reloaded.
+     * The callback receives the tenant ID, old state, and new state for that specific tenant.
+     *
+     * @return the tenant-specific refresh callback
+     */
+    public TriConsumer<String, Map<String, T>, Map<String, T>> getTenantRefreshCallback() {
+        return tenantRefreshCallback;
+    }
+
+    /**
+     * Check if this configuration has a stream processor.
+     *
+     * @return true if there is a stream processor
+     */
+    public boolean hasStreamProcessor() {
+        return streamProcessor != null;
+    }
+
+    /**
+     * Get the stream processor that handles direct input stream processing.
+     *
+     * @return the stream processor
+     */
+    public TriFunction<BundleContext, URL, InputStream, T> getStreamProcessor() {
+        return streamProcessor;
+    }
+
+    /**
      * Builder for CacheableTypeConfig
      * @param <T> the type parameter for the cacheable type
      */
@@ -215,7 +369,11 @@ public class CacheableTypeConfig<T extends Serializable> {
         private Consumer<T> postProcessor = null;
         private boolean hasPredefinedItems = true;
         private BiConsumer<BundleContext, T> bundleItemProcessor = null;
+        private TriConsumer<BundleContext, T, URL> urlAwareBundleItemProcessor = null;
         private Comparator<URL> urlComparator = null;
+        private BiConsumer<Map<String, Map<String, T>>, Map<String, Map<String, T>>> postRefreshCallback = null;
+        private TriConsumer<String, Map<String, T>, Map<String, T>> tenantRefreshCallback = null;
+        private TriFunction<BundleContext, URL, InputStream, T> streamProcessor = null;
 
         private Builder(Class<T> type, String itemType, String metaInfPath) {
             this.type = type;
@@ -352,6 +510,20 @@ public class CacheableTypeConfig<T extends Serializable> {
         }
 
         /**
+         * Sets a URL-aware processor for bundle items that includes the resource URL.
+         * This is called after an item is loaded from a bundle but before it is persisted.
+         * This allows for customization based on both the item and its source URL.
+         * If both this and bundleItemProcessor are set, this one takes precedence.
+         *
+         * @param urlAwareBundleItemProcessor the TriConsumer that processes bundle items with URL access
+         * @return the builder
+         */
+        public Builder<T> withUrlAwareBundleItemProcessor(TriConsumer<BundleContext, T, URL> urlAwareBundleItemProcessor) {
+            this.urlAwareBundleItemProcessor = urlAwareBundleItemProcessor;
+            return this;
+        }
+
+        /**
          * Set a custom comparator for sorting URLs when loading predefined items.
          * 
          * <p>This comparator determines the order in which predefined items are loaded from bundles.
@@ -370,6 +542,54 @@ public class CacheableTypeConfig<T extends Serializable> {
         }
 
         /**
+         * Sets a post-refresh callback that is executed after all items across all tenants have been reloaded.
+         * This allows for comparing the old and new states to detect changes and perform additional operations.
+         * The first parameter is the old state (Map of tenant ID to a Map of item ID to item).
+         * The second parameter is the new state (same structure).
+         * 
+         * @param postRefreshCallback the callback to execute after a full refresh
+         * @return the builder
+         */
+        public Builder<T> withPostRefreshCallback(BiConsumer<Map<String, Map<String, T>>, Map<String, Map<String, T>>> postRefreshCallback) {
+            this.postRefreshCallback = postRefreshCallback;
+            return this;
+        }
+
+        /**
+         * Sets a tenant-specific refresh callback that is executed after each tenant's items have been reloaded.
+         * This allows for efficient processing of changes on a per-tenant basis.
+         * The first parameter is the tenant ID.
+         * The second parameter is the old state for this tenant (Map of item ID to item).
+         * The third parameter is the new state for this tenant (same structure).
+         * 
+         * @param tenantRefreshCallback the callback to execute after each tenant's refresh
+         * @return the builder
+         */
+        public Builder<T> withTenantRefreshCallback(TriConsumer<String, Map<String, T>, Map<String, T>> tenantRefreshCallback) {
+            this.tenantRefreshCallback = tenantRefreshCallback;
+            return this;
+        }
+
+        /**
+         * Set a stream processor that will directly process the input stream from a predefined item resource.
+         * This is an alternative to the standard deserialization process and allows for custom processing of the raw data.
+         * When this processor is defined, it takes precedence over the standard JSON deserialization.
+         *
+         * <p>The processor is given the bundle context, the URL of the resource, and the input stream to read from.
+         * It must return a fully constructed item instance or null if processing fails.</p>
+         *
+         * <p>This is particularly useful for items that require special processing of the source data before
+         * they can be instantiated, such as JSON schemas that need to be validated, parsed, or transformed.</p>
+         *
+         * @param streamProcessor the function to process the input stream
+         * @return the builder instance for method chaining
+         */
+        public Builder<T> withStreamProcessor(TriFunction<BundleContext, URL, InputStream, T> streamProcessor) {
+            this.streamProcessor = streamProcessor;
+            return this;
+        }
+
+        /**
          * Build the config.
          * 
          * <p>Creates a new immutable CacheableTypeConfig instance with the current builder settings.</p>
@@ -383,5 +603,18 @@ public class CacheableTypeConfig<T extends Serializable> {
             }
             return new CacheableTypeConfig<>(this);
         }
+    }
+
+    /**
+     * A functional interface for a consumer that accepts three arguments.
+     * Similar to BiConsumer but with a third argument.
+     *
+     * @param <T> the type of the first argument
+     * @param <U> the type of the second argument
+     * @param <V> the type of the third argument
+     */
+    @FunctionalInterface
+    public interface TriConsumer<T, U, V> {
+        void accept(T t, U u, V v);
     }
 } 

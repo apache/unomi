@@ -22,3 +22,5 @@ itests/src/main
 /.cursor/rules/osgi-injection-frameworks.mdc
 /services/data/
 /extensions/json-schema/services/data/
+# Ignore all data directories used by InMemoryPersistenceServiceImpl and integration tests
+**/data/persistence/

@@ -1149,7 +1149,10 @@ public class ProfileServiceImpl extends AbstractMultiTypeCachingService implemen
                 .withRequiresRefresh(true)
                 .withRefreshInterval(propertiesRefreshInterval)
                 .withIdExtractor(PropertyType::getItemId)
-                .withBundleItemProcessor((bundleContext, propertyType) -> {
+                .withUrlAwareBundleItemProcessor((bundleContext, propertyType, predefinedPropertyTypeURL) -> {
+                    // First set the target based on the URL path if needed
+                    setPropertyTypeTarget(predefinedPropertyTypeURL, propertyType);
+                    // Then save the property type
                     setPropertyType(propertyType);
                 })
                 .build());

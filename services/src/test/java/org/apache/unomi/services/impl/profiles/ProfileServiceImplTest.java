@@ -38,10 +38,12 @@ import org.osgi.framework.BundleEvent;
 
 import java.net.URL;
 import java.util.*;
+import java.net.MalformedURLException;
 
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.reset;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
@@ -612,6 +614,56 @@ public class ProfileServiceImplTest {
             assertEquals("system", result.getPersona().getProperty("role"));
             return null;
         });
+    }
+
+    @Test
+    public void testLoadPredefinedPropertyTypes() {
+        // Setup a specific test bundle for this test
+        Bundle testBundle = mock(Bundle.class);
+        when(testBundle.getBundleContext()).thenReturn(bundleContext);
+        when(testBundle.getBundleId()).thenReturn(123L);
+        when(testBundle.getSymbolicName()).thenReturn("org.apache.unomi.test.properties");
+        bundleContext.addBundle(testBundle);
+        
+        // Create a test property type JSON URL with a custom target in the path
+        URL propertyTypeUrl = getClass().getResource("/META-INF/cxs/properties/predefined-properties.json");
+        
+        // Reset and set up the mock to return our test URL
+        reset(bundleContext.getBundle());
+        when(bundleContext.getBundle().findEntries("META-INF/cxs/properties", "*.json", true))
+                .thenReturn(Collections.enumeration(Arrays.asList(propertyTypeUrl)));
+        
+        // Trigger the bundle event to load property types via the CacheableTypeConfig system
+        profileService.bundleChanged(new BundleEvent(BundleEvent.STARTED, testBundle));
+        
+        // Verify property types were loaded correctly
+        Collection<PropertyType> result = profileService.getTargetPropertyTypes("profiles");
+        
+        // Verify that the predefined property exists and has the correct target
+        Optional<PropertyType> firstNameProp = result.stream()
+                .filter(p -> p.getItemId().equals("firstName"))
+                .findFirst();
+                
+        assertTrue(firstNameProp.isPresent());
+        assertEquals("profiles", firstNameProp.get().getTarget());
+        assertEquals("string", firstNameProp.get().getValueTypeId());
+        
+        // Direct test of the setPropertyTypeTarget method that's used by the URL-aware processor
+        URL mockUrl;
+        try {
+            mockUrl = new URL("file:/path/to/META-INF/cxs/properties/customTarget/test-property.json");
+            PropertyType testPropertyType = new PropertyType();
+            testPropertyType.setMetadata(new Metadata("test-property"));
+            testPropertyType.setTarget(""); // Empty target
+            
+            // Call the method directly to test target setting logic
+            profileService.setPropertyTypeTarget(mockUrl, testPropertyType);
+            
+            // Verify the target was set correctly from the path
+            assertEquals("customTarget", testPropertyType.getTarget());
+        } catch (MalformedURLException e) {
+            fail("Failed to create test URL: " + e.getMessage());
+        }
     }
 
 }

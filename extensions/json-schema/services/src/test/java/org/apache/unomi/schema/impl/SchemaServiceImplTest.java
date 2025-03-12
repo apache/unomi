@@ -17,14 +17,16 @@
 package org.apache.unomi.schema.impl;
 
 import org.apache.unomi.api.services.ExecutionContextManager;
+import org.apache.unomi.api.services.SchedulerService;
+import org.apache.unomi.api.services.cache.MultiTypeCacheService;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.conditions.ConditionEvaluatorDispatcher;
 import org.apache.unomi.schema.api.JsonSchemaWrapper;
 import org.apache.unomi.schema.api.ValidationException;
 import org.apache.unomi.schema.api.ValidationError;
-import org.apache.unomi.schema.listener.JsonSchemaListener;
 import org.apache.unomi.services.TestHelper;
 import org.apache.unomi.services.impl.*;
+import org.apache.unomi.services.impl.cache.MultiTypeCacheServiceImpl;
 import org.apache.unomi.tracing.api.TracerService;
 import org.junit.Before;
 import org.junit.Test;
@@ -50,17 +52,13 @@ public class SchemaServiceImplTest {
     private TestTenantService tenantService;
     private PersistenceService persistenceService;
     private TestBundleContext bundleContext;
-    private JsonSchemaListener schemaListener;
     private KarafSecurityService securityService;
     private ExecutionContextManager contextManager;
     private TracerService tracerService;
-
+    private SchedulerService schedulerService;
+    private MultiTypeCacheService cacheService;
     private static final String TENANT_1 = "tenant1";
     private static final String SYSTEM_TENANT = "system";
-
-    private interface RuntimeSupplier<T> {
-        T get();
-    }
 
     @Before
     public void setUp() {
@@ -69,7 +67,6 @@ public class SchemaServiceImplTest {
         securityService.setCurrentSubject(securityService.createSubject(TENANT_1, true));
         contextManager = TestHelper.createExecutionContextManager(securityService);
         tracerService = TestHelper.createTracerService();
-
         // Create tenants
         contextManager.executeAsSystem(() -> {
             tenantService.createTenant(SYSTEM_TENANT, Collections.singletonMap("description", "System tenant"));
@@ -97,19 +94,20 @@ public class SchemaServiceImplTest {
         when(bundleContext.getBundle().findEntries("META-INF/cxs/schemas", "*.json", true))
                 .thenReturn(Collections.enumeration(Arrays.asList(schemasUrl)));
 
+        schedulerService = TestHelper.createSchedulerService(persistenceService, contextManager, bundleContext);
+
+        cacheService = new MultiTypeCacheServiceImpl();
+
         // Set up schema service
         schemaService = new SchemaServiceImpl();
         schemaService.setPersistenceService(persistenceService);
         schemaService.setTenantService(tenantService);
         schemaService.setContextManager(contextManager);
         schemaService.setTracerService(tracerService);
-        schemaService.init();
-
-        // Set up schema listener
-        schemaListener = new JsonSchemaListener();
-        schemaListener.setBundleContext(bundleContext);
-        schemaListener.setSchemaService(schemaService);
-        schemaListener.postConstruct();
+        schemaService.setSchedulerService(schedulerService);
+        schemaService.setBundleContext(bundleContext);
+        schemaService.setCacheService(cacheService);
+        schemaService.postConstruct();
     }
 
     @Test
@@ -767,7 +765,7 @@ public class SchemaServiceImplTest {
         String baseSchemaId = "https://unomi.apache.org/schemas/json/events/view/properties/1-0-0";
         String extension1Id = "https://vendor.test.com/schemas/json/events/dummy/extension/1-0-0";
         String extension2Id = "https://apache.org/schemas/json/events/system/extension/1-0-0";
-        
+
         // 1. Create base view event schema in system tenant
         contextManager.executeAsSystem(() -> {
             try {
@@ -775,7 +773,7 @@ public class SchemaServiceImplTest {
                 JsonSchemaWrapper baseSchema1 = loadSchemaFromResource("/META-INF/cxs/schemas/view-event-schema.json", SYSTEM_TENANT);
                 baseSchema1.setTenantId(SYSTEM_TENANT);
                 persistenceService.save(baseSchema1);
-                
+
                 // Load system tenant extension
                 JsonSchemaWrapper systemExtSchema = loadSchemaFromResource("/META-INF/cxs/schemas/system-extension.json", SYSTEM_TENANT);
                 systemExtSchema.setTenantId(SYSTEM_TENANT);
@@ -785,7 +783,7 @@ public class SchemaServiceImplTest {
                 throw new RuntimeException(e);
             }
         });
-        
+
         // 2. Create tenant extension
         contextManager.executeAsTenant(TENANT_1, () -> {
             try {
@@ -798,132 +796,132 @@ public class SchemaServiceImplTest {
                 throw new RuntimeException(e);
             }
         });
-        
+
         // Refresh schemas to load all schemas
         schemaService.refreshJSONSchemas();
-        
+
         // 3. Test the dynamic merging functionality during validation
-        
+
         // From Tenant 1 Context - should apply both tenant and system extensions
         contextManager.executeAsTenant(TENANT_1, () -> {
             try {
                 // Test data validation with extensions
-                
+
                 // Data with only base schema properties - should fail (missing required properties from extensions)
                 String baseOnlyData = "{ \"source\": \"web\", \"url\": \"https://example.org\" }";
-                
+
                 // Data with all required properties - should pass validation
                 String fullData = "{ \"source\": \"web\", \"url\": \"https://example.org\", \"myNewProp\": \"value\", \"systemProp\": \"value\" }";
-                
+
                 // Validate directly using the schema - this should trigger dynamic merging
                 boolean baseOnlyValid = schemaService.isValid(baseOnlyData, baseSchemaId);
                 boolean fullDataValid = schemaService.isValid(fullData, baseSchemaId);
-                
+
                 assertFalse("Data with only base properties should fail validation", baseOnlyValid);
                 assertTrue("Data with all extension properties should pass validation", fullDataValid);
-                
+
                 // Validate directly against the extensions to ensure they're applied separately
                 boolean missingTenantProp = schemaService.isValid(
-                    "{ \"source\": \"web\", \"url\": \"https://example.org\", \"systemProp\": \"value\" }", 
+                    "{ \"source\": \"web\", \"url\": \"https://example.org\", \"systemProp\": \"value\" }",
                     baseSchemaId);
                 boolean missingSystemProp = schemaService.isValid(
-                    "{ \"source\": \"web\", \"url\": \"https://example.org\", \"myNewProp\": \"value\" }", 
+                    "{ \"source\": \"web\", \"url\": \"https://example.org\", \"myNewProp\": \"value\" }",
                     baseSchemaId);
-                    
+
                 assertFalse("Should fail without tenant extension property", missingTenantProp);
                 assertFalse("Should fail without system extension property", missingSystemProp);
-                
+
                 return null;
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
         });
-        
+
         // From System Context - should only apply system extension
         contextManager.executeAsSystem(() -> {
             try {
                 // Data with only base schema properties - should fail (missing system extension property)
                 String baseOnlyData = "{ \"source\": \"web\", \"url\": \"https://example.org\" }";
-                
+
                 // Data with base + system extension properties - should pass
                 String withSystemData = "{ \"source\": \"web\", \"url\": \"https://example.org\", \"systemProp\": \"value\" }";
-                
+
                 // Data with tenant extension property - should be ignored in system context
                 String withTenantData = "{ \"source\": \"web\", \"url\": \"https://example.org\", \"systemProp\": \"value\", \"myNewProp\": \"value\" }";
-                
+
                 // Validate directly using the schema - this should trigger dynamic merging
                 boolean baseOnlyValid = schemaService.isValid(baseOnlyData, baseSchemaId);
                 boolean withSystemValid = schemaService.isValid(withSystemData, baseSchemaId);
                 boolean withTenantValid = schemaService.isValid(withTenantData, baseSchemaId);
-                
+
                 assertFalse("Data with only base properties should fail validation", baseOnlyValid);
                 assertTrue("Data with system properties should pass validation", withSystemValid);
                 assertTrue("Data with tenant property should pass validation in system context", withTenantValid);
-                
+
                 return null;
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
         });
-        
+
         // 4. Test from a fresh tenant that doesn't have its own extensions
         final String TENANT_2 = "tenant2";
         contextManager.executeAsSystem(() -> {
             tenantService.createTenant(TENANT_2, Collections.singletonMap("description", "Tenant 2"));
             return null;
         });
-        
+
         // New tenant should inherit system extensions but not tenant1 extensions
         contextManager.executeAsTenant(TENANT_2, () -> {
             try {
                 // Data with only base schema properties - should fail (missing system extension property)
                 String baseOnlyData = "{ \"source\": \"web\", \"url\": \"https://example.org\" }";
-                
+
                 // Data with base + system extension properties - should pass
                 String withSystemData = "{ \"source\": \"web\", \"url\": \"https://example.org\", \"systemProp\": \"value\" }";
-                
+
                 // Data with tenant1 extension property - should be ignored (not tenant2's extension)
                 String withTenantData = "{ \"source\": \"web\", \"url\": \"https://example.org\", \"systemProp\": \"value\", \"myNewProp\": \"value\" }";
-                
+
                 // Validate directly using the schema - this should trigger dynamic merging
                 boolean baseOnlyValid = schemaService.isValid(baseOnlyData, baseSchemaId);
                 boolean withSystemValid = schemaService.isValid(withSystemData, baseSchemaId);
                 boolean withTenantValid = schemaService.isValid(withTenantData, baseSchemaId);
-                
+
                 assertFalse("Data with only base properties should fail validation", baseOnlyValid);
                 assertTrue("Data with system properties should pass validation", withSystemValid);
                 assertTrue("Data with other tenant's property should pass validation (ignored)", withTenantValid);
-                
+
                 return null;
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
         });
-        
+
         // 5. Verify we can add a tenant-specific extension to tenant2 and it will be applied
         contextManager.executeAsTenant(TENANT_2, () -> {
             try {
                 // Load tenant2 extension schema from file
                 JsonSchemaWrapper tenant2ExtSchema = loadSchemaFromResource("/META-INF/cxs/schemas/tenant2-extension.json", TENANT_2);
                 persistenceService.save(tenant2ExtSchema);
-                
+
                 // Refresh schemas
                 schemaService.refreshJSONSchemas();
-                
+
                 // Now tenant2 should require tenant2Prop in addition to systemProp
-                
+
                 // Data with just system property - should now fail (missing tenant2 property)
                 String withSystemOnly = "{ \"source\": \"web\", \"url\": \"https://example.org\", \"systemProp\": \"value\" }";
-                
+
                 // Data with system + tenant2 properties - should pass
                 String withTenant2Prop = "{ \"source\": \"web\", \"url\": \"https://example.org\", \"systemProp\": \"value\", \"tenant2Prop\": \"value\" }";
-                
+
                 boolean systemOnlyValid = schemaService.isValid(withSystemOnly, baseSchemaId);
                 boolean withTenant2Valid = schemaService.isValid(withTenant2Prop, baseSchemaId);
-                
+
                 assertFalse("Should now fail without tenant2 extension property", systemOnlyValid);
                 assertTrue("Should pass with tenant2 extension property", withTenant2Valid);
-                
+
                 return null;
             } catch (Exception e) {
                 throw new RuntimeException(e);
@@ -1261,62 +1259,6 @@ public class SchemaServiceImplTest {
                 return null;
             }
         });
-    }
-
-    @Test
-    public void testUnloadPredefinedSchema() throws IOException {
-        // Setup - create a new instance of the schema service with known predefined schemas
-        URL predefinedSchemaUrl = getClass().getResource("/META-INF/cxs/schemas/predefined-schemas.json");
-        assertNotNull("Predefined schema file should exist", predefinedSchemaUrl);
-
-        // 1. Load the predefined schema
-        try (InputStream predefinedSchemaStream = predefinedSchemaUrl.openStream()) {
-            // Load into the schema service
-            schemaService.loadPredefinedSchema(predefinedSchemaStream);
-        }
-
-        // Refresh schemas
-        schemaService.refreshJSONSchemas();
-
-        // Verify predefined schema is loaded
-        contextManager.executeAsSystem(() -> {
-            String testEventSchemaId = "https://unomi.apache.org/schemas/json/events/test";
-            JsonSchemaWrapper testSchema = schemaService.getSchema(testEventSchemaId);
-            assertNotNull("Predefined schema should be loaded", testSchema);
-            assertEquals("Schema should have correct ID", testEventSchemaId, testSchema.getItemId());
-            return null;
-        });
-
-        // 2. Now unload the predefined schema
-        try (InputStream predefinedSchemaStream = predefinedSchemaUrl.openStream()) {
-            boolean unloaded = schemaService.unloadPredefinedSchema(predefinedSchemaStream);
-            assertTrue("Schema should be successfully unloaded", unloaded);
-        }
-
-        // Refresh schemas
-        schemaService.refreshJSONSchemas();
-
-        // 3. Verify the schema is no longer available
-        contextManager.executeAsSystem(() -> {
-            String testEventSchemaId = "https://unomi.apache.org/schemas/json/events/test";
-            JsonSchemaWrapper testSchema = schemaService.getSchema(testEventSchemaId);
-            assertNull("Predefined schema should be unloaded", testSchema);
-            return null;
-        });
-
-        // 4. Test unloading a non-existent schema
-        try (InputStream nonExistentSchemaStream =
-                new ByteArrayInputStream(
-                        "{ \"$id\": \"https://unomi.apache.org/schemas/json/events/non-existant\", \"$schema\": \"https://json-schema.org/draft/2019-09/schema\", \"self\": { \"name\": \"non-existent\", \"target\": \"test\" }, \"type\": \"object\" }".getBytes(StandardCharsets.UTF_8))) {
-            boolean unloaded = schemaService.unloadPredefinedSchema(nonExistentSchemaStream);
-            assertFalse("Unloading non-existent schema should return false", unloaded);
-        }
-
-        // 5. Test unloading an invalid schema
-        try (InputStream invalidSchemaStream = new ByteArrayInputStream("{ not valid json".getBytes(StandardCharsets.UTF_8))) {
-            boolean unloaded = schemaService.unloadPredefinedSchema(invalidSchemaStream);
-            assertFalse("Unloading invalid schema should return false", unloaded);
-        }
     }
 
     private JsonSchemaWrapper loadSchemaFromResource(String resourcePath, String tenantId) throws IOException {

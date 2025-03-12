@@ -27,6 +27,8 @@
     <reference id="tenantService" interface="org.apache.unomi.api.tenants.TenantService"/>
     <reference id="contextManager" interface="org.apache.unomi.api.services.ExecutionContextManager"/>
     <reference id="tracerService" interface="org.apache.unomi.tracing.api.TracerService"/>
+    <reference id="schedulerService" interface="org.apache.unomi.api.services.SchedulerService"/>
+    <reference id="cacheService" interface="org.apache.unomi.api.services.cache.MultiTypeCacheService" />
 
     <!-- Configuration -->
     <cm:property-placeholder persistent-id="org.apache.unomi.schema" update-strategy="reload">
@@ -37,29 +39,19 @@
 
     <!-- Beans -->
     <bean id="schemaServiceImpl" class="org.apache.unomi.schema.impl.SchemaServiceImpl"
-          init-method="init" destroy-method="destroy">
+          init-method="postConstruct" destroy-method="preDestroy">
         <property name="persistenceService" ref="persistenceService"/>
         <property name="scopeService" ref="scopeService"/>
         <property name="tenantService" ref="tenantService"/>
         <property name="contextManager" ref="contextManager"/>
         <property name="tracerService" ref="tracerService"/>
         <property name="jsonSchemaRefreshInterval" value="${json.schema.refresh.interval}"/>
-    </bean>
-
-    <bean id="jsonSchemaListenerImpl" class="org.apache.unomi.schema.listener.JsonSchemaListener"
-          init-method="postConstruct" destroy-method="preDestroy">
-        <property name="bundleContext" ref="blueprintBundleContext"/>
-        <property name="schemaService" ref="schemaServiceImpl"/>
-        <property name="contextManager" ref="contextManager"/>
+        <property name="schedulerService" ref="schedulerService"/>
+        <property name="bundleContext" ref="blueprintBundleContext" />
+        <property name="cacheService" ref="cacheService" />
     </bean>
 
     <!-- Services -->
     <service id="schemaService" ref="schemaServiceImpl" interface="org.apache.unomi.schema.api.SchemaService"/>
-
-    <service id="jsonSchemaListener" ref="jsonSchemaListenerImpl">
-        <interfaces>
-            <value>org.osgi.framework.SynchronousBundleListener</value>
-        </interfaces>
-    </service>
 
 </blueprint>

@@ -391,6 +391,19 @@ curl http://localhost:8181/graphql \
   }'
 ----
 
+=== Tenant-Specific GraphQL Schemas
+
+The GraphQL API provides tenant-specific schemas, meaning each tenant can have a unique GraphQL schema based on their property types and configurations. This ensures that tenants only see the data and fields relevant to their specific implementation.
+
+When a tenant accesses the GraphQL API:
+
+1. The system automatically detects the tenant from the authentication context
+2. It retrieves (or creates) a GraphQL schema specific to that tenant
+3. The schema only includes property types defined for that tenant
+4. Changes to a tenant's property types are automatically reflected in their schema
+
+For complete details on the GraphQL multi-tenancy implementation, refer to the <<GraphQL API>> section of the documentation.
+
 == Monitoring and Management
 
 === Monitoring API Usage

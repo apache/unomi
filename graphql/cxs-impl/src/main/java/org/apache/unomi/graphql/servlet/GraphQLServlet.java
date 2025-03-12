@@ -19,7 +19,9 @@ package org.apache.unomi.graphql.servlet;
 import com.fasterxml.jackson.core.type.TypeReference;
 import graphql.ExecutionInput;
 import graphql.ExecutionResult;
+import graphql.GraphQL;
 import graphql.introspection.IntrospectionQuery;
+import org.apache.unomi.api.services.ExecutionContextManager;
 import org.apache.unomi.api.tenants.TenantService;
 import org.apache.unomi.graphql.schema.GraphQLSchemaUpdater;
 import org.apache.unomi.graphql.services.ServiceManager;
@@ -31,6 +33,8 @@ import org.eclipse.jetty.websocket.servlet.WebSocketServlet;
 import org.eclipse.jetty.websocket.servlet.WebSocketServletFactory;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
@@ -50,11 +54,15 @@ public class GraphQLServlet extends WebSocketServlet {
 
     public static final String SCHEMA_URL = "/schema.json";
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(GraphQLServlet.class);
+
     private GraphQLSchemaUpdater graphQLSchemaUpdater;
 
     private ServiceManager serviceManager;
 
     private TenantService tenantService;
+    
+    private ExecutionContextManager executionContextManager;
 
     private GraphQLServletSecurityValidator validator;
 
@@ -71,6 +79,11 @@ public class GraphQLServlet extends WebSocketServlet {
     @Reference
     public void setTenantService(TenantService tenantService) {
         this.tenantService = tenantService;
+    }
+    
+    @Reference
+    public void setExecutionContextManager(ExecutionContextManager executionContextManager) {
+        this.executionContextManager = executionContextManager;
     }
 
     @Override
@@ -163,6 +176,23 @@ public class GraphQLServlet extends WebSocketServlet {
             throw new IllegalArgumentException("Query cannot be empty or null");
         }
 
+        // Get the current tenant ID from the execution context
+        String tenantId = null;
+        try {
+            tenantId = executionContextManager.getCurrentContext() != null ? 
+                executionContextManager.getCurrentContext().getTenantId() : null;
+        } catch (Exception e) {
+            // If we can't get the tenant ID, fall back to system tenant
+            LOGGER.debug("Could not determine tenant ID, falling back to system tenant", e);
+        }
+
+        LOGGER.debug("Executing GraphQL request for tenant: {}", tenantId);
+        
+        // Get tenant-specific GraphQL instance or fall back to default
+        final GraphQL graphQL = (tenantId != null) 
+                ? graphQLSchemaUpdater.getGraphQLForTenant(tenantId)
+                : graphQLSchemaUpdater.getGraphQL();
+
         final ExecutionInput executionInput = ExecutionInput.newExecutionInput()
                 .query(query)
                 .variables(variables)
@@ -170,7 +200,7 @@ public class GraphQLServlet extends WebSocketServlet {
                 .context(serviceManager)
                 .build();
 
-        final ExecutionResult executionResult = graphQLSchemaUpdater.getGraphQL().execute(executionInput);
+        final ExecutionResult executionResult = graphQL.execute(executionInput);
 
         final Map<String, Object> specificationResult = executionResult.toSpecification();
 
