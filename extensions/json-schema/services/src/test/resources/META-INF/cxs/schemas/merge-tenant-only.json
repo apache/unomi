@@ -1,5 +1,5 @@
 {
-  "$id": "tenant-only",
+  "$id": "https://unomi.apache.org/schemas/json/test/tenant-only",
   "$schema": "https://json-schema.org/draft/2019-09/schema",
   "self": {
     "name": "tenant-only",
@@ -12,4 +12,4 @@
     }
   },
   "required": ["tenantOnlyProp"]
-} 
+}

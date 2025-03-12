@@ -2,7 +2,7 @@
   "$id": "https://unomi.apache.org/schemas/json/events/tenant-event-schema",
   "$schema": "https://json-schema.org/draft/2019-09/schema",
   "self": {
-    "name": "test-event",
+    "name": "test_event",
     "target": "events"
   },
   "type": "object",

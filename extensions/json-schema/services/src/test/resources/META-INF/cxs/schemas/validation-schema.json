@@ -1,5 +1,5 @@
 {
-  "$id": "test-validation",
+  "$id": "https://unomi.apache.org/schemas/json/test/test-validation",
   "$schema": "https://json-schema.org/draft/2019-09/schema",
   "self": {
     "name": "validation",
@@ -12,4 +12,4 @@
       "type": "string"
     }
   }
-} 
+}

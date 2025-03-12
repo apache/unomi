@@ -1,5 +1,5 @@
 {
-  "$id": "shared-schema",
+  "$id": "https://unomi.apache.org/schemas/json/test/shared-schema",
   "$schema": "https://json-schema.org/draft/2019-09/schema",
   "self": {
     "name": "tenant-version",
@@ -12,4 +12,4 @@
     }
   },
   "required": ["tenantSharedProp"]
-} 
+}

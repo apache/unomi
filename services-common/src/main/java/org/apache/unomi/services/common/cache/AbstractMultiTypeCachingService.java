@@ -658,9 +658,12 @@ public abstract class AbstractMultiTypeCachingService extends AbstractContextAwa
      * @param itemType the type identifier for the item
      */
     protected <T extends Item & Serializable> void saveItem(T item, Function<T, String> idExtractor, String itemType) {
-        if (item instanceof MetadataItem && ((MetadataItem) item).getMetadata() == null || ((MetadataItem) item).getMetadata().getId() == null) {
-            logger.warn("Cannot save item without metadata ID");
-            return;
+        if (item instanceof MetadataItem) {
+            MetadataItem metadataItem = (MetadataItem) item;
+            if (metadataItem.getMetadata() == null || metadataItem.getMetadata().getId() == null) {
+                logger.warn("Cannot save metadata item without metadata ID");
+                return;
+            }
         }
 
         String currentTenant = contextManager.getCurrentContext().getTenantId();

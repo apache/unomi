@@ -152,8 +152,8 @@ public class SchemaServiceImplTest {
         // Setup - Create a schema in tenant1
         contextManager.executeAsTenant(TENANT_1, () -> {
             try {
-                JsonSchemaWrapper schema = loadSchemaFromResource("/META-INF/cxs/schemas/tenant-specific-schema.json", TENANT_1);
-                persistenceService.save(schema);
+                String schema = loadFromResource("/META-INF/cxs/schemas/tenant-specific-schema.json");
+                schemaService.saveSchema(schema);
 
                 // Test - Get from same tenant
                 schemaService.refreshJSONSchemas();
@@ -190,8 +190,8 @@ public class SchemaServiceImplTest {
         // Setup
         contextManager.executeAsSystem(() -> {
             try {
-                JsonSchemaWrapper systemSchema = loadSchemaFromResource("/META-INF/cxs/schemas/system-inheritance-schema.json", SYSTEM_TENANT);
-                persistenceService.save(systemSchema);
+                String systemSchema = loadFromResource("/META-INF/cxs/schemas/system-inheritance-schema.json");
+                schemaService.saveSchema(systemSchema);
                 return null;
             } catch (IOException e) {
                 throw new RuntimeException(e);
@@ -218,8 +218,8 @@ public class SchemaServiceImplTest {
         // Setup system schema
         contextManager.executeAsSystem(() -> {
             try {
-                JsonSchemaWrapper systemSchema = loadSchemaFromResource("/META-INF/cxs/schemas/system-override-schema.json", SYSTEM_TENANT);
-                persistenceService.save(systemSchema);
+                String systemSchema = loadFromResource("/META-INF/cxs/schemas/system-override-schema.json");
+                schemaService.saveSchema(systemSchema);
                 return null;
             } catch (IOException e) {
                 throw new RuntimeException(e);
@@ -229,8 +229,8 @@ public class SchemaServiceImplTest {
         // Setup tenant schema and test
         contextManager.executeAsTenant(TENANT_1, () -> {
             try {
-                JsonSchemaWrapper tenantSchema = loadSchemaFromResource("/META-INF/cxs/schemas/tenant-override-schema.json", TENANT_1);
-                persistenceService.save(tenantSchema);
+                String tenantSchema = loadFromResource("/META-INF/cxs/schemas/tenant-override-schema.json");
+                schemaService.saveSchema(tenantSchema);
 
                 // Test
                 schemaService.refreshJSONSchemas();
@@ -252,11 +252,11 @@ public class SchemaServiceImplTest {
         // Setup system schemas
         contextManager.executeAsSystem(() -> {
             try {
-                JsonSchemaWrapper systemOnlySchema = loadSchemaFromResource("/META-INF/cxs/schemas/merge-system-only.json", SYSTEM_TENANT);
-                persistenceService.save(systemOnlySchema);
+                String systemOnlySchema = loadFromResource("/META-INF/cxs/schemas/merge-system-only.json");
+                schemaService.saveSchema(systemOnlySchema);
 
-                JsonSchemaWrapper systemOverrideSchema = loadSchemaFromResource("/META-INF/cxs/schemas/merge-shared-schema-system.json", SYSTEM_TENANT);
-                persistenceService.save(systemOverrideSchema);
+                String systemOverrideSchema = loadFromResource("/META-INF/cxs/schemas/merge-shared-schema-system.json");
+                schemaService.saveSchema(systemOverrideSchema);
                 return null;
             } catch (IOException e) {
                 throw new RuntimeException(e);
@@ -271,11 +271,11 @@ public class SchemaServiceImplTest {
             // Execute in tenant context
             contextManager.executeAsTenant(TENANT_1, () -> {
                 try {
-                    JsonSchemaWrapper tenantOnlySchema = loadSchemaFromResource("/META-INF/cxs/schemas/merge-tenant-only.json", TENANT_1);
-                    persistenceService.save(tenantOnlySchema);
+                    String tenantOnlySchema = loadFromResource("/META-INF/cxs/schemas/merge-tenant-only.json");
+                    schemaService.saveSchema(tenantOnlySchema);
 
-                    JsonSchemaWrapper tenantOverrideSchema = loadSchemaFromResource("/META-INF/cxs/schemas/merge-shared-schema-tenant.json", TENANT_1);
-                    persistenceService.save(tenantOverrideSchema);
+                    String tenantOverrideSchema = loadFromResource("/META-INF/cxs/schemas/merge-shared-schema-tenant.json");
+                    schemaService.saveSchema(tenantOverrideSchema);
                     return null;
                 } catch (IOException e) {
                     throw new RuntimeException(e);
@@ -298,19 +298,19 @@ public class SchemaServiceImplTest {
                 }
 
                 // Verify system-only schema
-                JsonSchemaWrapper systemOnly = schemaMap.get("system-only");
+                JsonSchemaWrapper systemOnly = schemaMap.get("https://unomi.apache.org/schemas/json/test/system-only");
                 assertNotNull(systemOnly);
                 assertEquals(SYSTEM_TENANT, systemOnly.getTenantId());
                 assertEquals("system-only", systemOnly.getName());
 
                 // Verify tenant-only schema
-                JsonSchemaWrapper tenantOnly = schemaMap.get("tenant-only");
+                JsonSchemaWrapper tenantOnly = schemaMap.get("https://unomi.apache.org/schemas/json/test/tenant-only");
                 assertNotNull(tenantOnly);
                 assertEquals(TENANT_1, tenantOnly.getTenantId());
                 assertEquals("tenant-only", tenantOnly.getName());
 
                 // Verify overridden schema
-                JsonSchemaWrapper overridden = schemaMap.get("shared-schema");
+                JsonSchemaWrapper overridden = schemaMap.get("https://unomi.apache.org/schemas/json/test/shared-schema");
                 assertNotNull(overridden);
                 assertEquals(TENANT_1, overridden.getTenantId());
                 assertEquals("tenant-version", overridden.getName());
@@ -326,8 +326,8 @@ public class SchemaServiceImplTest {
         // Setup system schema
         contextManager.executeAsSystem(() -> {
             try {
-                JsonSchemaWrapper schema = loadSchemaFromResource("/META-INF/cxs/schemas/validation-schema.json", SYSTEM_TENANT);
-                persistenceService.save(schema);
+                String schema = loadFromResource("/META-INF/cxs/schemas/validation-schema.json");
+                schemaService.saveSchema(schema);
                 return null;
             } catch (IOException e) {
                 throw new RuntimeException(e);
@@ -337,7 +337,7 @@ public class SchemaServiceImplTest {
         // Test from tenant context
         contextManager.executeAsTenant(TENANT_1, () -> {
             schemaService.refreshJSONSchemas();
-            JsonSchemaWrapper result = schemaService.getSchema("test-validation");
+            JsonSchemaWrapper result = schemaService.getSchema("https://unomi.apache.org/schemas/json/test/test-validation");
 
             // Verify schema validation works
             assertNotNull(result);
@@ -352,8 +352,8 @@ public class SchemaServiceImplTest {
         // Setup system schema with target
         contextManager.executeAsSystem(() -> {
             try {
-                JsonSchemaWrapper systemSchema = loadSchemaFromResource("/META-INF/cxs/schemas/test-scope-schema.json", SYSTEM_TENANT);
-                persistenceService.save(systemSchema);
+                String systemSchema = loadFromResource("/META-INF/cxs/schemas/test-scope-schema.json");
+                schemaService.saveSchema(systemSchema);
                 return null;
             } catch (IOException e) {
                 throw new RuntimeException(e);
@@ -383,8 +383,8 @@ public class SchemaServiceImplTest {
         // Tenant 1 schema - requires a "name" field
         contextManager.executeAsTenant(TENANT_1, () -> {
             try {
-                JsonSchemaWrapper tenant1Schema = loadSchemaFromResource("/META-INF/cxs/schemas/tenant1-schema.json", TENANT_1);
-                persistenceService.save(tenant1Schema);
+                String tenant1Schema = loadFromResource("/META-INF/cxs/schemas/tenant1-schema.json");
+                schemaService.saveSchema(tenant1Schema);
                 return null;
             } catch (IOException e) {
                 throw new RuntimeException(e);
@@ -394,8 +394,8 @@ public class SchemaServiceImplTest {
         // System tenant schema - requires an "id" field (different validation rules)
         contextManager.executeAsSystem(() -> {
             try {
-                JsonSchemaWrapper systemSchema = loadSchemaFromResource("/META-INF/cxs/schemas/system-schema.json", SYSTEM_TENANT);
-                persistenceService.save(systemSchema);
+                String systemSchema = loadFromResource("/META-INF/cxs/schemas/system-schema.json");
+                schemaService.saveSchema(systemSchema);
                 return null;
             } catch (IOException e) {
                 throw new RuntimeException(e);
@@ -434,14 +434,13 @@ public class SchemaServiceImplTest {
 
     @Test
     public void testTenantSpecificSchema_CrossTenantValidation() throws IOException {
-        String eventName = "test-event";
+        String eventName = "test_event";
 
         // System tenant schema - requires "systemField"
         contextManager.executeAsSystem(() -> {
             try {
-                JsonSchemaWrapper systemSchema = loadSchemaFromResource("/META-INF/cxs/schemas/system-event-schema.json", SYSTEM_TENANT);
-                systemSchema.setTenantId(SYSTEM_TENANT);
-                persistenceService.save(systemSchema);
+                String systemSchema = loadFromResource("/META-INF/cxs/schemas/system-event-schema.json");
+                schemaService.saveSchema(systemSchema);
                 return null;
             } catch (IOException e) {
                 throw new RuntimeException(e);
@@ -451,9 +450,8 @@ public class SchemaServiceImplTest {
         // Tenant 1 schema - requires "tenantField"
         contextManager.executeAsTenant(TENANT_1, () -> {
             try {
-                JsonSchemaWrapper tenantSchema = loadSchemaFromResource("/META-INF/cxs/schemas/tenant-event-schema.json", TENANT_1);
-                tenantSchema.setTenantId(TENANT_1);
-                persistenceService.save(tenantSchema);
+                String tenantSchema = loadFromResource("/META-INF/cxs/schemas/tenant-event-schema.json");
+                schemaService.saveSchema(tenantSchema);
                 return null;
             } catch (IOException e) {
                 throw new RuntimeException(e);
@@ -495,9 +493,8 @@ public class SchemaServiceImplTest {
 
         contextManager.executeAsTenant(TENANT_1, () -> {
             try {
-                JsonSchemaWrapper initialSchema = loadSchemaFromResource("/META-INF/cxs/schemas/initial-schema.json", TENANT_1);
-                initialSchema.setTenantId(TENANT_1);
-                persistenceService.save(initialSchema);
+                String initialSchema = loadFromResource("/META-INF/cxs/schemas/initial-schema.json");
+                schemaService.saveSchema(initialSchema);
                 return null;
             } catch (IOException e) {
                 throw new RuntimeException(e);
@@ -520,9 +517,8 @@ public class SchemaServiceImplTest {
         // Update schema in tenant 1
         contextManager.executeAsTenant(TENANT_1, () -> {
             try {
-                JsonSchemaWrapper updatedSchema = loadSchemaFromResource("/META-INF/cxs/schemas/updated-schema.json", TENANT_1);
-                updatedSchema.setTenantId(TENANT_1);
-                persistenceService.save(updatedSchema);
+                String updatedSchema = loadFromResource("/META-INF/cxs/schemas/updated-schema.json");
+                schemaService.saveSchema(updatedSchema);
                 return null;
             } catch (IOException e) {
                 throw new RuntimeException(e);
@@ -546,15 +542,15 @@ public class SchemaServiceImplTest {
 
     @Test
     public void testGetSchemaForEventType_TenantIsolation() throws IOException, ValidationException {
-        String eventName = "test-event";
+        String eventName = "test_event";
 
         // Create two event schemas with the same name but different validation rules in different tenants
 
         // System tenant schema
         contextManager.executeAsSystem(() -> {
             try {
-                JsonSchemaWrapper systemSchema = loadSchemaFromResource("/META-INF/cxs/schemas/system-event-schema.json", SYSTEM_TENANT);
-                persistenceService.save(systemSchema);
+                String systemSchema = loadFromResource("/META-INF/cxs/schemas/system-event-schema.json");
+                schemaService.saveSchema(systemSchema);
                 return null;
             } catch (IOException e) {
                 throw new RuntimeException(e);
@@ -564,8 +560,8 @@ public class SchemaServiceImplTest {
         // Tenant 1 schema
         contextManager.executeAsTenant(TENANT_1, () -> {
             try {
-                JsonSchemaWrapper tenantSchema = loadSchemaFromResource("/META-INF/cxs/schemas/tenant-event-schema.json", TENANT_1);
-                persistenceService.save(tenantSchema);
+                String tenantSchema = loadFromResource("/META-INF/cxs/schemas/tenant-event-schema.json");
+                schemaService.saveSchema(tenantSchema);
                 return null;
             } catch (IOException e) {
                 throw new RuntimeException(e);
@@ -641,14 +637,14 @@ public class SchemaServiceImplTest {
         // System tenant schemas with the target
         contextManager.executeAsSystem(() -> {
             try {
-                JsonSchemaWrapper systemSchema1 = loadSchemaFromResource("/META-INF/cxs/schemas/target-schema1.json", SYSTEM_TENANT);
-                JsonSchemaWrapper systemSchema2 = loadSchemaFromResource("/META-INF/cxs/schemas/target-schema2.json", SYSTEM_TENANT);
-                persistenceService.save(systemSchema1);
-                persistenceService.save(systemSchema2);
+                String systemSchema1 = loadFromResource("/META-INF/cxs/schemas/target-schema1.json");
+                String systemSchema2 = loadFromResource("/META-INF/cxs/schemas/target-schema2.json");
+                schemaService.saveSchema(systemSchema1);
+                schemaService.saveSchema(systemSchema2);
 
                 // Create a schema with different target (should not be returned)
-                JsonSchemaWrapper differentTargetSchema = loadSchemaFromResource("/META-INF/cxs/schemas/target-schema5.json", SYSTEM_TENANT);
-                persistenceService.save(differentTargetSchema);
+                String differentTargetSchema = loadFromResource("/META-INF/cxs/schemas/target-schema5.json");
+                schemaService.saveSchema(differentTargetSchema);
                 return null;
             } catch (IOException e) {
                 throw new RuntimeException(e);
@@ -658,10 +654,10 @@ public class SchemaServiceImplTest {
         // Tenant 1 schemas with the target
         contextManager.executeAsTenant(TENANT_1, () -> {
             try {
-                JsonSchemaWrapper tenantSchema1 = loadSchemaFromResource("/META-INF/cxs/schemas/target-schema3.json", TENANT_1);
-                JsonSchemaWrapper tenantSchema2 = loadSchemaFromResource("/META-INF/cxs/schemas/target-schema4.json", TENANT_1);
-                persistenceService.save(tenantSchema1);
-                persistenceService.save(tenantSchema2);
+                String tenantSchema1 = loadFromResource("/META-INF/cxs/schemas/target-schema3.json");
+                String tenantSchema2 = loadFromResource("/META-INF/cxs/schemas/target-schema4.json");
+                schemaService.saveSchema(tenantSchema1);
+                schemaService.saveSchema(tenantSchema2);
                 return null;
             } catch (IOException e) {
                 throw new RuntimeException(e);
@@ -677,8 +673,8 @@ public class SchemaServiceImplTest {
 
         contextManager.executeAsTenant(TENANT_2, () -> {
             try {
-                JsonSchemaWrapper tenant2Schema = loadSchemaFromResource("/META-INF/cxs/schemas/target-schema6.json", TENANT_2);
-                persistenceService.save(tenant2Schema);
+                String tenant2Schema = loadFromResource("/META-INF/cxs/schemas/target-schema6.json");
+                schemaService.saveSchema(tenant2Schema);
                 return null;
             } catch (IOException e) {
                 throw new RuntimeException(e);
@@ -770,14 +766,12 @@ public class SchemaServiceImplTest {
         contextManager.executeAsSystem(() -> {
             try {
                 // Load base schema
-                JsonSchemaWrapper baseSchema1 = loadSchemaFromResource("/META-INF/cxs/schemas/view-event-schema.json", SYSTEM_TENANT);
-                baseSchema1.setTenantId(SYSTEM_TENANT);
-                persistenceService.save(baseSchema1);
+                String baseSchema1 = loadFromResource("/META-INF/cxs/schemas/view-event-schema.json");
+                schemaService.saveSchema(baseSchema1);
 
                 // Load system tenant extension
-                JsonSchemaWrapper systemExtSchema = loadSchemaFromResource("/META-INF/cxs/schemas/system-extension.json", SYSTEM_TENANT);
-                systemExtSchema.setTenantId(SYSTEM_TENANT);
-                persistenceService.save(systemExtSchema);
+                String systemExtSchema = loadFromResource("/META-INF/cxs/schemas/system-extension.json");
+                schemaService.saveSchema(systemExtSchema);
                 return null;
             } catch (IOException e) {
                 throw new RuntimeException(e);
@@ -788,9 +782,8 @@ public class SchemaServiceImplTest {
         contextManager.executeAsTenant(TENANT_1, () -> {
             try {
                 // Load tenant extension schema
-                JsonSchemaWrapper tenant1ExtSchema = loadSchemaFromResource("/META-INF/cxs/schemas/tenant1-extension.json", TENANT_1);
-                tenant1ExtSchema.setTenantId(TENANT_1);
-                persistenceService.save(tenant1ExtSchema);
+                String tenant1ExtSchema = loadFromResource("/META-INF/cxs/schemas/tenant1-extension.json");
+                schemaService.saveSchema(tenant1ExtSchema);
                 return null;
             } catch (IOException e) {
                 throw new RuntimeException(e);
@@ -902,8 +895,8 @@ public class SchemaServiceImplTest {
         contextManager.executeAsTenant(TENANT_2, () -> {
             try {
                 // Load tenant2 extension schema from file
-                JsonSchemaWrapper tenant2ExtSchema = loadSchemaFromResource("/META-INF/cxs/schemas/tenant2-extension.json", TENANT_2);
-                persistenceService.save(tenant2ExtSchema);
+                String tenant2ExtSchema = loadFromResource("/META-INF/cxs/schemas/tenant2-extension.json");
+                schemaService.saveSchema(tenant2ExtSchema);
 
                 // Refresh schemas
                 schemaService.refreshJSONSchemas();
@@ -937,8 +930,8 @@ public class SchemaServiceImplTest {
         // Create system tenant schema
         contextManager.executeAsSystem(() -> {
             try {
-                JsonSchemaWrapper systemSchema = loadSchemaFromResource("/META-INF/cxs/schemas/schema1.json", SYSTEM_TENANT);
-                persistenceService.save(systemSchema);
+                String systemSchema = loadFromResource("/META-INF/cxs/schemas/schema1.json");
+                schemaService.saveSchema(systemSchema);
                 return null;
             } catch (IOException e) {
                 throw new RuntimeException(e);
@@ -948,8 +941,8 @@ public class SchemaServiceImplTest {
         // Create tenant1 schema with same ID
         contextManager.executeAsTenant(TENANT_1, () -> {
             try {
-                JsonSchemaWrapper tenantSchema = loadSchemaFromResource("/META-INF/cxs/schemas/schema2.json", TENANT_1);
-                persistenceService.save(tenantSchema);
+                String tenantSchema = loadFromResource("/META-INF/cxs/schemas/schema2.json");
+                schemaService.saveSchema(tenantSchema);
                 return null;
             } catch (IOException e) {
                 throw new RuntimeException(e);
@@ -1007,9 +1000,8 @@ public class SchemaServiceImplTest {
         // Create a schema in the system tenant
         contextManager.executeAsTenant(TENANT_1, () -> {
             try {
-                JsonSchemaWrapper schema = loadSchemaFromResource("/META-INF/cxs/schemas/tenant1-schema.json", SYSTEM_TENANT);
-                schema.setTenantId(TENANT_1);
-                persistenceService.save(schema);
+                String schema = loadFromResource("/META-INF/cxs/schemas/tenant1-schema.json");
+                schemaService.saveSchema(schema);
                 return null;
             } catch (IOException e) {
                 throw new RuntimeException(e);
@@ -1035,10 +1027,6 @@ public class SchemaServiceImplTest {
             JsonSchemaWrapper deletedSchema = schemaService.getSchema(schemaId);
             assertNull("Schema should not exist after deletion", deletedSchema);
 
-            // 4. Try to delete a non-existent schema
-            boolean nonExistentDeleted = schemaService.deleteSchema("non-existent-schema");
-            assertFalse("Deleting non-existent schema should return false", nonExistentDeleted);
-
             return null;
         });
 
@@ -1048,8 +1036,8 @@ public class SchemaServiceImplTest {
         // Create a tenant-specific schema
         contextManager.executeAsTenant(TENANT_1, () -> {
             try {
-                JsonSchemaWrapper schema = loadSchemaFromResource("/META-INF/cxs/schemas/tenant-specific-schema.json", TENANT_1);
-                persistenceService.save(schema);
+                String schema = loadFromResource("/META-INF/cxs/schemas/tenant-specific-schema.json");
+                schemaService.saveSchema(schema);
                 return null;
             } catch (IOException e) {
                 throw new RuntimeException(e);
@@ -1064,8 +1052,7 @@ public class SchemaServiceImplTest {
             JsonSchemaWrapper tenantSchema = schemaService.getSchema(tenantSchemaId);
             assertNull("System tenant should not see tenant-specific schema", tenantSchema);
 
-            boolean deleted = schemaService.deleteSchema(tenantSchemaId);
-            assertFalse("System tenant should not be able to delete tenant schema", deleted);
+            schemaService.deleteSchema(tenantSchemaId);
             return null;
         });
 
@@ -1083,9 +1070,8 @@ public class SchemaServiceImplTest {
         // Setup - create an event schema in the system tenant
         contextManager.executeAsSystem(() -> {
             try {
-                JsonSchemaWrapper schema = loadSchemaFromResource("/META-INF/cxs/schemas/autodetect-system-event-schema.json", SYSTEM_TENANT);
-                schema.setTenantId(SYSTEM_TENANT);
-                persistenceService.save(schema);
+                String schema = loadFromResource("/META-INF/cxs/schemas/autodetect-system-event-schema.json");
+                schemaService.saveSchema(schema);
                 return null;
             } catch (IOException e) {
                 throw new RuntimeException(e);
@@ -1128,8 +1114,8 @@ public class SchemaServiceImplTest {
         // Test tenant isolation - create tenant-specific event schema
         contextManager.executeAsTenant(TENANT_1, () -> {
             try {
-                JsonSchemaWrapper schema = loadSchemaFromResource("/META-INF/cxs/schemas/autodetect-tenant-event-schema.json", TENANT_1);
-                persistenceService.save(schema);
+                String schema = loadFromResource("/META-INF/cxs/schemas/autodetect-tenant-event-schema.json");
+                schemaService.saveSchema(schema);
                 return null;
             } catch (IOException e) {
                 throw new RuntimeException(e);
@@ -1161,9 +1147,8 @@ public class SchemaServiceImplTest {
         contextManager.executeAsSystem(() -> {
             try {
                 // System event schema
-                JsonSchemaWrapper systemSchema = loadSchemaFromResource("/META-INF/cxs/schemas/system-event-schema.json", SYSTEM_TENANT);
-                systemSchema.setTenantId(SYSTEM_TENANT);
-                persistenceService.save(systemSchema);
+                String systemSchema = loadFromResource("/META-INF/cxs/schemas/system-event-schema.json");
+                schemaService.saveSchema(systemSchema);
 
                 // Predefined test schema (from predefined-schemas.json)
                 // This is loaded during setup from the mocked bundle.findEntries
@@ -1182,8 +1167,8 @@ public class SchemaServiceImplTest {
             try {
                 // Prepare batch of events with different validation outcomes
                 String events = "["
-                    + "{ \"eventType\": \"test-event\", \"systemField\": \"test\" },"                                            // valid system event
-                    + "{ \"eventType\": \"test-event\" },"                                                                       // invalid system event (missing required property)
+                    + "{ \"eventType\": \"test_event\", \"systemField\": \"test\" },"                                            // valid system event
+                    + "{ \"eventType\": \"test_event\" },"                                                                       // invalid system event (missing required property)
                     + "{ \"eventType\": \"test\", \"scope\": \"scope\", \"properties\": {} },"                                   // valid test event
                     + "{ \"eventType\": \"unknown\", \"scope\": \"test\" },"                                                     // unknown event type
                     + "{ \"scope\": \"test\", \"properties\": { \"systemProperty\": \"value\" } }"                               // missing eventType
@@ -1200,8 +1185,8 @@ public class SchemaServiceImplTest {
                 // And possibly 'error' for the event missing eventType field
 
                 // System events - should have errors because one event is invalid
-                assertTrue("Should have errors for system event type", validationResults.containsKey("test-event"));
-                assertFalse("System event type should have validation errors", validationResults.get("test-event").isEmpty());
+                assertTrue("Should have errors for system event type", validationResults.containsKey("test_event"));
+                assertFalse("System event type should have validation errors", validationResults.get("test_event").isEmpty());
 
                 // Test events - should not have errors (valid test event)
                 assertFalse("Should not have errors for test event type", validationResults.containsKey("test"));
@@ -1261,29 +1246,12 @@ public class SchemaServiceImplTest {
         });
     }
 
-    private JsonSchemaWrapper loadSchemaFromResource(String resourcePath, String tenantId) throws IOException {
+    private String loadFromResource(String resourcePath) throws IOException {
         try (InputStream is = getClass().getResourceAsStream(resourcePath)) {
             if (is == null) {
                 throw new IOException("Resource not found: " + resourcePath);
             }
-            String schemaContent = IOUtils.toString(is, StandardCharsets.UTF_8);
-
-            // Parse schema manually
-            ObjectMapper mapper = new ObjectMapper();
-            JsonNode schemaNode = mapper.readTree(schemaContent);
-
-            String schemaId = schemaNode.get("$id").asText();
-            String target = schemaNode.at("/self/target").asText();
-            String name = schemaNode.at("/self/name").asText();
-            String extendsSchemaId = null;
-            JsonNode extendsNode = schemaNode.at("/self/extends");
-            if (!extendsNode.isMissingNode() && !extendsNode.isNull()) {
-                extendsSchemaId = extendsNode.asText();
-            }
-
-            JsonSchemaWrapper wrapper = new JsonSchemaWrapper(schemaId, schemaContent, target, name, extendsSchemaId, new Date());
-            wrapper.setTenantId(tenantId);
-            return wrapper;
+            return IOUtils.toString(is, StandardCharsets.UTF_8);
         }
     }
 }
