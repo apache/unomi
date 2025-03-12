@@ -39,7 +39,6 @@ import org.apache.unomi.services.actions.ActionExecutorDispatcher;
 import org.apache.unomi.services.common.cache.AbstractMultiTypeCachingService;
 import org.codehaus.groovy.control.CompilerConfiguration;
 import org.codehaus.groovy.control.customizers.ImportCustomizer;
-import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.wiring.BundleWiring;
 import org.osgi.service.component.annotations.Activate;
@@ -51,14 +50,12 @@ import org.osgi.service.metatype.annotations.ObjectClassDefinition;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Serializable;
 import java.net.URL;
 import java.util.Collections;
 import java.util.Enumeration;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -150,10 +147,10 @@ public class GroovyActionsServiceImpl extends AbstractMultiTypeCachingService im
         LOGGER.debug("Activating Groovy Actions Service {}", bundleContext.getBundle());
         this.config = config;
         this.setBundleContext(bundleContext);
-        
+
         // Initialize Groovy-specific components
         initializeGroovyComponents();
-        
+
         // Initialize the caching service
         super.postConstruct();
     }
@@ -178,7 +175,7 @@ public class GroovyActionsServiceImpl extends AbstractMultiTypeCachingService im
             super.loadPredefinedItemsForType(bundleContext, config);
             return;
         }
-        
+
         // Skip if this type doesn't have predefined items
         if (!config.hasPredefinedItems()) {
             return;
@@ -187,7 +184,7 @@ public class GroovyActionsServiceImpl extends AbstractMultiTypeCachingService im
         // Use *.groovy pattern instead of *.json for Groovy actions
         Enumeration<URL> entries = bundleContext.getBundle()
             .findEntries("META-INF/cxs/" + config.getMetaInfPath(), "*.groovy", true);
-            
+
         if (entries == null) return;
 
         // Process entries in the same way as the parent class does
@@ -201,7 +198,7 @@ public class GroovyActionsServiceImpl extends AbstractMultiTypeCachingService im
 
             try {
                 final long bundleId = bundleContext.getBundle().getBundleId();
-                
+
                 // Use stream processor to process the Groovy script
                 try (InputStream inputStream = entryURL.openStream()) {
                     T item = config.getStreamProcessor().apply(bundleContext, entryURL, inputStream);
@@ -209,10 +206,10 @@ public class GroovyActionsServiceImpl extends AbstractMultiTypeCachingService im
                         logger.warn("Stream processor returned null for {}", entryURL);
                         continue;
                     }
-                    
+
                     // Final item variable for lambda
                     final T finalItem = item;
-                    
+
                     // Process in system context to ensure permissions
                     contextManager.executeAsSystem(() -> {
                         try {
@@ -220,14 +217,14 @@ public class GroovyActionsServiceImpl extends AbstractMultiTypeCachingService im
                             if (config.getPostProcessor() != null) {
                                 config.getPostProcessor().accept(finalItem);
                             }
-                            
+
                             // Track contribution
                             addPluginContribution(bundleId, finalItem);
-                            
+
                             // Add to cache
                             String id = config.getIdExtractor().apply(finalItem);
                             cacheService.put(config.getItemType(), id, SYSTEM_TENANT, finalItem);
-                            
+
                             logger.info("Predefined Groovy action registered: {}", id);
                         } catch (Exception e) {
                             logger.error("Error processing Groovy action {}", entryURL, e);
@@ -257,13 +254,13 @@ public class GroovyActionsServiceImpl extends AbstractMultiTypeCachingService im
         try {
             String actionName = FilenameUtils.getBaseName(url.getPath());
             String groovyScript = IOUtils.toString(inputStream);
-            
+
             // Create the GroovyAction instance
             GroovyAction groovyAction = new GroovyAction(actionName, groovyScript);
-            
+
             LOGGER.debug("Processed Groovy script from {}, action name: {}", url.getPath(), actionName);
             return groovyAction;
-            
+
         } catch (IOException e) {
             LOGGER.error("Error processing Groovy script from {}: {}", url.getPath(), e.getMessage(), e);
             return null;
@@ -331,21 +328,21 @@ public class GroovyActionsServiceImpl extends AbstractMultiTypeCachingService im
 
     /**
      * Post-process a GroovyAction, creating a GroovyCodeSource and potentially registering an ActionType
-     * 
+     *
      * @param groovyAction the GroovyAction to process
      */
     private void postProcessGroovyAction(GroovyAction groovyAction) {
         try {
             String actionName = groovyAction.getName();
             String script = groovyAction.getScript();
-            
+
             GroovyCodeSource groovyCodeSource = new GroovyCodeSource(script, actionName, "/groovy/script");
-            
+
             // Store the code source in our tenant map for runtime access
             String tenantId = contextManager.getCurrentContext().getTenantId();
             Map<String, GroovyCodeSource> groovyCodeSourceMap = groovyCodeSourceMapByTenant.computeIfAbsent(tenantId, k -> new ConcurrentHashMap<>());
             groovyCodeSourceMap.put(actionName, groovyCodeSource);
-            
+
             // Try to extract the Action annotation and register the ActionType
             try {
                 Action actionAnnotation = groovyShell.parse(groovyCodeSource).getClass().getMethod("execute").getAnnotation(Action.class);
@@ -373,10 +370,10 @@ public class GroovyActionsServiceImpl extends AbstractMultiTypeCachingService im
                 .withPostProcessor(this::postProcessGroovyAction)
                 .withStreamProcessor(this::processGroovyScript)
                 .build();
-            
+
             return Collections.singleton(updatedConfig);
         }
-        
+
         return Collections.singleton(groovyActionTypeConfig);
     }
 
@@ -385,16 +382,16 @@ public class GroovyActionsServiceImpl extends AbstractMultiTypeCachingService im
         GroovyCodeSource groovyCodeSource = buildClassScript(groovyScript, actionName);
         try {
             saveActionType(groovyShell.parse(groovyCodeSource).getClass().getMethod("execute").getAnnotation(Action.class));
-            
+
             // Create and save the GroovyAction
             GroovyAction groovyAction = new GroovyAction(actionName, groovyScript);
             saveItem(groovyAction, GroovyAction::getName, GroovyAction.ITEM_TYPE);
-            
+
             // Also update our code source map for immediate use
             String tenantId = contextManager.getCurrentContext().getTenantId();
             Map<String, GroovyCodeSource> groovyCodeSourceMap = groovyCodeSourceMapByTenant.computeIfAbsent(tenantId, k -> new ConcurrentHashMap<>());
             groovyCodeSourceMap.put(actionName, groovyCodeSource);
-            
+
             LOGGER.info("The script {} has been loaded.", actionName);
         } catch (NoSuchMethodException e) {
             LOGGER.error("Failed to save the script {}", actionName, e);
@@ -427,7 +424,7 @@ public class GroovyActionsServiceImpl extends AbstractMultiTypeCachingService im
             String tenantId = contextManager.getCurrentContext().getTenantId();
             Map<String, GroovyCodeSource> groovyCodeSourceMap = groovyCodeSourceMapByTenant.computeIfAbsent(tenantId, k -> new ConcurrentHashMap<>());
             GroovyCodeSource codeSource = groovyCodeSourceMap.get(id);
-            
+
             if (codeSource != null) {
                 try {
                     Action actionAnnotation = groovyShell.parse(codeSource).getClass().getMethod("execute").getAnnotation(Action.class);
@@ -438,15 +435,15 @@ public class GroovyActionsServiceImpl extends AbstractMultiTypeCachingService im
                     LOGGER.error("Failed to get action annotation for removal: {}", id, e);
                 }
             }
-            
+
             // Remove from persistent storage and cache
             removeItem(id, GroovyAction.class, GroovyAction.ITEM_TYPE);
-            
+
             // Remove from our code source map
             if (groovyCodeSourceMap.containsKey(id)) {
                 groovyCodeSourceMap.remove(id);
             }
-            
+
             LOGGER.info("The script {} has been removed.", id);
         } catch (Exception e) {
             LOGGER.error("Error removing Groovy action: {}", id, e);
