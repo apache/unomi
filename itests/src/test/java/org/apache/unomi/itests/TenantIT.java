@@ -150,7 +150,7 @@ public class TenantIT extends BaseIT {
     public void testTenantEndpointAuthentication() throws Exception {
         // Test without any authentication
         HttpGet tenantsRequest = new HttpGet(REST_ENDPOINT);
-        Assert.assertEquals("Unauthenticated request should be rejected", 
+        Assert.assertEquals("Unauthenticated request should be rejected",
             401, executeHttpRequest(tenantsRequest).getStatusLine().getStatusCode());
 
         // Create test tenant for API key tests
@@ -170,26 +170,26 @@ public class TenantIT extends BaseIT {
         try {
             // Test with public API key (should fail)
             tenantsRequest = new HttpGet(REST_ENDPOINT);
-            tenantsRequest.setHeader("X-Unomi-API-Key", tenant.getPublicApiKey());
-            Assert.assertEquals("Public API key should not grant access to tenant endpoints", 
+            tenantsRequest.setHeader("X-Unomi-Api-Key", tenant.getPublicApiKey());
+            Assert.assertEquals("Public API key should not grant access to tenant endpoints",
                 401, executeHttpRequest(tenantsRequest).getStatusLine().getStatusCode());
 
             // Test with private API key (should fail)
             tenantsRequest = new HttpGet(REST_ENDPOINT);
             tenantsRequest.setHeader("Authorization", "Basic " + Base64.getEncoder().encodeToString(
                 (tenant.getItemId() + ":" + tenant.getPrivateApiKey()).getBytes()));
-            Assert.assertEquals("Private API key should not grant access to tenant endpoints", 
+            Assert.assertEquals("Private API key should not grant access to tenant endpoints",
                 401, executeHttpRequest(tenantsRequest).getStatusLine().getStatusCode());
 
             // Test with invalid JAAS credentials (should fail)
             BasicCredentialsProvider wrongCredsProvider = new BasicCredentialsProvider();
             wrongCredsProvider.setCredentials(AuthScope.ANY, new UsernamePasswordCredentials("wrong", "wrong"));
             CloseableHttpClient wrongClient = HttpClients.custom().setDefaultCredentialsProvider(wrongCredsProvider).build();
-            Assert.assertEquals("Invalid JAAS credentials should be rejected", 
+            Assert.assertEquals("Invalid JAAS credentials should be rejected",
                 401, wrongClient.execute(tenantsRequest).getStatusLine().getStatusCode());
 
             // Test with valid JAAS credentials (should succeed)
-            Assert.assertEquals("Valid JAAS credentials should be accepted", 
+            Assert.assertEquals("Valid JAAS credentials should be accepted",
                 200, adminClient.execute(tenantsRequest).getStatusLine().getStatusCode());
         } finally {
             // Cleanup
@@ -206,26 +206,26 @@ public class TenantIT extends BaseIT {
         try {
             // Test without any authentication
             HttpGet publicRequest = new HttpGet(getFullUrl("/cxs/public/test"));
-            Assert.assertEquals("Unauthenticated public request should be rejected", 
+            Assert.assertEquals("Unauthenticated public request should be rejected",
                 401, executeHttpRequest(publicRequest).getStatusLine().getStatusCode());
 
             // Test with private API key (should fail)
             publicRequest.setHeader("Authorization", "Basic " + Base64.getEncoder().encodeToString(
                 (tenant.getItemId() + ":" + tenant.getPrivateApiKey()).getBytes()));
-            Assert.assertEquals("Private API key should not grant access to public endpoints", 
+            Assert.assertEquals("Private API key should not grant access to public endpoints",
                 401, executeHttpRequest(publicRequest).getStatusLine().getStatusCode());
 
             // Test with valid public API key (should succeed)
             publicRequest = new HttpGet(getFullUrl("/cxs/public/test"));
-            publicRequest.setHeader("X-Unomi-API-Key", tenant.getPublicApiKey());
-            Assert.assertEquals("Valid public API key should grant access to public endpoints", 
+            publicRequest.setHeader("X-Unomi-Api-Key", tenant.getPublicApiKey());
+            Assert.assertEquals("Valid public API key should grant access to public endpoints",
                 200, executeHttpRequest(publicRequest).getStatusLine().getStatusCode());
 
             // Test with JAAS auth (should succeed)
             BasicCredentialsProvider adminCredsProvider = new BasicCredentialsProvider();
             adminCredsProvider.setCredentials(AuthScope.ANY, new UsernamePasswordCredentials("karaf", "karaf"));
             CloseableHttpClient adminClient = HttpClients.custom().setDefaultCredentialsProvider(adminCredsProvider).build();
-            Assert.assertEquals("JAAS auth should grant access to public endpoints", 
+            Assert.assertEquals("JAAS auth should grant access to public endpoints",
                 200, adminClient.execute(publicRequest).getStatusLine().getStatusCode());
         } finally {
             tenantService.deleteTenant(tenant.getItemId());
@@ -240,33 +240,33 @@ public class TenantIT extends BaseIT {
         try {
             // Test without any authentication
             HttpGet privateRequest = new HttpGet(getFullUrl("/cxs/private/test"));
-            Assert.assertEquals("Unauthenticated private request should be rejected", 
+            Assert.assertEquals("Unauthenticated private request should be rejected",
                 401, executeHttpRequest(privateRequest).getStatusLine().getStatusCode());
 
             // Test with public API key (should fail)
-            privateRequest.setHeader("X-Unomi-API-Key", tenant.getPublicApiKey());
-            Assert.assertEquals("Public API key should not grant access to private endpoints", 
+            privateRequest.setHeader("X-Unomi-Api-Key", tenant.getPublicApiKey());
+            Assert.assertEquals("Public API key should not grant access to private endpoints",
                 401, executeHttpRequest(privateRequest).getStatusLine().getStatusCode());
 
             // Test with invalid private API key (should fail)
             privateRequest = new HttpGet(getFullUrl("/cxs/private/test"));
             privateRequest.setHeader("Authorization", "Basic " + Base64.getEncoder().encodeToString(
                 (tenant.getItemId() + ":wrong-key").getBytes()));
-            Assert.assertEquals("Invalid private API key should be rejected", 
+            Assert.assertEquals("Invalid private API key should be rejected",
                 401, executeHttpRequest(privateRequest).getStatusLine().getStatusCode());
 
             // Test with valid private API key (should succeed)
             privateRequest = new HttpGet(getFullUrl("/cxs/private/test"));
             privateRequest.setHeader("Authorization", "Basic " + Base64.getEncoder().encodeToString(
                 (tenant.getItemId() + ":" + tenant.getPrivateApiKey()).getBytes()));
-            Assert.assertEquals("Valid private API key should grant access to private endpoints", 
+            Assert.assertEquals("Valid private API key should grant access to private endpoints",
                 200, executeHttpRequest(privateRequest).getStatusLine().getStatusCode());
 
             // Test with JAAS auth (should succeed)
             BasicCredentialsProvider adminCredsProvider = new BasicCredentialsProvider();
             adminCredsProvider.setCredentials(AuthScope.ANY, new UsernamePasswordCredentials("karaf", "karaf"));
             CloseableHttpClient adminClient = HttpClients.custom().setDefaultCredentialsProvider(adminCredsProvider).build();
-            Assert.assertEquals("JAAS auth should grant access to private endpoints", 
+            Assert.assertEquals("JAAS auth should grant access to private endpoints",
                 200, adminClient.execute(privateRequest).getStatusLine().getStatusCode());
         } finally {
             tenantService.deleteTenant(tenant.getItemId());
@@ -320,7 +320,7 @@ public class TenantIT extends BaseIT {
         // Test with public API key (should fail)
         ApiKey publicKey = tenantService.generateApiKeyWithType(tenant.getItemId(), ApiKey.ApiKeyType.PUBLIC, null);
         getRequest = new HttpGet(REST_ENDPOINT + "/private/test");
-        getRequest.setHeader("X-Unomi-API-Key", publicKey.getKey());
+        getRequest.setHeader("X-Unomi-Api-Key", publicKey.getKey());
         response = executeHttpRequest(getRequest);
         Assert.assertEquals("Public API key should not grant access to private endpoints", 401, response.getStatusLine().getStatusCode());
 

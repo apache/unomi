@@ -38,6 +38,8 @@ public class TenantQuotaService {
     private ExecutionContextManager contextManager;
 
     private Map<String, TenantUsage> usageCache = new ConcurrentHashMap<>();
+    private ScheduledExecutorService executor;
+    private volatile boolean shutdownNow = false;
 
     public void setPersistenceService(PersistenceService persistenceService) {
         this.persistenceService = persistenceService;
@@ -52,8 +54,14 @@ public class TenantQuotaService {
     }
 
     public void activate() {
+        shutdownNow = false; // Reset shutdown flag
         // Start usage monitoring
         startUsageMonitoring();
+    }
+
+    public void deactivate() {
+        shutdownNow = true; // Set shutdown flag before stopping
+        stopUsageMonitoring();
     }
 
     private ResourceQuota getTenantQuota(String tenantId) {
@@ -86,21 +94,47 @@ public class TenantQuotaService {
     }
 
     private void updateUsageStatistics() {
-        for (String tenantId : usageCache.keySet()) {
-            TenantUsage usage = usageCache.get(tenantId);
-            usage.setProfileCount(persistenceService.getAllItemsCount("profile"));
-            usage.setEventCount(persistenceService.getAllItemsCount("event"));
-            // Note: Storage size calculation would require additional implementation
+        if (shutdownNow || persistenceService == null) {
+            return; // Skip if shutting down or persistence service is unavailable
+        }
+        
+        try {
+            for (String tenantId : usageCache.keySet()) {
+                if (shutdownNow) return; // Check shutdown flag during iteration
+                
+                TenantUsage usage = usageCache.get(tenantId);
+                usage.setProfileCount(persistenceService.getAllItemsCount("profile"));
+                usage.setEventCount(persistenceService.getAllItemsCount("event"));
+                // Note: Storage size calculation would require additional implementation
+            }
+        } catch (Exception e) {
+            logger.error("Error updating tenant usage statistics", e);
         }
     }
 
     private void startUsageMonitoring() {
-        ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
+        executor = Executors.newSingleThreadScheduledExecutor(r -> {
+            Thread t = new Thread(r, "Tenant-Usage-Monitor");
+            t.setDaemon(true); // Make it daemon so it doesn't prevent JVM shutdown
+            return t;
+        });
+        
         executor.scheduleAtFixedRate(() -> {
             try {
+                if (shutdownNow) {
+                    return; // Skip execution if shutting down
+                }
+                
+                if (contextManager == null) {
+                    logger.warn("Context manager not available, skipping usage statistics update");
+                    return;
+                }
+                
                 contextManager.executeAsSystem(() -> {
                     try {
-                        updateUsageStatistics();
+                        if (!shutdownNow && persistenceService != null) {
+                            updateUsageStatistics();
+                        }
                     } catch (Exception e) {
                         logger.error("Error updating usage statistics", e);
                     }
@@ -109,5 +143,23 @@ public class TenantQuotaService {
                 logger.error("Error executing usage statistics update as system subject", e);
             }
         }, 0, 1, TimeUnit.HOURS);
+    }
+
+    private void stopUsageMonitoring() {
+        if (executor != null) {
+            try {
+                // Use shutdownNow instead of shutdown for immediate interruption
+                executor.shutdownNow();
+                // Reduce wait time to avoid blocking OSGi shutdown
+                if (!executor.awaitTermination(3, TimeUnit.SECONDS)) {
+                    logger.warn("Executor did not terminate in time, some tasks may have been canceled");
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                logger.warn("Interrupted while shutting down the monitoring executor");
+            } finally {
+                executor = null;
+            }
+        }
     }
 }

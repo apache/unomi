@@ -56,9 +56,9 @@ public class HttpClientThatWaitsForUnomi {
                 request.setHeader("Authorization", "Basic " + Base64.getEncoder().encodeToString(credentials.getBytes()));
             }
         } else {
-            // For public endpoints, use X-Unomi-API-Key header
+            // For public endpoints, use X-Unomi-Api-Key header
             if (testPublicKey != null) {
-                request.setHeader("X-Unomi-API-Key", testPublicKey.getKey());
+                request.setHeader("X-Unomi-Api-Key", testPublicKey.getKey());
             }
         }
 
@@ -84,9 +84,9 @@ public class HttpClientThatWaitsForUnomi {
 
     private static boolean isPrivateEndpoint(String path) {
         // Add paths that require private key authentication
-        return path.contains("/cxs/profiles") || 
-               path.contains("/cxs/rules") || 
-               path.contains("/cxs/segments") || 
+        return path.contains("/cxs/profiles") ||
+               path.contains("/cxs/rules") ||
+               path.contains("/cxs/segments") ||
                path.contains("/cxs/scoring") ||
                path.contains("/cxs/definitions") ||
                path.contains("/cxs/tenants");

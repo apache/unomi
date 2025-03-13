@@ -306,7 +306,7 @@ to send additional events.
 ----
 curl -X POST http://localhost:8181/cxs/context.json?sessionId=1234 \
 -H "Content-Type: application/json" \
--H "X-Unomi-API-Key: YOUR_PUBLIC_API_KEY" \
+-H "X-Unomi-Api-Key: YOUR_PUBLIC_API_KEY" \
 -d @- <<'EOF'
 {
     "source":{
@@ -345,7 +345,7 @@ EOF
 ----
 curl -X POST http://localhost:8181/cxs/eventcollector \
 -H "Content-Type: application/json" \
--H "X-Unomi-API-Key: YOUR_PUBLIC_API_KEY" \
+-H "X-Unomi-Api-Key: YOUR_PUBLIC_API_KEY" \
 -d '{
     "sessionId" : "1234",
     "events":[
@@ -483,7 +483,7 @@ You can also update the personalization example to use the birthday property:
 ----
 curl -X POST http://localhost:8181/cxs/context.json \
 -H "Content-Type: application/json" \
--H "X-Unomi-API-Key: YOUR_PUBLIC_API_KEY" \
+-H "X-Unomi-Api-Key: YOUR_PUBLIC_API_KEY" \
 -d '{
     "sessionId": "birthday-session",
     "profileId": "profile-1",
@@ -631,7 +631,7 @@ For the birthday profile (should show birthday message):
 ----
 curl -X POST http://localhost:8181/cxs/context.json \
 -H "Content-Type: application/json" \
--H "X-Unomi-API-Key: YOUR_PUBLIC_API_KEY" \
+-H "X-Unomi-Api-Key: YOUR_PUBLIC_API_KEY" \
 -d '{
     "sessionId": "birthday-session",
     "profileId": "profile-1",
@@ -677,7 +677,7 @@ For the non-birthday profile (should show welcome message):
 ----
 curl -X POST http://localhost:8181/cxs/context.json \
 -H "Content-Type: application/json" \
--H "X-Unomi-API-Key: YOUR_PUBLIC_API_KEY" \
+-H "X-Unomi-Api-Key: YOUR_PUBLIC_API_KEY" \
 -d '{
     "sessionId": "regular-session",
     "profileId": "profile-2",
@@ -805,7 +805,7 @@ You can use the eventcollector endpoint to send product view events:
 ----
 curl -X POST http://localhost:8181/cxs/eventcollector \
 -H "Content-Type: application/json" \
--H "X-Unomi-API-Key: YOUR_PUBLIC_API_KEY" \
+-H "X-Unomi-Api-Key: YOUR_PUBLIC_API_KEY" \
 -d '{
     "sessionId": "1234",
     "events": [
@@ -846,7 +846,7 @@ For web applications, you can also send product views through the context.json e
 ----
 curl -X POST http://localhost:8181/cxs/context.json?sessionId=1234 \
 -H "Content-Type: application/json" \
--H "X-Unomi-API-Key: YOUR_PUBLIC_API_KEY" \
+-H "X-Unomi-Api-Key: YOUR_PUBLIC_API_KEY" \
 -d '{
     "source": {
         "itemId": "product-page",
@@ -1154,12 +1154,12 @@ class ExtractBirthdayAction implements ActionExecutor {
     public int execute(Action action, Event event) {
         Profile profile = event.getProfile()
         def birthDate = profile.getProperty("birthDate")
-        
+
         if (birthDate != null && birthDate instanceof String && birthDate.length() >= 10) {
             try {
                 // Extract month-day part (e.g., "03-24" from "2000-03-24")
                 def monthDay = birthDate.substring(5, 10)
-                
+
                 // Only update if different to avoid unnecessary saves
                 if (monthDay != profile.getProperty("birthday")) {
                     profile.setProperty("birthday", monthDay)
@@ -1733,14 +1733,14 @@ activate requestTracer
 
 loop for each content
     perso -> requestTracer: startOperation("content-filter-evaluation")
-    
+
     loop for each filter
         perso -> requestTracer: startOperation("condition-evaluation")
         perso -> perso: evaluate condition
         perso -> requestTracer: trace(result details)
         perso -> requestTracer: endOperation(result)
     end
-    
+
     perso -> requestTracer: endOperation(filter result)
 end
 

@@ -128,7 +128,7 @@ public class AuthenticationFilter implements ContainerRequestFilter {
 
             // Check if this is a public path
             if (isPublicPath(requestContext)) {
-                String apiKey = requestContext.getHeaderString("X-Unomi-API-Key");
+                String apiKey = requestContext.getHeaderString("X-Unomi-Api-Key");
                 if (apiKey == null) {
                     logger.debug("Public endpoint access denied: Missing API key");
                     unauthorized(requestContext);

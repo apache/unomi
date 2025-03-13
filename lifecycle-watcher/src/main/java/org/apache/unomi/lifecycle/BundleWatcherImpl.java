@@ -122,6 +122,17 @@ public class BundleWatcherImpl implements SynchronousBundleListener, ServiceList
         if (scheduledFuture != null) {
             scheduledFuture.cancel(true);
         }
+        if (scheduler != null) {
+            scheduler.shutdown();
+            try {
+                if (!scheduler.awaitTermination(10, TimeUnit.SECONDS)) {
+                    scheduler.shutdownNow();
+                }
+            } catch (InterruptedException e) {
+                scheduler.shutdownNow();
+            }
+            scheduler = null;
+        }
         LOGGER.info("Bundle watcher shutdown.");
     }
 

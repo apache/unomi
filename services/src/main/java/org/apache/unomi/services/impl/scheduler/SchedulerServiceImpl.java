@@ -85,6 +85,7 @@ public class SchedulerServiceImpl implements SchedulerService {
     private long completedTaskTtlDays = DEFAULT_COMPLETED_TASK_TTL_DAYS;
     private boolean purgeTaskEnabled = DEFAULT_PURGE_TASK_ENABLED;
     private ScheduledTask taskPurgeTask;
+    private volatile boolean shutdownNow = false;
 
     // Core services
     private PersistenceService persistenceService;
@@ -336,41 +337,76 @@ public class SchedulerServiceImpl implements SchedulerService {
 
     @PreDestroy
     public void preDestroy() {
+        shutdownNow = true; // Set shutdown flag before other operations
         running.set(false);
+        
+        // Notify all managers about shutdown
+        if (recoveryManager != null) {
+            try {
+                recoveryManager.prepareForShutdown();
+            } catch (Exception e) {
+                LOGGER.debug("Error preparing recovery manager for shutdown: {}", e.getMessage());
+            }
+        }
 
         // Release any task locks owned by this node
         if (persistenceService != null) {
-            List<ScheduledTask> tasks = findTasksByLockOwner(nodeId);
-            for (ScheduledTask task : tasks) {
-                lockManager.releaseLock(task);
+            try {
+                List<ScheduledTask> tasks = findTasksByLockOwner(nodeId);
+                for (ScheduledTask task : tasks) {
+                    try {
+                        lockManager.releaseLock(task);
+                    } catch (Exception e) {
+                        LOGGER.debug("Error releasing lock for task {} during shutdown: {}", task.getItemId(), e.getMessage());
+                    }
+                }
+            } catch (Exception e) {
+                LOGGER.warn("Error finding locked tasks during shutdown: {}", e.getMessage());
             }
         }
 
         if (taskPurgeTask != null) {
-            cancelTask(taskPurgeTask.getItemId());
+            try {
+                cancelTask(taskPurgeTask.getItemId());
+            } catch (Exception e) {
+                LOGGER.debug("Error cancelling purge task during shutdown: {}", e.getMessage());
+            }
         }
 
         // Shutdown execution manager
-        executionManager.shutdown();
+        try {
+            executionManager.shutdown();
+        } catch (Exception e) {
+            LOGGER.debug("Error shutting down execution manager: {}", e.getMessage());
+        }
 
         if (taskExecutorTracker != null) {
-            taskExecutorTracker.close();
+            try {
+                taskExecutorTracker.close();
+            } catch (Exception e) {
+                LOGGER.debug("Error closing task executor tracker: {}", e.getMessage());
+            }
             taskExecutorTracker = null;
         }
+        
+        LOGGER.info("SchedulerService shutdown completed");
     }
 
     void checkTasks() {
-        if (!running.get() || persistenceService == null) {
+        if (shutdownNow || !running.get() || checkTasksRunning.get() || !executorNode) {
             return;
         }
-
-        // Add reentrant check
+        
         if (!checkTasksRunning.compareAndSet(false, true)) {
-            LOGGER.debug("checkTasks is already running, skipping this execution");
             return;
         }
-
+        
         try {
+            // Skip task processing during shutdown
+            if (shutdownNow) {
+                return;
+            }
+            
             // Check for crashed tasks first
             recoveryManager.recoverCrashedTasks();
 

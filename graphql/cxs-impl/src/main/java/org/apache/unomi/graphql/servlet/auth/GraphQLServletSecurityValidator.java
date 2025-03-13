@@ -58,7 +58,7 @@ public class GraphQLServletSecurityValidator {
     public boolean validate(String query, String operationName, HttpServletRequest req, HttpServletResponse res) throws IOException {
         if (isPublicOperation(query)) {
             // For public operations, check API key
-            String apiKey = req.getHeader("X-Unomi-API-Key");
+            String apiKey = req.getHeader("X-Unomi-Api-Key");
             if (apiKey != null) {
                 Tenant tenant = tenantService.getTenantByApiKey(apiKey, ApiKey.ApiKeyType.PUBLIC);
                 if (tenant != null) {

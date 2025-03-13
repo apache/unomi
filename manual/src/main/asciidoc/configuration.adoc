@@ -170,7 +170,7 @@ The properties start with the prefix : `org.apache.unomi.thirdparty.*` and here 
     org.apache.unomi.thirdparty.provider1.allowedEvents=${env:UNOMI_THIRDPARTY_PROVIDER1_ALLOWEDEVENTS:-login,updateProperties}
 
 The events set in allowedEvents will be secured and will only be accepted if the call comes from the specified IP
-address, and if the secret-key is passed in the X-Unomi-Peer HTTP request header. The "env:" part means that it will
+address, and if the secret-key is passed in the X-Unomi-Api-Key HTTP request header. The "env:" part means that it will
 attempt to read an environment variable by that name, and if it's not found it will default to the value after the ":-"
 marker.
 
@@ -985,7 +985,7 @@ alt No matches found
 else Matches found
     Action -> Profile: mergeProfiles(master, profileList)
     activate Profile
-    
+
     Profile -> Profile: Merge properties according to strategy
     Profile -> Profile: Create aliases for merged profiles
     Profile -> ES: Save master profile with updated properties
@@ -993,9 +993,9 @@ else Matches found
     Profile -> ES: Delete merged profiles
     Profile --> Action: Return master profile
     deactivate Profile
-    
+
     Action -> Event: Update event's profile reference
-    
+
     Action -> Scheduler: Schedule async browsing data reassignment
     activate Scheduler
     Scheduler -> ES: Update sessions and events for merged profiles
@@ -1028,7 +1028,7 @@ package "Before Merge" {
     sessions = [session-a1, session-a2]
     events = [event-a1, event-a2, event-a3]
   }
-  
+
   object "Profile B" as PB {
     id = "profile-b-456"
     email = "user@example.com"
@@ -1047,12 +1047,12 @@ package "After Merge" {
     sessions = [session-a1, session-a2, session-b1]
     events = [event-a1, event-a2, event-a3, event-b1, event-b2]
   }
-  
+
   object "Profile Alias" as AL {
     aliasId = "profile-b-456"
     profileId = "profile-a-123"
   }
-  
+
   MP -- AL : references
 }
 

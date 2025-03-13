@@ -405,7 +405,7 @@
     </bean>
 
     <bean id="tenantMonitoringServiceImpl" class="org.apache.unomi.services.impl.tenants.TenantMonitoringService"
-          init-method="activate">
+          init-method="activate" destroy-method="deactivate">
         <property name="persistenceService" ref="persistenceService"/>
         <property name="definitionsService" ref="definitionsServiceImpl"/>
         <property name="tenantService" ref="tenantServiceImpl"/>

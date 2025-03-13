@@ -41,6 +41,7 @@ public class TaskRecoveryManager {
     private final TaskMetricsManager metricsManager;
     private final TaskExecutionManager executionManager;
     private final SchedulerServiceImpl schedulerService;
+    private volatile boolean shutdownNow = false;
 
     public TaskRecoveryManager(String nodeId,
                              PersistenceService persistenceService,
@@ -59,14 +60,27 @@ public class TaskRecoveryManager {
     }
 
     /**
-     * Recovers tasks after node crashes or failures.
-     * Recovery process:
+     * Set the shutdown flag to prevent operations during shutdown
+     */
+    public void prepareForShutdown() {
+        this.shutdownNow = true;
+        LOGGER.debug("TaskRecoveryManager prepared for shutdown");
+    }
+
+    /**
+     * Recovers tasks that crashed due to node failure or unexpected termination
+     * Process:
      * 1. Identify tasks with expired locks
      * 2. Release locks and update states
      * 3. Attempt to resume tasks with checkpoint data
      * 4. Reschedule tasks that can't be resumed
      */
     public void recoverCrashedTasks() {
+        if (shutdownNow) {
+            LOGGER.debug("Skipping crashed task recovery during shutdown");
+            return;
+        }
+        
         try {
             recoverRunningTasks();
             recoverLockedTasks();
@@ -79,9 +93,13 @@ public class TaskRecoveryManager {
      * Recovers tasks that are marked as running but have expired locks
      */
     private void recoverRunningTasks() {
+        if (shutdownNow) return;
+        
         List<ScheduledTask> runningTasks = findTasksByStatus(ScheduledTask.TaskStatus.RUNNING);
 
         for (ScheduledTask task : runningTasks) {
+            if (shutdownNow) return;
+            
             if (lockManager.isLockExpired(task)) {
                 LOGGER.info("Node {} Recovering crashed task {} : {}", nodeId, task.getTaskType(), task.getItemId());
                 recoverCrashedTask(task);
@@ -234,12 +252,19 @@ public class TaskRecoveryManager {
      * Finds tasks by status
      */
     private List<ScheduledTask> findTasksByStatus(ScheduledTask.TaskStatus status) {
-        Condition statusCondition = new Condition(PROPERTY_CONDITION_TYPE);
-        statusCondition.setParameter("propertyName", "status");
-        statusCondition.setParameter("comparisonOperator", "equals");
-        statusCondition.setParameter("propertyValue", status);
+        if (shutdownNow) return Collections.emptyList();
+        
+        try {
+            Condition statusCondition = new Condition(PROPERTY_CONDITION_TYPE);
+            statusCondition.setParameter("propertyName", "status");
+            statusCondition.setParameter("comparisonOperator", "equals");
+            statusCondition.setParameter("propertyValue", status);
 
-        return persistenceService.query(statusCondition, null, ScheduledTask.class, 0, -1).getList();
+            return persistenceService.query(statusCondition, null, ScheduledTask.class, 0, -1).getList();
+        } catch (Exception e) {
+            LOGGER.error("Failed to find tasks by status: {}", e.getMessage());
+            return Collections.emptyList();
+        }
     }
 
     /**

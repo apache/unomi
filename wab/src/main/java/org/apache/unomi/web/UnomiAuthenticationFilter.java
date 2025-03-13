@@ -66,7 +66,7 @@ public class UnomiAuthenticationFilter implements Filter {
 
         // Handle public endpoints
         if (isPublicEndpoint(path)) {
-            String apiKey = httpRequest.getHeader("X-Unomi-API-Key");
+            String apiKey = httpRequest.getHeader("X-Unomi-Api-Key");
             if (apiKey == null) {
                 httpResponse.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Missing public API key");
                 return;

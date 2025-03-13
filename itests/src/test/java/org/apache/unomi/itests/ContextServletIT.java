@@ -64,7 +64,7 @@ import static org.junit.Assert.*;
 public class ContextServletIT extends BaseIT {
     private final static String CONTEXT_URL = "/cxs/context.json";
 
-    private final static String THIRD_PARTY_HEADER_NAME = "X-Unomi-Peer";
+    private final static String UNOMI_API_KEY_HTTP_HEADER_KEY = "X-Unomi-Api-Key";
     private final static String TEST_EVENT_TYPE = "testEventType";
     private final static String TEST_EVENT_TYPE_SCHEMA = "schemas/events/test-event-type.json";
     private final static String FLOAT_PROPERTY_EVENT_TYPE = "floatPropertyType";
@@ -170,7 +170,7 @@ public class ContextServletIT extends BaseIT {
         contextRequest.setSessionId(session.getItemId());
         contextRequest.setEvents(Arrays.asList(event));
         HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
-        request.addHeader(THIRD_PARTY_HEADER_NAME, UNOMI_KEY);
+        request.addHeader(UNOMI_API_KEY_HTTP_HEADER_KEY, testPublicKey.getKey());
         request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
         TestUtils.executeContextJSONRequest(request, sessionId);
 
@@ -198,7 +198,7 @@ public class ContextServletIT extends BaseIT {
         contextRequest.setSessionId(sessionId);
         contextRequest.setEvents(Collections.singletonList(event));
         HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
-        request.addHeader(THIRD_PARTY_HEADER_NAME, UNOMI_KEY);
+        request.addHeader(UNOMI_API_KEY_HTTP_HEADER_KEY, testPublicKey.getKey());
         request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
         TestUtils.executeContextJSONRequest(request, sessionId);
 
@@ -392,7 +392,7 @@ public class ContextServletIT extends BaseIT {
 
         //Act
         HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
-        request.addHeader(THIRD_PARTY_HEADER_NAME, UNOMI_KEY);
+        request.addHeader(UNOMI_API_KEY_HTTP_HEADER_KEY, testPublicKey.getKey());
         request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
         TestUtils.executeContextJSONRequest(request);
 
@@ -419,7 +419,7 @@ public class ContextServletIT extends BaseIT {
 
         //Act
         HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
-        request.addHeader(THIRD_PARTY_HEADER_NAME, UNOMI_KEY);
+        request.addHeader(UNOMI_API_KEY_HTTP_HEADER_KEY, testPublicKey.getKey());
         request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
         TestUtils.executeContextJSONRequest(request);
 
@@ -449,7 +449,7 @@ public class ContextServletIT extends BaseIT {
 
         //Act
         HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
-        request.addHeader(THIRD_PARTY_HEADER_NAME, UNOMI_KEY);
+        request.addHeader(UNOMI_API_KEY_HTTP_HEADER_KEY, testPublicKey.getKey());
         request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
         TestUtils.executeContextJSONRequest(request);
 
@@ -476,7 +476,7 @@ public class ContextServletIT extends BaseIT {
 
         //Act
         HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
-        request.addHeader(THIRD_PARTY_HEADER_NAME, UNOMI_KEY);
+        request.addHeader(UNOMI_API_KEY_HTTP_HEADER_KEY, testPublicKey.getKey());
         request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
         TestUtils.executeContextJSONRequest(request);
 

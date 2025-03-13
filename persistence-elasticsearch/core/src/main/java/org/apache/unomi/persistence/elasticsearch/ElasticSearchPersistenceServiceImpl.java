@@ -156,6 +156,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     private static final Logger LOGGER = LoggerFactory.getLogger(ElasticSearchPersistenceServiceImpl.class.getName());
     private static final String ROLLOVER_LIFECYCLE_NAME = "unomi-rollover-policy";
 
+    private volatile boolean shuttingDown = false;
     private boolean throwExceptions = false;
     private CustomRestHighLevelClient client;
     private BulkProcessor bulkProcessor;
@@ -711,7 +712,8 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     }
 
     public void stop() {
-
+        shuttingDown = true;
+        
         new InClassLoaderExecute<Object>(null, null, this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
             protected Object execute(Object... args) throws IOException {
                 LOGGER.info("Closing ElasticSearch persistence backend...");
@@ -738,10 +740,19 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     }
 
     public void unbindConditionEvaluator(ServiceReference<ConditionEvaluator> conditionEvaluatorServiceReference) {
-        if (conditionEvaluatorServiceReference == null) {
-            return;
+        if (conditionEvaluatorServiceReference == null || shuttingDown) {
+            return; // Skip this entirely if we're shutting down
         }
-        conditionEvaluatorDispatcher.removeEvaluator(conditionEvaluatorServiceReference.getProperty("conditionEvaluatorId").toString());
+        try {
+            Object conditionEvaluatorId = conditionEvaluatorServiceReference.getProperty("conditionEvaluatorId");
+            if (conditionEvaluatorId != null && conditionEvaluatorDispatcher != null) {
+                conditionEvaluatorDispatcher.removeEvaluator(conditionEvaluatorId.toString());
+            }
+        } catch (Exception e) {
+            // During shutdown we might get exceptions as services are being unregistered in unpredictable order
+            // Just log and continue to avoid deadlocks
+            LOGGER.debug("Error while unbinding condition evaluator: {}", e.getMessage());
+        }
     }
 
     public void bindConditionESQueryBuilder(ServiceReference<ConditionESQueryBuilder> conditionESQueryBuilderServiceReference) {
@@ -750,10 +761,19 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     }
 
     public void unbindConditionESQueryBuilder(ServiceReference<ConditionESQueryBuilder> conditionESQueryBuilderServiceReference) {
-        if (conditionESQueryBuilderServiceReference == null) {
-            return;
+        if (conditionESQueryBuilderServiceReference == null || shuttingDown) {
+            return; // Skip this entirely if we're shutting down
         }
-        conditionESQueryBuilderDispatcher.removeQueryBuilder(conditionESQueryBuilderServiceReference.getProperty("queryBuilderId").toString());
+        try {
+            Object queryBuilderId = conditionESQueryBuilderServiceReference.getProperty("queryBuilderId");
+            if (queryBuilderId != null && conditionESQueryBuilderDispatcher != null) {
+                conditionESQueryBuilderDispatcher.removeQueryBuilder(queryBuilderId.toString());
+            }
+        } catch (Exception e) {
+            // During shutdown we might get exceptions as services are being unregistered in unpredictable order
+            // Just log and continue to avoid deadlocks
+            LOGGER.debug("Error while unbinding condition query builder: {}", e.getMessage());
+        }
     }
 
     @Override

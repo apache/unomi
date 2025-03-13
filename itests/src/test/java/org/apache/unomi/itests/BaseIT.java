@@ -117,7 +117,6 @@ public abstract class BaseIT extends KarafTestSupport {
 
     private final static Logger LOGGER = LoggerFactory.getLogger(BaseIT.class);
 
-    protected static final String UNOMI_KEY = "670c26d1cc413346c3b2fd9ce65dab41";
     protected static final ContentType JSON_CONTENT_TYPE = ContentType.create("application/json");
     protected static final String BASE_URL = "http://localhost";
     protected static final String BASIC_AUTH_USER_NAME = "karaf";
@@ -652,8 +651,8 @@ public abstract class BaseIT extends KarafTestSupport {
             String credentials = TEST_TENANT_ID + ":" + testPrivateKey.getKey();
             request.setHeader("Authorization", "Basic " + Base64.getEncoder().encodeToString(credentials.getBytes()));
         } else {
-            // For public endpoints, use X-Unomi-API-Key header
-            request.setHeader("X-Unomi-API-Key", testPublicKey.getKey());
+            // For public endpoints, use X-Unomi-Api-Key header
+            request.setHeader("X-Unomi-Api-Key", testPublicKey.getKey());
         }
 
         System.out.println("Executing request " + request.getMethod() + " " + request.getURI() + "...");

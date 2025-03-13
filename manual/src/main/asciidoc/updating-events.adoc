@@ -45,7 +45,7 @@ curl -X POST http://localhost:8181/cxs/context.json \
 }
 EOF
 ----
-Make sure to use an authorized third party using `X-Unomi-Peer` requests headers and that the `eventType` is in the list of allowed events
+Make sure to use an authorized third party using `X-Unomi-Api-Key` requests headers and that the `eventType` is in the list of allowed events
 
 ==== Defining Rules
 Another use case we support is the ability to define a rule on the above mentioned events.

@@ -44,6 +44,8 @@ public class TenantMonitoringService {
     private ExecutionContextManager contextManager;
 
     private final Map<String, TenantMetrics> metricsCache = new ConcurrentHashMap<>();
+    private ScheduledExecutorService executor;
+    private volatile boolean shutdownNow = false;
 
     public void setPersistenceService(PersistenceService persistenceService) {
         this.persistenceService = persistenceService;
@@ -62,7 +64,13 @@ public class TenantMonitoringService {
     }
 
     public void activate() {
+        shutdownNow = false;
         startMetricsCollection();
+    }
+
+    public void deactivate() {
+        shutdownNow = true;
+        stopMetricsCollection();
     }
 
     public TenantMetrics getMetrics(String tenantId) {
@@ -70,12 +78,28 @@ public class TenantMonitoringService {
     }
 
     private void startMetricsCollection() {
-        ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
+        executor = Executors.newScheduledThreadPool(1, r -> {
+            Thread t = new Thread(r, "Tenant-Metrics-Collector");
+            t.setDaemon(true);
+            return t;
+        });
+        
         executor.scheduleAtFixedRate(() -> {
             try {
+                if (shutdownNow) {
+                    return;
+                }
+                
+                if (contextManager == null) {
+                    logger.warn("Context manager not available, skipping metrics collection");
+                    return;
+                }
+                
                 contextManager.executeAsSystem(() -> {
                     try {
-                        updateMetrics();
+                        if (!shutdownNow && tenantService != null && persistenceService != null) {
+                            updateMetrics();
+                        }
                     } catch (Exception e) {
                         logger.error("Error updating metrics", e);
                     }
@@ -87,15 +111,25 @@ public class TenantMonitoringService {
     }
 
     private void updateMetrics() {
-        List<Tenant> tenants = tenantService.getAllTenants();
-        for (Tenant tenant : tenants) {
-            TenantMetrics metrics = new TenantMetrics();
-            metrics.setProfileCount(countProfiles(tenant.getItemId()));
-            metrics.setEventCount(countEvents(tenant.getItemId()));
-            metrics.setStorageSize(persistenceService.calculateStorageSize(tenant.getItemId()));
-            metrics.setApiCallCount(persistenceService.getApiCallCount(tenant.getItemId()));
+        if (shutdownNow) {
+            return;
+        }
+        
+        try {
+            List<Tenant> tenants = tenantService.getAllTenants();
+            for (Tenant tenant : tenants) {
+                if (shutdownNow) return;
+                
+                TenantMetrics metrics = new TenantMetrics();
+                metrics.setProfileCount(countProfiles(tenant.getItemId()));
+                metrics.setEventCount(countEvents(tenant.getItemId()));
+                metrics.setStorageSize(persistenceService.calculateStorageSize(tenant.getItemId()));
+                metrics.setApiCallCount(persistenceService.getApiCallCount(tenant.getItemId()));
 
-            metricsCache.put(tenant.getItemId(), metrics);
+                metricsCache.put(tenant.getItemId(), metrics);
+            }
+        } catch (Exception e) {
+            logger.error("Error updating tenant metrics", e);
         }
     }
 
@@ -117,5 +151,21 @@ public class TenantMonitoringService {
         condition.setParameter("comparisonOperator", "equals");
         condition.setParameter("propertyValue", tenantId);
         return persistenceService.queryCount(condition, Event.ITEM_TYPE);
+    }
+
+    private void stopMetricsCollection() {
+        if (executor != null) {
+            try {
+                executor.shutdownNow();
+                if (!executor.awaitTermination(3, TimeUnit.SECONDS)) {
+                    logger.warn("Executor did not terminate in time, some tasks may have been canceled");
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                logger.warn("Interrupted while shutting down the monitoring executor");
+            } finally {
+                executor = null;
+            }
+        }
     }
 }

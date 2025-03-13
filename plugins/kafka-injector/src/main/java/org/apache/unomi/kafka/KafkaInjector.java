@@ -26,6 +26,7 @@ import org.apache.unomi.api.services.EventService;
 import org.osgi.service.component.ComponentContext;
 import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Deactivate;
 import org.osgi.service.component.annotations.Reference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,7 +36,9 @@ import java.io.UnsupportedEncodingException;
 import java.util.Arrays;
 import java.util.Dictionary;
 import java.util.Properties;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 @Component(
         name = "org.apache.unomi.kafka",
@@ -51,6 +54,7 @@ public class KafkaInjector implements Runnable {
     private String messageType;
     private boolean consuming = false;
     private ObjectMapper objectMapper;
+    private ExecutorService executorService;
 
     @Reference
     private EventService eventService;
@@ -141,7 +145,26 @@ public class KafkaInjector implements Runnable {
             Thread.currentThread().setContextClassLoader(originClassLoader);
         }
         consuming = true;
-        Executors.newSingleThreadExecutor().execute(this);
+
+        executorService = Executors.newSingleThreadExecutor();
+        executorService.execute(this);
+    }
+
+    @Deactivate
+    public void deactivate() {
+        consuming = false;
+        if (executorService != null) {
+            executorService.shutdown();
+            try {
+                if (!executorService.awaitTermination(10, TimeUnit.SECONDS)) {
+                    executorService.shutdownNow();
+                }
+            } catch (InterruptedException e) {
+                executorService.shutdownNow();
+                Thread.currentThread().interrupt();
+            }
+            executorService = null;
+        }
     }
 
     @Override
