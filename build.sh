@@ -222,6 +222,20 @@ print_progress() {
     fi
 }
 
+# Function to prompt for continuation
+prompt_continue() {
+    local prompt_text="$1"
+    if [ -z "$prompt_text" ]; then
+        prompt_text="Continue?"
+    fi
+    
+    read -p "$prompt_text (y/N) " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        exit 1
+    fi
+}
+
 # Add the new section header
 print_section "Apache Unomi Build Script"
 
@@ -239,6 +253,10 @@ KARAF_DEBUG_SUSPEND=n
 USE_OPENSEARCH=false
 NO_KARAF=false
 AUTO_START=""
+SINGLE_TEST=""
+IT_DEBUG=false
+IT_DEBUG_PORT=5006
+IT_DEBUG_SUSPEND=false
 
 # Enhanced usage function with color support
 usage() {
@@ -272,6 +290,10 @@ EOF
         echo -e "  ${CYAN}--use-opensearch${NC}          Use OpenSearch instead of ElasticSearch"
         echo -e "  ${CYAN}--no-karaf${NC}               Build without starting Karaf"
         echo -e "  ${CYAN}--auto-start ENGINE${NC}      Auto-start with specified engine"
+        echo -e "  ${CYAN}--single-test TEST${NC}         Run a single integration test"
+        echo -e "  ${CYAN}--it-debug${NC}                 Enable integration test debug mode"
+        echo -e "  ${CYAN}--it-debug-port PORT${NC}        Set integration test debug port"
+        echo -e "  ${CYAN}--it-debug-suspend${NC}        Suspend integration test until debugger connects"
     else
         cat << "EOF"
      _    _ _____ _      ____
@@ -300,6 +322,10 @@ EOF
         echo "  --use-opensearch          Use OpenSearch instead of ElasticSearch"
         echo "  --no-karaf               Build without starting Karaf"
         echo "  --auto-start ENGINE      Auto-start with specified engine"
+        echo "  --single-test TEST         Run a single integration test"
+        echo "  --it-debug                Enable integration test debug mode"
+        echo "  --it-debug-port PORT      Set integration test debug port"
+        echo "  --it-debug-suspend        Suspend integration test until debugger connects"
     fi
 
     echo
@@ -316,6 +342,12 @@ EOF
         echo -e
         echo -e "  ${GRAY}# Build without Karaf and auto-start OpenSearch${NC}"
         echo -e "  ${GRAY}$0 --no-karaf --auto-start opensearch${NC}"
+        echo -e
+        echo -e "  ${GRAY}# Run a single integration test${NC}"
+        echo -e "  ${GRAY}$0 --integration-tests --single-test org.apache.unomi.itests.graphql.GraphQLEventIT${NC}"
+        echo -e
+        echo -e "  ${GRAY}# Debug a single integration test${NC}"
+        echo -e "  ${GRAY}$0 --integration-tests --single-test org.apache.unomi.itests.graphql.GraphQLEventIT --it-debug --it-debug-suspend${NC}"
         echo -e
         echo -e "  ${GRAY}# Run without colored output${NC}"
         echo -e "  ${GRAY}NO_COLOR=1 $0${NC}"
@@ -334,6 +366,12 @@ EOF
         echo
         echo "  # Build without Karaf and auto-start OpenSearch"
         echo "  $0 --no-karaf --auto-start opensearch"
+        echo
+        echo "  # Run a single integration test"
+        echo "  $0 --integration-tests --single-test org.apache.unomi.itests.graphql.GraphQLEventIT"
+        echo
+        echo "  # Debug a single integration test"
+        echo "  $0 --integration-tests --single-test org.apache.unomi.itests.graphql.GraphQLEventIT --it-debug --it-debug-suspend"
         echo
         echo "  # Run without colored output"
         echo "  NO_COLOR=1 $0"
@@ -398,6 +436,20 @@ while [ "$1" != "" ]; do
                 exit 1
             fi
             AUTO_START="$1"
+            ;;
+        --single-test)
+            shift
+            SINGLE_TEST="$1"
+            ;;
+        --it-debug)
+            IT_DEBUG=true
+            ;;
+        --it-debug-port)
+            shift
+            IT_DEBUG_PORT=$1
+            ;;
+        --it-debug-suspend)
+            IT_DEBUG_SUSPEND=true
             ;;
         *)
             echo "Unknown option: $1"
@@ -642,6 +694,34 @@ check_requirements() {
         has_errors=true
     fi
 
+    if [ ! -z "$SINGLE_TEST" ] && [ "$RUN_INTEGRATION_TESTS" = false ]; then
+        print_status "error" "Single test specified (--single-test) but integration tests are not enabled. Use --integration-tests to run the test."
+        has_errors=true
+    fi
+
+    if [ "$IT_DEBUG" = true ] && [ "$RUN_INTEGRATION_TESTS" = false ]; then
+        print_status "error" "Integration test debug (--it-debug) enabled but integration tests are not enabled. Use --integration-tests to run the test."
+        has_errors=true
+    fi
+
+    if [ "$IT_DEBUG" = true ]; then
+        if ! [[ "$IT_DEBUG_PORT" =~ ^[0-9]+$ ]] || [ "$IT_DEBUG_PORT" -lt 1024 ] || [ "$IT_DEBUG_PORT" -gt 65535 ]; then
+            print_status "error" "✗ Integration test debug port: $IT_DEBUG_PORT (invalid)"
+            echo "Please specify a valid port with --it-debug-port option"
+            echo "Common debug ports: 5006 (default), 8000, 8453"
+            has_errors=true
+        elif command_exists nc && nc -z localhost "$IT_DEBUG_PORT" 2>/dev/null; then
+            print_status "error" "✗ Integration test debug port: $IT_DEBUG_PORT (already in use)"
+            echo "Tips:"
+            echo "  - Choose a different port with --it-debug-port option"
+            echo "  - Check what's using the port: lsof -i :$IT_DEBUG_PORT"
+            echo "  - Kill the process using the port if necessary"
+            has_errors=true
+        else
+            print_status "success" "✓ Integration test debug port: $IT_DEBUG_PORT available"
+        fi
+    fi
+
     if [ "$MAVEN_OFFLINE" = true ]; then
         if [ "$PURGE_MAVEN_CACHE" = true ]; then
             print_status "error" "Cannot use --purge-maven-cache in offline mode"
@@ -729,10 +809,34 @@ if [ "$RUN_INTEGRATION_TESTS" = true ]; then
         echo "Running integration tests with ElasticSearch"
     fi
     MVN_OPTS="$MVN_OPTS -P integration-tests"
+    
+    # Add single test option if specified
+    if [ ! -z "$SINGLE_TEST" ]; then
+        MVN_OPTS="$MVN_OPTS -Dit.test=$SINGLE_TEST"
+        echo "Running single integration test: $SINGLE_TEST"
+    fi
+    
+    # Add integration test debug options if enabled
+    if [ "$IT_DEBUG" = true ]; then
+        DEBUG_OPTS="port=$IT_DEBUG_PORT"
+        if [ "$IT_DEBUG_SUSPEND" = true ]; then
+            DEBUG_OPTS="$DEBUG_OPTS,hold:true"
+            echo "Integration test debug enabled with suspend (port: $IT_DEBUG_PORT)"
+        else
+            DEBUG_OPTS="$DEBUG_OPTS,hold:false"
+            echo "Integration test debug enabled (port: $IT_DEBUG_PORT)"
+        fi
+        MVN_OPTS="$MVN_OPTS -Dit.karaf.debug=$DEBUG_OPTS"
+    fi
 else
     if [ "$SKIP_TESTS" = true ]; then
         PROFILES="$PROFILES,!integration-tests,!run-tests"
         MVN_OPTS="$MVN_OPTS -DskipTests"
+    fi
+    
+    # Warn if single test was specified but integration tests are not enabled
+    if [ ! -z "$SINGLE_TEST" ]; then
+        print_status "warning" "Single test specified but integration tests are not enabled. Use --integration-tests to run the test."
     fi
 fi
 
