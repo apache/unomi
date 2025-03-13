@@ -69,6 +69,22 @@ import static org.apache.unomi.api.tenants.TenantService.SYSTEM_TENANT;
 
 /**
  * Implementation of the GroovyActionService. Allows to create a groovy action from a groovy file
+ *
+ * This implementation handles three distinct scenarios for Groovy actions:
+ *
+ * 1. Preloading from bundle resources:
+ *    - Groovy scripts are loaded from META-INF/cxs/actions/*.groovy files
+ *    - ActionTypes are registered directly during processGroovyScript
+ *    - Custom loadPredefinedItemsForType handles storing code sources in tenant map
+ *
+ * 2. Manual saving via API:
+ *    - ActionTypes are registered directly during save method
+ *    - Code sources are stored in the tenant map for runtime execution
+ *
+ * 3. Cache refreshing from persistence:
+ *    - processGroovyActionForCache is used which only stores code sources in tenant map
+ *    - No ActionType persistence happens during cache refresh
+ *    - Avoids circular persistence operations during refresh
  */
 @Component(service = GroovyActionsService.class, configurationPid = "org.apache.unomi.groovy.actions")
 @Designate(ocd = GroovyActionsServiceImpl.GroovyActionsServiceConfig.class)
@@ -98,8 +114,9 @@ public class GroovyActionsServiceImpl extends AbstractMultiTypeCachingService im
             .withRequiresRefresh(true)
             .withRefreshInterval(1000) // Will be overridden by config
             .withIdExtractor(GroovyAction::getName)
-            .withPostProcessor(this::postProcessGroovyAction)
-            .withStreamProcessor(this::processGroovyScript)
+            // Skip saving action types during cache refresh to avoid circular persistence operations
+            .withPostProcessor(this::processGroovyActionForCache)
+            .withStreamProcessor((bundleContext, url, inputStream) -> contextManager.executeAsSystem(() -> processGroovyScript(bundleContext, url, inputStream)))
             .build();
 
     @Reference
@@ -201,6 +218,7 @@ public class GroovyActionsServiceImpl extends AbstractMultiTypeCachingService im
 
                 // Use stream processor to process the Groovy script
                 try (InputStream inputStream = entryURL.openStream()) {
+                    // During preloading, the processGroovyScript method will extract and register the ActionType
                     T item = config.getStreamProcessor().apply(bundleContext, entryURL, inputStream);
                     if (item == null) {
                         logger.warn("Stream processor returned null for {}", entryURL);
@@ -213,9 +231,23 @@ public class GroovyActionsServiceImpl extends AbstractMultiTypeCachingService im
                     // Process in system context to ensure permissions
                     contextManager.executeAsSystem(() -> {
                         try {
-                            // Apply post-processor if defined
-                            if (config.getPostProcessor() != null) {
-                                config.getPostProcessor().accept(finalItem);
+                            // We're skipping the post-processor here because:
+                            // 1. For GroovyAction, the ActionType is already registered in processGroovyScript
+                            // 2. The only other thing postProcessor does is to add the code source to the tenant map
+
+                            // Manual handling of what's needed from the post-processor
+                            // (just storing the code source in tenant map)
+                            if (finalItem instanceof GroovyAction) {
+                                GroovyAction groovyAction = (GroovyAction) finalItem;
+                                String actionName = groovyAction.getName();
+                                String script = groovyAction.getScript();
+
+                                GroovyCodeSource groovyCodeSource = new GroovyCodeSource(script, actionName, "/groovy/script");
+
+                                // Store the code source in our tenant map for runtime access
+                                Map<String, GroovyCodeSource> groovyCodeSourceMap = groovyCodeSourceMapByTenant
+                                    .computeIfAbsent(SYSTEM_TENANT, k -> new ConcurrentHashMap<>());
+                                groovyCodeSourceMap.put(actionName, groovyCodeSource);
                             }
 
                             // Track contribution
@@ -257,6 +289,22 @@ public class GroovyActionsServiceImpl extends AbstractMultiTypeCachingService im
 
             // Create the GroovyAction instance
             GroovyAction groovyAction = new GroovyAction(actionName, groovyScript);
+
+            // During preloading, we need to register the ActionType immediately
+            // Create a code source for parsing
+            GroovyCodeSource groovyCodeSource = new GroovyCodeSource(groovyScript, actionName, "/groovy/script");
+
+            // Extract Action annotation and register the ActionType
+            try {
+                Action actionAnnotation = groovyShell.parse(groovyCodeSource).getClass().getMethod("execute").getAnnotation(Action.class);
+                if (actionAnnotation != null) {
+                    contextManager.executeAsSystem(() -> {
+                        saveActionType(actionAnnotation);
+                    });
+                }
+            } catch (NoSuchMethodException e) {
+                LOGGER.warn("Failed to extract Action annotation from predefined Groovy script {}: {}", actionName, e.getMessage());
+            }
 
             LOGGER.debug("Processed Groovy script from {}, action name: {}", url.getPath(), actionName);
             return groovyAction;
@@ -327,11 +375,12 @@ public class GroovyActionsServiceImpl extends AbstractMultiTypeCachingService im
     }
 
     /**
-     * Post-process a GroovyAction, creating a GroovyCodeSource and potentially registering an ActionType
+     * Process a GroovyAction for caching purposes, creating a GroovyCodeSource and storing it in the tenant map.
+     * This method specifically avoids registering ActionTypes to prevent circular persistence operations.
      *
      * @param groovyAction the GroovyAction to process
      */
-    private void postProcessGroovyAction(GroovyAction groovyAction) {
+    private void processGroovyActionForCache(GroovyAction groovyAction) {
         try {
             String actionName = groovyAction.getName();
             String script = groovyAction.getScript();
@@ -343,17 +392,16 @@ public class GroovyActionsServiceImpl extends AbstractMultiTypeCachingService im
             Map<String, GroovyCodeSource> groovyCodeSourceMap = groovyCodeSourceMapByTenant.computeIfAbsent(tenantId, k -> new ConcurrentHashMap<>());
             groovyCodeSourceMap.put(actionName, groovyCodeSource);
 
-            // Try to extract the Action annotation and register the ActionType
+            // We parse the script to validate it, but intentionally skip saving ActionType
+            // to avoid circular persistence operations during cache refresh
             try {
-                Action actionAnnotation = groovyShell.parse(groovyCodeSource).getClass().getMethod("execute").getAnnotation(Action.class);
-                if (actionAnnotation != null) {
-                    saveActionType(actionAnnotation);
-                }
+                groovyShell.parse(groovyCodeSource).getClass().getMethod("execute");
+                // Note: We don't extract or save the ActionType here
             } catch (NoSuchMethodException e) {
-                LOGGER.warn("Failed to extract Action annotation from Groovy script {}: {}", actionName, e.getMessage());
+                LOGGER.warn("Failed to validate Groovy script {}: {}", actionName, e.getMessage());
             }
         } catch (Exception e) {
-            LOGGER.error("Error post-processing Groovy action {}: {}", groovyAction.getName(), e.getMessage(), e);
+            LOGGER.error("Error processing Groovy action {}: {}", groovyAction.getName(), e.getMessage(), e);
         }
     }
 
@@ -367,7 +415,10 @@ public class GroovyActionsServiceImpl extends AbstractMultiTypeCachingService im
                 .withRequiresRefresh(true)
                 .withRefreshInterval(config.services_groovy_actions_refresh_interval())
                 .withIdExtractor(GroovyAction::getName)
-                .withPostProcessor(this::postProcessGroovyAction)
+                // We need to skip saving the action type during cache refresh to avoid circular persistence operations.
+                // During cache refresh, we're loading items that already exist in the persistence store,
+                // so calling saveActionType would trigger another persistence.save operation for the same item.
+                .withPostProcessor(this::processGroovyActionForCache)
                 .withStreamProcessor(this::processGroovyScript)
                 .build();
 
