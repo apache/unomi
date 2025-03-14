@@ -63,6 +63,10 @@ public class ClusterServiceImplTest {
     @Mock
     private BundleContext bundleContext;
 
+    // Add mock for BundleWatcher
+    @Mock
+    private org.apache.unomi.lifecycle.BundleWatcher bundleWatcher;
+
     private static final String TEST_NODE_ID = "test-node-1";
     private static final String PUBLIC_ADDRESS = "http://localhost:8181";
     private static final String INTERNAL_ADDRESS = "https://localhost:9443";
@@ -90,14 +94,15 @@ public class ClusterServiceImplTest {
         persistenceService = new InMemoryPersistenceServiceImpl(executionContextManager, conditionEvaluatorDispatcher);
 
         // Create cluster service using TestHelper
-        clusterService = TestHelper.createClusterService(persistenceService, TEST_NODE_ID, PUBLIC_ADDRESS, INTERNAL_ADDRESS);
+        clusterService = TestHelper.createClusterService(persistenceService, TEST_NODE_ID, PUBLIC_ADDRESS, INTERNAL_ADDRESS, bundleContext);
         
         // Configure cluster service (additional configurations not covered by helper method)
         clusterService.setNodeStatisticsUpdateFrequency(NODE_STATISTICS_UPDATE_FREQUENCY);
         
         // Create scheduler service using TestHelper
-        schedulerService = (SchedulerServiceImpl) TestHelper.createSchedulerService(
-            persistenceService, executionContextManager, bundleContext, clusterService, true);
+        schedulerService = TestHelper.createSchedulerService(
+            "cluster-scheduler-node",
+            persistenceService, executionContextManager, bundleContext, clusterService, -1, true, true);
 
         // Set scheduler in cluster service - this would normally be done by OSGi but we need to do it manually in tests
         clusterService.setSchedulerService(schedulerService);
@@ -108,6 +113,20 @@ public class ClusterServiceImplTest {
 
     @Test
     public void testInitRegistersNodeInPersistence() {
+        // Setup mock BundleWatcher to return a ServerInfo
+        org.apache.unomi.api.ServerInfo mockServerInfo = new org.apache.unomi.api.ServerInfo();
+        mockServerInfo.setServerIdentifier("test-server");
+        mockServerInfo.setServerVersion("1.0.0");
+        mockServerInfo.setServerBuildNumber("123");
+        mockServerInfo.setServerBuildDate(new Date());
+        mockServerInfo.setServerTimestamp("20250314120000");
+        mockServerInfo.setServerScmBranch("main");
+        
+        when(bundleWatcher.getServerInfos()).thenReturn(java.util.Collections.singletonList(mockServerInfo));
+        
+        // Set the BundleWatcher in the ClusterService
+        clusterService.setBundleWatcher(bundleWatcher);
+        
         // Execute
         clusterService.init();
 
@@ -122,6 +141,30 @@ public class ClusterServiceImplTest {
         assertNotNull(savedNode.getCpuLoad());
         assertNotNull(savedNode.getUptime());
         assertNotNull(savedNode.getLoadAverage());
+        
+        // Verify ServerInfo was set correctly
+        assertNotNull(savedNode.getServerInfo(), "ServerInfo should be set from BundleWatcher");
+        assertEquals(mockServerInfo.getServerIdentifier(), savedNode.getServerInfo().getServerIdentifier());
+        assertEquals(mockServerInfo.getServerVersion(), savedNode.getServerInfo().getServerVersion());
+        assertEquals(mockServerInfo.getServerBuildNumber(), savedNode.getServerInfo().getServerBuildNumber());
+        assertEquals(mockServerInfo.getServerBuildDate(), savedNode.getServerInfo().getServerBuildDate());
+        assertEquals(mockServerInfo.getServerTimestamp(), savedNode.getServerInfo().getServerTimestamp());
+        assertEquals(mockServerInfo.getServerScmBranch(), savedNode.getServerInfo().getServerScmBranch());
+    }
+
+    // Add a new test to verify behavior when BundleWatcher is not available
+    @Test
+    public void testInitRegistersNodeInPersistenceWithoutBundleWatcher() {
+        // Execute without setting a BundleWatcher
+        clusterService.init();
+
+        // Verify node was saved in persistence
+        ClusterNode savedNode = persistenceService.load(TEST_NODE_ID, ClusterNode.class);
+        assertNotNull(savedNode);
+        assertEquals(TEST_NODE_ID, savedNode.getItemId());
+        
+        // Server info should be null since we don't have a BundleWatcher set
+        assertNull(savedNode.getServerInfo(), "ServerInfo should be null when BundleWatcher is not available");
     }
 
     @Test

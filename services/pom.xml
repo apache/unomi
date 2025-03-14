@@ -72,6 +72,13 @@
         </dependency>
 
         <dependency>
+            <groupId>org.apache.unomi</groupId>
+            <artifactId>unomi-lifecycle-watcher</artifactId>
+            <version>${project.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
             <groupId>javax.servlet</groupId>
             <artifactId>javax.servlet-api</artifactId>
             <scope>provided</scope>

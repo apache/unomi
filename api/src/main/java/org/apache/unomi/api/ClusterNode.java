@@ -35,6 +35,9 @@ public class ClusterNode extends Item {
     private boolean data;
     private long startTime;
     private long lastHeartbeat;
+    
+    // Server information 
+    private ServerInfo serverInfo;
 
     /**
      * Instantiates a new Cluster node.
@@ -204,5 +207,23 @@ public class ClusterNode extends Item {
      */
     public void setLastHeartbeat(long lastHeartbeat) {
         this.lastHeartbeat = lastHeartbeat;
+    }
+    
+    /**
+     * Gets the server information.
+     *
+     * @return the server information
+     */
+    public ServerInfo getServerInfo() {
+        return serverInfo;
+    }
+
+    /**
+     * Sets the server information.
+     *
+     * @param serverInfo the server information
+     */
+    public void setServerInfo(ServerInfo serverInfo) {
+        this.serverInfo = serverInfo;
     }
 }
