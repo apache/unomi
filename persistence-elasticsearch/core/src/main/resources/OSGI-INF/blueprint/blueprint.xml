@@ -188,8 +188,7 @@
     <!-- Execution Context Manager Reference -->
     <reference id="contextManager"
                interface="org.apache.unomi.api.services.ExecutionContextManager"
-               availability="optional"
-               timeout="0">
+               availability="optional">
         <reference-listener bind-method="bindContextManager"
                           unbind-method="unbindContextManager">
             <ref component-id="elasticSearchPersistenceServiceImpl"/>

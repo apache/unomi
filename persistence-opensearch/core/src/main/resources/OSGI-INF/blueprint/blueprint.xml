@@ -193,8 +193,7 @@
     <!-- Security Service Reference -->
     <reference id="securityService"
                interface="org.apache.unomi.api.security.SecurityService"
-               availability="optional"
-               timeout="0">
+               availability="optional">
         <reference-listener bind-method="bindSecurityService"
                           unbind-method="unbindSecurityService">
             <ref component-id="openSearchPersistenceServiceImpl"/>

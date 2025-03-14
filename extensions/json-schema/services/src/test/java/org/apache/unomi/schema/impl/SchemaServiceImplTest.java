@@ -94,7 +94,7 @@ public class SchemaServiceImplTest {
         when(bundleContext.getBundle().findEntries("META-INF/cxs/schemas", "*.json", true))
                 .thenReturn(Collections.enumeration(Arrays.asList(schemasUrl)));
 
-        schedulerService = TestHelper.createSchedulerService(persistenceService, contextManager, bundleContext);
+        schedulerService = TestHelper.createSchedulerService("schema-scheduler-node", persistenceService, contextManager, bundleContext, null, -1, true, true);
 
         cacheService = new MultiTypeCacheServiceImpl();
 

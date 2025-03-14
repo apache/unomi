@@ -36,6 +36,7 @@
                            bind-method="bindEncryptionService"
                            unbind-method="unbindEncryptionService"/>
     </reference>
+    <reference id="bundleWatcher" interface="org.apache.unomi.lifecycle.BundleWatcher"/>
 
     <!-- Reference Lists -->
     <reference-list id="eventListenerServices"
@@ -185,14 +186,12 @@
     <bean id="schedulerServiceImpl" class="org.apache.unomi.services.impl.scheduler.SchedulerServiceImpl"
         init-method="postConstruct" destroy-method="preDestroy">
         <property name="threadPoolSize" value="${services.scheduler.thread.poolSize}"/>
-        <property name="persistenceService" ref="persistenceService"/>
         <property name="executorNode" value="${services.scheduler.executorNode}"/>
         <property name="completedTaskTtlDays" value="${services.scheduler.completedTaskTtlDays}"/>
         <property name="bundleContext" ref="blueprintBundleContext"/>
         <property name="nodeId" value="${services.scheduler.nodeId}"/>
         <property name="lockTimeout" value="${services.scheduler.lockTimeout}"/>
         <property name="purgeTaskEnabled" value="${services.scheduler.purgeTaskEnabled}"/>
-        <property name="clusterService" ref="clusterServiceImpl"/>
     </bean>
 
     <bean id="definitionsServiceImpl" class="org.apache.unomi.services.impl.definitions.DefinitionsServiceImpl"
@@ -354,6 +353,8 @@
         <property name="persistenceService" ref="persistenceService"/>
         <property name="nodeId" value="${cluster.nodeId}"/>
         <property name="nodeStatisticsUpdateFrequency" value="${cluster.nodeStatisticsUpdateFrequency}"/>
+        <property name="bundleContext" ref="blueprintBundleContext"/>
+        <property name="bundleWatcher" ref="bundleWatcher"/>
     </bean>
 
     <reference id="schedulerServiceReference" interface="org.apache.unomi.api.services.SchedulerService"

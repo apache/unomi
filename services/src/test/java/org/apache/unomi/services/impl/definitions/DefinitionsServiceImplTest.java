@@ -93,7 +93,7 @@ class DefinitionsServiceImplTest {
         conditionValidationService = new ConditionValidationServiceImpl();
         // Mock bundle context
         bundleContext = TestHelper.createMockBundleContext();
-        schedulerService = TestHelper.createSchedulerService(persistenceService, executionContextManager, bundleContext);
+        schedulerService = TestHelper.createSchedulerService("definitions-service-scheduler-node", persistenceService, executionContextManager, bundleContext, null, -1, true, true);
         // Create scheduler service using TestHelper
         multiTypeCacheService = new MultiTypeCacheServiceImpl();
         definitionsService = TestHelper.createDefinitionService(persistenceService, bundleContext, schedulerService, multiTypeCacheService, executionContextManager, tenantService, conditionValidationService);

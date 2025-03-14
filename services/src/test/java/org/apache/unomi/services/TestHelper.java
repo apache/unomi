@@ -179,41 +179,38 @@ public class TestHelper {
         return rulesService;
     }
 
-    public static SchedulerService createSchedulerService(
-            PersistenceService persistenceService,
-            ExecutionContextManager executionContextManager, BundleContext bundleContext) {
-        return createSchedulerService(persistenceService, executionContextManager, bundleContext, true);
-    }
-    public static SchedulerService createSchedulerService(
-            PersistenceService persistenceService,
-            ExecutionContextManager executionContextManager, BundleContext bundleContext, boolean construct) {
-        return createSchedulerService(persistenceService, executionContextManager, bundleContext, null, construct);
-    }
-
     /**
      * Creates a scheduler service instance for testing purposes with ClusterService support.
      *
+     * @param nodeId The unique identifier for this node
      * @param persistenceService The persistence service to use
      * @param executionContextManager The execution context manager to use
      * @param bundleContext The bundle context to use
      * @param clusterService The cluster service to use (can be null)
+     * @param lockTimeout The lock timeout to use (in milliseconds)
+     * @param executorNode Whether this node is an executor node
      * @param construct Whether to call postConstruct on the service
      * @return A configured SchedulerServiceImpl instance
      */
-    public static SchedulerService createSchedulerService(
+    public static SchedulerServiceImpl createSchedulerService(
+            String nodeId,
             PersistenceService persistenceService,
             ExecutionContextManager executionContextManager,
             BundleContext bundleContext,
             ClusterService clusterService,
+            long lockTimeout,
+            boolean executorNode,
             boolean construct) {
-        org.apache.unomi.services.impl.scheduler.SchedulerServiceImpl schedulerService =
-            new org.apache.unomi.services.impl.scheduler.SchedulerServiceImpl();
+        SchedulerServiceImpl schedulerService = new SchedulerServiceImpl();
         schedulerService.setPersistenceService(persistenceService);
         schedulerService.setBundleContext(bundleContext);
         schedulerService.setThreadPoolSize(4); // Ensure enough threads for parallel execution
-        schedulerService.setExecutorNode(true);
-        schedulerService.setNodeId("test-scheduler-node");
+        schedulerService.setExecutorNode(executorNode);
+        schedulerService.setNodeId(nodeId);
         schedulerService.setPurgeTaskEnabled(false); // Disable purge task by default for tests
+        if (lockTimeout > 0) {
+            schedulerService.setLockTimeout(lockTimeout); // Set a default lock timeout for tests
+        }
 
         // Set the cluster service if provided
         if (clusterService != null) {
@@ -258,15 +255,17 @@ public class TestHelper {
      *
      * @param persistenceService The persistence service to use
      * @param nodeId The unique identifier for this node
+     * @param bundleContext The bundle context to use for service trackers (can be null)
      * @return A configured ClusterServiceImpl instance
      */
-    public static ClusterServiceImpl createClusterService(PersistenceService persistenceService, String nodeId) {
-        return createClusterService(persistenceService, nodeId, "127.0.0.1", "127.0.0.1");
+    public static ClusterServiceImpl createClusterService(PersistenceService persistenceService, String nodeId, BundleContext bundleContext) {
+        return createClusterService(persistenceService, nodeId, "127.0.0.1", "127.0.0.1", bundleContext);
     }
 
+    
     /**
-     * Creates a cluster service instance for testing purposes with custom addresses.
-     * Initializes a new ClusterServiceImpl with the specified persistence service, node ID, and addresses.
+     * Creates a cluster service instance for testing purposes with custom addresses and bundle context.
+     * Initializes a new ClusterServiceImpl with the specified persistence service, node ID, addresses, and bundle context.
      *
      * NOTE: Due to circular dependency between ClusterService and SchedulerService,
      * when using both services together:
@@ -278,19 +277,24 @@ public class TestHelper {
      * @param nodeId The unique identifier for this node
      * @param publicAddress The public address for the node
      * @param internalAddress The internal address for the node
+     * @param bundleContext The bundle context to use for service trackers (can be null)
      * @return A configured ClusterServiceImpl instance
      */
     public static ClusterServiceImpl createClusterService(
             PersistenceService persistenceService,
             String nodeId,
             String publicAddress,
-            String internalAddress) {
+            String internalAddress,
+            BundleContext bundleContext) {
         ClusterServiceImpl clusterService = new ClusterServiceImpl();
         clusterService.setPersistenceService(persistenceService);
         clusterService.setPublicAddress(publicAddress);
         clusterService.setInternalAddress(internalAddress);
         clusterService.setNodeStatisticsUpdateFrequency(60000);
         clusterService.setNodeId(nodeId);
+        if (bundleContext != null) {
+            clusterService.setBundleContext(bundleContext);
+        }
 
         return clusterService;
     }
@@ -503,51 +507,6 @@ public class TestHelper {
         task.setPersistent(persistent);
         task.setStatus(ScheduledTask.TaskStatus.SCHEDULED);
         return task;
-    }
-
-    /**
-     * Creates a test scheduler node with specified configuration.
-     * Sets up a SchedulerServiceImpl instance with the provided parameters and initializes it.
-     *
-     * @param persistenceService The persistence service to use
-     * @param nodeId The unique identifier for this node
-     * @param executorNode Whether this node should execute tasks
-     * @param lockTimeout The timeout duration for task locks (in milliseconds)
-     * @return A configured SchedulerServiceImpl instance
-     */
-    public static SchedulerServiceImpl createTestNode(PersistenceService persistenceService, String nodeId, boolean executorNode, long lockTimeout) {
-        return createTestNode(persistenceService, nodeId, executorNode, lockTimeout, null);
-    }
-
-    /**
-     * Creates a test scheduler node with cluster service support
-     *
-     * @param persistenceService The persistence service to use
-     * @param nodeId The node identifier
-     * @param executorNode Whether this node should execute tasks
-     * @param lockTimeout Lock timeout in milliseconds (-1 for default)
-     * @param clusterService The cluster service to use (can be null)
-     * @return Configured SchedulerServiceImpl instance
-     */
-    public static SchedulerServiceImpl createTestNode(PersistenceService persistenceService, String nodeId, boolean executorNode,
-                                                   long lockTimeout, ClusterService clusterService) {
-        SchedulerServiceImpl node = new SchedulerServiceImpl();
-        if (lockTimeout > 0) {
-            node.setLockTimeout(lockTimeout);
-        }
-        node.setPersistenceService(persistenceService);
-        node.setExecutorNode(executorNode);
-        node.setThreadPoolSize(2);
-        node.setPurgeTaskEnabled(false);
-        node.setNodeId(nodeId);
-
-        // Set the cluster service if provided
-        if (clusterService != null) {
-            node.setClusterService(clusterService);
-        }
-
-        node.postConstruct();
-        return node;
     }
 
     /**

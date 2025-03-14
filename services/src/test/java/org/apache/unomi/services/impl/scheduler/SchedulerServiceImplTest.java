@@ -39,9 +39,6 @@ import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -101,6 +98,28 @@ public class SchedulerServiceImplTest {
     @Mock
     private BundleContext bundleContext;
 
+    // Test categories with documentation
+    /** Tests for basic task lifecycle operations */
+    public interface BasicTests {}
+    /** Tests for task state transitions and validation */
+    public interface StateTests {}
+    /** Tests for task dependency management */
+    public interface DependencyTests {}
+    /** Tests for multi-node execution and lock management */
+    public interface ClusterTests {}
+    /** Tests for crash recovery and task resumption */
+    public interface RecoveryTests {}
+    /** Tests for metrics collection and history tracking */
+    public interface MetricsTests {}
+    /** Tests for input validation and error handling */
+    public interface ValidationTests {}
+    /** Tests for task retry behavior and delay */
+    public interface RetryTests {}
+    /** Tests for task cleanup and maintenance */
+    public interface MaintenanceTests {}
+    /** Tests for task querying and filtering */
+    public interface QueryTests {}
+
     private static void configureDebugLogging() {
         // Enable debug logging for scheduler package
         System.setProperty("org.slf4j.simpleLogger.log.org.apache.unomi.services.impl.scheduler", "DEBUG");
@@ -129,14 +148,17 @@ public class SchedulerServiceImplTest {
         persistenceService = new InMemoryPersistenceServiceImpl(executionContextManager, conditionEvaluatorDispatcher);
         
         // Create and configure cluster service using the helper method
-        clusterService = TestHelper.createClusterService(persistenceService, "test-scheduler-node");
+        clusterService = TestHelper.createClusterService(persistenceService, "test-scheduler-node", bundleContext);
         
         // Create scheduler service with cluster service
         schedulerService = (SchedulerServiceImpl) TestHelper.createSchedulerService(
+            "test-scheduler-node",
             persistenceService, 
             executionContextManager, 
             bundleContext, 
             clusterService, 
+            -1,
+            true,
             false);
 
         // Configure scheduler for testing
@@ -388,9 +410,9 @@ public class SchedulerServiceImplTest {
     @Category(ClusterTests.class)
     public void testClusteringSupport() throws Exception {
         // Test clustering behavior with multiple nodes
-        SchedulerServiceImpl node1 = TestHelper.createTestNode(persistenceService, "node1", true, -1, clusterService);
-        SchedulerServiceImpl node2 = TestHelper.createTestNode(persistenceService, "node2", true, -1, clusterService);
-        SchedulerServiceImpl nonExecutorNode = TestHelper.createTestNode(persistenceService, "node3", false, -1, clusterService);
+        SchedulerServiceImpl node1 = TestHelper.createSchedulerService("node1", persistenceService, executionContextManager, bundleContext, clusterService, -1, true, true);
+        SchedulerServiceImpl node2 = TestHelper.createSchedulerService("node2", persistenceService, executionContextManager, bundleContext, clusterService, -1, true, true);
+        SchedulerServiceImpl nonExecutorNode = TestHelper.createSchedulerService("node3", persistenceService, executionContextManager, bundleContext, clusterService, -1, false, true);
 
         try {
             // Instead of mock cluster nodes, create persistent tasks with locks
@@ -1092,28 +1114,6 @@ public class SchedulerServiceImplTest {
         return task;
     }
 
-    // Test categories with documentation
-    /** Tests for basic task lifecycle operations */
-    public interface BasicTests {}
-    /** Tests for task state transitions and validation */
-    public interface StateTests {}
-    /** Tests for task dependency management */
-    public interface DependencyTests {}
-    /** Tests for multi-node execution and lock management */
-    public interface ClusterTests {}
-    /** Tests for crash recovery and task resumption */
-    public interface RecoveryTests {}
-    /** Tests for metrics collection and history tracking */
-    public interface MetricsTests {}
-    /** Tests for input validation and error handling */
-    public interface ValidationTests {}
-    /** Tests for task retry behavior and delay */
-    public interface RetryTests {}
-    /** Tests for task cleanup and maintenance */
-    public interface MaintenanceTests {}
-    /** Tests for task querying and filtering */
-    public interface QueryTests {}
-
     /**
      * Tests node failure scenarios in clustering.
      * Verifies that tasks are properly recovered when nodes fail during execution.
@@ -1122,8 +1122,8 @@ public class SchedulerServiceImplTest {
     @Category(ClusterTests.class)
     public void testNodeFailure() throws Exception {
         schedulerService.preDestroy();
-        SchedulerServiceImpl node1 = TestHelper.createTestNode(persistenceService, "node1", true, TEST_LOCK_TIMEOUT, clusterService);
-        SchedulerServiceImpl node2 = TestHelper.createTestNode(persistenceService, "node2", true, TEST_LOCK_TIMEOUT, clusterService);
+        SchedulerServiceImpl node1 = TestHelper.createSchedulerService("node1", persistenceService, executionContextManager, bundleContext, clusterService, TEST_LOCK_TIMEOUT, true, true);
+        SchedulerServiceImpl node2 = TestHelper.createSchedulerService("node2", persistenceService, executionContextManager, bundleContext, clusterService, TEST_LOCK_TIMEOUT, true, true);
 
         try {
             CountDownLatch startLatch = new CountDownLatch(1);
@@ -1210,8 +1210,8 @@ public class SchedulerServiceImplTest {
     @Test
     @Category(ClusterTests.class)
     public void testConcurrentLockAcquisition() throws Exception {
-        SchedulerServiceImpl node1 = TestHelper.createTestNode(persistenceService, "node1", true, -1, clusterService);
-        SchedulerServiceImpl node2 = TestHelper.createTestNode(persistenceService, "node2", true, -1, clusterService);
+        SchedulerServiceImpl node1 = TestHelper.createSchedulerService("node1", persistenceService, executionContextManager, bundleContext, clusterService, -1, true, true);
+        SchedulerServiceImpl node2 = TestHelper.createSchedulerService("node2", persistenceService, executionContextManager, bundleContext, clusterService, -1, true, true);
 
         try {
             CountDownLatch completionLatch = new CountDownLatch(2); // We expect 2 executions
@@ -1315,7 +1315,7 @@ public class SchedulerServiceImplTest {
     @Test
     @Category(ClusterTests.class)
     public void testTaskRebalancing() throws Exception {
-        SchedulerServiceImpl node1 = TestHelper.createTestNode(persistenceService, "node1", true, -1, clusterService);
+        SchedulerServiceImpl node1 = TestHelper.createSchedulerService("node1", persistenceService, executionContextManager, bundleContext, clusterService, -1, true, true);
         SchedulerServiceImpl node2 = null;
         try {
             CountDownLatch node1Latch = new CountDownLatch(1);
@@ -1356,7 +1356,7 @@ public class SchedulerServiceImplTest {
                 executingNodes.contains("node1"));
 
             // Add second node
-            node2 = TestHelper.createTestNode(persistenceService, "node2", true, -1, clusterService);
+            node2 = TestHelper.createSchedulerService("node2", persistenceService, executionContextManager, bundleContext, clusterService, -1, true, true);
             node2.registerTaskExecutor(executor);
 
             // Wait for execution on node2
@@ -1383,8 +1383,8 @@ public class SchedulerServiceImplTest {
     @Test
     @Category(ClusterTests.class)
     public void testLockStealing() throws Exception {
-        SchedulerServiceImpl node1 = TestHelper.createTestNode(persistenceService, "node1", true, -1, clusterService);
-        SchedulerServiceImpl node2 = TestHelper.createTestNode(persistenceService, "node2", true, -1, clusterService);
+        SchedulerServiceImpl node1 = TestHelper.createSchedulerService("node1", persistenceService, executionContextManager, bundleContext, clusterService, -1, true, true);
+        SchedulerServiceImpl node2 = TestHelper.createSchedulerService("node2", persistenceService, executionContextManager, bundleContext, clusterService, -1, true, true);
 
         try {
             CountDownLatch executionLatch = new CountDownLatch(1);
@@ -1444,9 +1444,9 @@ public class SchedulerServiceImplTest {
     @Test
     public void testNodeAffinity() throws Exception {
         // Create test nodes with cluster service
-        SchedulerServiceImpl node1 = TestHelper.createTestNode(persistenceService, "node1", true, -1, clusterService);
-        SchedulerServiceImpl node2 = TestHelper.createTestNode(persistenceService, "node2", true, -1, clusterService);
-        SchedulerServiceImpl nonExecutorNode = TestHelper.createTestNode(persistenceService, "node3", false, -1, clusterService);
+        SchedulerServiceImpl node1 = TestHelper.createSchedulerService("node1", persistenceService, executionContextManager, bundleContext, clusterService, -1, true, true);
+        SchedulerServiceImpl node2 = TestHelper.createSchedulerService("node2", persistenceService, executionContextManager, bundleContext, clusterService, -1, true, true);
+        SchedulerServiceImpl nonExecutorNode = TestHelper.createSchedulerService("node3", persistenceService, executionContextManager, bundleContext, clusterService, -1, false, true);
 
         try {
             // Instead of trying to mock the ClusterService, create persistent tasks with locks
@@ -1639,10 +1639,13 @@ public class SchedulerServiceImplTest {
         
         // Create a new scheduler service that will reload existing tasks
         SchedulerServiceImpl newSchedulerService = (SchedulerServiceImpl) TestHelper.createSchedulerService(
+            "restart-scheduler-node",
             persistenceService, 
             executionContextManager, 
             bundleContext, 
             clusterService, 
+            -1,
+            true,
             false);
         
         newSchedulerService.setThreadPoolSize(TEST_THREAD_POOL_SIZE);
@@ -1717,10 +1720,13 @@ public class SchedulerServiceImplTest {
         
         // Create a new scheduler service
         SchedulerServiceImpl newSchedulerService = (SchedulerServiceImpl) TestHelper.createSchedulerService(
+            "system-task-restart-scheduler-node",
             persistenceService, 
             executionContextManager, 
             bundleContext, 
             clusterService, 
+            -1,
+            true,
             false);
         
         newSchedulerService.setThreadPoolSize(TEST_THREAD_POOL_SIZE);
@@ -1825,10 +1831,13 @@ public class SchedulerServiceImplTest {
         
         // Create a new scheduler service
         SchedulerServiceImpl newSchedulerService = (SchedulerServiceImpl) TestHelper.createSchedulerService(
+            "system-purge-scheduler-node",
             persistenceService, 
             executionContextManager, 
             bundleContext, 
             clusterService, 
+            -1,
+            true,
             false);
         
         newSchedulerService.setThreadPoolSize(TEST_THREAD_POOL_SIZE);
@@ -1951,10 +1960,13 @@ public class SchedulerServiceImplTest {
         
         // Create a new scheduler service
         SchedulerServiceImpl newSchedulerService = (SchedulerServiceImpl) TestHelper.createSchedulerService(
+            "dedicated-executor-scheduler-node",
             persistenceService, 
             executionContextManager, 
             bundleContext, 
             clusterService, 
+            -1,
+            true,
             false);
         
         newSchedulerService.setThreadPoolSize(TEST_THREAD_POOL_SIZE);

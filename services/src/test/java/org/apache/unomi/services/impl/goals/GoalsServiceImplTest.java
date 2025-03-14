@@ -74,7 +74,7 @@ public class GoalsServiceImplTest {
         conditionValidationService = TestHelper.createConditionValidationService();
         // Mock bundle context
         bundleContext = TestHelper.createMockBundleContext();
-        schedulerService = TestHelper.createSchedulerService(persistenceService, executionContextManager, bundleContext);
+        schedulerService = TestHelper.createSchedulerService("goals-service-scheduler-node", persistenceService, executionContextManager, bundleContext, null, -1, true, true);
         // Create scheduler service using TestHelper
         multiTypeCacheService = new MultiTypeCacheServiceImpl();
 

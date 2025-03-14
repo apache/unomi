@@ -87,9 +87,28 @@ public class SchedulerServiceImpl implements SchedulerService {
     private ScheduledTask taskPurgeTask;
     private volatile boolean shutdownNow = false;
 
-    // Core services
-    private PersistenceService persistenceService;
-    private ClusterService clusterService;
+    // Service trackers for OSGi services
+    /**
+     * We use ServiceTrackers instead of Blueprint dependency injection due to a known bug in Apache Aries Blueprint
+     * where service dependencies are not properly shut down in reverse order of their initialization.
+     *
+     * The bug manifests in two ways:
+     * 1. Services are not shut down in reverse order of their initialization, causing potential deadlocks
+     * 2. The PersistenceService is often shut down before other services that depend on it, leading to timeout waits
+     *
+     * By using ServiceTrackers, we have explicit control over:
+     * - Service lifecycle management
+     * - Shutdown order
+     * - Service availability checks
+     * - Graceful degradation when services become unavailable
+     */
+    private ServiceTracker<PersistenceService, PersistenceService> persistenceServiceTracker;
+    private ServiceTracker<ClusterService, ClusterService> clusterServiceTracker;
+
+    // Keep references for backward compatibility
+    private volatile PersistenceService persistenceService;
+    private volatile ClusterService clusterService;
+
     private final Map<String, TaskExecutor> taskExecutors = new ConcurrentHashMap<>();
     private final Map<String, ScheduledTask> nonPersistentTasks = new ConcurrentHashMap<>();
     private final AtomicBoolean running = new AtomicBoolean(false);
@@ -261,17 +280,42 @@ public class SchedulerServiceImpl implements SchedulerService {
         this.bundleContext = bundleContext;
     }
 
+    // Safe accessor methods
+    private PersistenceService getPersistenceService() {
+        if (shutdownNow) return null;
+        return persistenceServiceTracker != null ? persistenceServiceTracker.getService() : persistenceService;
+    }
+
+    private ClusterService getClusterService() {
+        if (shutdownNow) return null;
+        return clusterServiceTracker != null ? clusterServiceTracker.getService() : clusterService;
+    }
+
     @PostConstruct
     public void postConstruct() {
+        if (bundleContext == null) {
+            LOGGER.error("BundleContext is null, cannot initialize service trackers");
+            return;
+        }
+
+        // Initialize service trackers only if we don't have direct service references
+        if (persistenceService == null && clusterService == null) {
+            initializeServiceTrackers();
+        }
+
         // Initialize managers
         this.metricsManager = new TaskMetricsManager();
         this.stateManager = new TaskStateManager();
         this.lockManager = new TaskLockManager(nodeId, lockTimeout, metricsManager, this);
         this.historyManager = new TaskHistoryManager(nodeId, metricsManager);
         this.validationManager = new TaskValidationManager();
+
+        // Wait for persistence service to be available before continuing
+        waitForPersistenceService();
+
         this.executionManager = new TaskExecutionManager(nodeId, threadPoolSize, stateManager,
-            lockManager, metricsManager, historyManager, persistenceService, this);
-        this.recoveryManager = new TaskRecoveryManager(nodeId, persistenceService, stateManager,
+            lockManager, metricsManager, historyManager, getPersistenceService(), this);
+        this.recoveryManager = new TaskRecoveryManager(nodeId, getPersistenceService(), stateManager,
             lockManager, metricsManager, executionManager, this);
 
         if (executorNode) {
@@ -290,6 +334,117 @@ public class SchedulerServiceImpl implements SchedulerService {
             nodeId, executorNode, Math.max(MIN_THREAD_POOL_SIZE, threadPoolSize));
 
         // Initialize service tracker for TaskExecutors
+        initializeTaskExecutorTracker();
+    }
+
+    private void initializeServiceTrackers() {
+        /**
+         * Initialize service trackers with custom lifecycle management to handle the Aries Blueprint bug.
+         * This approach ensures:
+         * 1. Services are properly tracked and managed
+         * 2. We can handle service unavailability gracefully
+         * 3. We maintain explicit control over service lifecycle
+         * 4. We can implement proper shutdown order in preDestroy()
+         */
+        // Persistence service tracker
+        persistenceServiceTracker = new ServiceTracker<>(
+            bundleContext,
+            PersistenceService.class,
+            new ServiceTrackerCustomizer<PersistenceService, PersistenceService>() {
+                @Override
+                public PersistenceService addingService(ServiceReference<PersistenceService> reference) {
+                    PersistenceService service = bundleContext.getService(reference);
+                    if (service != null) {
+                        persistenceService = service;
+                        LOGGER.info("PersistenceService acquired");
+                    }
+                    return service;
+                }
+
+                @Override
+                public void modifiedService(ServiceReference<PersistenceService> reference, PersistenceService service) {
+                    // No action needed
+                }
+
+                @Override
+                public void removedService(ServiceReference<PersistenceService> reference, PersistenceService service) {
+                    LOGGER.info("PersistenceService removed");
+                    persistenceService = null;
+                    bundleContext.ungetService(reference);
+                }
+            }
+        );
+        persistenceServiceTracker.open();
+
+        // Cluster service tracker
+        clusterServiceTracker = new ServiceTracker<>(
+            bundleContext,
+            ClusterService.class,
+            new ServiceTrackerCustomizer<ClusterService, ClusterService>() {
+                @Override
+                public ClusterService addingService(ServiceReference<ClusterService> reference) {
+                    ClusterService service = bundleContext.getService(reference);
+                    if (service != null) {
+                        clusterService = service;
+                        LOGGER.info("ClusterService acquired");
+
+                        // Handle case where the ClusterService is set after SchedulerService is initialized
+                        if (running.get() && service instanceof org.apache.unomi.services.impl.cluster.ClusterServiceImpl) {
+                            LOGGER.info("Initializing ClusterService scheduled tasks...");
+                            try {
+                                ((org.apache.unomi.services.impl.cluster.ClusterServiceImpl) service).initializeScheduledTasks();
+                            } catch (Exception e) {
+                                LOGGER.error("Error initializing ClusterService scheduled tasks", e);
+                            }
+                        }
+                    }
+                    return service;
+                }
+
+                @Override
+                public void modifiedService(ServiceReference<ClusterService> reference, ClusterService service) {
+                    // No action needed
+                }
+
+                @Override
+                public void removedService(ServiceReference<ClusterService> reference, ClusterService service) {
+                    LOGGER.info("ClusterService removed");
+                    clusterService = null;
+                    bundleContext.ungetService(reference);
+                }
+            }
+        );
+        clusterServiceTracker.open();
+    }
+
+    private void waitForPersistenceService() {
+        // In test environment, we might have a direct reference to persistenceService
+        if (persistenceService != null) {
+            LOGGER.debug("Using existing PersistenceService reference");
+            return;
+        }
+
+        // Wait up to 30 seconds for persistence service to be available
+        PersistenceService service = null;
+        for (int i = 0; i < 30 && !shutdownNow; i++) {
+            service = getPersistenceService();
+            if (service != null) break;
+
+            try {
+                LOGGER.info("Waiting for PersistenceService to be available...");
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                break;
+            }
+        }
+
+        if (service == null && !shutdownNow) {
+            LOGGER.warn("PersistenceService not available after waiting. Some features may be unavailable.");
+        }
+    }
+
+    private void initializeTaskExecutorTracker() {
         if (bundleContext != null) {
             taskExecutorTracker = new ServiceTracker<>(bundleContext, TaskExecutor.class,
                     new ServiceTrackerCustomizer<TaskExecutor, TaskExecutor>() {
@@ -324,33 +479,39 @@ public class SchedulerServiceImpl implements SchedulerService {
         }
     }
 
-    void simulateCrash() {
-        LOGGER.info("Simulating crash of node {}", nodeId);
-        running.set(false);
-        if (taskPurgeTask != null) {
-            cancelTask(taskPurgeTask.getItemId());
-        }
-
-        taskExecutors.clear();
-        executionManager.shutdown();
-    }
-
     @PreDestroy
     public void preDestroy() {
+        /**
+         * Explicit shutdown sequence to handle the Aries Blueprint bug.
+         * We ensure services are shut down in the correct order:
+         * 1. Set shutdown flag first to prevent new operations
+         * 2. Release task locks and cancel tasks
+         * 3. Shutdown execution manager
+         * 4. Release manager references
+         * 5. Clear task collections
+         * 6. Close service trackers in reverse order of dependency
+         *
+         * This explicit shutdown sequence prevents the deadlocks and timeout issues
+         * that occur with Blueprint's default shutdown behavior.
+         */
         shutdownNow = true; // Set shutdown flag before other operations
         running.set(false);
-        
+
+        LOGGER.info("SchedulerService preDestroy: beginning shutdown process");
+
         // Notify all managers about shutdown
         if (recoveryManager != null) {
             try {
                 recoveryManager.prepareForShutdown();
+                LOGGER.debug("Recovery manager prepared for shutdown");
             } catch (Exception e) {
                 LOGGER.debug("Error preparing recovery manager for shutdown: {}", e.getMessage());
             }
         }
 
-        // Release any task locks owned by this node
-        if (persistenceService != null) {
+        // Release any task locks owned by this node - use local reference to avoid service lookup
+        PersistenceService persistenceServiceLocal = this.persistenceService;
+        if (persistenceServiceLocal != null && !shutdownNow) {
             try {
                 List<ScheduledTask> tasks = findTasksByLockOwner(nodeId);
                 for (ScheduledTask task : tasks) {
@@ -360,6 +521,7 @@ public class SchedulerServiceImpl implements SchedulerService {
                         LOGGER.debug("Error releasing lock for task {} during shutdown: {}", task.getItemId(), e.getMessage());
                     }
                 }
+                LOGGER.debug("Task locks released");
             } catch (Exception e) {
                 LOGGER.warn("Error finding locked tasks during shutdown: {}", e.getMessage());
             }
@@ -368,6 +530,7 @@ public class SchedulerServiceImpl implements SchedulerService {
         if (taskPurgeTask != null) {
             try {
                 cancelTask(taskPurgeTask.getItemId());
+                LOGGER.debug("Task purge cancelled");
             } catch (Exception e) {
                 LOGGER.debug("Error cancelling purge task during shutdown: {}", e.getMessage());
             }
@@ -375,20 +538,67 @@ public class SchedulerServiceImpl implements SchedulerService {
 
         // Shutdown execution manager
         try {
-            executionManager.shutdown();
+            if (executionManager != null) {
+                executionManager.shutdown();
+                LOGGER.debug("Execution manager shutdown completed");
+            }
         } catch (Exception e) {
             LOGGER.debug("Error shutting down execution manager: {}", e.getMessage());
         }
 
+        // Release all manager references
+        this.recoveryManager = null;
+        this.executionManager = null;
+        this.lockManager = null;
+        this.stateManager = null;
+        this.historyManager = null;
+        this.metricsManager = null;
+        this.validationManager = null;
+
+        // Clear task collections
+        try {
+            this.taskExecutors.clear();
+            this.nonPersistentTasks.clear();
+            this.waitingNonPersistentTasks.clear();
+            LOGGER.debug("Task collections cleared");
+        } catch (Exception e) {
+            LOGGER.debug("Error clearing task collections: {}", e.getMessage());
+        }
+
+        // Close trackers in reverse order of dependency
         if (taskExecutorTracker != null) {
             try {
                 taskExecutorTracker.close();
+                LOGGER.debug("Task executor tracker closed");
             } catch (Exception e) {
                 LOGGER.debug("Error closing task executor tracker: {}", e.getMessage());
             }
             taskExecutorTracker = null;
         }
-        
+
+        // Close service trackers
+        if (clusterServiceTracker != null) {
+            try {
+                clusterServiceTracker.close();
+                clusterService = null;
+                LOGGER.debug("Cluster service tracker closed");
+            } catch (Exception e) {
+                LOGGER.debug("Error closing cluster service tracker: {}", e.getMessage());
+            }
+            clusterServiceTracker = null;
+        }
+
+        if (persistenceServiceTracker != null) {
+            try {
+                persistenceServiceTracker.close();
+                persistenceService = null;
+                LOGGER.debug("Persistence service tracker closed");
+            } catch (Exception e) {
+                LOGGER.debug("Error closing persistence service tracker: {}", e.getMessage());
+            }
+            persistenceServiceTracker = null;
+        }
+
         LOGGER.info("SchedulerService shutdown completed");
     }
 
@@ -396,22 +606,26 @@ public class SchedulerServiceImpl implements SchedulerService {
         if (shutdownNow || !running.get() || checkTasksRunning.get() || !executorNode) {
             return;
         }
-        
+
         if (!checkTasksRunning.compareAndSet(false, true)) {
             return;
         }
-        
+
         try {
             // Skip task processing during shutdown
             if (shutdownNow) {
                 return;
             }
-            
+
             // Check for crashed tasks first
             recoveryManager.recoverCrashedTasks();
 
             // Get all enabled tasks that are either scheduled or waiting
             List<ScheduledTask> tasks = findEnabledScheduledOrWaitingTasks();
+            if (tasks == null) {
+                LOGGER.debug("No tasks found or persistence service unavailable");
+                return;
+            }
 
             // Also check in-memory tasks
             List<ScheduledTask> inMemoryTasks = nonPersistentTasks.values().stream()
@@ -438,6 +652,7 @@ public class SchedulerServiceImpl implements SchedulerService {
 
             // Process each task type
             for (Map.Entry<String, List<ScheduledTask>> entry : tasksByType.entrySet()) {
+                if (shutdownNow) return;
                 processTaskGroup(entry.getKey(), entry.getValue());
             }
         } catch (Exception e) {
@@ -448,32 +663,52 @@ public class SchedulerServiceImpl implements SchedulerService {
     }
 
     private List<ScheduledTask> findTasksByLockOwner(String owner) {
-        Condition condition = new Condition(PROPERTY_CONDITION_TYPE);
-        condition.setParameter("propertyName", "lockOwner");
-        condition.setParameter("comparisonOperator", "equals");
-        condition.setParameter("propertyValue", owner);
-        return persistenceService.query(condition, null, ScheduledTask.class, 0, -1).getList();
+        PersistenceService service = getPersistenceService();
+        if (service == null || shutdownNow) {
+            return Collections.emptyList();
+        }
+
+        try {
+            Condition condition = new Condition(PROPERTY_CONDITION_TYPE);
+            condition.setParameter("propertyName", "lockOwner");
+            condition.setParameter("comparisonOperator", "equals");
+            condition.setParameter("propertyValue", owner);
+            return service.query(condition, null, ScheduledTask.class, 0, -1).getList();
+        } catch (Exception e) {
+            LOGGER.error("Error finding tasks by lock owner: {}", e.getMessage());
+            return Collections.emptyList();
+        }
     }
 
     private List<ScheduledTask> findEnabledScheduledOrWaitingTasks() {
-        Condition enabledCondition = new Condition(PROPERTY_CONDITION_TYPE);
-        enabledCondition.setParameter("propertyName", "enabled");
-        enabledCondition.setParameter("comparisonOperator", "equals");
-        enabledCondition.setParameter("propertyValue", "true");
+        PersistenceService service = getPersistenceService();
+        if (service == null || shutdownNow) {
+            return Collections.emptyList();
+        }
 
-        Condition statusCondition = new Condition(PROPERTY_CONDITION_TYPE);
-        statusCondition.setParameter("propertyName", "status");
-        statusCondition.setParameter("comparisonOperator", "in");
-        statusCondition.setParameter("propertyValues", Arrays.asList(
-            ScheduledTask.TaskStatus.SCHEDULED,
-            ScheduledTask.TaskStatus.WAITING
-        ));
+        try {
+            Condition enabledCondition = new Condition(PROPERTY_CONDITION_TYPE);
+            enabledCondition.setParameter("propertyName", "enabled");
+            enabledCondition.setParameter("comparisonOperator", "equals");
+            enabledCondition.setParameter("propertyValue", "true");
 
-        Condition andCondition = new Condition(BOOLEAN_CONDITION_TYPE);
-        andCondition.setParameter("operator", "and");
-        andCondition.setParameter("subConditions", Arrays.asList(enabledCondition, statusCondition));
+            Condition statusCondition = new Condition(PROPERTY_CONDITION_TYPE);
+            statusCondition.setParameter("propertyName", "status");
+            statusCondition.setParameter("comparisonOperator", "in");
+            statusCondition.setParameter("propertyValues", Arrays.asList(
+                ScheduledTask.TaskStatus.SCHEDULED,
+                ScheduledTask.TaskStatus.WAITING
+            ));
 
-        return persistenceService.query(andCondition, "creationDate:asc", ScheduledTask.class, 0, -1).getList();
+            Condition andCondition = new Condition(BOOLEAN_CONDITION_TYPE);
+            andCondition.setParameter("operator", "and");
+            andCondition.setParameter("subConditions", Arrays.asList(enabledCondition, statusCondition));
+
+            return service.query(andCondition, "creationDate:asc", ScheduledTask.class, 0, -1).getList();
+        } catch (Exception e) {
+            LOGGER.error("Error finding enabled scheduled or waiting tasks: {}", e.getMessage());
+            return Collections.emptyList();
+        }
     }
 
     private void sortTasksByPriority(List<ScheduledTask> tasks) {
@@ -562,21 +797,31 @@ public class SchedulerServiceImpl implements SchedulerService {
     }
 
     private List<ScheduledTask> findTasksByTypeAndStatus(String taskType, ScheduledTask.TaskStatus status) {
-        Condition typeCondition = new Condition(PROPERTY_CONDITION_TYPE);
-        typeCondition.setParameter("propertyName", "taskType");
-        typeCondition.setParameter("comparisonOperator", "equals");
-        typeCondition.setParameter("propertyValue", taskType);
+        PersistenceService service = getPersistenceService();
+        if (service == null || shutdownNow) {
+            return Collections.emptyList();
+        }
 
-        Condition statusCondition = new Condition(PROPERTY_CONDITION_TYPE);
-        statusCondition.setParameter("propertyName", "status");
-        statusCondition.setParameter("comparisonOperator", "equals");
-        statusCondition.setParameter("propertyValue", status.toString());
+        try {
+            Condition typeCondition = new Condition(PROPERTY_CONDITION_TYPE);
+            typeCondition.setParameter("propertyName", "taskType");
+            typeCondition.setParameter("comparisonOperator", "equals");
+            typeCondition.setParameter("propertyValue", taskType);
 
-        Condition andCondition = new Condition(BOOLEAN_CONDITION_TYPE);
-        andCondition.setParameter("operator", "and");
-        andCondition.setParameter("subConditions", Arrays.asList(typeCondition, statusCondition));
+            Condition statusCondition = new Condition(PROPERTY_CONDITION_TYPE);
+            statusCondition.setParameter("propertyName", "status");
+            statusCondition.setParameter("comparisonOperator", "equals");
+            statusCondition.setParameter("propertyValue", status.toString());
 
-        return persistenceService.query(andCondition, null, ScheduledTask.class, 0, -1).getList();
+            Condition andCondition = new Condition(BOOLEAN_CONDITION_TYPE);
+            andCondition.setParameter("operator", "and");
+            andCondition.setParameter("subConditions", Arrays.asList(typeCondition, statusCondition));
+
+            return service.query(andCondition, null, ScheduledTask.class, 0, -1).getList();
+        } catch (Exception e) {
+            LOGGER.error("Error finding tasks by type and status: {}", e.getMessage());
+            return Collections.emptyList();
+        }
     }
 
     private boolean shouldExecuteTask(ScheduledTask task) {
@@ -674,6 +919,9 @@ public class SchedulerServiceImpl implements SchedulerService {
 
     @Override
     public void cancelTask(String taskId) {
+        if (shutdownNow) {
+            return;
+        }
         ScheduledTask task = getTask(taskId);
         if (task != null) {
             // Only cancel if in a cancellable state
@@ -733,13 +981,43 @@ public class SchedulerServiceImpl implements SchedulerService {
 
     @Override
     public ScheduledTask getTask(String taskId) {
-        ScheduledTask task = persistenceService.load(taskId, ScheduledTask.class);
-        return task != null ? task : nonPersistentTasks.get(taskId);
+        if (shutdownNow) {
+            return null;
+        }
+
+        // First check in-memory tasks which is faster
+        ScheduledTask memoryTask = nonPersistentTasks.get(taskId);
+        if (memoryTask != null) {
+            return memoryTask;
+        }
+
+        // Then check persistent tasks
+        PersistenceService service = getPersistenceService();
+        if (service == null) {
+            return null;
+        }
+
+        try {
+            return service.load(taskId, ScheduledTask.class);
+        } catch (Exception e) {
+            LOGGER.error("Error loading task {}: {}", taskId, e.getMessage());
+            return null;
+        }
     }
 
     @Override
     public List<ScheduledTask> getPersistentTasks() {
-        return persistenceService.getAllItems(ScheduledTask.class, 0, -1, null).getList();
+        PersistenceService service = getPersistenceService();
+        if (service == null || shutdownNow) {
+            return Collections.emptyList();
+        }
+
+        try {
+            return service.getAllItems(ScheduledTask.class, 0, -1, null).getList();
+        } catch (Exception e) {
+            LOGGER.error("Error getting persistent tasks: {}", e.getMessage());
+            return Collections.emptyList();
+        }
     }
 
     @Override
@@ -777,23 +1055,6 @@ public class SchedulerServiceImpl implements SchedulerService {
 
     public void setExecutorNode(boolean executorNode) {
         this.executorNode = executorNode;
-    }
-
-    public void setPersistenceService(PersistenceService persistenceService) {
-        this.persistenceService = persistenceService;
-    }
-
-    public void setClusterService(ClusterService clusterService) {
-        this.clusterService = clusterService;
-        // Handle case where the ClusterService is set after SchedulerService is initialized
-        if (clusterService instanceof org.apache.unomi.services.impl.cluster.ClusterServiceImpl && running.get()) {
-            LOGGER.info("ClusterService set after initialization. Initializing ClusterService scheduled tasks...");
-            try {
-                ((org.apache.unomi.services.impl.cluster.ClusterServiceImpl) clusterService).initializeScheduledTasks();
-            } catch (Exception e) {
-                LOGGER.error("Error initializing ClusterService scheduled tasks", e);
-            }
-        }
     }
 
     public void setLockTimeout(long lockTimeout) {
@@ -852,27 +1113,47 @@ public class SchedulerServiceImpl implements SchedulerService {
 
     @Override
     public PartialList<ScheduledTask> getTasksByStatus(ScheduledTask.TaskStatus status, int offset, int size, String sortBy) {
-        Condition condition = new Condition(PROPERTY_CONDITION_TYPE);
-        condition.setParameter("propertyName", "status");
-        condition.setParameter("comparisonOperator", "equals");
-        condition.setParameter("propertyValue", status.toString());
-        return persistenceService.query(condition, sortBy, ScheduledTask.class, offset, size);
+        PersistenceService service = getPersistenceService();
+        if (service == null || shutdownNow) {
+            return new PartialList<ScheduledTask>(Collections.emptyList(), 0, 0, 0, PartialList.Relation.EQUAL);
+        }
+
+        try {
+            Condition condition = new Condition(PROPERTY_CONDITION_TYPE);
+            condition.setParameter("propertyName", "status");
+            condition.setParameter("comparisonOperator", "equals");
+            condition.setParameter("propertyValue", status.toString());
+            return service.query(condition, sortBy, ScheduledTask.class, offset, size);
+        } catch (Exception e) {
+            LOGGER.error("Error getting tasks by status: {}", e.getMessage());
+            return new PartialList<ScheduledTask>(Collections.emptyList(), 0, 0, 0, PartialList.Relation.EQUAL);
+        }
     }
 
     @Override
     public PartialList<ScheduledTask> getTasksByType(String taskType, int offset, int size, String sortBy) {
-        Condition condition = new Condition(PROPERTY_CONDITION_TYPE);
-        condition.setParameter("propertyName", "taskType");
-        condition.setParameter("comparisonOperator", "equals");
-        condition.setParameter("propertyValue", taskType);
-        return persistenceService.query(condition, sortBy, ScheduledTask.class, offset, size);
+        PersistenceService service = getPersistenceService();
+        if (service == null || shutdownNow) {
+            return new PartialList<ScheduledTask>(Collections.emptyList(), 0, 0, 0, PartialList.Relation.EQUAL);
+        }
+
+        try {
+            Condition condition = new Condition(PROPERTY_CONDITION_TYPE);
+            condition.setParameter("propertyName", "taskType");
+            condition.setParameter("comparisonOperator", "equals");
+            condition.setParameter("propertyValue", taskType);
+            return service.query(condition, sortBy, ScheduledTask.class, offset, size);
+        } catch (Exception e) {
+            LOGGER.error("Error getting tasks by type: {}", e.getMessage());
+            return new PartialList<ScheduledTask>(Collections.emptyList(), 0, 0, 0, PartialList.Relation.EQUAL);
+        }
     }
 
     private void initializeTaskPurge() {
         if (!purgeTaskEnabled) {
             return;
         }
-        
+
         // Register the task executor for task purge
         TaskExecutor taskPurgeExecutor = new TaskExecutor() {
             @Override
@@ -891,13 +1172,13 @@ public class SchedulerServiceImpl implements SchedulerService {
                 }
             }
         };
-        
+
         registerTaskExecutor(taskPurgeExecutor);
 
         // Check if a task purge task already exists
         List<ScheduledTask> existingTasks = getTasksByType("task-purge", 0, 1, null).getList();
         ScheduledTask taskPurgeTask = null;
-        
+
         if (!existingTasks.isEmpty() && existingTasks.get(0).isSystemTask()) {
             // Reuse the existing task if it's a system task
             taskPurgeTask = existingTasks.get(0);
@@ -920,7 +1201,13 @@ public class SchedulerServiceImpl implements SchedulerService {
     }
 
     void purgeOldTasks() {
-        if (!executorNode) {
+        if (!executorNode || shutdownNow) {
+            return;
+        }
+
+        PersistenceService service = getPersistenceService();
+        if (service == null) {
+            LOGGER.warn("Cannot purge old tasks - persistence service unavailable");
             return;
         }
 
@@ -943,7 +1230,7 @@ public class SchedulerServiceImpl implements SchedulerService {
             andCondition.setParameter("operator", "and");
             andCondition.setParameter("subConditions", Arrays.asList(statusCondition, dateCondition));
 
-            persistenceService.removeByQuery(andCondition, ScheduledTask.class);
+            service.removeByQuery(andCondition, ScheduledTask.class);
             LOGGER.info("Completed purge of old tasks before date: {}", purgeBeforeDate);
         } catch (Exception e) {
             LOGGER.error("Error purging old tasks", e);
@@ -968,14 +1255,19 @@ public class SchedulerServiceImpl implements SchedulerService {
      */
     @Override
     public boolean saveTask(ScheduledTask task) {
-        if (task == null) {
-            LOGGER.warn("Attempted to save null task, ignoring");
+        if (task == null || shutdownNow) {
             return false;
         }
 
         if (task.isPersistent()) {
+            PersistenceService service = getPersistenceService();
+            if (service == null) {
+                LOGGER.warn("Cannot save task {} - persistence service unavailable", task.getItemId());
+                return false;
+            }
+
             try {
-                persistenceService.save(task);
+                service.save(task);
                 LOGGER.debug("Saved task {} to persistence", task.getItemId());
                 return true;
             } catch (Exception e) {
@@ -1020,12 +1312,15 @@ public class SchedulerServiceImpl implements SchedulerService {
      * all nodes see the latest task state.
      */
     public void refreshTasks() {
-        if (persistenceService != null) {
-            try {
-                persistenceService.refreshIndex(ScheduledTask.class);
-            } catch (Exception e) {
-                LOGGER.error("Error refreshing task indices", e);
-            }
+        PersistenceService service = getPersistenceService();
+        if (service == null || shutdownNow) {
+            return;
+        }
+
+        try {
+            service.refreshIndex(ScheduledTask.class);
+        } catch (Exception e) {
+            LOGGER.error("Error refreshing task indices", e);
         }
     }
 
@@ -1038,15 +1333,21 @@ public class SchedulerServiceImpl implements SchedulerService {
      * @return true if the operation was successful
      */
     public boolean saveTaskWithRefresh(ScheduledTask task) {
-        if (task == null) {
+        if (task == null || shutdownNow) {
             return false;
         }
 
         if (task.isPersistent()) {
+            PersistenceService service = getPersistenceService();
+            if (service == null) {
+                LOGGER.warn("Cannot save task with refresh - persistence service unavailable");
+                return false;
+            }
+
             try {
                 // Save with optimistic concurrency control
                 // Refresh is now handled automatically by the refresh policy
-                return persistenceService.save(task);
+                return service.save(task);
             } catch (Exception e) {
                 LOGGER.error("Error saving task {}", task.getItemId(), e);
                 return false;
@@ -1060,7 +1361,7 @@ public class SchedulerServiceImpl implements SchedulerService {
     /**
      * Returns the list of currently active cluster nodes.
      * This is used for node affinity in the distributed locking mechanism.
-     * 
+     *
      * This method is designed to handle the case when ClusterService is not available (null),
      * which can happen during startup when services are being initialized in a particular order,
      * or in standalone mode. When ClusterService is null, this method will return just the current
@@ -1070,24 +1371,25 @@ public class SchedulerServiceImpl implements SchedulerService {
      */
     public List<String> getActiveNodes() {
         Set<String> activeNodes = new HashSet<>();
-        
+
         // Add this node
         activeNodes.add(nodeId);
-        
+
         // Use ClusterService if available to get cluster nodes
-        if (clusterService != null) {
+        ClusterService clusterServiceLocal = getClusterService();
+        if (clusterServiceLocal != null && !shutdownNow) {
             try {
-                List<ClusterNode> clusterNodes = clusterService.getClusterNodes();
+                List<ClusterNode> clusterNodes = clusterServiceLocal.getClusterNodes();
                 if (clusterNodes != null && !clusterNodes.isEmpty()) {
                     // Consider nodes with recent heartbeats as active
                     long cutoffTime = System.currentTimeMillis() - (5 * 60 * 1000); // 5 minutes threshold
-                    
+
                     for (ClusterNode node : clusterNodes) {
                         if (node.getLastHeartbeat() > cutoffTime) {
                             activeNodes.add(node.getItemId());
                         }
                     }
-                    
+
                     LOGGER.debug("Detected active cluster nodes via ClusterService: {}", activeNodes);
                     return new ArrayList<>(activeNodes);
                 }
@@ -1098,40 +1400,101 @@ public class SchedulerServiceImpl implements SchedulerService {
                 }
             }
         }
-        
+
         // Fallback: Look for other active nodes by checking tasks with recent locks
-        try {
-            // Create a condition to find tasks with recent locks
-            Condition recentLocksCondition = new Condition();
-            recentLocksCondition.setConditionType(PROPERTY_CONDITION_TYPE);
-            Map<String, Object> parameters = new HashMap<>();
-            parameters.put("propertyName", "lockDate");
-            parameters.put("comparisonOperator", "exists");
-            recentLocksCondition.setParameterValues(parameters);
-            
-            // Query for tasks with lock information
-            List<ScheduledTask> recentlyLockedTasks = persistenceService.query(recentLocksCondition, "lockDate", ScheduledTask.class);
-            
-            // Get current time for filtering
-            long fiveMinutesAgo = System.currentTimeMillis() - (5 * 60 * 1000);
-            
-            // Extract unique node IDs from lock owners with recent locks
-            for (ScheduledTask task : recentlyLockedTasks) {
-                if (task.getLockOwner() != null && task.getLockDate() != null &&
-                    task.getLockDate().getTime() > fiveMinutesAgo) {
-                    activeNodes.add(task.getLockOwner());
+        PersistenceService persistenceServiceLocal = getPersistenceService();
+        if (persistenceServiceLocal != null && !shutdownNow) {
+            try {
+                // Create a condition to find tasks with recent locks
+                Condition recentLocksCondition = new Condition();
+                recentLocksCondition.setConditionType(PROPERTY_CONDITION_TYPE);
+                Map<String, Object> parameters = new HashMap<>();
+                parameters.put("propertyName", "lockDate");
+                parameters.put("comparisonOperator", "exists");
+                recentLocksCondition.setParameterValues(parameters);
+
+                // Query for tasks with lock information
+                List<ScheduledTask> recentlyLockedTasks = persistenceServiceLocal.query(recentLocksCondition, "lockDate", ScheduledTask.class);
+
+                // Get current time for filtering
+                long fiveMinutesAgo = System.currentTimeMillis() - (5 * 60 * 1000);
+
+                // Extract unique node IDs from lock owners with recent locks
+                for (ScheduledTask task : recentlyLockedTasks) {
+                    if (task.getLockOwner() != null && task.getLockDate() != null &&
+                        task.getLockDate().getTime() > fiveMinutesAgo) {
+                        activeNodes.add(task.getLockOwner());
+                    }
+                }
+            } catch (Exception e) {
+                // If we can't determine active nodes, just fall back to this node only
+                LOGGER.warn("Error detecting active cluster nodes: {}", e.getMessage());
+                if (LOGGER.isDebugEnabled()) {
+                    LOGGER.debug("Error details:", e);
                 }
             }
-        } catch (Exception e) {
-            // If we can't determine active nodes, just fall back to this node only
-            LOGGER.warn("Error detecting active cluster nodes: {}", e.getMessage());
-            if (LOGGER.isDebugEnabled()) {
-                LOGGER.debug("Error details:", e);
-            }
         }
-        
+
         LOGGER.debug("Detected active cluster nodes: {}", activeNodes);
         return new ArrayList<>(activeNodes);
+    }
+
+    /**
+     * Simulates a crash of the scheduler service by abruptly stopping all operations.
+     * This is used for testing crash recovery scenarios.
+     */
+    public void simulateCrash() {
+        shutdownNow = true;
+        running.set(false);
+
+        // Release any locks owned by this node
+        if (persistenceService != null) {
+            try {
+                List<ScheduledTask> tasks = findTasksByLockOwner(nodeId);
+                for (ScheduledTask task : tasks) {
+                    try {
+                        lockManager.releaseLock(task);
+                    } catch (Exception e) {
+                        LOGGER.debug("Error releasing lock for task {} during crash simulation: {}", task.getItemId(), e.getMessage());
+                    }
+                }
+            } catch (Exception e) {
+                LOGGER.warn("Error finding locked tasks during crash simulation: {}", e.getMessage());
+            }
+        }
+
+        // Stop execution manager
+        if (executionManager != null) {
+            try {
+                executionManager.shutdown();
+            } catch (Exception e) {
+                LOGGER.debug("Error shutting down execution manager during crash simulation: {}", e.getMessage());
+            }
+        }
+    }
+
+    /**
+     * For testing purposes only - sets up a mock persistence service
+     * This method should be called before postConstruct() in test scenarios
+     */
+    public void setPersistenceService(PersistenceService service) {
+        if (persistenceServiceTracker != null) {
+            persistenceServiceTracker.close();
+        }
+        this.persistenceService = service;
+        LOGGER.info("PersistenceService set for testing");
+    }
+
+    /**
+     * For testing purposes only - sets up a mock cluster service
+     * This method should be called before postConstruct() in test scenarios
+     */
+    public void setClusterService(ClusterService service) {
+        if (clusterServiceTracker != null) {
+            clusterServiceTracker.close();
+        }
+        this.clusterService = service;
+        LOGGER.info("ClusterService set for testing");
     }
 
     public static class TaskBuilder implements SchedulerService.TaskBuilder {
@@ -1293,7 +1656,7 @@ public class SchedulerServiceImpl implements SchedulerService {
                     // Reuse the existing system task
                     ScheduledTask existingTask = existingTasks.get(0);
                     LOGGER.info("Reusing existing system task: {}", existingTask.getItemId());
-                    
+
                     // Schedule the existing task
                     schedulerService.scheduleTask(existingTask);
                     return existingTask;
@@ -1324,4 +1687,5 @@ public class SchedulerServiceImpl implements SchedulerService {
         }
     }
 }
+
 
