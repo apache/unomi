@@ -1816,7 +1816,6 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
         String finalTenantId = validateTenantAndGetId(SecurityServiceConfiguration.PERMISSION_QUERY);
 
         Query queryBuilder = conditionOSQueryBuilderDispatcher.buildFilter(query);
-        queryBuilder = wrapWithTenantAndItemTypeQuery(Item.getItemType(clazz), queryBuilder, finalTenantId);
         return query(queryBuilder, sortBy, clazz, offset, size, null, null);
     }
 
@@ -1825,7 +1824,6 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
         String finalTenantId = validateTenantAndGetId(SecurityServiceConfiguration.PERMISSION_QUERY);
 
         Query queryBuilder = conditionOSQueryBuilderDispatcher.buildFilter(query);
-        queryBuilder = wrapWithTenantAndItemTypeQuery(Item.getItemType(clazz), queryBuilder, finalTenantId);
         return query(queryBuilder, sortBy, clazz, offset, size, null, scrollTimeValidity);
     }
 
@@ -2461,7 +2459,7 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
                                         .must(m -> m
                                                 .term(t -> t
                                                         .field("tenantId")
-                                                        .value(v -> v.stringValue(finalTenantId))
+                                                        .value(v -> v.stringValue(ConditionContextHelper.foldToASCII(finalTenantId)))
                                                 )
                                         )
                                 )
@@ -2813,7 +2811,7 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
                 .bool(b -> {
                     // Add tenants filter
                     if (tenantId != null) {
-                        b.must(Query.of(q2 -> q2.term(t -> t.field("tenantId").value(v -> v.stringValue(tenantId)))));
+                        b.must(Query.of(q2 -> q2.term(t -> t.field("tenantId").value(v -> v.stringValue(ConditionContextHelper.foldToASCII(tenantId))))));
                     }
 
                     // Add item type filter if needed
@@ -2879,7 +2877,7 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
     @Override
     public long calculateStorageSize(String tenantId) {
         try {
-            Query query = Query.of(q -> q.term(t -> t.field("tenantId").value(v -> v.stringValue(tenantId))));
+            Query query = Query.of(q -> q.term(t -> t.field("tenantId").value(v -> v.stringValue(ConditionContextHelper.foldToASCII(tenantId)))));
 
             // Execute count query
             CountResponse response = client.count(c -> c
@@ -2897,7 +2895,7 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
     @Override
     public boolean migrateTenantData(String sourceTenantId, String targetTenantId, List<String> itemTypes) {
         try {
-            Query query = Query.of(q -> q.term(t -> t.field("tenantId").value(v -> v.stringValue(sourceTenantId))));
+            Query query = Query.of(q -> q.term(t -> t.field("tenantId").value(v -> v.stringValue(ConditionContextHelper.foldToASCII(sourceTenantId)))));
 
             SearchResponse<Item> searchResponse = client.search(s -> s
                 .index(getAllIndexForQuery())
@@ -2967,7 +2965,7 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
         try {
             // Build query to count API calls for tenant
             Query query = Query.of(q -> q.bool(b -> b
-                .must(Query.of(q2 -> q2.term(t -> t.field("tenantId").value(v -> v.stringValue(tenantId)))))
+                .must(Query.of(q2 -> q2.term(t -> t.field("tenantId").value(v -> v.stringValue(ConditionContextHelper.foldToASCII(tenantId))))))
                 .must(Query.of(q2 -> q2.term(t -> t.field("itemType").value(v -> v.stringValue("apiCall")))))));
 
             // Execute count query
@@ -3027,7 +3025,7 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
                     .bool(b -> {
                         // Add tenant filter if provided
                         if (tenantId != null) {
-                            b.must(Query.of(q2 -> q2.term(t -> t.field("tenantId").value(v -> v.stringValue(tenantId)))));
+                            b.must(Query.of(q2 -> q2.term(t -> t.field("tenantId").value(v -> v.stringValue(ConditionContextHelper.foldToASCII(tenantId))))));
                         }
 
                         // Add original query and item types filter

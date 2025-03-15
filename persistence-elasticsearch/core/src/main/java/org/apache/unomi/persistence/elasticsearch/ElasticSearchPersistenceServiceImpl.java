@@ -713,7 +713,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     public void stop() {
         shuttingDown = true;
-        
+
         new InClassLoaderExecute<Object>(null, null, this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
             protected Object execute(Object... args) throws IOException {
                 LOGGER.info("Closing ElasticSearch persistence backend...");
@@ -1947,7 +1947,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         String finalTenantId = validateTenantAndGetId(SecurityServiceConfiguration.PERMISSION_QUERY);
 
         QueryBuilder queryBuilder = conditionESQueryBuilderDispatcher.buildFilter(query);
-        queryBuilder = wrapWithTenantAndItemTypeQuery(Item.getItemType(clazz), queryBuilder, finalTenantId);
         return query(queryBuilder, sortBy, clazz, offset, size, null, null);
     }
 
@@ -1961,7 +1960,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         String finalTenantId = validateTenantAndGetId(SecurityServiceConfiguration.PERMISSION_QUERY);
 
         QueryBuilder queryBuilder = conditionESQueryBuilderDispatcher.getQueryBuilder(query);
-        queryBuilder = wrapWithTenantAndItemTypeQuery(customItemType, queryBuilder, finalTenantId);
         return query(queryBuilder, sortBy, customItemType, offset, size, null, scrollTimeValidity);
     }
 
@@ -2556,7 +2554,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             protected Void execute(Object... args) throws IOException {
                 QueryBuilder queryBuilder = QueryBuilders.boolQuery()
                     .must(QueryBuilders.termQuery("scope", scope))
-                    .must(QueryBuilders.termQuery("tenantId", finalTenantId));
+                    .must(QueryBuilders.termQuery("tenantId", ConditionContextHelper.foldToASCII(finalTenantId)));
 
                 SearchRequest searchRequest = new SearchRequest(getAllIndexForQuery());
                 SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder()
@@ -2789,7 +2787,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
         // Add tenants filter
         if (tenantId != null) {
-            boolQuery.must(QueryBuilders.termQuery("tenantId", tenantId));
+            boolQuery.must(QueryBuilders.termQuery("tenantId", ConditionContextHelper.foldToASCII(tenantId)));
         }
 
         // Add item type filter if needed
@@ -2903,7 +2901,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             // Build query to match tenant ID
             SearchRequest searchRequest = new SearchRequest(getAllIndexForQuery())
                 .source(new SearchSourceBuilder()
-                    .query(QueryBuilders.termQuery("tenantId", tenantId))
+                    .query(QueryBuilders.termQuery("tenantId", ConditionContextHelper.foldToASCII(tenantId)))
                     .size(0)
                     .trackTotalHits(true));
 
@@ -2922,7 +2920,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         try {
             SearchRequest searchRequest = new SearchRequest(getAllIndexForQuery())
                 .source(new SearchSourceBuilder()
-                    .query(QueryBuilders.termQuery("tenantId", sourceTenantId))
+                    .query(QueryBuilders.termQuery("tenantId", ConditionContextHelper.foldToASCII(sourceTenantId)))
                     .size(1000))
                 .scroll(TimeValue.timeValueMinutes(1));
 
@@ -2986,7 +2984,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             SearchRequest searchRequest = new SearchRequest(getAllIndexForQuery())
                 .source(new SearchSourceBuilder()
                     .query(QueryBuilders.boolQuery()
-                        .must(QueryBuilders.termQuery("tenantId", tenantId))
+                        .must(QueryBuilders.termQuery("tenantId", ConditionContextHelper.foldToASCII(tenantId)))
                         .must(QueryBuilders.termQuery("itemType", "apiCall")))
                     .size(0));
 
@@ -3030,14 +3028,14 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             wrappedQuery.filter(itemTypeQuery);
             wrappedQuery.must(originalQuery);
             if (tenantId != null) {
-                wrappedQuery.must(QueryBuilders.termQuery("tenantId", tenantId));
+                wrappedQuery.must(QueryBuilders.termQuery("tenantId", ConditionContextHelper.foldToASCII(tenantId)));
             }
             return wrappedQuery;
         }
         if (tenantId != null) {
             BoolQueryBuilder wrappedQuery = QueryBuilders.boolQuery();
             wrappedQuery.must(originalQuery);
-            wrappedQuery.must(QueryBuilders.termQuery("tenantId", tenantId));
+            wrappedQuery.must(QueryBuilders.termQuery("tenantId", ConditionContextHelper.foldToASCII(tenantId)));
             return wrappedQuery;
         }
         return originalQuery;
