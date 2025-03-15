@@ -88,6 +88,8 @@ public class SchedulerServiceImplTest {
     private static final int TEST_MAX_RETRIES = 3;
     /** Short sleep duration for timing-sensitive tests */
     private static final long TEST_SLEEP = 100; // 100 milliseconds
+    /** Default wait timeout for task status transitions */
+    private static final long TEST_WAIT_TIMEOUT = 2000; // 2 seconds
 
     private SchedulerServiceImpl schedulerService;
     private PersistenceService persistenceService;
@@ -170,12 +172,32 @@ public class SchedulerServiceImplTest {
     @After
     public void tearDown() {
         if (schedulerService != null) {
-            schedulerService.preDestroy();
-            schedulerService = null;
+            try {
+                // Cancel any running or retrying tasks
+                List<ScheduledTask> allTasks = schedulerService.getAllTasks();
+                for (ScheduledTask task : allTasks) {
+                    try {
+                        if (task.getStatus() == ScheduledTask.TaskStatus.RUNNING || 
+                            task.getStatus() == ScheduledTask.TaskStatus.SCHEDULED) {
+                            schedulerService.cancelTask(task.getItemId());
+                        }
+                    } catch (Exception e) {
+                        // Log but continue with other tasks
+                        LOGGER.warn("Error cancelling task {} during teardown: {}", task.getItemId(), e.getMessage());
+                    }
+                }
+                // Small delay to allow task cancellations to complete
+                Thread.sleep(100);
+                
+                schedulerService.preDestroy();
+                schedulerService = null;
+            } catch (Exception e) {
+                LOGGER.warn("Error during test teardown: {}", e.getMessage());
+            }
         }
-            persistenceService = null;
-            executionContextManager = null;
-            securityService = null;
+        persistenceService = null;
+        executionContextManager = null;
+        securityService = null;
     }
 
     // Basic task lifecycle tests
@@ -680,6 +702,41 @@ public class SchedulerServiceImplTest {
         testOneShotRetryBehavior(false); // in-memory
     }
 
+    /**
+     * Helper method that waits for a task to reach a specific status.
+     * 
+     * @param taskId The ID of the task to check
+     * @param targetStatus The status to wait for
+     * @param maxWaitTimeMs Maximum time to wait in milliseconds
+     * @param sleepIntervalMs Time to sleep between status checks in milliseconds
+     * @return The task with its current status (which may not be targetStatus if timeout occurred)
+     * @throws InterruptedException If the waiting is interrupted
+     */
+    private ScheduledTask waitForTaskStatus(String taskId, ScheduledTask.TaskStatus targetStatus, 
+            long maxWaitTimeMs, long sleepIntervalMs) throws InterruptedException {
+        
+        final long startTime = System.currentTimeMillis();
+        ScheduledTask task = null;
+        
+        while (System.currentTimeMillis() - startTime < maxWaitTimeMs) {
+            task = schedulerService.getTask(taskId);
+            if (targetStatus.equals(task.getStatus())) {
+                LOGGER.info("Task {} reached target status: {}", taskId, targetStatus);
+                break;
+            }
+            LOGGER.debug("Waiting for task {} to transition from {} to {}", 
+                taskId, task.getStatus(), targetStatus);
+            Thread.sleep(sleepIntervalMs);
+        }
+        
+        if (task != null && !targetStatus.equals(task.getStatus())) {
+            LOGGER.warn("Timeout waiting for task {} to reach status {}. Current status: {}", 
+                taskId, targetStatus, task.getStatus());
+        }
+        
+        return task;
+    }
+
     private void testOneShotRetryBehavior(boolean persistent) throws Exception {
         CountDownLatch executionLatch = new CountDownLatch(TEST_MAX_RETRIES+1);
         AtomicInteger executionCount = new AtomicInteger(0);
@@ -729,10 +786,13 @@ public class SchedulerServiceImplTest {
                 delay >= TEST_RETRY_DELAY);
         }
 
-        // Verify final state
-        task = schedulerService.getTask(task.getItemId());
+        // Wait for the task to transition from RUNNING to COMPLETED state
+        // This is necessary because the state transition happens asynchronously after the callback.complete() is called
+        ScheduledTask finalTask = waitForTaskStatus(task.getItemId(), ScheduledTask.TaskStatus.COMPLETED, TEST_WAIT_TIMEOUT, 50);
+        
+        LOGGER.info("Task status={}", finalTask.getStatus());
         assertEquals("Task should be completed",
-            ScheduledTask.TaskStatus.COMPLETED, task.getStatus());
+            ScheduledTask.TaskStatus.COMPLETED, finalTask.getStatus());
         assertEquals("Should have executed expected number of times",
             TEST_MAX_RETRIES+1, executionCount.get());
     }
@@ -817,19 +877,13 @@ public class SchedulerServiceImplTest {
             periodTransitionDelay >= 2000);
 
         // Verify task state
-        task = schedulerService.getTask(task.getItemId());
-        while (!ScheduledTask.TaskStatus.SCHEDULED.equals(task.getStatus())) {
-            LOGGER.debug("Waiting for task {} to complete a period" , task.getItemId());
-            Thread.sleep(100);
-            task = schedulerService.getTask(task.getItemId());
-        }
-        LOGGER.info("Task status={}", task.getStatus());
+        ScheduledTask scheduledTask = waitForTaskStatus(task.getItemId(), ScheduledTask.TaskStatus.SCHEDULED, TEST_WAIT_TIMEOUT, 100);
+        LOGGER.info("Task status={}", scheduledTask.getStatus());
         assertEquals("Task should be in scheduled state",
-            ScheduledTask.TaskStatus.SCHEDULED, task.getStatus());
-        assertEquals("Failure count should be reset", 0, task.getFailureCount());
+            ScheduledTask.TaskStatus.SCHEDULED, scheduledTask.getStatus());
+        assertEquals("Failure count should be reset", 0, scheduledTask.getFailureCount());
 
         schedulerService.cancelTask(task.getItemId());
-
     }
 
     @Test
@@ -873,29 +927,24 @@ public class SchedulerServiceImplTest {
             exhaustionLatch.await(TEST_TIMEOUT, TimeUnit.MILLISECONDS));
 
         // Verify failed state
-        task = schedulerService.getTask(task.getItemId());
+        ScheduledTask failedTask = waitForTaskStatus(task.getItemId(), ScheduledTask.TaskStatus.FAILED, TEST_WAIT_TIMEOUT, 50);
         assertEquals("Task should be in failed state",
-            ScheduledTask.TaskStatus.FAILED, task.getStatus());
+            ScheduledTask.TaskStatus.FAILED, failedTask.getStatus());
         assertEquals("Should have correct failure count",
-            TEST_MAX_RETRIES+1, task.getFailureCount());
+            TEST_MAX_RETRIES+1, failedTask.getFailureCount());
 
         // Manually retry with reset
         schedulerService.retryTask(task.getItemId(), true);
 
         // Wait for manual retry to complete
         assertTrue("Manual retry should succeed",
-            manualRetryLatch.await(TEST_TIMEOUT, TimeUnit.MILLISECONDS));
+            manualRetryLatch.await(TEST_TIMEOUT, TEST_TIME_UNIT));
 
         // Verify final state
-        task = schedulerService.getTask(task.getItemId());
-        while (!ScheduledTask.TaskStatus.COMPLETED.equals(task.getStatus())) {
-            LOGGER.debug("Waiting for task {} to complete" , task.getItemId());
-            Thread.sleep(100);
-            task = schedulerService.getTask(task.getItemId());
-        }
+        ScheduledTask completedTask = waitForTaskStatus(task.getItemId(), ScheduledTask.TaskStatus.COMPLETED, TEST_WAIT_TIMEOUT, 50);
         assertEquals("Task should be completed after manual retry",
-            ScheduledTask.TaskStatus.COMPLETED, task.getStatus());
-        assertEquals("Failure count should be reset", 0, task.getFailureCount());
+            ScheduledTask.TaskStatus.COMPLETED, completedTask.getStatus());
+        assertEquals("Failure count should be reset", 0, completedTask.getFailureCount());
     }
 
     // Task purging tests

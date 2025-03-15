@@ -372,17 +372,26 @@ public class TaskExecutionManager {
                 stateManager.calculateNextExecutionTime(task, true);
                 stateManager.updateTaskState(task, ScheduledTask.TaskStatus.SCHEDULED, null, nodeId);
 
-                // Schedule retry
-                Runnable retryTask = () -> {
-                    TaskExecutor executor = getTaskExecutor(task.getTaskType());
-                    if (executor != null) {
-                        executeTask(task, executor);
+                // Only schedule retry if scheduler is not shutting down
+                if (!scheduler.isShutdown() && !scheduler.isTerminated()) {
+                    // Schedule retry
+                    try {
+                        Runnable retryTask = () -> {
+                            TaskExecutor executor = getTaskExecutor(task.getTaskType());
+                            if (executor != null) {
+                                executeTask(task, executor);
+                            }
+                        };
+                        long retryDelay = task.getNextScheduledExecution().getTime() - System.currentTimeMillis();
+                        scheduler.schedule(retryTask, retryDelay, TimeUnit.MILLISECONDS);
+                        LOGGER.debug("Scheduled retry #{} for task {} in {} ms",
+                            task.getFailureCount(), task.getItemId(), retryDelay);
+                    } catch (RejectedExecutionException e) {
+                        LOGGER.debug("Retry scheduling rejected for task {} as scheduler is shutting down", task.getItemId());
                     }
-                };
-                long retryDelay = task.getNextScheduledExecution().getTime() - System.currentTimeMillis();
-                scheduler.schedule(retryTask, retryDelay, TimeUnit.MILLISECONDS);
-                LOGGER.debug("Scheduled retry #{} for task {} in {} ms",
-                    task.getFailureCount(), task.getItemId(), retryDelay);
+                } else {
+                    LOGGER.debug("Not scheduling retry for task {} as scheduler is shutting down", task.getItemId());
+                }
             } else if (!task.isOneShot()) {
                 LOGGER.debug("Periodic task {} failed all retries but scheduling for next period in {} ms", task.getItemId(), task.getPeriod());
                 schedulerService.saveTask(task); // persist failure state before going back to scheduled state

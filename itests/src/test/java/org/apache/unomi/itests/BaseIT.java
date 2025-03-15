@@ -42,12 +42,14 @@ import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.apache.karaf.itests.KarafTestSupport;
 import org.apache.unomi.api.Item;
 import org.apache.unomi.api.conditions.Condition;
+import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.rules.Rule;
 import org.apache.unomi.api.security.SecurityService;
 import org.apache.unomi.api.services.*;
 import org.apache.unomi.api.tenants.ApiKey;
 import org.apache.unomi.api.tenants.Tenant;
 import org.apache.unomi.api.tenants.TenantService;
+import org.apache.unomi.api.utils.ConditionBuilder;
 import org.apache.unomi.groovy.actions.services.GroovyActionsService;
 import org.apache.unomi.itests.tools.httpclient.HttpClientThatWaitsForUnomi;
 import org.apache.unomi.lifecycle.BundleWatcher;
@@ -568,8 +570,12 @@ public abstract class BaseIT extends KarafTestSupport {
 
     public void createAndWaitForRule(Rule rule) throws InterruptedException {
         rulesService.setRule(rule);
-        keepTrying("Failed waiting for rule to be saved", () -> rulesService.getAllRules(),
-                (rules) -> rules.stream().anyMatch(r -> r.getItemId().equals(rule.getMetadata().getId())), 1000,
+        Query query = new Query();
+        ConditionBuilder builder = new ConditionBuilder(definitionsService);
+        query.setCondition(builder.matchAll().build());
+        query.setForceRefresh(true);
+        keepTrying("Failed waiting for rule to be saved", () -> rulesService.getRuleMetadatas(query),
+                (rules) -> rules.getList().stream().anyMatch(r -> r.getId().equals(rule.getMetadata().getId())), 1000,
                 100);
         rulesService.refreshRules();
     }
