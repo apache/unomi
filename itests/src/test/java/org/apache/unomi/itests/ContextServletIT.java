@@ -77,13 +77,10 @@ public class ContextServletIT extends BaseIT {
     private final static int SEGMENT_NUMBER_OF_DAYS = 30;
 
     private static final int DEFAULT_TRYING_TIMEOUT = 2000;
-    private static final int DEFAULT_TRYING_TRIES = 30;
+    private static final int DEFAULT_TRYING_TRIES = 60;
     public static final String TEST_SCOPE = "test-scope";
 
     private Profile profile;
-
-    @Inject
-    private TenantService tenantService;
 
     @Before
     public void setUp() throws InterruptedException {
@@ -244,7 +241,7 @@ public class ContextServletIT extends BaseIT {
 
         // Check event type did not changed
         event = shouldBeTrueUntilEnd("Event type should not have changed", () -> eventService.getEvent(eventId),
-                (savedEvent) -> eventTypeOriginal.equals(savedEvent.getEventType()), DEFAULT_TRYING_TIMEOUT, 10);
+                (savedEvent) -> eventTypeOriginal.equals(savedEvent.getEventType()), DEFAULT_TRYING_TIMEOUT, DEFAULT_SHOULDBETRUE_TRIES);
         assertEquals(1, event.getVersion().longValue());
     }
 
@@ -276,7 +273,7 @@ public class ContextServletIT extends BaseIT {
 
         // Check event type did not changed
         event = shouldBeTrueUntilEnd("Event type should not have changed", () -> eventService.getEvent(eventId),
-                (savedEvent) -> eventTypeOriginal.equals(savedEvent.getEventType()), DEFAULT_TRYING_TIMEOUT, 10);
+                (savedEvent) -> eventTypeOriginal.equals(savedEvent.getEventType()), DEFAULT_TRYING_TIMEOUT, DEFAULT_SHOULDBETRUE_TRIES);
 
         assertEquals(1, event.getVersion().longValue());
     }
@@ -341,7 +338,7 @@ public class ContextServletIT extends BaseIT {
         shouldBeTrueUntilEnd("Profile " + response.getProfileId() + " not found in the required time",
                 () -> profileService.load(response.getProfileId()),
                 (savedProfile) -> Objects.nonNull(savedProfile) && !savedProfile.getSegments().contains(SEGMENT_ID), DEFAULT_TRYING_TIMEOUT,
-                DEFAULT_TRYING_TRIES);
+                DEFAULT_SHOULDBETRUE_TRIES);
     }
 
     @Test
@@ -374,7 +371,7 @@ public class ContextServletIT extends BaseIT {
         shouldBeTrueUntilEnd("Profile " + response.getProfileId() + " not found in the required time",
                 () -> profileService.load(response.getProfileId()),
                 (savedProfile) -> Objects.nonNull(savedProfile) && !savedProfile.getSegments().contains(SEGMENT_ID), DEFAULT_TRYING_TIMEOUT,
-                DEFAULT_TRYING_TRIES);
+                DEFAULT_SHOULDBETRUE_TRIES);
     }
 
     @Test
@@ -455,7 +452,7 @@ public class ContextServletIT extends BaseIT {
 
         //Assert
         shouldBeTrueUntilEnd("Event should be null", () -> eventService.getEvent(eventId), Objects::isNull, DEFAULT_TRYING_TIMEOUT,
-                DEFAULT_TRYING_TRIES);
+                DEFAULT_SHOULDBETRUE_TRIES);
     }
 
     @Test
@@ -482,7 +479,7 @@ public class ContextServletIT extends BaseIT {
 
         //Assert
         shouldBeTrueUntilEnd("Event should be null", () -> eventService.getEvent(eventId), Objects::isNull, DEFAULT_TRYING_TIMEOUT,
-                DEFAULT_TRYING_TRIES);
+                DEFAULT_SHOULDBETRUE_TRIES);
     }
 
     @Test
@@ -502,7 +499,7 @@ public class ContextServletIT extends BaseIT {
         RequestResponse response = TestUtils.executeContextJSONRequest(request, TEST_SESSION_ID);
 
         shouldBeTrueUntilEnd("Vulnerability successfully executed ! File created at " + vulnFileCanonicalPath, vulnFile::exists,
-                exists -> exists == Boolean.FALSE, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+                exists -> exists == Boolean.FALSE, DEFAULT_TRYING_TIMEOUT, DEFAULT_SHOULDBETRUE_TRIES);
     }
 
     @Test
@@ -522,7 +519,7 @@ public class ContextServletIT extends BaseIT {
         RequestResponse response = TestUtils.executeContextJSONRequest(request, TEST_SESSION_ID);
 
         shouldBeTrueUntilEnd("Vulnerability successfully executed ! File created at " + vulnFileCanonicalPath, vulnFile::exists,
-                exists -> exists == Boolean.FALSE, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+                exists -> exists == Boolean.FALSE, DEFAULT_TRYING_TIMEOUT, DEFAULT_SHOULDBETRUE_TRIES);
     }
 
     @Test

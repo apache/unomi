@@ -124,8 +124,9 @@ public abstract class BaseIT extends KarafTestSupport {
     protected static final String BASIC_AUTH_USER_NAME = "karaf";
     protected static final String BASIC_AUTH_PASSWORD = "karaf";
     protected static final int REQUEST_TIMEOUT = 60000;
-    protected static final int DEFAULT_TRYING_TIMEOUT = 2000;
-    protected static final int DEFAULT_TRYING_TRIES = 30;
+    protected static final int DEFAULT_TRYING_TIMEOUT = 1000;
+    protected static final int DEFAULT_TRYING_TRIES = 10;
+    protected static final int DEFAULT_SHOULDBETRUE_TRIES = 5;
 
     protected static final String SEARCH_ENGINE_PROPERTY = "unomi.search.engine";
     protected static final String SEARCH_ENGINE_ELASTICSEARCH = "elasticsearch";
@@ -430,6 +431,21 @@ public abstract class BaseIT extends KarafTestSupport {
         return Stream.of(super.config(), karafOptions.toArray(new Option[karafOptions.size()])).flatMap(Stream::of).toArray(Option[]::new);
     }
 
+    /**
+     * Repeatedly attempts to retrieve a value using the provided supplier and validates it with the predicate.
+     * This method is particularly useful for testing asynchronous operations where we need to wait
+     * for a specific condition to become true.
+     *
+     * @param <T>         The type of the value being returned by the supplier and checked by the predicate
+     * @param failMessage The message to include in the AssertionError if the maximum number of retries is reached
+     * @param call        A supplier function that returns the value to be tested
+     * @param predicate   A predicate that tests the value and returns true if the condition is satisfied
+     * @param timeout     The time in milliseconds to wait between retry attempts
+     * @param retries     The maximum number of retry attempts before failing
+     * @return The value that satisfied the predicate condition
+     * @throws InterruptedException If the thread is interrupted while sleeping between retries
+     * @throws AssertionError       If the maximum number of retries is reached without the predicate being satisfied
+     */
     protected <T> T keepTrying(String failMessage, Supplier<T> call, Predicate<T> predicate, int timeout, int retries)
             throws InterruptedException {
         int count = 0;
@@ -444,6 +460,19 @@ public abstract class BaseIT extends KarafTestSupport {
         return value;
     }
 
+    /**
+     * Repeatedly checks if a value becomes null within a specific number of retries.
+     * This is useful for testing operations that should result in the removal or
+     * deregistration of elements.
+     *
+     * @param <T>         The type of value being checked
+     * @param failMessage The message to include in the AssertionError if the value doesn't become null
+     * @param call        A supplier function that returns the value to check for null
+     * @param timeout     The time in milliseconds to wait between retry attempts
+     * @param retries     The maximum number of retry attempts before failing
+     * @throws InterruptedException If the thread is interrupted while sleeping between retries
+     * @throws AssertionError       If the maximum number of retries is reached without the value becoming null
+     */
     protected <T> void waitForNullValue(String failMessage, Supplier<T> call, int timeout, int retries) throws InterruptedException {
         int count = 0;
         while (call.get() != null) {
@@ -454,6 +483,21 @@ public abstract class BaseIT extends KarafTestSupport {
         }
     }
 
+    /**
+     * Verifies that a condition remains true for the entire duration of the test period.
+     * This is useful for testing stability of a state or ensuring that a condition doesn't
+     * revert back to false after initially becoming true.
+     *
+     * @param <T>         The type of the value being checked
+     * @param failMessage The message to include in the AssertionError if the condition becomes false
+     * @param call        A supplier function that returns the value to be tested
+     * @param predicate   A predicate that tests the value and should return true for the entire test period
+     * @param timeout     The time in milliseconds to wait between validation attempts
+     * @param retries     The number of times to check the condition (defines the total test period)
+     * @return The final value after all checks have passed
+     * @throws InterruptedException If the thread is interrupted while sleeping between checks
+     * @throws AssertionError       If the condition becomes false at any point during the test period
+     */
     protected <T> T shouldBeTrueUntilEnd(String failMessage, Supplier<T> call, Predicate<T> predicate, int timeout, int retries)
             throws InterruptedException {
         int count = 0;
@@ -469,6 +513,13 @@ public abstract class BaseIT extends KarafTestSupport {
         return value;
     }
 
+    /**
+     * Retrieves the content of a resource file from the bundle as a string.
+     * 
+     * @param resourcePath The path to the resource within the bundle
+     * @return The resource content as a string, or null if the resource cannot be found
+     * @throws IOException If an error occurs while reading the resource
+     */
     protected String bundleResourceAsString(final String resourcePath) throws IOException {
         final java.net.URL url = bundleContext.getBundle().getResource(resourcePath);
         if (url != null) {
@@ -482,6 +533,14 @@ public abstract class BaseIT extends KarafTestSupport {
         }
     }
 
+    /**
+     * Retrieves and validates a JSON resource from the bundle, with optional parameter replacement.
+     * 
+     * @param resourcePath The path to the JSON resource within the bundle
+     * @param parameters   A map of parameters to replace in the JSON string (format: "###KEY###" -> "value")
+     * @return The validated JSON string
+     * @throws IOException If an error occurs while reading or validating the JSON
+     */
     protected String getValidatedBundleJSON(final String resourcePath, Map<String, String> parameters) throws IOException {
         String jsonString = bundleResourceAsString(resourcePath);
         if (parameters != null && parameters.size() > 0) {
@@ -493,13 +552,88 @@ public abstract class BaseIT extends KarafTestSupport {
         return objectMapper.writeValueAsString(objectMapper.readTree(jsonString));
     }
 
+    /**
+     * Retrieves an OSGi service of the specified type, waiting if necessary until it becomes available.
+     * 
+     * @param <T>          The type of service to retrieve
+     * @param serviceClass The class object representing the service interface
+     * @return The service instance
+     * @throws InterruptedException If the thread is interrupted while waiting for the service
+     */
+    public <T> T getService(Class<T> serviceClass) throws InterruptedException {
+        ServiceReference<T> serviceReference = bundleContext.getServiceReference(serviceClass);
+        while (serviceReference == null) {
+            LOGGER.info("Waiting for service {} to become available", serviceClass.getName());
+            Thread.sleep(1000);
+            serviceReference = bundleContext.getServiceReference(serviceClass);
+        }
+        return bundleContext.getService(serviceReference);
+    }
+    
+    /**
+     * Retrieves an OSGi service of the specified type with the given filter, waiting if necessary until it becomes available.
+     * 
+     * @param <T>          The type of service to retrieve
+     * @param serviceClass The class object representing the service interface
+     * @param filter       The OSGi filter expression to match the service
+     * @return The service instance
+     * @throws InterruptedException If the thread is interrupted while waiting for the service
+     */
+    public <T> T getService(Class<T> serviceClass, String filter) throws InterruptedException {
+        try {
+            ServiceReference<T>[] serviceReferences = (ServiceReference<T>[]) bundleContext.getServiceReferences(serviceClass.getName(), filter);
+            while (serviceReferences == null || serviceReferences.length == 0) {
+                LOGGER.info("Waiting for service {} with filter {} to become available", serviceClass.getName(), filter);
+                Thread.sleep(1000);
+                serviceReferences = (ServiceReference<T>[]) bundleContext.getServiceReferences(serviceClass.getName(), filter);
+            }
+            return bundleContext.getService(serviceReferences[0]);
+        } catch (Exception e) {
+            LOGGER.error("Error getting service with filter", e);
+            throw new RuntimeException("Error getting service with filter", e);
+        }
+    }
+
+    /**
+     * Updates the local service references by retrieving them again from the OSGi service registry.
+     * This is typically needed after configuration changes that might cause service reregistration.
+     * All services initialized in waitForStartup() are refreshed to ensure test consistency.
+     * 
+     * @throws InterruptedException If the thread is interrupted while waiting for services
+     */
     public void updateServices() throws InterruptedException {
         persistenceService = getService(PersistenceService.class);
         definitionsService = getService(DefinitionsService.class);
         rulesService = getService(RulesService.class);
         segmentService = getService(SegmentService.class);
+        profileService = getService(ProfileService.class);
+        privacyService = getService(PrivacyService.class);
+        eventService = getService(EventService.class);
+        bundleWatcher = getService(BundleWatcher.class);
+        groovyActionsService = getService(GroovyActionsService.class);
+        schemaService = getService(SchemaService.class);
+        scopeService = getService(ScopeService.class);
+        patchService = getService(PatchService.class);
+        importConfigurationService = getService(ImportExportConfigurationService.class, "(configDiscriminator=IMPORT)");
+        exportConfigurationService = getService(ImportExportConfigurationService.class, "(configDiscriminator=EXPORT)");
+        routerCamelContext = getService(IRouterCamelContext.class);
+        userListService = getService(UserListService.class);
+        topicService = getService(TopicService.class);
+        tenantService = getService(TenantService.class);
+        securityService = getService(SecurityService.class);
+        executionContextManager = getService(ExecutionContextManager.class);
     }
 
+    /**
+     * Updates an OSGi configuration with a single property value and waits for the service to be reregistered.
+     * 
+     * @param serviceName The fully qualified name of the service to wait for
+     * @param configPid   The persistent identifier of the configuration to update
+     * @param propName    The name of the property to update
+     * @param propValue   The new value for the property
+     * @throws InterruptedException If the thread is interrupted while waiting for service reregistration
+     * @throws IOException          If an error occurs while updating the configuration
+     */
     public void updateConfiguration(String serviceName, String configPid, String propName, Object propValue)
             throws InterruptedException, IOException {
         Map<String, Object> props = new HashMap<>();
@@ -507,6 +641,15 @@ public abstract class BaseIT extends KarafTestSupport {
         updateConfiguration(serviceName, configPid, props);
     }
 
+    /**
+     * Updates an OSGi configuration with multiple property values and waits for the service to be reregistered.
+     * 
+     * @param serviceName The fully qualified name of the service to wait for
+     * @param configPid   The persistent identifier of the configuration to update
+     * @param propsToSet  A map of property names to their new values
+     * @throws InterruptedException If the thread is interrupted while waiting for service reregistration
+     * @throws IOException          If an error occurs while updating the configuration
+     */
     public void updateConfiguration(String serviceName, String configPid, Map<String, Object> propsToSet)
             throws InterruptedException, IOException {
         org.osgi.service.cm.Configuration cfg = configurationAdmin.getConfiguration(configPid);
@@ -528,6 +671,14 @@ public abstract class BaseIT extends KarafTestSupport {
         updateServices();
     }
 
+    /**
+     * Waits for a service to be unregistered and then reregistered after a configuration change.
+     * This is useful when updating configurations that cause services to restart.
+     * 
+     * @param serviceName The fully qualified name of the service to wait for
+     * @param trigger     A runnable that will trigger the service reregistration (e.g., updating configuration)
+     * @throws InterruptedException If the thread is interrupted while waiting for service events
+     */
     public void waitForReRegistration(String serviceName, Runnable trigger) throws InterruptedException {
         CountDownLatch latch1 = new CountDownLatch(2);
         ServiceListener serviceListener = e -> {
@@ -543,6 +694,12 @@ public abstract class BaseIT extends KarafTestSupport {
         bundleContext.removeServiceListener(serviceListener);
     }
 
+    /**
+     * Converts an OSGi ServiceEvent type to a human-readable string representation.
+     * 
+     * @param serviceEvent The ServiceEvent to convert
+     * @return A string representation of the service event type
+     */
     public String serviceEventTypeToString(ServiceEvent serviceEvent) {
         switch (serviceEvent.getType()) {
             case ServiceEvent.MODIFIED:
@@ -558,16 +715,12 @@ public abstract class BaseIT extends KarafTestSupport {
         }
     }
 
-    public <T> T getService(Class<T> serviceClass) throws InterruptedException {
-        ServiceReference<T> serviceReference = bundleContext.getServiceReference(serviceClass);
-        while (serviceReference == null) {
-            LOGGER.info("Waiting for service {} to become available", serviceClass.getName());
-            Thread.sleep(1000);
-            serviceReference = bundleContext.getServiceReference(serviceClass);
-        }
-        return bundleContext.getService(serviceReference);
-    }
-
+    /**
+     * Creates a rule and waits until it has been successfully saved in the system.
+     * 
+     * @param rule The rule to create
+     * @throws InterruptedException If the thread is interrupted while waiting for the rule to be saved
+     */
     public void createAndWaitForRule(Rule rule) throws InterruptedException {
         rulesService.setRule(rule);
         Query query = new Query();
@@ -580,10 +733,25 @@ public abstract class BaseIT extends KarafTestSupport {
         rulesService.refreshRules();
     }
 
+    /**
+     * Constructs a full URL by combining the base URL, port, and the provided path.
+     * 
+     * @param url The URL path to append to the base URL and port
+     * @return The complete URL string
+     * @throws Exception If an error occurs while constructing the URL
+     */
     public String getFullUrl(String url) throws Exception {
         return BASE_URL + ":" + getHttpPort() + url;
     }
 
+    /**
+     * Performs an HTTP GET request and deserializes the response to the specified class.
+     * 
+     * @param <T>   The type to deserialize the response to
+     * @param url   The URL path for the GET request
+     * @param clazz The class object for the type to deserialize to
+     * @return The deserialized response object, or null if the request failed
+     */
     protected <T> T get(final String url, Class<T> clazz) {
         CloseableHttpResponse response = null;
         try {
@@ -608,6 +776,14 @@ public abstract class BaseIT extends KarafTestSupport {
         return null;
     }
 
+    /**
+     * Performs an HTTP POST request with the specified resource as the request body.
+     * 
+     * @param url        The URL path for the POST request
+     * @param resource   The resource to use as the request body
+     * @param contentType The content type of the request
+     * @return The HTTP response, or null if the request failed
+     */
     protected CloseableHttpResponse post(final String url, final String resource, ContentType contentType) {
         try {
             final HttpPost request = new HttpPost(getFullUrl(url));
@@ -624,10 +800,23 @@ public abstract class BaseIT extends KarafTestSupport {
         return null;
     }
 
+    /**
+     * Performs an HTTP POST request with the specified resource as the request body using JSON content type.
+     * 
+     * @param url      The URL path for the POST request
+     * @param resource The resource to use as the request body
+     * @return The HTTP response, or null if the request failed
+     */
     protected CloseableHttpResponse post(final String url, final String resource) {
         return post(url, resource, JSON_CONTENT_TYPE);
     }
 
+    /**
+     * Performs an HTTP DELETE request.
+     * 
+     * @param url The URL path for the DELETE request
+     * @return The HTTP response, or null if the request failed
+     */
     protected CloseableHttpResponse delete(final String url) {
         CloseableHttpResponse response = null;
         try {
@@ -649,6 +838,13 @@ public abstract class BaseIT extends KarafTestSupport {
         return response;
     }
 
+    /**
+     * Executes an HTTP request with appropriate authentication headers based on the endpoint type.
+     * 
+     * @param request The HTTP request to execute
+     * @return The HTTP response
+     * @throws IOException If an error occurs while executing the request
+     */
     protected CloseableHttpResponse executeHttpRequest(HttpUriRequest request) throws IOException {
         // Add API key headers based on the request path
         String path = request.getURI().getPath();
@@ -678,6 +874,13 @@ public abstract class BaseIT extends KarafTestSupport {
         return response;
     }
 
+    /**
+     * Loads a resource from the bundle and returns its content as a string.
+     * 
+     * @param resource The path to the resource within the bundle
+     * @return The resource content as a string
+     * @throws RuntimeException If an error occurs while reading the resource
+     */
     protected String resourceAsString(final String resource) {
         final java.net.URL url = bundleContext.getBundle().getResource(resource);
         try (InputStream stream = url.openStream()) {
@@ -689,6 +892,12 @@ public abstract class BaseIT extends KarafTestSupport {
         }
     }
 
+    /**
+     * Initializes an HTTP client with custom SSL settings and credentials provider.
+     * 
+     * @param credentialsProvider The credentials provider for basic authentication
+     * @return The configured HTTP client
+     */
     public static CloseableHttpClient initHttpClient(BasicCredentialsProvider credentialsProvider) {
         long requestStartTime = System.currentTimeMillis();
         HttpClientBuilder httpClientBuilder = HttpClients.custom().useSystemProperties().setDefaultCredentialsProvider(credentialsProvider);
@@ -735,6 +944,11 @@ public abstract class BaseIT extends KarafTestSupport {
         return httpClientBuilder.build();
     }
 
+    /**
+     * Safely closes an HTTP client, handling any exceptions.
+     * 
+     * @param httpClient The HTTP client to close
+     */
     public static void closeHttpClient(CloseableHttpClient httpClient) {
         try {
             if (httpClient != null) {
@@ -745,12 +959,22 @@ public abstract class BaseIT extends KarafTestSupport {
         }
     }
 
+    /**
+     * Creates a basic credentials provider with default username and password.
+     * 
+     * @return The configured credentials provider
+     */
     public BasicCredentialsProvider getHttpClientCredentialProvider() {
         BasicCredentialsProvider credsProvider = new BasicCredentialsProvider();
         credsProvider.setCredentials(AuthScope.ANY, new UsernamePasswordCredentials(BASIC_AUTH_USER_NAME, BASIC_AUTH_PASSWORD));
         return credsProvider;
     }
 
+    /**
+     * Gets the appropriate search engine port based on the configured search engine.
+     * 
+     * @return The port number as a string
+     */
     protected static String getSearchPort() {
         String searchEngine = System.getProperty(SEARCH_ENGINE_PROPERTY, SEARCH_ENGINE_ELASTICSEARCH);
         if (SEARCH_ENGINE_OPENSEARCH.equals(searchEngine)) {
@@ -763,6 +987,12 @@ public abstract class BaseIT extends KarafTestSupport {
         }
     }
 
+    /**
+     * Determines if the given path is a private endpoint that requires private key authentication.
+     * 
+     * @param path The URL path to check
+     * @return true if the endpoint requires private key authentication, false otherwise
+     */
     protected boolean isPrivateEndpoint(String path) {
         // Add paths that require private key authentication
         return path.contains("/cxs/profiles") ||

@@ -54,9 +54,6 @@ public class TenantIT extends BaseIT {
     private static final String REST_ENDPOINT = "http://localhost:8181/cxs/tenants";
     private CustomObjectMapper objectMapper;
 
-    @Inject
-    private TenantService tenantService;
-
     @Before
     public void setUp() {
         objectMapper = new CustomObjectMapper();

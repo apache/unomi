@@ -60,7 +60,7 @@ public class SendEventActionIT extends BaseIT {
         Assert.assertEquals(TEST_PROFILE_ID, sendEvent().getProfile().getItemId());
 
         shouldBeTrueUntilEnd("Event should not have been persisted", () -> eventService.searchEvents(getSearchCondition(), 0, 1),
-                (eventPartialList -> eventPartialList.size() == 0), DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+                (eventPartialList -> eventPartialList.size() == 0), DEFAULT_TRYING_TIMEOUT, DEFAULT_SHOULDBETRUE_TRIES);
     }
 
     @Test

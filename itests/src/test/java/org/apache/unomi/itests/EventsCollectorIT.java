@@ -46,9 +46,6 @@ public class EventsCollectorIT extends BaseIT {
     private final static String TEST_PROFILE_ID = "test-profile-id";
     private final static String TEST_SESSION_ID = "test-session-id";
 
-    @Inject
-    private TenantService tenantService;
-
     private Profile profile;
 
     @Before
@@ -65,30 +62,30 @@ public class EventsCollectorIT extends BaseIT {
         // Create tenant with API keys
         Tenant tenant = tenantService.createTenant("EventsApiKeyTest", Collections.emptyMap());
         ApiKey publicKey = tenantService.getApiKey(tenant.getItemId(), ApiKey.ApiKeyType.PUBLIC);
-        
+
         // Create event
         Event event = new Event(TEST_EVENT_TYPE, null, profile, null, null, null, new Date());
-        
+
         // Create events collector request with public API key
         EventsCollectorRequest eventsRequest = new EventsCollectorRequest();
         eventsRequest.setSessionId(TEST_SESSION_ID);
         eventsRequest.setEvents(Collections.singletonList(event));
         eventsRequest.setPublicApiKey(publicKey.getKey());
-        
+
         // Send request
         HttpPost request = new HttpPost(getFullUrl(EVENTS_URL));
         request.setEntity(new StringEntity(objectMapper.writeValueAsString(eventsRequest), ContentType.APPLICATION_JSON));
         TestUtils.RequestResponse response = TestUtils.executeContextJSONRequest(request, TEST_SESSION_ID);
-        
+
         // Verify response
         Assert.assertEquals("Should receive success response", 200, response.getStatusCode());
-        
+
         // Test with invalid API key
         eventsRequest.setPublicApiKey("invalid-key");
         request.setEntity(new StringEntity(objectMapper.writeValueAsString(eventsRequest), ContentType.APPLICATION_JSON));
         response = TestUtils.executeContextJSONRequest(request, TEST_SESSION_ID);
-        
+
         // Verify error response for invalid key
         Assert.assertEquals("Should receive unauthorized response", 401, response.getStatusCode());
     }
-} 
+}

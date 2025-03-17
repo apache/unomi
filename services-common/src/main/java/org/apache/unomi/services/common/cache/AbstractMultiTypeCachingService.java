@@ -193,11 +193,36 @@ public abstract class AbstractMultiTypeCachingService extends AbstractContextAwa
                 }
             }
             
+            // Always store a reference to the current items to check for deletions later
+            // Get a copy of the keys to avoid concurrent modification issues
+            final Set<String> oldItemIds = new HashSet<>(cacheService.getTenantCache(tenantId, config.getType()).keySet());
+            
+            // Create a set to track IDs loaded from persistence
+            final Set<String> persistenceItemIds = new HashSet<>();
+            
             // Reload tenant data
             contextManager.executeAsTenant(tenantId, () -> {
                 List<T> items = loadItemsForTenant(tenantId, config);
+                
+                // Track IDs of items still in persistence
+                for (T item : items) {
+                    String id = config.getIdExtractor().apply(item);
+                    persistenceItemIds.add(id);
+                }
+                
                 processAndCacheItems(tenantId, items, config);
             });
+            
+            // Remove items no longer in persistence
+            if (config.isPersistable()) {
+                for (String id : oldItemIds) {
+                    if (!persistenceItemIds.contains(id)) {
+                        cacheService.remove(config.getItemType(), id, tenantId, config.getType());
+                        logger.debug("Removed item {} of type {} for tenant {} as it no longer exists in persistence",
+                                id, config.getType().getName(), tenantId);
+                    }
+                }
+            }
             
             // Process tenant-specific changes if needed
             if (config.hasTenantRefreshCallback() || config.hasPostRefreshCallback()) {

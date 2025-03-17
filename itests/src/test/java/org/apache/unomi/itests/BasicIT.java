@@ -275,6 +275,8 @@ public class BasicIT extends BaseIT {
         Profile profileVisitor2 = profileService.load(profileIdVisitor2);
         checkVisitor2ResponseProperties(profileVisitor2.getProperties());
 
+        rulesService.removeRule("testLogin");
+
         LOGGER.info("End test testMultipleLoginOnSameBrowser");
     }
 
