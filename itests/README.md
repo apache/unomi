@@ -105,6 +105,14 @@ Here's an example:
 
     mvn clean install -Dit.karaf.debug=hold:true -Dit.test=org.apache.unomi.itests.graphql.GraphQLEventIT
 
+To run a specific test method within a test class, you can use the # symbol followed by the method name:
+
+    mvn clean install -Dit.test=org.apache.unomi.itests.ContextServletIT#testContextEndpointAuthentication
+
+You can also use patterns to run multiple methods that match a pattern:
+
+    mvn clean install -Dit.test=org.apache.unomi.itests.ContextServletIT#test*Authentication*
+
 ## Migration tests
 
 Migration can now be tested, by reusing an ElasticSearch snapshot. 

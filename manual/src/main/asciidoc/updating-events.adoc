@@ -19,6 +19,14 @@ This can easily achieved using the `KafkaInjector` module built in within Unomi.
 But, as streaming system usually operates in https://dzone.com/articles/kafka-clients-at-most-once-at-least-once-exactly-o[at-least-once] semantics,
 we need to have a way to guarantee we wont have duplicate events in the system.
 
+==== Authentication Requirements
+To update events in Unomi, you must authenticate as either:
+
+* A tenant administrator
+* The system administrator
+
+This authentication requirement ensures proper access control and security when modifying event data.
+
 ==== Solution
 
 One of the solutions to this scenario is to have the ability to control and pass in the `eventId` property from outside of Unomi,
@@ -30,6 +38,7 @@ Here is an example of a request contains the `itemdId`
 ----
 curl -X POST http://localhost:8181/cxs/context.json \
 -H "Content-Type: application/json" \
+-H "Authorization: Basic {base64-encoded-credentials}" \
 -d @- <<'EOF'
 {
     "events":[
@@ -45,7 +54,7 @@ curl -X POST http://localhost:8181/cxs/context.json \
 }
 EOF
 ----
-Make sure to use an authorized third party using `X-Unomi-Api-Key` requests headers and that the `eventType` is in the list of allowed events
+Make sure to authenticate as either a tenant administrator or system administrator using Basic Authentication, and verify that the `eventType` is in the list of allowed events.
 
 ==== Defining Rules
 Another use case we support is the ability to define a rule on the above mentioned events.

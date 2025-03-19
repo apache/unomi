@@ -32,6 +32,12 @@ import java.util.HashSet;
 import java.util.Set;
 
 public class UnomiAuthenticationFilter implements Filter {
+    private static final String BASIC_AUTH_PREFIX = "Basic ";
+
+    private static final String AUTHORIZATION_HEADER = "Authorization";
+
+    private static final String UNOMI_API_KEY_HEADER = "X-Unomi-Api-Key";
+
     private static final Logger logger = LoggerFactory.getLogger(UnomiAuthenticationFilter.class);
 
     private static final Set<String> PUBLIC_ENDPOINTS = new HashSet<>();
@@ -66,32 +72,25 @@ public class UnomiAuthenticationFilter implements Filter {
 
         // Handle public endpoints
         if (isPublicEndpoint(path)) {
-            String apiKey = httpRequest.getHeader("X-Unomi-Api-Key");
-            if (apiKey == null) {
-                httpResponse.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Missing public API key");
-                return;
-            }
+            String apiKey = httpRequest.getHeader(UNOMI_API_KEY_HEADER);
 
             Tenant tenant = tenantService.getTenantByApiKey(apiKey, ApiKey.ApiKeyType.PUBLIC);
-            if (tenant == null) {
-                httpResponse.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Invalid public API key");
-                return;
+            if (tenant != null) {
+                // Set tenant ID for the request
+                executionContextManager.executeAsTenant(tenant.getItemId(), () -> {
+                    try {
+                        chain.doFilter(request, response);
+                    } catch (IOException | ServletException e) {
+                        throw new RuntimeException(e);
+                    }
+                });
             }
-
-            // Set tenant ID for the request
-            executionContextManager.executeAsTenant(tenant.getItemId(), () -> {
-                try {
-                    chain.doFilter(request, response);
-                } catch (IOException | ServletException e) {
-                    throw new RuntimeException(e);
-                }
-            });
         }
-        // Handle private endpoints (CXS)
+        // Handle all other endpoints requests
         else {
-            String authHeader = httpRequest.getHeader("Authorization");
-            if (authHeader == null || !authHeader.startsWith("Basic ")) {
-                httpResponse.setHeader("WWW-Authenticate", "Basic realm=\"Apache Unomi\"");
+            String authHeader = httpRequest.getHeader(AUTHORIZATION_HEADER);
+            if (authHeader == null || !authHeader.startsWith(BASIC_AUTH_PREFIX)) {
+                httpResponse.setHeader("WWW-Authenticate", "Basic realm=\"cxs\"");
                 httpResponse.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Authentication required");
                 return;
             }
@@ -127,7 +126,7 @@ public class UnomiAuthenticationFilter implements Filter {
 
     private String[] extractCredentials(String authHeader) {
         try {
-            String base64Credentials = authHeader.substring("Basic ".length()).trim();
+            String base64Credentials = authHeader.substring(BASIC_AUTH_PREFIX.length()).trim();
             String credentials = new String(Base64.getDecoder().decode(base64Credentials));
             return credentials.split(":", 2);
         } catch (Exception e) {

@@ -30,18 +30,59 @@ import org.slf4j.LoggerFactory;
 import java.util.Map;
 
 /**
- * Created by amidani on 22/05/2017.
+ * A Camel route builder that handles one-time profile imports from files.
+ * This route builder creates routes that process CSV files dropped into a
+ * monitored directory for one-time import operations.
+ *
+ * <p>Features:
+ * <ul>
+ *   <li>File-based import processing</li>
+ *   <li>Configuration lookup from filename</li>
+ *   <li>CSV file processing with error handling</li>
+ *   <li>Support for both Kafka and direct endpoints</li>
+ *   <li>Automatic file movement after processing</li>
+ *   <li>Error reporting and failed file handling</li>
+ * </ul>
+ * </p>
+ *
+ * @since 1.0
  */
 public class ProfileImportOneShotRouteBuilder extends RouterAbstractRouteBuilder {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ProfileImportOneShotRouteBuilder.class.getName());
+    
+    /** Processor for extracting import configuration from filenames */
     private ImportConfigByFileNameProcessor importConfigByFileNameProcessor;
+    
+    /** Directory to monitor for import files */
     private String uploadDir;
 
+    /**
+     * Constructs a new route builder with Kafka configuration.
+     *
+     * @param kafkaProps map containing Kafka configuration properties
+     * @param configType the type of configuration (kafka/direct)
+     */
     public ProfileImportOneShotRouteBuilder(Map<String, String> kafkaProps, String configType) {
         super(kafkaProps, configType);
     }
 
+    /**
+     * Configures the route for one-shot profile imports.
+     * Creates a route that monitors a directory for CSV files and processes them for import.
+     * 
+     * <p>The route:
+     * <ul>
+     *   <li>Monitors upload directory for CSV files</li>
+     *   <li>Extracts configuration from filename</li>
+     *   <li>Processes file contents line by line</li>
+     *   <li>Handles validation and format errors</li>
+     *   <li>Routes processed data to appropriate endpoints</li>
+     * </ul>
+     * </p>
+     *
+     * @throws Exception if an error occurs during route configuration
+     */
     @Override
     public void configure() throws Exception {
 
@@ -81,10 +122,20 @@ public class ProfileImportOneShotRouteBuilder extends RouterAbstractRouteBuilder
         }
     }
 
+    /**
+     * Sets the processor for handling import configuration by filename.
+     *
+     * @param importConfigByFileNameProcessor processor for filename-based configuration
+     */
     public void setImportConfigByFileNameProcessor(ImportConfigByFileNameProcessor importConfigByFileNameProcessor) {
         this.importConfigByFileNameProcessor = importConfigByFileNameProcessor;
     }
 
+    /**
+     * Sets the directory to monitor for import files.
+     *
+     * @param uploadDir path to the directory to monitor
+     */
     public void setUploadDir(String uploadDir) {
         this.uploadDir = uploadDir;
     }

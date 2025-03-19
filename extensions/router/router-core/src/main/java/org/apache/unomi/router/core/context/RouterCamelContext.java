@@ -17,10 +17,15 @@
 package org.apache.unomi.router.core.context;
 
 import org.apache.camel.CamelContext;
+import org.apache.camel.Exchange;
 import org.apache.camel.Route;
 import org.apache.camel.component.jackson.JacksonDataFormat;
 import org.apache.camel.core.osgi.OsgiDefaultCamelContext;
+import org.apache.camel.management.event.ExchangeCompletedEvent;
+import org.apache.camel.management.event.ExchangeCreatedEvent;
+import org.apache.camel.management.event.ExchangeSentEvent;
 import org.apache.camel.model.RouteDefinition;
+import org.apache.camel.support.EventNotifierSupport;
 import org.apache.unomi.api.services.ConfigSharingService;
 import org.apache.unomi.api.services.ExecutionContextManager;
 import org.apache.unomi.api.services.ProfileService;
@@ -40,17 +45,29 @@ import org.osgi.framework.BundleContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Map;
-import java.util.TimerTask;
+import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 /**
- * Created by amidani on 04/05/2017.
+ * The main Camel context manager for the Unomi Router component.
+ * This class manages the lifecycle of all import and export routes,
+ * handles route configuration updates, and maintains the Camel context.
+ *
+ * <p>Features:
+ * <ul>
+ *   <li>Initializes and manages the Camel context</li>
+ *   <li>Sets up import and export routes</li>
+ *   <li>Handles route configuration updates</li>
+ *   <li>Manages route lifecycle (start/stop/update)</li>
+ *   <li>Provides monitoring through event notifications</li>
+ *   <li>Supports both Kafka and direct endpoints</li>
+ * </ul>
+ * </p>
+ *
+ * @since 1.0
  */
 public class RouterCamelContext implements IRouterCamelContext {
 
@@ -179,6 +196,30 @@ public class RouterCamelContext implements IRouterCamelContext {
 
     private void initCamel() throws Exception {
         camelContext = new OsgiDefaultCamelContext(bundleContext);
+
+        // Setup listener, we might want to improve this to know exactly what is running at a given time and expose an API to query this information
+        camelContext.getManagementStrategy().addEventNotifier(new EventNotifierSupport() {
+            @Override
+            public void notify(EventObject event) throws Exception {
+                if (event instanceof ExchangeCreatedEvent) {
+                    ExchangeCreatedEvent exchangeCreatedEvent = (ExchangeCreatedEvent) event;
+                    Exchange exchange = exchangeCreatedEvent.getExchange();
+                    LOGGER.info("Exchange Created: {}", exchange.getExchangeId());
+                } else if (event instanceof ExchangeSentEvent) {
+                    ExchangeSentEvent sentEvent = (ExchangeSentEvent) event;
+                    LOGGER.info("Processed: {} in {}ms by endpoint {} ", sentEvent.getExchange().getIn().getBody(), sentEvent.getTimeTaken(), sentEvent.getEndpoint().getEndpointUri());
+                } else if (event instanceof ExchangeCompletedEvent) {
+                    ExchangeCompletedEvent completedEvent = (ExchangeCompletedEvent) event;
+                    Exchange exchange = completedEvent.getExchange();
+                    LOGGER.info("Exchange Completed: {}", exchange.getExchangeId());
+                }
+            }
+
+            @Override
+            public boolean isEnabled(EventObject event) {
+                return event instanceof ExchangeCreatedEvent || event instanceof ExchangeCompletedEvent ||  event instanceof ExchangeSentEvent;
+            }
+        });
 
         //--IMPORT ROUTES
 

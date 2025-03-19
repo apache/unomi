@@ -16,15 +16,50 @@
  */
 package org.apache.unomi.router.api;
 
-        import org.apache.unomi.api.Item;
+import org.apache.unomi.api.Item;
 
-        import java.util.ArrayList;
-        import java.util.HashMap;
-        import java.util.List;
-        import java.util.Map;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
- * Created by amidani on 21/06/2017.
+ * Base configuration class for import and export operations in Apache Unomi.
+ * This class serves as the foundation for both ImportConfiguration and ExportConfiguration,
+ * providing common configuration properties and behaviors needed for data transfer operations.
+ *
+ * <p>Key features and responsibilities:
+ * <ul>
+ *   <li>Defines common configuration properties for import/export operations</li>
+ *   <li>Manages separators and delimiters for CSV-like file formats</li>
+ *   <li>Tracks execution status and history</li>
+ *   <li>Handles configuration activation/deactivation</li>
+ * </ul>
+ * </p>
+ *
+ * <p>Usage in Unomi:
+ * <ul>
+ *   <li>Used by ImportExportConfigurationService to manage data transfer configurations</li>
+ *   <li>Consumed by Camel routes to determine how to process data</li>
+ *   <li>Referenced by import/export processors to format data correctly</li>
+ * </ul>
+ * </p>
+ *
+ * <p>Configuration properties include:
+ * <ul>
+ *   <li>name - unique identifier for the configuration</li>
+ *   <li>configType - type of configuration (import/export)</li>
+ *   <li>columnSeparator - character used to separate columns (default: ",")</li>
+ *   <li>lineSeparator - character used to separate lines (default: "\n")</li>
+ *   <li>multiValueSeparator - character used to separate multiple values (default: ";")</li>
+ *   <li>active - whether the configuration is currently active</li>
+ *   <li>status - current status of the configuration</li>
+ *   <li>executions - history of execution attempts</li>
+ * </ul>
+ * </p>
+ *
+ * @see org.apache.unomi.router.api.services.ImportExportConfigurationService
+ * @since 1.0
  */
 public class ImportExportConfiguration extends Item {
 

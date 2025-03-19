@@ -18,7 +18,11 @@ package org.apache.unomi.rest.service.impl;
 
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.cxf.interceptor.security.RolePrefixSecurityContextImpl;
+import org.apache.cxf.jaxrs.utils.JAXRSUtils;
 import org.apache.unomi.api.*;
+import org.apache.unomi.api.security.TenantPrincipal;
+import org.apache.unomi.api.security.UnomiRoles;
 import org.apache.unomi.api.services.ConfigSharingService;
 import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.api.services.PrivacyService;
@@ -35,14 +39,18 @@ import org.osgi.service.component.annotations.Reference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.security.auth.Subject;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.BadRequestException;
 import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.SecurityContext;
+import java.security.Principal;
 import java.util.Date;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Component(service = RestServiceUtils.class)
@@ -51,6 +59,7 @@ public class RestServiceUtilsImpl implements RestServiceUtils {
     private static final String DEFAULT_CLIENT_ID = "defaultClientId";
 
     private static final Logger LOGGER = LoggerFactory.getLogger(RestServiceUtilsImpl.class.getName());
+    public static final String UNOMI_TENANT_ID_HEADER = "X-Unomi-Tenant-Id";
 
     @Reference
     private ConfigSharingService configSharingService;
@@ -239,17 +248,12 @@ public class RestServiceUtilsImpl implements RestServiceUtils {
     }
 
     @Override
-    public EventsRequestContext performEventsRequest(List<Event> events, EventsRequestContext eventsRequestContext) {
+    public EventsRequestContext performEventsRequest(List<Event> events, EventsRequestContext eventsRequestContext, SecurityContext securityContext) {
         List<String> filteredEventTypes = privacyService.getFilteredEventTypes(eventsRequestContext.getProfile());
-        String privateApiKey = eventsRequestContext.getRequest().getHeader("X-Unomi-Api-Key");
 
-        if (StringUtils.isBlank(privateApiKey)) {
-            throw new WebApplicationException("Missing private API key", Response.Status.UNAUTHORIZED);
-        }
-
-        Tenant tenant = tenantService.getTenantByApiKey(privateApiKey);
-        if (tenant == null) {
-            throw new WebApplicationException("Invalid private API key", Response.Status.UNAUTHORIZED);
+        String tenantId = resolveTenantId(eventsRequestContext.getRequest());
+        if (tenantId == null) {
+            throw new WebApplicationException("Unable to resolve a tenant", Response.Status.UNAUTHORIZED);
         }
 
         // execute provided events if any
@@ -264,8 +268,13 @@ public class RestServiceUtilsImpl implements RestServiceUtils {
                     Event eventToSend = new Event(event.getEventType(), eventsRequestContext.getSession(), eventsRequestContext.getProfile(), event.getScope(),
                             event.getSource(), event.getTarget(), event.getProperties(), eventsRequestContext.getTimestamp(), event.isPersistent());
                     eventToSend.setFlattenedProperties(event.getFlattenedProperties());
-                    if (!eventService.isEventAllowedForTenant(event, tenant.getItemId(), eventsRequestContext.getRequest().getRemoteAddr())) {
+                    if (!eventService.isEventAllowedForTenant(event, tenantId, eventsRequestContext.getRequest().getRemoteAddr())) {
                         throw new WebApplicationException("Tenant is not authorized to send event " + event.getEventType() + " from IP " + eventsRequestContext.getRequest().getRemoteAddr(), Response.Status.UNAUTHORIZED);
+                    }
+                    if (securityContext.isUserInRole(UnomiRoles.TENANT_ADMINISTRATOR) && event.getItemId() != null) {
+                        eventToSend = new Event(event.getItemId(), event.getEventType(), eventsRequestContext.getSession(), eventsRequestContext.getProfile(), event.getScope(),
+                                event.getSource(), event.getTarget(), event.getProperties(), eventsRequestContext.getTimestamp(), event.isPersistent());
+                        eventToSend.setFlattenedProperties(event.getFlattenedProperties());
                     }
                     if (filteredEventTypes != null && filteredEventTypes.contains(event.getEventType())) {
                         LOGGER.debug("Profile is filtering event type {}", event.getEventType());
@@ -303,6 +312,23 @@ public class RestServiceUtilsImpl implements RestServiceUtils {
         }
 
         return eventsRequestContext;
+    }
+
+    private static String resolveTenantId(HttpServletRequest request) {
+        RolePrefixSecurityContextImpl rolePrefixSecurityContextImpl = (RolePrefixSecurityContextImpl) JAXRSUtils.getCurrentMessage().get(org.apache.cxf.security.SecurityContext.class);
+        Subject subject = rolePrefixSecurityContextImpl.getSubject();
+        Optional<Principal> optTenantPrincipal = subject.getPrincipals().stream().filter(principal -> principal instanceof TenantPrincipal).findFirst();
+        if (optTenantPrincipal.isPresent()) {
+            TenantPrincipal tenantPrincipal = (TenantPrincipal) optTenantPrincipal.get();
+            return tenantPrincipal.getTenantId();
+        }
+        String tenantId = request.getHeader(UNOMI_TENANT_ID_HEADER);
+        if (tenantId == null) {
+            return null;
+        }
+        tenantId = tenantId.trim();
+        tenantId = tenantId.substring(0, Math.min(tenantId.length(), 100)); // basic protection against long string injection.
+        return tenantId;
     }
 
     @Override

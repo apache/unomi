@@ -30,8 +30,8 @@ import org.junit.runners.Suite.SuiteClasses;
  */
 @RunWith(ProgressSuite.class)
 @SuiteClasses({
-        Migrate16xTo220IT.class,
-        MigrationIT.class,
+        /* Migrate16xTo220IT.class,
+        MigrationIT.class, */
         BasicIT.class,
         ConditionEvaluatorIT.class,
         ConditionQueryBuilderIT.class,

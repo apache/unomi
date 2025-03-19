@@ -71,25 +71,33 @@ public class TestUtils {
 		return null;
 	}
 
+	public static RequestResponse executeContextJSONRequest(HttpUriRequest request, String sessionId) throws IOException {
+		return executeContextJSONRequest(request, sessionId, -1, true);
+	}
+
 	/**
 	 * Executes a JSON request to the context service and processes the response.
 	 * Validates the response MIME type and handles cookies if a session ID is provided.
 	 *
 	 * @param request The HTTP request to execute
 	 * @param sessionId The session ID to use for cookie handling, or null if not needed
+	 * @param expectedStatusCode The expected status code of the response, or -1 if not needed	
+	 * @param withAuth Whether to include authentication headers in the request
 	 * @return A RequestResponse object containing the response details
 	 * @throws IOException if there is an error executing the request or processing the response
 	 */
-	public static RequestResponse executeContextJSONRequest(HttpUriRequest request, String sessionId) throws IOException {
-		try (CloseableHttpResponse response = HttpClientThatWaitsForUnomi.doRequest(request)) {
+	public static RequestResponse executeContextJSONRequest(HttpUriRequest request, String sessionId, int expectedStatusCode, boolean withAuth) throws IOException {
+		try (CloseableHttpResponse response = HttpClientThatWaitsForUnomi.doRequest(request, expectedStatusCode, withAuth)) {
 			// validate mimeType
 			HttpEntity entity = response.getEntity();
 			String mimeType = ContentType.getOrDefault(entity).getMimeType();
-			if (!JSON_MYME_TYPE.equals(mimeType)) {
-				String entityContent = EntityUtils.toString(entity);
-				LOGGER.warn("Invalid response: " + entityContent);
+			if (expectedStatusCode < 0 || expectedStatusCode < 300) {
+				if (!JSON_MYME_TYPE.equals(mimeType)) {
+					String entityContent = EntityUtils.toString(entity);
+					LOGGER.warn("Invalid response: " + entityContent);
+				}
+				Assert.assertEquals("Response content type should be " + JSON_MYME_TYPE, JSON_MYME_TYPE, mimeType);
 			}
-			Assert.assertEquals("Response content type should be " + JSON_MYME_TYPE, JSON_MYME_TYPE, mimeType);
 
 			// get response
 			String cookieHeader = null;

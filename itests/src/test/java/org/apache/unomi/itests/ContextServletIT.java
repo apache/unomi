@@ -26,13 +26,18 @@ import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
+import org.apache.http.config.RegistryBuilder;
+import org.apache.http.auth.AuthSchemeProvider;
+import org.apache.http.impl.auth.BasicSchemeFactory;
+import org.apache.http.client.config.AuthSchemes;
+import org.apache.http.impl.client.TargetAuthenticationStrategy;
+import org.apache.http.client.config.RequestConfig;
 import org.apache.unomi.api.*;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.segments.Scoring;
 import org.apache.unomi.api.segments.Segment;
 import org.apache.unomi.api.tenants.ApiKey;
 import org.apache.unomi.api.tenants.Tenant;
-import org.apache.unomi.api.tenants.TenantService;
 import org.apache.unomi.itests.TestUtils.RequestResponse;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.junit.After;
@@ -44,7 +49,6 @@ import org.ops4j.pax.exam.junit.PaxExam;
 import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
 import org.ops4j.pax.exam.spi.reactors.PerSuite;
 
-import javax.inject.Inject;
 import java.io.File;
 import java.net.URI;
 import java.time.LocalDateTime;
@@ -76,9 +80,8 @@ public class ContextServletIT extends BaseIT {
     private final static String SEGMENT_ID = "test-segment-id";
     private final static int SEGMENT_NUMBER_OF_DAYS = 30;
 
-    private static final int DEFAULT_TRYING_TIMEOUT = 2000;
-    private static final int DEFAULT_TRYING_TRIES = 60;
     public static final String TEST_SCOPE = "test-scope";
+    public static final String UNOMI_TENANT_ID_HEADER = "X-Unomi-Tenant-Id";
 
     private Profile profile;
 
@@ -167,14 +170,18 @@ public class ContextServletIT extends BaseIT {
         contextRequest.setSessionId(session.getItemId());
         contextRequest.setEvents(Arrays.asList(event));
         HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
-        request.addHeader(UNOMI_API_KEY_HTTP_HEADER_KEY, testPublicKey.getKey());
+        addPrivateTenantAuth(request, testTenant, testPrivateKey);
         request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
-        TestUtils.executeContextJSONRequest(request, sessionId);
+        TestUtils.executeContextJSONRequest(request, sessionId, -1, false);
 
         event = keepTrying("Event " + eventId + " not updated in the required time", () -> eventService.getEvent(eventId),
                 savedEvent -> Objects.nonNull(savedEvent) && TEST_EVENT_TYPE.equals(savedEvent.getEventType()), DEFAULT_TRYING_TIMEOUT,
                 DEFAULT_TRYING_TRIES);
         assertEquals(2, event.getVersion().longValue());
+    }
+
+    private void addPublicTenantAuth(HttpPost request) {
+        request.addHeader(UNOMI_API_KEY_HTTP_HEADER_KEY, testPublicKey.getKey());
     }
 
     @Test
@@ -195,7 +202,7 @@ public class ContextServletIT extends BaseIT {
         contextRequest.setSessionId(sessionId);
         contextRequest.setEvents(Collections.singletonList(event));
         HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
-        request.addHeader(UNOMI_API_KEY_HTTP_HEADER_KEY, testPublicKey.getKey());
+        addPublicTenantAuth(request);
         request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
         TestUtils.executeContextJSONRequest(request, sessionId);
 
@@ -389,7 +396,7 @@ public class ContextServletIT extends BaseIT {
 
         //Act
         HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
-        request.addHeader(UNOMI_API_KEY_HTTP_HEADER_KEY, testPublicKey.getKey());
+        addPublicTenantAuth(request);
         request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
         TestUtils.executeContextJSONRequest(request);
 
@@ -416,9 +423,9 @@ public class ContextServletIT extends BaseIT {
 
         //Act
         HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
-        request.addHeader(UNOMI_API_KEY_HTTP_HEADER_KEY, testPublicKey.getKey());
+        addPrivateTenantAuth(request, testTenant, testPrivateKey);
         request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
-        TestUtils.executeContextJSONRequest(request);
+        TestUtils.executeContextJSONRequest(request, null, -1, false);
 
         //Assert
         event = keepTrying("Event not found", () -> eventService.getEvent(eventId), Objects::nonNull, DEFAULT_TRYING_TIMEOUT,
@@ -446,7 +453,7 @@ public class ContextServletIT extends BaseIT {
 
         //Act
         HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
-        request.addHeader(UNOMI_API_KEY_HTTP_HEADER_KEY, testPublicKey.getKey());
+        addPrivateTenantAuth(request, testTenant, testPrivateKey);
         request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
         TestUtils.executeContextJSONRequest(request);
 
@@ -473,7 +480,7 @@ public class ContextServletIT extends BaseIT {
 
         //Act
         HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
-        request.addHeader(UNOMI_API_KEY_HTTP_HEADER_KEY, testPublicKey.getKey());
+        addPrivateTenantAuth(request, testTenant, testPrivateKey);
         request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
         TestUtils.executeContextJSONRequest(request);
 
@@ -822,16 +829,27 @@ public class ContextServletIT extends BaseIT {
 
         HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
         request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
-        TestUtils.RequestResponse response = TestUtils.executeContextJSONRequest(request, TEST_SESSION_ID);
+        TestUtils.RequestResponse response = TestUtils.executeContextJSONRequest(request, TEST_SESSION_ID, 401, false);
         Assert.assertEquals("Unauthenticated request should be rejected", 401, response.getStatusCode());
 
         // Test with JAAS authentication (should succeed)
         BasicCredentialsProvider credsProvider = new BasicCredentialsProvider();
         credsProvider.setCredentials(AuthScope.ANY, new UsernamePasswordCredentials("karaf", "karaf"));
-        CloseableHttpClient adminClient = HttpClients.custom().setDefaultCredentialsProvider(credsProvider).build();
+
+        RequestConfig requestConfig = RequestConfig.custom()
+                .setAuthenticationEnabled(true)
+                .setTargetPreferredAuthSchemes(Arrays.asList(AuthSchemes.BASIC))
+                .build();
+
+        CloseableHttpClient adminClient = HttpClients.custom()
+                .setDefaultCredentialsProvider(credsProvider)
+                .setDefaultRequestConfig(requestConfig)
+                .build();
 
         request = new HttpPost(getFullUrl(CONTEXT_URL));
         request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
+        // We need to specify which tenant we want to access since we are using the system administrator.
+        request.addHeader(UNOMI_TENANT_ID_HEADER, TEST_TENANT_ID);
         CloseableHttpResponse jaasResponse = adminClient.execute(request);
         Assert.assertEquals("JAAS authenticated request should succeed", 200, jaasResponse.getStatusLine().getStatusCode());
 
@@ -844,14 +862,18 @@ public class ContextServletIT extends BaseIT {
 
         // Test with private API key (should fail for public endpoint)
         request = new HttpPost(getFullUrl(CONTEXT_URL));
-        request.setHeader("Authorization", "Basic " + Base64.getEncoder().encodeToString(
-            (tenant.getItemId() + ":" + privateKey.getKey()).getBytes()));
+        addPrivateTenantAuth(request, tenant, privateKey);
         request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
         response = TestUtils.executeContextJSONRequest(request, TEST_SESSION_ID);
-        Assert.assertEquals("Private API key should not be accepted for public endpoint", 401, response.getStatusCode());
+        Assert.assertEquals("Private API key should be accepted for public endpoint to be able to update events and send restricted events", 200, response.getStatusCode());
 
         // Cleanup
         tenantService.deleteTenant(tenant.getItemId());
+    }
+
+    private static void addPrivateTenantAuth(HttpPost request, Tenant tenant, ApiKey privateKey) {
+        request.setHeader("Authorization", "Basic " + Base64.getEncoder().encodeToString(
+            (tenant.getItemId() + ":" + privateKey.getKey()).getBytes()));
     }
 
     private void performPersonalizationWithControlGroup(Map<String, String> controlGroupConfig, List<String> expectedVariants,
@@ -966,9 +988,11 @@ public class ContextServletIT extends BaseIT {
         assertNotNull("Context response should not be null", contextResponse);
 
         // Test with invalid API key
+        request = new HttpPost(getFullUrl(CONTEXT_URL));
         contextRequest.setPublicApiKey("invalid-key");
+        request.addHeader(UNOMI_API_KEY_HTTP_HEADER_KEY, "invalid-key");
         request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
-        response = TestUtils.executeContextJSONRequest(request, TEST_SESSION_ID);
+        response = TestUtils.executeContextJSONRequest(request, TEST_SESSION_ID, 401, false);
 
         // Verify error response for invalid key
         assertEquals("Should receive unauthorized response", 401, response.getStatusCode());

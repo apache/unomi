@@ -29,19 +29,56 @@ import org.slf4j.LoggerFactory;
 import java.util.Map;
 
 /**
- * Created by amidani on 26/04/2017.
+ * A Camel route builder that handles the final stage of profile imports by storing
+ * processed profile data into Apache Unomi's storage system.
+ * 
+ * <p>Features:
+ * <ul>
+ *   <li>Final processing of imported profiles</li>
+ *   <li>Integration with Unomi's storage system</li>
+ *   <li>Support for both Kafka and direct endpoints</li>
+ *   <li>Import completion handling</li>
+ *   <li>Error handling and reporting</li>
+ * </ul>
+ * </p>
+ *
+ * @since 1.0
  */
 public class ProfileImportToUnomiRouteBuilder extends RouterAbstractRouteBuilder {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ProfileImportToUnomiRouteBuilder.class.getName());
 
+    /** Processor for storing profiles in Unomi */
     private UnomiStorageProcessor unomiStorageProcessor;
+    
+    /** Processor for handling import completion */
     private ImportRouteCompletionProcessor importRouteCompletionProcessor;
 
+    /**
+     * Constructs a new route builder with Kafka configuration.
+     *
+     * @param kafkaProps map containing Kafka configuration properties
+     * @param configType the type of configuration (kafka/direct)
+     */
     public ProfileImportToUnomiRouteBuilder(Map<String, String> kafkaProps, String configType) {
         super(kafkaProps, configType);
     }
 
+    /**
+     * Configures the route for storing imported profiles in Unomi.
+     * Creates a route that processes incoming profile data and stores it in Unomi's storage system.
+     * 
+     * <p>The route:
+     * <ul>
+     *   <li>Receives processed profile data</li>
+     *   <li>Stores profiles in Unomi's storage system</li>
+     *   <li>Handles import completion</li>
+     *   <li>Manages error reporting</li>
+     * </ul>
+     * </p>
+     *
+     * @throws Exception if an error occurs during route configuration
+     */
     @Override
     public void configure() throws Exception {
 
@@ -67,10 +104,20 @@ public class ProfileImportToUnomiRouteBuilder extends RouterAbstractRouteBuilder
                 .to("log:org.apache.unomi.router?level=DEBUG");
     }
 
+    /**
+     * Sets the processor for storing profiles in Unomi.
+     *
+     * @param unomiStorageProcessor processor for Unomi storage operations
+     */
     public void setUnomiStorageProcessor(UnomiStorageProcessor unomiStorageProcessor) {
         this.unomiStorageProcessor = unomiStorageProcessor;
     }
 
+    /**
+     * Sets the processor for handling import completion.
+     *
+     * @param importRouteCompletionProcessor processor for import completion operations
+     */
     public void setImportRouteCompletionProcessor(ImportRouteCompletionProcessor importRouteCompletionProcessor) {
         this.importRouteCompletionProcessor = importRouteCompletionProcessor;
     }

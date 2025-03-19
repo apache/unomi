@@ -31,19 +31,58 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Created by amidani on 27/06/2017.
+ * A Camel route builder that handles the collection of profiles for export.
+ * This route builder creates routes that periodically collect profiles based on
+ * segment criteria and prepare them for export processing.
+ *
+ * <p>Features:
+ * <ul>
+ *   <li>Timer-based profile collection</li>
+ *   <li>Segment-based profile filtering</li>
+ *   <li>Support for multiple export configurations</li>
+ *   <li>Configurable collection intervals</li>
+ *   <li>Security through endpoint allowlist</li>
+ *   <li>Support for both Kafka and direct endpoints</li>
+ * </ul>
+ * </p>
+ *
+ * @since 1.0
  */
 public class ProfileExportCollectRouteBuilder extends RouterAbstractRouteBuilder {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ProfileExportCollectRouteBuilder.class);
 
+    /** List of export configurations to process */
     private List<ExportConfiguration> exportConfigurationList;
+    
+    /** Service for persisting and retrieving data */
     private PersistenceService persistenceService;
 
+    /**
+     * Constructs a new route builder with Kafka configuration.
+     *
+     * @param kafkaProps map containing Kafka configuration properties
+     * @param configType the type of configuration (kafka/direct)
+     */
     public ProfileExportCollectRouteBuilder(Map<String, String> kafkaProps, String configType) {
         super(kafkaProps, configType);
     }
 
+    /**
+     * Configures the routes for collecting profiles to export.
+     * Creates a route for each export configuration that matches the criteria.
+     * 
+     * <p>Each route:
+     * <ul>
+     *   <li>Runs on a configured timer schedule</li>
+     *   <li>Collects profiles based on segment criteria</li>
+     *   <li>Processes profiles for export</li>
+     *   <li>Routes data to appropriate endpoints</li>
+     * </ul>
+     * </p>
+     *
+     * @throws Exception if an error occurs during route configuration
+     */
     @Override
     public void configure() throws Exception {
         if (exportConfigurationList == null || exportConfigurationList.isEmpty()) {
@@ -93,10 +132,20 @@ public class ProfileExportCollectRouteBuilder extends RouterAbstractRouteBuilder
         }
     }
 
+    /**
+     * Sets the list of export configurations to process.
+     *
+     * @param exportConfigurationList list of export configurations
+     */
     public void setExportConfigurationList(List<ExportConfiguration> exportConfigurationList) {
         this.exportConfigurationList = exportConfigurationList;
     }
 
+    /**
+     * Sets the persistence service for data operations.
+     *
+     * @param persistenceService service for persisting and retrieving data
+     */
     public void setPersistenceService(PersistenceService persistenceService) {
         this.persistenceService = persistenceService;
     }

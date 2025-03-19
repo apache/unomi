@@ -35,25 +35,77 @@ import org.slf4j.LoggerFactory;
 import java.util.*;
 
 /**
- * Created by amidani on 29/12/2016.
+ * A Camel processor that splits and processes CSV lines into ProfileToImport objects.
+ * This processor handles the conversion of CSV data into structured profile data according
+ * to the import configuration, supporting various data types and multi-value fields.
+ *
+ * <p>Features include:
+ * <ul>
+ *   <li>CSV parsing using RFC4180 standard</li>
+ *   <li>Support for header rows</li>
+ *   <li>Field mapping to profile properties</li>
+ *   <li>Multi-value field handling</li>
+ *   <li>Type conversion based on property definitions</li>
+ *   <li>Profile merging configuration</li>
+ *   <li>Delete operation support</li>
+ * </ul>
+ * </p>
+ *
+ * @since 1.0
  */
 public class LineSplitProcessor implements Processor {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(LineSplitProcessor.class.getName());
 
+    /** Maps field names to their corresponding column indices */
     private Map<String, Integer> fieldsMapping;
+    
+    /** List of properties that should be overwritten during import */
     private List<String> propertiesToOverwrite;
+    
+    /** Property used for merging profiles */
     private String mergingProperty;
+    
+    /** Whether to overwrite existing profiles during import */
     private boolean overwriteExistingProfiles;
+    
+    /** Whether the CSV file contains a header row */
     private boolean hasHeader;
+    
+    /** Whether the CSV file contains a column for delete operations */
     private boolean hasDeleteColumn;
+    
+    /** Character used to separate columns in the CSV */
     private String columnSeparator;
 
+    /** Character used to separate multiple values within a field */
     private String multiValueSeparator;
+    
+    /** Characters used to delimit multi-value fields */
     private String multiValueDelimiter;
 
+    /** Collection of property types used for type conversion */
     private Collection<PropertyType> profilePropertyTypes;
 
+    /**
+     * Processes a single line from a CSV file and converts it into a ProfileToImport object.
+     * 
+     * <p>The method performs the following operations:
+     * <ul>
+     *   <li>Handles one-shot import configurations if present</li>
+     *   <li>Skips header row if configured</li>
+     *   <li>Parses CSV line using RFC4180 standard</li>
+     *   <li>Validates field mapping against data</li>
+     *   <li>Converts fields according to their property types</li>
+     *   <li>Handles multi-value fields</li>
+     *   <li>Sets up profile merging configuration</li>
+     *   <li>Processes delete operations if configured</li>
+     * </ul>
+     * </p>
+     *
+     * @param exchange the Camel exchange containing the CSV line to process
+     * @throws Exception if an error occurs during processing, including BadProfileDataFormatException
+     */
     @Override
     public void process(Exchange exchange) throws Exception {
 

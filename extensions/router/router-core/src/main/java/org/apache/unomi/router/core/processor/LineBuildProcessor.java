@@ -23,16 +23,43 @@ import org.apache.unomi.router.api.ExportConfiguration;
 import org.apache.unomi.router.api.services.ProfileExportService;
 
 /**
- * Created by amidani on 28/06/2017.
+ * A Camel processor that converts Unomi Profile objects into CSV lines for export.
+ * This processor is responsible for transforming profile data into a formatted string
+ * according to the export configuration specified in the exchange header.
+ *
+ * <p>The processor works in conjunction with the ProfileExportService to perform
+ * the actual conversion of profile data to CSV format.</p>
+ *
+ * @since 1.0
  */
 public class LineBuildProcessor implements Processor {
 
     private ProfileExportService profileExportService;
 
+    /**
+     * Constructs a new LineBuildProcessor with the specified ProfileExportService.
+     *
+     * @param profileExportService the service responsible for converting profiles to CSV format
+     */
     public LineBuildProcessor(ProfileExportService profileExportService) {
         this.profileExportService = profileExportService;
     }
 
+    /**
+     * Processes the exchange by converting a Profile object into a CSV line.
+     * 
+     * <p>This method:
+     * <ul>
+     *   <li>Extracts the export configuration from the exchange header</li>
+     *   <li>Gets the Profile object from the exchange body</li>
+     *   <li>Converts the profile to a CSV line using the ProfileExportService</li>
+     *   <li>Sets the resulting string as the new exchange body</li>
+     * </ul>
+     * </p>
+     *
+     * @param exchange the Camel exchange containing the Profile to convert and export configuration
+     * @throws Exception if an error occurs during processing
+     */
     @Override
     public void process(Exchange exchange) throws Exception {
         ExportConfiguration exportConfiguration = (ExportConfiguration) exchange.getIn().getHeader("exportConfig");

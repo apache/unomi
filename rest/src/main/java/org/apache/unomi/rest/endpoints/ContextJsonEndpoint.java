@@ -194,7 +194,7 @@ public class ContextJsonEndpoint {
             // Build response
             ContextResponse contextResponse = new ContextResponse();
             if (contextRequest != null) {
-                eventsRequestContext = processContextRequest(contextRequest, contextResponse, eventsRequestContext);
+                eventsRequestContext = processContextRequest(contextRequest, contextResponse, eventsRequestContext, securityContext);
             }
 
             // finalize request, save profile and session if necessary and return profileId cookie in response
@@ -220,11 +220,11 @@ public class ContextJsonEndpoint {
         }
     }
 
-    private EventsRequestContext processContextRequest(ContextRequest contextRequest, ContextResponse data, EventsRequestContext eventsRequestContext) {
+    private EventsRequestContext processContextRequest(ContextRequest contextRequest, ContextResponse data, EventsRequestContext eventsRequestContext, SecurityContext securityContext) {
 
         processOverrides(contextRequest, eventsRequestContext.getProfile(), eventsRequestContext.getSession());
 
-        eventsRequestContext = restServiceUtils.performEventsRequest(contextRequest.getEvents(), eventsRequestContext);
+        eventsRequestContext = restServiceUtils.performEventsRequest(contextRequest.getEvents(), eventsRequestContext, securityContext);
         data.setProcessedEvents(eventsRequestContext.getProcessedItems());
 
         List<PersonalizationService.PersonalizedContent> filterNodes = contextRequest.getFilters();

@@ -28,13 +28,43 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Created by amidani on 29/12/2016.
+ * A Camel processor that handles the storage of imported profiles in the Unomi system.
+ * This processor is responsible for managing the final stage of profile import, including
+ * segment calculation and profile persistence.
+ *
+ * <p>The processor performs the following operations:
+ * <ul>
+ *   <li>Processes profiles marked for import</li>
+ *   <li>Calculates segments and scores for non-deleted profiles</li>
+ *   <li>Updates profile information with calculated segments</li>
+ *   <li>Persists profiles in the Unomi storage system</li>
+ * </ul>
+ * </p>
+ *
+ * @since 1.0
  */
 public class UnomiStorageProcessor implements Processor {
 
+    /** Service for handling profile import operations */
     private ProfileImportService profileImportService;
+    
+    /** Service for managing profile segments and scoring */
     private SegmentService segmentService;
 
+    /**
+     * Processes the exchange by storing or updating the profile in Unomi's storage system.
+     * 
+     * <p>This method:
+     * <ul>
+     *   <li>Extracts the ProfileToImport from the message body</li>
+     *   <li>For non-delete operations, calculates and updates segments and scores</li>
+     *   <li>Persists the profile using the ProfileImportService</li>
+     * </ul>
+     * </p>
+     *
+     * @param exchange the Camel exchange containing the profile to process
+     * @throws Exception if an error occurs during processing
+     */
     @Override
     public void process(Exchange exchange)
             throws Exception {
@@ -59,10 +89,20 @@ public class UnomiStorageProcessor implements Processor {
         }
     }
 
+    /**
+     * Sets the profile import service used for persisting profiles.
+     *
+     * @param profileImportService the service responsible for profile import operations
+     */
     public void setProfileImportService(ProfileImportService profileImportService) {
         this.profileImportService = profileImportService;
     }
 
+    /**
+     * Sets the segment service used for calculating profile segments and scores.
+     *
+     * @param segmentService the service responsible for segment calculations
+     */
     public void setSegmentService(SegmentService segmentService) {
         this.segmentService = segmentService;
     }

@@ -133,7 +133,7 @@ public class EventsCollectorEndpoint {
                     request, response, timestamp);
 
             // process events
-            eventsRequestContext = restServiceUtils.performEventsRequest(eventsCollectorRequest.getEvents(), eventsRequestContext);
+            eventsRequestContext = restServiceUtils.performEventsRequest(eventsCollectorRequest.getEvents(), eventsRequestContext, securityContext);
 
             // finalize request
             restServiceUtils.finalizeEventsRequest(eventsRequestContext, true);

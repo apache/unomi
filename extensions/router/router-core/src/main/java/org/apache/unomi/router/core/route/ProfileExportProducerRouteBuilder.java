@@ -29,24 +29,67 @@ import org.slf4j.LoggerFactory;
 import java.util.Map;
 
 /**
- * Created by amidani on 28/06/2017.
+ * A Camel route builder that handles the production of export data from collected profiles.
+ * This route builder creates routes that process collected profiles and formats them
+ * for export to the configured destination.
+ *
+ * <p>Features:
+ * <ul>
+ *   <li>Profile data transformation to export format</li>
+ *   <li>Line-by-line processing with aggregation</li>
+ *   <li>Support for multiple export destinations</li>
+ *   <li>Completion handling and status updates</li>
+ *   <li>Support for both Kafka and direct endpoints</li>
+ * </ul>
+ * </p>
+ *
+ * @since 1.0
  */
 public class ProfileExportProducerRouteBuilder extends RouterAbstractRouteBuilder {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ProfileExportProducerRouteBuilder.class);
 
+    /** Processor for handling export completion */
     private ExportRouteCompletionProcessor exportRouteCompletionProcessor;
 
+    /** Service for profile export operations */
     private ProfileExportService profileExportService;
 
+    /**
+     * Constructs a new route builder with Kafka configuration.
+     *
+     * @param kafkaProps map containing Kafka configuration properties
+     * @param configType the type of configuration (kafka/direct)
+     */
     public ProfileExportProducerRouteBuilder(Map<String, String> kafkaProps, String configType) {
         super(kafkaProps, configType);
     }
 
+    /**
+     * Sets the profile export service.
+     *
+     * @param profileExportService service for handling profile exports
+     */
     public void setProfileExportService(ProfileExportService profileExportService) {
         this.profileExportService = profileExportService;
     }
 
+    /**
+     * Configures the routes for producing export data.
+     * Creates a route that processes collected profiles and prepares them for export.
+     * 
+     * <p>The route:
+     * <ul>
+     *   <li>Unmarshals incoming profile data</li>
+     *   <li>Processes profiles into export format</li>
+     *   <li>Aggregates lines for batch processing</li>
+     *   <li>Handles export completion</li>
+     *   <li>Routes data to configured destinations</li>
+     * </ul>
+     * </p>
+     *
+     * @throws Exception if an error occurs during route configuration
+     */
     @Override
     public void configure() throws Exception {
 
@@ -69,6 +112,11 @@ public class ProfileExportProducerRouteBuilder extends RouterAbstractRouteBuilde
 
     }
 
+    /**
+     * Sets the processor for handling export completion.
+     *
+     * @param exportRouteCompletionProcessor processor for export completion handling
+     */
     public void setExportRouteCompletionProcessor(ExportRouteCompletionProcessor exportRouteCompletionProcessor) {
         this.exportRouteCompletionProcessor = exportRouteCompletionProcessor;
     }

@@ -26,14 +26,48 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Created by amidani on 22/05/2017.
+ * A Camel processor that retrieves import configurations based on file names.
+ * This processor extracts the configuration ID from the filename and loads
+ * the corresponding import configuration for processing.
+ *
+ * <p>The processor expects filenames in the format:
+ * <pre>configurationId.extension</pre>
+ * where the configurationId matches an existing import configuration.</p>
+ *
+ * <p>Features:
+ * <ul>
+ *   <li>Extracts configuration ID from filename</li>
+ *   <li>Loads corresponding import configuration</li>
+ *   <li>Sets configuration in exchange header for processing</li>
+ *   <li>Handles missing configurations gracefully</li>
+ * </ul>
+ * </p>
+ *
+ * @since 1.0
  */
 public class ImportConfigByFileNameProcessor implements Processor {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ImportConfigByFileNameProcessor.class.getName());
 
+    /** Service for managing import configurations */
     private ImportExportConfigurationService<ImportConfiguration> importConfigurationService;
 
+    /**
+     * Processes the exchange by loading an import configuration based on the filename.
+     * 
+     * <p>This method:
+     * <ul>
+     *   <li>Extracts the filename from the exchange body</li>
+     *   <li>Parses the configuration ID from the filename</li>
+     *   <li>Attempts to load the corresponding import configuration</li>
+     *   <li>Sets the configuration in the exchange header if found</li>
+     *   <li>Stops route processing if no configuration is found</li>
+     * </ul>
+     * </p>
+     *
+     * @param exchange the Camel exchange containing the file to process
+     * @throws Exception if an error occurs during processing
+     */
     @Override
     public void process(Exchange exchange) throws Exception {
 
@@ -49,6 +83,11 @@ public class ImportConfigByFileNameProcessor implements Processor {
         }
     }
 
+    /**
+     * Sets the service used for managing import configurations.
+     *
+     * @param importConfigurationService the service for handling import configurations
+     */
     public void setImportConfigurationService(ImportExportConfigurationService<ImportConfiguration> importConfigurationService) {
         this.importConfigurationService = importConfigurationService;
     }

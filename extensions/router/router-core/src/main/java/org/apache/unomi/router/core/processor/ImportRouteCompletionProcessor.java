@@ -26,15 +26,51 @@ import org.slf4j.LoggerFactory;
 import java.util.*;
 
 /**
- * Created by amidani on 14/06/2017.
+ * A Camel processor that handles the completion of profile import routes.
+ * This processor manages the final stage of import operations, collecting statistics,
+ * handling errors, and updating the import configuration with execution results.
+ *
+ * <p>The processor performs the following operations:
+ * <ul>
+ *   <li>Collects import statistics (success, failure, ignore counts)</li>
+ *   <li>Manages error reporting with configurable limits</li>
+ *   <li>Updates import configuration status</li>
+ *   <li>Maintains execution history</li>
+ *   <li>Handles both one-shot and recurring imports</li>
+ * </ul>
+ * </p>
+ *
+ * @since 1.0
  */
 public class ImportRouteCompletionProcessor implements Processor {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ImportRouteCompletionProcessor.class.getName());
+    
+    /** Service for managing import configurations */
     private ImportExportConfigurationService<ImportConfiguration> importConfigurationService;
+    
+    /** Maximum number of execution history entries to maintain */
     private int executionsHistorySize;
+    
+    /** Maximum number of errors to report per execution */
     private int execErrReportSize;
 
+    /**
+     * Processes the completion of an import route by collecting statistics and updating configuration.
+     * 
+     * <p>This method:
+     * <ul>
+     *   <li>Identifies the import configuration (one-shot or recurring)</li>
+     *   <li>Counts successful, failed, and ignored imports</li>
+     *   <li>Collects error information up to the configured limit</li>
+     *   <li>Updates the import configuration with execution results</li>
+     *   <li>Sets the final status based on success/failure counts</li>
+     * </ul>
+     * </p>
+     *
+     * @param exchange the Camel exchange containing import results
+     * @throws Exception if an error occurs during processing
+     */
     @Override
     public void process(Exchange exchange) throws Exception {
         String importConfigId = null;
@@ -89,14 +125,29 @@ public class ImportRouteCompletionProcessor implements Processor {
         LOGGER.info("Processing route {} completed. completion date: {}.", exchange.getFromRouteId(), new Date());
     }
 
+    /**
+     * Sets the service used for managing import configurations.
+     *
+     * @param importConfigurationService the service for handling import configurations
+     */
     public void setImportConfigurationService(ImportExportConfigurationService<ImportConfiguration> importConfigurationService) {
         this.importConfigurationService = importConfigurationService;
     }
 
+    /**
+     * Sets the maximum size of the execution history to maintain.
+     *
+     * @param executionsHistorySize the maximum number of execution entries to keep
+     */
     public void setExecutionsHistorySize(int executionsHistorySize) {
         this.executionsHistorySize = executionsHistorySize;
     }
 
+    /**
+     * Sets the maximum number of errors to report per execution.
+     *
+     * @param execErrReportSize the maximum number of errors to store per execution
+     */
     public void setExecErrReportSize(int execErrReportSize) {
         this.execErrReportSize = execErrReportSize;
     }

@@ -362,11 +362,46 @@ public class MigrationUtils {
         }
     }
 
+    public static String getElasticMajorVersion(CloseableHttpClient httpClient, String esAddress) throws IOException {
+        String response = HttpUtils.executeGetRequest(httpClient, esAddress, null);
+        JSONObject jsonResponse = new JSONObject(response);
+        String version = jsonResponse.getJSONObject("version").getString("number");
+        return version.split("\\.")[0]; // Return major version number
+    }
+
     public interface ScrollCallback {
         void execute(String hits);
     }
 
     private static String getScriptPart(String painlessScript) {
         return ", \"script\": {\"source\": \"" + painlessScript + "\", \"lang\": \"painless\"}";
+    }
+
+    /**
+     * Creates a new index with the specified settings
+     *
+     * @param httpClient the HTTP client to use
+     * @param esAddress the Elasticsearch address
+     * @param indexName the name of the index to create
+     * @param settings the settings and mappings for the index
+     * @throws IOException if there is an error during the HTTP request
+     */
+    public static void createIndex(CloseableHttpClient httpClient, String esAddress, String indexName, String settings) throws IOException {
+        HttpUtils.executePutRequest(httpClient, esAddress + "/" + indexName, settings, null);
+    }
+
+    /**
+     * Indexes a document in Elasticsearch
+     *
+     * @param httpClient the HTTP client to use
+     * @param esAddress the Elasticsearch address
+     * @param indexName the name of the index
+     * @param type the document type (e.g., "_doc")
+     * @param id the document ID
+     * @param jsonData the document data in JSON format
+     * @throws IOException if there is an error during the HTTP request
+     */
+    public static void indexData(CloseableHttpClient httpClient, String esAddress, String indexName, String type, String id, String jsonData) throws IOException {
+        HttpUtils.executePutRequest(httpClient, esAddress + "/" + indexName + "/" + type + "/" + id, jsonData, null);
     }
 }

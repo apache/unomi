@@ -47,18 +47,24 @@ public class HttpClientThatWaitsForUnomi {
     }
 
     public static CloseableHttpResponse doRequest(HttpUriRequest request, int expectedStatusCode) throws IOException {
+        return doRequest(request, expectedStatusCode, true);
+    }
+
+    public static CloseableHttpResponse doRequest(HttpUriRequest request, int expectedStatusCode, boolean withAuth) throws IOException {
         // Add API key headers based on the request path
         String path = request.getURI().getPath();
-        if (isPrivateEndpoint(path)) {
-            // For private endpoints, use Basic auth with tenant ID and private key
-            if (testTenant != null && testPrivateKey != null) {
-                String credentials = testTenant.getItemId() + ":" + testPrivateKey.getKey();
-                request.setHeader("Authorization", "Basic " + Base64.getEncoder().encodeToString(credentials.getBytes()));
-            }
-        } else {
-            // For public endpoints, use X-Unomi-Api-Key header
-            if (testPublicKey != null) {
-                request.setHeader("X-Unomi-Api-Key", testPublicKey.getKey());
+        if (withAuth) {
+            if (isPrivateEndpoint(path)) {
+                // For private endpoints, use Basic auth with tenant ID and private key
+                if (testTenant != null && testPrivateKey != null) {
+                    String credentials = testTenant.getItemId() + ":" + testPrivateKey.getKey();
+                    request.setHeader("Authorization", "Basic " + Base64.getEncoder().encodeToString(credentials.getBytes()));
+                }
+            } else {
+                // For public endpoints, use X-Unomi-Api-Key header
+                if (testPublicKey != null) {
+                    request.setHeader("X-Unomi-Api-Key", testPublicKey.getKey());
+                }
             }
         }
 

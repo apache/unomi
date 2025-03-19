@@ -1,5 +1,6 @@
 import org.apache.unomi.shell.migration.service.MigrationContext
 import org.apache.unomi.shell.migration.utils.MigrationUtils
+import org.apache.unomi.shell.migration.utils.HttpUtils
 
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
@@ -31,7 +32,7 @@ context.performMigrationStep("3.0.0-environment-check", () -> {
 
 // Get list of all index names
 context.performMigrationStep("3.0.0-get-all-indices", () -> {
-    Set<String> allIndices = MigrationUtils.getIndicesWithPrefix(context.getHttpClient(), esAddress, indexPrefix)
+    Set<String> allIndices = MigrationUtils.getIndexesPrefixedBy(context.getHttpClient(), esAddress, indexPrefix)
     context.printMessage("Found " + allIndices.size() + " indices with prefix " + indexPrefix)
 
     // Set default values for all audit fields in every index - the generic part

@@ -308,7 +308,7 @@ public class AbstractMultiTypeCachingServiceTest {
 
     @Test
     public void testRefreshCacheHandlesMultipleTenants() {
-        // Setup tenant1 items 
+        // Setup tenant1 items
         List<TestSerializable> tenant1Items = Arrays.asList(
             new TestSerializable("item1", TEST_TENANT),
             new TestSerializable("item2", TEST_TENANT)

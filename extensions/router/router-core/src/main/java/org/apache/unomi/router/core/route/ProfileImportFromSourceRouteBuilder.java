@@ -37,20 +37,59 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Created by amidani on 26/04/2017.
+ * A Camel route builder that handles the import of profiles from configured sources.
+ * This route builder creates routes that process incoming profile data from various
+ * sources and prepares it for import into Unomi.
+ *
+ * <p>Features:
+ * <ul>
+ *   <li>Support for multiple import configurations</li>
+ *   <li>Line-by-line processing of import data</li>
+ *   <li>Error handling and failure reporting</li>
+ *   <li>Configuration validation and status updates</li>
+ *   <li>Support for both Kafka and direct endpoints</li>
+ *   <li>Graceful shutdown handling</li>
+ * </ul>
+ * </p>
+ *
+ * @since 1.0
  */
-
 public class ProfileImportFromSourceRouteBuilder extends RouterAbstractRouteBuilder {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ProfileImportFromSourceRouteBuilder.class.getName());
 
+    /** List of import configurations to process */
     private List<ImportConfiguration> importConfigurationList;
+    
+    /** Service for managing import configurations */
     private ImportExportConfigurationService<ImportConfiguration> importConfigurationService;
 
+    /**
+     * Constructs a new route builder with Kafka configuration.
+     *
+     * @param kafkaProps map containing Kafka configuration properties
+     * @param configType the type of configuration (kafka/direct)
+     */
     public ProfileImportFromSourceRouteBuilder(Map<String, String> kafkaProps, String configType) {
         super(kafkaProps, configType);
     }
 
+    /**
+     * Configures the routes for importing profiles from sources.
+     * Creates routes for each import configuration and sets up error handling.
+     * 
+     * <p>The routes:
+     * <ul>
+     *   <li>Handle data validation and format errors</li>
+     *   <li>Process data line by line</li>
+     *   <li>Update import status and progress</li>
+     *   <li>Route processed data to appropriate endpoints</li>
+     *   <li>Manage graceful completion of imports</li>
+     * </ul>
+     * </p>
+     *
+     * @throws Exception if an error occurs during route configuration
+     */
     @Override
     public void configure() throws Exception {
 
@@ -132,10 +171,20 @@ public class ProfileImportFromSourceRouteBuilder extends RouterAbstractRouteBuil
         }
     }
 
+    /**
+     * Sets the list of import configurations to process.
+     *
+     * @param importConfigurationList list of import configurations
+     */
     public void setImportConfigurationList(List<ImportConfiguration> importConfigurationList) {
         this.importConfigurationList = importConfigurationList;
     }
 
+    /**
+     * Sets the service for managing import configurations.
+     *
+     * @param importConfigurationService service for handling import configurations
+     */
     public void setImportConfigurationService(ImportExportConfigurationService<ImportConfiguration> importConfigurationService) {
         this.importConfigurationService = importConfigurationService;
     }

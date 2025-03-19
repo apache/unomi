@@ -25,12 +25,46 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Created by amidani on 14/06/2017.
+ * A Camel processor that handles failures during the line splitting process of data import.
+ * This processor is responsible for creating structured error reports when lines fail to process,
+ * providing detailed information about the nature of the failure and the problematic data.
+ *
+ * <p>The handler processes different types of exceptions:
+ * <ul>
+ *   <li>BadProfileDataFormatException - for data format related errors</li>
+ *   <li>General exceptions - capturing the root cause message</li>
+ * </ul>
+ * </p>
+ *
+ * <p>For each failure, it creates an ImportLineError object containing:
+ * <ul>
+ *   <li>The error code or message</li>
+ *   <li>The content of the failed line</li>
+ *   <li>The line number in the source file</li>
+ * </ul>
+ * </p>
+ *
+ * @since 1.0
  */
 public class LineSplitFailureHandler implements Processor {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(LineSplitFailureHandler.class.getName());
 
+    /**
+     * Processes failures that occur during line splitting and creates structured error reports.
+     * 
+     * <p>This method:
+     * <ul>
+     *   <li>Logs the failure details including the route ID and exception</li>
+     *   <li>Creates an ImportLineError object with detailed error information</li>
+     *   <li>Extracts the appropriate error message based on the exception type</li>
+     *   <li>Sets the failure information in the exchange for further processing</li>
+     * </ul>
+     * </p>
+     *
+     * @param exchange the Camel exchange containing the failed message and exception details
+     * @throws Exception if an error occurs during failure handling
+     */
     public void process(Exchange exchange) throws Exception {
         LOGGER.error("Route: {}, Error: {}", exchange.getProperty(Exchange.FAILURE_ROUTE_ID), exchange.getProperty(Exchange.EXCEPTION_CAUGHT));
         ImportLineError importLineError = new ImportLineError();

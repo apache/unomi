@@ -54,6 +54,7 @@ import java.util.List;
 @Priority(Priorities.AUTHENTICATION)
 public class AuthenticationFilter implements ContainerRequestFilter {
 
+    private static final String UNOMI_API_KEY_HEADER = "X-Unomi-Api-Key";
     private static final Logger logger = LoggerFactory.getLogger(AuthenticationFilter.class);
     private static final String GUEST_USERNAME = "guest";
     private static final String AUTHORIZATION_HEADER = "Authorization";
@@ -103,7 +104,7 @@ public class AuthenticationFilter implements ContainerRequestFilter {
             // Tenant endpoints require JAAS authentication only
             if (path.startsWith("tenants")) {
                 String authHeader = requestContext.getHeaderString(HttpHeaders.AUTHORIZATION);
-                if (authHeader == null || !authHeader.startsWith("Basic ")) {
+                if (authHeader == null || !authHeader.startsWith(BASIC_AUTH_PREFIX)) {
                     logger.debug("Tenant endpoint access denied: Missing or invalid Basic Auth header");
                     unauthorized(requestContext);
                     return;
@@ -126,14 +127,9 @@ public class AuthenticationFilter implements ContainerRequestFilter {
                 }
             }
 
-            // Check if this is a public path
+            // Check if this is a public path, in which we first try to find a tenant by API key
             if (isPublicPath(requestContext)) {
-                String apiKey = requestContext.getHeaderString("X-Unomi-Api-Key");
-                if (apiKey == null) {
-                    logger.debug("Public endpoint access denied: Missing API key");
-                    unauthorized(requestContext);
-                    return;
-                }
+                String apiKey = requestContext.getHeaderString(UNOMI_API_KEY_HEADER);
 
                 // Find tenant by API key and validate it's a public key
                 Tenant tenant = tenantService.getTenantByApiKey(apiKey, ApiKey.ApiKeyType.PUBLIC);
@@ -149,14 +145,11 @@ public class AuthenticationFilter implements ContainerRequestFilter {
                     securityService.setCurrentSubject(subject);
                     return;
                 }
-                logger.debug("Public endpoint access denied: Invalid public API key");
-                unauthorized(requestContext);
-                return;
             }
 
-            // For private endpoints, try tenant private key first, then fall back to JAAS
+            // For all other cases, try tenant private key first, then fall back to JAAS
             String authHeader = requestContext.getHeaderString(HttpHeaders.AUTHORIZATION);
-            if (authHeader != null && authHeader.startsWith("Basic ")) {
+            if (authHeader != null && authHeader.startsWith(BASIC_AUTH_PREFIX)) {
                 // Try tenant private key authentication first
                 String[] credentials = extractBasicAuthCredentials(authHeader);
                 if (credentials != null && credentials.length == 2) {
@@ -175,7 +168,7 @@ public class AuthenticationFilter implements ContainerRequestFilter {
                         securityService.setCurrentSubject(subject);
                         return;
                     }
-                    logger.debug("Private endpoint access denied: Invalid tenant private key");
+                    logger.debug("Endpoint access denied: Invalid tenant private key");
                 }
 
                 // If tenant auth fails, try JAAS auth
@@ -190,10 +183,10 @@ public class AuthenticationFilter implements ContainerRequestFilter {
                     }
                     return;
                 } catch (Exception e) {
-                    logger.debug("Private endpoint access denied: Both tenant key and JAAS authentication failed");
+                    logger.debug("Endpoint access denied: Both tenant key and JAAS authentication failed");
                 }
             } else {
-                logger.debug("Private endpoint access denied: Missing Basic Auth header");
+                logger.debug("Endpoint access denied: Missing Basic Auth header");
             }
 
             // If we get here, no valid authentication was provided
@@ -206,7 +199,7 @@ public class AuthenticationFilter implements ContainerRequestFilter {
 
     private String[] extractBasicAuthCredentials(String authHeader) {
         try {
-            String base64Credentials = authHeader.substring("Basic ".length()).trim();
+            String base64Credentials = authHeader.substring(BASIC_AUTH_PREFIX.length()).trim();
             String credentials = new String(Base64.getDecoder().decode(base64Credentials));
             return credentials.split(":", 2);
         } catch (Exception e) {
@@ -215,9 +208,12 @@ public class AuthenticationFilter implements ContainerRequestFilter {
     }
 
     private void unauthorized(ContainerRequestContext requestContext) {
-        requestContext.abortWith(Response.status(Response.Status.UNAUTHORIZED)
+        Response response = Response.status(Response.Status.UNAUTHORIZED)
                 .header(HttpHeaders.WWW_AUTHENTICATE, "Basic realm=\"" + REALM_NAME + "\"")
-                .build());
+                .entity("Unauthorized Access") // Ensures response is not empty
+                .build();
+
+        requestContext.abortWith(response);
     }
 
     private boolean isPublicPath(ContainerRequestContext requestContext) {

@@ -30,14 +30,47 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Created by amidani on 29/06/2017.
+ * A Camel processor that handles the completion of profile export routes.
+ * This processor updates the export configuration with execution statistics
+ * and manages the execution history of export operations.
+ *
+ * <p>The processor performs the following operations:
+ * <ul>
+ *   <li>Records export execution statistics</li>
+ *   <li>Updates the export configuration status</li>
+ *   <li>Maintains execution history within configured size limits</li>
+ *   <li>Persists updated configuration information</li>
+ * </ul>
+ * </p>
+ *
+ * @since 1.0
  */
 public class ExportRouteCompletionProcessor implements Processor {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ExportRouteCompletionProcessor.class.getName());
+    
+    /** Service for managing export configurations */
     private ImportExportConfigurationService<ExportConfiguration> exportConfigurationService;
+    
+    /** Maximum number of execution history entries to maintain */
     private int executionsHistorySize;
 
+    /**
+     * Processes the completion of an export route by updating its configuration and statistics.
+     * 
+     * <p>This method:
+     * <ul>
+     *   <li>Loads the current export configuration</li>
+     *   <li>Creates an execution entry with timestamp and statistics</li>
+     *   <li>Updates the configuration with execution results</li>
+     *   <li>Maintains the execution history size limit</li>
+     *   <li>Updates the export status to complete</li>
+     * </ul>
+     * </p>
+     *
+     * @param exchange the Camel exchange containing export execution details
+     * @throws Exception if an error occurs during processing
+     */
     @Override
     public void process(Exchange exchange) throws Exception {
         // We load the conf from ES because we are going to increment the execution number
@@ -59,10 +92,20 @@ public class ExportRouteCompletionProcessor implements Processor {
         LOGGER.info("Processing route {} completed.", exchange.getFromRouteId());
     }
 
+    /**
+     * Sets the service used for managing export configurations.
+     *
+     * @param exportConfigurationService the service for handling export configurations
+     */
     public void setExportConfigurationService(ImportExportConfigurationService<ExportConfiguration> exportConfigurationService) {
         this.exportConfigurationService = exportConfigurationService;
     }
 
+    /**
+     * Sets the maximum size of the execution history to maintain.
+     *
+     * @param executionsHistorySize the maximum number of execution entries to keep
+     */
     public void setExecutionsHistorySize(int executionsHistorySize) {
         this.executionsHistorySize = executionsHistorySize;
     }
