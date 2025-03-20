@@ -86,7 +86,7 @@ public class ProfileImportSurfersIT extends BaseIT {
         importConfigSurfers.getProperties().put("mapping", mappingSurfers);
         File importSurfersFile = new File("data/tmp/recurrent_import/");
         importConfigSurfers.getProperties().put("source",
-                "file://" + importSurfersFile.getAbsolutePath() + "?fileName=2-surfers-test.csv&consumer.delay=10m&move=.done");
+                "file://" + importSurfersFile.getAbsolutePath() + "?fileName=2-surfers-test.csv&move=.done");
         importConfigSurfers.setActive(true);
 
         importConfigurationService.save(importConfigSurfers, true);

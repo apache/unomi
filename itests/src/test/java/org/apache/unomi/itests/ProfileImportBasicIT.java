@@ -76,10 +76,12 @@ public class ProfileImportBasicIT extends BaseIT {
 
         // Move the file to the import folder so the import can start
         File basicFile = new File("data/tmp/1-basic-test.csv");
-        Files.copy(basicFile.toPath(), new File("data/tmp/unomi_oneshot_import_configs/1-basic-test.csv").toPath(), StandardCopyOption.REPLACE_EXISTING);
+        File destinationDir = new File("data/tmp/unomi_oneshot_import_configs/"+TEST_TENANT_ID);
+        destinationDir.mkdirs();
+        Files.copy(basicFile.toPath(), new File(destinationDir, "1-basic-test.csv").toPath(), StandardCopyOption.REPLACE_EXISTING);
 
         //Wait for the csv to be processed
-        PartialList<Profile> profiles = keepTrying("Failed waiting for basic import test to complete", ()->profileService.findProfilesByPropertyValue("properties.city", "oneShotImportCity", 0, 10, null), (p)->p.getTotalSize() == 3, 1000, 200);
+        PartialList<Profile> profiles = keepTrying("Failed waiting for basic import test to complete", ()->profileService.findProfilesByPropertyValue("properties.city", "oneShotImportCity", 0, 10, null), (p)->p.getTotalSize() == 3, 1000, 10);
         Assert.assertEquals(3, profiles.getList().size());
 
         checkProfiles(1);

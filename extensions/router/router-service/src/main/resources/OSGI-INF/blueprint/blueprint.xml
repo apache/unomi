@@ -23,9 +23,11 @@
     <reference id="persistenceService" interface="org.apache.unomi.persistence.spi.PersistenceService"/>
     <reference id="configSharingService" interface="org.apache.unomi.api.services.ConfigSharingService"/>
     <reference id="definitionsService" interface="org.apache.unomi.api.services.DefinitionsService"/>
+    <reference id="executionContextManager" interface="org.apache.unomi.api.services.ExecutionContextManager"/>
 
     <bean id="importConfigurationServiceImpl" class="org.apache.unomi.router.services.ImportConfigurationServiceImpl">
         <property name="persistenceService" ref="persistenceService"/>
+        <property name="executionContextManager" ref="executionContextManager"/>
     </bean>
     <service id="importConfigurationService" ref="importConfigurationServiceImpl">
         <interfaces>
@@ -38,6 +40,7 @@
 
     <bean id="exportConfigurationServiceImpl" class="org.apache.unomi.router.services.ExportConfigurationServiceImpl">
         <property name="persistenceService" ref="persistenceService"/>
+        <property name="executionContextManager" ref="executionContextManager"/>
     </bean>
     <service id="exportConfigurationService" ref="exportConfigurationServiceImpl">
         <interfaces>

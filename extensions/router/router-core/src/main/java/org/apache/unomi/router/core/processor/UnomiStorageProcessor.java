@@ -17,12 +17,16 @@
 package org.apache.unomi.router.core.processor;
 
 import org.apache.camel.Exchange;
-import org.apache.camel.Message;
 import org.apache.camel.Processor;
-import org.apache.unomi.api.segments.SegmentsAndScores;
+import org.apache.unomi.api.security.SecurityService;
+import org.apache.unomi.api.services.ExecutionContextManager;
 import org.apache.unomi.api.services.SegmentService;
 import org.apache.unomi.router.api.ProfileToImport;
+import org.apache.unomi.router.api.RouterConstants;
 import org.apache.unomi.router.api.services.ProfileImportService;
+import org.apache.unomi.api.segments.SegmentsAndScores;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Map;
 import java.util.Set;
@@ -45,15 +49,21 @@ import java.util.Set;
  */
 public class UnomiStorageProcessor implements Processor {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(UnomiStorageProcessor.class.getName());
+
     /** Service for handling profile import operations */
     private ProfileImportService profileImportService;
-    
+
     /** Service for managing profile segments and scoring */
     private SegmentService segmentService;
 
+    private ExecutionContextManager contextManager;
+
+    private SecurityService securityService;
+
     /**
      * Processes the exchange by storing or updating the profile in Unomi's storage system.
-     * 
+     *
      * <p>This method:
      * <ul>
      *   <li>Extracts the ProfileToImport from the message body</li>
@@ -66,27 +76,38 @@ public class UnomiStorageProcessor implements Processor {
      * @throws Exception if an error occurs during processing
      */
     @Override
-    public void process(Exchange exchange)
-            throws Exception {
-        if (exchange.getIn() != null) {
-            Message message = exchange.getIn();
+    public void process(Exchange exchange) throws Exception {
+        ProfileToImport profileToImport = exchange.getIn().getBody(ProfileToImport.class);
+        String tenantId = exchange.getIn().getHeader(RouterConstants.HEADER_TENANT_ID, String.class);
 
-            ProfileToImport profileToImport = (ProfileToImport) message.getBody();
-
-            if (!profileToImport.isProfileToDelete()) {
-                SegmentsAndScores segmentsAndScoringForProfile = segmentService.getSegmentsAndScoresForProfile(profileToImport);
-                Set<String> segments = segmentsAndScoringForProfile.getSegments();
-                if (!segments.equals(profileToImport.getSegments())) {
-                    profileToImport.setSegments(segments);
-                }
-                Map<String, Integer> scores = segmentsAndScoringForProfile.getScores();
-                if (!scores.equals(profileToImport.getScores())) {
-                    profileToImport.setScores(scores);
-                }
-            }
-
-            profileImportService.saveMergeDeleteImportedProfile(profileToImport);
+        if (tenantId == null) {
+            LOGGER.error("No tenant ID found in exchange headers");
+            throw new Exception("No tenant ID found in exchange headers");
         }
+
+        securityService.setCurrentSubject(securityService.createSubject(tenantId, true));
+        contextManager.executeAsTenant(tenantId, () -> {
+            try {
+                if (!profileToImport.isProfileToDelete()) {
+                    SegmentsAndScores segmentsAndScoringForProfile = segmentService.getSegmentsAndScoresForProfile(profileToImport);
+                    Set<String> segments = segmentsAndScoringForProfile.getSegments();
+                    if (!segments.equals(profileToImport.getSegments())) {
+                        profileToImport.setSegments(segments);
+                    }
+                    Map<String, Integer> scores = segmentsAndScoringForProfile.getScores();
+                    if (!scores.equals(profileToImport.getScores())) {
+                        profileToImport.setScores(scores);
+                    }
+                }
+
+                profileImportService.saveMergeDeleteImportedProfile(profileToImport);
+                exchange.getIn().setBody(profileToImport);
+            } catch (Exception e) {
+                LOGGER.error("Error processing profile import", e);
+                throw new RuntimeException("Error processing profile import", e);
+            }
+            return null;
+        });
     }
 
     /**
@@ -105,5 +126,13 @@ public class UnomiStorageProcessor implements Processor {
      */
     public void setSegmentService(SegmentService segmentService) {
         this.segmentService = segmentService;
+    }
+
+    public void setContextManager(ExecutionContextManager contextManager) {
+        this.contextManager = contextManager;
+    }
+
+    public void setSecurityService(SecurityService securityService) {
+        this.securityService = securityService;
     }
 }

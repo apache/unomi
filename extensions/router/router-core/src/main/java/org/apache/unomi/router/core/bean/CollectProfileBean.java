@@ -17,7 +17,10 @@
 package org.apache.unomi.router.core.bean;
 
 import org.apache.unomi.api.Profile;
+import org.apache.unomi.api.services.ExecutionContextManager;
 import org.apache.unomi.persistence.spi.PersistenceService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 
@@ -38,8 +41,11 @@ import java.util.List;
  */
 public class CollectProfileBean {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(CollectProfileBean.class);
+
     /** Service for accessing Unomi's persistence layer */
     private PersistenceService persistenceService;
+    private ExecutionContextManager executionContextManager;
 
     /**
      * Extracts profiles that belong to a specific segment.
@@ -52,9 +58,10 @@ public class CollectProfileBean {
      * @param segment the segment identifier to filter profiles by
      * @return a list of Profile objects that belong to the specified segment
      */
-    public List<Profile> extractProfileBySegment(String segment) {
-        // TODO: UNOMI-759 avoid loading all profiles in RAM here
-        return persistenceService.query("segments", segment,null, Profile.class);
+    public List<Profile> extractProfileBySegment(String segment, String tenantId) {
+        return executionContextManager.executeAsTenant(tenantId, () -> {
+            return persistenceService.query("segments", segment,null, Profile.class);
+        });
     }
 
     /**
@@ -64,5 +71,9 @@ public class CollectProfileBean {
      */
     public void setPersistenceService(PersistenceService persistenceService) {
         this.persistenceService = persistenceService;
+    }
+
+    public void setExecutionContextManager(ExecutionContextManager executionContextManager) {
+        this.executionContextManager = executionContextManager;
     }
 }

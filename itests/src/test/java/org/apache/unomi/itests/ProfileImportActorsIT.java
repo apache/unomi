@@ -87,7 +87,7 @@ public class ProfileImportActorsIT extends BaseIT {
         importConfigActors.getProperties().put("mapping", mappingActors);
         File importSurfersFile = new File("data/tmp/recurrent_import/");
         importConfigActors.getProperties().put("source",
-                "file://" + importSurfersFile.getAbsolutePath() + "?fileName=6-actors-test.csv&consumer.delay=10m&move=.done");
+                "file://" + importSurfersFile.getAbsolutePath() + "?fileName=6-actors-test.csv&move=.done");
         importConfigActors.setActive(true);
 
         ImportConfiguration savedImportConfigActors = importConfigurationService.save(importConfigActors, true);

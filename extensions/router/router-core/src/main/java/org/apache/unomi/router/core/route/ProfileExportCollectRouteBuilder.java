@@ -20,6 +20,7 @@ import org.apache.camel.LoggingLevel;
 import org.apache.camel.component.kafka.KafkaEndpoint;
 import org.apache.camel.model.ProcessorDefinition;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.unomi.api.services.ExecutionContextManager;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.router.api.ExportConfiguration;
 import org.apache.unomi.router.api.RouterConstants;
@@ -54,9 +55,11 @@ public class ProfileExportCollectRouteBuilder extends RouterAbstractRouteBuilder
 
     /** List of export configurations to process */
     private List<ExportConfiguration> exportConfigurationList;
-    
+
     /** Service for persisting and retrieving data */
     private PersistenceService persistenceService;
+
+    private ExecutionContextManager executionContextManager;
 
     /**
      * Constructs a new route builder with Kafka configuration.
@@ -71,7 +74,7 @@ public class ProfileExportCollectRouteBuilder extends RouterAbstractRouteBuilder
     /**
      * Configures the routes for collecting profiles to export.
      * Creates a route for each export configuration that matches the criteria.
-     * 
+     *
      * <p>Each route:
      * <ul>
      *   <li>Runs on a configured timer schedule</li>
@@ -94,6 +97,7 @@ public class ProfileExportCollectRouteBuilder extends RouterAbstractRouteBuilder
 
         CollectProfileBean collectProfileBean = new CollectProfileBean();
         collectProfileBean.setPersistenceService(persistenceService);
+        collectProfileBean.setExecutionContextManager(executionContextManager);
 
         //Loop on multiple export configuration
         for (final ExportConfiguration exportConfiguration : exportConfigurationList) {
@@ -109,7 +113,8 @@ public class ProfileExportCollectRouteBuilder extends RouterAbstractRouteBuilder
                         ProcessorDefinition prDef = from(timerString)
                                 .routeId(exportConfiguration.getItemId())// This allow identification of the route for manual start/stop
                                 .autoStartup(exportConfiguration.isActive())
-                                .bean(collectProfileBean, "extractProfileBySegment(" + exportConfiguration.getProperties().get("segment") + ")")
+                                .setHeader(RouterConstants.HEADER_TENANT_ID, constant(exportConfiguration.getTenantId()))
+                                .bean(collectProfileBean, "extractProfileBySegment(" + exportConfiguration.getProperties().get("segment") + "," + exportConfiguration.getTenantId() + ")")
                                 .split(body())
                                 .marshal(jacksonDataFormat) // TODO: UNOMI-759 avoid unnecessary marshalling
                                 .convertBodyTo(String.class)
@@ -148,5 +153,14 @@ public class ProfileExportCollectRouteBuilder extends RouterAbstractRouteBuilder
      */
     public void setPersistenceService(PersistenceService persistenceService) {
         this.persistenceService = persistenceService;
+    }
+
+    /**
+     * Sets the execution context manager for the route builder.
+     *
+     * @param executionContextManager the execution context manager to set
+     */
+    public void setExecutionContextManager(ExecutionContextManager executionContextManager) {
+        this.executionContextManager = executionContextManager;
     }
 }

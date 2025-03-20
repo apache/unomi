@@ -21,6 +21,19 @@
            xsi:schemaLocation="http://www.osgi.org/xmlns/blueprint/v1.0.0 http://www.osgi.org/xmlns/blueprint/v1.0.0/blueprint.xsd
                                http://aries.apache.org/blueprint/xmlns/blueprint-cm/v1.1.0 http://aries.apache.org/schemas/blueprint-cm/blueprint-cm-1.1.0.xsd">
 
+    <reference id="configSharingService" interface="org.apache.unomi.api.services.ConfigSharingService" />
+    <reference id="profileImportService" interface="org.apache.unomi.router.api.services.ProfileImportService"/>
+    <reference id="profileExportService" interface="org.apache.unomi.router.api.services.ProfileExportService"/>
+    <reference id="profileService" interface="org.apache.unomi.api.services.ProfileService"/>
+    <reference id="persistenceService" interface="org.apache.unomi.persistence.spi.PersistenceService"/>
+    <reference id="segmentService" interface="org.apache.unomi.api.services.SegmentService"/>
+    <reference id="importConfigurationService" interface="org.apache.unomi.router.api.services.ImportExportConfigurationService" filter="(configDiscriminator=IMPORT)"/>
+    <reference id="exportConfigurationService" interface="org.apache.unomi.router.api.services.ImportExportConfigurationService" filter="(configDiscriminator=EXPORT)"/>
+    <reference id="contextManager" interface="org.apache.unomi.api.services.ExecutionContextManager" />
+    <reference id="tenantService" interface="org.apache.unomi.api.tenants.TenantService" />
+    <reference id="securityService" interface="org.apache.unomi.api.security.SecurityService" />
+    <reference id="schedulerService" interface="org.apache.unomi.api.services.SchedulerService" />
+
     <cm:property-placeholder persistent-id="org.apache.unomi.router" update-strategy="reload">
         <cm:default-properties>
             <cm:property name="router.config.type" value="nobroker"/>
@@ -36,12 +49,15 @@
             <cm:property name="import.oneshot.uploadDir" value="/tmp/oneshot_import_configs/"/>
             <cm:property name="executionsHistory.size" value="5"/>
             <cm:property name="executions.error.report.size" value="200"/>
+            <cm:property name="configs.refresh.interval" value="1000"/>
         </cm:default-properties>
     </cm:property-placeholder>
 
     <bean id="unomiStorageProcessor" class="org.apache.unomi.router.core.processor.UnomiStorageProcessor">
         <property name="profileImportService" ref="profileImportService"/>
         <property name="segmentService" ref="segmentService"/>
+        <property name="contextManager" ref="contextManager"/>
+        <property name="securityService" ref="securityService" />
     </bean>
 
     <bean id="importRouteCompletionProcessor" class="org.apache.unomi.router.core.processor.ImportRouteCompletionProcessor">
@@ -57,6 +73,8 @@
 
     <bean id="importConfigByFileNameProcessor" class="org.apache.unomi.router.core.processor.ImportConfigByFileNameProcessor">
         <property name="importConfigurationService" ref="importConfigurationService"/>
+        <property name="tenantService" ref="tenantService" />
+        <property name="executionContextManager" ref="contextManager"/>
     </bean>
 
     <bean id="jacksonDataFormat" class="org.apache.camel.component.jackson.JacksonDataFormat">
@@ -77,7 +95,6 @@
         <property name="unmarshalType" value="org.apache.unomi.router.api.ImportLineError"/>
         <property name="library" value="Jackson"/>
     </bean>
-
 
     <bean id="camelContext" class="org.apache.unomi.router.core.context.RouterCamelContext"
           init-method="init" destroy-method="destroy">
@@ -111,21 +128,16 @@
         <property name="profileExportService" ref="profileExportService"/>
         <property name="profileService" ref="profileService"/>
         <property name="contextManager" ref="contextManager"/>
+        <property name="schedulerService" ref="schedulerService"/>
+        <property name="securityService" ref="securityService"/>
+        <property name="configsRefreshInterval" value="${configs.refresh.interval}"/>
     </bean>
-    <service id="camelContextOSGI" ref="camelContext" interface="org.apache.unomi.router.api.IRouterCamelContext"/>
 
     <bean id="collectProfileBean" class="org.apache.unomi.router.core.bean.CollectProfileBean">
         <property name="persistenceService" ref="persistenceService"/>
+        <property name="executionContextManager" ref="contextManager"/>
     </bean>
 
-    <reference id="configSharingService" interface="org.apache.unomi.api.services.ConfigSharingService" />
-    <reference id="profileImportService" interface="org.apache.unomi.router.api.services.ProfileImportService"/>
-    <reference id="profileExportService" interface="org.apache.unomi.router.api.services.ProfileExportService"/>
-    <reference id="profileService" interface="org.apache.unomi.api.services.ProfileService"/>
-    <reference id="persistenceService" interface="org.apache.unomi.persistence.spi.PersistenceService"/>
-    <reference id="segmentService" interface="org.apache.unomi.api.services.SegmentService"/>
-    <reference id="importConfigurationService" interface="org.apache.unomi.router.api.services.ImportExportConfigurationService" filter="(configDiscriminator=IMPORT)"/>
-    <reference id="exportConfigurationService" interface="org.apache.unomi.router.api.services.ImportExportConfigurationService" filter="(configDiscriminator=EXPORT)"/>
-    <reference id="contextManager" interface="org.apache.unomi.api.services.ExecutionContextManager" />
+    <service id="camelContextOSGI" ref="camelContext" interface="org.apache.unomi.router.api.IRouterCamelContext"/>
 
 </blueprint>

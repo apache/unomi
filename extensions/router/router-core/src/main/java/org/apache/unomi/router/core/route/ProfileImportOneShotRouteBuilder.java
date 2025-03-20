@@ -50,10 +50,10 @@ import java.util.Map;
 public class ProfileImportOneShotRouteBuilder extends RouterAbstractRouteBuilder {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ProfileImportOneShotRouteBuilder.class.getName());
-    
+
     /** Processor for extracting import configuration from filenames */
     private ImportConfigByFileNameProcessor importConfigByFileNameProcessor;
-    
+
     /** Directory to monitor for import files */
     private String uploadDir;
 
@@ -70,7 +70,7 @@ public class ProfileImportOneShotRouteBuilder extends RouterAbstractRouteBuilder
     /**
      * Configures the route for one-shot profile imports.
      * Creates a route that monitors a directory for CSV files and processes them for import.
-     * 
+     *
      * <p>The route:
      * <ul>
      *   <li>Monitors upload directory for CSV files</li>
@@ -105,7 +105,7 @@ public class ProfileImportOneShotRouteBuilder extends RouterAbstractRouteBuilder
         LineSplitProcessor lineSplitProcessor = new LineSplitProcessor();
         lineSplitProcessor.setProfilePropertyTypes(profileService.getTargetPropertyTypes("profiles"));
 
-        ProcessorDefinition prDef = from("file://" + uploadDir + "?moveFailed=.error&include=.*.csv&consumer.delay=1m")
+        ProcessorDefinition prDef = from("file://" + uploadDir + "?recursive=true&moveFailed=.error&include=.*.csv")
                 .routeId(RouterConstants.IMPORT_ONESHOT_ROUTE_ID)
                 .autoStartup(true)
                 .process(importConfigByFileNameProcessor)

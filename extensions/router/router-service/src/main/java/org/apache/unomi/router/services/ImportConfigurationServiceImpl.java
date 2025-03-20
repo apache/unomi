@@ -16,6 +16,8 @@
  */
 package org.apache.unomi.router.services;
 
+import org.apache.unomi.api.ExecutionContext;
+import org.apache.unomi.api.services.ExecutionContextManager;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.router.api.ImportConfiguration;
 import org.apache.unomi.router.api.RouterConstants;
@@ -35,12 +37,17 @@ public class ImportConfigurationServiceImpl implements ImportExportConfiguration
     private static final Logger LOGGER = LoggerFactory.getLogger(ImportConfigurationServiceImpl.class.getName());
 
     private PersistenceService persistenceService;
+    private ExecutionContextManager executionContextManager;
 
     public void setPersistenceService(PersistenceService persistenceService) {
         this.persistenceService = persistenceService;
     }
 
-    private final Map<String, RouterConstants.CONFIG_CAMEL_REFRESH> camelConfigsToRefresh = new ConcurrentHashMap<>();
+    public void setExecutionContextManager(ExecutionContextManager executionContextManager) {
+        this.executionContextManager = executionContextManager;
+    }
+
+    private final Map<String, Map<String, RouterConstants.CONFIG_CAMEL_REFRESH>> camelConfigsToRefresh = new ConcurrentHashMap<>();
 
     public ImportConfigurationServiceImpl() {
         LOGGER.info("Initializing import configuration service...");
@@ -53,16 +60,29 @@ public class ImportConfigurationServiceImpl implements ImportExportConfiguration
 
     @Override
     public ImportConfiguration load(String configId) {
-        return persistenceService.load(configId, ImportConfiguration.class);
+        ExecutionContext context = executionContextManager.getCurrentContext();
+        ImportConfiguration config = persistenceService.load(configId, ImportConfiguration.class);
+        if (config != null && !context.getTenantId().equals(config.getTenantId()) && !context.isSystem()) {
+            return null;
+        }
+        return config;
     }
 
     @Override
     public ImportConfiguration save(ImportConfiguration importConfiguration, boolean updateRunningRoute) {
+        ExecutionContext context = executionContextManager.getCurrentContext();
         if (importConfiguration.getItemId() == null) {
             importConfiguration.setItemId(UUID.randomUUID().toString());
         }
+        if (importConfiguration.getTenantId() == null) {
+            importConfiguration.setTenantId(context.getTenantId());
+        } else if (!context.isSystem() && !context.getTenantId().equals(importConfiguration.getTenantId())) {
+            throw new SecurityException("Cannot save configuration for different tenant");
+        }
         if (updateRunningRoute) {
-            camelConfigsToRefresh.put(importConfiguration.getItemId(), RouterConstants.CONFIG_CAMEL_REFRESH.UPDATED);
+            String tenantId = importConfiguration.getTenantId();
+            camelConfigsToRefresh.computeIfAbsent(tenantId, k -> new ConcurrentHashMap<>())
+                    .put(importConfiguration.getItemId(), RouterConstants.CONFIG_CAMEL_REFRESH.UPDATED);
         }
         persistenceService.save(importConfiguration);
         return persistenceService.load(importConfiguration.getItemId(), ImportConfiguration.class);
@@ -70,13 +90,19 @@ public class ImportConfigurationServiceImpl implements ImportExportConfiguration
 
     @Override
     public void delete(String configId) {
-        persistenceService.remove(configId, ImportConfiguration.class);
-        camelConfigsToRefresh.put(configId, RouterConstants.CONFIG_CAMEL_REFRESH.REMOVED);
+        ExecutionContext context = executionContextManager.getCurrentContext();
+        ImportConfiguration config = load(configId);
+        if (config != null && (context.isSystem() || context.getTenantId().equals(config.getTenantId()))) {
+            persistenceService.remove(configId, ImportConfiguration.class);
+            String tenantId = config.getTenantId();
+            camelConfigsToRefresh.computeIfAbsent(tenantId, k -> new ConcurrentHashMap<>())
+                    .put(configId, RouterConstants.CONFIG_CAMEL_REFRESH.REMOVED);
+        }
     }
 
     @Override
-    public Map<String, RouterConstants.CONFIG_CAMEL_REFRESH> consumeConfigsToBeRefresh() {
-        Map<String, RouterConstants.CONFIG_CAMEL_REFRESH> result = new HashMap<>(camelConfigsToRefresh);
+    public Map<String, Map<String, RouterConstants.CONFIG_CAMEL_REFRESH>> consumeConfigsToBeRefresh() {
+        Map<String, Map<String, RouterConstants.CONFIG_CAMEL_REFRESH>> result = new HashMap<>(camelConfigsToRefresh);
         camelConfigsToRefresh.clear();
         return result;
     }

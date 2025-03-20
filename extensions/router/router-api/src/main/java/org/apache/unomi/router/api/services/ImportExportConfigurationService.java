@@ -95,7 +95,7 @@ public interface ImportExportConfigurationService<T> {
 
     /**
      * Used by camel route system to get the latest changes on configs and reflect changes on camel routes if necessary
-     * @return map of configId per operation to be done in camel
+     * @return map of tenantId to map of configId per operation to be done in camel
      */
-    Map<String, RouterConstants.CONFIG_CAMEL_REFRESH> consumeConfigsToBeRefresh();
+    Map<String, Map<String, RouterConstants.CONFIG_CAMEL_REFRESH>> consumeConfigsToBeRefresh();
 }

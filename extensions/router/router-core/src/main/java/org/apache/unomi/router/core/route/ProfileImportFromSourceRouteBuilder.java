@@ -23,6 +23,8 @@ import org.apache.camel.ShutdownRunningTask;
 import org.apache.camel.component.kafka.KafkaEndpoint;
 import org.apache.camel.model.ProcessorDefinition;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.unomi.api.services.ExecutionContextManager;
+import org.apache.unomi.api.security.SecurityService;
 import org.apache.unomi.router.api.ImportConfiguration;
 import org.apache.unomi.router.api.RouterConstants;
 import org.apache.unomi.router.api.services.ImportExportConfigurationService;
@@ -60,9 +62,13 @@ public class ProfileImportFromSourceRouteBuilder extends RouterAbstractRouteBuil
 
     /** List of import configurations to process */
     private List<ImportConfiguration> importConfigurationList;
-    
+
     /** Service for managing import configurations */
     private ImportExportConfigurationService<ImportConfiguration> importConfigurationService;
+
+    private ExecutionContextManager executionContextManager;
+
+    private SecurityService securityService;
 
     /**
      * Constructs a new route builder with Kafka configuration.
@@ -77,7 +83,7 @@ public class ProfileImportFromSourceRouteBuilder extends RouterAbstractRouteBuil
     /**
      * Configures the routes for importing profiles from sources.
      * Creates routes for each import configuration and sets up error handling.
-     * 
+     *
      * <p>The routes:
      * <ul>
      *   <li>Handle data validation and format errors</li>
@@ -148,12 +154,17 @@ public class ProfileImportFromSourceRouteBuilder extends RouterAbstractRouteBuil
                                 @Override
                                 public void process(Exchange exchange) throws Exception {
                                     importConfiguration.setStatus(RouterConstants.CONFIG_STATUS_RUNNING);
-                                    importConfigurationService.save(importConfiguration, false);
+                                    securityService.setCurrentSubject(securityService.createSubject(importConfiguration.getTenantId(), true));
+                                    executionContextManager.executeAsTenant(importConfiguration.getTenantId(), () -> {
+                                        importConfigurationService.save(importConfiguration, false);
+                                        return null;
+                                    });
                                 }
                             })
                             .split(bodyAs(String.class).tokenize(importConfiguration.getLineSeparator()))
                             .log(LoggingLevel.DEBUG, "Splitted into ${exchangeProperty.CamelSplitSize} records")
                             .setHeader(RouterConstants.HEADER_CONFIG_TYPE, constant(configType))
+                            .setHeader(RouterConstants.HEADER_TENANT_ID, constant(importConfiguration.getTenantId()))
                             .process(lineSplitProcessor)
                             .log(LoggingLevel.DEBUG, "Split IDX ${exchangeProperty.CamelSplitIndex} record")
                             .marshal(jacksonDataFormat)
@@ -187,6 +198,14 @@ public class ProfileImportFromSourceRouteBuilder extends RouterAbstractRouteBuil
      */
     public void setImportConfigurationService(ImportExportConfigurationService<ImportConfiguration> importConfigurationService) {
         this.importConfigurationService = importConfigurationService;
+    }
+
+    public void setExecutionContextManager(ExecutionContextManager executionContextManager) {
+        this.executionContextManager = executionContextManager;
+    }
+
+    public void setSecurityService(SecurityService securityService) {
+        this.securityService = securityService;
     }
 
 }

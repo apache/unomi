@@ -47,6 +47,7 @@ public interface RouterConstants {
     String HEADER_EXPORT_CONFIG = "exportConfig";
     String HEADER_FAILED_MESSAGE = "failedMessage";
     String HEADER_IMPORT_CONFIG_ONESHOT = "importConfigOneShot";
+    String HEADER_TENANT_ID = "tenantId";
 
     String IMPORT_ONESHOT_ROUTE_ID = "ONE_SHOT_ROUTE";
     String IMPORT_ONESHOT_UPLOAD_DIR = "oneshotImportUploadDir";
