@@ -27,7 +27,7 @@ import java.nio.file.Paths;
 
 import static org.junit.Assert.fail;
 
-public class MigrationIT  extends BaseIT {
+public class MigrationIT extends BaseIT {
     protected static final Path BASE_DIRECTORIES = Paths.get(System.getProperty( "karaf.data" ), "migration", "scripts");
     private static final String FAILING_SCRIPT_NAME = "migrate-11.0.0-01-failingMigration.groovy";
     private static final String SUCCESS_SCRIPT_NAME = "migrate-11.0.0-01-successMigration.groovy";

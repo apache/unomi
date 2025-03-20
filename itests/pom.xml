@@ -282,6 +282,9 @@
                             <includes>
                                 <include>**/*AllITs.java</include>
                             </includes>
+                            <excludes>
+                                <exclude>${it.test.exclude.pattern}</exclude>
+                            </excludes>
                             <systemPropertyVariables>
                                 <my.system.property>foo</my.system.property>
                                 <unomi.search.engine>elasticsearch</unomi.search.engine>
@@ -372,6 +375,9 @@
                             <includes>
                                 <include>**/*AllITs.java</include>
                             </includes>
+                            <excludes>
+                                <exclude>${it.test.exclude.pattern}</exclude>
+                            </excludes>
                             <systemPropertyVariables>
                                 <my.system.property>foo</my.system.property>
                                 <unomi.search.engine>opensearch</unomi.search.engine>

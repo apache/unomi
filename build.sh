@@ -257,6 +257,7 @@ SINGLE_TEST=""
 IT_DEBUG=false
 IT_DEBUG_PORT=5006
 IT_DEBUG_SUSPEND=false
+SKIP_MIGRATION_TESTS=false
 
 # Enhanced usage function with color support
 usage() {
@@ -294,6 +295,7 @@ EOF
         echo -e "  ${CYAN}--it-debug${NC}                 Enable integration test debug mode"
         echo -e "  ${CYAN}--it-debug-port PORT${NC}        Set integration test debug port"
         echo -e "  ${CYAN}--it-debug-suspend${NC}        Suspend integration test until debugger connects"
+        echo -e "  ${CYAN}--skip-migration-tests${NC}    Skip migration-related tests"
     else
         cat << "EOF"
      _    _ _____ _      ____
@@ -326,6 +328,7 @@ EOF
         echo "  --it-debug                Enable integration test debug mode"
         echo "  --it-debug-port PORT      Set integration test debug port"
         echo "  --it-debug-suspend        Suspend integration test until debugger connects"
+        echo "  --skip-migration-tests    Skip migration-related tests"
     fi
 
     echo
@@ -450,6 +453,9 @@ while [ "$1" != "" ]; do
             ;;
         --it-debug-suspend)
             IT_DEBUG_SUSPEND=true
+            ;;
+        --skip-migration-tests)
+            SKIP_MIGRATION_TESTS=true
             ;;
         *)
             echo "Unknown option: $1"
@@ -827,6 +833,12 @@ if [ "$RUN_INTEGRATION_TESTS" = true ]; then
             echo "Integration test debug enabled (port: $IT_DEBUG_PORT)"
         fi
         MVN_OPTS="$MVN_OPTS -Dit.karaf.debug=$DEBUG_OPTS"
+    fi
+
+    # Add migration test exclusion if specified
+    if [ "$SKIP_MIGRATION_TESTS" = true ]; then
+        MVN_OPTS="$MVN_OPTS -Dit.test.exclude.pattern=**/migration/**/*IT.java"
+        echo "Skipping migration tests"
     fi
 else
     if [ "$SKIP_TESTS" = true ]; then
