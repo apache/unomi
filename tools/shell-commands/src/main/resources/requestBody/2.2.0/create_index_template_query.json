@@ -1,0 +1,30 @@
+{
+  "index_patterns": [
+    "#indexPattern"
+  ],
+  "template": {
+    "settings": {
+      "index.lifecycle.name": "#lifecycleName",
+      "index.lifecycle.rollover_alias": "#lifecycleRolloverAlias",
+      "index.number_of_shards": #numberOfShards,
+      "index.number_of_replicas": #numberOfReplicas,
+      "index.mapping.total_fields.limit": #mappingTotalFieldsLimit,
+      "index.max_docvalue_fields_search": #maxDocValueFieldsSearch,
+      "analysis": {
+        "analyzer": {
+          "folding": {
+            "type": "custom",
+            "tokenizer": "keyword",
+            "filter": [
+              "lowercase",
+              "asciifolding"
+            ]
+          }
+        }
+      }
+    },
+    "mappings": #mappings
+    }
+  },
+  "priority": 100
+}
