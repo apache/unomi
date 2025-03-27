@@ -85,6 +85,13 @@ else
     IFS=',' read -ra NODES <<< "${UNOMI_ELASTICSEARCH_ADDRESSES}"
 fi
 
+# Ensure curl options allow insecure deployments when needed.
+# - For HTTPS with self-signed certs: add -k
+# - For HTTP: -k is harmless, but we only add it when schema is https to keep things tidy.
+if [ "$schema" = "https" ]; then
+    curl_opts="$curl_opts -k"
+fi
+
 # Wait for search engine to be ready
 echo "Waiting for ${SEARCH_ENGINE} to be ready..."
 echo "Checking nodes: ${NODES[@]}"
