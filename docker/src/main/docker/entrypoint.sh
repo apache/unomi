@@ -31,10 +31,10 @@ else
   elasticsearch_addresses="$schema://$UNOMI_ELASTICSEARCH_ADDRESSES/_cat/health?h=status"
 fi
 
-health_check="$(curl -fsSL "$elasticsearch_addresses")"
+health_check="$(curl -kfsSL "$elasticsearch_addresses")"
 
 until ([ "$health_check" = 'yellow' ] || [ "$health_check" = 'green' ]); do
-    health_check="$(curl -fsSL $elasticsearch_addresses)"
+    health_check="$(curl -kfsSL $elasticsearch_addresses)"
     >&2 echo "Elastic Search is not yet available - waiting (health check=$health_check)..."
     sleep 1
 done
