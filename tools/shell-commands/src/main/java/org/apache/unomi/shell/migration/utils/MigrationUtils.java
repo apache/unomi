@@ -64,6 +64,9 @@ public class MigrationUtils {
 
     public static String resourceAsString(BundleContext bundleContext, final String resource) {
         final URL url = bundleContext.getBundle().getResource(resource);
+        if (url == null) {
+            throw new RuntimeException("Resource not found: " + resource);
+        }
         try (InputStream stream = url.openStream()) {
             return IOUtils.toString(stream, StandardCharsets.UTF_8);
         } catch (final Exception e) {
@@ -73,21 +76,167 @@ public class MigrationUtils {
 
     public static String getFileWithoutComments(BundleContext bundleContext, final String resource) {
         final URL url = bundleContext.getBundle().getResource(resource);
-        try (InputStream stream = url.openStream()) {
-            DataInputStream in = new DataInputStream(stream);
-            BufferedReader br = new BufferedReader(new InputStreamReader(in));
-            String line;
-            StringBuilder value = new StringBuilder();
-            while ((line = br.readLine()) != null) {
-                if (!line.startsWith("/*") && !line.startsWith(" *") && !line.startsWith("*/")) {
-                    value.append(line);
+        try {
+            // Read the entire file into a string to preserve exact line endings
+            String fileContent;
+            try (InputStream stream = url.openStream()) {
+                fileContent = IOUtils.toString(stream, StandardCharsets.UTF_8);
+            }
+            
+            // Process the content
+            StringBuilder result = new StringBuilder();
+            StringBuilder currentLine = new StringBuilder();
+            boolean inBlockComment = false;
+            boolean inString = false;
+            char stringChar = 0;
+            boolean lastWasSpace = false;
+            
+            for (int i = 0; i < fileContent.length(); i++) {
+                char ch = fileContent.charAt(i);
+                
+                // Handle string literals - only if we're not in a comment
+                if (!inBlockComment && (ch == '"' || ch == '\'')) {
+                    if (!inString) {
+                        inString = true;
+                        stringChar = ch;
+                    } else if (ch == stringChar) {
+                        inString = false;
+                        stringChar = 0;
+                    }
+                    currentLine.append(ch);
+                    continue;
+                }
+                
+                // If we're in a string, just append the character
+                if (inString) {
+                    currentLine.append(ch);
+                    continue;
+                }
+                
+                // Handle line endings - replace with space
+                if (ch == '\n' || ch == '\r') {
+                    // Check for Windows line endings (\r\n)
+                    boolean isWindowsLineEnding = (ch == '\r' && i + 1 < fileContent.length() && fileContent.charAt(i + 1) == '\n');
+                    
+                    if (inBlockComment) {
+                        // Just skip newlines in block comments
+                        if (isWindowsLineEnding) {
+                            i++; // Skip the \n part of \r\n
+                        }
+                    } else {
+                        if (currentLine.length() > 0) {
+                            // Process the current line
+                            result.append(handleInlineComments(currentLine.toString()));
+                            currentLine.setLength(0);
+                        }
+                        // Add a space if the last character wasn't already a space
+                        if (!lastWasSpace) {
+                            result.append(' ');
+                            lastWasSpace = true;
+                        }
+                        if (isWindowsLineEnding) {
+                            i++; // Skip the \n part of \r\n
+                        }
+                    }
+                    continue;
+                }
+                
+                // Handle block comments
+                if (!inBlockComment && ch == '/' && i + 1 < fileContent.length() && fileContent.charAt(i + 1) == '*') {
+                    inBlockComment = true;
+                    i++; // Skip the *
+                    continue;
+                }
+                if (inBlockComment && ch == '*' && i + 1 < fileContent.length() && fileContent.charAt(i + 1) == '/') {
+                    inBlockComment = false;
+                    i++; // Skip the /
+                    continue;
+                }
+                
+                // Handle inline comments
+                if (!inBlockComment && ch == '/' && i + 1 < fileContent.length() && fileContent.charAt(i + 1) == '/') {
+                    // Process the content before the inline comment
+                    if (currentLine.length() > 0) {
+                        result.append(currentLine);
+                    }
+                    currentLine.setLength(0);
+                    
+                    // Skip to the end of line
+                    while (i < fileContent.length() && fileContent.charAt(i) != '\n' && fileContent.charAt(i) != '\r') {
+                        i++;
+                    }
+                    i--; // Step back one character so the line ending is processed in the next loop iteration
+                    continue;
+                }
+                
+                // Only append if we're not in a comment
+                if (!inBlockComment) {
+                    // Handle spaces to avoid multiple consecutive spaces
+                    if (ch == ' ') {
+                        if (!lastWasSpace) {
+                            currentLine.append(ch);
+                            lastWasSpace = true;
+                        }
+                    } else {
+                        currentLine.append(ch);
+                        lastWasSpace = false;
+                    }
                 }
             }
-            in.close();
-            return value.toString();
-        } catch (final Exception e) {
+            
+            // Process any remaining content
+            if (currentLine.length() > 0 && !inBlockComment) {
+                result.append(handleInlineComments(currentLine.toString()));
+            }
+            
+            return result.toString().trim();
+        } catch (IOException e) {
             throw new RuntimeException("Error reading file " + resource, e);
         }
+    }
+    
+    private static String handleInlineComments(String line) {
+        int commentPos = indexOfOutsideString(line, "//");
+        if (commentPos != -1) {
+            return line.substring(0, commentPos);
+        }
+        return line;
+    }
+    
+    private static int indexOfOutsideString(String line, String search) {
+        boolean inString = false;
+        char stringChar = 0;
+        
+        for (int i = 0; i < line.length() - search.length() + 1; i++) {
+            char c = line.charAt(i);
+            
+            // Handle string literals
+            if (c == '"' || c == '\'') {
+                if (!inString) {
+                    inString = true;
+                    stringChar = c;
+                } else if (c == stringChar) {
+                    inString = false;
+                }
+                continue;
+            }
+            
+            // Only look for comments outside strings
+            if (!inString) {
+                boolean found = true;
+                for (int j = 0; j < search.length(); j++) {
+                    if (line.charAt(i + j) != search.charAt(j)) {
+                        found = false;
+                        break;
+                    }
+                }
+                if (found) {
+                    return i;
+                }
+            }
+        }
+        
+        return -1;
     }
 
     public static boolean indexExists(CloseableHttpClient httpClient, String esAddress, String indexName) throws IOException {
@@ -182,12 +331,19 @@ public class MigrationUtils {
     }
 
     public static void moveToIndex(CloseableHttpClient httpClient, BundleContext bundleContext, String esAddress, String sourceIndexName, String targetIndexName, String painlessScript) throws Exception {
-        String reIndexRequest = resourceAsString(bundleContext, "requestBody/2.2.0/base_reindex_request.json").replace("#source", sourceIndexName).replace("#dest", targetIndexName).replace("#painless", StringUtils.isNotEmpty(painlessScript) ? getScriptPart(painlessScript) : "");
+        moveToIndex(httpClient, bundleContext, esAddress, sourceIndexName, targetIndexName, painlessScript, null);
+    }
+
+    public static void moveToIndex(CloseableHttpClient httpClient, BundleContext bundleContext, String esAddress, String sourceIndexName, String targetIndexName, String painlessScript, Map<String, Object> scriptParams) throws Exception {
+        String reIndexRequest = resourceAsString(bundleContext, "requestBody/2.2.0/base_reindex_request.json")
+                .replace("#source", sourceIndexName)
+                .replace("#dest", targetIndexName)
+                .replace("#painless", StringUtils.isNotEmpty(painlessScript) ? getScriptPart(painlessScript, scriptParams) : "");
 
         // Reindex
         JSONObject task = new JSONObject(HttpUtils.executePostRequest(httpClient, esAddress + "/_reindex?wait_for_completion=false", reIndexRequest, null));
         //Wait for the reindex task to finish
-        waitForTaskToFinish(httpClient, esAddress, task.getString("task"), null);
+        waitForTaskToFinish(httpClient, esAddress, task.getString("task"), null, "Reindex operation from " + sourceIndexName + " to " + targetIndexName);
     }
 
     public static void deleteIndex(CloseableHttpClient httpClient, String esAddress, String indexName) throws Exception {
@@ -197,6 +353,10 @@ public class MigrationUtils {
     }
 
     public static void reIndex(CloseableHttpClient httpClient, BundleContext bundleContext, String esAddress, String indexName, String newIndexSettings, String painlessScript, MigrationContext migrationContext, String migrationUniqueName) throws Exception {
+        reIndex(httpClient, bundleContext, esAddress, indexName, newIndexSettings, painlessScript, null, migrationContext, migrationUniqueName);
+    }
+
+    public static void reIndex(CloseableHttpClient httpClient, BundleContext bundleContext, String esAddress, String indexName, String newIndexSettings, String painlessScript, Map<String, Object> scriptParams, MigrationContext migrationContext, String migrationUniqueName) throws Exception {
         if (indexName.endsWith("-cloned")) {
             // We should never reIndex a clone ...
             return;
@@ -204,7 +364,10 @@ public class MigrationUtils {
 
         String indexNameCloned = indexName + "-cloned";
 
-        String reIndexRequest = resourceAsString(bundleContext, "requestBody/2.0.0/base_reindex_request.json").replace("#source", indexNameCloned).replace("#dest", indexName).replace("#painless", StringUtils.isNotEmpty(painlessScript) ? getScriptPart(painlessScript) : "");
+        String reIndexRequest = resourceAsString(bundleContext, "requestBody/2.0.0/base_reindex_request.json")
+                .replace("#source", indexNameCloned)
+                .replace("#dest", indexName)
+                .replace("#painless", StringUtils.isNotEmpty(painlessScript) ? getScriptPart(painlessScript, scriptParams) : "");
 
         String setIndexReadOnlyRequest = resourceAsString(bundleContext, "requestBody/2.0.0/base_set_index_readonly_request.json");
 
@@ -229,7 +392,7 @@ public class MigrationUtils {
             // Reindex data from clone
             JSONObject task = new JSONObject(HttpUtils.executePostRequest(httpClient, esAddress + "/_reindex?wait_for_completion=false", reIndexRequest, null));
             //Wait for the reindex task to finish
-            waitForTaskToFinish(httpClient, esAddress, task.getString("task"), migrationContext);
+            waitForTaskToFinish(httpClient, esAddress, task.getString("task"), migrationContext, "Reindex operation for " + indexName);
         });
 
         migrationContext.performMigrationStep(migrationUniqueName + " - reindex step for: " + indexName + " (delete clone)", () -> {
@@ -309,8 +472,8 @@ public class MigrationUtils {
     public static void updateByQuery(CloseableHttpClient httpClient, String esAddress, String indexName, String requestBody) throws Exception {
         JSONObject task = new JSONObject(HttpUtils.executePostRequest(httpClient, esAddress + "/" + indexName + "/_update_by_query?wait_for_completion=false", requestBody, null));
 
-        //Wait for the deletion task to finish
-        waitForTaskToFinish(httpClient, esAddress, task.getString("task"), null);
+        //Wait for the update task to finish
+        waitForTaskToFinish(httpClient, esAddress, task.getString("task"), null, "Update by query operation for " + indexName);
     }
 
     /**
@@ -329,37 +492,106 @@ public class MigrationUtils {
     public static void deleteByQuery(CloseableHttpClient httpClient, String esAddress, String indexName, String requestBody) throws Exception {
         JSONObject task = new JSONObject(HttpUtils.executePostRequest(httpClient, esAddress + "/" + indexName + "/_delete_by_query?wait_for_completion=false", requestBody, null));
         //Wait for the deletion task to finish
-        waitForTaskToFinish(httpClient, esAddress, task.getString("task"), null);
+        waitForTaskToFinish(httpClient, esAddress, task.getString("task"), null, "Delete by query operation for " + indexName);
     }
 
-    public static void waitForTaskToFinish(CloseableHttpClient httpClient, String esAddress, String taskId, MigrationContext migrationContext) throws IOException {
+    public static void waitForTaskToFinish(CloseableHttpClient httpClient, String esAddress, String taskId, MigrationContext migrationContext, String taskDescription) throws IOException {
         while (true) {
             final JSONObject status = new JSONObject(
                     HttpUtils.executeGetRequest(httpClient, esAddress + "/_tasks/" + taskId,
                             null));
             if (status.has("completed") && status.getBoolean("completed")) {
                 if (migrationContext != null) {
-                    migrationContext.printMessage("Task is completed");
+                    migrationContext.printMessage("Task completed: " + taskDescription + " (task ID: " + taskId + ")");
                 } else {
-                    LOGGER.info("Task is completed");
+                    LOGGER.info("Task completed: {} (task ID: {})", taskDescription, taskId);
                 }
                 break;
             }
             if (status.has("error")) {
                 final JSONObject error = status.getJSONObject("error");
-                throw new IOException("Task error: " + error.getString("type") + " - " + error.getString("reason"));
+                throw new IOException("Task error for " + taskDescription + " (task ID: " + taskId + "): " + error.getString("type") + " - " + error.getString("reason"));
             }
+
+            double progress = -1;
+            String progressMessage = "";
+            if (status.has("task")) {
+                JSONObject task = status.getJSONObject("task");
+                if (task.has("status")) {
+                    JSONObject taskStatus = task.getJSONObject("status");
+                    int total = taskStatus.has("total") ? taskStatus.getInt("total") : -1;
+                    int deleted = taskStatus.has("deleted") ? taskStatus.getInt("deleted") : -1;
+                    int updated = taskStatus.has("updated") ? taskStatus.getInt("updated") : -1;
+                    int created = taskStatus.has("created") ? taskStatus.getInt("created") : -1;
+                    int noops = taskStatus.has("noops") ? taskStatus.getInt("noops") : -1;
+                    if (total > 0 && deleted >= 0 && updated >= 0 && created >= 0 && noops >= 0) {
+                        progress = ((double) updated + created + deleted + noops) / total;
+                    }
+                    
+                    progressMessage = formatTaskProgress(progress, total, updated, created, deleted, noops);
+                }
+            }
+
             if (migrationContext != null) {
-                migrationContext.printMessage("Waiting for Task " + taskId + " to complete");
+                migrationContext.printMessage(String.format("Task %s: %s%s", taskId, taskDescription, progressMessage));
             } else {
-                LOGGER.info("Waiting for Task {} to complete", taskId);
+                LOGGER.info("Task {}: {}{}", taskId, taskDescription, progressMessage);
             }
             try {
-                Thread.sleep(5000);
+                Thread.sleep(1000);
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
         }
+    }
+
+    /**
+     * Formats the progress information for a task into a visually appealing string.
+     *
+     * @param progress the progress value between 0 and 1
+     * @param total the total number of items to process
+     * @param updated number of updated items
+     * @param created number of created items
+     * @param deleted number of deleted items
+     * @param noops number of items that required no changes
+     * @return a formatted string containing the progress bar and statistics
+     */
+    private static String formatTaskProgress(double progress, int total, int updated, int created, int deleted, int noops) {
+        // Validate progress value
+        if (progress < 0) {
+            return " [                    ] 0.0%";
+        }
+        progress = Math.min(1.0, progress); // Ensure progress doesn't exceed 1.0
+        
+        // Create a compact progress bar
+        int barWidth = 20;
+        int filledLength = (int) (progress * barWidth);
+        String progressBar = "[" + "=".repeat(filledLength) + ">".repeat(filledLength < barWidth ? 1 : 0) + " ".repeat(barWidth - filledLength - 1) + "]";
+        
+        // Format statistics in a compact way
+        StringBuilder stats = new StringBuilder();
+        if (total > 0) {
+            stats.append(String.format(" %d/%d", updated + created + deleted + noops, total));
+        }
+        if (updated > 0 || created > 0 || deleted > 0 || noops > 0) {
+            stats.append(" (");
+            if (updated > 0) stats.append("↑").append(updated);
+            if (created > 0) {
+                if (updated > 0) stats.append(" ");
+                stats.append("+").append(created);
+            }
+            if (deleted > 0) {
+                if (created > 0 || updated > 0) stats.append(" ");
+                stats.append("-").append(deleted);
+            }
+            if (noops > 0) {
+                if (deleted > 0 || created > 0 || updated > 0) stats.append(" ");
+                stats.append("~").append(noops);
+            }
+            stats.append(")");
+        }
+        
+        return String.format(" %s %.1f%%%s", progressBar, progress * 100, stats.toString());
     }
 
     public static String getElasticMajorVersion(CloseableHttpClient httpClient, String esAddress) throws IOException {
@@ -373,8 +605,20 @@ public class MigrationUtils {
         void execute(String hits);
     }
 
-    private static String getScriptPart(String painlessScript) {
-        return ", \"script\": {\"source\": \"" + painlessScript + "\", \"lang\": \"painless\"}";
+    private static String getScriptPart(String painlessScript, Map<String, Object> params) {
+        JSONObject scriptObj = new JSONObject();
+        scriptObj.put("source", painlessScript);
+        scriptObj.put("lang", "painless");
+        
+        if (params != null && !params.isEmpty()) {
+            JSONObject paramsObj = new JSONObject();
+            for (Map.Entry<String, Object> entry : params.entrySet()) {
+                paramsObj.put(entry.getKey(), entry.getValue());
+            }
+            scriptObj.put("params", paramsObj);
+        }
+        
+        return ", \"script\": " + scriptObj.toString();
     }
 
     /**
@@ -403,5 +647,32 @@ public class MigrationUtils {
      */
     public static void indexData(CloseableHttpClient httpClient, String esAddress, String indexName, String type, String id, String jsonData) throws IOException {
         HttpUtils.executePutRequest(httpClient, esAddress + "/" + indexName + "/" + type + "/" + id, jsonData, null);
+    }
+
+    /**
+     * Gets all unique item types from the specified index
+     *
+     * @param httpClient the HTTP client to use
+     * @param esAddress the Elasticsearch address
+     * @param indexPrefix the index prefix
+     * @param indexName the name of the index, can be "*" to get all item types from all indices
+     * @param bundleContext the bundle context to load resources
+     * @return Set of unique item types
+     * @throws IOException if there is an error during the HTTP request
+     */
+    public static Set<String> getAllItemTypes(CloseableHttpClient httpClient, String esAddress, String indexPrefix, String indexName, BundleContext bundleContext) throws IOException {
+        String systemItemsIndex = indexPrefix + "-" + indexName;
+        String query = resourceAsString(bundleContext, "requestBody/3.0.0/get_item_types_query.json");
+
+        String response = HttpUtils.executePostRequest(httpClient, esAddress + "/" + systemItemsIndex + "/_search", query, null);
+        JSONObject jsonResponse = new JSONObject(response);
+        JSONArray buckets = jsonResponse.getJSONObject("aggregations").getJSONObject("itemTypes").getJSONArray("buckets");
+        
+        Set<String> itemTypes = new HashSet<>();
+        for (int i = 0; i < buckets.length(); i++) {
+            itemTypes.add(buckets.getJSONObject(i).getString("key"));
+        }
+        
+        return itemTypes;
     }
 }

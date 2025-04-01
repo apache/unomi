@@ -56,6 +56,14 @@ You can run the integration tests along with the build by doing:
     
 from the project's root directory
 
+### Bypassing Maven Build Cache
+
+If you encounter issues with cached builds interfering with test execution, you can bypass the Maven Build Cache by adding the `-Dmaven.build.cache.enabled=false` parameter:
+
+    mvn clean install -P integration-tests -Dmaven.build.cache.enabled=false
+
+This is particularly useful when you want to ensure a completely fresh build and test execution, regardless of previous successful builds.
+
 ### Search Engine Selection
 
 Apache Unomi supports both ElasticSearch and OpenSearch as search engine backends. The integration tests can be configured to run against either engine:

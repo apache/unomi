@@ -310,13 +310,13 @@ public class SchemaServiceImpl extends AbstractMultiTypeCachingService implement
         JsonSchemaWrapper jsonSchemaWrapper = buildJsonSchemaWrapper(schema);
         String currentTenant = contextManager.getCurrentContext().getTenantId();
         jsonSchemaWrapper.setTenantId(currentTenant);
-        
+
         // Save the item to persistence and cache
         saveItem(jsonSchemaWrapper, JsonSchemaWrapper::getItemId, JsonSchemaWrapper.ITEM_TYPE);
-        
+
         // Refresh schema extensions and factories
         refreshSchemaExtensionsAndFactories(null);
-        
+
         LOGGER.debug("Schema saved and factories regenerated for: {}", jsonSchemaWrapper.getItemId());
     }
 
@@ -324,46 +324,46 @@ public class SchemaServiceImpl extends AbstractMultiTypeCachingService implement
     public boolean deleteSchema(String schemaId) {
         contextManager.getCurrentContext().validateAccess(SecurityServiceConfiguration.PERMISSION_SCHEMA_DELETE);
         final String tenantId = contextManager.getCurrentContext().getTenantId();
-        
+
         // Remove the item from persistence and cache
         removeItem(schemaId, JsonSchemaWrapper.class, JsonSchemaWrapper.ITEM_TYPE);
-        
+
         // Refresh schema extensions and factories
         refreshSchemaExtensionsAndFactories(null);
-        
+
         LOGGER.debug("Schema deleted and factories regenerated for: {}", schemaId);
         return true;
     }
-    
+
     /**
      * Collects all schemas from all tenants into a map structure needed by initExtensions.
-     * 
+     *
      * @return A map of tenant IDs to a map of schema IDs to schemas
      */
     private Map<String, Map<String, JsonSchemaWrapper>> collectAllSchemas() {
         Map<String, Map<String, JsonSchemaWrapper>> allSchemas = new HashMap<>();
-        
+
         // Get all tenants
         Set<String> tenants = new HashSet<>();
         tenantService.getAllTenants().forEach(tenant -> tenants.add(tenant.getItemId()));
         tenants.add(SYSTEM_TENANT);
-        
+
         // Collect schemas for each tenant
         for (String tenantId : tenants) {
             Map<String, JsonSchemaWrapper> tenantSchemas = new HashMap<>();
-            
+
             contextManager.executeAsTenant(tenantId, () -> {
                 Collection<JsonSchemaWrapper> schemas = getAllItems(JsonSchemaWrapper.class, false);
                 for (JsonSchemaWrapper schema : schemas) {
                     tenantSchemas.put(schema.getItemId(), schema);
                 }
             });
-            
+
             if (!tenantSchemas.isEmpty()) {
                 allSchemas.put(tenantId, tenantSchemas);
             }
         }
-        
+
         return allSchemas;
     }
 
@@ -573,7 +573,7 @@ public class SchemaServiceImpl extends AbstractMultiTypeCachingService implement
                     JsonSchemaWrapper jsonSchemaWrapper = getSchema(schemaId);
                     if (jsonSchemaWrapper == null) {
                         LOGGER.error("Couldn't find schema {}", uri);
-                        return null;
+                        throw new IOException("Couldn't find schema " + uri);
                     }
 
                     String schema = jsonSchemaWrapper.getSchema();
@@ -620,13 +620,13 @@ public class SchemaServiceImpl extends AbstractMultiTypeCachingService implement
         if (schemas == null) {
             schemas = collectAllSchemas();
         }
-        
+
         // Process schema extension changes
         initExtensions(schemas);
-        
+
         // Regenerate schema factories
         initJsonSchemaFactory();
-        
+
         LOGGER.debug("Schema extensions and factories refreshed");
     }
 

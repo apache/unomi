@@ -1,0 +1,12 @@
+{
+  "script": {
+    "source": "#painless",
+    "lang": "painless",
+    "params" : {
+      "date" : "#date"
+    }
+  },
+  "query": {
+    "match_all": {}
+  }
+}

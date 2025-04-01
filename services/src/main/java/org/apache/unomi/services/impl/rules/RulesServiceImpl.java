@@ -136,7 +136,7 @@ public class RulesServiceImpl extends AbstractMultiTypeCachingService implements
                 .withIdExtractor(r -> r.getItemId())
                 .withBundleItemProcessor((bundleContext, rule) -> {
                     // Bundle item processor is called before post processor when loading predefined types
-                    setRule(rule);
+                    setRule(rule, true);
                 })
                 .withPostProcessor(rule -> {
                     // post processor is called when loading predefined types or when reloading from persistence
@@ -515,6 +515,10 @@ public class RulesServiceImpl extends AbstractMultiTypeCachingService implements
 
     @Override
     public void setRule(Rule rule) {
+        setRule(rule, false);
+    }
+
+    protected void setRule(Rule rule, boolean allowInvalidRules) {
         if (rule == null) {
             return;
         }
@@ -529,13 +533,30 @@ public class RulesServiceImpl extends AbstractMultiTypeCachingService implements
             rule.setTenantId(tenantId);
         }
 
+        // If missingPlugins is true, treat as if allowInvalidRules is true
+        boolean effectiveAllowInvalidRules = allowInvalidRules || rule.getMetadata().isMissingPlugins();
+
         Condition condition = rule.getCondition();
         if (condition != null) {
-            if (rule.getMetadata().isEnabled() && !rule.getMetadata().isMissingPlugins()) {
-                ParserHelper.resolveConditionType(definitionsService, condition, "rule " + rule.getItemId());
-                ParserHelper.resolveActionTypes(definitionsService, rule, invalidRulesId.contains(rule.getItemId()));
-                // Check rule's condition validity, throws an exception if not set properly.
-                definitionsService.extractConditionBySystemTag(condition, "eventCondition");
+            if (rule.getMetadata().isEnabled()) {
+                boolean isValid = ParserHelper.resolveConditionType(definitionsService, condition, "rule " + rule.getItemId());
+                isValid &= ParserHelper.resolveActionTypes(definitionsService, rule, invalidRulesId.contains(rule.getItemId()));
+                if (!isValid) {
+                    invalidRulesId.add(rule.getItemId());
+                } else {
+                    invalidRulesId.remove(rule.getItemId());
+                }
+                try {
+                    // Check rule's condition validity, throws an exception if not set properly.
+                    definitionsService.extractConditionBySystemTag(condition, "eventCondition");
+                } catch (Exception e) {
+                    if (!effectiveAllowInvalidRules) {
+                        throw e;
+                    } else {
+                        LOGGER.warn("Invalid rule condition for rule {} : ", rule, e);
+                        invalidRulesId.add(rule.getItemId());
+                    }
+                }
             }
         }
 
@@ -583,7 +604,12 @@ public class RulesServiceImpl extends AbstractMultiTypeCachingService implements
                 for (ValidationError error : errors) {
                     errorMessage.append("\n- ").append(error.getMessage());
                 }
-                throw new IllegalArgumentException(errorMessage.toString());
+                if (!effectiveAllowInvalidRules) {
+                    throw new IllegalArgumentException(errorMessage.toString());
+                } else {
+                    LOGGER.warn("Invalid rule condition for rule {} : {}", rule, errorMessage.toString());
+                    invalidRulesId.add(rule.getItemId());
+                }
             }
         }
 

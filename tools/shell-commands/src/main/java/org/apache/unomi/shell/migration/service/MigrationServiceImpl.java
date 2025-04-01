@@ -16,6 +16,7 @@
  */
 package org.apache.unomi.shell.migration.service;
 
+import groovy.lang.Closure;
 import groovy.lang.GroovyClassLoader;
 import groovy.lang.GroovyShell;
 import groovy.util.GroovyScriptEngine;
@@ -130,10 +131,14 @@ public class MigrationServiceImpl implements MigrationService {
                 try {
                     migrateScript.getCompiledScript().run();
                 } catch (MigrationException e) {
-                    context.printException("Error executing: " + migrateScript);
+                    context.printException("Error executing migration script: " + migrateScript.getScriptName() + 
+                        "\nLocation: " + migrateScript.getSourceLocation() + 
+                        "\nError: " + e.getMessage(), e);
                     throw e;
                 } catch (Exception e) {
-                    context.printException("Error executing: " + migrateScript, e);
+                    context.printException("Error executing migration script: " + migrateScript.getScriptName() + 
+                        "\nLocation: " + migrateScript.getSourceLocation() + 
+                        "\nError: " + e.getMessage(), e);
                     throw e;
                 }
 
@@ -183,7 +188,17 @@ public class MigrationServiceImpl implements MigrationService {
                     if (!shellsPerBundle.containsKey(scriptBundle.getSymbolicName())) {
                         shellsPerBundle.put(scriptBundle.getSymbolicName(), buildShellForBundle(scriptBundle, context));
                     }
-                    migrateScript.setCompiledScript(shellsPerBundle.get(scriptBundle.getSymbolicName()).parse(migrateScript.getScript()));
+                    
+                    try {
+                        // Set script source location for debugging
+                        shellsPerBundle.get(scriptBundle.getSymbolicName()).setVariable("SCRIPT_SOURCE", migrateScript.getSourceLocation());
+                        shellsPerBundle.get(scriptBundle.getSymbolicName()).setVariable("SCRIPT_NAME", migrateScript.getScriptName());
+                        
+                        migrateScript.setCompiledScript(shellsPerBundle.get(scriptBundle.getSymbolicName()).parse(migrateScript.getScript()));
+                    } catch (Exception e) {
+                        context.printException("Failed to parse script: " + migrateScript.getScriptName(), e);
+                        throw e;
+                    }
                 })
                 .collect(Collectors.toCollection(TreeSet::new));
     }
@@ -230,8 +245,27 @@ public class MigrationServiceImpl implements MigrationService {
         GroovyClassLoader groovyLoader = new GroovyClassLoader(bundle.adapt(BundleWiring.class).getClassLoader());
         GroovyScriptEngine groovyScriptEngine = new GroovyScriptEngine((URL[]) null, groovyLoader);
         GroovyShell groovyShell = new GroovyShell(groovyScriptEngine.getGroovyClassLoader());
+        
+        // Configure for debugging
         groovyShell.setVariable("migrationContext", context);
         groovyShell.setVariable("bundleContext", bundle.getBundleContext());
+        
+        // Enable source code debugging
+        groovyShell.setVariable("DEBUG", true);
+        groovyShell.setVariable("SOURCE_LOCATION", true);
+        
+        // Configure error handling
+        groovyShell.setVariable("SCRIPT_ERROR_HANDLER", new Closure<Object>(groovyShell) {
+            public Object doCall(Object[] args) {
+                if (args.length >= 2) {
+                    String scriptName = args[0].toString();
+                    Exception error = (Exception) args[1];
+                    context.printException("Error in script: " + scriptName, error);
+                }
+                return null;
+            }
+        });
+        
         return groovyShell;
     }
 

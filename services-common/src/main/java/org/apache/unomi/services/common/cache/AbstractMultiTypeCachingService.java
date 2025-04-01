@@ -109,9 +109,35 @@ public abstract class AbstractMultiTypeCachingService extends AbstractContextAwa
         }
 
         bundleContext.addBundleListener(this);
+
+        // Load initial data for all types before starting timers
+        loadInitialDataForAllTypes();
+
         initializeTimers();
 
         logger.info("{} service initialized.", getClass().getSimpleName());
+    }
+
+    /**
+     * Loads initial data from persistence for all types.
+     * This ensures data is immediately available when the service starts up,
+     * without waiting for the first refresh cycle.
+     */
+    protected void loadInitialDataForAllTypes() {
+        for (CacheableTypeConfig<?> config : getTypeConfigs()) {
+            try {
+                contextManager.executeAsSystem(() -> {
+                    try {
+                        refreshTypeCache(config);
+                    } catch (Exception e) {
+                        logger.error("Error loading initial data for type: " + config.getType(), e);
+                    }
+                    return null;
+                });
+            } catch (Exception e) {
+                logger.error("Error executing initial data load as system subject for type: " + config.getType(), e);
+            }
+        }
     }
 
     public void preDestroy() {

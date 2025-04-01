@@ -1913,7 +1913,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         try {
             return conditionEvaluatorDispatcher.eval(query, item);
         } catch (UnsupportedOperationException e) {
-            LOGGER.error("Eval not supported, continue with query", e);
+            LOGGER.error("Eval not supported for query {}, attempting to continue with query builder", query, e);
         } finally {
             if (metricsService != null && metricsService.isActivated()) {
                 metricsService.updateTimer(this.getClass().getName() + ".testMatchLocally", startTime);
@@ -1929,6 +1929,9 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     .must(QueryBuilders.idsQuery().addIds(documentId))
                     .must(conditionESQueryBuilderDispatcher.buildFilter(query));
             return queryCount(builder, itemType) > 0;
+        } catch (UnsupportedOperationException uoe) {
+            LOGGER.error("Error building query for query {}, returning false", query, uoe);
+            return false;
         } finally {
             if (metricsService != null && metricsService.isActivated()) {
                 metricsService.updateTimer(this.getClass().getName() + ".testMatchInElasticSearch", startTime);

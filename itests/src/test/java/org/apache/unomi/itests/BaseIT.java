@@ -235,16 +235,11 @@ public abstract class BaseIT extends KarafTestSupport {
         if (testTenant == null) {
             testTenant = tenantService.getTenant(TEST_TENANT_ID);
             if (testTenant == null) {
-                testTenant = new Tenant();
-                testTenant.setItemId(TEST_TENANT_ID);
-                testTenant.setName("Integration Test Tenant");
-                testTenant.setDescription("Tenant for integration tests");
-                testTenant = tenantService.createTenant(testTenant.getItemId(), Collections.emptyMap());
-
-                // Get the generated API keys
-                testPublicKey = tenantService.getApiKey(testTenant.getItemId(), ApiKey.ApiKeyType.PUBLIC);
-                testPrivateKey = tenantService.getApiKey(testTenant.getItemId(), ApiKey.ApiKeyType.PRIVATE);
+                testTenant = tenantService.createTenant(TEST_TENANT_ID, Collections.emptyMap());
             }
+            // Get the API keys
+            testPublicKey = tenantService.getApiKey(testTenant.getItemId(), ApiKey.ApiKeyType.PUBLIC);
+            testPrivateKey = tenantService.getApiKey(testTenant.getItemId(), ApiKey.ApiKeyType.PRIVATE);
         }
 
         securityService.setCurrentSubject(securityService.createSubject(TEST_TENANT_ID, true));
@@ -366,6 +361,7 @@ public abstract class BaseIT extends KarafTestSupport {
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.opensearch.sslEnable", "false"),
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.opensearch.sslTrustAllCertificates", "true"),
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.opensearch.minimalClusterState", "YELLOW"),
+                editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.migration.tenant.id", TEST_TENANT_ID),
 
                 systemProperty("org.ops4j.pax.exam.rbc.rmi.port").value("1199"),
                 systemProperty("org.apache.unomi.hazelcast.group.name").value("cellar"),
@@ -515,7 +511,7 @@ public abstract class BaseIT extends KarafTestSupport {
 
     /**
      * Retrieves the content of a resource file from the bundle as a string.
-     * 
+     *
      * @param resourcePath The path to the resource within the bundle
      * @return The resource content as a string, or null if the resource cannot be found
      * @throws IOException If an error occurs while reading the resource
@@ -535,7 +531,7 @@ public abstract class BaseIT extends KarafTestSupport {
 
     /**
      * Retrieves and validates a JSON resource from the bundle, with optional parameter replacement.
-     * 
+     *
      * @param resourcePath The path to the JSON resource within the bundle
      * @param parameters   A map of parameters to replace in the JSON string (format: "###KEY###" -> "value")
      * @return The validated JSON string
@@ -554,7 +550,7 @@ public abstract class BaseIT extends KarafTestSupport {
 
     /**
      * Retrieves an OSGi service of the specified type, waiting if necessary until it becomes available.
-     * 
+     *
      * @param <T>          The type of service to retrieve
      * @param serviceClass The class object representing the service interface
      * @return The service instance
@@ -569,10 +565,10 @@ public abstract class BaseIT extends KarafTestSupport {
         }
         return bundleContext.getService(serviceReference);
     }
-    
+
     /**
      * Retrieves an OSGi service of the specified type with the given filter, waiting if necessary until it becomes available.
-     * 
+     *
      * @param <T>          The type of service to retrieve
      * @param serviceClass The class object representing the service interface
      * @param filter       The OSGi filter expression to match the service
@@ -598,7 +594,7 @@ public abstract class BaseIT extends KarafTestSupport {
      * Updates the local service references by retrieving them again from the OSGi service registry.
      * This is typically needed after configuration changes that might cause service reregistration.
      * All services initialized in waitForStartup() are refreshed to ensure test consistency.
-     * 
+     *
      * @throws InterruptedException If the thread is interrupted while waiting for services
      */
     public void updateServices() throws InterruptedException {
@@ -626,7 +622,7 @@ public abstract class BaseIT extends KarafTestSupport {
 
     /**
      * Updates an OSGi configuration with a single property value and waits for the service to be reregistered.
-     * 
+     *
      * @param serviceName The fully qualified name of the service to wait for
      * @param configPid   The persistent identifier of the configuration to update
      * @param propName    The name of the property to update
@@ -643,7 +639,7 @@ public abstract class BaseIT extends KarafTestSupport {
 
     /**
      * Updates an OSGi configuration with multiple property values and waits for the service to be reregistered.
-     * 
+     *
      * @param serviceName The fully qualified name of the service to wait for
      * @param configPid   The persistent identifier of the configuration to update
      * @param propsToSet  A map of property names to their new values
@@ -674,7 +670,7 @@ public abstract class BaseIT extends KarafTestSupport {
     /**
      * Waits for a service to be unregistered and then reregistered after a configuration change.
      * This is useful when updating configurations that cause services to restart.
-     * 
+     *
      * @param serviceName The fully qualified name of the service to wait for
      * @param trigger     A runnable that will trigger the service reregistration (e.g., updating configuration)
      * @throws InterruptedException If the thread is interrupted while waiting for service events
@@ -696,7 +692,7 @@ public abstract class BaseIT extends KarafTestSupport {
 
     /**
      * Converts an OSGi ServiceEvent type to a human-readable string representation.
-     * 
+     *
      * @param serviceEvent The ServiceEvent to convert
      * @return A string representation of the service event type
      */
@@ -717,7 +713,7 @@ public abstract class BaseIT extends KarafTestSupport {
 
     /**
      * Creates a rule and waits until it has been successfully saved in the system.
-     * 
+     *
      * @param rule The rule to create
      * @throws InterruptedException If the thread is interrupted while waiting for the rule to be saved
      */
@@ -735,7 +731,7 @@ public abstract class BaseIT extends KarafTestSupport {
 
     /**
      * Constructs a full URL by combining the base URL, port, and the provided path.
-     * 
+     *
      * @param url The URL path to append to the base URL and port
      * @return The complete URL string
      * @throws Exception If an error occurs while constructing the URL
@@ -746,7 +742,7 @@ public abstract class BaseIT extends KarafTestSupport {
 
     /**
      * Performs an HTTP GET request and deserializes the response to the specified class.
-     * 
+     *
      * @param <T>   The type to deserialize the response to
      * @param url   The URL path for the GET request
      * @param clazz The class object for the type to deserialize to
@@ -778,7 +774,7 @@ public abstract class BaseIT extends KarafTestSupport {
 
     /**
      * Performs an HTTP POST request with the specified resource as the request body.
-     * 
+     *
      * @param url        The URL path for the POST request
      * @param resource   The resource to use as the request body
      * @param contentType The content type of the request
@@ -802,7 +798,7 @@ public abstract class BaseIT extends KarafTestSupport {
 
     /**
      * Performs an HTTP POST request with the specified resource as the request body using JSON content type.
-     * 
+     *
      * @param url      The URL path for the POST request
      * @param resource The resource to use as the request body
      * @return The HTTP response, or null if the request failed
@@ -813,7 +809,7 @@ public abstract class BaseIT extends KarafTestSupport {
 
     /**
      * Performs an HTTP DELETE request.
-     * 
+     *
      * @param url The URL path for the DELETE request
      * @return The HTTP response, or null if the request failed
      */
@@ -840,7 +836,7 @@ public abstract class BaseIT extends KarafTestSupport {
 
     /**
      * Executes an HTTP request with appropriate authentication headers based on the endpoint type.
-     * 
+     *
      * @param request The HTTP request to execute
      * @return The HTTP response
      * @throws IOException If an error occurs while executing the request
@@ -876,7 +872,7 @@ public abstract class BaseIT extends KarafTestSupport {
 
     /**
      * Loads a resource from the bundle and returns its content as a string.
-     * 
+     *
      * @param resource The path to the resource within the bundle
      * @return The resource content as a string
      * @throws RuntimeException If an error occurs while reading the resource
@@ -894,7 +890,7 @@ public abstract class BaseIT extends KarafTestSupport {
 
     /**
      * Initializes an HTTP client with custom SSL settings and credentials provider.
-     * 
+     *
      * @param credentialsProvider The credentials provider for basic authentication
      * @return The configured HTTP client
      */
@@ -946,7 +942,7 @@ public abstract class BaseIT extends KarafTestSupport {
 
     /**
      * Safely closes an HTTP client, handling any exceptions.
-     * 
+     *
      * @param httpClient The HTTP client to close
      */
     public static void closeHttpClient(CloseableHttpClient httpClient) {
@@ -961,7 +957,7 @@ public abstract class BaseIT extends KarafTestSupport {
 
     /**
      * Creates a basic credentials provider with default username and password.
-     * 
+     *
      * @return The configured credentials provider
      */
     public BasicCredentialsProvider getHttpClientCredentialProvider() {
@@ -972,7 +968,7 @@ public abstract class BaseIT extends KarafTestSupport {
 
     /**
      * Gets the appropriate search engine port based on the configured search engine.
-     * 
+     *
      * @return The port number as a string
      */
     protected static String getSearchPort() {
@@ -989,7 +985,7 @@ public abstract class BaseIT extends KarafTestSupport {
 
     /**
      * Determines if the given path is a private endpoint that requires private key authentication.
-     * 
+     *
      * @param path The URL path to check
      * @return true if the endpoint requires private key authentication, false otherwise
      */

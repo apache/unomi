@@ -22,19 +22,19 @@
     - params.scoringValue:  the score of the Scoring plan element (used for incrementation)
 */
 
-// init the scores map
+/* init the scores map */
 if (!ctx._source.containsKey("scores") || ctx._source.scores == null) {
     ctx._source.put("scores", [:]);
 }
 
-// increment the score
+/* increment the score */
 if (ctx._source.scores.containsKey(params.scoringId)) {
 
-    // Score already exists, just increment
+    /* Score already exists, just increment */
     ctx._source.scores.put(params.scoringId, ctx._source.scores.get(params.scoringId) + params.scoringValue);
 } else {
 
-    // Score doesn't exists yet, check if the current profile is using a scoreModifier
+    /* Score doesn't exists yet, check if the current profile is using a scoreModifier */
     if (ctx._source.containsKey("systemProperties") &&
         ctx._source.systemProperties.containsKey("scoreModifiers") &&
         ctx._source.systemProperties.scoreModifiers.containsKey(params.scoringId)) {
@@ -45,7 +45,7 @@ if (ctx._source.scores.containsKey(params.scoringId)) {
     }
 }
 
-// Update lastUpdated date on profile
+/* Update lastUpdated date on profile */
 if (!ctx._source.containsKey("systemProperties")) {
     ctx._source.put("systemProperties", [:]);
 }

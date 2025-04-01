@@ -1782,7 +1782,7 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
         try {
             return conditionEvaluatorDispatcher.eval(query, item);
         } catch (UnsupportedOperationException e) {
-            LOGGER.error("Eval not supported, continue with query", e);
+            LOGGER.error("Eval not supported for query {}, attempting to continue with query builder", query, e);
         } finally {
             if (metricsService != null && metricsService.isActivated()) {
                 metricsService.updateTimer(this.getClass().getName() + ".testMatchLocally", startTime);
@@ -1798,6 +1798,9 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
                     .must(Query.of(q2->q2.ids(i->i.values(documentId))))
                     .must(conditionOSQueryBuilderDispatcher.buildFilter(query))));
             return queryCount(builder, itemType) > 0;
+        } catch (UnsupportedOperationException uoe) {
+            LOGGER.error("Error building query for query {}, returning false", query, uoe);
+            return false;
         } finally {
             if (metricsService != null && metricsService.isActivated()) {
                 metricsService.updateTimer(this.getClass().getName() + ".testMatchInOpenSearch", startTime);

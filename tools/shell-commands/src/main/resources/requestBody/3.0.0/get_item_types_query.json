@@ -1,0 +1,11 @@
+{
+  "size": 0,
+  "aggs": {
+    "itemTypes": {
+      "terms": {
+        "field": "itemType.keyword",
+        "size": 1000
+      }
+    }
+  }
+} 

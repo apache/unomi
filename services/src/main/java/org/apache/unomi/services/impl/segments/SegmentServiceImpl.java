@@ -180,6 +180,9 @@ public class SegmentServiceImpl extends AbstractMultiTypeCachingService implemen
         // Post-processor for Segment to resolve condition types
         configs.add(createBaseBuilder(Segment.class, Segment.ITEM_TYPE, "segments")
             .withIdExtractor(s -> s.getMetadata().getId())
+            .withBundleItemProcessor((bundleContext, segment) -> {
+                setSegmentDefinition(segment);
+            })
             .withPostProcessor(segment -> {
                 if (segment.getCondition() != null) {
                     ParserHelper.resolveConditionType(definitionsService, segment.getCondition(), "segment " + segment.getMetadata().getId());
@@ -190,6 +193,9 @@ public class SegmentServiceImpl extends AbstractMultiTypeCachingService implemen
         // Post-processor for Scoring to resolve condition types in scoring elements
         configs.add(createBaseBuilder(Scoring.class, "scoring", "scoring")
             .withIdExtractor(s -> s.getMetadata().getId())
+            .withBundleItemProcessor((bundleContext, scoring) -> {
+                setScoringDefinition(scoring);
+            })
             .withPostProcessor(scoring -> {
                 if (scoring.getElements() != null) {
                     for (ScoringElement scoringElement : scoring.getElements()) {
@@ -688,6 +694,10 @@ public class SegmentServiceImpl extends AbstractMultiTypeCachingService implemen
 
         if (systemSegments != null) {
             for (Segment segment : systemSegments.values()) {
+                if (segment.getCondition() == null) {
+                    LOGGER.warn("Found empty condition for segment {}, will skip", segment);
+                    continue;
+                }
                 if (segment.getMetadata().isEnabled() && persistenceService.testMatch(segment.getCondition(), profile)) {
                     segments.add(segment.getMetadata().getId());
                     tracer.trace("Profile matches system segment: " + segment.getMetadata().getId(), profile.getItemId());
@@ -701,6 +711,10 @@ public class SegmentServiceImpl extends AbstractMultiTypeCachingService implemen
 
         if (tenantSegments != null) {
             for (Segment segment : tenantSegments.values()) {
+                if (segment.getCondition() == null) {
+                    LOGGER.warn("Found empty condition for segment {}, will skip", segment);
+                    continue;
+                }
                 if (segment.getMetadata().isEnabled() && persistenceService.testMatch(segment.getCondition(), profile)) {
                     segments.add(segment.getMetadata().getId());
                     tracer.trace("Profile matches tenant segment: " + segment.getMetadata().getId(), profile.getItemId());

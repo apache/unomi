@@ -47,14 +47,14 @@ public class HttpClientThatWaitsForUnomi {
     }
 
     public static CloseableHttpResponse doRequest(HttpUriRequest request, int expectedStatusCode) throws IOException {
-        return doRequest(request, expectedStatusCode, true);
+        return doRequest(request, expectedStatusCode, true, false);
     }
 
-    public static CloseableHttpResponse doRequest(HttpUriRequest request, int expectedStatusCode, boolean withAuth) throws IOException {
+    public static CloseableHttpResponse doRequest(HttpUriRequest request, int expectedStatusCode, boolean withAuth, boolean forcePrivate) throws IOException {
         // Add API key headers based on the request path
         String path = request.getURI().getPath();
         if (withAuth) {
-            if (isPrivateEndpoint(path)) {
+            if (isPrivateEndpoint(path) || forcePrivate) {
                 // For private endpoints, use Basic auth with tenant ID and private key
                 if (testTenant != null && testPrivateKey != null) {
                     String credentials = testTenant.getItemId() + ":" + testPrivateKey.getKey();

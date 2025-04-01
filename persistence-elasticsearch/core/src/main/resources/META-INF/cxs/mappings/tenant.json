@@ -11,24 +11,24 @@
   ],
   "properties": {
     "itemId": {
-      "type": "keyword"
+      "type": "text"
     },
     "itemType": {
-      "type": "keyword"
+      "type": "text"
     },
     "version": {
       "type": "long"
     },
     "name": {
-      "type": "keyword"
+      "type": "text"
     },
     "status": {
-      "type": "keyword"
+      "type": "text"
     },
     "creationDate": {
       "type": "date"
     },
-    "modificationDate": {
+    "lastModificationDate": {
       "type": "date"
     },
     "properties": {
@@ -39,10 +39,10 @@
       "type": "nested",
       "properties": {
         "key": {
-          "type": "keyword"
+          "type": "text"
         },
         "keyType": {
-          "type": "keyword"
+          "type": "text"
         },
         "expirationDate": {
           "type": "date"
@@ -53,4 +53,4 @@
       }
     }
   }
-} 
+}

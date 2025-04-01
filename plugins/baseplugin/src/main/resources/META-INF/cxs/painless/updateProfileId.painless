@@ -21,12 +21,12 @@
     - params.profileId:     the ID of the new profileId
 */
 
-// update profileId
+/* update profileId */
 if (ctx._source.containsKey("profileId") && ctx._source.profileId != params.profileId) {
     ctx._source.put("profileId", params.profileId)
 }
 
-// update inner profile.profileId if the inner profile exists (in sessions for example)
+/* update inner profile.profileId if the inner profile exists (in sessions for example) */
 if (ctx._source.containsKey("profile") && ctx._source.profile.containsKey("itemId") && ctx._source.profile.itemId != params.profileId) {
     ctx._source.profile.put("itemId", params.profileId)
 }

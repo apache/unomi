@@ -20,6 +20,7 @@ import org.apache.unomi.api.*;
 import org.apache.unomi.api.actions.Action;
 import org.apache.unomi.api.actions.ActionType;
 import org.apache.unomi.api.conditions.Condition;
+import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.api.rules.Rule;
 import org.apache.unomi.api.rules.RuleStatistics;
 import org.apache.unomi.api.services.ConditionValidationService;
@@ -141,14 +142,77 @@ public class RulesServiceImplTest {
         definitionsService.setActionType(testActionType);
     }
 
+    private Rule createTestRule() {
+        Rule rule = new Rule();
+        rule.setItemId("test-rule");
+        rule.setTenantId(executionContextManager.getCurrentContext().getTenantId());
+
+        Metadata metadata = new Metadata();
+        metadata.setId("test-rule");
+        metadata.setScope("systemscope");
+        metadata.setEnabled(true);
+        rule.setMetadata(metadata);
+
+        // Create a simple condition
+        Condition condition = createEventTypeCondition("test");
+        rule.setCondition(condition);
+
+        // Create a simple action
+        Action action = createTestAction();
+        rule.setActions(Collections.singletonList(action));
+
+        return rule;
+    }
+
+    private Condition createEventTypeCondition(String eventType) {
+        Condition condition = new Condition();
+        condition.setConditionType(definitionsService.getConditionType("eventTypeCondition"));
+        condition.setParameter("eventTypeId", eventType);
+        return condition;
+    }
+
+    private Condition createProfilePropertyCondition(String propertyName, String comparisonOperator, String propertyValue) {
+        Condition condition = new Condition();
+        condition.setConditionType(definitionsService.getConditionType("profilePropertyCondition"));
+        condition.setParameter("propertyName", propertyName);
+        condition.setParameter("comparisonOperator", comparisonOperator);
+        condition.setParameter("propertyValue", propertyValue);
+        return condition;
+    }
+
+    private Condition createSessionPropertyCondition(String propertyName, String comparisonOperator, String propertyValue) {
+        Condition condition = new Condition();
+        condition.setConditionType(definitionsService.getConditionType("sessionPropertyCondition"));
+        condition.setParameter("propertyName", propertyName);
+        condition.setParameter("comparisonOperator", comparisonOperator);
+        condition.setParameter("propertyValue", propertyValue);
+        return condition;
+    }
+
+    private Condition createBooleanCondition(String operator, List<Condition> subConditions) {
+        Condition condition = new Condition();
+        condition.setConditionType(definitionsService.getConditionType("booleanCondition"));
+        condition.setParameter("operator", operator);
+        condition.setParameter("subConditions", subConditions);
+        return condition;
+    }
+
+    private Action createTestAction() {
+        Action action = new Action();
+        action.setActionType(definitionsService.getActionType("test"));
+        return action;
+    }
+
     private Event createTestEvent() {
         Event event = new Event();
         event.setEventType("test");
         String currentTenant = executionContextManager.getCurrentContext().getTenantId();
+
         Profile profile = new Profile(currentTenant);
         profile.setProperty("testProperty", "testValue"); // Add test property for profile condition
         event.setProfile(profile);
         event.setProfileId(profile.getItemId());
+
         Session session = new Session();
         session.setItemId(currentTenant);
         session.setProfile(profile);
@@ -156,13 +220,47 @@ public class RulesServiceImplTest {
         session.setProperty("testProperty", "testValue"); // Add test property for session condition
         event.setSession(session);
         event.setSessionId(currentTenant);
+
         event.setTenantId(currentTenant);
         event.setAttributes(new HashMap<>());
         event.setActionPostExecutors(new ArrayList<>());
+
         Item target = new CustomItem();
         target.setItemId("targetItemId");
         event.setTarget(target);
+
         return event;
+    }
+
+    private Rule createRuleWithUnavailableConditionType(String conditionTypeId) {
+        Rule rule = new Rule();
+        rule.setMetadata(new Metadata());
+        rule.getMetadata().setId("testRule");
+        rule.getMetadata().setEnabled(true);
+        rule.setScope("systemscope");
+
+        Condition condition = new Condition();
+        condition.setConditionTypeId(conditionTypeId);
+        condition.setParameter("propertyName", "testProperty");
+        condition.setParameter("comparisonOperator", "equals");
+        condition.setParameter("propertyValue", "testValue");
+        rule.setCondition(condition);
+
+        Action action = createTestAction();
+        rule.setActions(List.of(action));
+
+        return rule;
+    }
+
+    private ConditionType createTestConditionType(String id) {
+        ConditionType conditionType = new ConditionType();
+        Metadata metadata = new Metadata();
+        metadata.setId(id);
+        metadata.setEnabled(true);
+        conditionType.setMetadata(metadata);
+        conditionType.setConditionEvaluator(id + "Evaluator");
+        conditionType.setQueryBuilder(id + "QueryBuilder");
+        return conditionType;
     }
 
     @Test
@@ -268,31 +366,6 @@ public class RulesServiceImplTest {
                 rulesService.getRuleStatistics(tenant1Rule[0].getItemId()));
             return null;
         });
-    }
-
-    private Rule createTestRule() {
-        Rule rule = new Rule();
-        rule.setItemId("test-rule");
-        rule.setTenantId(executionContextManager.getCurrentContext().getTenantId());
-
-        Metadata metadata = new Metadata();
-        metadata.setId("test-rule");
-        metadata.setScope("systemscope");
-        metadata.setEnabled(true);
-        rule.setMetadata(metadata);
-
-        // Create a simple condition
-        Condition condition = new Condition();
-        condition.setConditionType(definitionsService.getConditionType("eventTypeCondition"));
-        condition.setParameter("eventTypeId", "test");
-        rule.setCondition(condition);
-
-        // Create a simple action
-        Action action = new Action();
-        action.setActionType(definitionsService.getActionType("test"));
-        rule.setActions(Collections.singletonList(action));
-
-        return rule;
     }
 
     @Test
@@ -481,23 +554,9 @@ public class RulesServiceImplTest {
         Rule rule = createTestRule();
         rule.setTenantId(TENANT_1);
 
-        // Create event condition
-        Condition eventCondition = new Condition();
-        eventCondition.setConditionType(definitionsService.getConditionType("eventTypeCondition"));
-        eventCondition.setParameter("eventTypeId", "test");
-
-        // Create profile condition
-        Condition profileCondition = new Condition();
-        profileCondition.setConditionType(definitionsService.getConditionType("profilePropertyCondition"));
-        profileCondition.setParameter("propertyName", "properties.testProperty");
-        profileCondition.setParameter("comparisonOperator", "equals");
-        profileCondition.setParameter("propertyValue", "testValue");
-
-        // Combine conditions with AND
-        Condition booleanCondition = new Condition();
-        booleanCondition.setConditionType(definitionsService.getConditionType("booleanCondition"));
-        booleanCondition.setParameter("operator", "and");
-        booleanCondition.setParameter("subConditions", Arrays.asList(eventCondition, profileCondition));
+        Condition eventCondition = createEventTypeCondition("test");
+        Condition profileCondition = createProfilePropertyCondition("properties.testProperty", "equals", "testValue");
+        Condition booleanCondition = createBooleanCondition("and", Arrays.asList(eventCondition, profileCondition));
 
         rule.setCondition(booleanCondition);
         rulesService.setRule(rule);
@@ -521,23 +580,9 @@ public class RulesServiceImplTest {
         Rule rule = createTestRule();
         rule.setTenantId(TENANT_1);
 
-        // Create event condition
-        Condition eventCondition = new Condition();
-        eventCondition.setConditionType(definitionsService.getConditionType("eventTypeCondition"));
-        eventCondition.setParameter("eventTypeId", "test");
-
-        // Create session condition
-        Condition sessionCondition = new Condition();
-        sessionCondition.setConditionType(definitionsService.getConditionType("sessionPropertyCondition"));
-        sessionCondition.setParameter("propertyName", "properties.testProperty");
-        sessionCondition.setParameter("comparisonOperator", "equals");
-        sessionCondition.setParameter("propertyValue", "testValue");
-
-        // Combine conditions with AND
-        Condition booleanCondition = new Condition();
-        booleanCondition.setConditionType(definitionsService.getConditionType("booleanCondition"));
-        booleanCondition.setParameter("operator", "and");
-        booleanCondition.setParameter("subConditions", Arrays.asList(eventCondition, sessionCondition));
+        Condition eventCondition = createEventTypeCondition("test");
+        Condition sessionCondition = createSessionPropertyCondition("properties.testProperty", "equals", "testValue");
+        Condition booleanCondition = createBooleanCondition("and", Arrays.asList(eventCondition, sessionCondition));
 
         rule.setCondition(booleanCondition);
         rulesService.setRule(rule);
@@ -621,20 +666,15 @@ public class RulesServiceImplTest {
         rule.getMetadata().setId("testRule");
         rule.getMetadata().setEnabled(true);
 
-        Condition condition = new Condition();
-        condition.setConditionType(definitionsService.getConditionType("profilePropertyCondition"));
-        condition.setParameter("propertyName", "testProperty");
-        condition.setParameter("comparisonOperator", "exists");
+        Condition condition = createProfilePropertyCondition("testProperty", "exists", null);
         rule.setCondition(condition);
 
         // Should not throw any exceptions
         rulesService.setRule(rule);
-
     }
 
     @Test
     public void testSetRuleWithNestedConditions() {
-        // Create a rule with nested conditions
         Rule rule = new Rule();
         rule.setMetadata(new Metadata());
         rule.getMetadata().setId("testRule");
@@ -658,7 +698,6 @@ public class RulesServiceImplTest {
 
         // Should not throw any exceptions
         rulesService.setRule(rule);
-
     }
 
     @Test(expected = IllegalArgumentException.class)
@@ -715,6 +754,53 @@ public class RulesServiceImplTest {
 
         // Execute rule
         rulesService.onEvent(event);
+    }
 
+    @Test
+    public void testSetRuleWithUnavailableConditionType() {
+        Rule rule = createRuleWithUnavailableConditionType("unavailableConditionType");
+
+        rulesService.setRule(rule, true);
+
+        Rule savedRule = persistenceService.load(rule.getItemId(), Rule.class);
+        assertNotNull("Rule should be saved when deployed from bundle", savedRule);
+        assertNull("Condition type should not be available yet", definitionsService.getConditionType("unavailableConditionType"));
+
+        ConditionType conditionType = createTestConditionType("unavailableConditionType");
+        definitionsService.setConditionType(conditionType);
+
+        rulesService.refreshRules();
+
+        Rule refreshedRule = rulesService.getRule(rule.getItemId());
+        assertNotNull("Rule should have a condition type after refresh", definitionsService.getConditionType("unavailableConditionType"));
+        assertNotNull("Rule condition type should not be null", refreshedRule.getCondition().getConditionType());
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testSetRuleWithUnavailableConditionTypeNonBundle() {
+        Rule rule = createRuleWithUnavailableConditionType("unavailableConditionType");
+        rulesService.setRule(rule, false);
+    }
+
+    @Test
+    public void testSetRuleWithMissingPluginsFlag() {
+        Rule rule = createRuleWithUnavailableConditionType("unavailableConditionType");
+        rule.getMetadata().setMissingPlugins(true);
+
+        rulesService.setRule(rule, false);
+
+        Rule savedRule = persistenceService.load(rule.getItemId(), Rule.class);
+        assertNotNull("Rule should be saved when missingPlugins is true", savedRule);
+        assertNull("Condition type should not be available yet", definitionsService.getConditionType("unavailableConditionType"));
+        assertTrue("Rule should still be marked as having missing plugins", savedRule.getMetadata().isMissingPlugins());
+
+        ConditionType conditionType = createTestConditionType("unavailableConditionType");
+        definitionsService.setConditionType(conditionType);
+
+        rulesService.refreshRules();
+
+        Rule refreshedRule = rulesService.getRule(rule.getItemId());
+        assertNotNull("Rule should have a condition type after refresh", definitionsService.getConditionType("unavailableConditionType"));
+        assertNotNull("Rule condition type should not be null", refreshedRule.getCondition().getConditionType());
     }
 }

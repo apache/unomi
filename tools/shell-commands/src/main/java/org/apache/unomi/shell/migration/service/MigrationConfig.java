@@ -51,6 +51,7 @@ public class MigrationConfig {
     public static final String ROLLOVER_MAX_SIZE = "rolloverMaxSize";
     public static final String ROLLOVER_MAX_DOCS = "rolloverMaxDocs";
     public static final String SEARCH_ENGINE = "searchEngine";
+    public static final String TENANT_ID = "tenantId";
     protected static final Map<String, MigrationConfigProperty> configProperties;
     static {
         Map<String, MigrationConfigProperty> m = new HashMap<>();
@@ -61,6 +62,7 @@ public class MigrationConfig {
         m.put(CONFIG_ES_PASSWORD, new MigrationConfigProperty("Enter search engine TARGET password (default: none): ", ""));
         m.put(CONFIG_TRUST_ALL_CERTIFICATES, new MigrationConfigProperty("We need to initialize a HttpClient, do we need to trust all certificates ? (yes/no)", null));
         m.put(INDEX_PREFIX, new MigrationConfigProperty("Enter search engine Unomi indices prefix (default: context): ", "context"));
+        m.put(TENANT_ID, new MigrationConfigProperty("Enter tenant ID for document prefixing (default: default): ", "default"));
         m.put(NUMBER_OF_SHARDS, new MigrationConfigProperty("Enter search engine index mapping configuration: number_of_shards (default: 5): ", "5"));
         m.put(NUMBER_OF_REPLICAS, new MigrationConfigProperty("Enter search engine index mapping configuration: number_of_replicas (default: 0): ", "0"));
         m.put(TOTAL_FIELDS_LIMIT, new MigrationConfigProperty("Enter search engine index mapping configuration: mapping.total_fields.limit (default: 1000): ", "1000"));

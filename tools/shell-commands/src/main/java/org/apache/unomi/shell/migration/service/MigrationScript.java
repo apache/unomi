@@ -47,10 +47,12 @@ public class MigrationScript implements Comparable<MigrationScript> {
     private final Version version;
     private final int priority;
     private final String name;
+    private final URL sourceLocation;
 
     protected MigrationScript(URL scriptURL, Bundle bundle) throws IOException {
         this.bundle = bundle;
         this.script = IOUtils.toString(scriptURL);
+        this.sourceLocation = scriptURL;
 
         String path = scriptURL.getPath();
         String fileName = StringUtils.substringAfterLast(path, "/");
@@ -91,6 +93,14 @@ public class MigrationScript implements Comparable<MigrationScript> {
 
     protected String getName() {
         return name;
+    }
+
+    protected URL getSourceLocation() {
+        return sourceLocation;
+    }
+
+    protected String getScriptName() {
+        return sourceLocation != null ? sourceLocation.getPath() : "unknown";
     }
 
     @Override

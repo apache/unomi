@@ -91,6 +91,7 @@ public class TenantServiceImpl implements TenantService {
             tenant.setProperties(properties);
             tenant.setStatus(TenantStatus.ACTIVE);
             tenant.setCreationDate(new Date());
+            tenant.setLastModificationDate(new Date());
 
             // Save tenant first to ensure it exists
             persistenceService.save(tenant);

@@ -71,6 +71,11 @@ public class MigrationContext {
 
     private Map<String, MigrationStepState> history = new HashMap<>();
     private Map<String, String> userConfig = new HashMap<>();
+    private Boolean logToLogger = true;
+
+    public void setLogToLogger(Boolean logToLogger) {
+        this.logToLogger = logToLogger;
+    }
 
     /**
      * Try to recover from a previous run
@@ -176,10 +181,13 @@ public class MigrationContext {
      */
     public void printMessage(String msg) {
         if (session == null) {
-            LOGGER.info("{}: {}", new Date(), msg);
+            LOGGER.info(msg);
         } else {
             PrintStream writer = session.getConsole();
             writer.printf("%s: %s%n",new Date(), msg);
+            if (logToLogger) {
+                LOGGER.info(msg);
+            }
         }
     }
 
@@ -195,6 +203,9 @@ public class MigrationContext {
             PrintStream writer = session.getConsole();
             writer.println(msg);
             t.printStackTrace(writer);
+            if (logToLogger) {
+                LOGGER.error(msg, t);
+            }
         }
     }
 
@@ -208,6 +219,9 @@ public class MigrationContext {
         } else {
             PrintStream writer = session.getConsole();
             writer.println(msg);
+            if (logToLogger) {
+                LOGGER.error(msg);
+            }
         }
     }
 

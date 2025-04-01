@@ -21,10 +21,10 @@
     - params.scoringId:     the ID of the Scoring plan
 */
 
-// remove score for the given params.scoringId
+/* remove score for the given params.scoringId */
 ctx._source.scores.remove(params.scoringId);
 
-// Update lastUpdated date on profile
+/* Update lastUpdated date on profile */
 if (!ctx._source.containsKey("systemProperties")) {
     ctx._source.put("systemProperties", [:]);
 }
