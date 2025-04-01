@@ -267,6 +267,7 @@
         <property name="metricsService" ref="metricsService"/>
         <property name="scriptExecutor" ref="scriptExecutor"/>
         <property name="bundleContext" ref="blueprintBundleContext"/>
+        <property name="tracerService" ref="tracerService" />
     </bean>
 
     <bean id="rulesServiceImpl" class="org.apache.unomi.services.impl.rules.RulesServiceImpl"
