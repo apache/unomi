@@ -29,6 +29,8 @@ import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.persistence.spi.PropertyHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.apache.unomi.tracing.api.TracerService;
+import org.apache.unomi.tracing.api.RequestTracer;
 
 import java.util.*;
 
@@ -48,67 +50,94 @@ public class UpdatePropertiesAction implements ActionExecutor {
 
     private ProfileService profileService;
     private EventService eventService;
+    private TracerService tracerService;
 
     public int execute(Action action, Event event) {
+        RequestTracer tracer = null;
+        if (tracerService != null && tracerService.isTracingEnabled()) {
+            tracer = tracerService.getCurrentTracer();
+            tracer.startOperation("update-properties", 
+                "Updating properties", action);
+        }
 
-        Profile target = event.getProfile();
+        try {
+            Profile target = event.getProfile();
+            String targetId = (String) event.getProperty(TARGET_ID_KEY);
+            String targetType = (String) event.getProperty(TARGET_TYPE_KEY);
 
-        String targetId = (String) event.getProperty(TARGET_ID_KEY);
-        String targetType = (String) event.getProperty(TARGET_TYPE_KEY);
-
-        if (StringUtils.isNotBlank(targetId) && event.getProfile() != null && !targetId.equals(event.getProfile().getItemId())) {
-            target = TARGET_TYPE_PROFILE.equals(targetType) ? profileService.load(targetId) : profileService.loadPersona(targetId);
-            if (target == null) {
-                LOGGER.warn("No profile found with Id : {}. Update skipped.", targetId);
-                return EventService.NO_CHANGE;
+            if (tracer != null) {
+                tracer.trace("Processing properties update", Map.of(
+                    "targetId", targetId,
+                    "targetType", targetType,
+                    "hasTarget", target != null
+                ));
             }
-        }
 
-        boolean isProfileOrPersonaUpdated = false;
-
-        Map<String, Object> propsToAdd = (HashMap<String, Object>) event.getProperties().get(PROPS_TO_ADD);
-
-        if (propsToAdd != null) {
-            isProfileOrPersonaUpdated |= processProperties(target, propsToAdd, "setIfMissing");
-        }
-
-        Map<String, Object> propsToUpdate = (HashMap<String, Object>) event.getProperties().get(PROPS_TO_UPDATE);
-        if (propsToUpdate != null) {
-            isProfileOrPersonaUpdated |= processProperties(target, propsToUpdate, "alwaysSet");
-        }
-
-        Map<String, Object> propsToAddToSet = (HashMap<String, Object>) event.getProperties().get(PROPS_TO_ADD_TO_SET);
-        if (propsToAddToSet != null) {
-            isProfileOrPersonaUpdated |= processProperties(target, propsToAddToSet, "addValues");
-        }
-
-        List<String> propsToDelete = (List<String>) event.getProperties().get(PROPS_TO_DELETE);
-        if (propsToDelete != null) {
-            for (String prop : propsToDelete) {
-                isProfileOrPersonaUpdated |= PropertyHelper.setProperty(target, prop, null, "remove");
-            }
-        }
-
-        if (StringUtils.isNotBlank(targetId) && isProfileOrPersonaUpdated &&
-                event.getProfile() != null && !targetId.equals(event.getProfile().getItemId())) {
-            if (TARGET_TYPE_PROFILE.equals(targetType)) {
-                profileService.save(target);
-                Event profileUpdated = new Event("profileUpdated", null, target, null, null, target, new Date());
-                profileUpdated.setPersistent(false);
-                int changes = eventService.send(profileUpdated);
-                if ((changes & EventService.PROFILE_UPDATED) == EventService.PROFILE_UPDATED) {
-                    profileService.save(target);
+            if (StringUtils.isNotBlank(targetId) && event.getProfile() != null && !targetId.equals(event.getProfile().getItemId())) {
+                target = TARGET_TYPE_PROFILE.equals(targetType) ? profileService.load(targetId) : profileService.loadPersona(targetId);
+                if (target == null) {
+                    if (tracer != null) {
+                        tracer.endOperation(false, "No profile found with Id: " + targetId);
+                    }
+                    LOGGER.warn("No profile found with Id : {}. Update skipped.", targetId);
+                    return EventService.NO_CHANGE;
                 }
-            } else {
-                profileService.savePersona((Persona) target);
             }
 
-            return EventService.NO_CHANGE;
+            boolean isProfileOrPersonaUpdated = false;
 
+            Map<String, Object> propsToAdd = (HashMap<String, Object>) event.getProperties().get(PROPS_TO_ADD);
+
+            if (propsToAdd != null) {
+                isProfileOrPersonaUpdated |= processProperties(target, propsToAdd, "setIfMissing");
+            }
+
+            Map<String, Object> propsToUpdate = (HashMap<String, Object>) event.getProperties().get(PROPS_TO_UPDATE);
+            if (propsToUpdate != null) {
+                isProfileOrPersonaUpdated |= processProperties(target, propsToUpdate, "alwaysSet");
+            }
+
+            Map<String, Object> propsToAddToSet = (HashMap<String, Object>) event.getProperties().get(PROPS_TO_ADD_TO_SET);
+            if (propsToAddToSet != null) {
+                isProfileOrPersonaUpdated |= processProperties(target, propsToAddToSet, "addValues");
+            }
+
+            List<String> propsToDelete = (List<String>) event.getProperties().get(PROPS_TO_DELETE);
+            if (propsToDelete != null) {
+                for (String prop : propsToDelete) {
+                    isProfileOrPersonaUpdated |= PropertyHelper.setProperty(target, prop, null, "remove");
+                }
+            }
+
+            if (StringUtils.isNotBlank(targetId) && isProfileOrPersonaUpdated &&
+                    event.getProfile() != null && !targetId.equals(event.getProfile().getItemId())) {
+                if (TARGET_TYPE_PROFILE.equals(targetType)) {
+                    profileService.save(target);
+                    Event profileUpdated = new Event("profileUpdated", null, target, null, null, target, new Date());
+                    profileUpdated.setPersistent(false);
+                    int changes = eventService.send(profileUpdated);
+                    if ((changes & EventService.PROFILE_UPDATED) == EventService.PROFILE_UPDATED) {
+                        profileService.save(target);
+                    }
+                } else {
+                    profileService.savePersona((Persona) target);
+                }
+
+                return EventService.NO_CHANGE;
+
+            }
+
+            if (tracer != null) {
+                tracer.endOperation(isProfileOrPersonaUpdated, 
+                    isProfileOrPersonaUpdated ? "Properties updated successfully" : "No changes needed");
+            }
+            return isProfileOrPersonaUpdated ? EventService.PROFILE_UPDATED : EventService.NO_CHANGE;
+        } catch (Exception e) {
+            if (tracer != null) {
+                tracer.endOperation(false, "Error updating properties: " + e.getMessage());
+            }
+            throw e;
         }
-
-        return isProfileOrPersonaUpdated ? EventService.PROFILE_UPDATED : EventService.NO_CHANGE;
-
     }
 
     private boolean processProperties(Profile target, Map<String, Object> propsMap, String strategy) {
@@ -139,6 +168,10 @@ public class UpdatePropertiesAction implements ActionExecutor {
 
     public void setEventService(EventService eventService) {
         this.eventService = eventService;
+    }
+
+    public void setTracerService(TracerService tracerService) {
+        this.tracerService = tracerService;
     }
 
 }

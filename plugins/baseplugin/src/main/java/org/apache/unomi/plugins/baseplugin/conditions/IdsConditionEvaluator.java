@@ -20,17 +20,49 @@ import org.apache.unomi.api.Item;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.persistence.spi.conditions.ConditionEvaluator;
 import org.apache.unomi.persistence.spi.conditions.ConditionEvaluatorDispatcher;
+import org.apache.unomi.tracing.api.TracerService;
+import org.apache.unomi.tracing.api.RequestTracer;
 
-import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 
 public class IdsConditionEvaluator implements ConditionEvaluator {
+    private TracerService tracerService;
+
+    public void setTracerService(TracerService tracerService) {
+        this.tracerService = tracerService;
+    }
+
     @Override
     public boolean eval(Condition condition, Item item, Map<String, Object> context, ConditionEvaluatorDispatcher dispatcher) {
-        Collection<String> ids = (Collection<String>) condition.getParameter("ids");
-        Boolean match = (Boolean) condition.getParameter("match");
+        RequestTracer tracer = null;
+        if (tracerService != null && tracerService.isTracingEnabled()) {
+            tracer = tracerService.getCurrentTracer();
+            tracer.startOperation("ids", 
+                "Evaluating IDs condition", condition);
+        }
 
-        boolean contained = ids != null && !ids.isEmpty() && ids.contains(item.getItemId());
-        return match == contained;
+        try {
+            List<String> ids = (List<String>) condition.getParameter("ids");
+            if (ids == null || ids.isEmpty()) {
+                if (tracer != null) {
+                    tracer.endOperation(false, "No IDs found");
+                }
+                return false;
+            }
+
+            String itemId = item.getItemId();
+            boolean result = ids.contains(itemId);
+
+            if (tracer != null) {
+                tracer.endOperation(result, "IDs condition evaluation completed");
+            }
+            return result;
+        } catch (Exception e) {
+            if (tracer != null) {
+                tracer.endOperation(false, "Error during IDs condition evaluation: " + e.getMessage());
+            }
+            throw e;
+        }
     }
 }

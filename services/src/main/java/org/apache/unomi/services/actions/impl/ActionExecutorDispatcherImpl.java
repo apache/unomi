@@ -31,6 +31,8 @@ import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceReference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.apache.unomi.tracing.api.TracerService;
+import org.apache.unomi.tracing.api.RequestTracer;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.HashMap;
@@ -45,6 +47,7 @@ public class ActionExecutorDispatcherImpl implements ActionExecutorDispatcher {
     private final Map<String, ActionDispatcher> actionDispatchers = new ConcurrentHashMap<>();
     private BundleContext bundleContext;
     private ScriptExecutor scriptExecutor;
+    private TracerService tracerService;
 
     public void setMetricsService(MetricsService metricsService) {
         this.metricsService = metricsService;
@@ -56,6 +59,10 @@ public class ActionExecutorDispatcherImpl implements ActionExecutorDispatcher {
 
     public void setScriptExecutor(ScriptExecutor scriptExecutor) {
         this.scriptExecutor = scriptExecutor;
+    }
+
+    public void setTracerService(TracerService tracerService) {
+        this.tracerService = tracerService;
     }
 
     public ActionExecutorDispatcherImpl() {
@@ -90,29 +97,70 @@ public class ActionExecutorDispatcherImpl implements ActionExecutorDispatcher {
             throw new UnsupportedOperationException("No service defined for : " + action.getActionTypeId());
         }
 
-        int colonPos = actionKey.indexOf(":");
-        if (colonPos > 0) {
-            String actionPrefix = actionKey.substring(0, colonPos);
-            String actionName = actionKey.substring(colonPos + 1);
-            ActionDispatcher actionDispatcher = actionDispatchers.get(actionPrefix);
-            if (actionDispatcher == null) {
-                LOGGER.warn("Couldn't find any action dispatcher for prefix '{}', action {} won't execute !", actionPrefix, actionKey);
-            }
-            return actionDispatcher.execute(action, event, actionName);
-        } else if (executors.containsKey(actionKey)) {
-            ActionExecutor actionExecutor = executors.get(actionKey);
-            try {
-                return new MetricAdapter<Integer>(metricsService, this.getClass().getName() + ".action." + actionKey) {
-                    @Override
-                    public Integer execute(Object... args) throws Exception {
-                        return actionExecutor.execute(getContextualAction(action, event), event);
-                    }
-                }.runWithTimer();
-            } catch (Exception e) {
-                LOGGER.error("Error executing action with key={}", actionKey, e);
-            }
+        RequestTracer tracer = null;
+        if (tracerService != null && tracerService.isTracingEnabled()) {
+            tracer = tracerService.getCurrentTracer();
+            tracer.startOperation("action-execution", 
+                "Executing action: " + action.getActionTypeId(), action);
         }
-        return EventService.NO_CHANGE;
+
+        try {
+            int colonPos = actionKey.indexOf(":");
+            if (colonPos > 0) {
+                String actionPrefix = actionKey.substring(0, colonPos);
+                String actionName = actionKey.substring(colonPos + 1);
+                ActionDispatcher actionDispatcher = actionDispatchers.get(actionPrefix);
+                if (actionDispatcher == null) {
+                    LOGGER.warn("Couldn't find any action dispatcher for prefix '{}', action {} won't execute !", actionPrefix, actionKey);
+                    if (tracer != null) {
+                        tracer.endOperation(EventService.NO_CHANGE, 
+                            "No action dispatcher found for prefix: " + actionPrefix);
+                    }
+                    return EventService.NO_CHANGE;
+                }
+                int result = actionDispatcher.execute(action, event, actionName);
+                if (tracer != null) {
+                    tracer.endOperation(result, "Action execution completed");
+                }
+                return result;
+            } else if (executors.containsKey(actionKey)) {
+                ActionExecutor actionExecutor = executors.get(actionKey);
+                try {
+                    int result = new MetricAdapter<Integer>(metricsService, this.getClass().getName() + ".action." + actionKey) {
+                        @Override
+                        public Integer execute(Object... args) throws Exception {
+                            return actionExecutor.execute(getContextualAction(action, event), event);
+                        }
+                    }.runWithTimer();
+
+                    if (tracer != null) {
+                        tracer.endOperation(result, "Action execution completed");
+                    }
+                    return result;
+                } catch (Exception e) {
+                    LOGGER.error("Error executing action with key={}", actionKey, e);
+                    if (tracer != null) {
+                        tracer.endOperation(EventService.NO_CHANGE, 
+                            "Error during action execution: " + e.getMessage());
+                    }
+                    return EventService.NO_CHANGE;
+                }
+            } else {
+                LOGGER.error("Couldn't find executor with key={}", actionKey);
+                if (tracer != null) {
+                    tracer.endOperation(EventService.NO_CHANGE, 
+                        "No executor found for action type: " + actionKey);
+                }
+                return EventService.NO_CHANGE;
+            }
+        } catch (Exception e) {
+            LOGGER.error("Error during action execution", e);
+            if (tracer != null) {
+                tracer.endOperation(EventService.NO_CHANGE, 
+                    "Error during action execution: " + e.getMessage());
+            }
+            return EventService.NO_CHANGE;
+        }
     }
 
     public void bindExecutor(ServiceReference<ActionExecutor> actionExecutorServiceReference) {

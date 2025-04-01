@@ -24,6 +24,8 @@ import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.persistence.spi.PropertyHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.apache.unomi.tracing.api.TracerService;
+import org.apache.unomi.tracing.api.RequestTracer;
 
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -37,6 +39,7 @@ public class SetPropertyAction implements ActionExecutor {
     private static final Logger LOGGER = LoggerFactory.getLogger(SetPropertyAction.class.getName());
 
     private EventService eventService;
+    private TracerService tracerService;
     // TODO Temporary solution that should be handle by: https://issues.apache.org/jira/browse/UNOMI-630 (Implement a global solution to avoid multiple same log pollution.)
     private static final AtomicLong nowDeprecatedLogTimestamp = new AtomicLong();
 
@@ -47,46 +50,79 @@ public class SetPropertyAction implements ActionExecutor {
     }
 
     public int execute(Action action, Event event) {
-        boolean storeInSession = Boolean.TRUE.equals(action.getParameterValues().get("storeInSession"));
-        if (storeInSession && event.getSession() == null) {
-            return EventService.NO_CHANGE;
+        RequestTracer tracer = null;
+        if (tracerService != null && tracerService.isTracingEnabled()) {
+            tracer = tracerService.getCurrentTracer();
+            tracer.startOperation("set-property", 
+                "Setting property value", action);
         }
 
-        String propertyName = (String) action.getParameterValues().get("setPropertyName");
-        Object propertyValue = getPropertyValue(action, event);
-
-        if (storeInSession) {
-            // in the case of session storage we directly update the session
-            if (PropertyHelper.setProperty(event.getSession(), propertyName, propertyValue, (String) action.getParameterValues().get("setPropertyStrategy"))) {
-                return EventService.SESSION_UPDATED;
+        try {
+            boolean storeInSession = Boolean.TRUE.equals(action.getParameterValues().get("storeInSession"));
+            if (storeInSession && event.getSession() == null) {
+                if (tracer != null) {
+                    tracer.endOperation(false, "No session available for session storage");
+                }
+                return EventService.NO_CHANGE;
             }
-        } else {
-            if (useEventToUpdateProfile) {
-                // in the case of profile storage we use the update profile properties event instead.
-                Map<String, Object> propertyToUpdate = new HashMap<>();
-                propertyToUpdate.put(propertyName, propertyValue);
 
-                Event updateProperties = new Event("updateProperties", event.getSession(), event.getProfile(), event.getScope(), null, null, new Date());
-                updateProperties.setPersistent(false);
+            String propertyName = (String) action.getParameterValues().get("setPropertyName");
+            Object propertyValue = getPropertyValue(action, event);
 
-                updateProperties.setProperty(UpdatePropertiesAction.PROPS_TO_UPDATE, propertyToUpdate);
-                int changes = eventService.send(updateProperties);
+            if (tracer != null) {
+                tracer.trace("Setting property", Map.of(
+                    "propertyName", propertyName,
+                    "propertyValue", propertyValue,
+                    "storeInSession", storeInSession
+                ));
+            }
 
-                if ((changes & EventService.PROFILE_UPDATED) == EventService.PROFILE_UPDATED) {
-                    return EventService.PROFILE_UPDATED;
+            int result = EventService.NO_CHANGE;
+            if (storeInSession) {
+                // in the case of session storage we directly update the session
+                if (PropertyHelper.setProperty(event.getSession(), propertyName, propertyValue, (String) action.getParameterValues().get("setPropertyStrategy"))) {
+                    result = EventService.SESSION_UPDATED;
                 }
             } else {
-                if (PropertyHelper.setProperty(event.getProfile(), propertyName, propertyValue, (String) action.getParameterValues().get("setPropertyStrategy"))) {
-                    return EventService.PROFILE_UPDATED;
+                if (useEventToUpdateProfile) {
+                    // in the case of profile storage we use the update profile properties event instead.
+                    Map<String, Object> propertyToUpdate = new HashMap<>();
+                    propertyToUpdate.put(propertyName, propertyValue);
+
+                    Event updateProperties = new Event("updateProperties", event.getSession(), event.getProfile(), event.getScope(), null, null, new Date());
+                    updateProperties.setPersistent(false);
+
+                    updateProperties.setProperty(UpdatePropertiesAction.PROPS_TO_UPDATE, propertyToUpdate);
+                    result = eventService.send(updateProperties);
+                    if ((result & EventService.PROFILE_UPDATED) == EventService.PROFILE_UPDATED) {
+                        result = EventService.PROFILE_UPDATED;
+                    }
+                    } else {
+                    if (PropertyHelper.setProperty(event.getProfile(), propertyName, propertyValue, (String) action.getParameterValues().get("setPropertyStrategy"))) {
+                        result = EventService.PROFILE_UPDATED;
+                    }
                 }
             }
-        }
 
-        return EventService.NO_CHANGE;
+            if (tracer != null) {
+                tracer.endOperation(result != EventService.NO_CHANGE, 
+                    result != EventService.NO_CHANGE ? "Property set successfully" : "No changes needed");
+            }
+            return result;
+        } catch (Exception e) {
+            if (tracer != null) {
+                tracer.endOperation(false, "Error setting property: " + e.getMessage());
+            }
+            throw e;
+        }
     }
 
     public void setEventService(EventService eventService) {
         this.eventService = eventService;
+    }
+
+    public void setTracerService(TracerService tracerService) {
+        this.tracerService = tracerService;
     }
 
     private Object getPropertyValue(Action action, Event event) {

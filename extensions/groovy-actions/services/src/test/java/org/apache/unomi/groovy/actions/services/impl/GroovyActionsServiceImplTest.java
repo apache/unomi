@@ -219,6 +219,7 @@ public class GroovyActionsServiceImplTest {
 
             // Create a GroovyActionDispatcher to execute the action directly
             GroovyActionDispatcher groovyDispatcher = new GroovyActionDispatcher();
+            groovyDispatcher.setTracerService(tracerService);
             groovyDispatcher.setGroovyActionsService(groovyActionsService);
 
             // Create an event
@@ -446,6 +447,7 @@ public class GroovyActionsServiceImplTest {
 
             // Create a dispatcher to test execution
             GroovyActionDispatcher dispatcher = new GroovyActionDispatcher();
+            dispatcher.setTracerService(tracerService);
             dispatcher.setGroovyActionsService(groovyActionsService);
 
             Event event = new Event();

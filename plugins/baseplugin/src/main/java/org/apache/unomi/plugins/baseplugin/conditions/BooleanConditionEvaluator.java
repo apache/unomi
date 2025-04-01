@@ -21,6 +21,8 @@ import org.apache.unomi.api.Item;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.persistence.spi.conditions.ConditionEvaluator;
 import org.apache.unomi.persistence.spi.conditions.ConditionEvaluatorDispatcher;
+import org.apache.unomi.tracing.api.RequestTracer;
+import org.apache.unomi.tracing.api.TracerService;
 
 import java.util.List;
 import java.util.Map;
@@ -29,23 +31,63 @@ import java.util.Map;
  * Evaluator for AND and OR conditions.
  */
 public class BooleanConditionEvaluator implements ConditionEvaluator {
+    private TracerService tracerService;
+
+    public void setTracerService(TracerService tracerService) {
+        this.tracerService = tracerService;
+    }
 
     @Override
     public boolean eval(Condition condition, Item item, Map<String, Object> context,
             ConditionEvaluatorDispatcher dispatcher) {
-        boolean isAnd = "and".equalsIgnoreCase((String) condition.getParameter("operator"));
-        @SuppressWarnings("unchecked")
-        List<Condition> conditions = (List<Condition>) condition.getParameter("subConditions");
-        for (Condition sub : conditions) {
-            boolean eval = dispatcher.eval(sub, item, context);
-            if (!eval && isAnd) {
-                // And
-                return false;
-            } else if (eval && !isAnd) {
-                // Or
+        RequestTracer tracer = null;
+        if (tracerService != null && tracerService.isTracingEnabled()) {
+            tracer = tracerService.getCurrentTracer();
+            tracer.startOperation("boolean",
+                "Evaluating boolean condition with operator: " + condition.getParameter("operator"), condition);
+        }
+
+        try {
+            boolean isAnd = "and".equalsIgnoreCase((String) condition.getParameter("operator"));
+            @SuppressWarnings("unchecked")
+            List<Condition> conditions = (List<Condition>) condition.getParameter("subConditions");
+
+            if (conditions == null || conditions.isEmpty()) {
+                if (tracer != null) {
+                    tracer.endOperation(true, "No subconditions found, returning true");
+                }
                 return true;
             }
+
+            if (tracer != null) {
+                tracer.trace("Using " + (isAnd ? "AND" : "OR") + " operator for " + conditions.size() + " subconditions", condition);
+            }
+
+            for (Condition sub : conditions) {
+                boolean eval = dispatcher.eval(sub, item, context);
+                if (!eval && isAnd) {
+                    if (tracer != null) {
+                        tracer.endOperation(false, "AND condition failed on subcondition");
+                    }
+                    return false;
+                } else if (eval && !isAnd) {
+                    if (tracer != null) {
+                        tracer.endOperation(true, "OR condition succeeded on subcondition");
+                    }
+                    return true;
+                }
+            }
+
+            boolean finalResult = isAnd;
+            if (tracer != null) {
+                tracer.endOperation(finalResult, "All subconditions processed, returning " + finalResult);
+            }
+            return finalResult;
+        } catch (Exception e) {
+            if (tracer != null) {
+                tracer.endOperation(false, "Error during boolean condition evaluation: " + e.getMessage());
+            }
+            throw e;
         }
-        return isAnd;
     }
 }

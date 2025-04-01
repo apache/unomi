@@ -25,6 +25,8 @@ import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.PropertyHelper;
+import org.apache.unomi.tracing.api.TracerService;
+import org.apache.unomi.tracing.api.RequestTracer;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -36,8 +38,8 @@ import javax.xml.bind.DatatypeConverter;
 
 public class SetEventOccurenceCountAction implements ActionExecutor {
     private DefinitionsService definitionsService;
-
     private PersistenceService persistenceService;
+    private TracerService tracerService;
 
     public void setDefinitionsService(DefinitionsService definitionsService) {
         this.definitionsService = definitionsService;
@@ -47,85 +49,116 @@ public class SetEventOccurenceCountAction implements ActionExecutor {
         this.persistenceService = persistenceService;
     }
 
+    public void setTracerService(TracerService tracerService) {
+        this.tracerService = tracerService;
+    }
+
     @Override
     public int execute(Action action, Event event) {
-        final Condition pastEventCondition = (Condition) action.getParameterValues().get("pastEventCondition");
-
-        Condition andCondition = new Condition(definitionsService.getConditionType("booleanCondition"));
-        andCondition.setParameter("operator", "and");
-        ArrayList<Condition> conditions = new ArrayList<Condition>();
-
-        Condition eventCondition = (Condition) pastEventCondition.getParameter("eventCondition");
-        definitionsService.resolveConditionType(eventCondition);
-        conditions.add(eventCondition);
-
-        Condition c = new Condition(definitionsService.getConditionType("eventPropertyCondition"));
-        c.setParameter("propertyName", "profileId");
-        c.setParameter("comparisonOperator", "equals");
-        c.setParameter("propertyValue", event.getProfileId());
-        conditions.add(c);
-
-        // may be current event is already persisted and indexed, in that case we filter it from the count to increment it manually at the end
-        Condition eventIdFilter = new Condition(definitionsService.getConditionType("eventPropertyCondition"));
-        eventIdFilter.setParameter("propertyName", "itemId");
-        eventIdFilter.setParameter("comparisonOperator", "notEquals");
-        eventIdFilter.setParameter("propertyValue", event.getItemId());
-        conditions.add(eventIdFilter);
-
-        Integer numberOfDays = (Integer) pastEventCondition.getParameter("numberOfDays");
-        String fromDate = (String) pastEventCondition.getParameter("fromDate");
-        String toDate = (String) pastEventCondition.getParameter("toDate");
-
-        if (numberOfDays != null) {
-            Condition numberOfDaysCondition = new Condition(definitionsService.getConditionType("eventPropertyCondition"));
-            numberOfDaysCondition.setParameter("propertyName", "timeStamp");
-            numberOfDaysCondition.setParameter("comparisonOperator", "greaterThan");
-            numberOfDaysCondition.setParameter("propertyValueDateExpr", "now-" + numberOfDays + "d");
-            conditions.add(numberOfDaysCondition);
-        }
-        if (fromDate != null)  {
-            Condition startDateCondition = new Condition();
-            startDateCondition.setConditionType(definitionsService.getConditionType("eventPropertyCondition"));
-            startDateCondition.setParameter("propertyName", "timeStamp");
-            startDateCondition.setParameter("comparisonOperator", "greaterThanOrEqualTo");
-            startDateCondition.setParameter("propertyValueDate", fromDate);
-            conditions.add(startDateCondition);
-        }
-        if (toDate != null)  {
-            Condition endDateCondition = new Condition();
-            endDateCondition.setConditionType(definitionsService.getConditionType("eventPropertyCondition"));
-            endDateCondition.setParameter("propertyName", "timeStamp");
-            endDateCondition.setParameter("comparisonOperator", "lessThanOrEqualTo");
-            endDateCondition.setParameter("propertyValueDate", toDate);
-            conditions.add(endDateCondition);
+        RequestTracer tracer = null;
+        if (tracerService != null && tracerService.isTracingEnabled()) {
+            tracer = tracerService.getCurrentTracer();
+            tracer.startOperation("set-event-count", 
+                "Setting event occurrence count", action);
         }
 
-        andCondition.setParameter("subConditions", conditions);
+        try {
+            final Condition pastEventCondition = (Condition) action.getParameterValues().get("pastEventCondition");
+            String generatedPropertyKey = (String) pastEventCondition.getParameter("generatedPropertyKey");
 
-        long count = persistenceService.queryCount(andCondition, Event.ITEM_TYPE);
+            if (tracer != null) {
+                tracer.trace("Processing event count", Map.of(
+                    "propertyKey", generatedPropertyKey,
+                    "eventId", event.getItemId()
+                ));
+            }
 
-        LocalDateTime fromDateTime = null;
-        if (fromDate != null) {
-            Calendar fromDateCalendar = DatatypeConverter.parseDateTime(fromDate);
-            fromDateTime = LocalDateTime.ofInstant(fromDateCalendar.toInstant(), ZoneId.of("UTC"));
+            Condition andCondition = new Condition(definitionsService.getConditionType("booleanCondition"));
+            andCondition.setParameter("operator", "and");
+            ArrayList<Condition> conditions = new ArrayList<Condition>();
+
+            Condition eventCondition = (Condition) pastEventCondition.getParameter("eventCondition");
+            definitionsService.resolveConditionType(eventCondition);
+            conditions.add(eventCondition);
+
+            Condition c = new Condition(definitionsService.getConditionType("eventPropertyCondition"));
+            c.setParameter("propertyName", "profileId");
+            c.setParameter("comparisonOperator", "equals");
+            c.setParameter("propertyValue", event.getProfileId());
+            conditions.add(c);
+
+            // may be current event is already persisted and indexed, in that case we filter it from the count to increment it manually at the end
+            Condition eventIdFilter = new Condition(definitionsService.getConditionType("eventPropertyCondition"));
+            eventIdFilter.setParameter("propertyName", "itemId");
+            eventIdFilter.setParameter("comparisonOperator", "notEquals");
+            eventIdFilter.setParameter("propertyValue", event.getItemId());
+            conditions.add(eventIdFilter);
+
+            Integer numberOfDays = (Integer) pastEventCondition.getParameter("numberOfDays");
+            String fromDate = (String) pastEventCondition.getParameter("fromDate");
+            String toDate = (String) pastEventCondition.getParameter("toDate");
+
+            if (numberOfDays != null) {
+                Condition numberOfDaysCondition = new Condition(definitionsService.getConditionType("eventPropertyCondition"));
+                numberOfDaysCondition.setParameter("propertyName", "timeStamp");
+                numberOfDaysCondition.setParameter("comparisonOperator", "greaterThan");
+                numberOfDaysCondition.setParameter("propertyValueDateExpr", "now-" + numberOfDays + "d");
+                conditions.add(numberOfDaysCondition);
+            }
+            if (fromDate != null)  {
+                Condition startDateCondition = new Condition();
+                startDateCondition.setConditionType(definitionsService.getConditionType("eventPropertyCondition"));
+                startDateCondition.setParameter("propertyName", "timeStamp");
+                startDateCondition.setParameter("comparisonOperator", "greaterThanOrEqualTo");
+                startDateCondition.setParameter("propertyValueDate", fromDate);
+                conditions.add(startDateCondition);
+            }
+            if (toDate != null)  {
+                Condition endDateCondition = new Condition();
+                endDateCondition.setConditionType(definitionsService.getConditionType("eventPropertyCondition"));
+                endDateCondition.setParameter("propertyName", "timeStamp");
+                endDateCondition.setParameter("comparisonOperator", "lessThanOrEqualTo");
+                endDateCondition.setParameter("propertyValueDate", toDate);
+                conditions.add(endDateCondition);
+            }
+
+            andCondition.setParameter("subConditions", conditions);
+
+            long count = persistenceService.queryCount(andCondition, Event.ITEM_TYPE);
+
+            LocalDateTime fromDateTime = null;
+            if (fromDate != null) {
+                Calendar fromDateCalendar = DatatypeConverter.parseDateTime(fromDate);
+                fromDateTime = LocalDateTime.ofInstant(fromDateCalendar.toInstant(), ZoneId.of("UTC"));
+            }
+            LocalDateTime toDateTime = null;
+            if (toDate != null) {
+                Calendar toDateCalendar = DatatypeConverter.parseDateTime(toDate);
+                toDateTime = LocalDateTime.ofInstant(toDateCalendar.toInstant(), ZoneId.of("UTC"));
+            }
+
+            LocalDateTime eventTime = LocalDateTime.ofInstant(event.getTimeStamp().toInstant(),ZoneId.of("UTC"));
+
+            if (inTimeRange(eventTime, numberOfDays, fromDateTime, toDateTime)) {
+                count++;
+            }
+
+            boolean updated = updatePastEvents(event, generatedPropertyKey, count);
+            if (tracer != null) {
+                tracer.trace("Event count updated", Map.of(
+                    "count", count,
+                    "isUpdated", updated
+                ));
+                tracer.endOperation(updated, 
+                    updated ? "Event count updated successfully" : "No changes needed");
+            }
+            return updated ? EventService.PROFILE_UPDATED : EventService.NO_CHANGE;
+        } catch (Exception e) {
+            if (tracer != null) {
+                tracer.endOperation(false, "Error setting event count: " + e.getMessage());
+            }
+            throw e;
         }
-        LocalDateTime toDateTime = null;
-        if (toDate != null) {
-            Calendar toDateCalendar = DatatypeConverter.parseDateTime(toDate);
-            toDateTime = LocalDateTime.ofInstant(toDateCalendar.toInstant(), ZoneId.of("UTC"));
-        }
-
-        LocalDateTime eventTime = LocalDateTime.ofInstant(event.getTimeStamp().toInstant(),ZoneId.of("UTC"));
-
-        if (inTimeRange(eventTime, numberOfDays, fromDateTime, toDateTime)) {
-            count++;
-        }
-
-        if (updatePastEvents(event, (String) pastEventCondition.getParameter("generatedPropertyKey"), count)) {
-            return EventService.PROFILE_UPDATED;
-        }
-
-        return EventService.NO_CHANGE;
     }
 
     private boolean updatePastEvents(Event event, String generatedPropertyKey, long count) {

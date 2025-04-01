@@ -161,6 +161,7 @@ public class ContextJsonEndpoint {
 
         if (explain) {
             tracerService.enableTracing();
+            tracerService.getCurrentTracer().startOperation("context-request", "Processing context request", contextRequest);
         }
 
         try {
@@ -169,6 +170,9 @@ public class ContextJsonEndpoint {
             paramsAsJson.put("personaId", personaId);
             paramsAsJson.put("sessionId", sessionId);
             if (!schemaService.isValid(paramsAsJson.toString(), "https://unomi.apache.org/schemas/json/rest/requestIds/1-0-0")) {
+                if (explain) {
+                    tracerService.getCurrentTracer().endOperation(false, "Schema validation failed");
+                }
                 throw new InvalidRequestException("Invalid parameter", "Invalid received data");
             }
 
@@ -210,6 +214,7 @@ public class ContextJsonEndpoint {
             // Add tracing information if requested
             if (explain) {
                 contextResponse.setRequestTracing(tracerService.getTraceNode());
+                tracerService.getCurrentTracer().endOperation(contextResponse, "Context request processed successfully");
             }
 
             return contextResponse;

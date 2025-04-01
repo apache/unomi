@@ -24,6 +24,8 @@ import org.apache.unomi.metrics.MetricsService;
 import org.apache.unomi.scripting.ScriptExecutor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.apache.unomi.tracing.api.TracerService;
+import org.apache.unomi.tracing.api.RequestTracer;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -39,6 +41,7 @@ public class ConditionEvaluatorDispatcherImpl implements ConditionEvaluatorDispa
 
     private MetricsService metricsService;
     private ScriptExecutor scriptExecutor;
+    private TracerService tracerService;
 
     public void setMetricsService(MetricsService metricsService) {
         this.metricsService = metricsService;
@@ -46,6 +49,10 @@ public class ConditionEvaluatorDispatcherImpl implements ConditionEvaluatorDispa
 
     public void setScriptExecutor(ScriptExecutor scriptExecutor) {
         this.scriptExecutor = scriptExecutor;
+    }
+
+    public void setTracerService(TracerService tracerService) {
+        this.tracerService = tracerService;
     }
 
     @Override
@@ -71,39 +78,69 @@ public class ConditionEvaluatorDispatcherImpl implements ConditionEvaluatorDispa
         if (condition.getConditionType() == null) {
             throw new UnsupportedOperationException("Null condition type passed for condition typeID=" + condition.getConditionTypeId());
         }
-        String conditionEvaluatorKey = condition.getConditionType().getConditionEvaluator();
-        if (condition.getConditionType().getParentCondition() != null) {
-            context.putAll(condition.getParameterValues());
-            return eval(condition.getConditionType().getParentCondition(), item, context);
+
+        RequestTracer tracer = null;
+        if (tracerService != null && tracerService.isTracingEnabled()) {
+            tracer = tracerService.getCurrentTracer();
+            tracer.startOperation("condition-evaluation", 
+                "Evaluating condition: " + condition.getConditionTypeId(), condition);
         }
 
-        if (conditionEvaluatorKey == null) {
-            throw new UnsupportedOperationException("No evaluator defined for : " + condition.getConditionTypeId());
-        }
-
-        if (evaluators.containsKey(conditionEvaluatorKey)) {
-            ConditionEvaluator evaluator = evaluators.get(conditionEvaluatorKey);
-            final ConditionEvaluatorDispatcher dispatcher = this;
-            try {
-                return new MetricAdapter<Boolean>(metricsService, this.getClass().getName() + ".conditions." + conditionEvaluatorKey) {
-                    @Override
-                    public Boolean execute(Object... args) throws Exception {
-                        Condition contextualCondition = ConditionContextHelper.getContextualCondition(condition, context, scriptExecutor);
-                        if (contextualCondition != null) {
-                            return evaluator.eval(contextualCondition, item, context, dispatcher);
-                        } else {
-                            return true;
-                        }
-                    }
-                }.runWithTimer();
-            } catch (Exception e) {
-                LOGGER.error("Error executing condition evaluator with key={}", conditionEvaluatorKey, e);
+        try {
+            String conditionEvaluatorKey = condition.getConditionType().getConditionEvaluator();
+            if (condition.getConditionType().getParentCondition() != null) {
+                context.putAll(condition.getParameterValues());
+                boolean result = eval(condition.getConditionType().getParentCondition(), item, context);
+                if (tracer != null) {
+                    tracer.endOperation(result, "Parent condition evaluation completed");
+                }
+                return result;
             }
-        } else {
-            LOGGER.error("Couldn't find evaluator with key={}", conditionEvaluatorKey);
-        }
 
-        // if no matching
-        return false;
+            if (conditionEvaluatorKey == null) {
+                throw new UnsupportedOperationException("No evaluator defined for : " + condition.getConditionTypeId());
+            }
+
+            if (evaluators.containsKey(conditionEvaluatorKey)) {
+                ConditionEvaluator evaluator = evaluators.get(conditionEvaluatorKey);
+                final ConditionEvaluatorDispatcher dispatcher = this;
+                try {
+                    boolean result = new MetricAdapter<Boolean>(metricsService, this.getClass().getName() + ".conditions." + conditionEvaluatorKey) {
+                        @Override
+                        public Boolean execute(Object... args) throws Exception {
+                            Condition contextualCondition = ConditionContextHelper.getContextualCondition(condition, context, scriptExecutor);
+                            if (contextualCondition != null) {
+                                return evaluator.eval(contextualCondition, item, context, dispatcher);
+                            } else {
+                                return true;
+                            }
+                        }
+                    }.runWithTimer();
+
+                    if (tracer != null) {
+                        tracer.endOperation(result, "Condition evaluation completed");
+                    }
+                    return result;
+                } catch (Exception e) {
+                    LOGGER.error("Error executing condition evaluator with key={}", conditionEvaluatorKey, e);
+                    if (tracer != null) {
+                        tracer.endOperation(false, "Error during condition evaluation: " + e.getMessage());
+                    }
+                    return false;
+                }
+            } else {
+                LOGGER.error("Couldn't find evaluator with key={}", conditionEvaluatorKey);
+                if (tracer != null) {
+                    tracer.endOperation(false, "No evaluator found for condition type: " + conditionEvaluatorKey);
+                }
+                return false;
+            }
+        } catch (Exception e) {
+            LOGGER.error("Error during condition evaluation", e);
+            if (tracer != null) {
+                tracer.endOperation(false, "Error during condition evaluation: " + e.getMessage());
+            }
+            return false;
+        }
     }
 }

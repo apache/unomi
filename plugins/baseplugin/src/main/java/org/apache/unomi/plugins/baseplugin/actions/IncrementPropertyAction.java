@@ -25,6 +25,8 @@ import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.persistence.spi.PropertyHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.apache.unomi.tracing.api.TracerService;
+import org.apache.unomi.tracing.api.RequestTracer;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.HashMap;
@@ -32,33 +34,77 @@ import java.util.Map;
 
 public class IncrementPropertyAction implements ActionExecutor {
     private static final Logger LOGGER = LoggerFactory.getLogger(IncrementPropertyAction.class.getName());
+    private TracerService tracerService;
+
+    public void setTracerService(TracerService tracerService) {
+        this.tracerService = tracerService;
+    }
 
     @Override
     public int execute(final Action action, final Event event) {
-        boolean storeInSession = Boolean.TRUE.equals(action.getParameterValues().get("storeInSession"));
-        if (storeInSession && event.getSession() == null) {
-            return EventService.NO_CHANGE;
+        RequestTracer tracer = null;
+        if (tracerService != null && tracerService.isTracingEnabled()) {
+            tracer = tracerService.getCurrentTracer();
+            tracer.startOperation("increment-property", 
+                "Incrementing property", action);
         }
-
-        String propertyName = (String) action.getParameterValues().get("propertyName");
-        Profile profile = event.getProfile();
-        Session session = event.getSession();
 
         try {
-            Map<String, Object> properties = storeInSession ? session.getProperties() : profile.getProperties();
-            Object propertyValue = getPropertyValue(action, event, propertyName, properties);
-            if (PropertyHelper.setProperty(properties, propertyName, propertyValue, "alwaysSet")) {
-                return storeInSession ? EventService.SESSION_UPDATED : EventService.PROFILE_UPDATED;
+            boolean storeInSession = Boolean.TRUE.equals(action.getParameterValues().get("storeInSession"));
+            if (storeInSession && event.getSession() == null) {
+                if (tracer != null) {
+                    tracer.endOperation(false, "No session available for storing property");
+                }
+                return EventService.NO_CHANGE;
             }
-        } catch (IllegalAccessException | NoSuchMethodException | InvocationTargetException e) {
-            LOGGER.warn("Error resolving nested property of object. See debug log level for more information");
-            LOGGER.debug("Error resolving nested property of item: {}", storeInSession ? session : profile, e);
-        } catch (IllegalStateException ee) {
-            LOGGER.warn("Error increment existing property, because existing property doesn't have expected type. See debug log level for more information");
-            LOGGER.debug("{}", ee.getMessage(), ee);
-        }
 
-        return EventService.NO_CHANGE;
+            String propertyName = (String) action.getParameterValues().get("propertyName");
+            Profile profile = event.getProfile();
+            Session session = event.getSession();
+
+            if (tracer != null) {
+                tracer.trace("Processing property increment", Map.of(
+                    "propertyName", propertyName,
+                    "storeInSession", storeInSession,
+                    "hasTarget", event.getTarget() != null
+                ));
+            }
+
+            try {
+                Map<String, Object> properties = storeInSession ? session.getProperties() : profile.getProperties();
+                Object propertyValue = getPropertyValue(action, event, propertyName, properties);
+                boolean updated = PropertyHelper.setProperty(properties, propertyName, propertyValue, "alwaysSet");
+                
+                if (tracer != null) {
+                    tracer.trace("Property increment result", Map.of(
+                        "newValue", propertyValue,
+                        "isUpdated", updated
+                    ));
+                    tracer.endOperation(updated, 
+                        updated ? "Property incremented successfully" : "No changes needed");
+                }
+                return updated ? (storeInSession ? EventService.SESSION_UPDATED : EventService.PROFILE_UPDATED) : EventService.NO_CHANGE;
+            } catch (IllegalAccessException | NoSuchMethodException | InvocationTargetException e) {
+                if (tracer != null) {
+                    tracer.endOperation(false, "Error resolving nested property: " + e.getMessage());
+                }
+                LOGGER.warn("Error resolving nested property of object. See debug log level for more information");
+                LOGGER.debug("Error resolving nested property of item: {}", storeInSession ? session : profile, e);
+            } catch (IllegalStateException ee) {
+                if (tracer != null) {
+                    tracer.endOperation(false, "Error incrementing property: " + ee.getMessage());
+                }
+                LOGGER.warn("Error increment existing property, because existing property doesn't have expected type. See debug log level for more information");
+                LOGGER.debug("{}", ee.getMessage(), ee);
+            }
+
+            return EventService.NO_CHANGE;
+        } catch (Exception e) {
+            if (tracer != null) {
+                tracer.endOperation(false, "Error in property increment: " + e.getMessage());
+            }
+            throw e;
+        }
     }
 
     private Object getPropertyValue(Action action, Event event, String propertyName, Map<String, Object> properties)

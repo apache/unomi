@@ -23,6 +23,8 @@ import org.apache.unomi.api.actions.Action;
 import org.apache.unomi.api.actions.ActionExecutor;
 import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.persistence.spi.PropertyHelper;
+import org.apache.unomi.tracing.api.TracerService;
+import org.apache.unomi.tracing.api.RequestTracer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,6 +33,7 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.TimeZone;
+import java.util.HashMap;
 
 /**
  * This action is used to calculate the firstVisit, lastVisit and previousVisit date properties on the profile
@@ -38,40 +41,89 @@ import java.util.TimeZone;
  */
 public class EvaluateVisitPropertiesAction implements ActionExecutor {
     private static final Logger LOGGER = LoggerFactory.getLogger(EvaluateVisitPropertiesAction.class.getName());
+    private TracerService tracerService;
+
+    public void setTracerService(TracerService tracerService) {
+        this.tracerService = tracerService;
+    }
 
     public int execute(Action action, Event event) {
-        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
-        dateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
-
-        Date currentEventTimeStamp = event.getTimeStamp();
-        Date currentProfileFirstVisit = extractDateFromProperty(event.getProfile(), "firstVisit", dateFormat);
-        Date currentProfilePreviousVisit = extractDateFromProperty(event.getProfile(), "previousVisit", dateFormat);
-        Date currentProfileLastVisit = extractDateFromProperty(event.getProfile(), "lastVisit", dateFormat);
-
-        int result = EventService.NO_CHANGE;
-
-        if (currentProfileFirstVisit == null || currentProfileFirstVisit.after(currentEventTimeStamp)) {
-            // event < firstVisit < previousVisit < lastVisit. we need to update firstVisit
-            result = PropertyHelper.setProperty(event.getProfile(), "properties.firstVisit", dateFormat.format(currentEventTimeStamp), "alwaysSet") ?
-                    EventService.PROFILE_UPDATED : result;
+        RequestTracer tracer = tracerService.getCurrentTracer();
+        if (!tracer.isEnabled()) {
+            tracer.setEnabled(true);
         }
 
-        if (currentProfileLastVisit == null || currentProfileLastVisit.before(currentEventTimeStamp)) {
-            // firstVisit < previousVisit < lastVisit < event. we need to update lastVisit and previousVisit
-            if (PropertyHelper.setProperty(event.getProfile(), "properties.lastVisit", dateFormat.format(currentEventTimeStamp), "alwaysSet")) {
-                result = EventService.PROFILE_UPDATED;
+        tracer.startOperation("evaluate-visit-properties", "Evaluating visit properties", new HashMap<String, Object>() {{
+            put("action.type", action.getActionTypeId());
+            put("event.type", event.getEventType());
+            put("event.timestamp", event.getTimeStamp());
+        }});
 
-                if (currentProfileLastVisit != null) {
-                    PropertyHelper.setProperty(event.getProfile(), "properties.previousVisit", dateFormat.format(currentProfileLastVisit), "alwaysSet");
-                }
+        try {
+            SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
+            dateFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
+
+            Date currentEventTimeStamp = event.getTimeStamp();
+            Date currentProfileFirstVisit = extractDateFromProperty(event.getProfile(), "firstVisit", dateFormat);
+            Date currentProfilePreviousVisit = extractDateFromProperty(event.getProfile(), "previousVisit", dateFormat);
+            Date currentProfileLastVisit = extractDateFromProperty(event.getProfile(), "lastVisit", dateFormat);
+
+            tracer.trace("Current visit properties", new HashMap<String, Object>() {{
+                put("first.visit", currentProfileFirstVisit);
+                put("previous.visit", currentProfilePreviousVisit);
+                put("last.visit", currentProfileLastVisit);
+            }});
+
+            final int[] result = {EventService.NO_CHANGE};
+
+            if (currentProfileFirstVisit == null || currentProfileFirstVisit.after(currentEventTimeStamp)) {
+                // event < firstVisit < previousVisit < lastVisit. we need to update firstVisit
+                boolean updated = PropertyHelper.setProperty(event.getProfile(), "properties.firstVisit", dateFormat.format(currentEventTimeStamp), "alwaysSet");
+                tracer.trace("First visit update", new HashMap<String, Object>() {{
+                    put("updated", updated);
+                    put("new.value", currentEventTimeStamp);
+                }});
+                result[0] = updated ? EventService.PROFILE_UPDATED : result[0];
             }
-        } else if (currentProfilePreviousVisit != null && currentProfilePreviousVisit.before(currentEventTimeStamp)) {
-            // firstVisit < previousVisit < event < lastVisit. we need to update previousVisit
-            result = PropertyHelper.setProperty(event.getProfile(), "properties.previousVisit", dateFormat.format(currentEventTimeStamp), "alwaysSet") ?
-                    EventService.PROFILE_UPDATED : result;
-        }
 
-        return result;
+            if (currentProfileLastVisit == null || currentProfileLastVisit.before(currentEventTimeStamp)) {
+                // firstVisit < previousVisit < lastVisit < event. we need to update lastVisit and previousVisit
+                boolean updated = PropertyHelper.setProperty(event.getProfile(), "properties.lastVisit", dateFormat.format(currentEventTimeStamp), "alwaysSet");
+                tracer.trace("Last visit update", new HashMap<String, Object>() {{
+                    put("updated", updated);
+                    put("new.value", currentEventTimeStamp);
+                }});
+                if (updated) {
+                    result[0] = EventService.PROFILE_UPDATED;
+
+                    if (currentProfileLastVisit != null) {
+                        boolean prevUpdated = PropertyHelper.setProperty(event.getProfile(), "properties.previousVisit", dateFormat.format(currentProfileLastVisit), "alwaysSet");
+                        tracer.trace("Previous visit update", new HashMap<String, Object>() {{
+                            put("updated", prevUpdated);
+                            put("new.value", currentProfileLastVisit);
+                        }});
+                    }
+                }
+            } else if (currentProfilePreviousVisit != null && currentProfilePreviousVisit.before(currentEventTimeStamp)) {
+                // firstVisit < previousVisit < event < lastVisit. we need to update previousVisit
+                boolean updated = PropertyHelper.setProperty(event.getProfile(), "properties.previousVisit", dateFormat.format(currentEventTimeStamp), "alwaysSet");
+                tracer.trace("Previous visit update", new HashMap<String, Object>() {{
+                    put("updated", updated);
+                    put("new.value", currentEventTimeStamp);
+                }});
+                result[0] = updated ? EventService.PROFILE_UPDATED : result[0];
+            }
+
+            tracer.trace("Operation result", new HashMap<String, Object>() {{
+                put("profile.updated", result[0] == EventService.PROFILE_UPDATED);
+            }});
+            return result[0];
+        } catch (Exception e) {
+            tracer.trace("Error during visit properties evaluation", e);
+            throw e;
+        } finally {
+            tracer.endOperation(null, "Completed visit properties evaluation");
+        }
     }
 
     private Date extractDateFromProperty(Profile profile, String propertyName, DateFormat dateFormat) {

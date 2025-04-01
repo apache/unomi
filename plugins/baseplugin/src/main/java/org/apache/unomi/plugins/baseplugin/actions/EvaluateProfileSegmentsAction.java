@@ -23,6 +23,8 @@ import org.apache.unomi.api.actions.ActionExecutor;
 import org.apache.unomi.api.segments.SegmentsAndScores;
 import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.api.services.SegmentService;
+import org.apache.unomi.tracing.api.TracerService;
+import org.apache.unomi.tracing.api.RequestTracer;
 
 import java.util.Map;
 import java.util.Set;
@@ -30,6 +32,7 @@ import java.util.Set;
 public class EvaluateProfileSegmentsAction implements ActionExecutor {
 
     private SegmentService segmentService;
+    private TracerService tracerService;
 
     public SegmentService getSegmentService() {
         return segmentService;
@@ -39,23 +42,55 @@ public class EvaluateProfileSegmentsAction implements ActionExecutor {
         this.segmentService = segmentService;
     }
 
+    public void setTracerService(TracerService tracerService) {
+        this.tracerService = tracerService;
+    }
+
     @Override
     public int execute(Action action, Event event) {
-        if (event.getProfile().isAnonymousProfile()) {
-            return EventService.NO_CHANGE;
+        RequestTracer tracer = null;
+        if (tracerService != null && tracerService.isTracingEnabled()) {
+            tracer = tracerService.getCurrentTracer();
+            tracer.startOperation("evaluate-segments", 
+                "Evaluating profile segments", action);
         }
-        boolean updated = false;
-        SegmentsAndScores segmentsAndScoringForProfile = segmentService.getSegmentsAndScoresForProfile(event.getProfile());
-        Set<String> segments = segmentsAndScoringForProfile.getSegments();
-        if (!segments.equals(event.getProfile().getSegments())) {
-            event.getProfile().setSegments(segments);
-            updated = true;
+
+        try {
+            if (event.getProfile().isAnonymousProfile()) {
+                if (tracer != null) {
+                    tracer.endOperation(false, "Skipping anonymous profile");
+                }
+                return EventService.NO_CHANGE;
+            }
+
+            boolean updated = false;
+            SegmentsAndScores segmentsAndScoringForProfile = segmentService.getSegmentsAndScoresForProfile(event.getProfile());
+            Set<String> segments = segmentsAndScoringForProfile.getSegments();
+            if (!segments.equals(event.getProfile().getSegments())) {
+                event.getProfile().setSegments(segments);
+                updated = true;
+            }
+            Map<String, Integer> scores = segmentsAndScoringForProfile.getScores();
+            if (!scores.equals(event.getProfile().getScores())) {
+                event.getProfile().setScores(scores);
+                updated = true;
+            }
+
+            if (tracer != null) {
+                tracer.trace("Segments evaluated", Map.of(
+                    "segmentsCount", segments.size(),
+                    "scoresCount", scores.size(),
+                    "isUpdated", updated
+                ));
+                tracer.endOperation(updated, 
+                    updated ? "Profile segments updated" : "No changes needed");
+            }
+            return updated ? EventService.PROFILE_UPDATED : EventService.NO_CHANGE;
+        } catch (Exception e) {
+            if (tracer != null) {
+                tracer.endOperation(false, "Error evaluating segments: " + e.getMessage());
+            }
+            throw e;
         }
-        Map<String, Integer> scores = segmentsAndScoringForProfile.getScores();
-        if (!scores.equals(event.getProfile().getScores())) {
-            event.getProfile().setScores(scores);
-            updated = true;
-        }
-        return updated ? EventService.PROFILE_UPDATED : EventService.NO_CHANGE;
     }
 }

@@ -23,22 +23,60 @@ import org.apache.unomi.api.actions.ActionExecutor;
 import org.apache.unomi.api.services.EventService;
 import org.joda.time.DateTime;
 import org.joda.time.Years;
+import org.apache.unomi.tracing.api.TracerService;
+import org.apache.unomi.tracing.api.RequestTracer;
+import java.util.Map;
 
 /**
  * An action that sets the age of a profile based on his birth date
  */
 public class EvaluateProfileAgeAction implements ActionExecutor {
 
+    private TracerService tracerService;
+
+    public void setTracerService(TracerService tracerService) {
+        this.tracerService = tracerService;
+    }
+
     @Override
     public int execute(Action action, Event event) {
-        boolean updated = false;
-        if (event.getProfile().getProperty("birthDate") != null) {
-            Integer y = Years.yearsBetween(new DateTime(event.getProfile().getProperty("birthDate")), new DateTime()).getYears();
-            if (event.getProfile().getProperty("age") == null || event.getProfile().getProperty("age") != y) {
-                updated = true;
-                event.getProfile().setProperty("age", y);
-            }
+        RequestTracer tracer = null;
+        if (tracerService != null && tracerService.isTracingEnabled()) {
+            tracer = tracerService.getCurrentTracer();
+            tracer.startOperation("evaluate-age", 
+                "Evaluating profile age", action);
         }
-        return updated ? EventService.PROFILE_UPDATED : EventService.NO_CHANGE;
+
+        try {
+            boolean updated = false;
+            if (event.getProfile().getProperty("birthDate") != null) {
+                Integer y = Years.yearsBetween(new DateTime(event.getProfile().getProperty("birthDate")), new DateTime()).getYears();
+                if (event.getProfile().getProperty("age") == null || event.getProfile().getProperty("age") != y) {
+                    updated = true;
+                    event.getProfile().setProperty("age", y);
+                    if (tracer != null) {
+                        tracer.trace("Age updated", Map.of(
+                            "birthDate", event.getProfile().getProperty("birthDate"),
+                            "newAge", y
+                        ));
+                    }
+                }
+            } else {
+                if (tracer != null) {
+                    tracer.trace("No birth date found", Map.of());
+                }
+            }
+
+            if (tracer != null) {
+                tracer.endOperation(updated, 
+                    updated ? "Profile age updated" : "No changes needed");
+            }
+            return updated ? EventService.PROFILE_UPDATED : EventService.NO_CHANGE;
+        } catch (Exception e) {
+            if (tracer != null) {
+                tracer.endOperation(false, "Error evaluating age: " + e.getMessage());
+            }
+            throw e;
+        }
     }
 }

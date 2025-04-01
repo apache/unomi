@@ -36,6 +36,8 @@ import org.apache.unomi.scripting.ExpressionFilterFactory;
 import org.apache.unomi.scripting.SecureFilteringClassLoader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.apache.unomi.tracing.api.TracerService;
+import org.apache.unomi.tracing.api.RequestTracer;
 
 import java.lang.reflect.Member;
 import java.lang.reflect.Modifier;
@@ -63,12 +65,18 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
 
     private final boolean useOGNLScripting = Boolean.parseBoolean(System.getProperty("org.apache.unomi.security.properties.useOGNLScripting", "false"));
 
+    private TracerService tracerService;
+
     public void setUsePropertyConditionOptimizations(boolean usePropertyConditionOptimizations) {
         this.usePropertyConditionOptimizations = usePropertyConditionOptimizations;
     }
 
     public void setExpressionFilterFactory(ExpressionFilterFactory expressionFilterFactory) {
         this.expressionFilterFactory = expressionFilterFactory;
+    }
+
+    public void setTracerService(TracerService tracerService) {
+        this.tracerService = tracerService;
     }
 
     public void init() {
@@ -171,46 +179,77 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
 
     @Override
     public boolean eval(Condition condition, Item item, Map<String, Object> context, ConditionEvaluatorDispatcher dispatcher) {
-        String op = (String) condition.getParameter("comparisonOperator");
-        String name = (String) condition.getParameter("propertyName");
+        RequestTracer tracer = null;
+        if (tracerService != null && tracerService.isTracingEnabled()) {
+            tracer = tracerService.getCurrentTracer();
+            tracer.startOperation("property", 
+                "Evaluating property condition", condition);
+        }
 
-        String expectedValue = ConditionContextHelper.foldToASCII((String) condition.getParameter("propertyValue"));
-        Object expectedValueInteger = condition.getParameter("propertyValueInteger");
-        Object expectedValueDouble = condition.getParameter("propertyValueDouble");
-        Object expectedValueDate = condition.getParameter("propertyValueDate");
-        Object expectedValueDateExpr = condition.getParameter("propertyValueDateExpr");
+        try {
+            String op = (String) condition.getParameter("comparisonOperator");
+            String name = (String) condition.getParameter("propertyName");
 
-        Object actualValue;
-        if (item instanceof Event && "eventType".equals(name)) {
-            actualValue = ((Event) item).getEventType();
-        } else {
-            try {
-                long time = System.nanoTime();
-                //actualValue = beanUtilsBean.getPropertyUtils().getProperty(item, name);
-                actualValue = getPropertyValue(item, name);
-                time = System.nanoTime() - time;
-                if (time > 5000000L) {
-                    LOGGER.info("eval took {} ms for {} {}", time / 1000000L, item.getClass().getName(), name);
+            String expectedValue = ConditionContextHelper.foldToASCII((String) condition.getParameter("propertyValue"));
+            Object expectedValueInteger = condition.getParameter("propertyValueInteger");
+            Object expectedValueDouble = condition.getParameter("propertyValueDouble");
+            Object expectedValueDate = condition.getParameter("propertyValueDate");
+            Object expectedValueDateExpr = condition.getParameter("propertyValueDateExpr");
+
+            Object actualValue;
+            if (item instanceof Event && "eventType".equals(name)) {
+                actualValue = ((Event) item).getEventType();
+            } else {
+                try {
+                    long time = System.nanoTime();
+                    actualValue = getPropertyValue(item, name);
+                    time = System.nanoTime() - time;
+                    if (time > 5000000L) {
+                        LOGGER.info("eval took {} ms for {} {}", time / 1000000L, item.getClass().getName(), name);
+                    }
+                } catch (NullPointerException e) {
+                    // property not found
+                    actualValue = null;
+                } catch (Exception e) {
+                    if (!(e instanceof OgnlException)
+                            || (!StringUtils.startsWith(e.getMessage(),
+                            "source is null for getProperty(null"))) {
+                        LOGGER.warn("Error evaluating value for {} {}. See debug level for more information", item.getClass().getName(), name);
+                        if (LOGGER.isDebugEnabled()) LOGGER.debug("Error evaluating value for {} {}", item.getClass().getName(), name, e);
+                    }
+                    actualValue = null;
                 }
-            } catch (NullPointerException e) {
-                // property not found
-                actualValue = null;
-            } catch (Exception e) {
-                if (!(e instanceof OgnlException)
-                        || (!StringUtils.startsWith(e.getMessage(),
-                        "source is null for getProperty(null"))) {
-                    LOGGER.warn("Error evaluating value for {} {}. See debug level for more information", item.getClass().getName(), name);
-                    if (LOGGER.isDebugEnabled()) LOGGER.debug("Error evaluating value for {} {}", item.getClass().getName(), name, e);
-                }
-                actualValue = null;
             }
-        }
-        if (actualValue instanceof String) {
-            actualValue = ConditionContextHelper.foldToASCII((String) actualValue);
-        }
+            if (actualValue instanceof String) {
+                actualValue = ConditionContextHelper.foldToASCII((String) actualValue);
+            }
 
-        return isMatch(op, actualValue, expectedValue, expectedValueInteger, expectedValueDouble, expectedValueDate,
-                expectedValueDateExpr, condition);
+            final Object finalActualValue = actualValue;
+            if (tracer != null) {
+                tracer.trace("Property value comparison: " + name + " " + op + " " + expectedValue, 
+                    new HashMap<String, Object>() {{
+                        put("actualValue", finalActualValue);
+                        put("expectedValue", expectedValue);
+                        put("expectedValueInteger", expectedValueInteger);
+                        put("expectedValueDouble", expectedValueDouble);
+                        put("expectedValueDate", expectedValueDate);
+                        put("expectedValueDateExpr", expectedValueDateExpr);
+                    }});
+            }
+
+            boolean result = isMatch(op, actualValue, expectedValue, expectedValueInteger, expectedValueDouble, expectedValueDate,
+                    expectedValueDateExpr, condition);
+
+            if (tracer != null) {
+                tracer.endOperation(result, "Property condition evaluation completed");
+            }
+            return result;
+        } catch (Exception e) {
+            if (tracer != null) {
+                tracer.endOperation(false, "Error during property condition evaluation: " + e.getMessage());
+            }
+            throw e;
+        }
     }
 
     protected boolean isMatch(String op, Object actualValue, String expectedValue, Object expectedValueInteger, Object expectedValueDouble,

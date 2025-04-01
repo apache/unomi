@@ -64,7 +64,7 @@ public class TestRequestTracer extends LoggingRequestTracer {
         traces.add(indentedMessage);
         
         if (logToConsole) {
-            logger.info(indentedMessage);
+            logger.debug(indentedMessage);
         }
     }
 

@@ -23,34 +23,71 @@ import org.apache.unomi.api.Item;
 import org.apache.unomi.api.actions.Action;
 import org.apache.unomi.api.actions.ActionExecutor;
 import org.apache.unomi.api.services.EventService;
+import org.apache.unomi.tracing.api.TracerService;
+import org.apache.unomi.tracing.api.RequestTracer;
 
 import java.util.Map;
 
 public class SendEventAction implements ActionExecutor {
 
     private EventService eventService;
+    private TracerService tracerService;
 
     public void setEventService(EventService eventService) {
         this.eventService = eventService;
     }
 
+    public void setTracerService(TracerService tracerService) {
+        this.tracerService = tracerService;
+    }
+
     @Override
     public int execute(Action action, Event event) {
-        String eventType = (String) action.getParameterValues().get("eventType");
-        Boolean toBePersisted = (Boolean) action.getParameterValues().get("toBePersisted");
-
-        @SuppressWarnings("unchecked")
-        Map<String, Object> eventProperties = (Map<String, Object>) action.getParameterValues().get("eventProperties");
-        Item target = (Item) action.getParameterValues().get("eventTarget");
-
-        Event subEvent = new Event(eventType, event.getSession(), event.getProfile(), event.getScope(), event, target, event.getTimeStamp());
-        subEvent.setProfileId(event.getProfileId());
-        subEvent.getAttributes().putAll(event.getAttributes());
-        subEvent.getProperties().putAll(eventProperties);
-        if (toBePersisted != null && !toBePersisted) {
-            subEvent.setPersistent(false);
+        RequestTracer tracer = null;
+        if (tracerService != null && tracerService.isTracingEnabled()) {
+            tracer = tracerService.getCurrentTracer();
+            tracer.startOperation("send-event", 
+                "Sending event", action);
         }
 
-        return eventService.send(subEvent);
+        try {
+            String eventType = (String) action.getParameterValues().get("eventType");
+            Boolean toBePersisted = (Boolean) action.getParameterValues().get("toBePersisted");
+
+            if (tracer != null) {
+                tracer.trace("Preparing event", Map.of(
+                    "eventType", eventType,
+                    "toBePersisted", toBePersisted,
+                    "hasTarget", action.getParameterValues().get("eventTarget") != null
+                ));
+            }
+
+            @SuppressWarnings("unchecked")
+            Map<String, Object> eventProperties = (Map<String, Object>) action.getParameterValues().get("eventProperties");
+            Item target = (Item) action.getParameterValues().get("eventTarget");
+
+            Event subEvent = new Event(eventType, event.getSession(), event.getProfile(), event.getScope(), event, target, event.getTimeStamp());
+            subEvent.setProfileId(event.getProfileId());
+            subEvent.getAttributes().putAll(event.getAttributes());
+            subEvent.getProperties().putAll(eventProperties);
+            if (toBePersisted != null && !toBePersisted) {
+                subEvent.setPersistent(false);
+            }
+
+            int result = eventService.send(subEvent);
+            if (tracer != null) {
+                tracer.trace("Event sent", Map.of(
+                    "eventId", subEvent.getItemId(),
+                    "result", result
+                ));
+                tracer.endOperation(true, "Event sent successfully");
+            }
+            return result;
+        } catch (Exception e) {
+            if (tracer != null) {
+                tracer.endOperation(false, "Error sending event: " + e.getMessage());
+            }
+            throw e;
+        }
     }
 }
