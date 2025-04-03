@@ -214,7 +214,7 @@ public class ContextJsonEndpoint {
             // Add tracing information if requested
             if (explain) {
                 contextResponse.setRequestTracing(tracerService.getTraceNode());
-                tracerService.getCurrentTracer().endOperation(contextResponse, "Context request processed successfully");
+                tracerService.getCurrentTracer().endOperation(null, "Context request processed successfully");
             }
 
             return contextResponse;
