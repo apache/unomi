@@ -31,6 +31,8 @@
         <unomi.search.engine>elasticsearch</unomi.search.engine>
         <use.opensearch>false</use.opensearch>
         <docker.container.name>itests-opensearch</docker.container.name>
+        <!-- Skip caching for this module only -->
+        <maven.build.cache.skip>true</maven.build.cache.skip>
     </properties>
 
     <dependencyManagement>

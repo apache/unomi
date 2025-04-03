@@ -391,6 +391,37 @@
                 </configuration>
             </plugin>
 
+        <!-- Create a dummy JAR just for caching, this is a workaround to avoid Maven Build cache issues -->
+            <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-jar-plugin</artifactId>
+            <executions>
+                <execution>
+                <id>create-dummy-jar</id>
+                <phase>package</phase>
+                <goals>
+                    <goal>jar</goal>
+                </goals>
+                <configuration>
+                    <archive>
+                    <manifest>
+                        <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
+                    </manifest>
+                    </archive>
+                </configuration>
+                </execution>
+            </executions>
+            </plugin>
+
+            <!-- Ensure the dummy jar is NOT deployed -->
+            <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-deploy-plugin</artifactId>
+            <configuration>
+                <skip>true</skip>
+            </configuration>
+            </plugin>
+
         </plugins>
     </build>
 
