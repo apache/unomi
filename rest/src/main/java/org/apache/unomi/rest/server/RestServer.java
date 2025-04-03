@@ -241,7 +241,7 @@ public class RestServer {
 
         // Authentication and Security filters in order of priority
         // 1. Authentication filter (Priorities.AUTHENTICATION = 2000)
-        jaxrsServerFactoryBean.setProvider(new AuthenticationFilter(restAuthenticationConfig, tenantService, securityService));
+        jaxrsServerFactoryBean.setProvider(new AuthenticationFilter(restAuthenticationConfig, tenantService, securityService, executionContextManager));
 
         // 2. Security filter for role-based access control (Priorities.AUTHORIZATION = 3000)
         jaxrsServerFactoryBean.setProvider(securityFilter);

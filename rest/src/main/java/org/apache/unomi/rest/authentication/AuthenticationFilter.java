@@ -23,8 +23,10 @@ import org.apache.cxf.jaxrs.utils.JAXRSUtils;
 import org.apache.cxf.security.SecurityContext;
 import org.apache.karaf.jaas.boot.principal.RolePrincipal;
 import org.apache.karaf.jaas.boot.principal.UserPrincipal;
+import org.apache.unomi.api.ExecutionContext;
 import org.apache.unomi.api.security.SecurityService;
 import org.apache.unomi.api.security.UnomiRoles;
+import org.apache.unomi.api.services.ExecutionContextManager;
 import org.apache.unomi.api.tenants.ApiKey;
 import org.apache.unomi.api.tenants.Tenant;
 import org.apache.unomi.api.tenants.TenantService;
@@ -55,6 +57,7 @@ import java.util.List;
 public class AuthenticationFilter implements ContainerRequestFilter {
 
     private static final String UNOMI_API_KEY_HEADER = "X-Unomi-Api-Key";
+    private static final String UNOMI_TENANT_ID_HEADER = "X-Unomi-Tenant-Id";
     private static final Logger logger = LoggerFactory.getLogger(AuthenticationFilter.class);
     private static final String GUEST_USERNAME = "guest";
     private static final String AUTHORIZATION_HEADER = "Authorization";
@@ -80,13 +83,16 @@ public class AuthenticationFilter implements ContainerRequestFilter {
     private final RestAuthenticationConfig restAuthenticationConfig;
     private final TenantService tenantService;
     private final SecurityService securityService;
+    private final ExecutionContextManager executionContextManager;
 
     public AuthenticationFilter(RestAuthenticationConfig restAuthenticationConfig,
                               TenantService tenantService,
-                              SecurityService securityService) {
+                              SecurityService securityService,
+                              ExecutionContextManager executionContextManager) {
         this.restAuthenticationConfig = restAuthenticationConfig;
         this.tenantService = tenantService;
         this.securityService = securityService;
+        this.executionContextManager = executionContextManager;
 
         // Build wrapped jaas filter
         jaasAuthenticationFilter = new JAASAuthenticationFilter();
@@ -118,6 +124,21 @@ public class AuthenticationFilter implements ContainerRequestFilter {
                         Subject subject = ((RolePrefixSecurityContextImpl) securityContext).getSubject();
                         // Set the authenticated subject in Unomi's security service
                         securityService.setCurrentSubject(subject);
+                        
+                        // Check for tenant ID header
+                        String tenantId = requestContext.getHeaderString(UNOMI_TENANT_ID_HEADER);
+                        if (tenantId != null && !tenantId.trim().isEmpty()) {
+                            // Validate tenant exists
+                            Tenant tenant = tenantService.getTenant(tenantId);
+                            if (tenant != null) {
+                                executionContextManager.setCurrentContext(executionContextManager.createContext(tenantId));
+                            } else {
+                                logger.warn("Invalid tenant ID provided in header: {}", tenantId);
+                                executionContextManager.setCurrentContext(ExecutionContext.systemContext());
+                            }
+                        } else {
+                            executionContextManager.setCurrentContext(ExecutionContext.systemContext());
+                        }
                     }
                     return;
                 } catch (Exception e) {
@@ -143,6 +164,9 @@ public class AuthenticationFilter implements ContainerRequestFilter {
 
                     // Set the security service subject
                     securityService.setCurrentSubject(subject);
+                    
+                    // Set the execution context for the tenant
+                    executionContextManager.setCurrentContext(executionContextManager.createContext(tenant.getItemId()));
                     return;
                 }
             }
@@ -166,6 +190,9 @@ public class AuthenticationFilter implements ContainerRequestFilter {
 
                         // Set the security service subject
                         securityService.setCurrentSubject(subject);
+                        
+                        // Set the execution context for the tenant
+                        executionContextManager.setCurrentContext(executionContextManager.createContext(tenantId));
                         return;
                     }
                     logger.debug("Endpoint access denied: Invalid tenant private key");
@@ -180,6 +207,21 @@ public class AuthenticationFilter implements ContainerRequestFilter {
                         Subject subject = ((RolePrefixSecurityContextImpl) securityContext).getSubject();
                         // Set the authenticated subject in Unomi's security service
                         securityService.setCurrentSubject(subject);
+                        
+                        // Check for tenant ID header
+                        String tenantId = requestContext.getHeaderString(UNOMI_TENANT_ID_HEADER);
+                        if (tenantId != null && !tenantId.trim().isEmpty()) {
+                            // Validate tenant exists
+                            Tenant tenant = tenantService.getTenant(tenantId);
+                            if (tenant != null) {
+                                executionContextManager.setCurrentContext(executionContextManager.createContext(tenantId));
+                            } else {
+                                logger.warn("Invalid tenant ID provided in header: {}", tenantId);
+                                executionContextManager.setCurrentContext(ExecutionContext.systemContext());
+                            }
+                        } else {
+                            executionContextManager.setCurrentContext(ExecutionContext.systemContext());
+                        }
                     }
                     return;
                 } catch (Exception e) {

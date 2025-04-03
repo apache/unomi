@@ -1214,7 +1214,6 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
         Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".removeByQuery", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
             protected Boolean execute(Object... args) throws Exception {
                 Query queryBuilder = conditionOSQueryBuilderDispatcher.getQueryBuilder(query);
-                queryBuilder = wrapWithTenantAndItemTypeQuery(Item.getItemType(clazz), queryBuilder, finalTenantId);
                 return removeByQuery(queryBuilder, clazz);
             }
         }.catchingExecuteInClassLoader(true);
