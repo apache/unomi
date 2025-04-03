@@ -1,44 +1,25 @@
 {
   "dynamic_templates": [
     {
-      "all_props": {
-        "match": "properties.*",
+      "all": {
+        "match": "*",
+        "match_mapping_type": "string",
         "mapping": {
-          "type": "keyword"
+          "type": "text",
+          "analyzer": "folding",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
         }
       }
     }
   ],
   "properties": {
-    "tenantId" : {
-      "type" : "text"
-    },
-    "createdBy" : {
-      "type" : "text"
-    },
-    "lastModifiedBy" : {
-      "type" : "text"
-    },
-    "sourceInstanceId" : {
-      "type" : "text"
-    },
     "lastSyncDate" : {
       "type" : "date"
-    },
-    "itemId": {
-      "type": "text"
-    },
-    "itemType": {
-      "type": "text"
-    },
-    "version": {
-      "type": "long"
-    },
-    "name": {
-      "type": "text"
-    },
-    "status": {
-      "type": "text"
     },
     "creationDate": {
       "type": "date"
@@ -53,12 +34,6 @@
     "apiKeys": {
       "type": "nested",
       "properties": {
-        "key": {
-          "type": "text"
-        },
-        "keyType": {
-          "type": "text"
-        },
         "expirationDate": {
           "type": "date"
         },

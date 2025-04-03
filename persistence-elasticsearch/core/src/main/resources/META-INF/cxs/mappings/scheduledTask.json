@@ -18,29 +18,14 @@
     }
   ],
   "properties": {
-    "tenantId" : {
-      "type" : "text"
-    },
-    "createdBy" : {
-      "type" : "text"
-    },
-    "lastModifiedBy" : {
-      "type" : "text"
-    },
     "creationDate" : {
       "type" : "date"
     },
     "lastModificationDate" : {
       "type" : "date"
     },
-    "sourceInstanceId" : {
-      "type" : "text"
-    },
     "lastSyncDate" : {
       "type" : "date"
-    },
-    "taskType": {
-      "type": "keyword"
     },
     "enabled": {
       "type": "boolean"
@@ -48,17 +33,11 @@
     "persistent": {
       "type": "boolean"
     },
-    "status": {
-      "type": "keyword"
-    },
     "initialDelay": {
       "type": "long"
     },
     "period": {
       "type": "long"
-    },
-    "timeUnit": {
-      "type": "keyword"
     },
     "fixedRate": {
       "type": "boolean"
@@ -81,12 +60,6 @@
     "failureCount": {
       "type": "integer"
     },
-    "lastError": {
-      "type": "text"
-    },
-    "currentStep": {
-      "type": "keyword"
-    },
     "statusDetails": {
       "type": "object",
       "enabled": false
@@ -99,17 +72,11 @@
       "type": "object",
       "enabled": false
     },
-    "lockOwner": {
-      "type": "keyword"
-    },
     "lockDate": {
       "type": "date"
     },
     "lastExecutionDate": {
       "type": "date"
-    },
-    "lastExecutedBy": {
-      "type": "keyword"
     },
     "nextScheduledExecution": {
       "type": "date"

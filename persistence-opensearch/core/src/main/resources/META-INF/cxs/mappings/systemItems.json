@@ -18,23 +18,11 @@
     }
   ],
   "properties": {
-    "tenantId" : {
-      "type" : "text"
-    },
-    "createdBy" : {
-      "type" : "text"
-    },
-    "lastModifiedBy" : {
-      "type" : "text"
-    },
     "creationDate" : {
       "type" : "date"
     },
     "lastModificationDate" : {
       "type" : "date"
-    },
-    "sourceInstanceId" : {
-      "type" : "text"
     },
     "lastSyncDate" : {
       "type" : "date"
@@ -138,7 +126,6 @@
         }
       }
     },
-
     "patchedItemId": {
       "type": "text"
     },
