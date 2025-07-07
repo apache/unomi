@@ -20,6 +20,7 @@ import org.apache.unomi.api.ExecutionContext;
 import org.apache.unomi.api.security.SecurityService;
 import org.apache.unomi.api.security.SecurityServiceConfiguration;
 import org.apache.unomi.api.security.UnomiRoles;
+import org.apache.unomi.services.common.security.ExecutionContextManagerImpl;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;

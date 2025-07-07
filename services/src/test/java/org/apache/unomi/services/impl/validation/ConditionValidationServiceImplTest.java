@@ -29,6 +29,8 @@ import org.apache.unomi.api.tenants.TenantService;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.conditions.ConditionEvaluatorDispatcher;
 import org.apache.unomi.services.TestHelper;
+import org.apache.unomi.services.common.security.ExecutionContextManagerImpl;
+import org.apache.unomi.services.common.security.KarafSecurityService;
 import org.apache.unomi.services.impl.*;
 import org.apache.unomi.services.impl.cache.MultiTypeCacheServiceImpl;
 import org.apache.unomi.tracing.api.TracerService;
@@ -178,7 +180,7 @@ public class ConditionValidationServiceImplTest {
             persistenceService,
             tenantService
         );
-        
+
         // Clean up references using the helper method
         TestHelper.cleanupReferences(
             tenantService, securityService, executionContextManager, conditionValidationService,

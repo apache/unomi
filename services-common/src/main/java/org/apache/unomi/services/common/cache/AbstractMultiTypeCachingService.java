@@ -26,6 +26,7 @@ import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.api.services.SchedulerService;
 import org.apache.unomi.api.services.cache.CacheableTypeConfig;
 import org.apache.unomi.api.services.cache.MultiTypeCacheService;
+import org.apache.unomi.api.tasks.ScheduledTask;
 import org.apache.unomi.api.tenants.Tenant;
 import org.apache.unomi.api.tenants.TenantService;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
@@ -73,6 +74,12 @@ public abstract class AbstractMultiTypeCachingService extends AbstractContextAwa
      * Key is the bundle ID, value is the list of PluginType items contributed by that bundle.
      */
     protected final Map<Long, List<PluginType>> pluginTypes = new ConcurrentHashMap<>();
+
+    /**
+     * Map tracking scheduled tasks for cache refreshes.
+     * Key is the task name, value is the ScheduledTask instance.
+     */
+    protected final Map<String, ScheduledTask> scheduledRefreshTasks = new ConcurrentHashMap<>();
 
     // Each service defines its supported types
     protected abstract Set<CacheableTypeConfig<?>> getTypeConfigs();
@@ -142,6 +149,7 @@ public abstract class AbstractMultiTypeCachingService extends AbstractContextAwa
 
     public void preDestroy() {
         bundleContext.removeBundleListener(this);
+        shutdownTimers();
         logger.info("{} service shutdown.", getClass().getSimpleName());
     }
 
@@ -161,6 +169,13 @@ public abstract class AbstractMultiTypeCachingService extends AbstractContextAwa
     }
 
     protected void scheduleTypeRefresh(CacheableTypeConfig<?> config) {
+        String taskName = "cache-refresh-" + config.getType().getSimpleName();
+        // Avoid rescheduling if a task with the same name already exists
+        if (scheduledRefreshTasks.containsKey(taskName)) {
+            logger.debug("Cache refresh task {} already scheduled.", taskName);
+            return;
+        }
+
         Runnable task = () -> {
             try {
                 contextManager.executeAsSystem(() -> {
@@ -176,12 +191,32 @@ public abstract class AbstractMultiTypeCachingService extends AbstractContextAwa
             }
         };
 
-        schedulerService.newTask("cache-refresh-" + config.getType().getSimpleName())
-            .nonPersistent()  // Cache reloads should not be persisted
-            .withPeriod(config.getRefreshInterval(), TimeUnit.MILLISECONDS)
-            .withFixedDelay() // Sequential execution
-            .withSimpleExecutor(task)
-            .schedule();
+        ScheduledTask scheduledTask = schedulerService.newTask(taskName)
+                .nonPersistent()  // Cache reloads should not be persisted
+                .withPeriod(config.getRefreshInterval(), TimeUnit.MILLISECONDS)
+                .withFixedDelay() // Sequential execution
+                .withSimpleExecutor(task)
+                .schedule();
+
+        scheduledRefreshTasks.put(taskName, scheduledTask);
+        logger.info("Scheduled cache refresh for type: {}", config.getType().getSimpleName());
+    }
+
+    protected void shutdownTimers() {
+        logger.info("Shutting down cache refresh timers...");
+        for (Map.Entry<String, ScheduledTask> entry : scheduledRefreshTasks.entrySet()) {
+            String taskName = entry.getKey();
+            ScheduledTask task = entry.getValue();
+            if (task != null) {
+                try {
+                    schedulerService.cancelTask(task.getItemId());
+                    logger.info("Successfully shut down timer for task: {}", taskName);
+                } catch (Exception e) {
+                    logger.warn("Could not shut down timer for task: {}", taskName, e);
+                }
+            }
+        }
+        scheduledRefreshTasks.clear();
     }
 
     @SuppressWarnings("unchecked")
@@ -194,51 +229,56 @@ public abstract class AbstractMultiTypeCachingService extends AbstractContextAwa
         Map<String, Map<String, T>> oldGlobalState = null;
         Map<String, Map<String, T>> newGlobalState = null;
         boolean hasGlobalChanges = false;
-        
+
         // Initialize global state map if using global callback
         if (config.hasPostRefreshCallback()) {
             oldGlobalState = new HashMap<>();
             newGlobalState = new HashMap<>();
         }
 
+        Class<?> type = config.getType();
+        if (Item.class.isAssignableFrom(type)) {
+            persistenceService.refreshIndex((Class<? extends Item>) type);
+        }
+        
         // Get all tenants
         Set<String> tenants = getTenants();
-        
+
         // Process each tenant
         for (String tenantId : tenants) {
             // For each tenant, only create the snapshot if we need it for a callback
             Map<String, T> oldTenantState = null;
-            
+
             // Create snapshot of tenant's current state if needed
             if (config.hasTenantRefreshCallback() || config.hasPostRefreshCallback()) {
                 oldTenantState = new HashMap<>(cacheService.getTenantCache(tenantId, config.getType()));
-                
+
                 // If using global callback, add to old global state
                 if (config.hasPostRefreshCallback() && !oldTenantState.isEmpty()) {
                     oldGlobalState.put(tenantId, oldTenantState);
                 }
             }
-            
+
             // Always store a reference to the current items to check for deletions later
             // Get a copy of the keys to avoid concurrent modification issues
             final Set<String> oldItemIds = new HashSet<>(cacheService.getTenantCache(tenantId, config.getType()).keySet());
-            
+
             // Create a set to track IDs loaded from persistence
             final Set<String> persistenceItemIds = new HashSet<>();
-            
+
             // Reload tenant data
             contextManager.executeAsTenant(tenantId, () -> {
                 List<T> items = loadItemsForTenant(tenantId, config);
-                
+
                 // Track IDs of items still in persistence
                 for (T item : items) {
                     String id = config.getIdExtractor().apply(item);
                     persistenceItemIds.add(id);
                 }
-                
+
                 processAndCacheItems(tenantId, items, config);
             });
-            
+
             // Remove items no longer in persistence
             if (config.isPersistable()) {
                 for (String id : oldItemIds) {
@@ -249,17 +289,17 @@ public abstract class AbstractMultiTypeCachingService extends AbstractContextAwa
                     }
                 }
             }
-            
+
             // Process tenant-specific changes if needed
             if (config.hasTenantRefreshCallback() || config.hasPostRefreshCallback()) {
                 // Get the updated tenant state
                 Map<String, T> newTenantState = new HashMap<>(cacheService.getTenantCache(tenantId, config.getType()));
-                
+
                 // Add to new global state if using global callback
                 if (config.hasPostRefreshCallback() && !newTenantState.isEmpty()) {
                     newGlobalState.put(tenantId, newTenantState);
                 }
-                
+
                 // Call tenant-specific callback if configured
                 if (config.hasTenantRefreshCallback()) {
                     boolean tenantChanges = !oldTenantState.equals(newTenantState);
@@ -267,7 +307,7 @@ public abstract class AbstractMultiTypeCachingService extends AbstractContextAwa
                         try {
                             config.getTenantRefreshCallback().accept(tenantId, oldTenantState, newTenantState);
                         } catch (Exception e) {
-                            logger.error("Error executing tenant refresh callback for type {} and tenant {}", 
+                            logger.error("Error executing tenant refresh callback for type {} and tenant {}",
                                 config.getType().getName(), tenantId, e);
                         }
                         // Mark that we had changes at the global level
@@ -711,9 +751,34 @@ public abstract class AbstractMultiTypeCachingService extends AbstractContextAwa
     protected <T extends Item & Serializable> void saveItem(T item, Function<T, String> idExtractor, String itemType) {
         if (item instanceof MetadataItem) {
             MetadataItem metadataItem = (MetadataItem) item;
-            if (metadataItem.getMetadata() == null || metadataItem.getMetadata().getId() == null) {
-                logger.warn("Cannot save metadata item without metadata ID");
-                return;
+            
+            // If metadata is null, create it with available information from the item
+            if (metadataItem.getMetadata() == null) {
+                logger.debug("Creating metadata for metadata item of type {} with itemId {}", 
+                    item.getItemType(), item.getItemId());
+                
+                Metadata metadata = new Metadata();
+                metadata.setId(item.getItemId());
+                metadata.setScope(item.getScope());
+                
+                // Set a default name based on item type and ID if available
+                if (item.getItemId() != null) {
+                    metadata.setName(item.getItemType() + " - " + item.getItemId());
+                } else {
+                    metadata.setName(item.getItemType());
+                }
+                
+                metadataItem.setMetadata(metadata);
+            } else {
+                // If metadata.id is not set but itemId is available, use itemId as fallback
+                if (metadataItem.getMetadata().getId() == null && item.getItemId() != null) {
+                    logger.debug("Setting metadata.id to itemId {} for metadata item of type {}", 
+                        item.getItemId(), item.getItemType());
+                    metadataItem.getMetadata().setId(item.getItemId());
+                } else if (metadataItem.getMetadata().getId() == null) {
+                    logger.warn("Cannot save metadata item without metadata ID and no itemId available");
+                    return;
+                }
             }
         }
 

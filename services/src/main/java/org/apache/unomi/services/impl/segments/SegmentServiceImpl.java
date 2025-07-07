@@ -402,7 +402,11 @@ public class SegmentServiceImpl extends AbstractMultiTypeCachingService implemen
             throw new IllegalArgumentException("Segment metadata cannot be null");
         }
 
-        if (segment.getCondition() != null) {
+        if (segment.getCondition() == null) {
+            if (segment.getMetadata().isEnabled()) {
+                throw new BadSegmentConditionException();
+            }
+        } else {
             // Start validation operation in tracer
             if (tracerService != null) {
                 RequestTracer tracer = tracerService.getCurrentTracer();

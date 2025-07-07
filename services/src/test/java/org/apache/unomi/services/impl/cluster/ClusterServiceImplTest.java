@@ -17,27 +17,18 @@
 package org.apache.unomi.services.impl.cluster;
 
 import org.apache.unomi.api.ClusterNode;
-import org.apache.unomi.api.services.ConditionValidationService;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.conditions.ConditionEvaluatorDispatcher;
 import org.apache.unomi.services.TestHelper;
-import org.apache.unomi.services.impl.ExecutionContextManagerImpl;
+import org.apache.unomi.services.common.security.ExecutionContextManagerImpl;
 import org.apache.unomi.services.impl.InMemoryPersistenceServiceImpl;
-import org.apache.unomi.services.impl.KarafSecurityService;
+import org.apache.unomi.services.common.security.KarafSecurityService;
 import org.apache.unomi.services.impl.TestConditionEvaluators;
 import org.apache.unomi.services.impl.TestTenantService;
-import org.apache.unomi.services.impl.cache.MultiTypeCacheServiceImpl;
-import org.apache.unomi.services.impl.definitions.DefinitionsServiceImpl;
 import org.apache.unomi.services.impl.scheduler.SchedulerServiceImpl;
-import org.apache.unomi.services.impl.tenants.AuditServiceImpl;
-import org.apache.unomi.tracing.api.TracerService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.mockito.junit.jupiter.MockitoSettings;
-import org.mockito.quality.Strictness;
 import org.osgi.framework.BundleContext;
 
 import java.io.Serializable;
@@ -95,10 +86,10 @@ public class ClusterServiceImplTest {
 
         // Create cluster service using TestHelper
         clusterService = TestHelper.createClusterService(persistenceService, TEST_NODE_ID, PUBLIC_ADDRESS, INTERNAL_ADDRESS, bundleContext);
-        
+
         // Configure cluster service (additional configurations not covered by helper method)
         clusterService.setNodeStatisticsUpdateFrequency(NODE_STATISTICS_UPDATE_FREQUENCY);
-        
+
         // Create scheduler service using TestHelper
         schedulerService = TestHelper.createSchedulerService(
             "cluster-scheduler-node",
@@ -106,7 +97,7 @@ public class ClusterServiceImplTest {
 
         // Set scheduler in cluster service - this would normally be done by OSGi but we need to do it manually in tests
         clusterService.setSchedulerService(schedulerService);
-        
+
         // Explicitly initialize scheduled tasks to handle the circular dependency properly
         clusterService.initializeScheduledTasks();
     }
@@ -121,12 +112,12 @@ public class ClusterServiceImplTest {
         mockServerInfo.setServerBuildDate(new Date());
         mockServerInfo.setServerTimestamp("20250314120000");
         mockServerInfo.setServerScmBranch("main");
-        
+
         when(bundleWatcher.getServerInfos()).thenReturn(java.util.Collections.singletonList(mockServerInfo));
-        
+
         // Set the BundleWatcher in the ClusterService
         clusterService.setBundleWatcher(bundleWatcher);
-        
+
         // Execute
         clusterService.init();
 
@@ -141,7 +132,7 @@ public class ClusterServiceImplTest {
         assertNotNull(savedNode.getCpuLoad());
         assertNotNull(savedNode.getUptime());
         assertNotNull(savedNode.getLoadAverage());
-        
+
         // Verify ServerInfo was set correctly
         assertNotNull(savedNode.getServerInfo(), "ServerInfo should be set from BundleWatcher");
         assertEquals(mockServerInfo.getServerIdentifier(), savedNode.getServerInfo().getServerIdentifier());
@@ -162,7 +153,7 @@ public class ClusterServiceImplTest {
         ClusterNode savedNode = persistenceService.load(TEST_NODE_ID, ClusterNode.class);
         assertNotNull(savedNode);
         assertEquals(TEST_NODE_ID, savedNode.getItemId());
-        
+
         // Server info should be null since we don't have a BundleWatcher set
         assertNull(savedNode.getServerInfo(), "ServerInfo should be null when BundleWatcher is not available");
     }

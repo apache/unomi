@@ -25,6 +25,8 @@ import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.persistence.spi.conditions.ConditionEvaluatorDispatcher;
 import org.apache.unomi.services.TestHelper;
+import org.apache.unomi.services.common.security.ExecutionContextManagerImpl;
+import org.apache.unomi.services.common.security.KarafSecurityService;
 import org.apache.unomi.services.impl.*;
 import org.apache.unomi.services.impl.cache.MultiTypeCacheServiceImpl;
 import org.apache.unomi.services.impl.validation.ConditionValidationServiceImpl;

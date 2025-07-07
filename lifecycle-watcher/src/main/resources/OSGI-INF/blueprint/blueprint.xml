@@ -26,7 +26,7 @@
                              update-strategy="reload" placeholder-prefix="${lifecycle.">
         <cm:default-properties>
             <cm:property name="checkStartupState.refresh.interval" value="60"/>
-            <cm:property name="requiredServices" value="(urlPatterns=/eventcollector),(urlPatterns=/context.json),(objectClass=org.apache.unomi.persistence.spi.PersistenceService)" />
+            <cm:property name="requiredServices" value="(urlPatterns=/eventcollector),(urlPatterns=/context.json),(objectClass=org.apache.unomi.persistence.spi.PersistenceService),(objectClass=org.apache.unomi.rest.scheduler.TaskEndpoint),(objectClass=org.apache.unomi.rest.tenants.TenantEndpoint)" />
         </cm:default-properties>
     </cm:property-placeholder>
 

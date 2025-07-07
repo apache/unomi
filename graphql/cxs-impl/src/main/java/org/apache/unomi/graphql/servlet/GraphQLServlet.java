@@ -21,6 +21,8 @@ import graphql.ExecutionInput;
 import graphql.ExecutionResult;
 import graphql.GraphQL;
 import graphql.introspection.IntrospectionQuery;
+import org.apache.unomi.api.ExecutionContext;
+import org.apache.unomi.api.security.SecurityService;
 import org.apache.unomi.api.services.ExecutionContextManager;
 import org.apache.unomi.api.tenants.TenantService;
 import org.apache.unomi.graphql.schema.GraphQLSchemaUpdater;
@@ -64,6 +66,8 @@ public class GraphQLServlet extends WebSocketServlet {
     
     private ExecutionContextManager executionContextManager;
 
+    private SecurityService securityService;
+
     private GraphQLServletSecurityValidator validator;
 
     @Reference
@@ -86,10 +90,15 @@ public class GraphQLServlet extends WebSocketServlet {
         this.executionContextManager = executionContextManager;
     }
 
+    @Reference
+    public void setSecurityService(SecurityService securityService) {
+        this.securityService = securityService;
+    }
+
     @Override
     public void init(ServletConfig config) throws ServletException {
         super.init(config);
-        this.validator = new GraphQLServletSecurityValidator(tenantService);
+        this.validator = new GraphQLServletSecurityValidator(tenantService, securityService, executionContextManager);
     }
 
     private WebSocketServletFactory factory;
@@ -97,7 +106,15 @@ public class GraphQLServlet extends WebSocketServlet {
     @Override
     public void configure(WebSocketServletFactory factory) {
         this.factory = factory;
-        factory.setCreator(new SubscriptionWebSocketFactory(graphQLSchemaUpdater.getGraphQL(), serviceManager));
+        // Wrap the WebSocket creator to handle security context for WebSocket connections
+        SubscriptionWebSocketFactory originalCreator = new SubscriptionWebSocketFactory(graphQLSchemaUpdater.getGraphQL(), serviceManager);
+        factory.setCreator((req, resp) -> {
+            try {
+                return originalCreator.createWebSocket(req, resp);
+            } finally {
+                cleanupSecurityContext();
+            }
+        });
         factory.getPolicy().setMaxTextMessageBufferSize(1024 * 1024);
     }
 
@@ -121,53 +138,65 @@ public class GraphQLServlet extends WebSocketServlet {
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-        String query = req.getParameter("query");
-        if (SCHEMA_URL.equals(req.getPathInfo())) {
-            query = IntrospectionQuery.INTROSPECTION_QUERY;
-        }
-        String operationName = req.getParameter("operationName");
-        String variableStr = req.getParameter("variables");
-        Map<String, Object> variables = new HashMap<>();
-        if ((variableStr != null) && (variableStr.trim().length() > 0)) {
-            TypeReference<Map<String, Object>> typeRef = new TypeReference<Map<String, Object>>() {
-            };
-            variables = GraphQLObjectMapper.getInstance().readValue(variableStr, typeRef);
-        }
+        try {
+            String query = req.getParameter("query");
+            if (SCHEMA_URL.equals(req.getPathInfo())) {
+                query = IntrospectionQuery.INTROSPECTION_QUERY;
+            }
+            String operationName = req.getParameter("operationName");
+            String variableStr = req.getParameter("variables");
+            Map<String, Object> variables = new HashMap<>();
+            if ((variableStr != null) && (variableStr.trim().length() > 0)) {
+                TypeReference<Map<String, Object>> typeRef = new TypeReference<Map<String, Object>>() {
+                };
+                variables = GraphQLObjectMapper.getInstance().readValue(variableStr, typeRef);
+            }
 
-        if (!validator.validate(query, operationName, req, resp)) {
-            return;
+            if (!validator.validate(query, operationName, req, resp)) {
+                return;
+            }
+            setupCORSHeaders(req, resp);
+            executeGraphQLRequest(resp, query, operationName, variables);
+        } finally {
+            cleanupSecurityContext();
         }
-        setupCORSHeaders(req, resp);
-        executeGraphQLRequest(resp, query, operationName, variables);
     }
 
     @Override
     @SuppressWarnings("unchecked")
     protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-        TypeReference<Map<String, Object>> typeRef = new TypeReference<Map<String, Object>>() {
-        };
-        Map<String, Object> body = GraphQLObjectMapper.getInstance().readValue(req.getInputStream(), typeRef);
+        try {
+            TypeReference<Map<String, Object>> typeRef = new TypeReference<Map<String, Object>>() {
+            };
+            Map<String, Object> body = GraphQLObjectMapper.getInstance().readValue(req.getInputStream(), typeRef);
 
 
-        String query = (String) body.get("query");
-        String operationName = (String) body.get("operationName");
-        Map<String, Object> variables = (Map<String, Object>) body.get("variables");
+            String query = (String) body.get("query");
+            String operationName = (String) body.get("operationName");
+            Map<String, Object> variables = (Map<String, Object>) body.get("variables");
 
-        if (variables == null) {
-            variables = new HashMap<>();
+            if (variables == null) {
+                variables = new HashMap<>();
+            }
+
+            if (!validator.validate(query, operationName, req, resp)) {
+                return;
+            }
+            setupCORSHeaders(req, resp);
+            executeGraphQLRequest(resp, query, operationName, variables);
+        } finally {
+            cleanupSecurityContext();
         }
-
-        if (!validator.validate(query, operationName, req, resp)) {
-            return;
-        }
-        setupCORSHeaders(req, resp);
-        executeGraphQLRequest(resp, query, operationName, variables);
     }
 
     @Override
     protected void doOptions(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-        setupCORSHeaders(req, resp);
-        resp.flushBuffer();
+        try {
+            setupCORSHeaders(req, resp);
+            resp.flushBuffer();
+        } finally {
+            cleanupSecurityContext();
+        }
     }
 
     private void executeGraphQLRequest(
@@ -177,14 +206,8 @@ public class GraphQLServlet extends WebSocketServlet {
         }
 
         // Get the current tenant ID from the execution context
-        String tenantId = null;
-        try {
-            tenantId = executionContextManager.getCurrentContext() != null ? 
-                executionContextManager.getCurrentContext().getTenantId() : null;
-        } catch (Exception e) {
-            // If we can't get the tenant ID, fall back to system tenant
-            LOGGER.debug("Could not determine tenant ID, falling back to system tenant", e);
-        }
+        String tenantId = executionContextManager.getCurrentContext() != null ? 
+            executionContextManager.getCurrentContext().getTenantId() : null;
 
         LOGGER.debug("Executing GraphQL request for tenant: {}", tenantId);
         
@@ -224,6 +247,18 @@ public class GraphQLServlet extends WebSocketServlet {
         return httpServletRequest != null && httpServletRequest.getHeader("Origin") != null
                 ? httpServletRequest.getHeader("Origin")
                 : "*";
+    }
+
+    private void cleanupSecurityContext() {
+        try {
+            securityService.clearCurrentSubject();
+            executionContextManager.setCurrentContext(null);
+            if (LOGGER.isDebugEnabled()) {
+                LOGGER.debug("Cleared security context after GraphQL request processing");
+            }
+        } catch (Exception e) {
+            LOGGER.error("Error clearing GraphQL security context", e);
+        }
     }
 
 }

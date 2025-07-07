@@ -25,11 +25,19 @@
     <reference id="scriptExecutor" interface="org.apache.unomi.scripting.ScriptExecutor" />
     <reference id="tracerService" interface="org.apache.unomi.tracing.api.TracerService" />
 
+    <reference-list id="conditionEvaluators"
+                    interface="org.apache.unomi.persistence.spi.conditions.ConditionEvaluator"
+                    availability="optional">
+        <reference-listener
+                bind-method="bindConditionEvaluator" unbind-method="unbindConditionEvaluator" ref="conditionEvaluatorDispatcherImpl"/>
+    </reference-list>
+
     <bean id="conditionEvaluatorDispatcherImpl"
-          class="org.apache.unomi.persistence.spi.conditions.ConditionEvaluatorDispatcherImpl">
+          class="org.apache.unomi.persistence.spi.conditions.ConditionEvaluatorDispatcherImpl" init-method="init" destroy-method="destroy">
         <property name="metricsService" ref="metricsService" />
         <property name="scriptExecutor" ref="scriptExecutor" />
         <property name="tracerService" ref="tracerService" />
+        <property name="bundleContext" ref="blueprintBundleContext" />
     </bean>
 
     <service id="conditionEvaluatorDispatcherService" ref="conditionEvaluatorDispatcherImpl">
@@ -37,5 +45,6 @@
             <value>org.apache.unomi.persistence.spi.conditions.ConditionEvaluatorDispatcher</value>
         </interfaces>
     </service>
-    
+
+
 </blueprint>

@@ -91,7 +91,6 @@ public class GroovyActionsServiceIT extends BaseIT {
 
     @Test
     public void testGroovyActionsService_triggerGroovyAction() throws IOException, InterruptedException {
-        createRule("data/tmp/testRuleGroovyAction.json");
         groovyActionsService.save(UPDATE_ADDRESS_ACTION, loadGroovyAction(UPDATE_ADDRESS_ACTION_GROOVY_FILE));
 
         keepTrying("Failed waiting for the creation of the GroovyAction for the trigger action test",
@@ -101,6 +100,13 @@ public class GroovyActionsServiceIT extends BaseIT {
                 () -> definitionsService.getActionType(UPDATE_ADDRESS_GROOVY_ACTION), Objects::nonNull, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
 
         Assert.assertNotNull(actionType);
+
+        createRule("data/tmp/testRuleGroovyAction.json");
+        keepTrying("Failed waiting for rule to be available", 
+                () -> rulesService.getAllRules(), 
+                rules -> rules != null && rules.stream().anyMatch(r -> r.getItemId().equals("scriptGroovyActionRule")), 
+                DEFAULT_TRYING_TIMEOUT, 
+                DEFAULT_TRYING_TRIES);
 
         Event event = sendGroovyActionEvent();
 

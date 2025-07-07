@@ -170,7 +170,7 @@ public class RouterCamelContext implements IRouterCamelContext {
                                     } catch (Exception e) {
                                         LOGGER.error("Unexpected error while refreshing({}) camel route: {}", importConfigToRefresh.getValue(),
                                                 importConfigToRefresh.getKey(), e);
-                                    }    
+                                    }
                                 }
                             } catch (Exception e) {
                                 LOGGER.error("Unexpected error while refreshing import/export camel routes for tenant {}", tenantId, e);
@@ -339,6 +339,7 @@ public class RouterCamelContext implements IRouterCamelContext {
             ProfileExportCollectRouteBuilder profileExportCollectRouteBuilder = new ProfileExportCollectRouteBuilder(kafkaProps, configType);
             profileExportCollectRouteBuilder.setExportConfigurationList(Collections.singletonList(exportConfiguration));
             profileExportCollectRouteBuilder.setPersistenceService(persistenceService);
+            profileExportCollectRouteBuilder.setExecutionContextManager(contextManager);
             profileExportCollectRouteBuilder.setAllowedEndpoints(allowedEndpoints);
             profileExportCollectRouteBuilder.setJacksonDataFormat(jacksonDataFormat);
             profileExportCollectRouteBuilder.setContext(camelContext);

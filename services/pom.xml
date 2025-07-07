@@ -199,15 +199,23 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>org.apache.karaf.jaas</groupId>
-            <artifactId>org.apache.karaf.jaas.boot</artifactId>
-            <version>${karaf.version}</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
             <groupId>org.apache.unomi</groupId>
             <artifactId>unomi-tracing-impl</artifactId>
             <version>${project.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.karaf.jaas</groupId>
+            <artifactId>org.apache.karaf.jaas.boot</artifactId>
+            <version>${karaf.version}</version>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- Awaitility for robust async testing -->
+        <dependency>
+            <groupId>org.awaitility</groupId>
+            <artifactId>awaitility</artifactId>
+            <version>4.2.0</version>
             <scope>test</scope>
         </dependency>
 

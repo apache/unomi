@@ -80,14 +80,22 @@ public class PatchIT extends BaseIT {
         PropertyType income = profileService.getPropertyType("income");
 
         try {
-            Patch patch = CustomObjectMapper.getObjectMapper().readValue(bundleContext.getBundle().getResource("patch3.json"), Patch.class);
+            // We need to execute as system to remove a system property type
+            executionContextManager.executeAsSystem(() -> {
+                Patch patch = null;
+                try {
+                    patch = CustomObjectMapper.getObjectMapper().readValue(bundleContext.getBundle().getResource("patch3.json"), Patch.class);
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
 
-            patchService.patch(patch);
+                patchService.patch(patch);
 
-            profileService.refresh();
+                profileService.refresh();
 
-            PropertyType newIncome = profileService.getPropertyType("income");
-            Assert.assertNull(newIncome);
+                PropertyType newIncome = profileService.getPropertyType("income");
+                Assert.assertNull(newIncome);
+            });
         } finally {
             profileService.setPropertyType(income);
         }

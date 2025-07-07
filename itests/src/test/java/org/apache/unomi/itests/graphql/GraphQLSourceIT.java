@@ -29,7 +29,7 @@ public class GraphQLSourceIT extends BaseGraphQLIT {
             final ResponseContext context = ResponseContext.parse(response.getEntity());
 
             assertEquals("testSourceId", context.getValue("data.cdp.createOrUpdateSource.id"));
-            assertNull(context.getValue("data.cdp.createOrUpdateSource.thirdParty"));
+            assertFalse(context.getValue("data.cdp.createOrUpdateSource.thirdParty"));
         }
 
         refreshPersistence(Scope.class);
@@ -38,7 +38,7 @@ public class GraphQLSourceIT extends BaseGraphQLIT {
             final ResponseContext context = ResponseContext.parse(response.getEntity());
 
             assertEquals("testSourceId", context.getValue("data.cdp.createOrUpdateSource.id"));
-            assertTrue(context.getValue("data.cdp.createOrUpdateSource.thirdParty"));
+            assertFalse(context.getValue("data.cdp.createOrUpdateSource.thirdParty"));
         }
 
         refreshPersistence(Scope.class);
@@ -47,7 +47,7 @@ public class GraphQLSourceIT extends BaseGraphQLIT {
             final ResponseContext context = ResponseContext.parse(response.getEntity());
 
             assertEquals("testSourceId", context.getValue("data.cdp.getSources[0].id"));
-            assertTrue(context.getValue("data.cdp.getSources[0].thirdParty"));
+            assertFalse(context.getValue("data.cdp.getSources[0].thirdParty"));
         }
 
         try (CloseableHttpResponse response = post("graphql/source/delete-source.json")) {

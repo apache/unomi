@@ -49,9 +49,6 @@ public class SchedulerIT extends BaseIT {
     private final static String TEST_TASK_TYPE = "test-task";
     private String testTaskId;
 
-    @Inject @Filter(timeout = 600000)
-    protected SchedulerService schedulerService;
-
     @Before
     public void setUp() {
         // Register a test task executor

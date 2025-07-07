@@ -26,6 +26,7 @@ import org.apache.unomi.persistence.spi.PropertyHelper;
 import org.apache.unomi.persistence.spi.conditions.*;
 import org.apache.unomi.persistence.spi.conditions.geo.DistanceUnit;
 import org.apache.unomi.tracing.api.RequestTracer;
+import org.osgi.framework.BundleContext;
 
 import java.lang.reflect.Method;
 import java.text.SimpleDateFormat;
@@ -43,6 +44,7 @@ public class TestConditionEvaluators {
     private static final SimpleDateFormat ISO_DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
     private static final SimpleDateFormat yearMonthDayDateFormat = new SimpleDateFormat("yyyyMMdd");
     private static EventService eventService;
+    private static BundleContext bundleContext;
     private static TestRequestTracer tracer = new TestRequestTracer(false);
     private static Map<String, ConditionEvaluator> evaluators = new HashMap<>();
 
@@ -55,12 +57,18 @@ public class TestConditionEvaluators {
         eventService = service;
     }
 
+    public static void setBundleContext(BundleContext bundleContext) {
+        TestConditionEvaluators.bundleContext = bundleContext;
+    }
+
     public static RequestTracer getTracer() {
         return tracer;
     }
 
     public static ConditionEvaluatorDispatcher createDispatcher() {
         ConditionEvaluatorDispatcherImpl dispatcher = new ConditionEvaluatorDispatcherImpl();
+        dispatcher.setBundleContext(bundleContext);
+        dispatcher.init();
         dispatcher.addEvaluator("booleanConditionEvaluator", createBooleanConditionEvaluator());
         dispatcher.addEvaluator("propertyConditionEvaluator", createPropertyConditionEvaluator());
         dispatcher.addEvaluator("matchAllConditionEvaluator", createMatchAllConditionEvaluator());

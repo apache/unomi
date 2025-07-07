@@ -204,8 +204,8 @@ public class ProfileMergeIT extends BaseIT {
         Event event = new Event(TEST_EVENT_TYPE, simpleSession, masterProfile, null, null, eventProfile, new Date());
         eventService.send(event);
 
-        // Session should have been reassign and the previous existing profile for mergeIdentifier: event@domain.com should have been reuse
-        // Session should have been reassign and a new profile should have been created ! (We call this user switch case)
+        // Session should have been reassigned and the previous existing profile for mergeIdentifier: event@domain.com should have been reused
+        // Session should have been reassigned and a new profile should have been created ! (We call this user switch case)
         Assert.assertNotNull(event.getProfile());
         Assert.assertEquals("previousProfileID", event.getProfile().getItemId());
         Assert.assertEquals("previousProfileID", event.getProfileId());

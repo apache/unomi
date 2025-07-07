@@ -22,6 +22,8 @@ import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.metrics.MetricAdapter;
 import org.apache.unomi.metrics.MetricsService;
 import org.apache.unomi.scripting.ScriptExecutor;
+import org.osgi.framework.BundleContext;
+import org.osgi.framework.ServiceReference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.unomi.tracing.api.TracerService;
@@ -30,6 +32,7 @@ import org.apache.unomi.tracing.api.RequestTracer;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Entry point for condition evaluation. Will dispatch to all evaluators.
@@ -42,6 +45,8 @@ public class ConditionEvaluatorDispatcherImpl implements ConditionEvaluatorDispa
     private MetricsService metricsService;
     private ScriptExecutor scriptExecutor;
     private TracerService tracerService;
+    private BundleContext bundleContext;
+    private AtomicBoolean shuttingDown = new AtomicBoolean(false);
 
     public void setMetricsService(MetricsService metricsService) {
         this.metricsService = metricsService;
@@ -82,7 +87,7 @@ public class ConditionEvaluatorDispatcherImpl implements ConditionEvaluatorDispa
         RequestTracer tracer = null;
         if (tracerService != null && tracerService.isTracingEnabled()) {
             tracer = tracerService.getCurrentTracer();
-            tracer.startOperation("condition-evaluation", 
+            tracer.startOperation("condition-evaluation",
                 "Evaluating condition: " + condition.getConditionTypeId(), condition);
         }
 
@@ -142,5 +147,40 @@ public class ConditionEvaluatorDispatcherImpl implements ConditionEvaluatorDispa
             }
             return false;
         }
+    }
+
+    public void init() {
+        this.shuttingDown.set(false);
+        LOGGER.info("Condition evaluators initialized");
+    }
+
+    public void destroy() {
+        LOGGER.info("Condition evaluator shutting down");
+        this.shuttingDown.set(true);
+    }
+
+    public void bindConditionEvaluator(ServiceReference<ConditionEvaluator> conditionEvaluatorServiceReference) {
+        ConditionEvaluator conditionEvaluator = bundleContext.getService(conditionEvaluatorServiceReference);
+        addEvaluator(conditionEvaluatorServiceReference.getProperty("conditionEvaluatorId").toString(), conditionEvaluator);
+    }
+
+    public void unbindConditionEvaluator(ServiceReference<ConditionEvaluator> conditionEvaluatorServiceReference) {
+        if (conditionEvaluatorServiceReference == null || shuttingDown.get()) {
+            return; // Skip this entirely if we're shutting down
+        }
+        try {
+            Object conditionEvaluatorId = conditionEvaluatorServiceReference.getProperty("conditionEvaluatorId");
+            if (conditionEvaluatorId != null) {
+                removeEvaluator(conditionEvaluatorId.toString());
+            }
+        } catch (Exception e) {
+            // During shutdown we might get exceptions as services are being unregistered in unpredictable order
+            // Just log and continue to avoid deadlocks
+            LOGGER.debug("Error while unbinding condition evaluator: {}", e.getMessage());
+        }
+    }
+
+    public void setBundleContext(BundleContext bundleContext) {
+        this.bundleContext = bundleContext;
     }
 }

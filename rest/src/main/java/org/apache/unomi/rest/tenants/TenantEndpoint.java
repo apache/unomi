@@ -95,24 +95,7 @@ public class TenantEndpoint {
         }
 
         Tenant tenant = tenantService.createTenant(request.getRequestedId(), request.getProperties());
-        if (tenant != null) {
-            // Generate both API keys with default validity period
-            ApiKey publicKey = tenantService.generateApiKeyWithType(tenant.getItemId(), ApiKey.ApiKeyType.PUBLIC, null);
-            ApiKey privateKey = tenantService.generateApiKeyWithType(tenant.getItemId(), ApiKey.ApiKeyType.PRIVATE, null);
-
-            // Store API keys in tenant
-            List<ApiKey> apiKeys = tenant.getApiKeys();
-            apiKeys.add(publicKey);
-            apiKeys.add(privateKey);
-            tenant.setApiKeys(apiKeys);
-
-            // Set active API keys
-            tenant.setPublicApiKey(publicKey.getKey());
-            tenant.setPrivateApiKey(privateKey.getKey());
-
-            // Save tenant with API keys
-            tenantService.saveTenant(tenant);
-        }
+        // Note: createTenant already generates both API keys via generateApiKeyWithType
         return tenant;
     }
 
@@ -185,21 +168,8 @@ public class TenantEndpoint {
             validityPeriod = validityDays * 24L * 60L * 60L * 1000L;
         }
 
-        ApiKey apiKey = tenantService.generateApiKeyWithType(tenantId, type, validityPeriod);
-
-        // Update tenant's API keys
-        List<ApiKey> apiKeys = tenant.getApiKeys();
-        apiKeys.add(apiKey);
-
-        // Update active key reference
-        if (type == ApiKey.ApiKeyType.PUBLIC) {
-            tenant.setPublicApiKey(apiKey.getKey());
-        } else if (type == ApiKey.ApiKeyType.PRIVATE) {
-            tenant.setPrivateApiKey(apiKey.getKey());
-        }
-
-        tenantService.saveTenant(tenant);
-        return apiKey;
+        // generateApiKeyWithType already handles adding the key to the tenant's API keys list
+        return tenantService.generateApiKeyWithType(tenantId, type, validityPeriod);
     }
 
     /**

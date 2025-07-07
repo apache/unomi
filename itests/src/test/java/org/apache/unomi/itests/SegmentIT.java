@@ -46,13 +46,25 @@ import java.util.*;
 @RunWith(PaxExam.class)
 @ExamReactorStrategy(PerSuite.class)
 public class SegmentIT extends BaseIT {
+
     private final static Logger LOGGER = LoggerFactory.getLogger(SegmentIT.class);
     private final static String SEGMENT_ID = "test-segment-id-2";
+
+    private final static String TEST_EVENT_TYPE = "testEventType";
+    private final static String TEST_EVENT_TYPE_SCHEMA = "schemas/events/test-event-type.json";
 
     @Before
     public void setUp() throws InterruptedException {
         removeItems(Segment.class);
         removeItems(Scoring.class);
+
+        // create schemas required for tests
+        schemaService.saveSchema(resourceAsString(TEST_EVENT_TYPE_SCHEMA));
+        keepTrying("Couldn't find json schemas",
+                () -> schemaService.getInstalledJsonSchemaIds(),
+                (schemaIds) -> (schemaIds.contains("https://unomi.apache.org/schemas/json/events/testEventType/1-0-0")),
+                DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+
     }
 
     @After
@@ -114,7 +126,7 @@ public class SegmentIT extends BaseIT {
         segmentCondition.setParameter("minimumEventCount", "2");
         segmentCondition.setParameter("numberOfDays", "10");
         Condition pastEventEventCondition = new Condition(definitionsService.getConditionType("eventTypeCondition"));
-        pastEventEventCondition.setParameter("eventTypeId", "test-event-type");
+        pastEventEventCondition.setParameter("eventTypeId", "testEventType");
         segmentCondition.setParameter("eventCondition", pastEventEventCondition);
         segment.setCondition(segmentCondition);
         segmentService.setSegmentDefinition(segment);
@@ -128,7 +140,7 @@ public class SegmentIT extends BaseIT {
         segmentCondition.setParameter("minimumEventCount", 2);
         segmentCondition.setParameter("numberOfDays", 10);
         Condition pastEventEventCondition = new Condition(definitionsService.getConditionType("eventTypeCondition"));
-        pastEventEventCondition.setParameter("eventTypeId", "test-event-type");
+        pastEventEventCondition.setParameter("eventTypeId", "testEventType");
         segmentCondition.setParameter("eventCondition", pastEventEventCondition);
         segment.setCondition(segmentCondition);
         segmentService.setSegmentDefinition(segment);
@@ -186,7 +198,7 @@ public class SegmentIT extends BaseIT {
         // send event for profile from a previous date (today -3 days)
         ZoneId defaultZoneId = ZoneId.systemDefault();
         LocalDate localDate = LocalDate.now().minusDays(3);
-        Event testEvent = new Event("test-event-type", null, profile, null, null, profile,
+        Event testEvent = new Event("testEventType", null, profile, null, null, profile,
                 Date.from(localDate.atStartOfDay(defaultZoneId).toInstant()));
         testEvent.setPersistent(true);
         int changes = eventService.send(testEvent);
@@ -202,7 +214,7 @@ public class SegmentIT extends BaseIT {
         Condition segmentCondition = new Condition(definitionsService.getConditionType("pastEventCondition"));
         segmentCondition.setParameter("numberOfDays", 10);
         Condition pastEventEventCondition = new Condition(definitionsService.getConditionType("eventTypeCondition"));
-        pastEventEventCondition.setParameter("eventTypeId", "test-event-type");
+        pastEventEventCondition.setParameter("eventTypeId", "testEventType");
         segmentCondition.setParameter("eventCondition", pastEventEventCondition);
         segment.setCondition(segmentCondition);
         segmentService.setSegmentDefinition(segment);
@@ -226,7 +238,7 @@ public class SegmentIT extends BaseIT {
         Condition segmentCondition = new Condition(definitionsService.getConditionType("pastEventCondition"));
         segmentCondition.setParameter("numberOfDays", 10);
         Condition pastEventEventCondition = new Condition(definitionsService.getConditionType("eventTypeCondition"));
-        pastEventEventCondition.setParameter("eventTypeId", "negative-test-event-type");
+        pastEventEventCondition.setParameter("eventTypeId", "negative-testEventType");
         segmentCondition.setParameter("eventCondition", pastEventEventCondition);
         segmentCondition.setParameter("operator", "eventsNotOccurred");
         segment.setCondition(segmentCondition);
@@ -243,7 +255,7 @@ public class SegmentIT extends BaseIT {
         // send event for profile from a previous date (today -3 days)
         ZoneId defaultZoneId = ZoneId.systemDefault();
         LocalDate localDate = LocalDate.now().minusDays(3);
-        Event testEvent = new Event("negative-test-event-type", null, profile, null, null, profile,
+        Event testEvent = new Event("negative-testEventType", null, profile, null, null, profile,
                 Date.from(localDate.atStartOfDay(defaultZoneId).toInstant()));
         testEvent.setPersistent(true);
 
@@ -280,7 +292,7 @@ public class SegmentIT extends BaseIT {
         Condition segmentCondition = new Condition(definitionsService.getConditionType("pastEventCondition"));
         segmentCondition.setParameter("numberOfDays", 10);
         Condition pastEventEventCondition = new Condition(definitionsService.getConditionType("eventTypeCondition"));
-        pastEventEventCondition.setParameter("eventTypeId", "test-event-type");
+        pastEventEventCondition.setParameter("eventTypeId", "testEventType");
         segmentCondition.setParameter("eventCondition", pastEventEventCondition);
         segment.setCondition(segmentCondition);
         segmentService.setSegmentDefinition(segment);
@@ -290,7 +302,7 @@ public class SegmentIT extends BaseIT {
         // Persist the event (do not send it into the system so that it will not be processed by the rules)
         ZoneId defaultZoneId = ZoneId.systemDefault();
         LocalDate localDate = LocalDate.now().minusDays(3);
-        Event testEvent = new Event("test-event-type", null, profile, null, null, profile,
+        Event testEvent = new Event("testEventType", null, profile, null, null, profile,
                 Date.from(localDate.atStartOfDay(defaultZoneId).toInstant()));
         testEvent.setPersistent(true);
         persistenceService.save(testEvent, null, true);
@@ -309,7 +321,7 @@ public class SegmentIT extends BaseIT {
         // update the event to a date out of the past event condition
         removeItems(Event.class);
         localDate = LocalDate.now().minusDays(15);
-        testEvent = new Event("test-event-type", null, profile, null, null, profile,
+        testEvent = new Event("testEventType", null, profile, null, null, profile,
                 Date.from(localDate.atStartOfDay(defaultZoneId).toInstant()));
         persistenceService.save(testEvent);
         persistenceService.refreshIndex(Event.class, testEvent.getTimeStamp()); // wait for event to be fully persisted and indexed
@@ -332,7 +344,7 @@ public class SegmentIT extends BaseIT {
         // send event for profile from a previous date (today -3 days)
         ZoneId defaultZoneId = ZoneId.systemDefault();
         LocalDate localDate = LocalDate.now().minusDays(3);
-        Event testEvent = new Event("test-event-type", null, profile, null, null, profile,
+        Event testEvent = new Event("testEventType", null, profile, null, null, profile,
                 Date.from(localDate.atStartOfDay(defaultZoneId).toInstant()));
         testEvent.setPersistent(true);
         int changes = eventService.send(testEvent);
@@ -346,7 +358,7 @@ public class SegmentIT extends BaseIT {
         Condition pastEventCondition = new Condition(definitionsService.getConditionType("pastEventCondition"));
         pastEventCondition.setParameter("numberOfDays", 10);
         Condition pastEventEventCondition = new Condition(definitionsService.getConditionType("eventTypeCondition"));
-        pastEventEventCondition.setParameter("eventTypeId", "test-event-type");
+        pastEventEventCondition.setParameter("eventTypeId", "testEventType");
         pastEventCondition.setParameter("eventCondition", pastEventEventCondition);
 
         // create the scoring plan
@@ -378,7 +390,7 @@ public class SegmentIT extends BaseIT {
         Condition pastEventCondition = new Condition(definitionsService.getConditionType("pastEventCondition"));
         pastEventCondition.setParameter("numberOfDays", 10);
         Condition pastEventEventCondition = new Condition(definitionsService.getConditionType("eventTypeCondition"));
-        pastEventEventCondition.setParameter("eventTypeId", "test-event-type");
+        pastEventEventCondition.setParameter("eventTypeId", "testEventType");
         pastEventCondition.setParameter("eventCondition", pastEventEventCondition);
 
         // create the scoring
@@ -396,7 +408,7 @@ public class SegmentIT extends BaseIT {
         // Persist the event (do not send it into the system so that it will not be processed by the rules)
         ZoneId defaultZoneId = ZoneId.systemDefault();
         LocalDate localDate = LocalDate.now().minusDays(3);
-        Event testEvent = new Event("test-event-type", null, profile, null, null, profile,
+        Event testEvent = new Event("testEventType", null, profile, null, null, profile,
                 Date.from(localDate.atStartOfDay(defaultZoneId).toInstant()));
         testEvent.setPersistent(true);
         persistenceService.save(testEvent, null, true);
@@ -417,7 +429,7 @@ public class SegmentIT extends BaseIT {
         // update the event to a date out of the past event condition
         removeItems(Event.class);
         localDate = LocalDate.now().minusDays(15);
-        testEvent = new Event("test-event-type", null, profile, null, null, profile,
+        testEvent = new Event("testEventType", null, profile, null, null, profile,
                 Date.from(localDate.atStartOfDay(defaultZoneId).toInstant()));
         persistenceService.save(testEvent);
         persistenceService.refreshIndex(Event.class, testEvent.getTimeStamp()); // wait for event to be fully persisted and indexed
@@ -441,7 +453,7 @@ public class SegmentIT extends BaseIT {
         Condition pastEventCondition = new Condition(definitionsService.getConditionType("pastEventCondition"));
         pastEventCondition.setParameter("numberOfDays", 10);
         Condition pastEventEventCondition = new Condition(definitionsService.getConditionType("eventTypeCondition"));
-        pastEventEventCondition.setParameter("eventTypeId", "test-event-type-max");
+        pastEventEventCondition.setParameter("eventTypeId", "testEventType-max");
         pastEventCondition.setParameter("eventCondition", pastEventEventCondition);
         pastEventCondition.setParameter("maximumEventCount", 1);
 
@@ -460,7 +472,7 @@ public class SegmentIT extends BaseIT {
         // Persist the event (do not send it into the system so that it will not be processed by the rules)
         ZoneId defaultZoneId = ZoneId.systemDefault();
         LocalDate localDate = LocalDate.now().minusDays(3);
-        Event testEvent = new Event("test-event-type-max", null, profile, null, null, profile,
+        Event testEvent = new Event("testEventType-max", null, profile, null, null, profile,
                 Date.from(localDate.atStartOfDay(defaultZoneId).toInstant()));
         testEvent.setPersistent(true);
         persistenceService.save(testEvent, null, true);
@@ -482,7 +494,7 @@ public class SegmentIT extends BaseIT {
         // Persist the 2 event (do not send it into the system so that it will not be processed by the rules)
         defaultZoneId = ZoneId.systemDefault();
         localDate = LocalDate.now().minusDays(3);
-        testEvent = new Event("test-event-type-max", null, profile, null, null, profile,
+        testEvent = new Event("testEventType-max", null, profile, null, null, profile,
                 Date.from(localDate.atStartOfDay(defaultZoneId).toInstant()));
         testEvent.setPersistent(true);
         persistenceService.save(testEvent, null, true);
@@ -513,7 +525,7 @@ public class SegmentIT extends BaseIT {
         pastEventCondition.setParameter("toDate", "2001-01-15T07:00:00Z");
         ;
         Condition pastEventEventCondition = new Condition(definitionsService.getConditionType("eventTypeCondition"));
-        pastEventEventCondition.setParameter("eventTypeId", "test-event-type");
+        pastEventEventCondition.setParameter("eventTypeId", "testEventType");
         pastEventCondition.setParameter("eventCondition", pastEventEventCondition);
 
         // create the scoring
@@ -530,12 +542,12 @@ public class SegmentIT extends BaseIT {
 
         // Send 2 events that match the scoring plan.
         profile = profileService.load("test_profile_id");
-        Event testEvent = new Event("test-event-type", null, profile, null, null, profile, timestampEventInRange);
+        Event testEvent = new Event("testEventType", null, profile, null, null, profile, timestampEventInRange);
         testEvent.setPersistent(true);
         eventService.send(testEvent);
         refreshPersistence(Event.class);
         // 2nd event
-        testEvent = new Event("test-event-type", null, testEvent.getProfile(), null, null, testEvent.getProfile(), timestampEventInRange);
+        testEvent = new Event("testEventType", null, testEvent.getProfile(), null, null, testEvent.getProfile(), timestampEventInRange);
         eventService.send(testEvent);
         refreshPersistence(Event.class, Profile.class);
 
@@ -568,7 +580,7 @@ public class SegmentIT extends BaseIT {
         }, 1000, 20);
 
         // Add one more event
-        testEvent = new Event("test-event-type", null, testEvent.getProfile(), null, null, testEvent.getProfile(), timestampEventInRange);
+        testEvent = new Event("testEventType", null, testEvent.getProfile(), null, null, testEvent.getProfile(), timestampEventInRange);
         eventService.send(testEvent);
 
         // As 3 events have match, the profile should not be part of the scoring plan.
@@ -585,7 +597,8 @@ public class SegmentIT extends BaseIT {
         // As 3 events have match, the profile should not be part of the scoring plan.
         keepTrying("Profile should not be part of the scoring anymore", () -> profileService.load("test_profile_id"), updatedProfile -> {
             try {
-                return updatedProfile.getScores().get("past-event-scoring-test") == 0;
+                return (updatedProfile.getScores().get("past-event-scoring-test") == null) ||
+                        (updatedProfile.getScores().get("past-event-scoring-test") == 0);
             } catch (Exception e) {
                 // Do nothing, unable to read value
             }
@@ -605,7 +618,7 @@ public class SegmentIT extends BaseIT {
         pastEventCondition.setParameter("fromDate", "2000-07-15T07:00:00Z");
         pastEventCondition.setParameter("toDate", "2001-01-15T07:00:00Z");
         Condition pastEventEventCondition = new Condition(definitionsService.getConditionType("eventTypeCondition"));
-        pastEventEventCondition.setParameter("eventTypeId", "test-event-type");
+        pastEventEventCondition.setParameter("eventTypeId", "testEventType");
         pastEventCondition.setParameter("eventCondition", pastEventEventCondition);
 
         // create the scoring

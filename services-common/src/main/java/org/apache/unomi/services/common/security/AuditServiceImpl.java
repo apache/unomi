@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.services.impl.tenants;
+package org.apache.unomi.services.common.security;
 
 import org.apache.unomi.api.Item;
 import org.apache.unomi.api.conditions.Condition;
@@ -30,8 +30,12 @@ public class AuditServiceImpl implements AuditService {
 
     private PersistenceService persistenceService;
 
-    public void setPersistenceService(PersistenceService persistenceService) {
+    public void bindPersistenceService(PersistenceService persistenceService) {
         this.persistenceService = persistenceService;
+    }
+
+    public void unbindPersistenceService(PersistenceService persistenceService) {
+        this.persistenceService = null;
     }
 
     @Override
@@ -55,6 +59,9 @@ public class AuditServiceImpl implements AuditService {
 
     @Override
     public List<Item> getModifiedItems(String tenantId, Date since) {
+        if (persistenceService == null) {
+
+        }
         Condition condition = new Condition();
         condition.setConditionTypeId("booleanCondition");
         condition.setParameter("operator", "and");
@@ -82,6 +89,9 @@ public class AuditServiceImpl implements AuditService {
 
     @Override
     public void updateLastSyncDate(String tenantId, String sourceInstanceId, Date syncDate) {
+        if (persistenceService == null) {
+            return;
+        }
         Condition condition = new Condition();
         condition.setConditionTypeId("booleanCondition");
         condition.setParameter("operator", "and");
@@ -99,6 +109,9 @@ public class AuditServiceImpl implements AuditService {
 
     @Override
     public Date getLastSyncDate(String tenantId, String sourceInstanceId) {
+        if (persistenceService == null) {
+            return null;
+        }
         Condition condition = new Condition();
         condition.setConditionTypeId("booleanCondition");
         condition.setParameter("operator", "and");

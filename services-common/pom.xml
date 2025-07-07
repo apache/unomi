@@ -65,6 +65,12 @@
             <artifactId>osgi.cmpn</artifactId>
             <scope>provided</scope>
         </dependency>
+        <dependency>
+            <groupId>org.apache.karaf.jaas</groupId>
+            <artifactId>org.apache.karaf.jaas.boot</artifactId>
+            <version>${karaf.version}</version>
+            <scope>provided</scope>
+        </dependency>
 
         <!-- SLF4J for logging -->
         <dependency>

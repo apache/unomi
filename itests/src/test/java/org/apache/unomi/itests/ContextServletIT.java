@@ -123,9 +123,10 @@ public class ContextServletIT extends BaseIT {
 
     @After
     public void tearDown() throws InterruptedException {
-        TestUtils.removeAllEvents(definitionsService, persistenceService);
-        TestUtils.removeAllSessions(definitionsService, persistenceService);
-        TestUtils.removeAllProfiles(definitionsService, persistenceService);
+        persistenceService.refresh();
+        TestUtils.removeAllEvents(definitionsService, persistenceService, true, tenantService, executionContextManager);
+        TestUtils.removeAllSessions(definitionsService, persistenceService, true, tenantService, executionContextManager);
+        TestUtils.removeAllProfiles(definitionsService, persistenceService, true, tenantService, executionContextManager);
         profileService.delete(profile.getItemId(), false);
         removeItems(Session.class);
         segmentService.removeSegmentDefinition(SEGMENT_ID, false);
@@ -148,7 +149,7 @@ public class ContextServletIT extends BaseIT {
         String eventId = "test-event-id-" + System.currentTimeMillis();
         String sessionId = "test-session-id";
         String scope = TEST_SCOPE;
-        String eventTypeOriginal = "test-event-type-original";
+        String eventTypeOriginal = "testEventType-original";
         Profile profile = new Profile(TEST_PROFILE_ID);
         Session session = new Session(sessionId, profile, new Date(), scope);
         Event event = new Event(eventId, eventTypeOriginal, session, profile, scope, null, null, new Date());
@@ -220,7 +221,7 @@ public class ContextServletIT extends BaseIT {
         String eventId = "test-event-id-" + System.currentTimeMillis();
         String sessionId = "test-session-id";
         String scope = TEST_SCOPE;
-        String eventTypeOriginal = "test-event-type-original";
+        String eventTypeOriginal = "testEventType-original";
         String eventTypeUpdated = TEST_EVENT_TYPE;
         Profile profile = new Profile(TEST_PROFILE_ID);
         Session session = new Session(sessionId, profile, new Date(), scope);
@@ -258,7 +259,7 @@ public class ContextServletIT extends BaseIT {
         String eventId = "test-event-id-" + System.currentTimeMillis();
         String sessionId = "test-session-id";
         String scope = TEST_SCOPE;
-        String eventTypeOriginal = "test-event-type-original";
+        String eventTypeOriginal = "testEventType-original";
         String eventTypeUpdated = TEST_EVENT_TYPE;
         Session session = new Session(sessionId, profile, new Date(), scope);
         Event event = new Event(eventId, eventTypeOriginal, session, profile, scope, null, null, new Date());
@@ -385,7 +386,7 @@ public class ContextServletIT extends BaseIT {
     public void testCreateEventWithProfileId_Success() throws Exception {
         //Arrange
         String eventId = "test-event-id-" + System.currentTimeMillis();
-        String eventType = "test-event-type";
+        String eventType = TEST_EVENT_TYPE;
         Event event = new Event();
         event.setEventType(eventType);
         event.setItemId(eventId);
@@ -927,7 +928,7 @@ public class ContextServletIT extends BaseIT {
         customPropertyType.setValueTypeId("text");
         profileService.setPropertyType(customPropertyType);
         // New profile with the custom property type
-        Profile profile = new Profile("test-profile-id" + System.currentTimeMillis());
+        Profile profile = new Profile(TEST_PROFILE_ID + System.currentTimeMillis());
         profile.setProperty("customProperty", "concealedValue");
         profileService.save(profile);
 

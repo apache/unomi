@@ -91,21 +91,6 @@ public class DefinitionsServiceImpl extends AbstractMultiTypeCachingService impl
     public void postConstruct() {
         super.postConstruct();
 
-        // Process bundle startup
-        if (bundleContext != null) {
-            LOGGER.debug("postConstruct {{}}", bundleContext.getBundle());
-            processBundleStartup(bundleContext);
-
-            // Process already started bundles
-            for (Bundle bundle : bundleContext.getBundles()) {
-                if (bundle.getBundleContext() != null && bundle.getBundleId() != bundleContext.getBundle().getBundleId()) {
-                    processBundleStartup(bundle.getBundleContext());
-                }
-            }
-
-            bundleContext.addBundleListener(this);
-        }
-
         LOGGER.info("Definitions service initialized.");
     }
 
@@ -465,7 +450,7 @@ public class DefinitionsServiceImpl extends AbstractMultiTypeCachingService impl
             if (!warnings.isEmpty()) {
                 StringBuilder warningMessage = new StringBuilder("Condition has warnings:");
                 for (ValidationError warning : warnings) {
-                    warningMessage.append("\n- ").append(warning.getMessage());
+                    warningMessage.append("\n- ").append(warning.getDetailedMessage());
                 }
                 LOGGER.warn(warningMessage.toString());
             }
@@ -474,7 +459,7 @@ public class DefinitionsServiceImpl extends AbstractMultiTypeCachingService impl
             if (!errors.isEmpty()) {
                 StringBuilder errorMessage = new StringBuilder("Invalid condition:");
                 for (ValidationError error : errors) {
-                    errorMessage.append("\n- ").append(error.getMessage());
+                    errorMessage.append("\n- ").append(error.getDetailedMessage());
                 }
                 throw new IllegalArgumentException(errorMessage.toString());
             }

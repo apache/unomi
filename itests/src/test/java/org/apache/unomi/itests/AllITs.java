@@ -64,6 +64,7 @@ import org.junit.runners.Suite.SuiteClasses;
         JSONSchemaIT.class,
         GraphQLProfileAliasesIT.class,
         SendEventActionIT.class,
+        ScopeIT.class,
         HealthCheckIT.class,
 })
 public class AllITs {

@@ -57,6 +57,7 @@ import javax.ws.rs.ext.ExceptionMapper;
 import javax.xml.namespace.QName;
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 @Component
 public class RestServer {
@@ -65,7 +66,7 @@ public class RestServer {
 
     private Server server;
     private BundleContext bundleContext;
-    private ServiceTracker jaxRSServiceTracker;
+    private ServiceTracker<Object, Object> jaxRSServiceTracker;
     final List<Object> serviceBeans = new CopyOnWriteArrayList<>();
 
     // services
@@ -83,6 +84,7 @@ public class RestServer {
     private long timeOfLastUpdate = System.currentTimeMillis();
     private Timer refreshTimer = null;
     private long startupDelay = 1000L;
+    private final AtomicBoolean isShuttingDown = new AtomicBoolean(false);
 
     private static final QName UNOMI_REST_SERVER_END_POINT_NAME = new QName("http://rest.unomi.apache.org/", "UnomiRestServerEndPoint");
 
@@ -142,85 +144,177 @@ public class RestServer {
     @Activate
     public void activate(ComponentContext componentContext) throws Exception {
         this.bundleContext = componentContext.getBundleContext();
+        this.isShuttingDown.set(false);
 
+        // Create a filter for JAX-RS resources
         Filter filter = bundleContext.createFilter("(osgi.jaxrs.resource=true)");
-        jaxRSServiceTracker = new ServiceTracker(bundleContext, filter, new ServiceTrackerCustomizer() {
-            @Override
-            public Object addingService(ServiceReference reference) {
-                Object serviceBean = bundleContext.getService(reference);
-                while (serviceBean == null) {
-                    LOGGER.info("Waiting for service {} to become available...", reference.getProperty("objectClass"));
-                    serviceBean = bundleContext.getService(reference);
-                    try {
-                        Thread.sleep(100);
-                    } catch (InterruptedException e) {
-                        LOGGER.warn("Interrupted thread exception", e);
-                    }
-                }
-                LOGGER.info("Registering JAX RS service {}", serviceBean.getClass().getName());
-                serviceBeans.add(serviceBean);
-                timeOfLastUpdate = System.currentTimeMillis();
-                refreshServer();
-                return serviceBean;
-            }
-
-            @Override
-            public void modifiedService(ServiceReference reference, Object service) {
-                LOGGER.info("Refreshing JAX RS server because service {} was modified.", service.getClass().getName());
-                timeOfLastUpdate = System.currentTimeMillis();
-                refreshServer();
-            }
-
-            @Override
-            public void removedService(ServiceReference reference, Object service) {
-                LOGGER.info("Removing JAX RS service {}", service.getClass().getName());
-                serviceBeans.remove(service);
-                timeOfLastUpdate = System.currentTimeMillis();
-                refreshServer();
-            }
-        });
+        
+        // Create service tracker with proper generic types and customizer
+        jaxRSServiceTracker = new ServiceTracker<>(bundleContext, filter, new JaxRsServiceTrackerCustomizer());
         jaxRSServiceTracker.open();
+        
+        LOGGER.info("RestServer activated and service tracker opened");
     }
 
     @Deactivate
     public void deactivate() throws Exception {
-        jaxRSServiceTracker.close();
+        LOGGER.info("RestServer deactivating...");
+        isShuttingDown.set(true);
+        
+        // Cancel any pending refresh timer
+        if (refreshTimer != null) {
+            refreshTimer.cancel();
+            refreshTimer = null;
+        }
+        
+        // Close service tracker
+        if (jaxRSServiceTracker != null) {
+            jaxRSServiceTracker.close();
+            jaxRSServiceTracker = null;
+        }
+        
+        // Destroy server
         if (server != null) {
             server.destroy();
+            server = null;
+        }
+        
+        // Clear service beans
+        serviceBeans.clear();
+        
+        LOGGER.info("RestServer deactivated");
+    }
+
+    /**
+     * Custom service tracker customizer for JAX-RS services
+     * This handles the lifecycle of JAX-RS resource services properly
+     */
+    private class JaxRsServiceTrackerCustomizer implements ServiceTrackerCustomizer<Object, Object> {
+        
+        @Override
+        public Object addingService(ServiceReference<Object> reference) {
+            if (isShuttingDown.get()) {
+                LOGGER.debug("Shutdown in progress, ignoring new service: {}", 
+                    reference.getProperty("objectClass"));
+                return null;
+            }
+            
+            Object serviceBean = null;
+            try {
+                // Get the service - this should not be null if the service is properly registered
+                serviceBean = bundleContext.getService(reference);
+                
+                if (serviceBean == null) {
+                    LOGGER.warn("Service reference returned null for: {}", 
+                        reference.getProperty("objectClass"));
+                    return null;
+                }
+                
+                LOGGER.info("Registering JAX-RS service: {}", serviceBean.getClass().getName());
+                
+                // Add to service beans list
+                serviceBeans.add(serviceBean);
+                timeOfLastUpdate = System.currentTimeMillis();
+                
+                // Refresh server asynchronously to avoid blocking the service tracker
+                scheduleServerRefresh();
+                
+                return serviceBean;
+                
+            } catch (Exception e) {
+                LOGGER.error("Error adding JAX-RS service: {}", 
+                    reference.getProperty("objectClass"), e);
+                // Unget the service if we couldn't process it
+                if (serviceBean != null) {
+                    bundleContext.ungetService(reference);
+                }
+                return null;
+            }
+        }
+
+        @Override
+        public void modifiedService(ServiceReference<Object> reference, Object service) {
+            if (isShuttingDown.get()) {
+                return;
+            }
+            
+            LOGGER.info("JAX-RS service modified: {}", service.getClass().getName());
+            timeOfLastUpdate = System.currentTimeMillis();
+            scheduleServerRefresh();
+        }
+
+        @Override
+        public void removedService(ServiceReference<Object> reference, Object service) {
+            if (isShuttingDown.get()) {
+                return;
+            }
+            
+            LOGGER.info("Removing JAX-RS service: {}", service.getClass().getName());
+            
+            // Remove from service beans list
+            serviceBeans.remove(service);
+            timeOfLastUpdate = System.currentTimeMillis();
+            
+            // Unget the service
+            bundleContext.ungetService(reference);
+            
+            // Refresh server asynchronously
+            scheduleServerRefresh();
         }
     }
 
-    private synchronized void refreshServer() {
+    /**
+     * Schedules a server refresh with debouncing
+     */
+    private void scheduleServerRefresh() {
+        if (isShuttingDown.get()) {
+            return;
+        }
+        
         long now = System.currentTimeMillis();
-        LOGGER.info("Time (millis) since last update: {}", now - timeOfLastUpdate);
         if (now - timeOfLastUpdate < startupDelay) {
-            if (refreshTimer != null) {
-                return;
+            // Debounce rapid changes
+            if (refreshTimer == null) {
+                refreshTimer = new Timer("RestServer-Refresh-Timer", true);
+                refreshTimer.schedule(new TimerTask() {
+                    @Override
+                    public void run() {
+                        refreshTimer = null;
+                        if (!isShuttingDown.get()) {
+                            refreshServer();
+                        }
+                    }
+                }, startupDelay);
             }
-            TimerTask task = new TimerTask() {
-                public void run() {
-                    refreshTimer = null;
-                    refreshServer();
-                    LOGGER.info("Refreshed server task performed on: {} Thread's name: {}", new Date(), Thread.currentThread().getName());
-                }
-            };
-            refreshTimer = new Timer("Timer-Refresh-REST-API");
-
-            refreshTimer.schedule(task, startupDelay);
             return;
         }
+        
+        // Refresh immediately if enough time has passed
+        refreshServer();
+    }
 
+    private synchronized void refreshServer() {
+        if (isShuttingDown.get()) {
+            return;
+        }
+        
+        long now = System.currentTimeMillis();
+        LOGGER.debug("Time since last update: {} ms", now - timeOfLastUpdate);
+
+        // Destroy existing server
         if (server != null) {
-            LOGGER.info("JAX RS Server: Shutting down server...");
+            LOGGER.info("JAX-RS Server: Shutting down existing server...");
             server.destroy();
+            server = null;
         }
 
+        // Check if we have any services to register
         if (serviceBeans.isEmpty()) {
-            LOGGER.info("JAX RS Server: Server not started because no JAX RS EndPoint registered yet");
+            LOGGER.info("JAX-RS Server: No JAX-RS endpoints registered, server not started");
             return;
         }
 
-        LOGGER.info("JAX RS Server: Configuring server...");
+        LOGGER.info("JAX-RS Server: Configuring server with {} endpoints...", serviceBeans.size());
 
         List<Interceptor<? extends Message>> inInterceptors = new ArrayList<>();
         List<Interceptor<? extends Message>> outInterceptors = new ArrayList<>();
@@ -228,7 +322,6 @@ public class RestServer {
         Map<Class, StdDeserializer<?>> desers = new HashMap<>();
         desers.put(ContextRequest.class, new ContextRequestDeserializer(schemaService));
         desers.put(EventsCollectorRequest.class, new EventsCollectorRequestDeserializer(schemaService));
-
 
         // Build the server
         ObjectMapper objectMapper = new org.apache.unomi.persistence.spi.CustomObjectMapper(desers);
@@ -279,8 +372,14 @@ public class RestServer {
         jaxrsServerFactoryBean.setOutInterceptors(outInterceptors);
         jaxrsServerFactoryBean.setServiceBeans(serviceBeans);
 
-        LOGGER.info("JAX RS Server: Starting server with {} JAX RS EndPoints registered", serviceBeans.size());
-        server = jaxrsServerFactoryBean.create();
-        server.getEndpoint().getEndpointInfo().setName(UNOMI_REST_SERVER_END_POINT_NAME);
+        try {
+            LOGGER.info("JAX-RS Server: Starting server with {} endpoints", serviceBeans.size());
+            server = jaxrsServerFactoryBean.create();
+            server.getEndpoint().getEndpointInfo().setName(UNOMI_REST_SERVER_END_POINT_NAME);
+            LOGGER.info("JAX-RS Server: Server started successfully");
+        } catch (Exception e) {
+            LOGGER.error("JAX-RS Server: Failed to start server", e);
+            server = null;
+        }
     }
 }

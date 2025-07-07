@@ -35,7 +35,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
-
+import java.time.Instant;
 /**
  * An integration test for the event service
  */
@@ -89,8 +89,8 @@ public class EventServiceIT extends BaseIT {
 
         Condition pastEventCondition = new Condition(definitionsService.getConditionType("pastEventCondition"));
         pastEventCondition.setParameter("minimumEventCount", 1);
-        pastEventCondition.setParameter("fromDate", "1999-01-15T07:00:00Z");
-        pastEventCondition.setParameter("toDate", "2001-01-15T07:00:00Z");
+        pastEventCondition.setParameter("fromDate", Date.from(Instant.parse("1999-01-15T07:00:00Z")));
+        pastEventCondition.setParameter("toDate", Date.from(Instant.parse("2001-01-15T07:00:00Z")));
 
         pastEventCondition.setParameter("eventCondition", eventTypeCondition);
 
@@ -125,8 +125,8 @@ public class EventServiceIT extends BaseIT {
 
         Condition pastEventCondition = new Condition(definitionsService.getConditionType("pastEventCondition"));
         pastEventCondition.setParameter("minimumEventCount", 1);
-        pastEventCondition.setParameter("fromDate", "2000-07-15T07:00:00Z");
-        pastEventCondition.setParameter("toDate", "2001-01-15T07:00:00Z");
+        pastEventCondition.setParameter("fromDate", Date.from(Instant.parse("2000-07-01T07:00:00Z")));
+        pastEventCondition.setParameter("toDate", Date.from(Instant.parse("2001-01-15T07:00:00Z")));
 
         pastEventCondition.setParameter("eventCondition", eventTypeCondition);
 

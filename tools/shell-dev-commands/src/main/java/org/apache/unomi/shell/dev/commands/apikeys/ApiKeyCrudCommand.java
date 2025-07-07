@@ -112,13 +112,8 @@ public class ApiKeyCrudCommand extends BaseCrudCommand {
             apiKey.setName((String) properties.get("name"));
             apiKey.setDescription((String) properties.get("description"));
 
-            // Update the tenant with the new API key
+            // Update the tenant with the new API key metadata
             Tenant tenant = tenantService.getTenant(tenantId);
-            if (keyType == ApiKeyType.PUBLIC) {
-                tenant.setPublicApiKey(apiKey.getKey());
-            } else {
-                tenant.setPrivateApiKey(apiKey.getKey());
-            }
             tenantService.saveTenant(tenant);
         }
         return apiKey.getItemId();

@@ -332,7 +332,7 @@
                             <autoCreateIndex>true</autoCreateIndex>
                             <timeout>120</timeout>
                             <environmentVariables>
-                                <ES_JAVA_OPTS>-Xms4g -Xmx4g</ES_JAVA_OPTS>
+                                <ES_JAVA_OPTS>-Xms8g -Xmx8g</ES_JAVA_OPTS>
                             </environmentVariables>
                             <instanceSettings>
                                 <properties>
@@ -429,7 +429,7 @@
                                         </ports>
                                         <env>
                                             <discovery.type>single-node</discovery.type>
-                                            <OPENSEARCH_JAVA_OPTS>-Xms4g -Xmx4g -Dcluster.default.index.settings.number_of_replicas=0</OPENSEARCH_JAVA_OPTS>
+                                            <OPENSEARCH_JAVA_OPTS>-Xms8g -Xmx8g -Dcluster.default.index.settings.number_of_replicas=0</OPENSEARCH_JAVA_OPTS>
                                             <path.repo>/tmp/snapshots_repository</path.repo>
                                             <plugins.security.disabled>true</plugins.security.disabled>
                                             <OPENSEARCH_INITIAL_ADMIN_PASSWORD>Unomi.1ntegrat10n.Tests</OPENSEARCH_INITIAL_ADMIN_PASSWORD>

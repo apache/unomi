@@ -27,10 +27,12 @@ import org.apache.unomi.api.tenants.Tenant;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.conditions.ConditionEvaluatorDispatcher;
 import org.apache.unomi.services.TestHelper;
+import org.apache.unomi.services.common.security.ExecutionContextManagerImpl;
+import org.apache.unomi.services.common.security.KarafSecurityService;
 import org.apache.unomi.services.impl.*;
 import org.apache.unomi.services.impl.cache.MultiTypeCacheServiceImpl;
 import org.apache.unomi.services.impl.definitions.DefinitionsServiceImpl;
-import org.apache.unomi.services.impl.tenants.AuditServiceImpl;
+import org.apache.unomi.services.common.security.AuditServiceImpl;
 import org.apache.unomi.tracing.api.TracerService;
 import org.junit.Before;
 import org.junit.After;
@@ -123,12 +125,12 @@ public class EventServiceImplTest {
             tenantService,
             TENANT_1, TENANT_2, SYSTEM_TENANT
         );
-        
+
         // Clean up references using the helper method
         org.apache.unomi.services.TestHelper.cleanupReferences(
             tenantService, securityService, executionContextManager, eventService,
-            persistenceService, definitionsService, schedulerService, conditionValidationService, 
-            multiTypeCacheService, auditService, bundleContext, eventListener, 
+            persistenceService, definitionsService, schedulerService, conditionValidationService,
+            multiTypeCacheService, auditService, bundleContext, eventListener,
             eventListenerReference, tracerService
         );
     }

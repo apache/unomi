@@ -28,16 +28,16 @@ import org.apache.unomi.api.tasks.TaskExecutor;
 import org.apache.unomi.api.tenants.AuditService;
 import org.apache.unomi.api.tenants.TenantService;
 import org.apache.unomi.persistence.spi.PersistenceService;
-import org.apache.unomi.services.impl.ExecutionContextManagerImpl;
+import org.apache.unomi.services.common.security.ExecutionContextManagerImpl;
 import org.apache.unomi.services.impl.InMemoryPersistenceServiceImpl;
-import org.apache.unomi.services.impl.KarafSecurityService;
+import org.apache.unomi.services.common.security.KarafSecurityService;
 import org.apache.unomi.services.impl.TestRequestTracer;
 import org.apache.unomi.services.impl.definitions.DefinitionsServiceImpl;
 import org.apache.unomi.services.impl.events.EventServiceImpl;
 import org.apache.unomi.services.impl.rules.RulesServiceImpl;
 import org.apache.unomi.services.impl.rules.TestActionExecutorDispatcher;
 import org.apache.unomi.services.impl.scheduler.SchedulerServiceImpl;
-import org.apache.unomi.services.impl.tenants.AuditServiceImpl;
+import org.apache.unomi.services.common.security.AuditServiceImpl;
 import org.apache.unomi.services.impl.validation.ConditionValidationServiceImpl;
 import org.apache.unomi.services.impl.validation.validators.*;
 import org.apache.unomi.tracing.api.RequestTracer;
@@ -48,6 +48,7 @@ import org.osgi.framework.BundleContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.unomi.services.impl.cluster.ClusterServiceImpl;
+import org.apache.unomi.services.impl.InMemoryQueryBuilderAvailabilityTracker;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -217,6 +218,9 @@ public class TestHelper {
             schedulerService.setClusterService(clusterService);
         }
 
+        // Set the query builder availability tracker
+        schedulerService.setQueryBuilderAvailabilityTracker(new InMemoryQueryBuilderAvailabilityTracker());
+
         if (construct) {
             schedulerService.postConstruct();
         }
@@ -262,7 +266,7 @@ public class TestHelper {
         return createClusterService(persistenceService, nodeId, "127.0.0.1", "127.0.0.1", bundleContext);
     }
 
-    
+
     /**
      * Creates a cluster service instance for testing purposes with custom addresses and bundle context.
      * Initializes a new ClusterServiceImpl with the specified persistence service, node ID, addresses, and bundle context.

@@ -25,6 +25,7 @@ import org.apache.unomi.api.Session;
 import org.apache.unomi.api.actions.Action;
 import org.apache.unomi.api.actions.ActionExecutor;
 import org.apache.unomi.api.conditions.Condition;
+import org.apache.unomi.api.security.SecurityService;
 import org.apache.unomi.api.services.*;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.slf4j.Logger;
@@ -33,6 +34,7 @@ import org.apache.unomi.api.tasks.ScheduledTask;
 import org.apache.unomi.api.tasks.TaskExecutor;
 import org.apache.unomi.tracing.api.TracerService;
 import org.apache.unomi.tracing.api.RequestTracer;
+import org.apache.unomi.api.services.ExecutionContextManager;
 
 import java.util.*;
 import java.util.concurrent.TimeUnit;
@@ -48,6 +50,8 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
     private PrivacyService privacyService;
     private SchedulerService schedulerService;
     private TracerService tracerService;
+    private ExecutionContextManager executionContextManager;
+    private SecurityService securityService;
     // TODO we can remove this limit after dealing with: UNOMI-776 (50 is completely arbitrary and it's used to bypass the auto-scroll done by the persistence Service)
     private int maxProfilesInOneMerge = 50;
 
@@ -55,7 +59,7 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
         RequestTracer tracer = null;
         if (tracerService != null && tracerService.isTracingEnabled()) {
             tracer = tracerService.getCurrentTracer();
-            tracer.startOperation("merge-profiles", 
+            tracer.startOperation("merge-profiles",
                 "Starting profile merge operation", action);
         }
 
@@ -164,8 +168,12 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
                             .filter(mergedProfileId -> !StringUtils.equals(mergedProfileId, masterProfileId))
                             .collect(Collectors.toList());
 
+                    // Get current tenant ID from execution context
+                    String currentTenantId = executionContextManager.getCurrentContext() != null ?
+                        executionContextManager.getCurrentContext().getTenantId() : "system";
+
                     // ASYNC: Update browsing data (events/sessions) for merged profiles
-                    reassignPersistedBrowsingDatasAsync(anonymousBrowsing, mergedProfileIds, masterProfileId);
+                    reassignPersistedBrowsingDatasAsync(anonymousBrowsing, mergedProfileIds, masterProfileId, currentTenantId);
 
                     // Save event, as we dynamically changed the profileId of the current event
                     if (event.isPersistent()) {
@@ -217,10 +225,10 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
         return persistenceService.query(propertyCondition, "properties.firstVisit", Profile.class, 0, maxProfilesInOneMerge).getList();
     }
 
-    private void reassignPersistedBrowsingDatasAsync(boolean anonymousBrowsing, List<String> mergedProfileIds, String masterProfileId) {
+    private void reassignPersistedBrowsingDatasAsync(boolean anonymousBrowsing, List<String> mergedProfileIds, String masterProfileId, String tenantId) {
         // Register task executor for data reassignment
         String taskType = "merge-profiles-reassign-data";
-        
+
         // Create a reusable executor that can handle the parameters
         TaskExecutor mergeProfilesReassignDataExecutor = new TaskExecutor() {
             @Override
@@ -236,27 +244,31 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
                     @SuppressWarnings("unchecked")
                     List<String> profilesIds = (List<String>) parameters.get("mergedProfileIds");
                     String masterProfile = (String) parameters.get("masterProfileId");
-                    
-                    if (!isAnonymousBrowsing) {
-                        Condition profileIdsCondition = new Condition(definitionsService.getConditionType("eventPropertyCondition"));
-                        profileIdsCondition.setParameter("propertyName","profileId");
-                        profileIdsCondition.setParameter("comparisonOperator","in");
-                        profileIdsCondition.setParameter("propertyValues", profilesIds);
-                        Map<String, Object> eventParams = new HashMap<>();
-                        eventParams.put("mergeProfilePreviousIds", profilesIds);
-                        eventParams.put("mergeProfileTargetId", masterProfile);
-                        
-                        String[] scripts = new String[]{"updateProfileId"};
-                        Map<String, Object>[] scriptParams = new Map[]{Collections.singletonMap("profileId", masterProfile)};
-                        Condition[] conditions = new Condition[]{profileIdsCondition};
-                        
-                        persistenceService.updateWithQueryAndStoredScript(new Class[]{Session.class, Event.class}, scripts, scriptParams, conditions, false);
-                    } else {
-                        for (String mergedProfileId : profilesIds) {
-                            privacyService.anonymizeBrowsingData(mergedProfileId);
+                    String tenantId = (String) parameters.get("tenantId");
+
+                    securityService.setCurrentSubject(securityService.createSubject(tenantId, true));
+
+                    // Execute the merge operation in the correct tenant context
+                    executionContextManager.executeAsTenant(tenantId, () -> {
+                        if (!isAnonymousBrowsing) {
+                            Condition profileIdsCondition = new Condition(definitionsService.getConditionType("eventPropertyCondition"));
+                            profileIdsCondition.setParameter("propertyName","profileId");
+                            profileIdsCondition.setParameter("comparisonOperator","in");
+                            profileIdsCondition.setParameter("propertyValues", profilesIds);
+
+                            String[] scripts = new String[]{"updateProfileId"};
+                            Map<String, Object>[] scriptParams = new Map[]{Collections.singletonMap("profileId", masterProfile)};
+                            Condition[] conditions = new Condition[]{profileIdsCondition};
+
+                            persistenceService.updateWithQueryAndStoredScript(new Class[]{Session.class, Event.class}, scripts, scriptParams, conditions, false);
+                        } else {
+                            for (String mergedProfileId : profilesIds) {
+                                privacyService.anonymizeBrowsingData(mergedProfileId);
+                            }
                         }
-                    }
-                    
+                        return null;
+                    });
+
                     callback.complete();
                 } catch (Exception e) {
                     LOGGER.error("Error while reassigning profile data", e);
@@ -264,7 +276,7 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
                 }
             }
         };
-        
+
         // Register the executor
         schedulerService.registerTaskExecutor(mergeProfilesReassignDataExecutor);
 
@@ -273,7 +285,8 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
             .withParameters(Map.of(
                 "anonymousBrowsing", anonymousBrowsing,
                 "mergedProfileIds", mergedProfileIds,
-                "masterProfileId", masterProfileId
+                "masterProfileId", masterProfileId,
+                    "tenantId", tenantId
             ))
             .withInitialDelay(1000, TimeUnit.MILLISECONDS)
             .asOneShot()
@@ -338,5 +351,21 @@ public class MergeProfilesOnPropertyAction implements ActionExecutor {
 
     public void setTracerService(TracerService tracerService) {
         this.tracerService = tracerService;
+    }
+
+    public void bindExecutionContextManager(ExecutionContextManager executionContextManager) {
+        this.executionContextManager = executionContextManager;
+    }
+
+    public void unbindExecutionContextManager(ExecutionContextManager executionContextManager) {
+        this.executionContextManager = null;
+    }
+
+    public void bindSecurityService(SecurityService securityService) {
+        this.securityService = securityService;
+    }
+
+    public void unbindSecurityService(SecurityService securityService) {
+        this.securityService = null;
     }
 }

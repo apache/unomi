@@ -80,7 +80,7 @@ public class ScopeIT extends BaseIT {
         storedScope = keepTrying("Couldn't find scopes", () -> get(SCOPE_URL + "/scopeTest", Scope.class), Objects::nonNull,
                 DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
 
-        assertEquals("storedScope.getItemId() shoould be equal to scopeToTest", "scopeToTest", storedScope.getItemId());
+        assertEquals("storedScope.getItemId() should be equal to scopeToTest", "scopeTest", storedScope.getItemId());
     }
 
     @Test

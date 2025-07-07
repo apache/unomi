@@ -56,13 +56,13 @@ public class HttpClientThatWaitsForUnomi {
         if (withAuth) {
             if (isPrivateEndpoint(path) || forcePrivate) {
                 // For private endpoints, use Basic auth with tenant ID and private key
-                if (testTenant != null && testPrivateKey != null) {
+                if (testTenant != null && testPrivateKey != null && request.getFirstHeader("Authorization") == null) {
                     String credentials = testTenant.getItemId() + ":" + testPrivateKey.getKey();
                     request.setHeader("Authorization", "Basic " + Base64.getEncoder().encodeToString(credentials.getBytes()));
                 }
             } else {
                 // For public endpoints, use X-Unomi-Api-Key header
-                if (testPublicKey != null) {
+                if (testPublicKey != null && request.getFirstHeader("X-Unomi-Api-Key") == null) {
                     request.setHeader("X-Unomi-Api-Key", testPublicKey.getKey());
                 }
             }

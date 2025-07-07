@@ -84,7 +84,36 @@ public class UnomiAuthenticationFilter implements Filter {
                         throw new RuntimeException(e);
                     }
                 });
+                return;
             }
+            
+            // If no public key found, try private key authentication for public endpoints
+            // Private keys have higher privileges and should be able to access public endpoints
+            String authHeader = httpRequest.getHeader(AUTHORIZATION_HEADER);
+            if (authHeader != null && authHeader.startsWith(BASIC_AUTH_PREFIX)) {
+                String[] credentials = extractCredentials(authHeader);
+                if (credentials != null && credentials.length == 2) {
+                    String tenantId = credentials[0];
+                    String privateKey = credentials[1];
+
+                    if (tenantService.validateApiKeyWithType(tenantId, privateKey, ApiKey.ApiKeyType.PRIVATE)) {
+                        // Set tenant ID for the request
+                        executionContextManager.executeAsTenant(tenantId, () -> {
+                            try {
+                                chain.doFilter(request, response);
+                            } catch (IOException | ServletException e) {
+                                throw new RuntimeException(e);
+                            }
+                        });
+                        return;
+                    }
+                }
+            }
+            
+            // If no valid authentication found, return 401
+            httpResponse.setHeader("WWW-Authenticate", "Basic realm=\"cxs\"");
+            httpResponse.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Authentication required");
+            return;
         }
         // Handle all other endpoints requests
         else {

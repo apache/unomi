@@ -18,13 +18,14 @@ package org.apache.unomi.itests.graphql;
 
 import org.apache.http.HttpEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
-import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.util.EntityUtils;
 import org.apache.unomi.graphql.utils.GraphQLObjectMapper;
 import org.apache.unomi.itests.BaseIT;
+import org.junit.Before;
 import org.junit.runner.RunWith;
 import org.ops4j.pax.exam.junit.PaxExam;
 import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
@@ -34,6 +35,7 @@ import java.io.InputStream;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -42,20 +44,120 @@ import java.util.regex.Pattern;
 public abstract class BaseGraphQLIT extends BaseIT {
 
     protected static final ContentType JSON_CONTENT_TYPE = ContentType.create("application/json");
+    private static final String UNOMI_TENANT_ID_HEADER = "X-Unomi-Tenant-Id";
+    private static final String GRAPHQL_ENDPOINT = "/graphql/schema.json";
 
+    @Before
+    public void setUp() throws InterruptedException {
+        // Wait for GraphQL servlet to be available
+        keepTrying("Couldn't find GraphQL endpoint", () -> {
+            try (CloseableHttpResponse response = executeHttpRequest(new HttpGet(getFullUrl(GRAPHQL_ENDPOINT)), AuthType.JAAS_ADMIN)) {
+                return response.getStatusLine().getStatusCode() == 200 ? response : null;
+            } catch (Exception e) {
+                return null;
+            }
+        }, Objects::nonNull, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+    }
+
+    /**
+     * Performs a GraphQL POST request with no authentication.
+     * This is equivalent to AuthType.NONE.
+     *
+     * @param resource The resource path to the GraphQL query/mutation
+     * @return The HTTP response
+     * @throws Exception If an error occurs during the request
+     */
     protected CloseableHttpResponse postAnonymous(final String resource) throws Exception {
-        return postAs(resource, null, null);
+        return postWithAuthType(resource, AuthType.NONE);
     }
 
+    /**
+     * Performs a GraphQL POST request with JAAS admin authentication (karaf:karaf).
+     * This is equivalent to AuthType.JAAS_ADMIN.
+     *
+     * @param resource The resource path to the GraphQL query/mutation
+     * @return The HTTP response
+     * @throws Exception If an error occurs during the request
+     */
     protected CloseableHttpResponse post(final String resource) throws Exception {
-        return postAs(resource, "karaf", "karaf");
+        return postWithAuthType(resource, AuthType.JAAS_ADMIN);
     }
 
+    /**
+     * Performs a GraphQL POST request with custom username/password authentication.
+     * This is equivalent to AuthType.JAAS_ADMIN with custom credentials.
+     *
+     * @param resource The resource path to the GraphQL query/mutation
+     * @param username The username for basic authentication
+     * @param password The password for basic authentication
+     * @return The HTTP response
+     * @throws Exception If an error occurs during the request
+     */
     protected CloseableHttpResponse postAs(final String resource, final String username, final String password) throws Exception {
+        return postWithCustomCredentials(resource, username, password);
+    }
+
+    /**
+     * Performs a GraphQL POST request with the specified authentication type.
+     *
+     * @param resource The resource path to the GraphQL query/mutation
+     * @param authType The authentication type to use
+     * @return The HTTP response
+     * @throws Exception If an error occurs during the request
+     */
+    protected CloseableHttpResponse postWithAuthType(final String resource, final AuthType authType) throws Exception {
+        return postWithAuthTypeAndTenant(resource, authType, TEST_TENANT_ID);
+    }
+
+    /**
+     * Performs a GraphQL POST request with the specified authentication type and tenant ID.
+     *
+     * @param resource The resource path to the GraphQL query/mutation
+     * @param authType The authentication type to use
+     * @param tenantId The tenant ID to use for the request context (can be null)
+     * @return The HTTP response
+     * @throws Exception If an error occurs during the request
+     */
+    protected CloseableHttpResponse postWithAuthTypeAndTenant(final String resource, final AuthType authType, final String tenantId) throws Exception {
         final String resourceAsString = resourceAsString(resource);
-
         final HttpPost request = new HttpPost(getFullUrl("/graphql"));
+        request.setEntity(new StringEntity(resourceAsString, JSON_CONTENT_TYPE));
+        
+        // Add tenant ID header if specified
+        if (tenantId != null && !tenantId.trim().isEmpty()) {
+            request.setHeader(UNOMI_TENANT_ID_HEADER, tenantId);
+        }
+        
+        return executeHttpRequest(request, authType);
+    }
 
+    /**
+     * Performs a GraphQL POST request with custom credentials.
+     * This method maintains backward compatibility with the existing postAs method.
+     *
+     * @param resource The resource path to the GraphQL query/mutation
+     * @param username The username for basic authentication
+     * @param password The password for basic authentication
+     * @return The HTTP response
+     * @throws Exception If an error occurs during the request
+     */
+    protected CloseableHttpResponse postWithCustomCredentials(final String resource, final String username, final String password) throws Exception {
+        return postWithCustomCredentialsAndTenant(resource, username, password, TEST_TENANT_ID);
+    }
+
+    /**
+     * Performs a GraphQL POST request with custom credentials and tenant ID.
+     *
+     * @param resource The resource path to the GraphQL query/mutation
+     * @param username The username for basic authentication
+     * @param password The password for basic authentication
+     * @param tenantId The tenant ID to use for the request context (can be null)
+     * @return The HTTP response
+     * @throws Exception If an error occurs during the request
+     */
+    protected CloseableHttpResponse postWithCustomCredentialsAndTenant(final String resource, final String username, final String password, final String tenantId) throws Exception {
+        final String resourceAsString = resourceAsString(resource);
+        final HttpPost request = new HttpPost(getFullUrl("/graphql"));
         request.setEntity(new StringEntity(resourceAsString, JSON_CONTENT_TYPE));
 
         if (username != null && password != null) {
@@ -66,7 +168,12 @@ public abstract class BaseGraphQLIT extends BaseIT {
             request.removeHeaders("Authorization");
         }
 
-        return HttpClientBuilder.create().build().execute(request);
+        // Add tenant ID header if specified
+        if (tenantId != null && !tenantId.trim().isEmpty()) {
+            request.setHeader(UNOMI_TENANT_ID_HEADER, tenantId);
+        }
+
+        return httpClient.execute(request);
     }
 
     protected String resourceAsString(final String resource) {

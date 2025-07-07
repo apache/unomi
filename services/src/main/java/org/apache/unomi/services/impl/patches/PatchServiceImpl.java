@@ -21,6 +21,7 @@ import com.github.fge.jsonpatch.JsonPatch;
 import com.github.fge.jsonpatch.JsonPatchException;
 import org.apache.unomi.api.Item;
 import org.apache.unomi.api.Patch;
+import org.apache.unomi.api.services.ExecutionContextManager;
 import org.apache.unomi.api.services.PatchService;
 import org.apache.unomi.api.services.cache.CacheableTypeConfig;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
@@ -47,7 +48,7 @@ public class PatchServiceImpl extends AbstractMultiTypeCachingService implements
 
     @Override
     public Patch load(String id) {
-        return persistenceService.load(id, Patch.class);
+        return getItem(id, Patch.class);
     }
 
     public Item patch(Patch patch) {
@@ -57,7 +58,7 @@ public class PatchServiceImpl extends AbstractMultiTypeCachingService implements
             throw new IllegalArgumentException("Must specify valid type");
         }
 
-        Item item = persistenceService.load(patch.getPatchedItemId(), type);
+        Item item = getItem(patch.getPatchedItemId(), type);
 
         if (item != null && patch.getOperation() != null) {
             LOGGER.info("Applying patch {}", patch.getItemId());
@@ -65,7 +66,7 @@ public class PatchServiceImpl extends AbstractMultiTypeCachingService implements
             switch (patch.getOperation()) {
                 case "override":
                     item = CustomObjectMapper.getObjectMapper().convertValue(patch.getData(), type);
-                    persistenceService.save(item);
+                    saveItem(item, Item::getItemId, patch.getPatchedItemType());
                     break;
                 case "patch":
                     JsonNode node = CustomObjectMapper.getObjectMapper().valueToTree(item);
@@ -73,20 +74,20 @@ public class PatchServiceImpl extends AbstractMultiTypeCachingService implements
                     try {
                         JsonNode converted = jsonPatch.apply(node);
                         item = CustomObjectMapper.getObjectMapper().convertValue(converted, type);
-                        persistenceService.save(item);
+                        saveItem(item, Item::getItemId, patch.getPatchedItemType());
                     } catch (JsonPatchException e) {
                         LOGGER.error("Cannot apply patch",e);
                     }
                     break;
                 case "remove":
-                    persistenceService.remove(patch.getPatchedItemId(), type);
+                    removeItem(patch.getPatchedItemId(), type, patch.getPatchedItemType());
                     break;
             }
 
         }
 
         patch.setLastApplication(new Date());
-        persistenceService.save(patch);
+        saveItem(patch, Patch::getItemId, Patch.ITEM_TYPE);
 
         return item;
     }

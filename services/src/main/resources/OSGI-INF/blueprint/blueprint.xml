@@ -31,12 +31,9 @@
     <reference id="scriptExecutor" interface="org.apache.unomi.scripting.ScriptExecutor"/>
     <reference id="configAdmin" interface="org.osgi.service.cm.ConfigurationAdmin"/>
     <reference id="tracerService" interface="org.apache.unomi.tracing.api.TracerService"/>
-    <reference id="encryptionService" interface="org.apache.unomi.api.security.EncryptionService" availability="optional">
-        <reference-listener ref="securityServiceImpl"
-                           bind-method="bindEncryptionService"
-                           unbind-method="unbindEncryptionService"/>
-    </reference>
     <reference id="bundleWatcher" interface="org.apache.unomi.lifecycle.BundleWatcher"/>
+    <reference id="executionContextManager" interface="org.apache.unomi.api.services.ExecutionContextManager" />
+    <reference id="queryBuilderAvailabilityTrackerRef" interface="org.apache.unomi.persistence.spi.QueryBuilderAvailabilityTracker" availability="optional"/>
 
     <!-- Reference Lists -->
     <reference-list id="eventListenerServices"
@@ -145,43 +142,8 @@
         </cm:default-properties>
     </cm:property-placeholder>
 
-    <cm:property-placeholder persistent-id="org.apache.unomi.security" update-strategy="reload" placeholder-prefix="${security.">
-        <cm:default-properties>
-            <cm:property name="systemRoles" value="ROLE_UNOMI_SYSTEM,ROLE_UNOMI_ADMIN"/>
-            <cm:property name="defaultRole" value="ROLE_UNOMI_TENANT_USER"/>
-            <cm:property name="permissionRoles" value="ROLE_UNOMI_SYSTEM,ROLE_UNOMI_ADMIN,ROLE_UNOMI_TENANT_USER,ROLE_UNOMI_TENANT_ADMIN,ROLE_SYSTEM_MAINTENANCE"/>
-            <cm:property name="enableEncryption" value="false"/>
-        </cm:default-properties>
-    </cm:property-placeholder>
-
     <!-- Beans -->
     <bean id="multiTypeCacheServiceImpl" class="org.apache.unomi.services.impl.cache.MultiTypeCacheServiceImpl" />
-
-    <bean id="securityServiceConfiguration" class="org.apache.unomi.api.security.SecurityServiceConfiguration">
-        <property name="systemRoles">
-            <set>
-                <value>ROLE_UNOMI_SYSTEM</value>
-                <value>ROLE_UNOMI_ADMIN</value>
-                <value>ROLE_UNOMI_TENANT_ADMIN</value>
-                <value>ROLE_SYSTEM_MAINTENANCE</value>
-            </set>
-        </property>
-        <property name="enableEncryption" value="${security.enableEncryption}"/>
-    </bean>
-
-    <bean id="auditServiceImpl" class="org.apache.unomi.services.impl.tenants.AuditServiceImpl">
-        <property name="persistenceService" ref="persistenceService"/>
-    </bean>
-
-    <bean id="securityServiceImpl" class="org.apache.unomi.services.impl.KarafSecurityService"
-          init-method="init" destroy-method="destroy">
-        <property name="configuration" ref="securityServiceConfiguration"/>
-        <property name="tenantAuditService" ref="auditServiceImpl"/>
-    </bean>
-
-    <bean id="executionContextManagerImpl" class="org.apache.unomi.services.impl.ExecutionContextManagerImpl">
-        <property name="securityService" ref="securityServiceImpl"/>
-    </bean>
 
     <bean id="schedulerServiceImpl" class="org.apache.unomi.services.impl.scheduler.SchedulerServiceImpl"
         init-method="postConstruct" destroy-method="preDestroy">
@@ -192,6 +154,7 @@
         <property name="nodeId" value="${services.scheduler.nodeId}"/>
         <property name="lockTimeout" value="${services.scheduler.lockTimeout}"/>
         <property name="purgeTaskEnabled" value="${services.scheduler.purgeTaskEnabled}"/>
+        <property name="queryBuilderAvailabilityTracker" ref="queryBuilderAvailabilityTrackerRef"/>
     </bean>
 
     <bean id="definitionsServiceImpl" class="org.apache.unomi.services.impl.definitions.DefinitionsServiceImpl"
@@ -202,7 +165,7 @@
         <property name="definitionsRefreshInterval" value="${services.definitions.refresh.interval}"/>
         <property name="tenantService" ref="tenantServiceImpl"/>
         <property name="cacheService" ref="multiTypeCacheServiceImpl"/>
-        <property name="contextManager" ref="executionContextManagerImpl"/>
+        <property name="contextManager" ref="executionContextManager"/>
         <property name="conditionValidationService" ref="conditionValidationService"/>
         <property name="tracerService" ref="tracerService"/>
     </bean>
@@ -240,10 +203,10 @@
         <property name="rulesService" ref="rulesServiceImpl"/>
         <property name="bundleContext" ref="blueprintBundleContext"/>
         <property name="tenantService" ref="tenantServiceImpl"/>
-        <property name="contextManager" ref="executionContextManagerImpl"/>
+        <property name="contextManager" ref="executionContextManager"/>
         <property name="conditionValidationService" ref="conditionValidationService"/>
         <property name="tracerService" ref="tracerService"/>
-        <property name="contextManager" ref="executionContextManagerImpl"/>
+        <property name="contextManager" ref="executionContextManager"/>
         <property name="cacheService" ref="multiTypeCacheServiceImpl"/>
         <property name="tenantService" ref="tenantServiceImpl"/>
         <property name="schedulerService" ref="schedulerServiceImpl"/>
@@ -257,7 +220,7 @@
         <property name="schedulerService" ref="schedulerServiceImpl"/>
         <property name="scopesRefreshInterval" value="${services.scopes.refresh.interval}"/>
         <property name="tenantService" ref="tenantServiceImpl"/>
-        <property name="contextManager" ref="executionContextManagerImpl"/>
+        <property name="contextManager" ref="executionContextManager"/>
         <property name="bundleContext" ref="blueprintBundleContext"/>
         <property name="cacheService" ref="multiTypeCacheServiceImpl"/>
     </bean>
@@ -282,7 +245,7 @@
         <property name="rulesStatisticsRefreshInterval" value="${services.rules.statistics.refresh.interval}"/>
         <property name="optimizedRulesActivated" value="${services.rules.optimizationActivated}"/>
         <property name="tenantService" ref="tenantServiceImpl"/>
-        <property name="contextManager" ref="executionContextManagerImpl"/>
+        <property name="contextManager" ref="executionContextManager"/>
         <property name="conditionValidationService" ref="conditionValidationService"/>
         <property name="tracerService" ref="tracerService"/>
         <property name="cacheService" ref="multiTypeCacheServiceImpl"/>
@@ -308,7 +271,7 @@
         <property name="sendProfileUpdateEventForSegmentUpdate" value="${services.segment.send.profile.update.event}"/>
         <property name="dailyDateExprEvaluationHourUtc" value="${services.segment.daily.dateexpr.evaluation.hourutc}"/>
         <property name="tenantService" ref="tenantServiceImpl"/>
-        <property name="contextManager" ref="executionContextManagerImpl"/>
+        <property name="contextManager" ref="executionContextManager"/>
         <property name="cacheService" ref="multiTypeCacheServiceImpl"/>
         <property name="conditionValidationService" ref="conditionValidationService"/>
         <property name="tracerService" ref="tracerService"/>
@@ -336,7 +299,7 @@
         <property name="schedulerService" ref="schedulerServiceImpl"/>
         <property name="forceRefreshOnSave" value="${services.profile.forceRefreshOnSave}"/>
         <property name="propertiesRefreshInterval" value="${services.properties.refresh.interval}"/>
-        <property name="contextManager" ref="executionContextManagerImpl"/>
+        <property name="contextManager" ref="executionContextManager"/>
         <property name="cacheService" ref="multiTypeCacheServiceImpl"/>
         <property name="tenantService" ref="tenantServiceImpl"/>
     </bean>
@@ -375,7 +338,7 @@
           init-method="postConstruct" destroy-method="preDestroy">
         <property name="persistenceService" ref="persistenceService"/>
         <property name="bundleContext" ref="blueprintBundleContext"/>
-        <property name="contextManager" ref="executionContextManagerImpl"/>
+        <property name="contextManager" ref="executionContextManager"/>
         <property name="cacheService" ref="multiTypeCacheServiceImpl"/>
         <property name="tenantService" ref="tenantServiceImpl"/>
     </bean>
@@ -398,7 +361,7 @@
 
     <bean id="tenantServiceImpl" class="org.apache.unomi.services.impl.tenants.TenantServiceImpl">
         <property name="persistenceService" ref="persistenceService"/>
-        <property name="executionContextManager" ref="executionContextManagerImpl"/>
+        <property name="executionContextManager" ref="executionContextManager"/>
     </bean>
 
     <bean id="tenantMigrationServiceImpl" class="org.apache.unomi.services.impl.tenants.TenantMigrationService">
@@ -411,14 +374,14 @@
         <property name="persistenceService" ref="persistenceService"/>
         <property name="definitionsService" ref="definitionsServiceImpl"/>
         <property name="tenantService" ref="tenantServiceImpl"/>
-        <property name="contextManager" ref="executionContextManagerImpl"/>
+        <property name="contextManager" ref="executionContextManager"/>
     </bean>
 
     <bean id="tenantQuotaServiceImpl" class="org.apache.unomi.services.impl.tenants.TenantQuotaService"
           init-method="activate">
         <property name="persistenceService" ref="persistenceService"/>
         <property name="tenantService" ref="tenantServiceImpl"/>
-        <property name="contextManager" ref="executionContextManagerImpl"/>
+        <property name="contextManager" ref="executionContextManager"/>
     </bean>
 
     <!-- Value Type Validator Beans -->
@@ -451,8 +414,6 @@
 
     <!-- Services -->
     <service id="multiTypeCacheService" ref="multiTypeCacheServiceImpl" interface="org.apache.unomi.api.services.cache.MultiTypeCacheService" />
-
-    <service id="executionContextManager" ref="executionContextManagerImpl" interface="org.apache.unomi.api.services.ExecutionContextManager"/>
 
     <service id="schedulerService" ref="schedulerServiceImpl">
         <interfaces>
@@ -614,12 +575,6 @@
         </service-properties>
     </service>
 
-    <service id="auditService" ref="auditServiceImpl" interface="org.apache.unomi.api.tenants.AuditService">
-        <service-properties>
-            <entry key="service.exported.interfaces" value="org.apache.unomi.api.tenants.AuditService"/>
-        </service-properties>
-    </service>
-
     <service id="tenantMigrationService" ref="tenantMigrationServiceImpl"
              interface="org.apache.unomi.services.impl.tenants.TenantMigrationService">
         <service-properties>
@@ -641,12 +596,6 @@
         </service-properties>
     </service>
 
-    <service id="securityService" ref="securityServiceImpl" interface="org.apache.unomi.api.security.SecurityService">
-        <service-properties>
-            <entry key="service.exported.interfaces" value="org.apache.unomi.api.security.SecurityService"/>
-        </service-properties>
-    </service>
-
     <service id="clusterService" ref="clusterServiceImpl" interface="org.apache.unomi.api.services.ClusterService"/>
 
     <!-- Value Type Validator Services -->
@@ -662,5 +611,13 @@
 
     <!-- Condition Validation Service -->
     <service id="conditionValidationServiceInterface" ref="conditionValidationService" interface="org.apache.unomi.api.services.ConditionValidationService"/>
+
+    <reference id="queryBuilderAvailabilityTracker" 
+               interface="org.apache.unomi.persistence.spi.QueryBuilderAvailabilityTracker"
+               availability="optional">
+        <reference-listener ref="schedulerServiceImpl"
+                          bind-method="setQueryBuilderAvailabilityTracker"
+                          unbind-method="unsetQueryBuilderAvailabilityTracker"/>
+    </reference>
 
 </blueprint>

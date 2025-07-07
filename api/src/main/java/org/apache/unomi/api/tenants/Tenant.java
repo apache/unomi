@@ -19,6 +19,9 @@ package org.apache.unomi.api.tenants;
 import org.apache.unomi.api.Item;
 
 import java.util.*;
+import java.util.stream.Collectors;
+
+import javax.xml.bind.annotation.XmlTransient;
 
 /**
  * Represents a tenant in the system.
@@ -76,20 +79,6 @@ public class Tenant extends Item {
      * Additional custom properties for the tenant.
      */
     private Map<String, Object> properties;
-
-    /**
-     * The currently active private API key for the tenant.
-     * This key is used for secure operations and administrative tasks.
-     * It should be kept confidential and only used for server-to-server communication.
-     */
-    private String privateApiKey;
-
-    /**
-     * The currently active public API key for the tenant.
-     * This key is used for client-side operations and can be safely exposed
-     * in client applications.
-     */
-    private String publicApiKey;
 
     /**
      * The set of event types that are restricted for this tenant.
@@ -281,35 +270,98 @@ public class Tenant extends Item {
 
     /**
      * Gets the currently active private API key for the tenant.
+     * This method resolves the active private API key from the API keys list.
+     * It returns the most recently created, non-revoked, non-expired private key.
      * This key should be used for secure operations and administrative tasks.
-     * @return the active private API key
+     * @return the active private API key, or null if no valid private key exists
      */
+    @XmlTransient
     public String getPrivateApiKey() {
-        return privateApiKey;
-    }
-
-    /**
-     * Sets the active private API key for the tenant.
-     * @param privateApiKey the private API key to set as active
-     */
-    public void setPrivateApiKey(String privateApiKey) {
-        this.privateApiKey = privateApiKey;
+        if (apiKeys == null) {
+            return null;
+        }
+        
+        return apiKeys.stream()
+            .filter(key -> key.getKeyType() == ApiKey.ApiKeyType.PRIVATE)
+            .filter(key -> !key.isRevoked())
+            .filter(key -> key.getExpirationDate() == null || key.getExpirationDate().after(new Date()))
+            .max(Comparator.comparing(ApiKey::getCreationDate))
+            .map(ApiKey::getKey)
+            .orElse(null);
     }
 
     /**
      * Gets the currently active public API key for the tenant.
+     * This method resolves the active public API key from the API keys list.
+     * It returns the most recently created, non-revoked, non-expired public key.
      * This key can be safely used in client-side applications.
-     * @return the active public API key
+     * @return the active public API key, or null if no valid public key exists
      */
+    @XmlTransient
     public String getPublicApiKey() {
-        return publicApiKey;
+        if (apiKeys == null) {
+            return null;
+        }
+        
+        return apiKeys.stream()
+            .filter(key -> key.getKeyType() == ApiKey.ApiKeyType.PUBLIC)
+            .filter(key -> !key.isRevoked())
+            .filter(key -> key.getExpirationDate() == null || key.getExpirationDate().after(new Date()))
+            .max(Comparator.comparing(ApiKey::getCreationDate))
+            .map(ApiKey::getKey)
+            .orElse(null);
     }
 
     /**
-     * Sets the active public API key for the tenant.
-     * @param publicApiKey the public API key to set as active
+     * Gets all active private API keys for the tenant.
+     * This method returns all non-revoked, non-expired private keys.
+     * @return list of active private API keys, or empty list if none exist
      */
-    public void setPublicApiKey(String publicApiKey) {
-        this.publicApiKey = publicApiKey;
+    @XmlTransient
+    public List<ApiKey> getActivePrivateApiKeys() {
+        if (apiKeys == null) {
+            return new ArrayList<>();
+        }
+        
+        return apiKeys.stream()
+            .filter(key -> key.getKeyType() == ApiKey.ApiKeyType.PRIVATE)
+            .filter(key -> !key.isRevoked())
+            .filter(key -> key.getExpirationDate() == null || key.getExpirationDate().after(new Date()))
+            .collect(Collectors.toList());
+    }
+
+    /**
+     * Gets all active public API keys for the tenant.
+     * This method returns all non-revoked, non-expired public keys.
+     * @return list of active public API keys, or empty list if none exist
+     */
+    @XmlTransient
+    public List<ApiKey> getActivePublicApiKeys() {
+        if (apiKeys == null) {
+            return new ArrayList<>();
+        }
+        
+        return apiKeys.stream()
+            .filter(key -> key.getKeyType() == ApiKey.ApiKeyType.PUBLIC)
+            .filter(key -> !key.isRevoked())
+            .filter(key -> key.getExpirationDate() == null || key.getExpirationDate().after(new Date()))
+            .collect(Collectors.toList());
+    }
+
+    /**
+     * Gets all active API keys for the tenant.
+     * This method returns all non-revoked, non-expired keys regardless of type.
+     * @return list of all active API keys, or empty list if none exist
+     */
+    @XmlTransient
+    public List<ApiKey> getActiveApiKeys() {
+        if (apiKeys == null) {
+            return new ArrayList<>();
+        }
+        
+        return apiKeys.stream()
+            .filter(key -> !key.isRevoked())
+            .filter(key -> key.getExpirationDate() == null || key.getExpirationDate().after(new Date()))
+            .collect(Collectors.toList());
     }
 }

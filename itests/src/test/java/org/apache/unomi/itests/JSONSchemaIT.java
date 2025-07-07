@@ -206,12 +206,15 @@ public class JSONSchemaIT extends BaseIT {
 
         keepTrying("Should return a schema when calling the endpoint", () -> {
             try (CloseableHttpResponse response = executeHttpRequest(request)) {
+                if (response.getEntity() == null) {
+                    return null;
+                }
                 return EntityUtils.toString(response.getEntity());
             } catch (IOException e) {
                 LOGGER.error("Failed to get the json schema with the id: {}", schemaId);
             }
             return "";
-        }, entity -> entity.contains("DummyEvent"), DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+        }, entity -> entity != null && entity.contains("DummyEvent"), DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
     }
 
     @Test
@@ -364,9 +367,16 @@ public class JSONSchemaIT extends BaseIT {
     }
 
     @Test
-    public void testSaveFail_PredefinedJSONSchema() throws IOException {
+    public void testOverridePredefinedJSONSchema() throws IOException {
         try (CloseableHttpResponse response = post(JSONSCHEMA_URL, "schemas/schema-predefined.json", ContentType.TEXT_PLAIN)) {
-            assertEquals("Unable to save schema", 400, response.getStatusLine().getStatusCode());
+            assertEquals("Schema should be saved successfully", 200, response.getStatusLine().getStatusCode());
+
+            // Get the schema and validate its properties
+            JsonSchemaWrapper schema = schemaService.getSchema("https://unomi.apache.org/schemas/json/event/1-0-0");
+            assertNotNull("Schema should exist", schema);
+            assertEquals("Schema name should be overridden", "testEventType", schema.getName());
+            assertEquals("Schema ID should remain unchanged", "https://unomi.apache.org/schemas/json/event/1-0-0", schema.getItemId());
+            assertEquals("Schema tenant ID should be set", "itTestTenant", schema.getTenantId());
         }
     }
 

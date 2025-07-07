@@ -19,11 +19,11 @@ package org.apache.unomi.services.impl;
 import org.apache.unomi.api.tenants.ApiKey;
 import org.apache.unomi.api.tenants.Tenant;
 import org.apache.unomi.api.tenants.TenantService;
+import org.apache.unomi.api.tenants.TenantStatus;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import javax.xml.bind.DatatypeConverter;
+import java.security.SecureRandom;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 // Custom TenantService implementation for testing
@@ -31,6 +31,7 @@ public class TestTenantService implements TenantService {
     private ThreadLocal<String> currentTenantId = new ThreadLocal<>();
     private Map<String, Tenant> tenants = new ConcurrentHashMap<>();
     private ThreadLocal<Boolean> inSystemOperation = new ThreadLocal<>();
+    private static final SecureRandom secureRandom = new SecureRandom();
 
     public void setInSystemOperation(boolean inSystemOperation) {
         this.inSystemOperation.set(inSystemOperation);
@@ -67,13 +68,24 @@ public class TestTenantService implements TenantService {
     }
 
     @Override
-    public boolean validateApiKey(String tenantId, String apiKey) {
-        return true; // For testing purposes
+    public boolean validateApiKey(String tenantId, String key) {
+        return validateApiKeyWithType(tenantId, key, null);
     }
 
     @Override
-    public boolean validateApiKeyWithType(String tenantId, String apiKey, ApiKey.ApiKeyType type) {
-        return true; // For testing purposes
+    public boolean validateApiKeyWithType(String tenantId, String key, ApiKey.ApiKeyType requiredType) {
+        Tenant tenant = getTenant(tenantId);
+        if (tenant == null) {
+            return false;
+        }
+        if (tenant.getApiKeys() == null) {
+            return false;
+        }
+        return tenant.getApiKeys().stream()
+                .anyMatch(apiKey -> apiKey.getKey().equals(key) &&
+                        !apiKey.isRevoked() &&
+                        (requiredType == null || apiKey.getKeyType() == requiredType) &&
+                        (apiKey.getExpirationDate() == null || apiKey.getExpirationDate().after(new Date())));
     }
 
     @Override
@@ -81,32 +93,86 @@ public class TestTenantService implements TenantService {
         Tenant tenant = new Tenant();
         tenant.setItemId(tenantId);
         tenant.setProperties(properties != null ? properties : new HashMap<>());
+        tenant.setStatus(TenantStatus.ACTIVE);
+        tenant.setCreationDate(new Date());
+        tenant.setLastModificationDate(new Date());
+        
         saveTenant(tenant);
-        return tenant;
+
+        // Generate both public and private API keys (consistent with TenantServiceImpl)
+        generateApiKeyWithType(tenant.getItemId(), ApiKey.ApiKeyType.PUBLIC, null);
+        generateApiKeyWithType(tenant.getItemId(), ApiKey.ApiKeyType.PRIVATE, null);
+
+        // Return the updated tenant with API keys
+        return getTenant(tenant.getItemId());
     }
 
     @Override
     public ApiKey generateApiKey(String tenantId, Long validityPeriod) {
-        return null; // Not needed for testing
+        return generateApiKeyWithType(tenantId, ApiKey.ApiKeyType.PUBLIC, validityPeriod);
     }
 
     @Override
-    public ApiKey generateApiKeyWithType(String tenantId, ApiKey.ApiKeyType type, Long validityPeriod) {
-        return null; // Not needed for testing
+    public ApiKey generateApiKeyWithType(String tenantId, ApiKey.ApiKeyType keyType, Long validityPeriod) {
+        ApiKey apiKey = new ApiKey();
+        apiKey.setItemId(UUID.randomUUID().toString());
+        String key = generateSecureKey();
+        apiKey.setKey(key);
+        apiKey.setKeyType(keyType);
+        apiKey.setCreationDate(new Date());
+        if (validityPeriod != null) {
+            apiKey.setExpirationDate(new Date(System.currentTimeMillis() + validityPeriod));
+        }
+
+        Tenant tenant = getTenant(tenantId);
+        if (tenant != null) {
+            // Remove any existing key of the same type
+            if (tenant.getApiKeys() == null) {
+                tenant.setApiKeys(new ArrayList<>());
+            }
+            tenant.getApiKeys().removeIf(existingKey -> existingKey.getKeyType() == keyType);
+            tenant.getApiKeys().add(apiKey);
+            saveTenant(tenant);
+        }
+
+        return apiKey;
     }
 
     @Override
     public Tenant getTenantByApiKey(String apiKey) {
-        return null; // Not needed for testing
+        return tenants.values().stream()
+                .filter(tenant -> tenant.getApiKeys() != null && 
+                        tenant.getApiKeys().stream()
+                                .anyMatch(key -> key.getKey().equals(apiKey)))
+                .findFirst()
+                .orElse(null);
     }
 
     @Override
-    public Tenant getTenantByApiKey(String apiKey, ApiKey.ApiKeyType type) {
-        return null; // Not needed for testing
+    public Tenant getTenantByApiKey(String apiKey, ApiKey.ApiKeyType keyType) {
+        return tenants.values().stream()
+                .filter(tenant -> tenant.getApiKeys() != null && 
+                        tenant.getApiKeys().stream()
+                                .anyMatch(key -> key.getKey().equals(apiKey) && key.getKeyType() == keyType))
+                .findFirst()
+                .orElse(null);
     }
 
     @Override
-    public ApiKey getApiKey(String tenantId, ApiKey.ApiKeyType type) {
-        return null; // Not needed for testing
+    public ApiKey getApiKey(String tenantId, ApiKey.ApiKeyType keyType) {
+        Tenant tenant = getTenant(tenantId);
+        if (tenant != null && tenant.getApiKeys() != null) {
+            return tenant.getApiKeys().stream()
+                .filter(key -> key.getKeyType() == keyType)
+                .findFirst()
+                .orElse(null);
+        }
+        return null;
+    }
+
+    private String generateSecureKey() {
+        byte[] randomBytes = new byte[32];
+        secureRandom.nextBytes(randomBytes);
+        return DatatypeConverter.printHexBinary(randomBytes);
     }
 }

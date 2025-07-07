@@ -34,10 +34,12 @@ import org.apache.http.conn.socket.PlainConnectionSocketFactory;
 import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
+import org.apache.http.HttpEntity;
 import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.HttpClients;
+import org.apache.http.entity.BufferedHttpEntity;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.apache.karaf.itests.KarafTestSupport;
 import org.apache.unomi.api.Item;
@@ -45,6 +47,7 @@ import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.rules.Rule;
 import org.apache.unomi.api.security.SecurityService;
+import org.apache.unomi.api.security.UnomiRoles;
 import org.apache.unomi.api.services.*;
 import org.apache.unomi.api.tenants.ApiKey;
 import org.apache.unomi.api.tenants.Tenant;
@@ -62,6 +65,7 @@ import org.apache.unomi.router.api.services.ImportExportConfigurationService;
 import org.apache.unomi.schema.api.SchemaService;
 import org.apache.unomi.services.UserListService;
 import org.apache.unomi.shell.services.UnomiManagementService;
+import org.apache.unomi.rest.authentication.RestAuthenticationConfig;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -129,6 +133,7 @@ public abstract class BaseIT extends KarafTestSupport {
     protected static final int DEFAULT_SHOULDBETRUE_TRIES = 5;
 
     protected static final String SEARCH_ENGINE_PROPERTY = "unomi.search.engine";
+    protected static final String SEARCH_ENGINE_HTTPREQUEST_LOG_LEVEL = "unomi.search.engine.httprequest.log.level";
     protected static final String SEARCH_ENGINE_ELASTICSEARCH = "elasticsearch";
     protected static final String SEARCH_ENGINE_OPENSEARCH = "opensearch";
 
@@ -163,9 +168,11 @@ public abstract class BaseIT extends KarafTestSupport {
     protected TenantService tenantService;
     protected SecurityService securityService;
     protected ExecutionContextManager executionContextManager;
+    protected RestAuthenticationConfig restAuthenticationConfig;
     protected Tenant testTenant;
     protected ApiKey testPublicKey;
     protected ApiKey testPrivateKey;
+    protected SchedulerService schedulerService;
     protected static final String TEST_TENANT_ID = "itTestTenant";
 
     @Inject
@@ -176,6 +183,14 @@ public abstract class BaseIT extends KarafTestSupport {
     protected ConfigurationAdmin configurationAdmin;
 
     protected CloseableHttpClient httpClient;
+
+    public enum AuthType {
+        NONE,           // No authentication
+        PUBLIC_KEY,     // X-Unomi-Api-Key header with public key
+        PRIVATE_KEY,    // Basic auth with tenant:private_key
+        JAAS_ADMIN,     // Basic auth with karaf:karaf
+        AUTO            // Automatically determine based on endpoint type
+    }
 
     @Before
     public void waitForStartup() throws InterruptedException {
@@ -213,6 +228,7 @@ public abstract class BaseIT extends KarafTestSupport {
         // init unomi services that are available once unomi:start have been called
         persistenceService = getOsgiService(PersistenceService.class, 600000);
         tenantService = getOsgiService(TenantService.class, 600000);
+        schedulerService = getOsgiService(SchedulerService.class, 600000);
         rulesService = getOsgiService(RulesService.class, 600000);
         definitionsService = getOsgiService(DefinitionsService.class, 600000);
         profileService = getOsgiService(ProfileService.class, 600000);
@@ -230,6 +246,7 @@ public abstract class BaseIT extends KarafTestSupport {
         routerCamelContext = getOsgiService(IRouterCamelContext.class, 600000);
         securityService = getOsgiService(SecurityService.class, 600000);
         executionContextManager = getOsgiService(ExecutionContextManager.class, 600000);
+        restAuthenticationConfig = getOsgiService(RestAuthenticationConfig.class, 600000);
 
         // Create test tenant if not exists
         if (testTenant == null) {
@@ -240,6 +257,9 @@ public abstract class BaseIT extends KarafTestSupport {
             // Get the API keys
             testPublicKey = tenantService.getApiKey(testTenant.getItemId(), ApiKey.ApiKeyType.PUBLIC);
             testPrivateKey = tenantService.getApiKey(testTenant.getItemId(), ApiKey.ApiKeyType.PRIVATE);
+
+            // Make sure the tenant is available for querying.
+            persistenceService.refresh();
         }
 
         securityService.setCurrentSubject(securityService.createSubject(TEST_TENANT_ID, true));
@@ -249,8 +269,8 @@ public abstract class BaseIT extends KarafTestSupport {
         // Set up test tenant for HttpClientThatWaitsForUnomi
         HttpClientThatWaitsForUnomi.setTestTenant(testTenant, testPublicKey, testPrivateKey);
 
-        // init httpClient
-        httpClient = initHttpClient(getHttpClientCredentialProvider());
+        // init httpClient without credentials provider - all auth handled via headers
+        httpClient = initHttpClient(null);
     }
 
     private void waitForUnomiManagementService() throws InterruptedException {
@@ -362,6 +382,7 @@ public abstract class BaseIT extends KarafTestSupport {
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.opensearch.sslTrustAllCertificates", "true"),
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.opensearch.minimalClusterState", "YELLOW"),
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.migration.tenant.id", TEST_TENANT_ID),
+                editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.elasticsearch.dumpRequestTypes", "removeByQuery"),
 
                 systemProperty("org.ops4j.pax.exam.rbc.rmi.port").value("1199"),
                 systemProperty("org.apache.unomi.hazelcast.group.name").value("cellar"),
@@ -600,6 +621,7 @@ public abstract class BaseIT extends KarafTestSupport {
     public void updateServices() throws InterruptedException {
         persistenceService = getService(PersistenceService.class);
         definitionsService = getService(DefinitionsService.class);
+        schedulerService = getService(SchedulerService.class);
         rulesService = getService(RulesService.class);
         segmentService = getService(SegmentService.class);
         profileService = getService(ProfileService.class);
@@ -618,6 +640,7 @@ public abstract class BaseIT extends KarafTestSupport {
         tenantService = getService(TenantService.class);
         securityService = getService(SecurityService.class);
         executionContextManager = getService(ExecutionContextManager.class);
+        restAuthenticationConfig = getService(RestAuthenticationConfig.class);
     }
 
     /**
@@ -723,6 +746,7 @@ public abstract class BaseIT extends KarafTestSupport {
         ConditionBuilder builder = new ConditionBuilder(definitionsService);
         query.setCondition(builder.matchAll().build());
         query.setForceRefresh(true);
+        query.setLimit(1000); // to avoid the default query limit of 10 entries
         keepTrying("Failed waiting for rule to be saved", () -> rulesService.getRuleMetadatas(query),
                 (rules) -> rules.getList().stream().anyMatch(r -> r.getId().equals(rule.getMetadata().getId())), 1000,
                 100);
@@ -749,25 +773,14 @@ public abstract class BaseIT extends KarafTestSupport {
      * @return The deserialized response object, or null if the request failed
      */
     protected <T> T get(final String url, Class<T> clazz) {
-        CloseableHttpResponse response = null;
-        try {
-            final HttpGet httpGet = new HttpGet(getFullUrl(url));
-            response = executeHttpRequest(httpGet);
+        try (CloseableHttpResponse response = executeHttpRequest(new HttpGet(getFullUrl(url)))) {
             if (response.getStatusLine().getStatusCode() == 200) {
                 return objectMapper.readValue(response.getEntity().getContent(), clazz);
             } else {
                 return null;
             }
         } catch (Exception e) {
-            e.printStackTrace();
-        } finally {
-            if (response != null) {
-                try {
-                    response.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
+            LOGGER.error("Error executing GET request to " + url, e);
         }
         return null;
     }
@@ -791,7 +804,7 @@ public abstract class BaseIT extends KarafTestSupport {
 
             return executeHttpRequest(request);
         } catch (Exception e) {
-            e.printStackTrace();
+            LOGGER.error("Error executing POST request to " + url, e);
         }
         return null;
     }
@@ -814,60 +827,26 @@ public abstract class BaseIT extends KarafTestSupport {
      * @return The HTTP response, or null if the request failed
      */
     protected CloseableHttpResponse delete(final String url) {
-        CloseableHttpResponse response = null;
         try {
-            final HttpDelete httpDelete = new HttpDelete(getFullUrl(url));
-            response = executeHttpRequest(httpDelete);
+            return executeHttpRequest(new HttpDelete(getFullUrl(url)));
         } catch (IOException e) {
-            e.printStackTrace();
+            LOGGER.error("Error executing DELETE request to " + url, e);
         } catch (Exception e) {
-            e.printStackTrace();
-        } finally {
-            if (response != null) {
-                try {
-                    response.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
+            LOGGER.error("Error executing DELETE request to " + url, e);
         }
-        return response;
+        return null;
     }
 
     /**
-     * Executes an HTTP request with appropriate authentication headers based on the endpoint type.
+     * Executes an HTTP request with automatic authentication detection.
+     * This is the default method that automatically determines the required authentication.
      *
      * @param request The HTTP request to execute
      * @return The HTTP response
      * @throws IOException If an error occurs while executing the request
      */
     protected CloseableHttpResponse executeHttpRequest(HttpUriRequest request) throws IOException {
-        // Add API key headers based on the request path
-        String path = request.getURI().getPath();
-        if (isPrivateEndpoint(path)) {
-            // For private endpoints, use Basic auth with tenant ID and private key
-            String credentials = TEST_TENANT_ID + ":" + testPrivateKey.getKey();
-            request.setHeader("Authorization", "Basic " + Base64.getEncoder().encodeToString(credentials.getBytes()));
-        } else {
-            // For public endpoints, use X-Unomi-Api-Key header
-            request.setHeader("X-Unomi-Api-Key", testPublicKey.getKey());
-        }
-
-        System.out.println("Executing request " + request.getMethod() + " " + request.getURI() + "...");
-        CloseableHttpResponse response = httpClient.execute(request);
-        int statusCode = response.getStatusLine().getStatusCode();
-        if (statusCode != 200) {
-            String content = null;
-            if (response.getEntity() != null) {
-                InputStream contentInputStream = response.getEntity().getContent();
-                if (contentInputStream != null) {
-                    content = IOUtils.toString(response.getEntity().getContent());
-                }
-            }
-            LOGGER.error("Response status code: {}, reason: {}, content:{}", response.getStatusLine().getStatusCode(),
-                    response.getStatusLine().getReasonPhrase(), content);
-        }
-        return response;
+        return executeHttpRequest(request, AuthType.AUTO);
     }
 
     /**
@@ -889,14 +868,19 @@ public abstract class BaseIT extends KarafTestSupport {
     }
 
     /**
-     * Initializes an HTTP client with custom SSL settings and credentials provider.
+     * Initializes an HTTP client with custom SSL settings and optional credentials provider.
      *
-     * @param credentialsProvider The credentials provider for basic authentication
+     * @param credentialsProvider The credentials provider for basic authentication (can be null)
      * @return The configured HTTP client
      */
     public static CloseableHttpClient initHttpClient(BasicCredentialsProvider credentialsProvider) {
         long requestStartTime = System.currentTimeMillis();
-        HttpClientBuilder httpClientBuilder = HttpClients.custom().useSystemProperties().setDefaultCredentialsProvider(credentialsProvider);
+        HttpClientBuilder httpClientBuilder = HttpClients.custom().useSystemProperties();
+
+        // Only set credentials provider if one is provided
+        if (credentialsProvider != null) {
+            httpClientBuilder.setDefaultCredentialsProvider(credentialsProvider);
+        }
 
         try {
             SSLContext sslContext = SSLContext.getInstance("SSL");
@@ -919,7 +903,9 @@ public abstract class BaseIT extends KarafTestSupport {
 
             PoolingHttpClientConnectionManager poolingHttpClientConnectionManager = new PoolingHttpClientConnectionManager(
                     socketFactoryRegistry);
-            poolingHttpClientConnectionManager.setMaxTotal(10);
+            poolingHttpClientConnectionManager.setMaxTotal(50);
+            poolingHttpClientConnectionManager.setDefaultMaxPerRoute(20);
+            poolingHttpClientConnectionManager.setValidateAfterInactivity(2000);
 
             httpClientBuilder.setHostnameVerifier(SSLConnectionSocketFactory.ALLOW_ALL_HOSTNAME_VERIFIER)
                     .setConnectionManager(poolingHttpClientConnectionManager);
@@ -928,8 +914,11 @@ public abstract class BaseIT extends KarafTestSupport {
             LOGGER.error("Error creating SSL Context", e);
         }
 
-        RequestConfig requestConfig = RequestConfig.custom().setConnectTimeout(REQUEST_TIMEOUT).setSocketTimeout(REQUEST_TIMEOUT)
-                .setConnectionRequestTimeout(REQUEST_TIMEOUT).build();
+        RequestConfig requestConfig = RequestConfig.custom()
+                .setConnectTimeout(REQUEST_TIMEOUT)
+                .setSocketTimeout(REQUEST_TIMEOUT)
+                .setConnectionRequestTimeout(REQUEST_TIMEOUT) // timeout for getting connection from pool
+                .build();
         httpClientBuilder.setDefaultRequestConfig(requestConfig);
 
         if (LOGGER.isDebugEnabled()) {
@@ -956,6 +945,21 @@ public abstract class BaseIT extends KarafTestSupport {
     }
 
     /**
+     * Safely closes an HTTP response, handling any exceptions.
+     *
+     * @param response The HTTP response to close
+     */
+    public static void closeResponse(CloseableHttpResponse response) {
+        try {
+            if (response != null) {
+                response.close();
+            }
+        } catch (IOException e) {
+            LOGGER.error("Could not close response", e);
+        }
+    }
+
+    /**
      * Creates a basic credentials provider with default username and password.
      *
      * @return The configured credentials provider
@@ -964,6 +968,21 @@ public abstract class BaseIT extends KarafTestSupport {
         BasicCredentialsProvider credsProvider = new BasicCredentialsProvider();
         credsProvider.setCredentials(AuthScope.ANY, new UsernamePasswordCredentials(BASIC_AUTH_USER_NAME, BASIC_AUTH_PASSWORD));
         return credsProvider;
+    }
+
+    /**
+     * Creates an HTTP client with specific credentials for testing purposes.
+     * This method is provided for backward compatibility when tests need
+     * automatic challenge-response authentication.
+     *
+     * @param username The username for basic authentication
+     * @param password The password for basic authentication
+     * @return A configured HTTP client with the specified credentials
+     */
+    public CloseableHttpClient createHttpClientWithCredentials(String username, String password) {
+        BasicCredentialsProvider credsProvider = new BasicCredentialsProvider();
+        credsProvider.setCredentials(AuthScope.ANY, new UsernamePasswordCredentials(username, password));
+        return initHttpClient(credsProvider);
     }
 
     /**
@@ -984,18 +1003,109 @@ public abstract class BaseIT extends KarafTestSupport {
     }
 
     /**
-     * Determines if the given path is a private endpoint that requires private key authentication.
+     * Executes an HTTP request with the specified authentication type.
      *
-     * @param path The URL path to check
-     * @return true if the endpoint requires private key authentication, false otherwise
+     * @param request The HTTP request to execute
+     * @param authType The authentication type to use
+     * @return The HTTP response
+     * @throws IOException If an error occurs while executing the request
      */
-    protected boolean isPrivateEndpoint(String path) {
-        // Add paths that require private key authentication
-        return path.contains("/cxs/profiles") ||
-               path.contains("/cxs/rules") ||
-               path.contains("/cxs/segments") ||
-               path.contains("/cxs/scoring") ||
-               path.contains("/cxs/definitions") ||
-               path.contains("/cxs/tenants");
+    protected CloseableHttpResponse executeHttpRequest(HttpUriRequest request, AuthType authType) throws IOException {
+        // Apply authentication based on type
+        switch (authType) {
+            case NONE:
+                // No authentication headers - explicitly remove any existing auth headers
+                request.removeHeaders("Authorization");
+                request.removeHeaders("X-Unomi-Api-Key");
+                break;
+            case PUBLIC_KEY:
+                // Remove any existing auth headers first
+                request.removeHeaders("Authorization");
+                // Only set X-Unomi-Api-Key header if it's not already set
+                if (request.getFirstHeader("X-Unomi-Api-Key") == null && testPublicKey != null) {
+                    request.setHeader("X-Unomi-Api-Key", testPublicKey.getKey());
+                }
+                break;
+            case PRIVATE_KEY:
+                // Remove any existing auth headers first
+                request.removeHeaders("X-Unomi-Api-Key");
+                // Only set Authorization header if it's not already set
+                if (request.getFirstHeader("Authorization") == null && testPrivateKey != null) {
+                    String credentials = TEST_TENANT_ID + ":" + testPrivateKey.getKey();
+                    request.setHeader("Authorization", "Basic " + Base64.getEncoder().encodeToString(credentials.getBytes()));
+                }
+                break;
+            case JAAS_ADMIN:
+                // Remove any existing auth headers first
+                request.removeHeaders("X-Unomi-Api-Key");
+                // Only set Authorization header if it's not already set
+                if (request.getFirstHeader("Authorization") == null) {
+                    String credentials = BASIC_AUTH_USER_NAME + ":" + BASIC_AUTH_PASSWORD;
+                    request.setHeader("Authorization", "Basic " + Base64.getEncoder().encodeToString(credentials.getBytes()));
+                }
+                break;
+            case AUTO:
+                // Auto-detect based on endpoint type
+                String path = request.getURI().getPath();
+                String method = request.getMethod();
+
+                // Normalize path for pattern matching - remove /cxs prefix if present and leading slash
+                // This matches the behavior of ContainerRequestContext.getUriInfo().getPath()
+                String normalizedPath = path.startsWith("/cxs/") ? path.substring(4) : path;
+                // Remove leading slash to match ContainerRequestContext.getUriInfo().getPath() behavior
+                if (normalizedPath.startsWith("/")) {
+                    normalizedPath = normalizedPath.substring(1);
+                }
+                String methodPath = method + " " + normalizedPath;
+
+                // Check if it's a public endpoint
+                boolean isPublic = restAuthenticationConfig.getPublicPathPatterns().stream()
+                        .anyMatch(pattern -> pattern.matcher(methodPath).matches());
+
+                if (isPublic) {
+                    // Public endpoint - use public key
+                    request.removeHeaders("Authorization");
+                    // Only set X-Unomi-Api-Key header if it's not already set
+                    if (request.getFirstHeader("X-Unomi-Api-Key") == null && testPublicKey != null) {
+                        request.setHeader("X-Unomi-Api-Key", testPublicKey.getKey());
+                    }
+                } else if (normalizedPath.startsWith("/tenants")) {
+                    // Admin endpoint - use JAAS admin
+                    request.removeHeaders("X-Unomi-Api-Key");
+                    // Only set Authorization header if it's not already set
+                    if (request.getFirstHeader("Authorization") == null) {
+                        String adminCredentials = BASIC_AUTH_USER_NAME + ":" + BASIC_AUTH_PASSWORD;
+                        request.setHeader("Authorization", "Basic " + Base64.getEncoder().encodeToString(adminCredentials.getBytes()));
+                    }
+                } else {
+                    // Private endpoint - use private key
+                    request.removeHeaders("X-Unomi-Api-Key");
+                    // Only set Authorization header if it's not already set
+                    if (request.getFirstHeader("Authorization") == null && testPrivateKey != null) {
+                        String privateCredentials = TEST_TENANT_ID + ":" + testPrivateKey.getKey();
+                        request.setHeader("Authorization", "Basic " + Base64.getEncoder().encodeToString(privateCredentials.getBytes()));
+                    }
+                }
+                break;
+        }
+
+        // Execute the request
+        CloseableHttpResponse response = httpClient.execute(request);
+
+        // Log errors
+        int statusCode = response.getStatusLine().getStatusCode();
+        if (statusCode != 200) {
+            String content = null;
+            if (response.getEntity() != null) {
+                // Use BufferedHttpEntity to allow multiple reads of the entity content
+                HttpEntity bufferedEntity = new BufferedHttpEntity(response.getEntity());
+                response.setEntity(bufferedEntity);
+                content = IOUtils.toString(bufferedEntity.getContent(), "UTF-8");
+            }
+            LOGGER.error("Response status code: {}, reason: {}, content:{}", response.getStatusLine().getStatusCode(),
+                    response.getStatusLine().getReasonPhrase(), content);
+        }
+
+        return response;
     }
 }

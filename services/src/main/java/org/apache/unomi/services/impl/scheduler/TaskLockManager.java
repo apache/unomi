@@ -63,8 +63,8 @@ import java.util.*;
  */
 public class TaskLockManager {
     private static final Logger LOGGER = LoggerFactory.getLogger(TaskLockManager.class);
-    private static final String SEQ_NO = "_seq_no";
-    private static final String PRIMARY_TERM = "_primary_term";
+    private static final String SEQ_NO = "seq_no";
+    private static final String PRIMARY_TERM = "primary_term";
     private static final String LOCK_VERSION = "lockVersion";
     private static final long VERIFICATION_DELAY_MS = 100;
     private static final long PRIMARY_NODE_WINDOW_MS = 3000;

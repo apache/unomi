@@ -25,6 +25,7 @@ import org.apache.unomi.schema.api.JsonSchemaWrapper;
 import org.apache.unomi.schema.api.ValidationException;
 import org.apache.unomi.schema.api.ValidationError;
 import org.apache.unomi.services.TestHelper;
+import org.apache.unomi.services.common.security.KarafSecurityService;
 import org.apache.unomi.services.impl.*;
 import org.apache.unomi.services.impl.cache.MultiTypeCacheServiceImpl;
 import org.apache.unomi.tracing.api.TracerService;
@@ -32,15 +33,12 @@ import org.junit.Before;
 import org.junit.Test;
 import org.osgi.framework.Bundle;
 import org.apache.commons.io.IOUtils;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.net.URL;
 import java.util.*;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
-import java.io.ByteArrayInputStream;
 
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.mock;

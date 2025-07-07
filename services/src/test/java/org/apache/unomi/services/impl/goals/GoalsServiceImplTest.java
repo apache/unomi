@@ -26,6 +26,8 @@ import org.apache.unomi.api.services.SchedulerService;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.conditions.ConditionEvaluatorDispatcher;
 import org.apache.unomi.services.TestHelper;
+import org.apache.unomi.services.common.security.ExecutionContextManagerImpl;
+import org.apache.unomi.services.common.security.KarafSecurityService;
 import org.apache.unomi.services.impl.*;
 import org.apache.unomi.services.impl.cache.MultiTypeCacheServiceImpl;
 import org.apache.unomi.services.impl.definitions.DefinitionsServiceImpl;

@@ -21,10 +21,12 @@ import org.apache.unomi.api.services.ConditionValidationService;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.conditions.ConditionEvaluatorDispatcher;
 import org.apache.unomi.services.TestHelper;
+import org.apache.unomi.services.common.security.ExecutionContextManagerImpl;
+import org.apache.unomi.services.common.security.KarafSecurityService;
 import org.apache.unomi.services.impl.*;
 import org.apache.unomi.services.impl.cache.MultiTypeCacheServiceImpl;
 import org.apache.unomi.services.impl.definitions.DefinitionsServiceImpl;
-import org.apache.unomi.services.impl.tenants.AuditServiceImpl;
+import org.apache.unomi.services.common.security.AuditServiceImpl;
 import org.apache.unomi.services.impl.validation.ConditionValidationServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.AfterEach;
@@ -624,30 +626,30 @@ public class ProfileServiceImplTest {
         when(testBundle.getBundleId()).thenReturn(123L);
         when(testBundle.getSymbolicName()).thenReturn("org.apache.unomi.test.properties");
         bundleContext.addBundle(testBundle);
-        
+
         // Create a test property type JSON URL with a custom target in the path
         URL propertyTypeUrl = getClass().getResource("/META-INF/cxs/properties/predefined-properties.json");
-        
+
         // Reset and set up the mock to return our test URL
         reset(bundleContext.getBundle());
         when(bundleContext.getBundle().findEntries("META-INF/cxs/properties", "*.json", true))
                 .thenReturn(Collections.enumeration(Arrays.asList(propertyTypeUrl)));
-        
+
         // Trigger the bundle event to load property types via the CacheableTypeConfig system
         profileService.bundleChanged(new BundleEvent(BundleEvent.STARTED, testBundle));
-        
+
         // Verify property types were loaded correctly
         Collection<PropertyType> result = profileService.getTargetPropertyTypes("profiles");
-        
+
         // Verify that the predefined property exists and has the correct target
         Optional<PropertyType> firstNameProp = result.stream()
                 .filter(p -> p.getItemId().equals("firstName"))
                 .findFirst();
-                
+
         assertTrue(firstNameProp.isPresent());
         assertEquals("profiles", firstNameProp.get().getTarget());
         assertEquals("string", firstNameProp.get().getValueTypeId());
-        
+
         // Direct test of the setPropertyTypeTarget method that's used by the URL-aware processor
         URL mockUrl;
         try {
@@ -655,10 +657,10 @@ public class ProfileServiceImplTest {
             PropertyType testPropertyType = new PropertyType();
             testPropertyType.setMetadata(new Metadata("test-property"));
             testPropertyType.setTarget(""); // Empty target
-            
+
             // Call the method directly to test target setting logic
             profileService.setPropertyTypeTarget(mockUrl, testPropertyType);
-            
+
             // Verify the target was set correctly from the path
             assertEquals("customTarget", testPropertyType.getTarget());
         } catch (MalformedURLException e) {

@@ -24,7 +24,7 @@ public class GraphQLServletSecurityIT extends BaseGraphQLIT {
 
     @Test
     public void testAnonymousProcessEventsRequest() throws Exception {
-        try (CloseableHttpResponse response = postAnonymous("graphql/security/process-events.json")) {
+        try (CloseableHttpResponse response = postWithAuthType("graphql/security/process-events.json", AuthType.PUBLIC_KEY)) {
             final ResponseContext context = ResponseContext.parse(response.getEntity());
 
             Assert.assertEquals(200, response.getStatusLine().getStatusCode());
@@ -34,7 +34,7 @@ public class GraphQLServletSecurityIT extends BaseGraphQLIT {
 
     @Test
     public void testAnonymousGetProfileRequest() throws Exception {
-        try (CloseableHttpResponse response = postAnonymous("graphql/security/get-profile.json")) {
+        try (CloseableHttpResponse response = postWithAuthType("graphql/security/get-profile.json", AuthType.PUBLIC_KEY)) {
             final ResponseContext context = ResponseContext.parse(response.getEntity());
 
             Assert.assertEquals(200, response.getStatusLine().getStatusCode());
@@ -83,4 +83,5 @@ public class GraphQLServletSecurityIT extends BaseGraphQLIT {
             Assert.assertEquals(401, response.getStatusLine().getStatusCode());
         }
     }
+
 }

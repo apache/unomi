@@ -30,7 +30,9 @@ import org.apache.unomi.persistence.spi.aggregate.NumericRangeAggregate;
 import org.apache.unomi.persistence.spi.aggregate.TermsAggregate;
 import org.apache.unomi.persistence.spi.conditions.ConditionEvaluatorDispatcher;
 import org.apache.unomi.services.TestHelper;
-import org.apache.unomi.services.impl.tenants.AuditServiceImpl;
+import org.apache.unomi.services.common.security.ExecutionContextManagerImpl;
+import org.apache.unomi.services.common.security.KarafSecurityService;
+import org.apache.unomi.services.common.security.AuditServiceImpl;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
@@ -39,7 +41,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -3822,133 +3823,133 @@ public class InMemoryPersistenceServiceImplTest {
             TestMetadataItem loaded = persistenceService.load(item.getItemId(), TestMetadataItem.class);
             assertEquals(6L, loaded.getVersion());
         }
-        
+
         @Test
         void shouldGenerateAndIncrementSequenceNumber() {
             // Create a test item
             TestMetadataItem item = new TestMetadataItem();
             item.setItemId("test-seq-no");
             item.setName("Test Sequence Number");
-            
+
             // Initial save should set sequence number to 1
             persistenceService.save(item);
             assertNotNull(item.getSystemMetadata("_seq_no"));
             assertEquals(1L, ((Number) item.getSystemMetadata("_seq_no")).longValue());
-            
+
             // Each save should increment sequence number
             persistenceService.save(item);
             assertEquals(2L, ((Number) item.getSystemMetadata("_seq_no")).longValue());
-            
+
             persistenceService.save(item);
             assertEquals(3L, ((Number) item.getSystemMetadata("_seq_no")).longValue());
-            
+
             // Load and verify sequence number persisted
             TestMetadataItem loaded = persistenceService.load(item.getItemId(), TestMetadataItem.class);
             assertEquals(3L, ((Number) loaded.getSystemMetadata("_seq_no")).longValue());
         }
-        
+
         @Test
         void shouldSetPrimaryTerm() {
             // Create a test item
             TestMetadataItem item = new TestMetadataItem();
             item.setItemId("test-primary-term");
             item.setName("Test Primary Term");
-            
+
             // Initial save should set primary term to 1
             persistenceService.save(item);
             assertNotNull(item.getSystemMetadata("_primary_term"));
             assertEquals(1L, ((Number) item.getSystemMetadata("_primary_term")).longValue());
-            
+
             // Primary term shouldn't change on regular updates
             persistenceService.save(item);
             assertEquals(1L, ((Number) item.getSystemMetadata("_primary_term")).longValue());
-            
+
             // Load and verify primary term persisted
             TestMetadataItem loaded = persistenceService.load(item.getItemId(), TestMetadataItem.class);
             assertEquals(1L, ((Number) loaded.getSystemMetadata("_primary_term")).longValue());
         }
-        
+
         @Test
         void shouldRejectUpdateWithIncorrectSequenceNumber() {
             // Create a test item
             TestMetadataItem item = new TestMetadataItem();
             item.setItemId("test-seq-conflict");
             item.setName("Test Sequence Conflict");
-            
+
             // Save the item to get a sequence number
             persistenceService.save(item);
             Long initialSeqNo = ((Number) item.getSystemMetadata("_seq_no")).longValue();
             Long initialPrimaryTerm = ((Number) item.getSystemMetadata("_primary_term")).longValue();
-            
+
             // Create a different instance with the same ID but wrong sequence number
             TestMetadataItem conflictItem = new TestMetadataItem();
             conflictItem.setItemId(item.getItemId());
             conflictItem.setName("Conflicting Update");
             conflictItem.setSystemMetadata("_seq_no", initialSeqNo - 1); // Use wrong sequence number
             conflictItem.setSystemMetadata("_primary_term", initialPrimaryTerm);
-            
+
             // Try to save with incorrect sequence number, should fail
             boolean saveResult = persistenceService.save(conflictItem);
             assertFalse(saveResult, "Save should fail with incorrect sequence number");
-            
+
             // Original item should still be there unchanged
             TestMetadataItem loaded = persistenceService.load(item.getItemId(), TestMetadataItem.class);
             assertEquals(item.getName(), loaded.getName());
             assertEquals(initialSeqNo, ((Number) loaded.getSystemMetadata("_seq_no")).longValue());
         }
-        
+
         @Test
         void shouldRejectUpdateWithIncorrectPrimaryTerm() {
             // Create a test item
             TestMetadataItem item = new TestMetadataItem();
             item.setItemId("test-term-conflict");
             item.setName("Test Primary Term Conflict");
-            
+
             // Save the item to get a primary term
             persistenceService.save(item);
             Long initialSeqNo = ((Number) item.getSystemMetadata("_seq_no")).longValue();
             Long initialPrimaryTerm = ((Number) item.getSystemMetadata("_primary_term")).longValue();
-            
+
             // Create a different instance with the same ID but wrong primary term
             TestMetadataItem conflictItem = new TestMetadataItem();
             conflictItem.setItemId(item.getItemId());
             conflictItem.setName("Conflicting Term Update");
             conflictItem.setSystemMetadata("_seq_no", initialSeqNo);
             conflictItem.setSystemMetadata("_primary_term", initialPrimaryTerm + 1); // Use wrong primary term
-            
+
             // Try to save with incorrect primary term, should fail
             boolean saveResult = persistenceService.save(conflictItem);
             assertFalse(saveResult, "Save should fail with incorrect primary term");
-            
+
             // Original item should still be there unchanged
             TestMetadataItem loaded = persistenceService.load(item.getItemId(), TestMetadataItem.class);
             assertEquals(item.getName(), loaded.getName());
             assertEquals(initialPrimaryTerm, ((Number) loaded.getSystemMetadata("_primary_term")).longValue());
         }
-        
+
         @Test
         void shouldAllowUpdateWithCorrectSequenceNumberAndPrimaryTerm() {
             // Create a test item
             TestMetadataItem item = new TestMetadataItem();
             item.setItemId("test-correct-seq");
             item.setName("Test Correct Sequence");
-            
+
             // Save the item to get a sequence number and primary term
             persistenceService.save(item);
             Long initialSeqNo = ((Number) item.getSystemMetadata("_seq_no")).longValue();
             Long initialPrimaryTerm = ((Number) item.getSystemMetadata("_primary_term")).longValue();
-            
+
             // Create a different instance with the same ID and correct sequence number
             TestMetadataItem updateItem = new TestMetadataItem();
             updateItem.setItemId(item.getItemId());
             updateItem.setName("Updated Name");
             updateItem.setSystemMetadata("_seq_no", initialSeqNo);
             updateItem.setSystemMetadata("_primary_term", initialPrimaryTerm);
-            
+
             // Try to save with correct sequence number and primary term, should succeed
             boolean saveResult = persistenceService.save(updateItem);
             assertTrue(saveResult, "Save should succeed with correct sequence number and primary term");
-            
+
             // Item should be updated with new name and incremented sequence number
             TestMetadataItem loaded = persistenceService.load(item.getItemId(), TestMetadataItem.class);
             assertEquals(updateItem.getName(), loaded.getName());
