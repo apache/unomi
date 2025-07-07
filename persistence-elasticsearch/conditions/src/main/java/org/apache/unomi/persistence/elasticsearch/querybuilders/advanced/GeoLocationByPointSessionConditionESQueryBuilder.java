@@ -15,18 +15,19 @@
  * limitations under the License.
  */
 
-package org.apache.unomi.persistence.opensearch.conditions;
+package org.apache.unomi.persistence.elasticsearch.querybuilders.advanced;
 
 import org.apache.unomi.api.conditions.Condition;
-import org.apache.unomi.persistence.opensearch.ConditionOSQueryBuilder;
-import org.apache.unomi.persistence.opensearch.ConditionOSQueryBuilderDispatcher;
-import org.opensearch.client.opensearch._types.query_dsl.Query;
+import org.apache.unomi.persistence.elasticsearch.ConditionESQueryBuilder;
+import org.apache.unomi.persistence.elasticsearch.ConditionESQueryBuilderDispatcher;
+import org.elasticsearch.index.query.QueryBuilder;
+import org.elasticsearch.index.query.QueryBuilders;
 
 import java.util.Map;
 
-public class GeoLocationByPointSessionConditionOSQueryBuilder implements ConditionOSQueryBuilder {
+public class GeoLocationByPointSessionConditionESQueryBuilder implements ConditionESQueryBuilder {
     @Override
-    public Query buildQuery(Condition condition, Map<String, Object> context, ConditionOSQueryBuilderDispatcher dispatcher) {
+    public QueryBuilder buildQuery(Condition condition, Map<String, Object> context, ConditionESQueryBuilderDispatcher dispatcher) {
         String type = (String) condition.getParameter("type");
         String name = condition.getParameter("name") == null ? "location" : (String) condition.getParameter("name");
 
@@ -36,7 +37,9 @@ public class GeoLocationByPointSessionConditionOSQueryBuilder implements Conditi
             String distance = condition.getParameter("distance").toString();
 
             if(circleLatitude != null && circleLongitude != null && distance != null) {
-                return Query.of(q -> q.geoDistance(g -> g.field(name).location(l -> l.latlon(latlong -> latlong.lat(circleLatitude).lon(circleLongitude))).distance(distance)));
+                return QueryBuilders.geoDistanceQuery(name)
+                        .point(circleLatitude, circleLongitude)
+                        .distance(distance);
             }
         } else if("rectangle".equals(type)) {
             Double rectLatitudeNE = (Double) condition.getParameter("rectLatitudeNE");
@@ -45,18 +48,8 @@ public class GeoLocationByPointSessionConditionOSQueryBuilder implements Conditi
             Double rectLongitudeSW = (Double) condition.getParameter("rectLongitudeSW");
 
             if(rectLatitudeNE != null && rectLongitudeNE != null && rectLatitudeSW != null && rectLongitudeSW != null) {
-                return Query.of(q -> q.geoBoundingBox(g -> g
-                                .field(name)
-                                .boundingBox(b -> b
-                                        .coords(c -> c
-                                                .top(rectLatitudeNE)
-                                                .left(rectLongitudeNE)
-                                                .bottom(rectLatitudeSW)
-                                                .right(rectLongitudeSW)
-                                        )
-                                )
-                        )
-                );
+                return QueryBuilders.geoBoundingBoxQuery(name)
+                        .setCorners(rectLatitudeNE, rectLongitudeNE,rectLatitudeSW, rectLongitudeSW);
             }
         }
 

@@ -14,44 +14,33 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.persistence.elasticsearch.conditions;
 
+package org.apache.unomi.persistence.elasticsearch.querybuilders.core;
+
+import org.apache.lucene.search.join.ScoreMode;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.persistence.elasticsearch.ConditionESQueryBuilder;
 import org.apache.unomi.persistence.elasticsearch.ConditionESQueryBuilderDispatcher;
-import org.elasticsearch.index.query.BoolQueryBuilder;
-import org.elasticsearch.index.query.IdsQueryBuilder;
 import org.elasticsearch.index.query.QueryBuilder;
 import org.elasticsearch.index.query.QueryBuilders;
 
-import java.util.Collection;
 import java.util.Map;
 
-public class IdsConditionESQueryBuilder implements ConditionESQueryBuilder {
-
-    private int maximumIdsQueryCount = 5000;
-
-    public void setMaximumIdsQueryCount(int maximumIdsQueryCount) {
-        this.maximumIdsQueryCount = maximumIdsQueryCount;
-    }
-
+public class NestedConditionESQueryBuilder implements ConditionESQueryBuilder {
     @Override
     public QueryBuilder buildQuery(Condition condition, Map<String, Object> context, ConditionESQueryBuilderDispatcher dispatcher) {
-        Collection<String> ids = (Collection<String>) condition.getParameter("ids");
-        Boolean match = (Boolean) condition.getParameter("match");
+        String path = (String) condition.getParameter("path");
+        Condition subCondition = (Condition) condition.getParameter("subCondition");
 
-        if (ids.size() > maximumIdsQueryCount) {
-            // Avoid building too big ids query - throw exception instead
-            throw new UnsupportedOperationException("Too many profiles");
+        if (subCondition == null || path == null) {
+            throw new IllegalArgumentException("Impossible to build Nested query, subCondition and path properties should be provided");
         }
 
-        IdsQueryBuilder idsQueryBuilder = QueryBuilders.idsQuery().addIds(ids.toArray(new String[0]));
-        if (match) {
-            return idsQueryBuilder;
+        QueryBuilder nestedQueryBuilder = dispatcher.buildFilter(subCondition, context);
+        if (nestedQueryBuilder != null) {
+            return QueryBuilders.nestedQuery(path, nestedQueryBuilder, ScoreMode.Avg);
         } else {
-            BoolQueryBuilder boolQuery = QueryBuilders.boolQuery();
-            boolQuery.mustNot(idsQueryBuilder);
-            return boolQuery;
+            throw new IllegalArgumentException("Impossible to build Nested query due to subCondition filter null");
         }
     }
 }

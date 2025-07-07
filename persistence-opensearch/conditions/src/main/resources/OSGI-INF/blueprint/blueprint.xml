@@ -49,14 +49,16 @@
     <reference id="configSharingService" interface="org.apache.unomi.api.services.ConfigSharingService"/>
     <reference id="scriptExecutor" interface="org.apache.unomi.scripting.ScriptExecutor"/>
     <reference id="topicService" interface="org.apache.unomi.api.services.TopicService"/>
+    <reference id="executionContextManager" interface="org.apache.unomi.api.services.ExecutionContextManager"/>
 
     <service
             interface="org.apache.unomi.persistence.opensearch.ConditionOSQueryBuilder">
         <service-properties>
             <entry key="queryBuilderId" value="idsConditionESQueryBuilder"/>
         </service-properties>
-        <bean class="org.apache.unomi.persistence.opensearch.conditions.IdsConditionOSQueryBuilder">
+        <bean class="org.apache.unomi.persistence.opensearch.querybuilders.advanced.IdsConditionOSQueryBuilder">
             <property name="maximumIdsQueryCount" value="${os.maximumIdsQueryCount}"/>
+            <property name="executionContextManager" ref="executionContextManager"/>
         </bean>
     </service>
 
@@ -65,7 +67,7 @@
         <service-properties>
             <entry key="queryBuilderId" value="booleanConditionESQueryBuilder"/>
         </service-properties>
-        <bean class="org.apache.unomi.persistence.opensearch.conditions.BooleanConditionOSQueryBuilder"/>
+        <bean class="org.apache.unomi.persistence.opensearch.querybuilders.core.BooleanConditionOSQueryBuilder"/>
     </service>
 
     <service
@@ -73,7 +75,7 @@
         <service-properties>
             <entry key="queryBuilderId" value="notConditionESQueryBuilder"/>
         </service-properties>
-        <bean class="org.apache.unomi.persistence.opensearch.conditions.NotConditionOSQueryBuilder"/>
+        <bean class="org.apache.unomi.persistence.opensearch.querybuilders.core.NotConditionOSQueryBuilder"/>
     </service>
 
     <service
@@ -81,7 +83,7 @@
         <service-properties>
             <entry key="queryBuilderId" value="matchAllConditionESQueryBuilder"/>
         </service-properties>
-        <bean class="org.apache.unomi.persistence.opensearch.conditions.MatchAllConditionOSQueryBuilder"/>
+        <bean class="org.apache.unomi.persistence.opensearch.querybuilders.core.MatchAllConditionOSQueryBuilder"/>
     </service>
 
     <service
@@ -89,7 +91,7 @@
         <service-properties>
             <entry key="queryBuilderId" value="propertyConditionESQueryBuilder"/>
         </service-properties>
-        <bean class="org.apache.unomi.persistence.opensearch.conditions.PropertyConditionOSQueryBuilder"/>
+        <bean class="org.apache.unomi.persistence.opensearch.querybuilders.core.PropertyConditionOSQueryBuilder"/>
     </service>
 
     <service
@@ -97,7 +99,7 @@
         <service-properties>
             <entry key="queryBuilderId" value="geoLocationByPointSessionConditionESQueryBuilder"/>
         </service-properties>
-        <bean class="org.apache.unomi.persistence.opensearch.conditions.GeoLocationByPointSessionConditionOSQueryBuilder"/>
+        <bean class="org.apache.unomi.persistence.opensearch.querybuilders.advanced.GeoLocationByPointSessionConditionOSQueryBuilder"/>
     </service>
 
     <service
@@ -105,7 +107,7 @@
         <service-properties>
             <entry key="queryBuilderId" value="sourceEventPropertyConditionESQueryBuilder"/>
         </service-properties>
-        <bean class="org.apache.unomi.persistence.opensearch.conditions.SourceEventPropertyConditionOSQueryBuilder"/>
+        <bean class="org.apache.unomi.persistence.opensearch.querybuilders.core.SourceEventPropertyConditionOSQueryBuilder"/>
     </service>
 
     <service>
@@ -116,7 +118,7 @@
         <service-properties>
             <entry key="queryBuilderId" value="pastEventConditionESQueryBuilder"/>
         </service-properties>
-        <bean class="org.apache.unomi.persistence.opensearch.conditions.PastEventConditionOSQueryBuilder">
+        <bean class="org.apache.unomi.persistence.opensearch.querybuilders.advanced.PastEventConditionOSQueryBuilder">
             <property name="definitionsService" ref="definitionsService"/>
             <property name="persistenceService" ref="persistenceService"/>
             <property name="segmentService" ref="segmentService"/>
@@ -132,7 +134,7 @@
         <service-properties>
             <entry key="queryBuilderId" value="nestedConditionESQueryBuilder"/>
         </service-properties>
-        <bean class="org.apache.unomi.persistence.opensearch.conditions.NestedConditionOSQueryBuilder"/>
+        <bean class="org.apache.unomi.persistence.opensearch.querybuilders.core.NestedConditionOSQueryBuilder"/>
     </service>
 
 </blueprint>

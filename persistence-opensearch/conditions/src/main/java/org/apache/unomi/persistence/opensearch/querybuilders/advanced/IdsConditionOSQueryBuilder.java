@@ -14,23 +14,30 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.persistence.opensearch.conditions;
+package org.apache.unomi.persistence.opensearch.querybuilders.advanced;
 
 import org.apache.unomi.api.conditions.Condition;
+import org.apache.unomi.api.services.ExecutionContextManager;
 import org.apache.unomi.persistence.opensearch.ConditionOSQueryBuilder;
 import org.apache.unomi.persistence.opensearch.ConditionOSQueryBuilderDispatcher;
 import org.opensearch.client.opensearch._types.query_dsl.Query;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 
 public class IdsConditionOSQueryBuilder implements ConditionOSQueryBuilder {
 
     private int maximumIdsQueryCount = 5000;
+    private ExecutionContextManager executionContextManager;
 
     public void setMaximumIdsQueryCount(int maximumIdsQueryCount) {
         this.maximumIdsQueryCount = maximumIdsQueryCount;
+    }
+
+    public void setExecutionContextManager(ExecutionContextManager executionContextManager) {
+        this.executionContextManager = executionContextManager;
     }
 
     @Override
@@ -43,7 +50,16 @@ public class IdsConditionOSQueryBuilder implements ConditionOSQueryBuilder {
             throw new UnsupportedOperationException("Too many profiles");
         }
 
-        Query idsQuery = Query.of(q->q.ids(i->i.values(new ArrayList<String>(ids))));
+        // Get the current tenant ID from the execution context
+        String tenantId = executionContextManager.getCurrentContext().getTenantId();
+
+        // Prefix each ID with the tenant ID
+        List<String> prefixedIds = new ArrayList<>();
+        for (String id : ids) {
+            prefixedIds.add(tenantId + "_" + id);
+        }
+
+        Query idsQuery = Query.of(q->q.ids(i->i.values(prefixedIds)));
         if (match) {
             return idsQuery;
         } else {

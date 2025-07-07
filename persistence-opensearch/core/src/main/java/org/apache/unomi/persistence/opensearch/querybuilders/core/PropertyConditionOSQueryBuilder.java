@@ -15,36 +15,38 @@
  * limitations under the License.
  */
 
-package org.apache.unomi.persistence.elasticsearch.conditions;
+package org.apache.unomi.persistence.opensearch.querybuilders.core;
 
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.unomi.api.conditions.Condition;
-import org.apache.unomi.persistence.elasticsearch.ConditionESQueryBuilder;
-import org.apache.unomi.persistence.elasticsearch.ConditionESQueryBuilderDispatcher;
+import org.apache.unomi.persistence.opensearch.ConditionOSQueryBuilder;
+import org.apache.unomi.persistence.opensearch.ConditionOSQueryBuilderDispatcher;
 import org.apache.unomi.persistence.spi.conditions.ConditionContextHelper;
-import org.elasticsearch.common.geo.GeoPoint;
-import org.elasticsearch.common.unit.DistanceUnit;
-import org.elasticsearch.index.query.BoolQueryBuilder;
-import org.elasticsearch.index.query.QueryBuilder;
-import org.elasticsearch.index.query.QueryBuilders;
 import org.joda.time.DateTime;
 import org.joda.time.format.DateTimeFormatter;
 import org.joda.time.format.ISODateTimeFormat;
+import org.opensearch.client.json.JsonData;
+import org.opensearch.client.opensearch._types.FieldValue;
+import org.opensearch.client.opensearch._types.GeoDistanceType;
+import org.opensearch.client.opensearch._types.query_dsl.BoolQuery;
+import org.opensearch.client.opensearch._types.query_dsl.Query;
+import org.opensearch.client.util.ObjectBuilder;
 
+import java.time.OffsetDateTime;
 import java.util.*;
 
 import static org.apache.unomi.persistence.spi.conditions.DateUtils.getDate;
 
-public class PropertyConditionESQueryBuilder implements ConditionESQueryBuilder {
+public class PropertyConditionOSQueryBuilder implements ConditionOSQueryBuilder {
 
     DateTimeFormatter dateTimeFormatter;
 
-    public PropertyConditionESQueryBuilder() {
+    public PropertyConditionOSQueryBuilder() {
         dateTimeFormatter = ISODateTimeFormat.dateTime();
     }
 
     @Override
-    public QueryBuilder buildQuery(Condition condition, Map<String, Object> context, ConditionESQueryBuilderDispatcher dispatcher) {
+    public Query buildQuery(Condition condition, Map<String, Object> context, ConditionOSQueryBuilderDispatcher dispatcher) {
         String comparisonOperator = (String) condition.getParameter("comparisonOperator");
         String name = (String) condition.getParameter("propertyName");
 
@@ -71,85 +73,85 @@ public class PropertyConditionESQueryBuilder implements ConditionESQueryBuilder 
         switch (comparisonOperator) {
             case "equals":
                 checkRequiredValue(value, name, comparisonOperator, false);
-                return QueryBuilders.termQuery(name, value);
+                return Query.of(q->q.term(t->t.field(name).value(v->getValue(value))));
             case "notEquals":
                 checkRequiredValue(value, name, comparisonOperator, false);
-                return QueryBuilders.boolQuery().mustNot(QueryBuilders.termQuery(name, value));
+                return Query.of(q->q.bool(b->b.mustNot(m->m.term(t->t.field(name).value(v->getValue(value))))));
             case "greaterThan":
                 checkRequiredValue(value, name, comparisonOperator, false);
-                return QueryBuilders.rangeQuery(name).gt(value);
+                return Query.of(q->q.range(r->r.field(name).gt(JsonData.of(value))));
             case "greaterThanOrEqualTo":
                 checkRequiredValue(value, name, comparisonOperator, false);
-                return QueryBuilders.rangeQuery(name).gte(value);
+                return Query.of(q->q.range(r->r.field(name).gte(JsonData.of(value))));
             case "lessThan":
                 checkRequiredValue(value, name, comparisonOperator, false);
-                return QueryBuilders.rangeQuery(name).lt(value);
+                return Query.of(q->q.range(r->r.field(name).lt(JsonData.of(value))));
             case "lessThanOrEqualTo":
                 checkRequiredValue(value, name, comparisonOperator, false);
-                return QueryBuilders.rangeQuery(name).lte(value);
+                return Query.of(q->q.range(r->r.field(name).lte(JsonData.of(value))));
             case "between":
                 checkRequiredValuesSize(values, name, comparisonOperator, 2);
                 Iterator<?> iterator = values.iterator();
-                return QueryBuilders.rangeQuery(name).gte(iterator.next()).lte(iterator.next());
+                return Query.of(q->q.range(r->r.field(name).gte(JsonData.of(iterator.next())).lte(JsonData.of(iterator.next()))));
             case "exists":
-                return QueryBuilders.existsQuery(name);
+                return Query.of(q->q.exists(e->e.field(name)));
             case "missing":
-                return QueryBuilders.boolQuery().mustNot(QueryBuilders.existsQuery((name)));
+                return Query.of(q->q.bool(b->b.mustNot(m->m.exists(e->e.field(name)))));
             case "contains":
                 checkRequiredValue(expectedValue, name, comparisonOperator, false);
-                return QueryBuilders.regexpQuery(name, ".*" + expectedValue + ".*");
+                return Query.of(q->q.regexp(r->r.field(name).value(".*" + expectedValue + ".*")));
             case "notContains":
                 checkRequiredValue(expectedValue, name, comparisonOperator, false);
-                return QueryBuilders.boolQuery().mustNot(QueryBuilders.regexpQuery(name, ".*" + expectedValue + ".*"));
+                return Query.of(q->q.bool(b->b.mustNot(m->m.regexp(r->r.field(name).value(".*" + expectedValue + ".*")))));
             case "startsWith":
                 checkRequiredValue(expectedValue, name, comparisonOperator, false);
-                return QueryBuilders.prefixQuery(name, expectedValue);
+                return Query.of(q->q.prefix(p->p.field(name).value(expectedValue)));
             case "endsWith":
                 checkRequiredValue(expectedValue, name, comparisonOperator, false);
-                return QueryBuilders.regexpQuery(name, ".*" + expectedValue);
+                return Query.of(q->q.regexp(r->r.field(name).value(".*" + expectedValue)));
             case "matchesRegex":
                 checkRequiredValue(expectedValue, name, comparisonOperator, false);
-                return QueryBuilders.regexpQuery(name, expectedValue);
+                return Query.of(q->q.regexp(r->r.field(name).value(expectedValue)));
             case "in":
                 checkRequiredValue(values, name, comparisonOperator, true);
-                return QueryBuilders.termsQuery(name, values.toArray());
+                return Query.of(q->q.terms(t->t.field(name).terms(t2->t2.value(getValues(values)))));
             case "notIn":
                 checkRequiredValue(values, name, comparisonOperator, true);
-                return QueryBuilders.boolQuery().mustNot(QueryBuilders.termsQuery(name, values.toArray()));
+                return Query.of(q->q.bool(b->b.mustNot(m->m.terms(t->t.field(name).terms(t2->t2.value(getValues(values)))))));
             case "all":
                 checkRequiredValue(values, name, comparisonOperator, true);
-                BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
+                BoolQuery.Builder boolQueryBuilder = new BoolQuery.Builder();
                 for (Object curValue : values) {
-                    boolQueryBuilder.must(QueryBuilders.termQuery(name, curValue));
+                    boolQueryBuilder.must(Query.of(q->q.term(t->t.field(name).value(getValue(curValue).build()))));
                 }
-                return boolQueryBuilder;
+                return Query.of(q->q.bool(boolQueryBuilder.build()));
             case "inContains":
                 checkRequiredValue(values, name, comparisonOperator, true);
-                BoolQueryBuilder boolQueryBuilderInContains = QueryBuilders.boolQuery();
+                BoolQuery.Builder boolQueryBuilderInContains = new BoolQuery.Builder();
                 for (Object curValue : values) {
-                    boolQueryBuilderInContains.must(QueryBuilders.regexpQuery(name, ".*" + curValue + ".*"));
+                    boolQueryBuilderInContains.must(Query.of(q->q.regexp(r->r.field(name).value(".*" + curValue + ".*"))));
                 }
-                return boolQueryBuilderInContains;
+                return Query.of(q->q.bool(boolQueryBuilderInContains.build()));
             case "hasSomeOf":
                 checkRequiredValue(values, name, comparisonOperator, true);
-                boolQueryBuilder = QueryBuilders.boolQuery();
+                boolQueryBuilder = new BoolQuery.Builder();
                 for (Object curValue : values) {
-                    boolQueryBuilder.should(QueryBuilders.termQuery(name, curValue));
+                    boolQueryBuilder.should(Query.of(q->q.term(t->t.field(name).value(getValue(curValue).build()))));
                 }
-                return boolQueryBuilder;
+                return Query.of(q->q.bool(boolQueryBuilder.build()));
             case "hasNoneOf":
                 checkRequiredValue(values, name, comparisonOperator, true);
-                boolQueryBuilder = QueryBuilders.boolQuery();
+                boolQueryBuilder = new BoolQuery.Builder();
                 for (Object curValue : values) {
-                    boolQueryBuilder.mustNot(QueryBuilders.termQuery(name, curValue));
+                    boolQueryBuilder.mustNot(Query.of(q->q.term(t->t.field(name).value(getValue(curValue).build()))));
                 }
-                return boolQueryBuilder;
+                return Query.of(q->q.bool(boolQueryBuilder.build()));
             case "isDay":
                 checkRequiredValue(value, name, comparisonOperator, false);
                 return getIsSameDayRange(getDate(value), name);
             case "isNotDay":
                 checkRequiredValue(value, name, comparisonOperator, false);
-                return QueryBuilders.boolQuery().mustNot(getIsSameDayRange(getDate(value), name));
+                return Query.of(q->q.bool(b->b.mustNot(getIsSameDayRange(getDate(value), name))));
             case "distance":
                 final String unitString = (String) condition.getParameter("unit");
                 final Object centerObj = condition.getParameter("center");
@@ -164,12 +166,9 @@ public class PropertyConditionESQueryBuilder implements ConditionESQueryBuilder 
                     } else {
                         centerString = centerObj.toString();
                     }
-                    DistanceUnit unit = unitString != null ? DistanceUnit.fromString(unitString) : DistanceUnit.DEFAULT;
+                    GeoDistanceType unit = unitString != null ? GeoDistanceType.valueOf(unitString) : GeoDistanceType.Plane;
 
-                    return QueryBuilders.geoDistanceQuery(name)
-                            .ignoreUnmapped(true)
-                            .distance(distance, unit)
-                            .point(new GeoPoint(centerString));
+                    return Query.of(q->q.geoDistance(g->g.field(name).distance(distance + "").distanceType(unit).location(l->l.text(centerString))));
                 }
         }
         return null;
@@ -187,11 +186,14 @@ public class PropertyConditionESQueryBuilder implements ConditionESQueryBuilder 
         }
     }
 
-    private QueryBuilder getIsSameDayRange(Object value, String name) {
+    private Query getIsSameDayRange(Object value, String name) {
         DateTime date = new DateTime(value);
         DateTime dayStart = date.withTimeAtStartOfDay();
         DateTime dayAfterStart = date.plusDays(1).withTimeAtStartOfDay();
-        return QueryBuilders.rangeQuery(name).gte(convertDateToISO(dayStart.toDate())).lte(convertDateToISO(dayAfterStart.toDate()));
+        return Query.of(q->q.range(r->r
+                .field(name)
+                .gte(JsonData.of(convertDateToISO(dayStart.toDate())))
+                .lte(JsonData.of(convertDateToISO(dayAfterStart.toDate())))));
     }
 
     private Object convertDateToISO(Object dateValue) {
@@ -200,6 +202,8 @@ public class PropertyConditionESQueryBuilder implements ConditionESQueryBuilder 
         }
         if (dateValue instanceof Date) {
             return dateTimeFormatter.print(new DateTime(dateValue));
+        } else if (dateValue instanceof OffsetDateTime) {
+            return dateTimeFormatter.print(new DateTime(Date.from(((OffsetDateTime)dateValue).toInstant())));
         } else {
             return dateValue;
         }
@@ -216,5 +220,36 @@ public class PropertyConditionESQueryBuilder implements ConditionESQueryBuilder 
             }
         }
         return results;
+    }
+
+    private ObjectBuilder<FieldValue> getValue(Object fieldValue) {
+        FieldValue.Builder fieldValueBuilder = new FieldValue.Builder();
+        if (fieldValue instanceof String) {
+            return fieldValueBuilder.stringValue((String) fieldValue);
+        } else if (fieldValue instanceof Integer) {
+            return fieldValueBuilder.longValue((Integer) fieldValue);
+        } else if (fieldValue instanceof Long) {
+            return fieldValueBuilder.longValue((Long) fieldValue);
+        } else if (fieldValue instanceof Double) {
+            return fieldValueBuilder.doubleValue((Double) fieldValue);
+        } else if (fieldValue instanceof Float) {
+            return fieldValueBuilder.doubleValue((Float) fieldValue);
+        } else if (fieldValue instanceof Boolean) {
+            return fieldValueBuilder.booleanValue((Boolean) fieldValue);
+        } else if (fieldValue instanceof Date) {
+            return fieldValueBuilder.stringValue(convertDateToISO((Date) fieldValue).toString());
+        } else if (fieldValue instanceof OffsetDateTime) {
+            return fieldValueBuilder.stringValue(convertDateToISO((OffsetDateTime) fieldValue).toString());
+        } else {
+            throw new IllegalArgumentException("Impossible to build ES filter, unsupported value type: " + fieldValue.getClass().getName());
+        }
+    }
+
+    private List<FieldValue> getValues(Collection<?> fieldValues) {
+        List<FieldValue> values = new ArrayList<>();
+        for (Object fieldValue : fieldValues) {
+            values.add(getValue(fieldValue).build());
+        }
+        return values;
     }
 }

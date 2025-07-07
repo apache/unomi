@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.apache.unomi.persistence.opensearch.conditions;
+package org.apache.unomi.persistence.opensearch.querybuilders.core;
 
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.persistence.opensearch.ConditionOSQueryBuilder;

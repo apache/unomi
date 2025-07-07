@@ -86,6 +86,7 @@ import org.elasticsearch.common.unit.ByteSizeUnit;
 import org.elasticsearch.common.unit.ByteSizeValue;
 import org.elasticsearch.common.unit.DistanceUnit;
 import org.elasticsearch.common.unit.TimeValue;
+import org.elasticsearch.common.xcontent.ToXContent;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentFactory;
 import org.elasticsearch.common.xcontent.XContentType;
@@ -127,10 +128,7 @@ import org.slf4j.LoggerFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyManagementException;
@@ -140,6 +138,7 @@ import java.security.cert.X509Certificate;
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import static org.apache.unomi.api.tenants.TenantService.SYSTEM_TENANT;
 import static org.elasticsearch.index.query.QueryBuilders.termQuery;
@@ -236,6 +235,21 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
         itemTypeIndexNameMap.put("profile", "profile");
         itemTypeIndexNameMap.put("persona", "profile");
+    }
+
+    private Set<String> dumpRequestTypes = new HashSet<>();
+
+    /**
+     * Sets the types of requests that should be dumped to logs
+     * @param dumpRequestTypes Comma-separated list of request types to dump
+     */
+    public void setDumpRequestTypes(String dumpRequestTypes) {
+        if (StringUtils.isNotBlank(dumpRequestTypes)) {
+            this.dumpRequestTypes = Arrays.stream(dumpRequestTypes.split(","))
+                    .map(String::trim)
+                    .filter(s -> !s.isEmpty())
+                    .collect(Collectors.toSet());
+        }
     }
 
     private volatile ExecutionContextManager contextManager = null;
@@ -732,27 +746,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         }.catchingExecuteInClassLoader(true);
 
         bundleContext.removeBundleListener(this);
-    }
-
-    public void bindConditionEvaluator(ServiceReference<ConditionEvaluator> conditionEvaluatorServiceReference) {
-        ConditionEvaluator conditionEvaluator = bundleContext.getService(conditionEvaluatorServiceReference);
-        conditionEvaluatorDispatcher.addEvaluator(conditionEvaluatorServiceReference.getProperty("conditionEvaluatorId").toString(), conditionEvaluator);
-    }
-
-    public void unbindConditionEvaluator(ServiceReference<ConditionEvaluator> conditionEvaluatorServiceReference) {
-        if (conditionEvaluatorServiceReference == null || shuttingDown) {
-            return; // Skip this entirely if we're shutting down
-        }
-        try {
-            Object conditionEvaluatorId = conditionEvaluatorServiceReference.getProperty("conditionEvaluatorId");
-            if (conditionEvaluatorId != null && conditionEvaluatorDispatcher != null) {
-                conditionEvaluatorDispatcher.removeEvaluator(conditionEvaluatorId.toString());
-            }
-        } catch (Exception e) {
-            // During shutdown we might get exceptions as services are being unregistered in unpredictable order
-            // Just log and continue to avoid deadlocks
-            LOGGER.debug("Error while unbinding condition evaluator: {}", e.getMessage());
-        }
     }
 
     public void bindConditionESQueryBuilder(ServiceReference<ConditionESQueryBuilder> conditionESQueryBuilderServiceReference) {
@@ -1455,6 +1448,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     // So we increase default timeout of 1min to 10min
                     .setTimeout(TimeValue.timeValueMinutes(removeByQueryTimeoutInMinutes));
 
+            dumpRequest(deleteByQueryRequest, itemType, "removeByQuery", getIndexNameForQuery(itemType));
             TaskSubmissionResponse taskResponse = client.submitDeleteByQuery(deleteByQueryRequest, RequestOptions.DEFAULT);
 
             if (taskResponse == null) {
@@ -3041,6 +3035,33 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             return wrappedQuery;
         }
         return originalQuery;
+    }
+
+    /**
+     * Utility method to dump Elasticsearch requests to debug logs using XContentBuilder
+     * @param request The request to dump
+     * @param itemType The item type of the request
+     * @param requestType The type of request being made (e.g., "search", "index", "delete")
+     * @param indices Optional array of indices involved in the request
+     */
+    private void dumpRequest(ToXContent request, String itemType, String requestType, String... indices) {
+        if (!dumpRequestTypes.isEmpty() && !dumpRequestTypes.contains(requestType)) {
+            return;
+        }
+        try {
+            if (LOGGER.isInfoEnabled()) {
+                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                XContentBuilder builder = XContentFactory.jsonBuilder(baos);
+                request.toXContent(builder, ToXContent.EMPTY_PARAMS);
+                builder.flush();
+                builder.close();
+                String requestString = baos.toString(StandardCharsets.UTF_8);
+                String indicesInfo = indices != null && indices.length > 0 ? " on indices [" + String.join(",", indices) + "]" : "";
+                LOGGER.info("Executing ES request {} for {}{} : {}", requestType, itemType, indicesInfo, requestString);
+            }
+        } catch (IOException e) {
+            LOGGER.warn("Failed to dump request", e);
+        }
     }
 
 }

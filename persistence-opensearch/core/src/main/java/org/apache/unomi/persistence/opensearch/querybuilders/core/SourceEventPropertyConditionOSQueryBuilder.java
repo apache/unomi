@@ -15,33 +15,32 @@
  * limitations under the License.
  */
 
-package org.apache.unomi.persistence.elasticsearch.conditions;
+package org.apache.unomi.persistence.opensearch.querybuilders.core;
 
 import org.apache.unomi.api.conditions.Condition;
-import org.apache.unomi.persistence.elasticsearch.ConditionESQueryBuilder;
-import org.apache.unomi.persistence.elasticsearch.ConditionESQueryBuilderDispatcher;
-import org.elasticsearch.index.query.BoolQueryBuilder;
-import org.elasticsearch.index.query.QueryBuilder;
-import org.elasticsearch.index.query.QueryBuilders;
+import org.apache.unomi.persistence.opensearch.ConditionOSQueryBuilder;
+import org.apache.unomi.persistence.opensearch.ConditionOSQueryBuilderDispatcher;
+import org.opensearch.client.opensearch._types.query_dsl.BoolQuery;
+import org.opensearch.client.opensearch._types.query_dsl.Query;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-public class SourceEventPropertyConditionESQueryBuilder implements ConditionESQueryBuilder {
+public class SourceEventPropertyConditionOSQueryBuilder implements ConditionOSQueryBuilder {
 
-    public SourceEventPropertyConditionESQueryBuilder() {
+    public SourceEventPropertyConditionOSQueryBuilder() {
     }
 
-    private void appendFilderIfPropExist(List<QueryBuilder> queryBuilders, Condition condition, String prop){
+    private void appendFilderIfPropExist(List<Query> queryBuilders, Condition condition, String prop){
         final Object parameter = condition.getParameter(prop);
         if (parameter != null && !"".equals(parameter)) {
-            queryBuilders.add(QueryBuilders.termQuery("source." + prop, (String) parameter));
+            queryBuilders.add(Query.of(q->q.term(t->t.field("source." + prop).value(v->v.stringValue((String) parameter)))));
         }
     }
 
-    public QueryBuilder buildQuery(Condition condition, Map<String, Object> context, ConditionESQueryBuilderDispatcher dispatcher) {
-        List<QueryBuilder> queryBuilders = new ArrayList<QueryBuilder>();
+    public Query buildQuery(Condition condition, Map<String, Object> context, ConditionOSQueryBuilderDispatcher dispatcher) {
+        List<Query> queryBuilders = new ArrayList<Query>();
         for (String prop : new String[]{"id", "path", "scope", "type"}){
             appendFilderIfPropExist(queryBuilders, condition, prop);
         }
@@ -50,11 +49,11 @@ public class SourceEventPropertyConditionESQueryBuilder implements ConditionESQu
             if (queryBuilders.size() == 1) {
                 return queryBuilders.get(0);
             } else {
-                BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
-                for (QueryBuilder queryBuilder : queryBuilders) {
+                BoolQuery.Builder boolQueryBuilder = new BoolQuery.Builder();
+                for (Query queryBuilder : queryBuilders) {
                     boolQueryBuilder.must(queryBuilder);
                 }
-                return boolQueryBuilder;
+                return Query.of(q->q.bool(boolQueryBuilder.build()));
             }
         } else {
             return null;

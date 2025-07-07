@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.apache.unomi.persistence.elasticsearch.conditions;
+package org.apache.unomi.persistence.elasticsearch.querybuilders.core;
 
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.persistence.elasticsearch.ConditionESQueryBuilder;

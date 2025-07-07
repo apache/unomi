@@ -74,6 +74,7 @@
             <cm:property name="throwExceptions" value="false" />
             <cm:property name="alwaysOverwrite" value="true" />
             <cm:property name="errorLogLevelRestClient" value="true" />
+            <cm:property name="dumpRequestTypes" value="" />
 
         </cm:default-properties>
     </cm:property-placeholder>
@@ -93,14 +94,14 @@
         <property name="scriptExecutor" ref="scriptExecutor" />
     </bean>
 
-    <reference id="conditionEvaluatorDispatcherImpl" interface="org.apache.unomi.persistence.spi.conditions.ConditionEvaluatorDispatcher" />
+    <reference id="conditionEvaluatorDispatcher" interface="org.apache.unomi.persistence.spi.conditions.ConditionEvaluatorDispatcher" />
 
     <bean id="elasticSearchPersistenceServiceImpl"
           class="org.apache.unomi.persistence.elasticsearch.ElasticSearchPersistenceServiceImpl"
           init-method="start"
           destroy-method="stop">
         <property name="bundleContext" ref="blueprintBundleContext"/>
-        <property name="conditionEvaluatorDispatcher" ref="conditionEvaluatorDispatcherImpl"/>
+        <property name="conditionEvaluatorDispatcher" ref="conditionEvaluatorDispatcher"/>
         <property name="conditionESQueryBuilderDispatcher" ref="conditionESQueryBuilderDispatcher"/>
         <property name="clusterName" value="${es.cluster.name}"/>
         <property name="indexPrefix" value="${es.index.prefix}"/>
@@ -158,21 +159,27 @@
         <property name="throwExceptions" value="${es.throwExceptions}" />
         <property name="alwaysOverwrite" value="${es.alwaysOverwrite}" />
         <property name="logLevelRestClient" value="${es.logLevelRestClient}" />
+        <property name="dumpRequestTypes" value="${es.dumpRequestTypes}" />
     </bean>
-
-    <!-- We use a listener here because using the list directly for listening to proxies coming from the same bundle didn't seem to work -->
-    <reference-list id="conditionEvaluators"
-                    interface="org.apache.unomi.persistence.spi.conditions.ConditionEvaluator"
-                    availability="optional">
-        <reference-listener
-                bind-method="bindConditionEvaluator" unbind-method="unbindConditionEvaluator" ref="elasticSearchPersistenceServiceImpl"/>
-    </reference-list>
 
     <reference-list id="conditionESQueryBuilders"
                     interface="org.apache.unomi.persistence.elasticsearch.ConditionESQueryBuilder"
         availability="optional">
         <reference-listener
                 bind-method="bindConditionESQueryBuilder" unbind-method="unbindConditionESQueryBuilder" ref="elasticSearchPersistenceServiceImpl"/>
+    </reference-list>
+
+    <bean id="elasticSearchQueryBuilderAvailabilityTracker"
+          class="org.apache.unomi.persistence.elasticsearch.ElasticSearchQueryBuilderAvailabilityTracker"/>
+
+    <service id="queryBuilderAvailabilityTracker" ref="elasticSearchQueryBuilderAvailabilityTracker"
+             interface="org.apache.unomi.persistence.spi.QueryBuilderAvailabilityTracker"/>
+
+    <reference-list id="queryBuilderAvailabilityTrackerListeners"
+                    interface="org.apache.unomi.persistence.elasticsearch.ConditionESQueryBuilder"
+                    availability="optional">
+        <reference-listener
+                bind-method="bindQueryBuilder" unbind-method="unbindQueryBuilder" ref="elasticSearchQueryBuilderAvailabilityTracker"/>
     </reference-list>
 
     <!-- Transformation Listeners -->
@@ -194,5 +201,53 @@
             <ref component-id="elasticSearchPersistenceServiceImpl"/>
         </reference-listener>
     </reference>
+
+    <service
+            interface="org.apache.unomi.persistence.elasticsearch.ConditionESQueryBuilder">
+        <service-properties>
+            <entry key="queryBuilderId" value="booleanConditionESQueryBuilder"/>
+        </service-properties>
+        <bean class="org.apache.unomi.persistence.elasticsearch.querybuilders.core.BooleanConditionESQueryBuilder"/>
+    </service>
+
+    <service
+            interface="org.apache.unomi.persistence.elasticsearch.ConditionESQueryBuilder">
+        <service-properties>
+            <entry key="queryBuilderId" value="notConditionESQueryBuilder"/>
+        </service-properties>
+        <bean class="org.apache.unomi.persistence.elasticsearch.querybuilders.core.NotConditionESQueryBuilder"/>
+    </service>
+
+    <service
+            interface="org.apache.unomi.persistence.elasticsearch.ConditionESQueryBuilder">
+        <service-properties>
+            <entry key="queryBuilderId" value="matchAllConditionESQueryBuilder"/>
+        </service-properties>
+        <bean class="org.apache.unomi.persistence.elasticsearch.querybuilders.core.MatchAllConditionESQueryBuilder"/>
+    </service>
+
+    <service
+            interface="org.apache.unomi.persistence.elasticsearch.ConditionESQueryBuilder">
+        <service-properties>
+            <entry key="queryBuilderId" value="propertyConditionESQueryBuilder"/>
+        </service-properties>
+        <bean class="org.apache.unomi.persistence.elasticsearch.querybuilders.core.PropertyConditionESQueryBuilder"/>
+    </service>
+
+    <service
+            interface="org.apache.unomi.persistence.elasticsearch.ConditionESQueryBuilder">
+        <service-properties>
+            <entry key="queryBuilderId" value="sourceEventPropertyConditionESQueryBuilder"/>
+        </service-properties>
+        <bean class="org.apache.unomi.persistence.elasticsearch.querybuilders.core.SourceEventPropertyConditionESQueryBuilder"/>
+    </service>
+
+    <service
+            interface="org.apache.unomi.persistence.elasticsearch.ConditionESQueryBuilder">
+        <service-properties>
+            <entry key="queryBuilderId" value="nestedConditionESQueryBuilder"/>
+        </service-properties>
+        <bean class="org.apache.unomi.persistence.elasticsearch.querybuilders.core.NestedConditionESQueryBuilder"/>
+    </service>
 
 </blueprint>

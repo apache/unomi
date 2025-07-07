@@ -15,9 +15,8 @@
  * limitations under the License.
  */
 
-package org.apache.unomi.persistence.elasticsearch.conditions;
+package org.apache.unomi.persistence.elasticsearch.querybuilders.core;
 
-import org.apache.lucene.search.join.ScoreMode;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.persistence.elasticsearch.ConditionESQueryBuilder;
 import org.apache.unomi.persistence.elasticsearch.ConditionESQueryBuilderDispatcher;
@@ -26,21 +25,10 @@ import org.elasticsearch.index.query.QueryBuilders;
 
 import java.util.Map;
 
-public class NestedConditionESQueryBuilder implements ConditionESQueryBuilder {
+public class MatchAllConditionESQueryBuilder implements ConditionESQueryBuilder {
+
     @Override
     public QueryBuilder buildQuery(Condition condition, Map<String, Object> context, ConditionESQueryBuilderDispatcher dispatcher) {
-        String path = (String) condition.getParameter("path");
-        Condition subCondition = (Condition) condition.getParameter("subCondition");
-
-        if (subCondition == null || path == null) {
-            throw new IllegalArgumentException("Impossible to build Nested query, subCondition and path properties should be provided");
-        }
-
-        QueryBuilder nestedQueryBuilder = dispatcher.buildFilter(subCondition, context);
-        if (nestedQueryBuilder != null) {
-            return QueryBuilders.nestedQuery(path, nestedQueryBuilder, ScoreMode.Avg);
-        } else {
-            throw new IllegalArgumentException("Impossible to build Nested query due to subCondition filter null");
-        }
+        return QueryBuilders.matchAllQuery();
     }
 }

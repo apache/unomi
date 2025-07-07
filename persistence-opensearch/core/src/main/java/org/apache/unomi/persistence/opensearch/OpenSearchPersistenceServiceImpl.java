@@ -539,18 +539,6 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
         bundleContext.removeBundleListener(this);
     }
 
-    public void bindConditionEvaluator(ServiceReference<ConditionEvaluator> conditionEvaluatorServiceReference) {
-        ConditionEvaluator conditionEvaluator = bundleContext.getService(conditionEvaluatorServiceReference);
-        conditionEvaluatorDispatcher.addEvaluator(conditionEvaluatorServiceReference.getProperty("conditionEvaluatorId").toString(), conditionEvaluator);
-    }
-
-    public void unbindConditionEvaluator(ServiceReference<ConditionEvaluator> conditionEvaluatorServiceReference) {
-        if (conditionEvaluatorServiceReference == null) {
-            return;
-        }
-        conditionEvaluatorDispatcher.removeEvaluator(conditionEvaluatorServiceReference.getProperty("conditionEvaluatorId").toString());
-    }
-
     public void bindConditionOSQueryBuilder(ServiceReference<ConditionOSQueryBuilder> conditionESQueryBuilderServiceReference) {
         ConditionOSQueryBuilder conditionOSQueryBuilder = bundleContext.getService(conditionESQueryBuilderServiceReference);
         conditionOSQueryBuilderDispatcher.addQueryBuilder(conditionESQueryBuilderServiceReference.getProperty("queryBuilderId").toString(), conditionOSQueryBuilder);
