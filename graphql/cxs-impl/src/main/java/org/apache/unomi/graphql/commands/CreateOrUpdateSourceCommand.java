@@ -16,6 +16,8 @@
  */
 package org.apache.unomi.graphql.commands;
 
+import org.apache.unomi.api.Metadata;
+import org.apache.unomi.api.MetadataItem;
 import org.apache.unomi.api.Scope;
 import org.apache.unomi.api.services.ScopeService;
 import org.apache.unomi.graphql.types.input.CDPSourceInput;
@@ -40,9 +42,11 @@ public class CreateOrUpdateSourceCommand extends BaseCommand<CDPSource> {
         Scope scope = scopeService.getScope(sourceInput.getId());
 
         if (scope == null) {
+            Metadata metadata = new Metadata();
+            metadata.setId(sourceInput.getId());
+            metadata.setScope(sourceInput.getId());
             scope = new Scope();
-
-            scope.setItemId(sourceInput.getId());
+            scope.setMetadata(metadata);
         }
 
         scopeService.save(scope);

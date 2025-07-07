@@ -641,6 +641,8 @@ public class GraphQLSchemaProvider {
                             .name(childPropertyName)
                             .type(objectType)
                             .build());
+                } else {
+                    LOGGER.error("Object type is null for property type {}", childPropertyType.getTypeId());
                 }
             });
         }

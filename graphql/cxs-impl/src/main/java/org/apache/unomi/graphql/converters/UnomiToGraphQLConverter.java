@@ -35,6 +35,9 @@ public interface UnomiToGraphQLConverter {
      *  [<type>]! - required array of values <type>
      */
     static GraphQLType convertPropertyType(final String type) {
+        if (type == null) {
+            return null;
+        }
         String normalizedType = type;
         GraphQLType graphQLType;
         boolean isArray = false;
