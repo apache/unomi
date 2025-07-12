@@ -16,43 +16,106 @@
  */
 package org.apache.unomi.groovy.actions.services;
 
-import groovy.lang.GroovyCodeSource;
-import groovy.lang.GroovyShell;
-import groovy.util.GroovyScriptEngine;
+import groovy.lang.Script;
 import org.apache.unomi.groovy.actions.GroovyAction;
+import org.apache.unomi.groovy.actions.ScriptMetadata;
+
 
 /**
- * A service to load groovy files and manage {@link GroovyAction}
+ * Service interface for managing Groovy action scripts.
+ * <p>
+ * This service provides functionality to load, compile, cache, and execute
+ * Groovy scripts as actions within the Apache Unomi framework. It implements
+ * optimized compilation and caching strategies to achieve high performance.
+ * </p>
+ * 
+ * <p>
+ * Key features:
+ * <ul>
+ *   <li>Pre-compilation of scripts at startup</li>
+ *   <li>Hash-based change detection for selective recompilation</li>
+ *   <li>Thread-safe compilation and execution</li>
+ *   <li>Unified caching architecture for compiled scripts</li>
+ * </ul>
+ * </p>
+ * 
+ * <p>
+ * Thread Safety: Implementations must be thread-safe as this service
+ * is accessed concurrently during script execution.
+ * </p>
+ * 
+ * @see GroovyAction
+ * @see ScriptMetadata
+ * @since 2.7.0
  */
 public interface GroovyActionsService {
 
     /**
-     * Save a groovy action from a groovy file
+     * Saves a Groovy action script with compilation and validation.
+     * <p>
+     * This method compiles the script, validates it has the required
+     * annotations, persists it, and updates the internal cache.
+     * If the script content hasn't changed, recompilation is skipped.
+     * </p>
      *
-     * @param actionName   actionName
-     * @param groovyScript script to save
+     * @param actionName   the unique identifier for the action
+     * @param groovyScript the Groovy script source code
+     * @throws IllegalArgumentException if actionName or groovyScript is null
+     * @throws RuntimeException if compilation or persistence fails
      */
     void save(String actionName, String groovyScript);
 
     /**
-     * Remove a groovy action
+     * Removes a Groovy action and all associated metadata.
+     * <p>
+     * This method removes the action from both the cache and persistent storage,
+     * and cleans up any registered action types in the definitions service.
+     * </p>
      *
-     * @param id of the action to remove
+     * @param id the unique identifier of the action to remove
+     * @throws IllegalArgumentException if id is null
      */
     void remove(String id);
 
     /**
-     * Get a groovy code source object by an id
+     * Retrieves a compiled script class, compiling on-demand if not cached.
+     * <p>
+     * This method first checks the cache for a compiled version. If not found,
+     * it loads the script from persistence and compiles it. This method is
+     * provided for backward compatibility but may have performance implications.
+     * </p>
      *
-     * @param id of the action to get
-     * @return Groovy code source
+     * @param id the unique identifier of the action
+     * @return the compiled script class, or {@code null} if not found
+     * @throws IllegalArgumentException if id is null
      */
-    GroovyCodeSource getGroovyCodeSource(String id);
+    Class<?> getOrCompileScript(String id);
 
     /**
-     * Get an instantiated groovy shell object
+     * Retrieves a pre-compiled script class from cache.
+     * <p>
+     * This is the preferred method for script execution as it returns
+     * pre-compiled classes without any compilation overhead. Returns
+     * {@code null} if the script is not found in the cache.
+     * </p>
      *
-     * @return GroovyShell
+     * @param id the unique identifier of the action
+     * @return the compiled script class, or {@code null} if not found in cache
+     * @throws IllegalArgumentException if id is null
      */
-    GroovyShell getGroovyShell();
+    Class<? extends Script> getCompiledScript(String id);
+
+    /**
+     * Retrieves script metadata for monitoring and change detection.
+     * <p>
+     * The returned metadata includes content hash, compilation timestamp,
+     * and the compiled class reference. This is useful for monitoring
+     * tools and debugging.
+     * </p>
+     *
+     * @param actionName the unique identifier of the action
+     * @return the script metadata, or {@code null} if not found
+     * @throws IllegalArgumentException if actionName is null
+     */
+    ScriptMetadata getScriptMetadata(String actionName);
 }
