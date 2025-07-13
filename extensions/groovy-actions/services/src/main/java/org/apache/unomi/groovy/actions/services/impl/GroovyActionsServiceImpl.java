@@ -74,7 +74,7 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
     private GroovyScriptEngine groovyScriptEngine;
     private CompilerConfiguration compilerConfiguration;
     private ScheduledFuture<?> scheduledFuture;
-    
+
     private final Object compilationLock = new Object();
     private GroovyShell compilationShell;
     private volatile Map<String, ScriptMetadata> scriptMetadataCache = new ConcurrentHashMap<>();
@@ -117,16 +117,16 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
 
         // Initialize Groovy compiler and compilation shell
         initializeGroovyCompiler();
-        
+
         try {
             loadBaseScript();
         } catch (IOException e) {
             LOGGER.error("Failed to load base script", e);
         }
-        
+
         // PRE-COMPILE ALL SCRIPTS AT STARTUP (no on-demand compilation)
         preloadAllScripts();
-        
+
         initializeTimers();
         LOGGER.info("Groovy action service initialized with {} scripts", scriptMetadataCache.size());
     }
@@ -140,7 +140,15 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
     }
 
     /**
-     * Loads the base script that provides utility functions for Groovy actions.
+     * Load the Base script.
+     * It's a script which provides utility functions that we can use in other groovy script
+     * The functions added by the base script could be called by the groovy actions executed in
+     * {@link org.apache.unomi.groovy.actions.GroovyActionDispatcher#execute}
+     * The base script would be added in the configuration of the {@link GroovyActionsServiceImpl#groovyShell GroovyShell} , so when a
+     * script will be parsed with the GroovyShell (groovyShell.parse(...)), the action will extends the base script, so the functions
+     * could be called
+     *
+     * @throws IOException
      */
     private void loadBaseScript() throws IOException {
         URL groovyBaseScriptURL = bundleContext.getBundle().getEntry("META-INF/base/BaseScript.groovy");
@@ -161,52 +169,51 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
         compilerConfiguration.addCompilationCustomizers(createImportCustomizer());
         compilerConfiguration.setScriptBaseClass(BASE_SCRIPT_NAME);
         groovyScriptEngine.setConfig(compilerConfiguration);
-        
+
         // Create single shared shell for compilation only
         this.compilationShell = new GroovyShell(groovyScriptEngine.getGroovyClassLoader(), compilerConfiguration);
     }
-    
+
     /**
      * Pre-compiles all scripts at startup to eliminate runtime compilation overhead.
      */
     private void preloadAllScripts() {
         long startTime = System.currentTimeMillis();
         LOGGER.info("Pre-compiling all Groovy scripts at startup...");
-        
+
         int successCount = 0;
         int failureCount = 0;
         long totalCompilationTime = 0;
-        
+
         for (GroovyAction groovyAction : persistenceService.getAllItems(GroovyAction.class)) {
             try {
                 String actionName = groovyAction.getName();
                 String scriptContent = groovyAction.getScript();
-                
+
                 long scriptStartTime = System.currentTimeMillis();
-                Class<? extends Script> scriptClass = compileScript(actionName, scriptContent);
+                ScriptMetadata metadata = compileAndCreateMetadata(actionName, scriptContent);
                 long scriptCompilationTime = System.currentTimeMillis() - scriptStartTime;
                 totalCompilationTime += scriptCompilationTime;
-                
-                ScriptMetadata metadata = new ScriptMetadata(actionName, scriptContent, scriptClass);
+
                 scriptMetadataCache.put(actionName, metadata);
-                
+
                 successCount++;
                 LOGGER.debug("Pre-compiled script: {} ({}ms)", actionName, scriptCompilationTime);
-                
+
             } catch (Exception e) {
                 failureCount++;
                 LOGGER.error("Failed to pre-compile script: {}", groovyAction.getName(), e);
             }
         }
-        
+
         long totalTime = System.currentTimeMillis() - startTime;
-        LOGGER.info("Pre-compilation completed: {} scripts successfully compiled, {} failures. Total time: {}ms", 
+        LOGGER.info("Pre-compilation completed: {} scripts successfully compiled, {} failures. Total time: {}ms",
                 successCount, failureCount, totalTime);
-        LOGGER.debug("Pre-compilation metrics: Average per script: {}ms, Compilation overhead: {}ms", 
+        LOGGER.debug("Pre-compilation metrics: Average per script: {}ms, Compilation overhead: {}ms",
                 successCount > 0 ? totalCompilationTime / successCount : 0,
                 totalTime - totalCompilationTime);
     }
-    
+
     /**
      * Thread-safe script compilation using synchronized shared shell.
      */
@@ -228,47 +235,75 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
     }
 
     /**
+     * Validates that a string parameter is not null or empty.
+     */
+    private void validateNotEmpty(String value, String parameterName) {
+        if (value == null || value.trim().isEmpty()) {
+            throw new IllegalArgumentException(parameterName + " cannot be null or empty");
+        }
+    }
+
+    /**
+     * Compiles a script and creates metadata with timing information.
+     */
+    private ScriptMetadata compileAndCreateMetadata(String actionName, String scriptContent) {
+        long compilationStartTime = System.currentTimeMillis();
+        Class<? extends Script> scriptClass = compileScript(actionName, scriptContent);
+        long compilationTime = System.currentTimeMillis() - compilationStartTime;
+
+        LOGGER.debug("Script {} compiled in {}ms", actionName, compilationTime);
+        return new ScriptMetadata(actionName, scriptContent, scriptClass);
+    }
+
+    /**
+     * Extracts Action annotation from script class if present.
+     */
+    private Action getActionAnnotation(Class<? extends Script> scriptClass) {
+        try {
+            return scriptClass.getMethod("execute").getAnnotation(Action.class);
+        } catch (Exception e) {
+            LOGGER.error("Failed to extract action annotation", e);
+            return null;
+        }
+    }
+
+    /**
      * {@inheritDoc}
      * Implementation performs hash-based change detection to skip unnecessary recompilation.
      */
     @Override
     public void save(String actionName, String groovyScript) {
-        if (actionName == null || actionName.trim().isEmpty()) {
-            throw new IllegalArgumentException("Action name cannot be null or empty");
-        }
-        if (groovyScript == null || groovyScript.trim().isEmpty()) {
-            throw new IllegalArgumentException("Groovy script cannot be null or empty");
-        }
-        
+        validateNotEmpty(actionName, "Action name");
+        validateNotEmpty(groovyScript, "Groovy script");
+
         long startTime = System.currentTimeMillis();
         LOGGER.info("Saving script: {}", actionName);
-        
+
         try {
             ScriptMetadata existingMetadata = scriptMetadataCache.get(actionName);
             if (existingMetadata != null && !existingMetadata.hasChanged(groovyScript)) {
-                LOGGER.info("Script {} unchanged, skipping recompilation ({}ms)", actionName, 
+                LOGGER.info("Script {} unchanged, skipping recompilation ({}ms)", actionName,
                     System.currentTimeMillis() - startTime);
                 return;
             }
-            
+
             long compilationStartTime = System.currentTimeMillis();
-            Class<? extends Script> scriptClass = compileScript(actionName, groovyScript);
+            ScriptMetadata metadata = compileAndCreateMetadata(actionName, groovyScript);
             long compilationTime = System.currentTimeMillis() - compilationStartTime;
-            
-            Action actionAnnotation = scriptClass.getMethod("execute").getAnnotation(Action.class);
+
+            Action actionAnnotation = getActionAnnotation(metadata.getCompiledClass());
             if (actionAnnotation != null) {
                 saveActionType(actionAnnotation);
             }
-            
+
             saveScript(actionName, groovyScript);
-            
-            ScriptMetadata metadata = new ScriptMetadata(actionName, groovyScript, scriptClass);
+
             scriptMetadataCache.put(actionName, metadata);
-            
+
             long totalTime = System.currentTimeMillis() - startTime;
-            LOGGER.info("Script {} saved and compiled successfully (total: {}ms, compilation: {}ms)", 
+            LOGGER.info("Script {} saved and compiled successfully (total: {}ms, compilation: {}ms)",
                 actionName, totalTime, compilationTime);
-            
+
         } catch (Exception e) {
             long totalTime = System.currentTimeMillis() - startTime;
             LOGGER.error("Failed to save script: {} ({}ms)", actionName, totalTime, e);
@@ -298,27 +333,20 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
      */
     @Override
     public void remove(String id) {
-        if (id == null || id.trim().isEmpty()) {
-            throw new IllegalArgumentException("Script ID cannot be null or empty");
-        }
-        
+        validateNotEmpty(id, "Script ID");
+
         LOGGER.info("Removing script: {}", id);
-        
+
         ScriptMetadata removedMetadata = scriptMetadataCache.remove(id);
         persistenceService.remove(id, GroovyAction.class);
-        
-        try {
-            if (removedMetadata != null) {
-                Class<? extends Script> cachedClass = removedMetadata.getCompiledClass();
-                Action actionAnnotation = cachedClass.getMethod("execute").getAnnotation(Action.class);
-                if (actionAnnotation != null) {
-                    definitionsService.removeActionType(actionAnnotation.id());
-                }
+
+        if (removedMetadata != null) {
+            Action actionAnnotation = getActionAnnotation(removedMetadata.getCompiledClass());
+            if (actionAnnotation != null) {
+                definitionsService.removeActionType(actionAnnotation.id());
             }
-        } catch (Exception e) {
-            LOGGER.error("Failed to remove action type for script: {}", id, e);
         }
-        
+
         LOGGER.info("Script {} removed successfully", id);
     }
 
@@ -329,53 +357,48 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
      */
     @Override
     public Class<? extends Script> getOrCompileScript(String id) {
-        if (id == null || id.trim().isEmpty()) {
-            throw new IllegalArgumentException("Script ID cannot be null or empty");
-        }
-        
+        validateNotEmpty(id, "Script ID");
+
         ScriptMetadata metadata = scriptMetadataCache.get(id);
         if (metadata != null) {
             return metadata.getCompiledClass();
         }
-        
+
         long startTime = System.currentTimeMillis();
         LOGGER.warn("Script {} not found in cache, compiling on-demand (performance warning)", id);
-        
+
         GroovyAction groovyAction = persistenceService.load(id, GroovyAction.class);
         if (groovyAction == null) {
-            LOGGER.warn("Script {} not found in persistence, returning null ({}ms)", id, 
+            LOGGER.warn("Script {} not found in persistence, returning null ({}ms)", id,
                 System.currentTimeMillis() - startTime);
             return null;
         }
-        
+
         try {
             long compilationStartTime = System.currentTimeMillis();
-            Class<? extends Script> scriptClass = compileScript(id, groovyAction.getScript());
+            ScriptMetadata newMetadata = compileAndCreateMetadata(id, groovyAction.getScript());
             long compilationTime = System.currentTimeMillis() - compilationStartTime;
-            
-            ScriptMetadata newMetadata = new ScriptMetadata(id, groovyAction.getScript(), scriptClass);
+
             scriptMetadataCache.put(id, newMetadata);
-            
+
             long totalTime = System.currentTimeMillis() - startTime;
-            LOGGER.warn("On-demand compilation completed for {} (total: {}ms, compilation: {}ms)", 
+            LOGGER.warn("On-demand compilation completed for {} (total: {}ms, compilation: {}ms)",
                 id, totalTime, compilationTime);
-            return scriptClass;
+            return newMetadata.getCompiledClass();
         } catch (Exception e) {
             long totalTime = System.currentTimeMillis() - startTime;
             LOGGER.error("Failed to compile script {} on-demand ({}ms)", id, totalTime, e);
             return null;
         }
     }
-    
+
     /**
      * {@inheritDoc}
      */
     @Override
     public Class<? extends Script> getCompiledScript(String id) {
-        if (id == null || id.trim().isEmpty()) {
-            throw new IllegalArgumentException("Script ID cannot be null or empty");
-        }
-        
+        validateNotEmpty(id, "Script ID");
+
         ScriptMetadata metadata = scriptMetadataCache.get(id);
         if (metadata == null) {
             LOGGER.warn("Script {} not found in cache", id);
@@ -383,16 +406,14 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
         }
         return metadata.getCompiledClass();
     }
-    
+
     /**
      * {@inheritDoc}
      */
     @Override
     public ScriptMetadata getScriptMetadata(String actionName) {
-        if (actionName == null || actionName.trim().isEmpty()) {
-            throw new IllegalArgumentException("Action name cannot be null or empty");
-        }
-        
+        validateNotEmpty(actionName, "Action name");
+
         return scriptMetadataCache.get(actionName);
     }
 
@@ -418,17 +439,17 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
      */
     private void refreshGroovyActions() {
         long startTime = System.currentTimeMillis();
-        
+
         Map<String, ScriptMetadata> newMetadataCache = new ConcurrentHashMap<>();
         int unchangedCount = 0;
         int recompiledCount = 0;
         int errorCount = 0;
         long totalCompilationTime = 0;
-        
+
         for (GroovyAction groovyAction : persistenceService.getAllItems(GroovyAction.class)) {
             String actionName = groovyAction.getName();
             String scriptContent = groovyAction.getScript();
-            
+
             try {
                 ScriptMetadata existingMetadata = scriptMetadataCache.get(actionName);
                 if (existingMetadata != null && !existingMetadata.hasChanged(scriptContent)) {
@@ -439,26 +460,25 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
                     if (recompiledCount == 0) {
                         LOGGER.info("Refreshing scripts from persistence layer...");
                     }
-                    
+
                     long compilationStartTime = System.currentTimeMillis();
-                    Class<? extends Script> scriptClass = compileScript(actionName, scriptContent);
+                    ScriptMetadata metadata = compileAndCreateMetadata(actionName, scriptContent);
                     long compilationTime = System.currentTimeMillis() - compilationStartTime;
                     totalCompilationTime += compilationTime;
-                    
-                    ScriptMetadata metadata = new ScriptMetadata(actionName, scriptContent, scriptClass);
+
                     newMetadataCache.put(actionName, metadata);
                     recompiledCount++;
                     LOGGER.info("Script {} recompiled during refresh ({}ms)", actionName, compilationTime);
                 }
-                
+
             } catch (Exception e) {
                 if (errorCount == 0 && recompiledCount == 0) {
                     LOGGER.info("Refreshing scripts from persistence layer...");
                 }
-                
+
                 errorCount++;
                 LOGGER.error("Failed to refresh script: {}", actionName, e);
-                
+
                 ScriptMetadata existingMetadata = scriptMetadataCache.get(actionName);
                 if (existingMetadata != null) {
                     newMetadataCache.put(actionName, existingMetadata);
@@ -466,17 +486,17 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
                 }
             }
         }
-        
+
         this.scriptMetadataCache = newMetadataCache;
-        
+
         if (recompiledCount > 0 || errorCount > 0) {
             long totalTime = System.currentTimeMillis() - startTime;
-            LOGGER.info("Script refresh completed: {} unchanged, {} recompiled, {} errors. Total time: {}ms", 
+            LOGGER.info("Script refresh completed: {} unchanged, {} recompiled, {} errors. Total time: {}ms",
                     unchangedCount, recompiledCount, errorCount, totalTime);
-            LOGGER.debug("Refresh metrics: Recompilation time: {}ms, Cache update overhead: {}ms", 
+            LOGGER.debug("Refresh metrics: Recompilation time: {}ms, Cache update overhead: {}ms",
                     totalCompilationTime, totalTime - totalCompilationTime);
         } else {
-            LOGGER.debug("Script refresh completed: {} scripts checked, no changes detected ({}ms)", 
+            LOGGER.debug("Script refresh completed: {} scripts checked, no changes detected ({}ms)",
                     unchangedCount, System.currentTimeMillis() - startTime);
         }
     }
