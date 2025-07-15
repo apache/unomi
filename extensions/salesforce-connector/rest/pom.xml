@@ -131,7 +131,7 @@
                     </instructions>
                 </configuration>
             </plugin>
-            <plugin>
+            <!--<plugin>
                 <groupId>com.sebastian-daschner</groupId>
                 <artifactId>jaxrs-analyzer-maven-plugin</artifactId>
                 <version>0.17</version>
@@ -146,7 +146,7 @@
                         </configuration>
                     </execution>
                 </executions>
-            </plugin>
+            </plugin>-->
         </plugins>
     </build>
 

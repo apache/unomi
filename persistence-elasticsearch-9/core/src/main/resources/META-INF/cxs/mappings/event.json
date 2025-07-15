@@ -1,0 +1,64 @@
+{
+  "dynamic_templates": [
+    {
+      "all": {
+        "match": "*",
+        "match_mapping_type": "string",
+        "mapping": {
+          "type": "text",
+          "analyzer": "folding",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        }
+      }
+    }
+  ],
+  "properties": {
+    "flattenedProperties": {
+      "type": "flattened"
+    },
+    "timeStamp": {
+      "type": "date"
+    },
+    "target" : {
+      "properties" : {
+        "lastEventDate" : {
+          "type" : "date"
+        },
+        "profile" : {
+          "properties" : {
+            "properties" : {
+              "properties" : {
+                "birthDate" : {
+                  "type" : "date"
+                },
+                "firstVisit" : {
+                  "type" : "date"
+                },
+                "lastVisit" : {
+                  "type" : "date"
+                },
+                "notificationRefreshDate" : {
+                  "type" : "date"
+                },
+                "previousVisit" : {
+                  "type" : "date"
+                }
+              }
+            },
+            "systemProperties" : {
+              "properties" : {
+
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+

@@ -81,7 +81,7 @@
     <reference id="metricsService" interface="org.apache.unomi.metrics.MetricsService" />
     <reference id="scriptExecutor" interface="org.apache.unomi.scripting.ScriptExecutor" />
 
-    <service id="elasticSearchPersistenceService" ref="elasticSearchPersistenceServiceImpl">
+    <service id="elasticSearchPersistenceService" ref="elasticSearch9PersistenceServiceImpl">
         <interfaces>
             <value>org.apache.unomi.persistence.spi.PersistenceService</value>
             <value>org.osgi.framework.SynchronousBundleListener</value>
@@ -99,7 +99,7 @@
         <property name="scriptExecutor" ref="scriptExecutor" />
     </bean>
 
-    <bean id="elasticSearchPersistenceServiceImpl"
+    <bean id="elasticSearch9PersistenceServiceImpl"
           class="org.apache.unomi.persistence.elasticsearch.ElasticSearch9PersistenceServiceImpl"
           init-method="start"
           destroy-method="stop">
@@ -169,14 +169,14 @@
                     interface="org.apache.unomi.persistence.elasticsearch.conditions.ConditionEvaluator"
                     availability="optional">
         <reference-listener
-                bind-method="bindConditionEvaluator" unbind-method="unbindConditionEvaluator" ref="elasticSearchPersistenceServiceImpl"/>
+                bind-method="bindConditionEvaluator" unbind-method="unbindConditionEvaluator" ref="elasticSearch9PersistenceServiceImpl"/>
     </reference-list>
 
     <reference-list id="conditionESQueryBuilders"
                     interface="org.apache.unomi.persistence.elasticsearch.conditions.ConditionESQueryBuilder"
         availability="optional">
         <reference-listener
-                bind-method="bindConditionESQueryBuilder" unbind-method="unbindConditionESQueryBuilder" ref="elasticSearchPersistenceServiceImpl"/>
+                bind-method="bindConditionESQueryBuilder" unbind-method="unbindConditionESQueryBuilder" ref="elasticSearch9PersistenceServiceImpl"/>
     </reference-list>
 
 </blueprint>

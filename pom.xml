@@ -84,7 +84,7 @@
         <json-patch.version>1.9</json-patch.version>
         <org.json.version>20240303</org.json.version>
 
-        <java.version>11</java.version>
+        <java.version>17</java.version>
 
         <maven.compiler.source>${java.version}</maven.compiler.source>
         <maven.compiler.target>${java.version}</maven.compiler.target>
@@ -993,6 +993,7 @@
         <module>persistence-spi</module>
         <module>lifecycle-watcher</module>
         <module>persistence-elasticsearch</module>
+        <module>persistence-elasticsearch-9</module>
         <module>services</module>
         <module>rest</module>
         <module>graphql</module>

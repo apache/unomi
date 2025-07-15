@@ -71,6 +71,7 @@
         <bundle start-level="75" start="false">mvn:org.apache.unomi/unomi-metrics/${project.version}</bundle>
         <bundle start-level="75" start="false">mvn:org.apache.unomi/unomi-persistence-spi/${project.version}</bundle>
         <bundle start-level="76" start="false">mvn:org.apache.unomi/unomi-persistence-elasticsearch-core/${project.version}</bundle>
+        <bundle start-level="76" start="false">mvn:org.apache.unomi/unomi-persistence-elasticsearch-core-9/${project.version}</bundle>
         <bundle start-level="77" start="false">mvn:org.apache.unomi/unomi-services/${project.version}</bundle>
         <bundle start-level="77" start="false">mvn:org.apache.unomi/unomi-json-schema-services/${project.version}</bundle>
         <bundle start-level="77" start="false">mvn:org.apache.unomi/unomi-json-schema-rest/${project.version}</bundle>
