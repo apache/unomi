@@ -33,7 +33,6 @@
     <reference id="tracerService" interface="org.apache.unomi.tracing.api.TracerService"/>
     <reference id="bundleWatcher" interface="org.apache.unomi.lifecycle.BundleWatcher"/>
     <reference id="executionContextManager" interface="org.apache.unomi.api.services.ExecutionContextManager" />
-    <reference id="queryBuilderAvailabilityTrackerRef" interface="org.apache.unomi.persistence.spi.QueryBuilderAvailabilityTracker" availability="optional"/>
 
     <!-- Reference Lists -->
     <reference-list id="eventListenerServices"
@@ -91,7 +90,7 @@
 
     <!-- Configuration -->
     <cm:property-placeholder persistent-id="org.apache.unomi.services"
-                             update-strategy="reload" placeholder-prefix="${services.">
+                             update-strategy="none" placeholder-prefix="${services.">
         <cm:default-properties>
             <cm:property name="profile.purge.interval" value="1"/>
             <cm:property name="profile.purge.inactiveTime" value="180"/>
@@ -136,7 +135,7 @@
     </cm:property-placeholder>
 
     <cm:property-placeholder persistent-id="org.apache.unomi.persistence.elasticsearch"
-                             update-strategy="reload" placeholder-prefix="${es.">
+                             update-strategy="none" placeholder-prefix="${es.">
         <cm:default-properties>
             <cm:property name="aggregateQueryBucketSize" value="5000"/>
         </cm:default-properties>
@@ -145,6 +144,68 @@
     <!-- Beans -->
     <bean id="multiTypeCacheServiceImpl" class="org.apache.unomi.services.impl.cache.MultiTypeCacheServiceImpl" />
 
+    <!-- Task Manager Beans -->
+    <bean id="taskExecutorRegistry" class="org.apache.unomi.services.impl.scheduler.TaskExecutorRegistry" />
+
+    <bean id="taskMetricsManager" class="org.apache.unomi.services.impl.scheduler.TaskMetricsManager" />
+
+    <bean id="taskStateManager" class="org.apache.unomi.services.impl.scheduler.TaskStateManager" />
+
+    <bean id="taskValidationManager" class="org.apache.unomi.services.impl.scheduler.TaskValidationManager" />
+
+    <bean id="taskHistoryManager" class="org.apache.unomi.services.impl.scheduler.TaskHistoryManager">
+        <property name="nodeId" value="${services.scheduler.nodeId}"/>
+        <property name="metricsManager" ref="taskMetricsManager"/>
+    </bean>
+
+    <bean id="taskLockManager" class="org.apache.unomi.services.impl.scheduler.TaskLockManager">
+        <property name="nodeId" value="${services.scheduler.nodeId}"/>
+        <property name="lockTimeout" value="${services.scheduler.lockTimeout}"/>
+        <property name="metricsManager" ref="taskMetricsManager"/>
+    </bean>
+
+    <bean id="taskExecutionManager" class="org.apache.unomi.services.impl.scheduler.TaskExecutionManager"
+          init-method="initialize">
+        <property name="nodeId" value="${services.scheduler.nodeId}"/>
+        <property name="threadPoolSize" value="${services.scheduler.thread.poolSize}"/>
+        <property name="stateManager" ref="taskStateManager"/>
+        <property name="lockManager" ref="taskLockManager"/>
+        <property name="metricsManager" ref="taskMetricsManager"/>
+        <property name="historyManager" ref="taskHistoryManager"/>
+        <property name="executorRegistry" ref="taskExecutorRegistry"/>
+    </bean>
+
+    <bean id="taskRecoveryManager" class="org.apache.unomi.services.impl.scheduler.TaskRecoveryManager">
+        <property name="nodeId" value="${services.scheduler.nodeId}"/>
+        <property name="stateManager" ref="taskStateManager"/>
+        <property name="lockManager" ref="taskLockManager"/>
+        <property name="metricsManager" ref="taskMetricsManager"/>
+        <property name="executionManager" ref="taskExecutionManager"/>
+        <property name="executorRegistry" ref="taskExecutorRegistry"/>
+    </bean>
+
+    <!-- Scheduler Provider -->
+    <bean id="persistenceSchedulerProvider" class="org.apache.unomi.services.impl.scheduler.PersistenceSchedulerProvider"
+          init-method="postConstruct" destroy-method="preDestroy">
+        <property name="persistenceService" ref="persistenceService"/>
+        <property name="executorNode" value="${services.scheduler.executorNode}"/>
+        <property name="nodeId" value="${services.scheduler.nodeId}"/>
+        <property name="completedTaskTtlDays" value="${services.scheduler.completedTaskTtlDays}"/>
+        <property name="lockManager" ref="taskLockManager"/>
+    </bean>
+
+    <!-- Register PersistenceSchedulerProvider as an OSGi service -->
+    <service id="persistenceSchedulerProviderService" ref="persistenceSchedulerProvider"
+             interface="org.apache.unomi.services.impl.scheduler.SchedulerProvider"/>
+
+    <!-- Reference to ClusterService for the persistence provider -->
+    <reference id="clusterServiceRef" interface="org.apache.unomi.api.services.ClusterService" availability="optional">
+        <reference-listener ref="persistenceSchedulerProvider"
+                           bind-method="setClusterService"
+                           unbind-method="unsetClusterService"/>
+    </reference>
+
+    <!-- Main Scheduler Service -->
     <bean id="schedulerServiceImpl" class="org.apache.unomi.services.impl.scheduler.SchedulerServiceImpl"
         init-method="postConstruct" destroy-method="preDestroy">
         <property name="threadPoolSize" value="${services.scheduler.thread.poolSize}"/>
@@ -154,8 +215,25 @@
         <property name="nodeId" value="${services.scheduler.nodeId}"/>
         <property name="lockTimeout" value="${services.scheduler.lockTimeout}"/>
         <property name="purgeTaskEnabled" value="${services.scheduler.purgeTaskEnabled}"/>
-        <property name="queryBuilderAvailabilityTracker" ref="queryBuilderAvailabilityTrackerRef"/>
+        <!-- Manager dependencies -->
+        <property name="stateManager" ref="taskStateManager"/>
+        <property name="lockManager" ref="taskLockManager"/>
+        <property name="executionManager" ref="taskExecutionManager"/>
+        <property name="recoveryManager" ref="taskRecoveryManager"/>
+        <property name="metricsManager" ref="taskMetricsManager"/>
+        <property name="historyManager" ref="taskHistoryManager"/>
+        <property name="validationManager" ref="taskValidationManager"/>
+        <property name="executorRegistry" ref="taskExecutorRegistry"/>
     </bean>
+
+    <!-- Optional reference to PersistenceSchedulerProvider with reference-listeners -->
+    <reference id="persistenceSchedulerProviderRef"
+               interface="org.apache.unomi.services.impl.scheduler.SchedulerProvider"
+               availability="optional">
+        <reference-listener ref="schedulerServiceImpl"
+                           bind-method="setPersistenceProvider"
+                           unbind-method="unsetPersistenceProvider"/>
+    </reference>
 
     <bean id="definitionsServiceImpl" class="org.apache.unomi.services.impl.definitions.DefinitionsServiceImpl"
           init-method="postConstruct" destroy-method="preDestroy" depends-on="conditionValidationService">
@@ -451,7 +529,11 @@
             <value>org.apache.unomi.api.services.RulesService</value>
             <value>org.apache.unomi.api.services.EventListenerService</value>
             <value>org.osgi.framework.SynchronousBundleListener</value>
+            <value>org.osgi.service.cm.ManagedService</value>
         </interfaces>
+        <service-properties>
+            <entry key="service.pid" value="org.apache.unomi.services"/>
+        </service-properties>
     </service>
 
     <service id="segmentService" ref="segmentServiceImpl">
@@ -611,13 +693,5 @@
 
     <!-- Condition Validation Service -->
     <service id="conditionValidationServiceInterface" ref="conditionValidationService" interface="org.apache.unomi.api.services.ConditionValidationService"/>
-
-    <reference id="queryBuilderAvailabilityTracker" 
-               interface="org.apache.unomi.persistence.spi.QueryBuilderAvailabilityTracker"
-               availability="optional">
-        <reference-listener ref="schedulerServiceImpl"
-                          bind-method="setQueryBuilderAvailabilityTracker"
-                          unbind-method="unsetQueryBuilderAvailabilityTracker"/>
-    </reference>
 
 </blueprint>

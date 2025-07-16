@@ -161,7 +161,8 @@ public class SchedulerServiceImplTest {
             clusterService,
             -1,
             true,
-            false);
+            false,
+            0); // Set TTL to 0 for immediate purging in tests
 
         // Configure scheduler for testing
         schedulerService.setThreadPoolSize(TEST_THREAD_POOL_SIZE);
@@ -540,7 +541,10 @@ public class SchedulerServiceImplTest {
     @Test
     @Category(RecoveryTests.class)
     public void testTaskRecovery() throws Exception {
-        // Test task recovery after crashes
+        // Set a very short lock timeout for the test
+        schedulerService.setLockTimeout(100); // 100 ms
+        schedulerService.getLockManager().setLockTimeout(100); // Ensure lockManager uses the same timeout
+
         CountDownLatch executionLatch = new CountDownLatch(1);
         AtomicBoolean recovered = new AtomicBoolean(false);
 
@@ -1578,6 +1582,254 @@ public class SchedulerServiceImplTest {
 
     public interface RestartTests {}
 
+    public interface OptionalDependencyTests {}
+
+    /**
+     * Tests that the scheduler service works correctly without a PersistenceSchedulerProvider.
+     * This verifies that the dependency is truly optional.
+     */
+    @Test
+    @Category(OptionalDependencyTests.class)
+    public void testSchedulerServiceWithoutPersistenceProvider() throws Exception {
+        // Create a scheduler service without persistence provider using the helper method
+        SchedulerServiceImpl schedulerWithoutProvider = TestHelper.createSchedulerServiceWithoutPersistenceProvider(
+            "test-node-no-provider",
+            persistenceService,
+            executionContextManager,
+            bundleContext,
+            clusterService,
+            TEST_LOCK_TIMEOUT,
+            true,
+            true);
+        
+        try {
+            // Verify that the service starts without errors
+            assertTrue("Scheduler service should be running", schedulerWithoutProvider.isExecutorNode());
+            
+            // Test that in-memory tasks work correctly
+            CountDownLatch executionLatch = new CountDownLatch(1);
+            AtomicBoolean executed = new AtomicBoolean(false);
+            
+            TaskExecutor executor = new TaskExecutor() {
+                @Override
+                public String getTaskType() {
+                    return "no-provider-test";
+                }
+                
+                @Override
+                public void execute(ScheduledTask task, TaskStatusCallback callback) {
+                    executed.set(true);
+                    executionLatch.countDown();
+                    callback.complete();
+                }
+            };
+            
+            schedulerWithoutProvider.registerTaskExecutor(executor);
+            
+            // Create a non-persistent task using the registered executor
+            ScheduledTask task = schedulerWithoutProvider.newTask("no-provider-test")
+                .nonPersistent()
+                .withExecutor(executor)
+                .schedule();
+            
+            // Wait for execution
+            assertTrue("Task should execute", executionLatch.await(TEST_TIMEOUT, TEST_TIME_UNIT));
+            assertTrue("Task should have executed", executed.get());
+            
+            // Verify task completion
+            ScheduledTask completedTask = schedulerWithoutProvider.getTask(task.getItemId());
+            assertEquals("Task should be completed", ScheduledTask.TaskStatus.COMPLETED, completedTask.getStatus());
+            
+            // Test that persistent tasks are handled gracefully (should not fail)
+            try {
+                List<ScheduledTask> persistentTasks = schedulerWithoutProvider.getPersistentTasks();
+                assertNotNull("Should return empty list for persistent tasks", persistentTasks);
+                assertEquals("Should have no persistent tasks", 0, persistentTasks.size());
+            } catch (Exception e) {
+                fail("Should handle persistent task queries gracefully: " + e.getMessage());
+            }
+            
+        } finally {
+            schedulerWithoutProvider.preDestroy();
+        }
+    }
+
+    /**
+     * Tests that the scheduler service works correctly when PersistenceSchedulerProvider is added later.
+     * This simulates the OSGi service binding scenario.
+     */
+    @Test
+    @Category(OptionalDependencyTests.class)
+    public void testSchedulerServiceWithLatePersistenceProviderBinding() throws Exception {
+        // Create a scheduler service without persistence provider initially
+        SchedulerServiceImpl schedulerWithLateProvider = TestHelper.createSchedulerServiceWithoutPersistenceProvider(
+            "test-node-late-provider",
+            persistenceService,
+            executionContextManager,
+            bundleContext,
+            clusterService,
+            TEST_LOCK_TIMEOUT,
+            true,
+            true);
+        
+        try {
+            // Verify service starts without persistence provider
+            assertTrue("Scheduler service should be running", schedulerWithLateProvider.isExecutorNode());
+            
+            // Create a persistence provider and bind it later
+            PersistenceSchedulerProvider lateProvider = new PersistenceSchedulerProvider();
+            lateProvider.setPersistenceService(persistenceService);
+            lateProvider.setExecutorNode(true);
+            lateProvider.setNodeId("test-node-late-provider");
+            lateProvider.setCompletedTaskTtlDays(30);
+            lateProvider.setLockManager(schedulerWithLateProvider.getLockManager());
+            lateProvider.postConstruct();
+            
+            // Bind the provider (simulating OSGi service binding)
+            schedulerWithLateProvider.setPersistenceProvider(lateProvider);
+            
+            // Test that persistent tasks now work
+            CountDownLatch executionLatch = new CountDownLatch(1);
+            AtomicBoolean executed = new AtomicBoolean(false);
+            
+            TaskExecutor executor = new TaskExecutor() {
+                @Override
+                public String getTaskType() {
+                    return "late-provider-test";
+                }
+                
+                @Override
+                public void execute(ScheduledTask task, TaskStatusCallback callback) {
+                    executed.set(true);
+                    executionLatch.countDown();
+                    callback.complete();
+                }
+            };
+            
+            schedulerWithLateProvider.registerTaskExecutor(executor);
+            
+            // Create a persistent task using the registered executor
+            ScheduledTask task = schedulerWithLateProvider.newTask("late-provider-test")
+                .withExecutor(executor)
+                .schedule();
+            
+            // Wait for execution
+            assertTrue("Task should execute", executionLatch.await(TEST_TIMEOUT, TEST_TIME_UNIT));
+            assertTrue("Task should have executed", executed.get());
+            
+            // Wait for task status to be properly updated and persisted
+            ScheduledTask completedTask = waitForTaskStatus(task.getItemId(), ScheduledTask.TaskStatus.COMPLETED, TEST_TIMEOUT, TEST_SLEEP);
+            assertNotNull("Task should be found", completedTask);
+            assertEquals("Task should be completed", ScheduledTask.TaskStatus.COMPLETED, completedTask.getStatus());
+            
+            // Verify persistent tasks are now available
+            List<ScheduledTask> persistentTasks = schedulerWithLateProvider.getPersistentTasks();
+            assertNotNull("Should return list for persistent tasks", persistentTasks);
+            assertTrue("Should have at least one persistent task", persistentTasks.size() >= 1);
+            
+            // Unbind the provider (simulating OSGi service unbinding)
+            schedulerWithLateProvider.unsetPersistenceProvider(lateProvider);
+            
+            // Verify that persistent task queries are handled gracefully again
+            try {
+                List<ScheduledTask> persistentTasksAfterUnbind = schedulerWithLateProvider.getPersistentTasks();
+                assertNotNull("Should return empty list after unbinding", persistentTasksAfterUnbind);
+                assertEquals("Should have no persistent tasks after unbinding", 0, persistentTasksAfterUnbind.size());
+            } catch (Exception e) {
+                fail("Should handle persistent task queries gracefully after unbinding: " + e.getMessage());
+            }
+            
+            // Clean up the provider
+            lateProvider.preDestroy();
+            
+        } finally {
+            schedulerWithLateProvider.preDestroy();
+        }
+    }
+
+    /**
+     * Tests that the scheduler service handles PersistenceSchedulerProvider binding/unbinding correctly
+     * in a multi-threaded environment.
+     */
+    @Test
+    @Category(OptionalDependencyTests.class)
+    public void testConcurrentPersistenceProviderBinding() throws Exception {
+        SchedulerServiceImpl schedulerConcurrent = TestHelper.createSchedulerServiceWithoutPersistenceProvider(
+            "test-node-concurrent",
+            persistenceService,
+            executionContextManager,
+            bundleContext,
+            clusterService,
+            TEST_LOCK_TIMEOUT,
+            true,
+            true);
+        
+        try {
+            // Create multiple persistence providers
+            List<PersistenceSchedulerProvider> providers = new ArrayList<>();
+            for (int i = 0; i < 3; i++) {
+                PersistenceSchedulerProvider provider = new PersistenceSchedulerProvider();
+                provider.setPersistenceService(persistenceService);
+                provider.setExecutorNode(true);
+                provider.setNodeId("test-node-concurrent-" + i);
+                provider.setCompletedTaskTtlDays(30);
+                provider.setLockManager(schedulerConcurrent.getLockManager());
+                provider.postConstruct();
+                providers.add(provider);
+            }
+            
+            // Test concurrent binding/unbinding
+            CountDownLatch startLatch = new CountDownLatch(1);
+            CountDownLatch completionLatch = new CountDownLatch(3);
+            AtomicInteger bindingCount = new AtomicInteger(0);
+            AtomicInteger unbindingCount = new AtomicInteger(0);
+            
+            // Start threads that bind/unbind providers concurrently
+            for (int i = 0; i < 3; i++) {
+                final int index = i;
+                new Thread(() -> {
+                    try {
+                        startLatch.await();
+                        
+                        // Bind provider
+                        schedulerConcurrent.setPersistenceProvider(providers.get(index));
+                        bindingCount.incrementAndGet();
+                        
+                        // Simulate some work
+                        Thread.sleep(100);
+                        
+                        // Unbind provider
+                        schedulerConcurrent.unsetPersistenceProvider(providers.get(index));
+                        unbindingCount.incrementAndGet();
+                        
+                        completionLatch.countDown();
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                    }
+                }).start();
+            }
+            
+            // Start all threads
+            startLatch.countDown();
+            
+            // Wait for completion
+            assertTrue("All binding/unbinding operations should complete", 
+                completionLatch.await(TEST_TIMEOUT, TEST_TIME_UNIT));
+            
+            // Verify all operations completed
+            assertEquals("All bindings should complete", 3, bindingCount.get());
+            assertEquals("All unbindings should complete", 3, unbindingCount.get());
+            
+            // Clean up providers
+            for (PersistenceSchedulerProvider provider : providers) {
+                provider.preDestroy();
+            }
+            
+        } finally {
+            schedulerConcurrent.preDestroy();
+        }
+    }
+
     /**
      * Tests that system tasks are properly handled when the scheduler restarts.
      * System tasks should be reused rather than duplicated.
@@ -1585,10 +1837,10 @@ public class SchedulerServiceImplTest {
     @Test
     @Category(SystemTaskTests.class)
     public void testSystemTaskReuse() throws Exception {
-        // Create a system task
         String taskType = "system-task-reuse-test";
         AtomicInteger executionCount = new AtomicInteger(0);
         CountDownLatch executionLatch = new CountDownLatch(1);
+        AtomicReference<String> taskId = new AtomicReference<>();
 
         TaskExecutor executor = new TaskExecutor() {
             @Override
@@ -1612,6 +1864,8 @@ public class SchedulerServiceImplTest {
             .withFixedRate()
             .asSystemTask()
             .schedule();
+        
+        taskId.set(systemTask.getItemId());
 
         // Wait for task to execute once
         assertTrue("Task should execute", executionLatch.await(TEST_TIMEOUT, TEST_TIME_UNIT));
@@ -1631,10 +1885,13 @@ public class SchedulerServiceImplTest {
         assertEquals("System task should be reused, not duplicated",
             systemTask.getItemId(), secondTask.getItemId());
 
-        // Check that there's only one task of this type
+        // Check that there's only one task of this type BEFORE teardown
         persistenceService.refreshIndex(ScheduledTask.class);
         List<ScheduledTask> tasks = schedulerService.getTasksByType(taskType, 0, -1, null).getList();
         assertEquals("Should only be one system task of this type", 1, tasks.size());
+        
+        // Clean up the system task manually to avoid teardown issues
+        schedulerService.cancelTask(taskId.get());
     }
 
     /**

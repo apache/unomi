@@ -34,28 +34,45 @@ public class TaskRecoveryManager {
     private static final Logger LOGGER = LoggerFactory.getLogger(TaskRecoveryManager.class);
     private static final int MAX_CRASH_RECOVERY_AGE_MINUTES = 60; // 1 hour
 
-    private final String nodeId;
-    private final PersistenceService persistenceService;
-    private final TaskStateManager stateManager;
-    private final TaskLockManager lockManager;
-    private final TaskMetricsManager metricsManager;
-    private final TaskExecutionManager executionManager;
-    private final SchedulerServiceImpl schedulerService;
+    private String nodeId;
+    private TaskStateManager stateManager;
+    private TaskLockManager lockManager;
+    private TaskMetricsManager metricsManager;
+    private TaskExecutionManager executionManager;
+    private TaskExecutorRegistry executorRegistry;
+    private SchedulerServiceImpl schedulerService;
     private volatile boolean shutdownNow = false;
 
-    public TaskRecoveryManager(String nodeId,
-                             PersistenceService persistenceService,
-                             TaskStateManager stateManager,
-                             TaskLockManager lockManager,
-                             TaskMetricsManager metricsManager,
-                             TaskExecutionManager executionManager,
-                             SchedulerServiceImpl schedulerService) {
+    public TaskRecoveryManager() {
+        // Parameterless constructor for Blueprint dependency injection
+    }
+
+    // Setter methods for Blueprint dependency injection
+    public void setNodeId(String nodeId) {
         this.nodeId = nodeId;
-        this.persistenceService = persistenceService;
+    }
+
+    public void setStateManager(TaskStateManager stateManager) {
         this.stateManager = stateManager;
+    }
+
+    public void setLockManager(TaskLockManager lockManager) {
         this.lockManager = lockManager;
+    }
+
+    public void setMetricsManager(TaskMetricsManager metricsManager) {
         this.metricsManager = metricsManager;
+    }
+
+    public void setExecutionManager(TaskExecutionManager executionManager) {
         this.executionManager = executionManager;
+    }
+
+    public void setExecutorRegistry(TaskExecutorRegistry executorRegistry) {
+        this.executorRegistry = executorRegistry;
+    }
+
+    public void setSchedulerService(SchedulerServiceImpl schedulerService) {
         this.schedulerService = schedulerService;
     }
 
@@ -80,7 +97,7 @@ public class TaskRecoveryManager {
             LOGGER.debug("Skipping crashed task recovery during shutdown");
             return;
         }
-        
+
         try {
             recoverRunningTasks();
             recoverLockedTasks();
@@ -94,12 +111,12 @@ public class TaskRecoveryManager {
      */
     private void recoverRunningTasks() {
         if (shutdownNow) return;
-        
-        List<ScheduledTask> runningTasks = findTasksByStatus(ScheduledTask.TaskStatus.RUNNING);
+
+        List<ScheduledTask> runningTasks = schedulerService.findTasksByStatus(ScheduledTask.TaskStatus.RUNNING);
 
         for (ScheduledTask task : runningTasks) {
             if (shutdownNow) return;
-            
+
             if (lockManager.isLockExpired(task)) {
                 LOGGER.info("Node {} Recovering crashed task {} : {}", nodeId, task.getTaskType(), task.getItemId());
                 recoverCrashedTask(task);
@@ -128,9 +145,9 @@ public class TaskRecoveryManager {
         recordCrash(task, previousOwner);
         metricsManager.updateMetric(TaskMetricsManager.METRIC_TASKS_CRASHED);
 
-        if (persistenceService.save(task)) {
+        if (schedulerService.saveTask(task)) {
             // If task has checkpoint data and can be resumed, try to resume it
-            TaskExecutor executor = executionManager.getTaskExecutor(task.getTaskType());
+            TaskExecutor executor = executorRegistry.getExecutor(task.getTaskType());
             if (executor != null && executor.canResume(task)) {
                 attemptTaskResumption(task, executor);
             } else {
@@ -198,7 +215,7 @@ public class TaskRecoveryManager {
      * Recovers tasks with expired locks that are not marked as running
      */
     private void recoverLockedTasks() {
-        List<ScheduledTask> lockedTasks = findLockedTasks();
+        List<ScheduledTask> lockedTasks = schedulerService.findLockedTasks();
 
         for (ScheduledTask task : lockedTasks) {
             if (lockManager.isLockExpired(task)) {
@@ -220,10 +237,10 @@ public class TaskRecoveryManager {
             stateManager.resetTaskToScheduled(task);
         }
 
-        if (persistenceService.save(task)) {
+        if (schedulerService.saveTask(task)) {
             // If task is now scheduled, try to execute it
             if (task.getStatus() == ScheduledTask.TaskStatus.SCHEDULED) {
-                TaskExecutor executor = executionManager.getTaskExecutor(task.getTaskType());
+                TaskExecutor executor = executorRegistry.getExecutor(task.getTaskType());
                 if (executor != null) {
                     executionManager.executeTask(task, executor);
                 }
@@ -248,47 +265,6 @@ public class TaskRecoveryManager {
         return task.isEnabled();
     }
 
-    /**
-     * Finds tasks by status
-     */
-    private List<ScheduledTask> findTasksByStatus(ScheduledTask.TaskStatus status) {
-        if (shutdownNow) return Collections.emptyList();
-        
-        try {
-            Condition statusCondition = new Condition(PROPERTY_CONDITION_TYPE);
-            statusCondition.setParameter("propertyName", "status");
-            statusCondition.setParameter("comparisonOperator", "equals");
-            statusCondition.setParameter("propertyValue", status);
-
-            return persistenceService.query(statusCondition, null, ScheduledTask.class, 0, -1).getList();
-        } catch (Exception e) {
-            LOGGER.error("Failed to find tasks by status: {}", e.getMessage());
-            return Collections.emptyList();
-        }
-    }
-
-    /**
-     * Finds tasks with locks
-     */
-    private List<ScheduledTask> findLockedTasks() {
-        Condition lockCondition = new Condition(PROPERTY_CONDITION_TYPE);
-        lockCondition.setParameter("propertyName", "lockOwner");
-        lockCondition.setParameter("comparisonOperator", "exists");
-
-        Condition statusCondition = new Condition(PROPERTY_CONDITION_TYPE);
-        statusCondition.setParameter("propertyName", "status");
-        statusCondition.setParameter("comparisonOperator", "in");
-        statusCondition.setParameter("propertyValues", Arrays.asList(
-            ScheduledTask.TaskStatus.SCHEDULED,
-            ScheduledTask.TaskStatus.WAITING
-        ));
-
-        Condition andCondition = new Condition(BOOLEAN_CONDITION_TYPE);
-        andCondition.setParameter("operator", "and");
-        andCondition.setParameter("subConditions", Arrays.asList(lockCondition, statusCondition));
-
-        return persistenceService.query(andCondition, null, ScheduledTask.class, 0, -1).getList();
-    }
 
     /**
      * Gets dependencies for a task
@@ -300,7 +276,7 @@ public class TaskRecoveryManager {
 
         Map<String, ScheduledTask> dependencies = new HashMap<>();
         for (String dependencyId : task.getDependsOn()) {
-            ScheduledTask dependency = persistenceService.load(dependencyId, ScheduledTask.class);
+            ScheduledTask dependency = schedulerService.getTask(dependencyId);
             if (dependency != null) {
                 dependencies.put(dependencyId, dependency);
             }
@@ -357,19 +333,4 @@ public class TaskRecoveryManager {
         }
     }
 
-    // Condition types for persistence queries
-    private static final ConditionType PROPERTY_CONDITION_TYPE = new ConditionType();
-    private static final ConditionType BOOLEAN_CONDITION_TYPE = new ConditionType();
-
-    static {
-        PROPERTY_CONDITION_TYPE.setItemId("propertyCondition");
-        PROPERTY_CONDITION_TYPE.setItemType(ConditionType.ITEM_TYPE);
-        PROPERTY_CONDITION_TYPE.setConditionEvaluator("propertyConditionEvaluator");
-        PROPERTY_CONDITION_TYPE.setQueryBuilder("propertyConditionESQueryBuilder");
-
-        BOOLEAN_CONDITION_TYPE.setItemId("booleanCondition");
-        BOOLEAN_CONDITION_TYPE.setItemType(ConditionType.ITEM_TYPE);
-        BOOLEAN_CONDITION_TYPE.setConditionEvaluator("booleanConditionEvaluator");
-        BOOLEAN_CONDITION_TYPE.setQueryBuilder("booleanConditionESQueryBuilder");
-    }
 }

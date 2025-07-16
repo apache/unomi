@@ -30,11 +30,19 @@ public class TaskHistoryManager {
     private static final Logger LOGGER = LoggerFactory.getLogger(TaskHistoryManager.class);
     private static final int MAX_HISTORY_SIZE = 10;
 
-    private final String nodeId;
-    private final TaskMetricsManager metricsManager;
+    private String nodeId;
+    private TaskMetricsManager metricsManager;
 
-    public TaskHistoryManager(String nodeId, TaskMetricsManager metricsManager) {
+    public TaskHistoryManager() {
+        // Parameterless constructor for Blueprint dependency injection
+    }
+
+    // Setter methods for Blueprint dependency injection
+    public void setNodeId(String nodeId) {
         this.nodeId = nodeId;
+    }
+
+    public void setMetricsManager(TaskMetricsManager metricsManager) {
         this.metricsManager = metricsManager;
     }
 

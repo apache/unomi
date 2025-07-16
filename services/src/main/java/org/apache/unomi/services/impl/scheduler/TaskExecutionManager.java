@@ -35,48 +35,73 @@ public class TaskExecutionManager {
     private static final int MIN_THREAD_POOL_SIZE = 4;
     private static final long TASK_CHECK_INTERVAL = 1000; // 1 second
 
-    private final String nodeId;
-    private final ScheduledExecutorService scheduler;
+    private String nodeId;
+    private ScheduledExecutorService scheduler;
     private final Map<String, ScheduledFuture<?>> scheduledTasks;
-    private final TaskStateManager stateManager;
-    private final TaskLockManager lockManager;
-    private final TaskMetricsManager metricsManager;
-    private final Map<String, TaskExecutor> taskExecutors;
-    private final TaskHistoryManager historyManager;
+    private TaskStateManager stateManager;
+    private TaskLockManager lockManager;
+    private TaskMetricsManager metricsManager;
+    private TaskHistoryManager historyManager;
     private final Map<String, Set<String>> executingTasksByType;
-    private final PersistenceService persistenceService;
     private final AtomicBoolean running = new AtomicBoolean(false);
     private ScheduledFuture<?> taskCheckerFuture;
-    private final SchedulerServiceImpl schedulerService;
+    private SchedulerServiceImpl schedulerService;
+    private TaskExecutorRegistry executorRegistry;
+    private int threadPoolSize = MIN_THREAD_POOL_SIZE;
 
-    public TaskExecutionManager(String nodeId, int threadPoolSize,
-                              TaskStateManager stateManager,
-                              TaskLockManager lockManager,
-                              TaskMetricsManager metricsManager,
-                              TaskHistoryManager historyManager,
-                              PersistenceService persistenceService,
-                              SchedulerServiceImpl schedulerService) {
-        this.nodeId = nodeId;
-        this.stateManager = stateManager;
-        this.lockManager = lockManager;
-        this.metricsManager = metricsManager;
-        this.historyManager = historyManager;
+    public TaskExecutionManager() {
         this.scheduledTasks = new ConcurrentHashMap<>();
-        this.taskExecutors = new ConcurrentHashMap<>();
         this.executingTasksByType = new ConcurrentHashMap<>();
-        this.persistenceService = persistenceService;
-        this.schedulerService = schedulerService;
+    }
 
-        // Initialize scheduler
-        this.scheduler = Executors.newScheduledThreadPool(
-            Math.max(MIN_THREAD_POOL_SIZE, threadPoolSize),
-            r -> {
-                Thread t = new Thread(r);
-                t.setName("UnomiScheduler-" + t.getId());
-                t.setDaemon(true);
-                return t;
-            }
-        );
+    // Setter methods for Blueprint dependency injection
+    public void setNodeId(String nodeId) {
+        this.nodeId = nodeId;
+    }
+
+    public void setThreadPoolSize(int threadPoolSize) {
+        this.threadPoolSize = Math.max(MIN_THREAD_POOL_SIZE, threadPoolSize);
+    }
+
+    public void setStateManager(TaskStateManager stateManager) {
+        this.stateManager = stateManager;
+    }
+
+    public void setLockManager(TaskLockManager lockManager) {
+        this.lockManager = lockManager;
+    }
+
+    public void setMetricsManager(TaskMetricsManager metricsManager) {
+        this.metricsManager = metricsManager;
+    }
+
+    public void setHistoryManager(TaskHistoryManager historyManager) {
+        this.historyManager = historyManager;
+    }
+
+    public void setExecutorRegistry(TaskExecutorRegistry executorRegistry) {
+        this.executorRegistry = executorRegistry;
+    }
+
+    public void setSchedulerService(SchedulerServiceImpl schedulerService) {
+        this.schedulerService = schedulerService;
+    }
+
+    /**
+     * Initializes the scheduler after all dependencies are set
+     */
+    public void initialize() {
+        if (scheduler == null) {
+            this.scheduler = Executors.newScheduledThreadPool(
+                threadPoolSize,
+                r -> {
+                    Thread t = new Thread(r);
+                    t.setName("UnomiScheduler-" + t.getId());
+                    t.setDaemon(true);
+                    return t;
+                }
+            );
+        }
     }
 
     /**
@@ -377,7 +402,7 @@ public class TaskExecutionManager {
                     // Schedule retry
                     try {
                         Runnable retryTask = () -> {
-                            TaskExecutor executor = getTaskExecutor(task.getTaskType());
+                            TaskExecutor executor = executorRegistry.getExecutor(task.getTaskType());
                             if (executor != null) {
                                 executeTask(task, executor);
                             }
@@ -433,27 +458,6 @@ public class TaskExecutionManager {
     }
 
     /**
-     * Registers a task executor
-     */
-    public void registerTaskExecutor(TaskExecutor executor) {
-        taskExecutors.put(executor.getTaskType(), executor);
-    }
-
-    /**
-     * Unregisters a task executor
-     */
-    public void unregisterTaskExecutor(TaskExecutor executor) {
-        taskExecutors.remove(executor.getTaskType());
-    }
-
-    /**
-     * Gets a task executor by type
-     */
-    public TaskExecutor getTaskExecutor(String taskType) {
-        return taskExecutors.get(taskType);
-    }
-
-    /**
      * Cancels a running task
      */
     public void cancelTask(String taskId) {
@@ -479,7 +483,6 @@ public class TaskExecutionManager {
             future.cancel(true);
         }
         scheduledTasks.clear();
-        taskExecutors.clear();
         executingTasksByType.clear();
 
         // Shutdown scheduler

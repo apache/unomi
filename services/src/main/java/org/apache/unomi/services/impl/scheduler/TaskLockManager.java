@@ -70,16 +70,29 @@ public class TaskLockManager {
     private static final long PRIMARY_NODE_WINDOW_MS = 3000;
     private static final long BACKUP_NODE_WINDOW_MS = 500;
 
-    private final String nodeId;
-    private final long lockTimeout;
-    private final TaskMetricsManager metricsManager;
-    private final SchedulerServiceImpl schedulerService;
+    private String nodeId;
+    private long lockTimeout;
+    private TaskMetricsManager metricsManager;
+    private SchedulerServiceImpl schedulerService;
 
-    public TaskLockManager(String nodeId, long lockTimeout,  
-                          TaskMetricsManager metricsManager, SchedulerServiceImpl schedulerService) {
+    public TaskLockManager() {
+        // Parameterless constructor for Blueprint dependency injection
+    }
+
+    // Setter methods for Blueprint dependency injection
+    public void setNodeId(String nodeId) {
         this.nodeId = nodeId;
+    }
+
+    public void setLockTimeout(long lockTimeout) {
         this.lockTimeout = lockTimeout;
+    }
+
+    public void setMetricsManager(TaskMetricsManager metricsManager) {
         this.metricsManager = metricsManager;
+    }
+
+    public void setSchedulerService(SchedulerServiceImpl schedulerService) {
         this.schedulerService = schedulerService;
     }
 
