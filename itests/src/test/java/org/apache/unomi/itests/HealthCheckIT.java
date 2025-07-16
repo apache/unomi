@@ -18,11 +18,8 @@
 package org.apache.unomi.itests;
 
 import com.fasterxml.jackson.core.type.TypeReference;
-import org.apache.http.auth.AuthScope;
-import org.apache.http.auth.UsernamePasswordCredentials;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -54,7 +51,7 @@ public class HealthCheckIT extends BaseIT {
     @Test
     public void testHealthCheck() {
         try {
-            List<HealthCheckResponse> response = get(HEALTHCHECK_ENDPOINT, new TypeReference<>() {});
+            List<HealthCheckResponse> response = get(HEALTHCHECK_ENDPOINT, new TypeReference<>() {}, HEALTHCHECK_AUTH_USER_NAME, HEALTHCHECK_AUTH_PASSWORD);
             LOGGER.info("health check response: {}", response);
             Assert.assertNotNull(response);
             Assert.assertEquals(5, response.size());
@@ -69,11 +66,11 @@ public class HealthCheckIT extends BaseIT {
         }
     }
 
-    protected <T> T get(final String url, TypeReference<T> typeReference) {
+    protected <T> T get(final String url, TypeReference<T> typeReference, String userName, String password) {
         CloseableHttpResponse response = null;
         try {
             final HttpGet httpGet = new HttpGet(getFullUrl(url));
-            response = executeHttpRequest(httpGet);
+            response = executeHttpRequest(httpGet, AuthType.CUSTOM_BASIC, userName, password);
             if (response.getStatusLine().getStatusCode() == 200 || response.getStatusLine().getStatusCode() == 206) {
                 return objectMapper.readValue(response.getEntity().getContent(), typeReference);
             } else {
@@ -92,12 +89,6 @@ public class HealthCheckIT extends BaseIT {
             }
         }
         return null;
-    }
-
-    public BasicCredentialsProvider getHttpClientCredentialProvider() {
-        BasicCredentialsProvider credsProvider = new BasicCredentialsProvider();
-        credsProvider.setCredentials(AuthScope.ANY, new UsernamePasswordCredentials(HEALTHCHECK_AUTH_USER_NAME, HEALTHCHECK_AUTH_PASSWORD));
-        return credsProvider;
     }
 
     public static class HealthCheckResponse {

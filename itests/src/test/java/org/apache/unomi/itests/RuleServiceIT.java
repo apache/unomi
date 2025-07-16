@@ -79,7 +79,10 @@ public class RuleServiceIT extends BaseIT {
     @Test
     public void getAllRulesShouldReturnAllRulesAvailable() throws InterruptedException {
         String ruleIDBase = "moreThan50RuleTest";
+        refreshPersistence(Rule.class); // refresh the persistence to ensure that the rules are all properly indexed by the persistence service
+        rulesService.refreshRules();
         int originalRulesNumber = rulesService.getAllRules().size();
+        LOGGER.info("Original number of rules: {}", originalRulesNumber);
 
         // Create a simple condition instead of null
         Condition defaultCondition = new Condition(definitionsService.getConditionType("matchAllCondition"));
@@ -90,7 +93,7 @@ public class RuleServiceIT extends BaseIT {
         defaultAction.setParameter("propertyValue", "testValue");
         List<Action> actions = Collections.singletonList(defaultAction);
 
-
+        int successfullyCreatedRules = 0;
         for (int i = 0; i < 60; i++) {
             String ruleID = ruleIDBase + "_" + i;
             Metadata metadata = new Metadata(ruleID);
@@ -100,9 +103,28 @@ public class RuleServiceIT extends BaseIT {
             Rule rule = new Rule(metadata);
             rule.setCondition(defaultCondition);  // Use default condition instead of null
             rule.setActions(actions);  // Empty list instead of null
-            createAndWaitForRule(rule);
+            
+            try {
+                createAndWaitForRule(rule);
+                successfullyCreatedRules++;
+                LOGGER.debug("Successfully created rule: {}", ruleID);
+            } catch (Exception e) {
+                LOGGER.error("Failed to create rule: {}", ruleID, e);
+            }
         }
-        assertEquals("Expected getAllRules to be able to retrieve all the rules available in the system", originalRulesNumber + 60, rulesService.getAllRules().size());
+        
+        LOGGER.info("Successfully created {} out of 60 rules", successfullyCreatedRules);
+        
+        // Wait a bit more to ensure all rules are indexed
+        Thread.sleep(1000);
+        refreshPersistence(Rule.class);
+        rulesService.refreshRules();
+        
+        int finalRulesNumber = rulesService.getAllRules().size();
+        LOGGER.info("Final number of rules: {} (expected: {})", finalRulesNumber, originalRulesNumber + 60);
+        
+        assertEquals("Expected getAllRules to be able to retrieve all the rules available in the system", originalRulesNumber + 60, finalRulesNumber);
+        
         // cleanup
         for (int i = 0; i < 60; i++) {
             String ruleID = ruleIDBase + "_" + i;

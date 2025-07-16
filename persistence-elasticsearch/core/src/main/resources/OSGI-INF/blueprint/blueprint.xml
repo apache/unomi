@@ -23,7 +23,7 @@
            http://aries.apache.org/blueprint/xmlns/blueprint-cm/v1.1.0 http://aries.apache.org/schemas/blueprint-cm/blueprint-cm-1.1.0.xsd">
 
     <cm:property-placeholder persistent-id="org.apache.unomi.persistence.elasticsearch"
-                             update-strategy="reload" placeholder-prefix="${es.">
+                             update-strategy="none" placeholder-prefix="${es.">
         <cm:default-properties>
             <cm:property name="cluster.name" value="contextElasticSearch"/>
             <cm:property name="elasticSearchAddresses" value="localhost:9200"/>
@@ -86,7 +86,11 @@
         <interfaces>
             <value>org.apache.unomi.persistence.spi.PersistenceService</value>
             <value>org.osgi.framework.SynchronousBundleListener</value>
+            <value>org.osgi.service.cm.ManagedService</value>
         </interfaces>
+        <service-properties>
+            <entry key="service.pid" value="org.apache.unomi.persistence.elasticsearch"/>
+        </service-properties>
     </service>
 
     <bean id="conditionESQueryBuilderDispatcher"
@@ -167,19 +171,6 @@
         availability="optional">
         <reference-listener
                 bind-method="bindConditionESQueryBuilder" unbind-method="unbindConditionESQueryBuilder" ref="elasticSearchPersistenceServiceImpl"/>
-    </reference-list>
-
-    <bean id="elasticSearchQueryBuilderAvailabilityTracker"
-          class="org.apache.unomi.persistence.elasticsearch.ElasticSearchQueryBuilderAvailabilityTracker"/>
-
-    <service id="queryBuilderAvailabilityTracker" ref="elasticSearchQueryBuilderAvailabilityTracker"
-             interface="org.apache.unomi.persistence.spi.QueryBuilderAvailabilityTracker"/>
-
-    <reference-list id="queryBuilderAvailabilityTrackerListeners"
-                    interface="org.apache.unomi.persistence.elasticsearch.ConditionESQueryBuilder"
-                    availability="optional">
-        <reference-listener
-                bind-method="bindQueryBuilder" unbind-method="unbindQueryBuilder" ref="elasticSearchQueryBuilderAvailabilityTracker"/>
     </reference-list>
 
     <!-- Transformation Listeners -->

@@ -28,7 +28,7 @@
   http://aries.apache.org/blueprint/xmlns/blueprint-cm/v1.1.0 http://aries.apache.org/schemas/blueprint-cm/blueprint-cm-1.1.0.xsd">
 
     <cm:property-placeholder persistent-id="org.apache.unomi.persistence.opensearch"
-                             update-strategy="reload" placeholder-prefix="${os.">
+                             update-strategy="none" placeholder-prefix="${os.">
         <cm:default-properties>
             <cm:property name="cluster.name" value="opensearch-cluster"/>
             <cm:property name="openSearchAddresses" value="localhost:9200"/>
@@ -92,7 +92,11 @@
         <interfaces>
             <value>org.apache.unomi.persistence.spi.PersistenceService</value>
             <value>org.osgi.framework.SynchronousBundleListener</value>
+            <value>org.osgi.service.cm.ManagedService</value>
         </interfaces>
+        <service-properties>
+            <entry key="service.pid" value="org.apache.unomi.persistence.opensearch"/>
+        </service-properties>
     </service>
 
     <bean id="conditionOSQueryBuilderDispatcher"
@@ -170,19 +174,6 @@
                     availability="optional">
         <reference-listener
                 bind-method="bindConditionOSQueryBuilder" unbind-method="unbindConditionOSQueryBuilder" ref="openSearchPersistenceServiceImpl"/>
-    </reference-list>
-
-    <bean id="openSearchQueryBuilderAvailabilityTracker"
-          class="org.apache.unomi.persistence.opensearch.OpenSearchQueryBuilderAvailabilityTracker"/>
-
-    <service id="queryBuilderAvailabilityTracker" ref="openSearchQueryBuilderAvailabilityTracker"
-             interface="org.apache.unomi.persistence.spi.QueryBuilderAvailabilityTracker"/>
-
-    <reference-list id="queryBuilderAvailabilityTrackerListeners"
-                    interface="org.apache.unomi.persistence.opensearch.ConditionOSQueryBuilder"
-                    availability="optional">
-        <reference-listener
-                bind-method="bindQueryBuilder" unbind-method="unbindQueryBuilder" ref="openSearchQueryBuilderAvailabilityTracker"/>
     </reference-list>
 
     <!-- Transformation Listeners -->

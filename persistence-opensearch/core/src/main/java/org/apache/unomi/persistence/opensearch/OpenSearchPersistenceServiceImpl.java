@@ -47,6 +47,7 @@ import org.apache.unomi.persistence.spi.aggregate.*;
 import org.apache.unomi.persistence.spi.conditions.ConditionContextHelper;
 import org.apache.unomi.persistence.spi.conditions.ConditionEvaluator;
 import org.apache.unomi.persistence.spi.conditions.ConditionEvaluatorDispatcher;
+import org.apache.unomi.persistence.spi.config.ConfigurationUpdateHelper;
 import org.opensearch.client.*;
 import org.opensearch.client.json.JsonData;
 import org.opensearch.client.json.JsonpMapper;
@@ -71,6 +72,7 @@ import org.opensearch.client.opensearch.tasks.GetTasksResponse;
 import org.opensearch.client.transport.OpenSearchTransport;
 import org.opensearch.client.transport.rest_client.RestClientTransport;
 import org.osgi.framework.*;
+import org.osgi.service.cm.ManagedService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -92,7 +94,7 @@ import java.util.stream.Collectors;
 import static org.apache.unomi.api.tenants.TenantService.SYSTEM_TENANT;
 
 @SuppressWarnings("rawtypes")
-public class OpenSearchPersistenceServiceImpl implements PersistenceService, SynchronousBundleListener {
+public class OpenSearchPersistenceServiceImpl implements PersistenceService, SynchronousBundleListener, ManagedService {
 
     public static final String SEQ_NO = "seq_no";
     public static final String PRIMARY_TERM = "primary_term";
@@ -565,6 +567,39 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
                 loadPainlessScripts(event.getBundle().getBundleContext());
             }
         }
+    }
+
+    @Override
+    public void updated(Dictionary<String, ?> properties) {
+        Map<String, ConfigurationUpdateHelper.PropertyMapping> propertyMappings = new HashMap<>();
+        
+        // Boolean properties
+        propertyMappings.put("throwExceptions", ConfigurationUpdateHelper.booleanProperty(this::setThrowExceptions));
+        propertyMappings.put("alwaysOverwrite", ConfigurationUpdateHelper.booleanProperty(this::setAlwaysOverwrite));
+        propertyMappings.put("useBatchingForSave", ConfigurationUpdateHelper.booleanProperty(this::setUseBatchingForSave));
+        propertyMappings.put("useBatchingForUpdate", ConfigurationUpdateHelper.booleanProperty(this::setUseBatchingForUpdate));
+        propertyMappings.put("aggQueryThrowOnMissingDocs", ConfigurationUpdateHelper.booleanProperty(this::setAggQueryThrowOnMissingDocs));
+        
+        // String properties
+        propertyMappings.put("logLevelRestClient", ConfigurationUpdateHelper.stringProperty(this::setLogLevelRestClient));
+        propertyMappings.put("clientSocketTimeout", ConfigurationUpdateHelper.stringProperty(this::setClientSocketTimeout));
+        propertyMappings.put("taskWaitingTimeout", ConfigurationUpdateHelper.stringProperty(this::setTaskWaitingTimeout));
+        propertyMappings.put("taskWaitingPollingInterval", ConfigurationUpdateHelper.stringProperty(this::setTaskWaitingPollingInterval));
+        propertyMappings.put("aggQueryMaxResponseSizeHttp", ConfigurationUpdateHelper.stringProperty(this::setAggQueryMaxResponseSizeHttp));
+        
+        // Integer properties
+        propertyMappings.put("aggregateQueryBucketSize", ConfigurationUpdateHelper.integerProperty(this::setAggregateQueryBucketSize));
+        
+        // Custom property for itemTypeToRefreshPolicy with IOException handling
+        propertyMappings.put("itemTypeToRefreshPolicy", ConfigurationUpdateHelper.customProperty((value, logger) -> {
+            try {
+                setItemTypeToRefreshPolicy(value.toString());
+            } catch (IOException e) {
+                logger.warn("Error setting itemTypeToRefreshPolicy: {}", e.getMessage());
+            }
+        }));
+        
+        ConfigurationUpdateHelper.processConfigurationUpdates(properties, LOGGER, "OpenSearch persistence", propertyMappings);
     }
 
     private void loadPredefinedMappings(BundleContext bundleContext, boolean forceUpdateMapping) {

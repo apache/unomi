@@ -23,8 +23,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.module.jaxb.JaxbAnnotationModule;
 import org.apache.commons.io.IOUtils;
-import org.apache.http.auth.AuthScope;
-import org.apache.http.auth.UsernamePasswordCredentials;
 import org.apache.http.client.config.RequestConfig;
 import org.apache.http.client.methods.*;
 import org.apache.http.config.Registry;
@@ -44,6 +42,7 @@ import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.apache.karaf.itests.KarafTestSupport;
 import org.apache.unomi.api.Item;
 import org.apache.unomi.api.conditions.Condition;
+import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.rules.Rule;
 import org.apache.unomi.api.security.SecurityService;
@@ -189,6 +188,7 @@ public abstract class BaseIT extends KarafTestSupport {
         PUBLIC_KEY,     // X-Unomi-Api-Key header with public key
         PRIVATE_KEY,    // Basic auth with tenant:private_key
         JAAS_ADMIN,     // Basic auth with karaf:karaf
+        CUSTOM_BASIC,   // Basic auth with custom username and password
         AUTO            // Automatically determine based on endpoint type
     }
 
@@ -305,10 +305,17 @@ public abstract class BaseIT extends KarafTestSupport {
         if (persistenceService == null) {
             throw new RuntimeException("persistenceService is null");
         }
-        Condition condition = new Condition(definitionsService.getConditionType("matchAllCondition"));
+
+        ConditionType matchAllConditionType = definitionsService.getConditionType("matchAllCondition");
+        if (matchAllConditionType == null) {
+            throw new RuntimeException("matchAllCondition type not found");
+        }
+
+        Condition condition = new Condition(matchAllConditionType);
         for (Class<? extends Item> aClass : classes) {
             persistenceService.removeByQuery(condition, aClass);
         }
+
         refreshPersistence(classes);
     }
 
@@ -662,6 +669,7 @@ public abstract class BaseIT extends KarafTestSupport {
 
     /**
      * Updates an OSGi configuration with multiple property values and waits for the service to be reregistered.
+     * For persistence configurations, this method handles updates without causing bundle restarts.
      *
      * @param serviceName The fully qualified name of the service to wait for
      * @param configPid   The persistent identifier of the configuration to update
@@ -677,12 +685,20 @@ public abstract class BaseIT extends KarafTestSupport {
             props.put(propToSet.getKey(), propToSet.getValue());
         }
 
-        waitForReRegistration(serviceName, () -> {
-            try {
-                cfg.update(props);
-            } catch (IOException ignored) {
-            }
-        });
+        // For configurations that now handle changes without restarting, don't wait for service re-registration
+        if (configPid.contains("persistence") || configPid.contains("org.apache.unomi.services")) {
+            LOGGER.info("Updating configuration {} without waiting for service restart", configPid);
+            cfg.update(props);
+            // Give the configuration change handler time to process
+            Thread.sleep(1000);
+        } else {
+            waitForReRegistration(serviceName, () -> {
+                try {
+                    cfg.update(props);
+                } catch (IOException ignored) {
+                }
+            });
+        }
 
         waitForStartup();
 
@@ -846,7 +862,19 @@ public abstract class BaseIT extends KarafTestSupport {
      * @throws IOException If an error occurs while executing the request
      */
     protected CloseableHttpResponse executeHttpRequest(HttpUriRequest request) throws IOException {
-        return executeHttpRequest(request, AuthType.AUTO);
+        return executeHttpRequest(request, AuthType.AUTO, null, null);
+    }
+
+    /**
+     * Executes an HTTP request with the specified authentication type.
+     *
+     * @param request The HTTP request to execute
+     * @param authType The authentication type to use
+     * @return The HTTP response
+     * @throws IOException If an error occurs while executing the request
+     */
+    protected CloseableHttpResponse executeHttpRequest(HttpUriRequest request, AuthType authType) throws IOException {
+        return executeHttpRequest(request, authType, null, null);
     }
 
     /**
@@ -960,32 +988,6 @@ public abstract class BaseIT extends KarafTestSupport {
     }
 
     /**
-     * Creates a basic credentials provider with default username and password.
-     *
-     * @return The configured credentials provider
-     */
-    public BasicCredentialsProvider getHttpClientCredentialProvider() {
-        BasicCredentialsProvider credsProvider = new BasicCredentialsProvider();
-        credsProvider.setCredentials(AuthScope.ANY, new UsernamePasswordCredentials(BASIC_AUTH_USER_NAME, BASIC_AUTH_PASSWORD));
-        return credsProvider;
-    }
-
-    /**
-     * Creates an HTTP client with specific credentials for testing purposes.
-     * This method is provided for backward compatibility when tests need
-     * automatic challenge-response authentication.
-     *
-     * @param username The username for basic authentication
-     * @param password The password for basic authentication
-     * @return A configured HTTP client with the specified credentials
-     */
-    public CloseableHttpClient createHttpClientWithCredentials(String username, String password) {
-        BasicCredentialsProvider credsProvider = new BasicCredentialsProvider();
-        credsProvider.setCredentials(AuthScope.ANY, new UsernamePasswordCredentials(username, password));
-        return initHttpClient(credsProvider);
-    }
-
-    /**
      * Gets the appropriate search engine port based on the configured search engine.
      *
      * @return The port number as a string
@@ -1007,10 +1009,12 @@ public abstract class BaseIT extends KarafTestSupport {
      *
      * @param request The HTTP request to execute
      * @param authType The authentication type to use
+     * @param userName The user name to use for the custom basic authentication type
+     * @param password The password to use for the custom basic authentication type
      * @return The HTTP response
      * @throws IOException If an error occurs while executing the request
      */
-    protected CloseableHttpResponse executeHttpRequest(HttpUriRequest request, AuthType authType) throws IOException {
+    protected CloseableHttpResponse executeHttpRequest(HttpUriRequest request, AuthType authType, String userName, String password) throws IOException {
         // Apply authentication based on type
         switch (authType) {
             case NONE:
@@ -1044,12 +1048,21 @@ public abstract class BaseIT extends KarafTestSupport {
                     request.setHeader("Authorization", "Basic " + Base64.getEncoder().encodeToString(credentials.getBytes()));
                 }
                 break;
+            case CUSTOM_BASIC:
+                // Remove any existing auth headers first
+                request.removeHeaders("X-Unomi-Api-Key");
+                // Only set Authorization header if it's not already set
+                if (request.getFirstHeader("Authorization") == null) {
+                    String credentials = userName + ":" + password;
+                    request.setHeader("Authorization", "Basic " + Base64.getEncoder().encodeToString(credentials.getBytes()));
+                }
+                break;
             case AUTO:
-                // Auto-detect based on endpoint type
+                // Auto-detect based on an endpoint type
                 String path = request.getURI().getPath();
                 String method = request.getMethod();
 
-                // Normalize path for pattern matching - remove /cxs prefix if present and leading slash
+                // Normalize the path for pattern matching - remove /cxs prefix if present and leading slash
                 // This matches the behavior of ContainerRequestContext.getUriInfo().getPath()
                 String normalizedPath = path.startsWith("/cxs/") ? path.substring(4) : path;
                 // Remove leading slash to match ContainerRequestContext.getUriInfo().getPath() behavior

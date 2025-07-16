@@ -36,7 +36,16 @@ import org.apache.unomi.services.impl.definitions.DefinitionsServiceImpl;
 import org.apache.unomi.services.impl.events.EventServiceImpl;
 import org.apache.unomi.services.impl.rules.RulesServiceImpl;
 import org.apache.unomi.services.impl.rules.TestActionExecutorDispatcher;
+import org.apache.unomi.services.impl.scheduler.PersistenceSchedulerProvider;
 import org.apache.unomi.services.impl.scheduler.SchedulerServiceImpl;
+import org.apache.unomi.services.impl.scheduler.TaskExecutionManager;
+import org.apache.unomi.services.impl.scheduler.TaskExecutorRegistry;
+import org.apache.unomi.services.impl.scheduler.TaskHistoryManager;
+import org.apache.unomi.services.impl.scheduler.TaskLockManager;
+import org.apache.unomi.services.impl.scheduler.TaskMetricsManager;
+import org.apache.unomi.services.impl.scheduler.TaskRecoveryManager;
+import org.apache.unomi.services.impl.scheduler.TaskStateManager;
+import org.apache.unomi.services.impl.scheduler.TaskValidationManager;
 import org.apache.unomi.services.common.security.AuditServiceImpl;
 import org.apache.unomi.services.impl.validation.ConditionValidationServiceImpl;
 import org.apache.unomi.services.impl.validation.validators.*;
@@ -48,7 +57,6 @@ import org.osgi.framework.BundleContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.unomi.services.impl.cluster.ClusterServiceImpl;
-import org.apache.unomi.services.impl.InMemoryQueryBuilderAvailabilityTracker;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -191,6 +199,119 @@ public class TestHelper {
      * @param lockTimeout The lock timeout to use (in milliseconds)
      * @param executorNode Whether this node is an executor node
      * @param construct Whether to call postConstruct on the service
+     * @param completedTaskTtlDays The TTL for completed tasks (in days)
+     * @return A configured SchedulerServiceImpl instance
+     */
+    public static SchedulerServiceImpl createSchedulerService(
+            String nodeId,
+            PersistenceService persistenceService,
+            ExecutionContextManager executionContextManager,
+            BundleContext bundleContext,
+            ClusterService clusterService,
+            long lockTimeout,
+            boolean executorNode,
+            boolean construct,
+            long completedTaskTtlDays) {
+
+        // Instantiate and wire task manager beans as in blueprint.xml
+
+        // Task Metrics Manager
+        TaskMetricsManager taskMetricsManager = new TaskMetricsManager();
+
+        // Task State Manager
+        TaskStateManager taskStateManager = new TaskStateManager();
+
+        // Task Executor Registry
+        TaskExecutorRegistry taskExecutorRegistry = new TaskExecutorRegistry();
+
+        // Task History Manager
+        TaskHistoryManager taskHistoryManager = new TaskHistoryManager();
+        taskHistoryManager.setNodeId(nodeId);
+        taskHistoryManager.setMetricsManager(taskMetricsManager);
+
+        // Task Lock Manager
+        TaskLockManager taskLockManager = new TaskLockManager();
+        taskLockManager.setNodeId(nodeId);
+        taskLockManager.setLockTimeout(lockTimeout > 0 ? lockTimeout : 10000L);
+        taskLockManager.setMetricsManager(taskMetricsManager);
+
+        // Task Execution Manager
+        TaskExecutionManager taskExecutionManager = new TaskExecutionManager();
+        taskExecutionManager.setNodeId(nodeId);
+        taskExecutionManager.setThreadPoolSize(4);
+        taskExecutionManager.setStateManager(taskStateManager);
+        taskExecutionManager.setLockManager(taskLockManager);
+        taskExecutionManager.setMetricsManager(taskMetricsManager);
+        taskExecutionManager.setHistoryManager(taskHistoryManager);
+        taskExecutionManager.setExecutorRegistry(taskExecutorRegistry);
+        taskExecutionManager.initialize(); // Initialize after all dependencies are set
+
+        // Task Recovery Manager
+        TaskRecoveryManager taskRecoveryManager = new TaskRecoveryManager();
+        taskRecoveryManager.setNodeId(nodeId);
+        taskRecoveryManager.setStateManager(taskStateManager);
+        taskRecoveryManager.setLockManager(taskLockManager);
+        taskRecoveryManager.setMetricsManager(taskMetricsManager);
+        taskRecoveryManager.setExecutionManager(taskExecutionManager);
+        taskRecoveryManager.setExecutorRegistry(taskExecutorRegistry);
+
+        // Task Validation Manager
+        TaskValidationManager taskValidationManager = new TaskValidationManager();
+
+        PersistenceSchedulerProvider persistenceSchedulerProvider = new PersistenceSchedulerProvider();
+        persistenceSchedulerProvider.setPersistenceService(persistenceService);
+        persistenceSchedulerProvider.setExecutorNode(executorNode);
+        persistenceSchedulerProvider.setNodeId(nodeId);
+        persistenceSchedulerProvider.setLockManager(taskLockManager);
+        persistenceSchedulerProvider.setClusterService(clusterService);
+        persistenceSchedulerProvider.setCompletedTaskTtlDays(completedTaskTtlDays);
+
+        SchedulerServiceImpl schedulerService = new SchedulerServiceImpl();
+        schedulerService.setMetricsManager(taskMetricsManager);
+        schedulerService.setStateManager(taskStateManager);
+        schedulerService.setExecutorRegistry(taskExecutorRegistry);
+        schedulerService.setHistoryManager(taskHistoryManager);
+        schedulerService.setLockManager(taskLockManager);
+        schedulerService.setExecutionManager(taskExecutionManager);
+        schedulerService.setRecoveryManager(taskRecoveryManager);
+        schedulerService.setValidationManager(taskValidationManager);
+        schedulerService.setBundleContext(bundleContext);
+        schedulerService.setThreadPoolSize(4); // Ensure enough threads for parallel execution
+        schedulerService.setExecutorNode(executorNode);
+        schedulerService.setNodeId(nodeId);
+        schedulerService.setPurgeTaskEnabled(false);
+        if (lockTimeout > 0) {
+            schedulerService.setLockTimeout(lockTimeout); // Set a default lock timeout for tests
+        }
+
+        // Set the persistence provider on the scheduler service (optional dependency)
+        if (persistenceSchedulerProvider != null) {
+            schedulerService.setPersistenceProvider(persistenceSchedulerProvider);
+        }
+
+        // Set the schedulerService on all managers that need it
+        taskLockManager.setSchedulerService(schedulerService);
+        taskExecutionManager.setSchedulerService(schedulerService);
+        taskRecoveryManager.setSchedulerService(schedulerService);
+
+        if (construct) {
+            schedulerService.postConstruct();
+        }
+        return schedulerService;
+    }
+
+    /**
+     * Creates a scheduler service instance for testing purposes with ClusterService support.
+     * Uses default TTL of 30 days for completed tasks.
+     *
+     * @param nodeId The unique identifier for this node
+     * @param persistenceService The persistence service to use
+     * @param executionContextManager The execution context manager to use
+     * @param bundleContext The bundle context to use
+     * @param clusterService The cluster service to use (can be null)
+     * @param lockTimeout The lock timeout to use (in milliseconds)
+     * @param executorNode Whether this node is an executor node
+     * @param construct Whether to call postConstruct on the service
      * @return A configured SchedulerServiceImpl instance
      */
     public static SchedulerServiceImpl createSchedulerService(
@@ -202,24 +323,93 @@ public class TestHelper {
             long lockTimeout,
             boolean executorNode,
             boolean construct) {
+        return createSchedulerService(nodeId, persistenceService, executionContextManager, bundleContext, clusterService, lockTimeout, executorNode, construct, 30);
+    }
+
+    /**
+     * Creates a scheduler service instance without a PersistenceSchedulerProvider for testing optional dependency scenarios.
+     *
+     * @param nodeId The unique identifier for this node
+     * @param persistenceService The persistence service to use
+     * @param executionContextManager The execution context manager to use
+     * @param bundleContext The bundle context to use
+     * @param clusterService The cluster service to use (can be null)
+     * @param lockTimeout The lock timeout to use (in milliseconds)
+     * @param executorNode Whether this node is an executor node
+     * @param construct Whether to call postConstruct on the service
+     * @return A configured SchedulerServiceImpl instance without persistence provider
+     */
+    public static SchedulerServiceImpl createSchedulerServiceWithoutPersistenceProvider(
+            String nodeId,
+            PersistenceService persistenceService,
+            ExecutionContextManager executionContextManager,
+            BundleContext bundleContext,
+            ClusterService clusterService,
+            long lockTimeout,
+            boolean executorNode,
+            boolean construct) {
+
+        // Create all required managers
+        TaskStateManager taskStateManager = new TaskStateManager();
+        TaskLockManager taskLockManager = new TaskLockManager();
+        TaskExecutionManager taskExecutionManager = new TaskExecutionManager();
+        TaskRecoveryManager taskRecoveryManager = new TaskRecoveryManager();
+        TaskMetricsManager taskMetricsManager = new TaskMetricsManager();
+        TaskHistoryManager taskHistoryManager = new TaskHistoryManager();
+        TaskValidationManager taskValidationManager = new TaskValidationManager();
+        TaskExecutorRegistry taskExecutorRegistry = new TaskExecutorRegistry();
+
+        // Configure managers
+        taskLockManager.setNodeId(nodeId);
+        taskLockManager.setLockTimeout(lockTimeout > 0 ? lockTimeout : 10000);
+        taskLockManager.setMetricsManager(taskMetricsManager);
+
+        taskHistoryManager.setNodeId(nodeId);
+        taskHistoryManager.setMetricsManager(taskMetricsManager);
+
+        taskExecutionManager.setNodeId(nodeId);
+        taskExecutionManager.setThreadPoolSize(4);
+        taskExecutionManager.setStateManager(taskStateManager);
+        taskExecutionManager.setLockManager(taskLockManager);
+        taskExecutionManager.setMetricsManager(taskMetricsManager);
+        taskExecutionManager.setHistoryManager(taskHistoryManager);
+        taskExecutionManager.setExecutorRegistry(taskExecutorRegistry);
+        taskExecutionManager.initialize();
+
+        taskRecoveryManager.setNodeId(nodeId);
+        taskRecoveryManager.setStateManager(taskStateManager);
+        taskRecoveryManager.setLockManager(taskLockManager);
+        taskRecoveryManager.setMetricsManager(taskMetricsManager);
+        taskRecoveryManager.setExecutionManager(taskExecutionManager);
+        taskRecoveryManager.setExecutorRegistry(taskExecutorRegistry);
+
+        // Create scheduler service
         SchedulerServiceImpl schedulerService = new SchedulerServiceImpl();
-        schedulerService.setPersistenceService(persistenceService);
         schedulerService.setBundleContext(bundleContext);
-        schedulerService.setThreadPoolSize(4); // Ensure enough threads for parallel execution
+        schedulerService.setThreadPoolSize(4);
         schedulerService.setExecutorNode(executorNode);
         schedulerService.setNodeId(nodeId);
-        schedulerService.setPurgeTaskEnabled(false); // Disable purge task by default for tests
+        schedulerService.setPurgeTaskEnabled(false);
         if (lockTimeout > 0) {
-            schedulerService.setLockTimeout(lockTimeout); // Set a default lock timeout for tests
+            schedulerService.setLockTimeout(lockTimeout);
         }
 
-        // Set the cluster service if provided
-        if (clusterService != null) {
-            schedulerService.setClusterService(clusterService);
-        }
+        // Set all required managers
+        schedulerService.setStateManager(taskStateManager);
+        schedulerService.setLockManager(taskLockManager);
+        schedulerService.setExecutionManager(taskExecutionManager);
+        schedulerService.setRecoveryManager(taskRecoveryManager);
+        schedulerService.setMetricsManager(taskMetricsManager);
+        schedulerService.setHistoryManager(taskHistoryManager);
+        schedulerService.setValidationManager(taskValidationManager);
+        schedulerService.setExecutorRegistry(taskExecutorRegistry);
 
-        // Set the query builder availability tracker
-        schedulerService.setQueryBuilderAvailabilityTracker(new InMemoryQueryBuilderAvailabilityTracker());
+        // Note: persistenceProvider is intentionally not set to test optional dependency
+
+        // Set the schedulerService on all managers that need it
+        taskLockManager.setSchedulerService(schedulerService);
+        taskExecutionManager.setSchedulerService(schedulerService);
+        taskRecoveryManager.setSchedulerService(schedulerService);
 
         if (construct) {
             schedulerService.postConstruct();

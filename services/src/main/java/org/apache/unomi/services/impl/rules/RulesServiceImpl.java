@@ -38,7 +38,9 @@ import org.apache.unomi.services.actions.ActionExecutorDispatcher;
 import org.apache.unomi.services.common.cache.AbstractMultiTypeCachingService;
 import org.apache.unomi.tracing.api.RequestTracer;
 import org.apache.unomi.tracing.api.TracerService;
+import org.apache.unomi.persistence.spi.config.ConfigurationUpdateHelper;
 import org.osgi.framework.*;
+import org.osgi.service.cm.ManagedService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -51,7 +53,7 @@ import java.util.stream.Collectors;
 
 import static org.apache.unomi.api.tenants.TenantService.SYSTEM_TENANT;
 
-public class RulesServiceImpl extends AbstractMultiTypeCachingService implements RulesService, EventListenerService {
+public class RulesServiceImpl extends AbstractMultiTypeCachingService implements RulesService, EventListenerService, ManagedService {
 
     public static final String TRACKED_PARAMETER = "trackedConditionParameters";
     private static final Logger LOGGER = LoggerFactory.getLogger(RulesServiceImpl.class.getName());
@@ -106,6 +108,20 @@ public class RulesServiceImpl extends AbstractMultiTypeCachingService implements
 
     public void setTracerService(TracerService tracerService) {
         this.tracerService = tracerService;
+    }
+
+    @Override
+    public void updated(Dictionary<String, ?> properties) {
+        Map<String, ConfigurationUpdateHelper.PropertyMapping> propertyMappings = new HashMap<>();
+        
+        // Boolean properties
+        propertyMappings.put("rules.optimizationActivated", ConfigurationUpdateHelper.booleanProperty(this::setOptimizedRulesActivated));
+        
+        // Integer properties
+        propertyMappings.put("rules.refresh.interval", ConfigurationUpdateHelper.integerProperty(this::setRulesRefreshInterval));
+        propertyMappings.put("rules.statistics.refresh.interval", ConfigurationUpdateHelper.integerProperty(this::setRulesStatisticsRefreshInterval));
+        
+        ConfigurationUpdateHelper.processConfigurationUpdates(properties, LOGGER, "Rules service", propertyMappings);
     }
 
     /**

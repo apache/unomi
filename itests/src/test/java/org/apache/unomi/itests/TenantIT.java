@@ -16,7 +16,6 @@
  */
 package org.apache.unomi.itests;
 
-import org.apache.http.HttpResponse;
 import org.apache.http.auth.AuthScope;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.auth.UsernamePasswordCredentials;
@@ -34,7 +33,6 @@ import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.tenants.ApiKey;
 import org.apache.unomi.api.tenants.ResourceQuota;
 import org.apache.unomi.api.tenants.Tenant;
-import org.apache.unomi.api.tenants.TenantService;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.junit.Assert;
 import org.junit.Before;
@@ -45,8 +43,6 @@ import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
 import org.ops4j.pax.exam.spi.reactors.PerSuite;
 import org.apache.http.util.EntityUtils;
 
-import javax.inject.Inject;
-import java.io.IOException;
 import java.util.*;
 import java.util.Base64;
 
