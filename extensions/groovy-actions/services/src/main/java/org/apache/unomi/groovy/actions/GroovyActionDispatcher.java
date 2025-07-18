@@ -79,7 +79,7 @@ public class GroovyActionDispatcher implements ActionDispatcher {
         }
         
         try {
-            Script script = scriptClass.newInstance();
+            Script script = scriptClass.getDeclaredConstructor().newInstance();
             setScriptVariables(script, action, event);
             
             return new MetricAdapter<Integer>(metricsService, this.getClass().getName() + ".action.groovy." + actionName) {

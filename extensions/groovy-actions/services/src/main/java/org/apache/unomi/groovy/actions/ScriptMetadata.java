@@ -41,7 +41,7 @@ public final class ScriptMetadata {
     private final String actionName;
     private final String scriptContent;
     private final String contentHash;
-    private final long lastModified;
+    private final long creationTime;
     private final Class<? extends Script> compiledClass;
     
     /**
@@ -66,7 +66,7 @@ public final class ScriptMetadata {
         this.actionName = actionName;
         this.scriptContent = scriptContent;
         this.contentHash = calculateHash(scriptContent);
-        this.lastModified = System.currentTimeMillis();
+        this.creationTime = System.currentTimeMillis();
         this.compiledClass = compiledClass;
     }
     
@@ -137,8 +137,8 @@ public final class ScriptMetadata {
      * 
      * @return creation timestamp in milliseconds since epoch
      */
-    public long getLastModified() { 
-        return lastModified; 
+    public long getCreationTime() { 
+        return creationTime; 
     }
     
     /**
