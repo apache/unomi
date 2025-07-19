@@ -46,6 +46,7 @@ import java.io.IOException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.HashSet;
+import java.util.Set;
 
 import java.util.Map;
 import java.util.TimerTask;
@@ -78,6 +79,8 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
     private final Object compilationLock = new Object();
     private GroovyShell compilationShell;
     private volatile Map<String, ScriptMetadata> scriptMetadataCache = new ConcurrentHashMap<>();
+    private final Map<String, Set<String>> loggedRefreshErrors = new ConcurrentHashMap<>();
+    private static final int MAX_LOGGED_ERRORS = 100; // Prevent memory leak
 
     private static final Logger LOGGER = LoggerFactory.getLogger(GroovyActionsServiceImpl.class.getName());
     private static final String BASE_SCRIPT_NAME = "BaseScript";
@@ -144,7 +147,7 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
      * It's a script which provides utility functions that we can use in other groovy script
      * The functions added by the base script could be called by the groovy actions executed in
      * {@link org.apache.unomi.groovy.actions.GroovyActionDispatcher#execute}
-     * The base script would be added in the configuration of the {@link GroovyActionsServiceImpl#groovyShell GroovyShell} , so when a
+     * The base script would be added in the configuration of the {@link GroovyActionsServiceImpl#compilationShell GroovyShell} , so when a
      * script will be parsed with the GroovyShell (groovyShell.parse(...)), the action will extends the base script, so the functions
      * could be called
      *
@@ -332,13 +335,16 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
      * {@inheritDoc}
      */
     @Override
-    public void remove(String id) {
-        validateNotEmpty(id, "Script ID");
+    public void remove(String actionName) {
+        validateNotEmpty(actionName, "Action name");
 
-        LOGGER.info("Removing script: {}", id);
+        LOGGER.info("Removing script: {}", actionName);
 
-        ScriptMetadata removedMetadata = scriptMetadataCache.remove(id);
-        persistenceService.remove(id, GroovyAction.class);
+        ScriptMetadata removedMetadata = scriptMetadataCache.remove(actionName);
+        persistenceService.remove(actionName, GroovyAction.class);
+        
+        // Clean up error tracking to prevent memory leak
+        loggedRefreshErrors.remove(actionName);
 
         if (removedMetadata != null) {
             Action actionAnnotation = getActionAnnotation(removedMetadata.getCompiledClass());
@@ -347,49 +353,7 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
             }
         }
 
-        LOGGER.info("Script {} removed successfully", id);
-    }
-
-
-    /**
-     * {@inheritDoc}
-     * Performance Warning: Compiles on-demand if not cached.
-     */
-    @Override
-    public Class<? extends Script> getOrCompileScript(String id) {
-        validateNotEmpty(id, "Script ID");
-
-        ScriptMetadata metadata = scriptMetadataCache.get(id);
-        if (metadata != null) {
-            return metadata.getCompiledClass();
-        }
-
-        long startTime = System.currentTimeMillis();
-        LOGGER.warn("Script {} not found in cache, compiling on-demand (performance warning)", id);
-
-        GroovyAction groovyAction = persistenceService.load(id, GroovyAction.class);
-        if (groovyAction == null) {
-            LOGGER.warn("Script {} not found in persistence, returning null ({}ms)", id,
-                System.currentTimeMillis() - startTime);
-            return null;
-        }
-
-        try {
-            long compilationStartTime = System.currentTimeMillis();
-            ScriptMetadata newMetadata = compileAndCreateMetadata(id, groovyAction.getScript());
-            long compilationTime = System.currentTimeMillis() - compilationStartTime;
-
-            scriptMetadataCache.put(id, newMetadata);
-
-            long totalTime = System.currentTimeMillis() - startTime;
-            LOGGER.warn("On-demand compilation completed for {} (total: {}ms, compilation: {}ms)",
-                id, totalTime, compilationTime);
-            return newMetadata.getCompiledClass();
-        } catch (Exception e) {
-            long totalTime = System.currentTimeMillis() - startTime;
-            LOGGER.error("Failed to compile script {} on-demand ({}ms)", id, totalTime, e);
-            return null;
-        }
+        LOGGER.info("Script {} removed successfully", actionName);
     }
 
     /**
@@ -466,6 +430,9 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
                     long compilationTime = System.currentTimeMillis() - compilationStartTime;
                     totalCompilationTime += compilationTime;
 
+                    // Clear error tracking on successful compilation
+                    loggedRefreshErrors.remove(actionName);
+
                     newMetadataCache.put(actionName, metadata);
                     recompiledCount++;
                     LOGGER.info("Script {} recompiled during refresh ({}ms)", actionName, compilationTime);
@@ -477,12 +444,34 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
                 }
 
                 errorCount++;
-                LOGGER.error("Failed to refresh script: {}", actionName, e);
+                
+                // Prevent log spam for repeated compilation errors during refresh
+                String errorMessage = e.getMessage();
+                Set<String> scriptErrors = loggedRefreshErrors.get(actionName);
+                
+                if (scriptErrors == null || !scriptErrors.contains(errorMessage)) {
+                    LOGGER.error("Failed to refresh script: {}", actionName, e);
+                    
+                    // Prevent memory leak by limiting tracked errors before adding new entries
+                    if (scriptErrors == null && loggedRefreshErrors.size() >= MAX_LOGGED_ERRORS) {
+                        // Remove one random entry to make space (simple eviction)
+                        String firstKey = loggedRefreshErrors.keySet().iterator().next();
+                        loggedRefreshErrors.remove(firstKey);
+                    }
+                    
+                    // Now safely add the error
+                    if (scriptErrors == null) {
+                        scriptErrors = ConcurrentHashMap.newKeySet();
+                        loggedRefreshErrors.put(actionName, scriptErrors);
+                    }
+                    scriptErrors.add(errorMessage);
+                    
+                    LOGGER.warn("Keeping existing version of script {} due to compilation error", actionName);
+                }
 
                 ScriptMetadata existingMetadata = scriptMetadataCache.get(actionName);
                 if (existingMetadata != null) {
                     newMetadataCache.put(actionName, existingMetadata);
-                    LOGGER.warn("Keeping existing version of script {} due to compilation error", actionName);
                 }
             }
         }

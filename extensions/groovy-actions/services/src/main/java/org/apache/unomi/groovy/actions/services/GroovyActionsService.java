@@ -28,7 +28,7 @@ import org.apache.unomi.groovy.actions.ScriptMetadata;
  * Groovy scripts as actions within the Apache Unomi framework. It implements
  * optimized compilation and caching strategies to achieve high performance.
  * </p>
- * 
+ *
  * <p>
  * Key features:
  * <ul>
@@ -38,12 +38,12 @@ import org.apache.unomi.groovy.actions.ScriptMetadata;
  *   <li>Unified caching architecture for compiled scripts</li>
  * </ul>
  * </p>
- * 
+ *
  * <p>
  * Thread Safety: Implementations must be thread-safe as this service
  * is accessed concurrently during script execution.
  * </p>
- * 
+ *
  * @see GroovyAction
  * @see ScriptMetadata
  * @since 2.7.0
@@ -72,24 +72,10 @@ public interface GroovyActionsService {
      * and cleans up any registered action types in the definitions service.
      * </p>
      *
-     * @param id the unique identifier of the action to remove
+     * @param actionName the unique identifier of the action to remove
      * @throws IllegalArgumentException if id is null
      */
-    void remove(String id);
-
-    /**
-     * Retrieves a compiled script class, compiling on-demand if not cached.
-     * <p>
-     * This method first checks the cache for a compiled version. If not found,
-     * it loads the script from persistence and compiles it. This method is
-     * provided for backward compatibility but may have performance implications.
-     * </p>
-     *
-     * @param id the unique identifier of the action
-     * @return the compiled script class, or {@code null} if not found
-     * @throws IllegalArgumentException if id is null
-     */
-    Class<?> getOrCompileScript(String id);
+    void remove(String actionName);
 
     /**
      * Retrieves a pre-compiled script class from cache.
@@ -99,11 +85,11 @@ public interface GroovyActionsService {
      * {@code null} if the script is not found in the cache.
      * </p>
      *
-     * @param id the unique identifier of the action
+     * @param actionName the unique identifier of the action
      * @return the compiled script class, or {@code null} if not found in cache
      * @throws IllegalArgumentException if id is null
      */
-    Class<? extends Script> getCompiledScript(String id);
+    Class<? extends Script> getCompiledScript(String actionName);
 
     /**
      * Retrieves script metadata for monitoring and change detection.
