@@ -408,6 +408,7 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
         int unchangedCount = 0;
         int recompiledCount = 0;
         int errorCount = 0;
+        int newErrorCount = 0;
         long totalCompilationTime = 0;
 
         for (GroovyAction groovyAction : persistenceService.getAllItems(GroovyAction.class)) {
@@ -439,7 +440,7 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
                 }
 
             } catch (Exception e) {
-                if (errorCount == 0 && recompiledCount == 0) {
+                if (newErrorCount == 0 && recompiledCount == 0) {
                     LOGGER.info("Refreshing scripts from persistence layer...");
                 }
 
@@ -450,6 +451,7 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
                 Set<String> scriptErrors = loggedRefreshErrors.get(actionName);
                 
                 if (scriptErrors == null || !scriptErrors.contains(errorMessage)) {
+                    newErrorCount++;
                     LOGGER.error("Failed to refresh script: {}", actionName, e);
                     
                     // Prevent memory leak by limiting tracked errors before adding new entries
@@ -478,7 +480,7 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
 
         this.scriptMetadataCache = newMetadataCache;
 
-        if (recompiledCount > 0 || errorCount > 0) {
+        if (recompiledCount > 0 || newErrorCount > 0) {
             long totalTime = System.currentTimeMillis() - startTime;
             LOGGER.info("Script refresh completed: {} unchanged, {} recompiled, {} errors. Total time: {}ms",
                     unchangedCount, recompiledCount, errorCount, totalTime);
