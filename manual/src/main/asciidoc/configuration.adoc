@@ -95,8 +95,9 @@ org.apache.unomi.opensearch.addresses=localhost:9200
 
 # OpenSearch security settings (required by default since OpenSearch 2.0)
 org.apache.unomi.opensearch.ssl.enable=true
-org.apache.unomi.opensearch.username=admin
-org.apache.unomi.opensearch.password=${env:OPENSEARCH_INITIAL_ADMIN_PASSWORD:-admin}
+org.apache.unomi.opensearch.username=$
+{env:UNOMI_OPENSEARCH_USERNAME:-admin}
+org.apache.unomi.opensearch.password=${env:UNOMI_OPENSEARCH_PASSWORD:-admin}
 org.apache.unomi.opensearch.sslTrustAllCertificates=true
 ----
 
@@ -133,18 +134,18 @@ For OpenSearch:
 [source]
 ----
 # refresh policy per item type in Json format.
-# Valid values are WaitForRefresh/Immediate/NoRefresh. The default refresh policy is NoRefresh.
-# Example: {"event":"WaitForRefresh","rule":"NoRefresh"}
-org.apache.unomi.opensearch.itemTypeToRefreshPolicy={"scheduledTask":"WaitForRefresh"}
+# Valid values are WaitFor/True/False. The default refresh policy is False.
+# Example: {"event":"WaitFor","rule":"False"}
+org.apache.unomi.opensearch.itemTypeToRefreshPolicy={"scheduledTask":"WaitFor"}
 ----
 
 The refresh policy can be configured per item type and affects when changes to documents of that type become visible:
 
-- *WAIT_UNTIL/WaitForRefresh*: Changes will be visible after the operation completes but will wait for a refresh. This ensures changes are immediately visible while being more efficient than an immediate refresh.
-- *IMMEDIATE/Immediate*: Changes will be made visible immediately (forces an index refresh). This is the most resource-intensive option but guarantees immediate visibility.
-- *NONE/NoRefresh*: Changes will be made visible when a refresh happens, either from the configured refresh interval or when manually triggered. This is the most efficient option but doesn't guarantee when changes will be visible.
+- *WAIT_UNTIL/WaitFor*: Changes will be visible after the operation completes but will wait for a refresh. This ensures changes are immediately visible while being more efficient than an immediate refresh.
+- *IMMEDIATE/True*: Changes will be made visible immediately (forces an index refresh). This is the most resource-intensive option but guarantees immediate visibility.
+- *NONE/False*: Changes will be made visible when a refresh happens, either from the configured refresh interval or when manually triggered. This is the most efficient option but doesn't guarantee when changes will be visible.
 
-For distributed task management, it's recommended to use *WAIT_UNTIL/WaitForRefresh* for the `scheduledTask` item type to ensure lock state changes are immediately visible to all nodes without requiring explicit refresh calls in the code.
+For distributed task management, it's recommended to use *WAIT_UNTIL/WaitFor* for the `scheduledTask` item type to ensure lock state changes are immediately visible to all nodes without requiring explicit refresh calls in the code.
 
 Authentication Rules:
 

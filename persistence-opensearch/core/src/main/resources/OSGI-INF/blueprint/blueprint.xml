@@ -165,7 +165,6 @@
         <property name="alwaysOverwrite" value="${os.alwaysOverwrite}" />
         <property name="logLevelRestClient" value="${os.logLevelRestClient}" />
         <property name="minimalClusterState" value="${os.minimalClusterState}" />
-        <property name="contextManager" ref="contextManager"/>
     </bean>
 
     <!-- We use a listener here because using the list directly for listening to proxies coming from the same bundle didn't seem to work -->
@@ -186,19 +185,15 @@
         </reference-listener>
     </reference-list>
 
-    <!-- Security Service Reference -->
-    <reference id="securityService"
-               interface="org.apache.unomi.api.security.SecurityService"
+    <!-- Execution Context Manager Reference -->
+    <reference id="contextManager"
+               interface="org.apache.unomi.api.services.ExecutionContextManager"
                availability="optional">
-        <reference-listener bind-method="bindSecurityService"
-                          unbind-method="unbindSecurityService">
+        <reference-listener bind-method="bindContextManager"
+                            unbind-method="unbindContextManager">
             <ref component-id="openSearchPersistenceServiceImpl"/>
         </reference-listener>
     </reference>
-
-    <!-- Context Manager Reference -->
-    <reference id="contextManager"
-               interface="org.apache.unomi.api.services.ExecutionContextManager"/>
 
     <service
             interface="org.apache.unomi.persistence.opensearch.ConditionOSQueryBuilder">

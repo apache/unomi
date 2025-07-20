@@ -145,6 +145,7 @@
                             org.conscrypt;resolution:=optional,
                             org.glassfish.hk2.osgiresourcelocator;resolution:=optional,
                             org.ietf.jgss;resolution:=optional,
+                            org.joda.convert;resolution:=optional,
                             org.reactivestreams;resolution:=optional,
                             reactor.blockhound.*;resolution:=optional,
                             software.amazon.awssdk.*;resolution:=optional,

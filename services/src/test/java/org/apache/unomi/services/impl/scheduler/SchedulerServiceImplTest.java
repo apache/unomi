@@ -741,6 +741,31 @@ public class SchedulerServiceImplTest {
         return task;
     }
 
+    private ScheduledTask waitForTaskStatusWithScheduler(String taskId, ScheduledTask.TaskStatus targetStatus,
+            long maxWaitTimeMs, long sleepIntervalMs, SchedulerServiceImpl scheduler) throws InterruptedException {
+
+        final long startTime = System.currentTimeMillis();
+        ScheduledTask task = null;
+
+        while (System.currentTimeMillis() - startTime < maxWaitTimeMs) {
+            task = scheduler.getTask(taskId);
+            if (targetStatus.equals(task.getStatus())) {
+                LOGGER.info("Task {} reached target status: {}", taskId, targetStatus);
+                break;
+            }
+            LOGGER.debug("Waiting for task {} to transition from {} to {}",
+                taskId, task.getStatus(), targetStatus);
+            Thread.sleep(sleepIntervalMs);
+        }
+
+        if (task != null && !targetStatus.equals(task.getStatus())) {
+            LOGGER.warn("Timeout waiting for task {} to reach status {}. Current status: {}",
+                taskId, targetStatus, task.getStatus());
+        }
+
+        return task;
+    }
+
     private void testOneShotRetryBehavior(boolean persistent) throws Exception {
         CountDownLatch executionLatch = new CountDownLatch(TEST_MAX_RETRIES+1);
         AtomicInteger executionCount = new AtomicInteger(0);
@@ -1636,8 +1661,10 @@ public class SchedulerServiceImplTest {
             assertTrue("Task should execute", executionLatch.await(TEST_TIMEOUT, TEST_TIME_UNIT));
             assertTrue("Task should have executed", executed.get());
             
-            // Verify task completion
-            ScheduledTask completedTask = schedulerWithoutProvider.getTask(task.getItemId());
+            // Wait for task status to be properly updated
+            // This is necessary because the state transition happens asynchronously after the callback.complete() is called
+            ScheduledTask completedTask = waitForTaskStatusWithScheduler(task.getItemId(), ScheduledTask.TaskStatus.COMPLETED, TEST_TIMEOUT, TEST_SLEEP, schedulerWithoutProvider);
+            assertNotNull("Task should be found", completedTask);
             assertEquals("Task should be completed", ScheduledTask.TaskStatus.COMPLETED, completedTask.getStatus());
             
             // Test that persistent tasks are handled gracefully (should not fail)

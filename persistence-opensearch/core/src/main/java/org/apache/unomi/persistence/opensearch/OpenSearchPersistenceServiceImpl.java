@@ -572,24 +572,24 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
     @Override
     public void updated(Dictionary<String, ?> properties) {
         Map<String, ConfigurationUpdateHelper.PropertyMapping> propertyMappings = new HashMap<>();
-        
+
         // Boolean properties
         propertyMappings.put("throwExceptions", ConfigurationUpdateHelper.booleanProperty(this::setThrowExceptions));
         propertyMappings.put("alwaysOverwrite", ConfigurationUpdateHelper.booleanProperty(this::setAlwaysOverwrite));
         propertyMappings.put("useBatchingForSave", ConfigurationUpdateHelper.booleanProperty(this::setUseBatchingForSave));
         propertyMappings.put("useBatchingForUpdate", ConfigurationUpdateHelper.booleanProperty(this::setUseBatchingForUpdate));
         propertyMappings.put("aggQueryThrowOnMissingDocs", ConfigurationUpdateHelper.booleanProperty(this::setAggQueryThrowOnMissingDocs));
-        
+
         // String properties
         propertyMappings.put("logLevelRestClient", ConfigurationUpdateHelper.stringProperty(this::setLogLevelRestClient));
         propertyMappings.put("clientSocketTimeout", ConfigurationUpdateHelper.stringProperty(this::setClientSocketTimeout));
         propertyMappings.put("taskWaitingTimeout", ConfigurationUpdateHelper.stringProperty(this::setTaskWaitingTimeout));
         propertyMappings.put("taskWaitingPollingInterval", ConfigurationUpdateHelper.stringProperty(this::setTaskWaitingPollingInterval));
         propertyMappings.put("aggQueryMaxResponseSizeHttp", ConfigurationUpdateHelper.stringProperty(this::setAggQueryMaxResponseSizeHttp));
-        
+
         // Integer properties
         propertyMappings.put("aggregateQueryBucketSize", ConfigurationUpdateHelper.integerProperty(this::setAggregateQueryBucketSize));
-        
+
         // Custom property for itemTypeToRefreshPolicy with IOException handling
         propertyMappings.put("itemTypeToRefreshPolicy", ConfigurationUpdateHelper.customProperty((value, logger) -> {
             try {
@@ -598,7 +598,7 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
                 logger.warn("Error setting itemTypeToRefreshPolicy: {}", e.getMessage());
             }
         }));
-        
+
         ConfigurationUpdateHelper.processConfigurationUpdates(properties, LOGGER, "OpenSearch persistence", propertyMappings);
     }
 
@@ -3026,7 +3026,7 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
         return tenantId;
     }
 
-    private void bindTransformationListener(ServiceReference<TenantTransformationListener> listenerReference) {
+    public void bindTransformationListener(ServiceReference<TenantTransformationListener> listenerReference) {
         TenantTransformationListener listener = bundleContext.getService(listenerReference);
         transformationListeners.add(listener);
         // Sort listeners by priority (highest first)

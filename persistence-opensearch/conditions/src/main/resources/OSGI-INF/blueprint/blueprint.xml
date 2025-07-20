@@ -41,14 +41,8 @@
 
     <reference id="definitionsService" interface="org.apache.unomi.api.services.DefinitionsService"/>
     <reference id="persistenceService" interface="org.apache.unomi.persistence.spi.PersistenceService"/>
-    <reference id="profileService" interface="org.apache.unomi.api.services.ProfileService"/>
-    <reference id="privacyService" interface="org.apache.unomi.api.services.PrivacyService"/>
-    <reference id="schedulerService" interface="org.apache.unomi.api.services.SchedulerService"/>
     <reference id="segmentService" interface="org.apache.unomi.api.services.SegmentService"/>
-    <reference id="eventService" interface="org.apache.unomi.api.services.EventService"/>
-    <reference id="configSharingService" interface="org.apache.unomi.api.services.ConfigSharingService"/>
     <reference id="scriptExecutor" interface="org.apache.unomi.scripting.ScriptExecutor"/>
-    <reference id="topicService" interface="org.apache.unomi.api.services.TopicService"/>
     <reference id="executionContextManager" interface="org.apache.unomi.api.services.ExecutionContextManager"/>
 
     <service
@@ -65,49 +59,9 @@
     <service
             interface="org.apache.unomi.persistence.opensearch.ConditionOSQueryBuilder">
         <service-properties>
-            <entry key="queryBuilderId" value="booleanConditionESQueryBuilder"/>
-        </service-properties>
-        <bean class="org.apache.unomi.persistence.opensearch.querybuilders.core.BooleanConditionOSQueryBuilder"/>
-    </service>
-
-    <service
-            interface="org.apache.unomi.persistence.opensearch.ConditionOSQueryBuilder">
-        <service-properties>
-            <entry key="queryBuilderId" value="notConditionESQueryBuilder"/>
-        </service-properties>
-        <bean class="org.apache.unomi.persistence.opensearch.querybuilders.core.NotConditionOSQueryBuilder"/>
-    </service>
-
-    <service
-            interface="org.apache.unomi.persistence.opensearch.ConditionOSQueryBuilder">
-        <service-properties>
-            <entry key="queryBuilderId" value="matchAllConditionESQueryBuilder"/>
-        </service-properties>
-        <bean class="org.apache.unomi.persistence.opensearch.querybuilders.core.MatchAllConditionOSQueryBuilder"/>
-    </service>
-
-    <service
-            interface="org.apache.unomi.persistence.opensearch.ConditionOSQueryBuilder">
-        <service-properties>
-            <entry key="queryBuilderId" value="propertyConditionESQueryBuilder"/>
-        </service-properties>
-        <bean class="org.apache.unomi.persistence.opensearch.querybuilders.core.PropertyConditionOSQueryBuilder"/>
-    </service>
-
-    <service
-            interface="org.apache.unomi.persistence.opensearch.ConditionOSQueryBuilder">
-        <service-properties>
             <entry key="queryBuilderId" value="geoLocationByPointSessionConditionESQueryBuilder"/>
         </service-properties>
         <bean class="org.apache.unomi.persistence.opensearch.querybuilders.advanced.GeoLocationByPointSessionConditionOSQueryBuilder"/>
-    </service>
-
-    <service
-            interface="org.apache.unomi.persistence.opensearch.ConditionOSQueryBuilder">
-        <service-properties>
-            <entry key="queryBuilderId" value="sourceEventPropertyConditionESQueryBuilder"/>
-        </service-properties>
-        <bean class="org.apache.unomi.persistence.opensearch.querybuilders.core.SourceEventPropertyConditionOSQueryBuilder"/>
     </service>
 
     <service>
@@ -127,14 +81,6 @@
             <property name="pastEventsDisablePartitions" value="${os.pastEventsDisablePartitions}"/>
             <property name="aggregateQueryBucketSize" value="${os.aggregateQueryBucketSize}"/>
         </bean>
-    </service>
-
-    <service
-            interface="org.apache.unomi.persistence.opensearch.ConditionOSQueryBuilder">
-        <service-properties>
-            <entry key="queryBuilderId" value="nestedConditionESQueryBuilder"/>
-        </service-properties>
-        <bean class="org.apache.unomi.persistence.opensearch.querybuilders.core.NestedConditionOSQueryBuilder"/>
     </service>
 
 </blueprint>
