@@ -17,7 +17,7 @@
 
 package org.apache.unomi.itests;
 
-import groovy.lang.GroovyCodeSource;
+import groovy.lang.Script;
 import org.apache.commons.io.IOUtils;
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.Profile;
@@ -95,7 +95,7 @@ public class GroovyActionsServiceIT extends BaseIT {
         groovyActionsService.save(UPDATE_ADDRESS_ACTION, loadGroovyAction(UPDATE_ADDRESS_ACTION_GROOVY_FILE));
 
         keepTrying("Failed waiting for the creation of the GroovyAction for the trigger action test",
-                () -> groovyActionsService.getGroovyCodeSource(UPDATE_ADDRESS_ACTION), Objects::nonNull, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+                () -> groovyActionsService.getCompiledScript(UPDATE_ADDRESS_ACTION), Objects::nonNull, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
 
         ActionType actionType = keepTrying("Failed waiting for the creation of the GroovyAction for trigger action test",
                 () -> definitionsService.getActionType(UPDATE_ADDRESS_GROOVY_ACTION), Objects::nonNull, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
@@ -114,10 +114,10 @@ public class GroovyActionsServiceIT extends BaseIT {
         ActionType actionType = keepTrying("Failed waiting for the creation of the GroovyAction for the save test",
                 () -> definitionsService.getActionType(UPDATE_ADDRESS_GROOVY_ACTION), Objects::nonNull, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
 
-        GroovyCodeSource groovyCodeSource = keepTrying("Failed waiting for the creation of the GroovyAction for the save test",
-                () -> groovyActionsService.getGroovyCodeSource(UPDATE_ADDRESS_ACTION), Objects::nonNull, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+        Class<? extends Script> compiledScript = keepTrying("Failed waiting for the creation of the GroovyAction for the save test",
+                () -> groovyActionsService.getCompiledScript(UPDATE_ADDRESS_ACTION), Objects::nonNull, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
 
-        Assert.assertEquals(UPDATE_ADDRESS_ACTION, groovyActionsService.getGroovyCodeSource(UPDATE_ADDRESS_ACTION).getName());
+        Assert.assertEquals(UPDATE_ADDRESS_ACTION, compiledScript.getSimpleName());
 
         Assert.assertTrue(actionType.getMetadata().getId().contains(UPDATE_ADDRESS_GROOVY_ACTION));
         Assert.assertEquals(2, actionType.getMetadata().getSystemTags().size());
@@ -133,14 +133,14 @@ public class GroovyActionsServiceIT extends BaseIT {
     public void testGroovyActionsService_removeGroovyAction() throws IOException, InterruptedException {
         groovyActionsService.save(UPDATE_ADDRESS_ACTION, loadGroovyAction(UPDATE_ADDRESS_ACTION_GROOVY_FILE));
 
-        GroovyCodeSource groovyCodeSource = keepTrying("Failed waiting for the creation of the GroovyAction for the remove test",
-                () -> groovyActionsService.getGroovyCodeSource(UPDATE_ADDRESS_ACTION), Objects::nonNull, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+        Class<? extends Script> compiledScript = keepTrying("Failed waiting for the creation of the GroovyAction for the remove test",
+                () -> groovyActionsService.getCompiledScript(UPDATE_ADDRESS_ACTION), Objects::nonNull, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
 
-        Assert.assertNotNull(groovyCodeSource);
+        Assert.assertNotNull(compiledScript);
 
         groovyActionsService.remove(UPDATE_ADDRESS_ACTION);
 
-        waitForNullValue("Groovy action is still present", () -> groovyActionsService.getGroovyCodeSource(UPDATE_ADDRESS_ACTION),
+        waitForNullValue("Groovy action is still present", () -> groovyActionsService.getCompiledScript(UPDATE_ADDRESS_ACTION),
                 DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
 
         waitForNullValue("Action type is still present", () -> definitionsService.getActionType(UPDATE_ADDRESS_GROOVY_ACTION),
