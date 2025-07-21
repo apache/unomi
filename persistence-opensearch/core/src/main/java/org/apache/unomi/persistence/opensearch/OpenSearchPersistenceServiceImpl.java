@@ -102,6 +102,7 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
     private static final Logger LOGGER = LoggerFactory.getLogger(OpenSearchPersistenceServiceImpl.class.getName());
     private static final String ROLLOVER_LIFECYCLE_NAME = "unomi-rollover-policy";
 
+    private volatile boolean shuttingDown = false;
     private boolean throwExceptions = false;
 
     private OpenSearchClient client;
@@ -176,6 +177,21 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
 
         itemTypeIndexNameMap.put("profile", "profile");
         itemTypeIndexNameMap.put("persona", "profile");
+    }
+
+    private Set<String> dumpRequestTypes = new HashSet<>();
+
+    /**
+     * Sets the types of requests that should be dumped to logs
+     * @param dumpRequestTypes Comma-separated list of request types to dump
+     */
+    public void setDumpRequestTypes(String dumpRequestTypes) {
+        if (StringUtils.isNotBlank(dumpRequestTypes)) {
+            this.dumpRequestTypes = Arrays.stream(dumpRequestTypes.split(","))
+                    .map(String::trim)
+                    .filter(s -> !s.isEmpty())
+                    .collect(Collectors.toSet());
+        }
     }
 
     private final JsonpMapper jsonpMapper = new JacksonJsonpMapper();
@@ -527,6 +543,7 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
 
 
     public void stop() {
+        shuttingDown = true;
 
         new InClassLoaderExecute<>(null, null, this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
             protected Object execute(Object... args) throws IOException {
@@ -547,10 +564,19 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
     }
 
     public void unbindConditionOSQueryBuilder(ServiceReference<ConditionOSQueryBuilder> conditionESQueryBuilderServiceReference) {
-        if (conditionESQueryBuilderServiceReference == null) {
-            return;
+        if (conditionESQueryBuilderServiceReference == null || shuttingDown) {
+            return; // Skip this entirely if we're shutting down
         }
-        conditionOSQueryBuilderDispatcher.removeQueryBuilder(conditionESQueryBuilderServiceReference.getProperty("queryBuilderId").toString());
+        try {
+            Object queryBuilderId = conditionESQueryBuilderServiceReference.getProperty("queryBuilderId");
+            if (queryBuilderId != null && conditionOSQueryBuilderDispatcher != null) {
+                conditionOSQueryBuilderDispatcher.removeQueryBuilder(queryBuilderId.toString());
+            }
+        } catch (Exception e) {
+            // During shutdown we might get exceptions as services are being unregistered in unpredictable order
+            // Just log and continue to avoid deadlocks
+            LOGGER.debug("Error while unbinding condition query builder: {}", e.getMessage());
+        }
     }
 
     @Override
@@ -586,6 +612,7 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
         propertyMappings.put("taskWaitingTimeout", ConfigurationUpdateHelper.stringProperty(this::setTaskWaitingTimeout));
         propertyMappings.put("taskWaitingPollingInterval", ConfigurationUpdateHelper.stringProperty(this::setTaskWaitingPollingInterval));
         propertyMappings.put("aggQueryMaxResponseSizeHttp", ConfigurationUpdateHelper.stringProperty(this::setAggQueryMaxResponseSizeHttp));
+        propertyMappings.put("dumpRequestTypes", ConfigurationUpdateHelper.stringProperty(this::setDumpRequestTypes));
 
         // Integer properties
         propertyMappings.put("aggregateQueryBucketSize", ConfigurationUpdateHelper.integerProperty(this::setAggregateQueryBucketSize));
@@ -814,16 +841,17 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
 
     @Override
     public boolean save(final Item item, final Boolean useBatchingOption, final Boolean alwaysOverwriteOption) {
+        String finalTenantId = validateTenantAndGetId(SecurityServiceConfiguration.PERMISSION_SAVE);
+        item.setTenantId(finalTenantId);
+
         final boolean useBatching = useBatchingOption == null ? this.useBatchingForSave : useBatchingOption;
         final boolean alwaysOverwrite = alwaysOverwriteOption == null ? this.alwaysOverwrite : alwaysOverwriteOption;
-
-        validateTenantAndGetId(SecurityServiceConfiguration.PERMISSION_SAVE);
-
-        handleItemTransformation(item);
 
         Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".save", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
             protected Boolean execute(Object... args) throws Exception {
                 try {
+                    // Add tenants-specific transformation before save
+                    handleItemTransformation(item);
                     String itemType = item.getItemType();
                     if (item instanceof CustomItem) {
                         itemType = ((CustomItem) item).getCustomItemType();
@@ -865,6 +893,10 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
                                 !responseIndex.equals(sessionLatestIndex)) {
                             sessionLatestIndex = responseIndex;
                         }
+                        
+                        // Add tenants metadata
+                        addTenantMetadata(item, finalTenantId);
+                        
                         logMetadataItemOperation("saved", item);
                     } catch (OpenSearchException ose) {
                         LOGGER.error("Could not find index {}, could not register item type {} with id {} ", index, itemType, item.getItemId(), ose);
@@ -909,12 +941,11 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
     public boolean update(final Item item, final Class clazz, final Map source, final boolean alwaysOverwrite) {
         validateTenantAndGetId(SecurityServiceConfiguration.PERMISSION_UPDATE);
 
-        // For property updates, we need to check if the field needs transformation
-        handleItemTransformation(item);
-
         Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".updateItem", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
             protected Boolean execute(Object... args) throws Exception {
                 try {
+                    // For property updates, we need to check if the field needs transformation
+                    handleItemTransformation(item);
                     UpdateRequest updateRequest = createUpdateRequest(clazz, item, source, alwaysOverwrite);
 
                     UpdateResponse response = client.update(updateRequest, Item.class);
@@ -1857,7 +1888,6 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
         String finalTenantId = validateTenantAndGetId(SecurityServiceConfiguration.PERMISSION_QUERY);
 
         Query queryBuilder = conditionOSQueryBuilderDispatcher.getQueryBuilder(query);
-        queryBuilder = wrapWithTenantAndItemTypeQuery(customItemType, queryBuilder, finalTenantId);
         return query(queryBuilder, sortBy, customItemType, offset, size, null, scrollTimeValidity);
     }
 
@@ -1957,8 +1987,6 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
     }
 
     private <T extends Item> PartialList<T> query(final Query query, final String sortBy, final Class<T> clazz, final String customItemType, final int offset, final int size, final String[] routing, final String scrollTimeValidity) {
-        String tenantId = getTenantId();
-        validateTenantAndGetId(SecurityServiceConfiguration.PERMISSION_QUERY);
         return new InClassLoaderExecute<PartialList<T>>(metricsService, this.getClass().getName() + ".query", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
 
             @Override
@@ -1975,7 +2003,7 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
                     String keepAlive;
                     SearchRequest.Builder searchRequest = new SearchRequest.Builder().index(getIndexNameForQuery(itemType));
                     searchRequest.seqNoPrimaryTerm(true)
-                            .query(wrapWithTenantAndItemTypeQuery(itemType, query, tenantId))
+                            .query(wrapWithTenantAndItemTypeQuery(itemType, query, getTenantId()))
                             .size(size < 0 ? defaultQueryLimit : size)
                             .source(s->s.fetch(true))
                             .from(offset);
@@ -3081,6 +3109,34 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
         if (this.contextManager == contextManager) {
             this.contextManager = null;
             LOGGER.info("ContextManager unbound");
+        }
+    }
+
+    private void addTenantMetadata(Item item, String tenantId) {
+        if (item != null && tenantId != null) {
+            item.setTenantId(tenantId);
+        }
+    }
+
+    /**
+     * Utility method to dump OpenSearch requests to debug logs
+     * @param request The request to dump
+     * @param itemType The item type of the request
+     * @param requestType The type of request being made (e.g., "search", "index", "delete")
+     * @param indices Optional array of indices involved in the request
+     */
+    private void dumpRequest(Object request, String itemType, String requestType, String... indices) {
+        if (!dumpRequestTypes.isEmpty() && !dumpRequestTypes.contains(requestType)) {
+            return;
+        }
+        try {
+            if (LOGGER.isInfoEnabled()) {
+                String requestString = OSCustomObjectMapper.getObjectMapper().writeValueAsString(request);
+                String indicesInfo = indices != null && indices.length > 0 ? " on indices [" + String.join(",", indices) + "]" : "";
+                LOGGER.info("Executing OS request {} for {}{} : {}", requestType, itemType, indicesInfo, requestString);
+            }
+        } catch (Exception e) {
+            LOGGER.warn("Failed to dump request", e);
         }
     }
 

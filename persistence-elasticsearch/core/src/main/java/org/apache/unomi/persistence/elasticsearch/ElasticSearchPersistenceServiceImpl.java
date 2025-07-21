@@ -1051,6 +1051,9 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         return new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".save", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
             protected Boolean execute(Object... args) throws Exception {
                 try {
+                    // Add tenants-specific transformation before save
+                    handleItemTransformation(item);
+                    
                     String source = ESCustomObjectMapper.getObjectMapper().writeValueAsString(item);
                     String itemType = item.getItemType();
                     if (item instanceof CustomItem) {
@@ -1103,9 +1106,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         return false;
                     }
 
-                    // Add tenants-specific encryption if configured
-                    handleItemTransformation(item);
-
                     // Add tenants metadata
                     addTenantMetadata(item, finalTenantId);
 
@@ -1148,6 +1148,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".updateItem", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
             protected Boolean execute(Object... args) throws Exception {
                 try {
+                    handleItemTransformation(item);
                     UpdateRequest updateRequest = createUpdateRequest(clazz, item, source, alwaysOverwrite);
 
                     if (bulkProcessor == null || !useBatchingForUpdate) {
