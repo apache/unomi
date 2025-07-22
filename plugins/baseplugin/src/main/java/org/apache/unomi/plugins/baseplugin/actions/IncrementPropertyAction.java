@@ -63,11 +63,11 @@ public class IncrementPropertyAction implements ActionExecutor {
             Session session = event.getSession();
 
             if (tracer != null) {
-                tracer.trace("Processing property increment", Map.of(
-                    "propertyName", propertyName,
-                    "storeInSession", storeInSession,
-                    "hasTarget", event.getTarget() != null
-                ));
+                Map<String, Object> traceData = new HashMap<>();
+                traceData.put("propertyName", propertyName);
+                traceData.put("storeInSession", storeInSession);
+                traceData.put("hasTarget", event.getTarget() != null);
+                tracer.trace("Processing property increment", traceData);
             }
 
             try {
@@ -76,10 +76,10 @@ public class IncrementPropertyAction implements ActionExecutor {
                 boolean updated = PropertyHelper.setProperty(properties, propertyName, propertyValue, "alwaysSet");
                 
                 if (tracer != null) {
-                    tracer.trace("Property increment result", Map.of(
-                        "newValue", propertyValue,
-                        "isUpdated", updated
-                    ));
+                    Map<String, Object> traceData = new HashMap<>();
+                    traceData.put("newValue", propertyValue);
+                    traceData.put("isUpdated", updated);
+                    tracer.trace("Property increment result", traceData);
                     tracer.endOperation(updated, 
                         updated ? "Property incremented successfully" : "No changes needed");
                 }

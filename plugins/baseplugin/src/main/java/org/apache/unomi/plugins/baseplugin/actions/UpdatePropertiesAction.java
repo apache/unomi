@@ -66,11 +66,11 @@ public class UpdatePropertiesAction implements ActionExecutor {
             String targetType = (String) event.getProperty(TARGET_TYPE_KEY);
 
             if (tracer != null) {
-                tracer.trace("Processing properties update", Map.of(
-                    "targetId", targetId,
-                    "targetType", targetType,
-                    "hasTarget", target != null
-                ));
+                Map<String, Object> traceData = new HashMap<>();
+                traceData.put("targetId", targetId);
+                traceData.put("targetType", targetType);
+                traceData.put("hasTarget", target != null);
+                tracer.trace("Processing properties update", traceData);
             }
 
             if (StringUtils.isNotBlank(targetId) && event.getProfile() != null && !targetId.equals(event.getProfile().getItemId())) {

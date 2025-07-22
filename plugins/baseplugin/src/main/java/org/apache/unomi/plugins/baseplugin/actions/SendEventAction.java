@@ -26,6 +26,7 @@ import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.tracing.api.TracerService;
 import org.apache.unomi.tracing.api.RequestTracer;
 
+import java.util.HashMap;
 import java.util.Map;
 
 public class SendEventAction implements ActionExecutor {
@@ -55,11 +56,11 @@ public class SendEventAction implements ActionExecutor {
             Boolean toBePersisted = (Boolean) action.getParameterValues().get("toBePersisted");
 
             if (tracer != null) {
-                tracer.trace("Preparing event", Map.of(
-                    "eventType", eventType,
-                    "toBePersisted", toBePersisted,
-                    "hasTarget", action.getParameterValues().get("eventTarget") != null
-                ));
+                Map<String, Object> traceData = new HashMap<>();
+                traceData.put("eventType", eventType);
+                traceData.put("toBePersisted", toBePersisted);
+                traceData.put("hasTarget", action.getParameterValues().get("eventTarget") != null);
+                tracer.trace("Preparing event", traceData);
             }
 
             @SuppressWarnings("unchecked")
@@ -76,10 +77,10 @@ public class SendEventAction implements ActionExecutor {
 
             int result = eventService.send(subEvent);
             if (tracer != null) {
-                tracer.trace("Event sent", Map.of(
-                    "eventId", subEvent.getItemId(),
-                    "result", result
-                ));
+                Map<String, Object> traceData = new HashMap<>();
+                traceData.put("eventId", subEvent.getItemId());
+                traceData.put("result", result);
+                tracer.trace("Event sent", traceData);
                 tracer.endOperation(true, "Event sent successfully");
             }
             return result;

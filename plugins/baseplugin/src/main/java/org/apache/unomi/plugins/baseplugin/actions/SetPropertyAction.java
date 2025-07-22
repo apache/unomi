@@ -70,11 +70,11 @@ public class SetPropertyAction implements ActionExecutor {
             Object propertyValue = getPropertyValue(action, event);
 
             if (tracer != null) {
-                tracer.trace("Setting property", Map.of(
-                    "propertyName", propertyName,
-                    "propertyValue", propertyValue,
-                    "storeInSession", storeInSession
-                ));
+                Map<String, Object> traceData = new HashMap<>();
+                traceData.put("propertyName", propertyName);
+                traceData.put("propertyValue", propertyValue);
+                traceData.put("storeInSession", storeInSession);
+                tracer.trace("Setting property", traceData);
             }
 
             int result = EventService.NO_CHANGE;
