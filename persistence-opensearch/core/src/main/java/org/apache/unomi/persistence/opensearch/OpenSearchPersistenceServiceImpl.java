@@ -2306,7 +2306,7 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
                             // field name could be null if no existing data exists
                         }
                     }
-                    if (bucketsAggregationBuilder != null) {
+                    if (bucketsAggregationBuilder != null && bucketsContainerBuilder != null) {
                         Aggregation.Builder missingAggregationBuilder = new Aggregation.Builder();
                         MissingAggregation.Builder missingBuilder = new MissingAggregation.Builder().field(fieldName);
                         Aggregation.Builder.ContainerBuilder missingContainerBuilder = missingAggregationBuilder.missing(missingBuilder.build());
