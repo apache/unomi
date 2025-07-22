@@ -262,31 +262,29 @@ public class GroovyActionsServiceImplTest {
     }
 
     @Test
-    public void testGroovyShell() {
-        // Verify that the Groovy shell is properly initialized
-        groovy.lang.GroovyShell shell = groovyActionsService.getGroovyShell();
-        assertNotNull("Groovy shell should be initialized", shell);
-
-        // Don't check specific variables as they might be implementation details
-        // Instead, test the functionality
-
-        // Test evaluating a simple script
-        try {
-            Object result = shell.evaluate("2 + 2");
-            assertEquals("Simple script should evaluate correctly", 4, result);
-        } catch (Exception e) {
-            fail("Failed to evaluate simple script: " + e.getMessage());
-        }
-
-        // Test importing classes that should be available through the ImportCustomizer
-        try {
-            Object result = shell.evaluate(
-                "import org.apache.unomi.api.services.EventService\n" +
-                "return EventService.NO_CHANGE");
-            assertEquals("Should be able to import and use EventService", EventService.NO_CHANGE, result);
-        } catch (Exception e) {
-            fail("Failed to test imports: " + e.getMessage());
-        }
+    public void testCompiledScript() {
+        // Test that we can get a compiled script
+        String actionName = "testCompiledScript";
+        String script = "return 'Hello, World!'";
+        
+        contextManager.executeAsTenant(TENANT_1, () -> {
+            groovyActionsService.save(actionName, script);
+            
+            Class<? extends groovy.lang.Script> scriptClass = groovyActionsService.getCompiledScript(actionName);
+            assertNotNull("Compiled script should not be null", scriptClass);
+            
+            // Test that we can create an instance and execute it
+            try {
+                groovy.lang.Script scriptInstance = scriptClass.getDeclaredConstructor().newInstance();
+                Object result = scriptInstance.run();
+                assertEquals("Script result should match", "Hello, World!", result);
+            } catch (Exception e) {
+                fail("Should be able to execute compiled script: " + e.getMessage());
+            }
+            
+            // Clean up
+            groovyActionsService.remove(actionName);
+        });
     }
 
     @Test
@@ -319,10 +317,10 @@ public class GroovyActionsServiceImplTest {
             return null;
         });
 
-        // Verify we can get the GroovyCodeSource for the loaded actions
+        // Verify we can get the compiled script for the loaded actions
         contextManager.executeAsSystem(() -> {
-            assertNotNull("Should have GroovyCodeSource for testSaveAction in system tenant",
-                        groovyActionsService.getGroovyCodeSource("testSaveAction"));
+            assertNotNull("Should have compiled script for testSaveAction in system tenant",
+                        groovyActionsService.getCompiledScript("testSaveAction"));
             return null;
         });
     }
@@ -437,13 +435,13 @@ public class GroovyActionsServiceImplTest {
             contextManager.executeAsTenant(TENANT_1, () -> {
                 groovyActionsService.save(actionName, tenant1Script);
                 assertNotNull("Action should be registered for tenant1",
-                             groovyActionsService.getGroovyCodeSource(actionName));
+                             groovyActionsService.getCompiledScript(actionName));
             });
 
             contextManager.executeAsTenant(TENANT_2, () -> {
                 groovyActionsService.save(actionName, tenant2Script);
                 assertNotNull("Action should be registered for tenant2",
-                             groovyActionsService.getGroovyCodeSource(actionName));
+                             groovyActionsService.getCompiledScript(actionName));
             });
 
             // Create a dispatcher to test execution
@@ -486,14 +484,14 @@ public class GroovyActionsServiceImplTest {
 
                 // Verify tenant1's action is gone
                 assertNull("Tenant1's action should be removed",
-                          groovyActionsService.getGroovyCodeSource(actionName));
+                          groovyActionsService.getCompiledScript(actionName));
             });
 
             // Verify tenant2's action is still available
             contextManager.executeAsTenant(TENANT_2, () -> {
                 // Tenant2's action should still be available
                 assertNotNull("Tenant2's action should still be available",
-                           groovyActionsService.getGroovyCodeSource(actionName));
+                           groovyActionsService.getCompiledScript(actionName));
 
                 // Cleanup
                 groovyActionsService.remove(actionName);

@@ -19,6 +19,7 @@ package org.apache.unomi.groovy.actions.services.impl;
 import groovy.lang.GroovyClassLoader;
 import groovy.lang.GroovyCodeSource;
 import groovy.lang.GroovyShell;
+import groovy.lang.Script;
 import groovy.util.GroovyScriptEngine;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
@@ -32,6 +33,7 @@ import org.apache.unomi.api.services.cache.MultiTypeCacheService;
 import org.apache.unomi.api.tenants.TenantService;
 import org.apache.unomi.groovy.actions.GroovyAction;
 import org.apache.unomi.groovy.actions.GroovyBundleResourceConnector;
+import org.apache.unomi.groovy.actions.ScriptMetadata;
 import org.apache.unomi.groovy.actions.annotations.Action;
 import org.apache.unomi.groovy.actions.services.GroovyActionsService;
 import org.apache.unomi.persistence.spi.PersistenceService;
@@ -54,6 +56,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.Serializable;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashSet;
@@ -68,7 +71,8 @@ import static java.util.Arrays.asList;
 import static org.apache.unomi.api.tenants.TenantService.SYSTEM_TENANT;
 
 /**
- * Implementation of the GroovyActionService. Allows to create a groovy action from a groovy file
+ * High-performance GroovyActionsService implementation with pre-compilation,
+ * hash-based change detection, and thread-safe execution.
  *
  * This implementation handles three distinct scenarios for Groovy actions:
  *
@@ -96,8 +100,14 @@ public class GroovyActionsServiceImpl extends AbstractMultiTypeCachingService im
     }
 
     private GroovyScriptEngine groovyScriptEngine;
-    private GroovyShell groovyShell;
-    private Map<String, Map<String, GroovyCodeSource>> groovyCodeSourceMapByTenant = new ConcurrentHashMap<>();
+    
+    // Thread-safe compilation shell for ScriptMetadata
+    private final Object compilationLock = new Object();
+    private GroovyShell compilationShell;
+    private volatile Map<String, Map<String, ScriptMetadata>> scriptMetadataCacheByTenant = new ConcurrentHashMap<>();
+    private final Map<String, Set<String>> loggedRefreshErrors = new ConcurrentHashMap<>();
+    private static final int MAX_LOGGED_ERRORS = 100; // Prevent memory leak
+    
     private static final Logger LOGGER = LoggerFactory.getLogger(GroovyActionsServiceImpl.class.getName());
     private static final String BASE_SCRIPT_NAME = "BaseScript";
     // Original path for Groovy actions
@@ -152,11 +162,6 @@ public class GroovyActionsServiceImpl extends AbstractMultiTypeCachingService im
     @Reference
     public void setPersistenceService(PersistenceService persistenceService) {
         super.setPersistenceService(persistenceService);
-    }
-
-    @Override
-    public GroovyShell getGroovyShell() {
-        return groovyShell;
     }
 
     @Activate
@@ -236,18 +241,21 @@ public class GroovyActionsServiceImpl extends AbstractMultiTypeCachingService im
                             // 2. The only other thing postProcessor does is to add the code source to the tenant map
 
                             // Manual handling of what's needed from the post-processor
-                            // (just storing the code source in tenant map)
+                            // (just storing the script metadata in tenant map)
                             if (finalItem instanceof GroovyAction) {
                                 GroovyAction groovyAction = (GroovyAction) finalItem;
                                 String actionName = groovyAction.getName();
                                 String script = groovyAction.getScript();
 
-                                GroovyCodeSource groovyCodeSource = new GroovyCodeSource(script, actionName, "/groovy/script");
-
-                                // Store the code source in our tenant map for runtime access
-                                Map<String, GroovyCodeSource> groovyCodeSourceMap = groovyCodeSourceMapByTenant
-                                    .computeIfAbsent(SYSTEM_TENANT, k -> new ConcurrentHashMap<>());
-                                groovyCodeSourceMap.put(actionName, groovyCodeSource);
+                                // Create and store ScriptMetadata for the new interface
+                                try {
+                                    ScriptMetadata metadata = compileAndCreateMetadata(actionName, script);
+                                    Map<String, ScriptMetadata> scriptMetadataMap = scriptMetadataCacheByTenant
+                                        .computeIfAbsent(SYSTEM_TENANT, k -> new ConcurrentHashMap<>());
+                                    scriptMetadataMap.put(actionName, metadata);
+                                } catch (Exception e) {
+                                    logger.error("Failed to create ScriptMetadata for predefined action {}", actionName, e);
+                                }
                             }
 
                             // Track contribution
@@ -285,7 +293,7 @@ public class GroovyActionsServiceImpl extends AbstractMultiTypeCachingService im
     private GroovyAction processGroovyScript(BundleContext bundleContext, URL url, InputStream inputStream) {
         try {
             String actionName = FilenameUtils.getBaseName(url.getPath());
-            String groovyScript = IOUtils.toString(inputStream);
+            String groovyScript = IOUtils.toString(inputStream, StandardCharsets.UTF_8);
 
             // Create the GroovyAction instance
             GroovyAction groovyAction = new GroovyAction(actionName, groovyScript);
@@ -296,11 +304,13 @@ public class GroovyActionsServiceImpl extends AbstractMultiTypeCachingService im
 
             // Extract Action annotation and register the ActionType
             try {
-                Action actionAnnotation = groovyShell.parse(groovyCodeSource).getClass().getMethod("execute").getAnnotation(Action.class);
-                if (actionAnnotation != null) {
-                    contextManager.executeAsSystem(() -> {
-                        saveActionType(actionAnnotation);
-                    });
+                synchronized(compilationLock) {
+                    Action actionAnnotation = compilationShell.parse(groovyCodeSource).getClass().getMethod("execute").getAnnotation(Action.class);
+                    if (actionAnnotation != null) {
+                        contextManager.executeAsSystem(() -> {
+                            saveActionType(actionAnnotation);
+                        });
+                    }
                 }
             } catch (NoSuchMethodException e) {
                 LOGGER.warn("Failed to extract Action annotation from predefined Groovy script {}: {}", actionName, e.getMessage());
@@ -323,7 +333,7 @@ public class GroovyActionsServiceImpl extends AbstractMultiTypeCachingService im
         GroovyClassLoader groovyLoader = new GroovyClassLoader(bundleContext.getBundle().adapt(BundleWiring.class).getClassLoader());
         this.groovyScriptEngine = new GroovyScriptEngine(bundleResourceConnector, groovyLoader);
 
-        initializeGroovyShell();
+        initializeCompilationShell();
         try {
             loadBaseScript();
         } catch (IOException e) {
@@ -348,23 +358,25 @@ public class GroovyActionsServiceImpl extends AbstractMultiTypeCachingService im
             return;
         }
         LOGGER.debug("Found Groovy base script at {}, loading... ", groovyBaseScriptURL.getPath());
-        GroovyCodeSource groovyCodeSource = new GroovyCodeSource(IOUtils.toString(groovyBaseScriptURL.openStream()), BASE_SCRIPT_NAME, "/groovy/script");
+        GroovyCodeSource groovyCodeSource = new GroovyCodeSource(IOUtils.toString(groovyBaseScriptURL.openStream(), StandardCharsets.UTF_8), BASE_SCRIPT_NAME, "/groovy/script");
         groovyScriptEngine.getGroovyClassLoader().parseClass(groovyCodeSource, true);
     }
 
     /**
-     * Initialize the groovyShell object and define the configuration which contains the name of the base script
+     * Initialize the compilation shell with proper configuration
      */
-    private void initializeGroovyShell() {
+    private void initializeCompilationShell() {
         CompilerConfiguration compilerConfiguration = new CompilerConfiguration();
         compilerConfiguration.addCompilationCustomizers(createImportCustomizer());
 
         compilerConfiguration.setScriptBaseClass(BASE_SCRIPT_NAME);
         groovyScriptEngine.setConfig(compilerConfiguration);
-        groovyShell = new GroovyShell(groovyScriptEngine.getGroovyClassLoader(), compilerConfiguration);
-        groovyShell.setVariable("actionExecutorDispatcher", actionExecutorDispatcher);
-        groovyShell.setVariable("definitionsService", definitionsService);
-        groovyShell.setVariable("logger", LoggerFactory.getLogger("GroovyAction"));
+        
+        // Initialize the compilation shell for ScriptMetadata
+        this.compilationShell = new GroovyShell(groovyScriptEngine.getGroovyClassLoader(), compilerConfiguration);
+        compilationShell.setVariable("actionExecutorDispatcher", actionExecutorDispatcher);
+        compilationShell.setVariable("definitionsService", definitionsService);
+        compilationShell.setVariable("logger", LoggerFactory.getLogger("GroovyAction"));
     }
 
     private ImportCustomizer createImportCustomizer() {
@@ -375,7 +387,7 @@ public class GroovyActionsServiceImpl extends AbstractMultiTypeCachingService im
     }
 
     /**
-     * Process a GroovyAction for caching purposes, creating a GroovyCodeSource and storing it in the tenant map.
+     * Process a GroovyAction for caching purposes, creating ScriptMetadata and storing it in the tenant map.
      * This method specifically avoids registering ActionTypes to prevent circular persistence operations.
      *
      * @param groovyAction the GroovyAction to process
@@ -385,23 +397,49 @@ public class GroovyActionsServiceImpl extends AbstractMultiTypeCachingService im
             String actionName = groovyAction.getName();
             String script = groovyAction.getScript();
 
-            GroovyCodeSource groovyCodeSource = new GroovyCodeSource(script, actionName, "/groovy/script");
-
-            // Store the code source in our tenant map for runtime access
-            String tenantId = contextManager.getCurrentContext().getTenantId();
-            Map<String, GroovyCodeSource> groovyCodeSourceMap = groovyCodeSourceMapByTenant.computeIfAbsent(tenantId, k -> new ConcurrentHashMap<>());
-            groovyCodeSourceMap.put(actionName, groovyCodeSource);
+            // Create and store ScriptMetadata for the new interface
+            try {
+                ScriptMetadata metadata = compileAndCreateMetadata(actionName, script);
+                Map<String, ScriptMetadata> scriptMetadataMap = getScriptMetadataMap();
+                scriptMetadataMap.put(actionName, metadata);
+            } catch (Exception e) {
+                logRefreshError(actionName, "Failed to create ScriptMetadata", e);
+            }
 
             // We parse the script to validate it, but intentionally skip saving ActionType
             // to avoid circular persistence operations during cache refresh
             try {
-                groovyShell.parse(groovyCodeSource).getClass().getMethod("execute");
+                GroovyCodeSource groovyCodeSource = new GroovyCodeSource(script, actionName, "/groovy/script");
+                synchronized(compilationLock) {
+                    compilationShell.parse(groovyCodeSource).getClass().getMethod("execute");
+                }
                 // Note: We don't extract or save the ActionType here
             } catch (NoSuchMethodException e) {
-                LOGGER.warn("Failed to validate Groovy script {}: {}", actionName, e.getMessage());
+                logRefreshError(actionName, "Failed to validate Groovy script", e);
             }
         } catch (Exception e) {
-            LOGGER.error("Error processing Groovy action {}: {}", groovyAction.getName(), e.getMessage(), e);
+            logRefreshError(groovyAction.getName(), "Error processing Groovy action", e);
+        }
+    }
+
+    /**
+     * Logs refresh errors with rate limiting to prevent log spam.
+     * Only logs the first MAX_LOGGED_ERRORS errors per action to prevent memory leaks.
+     */
+    private void logRefreshError(String actionName, String message, Exception e) {
+        String tenantId = contextManager.getCurrentContext().getTenantId();
+        Set<String> tenantErrors = loggedRefreshErrors.computeIfAbsent(tenantId, k -> ConcurrentHashMap.newKeySet());
+        
+        if (tenantErrors.size() < MAX_LOGGED_ERRORS) {
+            tenantErrors.add(actionName);
+            LOGGER.error("{} for action {}: {}", message, actionName, e.getMessage(), e);
+        } else if (tenantErrors.contains(actionName)) {
+            // Already logged this action, just log at debug level
+            LOGGER.debug("{} for action {}: {}", message, actionName, e.getMessage());
+        } else {
+            // Too many errors logged, skip this one
+            LOGGER.debug("Skipping error log for action {} due to error limit ({}): {}", 
+                actionName, MAX_LOGGED_ERRORS, e.getMessage());
         }
     }
 
@@ -428,24 +466,102 @@ public class GroovyActionsServiceImpl extends AbstractMultiTypeCachingService im
         return Collections.singleton(groovyActionTypeConfig);
     }
 
+    /**
+     * Validates that a string parameter is not null or empty.
+     */
+    private void validateNotEmpty(String value, String parameterName) {
+        if (value == null || value.trim().isEmpty()) {
+            throw new IllegalArgumentException(parameterName + " cannot be null or empty");
+        }
+    }
+
+    /**
+     * Thread-safe script compilation using synchronized shared shell.
+     */
+    private Class<? extends Script> compileScript(String actionName, String scriptContent) {
+        GroovyCodeSource codeSource = new GroovyCodeSource(scriptContent, actionName, "/groovy/script");
+        synchronized(compilationLock) {
+            return compilationShell.parse(codeSource).getClass();
+        }
+    }
+
+    /**
+     * Compiles a script and creates metadata with timing information.
+     */
+    private ScriptMetadata compileAndCreateMetadata(String actionName, String scriptContent) {
+        long compilationStartTime = System.currentTimeMillis();
+        Class<? extends Script> scriptClass = compileScript(actionName, scriptContent);
+        long compilationTime = System.currentTimeMillis() - compilationStartTime;
+
+        LOGGER.debug("Script {} compiled in {}ms", actionName, compilationTime);
+        return new ScriptMetadata(actionName, scriptContent, scriptClass);
+    }
+
+    /**
+     * Extracts Action annotation from script class if present.
+     */
+    private Action getActionAnnotation(Class<? extends Script> scriptClass) {
+        try {
+            return scriptClass.getMethod("execute").getAnnotation(Action.class);
+        } catch (NoSuchMethodException e) {
+            LOGGER.error("Failed to extract action annotation - execute method not found", e);
+            return null;
+        } catch (Exception e) {
+            LOGGER.error("Failed to extract action annotation", e);
+            return null;
+        }
+    }
+
+    /**
+     * Gets the script metadata map for the current tenant.
+     */
+    private Map<String, ScriptMetadata> getScriptMetadataMap() {
+        String tenantId = contextManager.getCurrentContext().getTenantId();
+        return scriptMetadataCacheByTenant.computeIfAbsent(tenantId, k -> new ConcurrentHashMap<>());
+    }
+
     @Override
     public void save(String actionName, String groovyScript) {
-        GroovyCodeSource groovyCodeSource = buildClassScript(groovyScript, actionName);
+        validateNotEmpty(actionName, "Action name");
+        validateNotEmpty(groovyScript, "Groovy script");
+
+        long startTime = System.currentTimeMillis();
+        LOGGER.info("Saving script: {}", actionName);
+
         try {
-            saveActionType(groovyShell.parse(groovyCodeSource).getClass().getMethod("execute").getAnnotation(Action.class));
+            Map<String, ScriptMetadata> scriptMetadataMap = getScriptMetadataMap();
+            
+            ScriptMetadata existingMetadata = scriptMetadataMap.get(actionName);
+            if (existingMetadata != null && !existingMetadata.hasChanged(groovyScript)) {
+                LOGGER.info("Script {} unchanged, skipping recompilation ({}ms)", actionName,
+                    System.currentTimeMillis() - startTime);
+                return;
+            }
+
+            long compilationStartTime = System.currentTimeMillis();
+            ScriptMetadata metadata = compileAndCreateMetadata(actionName, groovyScript);
+            long compilationTime = System.currentTimeMillis() - compilationStartTime;
+
+            Action actionAnnotation = getActionAnnotation(metadata.getCompiledClass());
+            if (actionAnnotation != null) {
+                saveActionType(actionAnnotation);
+            }
 
             // Create and save the GroovyAction
             GroovyAction groovyAction = new GroovyAction(actionName, groovyScript);
             saveItem(groovyAction, GroovyAction::getName, GroovyAction.ITEM_TYPE);
 
-            // Also update our code source map for immediate use
-            String tenantId = contextManager.getCurrentContext().getTenantId();
-            Map<String, GroovyCodeSource> groovyCodeSourceMap = groovyCodeSourceMapByTenant.computeIfAbsent(tenantId, k -> new ConcurrentHashMap<>());
-            groovyCodeSourceMap.put(actionName, groovyCodeSource);
+            // Store the new metadata
+            scriptMetadataMap.put(actionName, metadata);
 
-            LOGGER.info("The script {} has been loaded.", actionName);
-        } catch (NoSuchMethodException e) {
-            LOGGER.error("Failed to save the script {}", actionName, e);
+            long totalTime = System.currentTimeMillis() - startTime;
+            LOGGER.info("Script {} saved and compiled successfully (total: {}ms, compilation: {}ms)",
+                actionName, totalTime, compilationTime);
+
+        } catch (Exception e) {
+            long totalTime = System.currentTimeMillis() - startTime;
+            LOGGER.error("Failed to save script: {} ({}ms)", actionName, totalTime, e);
+            throw new RuntimeException("Failed to save script: " + actionName, e);
         }
     }
 
@@ -469,53 +585,60 @@ public class GroovyActionsServiceImpl extends AbstractMultiTypeCachingService im
     }
 
     @Override
-    public void remove(String id) {
-        try {
-            // Get the code source to extract action type ID before removal
-            String tenantId = contextManager.getCurrentContext().getTenantId();
-            Map<String, GroovyCodeSource> groovyCodeSourceMap = groovyCodeSourceMapByTenant.computeIfAbsent(tenantId, k -> new ConcurrentHashMap<>());
-            GroovyCodeSource codeSource = groovyCodeSourceMap.get(id);
+    public void remove(String actionName) {
+        validateNotEmpty(actionName, "Action name");
 
-            if (codeSource != null) {
-                try {
-                    Action actionAnnotation = groovyShell.parse(codeSource).getClass().getMethod("execute").getAnnotation(Action.class);
-                    if (actionAnnotation != null) {
-                        definitionsService.removeActionType(actionAnnotation.id());
-                    }
-                } catch (NoSuchMethodException e) {
-                    LOGGER.error("Failed to get action annotation for removal: {}", id, e);
-                }
+        LOGGER.info("Removing script: {}", actionName);
+
+        Map<String, ScriptMetadata> scriptMetadataMap = getScriptMetadataMap();
+        
+        ScriptMetadata removedMetadata = scriptMetadataMap.remove(actionName);
+        
+        // Clean up error tracking to prevent memory leak
+        String tenantId = contextManager.getCurrentContext().getTenantId();
+        Set<String> tenantErrors = loggedRefreshErrors.get(tenantId);
+        if (tenantErrors != null) {
+            tenantErrors.remove(actionName);
+            if (tenantErrors.isEmpty()) {
+                loggedRefreshErrors.remove(tenantId);
             }
-
-            // Remove from persistent storage and cache
-            removeItem(id, GroovyAction.class, GroovyAction.ITEM_TYPE);
-
-            // Remove from our code source map
-            if (groovyCodeSourceMap.containsKey(id)) {
-                groovyCodeSourceMap.remove(id);
-            }
-
-            LOGGER.info("The script {} has been removed.", id);
-        } catch (Exception e) {
-            LOGGER.error("Error removing Groovy action: {}", id, e);
         }
+
+        // Remove from persistent storage and cache
+        removeItem(actionName, GroovyAction.class, GroovyAction.ITEM_TYPE);
+
+        if (removedMetadata != null) {
+            Action actionAnnotation = getActionAnnotation(removedMetadata.getCompiledClass());
+            if (actionAnnotation != null) {
+                definitionsService.removeActionType(actionAnnotation.id());
+            }
+        }
+
+        LOGGER.info("Script {} removed successfully", actionName);
     }
 
     @Override
-    public GroovyCodeSource getGroovyCodeSource(String id) {
-        String tenantId = contextManager.getCurrentContext().getTenantId();
-        Map<String, GroovyCodeSource> groovyCodeSourceMap = groovyCodeSourceMapByTenant.computeIfAbsent(tenantId, k -> new ConcurrentHashMap<>());
-        return groovyCodeSourceMap.get(id);
+    public Class<? extends Script> getCompiledScript(String actionName) {
+        validateNotEmpty(actionName, "Script ID");
+
+        Map<String, ScriptMetadata> scriptMetadataMap = getScriptMetadataMap();
+        
+        ScriptMetadata metadata = scriptMetadataMap.get(actionName);
+        if (metadata == null) {
+            LOGGER.warn("Script {} not found in cache", actionName);
+            return null;
+        }
+        return metadata.getCompiledClass();
     }
 
-    /**
-     * Build a GroovyCodeSource object
-     *
-     * @param groovyScript groovy script as a string
-     * @param actionName   Name of the action
-     * @return Built GroovyCodeSource
-     */
-    private GroovyCodeSource buildClassScript(String groovyScript, String actionName) {
-        return new GroovyCodeSource(groovyScript, actionName, "/groovy/script");
+    @Override
+    public ScriptMetadata getScriptMetadata(String actionName) {
+        validateNotEmpty(actionName, "Action name");
+
+        Map<String, ScriptMetadata> scriptMetadataMap = getScriptMetadataMap();
+        
+        return scriptMetadataMap.get(actionName);
     }
+
+
 }

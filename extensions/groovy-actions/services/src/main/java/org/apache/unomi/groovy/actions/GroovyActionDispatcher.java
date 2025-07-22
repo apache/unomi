@@ -16,16 +16,16 @@
  */
 package org.apache.unomi.groovy.actions;
 
-import groovy.lang.GroovyCodeSource;
-import groovy.lang.GroovyShell;
 import groovy.lang.Script;
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.actions.Action;
 import org.apache.unomi.api.actions.ActionDispatcher;
+import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.groovy.actions.services.GroovyActionsService;
 import org.apache.unomi.metrics.MetricAdapter;
 import org.apache.unomi.metrics.MetricsService;
+import org.apache.unomi.services.actions.ActionExecutorDispatcher;
 import org.apache.unomi.tracing.api.TracerService;
 import org.apache.unomi.tracing.api.RequestTracer;
 import org.osgi.service.component.annotations.Component;
@@ -36,18 +36,21 @@ import org.slf4j.LoggerFactory;
 import java.util.HashMap;
 
 /**
- * An implementation of an ActionDispatcher for the Groovy language. This dispatcher will load the groovy action script matching to an
- * actionName. If a script if found, it will be executed.
+ * High-performance ActionDispatcher for pre-compiled Groovy scripts.
+ * Executes scripts without GroovyShell overhead using isolated instances.
  */
 @Component(service = ActionDispatcher.class)
 public class GroovyActionDispatcher implements ActionDispatcher {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(GroovyActionDispatcher.class.getName());
+    private static final Logger GROOVY_ACTION_LOGGER = LoggerFactory.getLogger("GroovyAction");
 
     private static final String GROOVY_PREFIX = "groovy";
 
     private MetricsService metricsService;
     private GroovyActionsService groovyActionsService;
+    private DefinitionsService definitionsService;
+    private ActionExecutorDispatcher actionExecutorDispatcher;
     private TracerService tracerService;
 
     @Reference
@@ -58,6 +61,16 @@ public class GroovyActionDispatcher implements ActionDispatcher {
     @Reference
     public void setGroovyActionsService(GroovyActionsService groovyActionsService) {
         this.groovyActionsService = groovyActionsService;
+    }
+
+    @Reference
+    public void setDefinitionsService(DefinitionsService definitionsService) {
+        this.definitionsService = definitionsService;
+    }
+
+    @Reference
+    public void setActionExecutorDispatcher(ActionExecutorDispatcher actionExecutorDispatcher) {
+        this.actionExecutorDispatcher = actionExecutorDispatcher;
     }
 
     @Reference
@@ -82,24 +95,24 @@ public class GroovyActionDispatcher implements ActionDispatcher {
         }});
 
         try {
-            GroovyCodeSource groovyCodeSource = groovyActionsService.getGroovyCodeSource(actionName);
-            if (groovyCodeSource == null) {
-                LOGGER.warn("Couldn't find a Groovy action with name {}, action will not execute !", actionName);
+            Class<? extends Script> scriptClass = groovyActionsService.getCompiledScript(actionName);
+            if (scriptClass == null) {
+                LOGGER.warn("Couldn't find a Groovy action with name {}, action will not execute!", actionName);
                 tracer.trace("Action not found", null);
                 return EventService.NO_CHANGE;
             }
-
-            GroovyShell groovyShell = groovyActionsService.getGroovyShell();
-            groovyShell.setVariable("action", action);
-            groovyShell.setVariable("event", event);
-            Script script = groovyShell.parse(groovyCodeSource);
+            
             try {
+                Script script = scriptClass.getDeclaredConstructor().newInstance();
+                setScriptVariables(script, action, event);
+                
                 return new MetricAdapter<Integer>(metricsService, this.getClass().getName() + ".action.groovy." + actionName) {
                     @Override
                     public Integer execute(Object... args) throws Exception {
                         return (Integer) script.invokeMethod("execute", null);
                     }
                 }.runWithTimer();
+                
             } catch (Exception e) {
                 LOGGER.error("Error executing Groovy action with key={}", actionName, e);
                 tracer.trace("Error executing action", e);
@@ -108,5 +121,16 @@ public class GroovyActionDispatcher implements ActionDispatcher {
         } finally {
             tracer.endOperation(null, "Completed Groovy action execution");
         }
+    }
+    
+    /**
+     * Sets required variables on script instance.
+     */
+    private void setScriptVariables(Script script, Action action, Event event) {
+        script.setProperty("action", action);
+        script.setProperty("event", event);
+        script.setProperty("actionExecutorDispatcher", actionExecutorDispatcher);
+        script.setProperty("definitionsService", definitionsService);
+        script.setProperty("logger", GROOVY_ACTION_LOGGER);
     }
 }
