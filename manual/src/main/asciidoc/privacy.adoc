@@ -38,7 +38,7 @@ Here's an example of a request to anonymize a profile:
 
 [source]
 ----
-curl -X POST http://localhost:8181/cxs/profiles/{profileID}/anonymize?scope=ASCOPE
+curl -X POST http://localhost:8181/cxs/privacy/profiles/{profileID}/anonymize?scope=ASCOPE
 ----
 
 where `{profileID}` must be replaced by the actual identifier of a profile
@@ -69,7 +69,7 @@ session data will also be detached from the current profile and anonymized.
 
 [source]
 ----
-curl -X DELETE http://localhost:8181/cxs/profiles/{profileID}?withData=false --user karaf:karaf
+curl -X DELETE http://localhost:8181/cxs/privacy/profiles/{profileID}?withData=false --user karaf:karaf
 ----
 
 where `{profileID}` must be replaced by the actual identifier of a profile
