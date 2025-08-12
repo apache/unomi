@@ -17,39 +17,27 @@
   -->
 
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
-
     <modelVersion>4.0.0</modelVersion>
-
     <parent>
         <groupId>org.apache.unomi</groupId>
         <artifactId>unomi-extensions</artifactId>
-        <version>2.7.0-SNAPSHOT</version>
-        <relativePath>../pom.xml</relativePath>
+        <version>3.0.0-SNAPSHOT</version>
     </parent>
-
     <artifactId>log4j-extension</artifactId>
     <packaging>bundle</packaging>
     <name>Apache Unomi :: Extensions :: Log4j Extension</name>
     <description>Apache Unomi log4j extensions</description>
 
-    <properties>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <maven.compiler.source>1.8</maven.compiler.source>
-        <maven.compiler.target>1.8</maven.compiler.target>
-    </properties>
-
     <dependencies>
-        <!-- Apache Commons -->
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-lang3</artifactId>
-            <version>3.15.0</version>
+            <scope>provided</scope>
         </dependency>
 
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
             <artifactId>log4j-core</artifactId>
-            <version>2.19.0</version>
             <scope>provided</scope>
         </dependency>
     </dependencies>

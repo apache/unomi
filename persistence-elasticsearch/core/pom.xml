@@ -18,11 +18,10 @@
 
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-
     <parent>
         <groupId>org.apache.unomi</groupId>
         <artifactId>unomi-persistence-elasticsearch</artifactId>
-        <version>2.7.0-SNAPSHOT</version>
+        <version>3.0.0-SNAPSHOT</version>
     </parent>
 
     <artifactId>unomi-persistence-elasticsearch-core</artifactId>
@@ -36,107 +35,67 @@
             <artifactId>osgi.core</artifactId>
             <scope>provided</scope>
         </dependency>
-        <dependency>
-            <groupId>org.osgi</groupId>
-            <artifactId>osgi.cmpn</artifactId>
-            <scope>provided</scope>
-        </dependency>
 
         <dependency>
             <groupId>org.apache.unomi</groupId>
             <artifactId>unomi-api</artifactId>
-            <version>${project.version}</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.unomi</groupId>
             <artifactId>unomi-common</artifactId>
-            <version>${project.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.unomi</groupId>
+            <artifactId>unomi-metrics</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.unomi</groupId>
+            <artifactId>unomi-scripting</artifactId>
             <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.unomi</groupId>
             <artifactId>unomi-persistence-spi</artifactId>
-            <version>${project.version}</version>
             <scope>provided</scope>
         </dependency>
+
+        <dependency>
+            <groupId>com.hazelcast</groupId>
+            <artifactId>hazelcast-all</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>commons-io</groupId>
+            <artifactId>commons-io</artifactId>
+        </dependency>
+
         <dependency>
             <groupId>org.elasticsearch.client</groupId>
             <artifactId>elasticsearch-rest-high-level-client</artifactId>
-            <version>${elasticsearch.version}</version>
-        </dependency>
-        <!--
-        <dependency>
-            <groupId>org.elasticsearch</groupId>
-            <artifactId>elasticsearch</artifactId>
-            <version>${elasticsearch.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.elasticsearch</groupId>
-            <artifactId>elasticsearch-core</artifactId>
-            <version>${elasticsearch.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.elasticsearch</groupId>
-            <artifactId>elasticsearch-secure-sm</artifactId>
-            <version>${elasticsearch.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.elasticsearch</groupId>
-            <artifactId>elasticsearch-x-content</artifactId>
-            <version>${elasticsearch.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.elasticsearch</groupId>
-            <artifactId>elasticsearch-geo</artifactId>
-            <version>${elasticsearch.version}</version>
-        </dependency>
-        -->
-        <dependency>
-            <groupId>org.elasticsearch.test</groupId>
-            <artifactId>framework</artifactId>
-            <version>${elasticsearch.version}</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.elasticsearch.plugin</groupId>
-            <artifactId>transport-netty4-client</artifactId>
-            <version>${elasticsearch.version}</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.lucene</groupId>
-            <artifactId>lucene-test-framework</artifactId>
-            <version>${lucene.version}</version>
-            <scope>test</scope>
-            <exclusions>
-                <exclusion>
-                    <!-- internal dep that is scoped "compile", ending up to be embedded and conflicting with ES Rest client internal deps -->
-                    <groupId>org.apache.lucene</groupId>
-                    <artifactId>lucene-core</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.logging.log4j</groupId>
-            <artifactId>log4j-slf4j-impl</artifactId>
-            <version>2.17.0</version>
-            <scope>test</scope>
         </dependency>
 
         <!-- The following are optional dependencies from the ElasticSearch that are made mandatory -->
-
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
             <artifactId>log4j-api</artifactId>
-            <version>2.17.0</version>
             <scope>compile</scope>
             <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
             <artifactId>log4j-core</artifactId>
-            <version>2.17.0</version>
             <scope>compile</scope>
             <exclusions>
                 <exclusion>
@@ -149,7 +108,6 @@
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
             <artifactId>log4j-1.2-api</artifactId>
-            <version>2.17.0</version>
             <scope>compile</scope>
             <exclusions>
                 <exclusion>
@@ -163,43 +121,40 @@
             </exclusions>
             <optional>true</optional>
         </dependency>
-
         <!-- End of optional ElasticSearch dependencies -->
-
-        <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-databind</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>org.apache.commons</groupId>
-            <artifactId>commons-lang3</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>commons-io</groupId>
-            <artifactId>commons-io</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>org.apache.unomi</groupId>
-            <artifactId>unomi-metrics</artifactId>
-            <version>${project.version}</version>
-            <scope>provided</scope>
-        </dependency>
 
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
             <scope>test</scope>
         </dependency>
-
         <dependency>
-            <groupId>org.apache.unomi</groupId>
-            <artifactId>unomi-scripting</artifactId>
-            <version>${project.version}</version>
-            <scope>provided</scope>
+            <groupId>org.elasticsearch.test</groupId>
+            <artifactId>framework</artifactId>
+            <scope>test</scope>
         </dependency>
-
+        <dependency>
+            <groupId>org.elasticsearch.plugin</groupId>
+            <artifactId>transport-netty4-client</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.lucene</groupId>
+            <artifactId>lucene-test-framework</artifactId>
+            <scope>test</scope>
+            <exclusions>
+                <exclusion>
+                    <!-- internal dep that is scoped "compile", ending up to be embedded and conflicting with ES Rest client internal deps -->
+                    <groupId>org.apache.lucene</groupId>
+                    <artifactId>lucene-core</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-slf4j-impl</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>

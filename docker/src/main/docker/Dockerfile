@@ -15,7 +15,7 @@
 # limitations under the License.
 ################################################################################
 
-FROM library/eclipse-temurin:11
+FROM library/eclipse-temurin:17
 
 # Unomi environment variables
 ENV UNOMI_HOME /opt/apache-unomi

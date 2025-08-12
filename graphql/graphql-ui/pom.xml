@@ -21,9 +21,8 @@
     <parent>
         <groupId>org.apache.unomi</groupId>
         <artifactId>unomi-graphql</artifactId>
-        <version>2.7.0-SNAPSHOT</version>
+        <version>3.0.0-SNAPSHOT</version>
     </parent>
-
     <artifactId>unomi-graphql-ui</artifactId>
     <name>Apache Unomi :: GraphQL API :: GraphQL UI</name>
     <description>An integrated GraphQL UI</description>
@@ -37,7 +36,6 @@
         <dependency>
             <groupId>org.apache.unomi</groupId>
             <artifactId>unomi-api</artifactId>
-            <version>${project.version}</version>
             <scope>provided</scope>
         </dependency>
         <dependency>

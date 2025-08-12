@@ -21,23 +21,11 @@
     <parent>
         <groupId>org.apache.unomi</groupId>
         <artifactId>unomi-root</artifactId>
-        <version>2.7.0-SNAPSHOT</version>
+        <version>3.0.0-SNAPSHOT</version>
     </parent>
     <artifactId>unomi-itests</artifactId>
     <name>Apache Unomi :: Integration Tests</name>
     <description>Apache Unomi Context Server integration tests</description>
-
-    <dependencyManagement>
-        <dependencies>
-            <dependency>
-                <groupId>org.apache.karaf</groupId>
-                <artifactId>karaf-bom</artifactId>
-                <version>${karaf.version}</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
-        </dependencies>
-    </dependencyManagement>
 
     <dependencies>
         <!-- Provide the KarafTestSupport -->
@@ -111,30 +99,26 @@
         <dependency>
             <groupId>org.eclipse.jetty.websocket</groupId>
             <artifactId>websocket-client</artifactId>
-            <version>9.4.28.v20200408</version>
+            <version>${jetty.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.unomi</groupId>
             <artifactId>unomi-lifecycle-watcher</artifactId>
-            <version>${project.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.unomi</groupId>
             <artifactId>unomi-persistence-spi</artifactId>
-            <version>${project.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.unomi</groupId>
             <artifactId>shell-commands</artifactId>
-            <version>${project.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.unomi</groupId>
             <artifactId>unomi-groovy-actions-services</artifactId>
-            <version>${project.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -257,7 +241,7 @@
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-failsafe-plugin</artifactId>
-                        <version>3.0.0-M4</version>
+                        <version>${maven-failsafe.plugin.version}</version>
                         <configuration>
                             <includes>
                                 <include>**/*AllITs.java</include>
