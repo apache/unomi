@@ -56,7 +56,7 @@ public class ExpressionFilterFactoryImpl implements ExpressionFilterFactory,Bund
     }
 
     public void init() {
-        String initialFilterCollections = System.getProperty("org.apache.unomi.scripting.filter.collections", "mvel,ognl");
+        String initialFilterCollections = System.getProperty("org.apache.unomi.scripting.filter.collections", "mvel");
         String[] initialFilterCollectionParts = initialFilterCollections.split(",");
         if (initialFilterCollectionParts != null) {
             for (String initialFilterCollection : initialFilterCollectionParts) {
