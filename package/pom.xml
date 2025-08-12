@@ -316,7 +316,7 @@
                         <feature>unomi-rest-ui</feature>
                         -->
                     </bootFeatures>
-                    <javase>11</javase>
+                    <javase>17</javase>
                 </configuration>
             </plugin>
             <plugin>
