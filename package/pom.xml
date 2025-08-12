@@ -73,16 +73,13 @@
         <dependency>
             <groupId>org.apache.unomi</groupId>
             <artifactId>unomi-kar</artifactId>
-            <version>${project.version}</version>
             <classifier>features</classifier>
             <type>xml</type>
             <scope>runtime</scope>
         </dependency>
-        <!--
         <dependency>
             <groupId>org.apache.unomi</groupId>
             <artifactId>unomi-router-karaf-feature</artifactId>
-            <version>${project.version}</version>
             <classifier>features</classifier>
             <type>xml</type>
             <scope>runtime</scope>
@@ -90,7 +87,6 @@
         <dependency>
             <groupId>org.apache.unomi</groupId>
             <artifactId>unomi-groovy-actions</artifactId>
-            <version>${project.version}</version>
             <classifier>features</classifier>
             <type>xml</type>
             <scope>runtime</scope>
@@ -98,12 +94,10 @@
         <dependency>
             <groupId>org.apache.unomi</groupId>
             <artifactId>cdp-graphql-feature</artifactId>
-            <version>${project.version}</version>
             <classifier>features</classifier>
             <type>xml</type>
             <scope>runtime</scope>
         </dependency>
-        -->
     </dependencies>
 
     <build>
@@ -154,7 +148,6 @@
                                 <artifactItem>
                                     <groupId>org.apache.unomi</groupId>
                                     <artifactId>unomi-wab</artifactId>
-                                    <version>${project.version}</version>
                                     <classifier>unomicfg</classifier>
                                     <type>cfg</type>
                                     <outputDirectory>${project.build.directory}/assembly/etc</outputDirectory>
@@ -163,7 +156,6 @@
                                 <artifactItem>
                                     <groupId>org.apache.unomi</groupId>
                                     <artifactId>unomi-persistence-elasticsearch-core</artifactId>
-                                    <version>${project.version}</version>
                                     <classifier>elasticsearchcfg</classifier>
                                     <type>cfg</type>
                                     <outputDirectory>${project.build.directory}/assembly/etc</outputDirectory>
@@ -172,7 +164,6 @@
                                 <artifactItem>
                                     <groupId>org.apache.unomi</groupId>
                                     <artifactId>unomi-services</artifactId>
-                                    <version>${project.version}</version>
                                     <classifier>clustercfg</classifier>
                                     <type>cfg</type>
                                     <outputDirectory>${project.build.directory}/assembly/etc</outputDirectory>
@@ -181,17 +172,14 @@
                                 <artifactItem>
                                     <groupId>org.apache.unomi</groupId>
                                     <artifactId>unomi-services</artifactId>
-                                    <version>${project.version}</version>
                                     <classifier>servicescfg</classifier>
                                     <type>cfg</type>
                                     <outputDirectory>${project.build.directory}/assembly/etc</outputDirectory>
                                     <destFileName>org.apache.unomi.services.cfg</destFileName>
                                 </artifactItem>
-                                <!--
                                 <artifactItem>
                                     <groupId>org.apache.unomi</groupId>
                                     <artifactId>unomi-plugins-request</artifactId>
-                                    <version>${project.version}</version>
                                     <classifier>requestcfg</classifier>
                                     <type>cfg</type>
                                     <outputDirectory>${project.build.directory}/assembly/etc</outputDirectory>
@@ -200,7 +188,6 @@
                                 <artifactItem>
                                     <groupId>org.apache.unomi</groupId>
                                     <artifactId>unomi-plugins-base</artifactId>
-                                    <version>${project.version}</version>
                                     <classifier>pluginsbasecfg</classifier>
                                     <type>cfg</type>
                                     <outputDirectory>${project.build.directory}/assembly/etc</outputDirectory>
@@ -209,7 +196,6 @@
                                 <artifactItem>
                                     <groupId>org.apache.unomi</groupId>
                                     <artifactId>unomi-groovy-actions-services</artifactId>
-                                    <version>${project.version}</version>
                                     <classifier>groovyactionscfg</classifier>
                                     <type>cfg</type>
                                     <outputDirectory>${project.build.directory}/assembly/etc</outputDirectory>
@@ -218,7 +204,6 @@
                                 <artifactItem>
                                     <groupId>org.apache.unomi</groupId>
                                     <artifactId>unomi-plugins-mail</artifactId>
-                                    <version>${project.version}</version>
                                     <classifier>mailcfg</classifier>
                                     <type>cfg</type>
                                     <outputDirectory>${project.build.directory}/assembly/etc</outputDirectory>
@@ -227,13 +212,11 @@
                                 <artifactItem>
                                     <groupId>org.apache.unomi</groupId>
                                     <artifactId>unomi-router-core</artifactId>
-                                    <version>${project.version}</version>
                                     <classifier>routercfg</classifier>
                                     <type>cfg</type>
                                     <outputDirectory>${project.build.directory}/assembly/etc</outputDirectory>
                                     <destFileName>org.apache.unomi.router.cfg</destFileName>
                                 </artifactItem>
-                                -->
                             </artifactItems>
                         </configuration>
                     </execution>
@@ -277,11 +260,9 @@
                     </execution>
                 </executions>
                 <configuration>
-                    <!--
                     <startupBundles>
                         <bundle>mvn:org.apache.unomi/log4j-extension/${project.version}</bundle>
                     </startupBundles>
-                    -->
                     <installedFeatures>
                         <feature>wrapper</feature>
                         <feature>cxf-commands</feature>
@@ -310,11 +291,9 @@
                         <feature>aries-blueprint</feature>
                         <feature>shell-compat</feature>
                         <feature>unomi-kar</feature>
-                        <!--
                         <feature>unomi-router-karaf-feature</feature>
                         <feature>unomi-groovy-actions</feature>
                         <feature>unomi-rest-ui</feature>
-                        -->
                     </bootFeatures>
                     <javase>17</javase>
                 </configuration>
