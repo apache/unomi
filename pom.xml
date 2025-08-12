@@ -93,7 +93,6 @@
         <org-json.version>20250517</org-json.version>
         <jsr305.version>3.0.2</jsr305.version>
         <jakarta-annotation-api.version>3.0.0</jakarta-annotation-api.version>
-        <swagger.version>2.2.16</swagger.version>
         <swagger-ui.version>5.27.1</swagger-ui.version>
         <cxf.version>3.6.5</cxf.version>
         <rs-api.version>2.1</rs-api.version>
@@ -1272,16 +1271,6 @@
                 <groupId>org.webjars</groupId>
                 <artifactId>swagger-ui</artifactId>
                 <version>${swagger-ui.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>io.swagger.core.v3</groupId>
-                <artifactId>swagger-jaxrs2</artifactId>
-                <version>${swagger.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>io.swagger.core.v3</groupId>
-                <artifactId>swagger-annotations</artifactId>
-                <version>${swagger.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.groovy</groupId>
