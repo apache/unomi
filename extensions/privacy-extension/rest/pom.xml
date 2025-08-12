@@ -87,23 +87,40 @@
             <artifactId>jackson-jaxrs-json-provider</artifactId>
             <scope>provided</scope>
         </dependency>
+
+        <dependency>
+            <groupId>io.swagger.core.v3</groupId>
+            <artifactId>swagger-jaxrs2</artifactId>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.swagger.core.v3</groupId>
+            <artifactId>swagger-annotations</artifactId>
+            <scope>compile</scope>
+        </dependency>
     </dependencies>
 
     <build>
         <plugins>
             <plugin>
-                <groupId>com.sebastian-daschner</groupId>
-                <artifactId>jaxrs-analyzer-maven-plugin</artifactId>
-                <version>0.17</version>
+                <groupId>io.swagger.core.v3</groupId>
+                <artifactId>swagger-maven-plugin</artifactId>
+                <version>${swagger.version}</version>
+                <configuration>
+                    <outputFileName>openapi</outputFileName>
+                    <outputPath>${project.build.directory}/generated/swagger</outputPath>
+                    <outputFormat>JSONANDYAML</outputFormat>
+                    <resourcePackages>
+                        <package>org.apache.unomi.privacy.rest</package>
+                    </resourcePackages>
+                    <prettyPrint>true</prettyPrint>
+                </configuration>
                 <executions>
                     <execution>
                         <goals>
-                            <goal>analyze-jaxrs</goal>
+                            <goal>resolve</goal>
                         </goals>
-                        <configuration>
-                            <backend>swagger</backend>
-                            <deployedDomain>unomi.apache.org</deployedDomain>
-                        </configuration>
+                        <phase>compile</phase>
                     </execution>
                 </executions>
             </plugin>
