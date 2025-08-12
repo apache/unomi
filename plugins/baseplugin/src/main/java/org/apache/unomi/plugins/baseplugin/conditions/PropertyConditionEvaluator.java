@@ -17,19 +17,19 @@
 
 package org.apache.unomi.plugins.baseplugin.conditions;
 
-import ognl.*;
-import ognl.enhance.ExpressionAccessor;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.unomi.api.*;
+import org.apache.unomi.api.Event;
+import org.apache.unomi.api.GeoPoint;
+import org.apache.unomi.api.Item;
 import org.apache.unomi.api.conditions.Condition;
-import org.apache.unomi.plugins.baseplugin.conditions.accessors.HardcodedPropertyAccessor;
-import org.apache.unomi.scripting.ExpressionFilterFactory;
-import org.apache.unomi.scripting.SecureFilteringClassLoader;
 import org.apache.unomi.persistence.elasticsearch.conditions.ConditionContextHelper;
 import org.apache.unomi.persistence.elasticsearch.conditions.ConditionEvaluator;
 import org.apache.unomi.persistence.elasticsearch.conditions.ConditionEvaluatorDispatcher;
 import org.apache.unomi.persistence.spi.PropertyHelper;
+import org.apache.unomi.plugins.baseplugin.conditions.accessors.HardcodedPropertyAccessor;
+import org.apache.unomi.scripting.ExpressionFilterFactory;
+import org.apache.unomi.scripting.SecureFilteringClassLoader;
 import org.elasticsearch.ElasticsearchParseException;
 import org.elasticsearch.common.joda.Joda;
 import org.elasticsearch.common.joda.JodaDateMathParser;
@@ -37,8 +37,6 @@ import org.elasticsearch.common.unit.DistanceUnit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.lang.reflect.Member;
-import java.lang.reflect.Modifier;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.regex.Pattern;
@@ -53,13 +51,10 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
 
     private static final SimpleDateFormat yearMonthDayDateFormat = new SimpleDateFormat("yyyyMMdd");
 
-    private final Map<String, Map<String, ExpressionAccessor>> expressionCache = new HashMap<>(64);
     private boolean usePropertyConditionOptimizations = true;
     private static final ClassLoader secureFilteringClassLoader = new SecureFilteringClassLoader(PropertyConditionEvaluator.class.getClassLoader());
     private static final HardcodedPropertyAccessorRegistry hardcodedPropertyAccessorRegistry = new HardcodedPropertyAccessorRegistry();
     private ExpressionFilterFactory expressionFilterFactory;
-
-    private final boolean useOGNLScripting = Boolean.parseBoolean(System.getProperty("org.apache.unomi.security.properties.useOGNLScripting", "false"));
 
     public void setUsePropertyConditionOptimizations(boolean usePropertyConditionOptimizations) {
         this.usePropertyConditionOptimizations = usePropertyConditionOptimizations;
@@ -67,12 +62,6 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
 
     public void setExpressionFilterFactory(ExpressionFilterFactory expressionFilterFactory) {
         this.expressionFilterFactory = expressionFilterFactory;
-    }
-
-    public void init() {
-        if (!useOGNLScripting) {
-            LOGGER.info("OGNL Script disabled, properties using OGNL won't be evaluated");
-        }
     }
 
     private int compare(Object actualValue, String expectedValue, Object expectedValueDate, Object expectedValueInteger, Object expectedValueDateExpr, Object expectedValueDouble) {
@@ -193,9 +182,7 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
                 // property not found
                 actualValue = null;
             } catch (Exception e) {
-                if (!(e instanceof OgnlException)
-                        || (!StringUtils.startsWith(e.getMessage(),
-                        "source is null for getProperty(null"))) {
+                if ((!StringUtils.startsWith(e.getMessage(),"source is null for getProperty(null"))) {
                     LOGGER.warn("Error evaluating value for {} {}. See debug level for more information", item.getClass().getName(), name);
                     if (LOGGER.isDebugEnabled()) LOGGER.debug("Error evaluating value for {} {}", item.getClass().getName(), name, e);
                 }
@@ -320,9 +307,6 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
                 return result;
             }
         }
-        if (useOGNLScripting) {
-            return getOGNLPropertyValue(item, expression);
-        }
         return null;
     }
 
@@ -330,107 +314,6 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
         // the following are optimizations to avoid using the expressions that are slower. The main objective here is
         // to avoid the most used expression that may also trigger calls to the Java Reflection API.
         return hardcodedPropertyAccessorRegistry.getProperty(item, expression);
-    }
-
-    protected Object getOGNLPropertyValue(Item item, String expression) throws Exception {
-        if (expressionFilterFactory.getExpressionFilter("ognl").filter(expression) == null) {
-            LOGGER.warn("OGNL expression filtered because not allowed on item: {}. See debug log level for more information", item.getClass().getName());
-            LOGGER.debug("OGNL expression filtered because not allowed: {}", expression);
-            return null;
-        }
-        OgnlContext ognlContext = getOgnlContext(secureFilteringClassLoader);
-        ExpressionAccessor accessor = getPropertyAccessor(item, expression, ognlContext, secureFilteringClassLoader);
-        if (accessor != null) {
-            try {
-                return accessor.get(ognlContext, item);
-            } catch (Throwable t) {
-                LOGGER.error("Error evaluating expression on item {}. See debug level for more information", item.getClass().getName());
-                LOGGER.debug("Error evaluating expression {} on item {}.", expression, item.getClass().getName(), t);
-                return null;
-            }
-        }
-        return null;
-    }
-
-    private class ClassLoaderClassResolver extends DefaultClassResolver {
-        private ClassLoader classLoader;
-
-        public ClassLoaderClassResolver(ClassLoader classLoader) {
-            this.classLoader = classLoader;
-        }
-
-        @Override
-        protected Class toClassForName(String className) throws ClassNotFoundException {
-            return Class.forName(className, true, classLoader);
-        }
-    }
-
-    private OgnlContext getOgnlContext(ClassLoader classLoader) {
-        return (OgnlContext) Ognl.createDefaultContext(null, new MemberAccess() {
-                    @Override
-                    public Object setup(OgnlContext ognlContext, Object target, Member member, String propertyName) {
-                        return null;
-                    }
-
-                    @Override
-                    public void restore(OgnlContext ognlContext, Object target, Member member, String propertyName, Object state) {
-                    }
-
-                    @Override
-                    public boolean isAccessible(OgnlContext ognlContext, Object target, Member member, String propertyName) {
-                        int modifiers = member.getModifiers();
-                        boolean accessible = false;
-                        if (target instanceof Item && !"getClass".equals(member.getName())) {
-                            accessible = Modifier.isPublic(modifiers);
-                        }
-                        if (!accessible) {
-                            LOGGER.warn("OGNL security filtered target, member for property. See debug log level for more information");
-                            LOGGER.debug("OGNL security filtered: Target {} and member {} for property {}. Not allowed", target, member, propertyName);
-                        }
-                        return accessible;
-                    }
-                }, new ClassLoaderClassResolver(classLoader),
-                null);
-    }
-
-    private ExpressionAccessor getPropertyAccessor(Item item, String expression, OgnlContext ognlContext, ClassLoader classLoader) throws Exception {
-        ExpressionAccessor accessor = null;
-        String clazz = item.getClass().getName();
-        Map<String, ExpressionAccessor> expressions = expressionCache.get(clazz);
-        if (expressions == null) {
-            expressions = new HashMap<>();
-            expressionCache.put(clazz, expressions);
-        } else {
-            accessor = expressions.get(expression);
-        }
-        if (accessor == null) {
-            long time = System.nanoTime();
-            Thread current = Thread.currentThread();
-            ClassLoader contextCL = current.getContextClassLoader();
-            try {
-                current.setContextClassLoader(classLoader);
-                Node node = Ognl.compileExpression(ognlContext, item, expression);
-                accessor = node.getAccessor();
-            } finally {
-                current.setContextClassLoader(contextCL);
-            }
-            if (accessor != null) {
-                expressions.put(expression, accessor);
-            } else {
-                if (LOGGER.isDebugEnabled()) {
-                    LOGGER.debug("Unable to compile expression: {} for: {}", expression, clazz);
-                } else {
-                    LOGGER.warn("Unable to compile expression for {}. See debug log level for more information", clazz);
-                }
-            }
-            if (LOGGER.isDebugEnabled()) {
-                LOGGER.debug("Expression compilation for item={} expression={} took {}", item.getClass().getName(), expression, (System.nanoTime() - time) / 1000000L);
-            } else {
-                LOGGER.info("Expression compilation for item={} took {}. See debug log level for more information", item.getClass().getName(), (System.nanoTime() - time) / 1000000L);
-            }
-        }
-
-        return accessor;
     }
 
     protected static Date getDate(Object value) {

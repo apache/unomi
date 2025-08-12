@@ -940,6 +940,8 @@
                 <groupId>org.apache.unomi</groupId>
                 <artifactId>unomi-groovy-actions</artifactId>
                 <version>${project.version}</version>
+                <classifier>features</classifier>
+                <type>xml</type>
             </dependency>
             <dependency>
                 <groupId>org.apache.unomi</groupId>
@@ -950,6 +952,8 @@
                 <groupId>org.apache.unomi</groupId>
                 <artifactId>cdp-graphql-feature</artifactId>
                 <version>${project.version}</version>
+                <classifier>features</classifier>
+                <type>xml</type>
             </dependency>
             <dependency>
                 <groupId>org.apache.unomi</groupId>
@@ -980,11 +984,15 @@
                 <groupId>org.apache.unomi</groupId>
                 <artifactId>unomi-kar</artifactId>
                 <version>${project.version}</version>
+                <classifier>features</classifier>
+                <type>xml</type>
             </dependency>
             <dependency>
                 <groupId>org.apache.unomi</groupId>
                 <artifactId>unomi-router-karaf-feature</artifactId>
                 <version>${project.version}</version>
+                <classifier>features</classifier>
+                <type>xml</type>
             </dependency>
 
             <dependency>
@@ -1193,11 +1201,6 @@
                 <groupId>org.mvel</groupId>
                 <artifactId>mvel2</artifactId>
                 <version>${mvel2.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>ognl</groupId>
-                <artifactId>ognl</artifactId>
-                <version>${ognl.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.yaml</groupId>
