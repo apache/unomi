@@ -151,7 +151,7 @@
                                 </goals>
                                 <configuration>
                                     <url>
-                                        https://search.maven.org/remotecontent?filepath=org/jacoco/jacoco/0.8.8/jacoco-0.8.8.zip
+                                        https://search.maven.org/remotecontent?filepath=org/jacoco/jacoco/0.8.13/jacoco-0.8.13.zip
                                     </url>
                                     <outputFileName>jacoco.zip</outputFileName>
                                     <unpack>true</unpack>
@@ -307,7 +307,7 @@
                     <plugin>
                         <groupId>org.jacoco</groupId>
                         <artifactId>jacoco-maven-plugin</artifactId>
-                        <version>0.7.7.201606060606</version>
+                        <version>0.8.13</version>
                         <executions>
                             <execution>
                                 <phase>post-site</phase>
