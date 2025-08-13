@@ -1304,6 +1304,16 @@
             </dependency>
             <dependency>
                 <groupId>org.cometd.java</groupId>
+                <artifactId>cometd-java-common</artifactId>
+                <version>${comet-java-client.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.cometd.java</groupId>
+                <artifactId>cometd-java-client-http-common</artifactId>
+                <version>${comet-java-client.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.cometd.java</groupId>
                 <artifactId>cometd-java-client-common</artifactId>
                 <version>${comet-java-client.version}</version>
             </dependency>
