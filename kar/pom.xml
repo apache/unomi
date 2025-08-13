@@ -184,7 +184,7 @@
                                 <descriptor>file:${project.build.directory}/feature/feature.xml</descriptor>
                             </descriptors>
                             <distribution>org.apache.karaf:apache-karaf:zip:${karaf.version}</distribution>
-                            <javase>17</javase>
+                            <javase>21</javase>
                             <framework>
                                 <feature>framework</feature>
                             </framework>

@@ -68,10 +68,10 @@
                 <executions>
                     <execution>
                         <id>generate-features</id>
+                        <phase>generate-resources</phase>
                         <goals>
                             <goal>features-generate-descriptor</goal>
                         </goals>
-                        <phase>compile</phase>
                     </execution>
                 </executions>
             </plugin>
