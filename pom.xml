@@ -1072,12 +1072,6 @@
             </dependency>
 
             <dependency>
-                <groupId>org.apache.geronimo.specs</groupId>
-                <artifactId>geronimo-ws-metadata_2.0_spec</artifactId>
-                <version>${geronimo-ws.version}</version>
-            </dependency>
-
-            <dependency>
                 <groupId>org.apache.cxf</groupId>
                 <artifactId>cxf-rt-frontend-jaxws</artifactId>
                 <version>${cxf.version}</version>

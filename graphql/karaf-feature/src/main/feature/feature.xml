@@ -37,17 +37,17 @@
         <bundle start-level="80">mvn:org.eclipse.jetty.websocket/websocket-server/${jetty.version}</bundle>
         <bundle start-level="80">mvn:org.eclipse.jetty.websocket/websocket-common/${jetty.version}</bundle>
         <bundle start-level="80">mvn:org.eclipse.jetty.websocket/websocket-api/${jetty.version}</bundle>
+        <bundle start-level="80">mvn:org.eclipse.jetty.websocket/websocket-client/${jetty.version}</bundle>
+        <bundle start-level="80">mvn:org.eclipse.jetty.websocket/websocket-servlet/${jetty.version}</bundle>
         <bundle start-level="80">mvn:org.eclipse.jetty/jetty-util/${jetty.version}</bundle>
         <bundle start-level="80">mvn:org.eclipse.jetty/jetty-io/${jetty.version}</bundle>
-        <bundle start-level="80">mvn:org.eclipse.jetty.websocket/websocket-client/${jetty.version}</bundle>
         <bundle start-level="80">mvn:org.eclipse.jetty/jetty-client/${jetty.version}</bundle>
         <bundle start-level="80">mvn:org.eclipse.jetty/jetty-xml/${jetty.version}</bundle>
-        <bundle start-level="80">mvn:org.eclipse.jetty.websocket/websocket-servlet/${jetty.version}</bundle>
-        <bundle start-level="80">mvn:javax.servlet/javax.servlet-api/${servlet.spec.version}</bundle>
         <bundle start-level="80">mvn:org.eclipse.jetty/jetty-servlet/${jetty.version}</bundle>
         <bundle start-level="80">mvn:org.eclipse.jetty/jetty-security/${jetty.version}</bundle>
         <bundle start-level="80">mvn:org.eclipse.jetty/jetty-server/${jetty.version}</bundle>
         <bundle start-level="80">mvn:org.eclipse.jetty/jetty-http/${jetty.version}</bundle>
+        <bundle start-level="80">mvn:${servlet.spec.groupId}/${servlet.spec.artefactId}/${servlet.spec.version}</bundle>
         <bundle start-level="80">mvn:org.apache.unomi/cdp-graphql-api-impl/${project.version}</bundle>
         <bundle start-level="80">mvn:org.apache.unomi/unomi-graphql-ui/${project.version}</bundle>
     </feature>

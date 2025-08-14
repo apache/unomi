@@ -25,8 +25,6 @@ import org.osgi.service.component.annotations.Activate;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 
-import javax.jws.WebMethod;
-import javax.jws.WebService;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
@@ -36,7 +34,6 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Map;
 
-@WebService
 @Produces(MediaType.APPLICATION_JSON + ";charset=UTF-8")
 @CrossOriginResourceSharing(
         allowAllOrigins = true,
@@ -59,7 +56,6 @@ public class SFDCEndPoint {
         this.bundleContext = componentContext.getBundleContext();
     }
 
-    @WebMethod(exclude = true)
     public void setSFDCService(SFDCService sfdcService) {
         this.sfdcService = sfdcService;
     }

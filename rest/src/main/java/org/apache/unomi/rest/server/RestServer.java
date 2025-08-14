@@ -233,8 +233,8 @@ public class RestServer {
         openApiFeature.setLicense("Apache 2.0 License");
         openApiFeature.setLicenseUrl("http://www.apache.org/licenses/LICENSE-2.0.html");
         openApiFeature.setScan(false);
-        openApiFeature.setUseContextBasedConfig(
-                true);        //Set<String> resourceClasses = serviceBeans.stream().map(service -> service.getClass().getName()).collect(toSet());
+        openApiFeature.setUseContextBasedConfig(true);
+        //Set<String> resourceClasses = serviceBeans.stream().map(service -> service.getClass().getName()).collect(toSet());
         OpenApiCustomizer customizer = new OpenApiCustomizer();
         customizer.setDynamicBasePath(true);
         openApiFeature.setCustomizer(customizer);
