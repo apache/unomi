@@ -28,18 +28,4 @@
     <description>Apache Unomi Context Server extensions</description>
     <packaging>pom</packaging>
 
-    <modules>
-        <module>lists-extension</module>
-        <module>privacy-extension</module>
-        <module>geonames</module>
-        <module>router</module>
-        <module>salesforce-connector</module>
-        <module>weather-update</module>
-        <module>web-tracker</module>
-        <module>groovy-actions</module>
-        <module>json-schema</module>
-        <module>log4j-extension</module>
-        <module>healthcheck</module>
-    </modules>
-
 </project>
