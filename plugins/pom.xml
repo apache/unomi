@@ -28,18 +28,7 @@
     <description>Apache Unomi Context Server plugins</description>
     <packaging>pom</packaging>
 
-    <modules>
-        <module>baseplugin</module>
-        <module>request</module>
-        <module>mail</module>
-        <module>optimization-test</module>
-        <module>hover-event</module>
-        <module>past-event</module>
-        <module>tracked-event</module>
-        <module>kafka-injector</module>
-    </modules>
-
-    <dependencies>
+   <dependencies>
         <dependency>
             <groupId>org.apache.unomi</groupId>
             <artifactId>unomi-api</artifactId>

@@ -43,6 +43,12 @@
             <groupId>org.antlr</groupId>
             <artifactId>ST4</artifactId>
         </dependency>
+
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <scope>provided</scope>
+        </dependency>
     </dependencies>
 
     <build>

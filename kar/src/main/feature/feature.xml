@@ -28,7 +28,7 @@
         <feature prerequisite="true">config</feature>
         <feature prerequisite="true">scr</feature>
         <feature prerequisite="true">http</feature>
-        <feature>pax-logging</feature>
+        <feature prerequisite="true">log</feature>
         <feature>cxf</feature>
         <feature>cxf-jaxrs</feature>
         <feature>cxf-features-metrics</feature>
@@ -47,7 +47,6 @@
         <configfile finalname="/etc/org.apache.unomi.plugins.request.cfg">mvn:org.apache.unomi/unomi-plugins-request/${project.version}/cfg/requestcfg</configfile>
         <configfile finalname="/etc/org.apache.unomi.plugins.base.cfg">mvn:org.apache.unomi/unomi-plugins-base/${project.version}/cfg/pluginsbasecfg</configfile>
         <configfile finalname="/etc/org.apache.unomi.geonames.cfg">mvn:org.apache.unomi/cxs-geonames-services/${project.version}/cfg/geonamescfg</configfile>
-        <configfile finalname="/etc/org.apache.unomi.groovy.actions.cfg">mvn:org.apache.unomi/unomi-groovy-actions-services/${project.version}/cfg/groovyactionscfg</configfile>
         <configfile finalname="/etc/org.apache.unomi.schema.cfg">mvn:org.apache.unomi/unomi-json-schema-services/${project.version}/cfg/schemacfg</configfile>
         <bundle start-level="55">mvn:commons-collections/commons-collections/${commons-collections.version}</bundle>
         <bundle start-level="55">mvn:org.apache.commons/commons-lang3/${commons-lang3.version}</bundle>

@@ -1444,6 +1444,7 @@
         <module>persistence-elasticsearch</module>
         <module>services</module>
         <!-- plugins -->
+        <module>plugins</module>
         <module>plugins/baseplugin</module>
         <module>plugins/hover-event</module>
         <module>plugins/past-event</module>
@@ -1453,6 +1454,7 @@
         <module>plugins/optimization-test</module>
         <module>plugins/request</module>
         <!-- root level extensions -->
+        <module>extensions</module>
         <module>extensions/healthcheck</module>
         <module>extensions/log4j-extension</module>
         <module>extensions/geonames</module>
@@ -1463,6 +1465,7 @@
         <module>commands</module>
         <module>wab</module>
         <module>rest</module>
+        <module>manual</module>
         <module>kar</module>
         <!-- other extensions -->
         <module>extensions/groovy-actions</module>
@@ -1470,7 +1473,6 @@
         <module>extensions/salesforce-connector</module>
         <module>extensions/weather-update</module>
         <module>graphql</module>
-        <module>manual</module>
         <module>samples</module>
         <module>package</module>
     </modules>
