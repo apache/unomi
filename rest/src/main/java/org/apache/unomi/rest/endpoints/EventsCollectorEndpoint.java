@@ -28,23 +28,15 @@ import org.apache.unomi.utils.EventsRequestContext;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 
-import javax.jws.WebService;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.ws.rs.Consumes;
-import javax.ws.rs.GET;
-import javax.ws.rs.OPTIONS;
-import javax.ws.rs.POST;
-import javax.ws.rs.Path;
-import javax.ws.rs.Produces;
-import javax.ws.rs.QueryParam;
+import javax.ws.rs.*;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.util.Date;
 import java.util.List;
 
-@WebService
 @Produces(MediaType.APPLICATION_JSON + ";charset=UTF-8")
 @Consumes(MediaType.APPLICATION_JSON)
 @CrossOriginResourceSharing(allowAllOrigins = true, allowCredentials = true)

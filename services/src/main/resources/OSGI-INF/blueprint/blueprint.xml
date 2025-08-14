@@ -67,8 +67,7 @@
         </cm:default-properties>
     </cm:property-placeholder>
 
-    <reference id="persistenceService"
-               interface="org.apache.unomi.persistence.spi.PersistenceService"/>
+    <reference id="persistenceService" interface="org.apache.unomi.persistence.spi.PersistenceService"/>
     <reference id="httpService" interface="org.osgi.service.http.HttpService"/>
     <reference id="karafCellarClusterManager" interface="org.apache.karaf.cellar.core.ClusterManager"/>
     <reference id="karafCellarEventProducer" interface="org.apache.karaf.cellar.core.event.EventProducer"/>

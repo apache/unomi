@@ -26,8 +26,6 @@ import org.osgi.service.component.annotations.Reference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.jws.WebMethod;
-import javax.jws.WebService;
 import javax.ws.rs.*;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
@@ -38,7 +36,6 @@ import java.util.List;
 /**
  * A JAX-RS endpoint to access information about the context server's cluster.
  */
-@WebService
 @Produces(MediaType.APPLICATION_JSON)
 @CrossOriginResourceSharing(
         allowAllOrigins = true,
@@ -59,12 +56,10 @@ public class ClusterServiceEndPoint {
         LOGGER.info("Initializing cluster service endpoint...");
     }
 
-    @WebMethod(exclude = true)
     public void setClusterService(ClusterService clusterService) {
         this.clusterService = clusterService;
     }
 
-    @WebMethod(exclude = true)
     public void setMessageContext(MessageContext messageContext) {
         this.messageContext = messageContext;
     }

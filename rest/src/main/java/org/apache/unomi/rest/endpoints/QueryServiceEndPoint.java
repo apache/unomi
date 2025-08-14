@@ -28,8 +28,6 @@ import org.osgi.service.component.annotations.Reference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.jws.WebMethod;
-import javax.jws.WebService;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.*;
 import javax.ws.rs.core.Context;
@@ -40,7 +38,6 @@ import java.util.Map;
 /**
  * A JAX-RS endpoint to perform queries against context-server data.
  */
-@WebService
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 @CrossOriginResourceSharing(
@@ -58,13 +55,10 @@ public class QueryServiceEndPoint {
     @Reference
     private LocalizationHelper localizationHelper;
 
-    @WebMethod(exclude = true)
     public void setQueryService(QueryService queryService) {
         this.queryService = queryService;
     }
 
-
-    @WebMethod(exclude = true)
     public void setLocalizationHelper(LocalizationHelper localizationHelper) {
         this.localizationHelper = localizationHelper;
     }

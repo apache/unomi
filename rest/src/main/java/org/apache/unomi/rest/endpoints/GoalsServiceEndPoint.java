@@ -28,8 +28,6 @@ import org.apache.unomi.api.services.GoalsService;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 
-import javax.jws.WebMethod;
-import javax.jws.WebService;
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import java.util.Set;
@@ -37,7 +35,6 @@ import java.util.Set;
 /**
  * A JAX-RS endpoint to manage {@link Goal}s and related information.
  */
-@WebService
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 @CrossOriginResourceSharing(
@@ -51,7 +48,6 @@ public class GoalsServiceEndPoint {
     @Reference
     private GoalsService goalsService;
 
-    @WebMethod(exclude = true)
     public void setGoalsService(GoalsService goalsService) {
         this.goalsService = goalsService;
     }

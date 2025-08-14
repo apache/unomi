@@ -47,14 +47,23 @@ public class ContextServlet extends HttpServlet {
 
     private ConfigSharingService configSharingService;
 
-    @Override
-    public void init(ServletConfig config) throws ServletException {
-        super.init(config);
+    public ContextServlet() {
+        super();
+        LOGGER.info("ContextServlet created.");
+    }
+
+    public void setup() {
         configSharingService.setProperty("profileIdCookieName", profileIdCookieName);
         configSharingService.setProperty("profileIdCookieDomain", profileIdCookieDomain);
         configSharingService.setProperty("profileIdCookieMaxAgeInSeconds", profileIdCookieMaxAgeInSeconds);
         configSharingService.setProperty("profileIdCookieHttpOnly", profileIdCookieHttpOnly);
         configSharingService.setProperty("publicPostRequestBytesLimit", publicPostRequestBytesLimit);
+        LOGGER.info("ContextServlet setup done");
+    }
+
+    @Override
+    public void init(ServletConfig config) throws ServletException {
+        super.init(config);
         LOGGER.info("ContextServlet initialized.");
     }
 
