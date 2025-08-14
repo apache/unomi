@@ -264,6 +264,13 @@
                             <goal>archive</goal>
                         </goals>
                     </execution>
+                    <execution>
+                        <id>verify-feature</id>
+                        <phase>process-resources</phase>
+                        <goals>
+                            <goal>verify</goal>
+                        </goals>
+                    </execution>
                 </executions>
                 <configuration>
                     <startupBundles>
@@ -301,7 +308,7 @@
                         <feature>unomi-groovy-actions</feature>
                         <feature>unomi-rest-ui</feature>
                     </bootFeatures>
-                    <javase>21</javase>
+                    <javase>17</javase>
                 </configuration>
             </plugin>
             <plugin>

@@ -163,7 +163,7 @@
                 <executions>
                     <execution>
                         <id>generate-features</id>
-                        <phase>generate-resources</phase>
+                        <phase>process-resources</phase>
                         <goals>
                             <goal>features-generate-descriptor</goal>
                         </goals>
@@ -184,7 +184,7 @@
                                 <descriptor>file:${project.build.directory}/feature/feature.xml</descriptor>
                             </descriptors>
                             <distribution>org.apache.karaf:apache-karaf:zip:${karaf.version}</distribution>
-                            <javase>21</javase>
+                            <javase>17</javase>
                             <framework>
                                 <feature>framework</feature>
                             </framework>

@@ -40,7 +40,7 @@
         <dependency>
             <groupId>org.apache.unomi</groupId>
             <artifactId>unomi</artifactId>
-            <version>3.0.0-SNAPSHOT</version>
+            <version>${project.version}</version>
             <type>tar.gz</type>
             <scope>test</scope>
             <exclusions>

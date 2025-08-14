@@ -31,12 +31,6 @@
 
     <dependencies>
         <dependency>
-            <groupId>org.osgi</groupId>
-            <artifactId>osgi.core</artifactId>
-            <scope>provided</scope>
-        </dependency>
-
-        <dependency>
             <groupId>org.apache.unomi</groupId>
             <artifactId>unomi-api</artifactId>
             <scope>provided</scope>
@@ -63,6 +57,12 @@
         </dependency>
 
         <dependency>
+            <groupId>org.osgi</groupId>
+            <artifactId>osgi.core</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
             <groupId>com.hazelcast</groupId>
             <artifactId>hazelcast-all</artifactId>
             <scope>provided</scope>
@@ -71,14 +71,17 @@
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-lang3</artifactId>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>commons-io</groupId>
             <artifactId>commons-io</artifactId>
+            <scope>provided</scope>
         </dependency>
 
         <dependency>

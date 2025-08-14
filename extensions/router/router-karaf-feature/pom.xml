@@ -158,7 +158,8 @@
                     </execution>
                     <execution>
                         <id>verify-feature</id>
-                        <phase>process-resources</phase>
+                        <!-- Unable to verify until other features are built (built order pb to fix) -->
+                        <!-- <phase>process-resources</phase> -->
                         <goals>
                             <goal>verify</goal>
                         </goals>
@@ -170,7 +171,7 @@
                                 <descriptor>file:${project.build.directory}/feature/feature.xml</descriptor>
                             </descriptors>
                             <distribution>org.apache.karaf:apache-karaf:zip:${karaf.version}</distribution>
-                            <javase>21</javase>
+                            <javase>17</javase>
                             <framework>
                                 <feature>framework</feature>
                             </framework>

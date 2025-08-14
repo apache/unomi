@@ -18,11 +18,9 @@
 FROM library/eclipse-temurin:17
 
 # Unomi environment variables
-ENV UNOMI_HOME /opt/apache-unomi
-ENV PATH $PATH:$UNOMI_HOME/bin
-
-ENV KARAF_OPTS "-Dunomi.autoStart=true"
-
+ENV UNOMI_HOME=/opt/apache-unomi
+ENV PATH=$PATH:$UNOMI_HOME/bin
+ENV KARAF_OPTS="-Dunomi.autoStart=true"
 ENV UNOMI_ELASTICSEARCH_ADDRESSES=localhost:9200
 
 WORKDIR $UNOMI_HOME
