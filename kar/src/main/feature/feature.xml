@@ -28,6 +28,7 @@
         <feature prerequisite="true">config</feature>
         <feature prerequisite="true">scr</feature>
         <feature prerequisite="true">http</feature>
+        <feature>pax-logging</feature>
         <feature>cxf</feature>
         <feature>cxf-jaxrs</feature>
         <feature>cxf-features-metrics</feature>
