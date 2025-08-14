@@ -158,8 +158,7 @@
                     </execution>
                     <execution>
                         <id>verify-feature</id>
-                        <!-- Unable to verify until other features are built (built order pb to fix) -->
-                        <!-- <phase>process-resources</phase> -->
+                        <phase>process-resources</phase>
                         <goals>
                             <goal>verify</goal>
                         </goals>

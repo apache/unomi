@@ -96,7 +96,6 @@
         <swagger-ui.version>5.27.1</swagger-ui.version>
         <cxf.version>3.6.5</cxf.version>
         <rs-api.version>2.1</rs-api.version>
-        <geronimo-ws.version>1.1.3</geronimo-ws.version>
         <groovy.version>4.0.28</groovy.version>
         <httpclient-osgi.version>4.5.14</httpclient-osgi.version>
         <httpcore-osgi.version>4.4.16</httpcore-osgi.version>
@@ -1444,15 +1443,35 @@
         <module>lifecycle-watcher</module>
         <module>persistence-elasticsearch</module>
         <module>services</module>
-        <module>manual</module>
+        <!-- plugins -->
+        <module>plugins/baseplugin</module>
+        <module>plugins/hover-event</module>
+        <module>plugins/past-event</module>
+        <module>plugins/tracked-event</module>
+        <module>plugins/kafka-injector</module>
+        <module>plugins/mail</module>
+        <module>plugins/optimization-test</module>
+        <module>plugins/request</module>
+        <!-- root level extensions -->
+        <module>extensions/healthcheck</module>
+        <module>extensions/log4j-extension</module>
+        <module>extensions/geonames</module>
+        <module>extensions/json-schema</module>
+        <module>extensions/lists-extension</module>
+        <module>extensions/privacy-extension</module>
+        <module>extensions/web-tracker</module>
+        <module>commands</module>
         <module>wab</module>
         <module>rest</module>
-        <module>graphql</module>
-        <module>plugins</module>
-        <module>extensions</module>
-        <module>tools</module>
-        <module>samples</module>
         <module>kar</module>
+        <!-- other extensions -->
+        <module>extensions/groovy-actions</module>
+        <module>extensions/router</module>
+        <module>extensions/salesforce-connector</module>
+        <module>extensions/weather-update</module>
+        <module>graphql</module>
+        <module>manual</module>
+        <module>samples</module>
         <module>package</module>
     </modules>
 

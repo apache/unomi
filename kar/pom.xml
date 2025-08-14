@@ -163,7 +163,7 @@
                 <executions>
                     <execution>
                         <id>generate-features</id>
-                        <phase>process-resources</phase>
+                        <phase>generate-resources</phase>
                         <goals>
                             <goal>features-generate-descriptor</goal>
                         </goals>
