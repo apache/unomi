@@ -245,8 +245,6 @@
                             org.xml.sax.ext;resolution:=optional,
                             org.xml.sax.helpers;resolution:=optional,
                             org.zeromq;resolution:=optional,
-                            sun.misc;resolution:=optional,
-                            sun.nio.ch;resolution:=optional,
                             *
                         </Import-Package>
                         <Export-Package>

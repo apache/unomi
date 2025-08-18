@@ -32,7 +32,6 @@
 
     <properties>
         <version.schema>1.0.86</version.schema>
-        <version.schema.jackson>2.17.1</version.schema.jackson>
         <version.schema.itu>1.7.0</version.schema.itu>
     </properties>
 
@@ -133,7 +132,6 @@
                             org.jcodings.specific;resolution:=optional,
                             org.joni;resolution:=optional,
                             org.joni.exception;resolution:=optional,
-                            sun.nio.ch;resolution:=optional,
                             *
                         </Import-Package>
                     </instructions>

@@ -39,9 +39,15 @@
             <groupId>org.apache.unomi</groupId>
             <artifactId>unomi-common</artifactId>
         </dependency>
+        <!--
         <dependency>
             <groupId>org.apache.unomi</groupId>
             <artifactId>unomi-wab</artifactId>
+        </dependency>
+        -->
+        <dependency>
+            <groupId>org.apache.unomi</groupId>
+            <artifactId>unomi-rest</artifactId>
         </dependency>
         <dependency>
             <groupId>org.apache.unomi</groupId>
@@ -119,10 +125,12 @@
             <groupId>org.apache.unomi</groupId>
             <artifactId>shell-dev-commands</artifactId>
         </dependency>
+        <!--
         <dependency>
             <groupId>org.apache.unomi</groupId>
             <artifactId>unomi-web-tracker-wab</artifactId>
         </dependency>
+        -->
 
         <dependency>
             <groupId>joda-time</groupId>

@@ -22,6 +22,7 @@
     <repository>mvn:org.apache.cxf.karaf/apache-cxf/${cxf.version}/xml/features</repository>
 
     <feature description="unomi-kar" version="${project.version}" name="unomi-kar" start-level="70">
+        <requirement>osgi.service;effective:=active;filter:=(objectClass=org.osgi.service.http.HttpService)</requirement>
         <feature prerequisite="true">wrap</feature>
         <feature prerequisite="true">aries-blueprint</feature>
         <feature prerequisite="true">war</feature>
@@ -29,8 +30,7 @@
         <feature prerequisite="true">scr</feature>
         <feature prerequisite="true">http</feature>
         <feature prerequisite="true">log</feature>
-        <feature>cxf</feature>
-        <feature>cxf-jaxrs</feature>
+        <feature version="${cxf.version}" dependency="true">cxf-jaxrs</feature>
         <feature>cxf-features-metrics</feature>
         <feature>cxf-rs-security-cors</feature>
         <feature>cxf-rs-description-openapi-v3</feature>
@@ -54,6 +54,7 @@
         <bundle start-level="55">mvn:commons-io/commons-io/${commons-io.version}</bundle>
         <bundle start-level="55">mvn:org.apache.httpcomponents/httpcore-osgi/${httpcore-osgi.version}</bundle>
         <bundle start-level="55">mvn:org.apache.httpcomponents/httpclient-osgi/${httpclient-osgi.version}</bundle>
+        <bundle start-level="55">mvn:javax.validation/validation-api/${javax-validation.version}</bundle>
         <bundle start-level="55">mvn:com.fasterxml.jackson.core/jackson-core/${jackson.version}</bundle>
         <bundle start-level="55">mvn:com.fasterxml.jackson.core/jackson-databind/${jackson.version}</bundle>
         <bundle start-level="55">mvn:com.fasterxml.jackson.core/jackson-annotations/${jackson.version}</bundle>

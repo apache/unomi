@@ -306,7 +306,7 @@
                         <feature>unomi-kar</feature>
                         <feature>unomi-router-karaf-feature</feature>
                         <feature>unomi-groovy-actions</feature>
-                        <feature>unomi-rest-ui</feature>
+                        <!--<feature>unomi-rest-ui</feature>-->
                     </bootFeatures>
                     <javase>17</javase>
                 </configuration>
