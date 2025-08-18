@@ -28,7 +28,7 @@
                              update-strategy="reload" placeholder-prefix="${lifecycle.">
         <cm:default-properties>
             <cm:property name="checkStartupState.refresh.interval" value="60"/>
-            <cm:property name="requiredServices" value="(urlPatterns=/eventcollector),(urlPatterns=/context.json),(osgi.service.blueprint.compname=elasticSearchPersistenceServiceImpl)" />
+            <cm:property name="requiredServices" value="(osgi.service.blueprint.compname=elasticSearchPersistenceServiceImpl)" />
         </cm:default-properties>
     </cm:property-placeholder>
 
