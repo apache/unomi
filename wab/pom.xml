@@ -43,6 +43,36 @@
         </dependency>
 
         <dependency>
+            <groupId>org.osgi</groupId>
+            <artifactId>org.osgi.framework</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.osgi</groupId>
+            <artifactId>org.osgi.util.tracker</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.osgi</groupId>
+            <artifactId>org.osgi.service.component</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.osgi</groupId>
+            <artifactId>org.osgi.service.component.annotations</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.osgi</groupId>
+            <artifactId>org.osgi.service.metatype</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.osgi</groupId>
+            <artifactId>org.osgi.service.metatype.annotations</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
             <groupId>javax.servlet</groupId>
             <artifactId>javax.servlet-api</artifactId>
             <scope>provided</scope>
@@ -82,7 +112,6 @@
             <artifactId>commons-collections</artifactId>
             <scope>provided</scope>
         </dependency>
-
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-lang3</artifactId>
@@ -94,10 +123,6 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>com.opencsv</groupId>
-            <artifactId>opencsv</artifactId>
-        </dependency>
-        <dependency>
             <groupId>commons-beanutils</groupId>
             <artifactId>commons-beanutils</artifactId>
             <scope>provided</scope>
@@ -106,6 +131,11 @@
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
             <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.opencsv</groupId>
+            <artifactId>opencsv</artifactId>
         </dependency>
     </dependencies>
 
@@ -120,15 +150,6 @@
                         <_wab>src/main/webapp</_wab>
                         <Embed-Dependency>*;scope=compile|runtime</Embed-Dependency>
                         <Embed-Directory>WEB-INF/lib</Embed-Directory>
-                        <Import-Package>
-                            org.apache.unomi.api,
-                            org.apache.unomi.api.conditions,
-                            org.apache.unomi.api.segments,
-                            org.apache.unomi.api.rules,
-                            org.apache.unomi.api.query,
-                            sun.nio.ch;resolution:=optional,
-                            *
-                        </Import-Package>
                         <Web-ContextPath>/</Web-ContextPath>
                     </instructions>
                 </configuration>

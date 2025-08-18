@@ -22,6 +22,7 @@ import org.slf4j.LoggerFactory;
 
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
+import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -31,8 +32,9 @@ import java.io.IOException;
  * @deprecated this servlet is now deprecated, because it have been migrated to REST endpoint.
  */
 @Deprecated
+@WebServlet(name = "EventsCollectorServlet", urlPatterns = "/eventcollector")
 public class EventsCollectorServlet extends HttpServlet {
-    private static final long serialVersionUID = 2008054804885122957L;
+
     private static final Logger LOGGER = LoggerFactory.getLogger(EventsCollectorServlet.class.getName());
 
     @Override
