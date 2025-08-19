@@ -32,7 +32,7 @@ import java.util.Date;
 import java.util.Objects;
 import java.util.Optional;
 
-@Component(service = ActionExecutor.class, immediate = true, property = {"actionType=cdp_sessionEvent"})
+@Component(service = ActionExecutor.class, immediate = true, property = {"actionExecutorId=cdp_sessionEvent"})
 public class CDPSessionAction implements ActionExecutor {
 
     private EventService eventService;
