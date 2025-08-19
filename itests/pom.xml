@@ -26,6 +26,19 @@
     <artifactId>unomi-itests</artifactId>
     <name>Apache Unomi :: Integration Tests</name>
     <description>Apache Unomi Context Server integration tests</description>
+    <packaging>jar</packaging>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.apache.unomi</groupId>
+                <artifactId>unomi-bom</artifactId>
+                <version>${project.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 
     <dependencies>
         <!-- Provide the KarafTestSupport -->
@@ -130,7 +143,6 @@
     </dependencies>
 
     <profiles>
-
         <profile>
             <id>run-tests</id>
             <activation>
@@ -202,7 +214,7 @@
                             <httpPort>9400</httpPort>
                             <version>${elasticsearch.test.version}</version>
                             <autoCreateIndex>true</autoCreateIndex>
-                            <timeout>120</timeout>
+                            <instanceStartupTimeout>120</instanceStartupTimeout>
                             <environmentVariables>
                                 <ES_JAVA_OPTS>-Xms4g -Xmx4g</ES_JAVA_OPTS>
                             </environmentVariables>

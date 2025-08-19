@@ -25,9 +25,21 @@
     </parent>
     <artifactId>unomi</artifactId>
     <version>3.0.0-SNAPSHOT</version>
-    <packaging>pom</packaging>
     <name>Apache Unomi :: Distribution Package</name>
     <description>Packaged distributions of the Apache Unomi Context Server</description>
+    <packaging>pom</packaging>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.apache.unomi</groupId>
+                <artifactId>unomi-bom</artifactId>
+                <version>${project.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 
     <properties>
         <appendedResourcesDirectory>${basedir}/../etc/appended-resources</appendedResourcesDirectory>

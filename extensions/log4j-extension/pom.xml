@@ -24,9 +24,21 @@
         <version>3.0.0-SNAPSHOT</version>
     </parent>
     <artifactId>log4j-extension</artifactId>
-    <packaging>bundle</packaging>
     <name>Apache Unomi :: Extensions :: Log4j Extension</name>
     <description>Apache Unomi log4j extensions</description>
+    <packaging>bundle</packaging>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.apache.unomi</groupId>
+                <artifactId>unomi-bom</artifactId>
+                <version>${project.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 
     <dependencies>
         <dependency>

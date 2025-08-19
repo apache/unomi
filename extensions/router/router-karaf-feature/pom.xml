@@ -26,6 +26,19 @@
     <name>Apache Unomi :: Extensions :: Router :: Apache Karaf Feature</name>
     <description>Apache Karaf feature for the Apache Unomi Context Server extension</description>
     <packaging>kar</packaging>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.apache.unomi</groupId>
+                <artifactId>unomi-bom</artifactId>
+                <version>${project.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
     <dependencies>
         <dependency>
             <groupId>org.apache.unomi</groupId>

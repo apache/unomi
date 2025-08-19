@@ -23,11 +23,22 @@
         <artifactId>unomi-persistence-elasticsearch</artifactId>
         <version>3.0.0-SNAPSHOT</version>
     </parent>
-
     <artifactId>unomi-persistence-elasticsearch-core</artifactId>
     <name>Apache Unomi :: Persistence :: ElasticSearch :: Core</name>
     <description>Core ElasticSearch persistence implementation for the Apache Unomi Context Server</description>
     <packaging>bundle</packaging>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.apache.unomi</groupId>
+                <artifactId>unomi-bom</artifactId>
+                <version>${project.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 
     <dependencies>
         <dependency>
