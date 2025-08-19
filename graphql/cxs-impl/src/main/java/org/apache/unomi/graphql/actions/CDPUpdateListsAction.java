@@ -22,6 +22,8 @@ import org.apache.unomi.api.actions.Action;
 import org.apache.unomi.api.actions.ActionExecutor;
 import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.graphql.utils.EventBuilder;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Reference;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -31,10 +33,12 @@ import java.util.Map;
 /**
  * A rule action that can add a profile to a list
  */
+@Component(service = ActionExecutor.class, immediate = true, property = {"actionType=updateLists"})
 public class CDPUpdateListsAction implements ActionExecutor {
 
     private EventService eventService;
 
+    @Reference
     public void setEventService(EventService eventService) {
         this.eventService = eventService;
     }

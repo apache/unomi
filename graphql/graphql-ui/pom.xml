@@ -100,9 +100,7 @@
                     <instructions>
                         <_wab>src/main/webapp,target/assets</_wab>
                         <Embed-Dependency>*;scope=compile|runtime</Embed-Dependency>
-                        <Import-Package>
-                            *
-                        </Import-Package>
+                        <Import-Package>*</Import-Package>
                         <Web-ContextPath>/graphql-ui</Web-ContextPath>
                     </instructions>
                 </configuration>

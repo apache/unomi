@@ -25,21 +25,25 @@ import org.apache.unomi.api.actions.ActionExecutor;
 import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.graphql.types.output.CDPSessionState;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Reference;
 
 import java.util.Date;
 import java.util.Objects;
 import java.util.Optional;
 
+@Component(service = ActionExecutor.class, immediate = true, property = {"actionType=cdp_sessionEvent"})
 public class CDPSessionAction implements ActionExecutor {
 
     private EventService eventService;
-
     private ProfileService profileService;
 
+    @Reference
     public void setEventService(EventService eventService) {
         this.eventService = eventService;
     }
 
+    @Reference
     public void setProfileService(ProfileService profileService) {
         this.profileService = profileService;
     }
