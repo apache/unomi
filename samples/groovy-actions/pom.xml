@@ -25,8 +25,20 @@
     </parent>
     <artifactId>test-groovy-action-sample</artifactId>
     <name>Apache Unomi :: Samples :: Test Groovy Action</name>
-    <packaging>bundle</packaging>
     <description>This is a simple Apache Unomi plugin that demonstrate how to define and use a Groovy Action</description>
+    <packaging>bundle</packaging>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.apache.unomi</groupId>
+                <artifactId>unomi-bom</artifactId>
+                <version>${project.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 
     <dependencies>
         <dependency>

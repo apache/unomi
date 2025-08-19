@@ -23,7 +23,6 @@
         <artifactId>unomi-extensions</artifactId>
         <version>3.0.0-SNAPSHOT</version>
     </parent>
-
     <artifactId>unomi-web-tracker</artifactId>
     <name>Apache Unomi :: Extension :: Web Tracker</name>
     <description>Apache Unomi Context Server to provide the web tracker</description>
