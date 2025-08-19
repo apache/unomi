@@ -33,7 +33,7 @@ import java.util.Map;
 /**
  * A rule action that can add a profile to a list
  */
-@Component(service = ActionExecutor.class, immediate = true, property = {"actionType=updateLists"})
+@Component(service = ActionExecutor.class, immediate = true, property = {"actionExecutorId=updateLists"})
 public class CDPUpdateListsAction implements ActionExecutor {
 
     private EventService eventService;

@@ -31,7 +31,7 @@ import java.time.OffsetDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
-@Component(service = ActionExecutor.class, immediate = true, property = {"actionType=updateConsent"})
+@Component(service = ActionExecutor.class, immediate = true, property = {"actionExecutorId=updateConsent"})
 public class CDPConsentUpdateAction implements ActionExecutor {
 
     private EventService eventService;
