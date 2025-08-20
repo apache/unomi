@@ -20,7 +20,6 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import graphql.ExecutionInput;
 import graphql.ExecutionResult;
 import graphql.introspection.IntrospectionQuery;
-import org.apache.unomi.graphql.activator.GraphQLServletActivator;
 import org.apache.unomi.graphql.schema.GraphQLSchemaUpdater;
 import org.apache.unomi.graphql.services.ServiceManager;
 import org.apache.unomi.graphql.servlet.auth.GraphQLServletSecurityValidator;
