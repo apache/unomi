@@ -53,7 +53,7 @@
     <cm:property-placeholder persistent-id="org.apache.unomi.cluster"
                              update-strategy="reload" placeholder-prefix="${cluster.">
         <cm:default-properties>
-            <cm:property name="group" value="default"/>
+            <cm:property name="nodeId" value="unomi-node-1"/>
             <cm:property name="contextserver.publicAddress" value="https://localhost:9443"/>
             <cm:property name="contextserver.internalAddress" value="http://127.0.0.1:8181"/>
             <cm:property name="nodeStatisticsUpdateFrequency" value="10000"/>
@@ -262,13 +262,11 @@
         <property name="publicAddress" value="${cluster.contextserver.publicAddress}"/>
         <property name="internalAddress" value="${cluster.contextserver.internalAddress}"/>
         <property name="persistenceService" ref="persistenceService"/>
-        <property name="karafCellarClusterManager" ref="karafCellarClusterManager"/>
-        <property name="karafCellarEventProducer" ref="karafCellarEventProducer"/>
-        <property name="karafCellarGroupManager" ref="karafCellarGroupManager"/>
-        <property name="karafCellarGroupName" value="${cluster.group}"/>
-        <property name="osgiConfigurationAdmin" ref="osgiConfigurationAdmin"/>
+        <property name="nodeId" value="${cluster.nodeId}"/>
         <property name="nodeStatisticsUpdateFrequency" value="${cluster.nodeStatisticsUpdateFrequency}"/>
+        <!-- Wait for UNOMI-878 to be available to activate that
         <property name="schedulerService" ref="schedulerServiceImpl"/>
+        -->
     </bean>
     <service id="clusterService" ref="clusterServiceImpl" interface="org.apache.unomi.api.services.ClusterService"/>
 
