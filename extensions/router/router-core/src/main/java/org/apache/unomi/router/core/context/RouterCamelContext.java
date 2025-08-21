@@ -31,7 +31,6 @@ import org.apache.unomi.router.api.ImportConfiguration;
 import org.apache.unomi.router.api.RouterConstants;
 import org.apache.unomi.router.api.services.ImportExportConfigurationService;
 import org.apache.unomi.router.api.services.ProfileExportService;
-import org.apache.unomi.router.core.event.UpdateCamelRouteEvent;
 import org.apache.unomi.router.core.processor.ExportRouteCompletionProcessor;
 import org.apache.unomi.router.core.processor.ImportConfigByFileNameProcessor;
 import org.apache.unomi.router.core.processor.ImportRouteCompletionProcessor;
@@ -240,12 +239,6 @@ public class RouterCamelContext implements IRouterCamelContext {
                 camelContext.removeRouteDefinition(routeDefinition);
             }
         }
-
-        if (fireEvent) {
-            UpdateCamelRouteEvent event = new UpdateCamelRouteEvent(EVENT_ID_REMOVE);
-            event.setRouteId(routeId);
-            clusterService.sendEvent(event);
-        }
     }
 
     public void updateProfileImportReaderRoute(String configId, boolean fireEvent) throws Exception {
@@ -266,11 +259,6 @@ public class RouterCamelContext implements IRouterCamelContext {
             builder.setJacksonDataFormat(jacksonDataFormat);
             builder.setContext(camelContext);
             camelContext.addRoutes(builder);
-
-            if (fireEvent) {
-                UpdateCamelRouteEvent event = new UpdateCamelRouteEvent(EVENT_ID_IMPORT);
-                clusterService.sendEvent(event);
-            }
         }
     }
 
@@ -291,11 +279,6 @@ public class RouterCamelContext implements IRouterCamelContext {
             profileExportCollectRouteBuilder.setJacksonDataFormat(jacksonDataFormat);
             profileExportCollectRouteBuilder.setContext(camelContext);
             camelContext.addRoutes(profileExportCollectRouteBuilder);
-
-            if (fireEvent) {
-                UpdateCamelRouteEvent event = new UpdateCamelRouteEvent(EVENT_ID_EXPORT);
-                clusterService.sendEvent(event);
-            }
         }
     }
 
