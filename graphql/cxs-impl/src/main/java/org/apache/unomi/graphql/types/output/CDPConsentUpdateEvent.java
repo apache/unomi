@@ -62,15 +62,13 @@ public class CDPConsentUpdateEvent implements CDPEventInterface {
     @GraphQLField
     @SuppressWarnings("unchecked")
     public OffsetDateTime lastUpdate(DataFetchingEnvironment environment) {
-        final Object lastUpdate = getEvent().getProperty("lastUpdate");
-        return lastUpdate != null ? DateUtils.offsetDateTimeFromMap((Map<String, Object>) lastUpdate) : null;
+        return OffsetDateTime.parse((String)getEvent().getProperty("lastUpdate"));
     }
 
     @GraphQLField
     @SuppressWarnings("unchecked")
     public OffsetDateTime expiration(DataFetchingEnvironment environment) {
-        final Object expiration = getEvent().getProperty("expiration");
-        return expiration != null ? DateUtils.offsetDateTimeFromMap((Map<String, Object>) expiration) : null;
+        return OffsetDateTime.parse((String)getEvent().getProperty("expiration"));
     }
 
 }
