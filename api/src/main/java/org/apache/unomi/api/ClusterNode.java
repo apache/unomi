@@ -22,11 +22,9 @@ import java.io.Serializable;
 /**
  * Information about a cluster node.
  */
-public class ClusterNode extends Item {
+public class ClusterNode implements Serializable {
 
     private static final long serialVersionUID = 1281422346318230514L;
-
-    public static final String ITEM_TYPE = "clusterNode";
 
     private double cpuLoad;
     private double[] loadAverage;
@@ -35,18 +33,11 @@ public class ClusterNode extends Item {
     private long uptime;
     private boolean master;
     private boolean data;
-    private long startTime;
-    private long lastHeartbeat;
-
-    // Server information
-    private ServerInfo serverInfo;
 
     /**
      * Instantiates a new Cluster node.
      */
     public ClusterNode() {
-        super();
-        setItemType(ITEM_TYPE);
     }
 
     /**
@@ -173,59 +164,5 @@ public class ClusterNode extends Item {
      */
     public void setData(boolean data) {
         this.data = data;
-    }
-
-    /**
-     * Retrieves the node start time in milliseconds.
-     *
-     * @return the start time
-     */
-    public long getStartTime() {
-        return startTime;
-    }
-
-    /**
-     * Sets the node start time in milliseconds.
-     *
-     * @param startTime the start time
-     */
-    public void setStartTime(long startTime) {
-        this.startTime = startTime;
-    }
-
-    /**
-     * Retrieves the last heartbeat time in milliseconds.
-     *
-     * @return the last heartbeat time
-     */
-    public long getLastHeartbeat() {
-        return lastHeartbeat;
-    }
-
-    /**
-     * Sets the last heartbeat time in milliseconds.
-     *
-     * @param lastHeartbeat the last heartbeat time
-     */
-    public void setLastHeartbeat(long lastHeartbeat) {
-        this.lastHeartbeat = lastHeartbeat;
-    }
-
-    /**
-     * Gets the server information.
-     *
-     * @return the server information
-     */
-    public ServerInfo getServerInfo() {
-        return serverInfo;
-    }
-
-    /**
-     * Sets the server information.
-     *
-     * @param serverInfo the server information
-     */
-    public void setServerInfo(ServerInfo serverInfo) {
-        this.serverInfo = serverInfo;
     }
 }
