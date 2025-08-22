@@ -17,8 +17,6 @@
 
 package org.apache.unomi.api;
 
-import java.io.Serializable;
-
 /**
  * Information about a cluster node.
  */

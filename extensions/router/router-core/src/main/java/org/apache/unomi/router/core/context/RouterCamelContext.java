@@ -21,7 +21,6 @@ import org.apache.camel.Route;
 import org.apache.camel.component.jackson.JacksonDataFormat;
 import org.apache.camel.core.osgi.OsgiDefaultCamelContext;
 import org.apache.camel.model.RouteDefinition;
-import org.apache.unomi.api.services.ClusterService;
 import org.apache.unomi.api.services.ConfigSharingService;
 import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.persistence.spi.PersistenceService;
