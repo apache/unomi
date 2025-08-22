@@ -56,6 +56,12 @@
             <version>${project.version}</version>
             <scope>provided</scope>
         </dependency>
+        <dependency>
+            <groupId>org.apache.unomi</groupId>
+            <artifactId>unomi-lifecycle-watcher</artifactId>
+            <version>${project.version}</version>
+            <scope>provided</scope>
+        </dependency>
 
         <dependency>
             <groupId>javax.servlet</groupId>
@@ -111,16 +117,6 @@
             <groupId>commons-beanutils</groupId>
             <artifactId>commons-beanutils</artifactId>
         </dependency>
-        <dependency>
-            <groupId>org.apache.karaf.cellar</groupId>
-            <artifactId>org.apache.karaf.cellar.core</artifactId>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.karaf.cellar</groupId>
-            <artifactId>org.apache.karaf.cellar.config</artifactId>
-            <scope>provided</scope>
-        </dependency>
 
         <dependency>
             <groupId>org.apache.unomi</groupId>
@@ -175,6 +171,7 @@
                         <Embed-Dependency>*;scope=compile|runtime</Embed-Dependency>
                         <Import-Package>
                             sun.misc;resolution:=optional,
+                            com.sun.management;resolution:=optional,
                             *
                         </Import-Package>
                     </instructions>
@@ -212,11 +209,6 @@
                                     </file>
                                     <type>cfg</type>
                                     <classifier>clustercfg</classifier>
-                                </artifact>
-                                <artifact>
-                                    <file>src/main/resources/hazelcast.xml</file>
-                                    <type>xml</type>
-                                    <classifier>hazelcastconfig</classifier>
                                 </artifact>
                             </artifacts>
                         </configuration>

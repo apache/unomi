@@ -256,11 +256,6 @@ public abstract class BaseIT extends KarafTestSupport {
                 editConfigurationFilePut("etc/custom.system.properties", "org.apache.unomi.elasticsearch.rollover.maxDocs", "300"),
 
                 systemProperty("org.ops4j.pax.exam.rbc.rmi.port").value("1199"),
-                systemProperty("org.apache.unomi.hazelcast.group.name").value("cellar"),
-                systemProperty("org.apache.unomi.hazelcast.group.password").value("pass"),
-                systemProperty("org.apache.unomi.hazelcast.network.port").value("5701"),
-                systemProperty("org.apache.unomi.hazelcast.tcp-ip.members").value("127.0.0.1"),
-                systemProperty("org.apache.unomi.hazelcast.tcp-ip.interface").value("127.0.0.1"),
                 systemProperty("org.apache.unomi.healthcheck.enabled").value("true"),
 
                 logLevel(LogLevel.INFO),

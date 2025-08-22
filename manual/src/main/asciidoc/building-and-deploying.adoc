@@ -144,12 +144,11 @@ files (at the end of the file):
    export KARAF_OPTS="$KARAF_OPTS -Xmx3G"
 ----
 
-Install the WAR support, CXF and Karaf Cellar into Karaf by doing the following in the Karaf command line:
+Install the WAR support and CXF into Karaf by doing the following in the Karaf command line:
 
 [source]
 ----
    feature:repo-add cxf-jaxrs 3.3.4
-   feature:repo-add cellar 4.1.3
    feature:repo-add mvn:org.apache.unomi/unomi-kar/VERSION/xml/features
    feature:install unomi-kar
 ----

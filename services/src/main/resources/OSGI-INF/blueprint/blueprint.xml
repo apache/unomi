@@ -53,7 +53,7 @@
     <cm:property-placeholder persistent-id="org.apache.unomi.cluster"
                              update-strategy="reload" placeholder-prefix="${cluster.">
         <cm:default-properties>
-            <cm:property name="group" value="default"/>
+            <cm:property name="nodeId" value="unomi-node-1"/>
             <cm:property name="contextserver.publicAddress" value="https://localhost:9443"/>
             <cm:property name="contextserver.internalAddress" value="http://127.0.0.1:8181"/>
             <cm:property name="nodeStatisticsUpdateFrequency" value="10000"/>
@@ -70,9 +70,6 @@
     <reference id="persistenceService"
                interface="org.apache.unomi.persistence.spi.PersistenceService"/>
     <reference id="httpService" interface="org.osgi.service.http.HttpService"/>
-    <reference id="karafCellarClusterManager" interface="org.apache.karaf.cellar.core.ClusterManager"/>
-    <reference id="karafCellarEventProducer" interface="org.apache.karaf.cellar.core.event.EventProducer"/>
-    <reference id="karafCellarGroupManager" interface="org.apache.karaf.cellar.core.GroupManager"/>
     <reference id="osgiConfigurationAdmin" interface="org.osgi.service.cm.ConfigurationAdmin"/>
     <reference id="metricsService" interface="org.apache.unomi.metrics.MetricsService"/>
     <reference id="scriptExecutor" interface="org.apache.unomi.scripting.ScriptExecutor"/>
@@ -262,13 +259,11 @@
         <property name="publicAddress" value="${cluster.contextserver.publicAddress}"/>
         <property name="internalAddress" value="${cluster.contextserver.internalAddress}"/>
         <property name="persistenceService" ref="persistenceService"/>
-        <property name="karafCellarClusterManager" ref="karafCellarClusterManager"/>
-        <property name="karafCellarEventProducer" ref="karafCellarEventProducer"/>
-        <property name="karafCellarGroupManager" ref="karafCellarGroupManager"/>
-        <property name="karafCellarGroupName" value="${cluster.group}"/>
-        <property name="osgiConfigurationAdmin" ref="osgiConfigurationAdmin"/>
+        <property name="nodeId" value="${cluster.nodeId}"/>
         <property name="nodeStatisticsUpdateFrequency" value="${cluster.nodeStatisticsUpdateFrequency}"/>
+        <!-- Wait for UNOMI-878 to be available to activate that
         <property name="schedulerService" ref="schedulerServiceImpl"/>
+        -->
     </bean>
     <service id="clusterService" ref="clusterServiceImpl" interface="org.apache.unomi.api.services.ClusterService"/>
 
@@ -411,7 +406,6 @@
         </bean>
     </service>
 
-
     <bean id="configSharingServiceImpl" class="org.apache.unomi.services.impl.configsharing.ConfigSharingServiceImpl"
           destroy-method="preDestroy">
         <property name="configProperties">
@@ -427,21 +421,6 @@
             <value>org.osgi.framework.SynchronousBundleListener</value>
             <value>org.apache.unomi.api.services.ConfigSharingService</value>
         </interfaces>
-    </service>
-
-    <!-- Cluster System Statistics Event Handler -->
-    <bean id="clusterSystemStatisticsEventHandler"
-          class="org.apache.unomi.services.impl.cluster.ClusterSystemStatisticsEventHandler"
-          init-method="init" destroy-method="destroy">
-        <property name="configurationAdmin" ref="osgiConfigurationAdmin"/>
-        <property name="clusterManager" ref="karafCellarClusterManager"/>
-        <property name="groupManager" ref="karafCellarGroupManager"/>
-        <property name="clusterServiceImpl" ref="clusterServiceImpl"/>
-    </bean>
-    <service ref="clusterSystemStatisticsEventHandler" interface="org.apache.karaf.cellar.core.event.EventHandler">
-        <service-properties>
-            <entry key="managed" value="true"/>
-        </service-properties>
     </service>
 
 </blueprint>
