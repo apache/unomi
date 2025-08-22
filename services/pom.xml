@@ -56,6 +56,12 @@
             <version>${project.version}</version>
             <scope>provided</scope>
         </dependency>
+        <dependency>
+            <groupId>org.apache.unomi</groupId>
+            <artifactId>unomi-lifecycle-watcher</artifactId>
+            <version>${project.version}</version>
+            <scope>provided</scope>
+        </dependency>
 
         <dependency>
             <groupId>javax.servlet</groupId>
@@ -175,6 +181,7 @@
                         <Embed-Dependency>*;scope=compile|runtime</Embed-Dependency>
                         <Import-Package>
                             sun.misc;resolution:=optional,
+                            com.sun.management;resolution:=optional,
                             *
                         </Import-Package>
                     </instructions>
