@@ -112,7 +112,6 @@
         <property name="persistenceService" ref="persistenceService"/>
         <property name="profileExportService" ref="profileExportService"/>
         <property name="profileService" ref="profileService"/>
-        <property name="clusterService" ref="clusterService" />
     </bean>
     <service id="camelContextOSGI" ref="camelContext" interface="org.apache.unomi.router.api.IRouterCamelContext"/>
 
