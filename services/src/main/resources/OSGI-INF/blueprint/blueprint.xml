@@ -73,6 +73,7 @@
     <reference id="osgiConfigurationAdmin" interface="org.osgi.service.cm.ConfigurationAdmin"/>
     <reference id="metricsService" interface="org.apache.unomi.metrics.MetricsService"/>
     <reference id="scriptExecutor" interface="org.apache.unomi.scripting.ScriptExecutor"/>
+    <reference id="bundleWatcher" interface="org.apache.unomi.lifecycle.BundleWatcher"/>
 
     <!-- Service definitions -->
 
@@ -261,6 +262,8 @@
         <property name="persistenceService" ref="persistenceService"/>
         <property name="nodeId" value="${cluster.nodeId}"/>
         <property name="nodeStatisticsUpdateFrequency" value="${cluster.nodeStatisticsUpdateFrequency}"/>
+        <property name="bundleContext" ref="blueprintBundleContext"/>
+        <property name="bundleWatcher" ref="bundleWatcher"/>
         <!-- Wait for UNOMI-878 to be available to activate that
         <property name="schedulerService" ref="schedulerServiceImpl"/>
         -->
