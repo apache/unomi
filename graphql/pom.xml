@@ -31,12 +31,12 @@
     <packaging>pom</packaging>
 
     <properties>
-        <graphql.java.version>14.0</graphql.java.version>
-        <graphql.java.annotations.version>8.0</graphql.java.annotations.version>
-        <graphql.java.extended.scalars.version>1.0</graphql.java.extended.scalars.version>
+        <graphql.java.version>17.2</graphql.java.version>
+        <graphql.java.annotations.version>9.1</graphql.java.annotations.version>
+        <graphql.java.extended.scalars.version>17.1</graphql.java.extended.scalars.version>
         <reactivex.version>2.2.19</reactivex.version>
-        <antlr.runtime.version>4.7.1</antlr.runtime.version>
-        <java.dataloader.version>2.2.0</java.dataloader.version>
+        <antlr.runtime.version>4.9.2</antlr.runtime.version>
+        <java.dataloader.version>3.1.0</java.dataloader.version>
         <jetty.websocket.version>9.4.38.v20210224</jetty.websocket.version>
     </properties>
 
