@@ -24,20 +24,13 @@ import org.apache.unomi.api.services.EventService;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 
-import javax.jws.WebMethod;
-import javax.jws.WebService;
-import javax.ws.rs.GET;
-import javax.ws.rs.POST;
-import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
-import javax.ws.rs.Produces;
+import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import java.util.Set;
 
 /**
  * A JAX-RS endpoint to access information about the context server's events.
  */
-@WebService
 @Produces(MediaType.APPLICATION_JSON)
 @CrossOriginResourceSharing(
         allowAllOrigins = true,
@@ -50,7 +43,6 @@ public class EventServiceEndpoint {
     @Reference
     private EventService eventService;
 
-    @WebMethod(exclude = true)
     public void setEventService(EventService eventService) {
         this.eventService = eventService;
     }

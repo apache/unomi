@@ -26,8 +26,6 @@ import org.osgi.service.component.annotations.Reference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.jws.WebMethod;
-import javax.jws.WebService;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
@@ -43,7 +41,6 @@ import java.util.Date;
 /**
  * A JAX-RS endpoint to manage {@link ExportConfiguration}s.
  */
-@WebService
 @CrossOriginResourceSharing(
         allowAllOrigins = true,
         allowCredentials = true
@@ -64,18 +61,15 @@ public class ExportConfigurationServiceEndPoint extends AbstractConfigurationSer
         LOGGER.info("Initializing export configuration service endpoint...");
     }
 
-    @WebMethod(exclude = true)
     @Reference(target="(configDiscriminator=EXPORT)")
     public void setExportConfigurationService(ImportExportConfigurationService<ExportConfiguration> exportConfigurationService) {
         configurationService = exportConfigurationService;
     }
 
-    @WebMethod(exclude = true)
     public void setProfileExportService(ProfileExportService profileExportService) {
         this.profileExportService = profileExportService;
     }
 
-    @WebMethod(exclude = true)
     public void setProfileService(ProfileService profileService) {
         this.profileService = profileService;
     }

@@ -24,15 +24,19 @@ import org.apache.unomi.api.actions.ActionExecutor;
 import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.graphql.utils.DateUtils;
 import org.apache.unomi.graphql.utils.EventBuilder;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Reference;
 
 import java.time.OffsetDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
+@Component(service = ActionExecutor.class, immediate = true, property = {"actionExecutorId=updateConsent"})
 public class CDPConsentUpdateAction implements ActionExecutor {
 
     private EventService eventService;
 
+    @Reference
     public void setEventService(EventService eventService) {
         this.eventService = eventService;
     }

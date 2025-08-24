@@ -21,13 +21,24 @@
     <parent>
         <groupId>org.apache.unomi</groupId>
         <artifactId>unomi-graphql</artifactId>
-        <version>2.7.0-SNAPSHOT</version>
+        <version>3.0.0-SNAPSHOT</version>
     </parent>
-
     <artifactId>unomi-graphql-ui</artifactId>
     <name>Apache Unomi :: GraphQL API :: GraphQL UI</name>
     <description>An integrated GraphQL UI</description>
     <packaging>bundle</packaging>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.apache.unomi</groupId>
+                <artifactId>unomi-bom</artifactId>
+                <version>${project.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 
     <properties>
         <yarn.arguments>build</yarn.arguments>
@@ -37,7 +48,6 @@
         <dependency>
             <groupId>org.apache.unomi</groupId>
             <artifactId>unomi-api</artifactId>
-            <version>${project.version}</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
@@ -102,9 +112,7 @@
                     <instructions>
                         <_wab>src/main/webapp,target/assets</_wab>
                         <Embed-Dependency>*;scope=compile|runtime</Embed-Dependency>
-                        <Import-Package>
-                            *
-                        </Import-Package>
+                        <Import-Package>*</Import-Package>
                         <Web-ContextPath>/graphql-ui</Web-ContextPath>
                     </instructions>
                 </configuration>

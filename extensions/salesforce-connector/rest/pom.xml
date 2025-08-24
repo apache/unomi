@@ -17,30 +17,59 @@
   -->
 
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>org.apache.unomi</groupId>
         <artifactId>unomi-salesforce-connector</artifactId>
-        <version>2.7.0-SNAPSHOT</version>
+        <version>3.0.0-SNAPSHOT</version>
     </parent>
-    <modelVersion>4.0.0</modelVersion>
-
     <artifactId>unomi-salesforce-connector-rest</artifactId>
     <name>Apache Unomi :: Extensions :: Salesforce connector :: REST API</name>
     <description>REST API for the Apache Unomi Context Server extension that integrates with Salesforce</description>
     <packaging>bundle</packaging>
 
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.apache.unomi</groupId>
+                <artifactId>unomi-bom</artifactId>
+                <version>${project.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
     <dependencies>
         <dependency>
             <groupId>org.apache.unomi</groupId>
             <artifactId>unomi-api</artifactId>
-            <version>${project.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.unomi</groupId>
+            <artifactId>unomi-persistence-spi</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.unomi</groupId>
+            <artifactId>unomi-salesforce-connector-services</artifactId>
             <scope>provided</scope>
         </dependency>
 
         <dependency>
-            <groupId>org.apache.unomi</groupId>
-            <artifactId>unomi-salesforce-connector-services</artifactId>
-            <version>${project.version}</version>
+            <groupId>org.osgi</groupId>
+            <artifactId>osgi.core</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.osgi</groupId>
+            <artifactId>org.osgi.service.component</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.osgi</groupId>
+            <artifactId>org.osgi.service.component.annotations</artifactId>
             <scope>provided</scope>
         </dependency>
 
@@ -49,19 +78,13 @@
             <artifactId>javax.servlet-api</artifactId>
             <scope>provided</scope>
         </dependency>
-        <!--
+
         <dependency>
-            <groupId>org.apache.cxf</groupId>
-            <artifactId>cxf-rt-core</artifactId>
-            <version>${cxf.version}</version>
+            <groupId>javax.ws.rs</groupId>
+            <artifactId>javax.ws.rs-api</artifactId>
             <scope>provided</scope>
         </dependency>
-        -->
-        <dependency>
-            <groupId>org.apache.cxf</groupId>
-            <artifactId>cxf-rt-frontend-jaxws</artifactId>
-            <scope>provided</scope>
-        </dependency>
+
         <dependency>
             <groupId>org.apache.cxf</groupId>
             <artifactId>cxf-rt-frontend-jaxrs</artifactId>
@@ -75,26 +98,11 @@
         <dependency>
             <groupId>org.apache.cxf</groupId>
             <artifactId>cxf-rt-rs-security-cors</artifactId>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>com.fasterxml.jackson.jaxrs</groupId>
             <artifactId>jackson-jaxrs-json-provider</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.unomi</groupId>
-            <artifactId>unomi-persistence-spi</artifactId>
-            <version>${project.version}</version>
-            <scope>provided</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>org.osgi</groupId>
-            <artifactId>osgi.core</artifactId>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.osgi</groupId>
-            <artifactId>osgi.cmpn</artifactId>
             <scope>provided</scope>
         </dependency>
     </dependencies>
@@ -130,22 +138,6 @@
                         <Implementation-Build>${buildNumber}</Implementation-Build>
                     </instructions>
                 </configuration>
-            </plugin>
-            <plugin>
-                <groupId>com.sebastian-daschner</groupId>
-                <artifactId>jaxrs-analyzer-maven-plugin</artifactId>
-                <version>0.17</version>
-                <executions>
-                    <execution>
-                        <goals>
-                            <goal>analyze-jaxrs</goal>
-                        </goals>
-                        <configuration>
-                            <backend>swagger</backend>
-                            <deployedDomain>unomi.apache.org</deployedDomain>
-                        </configuration>
-                    </execution>
-                </executions>
             </plugin>
         </plugins>
     </build>

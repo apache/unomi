@@ -17,7 +17,7 @@
 version: '2.4'
 services:
   elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:7.4.2
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.28
     volumes: # Persist ES data in separate "esdata" volume
       - esdata1:/usr/share/elasticsearch/data
     environment:

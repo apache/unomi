@@ -23,7 +23,10 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.apache.cxf.rs.security.cors.CrossOriginResourceSharing;
 import org.apache.unomi.api.*;
 import org.apache.unomi.api.conditions.Condition;
-import org.apache.unomi.api.services.*;
+import org.apache.unomi.api.services.PersonalizationService;
+import org.apache.unomi.api.services.PrivacyService;
+import org.apache.unomi.api.services.ProfileService;
+import org.apache.unomi.api.services.RulesService;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.rest.exception.InvalidRequestException;
 import org.apache.unomi.rest.service.RestServiceUtils;
@@ -34,7 +37,6 @@ import org.osgi.service.component.annotations.Reference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.jws.WebService;
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -45,7 +47,6 @@ import javax.ws.rs.core.Response;
 import java.util.*;
 import java.util.stream.Collectors;
 
-@WebService
 @Consumes(MediaType.APPLICATION_JSON)
 @CrossOriginResourceSharing(allowAllOrigins = true, allowCredentials = true)
 @Path("/")
