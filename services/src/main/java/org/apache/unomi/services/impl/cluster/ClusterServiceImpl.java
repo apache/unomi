@@ -363,9 +363,7 @@ public class ClusterServiceImpl implements ClusterService {
     }
 
     public void destroy() {
-        shutdownNow = true;
-
-        // Remove this node from the persistence service
+        // Remove this node from the persistence service BEFORE setting shutdownNow
         PersistenceService service = getPersistenceService();
         if (service != null) {
             try {
@@ -375,6 +373,8 @@ public class ClusterServiceImpl implements ClusterService {
                 LOGGER.error("Error removing node from cluster", e);
             }
         }
+
+        shutdownNow = true;
 
         // Close service trackers
         if (persistenceServiceTracker != null) {
