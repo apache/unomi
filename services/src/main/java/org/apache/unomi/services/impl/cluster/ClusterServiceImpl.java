@@ -363,7 +363,7 @@ public class ClusterServiceImpl implements ClusterService {
     }
 
     public void destroy() {
-        // Remove this node from the persistence service BEFORE setting shutdownNow
+        // Remove this node from the persistence service BEFORE setting shutdownNow otherwise it won't work
         PersistenceService service = getPersistenceService();
         if (service != null) {
             try {
