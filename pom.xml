@@ -65,7 +65,6 @@
         <version.jackson.databind>2.11.4</version.jackson.databind>
         <version.jackson.jaxb>2.11.4</version.jackson.jaxb>
         <version.karaf>4.2.15</version.karaf>
-        <version.karaf.cellar>4.2.1</version.karaf.cellar>
         <version.pax.exam>4.13.5</version.pax.exam>
         <elasticsearch.version>7.4.2</elasticsearch.version>
         <elasticsearch.test.version>7.11.0</elasticsearch.test.version>
@@ -829,24 +828,6 @@
                 <version>${version.karaf}</version>
                 <type>xml</type>
                 <scope>runtime</scope>
-            </dependency>
-            <dependency>
-                <groupId>org.apache.karaf.cellar</groupId>
-                <artifactId>apache-karaf-cellar</artifactId>
-                <classifier>features</classifier>
-                <version>${version.karaf.cellar}</version>
-                <type>xml</type>
-                <scope>runtime</scope>
-            </dependency>
-            <dependency>
-                <groupId>org.apache.karaf.cellar</groupId>
-                <artifactId>org.apache.karaf.cellar.core</artifactId>
-                <version>${version.karaf.cellar}</version>
-            </dependency>
-            <dependency>
-                <groupId>org.apache.karaf.cellar</groupId>
-                <artifactId>org.apache.karaf.cellar.config</artifactId>
-                <version>${version.karaf.cellar}</version>
             </dependency>
 
             <!-- End of Apache Karaf dependencies -->

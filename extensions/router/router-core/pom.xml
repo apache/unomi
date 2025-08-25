@@ -133,16 +133,6 @@
             <version>${kafka.client.version}</version>
             <scope>provided</scope>
         </dependency>
-        <dependency>
-            <groupId>org.apache.karaf.cellar</groupId>
-            <artifactId>org.apache.karaf.cellar.core</artifactId>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.karaf.cellar</groupId>
-            <artifactId>org.apache.karaf.cellar.config</artifactId>
-            <scope>provided</scope>
-        </dependency>
     </dependencies>
 
     <build>

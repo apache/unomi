@@ -112,25 +112,12 @@
         <property name="persistenceService" ref="persistenceService"/>
         <property name="profileExportService" ref="profileExportService"/>
         <property name="profileService" ref="profileService"/>
-        <property name="clusterService" ref="clusterService" />
     </bean>
     <service id="camelContextOSGI" ref="camelContext" interface="org.apache.unomi.router.api.IRouterCamelContext"/>
 
     <bean id="collectProfileBean" class="org.apache.unomi.router.core.bean.CollectProfileBean">
         <property name="persistenceService" ref="persistenceService"/>
     </bean>
-
-    <bean id="updateCamelRouteEventHandler" class="org.apache.unomi.router.core.event.UpdateCamelRouteEventHandler">
-        <property name="configurationAdmin" ref="osgiConfigurationAdmin"/>
-        <property name="clusterManager" ref="karafCellarClusterManager"/>
-        <property name="groupManager" ref="karafCellarGroupManager"/>
-        <property name="routerCamelContext" ref="camelContext"/>
-    </bean>
-    <service ref="updateCamelRouteEventHandler" interface="org.apache.karaf.cellar.core.event.EventHandler">
-        <service-properties>
-            <entry key="managed" value="true"/>
-        </service-properties>
-    </service>
 
     <reference id="configSharingService" interface="org.apache.unomi.api.services.ConfigSharingService" />
     <reference id="profileImportService" interface="org.apache.unomi.router.api.services.ProfileImportService"/>
@@ -141,8 +128,6 @@
     <reference id="importConfigurationService" interface="org.apache.unomi.router.api.services.ImportExportConfigurationService" filter="(configDiscriminator=IMPORT)"/>
     <reference id="exportConfigurationService" interface="org.apache.unomi.router.api.services.ImportExportConfigurationService" filter="(configDiscriminator=EXPORT)"/>
     <reference id="clusterService" interface="org.apache.unomi.api.services.ClusterService" />
-    <reference id="karafCellarGroupManager" interface="org.apache.karaf.cellar.core.GroupManager" />
     <reference id="osgiConfigurationAdmin" interface="org.osgi.service.cm.ConfigurationAdmin"/>
-    <reference id="karafCellarClusterManager" interface="org.apache.karaf.cellar.core.ClusterManager" />
 
 </blueprint>
