@@ -23,7 +23,7 @@
            http://aries.apache.org/blueprint/xmlns/blueprint-cm/v1.1.0 http://aries.apache.org/schemas/blueprint-cm/blueprint-cm-1.1.0.xsd">
 
     <cm:property-placeholder persistent-id="org.apache.unomi.services"
-                             update-strategy="reload" placeholder-prefix="${services.">
+                             update-strategy="none" placeholder-prefix="${services.">
         <cm:default-properties>
             <cm:property name="profile.purge.interval" value="1"/>
             <cm:property name="profile.purge.inactiveTime" value="180"/>
@@ -61,7 +61,7 @@
     </cm:property-placeholder>
 
     <cm:property-placeholder persistent-id="org.apache.unomi.persistence.elasticsearch"
-                             update-strategy="reload" placeholder-prefix="${es.">
+                             update-strategy="none" placeholder-prefix="${es.">
         <cm:default-properties>
             <cm:property name="aggregateQueryBucketSize" value="5000"/>
         </cm:default-properties>
@@ -181,7 +181,11 @@
             <value>org.apache.unomi.api.services.RulesService</value>
             <value>org.apache.unomi.api.services.EventListenerService</value>
             <value>org.osgi.framework.SynchronousBundleListener</value>
+            <value>org.osgi.service.cm.ManagedService</value>
         </interfaces>
+        <service-properties>
+            <entry key="service.pid" value="org.apache.unomi.services"/>
+        </service-properties>
     </service>
 
     <bean id="segmentServiceImpl" class="org.apache.unomi.services.impl.segments.SegmentServiceImpl"
@@ -257,12 +261,12 @@
 
     <bean id="clusterServiceImpl" class="org.apache.unomi.services.impl.cluster.ClusterServiceImpl"
           init-method="init" destroy-method="destroy">
+        <property name="persistenceService" ref="persistenceService" />
         <property name="publicAddress" value="${cluster.contextserver.publicAddress}"/>
         <property name="internalAddress" value="${cluster.contextserver.internalAddress}"/>
         <property name="persistenceService" ref="persistenceService"/>
         <property name="nodeId" value="${cluster.nodeId}"/>
         <property name="nodeStatisticsUpdateFrequency" value="${cluster.nodeStatisticsUpdateFrequency}"/>
-        <property name="bundleContext" ref="blueprintBundleContext"/>
         <property name="bundleWatcher" ref="bundleWatcher"/>
         <!-- Wait for UNOMI-878 to be available to activate that
         <property name="schedulerService" ref="schedulerServiceImpl"/>

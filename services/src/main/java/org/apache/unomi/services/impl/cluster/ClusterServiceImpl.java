@@ -27,10 +27,6 @@ import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.api.services.ClusterService;
 import org.apache.unomi.lifecycle.BundleWatcher;
 import org.apache.unomi.persistence.spi.PersistenceService;
-import org.osgi.framework.BundleContext;
-import org.osgi.framework.ServiceReference;
-import org.osgi.util.tracker.ServiceTracker;
-import org.osgi.util.tracker.ServiceTrackerCustomizer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,10 +35,7 @@ import java.lang.management.ManagementFactory;
 import java.lang.management.OperatingSystemMXBean;
 import java.lang.management.RuntimeMXBean;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 
 /**
  * Implementation of the persistence service interface
@@ -51,23 +44,6 @@ public class ClusterServiceImpl implements ClusterService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ClusterServiceImpl.class.getName());
 
-    /**
-     * We use ServiceTracker instead of Blueprint dependency injection due to a known bug in Apache Aries Blueprint
-     * where service dependencies are not properly shut down in reverse order of their initialization.
-     *
-     * The bug manifests in two ways:
-     * 1. Services are not shut down in reverse order of their initialization, causing potential deadlocks
-     * 2. The PersistenceService is often shut down before other services that depend on it, leading to timeout waits
-     *
-     * By using ServiceTracker, we have explicit control over:
-     * - Service lifecycle management
-     * - Shutdown order
-     * - Service availability checks
-     * - Graceful degradation when services become unavailable
-     */
-    private ServiceTracker<PersistenceService, PersistenceService> persistenceServiceTracker;
-
-    // Keep direct reference for backward compatibility and unit tests
     private PersistenceService persistenceService;
 
     private String publicAddress;
@@ -78,23 +54,16 @@ public class ClusterServiceImpl implements ClusterService {
     private long nodeStartTime;
     private long nodeStatisticsUpdateFrequency = 10000;
     private Map<String, Map<String, Serializable>> nodeSystemStatistics = new ConcurrentHashMap<>();
-    private BundleContext bundleContext;
     private volatile boolean shutdownNow = false;
 
     private BundleWatcher bundleWatcher;
+    private ScheduledFuture<?> updateSystemStatsFuture;
+    private ScheduledFuture<?> cleanupStaleNodesFuture;
 
     /**
      * Max time to wait for persistence service (in milliseconds)
      */
     private static final long MAX_WAIT_TIME = 60000; // 60 seconds
-
-    /**
-     * Sets the bundle context, which is needed to create service trackers
-     * @param bundleContext the OSGi bundle context
-     */
-    public void setBundleContext(BundleContext bundleContext) {
-        this.bundleContext = bundleContext;
-    }
 
     /**
      * Sets the bundle watcher used to retrieve server information
@@ -124,24 +93,12 @@ public class ClusterServiceImpl implements ClusterService {
             return;
         }
 
-        // If no bundle context, we can't get the service via tracker
-        if (bundleContext == null) {
-            LOGGER.error("No BundleContext available, cannot wait for persistence service");
-            throw new IllegalStateException("No BundleContext available to get persistence service");
-        }
-
-        // Initialize service tracker if needed
-        if (persistenceServiceTracker == null) {
-            initializeServiceTrackers();
-        }
-
         // Try to get the service with retries
         long startTime = System.currentTimeMillis();
         long waitTime = 50; // Start with 50ms wait time
 
         while (System.currentTimeMillis() - startTime < MAX_WAIT_TIME) {
-            PersistenceService service = getPersistenceService();
-            if (service != null) {
+            if (persistenceService != null) {
                 LOGGER.info("Persistence service is now available");
                 return;
             }
@@ -159,66 +116,6 @@ public class ClusterServiceImpl implements ClusterService {
         }
 
         throw new IllegalStateException("PersistenceService not available after waiting " + MAX_WAIT_TIME + "ms");
-    }
-
-    /**
-     * Safely gets the persistence service, either from the direct reference (for tests)
-     * or from the service tracker (for OSGi runtime)
-     * @return the persistence service or null if not available
-     */
-    private PersistenceService getPersistenceService() {
-        if (shutdownNow) return null;
-
-        // For unit tests or if already directly set
-        if (persistenceService != null) {
-            return persistenceService;
-        }
-
-        // Otherwise try to get from service tracker
-        return persistenceServiceTracker != null ? persistenceServiceTracker.getService() : null;
-    }
-
-    /**
-     * Initialize service tracker for PersistenceService
-     */
-    private void initializeServiceTrackers() {
-        if (bundleContext == null) {
-            LOGGER.warn("BundleContext is null, cannot initialize service trackers");
-            return;
-        }
-
-        // Only create service tracker if direct reference isn't set
-        if (persistenceService == null) {
-            LOGGER.info("Initializing PersistenceService tracker");
-            persistenceServiceTracker = new ServiceTracker<>(
-                    bundleContext,
-                    PersistenceService.class,
-                    new ServiceTrackerCustomizer<PersistenceService, PersistenceService>() {
-                        @Override
-                        public PersistenceService addingService(ServiceReference<PersistenceService> reference) {
-                            PersistenceService service = bundleContext.getService(reference);
-                            if (service != null) {
-                                persistenceService = service;
-                                LOGGER.info("PersistenceService acquired through tracker");
-                            }
-                            return service;
-                        }
-
-                        @Override
-                        public void modifiedService(ServiceReference<PersistenceService> reference, PersistenceService service) {
-                            // No action needed
-                        }
-
-                        @Override
-                        public void removedService(ServiceReference<PersistenceService> reference, PersistenceService service) {
-                            LOGGER.info("PersistenceService removed");
-                            persistenceService = null;
-                            bundleContext.ungetService(reference);
-                        }
-                    }
-            );
-            persistenceServiceTracker.open();
-        }
     }
 
     /**
@@ -278,9 +175,6 @@ public class ClusterServiceImpl implements ClusterService {
     }
 
     public void init() {
-        // Initialize service trackers if not set directly (common in unit tests)
-        initializeServiceTrackers();
-
         // Validate that nodeId is provided
         if (StringUtils.isBlank(nodeId)) {
             String errorMessage = "CRITICAL: nodeId is not set. This is a required setting for cluster operation.";
@@ -341,7 +235,7 @@ public class ClusterServiceImpl implements ClusterService {
         /* Wait for PR UNOMI-878 to reactivate that code
         schedulerService.createRecurringTask("clusterNodeStatisticsUpdate", nodeStatisticsUpdateFrequency, TimeUnit.MILLISECONDS, statisticsTask, false);
         */
-        scheduledExecutorService.scheduleAtFixedRate(statisticsTask, 100, nodeStatisticsUpdateFrequency, TimeUnit.MILLISECONDS);
+        updateSystemStatsFuture = scheduledExecutorService.scheduleAtFixedRate(statisticsTask, 100, nodeStatisticsUpdateFrequency, TimeUnit.MILLISECONDS);
 
         // Schedule cleanup of stale nodes
         TimerTask cleanupTask = new TimerTask() {
@@ -357,34 +251,54 @@ public class ClusterServiceImpl implements ClusterService {
         /* Wait for PR UNOMI-878 to reactivate that code
         schedulerService.createRecurringTask("clusterStaleNodesCleanup", 60000, TimeUnit.MILLISECONDS, cleanupTask, false);
         */
-        scheduledExecutorService.scheduleAtFixedRate(cleanupTask, 100, 60000, TimeUnit.MILLISECONDS);
+        cleanupStaleNodesFuture = scheduledExecutorService.scheduleAtFixedRate(cleanupTask, 100, 60000, TimeUnit.MILLISECONDS);
 
         LOGGER.info("Cluster service scheduled tasks initialized");
     }
 
     public void destroy() {
-        // Remove this node from the persistence service BEFORE setting shutdownNow otherwise it won't work
-        PersistenceService service = getPersistenceService();
-        if (service != null) {
+        LOGGER.info("Cluster service shutting down...");
+        shutdownNow = true;
+
+        // Cancel scheduled tasks
+        if (updateSystemStatsFuture != null) {
+            boolean successfullyCancelled = updateSystemStatsFuture.cancel(false);
+            if (!successfullyCancelled) {
+                LOGGER.warn("Failed to cancel scheduled task: clusterNodeStatisticsUpdate");
+            } else {
+                LOGGER.info("Scheduled task: clusterNodeStatisticsUpdate cancelled");
+            }
+        }
+        if (cleanupStaleNodesFuture != null) {
+            boolean successfullyCancelled = cleanupStaleNodesFuture.cancel(false);
+            if (!successfullyCancelled) {
+                LOGGER.warn("Failed to cancel scheduled task: cleanupStaleNodesFuture");
+            } else {
+                LOGGER.info("Scheduled task: cleanupStaleNodesFuture cancelled");
+            }
+        }
+        if (scheduledExecutorService != null) {
+            scheduledExecutorService.shutdownNow();
             try {
-                service.remove(nodeId, ClusterNode.class);
+                boolean successfullyTerminated = scheduledExecutorService.awaitTermination(10, TimeUnit.SECONDS);
+                if (!successfullyTerminated) {
+                    LOGGER.warn("Failed to terminate scheduled tasks after 10 seconds...");
+                } else {
+                    LOGGER.info("Scheduled tasks terminated");
+                }
+            } catch (InterruptedException e) {
+                LOGGER.error("Error waiting for scheduled tasks to terminate", e);
+            }
+        }
+
+        // Remove node from persistence service
+        if (persistenceService != null) {
+            try {
+                persistenceService.remove(nodeId, ClusterNode.class);
                 LOGGER.info("Node {} removed from cluster", nodeId);
             } catch (Exception e) {
                 LOGGER.error("Error removing node from cluster", e);
             }
-        }
-
-        shutdownNow = true;
-
-        // Close service trackers
-        if (persistenceServiceTracker != null) {
-            try {
-                persistenceServiceTracker.close();
-                LOGGER.debug("Persistence service tracker closed");
-            } catch (Exception e) {
-                LOGGER.debug("Error closing persistence service tracker: {}", e.getMessage());
-            }
-            persistenceServiceTracker = null;
         }
 
         // Clear references
@@ -398,8 +312,7 @@ public class ClusterServiceImpl implements ClusterService {
      * Register this node in the persistence service
      */
     private void registerNodeInPersistence() {
-        PersistenceService service = getPersistenceService();
-        if (service == null) {
+        if (persistenceService == null) {
             LOGGER.error("Cannot register node: PersistenceService not available");
             return;
         }
@@ -423,7 +336,7 @@ public class ClusterServiceImpl implements ClusterService {
 
         updateSystemStatsForNode(clusterNode);
 
-        boolean success = service.save(clusterNode);
+        boolean success = persistenceService.save(clusterNode);
         if (success) {
             LOGGER.info("Node {} registered in cluster", nodeId);
         } else {
@@ -481,14 +394,13 @@ public class ClusterServiceImpl implements ClusterService {
             return;
         }
 
-        PersistenceService service = getPersistenceService();
-        if (service == null) {
+        if (persistenceService == null) {
             LOGGER.warn("Cannot update system stats: PersistenceService not available");
             return;
         }
 
         // Load node from persistence
-        ClusterNode node = service.load(nodeId, ClusterNode.class);
+        ClusterNode node = persistenceService.load(nodeId, ClusterNode.class);
         if (node == null) {
             LOGGER.warn("Node {} not found in persistence, re-registering", nodeId);
             registerNodeInPersistence();
@@ -515,7 +427,7 @@ public class ClusterServiceImpl implements ClusterService {
             node.setLastHeartbeat(System.currentTimeMillis());
 
             // Save back to persistence
-            boolean success = service.save(node);
+            boolean success = persistenceService.save(node);
             if (!success) {
                 LOGGER.error("Failed to update node {} statistics", nodeId);
             }
@@ -532,8 +444,7 @@ public class ClusterServiceImpl implements ClusterService {
             return;
         }
 
-        PersistenceService service = getPersistenceService();
-        if (service == null) {
+        if (persistenceService == null) {
             LOGGER.warn("Cannot cleanup stale nodes: PersistenceService not available");
             return;
         }
@@ -552,47 +463,44 @@ public class ClusterServiceImpl implements ClusterService {
         staleNodesCondition.setParameter("comparisonOperator", "lessThan");
         staleNodesCondition.setParameter("propertyValueInteger", cutoffTime);
 
-        PartialList<ClusterNode> staleNodes = service.query(staleNodesCondition, null, ClusterNode.class, 0, -1);
+        PartialList<ClusterNode> staleNodes = persistenceService.query(staleNodesCondition, null, ClusterNode.class, 0, -1);
 
         for (ClusterNode staleNode : staleNodes.getList()) {
             LOGGER.info("Removing stale node: {}", staleNode.getItemId());
-            service.remove(staleNode.getItemId(), ClusterNode.class);
+            persistenceService.remove(staleNode.getItemId(), ClusterNode.class);
             nodeSystemStatistics.remove(staleNode.getItemId());
         }
     }
 
     @Override
     public List<ClusterNode> getClusterNodes() {
-        PersistenceService service = getPersistenceService();
-        if (service == null) {
+        if (persistenceService == null) {
             LOGGER.warn("Cannot get cluster nodes: PersistenceService not available");
             return Collections.emptyList();
         }
 
         // Query all nodes from the persistence service
-        return service.getAllItems(ClusterNode.class, 0, -1, null).getList();
+        return persistenceService.getAllItems(ClusterNode.class, 0, -1, null).getList();
     }
 
     @Override
     public void purge(Date date) {
-        PersistenceService service = getPersistenceService();
-        if (service == null) {
+        if (persistenceService == null) {
             LOGGER.warn("Cannot purge by date: PersistenceService not available");
             return;
         }
 
-        service.purge(date);
+        persistenceService.purge(date);
     }
 
     @Override
     public void purge(String scope) {
-        PersistenceService service = getPersistenceService();
-        if (service == null) {
+        if (persistenceService == null) {
             LOGGER.warn("Cannot purge by scope: PersistenceService not available");
             return;
         }
 
-        service.purge(scope);
+        persistenceService.purge(scope);
     }
 
     /**
@@ -602,7 +510,7 @@ public class ClusterServiceImpl implements ClusterService {
      * @return true if a persistence service is available (either directly set or via tracker)
      */
     public boolean isPersistenceServiceAvailable() {
-        return getPersistenceService() != null;
+        return persistenceService != null;
     }
 }
 
