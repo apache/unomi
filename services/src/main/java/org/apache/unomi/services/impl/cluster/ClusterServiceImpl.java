@@ -55,6 +55,7 @@ public class ClusterServiceImpl implements ClusterService {
     private long nodeStatisticsUpdateFrequency = 10000;
     private Map<String, Map<String, Serializable>> nodeSystemStatistics = new ConcurrentHashMap<>();
     private volatile boolean shutdownNow = false;
+    private volatile List<ClusterNode> cachedClusterNodes = Collections.emptyList();
 
     private BundleWatcher bundleWatcher;
     private ScheduledFuture<?> updateSystemStatsFuture;
@@ -431,6 +432,14 @@ public class ClusterServiceImpl implements ClusterService {
             if (!success) {
                 LOGGER.error("Failed to update node {} statistics", nodeId);
             }
+
+            // Always refresh cluster nodes cache after attempting stats update
+            try {
+                List<ClusterNode> nodes = persistenceService.getAllItems(ClusterNode.class, 0, -1, null).getList();
+                cachedClusterNodes = nodes;
+            } catch (Exception e) {
+                LOGGER.warn("Failed to refresh cluster nodes cache during stats update", e);
+            }
         } catch (Exception e) {
             LOGGER.error("Error updating system statistics for node {}: {}", nodeId, e.getMessage(), e);
         }
@@ -474,13 +483,8 @@ public class ClusterServiceImpl implements ClusterService {
 
     @Override
     public List<ClusterNode> getClusterNodes() {
-        if (persistenceService == null) {
-            LOGGER.warn("Cannot get cluster nodes: PersistenceService not available");
-            return Collections.emptyList();
-        }
-
-        // Query all nodes from the persistence service
-        return persistenceService.getAllItems(ClusterNode.class, 0, -1, null).getList();
+        // Return cached cluster nodes, creating a defensive copy
+        return cachedClusterNodes.isEmpty() ? Collections.emptyList() : new ArrayList<>(cachedClusterNodes);
     }
 
     @Override
