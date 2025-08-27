@@ -151,14 +151,14 @@ public class RuleServiceIT extends BaseIT {
         Profile profile = new Profile(UUID.randomUUID().toString());
         Session session = new Session(UUID.randomUUID().toString(), profile, new Date(), TEST_SCOPE);
 
-        updateConfiguration(RulesService.class.getName(), "org.apache.unomi.services", "rules.optimizationActivated", "false");
+        updateConfiguration(null, "org.apache.unomi.services", "rules.optimizationActivated", "false");
         rulesService = getService(RulesService.class);
         eventService = getService(EventService.class);
 
         LOGGER.info("Running unoptimized rules performance test...");
         long unoptimizedRunTime = runEventTest(profile, session);
 
-        updateConfiguration(RulesService.class.getName(), "org.apache.unomi.services", "rules.optimizationActivated", "true");
+        updateConfiguration(null, "org.apache.unomi.services", "rules.optimizationActivated", "true");
         rulesService = getService(RulesService.class);
         eventService = getService(EventService.class);
 
