@@ -31,13 +31,13 @@ import org.apache.unomi.groovy.actions.ScriptMetadata;
  *
  * <p>
  * Key features:
+ * </p>
  * <ul>
  *   <li>Pre-compilation of scripts at startup</li>
  *   <li>Hash-based change detection for selective recompilation</li>
  *   <li>Thread-safe compilation and execution</li>
  *   <li>Unified caching architecture for compiled scripts</li>
  * </ul>
- * </p>
  *
  * <p>
  * Thread Safety: Implementations must be thread-safe as this service
