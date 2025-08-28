@@ -29,6 +29,8 @@ import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.api.services.SchedulerService;
 import org.apache.unomi.api.services.SegmentService;
+import org.apache.unomi.api.tasks.ScheduledTask;
+import org.apache.unomi.api.tasks.TaskExecutor;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.PropertyHelper;
@@ -189,6 +191,8 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
 
     private boolean forceRefreshOnSave = false;
 
+    private static final String PROPERTY_TYPE_LOAD_TASK_TYPE = "property-type-load";
+    private static final String PROFILES_PURGE_TASK_TYPE = "profiles-purge";
     private String propertyTypeLoadTaskId;
     private String purgeProfilesTaskId;
 
@@ -301,14 +305,31 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
     }
 
     private void schedulePropertyTypeLoad() {
-        TimerTask task = new TimerTask() {
+        TaskExecutor reloadPropertyTaskExecutor = new TaskExecutor() {
             @Override
-            public void run() {
-                reloadPropertyTypes(false);
+            public String getTaskType() {
+                return PROPERTY_TYPE_LOAD_TASK_TYPE;
+            }
+
+            @Override
+            public void execute(ScheduledTask task, TaskExecutor.TaskStatusCallback callback) {
+                try {
+                    reloadPropertyTypes(false);
+                    callback.complete();
+                } catch (Exception e) {
+                    LOGGER.error("Error while reloading property type", e);
+                    callback.fail(e.getMessage());
+                }
             }
         };
+
+        schedulerService.registerTaskExecutor(reloadPropertyTaskExecutor);
+
         this.resetPropertyTypeLoadTask();
-        this.propertyTypeLoadTaskId = schedulerService.createRecurringTask("propertyTypeLoad", propertiesRefreshInterval, TimeUnit.MILLISECONDS, task, false).getItemId();
+        this.propertyTypeLoadTaskId = schedulerService.newTask(PROPERTY_TYPE_LOAD_TASK_TYPE)
+                .withPeriod(propertiesRefreshInterval, TimeUnit.MILLISECONDS)
+                .nonPersistent()
+                .schedule().getItemId();
         LOGGER.info("Scheduled task for property type loading each {}ms", propertiesRefreshInterval);
     }
 
@@ -406,7 +427,6 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
             if (purgeProfileExistTime > 0) {
                 LOGGER.info("Purge: Profile created since more than {} days, will be purged", purgeProfileExistTime);
             }
-
             if (purgeSessionExistTime > 0) {
                 LOGGER.info("Purge: Session items created since more than {} days, will be purged", purgeSessionExistTime);
             }
@@ -414,9 +434,14 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
                 LOGGER.info("Purge: Event items created since more than {} days, will be purged", purgeEventExistTime);
             }
 
-            TimerTask task = new TimerTask() {
+            TaskExecutor purgeProfilesTaskExecutor = new TaskExecutor() {
                 @Override
-                public void run() {
+                public String getTaskType() {
+                    return PROFILES_PURGE_TASK_TYPE;
+                }
+
+                @Override
+                public void execute(ScheduledTask task, TaskExecutor.TaskStatusCallback callback) {
                     try {
                         long purgeStartTime = System.currentTimeMillis();
                         LOGGER.info("Purge: triggered");
@@ -428,14 +453,21 @@ public class ProfileServiceImpl implements ProfileService, SynchronousBundleList
                         purgeSessionItems(purgeSessionExistTime);
                         purgeEventItems(purgeEventExistTime);
                         LOGGER.info("Purge: executed in {} ms", System.currentTimeMillis() - purgeStartTime);
-                    } catch (Throwable t) {
-                        LOGGER.error("Error while purging", t);
+                        callback.complete();
+                    } catch (Exception e) {
+                        LOGGER.error("Error while purging", e);
+                        callback.fail(e.getMessage());
                     }
                 }
             };
-            this.resetProfilesPurgeTask();
-            this.purgeProfilesTaskId = schedulerService.createRecurringTask("profilesPurge", purgeProfileInterval, TimeUnit.DAYS, task, false).getItemId();
 
+            schedulerService.registerTaskExecutor(purgeProfilesTaskExecutor);
+
+            this.resetProfilesPurgeTask();
+            this.purgeProfilesTaskId = schedulerService.newTask(PROFILES_PURGE_TASK_TYPE)
+                    .withPeriod(purgeProfileInterval, TimeUnit.DAYS)
+                    .nonPersistent()
+                    .schedule().getItemId();
             LOGGER.info("Purge: purge scheduled with an interval of {} days", purgeProfileInterval);
         } else {
             LOGGER.info("Purge: No purge scheduled");
