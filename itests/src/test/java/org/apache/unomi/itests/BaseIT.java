@@ -26,11 +26,7 @@ import org.apache.commons.io.IOUtils;
 import org.apache.http.auth.AuthScope;
 import org.apache.http.auth.UsernamePasswordCredentials;
 import org.apache.http.client.config.RequestConfig;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpDelete;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.client.methods.HttpUriRequest;
+import org.apache.http.client.methods.*;
 import org.apache.http.config.Registry;
 import org.apache.http.config.RegistryBuilder;
 import org.apache.http.conn.socket.ConnectionSocketFactory;
@@ -63,6 +59,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.runner.RunWith;
 import org.ops4j.pax.exam.Configuration;
+import org.ops4j.pax.exam.ConfigurationManager;
 import org.ops4j.pax.exam.CoreOptions;
 import org.ops4j.pax.exam.Option;
 import org.ops4j.pax.exam.junit.PaxExam;
@@ -204,6 +201,11 @@ public abstract class BaseIT extends KarafTestSupport {
     public void shutdown() {
         closeHttpClient(httpClient);
         httpClient = null;
+    }
+
+    protected String karafData() {
+        ConfigurationManager cm = new ConfigurationManager();
+        return cm.getProperty("karaf.data");
     }
 
     protected void removeItems(final Class<? extends Item>... classes) throws InterruptedException {

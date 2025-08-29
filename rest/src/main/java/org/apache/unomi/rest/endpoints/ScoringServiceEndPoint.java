@@ -30,8 +30,6 @@ import org.osgi.service.component.annotations.Reference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.jws.WebMethod;
-import javax.jws.WebService;
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import java.util.List;
@@ -39,7 +37,6 @@ import java.util.List;
 /**
  * A JAX-RS endpoint to manage {@link Scoring}s
  */
-@WebService
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 @CrossOriginResourceSharing(
@@ -59,7 +56,6 @@ public class ScoringServiceEndPoint {
         LOGGER.info("Initializing scoring service endpoint...");
     }
 
-    @WebMethod(exclude = true)
     public void setSegmentService(SegmentService segmentService) {
         this.segmentService = segmentService;
     }

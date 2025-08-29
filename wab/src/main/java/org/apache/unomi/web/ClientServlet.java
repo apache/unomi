@@ -17,12 +17,12 @@
 
 package org.apache.unomi.web;
 
-import org.apache.unomi.api.services.ConfigSharingService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
+import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -33,26 +33,20 @@ import java.io.IOException;
  * A servlet filter to serve a context-specific Javascript containing the current request context object.
  */
 @Deprecated
+@WebServlet(name = "ClientServlet", urlPatterns = "/client/*")
 public class ClientServlet extends HttpServlet {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ClientServlet.class.getName());
-    private static final long serialVersionUID = 2928875960103325238L;
-
-    private String allowedProfileDownloadFormats;
-
-    private ConfigSharingService configSharingService;
 
     @Override
     public void init(ServletConfig config) throws ServletException {
         super.init(config);
-        configSharingService.setProperty("allowedProfileDownloadFormats", allowedProfileDownloadFormats);
         LOGGER.info("ClientServlet initialized.");
     }
 
     @Override
     public void destroy() {
         super.destroy();
-
         LOGGER.info("Client servlet shutdown.");
     }
 
@@ -61,11 +55,4 @@ public class ClientServlet extends HttpServlet {
         HttpServletRequestForwardWrapper.forward(request, response);
     }
 
-    public void setConfigSharingService(ConfigSharingService configSharingService) {
-        this.configSharingService = configSharingService;
-    }
-
-    public void setAllowedProfileDownloadFormats(String allowedProfileDownloadFormats) {
-        this.allowedProfileDownloadFormats = allowedProfileDownloadFormats;
-    }
 }

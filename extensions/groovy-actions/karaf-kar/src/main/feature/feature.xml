@@ -16,16 +16,11 @@
   ~ limitations under the License.
   -->
 <features xmlns="http://karaf.apache.org/xmlns/features/v1.6.0" name="unomi-groovy-actions">
+
     <feature name="unomi-groovy-actions" description="${project.name}" version="${project.version}">
         <details>${project.description}</details>
         <feature>wrap</feature>
         <feature>unomi-kar</feature>
-        <bundle start-level="85">mvn:org.apache.groovy/groovy/${groovy.version}</bundle>
-        <bundle start-level="85">mvn:org.apache.groovy/groovy-xml/${groovy.version}</bundle>
-        <bundle start-level="85">mvn:org.apache.groovy/groovy-json/${groovy.version}</bundle>
-        <bundle start-level="85">wrap:mvn:io.github.http-builder-ng/http-builder-ng-core/1.0.4</bundle>
-        <bundle start-level="85">mvn:org.jsoup/jsoup/1.13.1</bundle>
-        <bundle start-level="85">mvn:com.sun.activation/javax.activation/1.2.0</bundle>
         <bundle start-level="85" start="false">mvn:org.apache.unomi/unomi-groovy-actions-services/${project.version}</bundle>
         <bundle start-level="85" start="false">mvn:org.apache.unomi/unomi-groovy-actions-rest/${project.version}</bundle>
     </feature>

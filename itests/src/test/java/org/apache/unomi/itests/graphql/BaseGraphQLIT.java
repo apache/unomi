@@ -30,6 +30,7 @@ import org.ops4j.pax.exam.junit.PaxExam;
 import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
 import org.ops4j.pax.exam.spi.reactors.PerSuite;
 
+import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.util.Base64;
 import java.util.List;
@@ -91,9 +92,14 @@ public abstract class BaseGraphQLIT extends BaseIT {
         private ResponseContext(HttpEntity httpEntity) {
             try {
                 final String jsonFromResponse = EntityUtils.toString(httpEntity);
-                responseAsMap = GraphQLObjectMapper.getInstance().readValue(jsonFromResponse, Map.class);
+                try {
+                    responseAsMap = GraphQLObjectMapper.getInstance().readValue(jsonFromResponse, Map.class);
+                } catch (Exception e) {
+                    throw new RuntimeException("Failed to parse response as JSON: " + jsonFromResponse, e);
+                }
             } catch (Exception e) {
-                throw new RuntimeException(e);
+                throw new RuntimeException("Unable to read response content, length:" + httpEntity.getContentLength()
+                        + ", type:" + httpEntity.getContentType().getValue(), e);
             }
         }
 

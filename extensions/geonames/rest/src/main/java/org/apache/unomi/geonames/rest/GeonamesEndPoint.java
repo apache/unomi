@@ -27,8 +27,6 @@ import org.osgi.service.component.annotations.Reference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.jws.WebMethod;
-import javax.jws.WebService;
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.PathSegment;
@@ -36,7 +34,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
-@WebService
 @Produces(MediaType.APPLICATION_JSON + ";charset=UTF-8")
 @CrossOriginResourceSharing(
         allowAllOrigins = true,
@@ -55,7 +52,6 @@ public class GeonamesEndPoint {
         LOGGER.info("Initializing geonames service endpoint...");
     }
 
-    @WebMethod(exclude = true)
     public void setGeonamesService(GeonamesService geonamesService) {
         this.geonamesService = geonamesService;
     }

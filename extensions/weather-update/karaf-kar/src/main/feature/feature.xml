@@ -15,11 +15,9 @@
   ~ See the License for the specific language governing permissions and
   ~ limitations under the License.
   -->
-<features xmlns="http://karaf.apache.org/xmlns/features/v1.2.1" name="unomi-weather-update-karaf-feature">
-    <feature name="unomi-weather-update-karaf-kar" version="${project.version}"
-             description="Apache Unomi :: Extensions :: Weather update :: Apache Karaf Feature">
-        <details>Apache Karaf feature for the Apache Unomi Context Server extension that integrates Weather
-            update</details>
+<features xmlns="http://karaf.apache.org/xmlns/features/v1.6.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://karaf.apache.org/xmlns/features/v1.6.0 https://karaf.apache.org/xmlns/features/v1.6.0" name="unomi-weather-update-karaf-feature">
+    <feature name="unomi-weather-update-karaf-kar" version="${project.version}" description="Apache Unomi :: Extensions :: Weather update :: Apache Karaf Feature">
+        <details>Apache Karaf feature for the Apache Unomi Context Server extension that integrates Weather update</details>
         <feature>unomi-kar</feature>
         <configfile finalname="/etc/org.apache.unomi.weatherUpdate.cfg">mvn:org.apache.unomi/unomi-weather-update-core/${project.version}/cfg/weatherupdatecfg</configfile>
         <bundle start-level="85">mvn:org.apache.httpcomponents/httpcore-osgi/${httpcore-osgi.version}</bundle>
