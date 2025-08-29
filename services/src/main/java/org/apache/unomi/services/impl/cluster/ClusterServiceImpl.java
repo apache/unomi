@@ -25,6 +25,7 @@ import org.apache.unomi.api.ServerInfo;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.api.services.ClusterService;
+import org.apache.unomi.api.services.SchedulerService;
 import org.apache.unomi.lifecycle.BundleWatcher;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.slf4j.Logger;
@@ -48,8 +49,7 @@ public class ClusterServiceImpl implements ClusterService {
 
     private String publicAddress;
     private String internalAddress;
-    //private SchedulerService schedulerService; /* Wait for PR UNOMI-878 to reactivate that code
-    private ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(3);
+    private SchedulerService schedulerService;
     private String nodeId;
     private long nodeStartTime;
     private long nodeStatisticsUpdateFrequency = 10000;
@@ -58,8 +58,8 @@ public class ClusterServiceImpl implements ClusterService {
     private volatile List<ClusterNode> cachedClusterNodes = Collections.emptyList();
 
     private BundleWatcher bundleWatcher;
-    private ScheduledFuture<?> updateSystemStatsFuture;
-    private ScheduledFuture<?> cleanupStaleNodesFuture;
+    private String updateSystemStatsTaskId;
+    private String cleanupStaleNodesTaskId;
 
     /**
      * Max time to wait for persistence service (in milliseconds)
@@ -140,7 +140,6 @@ public class ClusterServiceImpl implements ClusterService {
         this.nodeStatisticsUpdateFrequency = nodeStatisticsUpdateFrequency;
     }
 
-    /* Wait for PR UNOMI-878 to reactivate that code
     public void setSchedulerService(SchedulerService schedulerService) {
         this.schedulerService = schedulerService;
 
@@ -151,21 +150,17 @@ public class ClusterServiceImpl implements ClusterService {
             initializeScheduledTasks();
         }
     }
-    */
 
-    /* Wait for PR UNOMI-878 to reactivate that code
     /**
      * Unbind method for the scheduler service, called by the OSGi framework when the service is unregistered
      * @param schedulerService The scheduler service being unregistered
      */
-    /*
     public void unsetSchedulerService(SchedulerService schedulerService) {
         if (this.schedulerService == schedulerService) {
             LOGGER.info("SchedulerService was unset");
             this.schedulerService = null;
         }
     }
-    */
 
     public void setNodeId(String nodeId) {
         this.nodeId = nodeId;
@@ -196,16 +191,12 @@ public class ClusterServiceImpl implements ClusterService {
         // Register this node in the persistence service
         registerNodeInPersistence();
 
-        /* Wait for PR UNOMI-878 to reactivate that code
-        /*
         // Only initialize scheduled tasks if scheduler service is available
         if (schedulerService != null) {
             initializeScheduledTasks();
         } else {
             LOGGER.warn("SchedulerService not available during ClusterService initialization. Scheduled tasks will not be registered. They will be registered when SchedulerService becomes available.");
         }
-        */
-        initializeScheduledTasks();
 
         LOGGER.info("Cluster service initialized with node ID: {}", nodeId);
     }
@@ -233,10 +224,7 @@ public class ClusterServiceImpl implements ClusterService {
                 }
             }
         };
-        /* Wait for PR UNOMI-878 to reactivate that code
-        schedulerService.createRecurringTask("clusterNodeStatisticsUpdate", nodeStatisticsUpdateFrequency, TimeUnit.MILLISECONDS, statisticsTask, false);
-        */
-        updateSystemStatsFuture = scheduledExecutorService.scheduleAtFixedRate(statisticsTask, 100, nodeStatisticsUpdateFrequency, TimeUnit.MILLISECONDS);
+        updateSystemStatsTaskId = schedulerService.createRecurringTask("clusterNodeStatisticsUpdate", nodeStatisticsUpdateFrequency, TimeUnit.MILLISECONDS, statisticsTask, false).getItemId();
 
         // Schedule cleanup of stale nodes
         TimerTask cleanupTask = new TimerTask() {
@@ -249,10 +237,7 @@ public class ClusterServiceImpl implements ClusterService {
                 }
             }
         };
-        /* Wait for PR UNOMI-878 to reactivate that code
-        schedulerService.createRecurringTask("clusterStaleNodesCleanup", 60000, TimeUnit.MILLISECONDS, cleanupTask, false);
-        */
-        cleanupStaleNodesFuture = scheduledExecutorService.scheduleAtFixedRate(cleanupTask, 100, 60000, TimeUnit.MILLISECONDS);
+        cleanupStaleNodesTaskId = schedulerService.createRecurringTask("clusterStaleNodesCleanup", 60000, TimeUnit.MILLISECONDS, cleanupTask, false).getItemId();
 
         LOGGER.info("Cluster service scheduled tasks initialized");
     }
@@ -262,34 +247,11 @@ public class ClusterServiceImpl implements ClusterService {
         shutdownNow = true;
 
         // Cancel scheduled tasks
-        if (updateSystemStatsFuture != null) {
-            boolean successfullyCancelled = updateSystemStatsFuture.cancel(false);
-            if (!successfullyCancelled) {
-                LOGGER.warn("Failed to cancel scheduled task: clusterNodeStatisticsUpdate");
-            } else {
-                LOGGER.info("Scheduled task: clusterNodeStatisticsUpdate cancelled");
-            }
+        if (updateSystemStatsTaskId != null) {
+            schedulerService.cancelTask(updateSystemStatsTaskId);
         }
-        if (cleanupStaleNodesFuture != null) {
-            boolean successfullyCancelled = cleanupStaleNodesFuture.cancel(false);
-            if (!successfullyCancelled) {
-                LOGGER.warn("Failed to cancel scheduled task: cleanupStaleNodesFuture");
-            } else {
-                LOGGER.info("Scheduled task: cleanupStaleNodesFuture cancelled");
-            }
-        }
-        if (scheduledExecutorService != null) {
-            scheduledExecutorService.shutdownNow();
-            try {
-                boolean successfullyTerminated = scheduledExecutorService.awaitTermination(10, TimeUnit.SECONDS);
-                if (!successfullyTerminated) {
-                    LOGGER.warn("Failed to terminate scheduled tasks after 10 seconds...");
-                } else {
-                    LOGGER.info("Scheduled tasks terminated");
-                }
-            } catch (InterruptedException e) {
-                LOGGER.error("Error waiting for scheduled tasks to terminate", e);
-            }
+        if (cleanupStaleNodesTaskId != null) {
+            schedulerService.cancelTask(cleanupStaleNodesTaskId);
         }
 
         // Remove node from persistence service

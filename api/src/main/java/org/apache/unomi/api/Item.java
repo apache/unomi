@@ -21,6 +21,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.Serializable;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -66,11 +67,20 @@ public abstract class Item implements Serializable {
     protected Long version;
     protected Map<String, Object> systemMetadata = new HashMap<>();
 
+    // Audit metadata fields
+    private String createdBy;
+    private String lastModifiedBy;
+    private Date creationDate;
+    private Date lastModificationDate;
+    private String sourceInstanceId;
+    private Date lastSyncDate;
+
     public Item() {
         this.itemType = getItemType(this.getClass());
         if (itemType == null) {
             LOGGER.error("Item implementations must provide a public String constant named ITEM_TYPE to uniquely identify this Item for the persistence service.");
         }
+        initializeAuditMetadata();
     }
 
     public Item(String itemId) {
@@ -78,6 +88,11 @@ public abstract class Item implements Serializable {
         this.itemId = itemId;
     }
 
+    private void initializeAuditMetadata() {
+        this.creationDate = new Date();
+        this.lastModificationDate = this.creationDate;
+        this.version = 0L;
+    }
 
     /**
      * Retrieves the Item's identifier used to uniquely identify this Item when persisted or when referred to. An Item's identifier must be unique among Items with the same type.
@@ -149,5 +164,56 @@ public abstract class Item implements Serializable {
 
     public void setSystemMetadata(String key, Object value) {
         systemMetadata.put(key, value);
+    }
+
+    // Audit metadata getters and setters
+    public String getCreatedBy() {
+        return createdBy;
+    }
+
+    public void setCreatedBy(String createdBy) {
+        this.createdBy = createdBy;
+    }
+
+    public String getLastModifiedBy() {
+        return lastModifiedBy;
+    }
+
+    public void setLastModifiedBy(String lastModifiedBy) {
+        this.lastModifiedBy = lastModifiedBy;
+        this.lastModificationDate = new Date();
+        this.version++;
+    }
+
+    public Date getCreationDate() {
+        return creationDate;
+    }
+
+    public void setCreationDate(Date creationDate) {
+        this.creationDate = creationDate;
+    }
+
+    public Date getLastModificationDate() {
+        return lastModificationDate;
+    }
+
+    public void setLastModificationDate(Date lastModificationDate) {
+        this.lastModificationDate = lastModificationDate;
+    }
+
+    public String getSourceInstanceId() {
+        return sourceInstanceId;
+    }
+
+    public void setSourceInstanceId(String sourceInstanceId) {
+        this.sourceInstanceId = sourceInstanceId;
+    }
+
+    public Date getLastSyncDate() {
+        return lastSyncDate;
+    }
+
+    public void setLastSyncDate(Date lastSyncDate) {
+        this.lastSyncDate = lastSyncDate;
     }
 }
