@@ -390,12 +390,12 @@
 
     <bean id="clusterServiceImpl" class="org.apache.unomi.services.impl.cluster.ClusterServiceImpl"
           init-method="init" destroy-method="destroy">
+        <property name="persistenceService" ref="persistenceService" />
         <property name="publicAddress" value="${cluster.contextserver.publicAddress}"/>
         <property name="internalAddress" value="${cluster.contextserver.internalAddress}"/>
         <property name="persistenceService" ref="persistenceService"/>
         <property name="nodeId" value="${cluster.nodeId}"/>
         <property name="nodeStatisticsUpdateFrequency" value="${cluster.nodeStatisticsUpdateFrequency}"/>
-        <property name="bundleContext" ref="blueprintBundleContext"/>
         <property name="bundleWatcher" ref="bundleWatcher"/>
     </bean>
 

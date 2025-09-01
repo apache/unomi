@@ -486,9 +486,6 @@ public class TestHelper {
         clusterService.setInternalAddress(internalAddress);
         clusterService.setNodeStatisticsUpdateFrequency(60000);
         clusterService.setNodeId(nodeId);
-        if (bundleContext != null) {
-            clusterService.setBundleContext(bundleContext);
-        }
 
         return clusterService;
     }
