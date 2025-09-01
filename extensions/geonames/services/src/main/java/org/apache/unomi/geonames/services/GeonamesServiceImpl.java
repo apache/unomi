@@ -17,12 +17,15 @@
 
 package org.apache.unomi.geonames.services;
 
-
 import org.apache.commons.lang3.StringUtils;
 import org.apache.unomi.api.PartialList;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.services.DefinitionsService;
+import org.apache.unomi.api.services.ExecutionContextManager;
 import org.apache.unomi.api.services.SchedulerService;
+import org.apache.unomi.api.tasks.TaskExecutor;
+import org.apache.unomi.api.tasks.TaskExecutor.TaskStatusCallback;
+import org.apache.unomi.api.tasks.ScheduledTask;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,6 +46,7 @@ public class GeonamesServiceImpl implements GeonamesService {
     private DefinitionsService definitionsService;
     private PersistenceService persistenceService;
     private SchedulerService schedulerService;
+    private ExecutionContextManager contextManager;
 
     private String pathToGeonamesDatabase;
     private Boolean forceDbImport;
@@ -64,6 +68,10 @@ public class GeonamesServiceImpl implements GeonamesService {
         this.schedulerService = schedulerService;
     }
 
+    public void setContextManager(ExecutionContextManager contextManager) {
+        this.contextManager = contextManager;
+    }
+
     public void setPathToGeonamesDatabase(String pathToGeonamesDatabase) {
         this.pathToGeonamesDatabase = pathToGeonamesDatabase;
     }
@@ -79,47 +87,99 @@ public class GeonamesServiceImpl implements GeonamesService {
     public void stop() {
     }
 
-    public void importDatabase() {
-        if (!persistenceService.createIndex(GeonameEntry.ITEM_TYPE)) {
-            if (forceDbImport) {
-                persistenceService.removeIndex(GeonameEntry.ITEM_TYPE);
-                persistenceService.createIndex(GeonameEntry.ITEM_TYPE);
-                LOGGER.info("Geonames index removed and recreated");
-            } else if (persistenceService.getAllItemsCount(GeonameEntry.ITEM_TYPE) > 0) {
-                return;
-            }
-        } else {
-            LOGGER.info("Geonames index created");
+    private static class GeonamesImportTaskExecutor implements TaskExecutor {
+        private final GeonamesServiceImpl service;
+        private final File databaseFile;
+
+        public GeonamesImportTaskExecutor(GeonamesServiceImpl service, File databaseFile) {
+            this.service = service;
+            this.databaseFile = databaseFile;
         }
 
-        if (pathToGeonamesDatabase == null) {
-            LOGGER.info("No geonames DB provided");
-            return;
+        @Override
+        public String getTaskType() {
+            return "geonames-import";
         }
-        final File f = new File(pathToGeonamesDatabase);
-        if (f.exists()) {
-            schedulerService.getSharedScheduleExecutorService().schedule(new TimerTask() {
-                @Override
-                public void run() {
-                    importGeoNameDatabase(f);
+
+        @Override
+        public void execute(ScheduledTask task, TaskStatusCallback statusCallback) throws Exception {
+            service.contextManager.executeAsSystem(() -> {
+                try {
+                    service.importGeoNameDatabase(databaseFile);
+                    statusCallback.complete();
+                } catch (Exception e) {
+                    LOGGER.error("Error importing geoname database", e);
+                    statusCallback.fail(e.getMessage());
                 }
-            }, refreshDbInterval, TimeUnit.MILLISECONDS);
+                return null;
+            });
         }
+    }
+
+    private static class GeonamesImportRetryTaskExecutor implements TaskExecutor {
+        private final GeonamesServiceImpl service;
+        private final File databaseFile;
+
+        public GeonamesImportRetryTaskExecutor(GeonamesServiceImpl service, File databaseFile) {
+            this.service = service;
+            this.databaseFile = databaseFile;
+        }
+
+        @Override
+        public String getTaskType() {
+            return "geonames-import-retry";
+        }
+
+        @Override
+        public void execute(ScheduledTask task, TaskStatusCallback statusCallback) throws Exception {
+            service.importGeoNameDatabase(databaseFile);
+            statusCallback.complete();
+        }
+    }
+
+    public void importDatabase() {
+        contextManager.executeAsSystem(() -> {
+            if (!persistenceService.createIndex(GeonameEntry.ITEM_TYPE)) {
+                if (forceDbImport) {
+                    persistenceService.removeIndex(GeonameEntry.ITEM_TYPE);
+                    persistenceService.createIndex(GeonameEntry.ITEM_TYPE);
+                    LOGGER.info("Geonames index removed and recreated");
+                } else if (persistenceService.getAllItemsCount(GeonameEntry.ITEM_TYPE) > 0) {
+                    return;
+                }
+            } else {
+                LOGGER.info("Geonames index created");
+            }
+
+            if (pathToGeonamesDatabase == null) {
+                LOGGER.info("No geonames DB provided");
+                return;
+            }
+            final File f = new File(pathToGeonamesDatabase);
+            if (f.exists()) {
+                schedulerService.newTask("geonames-import")
+                    .withInitialDelay(refreshDbInterval, TimeUnit.MILLISECONDS)
+                    .asOneShot()
+                    .withExecutor(new GeonamesImportTaskExecutor(this, f))
+                    .nonPersistent()
+                    .schedule();
+            }
+        });
     }
 
     private void importGeoNameDatabase(final File f) {
         Map<String,Map<String,Object>> typeMappings = persistenceService.getPropertiesMapping(GeonameEntry.ITEM_TYPE);
         if (typeMappings == null || typeMappings.size() == 0) {
             LOGGER.warn("Type mappings for type {} are not yet installed, delaying import until they are ready!", GeonameEntry.ITEM_TYPE);
-            schedulerService.getSharedScheduleExecutorService().schedule(new TimerTask() {
-                @Override
-                public void run() {
-                    importGeoNameDatabase(f);
-                }
-            }, refreshDbInterval, TimeUnit.MILLISECONDS);
+            schedulerService.newTask("geonames-import-retry")
+                .withInitialDelay(refreshDbInterval, TimeUnit.MILLISECONDS)
+                .asOneShot()
+                .withExecutor(new GeonamesImportRetryTaskExecutor(this, f))
+                .nonPersistent()
+                .schedule();
             return;
         } else {
-            // let's check that the mappings are correct
+            // @TODO: let's check that the mappings are correct
         }
         try {
 
@@ -229,48 +289,50 @@ public class GeonamesServiceImpl implements GeonamesService {
     }
 
     public List<GeonameEntry> reverseGeoCode(String lat, String lon) {
-        List<Condition> l = new ArrayList<Condition>();
-        Condition andCondition = new Condition();
-        andCondition.setConditionType(definitionsService.getConditionType("booleanCondition"));
-        andCondition.setParameter("operator", "and");
-        andCondition.setParameter("subConditions", l);
+        return contextManager.executeAsSystem(() -> {
+            List<Condition> l = new ArrayList<Condition>();
+            Condition andCondition = new Condition();
+            andCondition.setConditionType(definitionsService.getConditionType("booleanCondition"));
+            andCondition.setParameter("operator", "and");
+            andCondition.setParameter("subConditions", l);
 
+            Condition geoLocation = new Condition();
+            geoLocation.setConditionType(definitionsService.getConditionType("geoLocationByPointSessionCondition"));
+            geoLocation.setParameter("type", "circle");
+            geoLocation.setParameter("circleLatitude", Double.parseDouble(lat));
+            geoLocation.setParameter("circleLongitude", Double.parseDouble(lon));
+            geoLocation.setParameter("distance", GEOCODING_MAX_DISTANCE);
+            l.add(geoLocation);
 
-        Condition geoLocation = new Condition();
-        geoLocation.setConditionType(definitionsService.getConditionType("geoLocationByPointSessionCondition"));
-        geoLocation.setParameter("type", "circle");
-        geoLocation.setParameter("circleLatitude", Double.parseDouble(lat));
-        geoLocation.setParameter("circleLongitude", Double.parseDouble(lon));
-        geoLocation.setParameter("distance", GEOCODING_MAX_DISTANCE);
-        l.add(geoLocation);
+            l.add(getPropertyCondition("featureCode", "propertyValues", CITIES_FEATURE_CODES, "in"));
 
-        l.add(getPropertyCondition("featureCode", "propertyValues", CITIES_FEATURE_CODES, "in"));
-
-        PartialList<GeonameEntry> list = persistenceService.query(andCondition, "geo:location:" + lat + ":" + lon, GeonameEntry.class, 0, 1);
-        if (!list.getList().isEmpty()) {
-            return getHierarchy(list.getList().get(0));
-        }
-        return Collections.emptyList();
+            PartialList<GeonameEntry> list = persistenceService.query(andCondition, "geo:location:" + lat + ":" + lon, GeonameEntry.class, 0, 1);
+            if (!list.getList().isEmpty()) {
+                return getHierarchy(list.getList().get(0));
+            }
+            return Collections.emptyList();
+        });
     }
 
-
     public PartialList<GeonameEntry> getChildrenEntries(List<String> items, int offset, int size) {
-        Condition andCondition = getItemsInChildrenQuery(items, CITIES_FEATURE_CODES);
-        Condition featureCodeCondition = ((List<Condition>) andCondition.getParameter("subConditions")).get(0);
-        int level = items.size();
+        return contextManager.executeAsSystem(() -> {
+            Condition andCondition = getItemsInChildrenQuery(items, CITIES_FEATURE_CODES);
+            Condition featureCodeCondition = ((List<Condition>) andCondition.getParameter("subConditions")).get(0);
+            int level = items.size();
 
-        featureCodeCondition.setParameter("propertyValues", ORDERED_FEATURES.get(level));
-        PartialList<GeonameEntry> r = persistenceService.query(andCondition, null, GeonameEntry.class, offset, size);
-        while (r.size() == 0 && level < ORDERED_FEATURES.size() - 1) {
-            level++;
             featureCodeCondition.setParameter("propertyValues", ORDERED_FEATURES.get(level));
-            r = persistenceService.query(andCondition, null, GeonameEntry.class, offset, size);
-        }
-        return r;
+            PartialList<GeonameEntry> r = persistenceService.query(andCondition, null, GeonameEntry.class, offset, size);
+            while (r.size() == 0 && level < ORDERED_FEATURES.size() - 1) {
+                level++;
+                featureCodeCondition.setParameter("propertyValues", ORDERED_FEATURES.get(level));
+                r = persistenceService.query(andCondition, null, GeonameEntry.class, offset, size);
+            }
+            return r;
+        });
     }
 
     public PartialList<GeonameEntry> getChildrenCities(List<String> items, int offset, int size) {
-        return persistenceService.query(getItemsInChildrenQuery(items, CITIES_FEATURE_CODES), null, GeonameEntry.class, offset, size);
+        return contextManager.executeAsSystem(() -> persistenceService.query(getItemsInChildrenQuery(items, CITIES_FEATURE_CODES), null, GeonameEntry.class, offset, size));
     }
 
     private Condition getItemsInChildrenQuery(List<String> items, List<String> featureCodes) {
@@ -296,45 +358,47 @@ public class GeonamesServiceImpl implements GeonamesService {
     }
 
     public List<GeonameEntry> getCapitalEntries(String itemId) {
-        GeonameEntry entry = persistenceService.load(itemId, GeonameEntry.class);
-        List<String> featureCodes;
+        return contextManager.executeAsSystem(() -> {
+            GeonameEntry entry = persistenceService.load(itemId, GeonameEntry.class);
+            List<String> featureCodes;
 
-        List<Condition> l = new ArrayList<Condition>();
-        Condition andCondition = new Condition();
-        andCondition.setConditionType(definitionsService.getConditionType("booleanCondition"));
-        andCondition.setParameter("operator", "and");
-        andCondition.setParameter("subConditions", l);
+            List<Condition> l = new ArrayList<Condition>();
+            Condition andCondition = new Condition();
+            andCondition.setConditionType(definitionsService.getConditionType("booleanCondition"));
+            andCondition.setParameter("operator", "and");
+            andCondition.setParameter("subConditions", l);
 
-        l.add(getPropertyCondition("countryCode", "propertyValue", entry.getCountryCode(), "equals"));
+            l.add(getPropertyCondition("countryCode", "propertyValue", entry.getCountryCode(), "equals"));
 
-        if (COUNTRY_FEATURE_CODES.contains(entry.getFeatureCode())) {
-            featureCodes = Arrays.asList("PPLC");
-        } else if (ADM1_FEATURE_CODES.contains(entry.getFeatureCode())) {
-            featureCodes = Arrays.asList("PPLA", "PPLC");
-            l.add(getPropertyCondition("admin1Code", "propertyValue", entry.getAdmin1Code(), "equals"));
-        } else if (ADM2_FEATURE_CODES.contains(entry.getFeatureCode())) {
-            featureCodes = Arrays.asList("PPLA2", "PPLA", "PPLC");
-            l.add(getPropertyCondition("admin1Code", "propertyValue", entry.getAdmin1Code(), "equals"));
-            l.add(getPropertyCondition("admin2Code", "propertyValue", entry.getAdmin2Code(), "equals"));
-        } else {
+            if (COUNTRY_FEATURE_CODES.contains(entry.getFeatureCode())) {
+                featureCodes = Arrays.asList("PPLC");
+            } else if (ADM1_FEATURE_CODES.contains(entry.getFeatureCode())) {
+                featureCodes = Arrays.asList("PPLA", "PPLC");
+                l.add(getPropertyCondition("admin1Code", "propertyValue", entry.getAdmin1Code(), "equals"));
+            } else if (ADM2_FEATURE_CODES.contains(entry.getFeatureCode())) {
+                featureCodes = Arrays.asList("PPLA2", "PPLA", "PPLC");
+                l.add(getPropertyCondition("admin1Code", "propertyValue", entry.getAdmin1Code(), "equals"));
+                l.add(getPropertyCondition("admin2Code", "propertyValue", entry.getAdmin2Code(), "equals"));
+            } else {
+                return Collections.emptyList();
+            }
+
+            Condition featureCodeCondition = new Condition();
+            featureCodeCondition.setConditionType(definitionsService.getConditionType("sessionPropertyCondition"));
+            featureCodeCondition.setParameter("propertyName", "featureCode");
+            featureCodeCondition.setParameter("propertyValues", featureCodes);
+            featureCodeCondition.setParameter("comparisonOperator", "in");
+            l.add(featureCodeCondition);
+            List<GeonameEntry> entries = persistenceService.query(andCondition, null, GeonameEntry.class);
+            if (entries.size() == 0) {
+                featureCodeCondition.setParameter("propertyValues", CITIES_FEATURE_CODES);
+                entries = persistenceService.query(andCondition, "population:desc", GeonameEntry.class, 0, 1).getList();
+            }
+            if (entries.size() > 0) {
+                return getHierarchy(entries.get(0));
+            }
             return Collections.emptyList();
-        }
-
-        Condition featureCodeCondition = new Condition();
-        featureCodeCondition.setConditionType(definitionsService.getConditionType("sessionPropertyCondition"));
-        featureCodeCondition.setParameter("propertyName", "featureCode");
-        featureCodeCondition.setParameter("propertyValues", featureCodes);
-        featureCodeCondition.setParameter("comparisonOperator", "in");
-        l.add(featureCodeCondition);
-        List<GeonameEntry> entries = persistenceService.query(andCondition, null, GeonameEntry.class);
-        if (entries.size() == 0) {
-            featureCodeCondition.setParameter("propertyValues", CITIES_FEATURE_CODES);
-            entries = persistenceService.query(andCondition, "population:desc", GeonameEntry.class, 0, 1).getList();
-        }
-        if (entries.size() > 0) {
-            return getHierarchy(entries.get(0));
-        }
-        return Collections.emptyList();
+        });
     }
 
     private Condition getPropertyCondition(String name, String propertyValueField, Object value, String operator) {

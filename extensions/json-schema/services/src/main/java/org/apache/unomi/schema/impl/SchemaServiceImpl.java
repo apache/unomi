@@ -27,7 +27,9 @@ import com.networknt.schema.*;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.unomi.api.Item;
+import org.apache.unomi.api.services.SchedulerService;
 import org.apache.unomi.api.services.ScopeService;
+import org.apache.unomi.api.tasks.ScheduledTask;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.schema.api.JsonSchemaWrapper;
 import org.apache.unomi.schema.api.SchemaService;
@@ -47,10 +49,8 @@ import java.util.stream.Collectors;
 public class SchemaServiceImpl implements SchemaService {
 
     private static final String URI = "https://json-schema.org/draft/2019-09/schema";
-
     private static final Logger LOGGER = LoggerFactory.getLogger(SchemaServiceImpl.class.getName());
     private static final String TARGET_EVENTS = "events";
-
     private static final String GENERIC_ERROR_KEY = "error";
 
     ObjectMapper objectMapper = new ObjectMapper();
@@ -67,18 +67,12 @@ public class SchemaServiceImpl implements SchemaService {
      * Available extensions indexed by key:schema URI to be extended, value: list of schema extension URIs
      */
     private ConcurrentMap<String, Set<String>> extensions = new ConcurrentHashMap<>();
-
     private Integer jsonSchemaRefreshInterval = 1000;
-    private ScheduledFuture<?> scheduledFuture;
-
     private PersistenceService persistenceService;
     private ScopeService scopeService;
-
     private JsonSchemaFactory jsonSchemaFactory;
-
-    // TODO UNOMI-572: when fixing UNOMI-572 please remove the usage of the custom ScheduledExecutorService and re-introduce the Unomi Scheduler Service
-    private ScheduledExecutorService scheduler;
-    //private SchedulerService schedulerService;
+    private SchedulerService schedulerService;
+    private String refreshJSONSchemasTaskId;
 
     @Override
     public boolean isValid(String data, String schemaId) {
@@ -378,14 +372,22 @@ public class SchemaServiceImpl implements SchemaService {
         TimerTask task = new TimerTask() {
             @Override
             public void run() {
-                try {
-                    refreshJSONSchemas();
-                } catch (Exception e) {
-                    LOGGER.error("Unexpected error while refreshing JSON Schemas", e);
-                }
+            try {
+                refreshJSONSchemas();
+            } catch (Exception e) {
+                LOGGER.error("Unexpected error while refreshing JSON Schemas", e);
+            }
             }
         };
-        scheduledFuture = scheduler.scheduleWithFixedDelay(task, 0, jsonSchemaRefreshInterval, TimeUnit.MILLISECONDS);
+        this.resetTimers();
+        this.refreshJSONSchemasTaskId = schedulerService.createRecurringTask("refreshJSONSchemas", jsonSchemaRefreshInterval, TimeUnit.MILLISECONDS, task, false).getItemId();
+    }
+
+    private void resetTimers() {
+        if (this.refreshJSONSchemasTaskId != null) {
+            schedulerService.cancelTask(this.refreshJSONSchemasTaskId);
+            this.refreshJSONSchemasTaskId = null;
+        }
     }
 
     private void initJsonSchemaFactory() {
@@ -414,17 +416,13 @@ public class SchemaServiceImpl implements SchemaService {
     }
 
     public void init() {
-        scheduler = Executors.newSingleThreadScheduledExecutor();
-        initJsonSchemaFactory();
-        initTimers();
+        this.initJsonSchemaFactory();
+        this.initTimers();
         LOGGER.info("Schema service initialized.");
     }
 
     public void destroy() {
-        scheduledFuture.cancel(true);
-        if (scheduler != null) {
-            scheduler.shutdown();
-        }
+        this.resetTimers();
         LOGGER.info("Schema service shutdown.");
     }
 

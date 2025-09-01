@@ -58,8 +58,8 @@ public class ClusterServiceImpl implements ClusterService {
     private volatile List<ClusterNode> cachedClusterNodes = Collections.emptyList();
 
     private BundleWatcher bundleWatcher;
-    private String updateSystemStatsTaskId;
-    private String cleanupStaleNodesTaskId;
+    private String clusterNodeStatisticsUpdateTaskId;
+    private String clusterStaleNodesCleanupTaskId;
 
     /**
      * Max time to wait for persistence service (in milliseconds)
@@ -206,12 +206,10 @@ public class ClusterServiceImpl implements ClusterService {
      * This method can be called later if schedulerService wasn't available during init.
      */
     public void initializeScheduledTasks() {
-        /* Wait for PR UNOMI-878 to reactivate that code
         if (schedulerService == null) {
             LOGGER.error("Cannot initialize scheduled tasks: SchedulerService is not set");
             return;
         }
-        */
 
         // Schedule regular updates of the node statistics
         TimerTask statisticsTask = new TimerTask() {
@@ -224,7 +222,7 @@ public class ClusterServiceImpl implements ClusterService {
                 }
             }
         };
-        updateSystemStatsTaskId = schedulerService.createRecurringTask("clusterNodeStatisticsUpdate", nodeStatisticsUpdateFrequency, TimeUnit.MILLISECONDS, statisticsTask, false).getItemId();
+        this.clusterNodeStatisticsUpdateTaskId = schedulerService.createRecurringTask("clusterNodeStatisticsUpdate", nodeStatisticsUpdateFrequency, TimeUnit.MILLISECONDS, statisticsTask, false).getItemId();
 
         // Schedule cleanup of stale nodes
         TimerTask cleanupTask = new TimerTask() {
@@ -237,7 +235,7 @@ public class ClusterServiceImpl implements ClusterService {
                 }
             }
         };
-        cleanupStaleNodesTaskId = schedulerService.createRecurringTask("clusterStaleNodesCleanup", 60000, TimeUnit.MILLISECONDS, cleanupTask, false).getItemId();
+        this.clusterStaleNodesCleanupTaskId = schedulerService.createRecurringTask("clusterStaleNodesCleanup", 60000, TimeUnit.MILLISECONDS, cleanupTask, false).getItemId();
 
         LOGGER.info("Cluster service scheduled tasks initialized");
     }
@@ -247,11 +245,13 @@ public class ClusterServiceImpl implements ClusterService {
         shutdownNow = true;
 
         // Cancel scheduled tasks
-        if (updateSystemStatsTaskId != null) {
-            schedulerService.cancelTask(updateSystemStatsTaskId);
+        if (schedulerService != null && clusterNodeStatisticsUpdateTaskId != null) {
+            schedulerService.cancelTask(clusterNodeStatisticsUpdateTaskId);
+            clusterStaleNodesCleanupTaskId = null;
         }
-        if (cleanupStaleNodesTaskId != null) {
-            schedulerService.cancelTask(cleanupStaleNodesTaskId);
+        if (schedulerService != null && clusterStaleNodesCleanupTaskId != null) {
+            schedulerService.cancelTask(clusterStaleNodesCleanupTaskId);
+            clusterStaleNodesCleanupTaskId = null;
         }
 
         // Remove node from persistence service

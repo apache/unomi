@@ -24,6 +24,7 @@ import org.apache.unomi.api.*;
 import org.apache.unomi.api.actions.Action;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.conditions.ConditionType;
+import org.apache.unomi.api.exceptions.BadSegmentConditionException;
 import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.rules.Rule;
 import org.apache.unomi.api.segments.*;
@@ -32,12 +33,11 @@ import org.apache.unomi.api.services.RulesService;
 import org.apache.unomi.api.services.SchedulerService;
 import org.apache.unomi.api.services.SegmentService;
 import org.apache.unomi.api.utils.ConditionBuilder;
+import org.apache.unomi.api.utils.ParserHelper;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.persistence.spi.aggregate.TermsAggregate;
 import org.apache.unomi.services.impl.AbstractServiceImpl;
 import org.apache.unomi.services.impl.scheduler.SchedulerServiceImpl;
-import org.apache.unomi.api.utils.ParserHelper;
-import org.apache.unomi.api.exceptions.BadSegmentConditionException;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.BundleEvent;
@@ -83,6 +83,8 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
     private int maximumIdsQueryCount = 5000;
     private boolean pastEventsDisablePartitions = false;
     private int dailyDateExprEvaluationHourUtc = 5;
+    private String recalculatePastEventConditionsTaskId;
+    private String refreshSegmentAndScoringDefinitionsTaskId;
 
     public SegmentServiceImpl() {
         LOGGER.info("Initializing segment service...");
@@ -155,11 +157,12 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
             }
         }
         bundleContext.addBundleListener(this);
-        initializeTimer();
+        this.initializeTimer();
         LOGGER.info("Segment service initialized.");
     }
 
     public void preDestroy() {
+        this.resetTimers();
         bundleContext.removeBundleListener(this);
         LOGGER.info("Segment service shutdown.");
     }
@@ -1196,7 +1199,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
     }
 
     private void initializeTimer() {
-
+        this.resetTimers();
         TimerTask task = new TimerTask() {
             @Override
             public void run() {
@@ -1214,7 +1217,7 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
         long period = TimeUnit.DAYS.toSeconds(taskExecutionPeriod);
         LOGGER.info("daily recalculation job for segments and scoring that contains date relative conditions will run at fixed rate, " +
                 "initialDelay={}, taskExecutionPeriod={} in seconds", initialDelay, period);
-        schedulerService.getScheduleExecutorService().scheduleAtFixedRate(task, initialDelay, period, TimeUnit.SECONDS);
+        this.recalculatePastEventConditionsTaskId = schedulerService.createRecurringTask("recalculatePastEventConditions", period, TimeUnit.SECONDS, task, false).getItemId();
 
         task = new TimerTask() {
             @Override
@@ -1227,7 +1230,18 @@ public class SegmentServiceImpl extends AbstractServiceImpl implements SegmentSe
                 }
             }
         };
-        schedulerService.getScheduleExecutorService().scheduleAtFixedRate(task, 0, segmentRefreshInterval, TimeUnit.MILLISECONDS);
+        this.refreshSegmentAndScoringDefinitionsTaskId = schedulerService.createRecurringTask("refreshSegmentAndScoringDefinitions", segmentRefreshInterval, TimeUnit.MILLISECONDS, task, false).getItemId();
+    }
+
+    private void resetTimers() {
+        if (this.recalculatePastEventConditionsTaskId != null) {
+            schedulerService.cancelTask(this.recalculatePastEventConditionsTaskId);
+            this.recalculatePastEventConditionsTaskId = null;
+        }
+        if (this.refreshSegmentAndScoringDefinitionsTaskId != null) {
+            schedulerService.cancelTask(this.refreshSegmentAndScoringDefinitionsTaskId);
+            this.refreshSegmentAndScoringDefinitionsTaskId = null;
+        }
     }
 
     public void setTaskExecutionPeriod(long taskExecutionPeriod) {
