@@ -21,18 +21,19 @@
     <parent>
         <groupId>org.apache.unomi</groupId>
         <artifactId>unomi-root</artifactId>
-        <version>2.7.0-SNAPSHOT</version>
+        <version>3.0.0-SNAPSHOT</version>
     </parent>
     <artifactId>unomi-itests</artifactId>
     <name>Apache Unomi :: Integration Tests</name>
     <description>Apache Unomi Context Server integration tests</description>
+    <packaging>jar</packaging>
 
     <dependencyManagement>
         <dependencies>
             <dependency>
-                <groupId>org.apache.karaf</groupId>
-                <artifactId>karaf-bom</artifactId>
-                <version>${karaf.version}</version>
+                <groupId>org.apache.unomi</groupId>
+                <artifactId>unomi-bom</artifactId>
+                <version>${project.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -111,30 +112,26 @@
         <dependency>
             <groupId>org.eclipse.jetty.websocket</groupId>
             <artifactId>websocket-client</artifactId>
-            <version>9.4.28.v20200408</version>
+            <version>${jetty.version}</version>
         </dependency>
         <dependency>
             <groupId>org.apache.unomi</groupId>
             <artifactId>unomi-lifecycle-watcher</artifactId>
-            <version>${project.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.unomi</groupId>
             <artifactId>unomi-persistence-spi</artifactId>
-            <version>${project.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.unomi</groupId>
             <artifactId>shell-commands</artifactId>
-            <version>${project.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.apache.unomi</groupId>
             <artifactId>unomi-groovy-actions-services</artifactId>
-            <version>${project.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -146,7 +143,6 @@
     </dependencies>
 
     <profiles>
-
         <profile>
             <id>run-tests</id>
             <activation>
@@ -167,7 +163,7 @@
                                 </goals>
                                 <configuration>
                                     <url>
-                                        https://search.maven.org/remotecontent?filepath=org/jacoco/jacoco/0.8.8/jacoco-0.8.8.zip
+                                        https://search.maven.org/remotecontent?filepath=org/jacoco/jacoco/0.8.13/jacoco-0.8.13.zip
                                     </url>
                                     <outputFileName>jacoco.zip</outputFileName>
                                     <unpack>true</unpack>
@@ -177,13 +173,13 @@
                             </execution>
                         </executions>
                     </plugin>
-                    <!-- Needed if you use versionAsInProject() -->
                     <plugin>
                         <groupId>org.apache.servicemix.tooling</groupId>
                         <artifactId>depends-maven-plugin</artifactId>
                         <executions>
                             <execution>
                                 <id>generate-depends-file</id>
+                                <phase>generate-resources</phase>
                                 <goals>
                                     <goal>generate-depends-file</goal>
                                 </goals>
@@ -218,7 +214,7 @@
                             <httpPort>9400</httpPort>
                             <version>${elasticsearch.test.version}</version>
                             <autoCreateIndex>true</autoCreateIndex>
-                            <timeout>120</timeout>
+                            <instanceStartupTimeout>120</instanceStartupTimeout>
                             <environmentVariables>
                                 <ES_JAVA_OPTS>-Xms4g -Xmx4g</ES_JAVA_OPTS>
                             </environmentVariables>
@@ -257,7 +253,7 @@
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-failsafe-plugin</artifactId>
-                        <version>3.0.0-M4</version>
+                        <version>${maven-failsafe.plugin.version}</version>
                         <configuration>
                             <includes>
                                 <include>**/*AllITs.java</include>
@@ -323,7 +319,7 @@
                     <plugin>
                         <groupId>org.jacoco</groupId>
                         <artifactId>jacoco-maven-plugin</artifactId>
-                        <version>0.7.7.201606060606</version>
+                        <version>0.8.13</version>
                         <executions>
                             <execution>
                                 <phase>post-site</phase>

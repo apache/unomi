@@ -224,9 +224,8 @@ Apache Unomi allows using different types of expressions in the following subsys
 - context.json filters and personalization queries
 - rule conditions and actions parameters
 
-Apache Unomi uses two integrated scripting languages to provide this functionality: OGNL and MVEL.
-OGNL is deprecated and is now disabled by default since 1.5.2 as it is little used (and replaced by better performing
-hardcoded property lookups). MVEL is more commonly used in rule actions as in the following example:
+Apache Unomi uses an integrated scripting language to provide this functionality: MVEL.
+MVEL is used in rule actions as in the following example:
 
 From https://github.com/apache/unomi/blob/unomi-1.5.x/plugins/baseplugin/src/main/resources/META-INF/cxs/rules/sessionAssigned.json[https://github.com/apache/unomi/blob/unomi-1.5.x/plugins/baseplugin/src/main/resources/META-INF/cxs/rules/sessionAssigned.json]:
 
@@ -296,10 +295,6 @@ From https://github.com/apache/unomi/blob/unomi-1.5.x/plugins/baseplugin/src/mai
 As we see in the above example, we use an MVEL script with the setPropertyAction to set a property value.
 Starting with version 1.5.2, any expression use in rules MUST be allow-listed.
 
-OGNL was previously used wherever a parameter could be used, but MVEL could only be used with a “script::” prefix.
-Starting with version 1.5.2 OGNL will no longer be allowed and is replaced by a compatible “hardcoded” property
-lookup system, while MVEL requires allow-listing the scripts that are to be used.
-
 By default, Apache Unomi comes with some built-in allowed expressions that cover all the internal uses cases.
 
 Default allowed MVEL expressions (from https://github.com/apache/unomi/blob/unomi-1.5.x/plugins/baseplugin/src/main/resources/META-INF/cxs/expressions/mvel.json[https://github.com/apache/unomi/blob/unomi-1.5.x/plugins/baseplugin/src/main/resources/META-INF/cxs/expressions/mvel.json]) :
@@ -342,15 +337,15 @@ Alongside with the allow-listing technology, there are new configuration paramet
 [source]
 ----
 # These parameters control the list of classes that are allowed or forbidden when executing expressions.
-org.apache.unomi.scripting.allow=${env:UNOMI_ALLOW_SCRIPTING_CLASSES:-org.apache.unomi.api.Event,org.apache.unomi.api.Profile,org.apache.unomi.api.Session,org.apache.unomi.api.Item,org.apache.unomi.api.CustomItem,ognl.*,java.lang.Object,java.util.Map,java.util.HashMap,java.lang.Integer,org.mvel2.*}
+org.apache.unomi.scripting.allow=${env:UNOMI_ALLOW_SCRIPTING_CLASSES:-org.apache.unomi.api.Event,org.apache.unomi.api.Profile,org.apache.unomi.api.Session,org.apache.unomi.api.Item,org.apache.unomi.api.CustomItem,java.lang.Object,java.util.Map,java.util.HashMap,java.lang.Integer,org.mvel2.*}
 org.apache.unomi.scripting.forbid=${env:UNOMI_FORBID_SCRIPTING_CLASSES:-}
 
 # This parameter controls the whole expression filtering system. It is not recommended to turn it off. The main reason to turn it off would be to check if it is interfering with something, but it should always be active in production.
 org.apache.unomi.scripting.filter.activated=${env:UNOMI_SCRIPTING_FILTER_ACTIVATED:-true}
 
 # The following parameters control the filtering using regular expressions for each scripting sub-system.
-# The "collections" parameter tells the expression filtering system which configurations to expect. By default only MVEL and/or OGNL are accepted values, but in the future these might be replaced by new scripting sub-systems.
-org.apache.unomi.scripting.filter.collections=${env:UNOMI_SCRIPTING_FILTER_COLLECTIONS:-mvel,ognl}
+# The "collections" parameter tells the expression filtering system which configurations to expect. By default only MVEL is accepted values, but in the future these might be replaced by new scripting sub-systems.
+org.apache.unomi.scripting.filter.collections=${env:UNOMI_SCRIPTING_FILTER_COLLECTIONS:-mvel}
 
 # For each scripting sub-system, there is an allow and a forbid property that reference a .json files,
 # you can either edit this files or reference your own file directly in the following config.
@@ -364,11 +359,6 @@ org.apache.unomi.scripting.filter.collections=${env:UNOMI_SCRIPTING_FILTER_COLLE
 #       example: ["\\Qsession.size + 1\\E"]
 org.apache.unomi.scripting.filter.mvel.allow=${env:UNOMI_SCRIPTING_FILTER_MVEL_ALLOW:-${karaf.etc}/mvel-allow.json}
 org.apache.unomi.scripting.filter.mvel.forbid=${env:UNOMI_SCRIPTING_FILTER_MVEL_FORBID:-${karaf.etc}/mvel-forbid.json}
-org.apache.unomi.scripting.filter.ognl.allow=${env:UNOMI_SCRIPTING_FILTER_OGNL_ALLOW:-${karaf.etc}/ognl-allow.json}
-org.apache.unomi.scripting.filter.ognl.forbid=${env:UNOMI_SCRIPTING_FILTER_OGNL_FORBID:-${karaf.etc}/ognl-forbid.json}
-
-# This parameter controls whether OGNL scripting is allowed in expressions. Because of security reasons it is deactivated by default. If you run into compatibility issues you could reactivate it but it is at your own risk.
-org.apache.unomi.security.properties.useOGNLScripting=${env:UNOMI_SCRIPTING_USE_OGNL:-false}
 
 # This parameter controls the condition sanitizing done on the ContextServlet (/cxs/context.json). If will remove any expressions that start with "script::". It is not recommended to change this value, unless you run into compatibility issues.
 org.apache.unomi.security.personalization.sanitizeConditions=${env:UNOMI_SECURITY_SANITIZEPERSONALIZATIONCONDITIONS:-true}

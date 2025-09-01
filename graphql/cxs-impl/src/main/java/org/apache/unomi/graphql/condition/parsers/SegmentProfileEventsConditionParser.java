@@ -164,7 +164,6 @@ public class SegmentProfileEventsConditionParser {
         }
     }
 
-    @SuppressWarnings("unchecked")
     private Map<String, Object> createProfileEventPropertyField(final Condition condition) {
         final Map<String, Object> tuple = new HashMap<>();
 
@@ -185,7 +184,7 @@ public class SegmentProfileEventsConditionParser {
                 tuple.put("fieldName", "cdp_timestamp_gte");
             }
 
-            final OffsetDateTime fieldValue = DateUtils.offsetDateTimeFromMap((Map<String, Object>) condition.getParameter("propertyValueDate"));
+            final OffsetDateTime fieldValue = OffsetDateTime.parse((String) condition.getParameter("propertyValueDate")); //With jackson JSR, OffsetDateTime are well serialized.
 
             tuple.put("fieldValue", fieldValue != null ? fieldValue.toString() : null);
         } else {

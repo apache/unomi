@@ -148,7 +148,6 @@ public class RouterCamelContext implements IRouterCamelContext {
                         }
                     }
 
-
                     for (Map.Entry<String, RouterConstants.CONFIG_CAMEL_REFRESH> exportConfigToRefresh : exportConfigsToRefresh.entrySet()) {
                         try {
                             if (exportConfigToRefresh.getValue().equals(RouterConstants.CONFIG_CAMEL_REFRESH.UPDATED)) {

@@ -147,7 +147,7 @@ public class SegmentProfilePropertiesConditionParser {
         Object value;
 
         if (condition.getParameter("propertyValueDate") != null) {
-            value = DateUtils.offsetDateTimeFromMap((Map<String, Object>) condition.getParameter("propertyValueDate"));
+            value = condition.getParameter("propertyValueDate");
         } else if (condition.getParameter("propertyValueInteger") != null) {
             value = condition.getParameter("propertyValueInteger");
         } else {

@@ -136,7 +136,7 @@ public class GraphQLServletSecurityValidator {
             Subject subject = loginContext.getSubject();
             boolean success = subject != null;
             if (success) {
-                req.setAttribute(REMOTE_USER, subject);
+                req.setAttribute(REMOTE_USER, username);
             }
             return success;
         } catch (LoginException e) {

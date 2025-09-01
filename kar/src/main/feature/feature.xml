@@ -16,51 +16,66 @@
   ~ limitations under the License.
   -->
 
-<features name="unomi-kar" xmlns="http://karaf.apache.org/xmlns/features/v1.3.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://karaf.apache.org/xmlns/features/v1.3.0 http://karaf.apache.org/xmlns/features/v1.3.0">
+<features name="unomi-kar" xmlns="http://karaf.apache.org/xmlns/features/v1.6.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://karaf.apache.org/xmlns/features/v1.6.0 http://karaf.apache.org/xmlns/features/v1.6.0">
 
+    <repository>mvn:org.apache.karaf.features/specs/${karaf.version}/xml/features</repository>
     <repository>mvn:org.apache.cxf.karaf/apache-cxf/${cxf.version}/xml/features</repository>
 
     <feature description="unomi-kar" version="${project.version}" name="unomi-kar" start-level="70">
+        <requirement>osgi.service;effective:=active;filter:=(objectClass=org.osgi.service.http.HttpService)</requirement>
         <feature prerequisite="true">wrap</feature>
         <feature prerequisite="true">aries-blueprint</feature>
         <feature prerequisite="true">war</feature>
-        <feature>cxf-jaxrs</feature>
+        <feature prerequisite="true">config</feature>
+        <feature prerequisite="true">scr</feature>
+        <feature prerequisite="true">http</feature>
+        <feature prerequisite="true">log</feature>
+        <feature version="${cxf.version}" dependency="true">cxf-jaxrs</feature>
         <feature>cxf-features-metrics</feature>
         <feature>cxf-rs-security-cors</feature>
         <feature>cxf-rs-description-openapi-v3</feature>
         <feature>eventadmin</feature>
         <feature>feature</feature>
+        <feature>spifly</feature>
         <feature>shell-compat</feature>
         <configfile finalname="/etc/org.apache.unomi.web.cfg">mvn:org.apache.unomi/unomi-wab/${project.version}/cfg/unomicfg</configfile>
         <configfile finalname="/etc/org.apache.unomi.persistence.elasticsearch.cfg">mvn:org.apache.unomi/unomi-persistence-elasticsearch-core/${project.version}/cfg/elasticsearchcfg</configfile>
-        <configfile finalname="/etc/org.apache.unomi.plugins.request.cfg">mvn:org.apache.unomi/unomi-plugins-request/${project.version}/cfg/requestcfg</configfile>
-        <configfile finalname="/etc/org.apache.unomi.plugins.base.cfg">mvn:org.apache.unomi/unomi-plugins-base/${project.version}/cfg/pluginsbasecfg</configfile>
         <configfile finalname="/etc/org.apache.unomi.services.cfg">mvn:org.apache.unomi/unomi-services/${project.version}/cfg/servicescfg</configfile>
         <configfile finalname="/etc/org.apache.unomi.thirdparty.cfg">mvn:org.apache.unomi/unomi-services/${project.version}/cfg/thirdpartycfg</configfile>
         <configfile finalname="/etc/org.apache.unomi.cluster.cfg">mvn:org.apache.unomi/unomi-services/${project.version}/cfg/clustercfg</configfile>
+        <configfile finalname="/etc/org.apache.unomi.plugins.request.cfg">mvn:org.apache.unomi/unomi-plugins-request/${project.version}/cfg/requestcfg</configfile>
+        <configfile finalname="/etc/org.apache.unomi.plugins.base.cfg">mvn:org.apache.unomi/unomi-plugins-base/${project.version}/cfg/pluginsbasecfg</configfile>
         <configfile finalname="/etc/org.apache.unomi.geonames.cfg">mvn:org.apache.unomi/cxs-geonames-services/${project.version}/cfg/geonamescfg</configfile>
-        <configfile finalname="/etc/org.apache.unomi.groovy.actions.cfg">mvn:org.apache.unomi/unomi-groovy-actions-services/${project.version}/cfg/groovyactionscfg</configfile>
         <configfile finalname="/etc/org.apache.unomi.schema.cfg">mvn:org.apache.unomi/unomi-json-schema-services/${project.version}/cfg/schemacfg</configfile>
-        <bundle start-level="75">mvn:commons-io/commons-io/${apache.commons.io.version}</bundle>
-        <bundle start-level="75">mvn:com.fasterxml.jackson.core/jackson-core/${version.jackson.core}</bundle>
-        <bundle start-level="75">mvn:com.github.fge/btf/1.2</bundle>
-        <bundle start-level="75">mvn:com.github.fge/msg-simple/1.1</bundle>
-        <bundle start-level="75">mvn:com.google.guava/guava/16.0.1</bundle>
-        <bundle start-level="75">mvn:com.github.fge/jackson-coreutils/1.8</bundle>
-        <bundle start-level="75">mvn:com.github.fge/json-patch/1.9</bundle>
-        <bundle start-level="75">mvn:org.json/json/${org.json.version}</bundle>
-        <bundle start-level="75">mvn:com.fasterxml.jackson.core/jackson-databind/${version.jackson.databind}</bundle>
-        <bundle start-level="75">mvn:com.fasterxml.jackson.core/jackson-annotations/${version.jackson.core}</bundle>
-        <bundle start-level="75">mvn:com.fasterxml.jackson.jaxrs/jackson-jaxrs-base/${version.jackson.core}</bundle>
-        <bundle start-level="75">mvn:com.fasterxml.jackson.module/jackson-module-jaxb-annotations/${version.jackson.jaxb}</bundle>
-        <bundle start-level="75">mvn:com.fasterxml.jackson.jaxrs/jackson-jaxrs-json-provider/${version.jackson.core}</bundle>
-        <bundle start-level="75">mvn:org.yaml/snakeyaml/1.33</bundle>
-        <bundle start-level="75">mvn:com.fasterxml.jackson.dataformat/jackson-dataformat-yaml/${version.jackson.core}</bundle>
-        <bundle start-level="75">mvn:joda-time/joda-time/${joda-time.version}</bundle>
-        <bundle start-level="75">mvn:org.apache.servicemix.specs/org.apache.servicemix.specs.jaxws-api-2.2/2.9.0</bundle>
-        <bundle start-level="75">mvn:javax.annotation/javax.annotation-api/1.3.2</bundle>
-        <bundle start-level="75">mvn:org.apache.servicemix.bundles/org.apache.servicemix.bundles.jsr305/${jsr305.bundle.version}</bundle>
-        <bundle start-level="75">mvn:commons-collections/commons-collections/${apache.commons.collections.version}</bundle>
+        <bundle start-level="55">mvn:commons-collections/commons-collections/${commons-collections.version}</bundle>
+        <bundle start-level="55">mvn:org.apache.commons/commons-lang3/${commons-lang3.version}</bundle>
+        <bundle start-level="55">mvn:commons-beanutils/commons-beanutils/${commons-beanutils.version}</bundle>
+        <bundle start-level="55">mvn:commons-io/commons-io/${commons-io.version}</bundle>
+        <bundle start-level="55">mvn:org.apache.httpcomponents/httpcore-osgi/${httpcore-osgi.version}</bundle>
+        <bundle start-level="55">mvn:org.apache.httpcomponents/httpclient-osgi/${httpclient-osgi.version}</bundle>
+        <bundle start-level="55">mvn:javax.validation/validation-api/${javax-validation.version}</bundle>
+        <bundle start-level="55">mvn:com.fasterxml.jackson.core/jackson-core/${jackson.version}</bundle>
+        <bundle start-level="55">mvn:com.fasterxml.jackson.core/jackson-databind/${jackson.version}</bundle>
+        <bundle start-level="55">mvn:com.fasterxml.jackson.core/jackson-annotations/${jackson.version}</bundle>
+        <bundle start-level="55">mvn:com.fasterxml.jackson.dataformat/jackson-dataformat-yaml/${jackson.version}</bundle>
+        <bundle start-level="55">mvn:com.fasterxml.jackson.datatype/jackson-datatype-jsr310/${jackson.version}</bundle>
+        <bundle start-level="55">mvn:com.fasterxml.jackson.module/jackson-module-jaxb-annotations/${jackson.version}</bundle>
+        <bundle start-level="55">mvn:com.fasterxml.jackson.jaxrs/jackson-jaxrs-base/${jackson.version}</bundle>
+        <bundle start-level="55">mvn:com.fasterxml.jackson.jaxrs/jackson-jaxrs-json-provider/${jackson.version}</bundle>
+        <bundle start-level="55">mvn:com.github.java-json-tools/btf/${btf.version}</bundle>
+        <bundle start-level="55">mvn:com.github.java-json-tools/msg-simple/${msg-simple.version}</bundle>
+        <bundle start-level="55">mvn:com.github.java-json-tools/jackson-coreutils/${jackson-coreutils.version}</bundle>
+        <bundle start-level="55">mvn:com.github.java-json-tools/json-patch/${json-patch.version}</bundle>
+        <bundle start-level="55">mvn:com.google.guava/guava/${guava.version}</bundle>
+        <bundle start-level="55">mvn:org.json/json/${org-json.version}</bundle>
+        <bundle start-level="55">mvn:org.yaml/snakeyaml/${snakeyaml.version}</bundle>
+        <bundle start-level="55">mvn:joda-time/joda-time/${joda-time.version}</bundle>
+        <bundle start-level="55">mvn:jakarta.annotation/jakarta.annotation-api/${jakarta-annotation-api.version}</bundle>
+        <bundle start-level="55">mvn:com.google.code.findbugs/jsr305/${jsr305.version}</bundle>
+        <bundle start-level="55">mvn:org.apache.groovy/groovy/${groovy.version}</bundle>
+        <bundle start-level="55">mvn:org.apache.groovy/groovy-xml/${groovy.version}</bundle>
+        <bundle start-level="55">mvn:org.apache.groovy/groovy-json/${groovy.version}</bundle>
+
         <bundle start-level="70" start="false">mvn:org.apache.unomi/unomi-lifecycle-watcher/${project.version}</bundle>
         <bundle start-level="75" start="false">mvn:org.apache.unomi/unomi-api/${project.version}</bundle>
         <bundle start-level="75" start="false">mvn:org.apache.unomi/unomi-common/${project.version}</bundle>
@@ -100,6 +115,7 @@
 
     <feature name="unomi-rest-ui" description="Enables Swagger UI to browse the REST API" version="${project.version}">
         <feature>unomi-kar</feature>
-        <bundle start-level="85">mvn:org.webjars/swagger-ui/3.23.8</bundle>
+        <bundle start-level="85">mvn:org.webjars/swagger-ui/${swagger-ui.version}</bundle>
     </feature>
+
 </features>
