@@ -403,7 +403,7 @@
         <module>extensions/lists-extension</module>
         <module>extensions/privacy-extension</module>
         <module>extensions/web-tracker</module>
-        <module>commands</module>
+        <module>tools</module>
         <module>wab</module>
         <module>rest</module>
         <module>manual</module>
