@@ -374,6 +374,10 @@
         </repository>
     </repositories>
 
+    <!--
+    see ticket https://issues.apache.org/jira/browse/UNOMI-905 for more details
+    about declaring submodules individually.
+    -->
     <modules>
         <module>bom</module>
         <module>api</module>
