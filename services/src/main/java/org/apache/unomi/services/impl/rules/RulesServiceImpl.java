@@ -71,6 +71,9 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
     private Map<String, Set<Rule>> rulesByEventType = new HashMap<>();
     private Boolean optimizedRulesActivated = true;
 
+    private String refreshRulesTaskId;
+    private String syncRuleStatisticsTaskId;
+
     public void setBundleContext(BundleContext bundleContext) {
         this.bundleContext = bundleContext;
     }
@@ -133,11 +136,12 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
 
         bundleContext.addBundleListener(this);
 
-        initializeTimers();
+        this.initializeTimers();
         LOGGER.info("Rule service initialized.");
     }
 
     public void preDestroy() {
+        this.resetTimers();
         bundleContext.removeBundleListener(this);
         LOGGER.info("Rule service shutdown.");
     }
@@ -488,25 +492,37 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
     }
 
     private void initializeTimers() {
+        this.resetTimers();
         TimerTask task = new TimerTask() {
             @Override
             public void run() {
                 refreshRules();
             }
         };
-        schedulerService.getScheduleExecutorService().scheduleWithFixedDelay(task, 0, rulesRefreshInterval, TimeUnit.MILLISECONDS);
+        this.refreshRulesTaskId = schedulerService.createRecurringTask("refreshRules", rulesRefreshInterval,  TimeUnit.MILLISECONDS, task, false).getItemId();
 
         TimerTask statisticsTask = new TimerTask() {
             @Override
             public void run() {
-                try {
-                    syncRuleStatistics();
-                } catch (Throwable t) {
-                    LOGGER.error("Error synching rule statistics between memory and persistence back-end", t);
-                }
+            try {
+                syncRuleStatistics();
+            } catch (Throwable t) {
+                LOGGER.error("Error synching rule statistics between memory and persistence back-end", t);
+            }
             }
         };
-        schedulerService.getScheduleExecutorService().scheduleWithFixedDelay(statisticsTask, 0, rulesStatisticsRefreshInterval, TimeUnit.MILLISECONDS);
+        this.syncRuleStatisticsTaskId = schedulerService.createRecurringTask("syncRuleStatistics", rulesStatisticsRefreshInterval,  TimeUnit.MILLISECONDS, statisticsTask, false).getItemId();
+    }
+
+    private void resetTimers() {
+        if (refreshRulesTaskId != null) {
+            schedulerService.cancelTask(refreshRulesTaskId);
+            refreshRulesTaskId = null;
+        }
+        if (syncRuleStatisticsTaskId != null) {
+            schedulerService.cancelTask(syncRuleStatisticsTaskId);
+            syncRuleStatisticsTaskId = null;
+        }
     }
 
     public void bundleChanged(BundleEvent event) {

@@ -27,7 +27,6 @@ import java.util.List;
 import java.util.TimerTask;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -41,7 +40,7 @@ public class ScopeServiceImpl implements ScopeService {
 
     private ConcurrentMap<String, Scope> scopes = new ConcurrentHashMap<>();
 
-    private ScheduledFuture<?> scheduledFuture;
+    private String refreshScopesTaskId;
 
     public void setPersistenceService(PersistenceService persistenceService) {
         this.persistenceService = persistenceService;
@@ -56,11 +55,11 @@ public class ScopeServiceImpl implements ScopeService {
     }
 
     public void postConstruct() {
-        initializeTimers();
+        this.initializeTimers();
     }
 
     public void preDestroy() {
-        scheduledFuture.cancel(true);
+        this.resetTimers();
     }
 
     @Override
@@ -90,8 +89,15 @@ public class ScopeServiceImpl implements ScopeService {
                 refreshScopes();
             }
         };
-        scheduledFuture = schedulerService.getScheduleExecutorService()
-                .scheduleWithFixedDelay(task, 0, scopesRefreshInterval, TimeUnit.MILLISECONDS);
+        this.resetTimers();
+        this.refreshScopesTaskId = schedulerService.createRecurringTask("refreshScopes", scopesRefreshInterval, TimeUnit.MILLISECONDS, task, false).getItemId();
+    }
+
+    private void resetTimers() {
+        if (refreshScopesTaskId != null) {
+            schedulerService.cancelTask(refreshScopesTaskId);
+            refreshScopesTaskId = null;
+        }
     }
 
     private void refreshScopes() {
