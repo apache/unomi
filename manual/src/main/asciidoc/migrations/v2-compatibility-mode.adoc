@@ -1,0 +1,351 @@
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+= Apache Unomi V2 Compatibility Mode
+
+This document explains how to use the V2 compatibility mode in Apache Unomi V3, which allows V2 client applications to work with Unomi V3 without requiring API keys.
+
+== Overview
+
+The V2 compatibility mode is designed to ease the migration from Unomi V2 to V3 by allowing V2 clients to continue working without immediate changes to their authentication logic. This mode provides backward compatibility while still leveraging the multi-tenant architecture of V3.
+
+=== How It Works
+
+When V2 compatibility mode is enabled:
+
+- **Public endpoints** (like `/context.json`) require no authentication (like V2)
+- **Protected events** (like `login`, `updateProperties`) require IP + X-Unomi-Peer (like V2)
+- **Private endpoints** require system administrator authentication (like V2)
+- **A default tenant** is automatically used for all operations
+- **No authentication** is required for non-protected events (like V2)
+
+This allows V2 clients to work with Unomi V3 immediately after migration, giving you time to gradually update client applications to use the new V3 authentication model.
+
+== Prerequisites
+
+Before enabling V2 compatibility mode, ensure that:
+
+1. **Data Migration Completed**: Your V2 data has been migrated to a tenant using the migration scripts
+2. **Default Tenant Exists**: A default tenant exists that will be used for all operations
+3. **V3 Installation**: Unomi V3 is properly installed and configured
+
+== Configuration
+
+=== Enable V2 Compatibility Mode
+
+1. **Edit the configuration file**:
+   ```bash
+   # Edit the configuration file
+   vi etc/org.apache.unomi.rest.authentication.cfg
+   ```
+
+2. **Enable V2 compatibility mode**:
+   ```properties
+   # Enable V2 compatibility mode
+   v2CompatibilityModeEnabled = true
+   
+   # Set the default tenant ID (should match the tenant ID used during migration)
+   v2CompatibilityDefaultTenantId = your-migration-tenant-id
+   ```
+
+3. **Restart the server** to apply the configuration changes:
+   ```bash
+   # Stop the server
+   ./bin/stop
+   
+   # Start the server
+   ./bin/start
+   ```
+
+=== Configuration Management
+
+V2 compatibility mode is managed through configuration files only. This approach is safer and prevents accidental changes to authentication settings.
+
+== Migration Workflow
+
+=== Step 1: Migrate Data
+
+First, migrate your V2 data to V3 using the migration scripts:
+
+```bash
+# Run the migration scripts
+unomi:migrate-3.0.0-00-tenantDocumentIds
+unomi:migrate-3.0.0-10-tenantInitialization
+```
+
+The `migrate-3.0.0-10-tenantInitialization` script creates a default tenant that will be used for V2 compatibility mode.
+
+=== Step 2: Enable V2 Compatibility Mode
+
+Enable V2 compatibility mode by updating the configuration file:
+
+```bash
+# Edit the configuration file
+vi etc/org.apache.unomi.rest.authentication.cfg
+
+# Set v2CompatibilityModeEnabled = true
+# Set v2CompatibilityDefaultTenantId = your-tenant-id
+
+# Restart the server to apply changes
+./bin/stop
+./bin/start
+```
+
+=== Step 3: Test V2 Clients
+
+Your V2 clients should now work without any changes:
+
+```java
+// V2-style authentication still works
+RestAssured.authentication = RestAssured.preemptive()
+    .basic("karaf", "karaf");
+
+// Context requests work without API keys
+RestAssured.given()
+    .auth().none()
+    .contentType(ContentType.JSON)
+    .body(contextJson)
+    .post("/context.json");
+```
+
+=== Step 4: Gradual Migration
+
+Over time, gradually update your clients to use V3 authentication:
+
+1. **Update client applications** to use API keys
+2. **Test with V3 authentication** while keeping V2 compatibility mode enabled
+3. **Disable V2 compatibility mode** once all clients are updated
+
+== Client Migration Examples
+
+=== From V2 to V3 (with V2 Compatibility Mode)
+
+**V2 Client (continues to work)**:
+```java
+// This continues to work in V2 compatibility mode
+RestAssured.authentication = RestAssured.preemptive()
+    .basic("karaf", "karaf");
+
+RestAssured.given()
+    .auth().none()
+    .contentType(ContentType.JSON)
+    .body(contextJson)
+    .post("/context.json");
+```
+
+**V3 Client (new implementation)**:
+```java
+// New V3 client using API keys
+given()
+    .header("X-Unomi-Api-Key", publicKey)
+    .contentType(ContentType.JSON)
+    .body(contextJson)
+    .post("/context.json");
+```
+
+=== Gradual Migration Strategy
+
+1. **Phase 1**: Enable V2 compatibility mode, V2 clients continue working
+2. **Phase 2**: Develop and test V3 clients alongside V2 clients
+3. **Phase 3**: Migrate clients one by one to V3 authentication
+4. **Phase 4**: Disable V2 compatibility mode once all clients are migrated
+
+== Security Considerations
+
+=== V2 Compatibility Mode Security
+
+When V2 compatibility mode is enabled:
+
+- **Public endpoints** are accessible without authentication (same as V2)
+- **Protected events** require IP + X-Unomi-Peer authentication (same as V2)
+- **Private endpoints** require system administrator authentication (same as V2)
+- **All operations** use the default tenant context
+- **Non-protected events** require no authentication (same as V2)
+
+=== Protected Events in V2 Compatibility Mode
+
+In V2 compatibility mode, protected event types are configured dynamically using the V2 third-party configuration file. By default, the following event types are protected:
+
+- `login` - User authentication events
+- `updateProperties` - Profile property updates
+
+Additional event types can be configured as protected by editing the V2 third-party configuration file.
+
+For protected events, clients must:
+1. Send the request from an authorized IP address (configured in the V2 third-party configuration)
+2. Include the `X-Unomi-Peer` header with the third-party ID (e.g., "provider1")
+
+All other event types are considered non-protected and require no authentication.
+
+=== V2 Third-Party Configuration
+
+The protected events and third-party providers are configured in the original V2 configuration file `etc/org.apache.unomi.thirdparty.cfg`. The system dynamically detects any number of providers using the pattern `thirdparty.{providerName}.{property}`:
+
+```properties
+# Provider 1 Configuration (default provider)
+thirdparty.provider1.key=${org.apache.unomi.thirdparty.provider1.key:-670c26d1cc413346c3b2fd9ce65dab41}
+thirdparty.provider1.ipAddresses=${org.apache.unomi.thirdparty.provider1.ipAddresses:-127.0.0.1,::1}
+thirdparty.provider1.allowedEvents=${org.apache.unomi.thirdparty.provider1.allowedEvents:-login,updateProperties}
+
+# Additional providers can be added dynamically
+thirdparty.myapp.key=${org.apache.unomi.thirdparty.myapp.key:-my-secret-key}
+thirdparty.myapp.ipAddresses=${org.apache.unomi.thirdparty.myapp.ipAddresses:-192.168.1.0/24}
+thirdparty.myapp.allowedEvents=${org.apache.unomi.thirdparty.myapp.allowedEvents:-login,updateProperties,sessionCreated}
+```
+
+This uses the exact same configuration format as V2, ensuring complete compatibility with existing V2 setups. The system automatically detects and configures any provider that has a valid key.
+
+=== Configuration Management
+
+The V2 third-party configuration supports dynamic updates:
+
+1. **Edit the configuration file**:
+   ```bash
+   # Edit the V2 third-party configuration
+   vi etc/org.apache.unomi.thirdparty.cfg
+   ```
+
+2. **Update protected events**:
+   ```properties
+   # Add more protected event types
+   thirdparty.provider1.allowedEvents=${org.apache.unomi.thirdparty.provider1.allowedEvents:-login,updateProperties,sessionCreated,profileUpdated}
+   ```
+
+3. **Add additional providers**:
+   ```properties
+   # Configure additional providers (any name is supported)
+   thirdparty.myapp.key=${org.apache.unomi.thirdparty.myapp.key:-your-secret-key-here}
+   thirdparty.myapp.ipAddresses=${org.apache.unomi.thirdparty.myapp.ipAddresses:-192.168.1.0/24,10.0.0.1}
+   thirdparty.myapp.allowedEvents=${org.apache.unomi.thirdparty.myapp.allowedEvents:-login,updateProperties}
+   
+   thirdparty.analytics.key=${org.apache.unomi.thirdparty.analytics.key:-analytics-secret}
+   thirdparty.analytics.ipAddresses=${org.apache.unomi.thirdparty.analytics.ipAddresses:-10.0.0.0/8}
+   thirdparty.analytics.allowedEvents=${org.apache.unomi.thirdparty.analytics.allowedEvents:-login,updateProperties,sessionCreated}
+   ```
+
+4. **Restart the server** to apply changes:
+   ```bash
+   ./bin/stop
+   ./bin/start
+   ```
+
+=== Recommendations
+
+1. **Use V2 compatibility mode temporarily** during migration
+2. **Plan for gradual migration** to V3 authentication
+3. **Monitor access patterns** during the transition
+4. **Disable V2 compatibility mode** once migration is complete
+
+== Troubleshooting
+
+=== Common Issues
+
+**V2 clients still not working**:
+- Check configuration file: `etc/org.apache.unomi.rest.authentication.cfg`
+- Verify `v2CompatibilityModeEnabled = true`
+- Ensure `v2CompatibilityDefaultTenantId` matches the tenant ID used during migration
+- Ensure the tenant exists and is accessible
+
+**Authentication errors**:
+- Verify system administrator credentials (karaf/karaf)
+- Check that the server is running properly
+- Review logs for authentication errors
+
+**Tenant context issues**:
+- Ensure the default tenant ID matches your migrated tenant
+- Verify tenant exists in the tenant index
+- Check tenant configuration in the migration scripts
+
+=== Debugging
+
+Enable debug logging for authentication:
+
+```bash
+# Enable debug logging
+log:set DEBUG org.apache.unomi.rest.authentication
+```
+
+Check authentication filter logs:
+
+```bash
+# View recent logs
+log:display | grep AuthenticationFilter
+```
+
+== Disabling V2 Compatibility Mode
+
+Once all clients are migrated to V3 authentication:
+
+1. **Update configuration**:
+   ```properties
+   v2CompatibilityModeEnabled = false
+   ```
+
+2. **Restart the server**:
+   ```bash
+   ./bin/stop
+   ./bin/start
+   ```
+
+3. **Verify all clients work** with V3 authentication
+
+4. **Monitor for any issues** and address them before final deployment
+
+== Testing V2 Compatibility Mode
+
+The existing test framework supports testing V2 compatibility mode using system properties.
+
+=== Running Tests in V2 Compatibility Mode
+
+To run tests with V2 compatibility mode enabled:
+
+```bash
+# Enable V2 compatibility mode for tests
+mvn test -Dunomi.v2.compatibility.mode=true
+
+# Or set the property in your test environment
+export UNOMI_V2_COMPATIBILITY_MODE=true
+mvn test
+```
+
+=== Test Framework Integration
+
+The test framework automatically detects V2 compatibility mode and uses the appropriate client:
+
+- **V2 Compatibility Mode Enabled**: Uses `UnomiV2Client` for all tests
+- **V2 Compatibility Mode Disabled**: Uses normal V2/V3 detection logic
+
+This allows you to test both V2 compatibility mode and normal V3 mode using the same test suite.
+
+=== Example Test Execution
+
+```bash
+# Test with V2 compatibility mode (server should be configured for V2 compatibility)
+mvn test -Dunomi.v2.compatibility.mode=true -Dunomi.url=http://localhost:8181
+
+# Test with normal V3 mode
+mvn test -Dunomi.url=http://localhost:8181
+```
+
+== Conclusion
+
+The V2 compatibility mode provides a smooth migration path from Unomi V2 to V3, allowing you to:
+
+- **Maintain existing V2 clients** during migration
+- **Gradually migrate** to V3 authentication
+- **Leverage V3 features** while maintaining backward compatibility
+- **Minimize downtime** during the migration process
+- **Test both modes** using the existing test framework
+
+Use this mode as a temporary solution during your migration journey, and plan to disable it once all clients are updated to use V3 authentication.

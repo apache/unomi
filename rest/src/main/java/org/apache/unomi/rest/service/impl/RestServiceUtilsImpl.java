@@ -29,6 +29,8 @@ import org.apache.unomi.api.services.PrivacyService;
 import org.apache.unomi.api.services.ProfileService;
 import org.apache.unomi.api.tenants.Tenant;
 import org.apache.unomi.api.tenants.TenantService;
+import org.apache.unomi.rest.authentication.RestAuthenticationConfig;
+import org.apache.unomi.rest.authentication.V2ThirdPartyConfigService;
 import org.apache.unomi.rest.exception.InvalidRequestException;
 import org.apache.unomi.rest.service.RestServiceUtils;
 import org.apache.unomi.schema.api.SchemaService;
@@ -51,6 +53,7 @@ import java.security.Principal;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 @Component(service = RestServiceUtils.class)
@@ -78,6 +81,12 @@ public class RestServiceUtilsImpl implements RestServiceUtils {
 
     @Reference
     private TenantService tenantService;
+
+    @Reference
+    private RestAuthenticationConfig restAuthenticationConfig;
+
+    @Reference
+    private V2ThirdPartyConfigService v2ThirdPartyConfigService;
 
     @Override
     public String getProfileIdCookieValue(HttpServletRequest httpServletRequest) {
@@ -268,8 +277,22 @@ public class RestServiceUtilsImpl implements RestServiceUtils {
                     Event eventToSend = new Event(event.getEventType(), eventsRequestContext.getSession(), eventsRequestContext.getProfile(), event.getScope(),
                             event.getSource(), event.getTarget(), event.getProperties(), eventsRequestContext.getTimestamp(), event.isPersistent());
                     eventToSend.setFlattenedProperties(event.getFlattenedProperties());
-                    if (!eventService.isEventAllowedForTenant(event, tenantId, eventsRequestContext.getRequest().getRemoteAddr())) {
-                        throw new WebApplicationException("Tenant is not authorized to send event " + event.getEventType() + " from IP " + eventsRequestContext.getRequest().getRemoteAddr(), Response.Status.UNAUTHORIZED);
+                    // Check if V2 compatibility mode is enabled and handle V2-style event authorization
+                    if (restAuthenticationConfig.isV2CompatibilityModeEnabled()) {
+                        if (!isEventAllowedInV2CompatibilityMode(event, eventsRequestContext.getRequest())) {
+                            LOGGER.debug("Event {} not authorized in V2 compatibility mode from IP {}", event.getEventType(), eventsRequestContext.getRequest().getRemoteAddr());
+                            //Don't count the event that failed
+                            eventsRequestContext.setProcessedItems(eventsRequestContext.getProcessedItems() - 1);
+                            continue;
+                        }
+                    } else {
+                        // Normal V3 event authorization
+                        if (!eventService.isEventAllowedForTenant(event, tenantId, eventsRequestContext.getRequest().getRemoteAddr())) {
+                            LOGGER.debug("Tenant is not authorized to send event {} from IP {}", event.getEventType(), eventsRequestContext.getRequest().getRemoteAddr());
+                            //Don't count the event that failed
+                            eventsRequestContext.setProcessedItems(eventsRequestContext.getProcessedItems() - 1);
+                            continue;
+                        }
                     }
                     if (securityContext.isUserInRole(UnomiRoles.TENANT_ADMINISTRATOR) && event.getItemId() != null) {
                         eventToSend = new Event(event.getItemId(), event.getEventType(), eventsRequestContext.getSession(), eventsRequestContext.getProfile(), event.getScope(),
@@ -278,6 +301,7 @@ public class RestServiceUtilsImpl implements RestServiceUtils {
                     }
                     if (filteredEventTypes != null && filteredEventTypes.contains(event.getEventType())) {
                         LOGGER.debug("Profile is filtering event type {}", event.getEventType());
+                        eventsRequestContext.setProcessedItems(eventsRequestContext.getProcessedItems() - 1);
                         continue;
                     }
                     if (eventsRequestContext.getProfile().isAnonymousProfile()) {
@@ -370,5 +394,41 @@ public class RestServiceUtilsImpl implements RestServiceUtils {
         profile = new Profile(profileId);
         profile.setProperty("firstVisit", timestamp);
         return profile;
+    }
+
+    /**
+     * Check if an event is allowed in V2 compatibility mode.
+     * In V2, protected events required IP + X-Unomi-Peer (third-party key) authentication.
+     * 
+     * @param event the event to check
+     * @param request the HTTP request
+     * @return true if the event is allowed, false otherwise
+     */
+    private boolean isEventAllowedInV2CompatibilityMode(Event event, HttpServletRequest request) {
+        // Check if this is a protected event type using the V2 third-party configuration
+        if (!v2ThirdPartyConfigService.isProtectedEventType(event.getEventType())) {
+            // Non-protected events are always allowed in V2 compatibility mode
+            return true;
+        }
+        
+        // For protected events, check IP + third-party key (V2-style)
+        String sourceIP = request.getRemoteAddr();
+        String thirdPartyKey = request.getHeader("X-Unomi-Peer");
+        
+        if (StringUtils.isBlank(thirdPartyKey)) {
+            LOGGER.debug("V2 compatibility mode: Protected event {} rejected - missing X-Unomi-Peer header", event.getEventType());
+            return false;
+        }
+        
+        // Validate the third-party provider using the V2 configuration
+        if (!v2ThirdPartyConfigService.validateProviderByKey(thirdPartyKey, event.getEventType(), sourceIP)) {
+            LOGGER.debug("V2 compatibility mode: Protected event {} rejected - invalid third-party provider key: {} from IP: {}", 
+                        event.getEventType(), thirdPartyKey, sourceIP);
+            return false;
+        }
+        
+        LOGGER.debug("V2 compatibility mode: Protected event {} allowed for provider key: {} from IP: {}", 
+                    event.getEventType(), thirdPartyKey, sourceIP);
+        return true;
     }
 }

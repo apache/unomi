@@ -17,10 +17,9 @@
 
 package org.apache.unomi.services.impl.events;
 
-import inet.ipaddr.IPAddress;
-import inet.ipaddr.IPAddressString;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.unomi.api.*;
+import org.apache.unomi.services.common.security.IPValidationUtils;
 import org.apache.unomi.api.actions.ActionPostExecutor;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.query.Query;
@@ -125,37 +124,7 @@ public class EventServiceImpl implements EventService {
 
     private boolean checkIPAuthorization(Tenant tenant, String sourceIP) {
         Set<String> authorizedIPs = tenant.getAuthorizedIPs();
-        if (authorizedIPs == null || authorizedIPs.isEmpty()) {
-            return true;  // No IP restrictions
-        }
-
-        if (StringUtils.isBlank(sourceIP)) {
-            return false;
-        }
-
-        try {
-            if (sourceIP.startsWith("[") && sourceIP.endsWith("]")) {
-                // This can happen with IPv6 addresses, we must remove the markers since our IPAddress library doesn't support them.
-                sourceIP = sourceIP.substring(1, sourceIP.length() - 1);
-            }
-            IPAddress eventIP = new IPAddressString(sourceIP).toAddress();
-
-            for (String authorizedIP : authorizedIPs) {
-                try {
-                    IPAddress ip = new IPAddressString(authorizedIP.trim()).toAddress();
-                    if (ip.contains(eventIP)) {
-                        return true;
-                    }
-                } catch (Exception e) {
-                    // Log invalid IP in tenant config but continue checking others
-                    LOGGER.warn("Invalid IP address in tenant configuration: {}. Skipping.", authorizedIP);
-                }
-            }
-            return false;
-        } catch (Exception e) {
-            LOGGER.error("Invalid source IP address: {}", sourceIP, e);
-            return false;
-        }
+        return IPValidationUtils.isIpAuthorized(sourceIP, authorizedIPs);
     }
 
     public int send(Event event) {

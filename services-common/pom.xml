@@ -79,6 +79,21 @@
             <scope>provided</scope>
         </dependency>
 
+        <!-- Apache Commons Lang3 for string utilities -->
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- IP Address library for CIDR validation -->
+        <dependency>
+            <groupId>com.github.seancfoley</groupId>
+            <artifactId>ipaddress</artifactId>
+            <version>4.3.0</version>
+            <scope>compile</scope>
+        </dependency>
+
         <!-- Test dependencies -->
         <dependency>
             <groupId>junit</groupId>
@@ -113,7 +128,8 @@
                         <Export-Package>
                             org.apache.unomi.services.common,
                             org.apache.unomi.services.common.service,
-                            org.apache.unomi.services.common.cache
+                            org.apache.unomi.services.common.cache,
+                            org.apache.unomi.services.common.security
                         </Export-Package>
                         <Import-Package>
                             org.apache.unomi.api,

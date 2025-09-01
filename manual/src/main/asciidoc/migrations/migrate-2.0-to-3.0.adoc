@@ -1,0 +1,319 @@
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+=== Migration Overview
+
+Apache Unomi 3.0 introduces comprehensive multi-tenancy support, enabling complete data isolation between different tenants. This fundamental architectural change requires a new tenant-based authentication model while keeping all API endpoints unchanged.
+
+The key innovation in V3 is the introduction of **tenant isolation** for all data:
+- **Profiles, events, segments, rules, and schemas** are now tenant-specific
+- **Complete data separation** between tenants - no cross-tenant data access
+- **Tenant-specific API keys** for secure access control
+- **Backward compatibility** with system administrator access for management operations
+
+=== Updating applications consuming Unomi
+
+==== Authentication Model Changes
+
+The main change in V3 is the introduction of tenant-based authentication. The system must now identify which tenant context to operate in for every request.
+
+[cols="1,1,1", options="header"]
+|===
+|Aspect |Unomi V2 |Unomi V3
+
+|Authentication Method
+|System Administrator Authentication (karaf/karaf)
+|Tenant-based API Keys + System Administrator Authentication
+
+|Public API Endpoints
+|No authentication required
+|Public API Key required (via X-Unomi-Api-Key header)
+
+|Private API Endpoints
+|System Administrator Authentication
+|Tenant Authentication (tenantId/privateKey) OR System Administrator Authentication
+
+|Tenant Administration
+|System Administrator Authentication (karaf/karaf)
+|System Administrator Authentication (karaf/karaf)
+|===
+
+==== API Key Types (V3 Only)
+
+V3 introduces two types of API keys per tenant:
+
+- **Public Key**: Used for public endpoints (event collection via `/context.json`)
+- **Private Key**: Used with tenantId for tenant-specific administrative operations
+
+==== Authentication Requirements by Endpoint Type
+
+[cols="1,1,1", options="header"]
+|===
+|Endpoint Category |V2 Authentication |V3 Authentication
+
+|Event Collection (`/context.json`)
+|None
+|Public API Key only
+
+|Administrative Operations
+|System Admin (karaf/karaf)
+|Tenant Auth (tenantId/privateKey) OR System Admin (karaf/karaf)
+
+|Tenant Administration (`/cxs/tenants`)
+|System Admin (karaf/karaf)
+|System Admin (karaf/karaf)
+|===
+
+==== Authentication Flow (V3)
+
+The AuthenticationFilter in V3 follows this resolution order:
+
+1. **Tenant endpoints** (`/cxs/tenants`): Requires system administrator authentication only
+2. **Public endpoints** (e.g., `/context.json`): Requires public API key via `X-Unomi-Api-Key` header
+3. **Private endpoints**: Tries tenant authentication first, then falls back to system administrator authentication:
+   - **Tenant Authentication**: Basic Auth with `tenantId:privateKey`
+   - **System Administrator Authentication**: Basic Auth with `karaf:karaf` (or configured admin credentials)
+
+==== Code Examples
+
+===== V2 Authentication
+
+[source,java]
+----
+// Global system administrator authentication for all endpoints
+RestAssured.authentication = RestAssured.preemptive()
+    .basic("karaf", "karaf");
+
+// Context requests require no authentication
+RestAssured.given()
+    .auth().none()
+    .contentType(ContentType.JSON)
+    .body(contextJson)
+    .post("/context.json");
+----
+
+===== V3 Authentication
+
+[source,java]
+----
+// For public endpoints (event collection)
+given()
+    .header("X-Unomi-Api-Key", publicKey)
+    .contentType(ContentType.JSON)
+    .body(contextJson)
+    .post("/context.json");
+
+// For private endpoints using tenant authentication
+given()
+    .auth().preemptive().basic(tenantId, privateKey)
+    .contentType(ContentType.JSON)
+    .body(payload)
+    .post("/cxs/profiles");
+
+// For private endpoints using system administrator authentication
+given()
+    .auth().preemptive().basic("karaf", "karaf")
+    .contentType(ContentType.JSON)
+    .body(payload)
+    .post("/cxs/profiles");
+
+// For tenant administration (system admin only)
+given()
+    .auth().preemptive().basic("karaf", "karaf")
+    .contentType(ContentType.JSON)
+    .body(tenantPayload)
+    .post("/cxs/tenants");
+----
+
+==== Implementation Strategy
+
+===== Client Factory Pattern
+
+[source,java]
+----
+public class UnomiConfiguration {
+    public UnomiClient createClient(String baseUrl) {
+        String version = System.getProperty("unomi.version", "3");
+        
+        if ("3".equals(version)) {
+            return new UnomiV3Client(baseUrl);
+        } else {
+            return new UnomiV2Client(baseUrl);
+        }
+    }
+}
+----
+
+===== Version-Specific Authentication
+
+[source,java]
+----
+// V2 Client
+public void init() {
+    RestAssured.baseURI = baseUrl;
+    RestAssured.authentication = RestAssured.preemptive()
+        .basic("karaf", "karaf");
+}
+
+// V3 Client
+public void init() {
+    RestAssured.baseURI = baseUrl;
+}
+
+public void updateKeys(String publicKey, String privateKey) {
+    this.publicKey = publicKey;
+    this.privateKey = privateKey;
+}
+----
+
+==== No API Contract Changes
+
+All API endpoints remain the same between V2 and V3. The only differences are in the authentication mechanism and tenant resolution. Request/response payloads are unchanged.
+
+=== Migrating your existing data
+
+==== Multi-Tenancy Impact
+
+When migrating to V3, you need to understand that:
+
+- All data (profiles, events, segments, rules, schemas) becomes tenant-specific
+- Each tenant operates in complete isolation with their own data space
+- Tenant context must be established for every API operation
+
+==== Migration Steps
+
+1. **Understand Multi-Tenancy Impact**
+   - All data (profiles, events, segments, rules, schemas) becomes tenant-specific
+   - Each tenant operates in complete isolation with their own data space
+   - Tenant context must be established for every API operation
+
+2. **Update Authentication Configuration**
+   - Remove global system administrator authentication
+   - Configure tenant-specific public and private API keys
+   - Implement endpoint-specific authentication logic
+
+3. **Endpoint-Specific Changes**
+   - Add `X-Unomi-Api-Key` header with public key for event collection
+   - Use tenant authentication (tenantId/privateKey) for tenant-specific administrative operations
+   - Keep system administrator authentication as fallback for administrative operations
+   - Continue using system administrator authentication for tenant administration
+
+4. **No API Contract Changes**
+   - All endpoints remain the same
+   - Request/response payloads are unchanged
+   - Only authentication mechanism differs
+
+==== Benefits of Multi-Tenancy in V3
+
+- **Data Isolation**: Complete separation ensures tenant data never crosses boundaries
+- **Scalability**: Support for multiple customers/organizations in a single Unomi instance
+- **Security**: Tenant-specific API keys prevent unauthorized cross-tenant access
+- **Compliance**: Easier to meet data privacy regulations with clear tenant boundaries
+- **Cost Efficiency**: Shared infrastructure with isolated data reduces operational costs
+
+=== Migration Checklist
+
+Before starting the migration, please ensure that:
+
+- You do have a backup of your data
+- You did practice the migration in a staging environment, NEVER migrate a production environment without prior validation
+- You verified your applications were operational with Apache Unomi 3.0 (authentication updated, client applications updated, ...)
+- You are currently running Apache Unomi 2.0 (or a later 2.x version)
+- You understand the multi-tenancy impact on your data model
+- You have configured tenant-specific API keys for your applications
+
+=== Migration Process
+
+The migration from V2 to V3 is primarily a configuration and authentication update:
+
+1. **Shutdown your Apache Unomi 2.0 cluster**
+2. **Update your client applications** to use the new authentication model
+3. **Configure tenant-specific API keys** for your applications
+4. **Start your Apache Unomi 3.0 cluster**
+5. **Test your applications** with the new authentication model
+
+=== V2 Compatibility Mode
+
+To facilitate the migration process, Unomi V3 includes a **V2 compatibility mode** that allows V2 client applications to work with Unomi V3 without immediate code changes.
+
+==== Enabling V2 Compatibility Mode
+
+To enable V2 compatibility mode, set the following system property when starting Unomi V3:
+
+[source,bash]
+----
+# Enable V2 compatibility mode
+-Dunomi.v2.compatibility.mode=true
+----
+
+==== V2 Compatibility Mode Behavior
+
+When V2 compatibility mode is enabled:
+
+- **Public endpoints** (e.g., `/context.json`): No authentication required (same as V2)
+- **Private endpoints**: JAAS authentication required (same as V2)
+- **All API endpoints**: Identical behavior to V2
+- **Data isolation**: Still enforced through tenant context
+
+==== Migration Strategy with V2 Compatibility Mode
+
+1. **Phase 1: Enable V2 Compatibility Mode**
+   - Start Unomi V3 with `-Dunomi.v2.compatibility.mode=true`
+   - Verify all V2 client applications work without changes
+   - Migrate data to tenant structure
+
+2. **Phase 2: Gradual Migration**
+   - Update client applications one by one to use V3 authentication
+   - Test each application with V3 authentication
+   - Keep V2 compatibility mode enabled for remaining applications
+
+3. **Phase 3: Complete Migration**
+   - Update all client applications to V3 authentication
+   - Disable V2 compatibility mode: `-Dunomi.v2.compatibility.mode=false`
+   - Verify all applications work with full V3 multi-tenancy
+
+==== Security Considerations
+
+- **V2 compatibility mode** should only be used during migration
+- **Production environments** should use full V3 authentication for security
+- **V2 compatibility mode** bypasses tenant API key requirements
+- **Data isolation** is still enforced through tenant context
+
+==== Example: Starting Unomi V3 with V2 Compatibility Mode
+
+[source,bash]
+----
+# Start Unomi V3 with V2 compatibility mode
+./karaf -Dunomi.v2.compatibility.mode=true
+
+# Or set as environment variable
+export KARAF_OPTS="-Dunomi.v2.compatibility.mode=true"
+./karaf
+----
+
+=== Post Migration
+
+Once the migration has been completed, you will be able to start Apache Unomi 3.0 with full multi-tenancy support.
+
+Remember that all data operations now require proper tenant context, either through tenant authentication or system administrator authentication.
+
+The fundamental difference between Unomi V2 and V3 is the introduction of **comprehensive multi-tenancy support**:
+
+- **V2**: Single-tenant architecture with system administrator authentication for all operations
+- **V3**: Multi-tenant architecture with complete data isolation and tenant-specific authentication
+- **API Endpoints**: Identical between versions - no breaking changes to existing integrations
+- **Data Model**: All entities (profiles, events, segments, rules, schemas) become tenant-specific in V3
+- **Authentication**: New tenant-based authentication model with system administrator authentication as fallback
+
+The authentication changes in V3 are driven by the need to establish tenant context for every operation, ensuring complete data isolation while maintaining backward compatibility for administrative operations.

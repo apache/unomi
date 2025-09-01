@@ -81,6 +81,7 @@
 
     <feature name="unomi-persistence-elasticsearch" description="ElasticSearch persistence implementation for Apache Unomi" version="${project.version}">
         <configfile finalname="/etc/org.apache.unomi.persistence.elasticsearch.cfg">mvn:org.apache.unomi/unomi-persistence-elasticsearch-core/${project.version}/cfg/elasticsearchcfg</configfile>
+        <configfile finalname="/etc/org.apache.unomi.rest.authentication.cfg">mvn:org.apache.unomi/unomi-rest/${project.version}/cfg/restauth</configfile>
         <bundle start="false">mvn:org.apache.unomi/unomi-services-common/${project.version}</bundle>
         <bundle start="false">mvn:org.apache.unomi/unomi-persistence-elasticsearch-core/${project.version}</bundle>
         <bundle start="false">mvn:org.apache.unomi/unomi-persistence-elasticsearch-conditions/${project.version}</bundle>
@@ -103,6 +104,7 @@
 
     <feature name="unomi-persistence-opensearch" description="OpenSearch persistence implementation for Apache Unomi" version="${project.version}">
         <configfile finalname="/etc/org.apache.unomi.persistence.opensearch.cfg">mvn:org.apache.unomi/unomi-persistence-opensearch-core/${project.version}/cfg/opensearchcfg</configfile>
+        <configfile finalname="/etc/org.apache.unomi.rest.authentication.cfg">mvn:org.apache.unomi/unomi-rest/${project.version}/cfg/restauth</configfile>
         <bundle start="false">mvn:org.apache.unomi/unomi-services-common/${project.version}</bundle>
         <bundle start="false">mvn:org.apache.unomi/unomi-persistence-opensearch-core/${project.version}</bundle>
         <bundle start="false">mvn:org.apache.unomi/unomi-persistence-opensearch-conditions/${project.version}</bundle>

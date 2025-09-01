@@ -1,0 +1,37 @@
+{
+  "sessionId": "test-session-id",
+  "events": [
+    {
+      "eventType": "view",
+      "scope": "testScope",
+      "source": {
+        "itemType": "site",
+        "scope": "testScope",
+        "itemId": "test-site"
+      },
+      "target": {
+        "itemType": "page",
+        "scope": "testScope",
+        "itemId": "test-page",
+        "properties": {
+          "pageInfo": {
+            "pageID": "test-page",
+            "nodeType": "jnt:page",
+            "pageName": "Test Page",
+            "pagePath": "/test-page",
+            "templateName": "test",
+            "destinationURL": "http://localhost:8080/test-page",
+            "destinationSearch": "",
+            "referringURL": "http://localhost:8080/",
+            "language": "en",
+            "categories": [],
+            "tags": [],
+            "sameDomainReferrer": false
+          },
+          "consentTypes": []
+        }
+      },
+      "flattenedProperties": {}
+    }
+  ]
+}

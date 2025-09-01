@@ -98,6 +98,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.KeyManagementException;
+import java.util.Hashtable;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
@@ -651,9 +652,10 @@ public abstract class BaseIT extends KarafTestSupport {
     }
 
     /**
-     * Updates an OSGi configuration with a single property value and waits for the service to be reregistered.
+     * Updates an OSGi configuration with a single property value and optionally waits for the service to be reregistered.
+     * If serviceName is null, the method will not wait for service re-registration.
      *
-     * @param serviceName The fully qualified name of the service to wait for
+     * @param serviceName The fully qualified name of the service to wait for, or null to skip waiting
      * @param configPid   The persistent identifier of the configuration to update
      * @param propName    The name of the property to update
      * @param propValue   The new value for the property
@@ -668,10 +670,10 @@ public abstract class BaseIT extends KarafTestSupport {
     }
 
     /**
-     * Updates an OSGi configuration with multiple property values and waits for the service to be reregistered.
-     * For persistence configurations, this method handles updates without causing bundle restarts.
+     * Updates an OSGi configuration with multiple property values and optionally waits for the service to be reregistered.
+     * If serviceName is null, the method will not wait for service re-registration.
      *
-     * @param serviceName The fully qualified name of the service to wait for
+     * @param serviceName The fully qualified name of the service to wait for, or null to skip waiting
      * @param configPid   The persistent identifier of the configuration to update
      * @param propsToSet  A map of property names to their new values
      * @throws InterruptedException If the thread is interrupted while waiting for service reregistration
@@ -681,20 +683,25 @@ public abstract class BaseIT extends KarafTestSupport {
             throws InterruptedException, IOException {
         org.osgi.service.cm.Configuration cfg = configurationAdmin.getConfiguration(configPid);
         Dictionary<String, Object> props = cfg.getProperties();
+        
+        // Handle case where properties haven't been initialized yet
+        final Dictionary<String, Object> finalProps = (props != null) ? props : new Hashtable<>();
+        
+        // Add new properties to the dictionary
         for (Map.Entry<String, Object> propToSet : propsToSet.entrySet()) {
-            props.put(propToSet.getKey(), propToSet.getValue());
+            finalProps.put(propToSet.getKey(), propToSet.getValue());
         }
 
-        // For configurations that now handle changes without restarting, don't wait for service re-registration
-        if (configPid.contains("persistence") || configPid.contains("org.apache.unomi.services")) {
+        // If serviceName is null, don't wait for service re-registration
+        if (serviceName == null) {
             LOGGER.info("Updating configuration {} without waiting for service restart", configPid);
-            cfg.update(props);
+            cfg.update(finalProps);
             // Give the configuration change handler time to process
             Thread.sleep(1000);
         } else {
             waitForReRegistration(serviceName, () -> {
                 try {
-                    cfg.update(props);
+                    cfg.update(finalProps);
                 } catch (IOException ignored) {
                 }
             });

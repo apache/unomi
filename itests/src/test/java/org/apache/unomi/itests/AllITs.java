@@ -66,6 +66,7 @@ import org.junit.runners.Suite.SuiteClasses;
         SendEventActionIT.class,
         ScopeIT.class,
         HealthCheckIT.class,
+        V2CompatibilityModeIT.class
 })
 public class AllITs {
 }

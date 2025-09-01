@@ -168,7 +168,7 @@ public class ProfileServiceIT extends BaseIT {
             }
         }
 
-        updateConfiguration(PersistenceService.class.getName(), "org.apache.unomi.persistence." + searchEngine, "throwExceptions", true);
+        updateConfiguration(null, "org.apache.unomi.persistence." + searchEngine, "throwExceptions", true);
 
         Query query = new Query();
         query.setLimit(2);
@@ -181,7 +181,7 @@ public class ProfileServiceIT extends BaseIT {
         } catch (RuntimeException ex) {
             // Should get here since this scenario should throw exception
         } finally {
-            updateConfiguration(PersistenceService.class.getName(), "org.apache.unomi.persistence." + searchEngine, "throwExceptions",
+            updateConfiguration(null, "org.apache.unomi.persistence." + searchEngine, "throwExceptions",
                     throwExceptionCurrent);
         }
     }

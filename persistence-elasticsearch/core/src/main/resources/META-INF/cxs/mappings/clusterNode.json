@@ -1,0 +1,67 @@
+{
+  "dynamic_templates": [
+    {
+      "all": {
+        "match": "*",
+        "match_mapping_type": "string",
+        "mapping": {
+          "type": "text",
+          "analyzer": "folding",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        }
+      }
+    }
+  ],
+  "properties": {
+    "creationDate": {
+      "type": "date"
+    },
+    "lastModificationDate": {
+      "type": "date"
+    },
+    "lastSyncDate": {
+      "type": "date"
+    },
+    "cpuLoad": {
+      "type": "double"
+    },
+    "loadAverage": {
+      "type": "double"
+    },
+    "uptime": {
+      "type": "long"
+    },
+    "master": {
+      "type": "boolean"
+    },
+    "data": {
+      "type": "boolean"
+    },
+    "startTime": {
+      "type": "long"
+    },
+    "lastHeartbeat": {
+      "type": "long"
+    },
+    "serverInfo": {
+      "properties": {
+        "serverBuildDate": {
+          "type": "date"
+        },
+        "eventTypes": {
+          "type": "object",
+          "enabled": false
+        },
+        "capabilities": {
+          "type": "object",
+          "enabled": false
+        }
+      }
+    }
+  }
+}
