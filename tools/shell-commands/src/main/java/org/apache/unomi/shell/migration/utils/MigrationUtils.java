@@ -313,9 +313,9 @@ public class MigrationUtils {
 
     /**
      * Updates documents in an index based on a specified query.
-     *
-     * <p>This method sends a request to update documents that match the provided query in the specified index. The update operation is
-     * performed asynchronously, and the method waits for the task to complete before returning.</p>
+     * <p>
+     * This method sends a request to update documents that match the provided query in the specified index. The update operation is
+     * performed asynchronously, and the method waits for the task to complete before returning.
      *
      * @param httpClient  the CloseableHttpClient used to send the request to the Elasticsearch server
      * @param esAddress   the address of the Elasticsearch server
@@ -332,10 +332,10 @@ public class MigrationUtils {
 
     /**
      * Deletes documents from an index based on a specified query.
-     *
-     * <p>This method sends a request to the Elasticsearch cluster to delete documents
+     * <p>
+     * This method sends a request to the Elasticsearch cluster to delete documents
      * that match the provided query in the specified index. The deletion operation is
-     * performed asynchronously, and the method waits for the task to complete before returning.</p>
+     * performed asynchronously, and the method waits for the task to complete before returning.
      *
      * @param httpClient  the CloseableHttpClient used to send the request to the Elasticsearch server
      * @param esAddress   the address of the Elasticsearch server
