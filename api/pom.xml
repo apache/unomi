@@ -97,6 +97,7 @@
                             org.jvnet.staxex;resolution:=optional,
                             org.glassfish.hk2.osgiresourcelocator;resolution:=optional,
                             javax.activation;resolution:=optional,
+                            com.sun.xml.*;resolution:=optional,
                             *
                         </Import-Package>
                     </instructions>
