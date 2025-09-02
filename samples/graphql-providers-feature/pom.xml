@@ -20,7 +20,7 @@
     <parent>
         <artifactId>samples</artifactId>
         <groupId>org.apache.unomi</groupId>
-        <version>2.7.0-SNAPSHOT</version>
+        <version>3.1.0-SNAPSHOT</version>
     </parent>
 
     <artifactId>graphql-providers-sample-feature</artifactId>
