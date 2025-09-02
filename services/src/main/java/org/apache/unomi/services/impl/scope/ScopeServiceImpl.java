@@ -20,28 +20,30 @@ import org.apache.unomi.api.Item;
 import org.apache.unomi.api.Scope;
 import org.apache.unomi.api.services.SchedulerService;
 import org.apache.unomi.api.services.ScopeService;
+import org.apache.unomi.api.tasks.ScheduledTask;
+import org.apache.unomi.api.tasks.TaskExecutor;
 import org.apache.unomi.persistence.spi.PersistenceService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.TimerTask;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 public class ScopeServiceImpl implements ScopeService {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(ScopeServiceImpl.class.getName());
+
     private PersistenceService persistenceService;
-
     private SchedulerService schedulerService;
-
     private Integer scopesRefreshInterval = 1000;
-
     private ConcurrentMap<String, Scope> scopes = new ConcurrentHashMap<>();
 
-    private ScheduledFuture<?> scheduledFuture;
+    private static final String REFRESH_SCOPES_TASK_TYPE = "refresh-scopes";
+    private String refreshScopesTaskId;
 
     public void setPersistenceService(PersistenceService persistenceService) {
         this.persistenceService = persistenceService;
@@ -56,11 +58,11 @@ public class ScopeServiceImpl implements ScopeService {
     }
 
     public void postConstruct() {
-        initializeTimers();
+        this.initializeTimers();
     }
 
     public void preDestroy() {
-        scheduledFuture.cancel(true);
+        this.resetTimers();
     }
 
     @Override
@@ -84,14 +86,38 @@ public class ScopeServiceImpl implements ScopeService {
     }
 
     private void initializeTimers() {
-        TimerTask task = new TimerTask() {
+        TaskExecutor refreshScopesTaskExecutor = new TaskExecutor() {
             @Override
-            public void run() {
-                refreshScopes();
+            public String getTaskType() {
+                return REFRESH_SCOPES_TASK_TYPE;
+            }
+
+            @Override
+            public void execute(ScheduledTask task, TaskExecutor.TaskStatusCallback callback) {
+                try {
+                    refreshScopes();
+                    callback.complete();
+                } catch (Exception e) {
+                    LOGGER.error("Error while refreshing scopes", e);
+                    callback.fail(e.getMessage());
+                }
             }
         };
-        scheduledFuture = schedulerService.getScheduleExecutorService()
-                .scheduleWithFixedDelay(task, 0, scopesRefreshInterval, TimeUnit.MILLISECONDS);
+
+        schedulerService.registerTaskExecutor(refreshScopesTaskExecutor);
+
+        this.resetTimers();
+        this.refreshScopesTaskId = schedulerService.newTask(REFRESH_SCOPES_TASK_TYPE)
+                .withPeriod(scopesRefreshInterval, TimeUnit.MILLISECONDS)
+                .nonPersistent()
+                .schedule().getItemId();
+    }
+
+    private void resetTimers() {
+        if (refreshScopesTaskId != null) {
+            schedulerService.cancelTask(refreshScopesTaskId);
+            refreshScopesTaskId = null;
+        }
     }
 
     private void refreshScopes() {
