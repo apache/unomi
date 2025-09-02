@@ -25,6 +25,8 @@ import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.SchedulerService;
+import org.apache.unomi.api.tasks.ScheduledTask;
+import org.apache.unomi.api.tasks.TaskExecutor;
 import org.apache.unomi.api.utils.ConditionBuilder;
 import org.apache.unomi.api.utils.ParserHelper;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
@@ -60,6 +62,8 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
 
     private ConditionBuilder conditionBuilder;
     private BundleContext bundleContext;
+
+    private static final String RELOAD_TYPES_TASK_TYPE = "reload-types";
     private String reloadTypesTaskId;
 
     public DefinitionsServiceImpl() {
@@ -100,20 +104,39 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
     }
 
     private void scheduleTypeReloads() {
-        TimerTask task = new TimerTask() {
+        TaskExecutor reloadTypesTaskExecutor = new TaskExecutor() {
             @Override
-            public void run() {
-                reloadTypes(false);
+            public String getTaskType() {
+                return RELOAD_TYPES_TASK_TYPE;
+            }
+
+            @Override
+            public void execute(ScheduledTask task, TaskExecutor.TaskStatusCallback callback) {
+                try {
+                    reloadTypes(false);
+                    callback.complete();
+                } catch (Exception e) {
+                    LOGGER.error("Error while reloading types", e);
+                    callback.fail(e.getMessage());
+                }
             }
         };
+
+        schedulerService.registerTaskExecutor(reloadTypesTaskExecutor);
+
         this.resetTypeReloads();
-        this.reloadTypesTaskId = schedulerService.createRecurringTask("reloadTypes", definitionsRefreshInterval, TimeUnit.MILLISECONDS, task, false).getItemId();
+        this.reloadTypesTaskId = schedulerService.newTask(RELOAD_TYPES_TASK_TYPE)
+                .withPeriod(definitionsRefreshInterval, TimeUnit.MILLISECONDS)
+                .nonPersistent()
+                .schedule().getItemId();
+
         LOGGER.info("Scheduled task for condition type loading each 10s");
     }
 
     private void resetTypeReloads() {
         if (this.reloadTypesTaskId != null) {
             schedulerService.cancelTask(this.reloadTypesTaskId);
+            this.reloadTypesTaskId = null;
         }
     }
 

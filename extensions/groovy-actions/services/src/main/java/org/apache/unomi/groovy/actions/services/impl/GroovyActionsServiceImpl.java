@@ -26,6 +26,8 @@ import org.apache.unomi.api.Metadata;
 import org.apache.unomi.api.actions.ActionType;
 import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.SchedulerService;
+import org.apache.unomi.api.tasks.ScheduledTask;
+import org.apache.unomi.api.tasks.TaskExecutor;
 import org.apache.unomi.groovy.actions.GroovyAction;
 import org.apache.unomi.groovy.actions.GroovyBundleResourceConnector;
 import org.apache.unomi.groovy.actions.ScriptMetadata;
@@ -51,7 +53,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.TimerTask;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -84,6 +85,7 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(GroovyActionsServiceImpl.class.getName());
     private static final String BASE_SCRIPT_NAME = "BaseScript";
+    private static final String REFRESH_ACTIONS_TASK_TYPE = "refresh-groovy-actions";
 
     private DefinitionsService definitionsService;
     private PersistenceService persistenceService;
@@ -504,15 +506,32 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
      * Initializes periodic script refresh timer.
      */
     private void initializeTimers() {
-        TimerTask task = new TimerTask() {
+        TaskExecutor refreshGroovyActionsTaskExecutor = new TaskExecutor() {
             @Override
-            public void run() {
-                refreshGroovyActions();
+            public String getTaskType() {
+                return REFRESH_ACTIONS_TASK_TYPE;
+            }
+
+            @Override
+            public void execute(ScheduledTask task, TaskExecutor.TaskStatusCallback callback) {
+                try {
+                    refreshGroovyActions();
+                    callback.complete();
+                } catch (Exception e) {
+                    LOGGER.error("Error while reassigning profile data", e);
+                    callback.fail(e.getMessage());
+                }
             }
         };
+
+        schedulerService.registerTaskExecutor(refreshGroovyActionsTaskExecutor);
+
         if (this.refreshGroovyActionsTaskId != null) {
             schedulerService.cancelTask(this.refreshGroovyActionsTaskId);
         }
-        this.refreshGroovyActionsTaskId = schedulerService.createRecurringTask("refreshGroovyActions", config.services_groovy_actions_refresh_interval(), TimeUnit.MILLISECONDS, task, false).getItemId();
+        this.refreshGroovyActionsTaskId = schedulerService.newTask(REFRESH_ACTIONS_TASK_TYPE)
+                .withPeriod(config.services_groovy_actions_refresh_interval(), TimeUnit.MILLISECONDS)
+                .nonPersistent()
+                .schedule().getItemId();
     }
 }

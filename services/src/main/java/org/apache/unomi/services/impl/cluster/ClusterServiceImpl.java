@@ -26,6 +26,8 @@ import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.api.services.ClusterService;
 import org.apache.unomi.api.services.SchedulerService;
+import org.apache.unomi.api.tasks.ScheduledTask;
+import org.apache.unomi.api.tasks.TaskExecutor;
 import org.apache.unomi.lifecycle.BundleWatcher;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.slf4j.Logger;
@@ -57,9 +59,12 @@ public class ClusterServiceImpl implements ClusterService {
     private volatile boolean shutdownNow = false;
     private volatile List<ClusterNode> cachedClusterNodes = Collections.emptyList();
 
-    private BundleWatcher bundleWatcher;
+    private static final String CLUSTER_NODE_STAT_UPDATE_TASK_TYPE = "cluster-node-statistics-update";
+    private static final String CLUSTER_STALE_NODE_CLEANUP_TASK_TYPE = "cluster-stale-nodes-cleanup";
     private String clusterNodeStatisticsUpdateTaskId;
     private String clusterStaleNodesCleanupTaskId;
+
+    private BundleWatcher bundleWatcher;
 
     /**
      * Max time to wait for persistence service (in milliseconds)
@@ -211,40 +216,59 @@ public class ClusterServiceImpl implements ClusterService {
             return;
         }
 
-        // Schedule regular updates of the node statistics
-        TimerTask statisticsTask = new TimerTask() {
+        TaskExecutor clusterNodeStatisticsUpdateTaskExecutor = new TaskExecutor() {
             @Override
-            public void run() {
+            public String getTaskType() {
+                return CLUSTER_NODE_STAT_UPDATE_TASK_TYPE;
+            }
+
+            @Override
+            public void execute(ScheduledTask task, TaskExecutor.TaskStatusCallback callback) {
                 try {
                     updateSystemStats();
-                } catch (Throwable t) {
-                    LOGGER.error("Error updating system statistics", t);
+                    callback.complete();
+                } catch (Exception e) {
+                    LOGGER.error("Error while updating cluster node statistics", e);
+                    callback.fail(e.getMessage());
                 }
             }
         };
-        this.clusterNodeStatisticsUpdateTaskId = schedulerService.createRecurringTask("clusterNodeStatisticsUpdate", nodeStatisticsUpdateFrequency, TimeUnit.MILLISECONDS, statisticsTask, false).getItemId();
 
-        // Schedule cleanup of stale nodes
-        TimerTask cleanupTask = new TimerTask() {
+        TaskExecutor clusterStaleNodesCleanupTaskExecutor = new TaskExecutor() {
             @Override
-            public void run() {
+            public String getTaskType() {
+                return CLUSTER_STALE_NODE_CLEANUP_TASK_TYPE;
+            }
+
+            @Override
+            public void execute(ScheduledTask task, TaskExecutor.TaskStatusCallback callback) {
                 try {
                     cleanupStaleNodes();
-                } catch (Throwable t) {
-                    LOGGER.error("Error cleaning up stale nodes", t);
+                    callback.complete();
+                } catch (Exception e) {
+                    LOGGER.error("Error while cleaning staled cluster nodes", e);
+                    callback.fail(e.getMessage());
                 }
             }
         };
-        this.clusterStaleNodesCleanupTaskId = schedulerService.createRecurringTask("clusterStaleNodesCleanup", 60000, TimeUnit.MILLISECONDS, cleanupTask, false).getItemId();
+
+        schedulerService.registerTaskExecutor(clusterNodeStatisticsUpdateTaskExecutor);
+        schedulerService.registerTaskExecutor(clusterStaleNodesCleanupTaskExecutor);
+
+        this.resetTimers();
+        this.clusterNodeStatisticsUpdateTaskId = schedulerService.newTask(CLUSTER_NODE_STAT_UPDATE_TASK_TYPE)
+                .withPeriod(nodeStatisticsUpdateFrequency, TimeUnit.MILLISECONDS)
+                .nonPersistent()
+                .schedule().getItemId();
+        this.clusterStaleNodesCleanupTaskId = schedulerService.newTask(CLUSTER_STALE_NODE_CLEANUP_TASK_TYPE)
+                .withPeriod(60000, TimeUnit.MILLISECONDS)
+                .nonPersistent()
+                .schedule().getItemId();
 
         LOGGER.info("Cluster service scheduled tasks initialized");
     }
 
-    public void destroy() {
-        LOGGER.info("Cluster service shutting down...");
-        shutdownNow = true;
-
-        // Cancel scheduled tasks
+    private void resetTimers() {
         if (schedulerService != null && clusterNodeStatisticsUpdateTaskId != null) {
             schedulerService.cancelTask(clusterNodeStatisticsUpdateTaskId);
             clusterStaleNodesCleanupTaskId = null;
@@ -253,6 +277,13 @@ public class ClusterServiceImpl implements ClusterService {
             schedulerService.cancelTask(clusterStaleNodesCleanupTaskId);
             clusterStaleNodesCleanupTaskId = null;
         }
+    }
+
+    public void destroy() {
+        LOGGER.info("Cluster service shutting down...");
+        shutdownNow = true;
+
+        this.resetTimers();
 
         // Remove node from persistence service
         if (persistenceService != null) {

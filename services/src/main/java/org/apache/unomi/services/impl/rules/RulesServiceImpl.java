@@ -28,6 +28,8 @@ import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.rules.Rule;
 import org.apache.unomi.api.rules.RuleStatistics;
 import org.apache.unomi.api.services.*;
+import org.apache.unomi.api.tasks.ScheduledTask;
+import org.apache.unomi.api.tasks.TaskExecutor;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.config.ConfigurationUpdateHelper;
@@ -65,14 +67,16 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
 
     private Integer rulesRefreshInterval = 1000;
     private Integer rulesStatisticsRefreshInterval = 10000;
+    private static final String REFRESH_RULES_TASK_TYPE = "refresh-rules";
+    private static final String REFRESH_RULE_STATS_TASK_TYPE = "refresh-rule-stats";
+    private String refreshRulesTaskId;
+    private String syncRuleStatisticsTaskId;
 
     private final List<RuleListenerService> ruleListeners = new CopyOnWriteArrayList<RuleListenerService>();
 
     private Map<String, Set<Rule>> rulesByEventType = new HashMap<>();
     private Boolean optimizedRulesActivated = true;
 
-    private String refreshRulesTaskId;
-    private String syncRuleStatisticsTaskId;
 
     public void setBundleContext(BundleContext bundleContext) {
         this.bundleContext = bundleContext;
@@ -492,26 +496,53 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
     }
 
     private void initializeTimers() {
-        this.resetTimers();
-        TimerTask task = new TimerTask() {
+        TaskExecutor refreshRulesTaskExecutor = new TaskExecutor() {
             @Override
-            public void run() {
-                refreshRules();
+            public String getTaskType() {
+                return REFRESH_RULES_TASK_TYPE;
             }
-        };
-        this.refreshRulesTaskId = schedulerService.createRecurringTask("refreshRules", rulesRefreshInterval,  TimeUnit.MILLISECONDS, task, false).getItemId();
 
-        TimerTask statisticsTask = new TimerTask() {
             @Override
-            public void run() {
-            try {
-                syncRuleStatistics();
-            } catch (Throwable t) {
-                LOGGER.error("Error synching rule statistics between memory and persistence back-end", t);
-            }
+            public void execute(ScheduledTask task, TaskExecutor.TaskStatusCallback callback) {
+                try {
+                    refreshRules();
+                    callback.complete();
+                } catch (Exception e) {
+                    LOGGER.error("Error while refreshing rules", e);
+                    callback.fail(e.getMessage());
+                }
             }
         };
-        this.syncRuleStatisticsTaskId = schedulerService.createRecurringTask("syncRuleStatistics", rulesStatisticsRefreshInterval,  TimeUnit.MILLISECONDS, statisticsTask, false).getItemId();
+        TaskExecutor refreshRuleStatsTaskExecutor = new TaskExecutor() {
+            @Override
+            public String getTaskType() {
+                return REFRESH_RULE_STATS_TASK_TYPE;
+            }
+
+            @Override
+            public void execute(ScheduledTask task, TaskExecutor.TaskStatusCallback callback) {
+                try {
+                    syncRuleStatistics();
+                    callback.complete();
+                } catch (Exception e) {
+                    LOGGER.error("Error while syncing rule statistics", e);
+                    callback.fail(e.getMessage());
+                }
+            }
+        };
+
+        schedulerService.registerTaskExecutor(refreshRulesTaskExecutor);
+        schedulerService.registerTaskExecutor(refreshRuleStatsTaskExecutor);
+
+        this.resetTimers();
+        this.refreshRulesTaskId = schedulerService.newTask(REFRESH_RULES_TASK_TYPE)
+                .withPeriod(rulesRefreshInterval, TimeUnit.MILLISECONDS)
+                .nonPersistent()
+                .schedule().getItemId();
+        this.refreshRulesTaskId = schedulerService.newTask(REFRESH_RULE_STATS_TASK_TYPE)
+                .withPeriod(rulesStatisticsRefreshInterval, TimeUnit.MILLISECONDS)
+                .nonPersistent()
+                .schedule().getItemId();
     }
 
     private void resetTimers() {

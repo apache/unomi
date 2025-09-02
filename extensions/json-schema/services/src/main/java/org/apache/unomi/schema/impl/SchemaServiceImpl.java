@@ -30,6 +30,7 @@ import org.apache.unomi.api.Item;
 import org.apache.unomi.api.services.SchedulerService;
 import org.apache.unomi.api.services.ScopeService;
 import org.apache.unomi.api.tasks.ScheduledTask;
+import org.apache.unomi.api.tasks.TaskExecutor;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.schema.api.JsonSchemaWrapper;
 import org.apache.unomi.schema.api.SchemaService;
@@ -43,7 +44,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.util.*;
-import java.util.concurrent.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 public class SchemaServiceImpl implements SchemaService {
@@ -71,8 +74,10 @@ public class SchemaServiceImpl implements SchemaService {
     private PersistenceService persistenceService;
     private ScopeService scopeService;
     private JsonSchemaFactory jsonSchemaFactory;
+
     private SchedulerService schedulerService;
     private String refreshJSONSchemasTaskId;
+    private static final String REFRESH_SCHEMAS_TASK_TYPE = "refresh-json-schemas";
 
     @Override
     public boolean isValid(String data, String schemaId) {
@@ -369,18 +374,31 @@ public class SchemaServiceImpl implements SchemaService {
     }
 
     private void initTimers() {
-        TimerTask task = new TimerTask() {
+        TaskExecutor refreshSchemasTaskExecutor = new TaskExecutor() {
             @Override
-            public void run() {
-            try {
-                refreshJSONSchemas();
-            } catch (Exception e) {
-                LOGGER.error("Unexpected error while refreshing JSON Schemas", e);
+            public String getTaskType() {
+                return REFRESH_SCHEMAS_TASK_TYPE;
             }
+
+            @Override
+            public void execute(ScheduledTask task, TaskExecutor.TaskStatusCallback callback) {
+                try {
+                    refreshJSONSchemas();
+                    callback.complete();
+                } catch (Exception e) {
+                    LOGGER.error("Error while refreshing json scehams", e);
+                    callback.fail(e.getMessage());
+                }
             }
         };
+
+        schedulerService.registerTaskExecutor(refreshSchemasTaskExecutor);
+
         this.resetTimers();
-        this.refreshJSONSchemasTaskId = schedulerService.createRecurringTask("refreshJSONSchemas", jsonSchemaRefreshInterval, TimeUnit.MILLISECONDS, task, false).getItemId();
+        this.refreshJSONSchemasTaskId = schedulerService.newTask(REFRESH_SCHEMAS_TASK_TYPE)
+                .withPeriod(jsonSchemaRefreshInterval, TimeUnit.MILLISECONDS)
+                .nonPersistent()
+                .schedule().getItemId();
     }
 
     private void resetTimers() {
