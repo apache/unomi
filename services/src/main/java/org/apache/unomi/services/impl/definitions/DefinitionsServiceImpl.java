@@ -487,7 +487,7 @@ public class DefinitionsServiceImpl implements DefinitionsService, SynchronousBu
         if (rootCondition.containsParameter("subConditions")) {
             @SuppressWarnings("unchecked")
             List<Condition> subConditions = (List<Condition>) rootCondition.getParameter("subConditions");
-            List<Condition> matchingConditions = new ArrayList<Condition>();
+            List<Condition> matchingConditions = new ArrayList<>();
             for (Condition condition : subConditions) {
                 Condition c = extractConditionBySystemTag(condition, systemTag);
                 if (c != null) {

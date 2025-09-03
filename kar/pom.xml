@@ -71,7 +71,7 @@
         </dependency>
         <dependency>
             <groupId>org.apache.unomi</groupId>
-            <artifactId>unomi-persistence-elasticsearch-core</artifactId>
+            <artifactId>unomi-persistence-elasticsearch-9-core</artifactId>
         </dependency>
 
         <!-- plugins -->
@@ -152,7 +152,6 @@
             <artifactId>httpclient-osgi</artifactId>
         </dependency>
     </dependencies>
-
     <build>
         <pluginManagement>
             <plugins>

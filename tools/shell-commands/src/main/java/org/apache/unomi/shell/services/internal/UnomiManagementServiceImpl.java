@@ -105,7 +105,7 @@ public class UnomiManagementServiceImpl implements UnomiManagementService {
         bundleSymbolicNames.add("org.apache.unomi.scripting");
         bundleSymbolicNames.add("org.apache.unomi.metrics");
         bundleSymbolicNames.add("org.apache.unomi.persistence-spi");
-        bundleSymbolicNames.add("org.apache.unomi.persistence-elasticsearch-core");
+        bundleSymbolicNames.add("org.apache.unomi.persistence-elasticsearch-9-core");
         bundleSymbolicNames.add("org.apache.unomi.services");
         bundleSymbolicNames.add("org.apache.unomi.cxs-lists-extension-services");
         bundleSymbolicNames.add("org.apache.unomi.cxs-lists-extension-rest");

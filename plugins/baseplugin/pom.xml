@@ -43,7 +43,7 @@
     <dependencies>
         <dependency>
             <groupId>org.apache.unomi</groupId>
-            <artifactId>unomi-persistence-elasticsearch-core</artifactId>
+            <artifactId>unomi-persistence-elasticsearch-9-core</artifactId>
             <scope>provided</scope>
         </dependency>
         <dependency>

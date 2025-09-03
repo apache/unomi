@@ -60,8 +60,7 @@ public class ScopeServiceEndPoint {
      */
     @GET
     @Path("/")
-    public List<Scope> getScopes() {
-        return scopeService.getScopes();
+    public List<Scope> getScopes() {return scopeService.getScopes();
     }
 
     /**
