@@ -39,7 +39,7 @@
         <feature>spifly</feature>
         <feature>shell-compat</feature>
         <configfile finalname="/etc/org.apache.unomi.web.cfg">mvn:org.apache.unomi/unomi-wab/${project.version}/cfg/unomicfg</configfile>
-        <configfile finalname="/etc/org.apache.unomi.persistence.elasticsearch.cfg">mvn:org.apache.unomi/unomi-persistence-elasticsearch-core/${project.version}/cfg/elasticsearchcfg</configfile>
+        <configfile finalname="/etc/org.apache.unomi.persistence.elasticsearch.cfg">mvn:org.apache.unomi/unomi-persistence-elasticsearch-9-core/${project.version}/cfg/elasticsearchcfg</configfile>
         <configfile finalname="/etc/org.apache.unomi.services.cfg">mvn:org.apache.unomi/unomi-services/${project.version}/cfg/servicescfg</configfile>
         <configfile finalname="/etc/org.apache.unomi.thirdparty.cfg">mvn:org.apache.unomi/unomi-services/${project.version}/cfg/thirdpartycfg</configfile>
         <configfile finalname="/etc/org.apache.unomi.cluster.cfg">mvn:org.apache.unomi/unomi-services/${project.version}/cfg/clustercfg</configfile>
@@ -82,7 +82,9 @@
         <bundle start-level="75" start="false">mvn:org.apache.unomi/unomi-scripting/${project.version}</bundle>
         <bundle start-level="75" start="false">mvn:org.apache.unomi/unomi-metrics/${project.version}</bundle>
         <bundle start-level="75" start="false">mvn:org.apache.unomi/unomi-persistence-spi/${project.version}</bundle>
-        <bundle start-level="76" start="false">mvn:org.apache.unomi/unomi-persistence-elasticsearch-core/${project.version}</bundle>
+
+        <bundle start-level="76" start="false">mvn:org.apache.unomi/unomi-persistence-elasticsearch-9-core/${project.version}</bundle>
+        <bundle start-level="77" start="false">mvn:org.apache.unomi/unomi-persistence-elasticsearch-9-conditions/${project.version}</bundle>
         <bundle start-level="77" start="false">mvn:org.apache.unomi/unomi-services/${project.version}</bundle>
         <bundle start-level="77" start="false">mvn:org.apache.unomi/unomi-json-schema-services/${project.version}</bundle>
         <bundle start-level="77" start="false">mvn:org.apache.unomi/unomi-json-schema-rest/${project.version}</bundle>

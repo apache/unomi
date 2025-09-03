@@ -64,7 +64,8 @@
         <maven.compiler.release>${java.version}</maven.compiler.release>
 
         <karaf.version>4.4.8</karaf.version>
-        <elasticsearch.version>7.4.2</elasticsearch.version>
+        <elasticsearch.version>9.0.3</elasticsearch.version>
+        <old.elasticsearch.version>7.4.2</old.elasticsearch.version>
         <elasticsearch.test.version>7.11.0</elasticsearch.test.version>
         <javax-validation.version>1.1.0.Final</javax-validation.version>
         <commons-lang3.version>3.18.0</commons-lang3.version>
@@ -76,7 +77,7 @@
         <snakeyaml.version>2.4</snakeyaml.version>
         <opencsv.version>3.10</opencsv.version>
         <log4j.version>2.19.0</log4j.version>
-        <lucene.version>8.2.0</lucene.version>
+        <lucene.version>9.12.2</lucene.version>
         <hazelcast.version>3.12.8</hazelcast.version>
         <failsafe.version>2.4.0</failsafe.version>
         <joda-time.version>2.12.7</joda-time.version>
@@ -91,6 +92,7 @@
         <org-json.version>20250517</org-json.version>
         <jsr305.version>3.0.2</jsr305.version>
         <jakarta-annotation-api.version>3.0.0</jakarta-annotation-api.version>
+        <jakarta-json-api.version>2.1.2</jakarta-json-api.version>
         <swagger-ui.version>5.27.1</swagger-ui.version>
         <cxf.version>3.6.5</cxf.version>
         <rs-api.version>2.1</rs-api.version>
@@ -374,10 +376,6 @@
         </repository>
     </repositories>
 
-    <!--
-    see ticket https://issues.apache.org/jira/browse/UNOMI-905 for more details
-    about declaring submodules individually.
-    -->
     <modules>
         <module>bom</module>
         <module>api</module>
@@ -386,7 +384,7 @@
         <module>scripting</module>
         <module>metrics</module>
         <module>lifecycle-watcher</module>
-        <module>persistence-elasticsearch</module>
+        <module>persistence-elasticsearch-9</module>
         <module>services</module>
         <!-- plugins -->
         <module>plugins</module>

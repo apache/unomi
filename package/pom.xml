@@ -149,7 +149,7 @@
                                 <artifactItem>
                                     <groupId>org.elasticsearch.plugin</groupId>
                                     <artifactId>reindex-client</artifactId>
-                                    <version>${elasticsearch.version}</version>
+                                    <version>${old.elasticsearch.version}</version>
                                     <outputDirectory>${project.build.directory}/assembly/elasticsearch/modules/reindex</outputDirectory>
                                 </artifactItem>
                             </artifactItems>
@@ -173,7 +173,7 @@
                                 </artifactItem>
                                 <artifactItem>
                                     <groupId>org.apache.unomi</groupId>
-                                    <artifactId>unomi-persistence-elasticsearch-core</artifactId>
+                                    <artifactId>unomi-persistence-elasticsearch-9-core</artifactId>
                                     <classifier>elasticsearchcfg</classifier>
                                     <type>cfg</type>
                                     <outputDirectory>${project.build.directory}/assembly/etc</outputDirectory>
@@ -318,7 +318,7 @@
                         <feature>unomi-kar</feature>
                         <feature>unomi-router-karaf-feature</feature>
                         <feature>unomi-groovy-actions</feature>
-                        <feature>unomi-rest-ui</feature>
+                        <!--<feature>unomi-rest-ui</feature>-->
                     </bootFeatures>
                     <javase>17</javase>
                 </configuration>
