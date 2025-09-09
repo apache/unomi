@@ -82,7 +82,7 @@ https://maven.apache.org/surefire/maven-failsafe-plugin/examples/single-test.htm
 
 Here's an example:
 
-    mvn clean install -Dit.karaf.debug=hold:true -Dit.test=org.apache.unomi.itests.graphql.GraphQLEventIT
+    mvn clean install -Dit.karaf.debug=hold:true -Dit.test=org.apache.unomi.itests.BasicIT
 
 ## Migration tests
 
