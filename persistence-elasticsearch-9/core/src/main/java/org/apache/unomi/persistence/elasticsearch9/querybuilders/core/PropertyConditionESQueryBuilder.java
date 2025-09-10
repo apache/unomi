@@ -366,19 +366,19 @@ public class PropertyConditionESQueryBuilder implements ConditionESQueryBuilder 
 
             if (val1 instanceof String) {
                 return new RangeQuery.Builder()
-                        .term(t -> t.field(fieldName).gte((String) val1).lt((String) val2))
+                        .term(t -> t.field(fieldName).gte((String) val1).lte((String) val2))
                         .build();
             } else if (val1 instanceof Date) {
                 return new RangeQuery.Builder()
                         .date(t -> t.field(fieldName)
                                 .gte(convertDateToISO(val1).toString())
-                                .lt(convertDateToISO(val2).toString()))
+                                .lte(convertDateToISO(val2).toString()))
                         .build();
             } else if (val1 instanceof Number) {
                 return new RangeQuery.Builder()
                         .number(t -> t.field(fieldName)
                                 .gte(((Number) val1).doubleValue())
-                                .lt(((Number) val2).doubleValue()))
+                                .lte(((Number) val2).doubleValue()))
                         .build();
             }
         }

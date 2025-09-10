@@ -1093,11 +1093,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
                         Query query = conditionESQueryBuilderDispatcher.buildFilter(conditions[i]);
                         int finalI = i;
-                        UpdateByQueryRequest.of(
-                                builder -> builder.index(List.of(indices)).conflicts(Conflicts.Proceed).slices(Slices.of(s -> s.value(2)))
-                                        .script(scripts[finalI]).query(wrapWithItemsTypeQuery(itemTypes, query)));
 
-                        //TODO implements the maxRetries if necessary
                         UpdateByQueryRequest updateByQueryRequest = UpdateByQueryRequest.of(
                                 builder -> builder.index(List.of(indices)).conflicts(Conflicts.Proceed).waitForCompletion(false)
                                         .slices(Slices.of(s -> s.value(2))).script(scripts[finalI])
@@ -2454,14 +2450,12 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             @Override protected Map<String, Double> execute(Object... args) throws IOException {
                 Map<String, Double> results = new LinkedHashMap<String, Double>();
 
-                List<Aggregation> aggregations = new ArrayList<>();
                 Map<String, Aggregation> subAggs = new HashMap<>();
                 if (metrics != null) {
                     for (String metric : metrics) {
                         switch (metric) {
                             case "sum":
                                 subAggs.put("sum", AggregationBuilders.sum().field(field).build()._toAggregation());
-                                //subAggs.put("sum", Aggregation.of(b -> b.sum(SumAggregation.of(builder -> builder.field(field)))));
                                 break;
                             case "avg":
                                 subAggs.put("avg", AggregationBuilders.avg().field(field).build()._toAggregation());
