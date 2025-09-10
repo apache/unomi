@@ -144,21 +144,10 @@
             </dependency>
 
             <dependency>
-                <groupId>org.elasticsearch.client</groupId>
-                <artifactId>elasticsearch-rest-high-level-client</artifactId>
-                <version>${old.elasticsearch.version}</version>
-            </dependency>
-            <dependency>
                 <groupId>org.elasticsearch.test</groupId>
                 <artifactId>framework</artifactId>
                 <version>${elasticsearch.version}</version>
             </dependency>
-            <dependency>
-                <groupId>org.elasticsearch.plugin</groupId>
-                <artifactId>transport-netty4-client</artifactId>
-                <version>${old.elasticsearch.version}</version>
-            </dependency>
-
             <dependency>
                 <groupId>co.elastic.clients</groupId>
                 <artifactId>elasticsearch-java</artifactId>

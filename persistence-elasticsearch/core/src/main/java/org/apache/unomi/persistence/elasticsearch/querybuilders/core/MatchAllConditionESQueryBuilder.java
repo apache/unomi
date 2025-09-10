@@ -15,39 +15,19 @@
  * limitations under the License.
  */
 
-package org.apache.unomi.plugins.events.hover.querybuilders;
+package org.apache.unomi.persistence.elasticsearch.querybuilders.core;
 
 import co.elastic.clients.elasticsearch._types.query_dsl.Query;
-import co.elastic.clients.elasticsearch._types.query_dsl.QueryBuilders;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.persistence.elasticsearch.ConditionESQueryBuilder;
 import org.apache.unomi.persistence.elasticsearch.ConditionESQueryBuilderDispatcher;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 
-/**
- * Condition builder for hover event types
- */
-public class HoverEventConditionESQueryBuilder implements ConditionESQueryBuilder {
+public class MatchAllConditionESQueryBuilder implements ConditionESQueryBuilder {
 
-    public HoverEventConditionESQueryBuilder() {
-    }
-
+    @Override
     public Query buildQuery(Condition condition, Map<String, Object> context, ConditionESQueryBuilderDispatcher dispatcher) {
-        List<Query> queries = new ArrayList<>();
-        queries.add(QueryBuilders.term(builder -> builder.field("eventType").value("hover")));
-        String targetId = (String) condition.getParameter("targetId");
-        String targetPath = (String) condition.getParameter("targetPath");
-
-        if (targetId != null && !targetId.trim().isEmpty()) {
-            queries.add(QueryBuilders.term(builder -> builder.field("target.itemId").value(targetId)));
-        } else if (targetPath != null && targetPath.trim().length() > 0) {
-            queries.add(QueryBuilders.term(builder -> builder.field("target.properties.pageInfo.pagePath").value(targetPath)));
-        } else {
-            queries.add(QueryBuilders.term(builder -> builder.field("target.itemId").value("")));
-        }
-        return QueryBuilders.bool().must(queries).build()._toQuery();
+        return Query.of(q->q.matchAll(m->m));
     }
 }

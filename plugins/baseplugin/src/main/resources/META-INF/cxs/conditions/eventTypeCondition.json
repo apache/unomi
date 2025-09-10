@@ -14,7 +14,7 @@
   "parentCondition": {
     "type": "eventPropertyCondition",
     "parameterValues": {
-      "propertyName": "eventType",
+      "propertyName": "eventType.keyword",
       "propertyValue": "parameter::eventTypeId",
       "comparisonOperator": "equals"
     }

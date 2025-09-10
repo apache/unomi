@@ -14,40 +14,40 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-package org.apache.unomi.plugins.events.hover.querybuilders;
+package org.apache.unomi.persistence.elasticsearch.querybuilders.advanced;
 
 import co.elastic.clients.elasticsearch._types.query_dsl.Query;
-import co.elastic.clients.elasticsearch._types.query_dsl.QueryBuilders;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.persistence.elasticsearch.ConditionESQueryBuilder;
 import org.apache.unomi.persistence.elasticsearch.ConditionESQueryBuilderDispatcher;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Collection;
 import java.util.Map;
 
-/**
- * Condition builder for hover event types
- */
-public class HoverEventConditionESQueryBuilder implements ConditionESQueryBuilder {
+public class IdsConditionESQueryBuilder implements ConditionESQueryBuilder {
 
-    public HoverEventConditionESQueryBuilder() {
+    private int maximumIdsQueryCount = 5000;
+
+    public void setMaximumIdsQueryCount(int maximumIdsQueryCount) {
+        this.maximumIdsQueryCount = maximumIdsQueryCount;
     }
 
-    public Query buildQuery(Condition condition, Map<String, Object> context, ConditionESQueryBuilderDispatcher dispatcher) {
-        List<Query> queries = new ArrayList<>();
-        queries.add(QueryBuilders.term(builder -> builder.field("eventType").value("hover")));
-        String targetId = (String) condition.getParameter("targetId");
-        String targetPath = (String) condition.getParameter("targetPath");
 
-        if (targetId != null && !targetId.trim().isEmpty()) {
-            queries.add(QueryBuilders.term(builder -> builder.field("target.itemId").value(targetId)));
-        } else if (targetPath != null && targetPath.trim().length() > 0) {
-            queries.add(QueryBuilders.term(builder -> builder.field("target.properties.pageInfo.pagePath").value(targetPath)));
-        } else {
-            queries.add(QueryBuilders.term(builder -> builder.field("target.itemId").value("")));
+    @Override
+    public Query buildQuery(Condition condition, Map<String, Object> context, ConditionESQueryBuilderDispatcher dispatcher) {
+        Collection<String> ids = (Collection<String>) condition.getParameter("ids");
+        Boolean match = (Boolean) condition.getParameter("match");
+
+        if (ids.size() > maximumIdsQueryCount) {
+            // Avoid building too big ids query - throw exception instead
+            throw new UnsupportedOperationException("Too many profiles");
         }
-        return QueryBuilders.bool().must(queries).build()._toQuery();
+
+        Query idsQuery = Query.of(q -> q.ids(i -> i.values(ids.stream().toList())));
+        if (match) {
+            return idsQuery;
+        } else {
+            return Query.of(q -> q.bool(b -> b.mustNot(idsQuery)));
+        }
     }
 }

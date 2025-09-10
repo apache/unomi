@@ -71,7 +71,7 @@
         </dependency>
         <dependency>
             <groupId>org.apache.unomi</groupId>
-            <artifactId>unomi-persistence-elasticsearch-9-core</artifactId>
+            <artifactId>unomi-persistence-elasticsearch-core</artifactId>
         </dependency>
 
         <!-- plugins -->
