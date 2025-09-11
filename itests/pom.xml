@@ -225,7 +225,7 @@
                                     <xpack.ml.enabled>false</xpack.ml.enabled>
                                     <path.repo>${project.build.directory}/snapshots_repository</path.repo>
                                     <cluster.routing.allocation.disk.threshold_enabled>false</cluster.routing.allocation.disk.threshold_enabled>
-                                    <http.cors.allow-origin>*</http.cors.allow-origin>
+                                    <!--http.cors.allow-origin>*</http.cors.allow-origin-->
                                     <http.cors.allow-methods>OPTIONS,HEAD,GET,POST,PUT,DELETE</http.cors.allow-methods>
                                     <http.cors.allow-headers>Authorization,X-Requested-With,X-Auth-Token,Content-Type,Content-Length</http.cors.allow-headers>
                                 </properties>
