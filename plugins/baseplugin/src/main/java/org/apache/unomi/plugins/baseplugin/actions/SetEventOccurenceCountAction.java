@@ -60,14 +60,14 @@ public class SetEventOccurenceCountAction implements ActionExecutor {
         conditions.add(eventCondition);
 
         Condition c = new Condition(definitionsService.getConditionType("eventPropertyCondition"));
-        c.setParameter("propertyName", "profileId.keyword");
+        c.setParameter("propertyName", "profileId");
         c.setParameter("comparisonOperator", "equals");
         c.setParameter("propertyValue", event.getProfileId());
         conditions.add(c);
 
         // may be current event is already persisted and indexed, in that case we filter it from the count to increment it manually at the end
         Condition eventIdFilter = new Condition(definitionsService.getConditionType("eventPropertyCondition"));
-        eventIdFilter.setParameter("propertyName", "itemId.keyword");
+        eventIdFilter.setParameter("propertyName", "itemId");
         eventIdFilter.setParameter("comparisonOperator", "notEquals");
         eventIdFilter.setParameter("propertyValue", event.getItemId());
         conditions.add(eventIdFilter);
