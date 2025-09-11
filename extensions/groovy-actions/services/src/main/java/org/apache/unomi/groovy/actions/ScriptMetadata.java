@@ -17,6 +17,7 @@
 package org.apache.unomi.groovy.actions;
 
 import groovy.lang.Script;
+
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.nio.charset.StandardCharsets;
@@ -28,13 +29,10 @@ import java.util.Base64;
  * This class encapsulates all metadata associated with a compiled Groovy script,
  * including content hash for efficient change detection and the compiled class
  * for direct execution without recompilation.
- * </p>
- * 
  * <p>
  * Thread Safety: This class is immutable and thread-safe. All fields are final
  * and the class provides no methods to modify its state after construction.
- * </p>
- * 
+ *
  * @since 2.7.0
  */
 public final class ScriptMetadata {
@@ -43,11 +41,11 @@ public final class ScriptMetadata {
     private final String contentHash;
     private final long creationTime;
     private final Class<? extends Script> compiledClass;
-    
+
     /**
      * Constructs a new ScriptMetadata instance.
-     * 
-     * @param actionName the unique name/identifier of the action
+     *
+     * @param actionName    the unique name/identifier of the action
      * @param scriptContent the raw Groovy script content
      * @param compiledClass the compiled Groovy script class
      * @throws IllegalArgumentException if any parameter is null
@@ -62,17 +60,17 @@ public final class ScriptMetadata {
         if (compiledClass == null) {
             throw new IllegalArgumentException("Compiled class cannot be null");
         }
-        
+
         this.actionName = actionName;
         this.scriptContent = scriptContent;
         this.contentHash = calculateHash(scriptContent);
         this.creationTime = System.currentTimeMillis();
         this.compiledClass = compiledClass;
     }
-    
+
     /**
      * Calculates SHA-256 hash of the given content.
-     * 
+     *
      * @param content the content to hash
      * @return Base64 encoded SHA-256 hash
      * @throws RuntimeException if SHA-256 algorithm is not available
@@ -86,14 +84,13 @@ public final class ScriptMetadata {
             throw new RuntimeException("SHA-256 algorithm not available", e);
         }
     }
-    
+
     /**
      * Determines if the script content has changed compared to new content.
      * <p>
      * This method uses SHA-256 hash comparison for efficient change detection
      * without storing or comparing the full script content.
-     * </p>
-     * 
+     *
      * @param newContent the new script content to compare against
      * @return {@code true} if content has changed, {@code false} if unchanged
      * @throws IllegalArgumentException if newContent is null
@@ -104,53 +101,52 @@ public final class ScriptMetadata {
         }
         return !contentHash.equals(calculateHash(newContent));
     }
-    
+
     /**
      * Returns the action name/identifier.
-     * 
+     *
      * @return the action name, never null
      */
-    public String getActionName() { 
-        return actionName; 
+    public String getActionName() {
+        return actionName;
     }
-    
+
     /**
      * Returns the original script content.
-     * 
+     *
      * @return the script content, never null
      */
-    public String getScriptContent() { 
-        return scriptContent; 
+    public String getScriptContent() {
+        return scriptContent;
     }
-    
+
     /**
      * Returns the SHA-256 hash of the script content.
-     * 
+     *
      * @return Base64 encoded content hash, never null
      */
-    public String getContentHash() { 
-        return contentHash; 
+    public String getContentHash() {
+        return contentHash;
     }
-    
+
     /**
      * Returns the timestamp when this metadata was created.
-     * 
+     *
      * @return creation timestamp in milliseconds since epoch
      */
-    public long getCreationTime() { 
-        return creationTime; 
+    public long getCreationTime() {
+        return creationTime;
     }
-    
+
     /**
      * Returns the compiled Groovy script class.
      * <p>
      * This class can be used to create new script instances for execution
      * without requiring recompilation.
-     * </p>
-     * 
+     *
      * @return the compiled script class, never null
      */
-    public Class<? extends Script> getCompiledClass() { 
-        return compiledClass; 
+    public Class<? extends Script> getCompiledClass() {
+        return compiledClass;
     }
 }
