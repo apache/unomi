@@ -89,11 +89,6 @@
             <artifactId>elasticsearch-rest-client</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.hazelcast</groupId>
-            <artifactId>hazelcast-all</artifactId>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
             <scope>provided</scope>
@@ -202,7 +197,6 @@
                             com.fasterxml.jackson.*;resolution:=optional,
                             com.google.appengine.api;resolution:=optional,
                             com.google.apphosting.api;resolution:=optional,
-                            com.google.common.geometry;resolution:=optional,
                             com.google.errorprone.annotations.concurrent;resolution:=optional,
                             com.lmax.disruptor;resolution:=optional,
                             com.lmax.disruptor.dsl;resolution:=optional,

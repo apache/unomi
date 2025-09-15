@@ -32,31 +32,29 @@ public class SourceEventPropertyConditionESQueryBuilder implements ConditionESQu
     public SourceEventPropertyConditionESQueryBuilder() {
     }
 
-    private void appendFilderIfPropExist(List<Query> queryBuilders, Condition condition, String prop) {
+    private void appendFilterIfPropExist(List<Query> queries, Condition condition, String prop) {
         final Object parameter = condition.getParameter(prop);
         if (parameter != null && !"".equals(parameter)) {
-            queryBuilders.add(Query.of(q -> q.term(t -> t.field("source." + prop).value(v -> v.stringValue((String) parameter)))));
+            queries.add(Query.of(q -> q.term(t -> t.field("source." + prop).value(v -> v.stringValue((String) parameter)))));
         }
     }
 
     public Query buildQuery(Condition condition, Map<String, Object> context, ConditionESQueryBuilderDispatcher dispatcher) {
-        List<Query> queryBuilders = new ArrayList<Query>();
-        for (String prop : new String[]{"id", "path", "scope", "type"}) {
-            appendFilderIfPropExist(queryBuilders, condition, prop);
+        List<Query> queries = new ArrayList<>();
+        for (String prop : new String[] { "id", "path", "scope", "type" }) {
+            appendFilterIfPropExist(queries, condition, prop);
         }
 
-        if (queryBuilders.size() >= 1) {
-            if (queryBuilders.size() == 1) {
-                return queryBuilders.get(0);
-            } else {
-                BoolQuery.Builder boolQueryBuilder = new BoolQuery.Builder();
-                for (Query queryBuilder : queryBuilders) {
-                    boolQueryBuilder.must(queryBuilder);
-                }
-                return Query.of(q -> q.bool(boolQueryBuilder.build()));
-            }
-        } else {
+        if (queries.isEmpty()) {
             return null;
+        } else if (queries.size() == 1) {
+            return queries.get(0);
+        } else {
+            BoolQuery.Builder boolQueryBuilder = new BoolQuery.Builder();
+            for (Query queryBuilder : queries) {
+                boolQueryBuilder.must(queryBuilder);
+            }
+            return Query.of(q -> q.bool(boolQueryBuilder.build()));
         }
     }
 }

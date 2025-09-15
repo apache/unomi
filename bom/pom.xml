@@ -297,11 +297,6 @@
                 <version>${opencsv.version}</version>
             </dependency>
             <dependency>
-                <groupId>com.hazelcast</groupId>
-                <artifactId>hazelcast-all</artifactId>
-                <version>${hazelcast.version}</version>
-            </dependency>
-            <dependency>
                 <groupId>net.jodah</groupId>
                 <artifactId>failsafe</artifactId>
                 <version>${failsafe.version}</version>
@@ -335,11 +330,6 @@
                 <groupId>com.github.java-json-tools</groupId>
                 <artifactId>jackson-coreutils</artifactId>
                 <version>${jackson-coreutils.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.google.guava</groupId>
-                <artifactId>guava</artifactId>
-                <version>${guava.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.json</groupId>

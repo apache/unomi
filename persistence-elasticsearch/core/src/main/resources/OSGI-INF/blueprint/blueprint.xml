@@ -37,7 +37,7 @@
             <cm:property name="bulkProcessor.concurrentRequests" value="1"/>
             <cm:property name="bulkProcessor.bulkActions" value="1000"/>
             <cm:property name="bulkProcessor.bulkSize" value="5"/>
-            <cm:property name="bulkProcessor.flushInterval" value="5s"/>
+            <cm:property name="bulkProcessor.flushInterval" value="5"/>
             <cm:property name="bulkProcessor.backoffPolicy" value="exponential"/>
 
             <cm:property name="rollover.indices" value=""/>
