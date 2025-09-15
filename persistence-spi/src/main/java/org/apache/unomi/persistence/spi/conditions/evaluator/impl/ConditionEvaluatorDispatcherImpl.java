@@ -15,13 +15,21 @@
  * limitations under the License.
  */
 
-package org.apache.unomi.persistence.spi.conditions;
+package org.apache.unomi.persistence.spi.conditions.evaluator.impl;
 
 import org.apache.unomi.api.Item;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.metrics.MetricAdapter;
 import org.apache.unomi.metrics.MetricsService;
+import org.apache.unomi.persistence.spi.conditions.ConditionContextHelper;
+import org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluator;
+import org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluatorDispatcher;
 import org.apache.unomi.scripting.ScriptExecutor;
+import org.osgi.annotation.bundle.Requirement;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Reference;
+import org.osgi.service.component.annotations.ReferenceCardinality;
+import org.osgi.service.component.annotations.ReferencePolicy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -32,33 +40,37 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * Entry point for condition evaluation. Will dispatch to all evaluators.
  */
-//TODO change to delarative services remove blueprint
-public class ConditionEvaluatorDispatcherImpl implements ConditionEvaluatorDispatcher {
-    private static final Logger LOGGER = LoggerFactory.getLogger(ConditionEvaluatorDispatcher.class.getName());
+
+@Component(service = ConditionEvaluatorDispatcher.class)
+public class ConditionEvaluatorDispatcherImpl
+        implements ConditionEvaluatorDispatcher {
+    private static final Logger LOGGER = LoggerFactory.getLogger(ConditionEvaluatorDispatcherImpl.class.getName());
 
     private Map<String, ConditionEvaluator> evaluators = new ConcurrentHashMap<>();
 
     private MetricsService metricsService;
     private ScriptExecutor scriptExecutor;
 
-    public ConditionEvaluatorDispatcherImpl() {}
+    public ConditionEvaluatorDispatcherImpl() {
+    }
 
+    @Reference
     public void setMetricsService(MetricsService metricsService) {
         this.metricsService = metricsService;
     }
 
+    @Reference
     public void setScriptExecutor(ScriptExecutor scriptExecutor) {
         this.scriptExecutor = scriptExecutor;
     }
 
-    @Override
-    public void addEvaluator(String name, ConditionEvaluator evaluator) {
-        evaluators.put(name, evaluator);
+    @Reference(service = ConditionEvaluator.class, cardinality = ReferenceCardinality.MULTIPLE, policy = ReferencePolicy.DYNAMIC)
+    public void bindEvaluator(ConditionEvaluator evaluator, Map<String, Object> props) {
+        evaluators.put((String) props.get("conditionEvaluatorId"), evaluator);
     }
 
-    @Override
-    public void removeEvaluator(String name) {
-        evaluators.remove(name);
+    public void unbindEvaluator(ConditionEvaluator evaluator, Map<String, Object> props) {
+        evaluators.remove((String) props.get("conditionEvaluatorId"));
     }
 
     @Override
@@ -83,8 +95,7 @@ public class ConditionEvaluatorDispatcherImpl implements ConditionEvaluatorDispa
             final ConditionEvaluatorDispatcher dispatcher = this;
             try {
                 return new MetricAdapter<Boolean>(metricsService, this.getClass().getName() + ".conditions." + conditionEvaluatorKey) {
-                    @Override
-                    public Boolean execute(Object... args) throws Exception {
+                    @Override public Boolean execute(Object... args) throws Exception {
                         Condition contextualCondition = ConditionContextHelper.getContextualCondition(condition, context, scriptExecutor);
                         if (contextualCondition != null) {
                             return evaluator.eval(contextualCondition, item, context, dispatcher);

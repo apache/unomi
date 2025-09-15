@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.unomi.persistence.spi.conditions;
+package org.apache.unomi.persistence.spi.conditions.evaluator;
 
 import org.apache.unomi.api.Item;
 import org.apache.unomi.api.conditions.Condition;
@@ -22,10 +22,6 @@ import org.apache.unomi.api.conditions.Condition;
 import java.util.Map;
 
 public interface ConditionEvaluatorDispatcher {
-
-    void addEvaluator(String name, ConditionEvaluator evaluator);
-
-    void removeEvaluator(String name);
 
     boolean eval(Condition condition, Item item);
 

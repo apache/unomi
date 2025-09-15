@@ -58,6 +58,11 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
+            <groupId>org.osgi</groupId>
+            <artifactId>org.osgi.service.component.annotations</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-core</artifactId>
             <scope>provided</scope>
@@ -121,9 +126,9 @@
                 <extensions>true</extensions>
                 <configuration>
                     <instructions>
+                        <_dsannotations>*</_dsannotations>
                         <Embed-Dependency>*;scope=compile|runtime</Embed-Dependency>
                         <Import-Package>
-
                             *
                         </Import-Package>
                     </instructions>
