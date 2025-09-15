@@ -462,7 +462,7 @@ public class SegmentIT extends BaseIT {
         Condition pastEventCondition = new Condition(definitionsService.getConditionType("pastEventCondition"));
         pastEventCondition.setParameter("numberOfDays", 10);
         Condition pastEventEventCondition = new Condition(definitionsService.getConditionType("eventTypeCondition"));
-        pastEventEventCondition.setParameter("eventTypeId", "test-event-type-max");
+        pastEventEventCondition.setParameter("eventTypeId", "testeventtypemax");
         pastEventCondition.setParameter("eventCondition", pastEventEventCondition);
         pastEventCondition.setParameter("maximumEventCount", 1);
 
@@ -481,7 +481,7 @@ public class SegmentIT extends BaseIT {
         // Persist the event (do not send it into the system so that it will not be processed by the rules)
         ZoneId defaultZoneId = ZoneId.systemDefault();
         LocalDate localDate = LocalDate.now().minusDays(3);
-        Event testEvent = new Event("test-event-type-max", null, profile, null, null, profile,
+        Event testEvent = new Event("testeventtypemax", null, profile, null, null, profile,
                 Date.from(localDate.atStartOfDay(defaultZoneId).toInstant()));
         testEvent.setPersistent(true);
         persistenceService.save(testEvent, null, true);
@@ -503,7 +503,7 @@ public class SegmentIT extends BaseIT {
         // Persist the 2 event (do not send it into the system so that it will not be processed by the rules)
         defaultZoneId = ZoneId.systemDefault();
         localDate = LocalDate.now().minusDays(3);
-        testEvent = new Event("test-event-type-max", null, profile, null, null, profile,
+        testEvent = new Event("testeventtypemax", null, profile, null, null, profile,
                 Date.from(localDate.atStartOfDay(defaultZoneId).toInstant()));
         testEvent.setPersistent(true);
         persistenceService.save(testEvent, null, true);

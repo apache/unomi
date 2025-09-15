@@ -26,12 +26,13 @@
     </parent>
 
     <artifactId>unomi-persistence-elasticsearch</artifactId>
-    <name>Apache Unomi :: Persistence :: ElasticSearch</name>
-    <description>ElasticSearch persistence implementation for the Apache Unomi Context Server</description>
+    <name>Apache Unomi :: Persistence :: Elasticsearch</name>
+    <description>Elasticsearch persistence implementation for the Apache Unomi Context Server</description>
     <packaging>pom</packaging>
 
     <modules>
         <module>core</module>
+        <module>conditions</module>
     </modules>
 
     <build>
@@ -44,6 +45,12 @@
                     <instructions>
                         <Embed-Dependency>*;scope=compile|runtime</Embed-Dependency>
                         <Import-Package>
+                            org.apache.unomi.api.conditions,
+                            org.apache.unomi.api.query,
+                            org.apache.unomi.api,
+                            org.apache.unomi.metrics,
+                            org.apache.unomi.persistence.spi.aggregate,
+                            org.apache.unomi.persistence.spi,
                             com.conversantmedia.util.concurrent;resolution:=optional,
                             *
                         </Import-Package>

@@ -51,12 +51,12 @@ public class Migrate16xToCurrentVersionIT extends BaseIT {
             // Create snapshot repo
             HttpUtils.executePutRequest(httpClient, "http://localhost:9400/_snapshot/snapshots_repository/", resourceAsString("migration/create_snapshots_repository.json"), null);
             // Get snapshot, insure it exists
-            String snapshot = HttpUtils.executeGetRequest(httpClient, "http://localhost:9400/_snapshot/snapshots_repository/snapshot_1.6.x", null);
-            if (snapshot == null || !snapshot.contains("snapshot_1.6.x")) {
+            String snapshot = HttpUtils.executeGetRequest(httpClient, "http://localhost:9400/_snapshot/snapshots_repository/snapshot_2", null);
+            if (snapshot == null || !snapshot.contains("snapshot_2")) {
                 throw new RuntimeException("Unable to retrieve 1.6.x snapshot for ES restore");
             }
             // Restore the snapshot
-            HttpUtils.executePostRequest(httpClient, "http://localhost:9400/_snapshot/snapshots_repository/snapshot_1.6.x/_restore?wait_for_completion=true", "{}", null);
+            HttpUtils.executePostRequest(httpClient, "http://localhost:9400/_snapshot/snapshots_repository/snapshot_2/_restore?wait_for_completion=true", "{}", null);
 
             // Get initial counts of items to compare after migration
             initCounts(httpClient);

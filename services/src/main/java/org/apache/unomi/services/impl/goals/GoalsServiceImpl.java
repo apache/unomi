@@ -438,7 +438,7 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
 
     public GoalReport getGoalReport(String goalId, AggregateQuery query) {
         Condition condition = new Condition(definitionsService.getConditionType("booleanCondition"));
-        final ArrayList<Condition> list = new ArrayList<Condition>();
+        final ArrayList<Condition> list = new ArrayList<>();
         condition.setParameter("operator", "and");
         condition.setParameter("subConditions", list);
 
@@ -479,17 +479,20 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
                     String interval = (String) query.getAggregate().getParameters().get("interval");
                     String format = (String) query.getAggregate().getParameters().get("format");
                     aggregate = new DateAggregate(property, interval, format);
-                } else if (query.getAggregate().getType().equals("dateRange") && query.getAggregate().getDateRanges() != null && query.getAggregate().getDateRanges().size() > 0) {
+                } else if (query.getAggregate().getType().equals("dateRange") && query.getAggregate().getDateRanges() != null && !query.getAggregate()
+                        .getDateRanges().isEmpty()) {
                     String format = (String) query.getAggregate().getParameters().get("format");
                     aggregate = new DateRangeAggregate(property, format, query.getAggregate().getDateRanges());
-                } else if (query.getAggregate().getType().equals("numericRange") && query.getAggregate().getNumericRanges() != null && query.getAggregate().getNumericRanges().size() > 0) {
+                } else if (query.getAggregate().getType().equals("numericRange") && query.getAggregate().getNumericRanges() != null && !query.getAggregate()
+                        .getNumericRanges().isEmpty()) {
                     aggregate = new NumericRangeAggregate(property, query.getAggregate().getNumericRanges());
-                } else if (query.getAggregate().getType().equals("ipRange") && query.getAggregate().ipRanges() != null && query.getAggregate().ipRanges().size() > 0) {
+                } else if (query.getAggregate().getType().equals("ipRange") && query.getAggregate().ipRanges() != null && !query.getAggregate()
+                        .ipRanges().isEmpty()) {
                     aggregate = new IpRangeAggregate(property, query.getAggregate().ipRanges());
                 }
             }
 
-            if(aggregate == null){
+            if (aggregate == null) {
                 aggregate = new TermsAggregate(property);
             }
         }
@@ -503,12 +506,12 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
             match = persistenceService.aggregateWithOptimizedQuery(condition, aggregate, Session.ITEM_TYPE);
         } else {
             list.add(goalStartCondition);
-            all = new HashMap<String, Long>();
+            all = new HashMap<>();
             all.put("_filtered", persistenceService.queryCount(condition, Session.ITEM_TYPE));
 
             list.remove(goalStartCondition);
             list.add(goalTargetCondition);
-            match = new HashMap<String, Long>();
+            match = new HashMap<>();
             match.put("_filtered", persistenceService.queryCount(condition, Session.ITEM_TYPE));
         }
 
@@ -522,7 +525,7 @@ public class GoalsServiceImpl implements GoalsService, SynchronousBundleListener
         stat.setConversionRate(stat.getStartCount() > 0 ? (float) stat.getTargetCount() / (float) stat.getStartCount() : 0);
         report.setGlobalStats(stat);
         all.remove("_all");
-        report.setSplit(new LinkedList<GoalReport.Stat>());
+        report.setSplit(new LinkedList<>());
         for (Map.Entry<String, Long> entry : all.entrySet()) {
             GoalReport.Stat dateStat = new GoalReport.Stat();
             dateStat.setKey(entry.getKey());

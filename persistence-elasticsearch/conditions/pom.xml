@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Licensed to the Apache Software Foundation (ASF) under one or more
+  ~ contributor license agreements.  See the NOTICE file distributed with
+  ~ this work for additional information regarding copyright ownership.
+  ~ The ASF licenses this file to You under the Apache License, Version 2.0
+  ~ (the "License"); you may not use this file except in compliance with
+  ~ the License.  You may obtain a copy of the License at
+  ~
+  ~      http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.apache.unomi</groupId>
+        <artifactId>unomi-persistence-elasticsearch</artifactId>
+        <version>3.0.0-SNAPSHOT</version>
+    </parent>
+
+    <artifactId>unomi-persistence-elasticsearch-conditions</artifactId>
+    <name>Apache Unomi :: Persistence :: ElasticSearch :: Conditions</name>
+    <description>Conditions ElasticSearch persistence implementation for the Apache Unomi Context Server</description>
+    <packaging>bundle</packaging>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.apache.unomi</groupId>
+                <artifactId>unomi-bom</artifactId>
+                <version>${project.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+    <dependencies>
+        <dependency>
+            <groupId>org.apache.unomi</groupId>
+            <artifactId>unomi-api</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.unomi</groupId>
+            <artifactId>unomi-common</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.unomi</groupId>
+            <artifactId>unomi-persistence-spi</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.unomi</groupId>
+            <artifactId>unomi-metrics</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.unomi</groupId>
+            <artifactId>unomi-scripting</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.unomi</groupId>
+            <artifactId>unomi-persistence-elasticsearch-core</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>commons-collections</groupId>
+            <artifactId>commons-collections</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>commons-io</groupId>
+            <artifactId>commons-io</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>joda-time</groupId>
+            <artifactId>joda-time</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.osgi</groupId>
+            <artifactId>osgi.core</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>co.elastic.clients</groupId>
+            <artifactId>elasticsearch-java</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.elasticsearch.client</groupId>
+            <artifactId>elasticsearch-rest-client</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.felix</groupId>
+                <artifactId>maven-bundle-plugin</artifactId>
+                <extensions>true</extensions>
+                <configuration>
+                    <instructions>
+                        <Import-Package>
+                            co.elastic.clients.elasticsearch._types,
+                            co.elastic.clients.elasticsearch._types.query_dsl,
+                            co.elastic.clients.elasticsearch._types.query_dsl.Query,
+                            co.elastic.clients.util,
+                            android.os;resolution:=optional,
+                            com.conversantmedia.util.concurrent;resolution:=optional,
+                            com.google.appengine.api;resolution:=optional,
+                            com.google.appengine.api.utils;resolution:=optional,
+                            com.google.apphosting.api;resolution:=optional,
+                            jakarta.enterprise.context.spi;resolution:=optional,
+                            jakarta.enterprise.inject.spi;resolution:=optional,
+                            jdk.net;resolution:=optional,
+                            org.apache.avalon.framework.logger;resolution:=optional,
+                            org.apache.log;resolution:=optional,
+                            org.apache.log4j,
+                            org.brotli.dec;resolution:=optional,
+                            org.conscrypt;resolution:=optional,
+                            org.glassfish.hk2.osgiresourcelocator;resolution:=optional,
+                            org.ietf.jgss;resolution:=optional,
+                            org.joda.convert;resolution:=optional,
+                            org.reactivestreams;resolution:=optional,
+                            software.amazon.awssdk.auth.credentials;resolution:=optional,
+                            software.amazon.awssdk.core.async;resolution:=optional,
+                            software.amazon.awssdk.http;resolution:=optional,
+                            software.amazon.awssdk.http.async;resolution:=optional,
+                            software.amazon.awssdk.http.auth.aws.signer;resolution:=optional,
+                            software.amazon.awssdk.http.auth.spi.signer;resolution:=optional,
+                            software.amazon.awssdk.identity.spi;resolution:=optional,
+                            software.amazon.awssdk.regions;resolution:=optional,
+                            software.amazon.awssdk.utils;resolution:=optional,
+                            software.amazon.awssdk.utils.builder;resolution:=optional,
+                            sun.misc;resolution:=optional,
+                            sun.nio.ch;resolution:=optional,
+                            io.opentelemetry.sdk.autoconfigure;resolution:=optional,
+                            jakarta.json.bind;resolution:=optional,
+                            jakarta.json.bind.spi;resolution:=optional,
+                            *
+                        </Import-Package>
+                        <Embed-Dependency>*;scope=compile|runtime</Embed-Dependency>
+                        <Embed-Transitive>true</Embed-Transitive>
+                    </instructions>
+                </configuration>
+            </plugin>
+        </plugins>
+
+    </build>
+
+</project>

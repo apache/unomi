@@ -45,6 +45,7 @@
                 <entry key="org.apache.unomi.metrics" value="false"/>
                 <entry key="org.apache.unomi.persistence-spi" value="false"/>
                 <entry key="org.apache.unomi.persistence-elasticsearch-core" value="false"/>
+                <entry key="org.apache.unomi.persistence-elasticsearch-conditions" value="false"/>
                 <entry key="org.apache.unomi.services" value="false"/>
                 <entry key="org.apache.unomi.cxs-lists-extension-services" value="false"/>
                 <entry key="org.apache.unomi.cxs-lists-extension-rest" value="false"/>

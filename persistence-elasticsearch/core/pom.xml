@@ -23,10 +23,12 @@
         <artifactId>unomi-persistence-elasticsearch</artifactId>
         <version>3.0.0-SNAPSHOT</version>
     </parent>
+
     <artifactId>unomi-persistence-elasticsearch-core</artifactId>
     <name>Apache Unomi :: Persistence :: ElasticSearch :: Core</name>
     <description>Core ElasticSearch persistence implementation for the Apache Unomi Context Server</description>
     <packaging>bundle</packaging>
+
 
     <dependencyManagement>
         <dependencies>
@@ -79,9 +81,12 @@
         </dependency>
 
         <dependency>
-            <groupId>com.hazelcast</groupId>
-            <artifactId>hazelcast-all</artifactId>
-            <scope>provided</scope>
+            <groupId>co.elastic.clients</groupId>
+            <artifactId>elasticsearch-java</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.elasticsearch.client</groupId>
+            <artifactId>elasticsearch-rest-client</artifactId>
         </dependency>
         <dependency>
             <groupId>org.slf4j</groupId>
@@ -92,6 +97,11 @@
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-core</artifactId>
             <scope>provided</scope>
         </dependency>
         <dependency>
@@ -106,10 +116,10 @@
         </dependency>
 
         <dependency>
-            <groupId>org.elasticsearch.client</groupId>
-            <artifactId>elasticsearch-rest-high-level-client</artifactId>
+            <groupId>joda-time</groupId>
+            <artifactId>joda-time</artifactId>
+            <scope>provided</scope>
         </dependency>
-
         <!-- The following are optional dependencies from the ElasticSearch that are made mandatory -->
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
@@ -153,16 +163,6 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>org.elasticsearch.test</groupId>
-            <artifactId>framework</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.elasticsearch.plugin</groupId>
-            <artifactId>transport-netty4-client</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
             <groupId>org.apache.lucene</groupId>
             <artifactId>lucene-test-framework</artifactId>
             <scope>test</scope>
@@ -197,7 +197,6 @@
                             com.fasterxml.jackson.*;resolution:=optional,
                             com.google.appengine.api;resolution:=optional,
                             com.google.apphosting.api;resolution:=optional,
-                            com.google.common.geometry;resolution:=optional,
                             com.google.errorprone.annotations.concurrent;resolution:=optional,
                             com.lmax.disruptor;resolution:=optional,
                             com.lmax.disruptor.dsl;resolution:=optional,
@@ -246,6 +245,7 @@
                             org.apache.unomi.metrics,
                             org.apache.unomi.persistence.spi.aggregate,
                             org.apache.unomi.persistence.spi,
+                            org.apache.unomi.persistence.spi.conditions,
                             org.codehaus.stax2;resolution:=optional,
                             org.elasticsearch.*;resolution:=optional,
                             org.ietf.jgss;resolution:=optional,
@@ -261,13 +261,34 @@
                             org.xml.sax.ext;resolution:=optional,
                             org.xml.sax.helpers;resolution:=optional,
                             org.zeromq;resolution:=optional,
+                            org.conscrypt;resolution:=optional,
+                            org.glassfish.hk2.osgiresourcelocator;resolution:=optional,
+                            org.brotli.dec;resolution:=optional,
+                            io.opentelemetry.opentelemetry-api;resolution:=optional,
+                            io.opentelemetry.sdk.autoconfigure;resolution:=optional,
+                            io.opentelemetry.opentelemetry-context;resolution:=optional,
+                            io.opentelemetry.opentelemetry-sdk;resolution:=optional,
+                            io.opentelemetry.opentelemetry-sdk-extension-autoconfigure;resolution:=optional,
+                            org.apache.httpcomponents.client5.httpclient5;resolution:=optional,
+                            org.apache.httpcomponents.core5.httpcore5;resolution:=optional,
+                            org.apache.httpcomponents.core5.httpcore5-h2;resolution:=optional,
+                            jakarta.json.bind;resolution:=optional,
+                            jakarta.json.bind.spi;resolution:=optional,
+                            jakarta.json.spi;resolution:=optional,
+                            jakarta.json.stream;resolution:=optional,
+                            org.eclipse.parsson.parsson;resolution:=optional,
+                            org.eclipse.yasson;resolution:=optional,
+                            org.apache.http.impl.nio.client;resolution:=optional,
                             *
                         </Import-Package>
                         <Export-Package>
-                            org.elasticsearch.*;version="${elasticsearch.version}",
-                            org.elasticsearch.index.query.*;version="${elasticsearch.version}",
                             org.apache.lucene.search.join.*;version="${lucene.version}",
-                            org.apache.unomi.persistence.elasticsearch.conditions;version="${project.version}"
+                            org.apache.unomi.persistence.elasticsearch;version="${project.version}",
+                            co.elastic.clients.elasticsearch;version="${elasticsearch.version}",
+                            co.elastic.clients.elasticsearch._types.query_dsl.Query;version="${elasticsearch.version}",
+                            co.elastic.clients.elasticsearch._types.query_dsl;version="${elasticsearch.version}",
+                            co.elastic.clients.util;version="${elasticsearch.version}",
+                            co.elastic.clients.elasticsearch._types;version="${elasticsearch.version}"
                         </Export-Package>
                         <Embed-Dependency>*;scope=compile|runtime</Embed-Dependency>
                         <Embed-Transitive>true</Embed-Transitive>

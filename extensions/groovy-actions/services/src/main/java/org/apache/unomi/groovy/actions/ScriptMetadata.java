@@ -17,6 +17,7 @@
 package org.apache.unomi.groovy.actions;
 
 import groovy.lang.Script;
+
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.nio.charset.StandardCharsets;
@@ -44,7 +45,7 @@ public final class ScriptMetadata {
     /**
      * Constructs a new ScriptMetadata instance.
      *
-     * @param actionName the unique name/identifier of the action
+     * @param actionName    the unique name/identifier of the action
      * @param scriptContent the raw Groovy script content
      * @param compiledClass the compiled Groovy script class
      * @throws IllegalArgumentException if any parameter is null
@@ -142,7 +143,6 @@ public final class ScriptMetadata {
      * <p>
      * This class can be used to create new script instances for execution
      * without requiring recompilation.
-     *
      *
      * @return the compiled script class, never null
      */

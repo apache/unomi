@@ -18,15 +18,16 @@ package org.apache.unomi.metrics.commands;
 
 import com.fasterxml.jackson.core.util.DefaultIndenter;
 import com.fasterxml.jackson.core.util.DefaultPrettyPrinter;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.karaf.shell.commands.Argument;
 import org.apache.karaf.shell.commands.Command;
 import org.apache.unomi.metrics.Metric;
-import org.apache.unomi.persistence.spi.CustomObjectMapper;
+import org.apache.unomi.metrics.internal.MetricsObjectMapper;
 
 @Command(scope = "metrics", name = "view", description = "This will display all the data for a single metric ")
 public class ViewCommand extends MetricsCommandSupport{
 
-    @Argument(index = 0, name = "metricName", description = "The identifier for the metric", required = true, multiValued = false)
+    @Argument(name = "metricName", description = "The identifier for the metric", required = true)
     String metricName;
 
     @Override
@@ -40,7 +41,7 @@ public class ViewCommand extends MetricsCommandSupport{
         // the caller values easier to read.
         DefaultPrettyPrinter defaultPrettyPrinter = new DefaultPrettyPrinter();
         defaultPrettyPrinter = defaultPrettyPrinter.withArrayIndenter(DefaultIndenter.SYSTEM_LINEFEED_INSTANCE);
-        String jsonMetric = CustomObjectMapper.getObjectMapper().writer(defaultPrettyPrinter).writeValueAsString(metric);
+        String jsonMetric = MetricsObjectMapper.getInstance().writer(defaultPrettyPrinter).writeValueAsString(metric);
         System.out.println(jsonMetric);
         return null;
     }

@@ -139,23 +139,6 @@
                 <artifactId>maven-dependency-plugin</artifactId>
                 <executions>
                     <execution>
-                        <id>unpack-deploy-by-query-plugin</id>
-                        <phase>generate-resources</phase>
-                        <goals>
-                            <goal>unpack</goal>
-                        </goals>
-                        <configuration>
-                            <artifactItems>
-                                <artifactItem>
-                                    <groupId>org.elasticsearch.plugin</groupId>
-                                    <artifactId>reindex-client</artifactId>
-                                    <version>${elasticsearch.version}</version>
-                                    <outputDirectory>${project.build.directory}/assembly/elasticsearch/modules/reindex</outputDirectory>
-                                </artifactItem>
-                            </artifactItems>
-                        </configuration>
-                    </execution>
-                    <execution>
                         <id>copy</id>
                         <phase>package</phase>
                         <goals>

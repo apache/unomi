@@ -152,7 +152,6 @@
             <artifactId>httpclient-osgi</artifactId>
         </dependency>
     </dependencies>
-
     <build>
         <pluginManagement>
             <plugins>
