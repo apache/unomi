@@ -74,8 +74,7 @@ import org.apache.unomi.persistence.spi.aggregate.*;
 import org.apache.unomi.persistence.spi.aggregate.DateRangeAggregate;
 import org.apache.unomi.persistence.spi.aggregate.IpRangeAggregate;
 import org.apache.unomi.persistence.spi.conditions.ConditionContextHelper;
-import org.apache.unomi.persistence.spi.conditions.ConditionEvaluator;
-import org.apache.unomi.persistence.spi.conditions.ConditionEvaluatorDispatcher;
+import org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluatorDispatcher;
 import org.elasticsearch.client.*;
 
 import org.osgi.framework.*;
@@ -609,19 +608,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         }.catchingExecuteInClassLoader(true);
 
         bundleContext.removeBundleListener(this);
-    }
-
-    public void bindConditionEvaluator(ServiceReference<ConditionEvaluator> conditionEvaluatorServiceReference) {
-        ConditionEvaluator conditionEvaluator = bundleContext.getService(conditionEvaluatorServiceReference);
-        conditionEvaluatorDispatcher.addEvaluator(conditionEvaluatorServiceReference.getProperty("conditionEvaluatorId").toString(),
-                conditionEvaluator);
-    }
-
-    public void unbindConditionEvaluator(ServiceReference<ConditionEvaluator> conditionEvaluatorServiceReference) {
-        if (conditionEvaluatorServiceReference == null) {
-            return;
-        }
-        conditionEvaluatorDispatcher.removeEvaluator(conditionEvaluatorServiceReference.getProperty("conditionEvaluatorId").toString());
     }
 
     public void bindConditionESQueryBuilder(ServiceReference<ConditionESQueryBuilder> conditionESQueryBuilderServiceReference) {

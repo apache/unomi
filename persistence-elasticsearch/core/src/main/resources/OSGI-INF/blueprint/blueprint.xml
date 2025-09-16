@@ -75,7 +75,8 @@
 
     <reference id="metricsService" interface="org.apache.unomi.metrics.MetricsService"/>
     <reference id="scriptExecutor" interface="org.apache.unomi.scripting.ScriptExecutor"/>
-    <reference id="conditionEvaluatorDispatcherService" interface="org.apache.unomi.persistence.spi.conditions.ConditionEvaluatorDispatcher"/>
+    <reference id="conditionEvaluatorDispatcherService"
+               interface="org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluatorDispatcher"/>
 
     <service id="elasticSearchPersistenceService" ref="elasticSearchPersistenceServiceImpl">
         <interfaces>
@@ -147,15 +148,6 @@
         <property name="alwaysOverwrite" value="${es.alwaysOverwrite}"/>
         <property name="logLevelRestClient" value="${es.logLevelRestClient}"/>
     </bean>
-
-    <!-- We use a listener here because using the list directly for listening to proxies coming from the same bundle didn't seem to work -->
-    <reference-list id="conditionEvaluators"
-                    interface="org.apache.unomi.persistence.spi.conditions.ConditionEvaluator"
-                    availability="optional">
-        <reference-listener
-                bind-method="bindConditionEvaluator" unbind-method="unbindConditionEvaluator"
-                ref="elasticSearchPersistenceServiceImpl"/>
-    </reference-list>
 
     <reference-list id="conditionESQueryBuilders"
                     interface="org.apache.unomi.persistence.elasticsearch.ConditionESQueryBuilder"

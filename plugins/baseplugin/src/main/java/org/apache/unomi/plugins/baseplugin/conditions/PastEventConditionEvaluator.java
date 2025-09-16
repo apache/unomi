@@ -23,9 +23,9 @@ import org.apache.unomi.api.Profile;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.persistence.spi.PersistenceService;
-import org.apache.unomi.persistence.spi.conditions.ConditionEvaluator;
-import org.apache.unomi.persistence.spi.conditions.ConditionEvaluatorDispatcher;
 import org.apache.unomi.persistence.spi.conditions.PastEventConditionPersistenceQueryBuilder;
+import org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluator;
+import org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluatorDispatcher;
 import org.apache.unomi.scripting.ScriptExecutor;
 
 import java.util.ArrayList;

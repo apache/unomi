@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.apache.unomi.persistence.spi.conditions;
+package org.apache.unomi.persistence.spi.conditions.evaluator;
 
 import org.apache.unomi.api.Item;
 import org.apache.unomi.api.conditions.Condition;
