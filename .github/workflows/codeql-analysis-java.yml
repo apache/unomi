@@ -20,6 +20,9 @@ on:
   schedule:
     - cron: '38 1 * * 0'
 
+env:
+  DEVELOCITY_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
+
 jobs:
   analyze:
     name: Analyze

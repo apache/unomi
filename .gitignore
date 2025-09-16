@@ -16,3 +16,4 @@ rest/.miredot-offline.json
 /extensions/salesforce-connector/test.properties
 **/*.versionsBackup
 itests/src/main
+.mvn/.develocity/develocity-workspace-id
