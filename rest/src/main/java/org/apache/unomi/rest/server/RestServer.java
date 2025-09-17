@@ -26,6 +26,7 @@ import org.apache.cxf.jaxrs.JAXRSServerFactoryBean;
 import org.apache.cxf.jaxrs.openapi.OpenApiCustomizer;
 import org.apache.cxf.jaxrs.openapi.OpenApiFeature;
 import org.apache.cxf.jaxrs.security.SimpleAuthorizingFilter;
+import org.apache.cxf.jaxrs.swagger.ui.SwaggerUiConfig;
 import org.apache.cxf.message.Message;
 import org.apache.cxf.rs.security.cors.CrossOriginResourceSharingFilter;
 import org.apache.unomi.api.ContextRequest;
@@ -236,6 +237,8 @@ public class RestServer {
         openApiFeature.setLicenseUrl("http://www.apache.org/licenses/LICENSE-2.0.html");
         openApiFeature.setScan(false);
         openApiFeature.setUseContextBasedConfig(true);
+        SwaggerUiConfig swaggerUiConfig = new SwaggerUiConfig().url("openapi.json").deepLinking(true).queryConfigEnabled(false);
+        openApiFeature.setSwaggerUiConfig(swaggerUiConfig);
         OpenApiCustomizer customizer = new OpenApiCustomizer();
         customizer.setDynamicBasePath(true);
         openApiFeature.setCustomizer(customizer);
