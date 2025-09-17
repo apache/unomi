@@ -91,8 +91,8 @@
         <jsr305.version>3.0.2</jsr305.version>
         <jakarta-annotation-api.version>3.0.0</jakarta-annotation-api.version>
         <jakarta-json-api.version>2.1.2</jakarta-json-api.version>
-        <swagger-ui.version>5.29.0</swagger-ui.version>
-        <cxf.version>3.6.5</cxf.version>
+        <swagger-ui.version>5.27.1</swagger-ui.version>
+        <cxf.version>3.6.8</cxf.version>
         <rs-api.version>2.1</rs-api.version>
         <groovy.version>4.0.28</groovy.version>
         <httpclient-osgi.version>4.5.14</httpclient-osgi.version>
@@ -634,7 +634,6 @@
                                 <exclude>**/node/**/*</exclude>
                                 <exclude>**/yarn.lock</exclude>
                                 <exclude>**/*.js.map</exclude>
-                                <exclude>**/swagger-ui/**/*</exclude>
                             </excludes>
                         </configuration>
                     </plugin>

@@ -115,11 +115,9 @@
         <bundle>mvn:org.apache.unomi/unomi-manual/${project.version}</bundle>
     </feature>
 
-    <!--
     <feature name="unomi-rest-ui" description="Enables Swagger UI to browse the REST API" version="${project.version}">
         <feature>unomi-kar</feature>
         <bundle start-level="85">mvn:org.webjars/swagger-ui/${swagger-ui.version}</bundle>
     </feature>
-    -->
 
 </features>
