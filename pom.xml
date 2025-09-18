@@ -73,7 +73,7 @@
         <commons-beanutils.version>1.11.0</commons-beanutils.version>
         <commons-collections.version>3.2.2</commons-collections.version>
         <mvel2.version>2.5.2.Final</mvel2.version>
-        <snakeyaml.version>2.4</snakeyaml.version>
+        <snakeyaml.version>2.3</snakeyaml.version>
         <opencsv.version>3.10</opencsv.version>
         <log4j.version>2.19.0</log4j.version>
         <lucene.version>9.12.2</lucene.version>
