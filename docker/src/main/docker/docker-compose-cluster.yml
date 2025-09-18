@@ -32,10 +32,10 @@ services:
       - 9200:9200
 
   node-1:
-    build: .
     image: apache/unomi:${project.version}
     environment:
       - UNOMI_ELASTICSEARCH_ADDRESSES=elasticsearch:9200
+      - UNOMI_CLUSTER_NODEID=unomi-3-node-1
     ports:
       - 8181:8181
       - 9443:9443
@@ -46,6 +46,28 @@ services:
       - elasticsearch
     depends_on:
       - elasticsearch
+
+  wait-for-node-1:
+    image: alpine:latest
+    command: sh -c "echo 'Wait 3 minutes before starting unomi-3-node-2...' && sleep 180"
+    depends_on:
+      - node-1
+
+  node-2:
+    image: apache/unomi:${project.version}
+    environment:
+      - UNOMI_ELASTICSEARCH_ADDRESSES=elasticsearch:9200
+      - UNOMI_CLUSTER_NODEID=unomi-3-node-2
+    ports:
+      - 8182:8181
+      - 9444:9443
+      - 8103:8102
+    networks:
+      - unomi-3
+    links:
+      - elasticsearch
+    depends_on:
+      - wait-for-node-1
 
 volumes:
   unomi-3-elasticsearch-data:
