@@ -38,6 +38,8 @@
         <feature>feature</feature>
         <feature>spifly</feature>
         <feature>shell-compat</feature>
+        <feature>jackson</feature>
+        <feature>jackson-jaxrs</feature>
         <configfile finalname="/etc/org.apache.unomi.web.cfg">mvn:org.apache.unomi/unomi-wab/${project.version}/cfg/unomicfg</configfile>
         <configfile finalname="/etc/org.apache.unomi.persistence.elasticsearch.cfg">mvn:org.apache.unomi/unomi-persistence-elasticsearch-core/${project.version}/cfg/elasticsearchcfg</configfile>
         <configfile finalname="/etc/org.apache.unomi.services.cfg">mvn:org.apache.unomi/unomi-services/${project.version}/cfg/servicescfg</configfile>
@@ -54,21 +56,16 @@
         <bundle start-level="55">mvn:org.apache.httpcomponents/httpcore-osgi/${httpcore-osgi.version}</bundle>
         <bundle start-level="55">mvn:org.apache.httpcomponents/httpclient-osgi/${httpclient-osgi.version}</bundle>
         <bundle start-level="55">mvn:javax.validation/validation-api/${javax-validation.version}</bundle>
-        <bundle start-level="55">mvn:com.fasterxml.jackson.core/jackson-core/${jackson.version}</bundle>
-        <bundle start-level="55">mvn:com.fasterxml.jackson.core/jackson-databind/${jackson.version}</bundle>
-        <bundle start-level="55">mvn:com.fasterxml.jackson.core/jackson-annotations/${jackson.version}</bundle>
-        <bundle start-level="55">mvn:com.fasterxml.jackson.dataformat/jackson-dataformat-yaml/${jackson.version}</bundle>
+        <!-- Jackson bundles not included in any karaf feature -->
         <bundle start-level="55">mvn:com.fasterxml.jackson.datatype/jackson-datatype-jsr310/${jackson.version}</bundle>
         <bundle start-level="55">mvn:com.fasterxml.jackson.module/jackson-module-jaxb-annotations/${jackson.version}</bundle>
-        <bundle start-level="55">mvn:com.fasterxml.jackson.jaxrs/jackson-jaxrs-base/${jackson.version}</bundle>
-        <bundle start-level="55">mvn:com.fasterxml.jackson.jaxrs/jackson-jaxrs-json-provider/${jackson.version}</bundle>
+
         <bundle start-level="55">mvn:com.github.java-json-tools/btf/${btf.version}</bundle>
         <bundle start-level="55">mvn:com.github.java-json-tools/msg-simple/${msg-simple.version}</bundle>
         <bundle start-level="55">mvn:com.github.java-json-tools/jackson-coreutils/${jackson-coreutils.version}</bundle>
         <bundle start-level="55">mvn:com.github.java-json-tools/json-patch/${json-patch.version}</bundle>
         <bundle start-level="55">mvn:com.google.guava/guava/${guava.version}</bundle>
         <bundle start-level="55">mvn:org.json/json/${org-json.version}</bundle>
-        <bundle start-level="55">mvn:org.yaml/snakeyaml/${snakeyaml.version}</bundle>
         <bundle start-level="55">mvn:joda-time/joda-time/${joda-time.version}</bundle>
         <bundle start-level="55">mvn:jakarta.annotation/jakarta.annotation-api/${jakarta-annotation-api.version}</bundle>
         <bundle start-level="55">mvn:com.google.code.findbugs/jsr305/${jsr305.version}</bundle>
