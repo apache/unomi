@@ -22,5 +22,3 @@ echo Detected project version=$UNOMI_VERSION
 export KARAF_VERSION=4.4.8
 # Uncomment the following line if you need Apache Unomi to start automatically at the first start
 # export KARAF_OPTS="-Dunomi.autoStart=true"
-export KARAF_OPTS="-Dunomi.autoStart=opensearch"
-export UNOMI_OPENSEARCH_PASSWORD="Unomi.1ntegrat10n.Tests"
