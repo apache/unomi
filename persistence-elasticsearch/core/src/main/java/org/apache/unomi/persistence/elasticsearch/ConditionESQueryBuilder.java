@@ -17,14 +17,14 @@
 
 package org.apache.unomi.persistence.elasticsearch;
 
+import co.elastic.clients.elasticsearch._types.query_dsl.Query;
 import org.apache.unomi.api.conditions.Condition;
-import org.elasticsearch.index.query.QueryBuilder;
 
 import java.util.Map;
 
 public interface ConditionESQueryBuilder {
 
-    QueryBuilder buildQuery(Condition condition, Map<String, Object> context, ConditionESQueryBuilderDispatcher dispatcher);
+    Query buildQuery(Condition condition, Map<String, Object> context, ConditionESQueryBuilderDispatcher dispatcher);
 
     default long count(Condition condition, Map<String, Object> context, ConditionESQueryBuilderDispatcher dispatcher) {
         throw new UnsupportedOperationException();

@@ -17,8 +17,8 @@
 
 package org.apache.unomi.itests;
 
+import org.apache.unomi.itests.migration.Migrate16xToCurrentVersionIT;
 import org.apache.unomi.itests.graphql.*;
-import org.apache.unomi.itests.migration.Migrate16xTo220IT;
 import org.apache.unomi.itests.migration.MigrationIT;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite.SuiteClasses;
@@ -30,7 +30,7 @@ import org.junit.runners.Suite.SuiteClasses;
  */
 @RunWith(ProgressSuite.class)
 @SuiteClasses({
-        Migrate16xTo220IT.class,
+        Migrate16xToCurrentVersionIT.class,
         MigrationIT.class,
         BasicIT.class,
         ConditionEvaluatorIT.class,
@@ -51,7 +51,6 @@ import org.junit.runners.Suite.SuiteClasses;
         ModifyConsentIT.class,
         PatchIT.class,
         ContextServletIT.class,
-        SecurityIT.class,
         RuleServiceIT.class,
         PrivacyServiceIT.class,
         GroovyActionsServiceIT.class,

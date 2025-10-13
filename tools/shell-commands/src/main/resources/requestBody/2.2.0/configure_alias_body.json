@@ -1,0 +1,11 @@
+{
+  "actions": [
+    {
+      "add": {
+        "index": "#writeIndexName",
+        "alias": "#aliasName",
+        "is_write_index": true
+      }
+    }#readIndicesToAdd
+  ]
+}

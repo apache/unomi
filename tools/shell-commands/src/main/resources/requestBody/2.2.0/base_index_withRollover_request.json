@@ -23,7 +23,7 @@
   },
   "aliases": {
     "#lifecycleRolloverAlias": {
-      "is_write_index": true
+      "is_write_index": false
     }
   },
   "mappings": #mappings

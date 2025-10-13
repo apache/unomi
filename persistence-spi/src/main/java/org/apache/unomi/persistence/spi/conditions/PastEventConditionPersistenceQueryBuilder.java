@@ -27,5 +27,5 @@ public interface PastEventConditionPersistenceQueryBuilder {
     boolean getStrategyFromOperator(String operator);
 
     Condition getEventCondition(Condition condition, Map<String, Object> context, String profileId,
-                                                 DefinitionsService definitionsService, ScriptExecutor scriptExecutor);
+                                DefinitionsService definitionsService, ScriptExecutor scriptExecutor);
 }

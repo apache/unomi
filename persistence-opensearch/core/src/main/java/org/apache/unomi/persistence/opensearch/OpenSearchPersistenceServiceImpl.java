@@ -19,17 +19,21 @@ package org.apache.unomi.persistence.opensearch;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.json.*;
 import jakarta.json.stream.JsonParser;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.http.HttpHost;
-import org.apache.http.auth.AuthScope;
-import org.apache.http.auth.UsernamePasswordCredentials;
-import org.apache.http.client.CredentialsProvider;
-import org.apache.http.conn.ssl.NoopHostnameVerifier;
-import org.apache.http.impl.client.BasicCredentialsProvider;
-import org.apache.http.util.EntityUtils;
+import org.apache.hc.client5.http.auth.AuthScope;
+import org.apache.hc.client5.http.auth.UsernamePasswordCredentials;
+import org.apache.hc.client5.http.impl.auth.BasicCredentialsProvider;
+import org.apache.hc.client5.http.impl.nio.PoolingAsyncClientConnectionManager;
+import org.apache.hc.client5.http.impl.nio.PoolingAsyncClientConnectionManagerBuilder;
+import org.apache.hc.client5.http.ssl.ClientTlsStrategyBuilder;
+import org.apache.hc.client5.http.ssl.NoopHostnameVerifier;
+import org.apache.hc.core5.http.HttpHost;
+import org.apache.hc.core5.http.nio.ssl.TlsStrategy;
+import org.apache.hc.core5.ssl.SSLContextBuilder;
 import org.apache.unomi.api.*;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.query.DateRange;
@@ -42,8 +46,7 @@ import org.apache.unomi.persistence.spi.aggregate.DateRangeAggregate;
 import org.apache.unomi.persistence.spi.aggregate.IpRangeAggregate;
 import org.apache.unomi.persistence.spi.aggregate.*;
 import org.apache.unomi.persistence.spi.conditions.ConditionContextHelper;
-import org.apache.unomi.persistence.spi.conditions.ConditionEvaluator;
-import org.apache.unomi.persistence.spi.conditions.ConditionEvaluatorDispatcher;
+import org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluatorDispatcher;
 import org.opensearch.client.*;
 import org.opensearch.client.json.JsonData;
 import org.opensearch.client.json.JsonpMapper;
@@ -62,26 +65,23 @@ import org.opensearch.client.opensearch.core.search.Hit;
 import org.opensearch.client.opensearch.core.search.HitsMetadata;
 import org.opensearch.client.opensearch.core.search.TotalHits;
 import org.opensearch.client.opensearch.core.search.TotalHitsRelation;
+import org.opensearch.client.opensearch.generic.Requests;
 import org.opensearch.client.opensearch.indices.*;
 import org.opensearch.client.opensearch.indices.get_alias.IndexAliases;
 import org.opensearch.client.opensearch.tasks.GetTasksResponse;
 import org.opensearch.client.transport.OpenSearchTransport;
-import org.opensearch.client.transport.rest_client.RestClientTransport;
+import org.opensearch.client.transport.endpoints.BooleanResponse;
+import org.opensearch.client.transport.httpclient5.ApacheHttpClient5TransportBuilder;
 import org.osgi.framework.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.X509TrustManager;
 import java.io.*;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyManagementException;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
-import java.security.SecureRandom;
-import java.security.cert.X509Certificate;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -97,7 +97,6 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
     private boolean throwExceptions = false;
 
     private OpenSearchClient client;
-    private RestClient restClient;
 
     private final List<String> openSearchAddressList = new ArrayList<>();
     private String clusterName;
@@ -135,13 +134,18 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
     private String rolloverIndexMaxDocValueFieldsSearch;
 
     private String minimalOpenSearchVersion = "2.1.0";
-    private String maximalOpenSearchVersion = "3.0.0";
+    private String maximalOpenSearchVersion = "4.0.0";
 
     // authentication props
     private String username;
     private String password;
     private boolean sslEnable = false;
     private boolean sslTrustAllCertificates = false;
+
+    // AWS configuration
+    private boolean awsEnabled = false;
+    private String awsRegion;
+    private String awsServiceName = "opensearch";  // or "es" for Elasticsearch service
 
     private int aggregateQueryBucketSize = 5000;
 
@@ -454,52 +458,57 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
 
     private void buildClient() throws NoSuchFieldException, IllegalAccessException, NoSuchAlgorithmException, KeyStoreException, KeyManagementException {
 
-        List<Node> nodeList = new ArrayList<>();
+        List<HttpHost> hosts = new ArrayList<>();
         for (String openSearchAddress : openSearchAddressList) {
             String[] openSearchAddressParts = openSearchAddress.split(":");
             String openSearchHostName = openSearchAddressParts[0];
             int openSearchPort = Integer.parseInt(openSearchAddressParts[1]);
 
-            // configure authentication
-            nodeList.add(new Node(new HttpHost(openSearchHostName, openSearchPort, sslEnable ? "https" : "http")));
+            hosts.add(new HttpHost(sslEnable ? "https" : "http", openSearchHostName, openSearchPort));
         }
 
-        RestClientBuilder clientBuilder = RestClient.builder(nodeList.toArray(new Node[nodeList.size()]));
+        // Use Apache HttpClient 5 transport with proper configuration
+        ApacheHttpClient5TransportBuilder transportBuilder = ApacheHttpClient5TransportBuilder.builder(
+                hosts.toArray(new HttpHost[0])
+        );
 
+        // Configure JSON mapper
+        transportBuilder.setMapper(new JacksonJsonpMapper(OSCustomObjectMapper.getObjectMapper()));
+
+        // Configure socket timeout if specified
         if (clientSocketTimeout != null) {
-            clientBuilder.setRequestConfigCallback(requestConfigBuilder -> {
-                requestConfigBuilder.setSocketTimeout(clientSocketTimeout);
+            transportBuilder.setRequestConfigCallback(requestConfigBuilder -> {
+                requestConfigBuilder.setResponseTimeout(clientSocketTimeout, java.util.concurrent.TimeUnit.MILLISECONDS);
                 return requestConfigBuilder;
             });
         }
 
-        clientBuilder.setHttpClientConfigCallback(httpClientBuilder -> {
+        // Configure SSL and authentication
+        transportBuilder.setHttpClientConfigCallback(httpClientBuilder -> {
             if (sslTrustAllCertificates) {
                 try {
-                    final SSLContext sslContext = SSLContext.getInstance("SSL");
-                    sslContext.init(null, new TrustManager[]{new X509TrustManager() {
-                        public X509Certificate[] getAcceptedIssuers() {
-                            return null;
-                        }
+                    TlsStrategy tlsStrategy = ClientTlsStrategyBuilder.create()
+                            .setSslContext(SSLContextBuilder.create()
+                                    .loadTrustMaterial((chain, authType) -> true)  // Trust all
+                                    .build())
+                            .setHostnameVerifier(NoopHostnameVerifier.INSTANCE)
+                            .build();
 
-                        public void checkClientTrusted(X509Certificate[] certs,
-                                                       String authType) {
-                        }
+                    PoolingAsyncClientConnectionManager connectionManager =
+                            PoolingAsyncClientConnectionManagerBuilder.create()
+                                    .setTlsStrategy(tlsStrategy)
+                                    .build();
 
-                        public void checkServerTrusted(X509Certificate[] certs,
-                                                       String authType) {
-                        }
-                    }}, new SecureRandom());
-
-                    httpClientBuilder.setSSLContext(sslContext).setSSLHostnameVerifier(new NoopHostnameVerifier());
-                } catch (NoSuchAlgorithmException | KeyManagementException e) {
-                    LOGGER.error("Error creating SSL Context for trust all certificates", e);
+                    httpClientBuilder.setConnectionManager(connectionManager);
+                } catch (Exception e) {
+                    throw new RuntimeException("Failed to create SSL context", e);
                 }
             }
 
             if (StringUtils.isNotBlank(username)) {
-                final CredentialsProvider credentialsProvider = new BasicCredentialsProvider();
-                credentialsProvider.setCredentials(AuthScope.ANY, new UsernamePasswordCredentials(username, password));
+                final BasicCredentialsProvider credentialsProvider = new BasicCredentialsProvider();
+                credentialsProvider.setCredentials(new AuthScope(null, -1),
+                    new UsernamePasswordCredentials(username, password.toCharArray()));
 
                 httpClientBuilder.setDefaultCredentialsProvider(credentialsProvider);
             }
@@ -507,8 +516,7 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
             return httpClientBuilder;
         });
 
-        restClient = clientBuilder.build();
-        OpenSearchTransport transport = new RestClientTransport(restClient, new JacksonJsonpMapper(OSCustomObjectMapper.getObjectMapper()));
+        OpenSearchTransport transport = transportBuilder.build();
         client = new OpenSearchClient(transport);
 
         LOGGER.info("Connecting to OpenSearch persistence backend using cluster name " + clusterName + " and index prefix " + indexPrefix + "...");
@@ -521,25 +529,14 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
             protected Object execute(Object... args) throws IOException {
                 LOGGER.info("Closing OpenSearch persistence backend...");
                 if (client != null) {
-                    client.shutdown();
+                    client._transport().close();
+                    client = null;
                 }
                 return null;
             }
         }.catchingExecuteInClassLoader(true);
 
         bundleContext.removeBundleListener(this);
-    }
-
-    public void bindConditionEvaluator(ServiceReference<ConditionEvaluator> conditionEvaluatorServiceReference) {
-        ConditionEvaluator conditionEvaluator = bundleContext.getService(conditionEvaluatorServiceReference);
-        conditionEvaluatorDispatcher.addEvaluator(conditionEvaluatorServiceReference.getProperty("conditionEvaluatorId").toString(), conditionEvaluator);
-    }
-
-    public void unbindConditionEvaluator(ServiceReference<ConditionEvaluator> conditionEvaluatorServiceReference) {
-        if (conditionEvaluatorServiceReference == null) {
-            return;
-        }
-        conditionEvaluatorDispatcher.removeEvaluator(conditionEvaluatorServiceReference.getProperty("conditionEvaluatorId").toString());
     }
 
     public void bindConditionOSQueryBuilder(ServiceReference<ConditionOSQueryBuilder> conditionESQueryBuilderServiceReference) {
@@ -962,7 +959,7 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
         Script[] builtScripts = new Script[scripts.length];
         for (int i = 0; i < scripts.length; i++) {
             final int finalI = i;
-            builtScripts[i] = Script.of(script -> script.inline(inline->inline.lang("painless").source(scripts[finalI]).params(convertParams(scriptParams[finalI]))));
+            builtScripts[i] = Script.of(script -> script.inline(inline->inline.lang(l -> l.builtin(BuiltinScriptLanguage.Painless)).source(scripts[finalI]).params(convertParams(scriptParams[finalI]))));
         }
         return updateWithQueryAndScript(new Class<?>[]{clazz}, builtScripts, conditions, true);
     }
@@ -1010,7 +1007,7 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
                         UpdateByQueryRequest.Builder updateByQueryRequestBuilder = new UpdateByQueryRequest.Builder().index(indices);
                         updateByQueryRequestBuilder.conflicts(Conflicts.Proceed);
                         // TODO fix this updateByQueryRequest.setMaxRetries(1000);
-                        updateByQueryRequestBuilder.slices(2L);
+                        updateByQueryRequestBuilder.slices(s -> s.calculation(SlicesCalculation.Auto));
                         updateByQueryRequestBuilder.script(scripts[i]);
                         updateByQueryRequestBuilder.query(wrapWithItemsTypeQuery(itemTypes, queryBuilder));
                         updateByQueryRequestBuilder.waitForCompletion(false); // force the return of a task ID.
@@ -1090,7 +1087,7 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
                 boolean executedSuccessfully = true;
                 for (Map.Entry<String, String> script : scripts.entrySet()) {
                     PutScriptRequest.Builder putScriptRequestBuilder = new PutScriptRequest.Builder();
-                    putScriptRequestBuilder.script(s -> s.lang("painless").source(script.getValue()));
+                    putScriptRequestBuilder.script(s -> s.lang(l -> l.builtin(BuiltinScriptLanguage.Painless)).source(script.getValue()));
                     putScriptRequestBuilder.id(script.getKey());
                     PutScriptResponse response = client.putScript(putScriptRequestBuilder.build());
                     executedSuccessfully &= response.acknowledged();
@@ -1119,7 +1116,7 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
                     String index = getIndex(itemType);
                     String documentId = getDocumentIDForItemType(item.getItemId(), itemType);
 
-                    Script actualScript = Script.of(s -> s.inline(i -> i.lang("painless").source(script).params(convertParams(scriptParams))));
+                    Script actualScript = Script.of(s -> s.inline(i -> i.lang(l -> l.builtin(BuiltinScriptLanguage.Painless)).source(script).params(convertParams(scriptParams))));
 
                     UpdateRequest.Builder<Item, Map> updateRequestBuilder = new UpdateRequest.Builder<Item, Map>().index(index).id(documentId);
 
@@ -1197,7 +1194,7 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
                     // Setting slices to auto will let OpenSearch choose the number of slices to use.
                     // This setting will use one slice per shard, up to a certain limit.
                     // The delete request will be more efficient and faster than no slicing.
-                    .slices(0L) // 0L means auto
+                    .slices(s -> s.calculation(SlicesCalculation.Auto))
                     // OpenSearch takes a snapshot of the index when you hit delete by query request and uses the _version of the documents to process the request.
                     // If a document gets updated in the meantime, it will result in a version conflict error and the delete operation will fail.
                     // So we explicitly set the conflict strategy to proceed in case of version conflict.
@@ -1250,75 +1247,103 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
             protected Boolean execute(Object... args) throws IOException {
                 try {
                     String policyName = indexPrefix + "-rollover-lifecycle-policy";
-                    String endpoint = "_plugins/_ism/policies/" + policyName;
 
-                    RestClient restClient = ((RestClientTransport) client._transport()).restClient();
-
-                    // Upon initial OpenSearch startup, the .opendistro-ism-config index may not exist yet, so we need to check if it exists first
+                    // Upon initial OpenSearch startup, the .opendistro-ism-config index may not exist yet
                     // Check if the .opendistro-ism-config index exists
-                    Request checkIndexRequest = new Request("HEAD", ".opendistro-ism-config");
-                    Response checkIndexResponse = restClient.performRequest(checkIndexRequest);
+                    try {
+                        BooleanResponse indexExists = client.indices().exists(e -> e.index(".opendistro-ism-config"));
 
-                    if (checkIndexResponse.getStatusLine().getStatusCode() == 404) {
-                        LOGGER.info(".opendistro-ism-config index does not exist. Initializing ISM configuration.");
-                    } else {
-                        Request getRequest = new Request("GET", endpoint);
-                        Response response = restClient.performRequest(getRequest);
-                        if (response.getStatusLine().getStatusCode() == 200) {
-                            LOGGER.info("Found existing rollover lifecycle policy, deleting the existing one.");
-                            Request deleteRequest = new Request("DELETE", endpoint);
-                            restClient.performRequest(deleteRequest);
+                        if (!indexExists.value()) {
+                            LOGGER.info(".opendistro-ism-config index does not exist. Initializing ISM configuration.");
+                        } else {
+                            // Check if a policy exists and delete it if it does
+                            try {
+                                // Use generic request to check if a policy exists
+                                org.opensearch.client.opensearch.generic.Response existingPolicyResponse = client.generic().execute(
+                                        Requests.builder()
+                                                .method("GET")
+                                                .endpoint("_plugins/_ism/policies/" + policyName)
+                                                .build()
+                                );
+
+                                if (existingPolicyResponse.getStatus() == 200) {
+                                    LOGGER.info("Found existing rollover lifecycle policy, deleting the existing one.");
+                                    client.generic().execute(
+                                            Requests.builder()
+                                                    .method("DELETE")
+                                                    .endpoint("_plugins/_ism/policies/" + policyName)
+                                                    .build()
+                                    );
+                                }
+                            } catch (OpenSearchException e) {
+                                // Policy doesn't exist, which is fine
+                                if (e.status() != 404) {
+                                    throw e;
+                                }
+                            }
                         }
+                    } catch (OpenSearchException e) {
+                        // Index doesn't exist, which is fine
+                        if (e.status() != 404) {
+                            throw e;
+                        }
+                        LOGGER.info(".opendistro-ism-config index does not exist. Initializing ISM configuration.");
                     }
 
-                    // Build the ILM policy JSON
-                    Map<String, Object> rolloverAction = new HashMap<>();
-
+                    // Build the ILM policy structure as JsonObject
+                    // Build the rollover action
+                    JsonObjectBuilder rolloverActionBuilder = Json.createObjectBuilder();
                     if (rolloverMaxDocs != null && !rolloverMaxDocs.isEmpty()) {
-                        rolloverAction.put("min_doc_count", Long.parseLong(rolloverMaxDocs));
+                        rolloverActionBuilder.add("min_doc_count", Long.parseLong(rolloverMaxDocs));
                     }
                     if (rolloverMaxSize != null && !rolloverMaxSize.isEmpty()) {
-                        rolloverAction.put("min_size", rolloverMaxSize);
+                        rolloverActionBuilder.add("min_size", rolloverMaxSize);
                     }
                     if (rolloverMaxAge != null && !rolloverMaxAge.isEmpty()) {
-                        rolloverAction.put("min_index_age", rolloverMaxAge);
+                        rolloverActionBuilder.add("min_index_age", rolloverMaxAge);
                     }
 
-                    List<Map<String,Object>> actions = new ArrayList<>();
-                    actions.add(Map.of("rollover", rolloverAction));
-                    Map<String, Object> state = new HashMap<>();
-                    state.put("name", "ingest");
-                    state.put("actions", actions);
-                    state.put("transitions", new ArrayList<>());
-                    List<Map<String,Object>> states = new ArrayList<>();
-                    states.add(state);
-                    Map<String, Object> policy = new HashMap<>();
-                    policy.put("states", states);
-                    policy.put("default_state", "ingest");
-                    policy.put("description", "Rollover lifecycle policy");
+                    // Build the policy from the inside out
+                    JsonObjectBuilder policyBuilder = Json.createObjectBuilder()
+                            .add("states", Json.createArrayBuilder()
+                                    .add(Json.createObjectBuilder()
+                                            .add("name", "ingest")
+                                            .add("actions", Json.createArrayBuilder()
+                                                    .add(Json.createObjectBuilder()
+                                                            .add("rollover", rolloverActionBuilder)))
+                                            .add("transitions", Json.createArrayBuilder())))
+                            .add("default_state", "ingest")
+                            .add("description", "Rollover lifecycle policy");
+
+                    // Add ISM template if rollover indices are specified
                     if (rolloverIndices != null && !rolloverIndices.isEmpty()) {
-                        Map<String,Object> ismTemplate = new HashMap<>();
-                        List<String> indexPatterns = new ArrayList<>();
-                        indexPatterns.addAll(rolloverIndices);
-                        ismTemplate.put("index_patterns", indexPatterns);
-                        ismTemplate.put("priority", 100);
-                        policy.put("ism_template", ismTemplate);
+                        JsonArrayBuilder indexPatternsBuilder = Json.createArrayBuilder();
+                        for (String pattern : rolloverIndices) {
+                            indexPatternsBuilder.add(pattern);
+                        }
+
+                        policyBuilder.add("ism_template", Json.createObjectBuilder()
+                                .add("index_patterns", indexPatternsBuilder)
+                                .add("priority", 100));
                     }
-                    Map<String,Object> policies = new HashMap<>();
-                    policies.put("policy", policy);
 
-                    // Convert the policy to JSON
-                    ObjectMapper objectMapper = new ObjectMapper();
-                    String policyJson = objectMapper.writeValueAsString(policies);
+                    // Wrap the policy and create
+                    JsonObject policyWrapper = Json.createObjectBuilder()
+                            .add("policy", policyBuilder)
+                            .build();
 
-                    // Send the request
+                    // Create the policy using the generic client
+                    org.opensearch.client.opensearch.generic.Response response = client.generic().execute(
+                            Requests.builder()
+                                    .method("PUT")
+                                    .endpoint("_plugins/_ism/policies/" + policyName)
+                                    .json(policyWrapper)
+                                    .build()
+                    );
 
-                    Request request = new Request("PUT", endpoint);
-                    request.setJsonEntity(policyJson);
-                    Response response = restClient.performRequest(request);
-
-                    return response.getStatusLine().getStatusCode() == 200;
+                    return response.getStatus() == 200;
                 } catch (Exception e) {
+                    LOGGER.error("Error registering rollover lifecycle policy", e);
                     e.printStackTrace();
                     return false;
                 }
@@ -1423,8 +1448,8 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
                 .index(indexName)
                 .settings(s -> s
                         .index(i -> i
-                                .numberOfShards(numberOfShards)
-                                .numberOfReplicas(numberOfReplicas)
+                                .numberOfShards(Integer.parseInt(numberOfShards))
+                                .numberOfReplicas(Integer.parseInt(numberOfReplicas))
                                 .mapping(m -> m
                                         .totalFields(t -> t
                                                 .limit(Long.parseLong(indexMappingTotalFieldsLimit))
@@ -1580,11 +1605,10 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
             @SuppressWarnings("unchecked")
             protected Map<String, Map<String, Object>> execute(Object... args) throws Exception {
 
-                Request request = new Request("GET", "/" + getIndexNameForQuery(itemType) + "/_mapping");
-
                 // Send the request
-                Response response = restClient.performRequest(request);
-                String json = EntityUtils.toString(response.getEntity());
+                org.opensearch.client.opensearch.generic.Response response = client.generic().execute(Requests.builder().method("GET").endpoint("/" + getIndexNameForQuery(itemType) + "/_mapping").build());
+                // Get the body as a proper InputStream and parse it
+                String json = response.getBody().get().bodyAsString();
                 Map<String,Map<String, Map<String, Object>>> indexMappings = (Map<String,Map<String,Map<String,Object>>>) new ObjectMapper().readValue(json, Map.class);
 
                 Map<String,Map<String,Object>> mappings = (Map<String,Map<String,Object>>) indexMappings.get(indexMappings.keySet().iterator().next()); // remove index wrapping object
@@ -1692,32 +1716,6 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
                     return true;
                 } catch (Exception e) {
                     throw new Exception("Cannot save query", e);
-                }
-            }
-        }.catchingExecuteInClassLoader(true);
-        return Objects.requireNonNullElse(result, false);
-    }
-
-    @Override
-    public boolean saveQuery(String queryName, Condition query) {
-        if (query == null) {
-            return false;
-        }
-        saveQuery(queryName, conditionOSQueryBuilderDispatcher.getQuery(query));
-        return true;
-    }
-
-    @Override
-    public boolean removeQuery(final String queryName) {
-        Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".removeQuery", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
-            protected Boolean execute(Object... args) throws Exception {
-                //Index the query = register it in the percolator
-                try {
-                    String index = getIndex(".percolator");
-                    client.delete(d->d.index(index).id(queryName).refresh(Refresh.WaitFor));
-                    return true;
-                } catch (Exception e) {
-                    throw new Exception("Cannot delete query", e);
                 }
             }
         }.catchingExecuteInClassLoader(true);
@@ -1844,11 +1842,6 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
     @Override
     public <T extends Item> PartialList<T> queryFullText(String fulltext, String sortBy, Class<T> clazz, int offset, int size) {
         return query(Query.of(q->q.queryString(s->s.query(fulltext))), sortBy, clazz, offset, size, null, null);
-    }
-
-    @Override
-    public <T extends Item> PartialList<T> rangeQuery(String fieldName, String from, String to, String sortBy, Class<T> clazz, int offset, int size) {
-        return query(Query.of(q->q.range(r->r.field(fieldName).from(JsonData.of(from)).to(JsonData.of(to)))), sortBy, clazz, offset, size, null, null);
     }
 
     @Override
@@ -2140,14 +2133,14 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
                             if (range != null) {
                                 if (range.getFrom() != null && range.getTo() != null) {
                                     rangeBuilder.ranges(r -> r.key(range.getKey())
-                                            .from(range.getFrom().toString())
-                                            .to(range.getTo().toString()));
+                                            .from(JsonData.of(range.getFrom()))
+                                            .to(JsonData.of(range.getTo())));
                                 } else if (range.getFrom() != null) {
                                     rangeBuilder.ranges(r -> r.key(range.getKey())
-                                            .from(range.getFrom().toString()));
+                                            .from(JsonData.of(range.getFrom())));
                                 } else if (range.getTo() != null) {
                                     rangeBuilder.ranges(r -> r.key(range.getKey())
-                                            .to(range.getTo().toString()));
+                                            .to(JsonData.of(range.getTo())));
                                 }
                             }
                         }
@@ -2195,7 +2188,7 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
                             // field name could be null if no existing data exists
                         }
                     }
-                    if (bucketsAggregationBuilder != null) {
+                    if (bucketsAggregationBuilder != null && bucketsContainerBuilder != null) {
                         Aggregation.Builder missingAggregationBuilder = new Aggregation.Builder();
                         MissingAggregation.Builder missingBuilder = new MissingAggregation.Builder().field(fieldName);
                         Aggregation.Builder.ContainerBuilder missingContainerBuilder = missingAggregationBuilder.missing(missingBuilder.build());

@@ -17,11 +17,10 @@
 
 package org.apache.unomi.persistence.elasticsearch;
 
+import co.elastic.clients.elasticsearch._types.query_dsl.Query;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.persistence.spi.conditions.ConditionContextHelper;
 import org.apache.unomi.scripting.ScriptExecutor;
-import org.elasticsearch.index.query.QueryBuilder;
-import org.elasticsearch.index.query.QueryBuilders;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -55,16 +54,18 @@ public class ConditionESQueryBuilderDispatcher {
         return "{\"query\": " + getQueryBuilder(condition).toString() + "}";
     }
 
-    public QueryBuilder getQueryBuilder(Condition condition) {
-        return QueryBuilders.boolQuery().must(QueryBuilders.matchAllQuery()).filter(buildFilter(condition));
+    public Query getQueryBuilder(Condition condition) {
+        Query.Builder qb = new Query.Builder();
+        return qb.bool(b -> b.must(Query.of(q -> q.matchAll(m -> m))).filter(buildFilter(condition))).build();
+
     }
 
-    public QueryBuilder buildFilter(Condition condition) {
-        return buildFilter(condition, new HashMap<String, Object>());
+    public Query buildFilter(Condition condition) {
+        return buildFilter(condition, new HashMap<>());
     }
 
-    public QueryBuilder buildFilter(Condition condition, Map<String, Object> context) {
-        if(condition == null || condition.getConditionType() == null) {
+    public Query buildFilter(Condition condition, Map<String, Object> context) {
+        if (condition == null || condition.getConditionType() == null) {
             throw new IllegalArgumentException("Condition is null or doesn't have type, impossible to build filter");
         }
 
@@ -90,7 +91,7 @@ public class ConditionESQueryBuilderDispatcher {
             LOGGER.debug("No matching query builder for condition {} and context {}", condition, context);
         }
 
-        return QueryBuilders.matchAllQuery();
+        return Query.of(q -> q.matchAll(m -> m));
     }
 
     public long count(Condition condition) {
@@ -98,7 +99,7 @@ public class ConditionESQueryBuilderDispatcher {
     }
 
     public long count(Condition condition, Map<String, Object> context) {
-        if(condition == null || condition.getConditionType() == null) {
+        if (condition == null || condition.getConditionType() == null) {
             throw new IllegalArgumentException("Condition is null or doesn't have type, impossible to build filter");
         }
 

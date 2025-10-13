@@ -443,10 +443,4 @@ public interface ProfileService {
      */
     @Deprecated
     void purgeMonthlyItems(int existsNumberOfMonths);
-
-    /**
-     * Delete a session using its identifier
-     * @param sessionIdentifier the unique identifier for the session
-     */
-    void deleteSession(String sessionIdentifier);
 }

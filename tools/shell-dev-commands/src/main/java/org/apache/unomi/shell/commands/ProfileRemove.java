@@ -16,6 +16,7 @@
  */
 package org.apache.unomi.shell.commands;
 
+import org.apache.karaf.shell.api.action.Action;
 import org.apache.karaf.shell.api.action.Argument;
 import org.apache.karaf.shell.api.action.Command;
 import org.apache.karaf.shell.api.action.lifecycle.Reference;
@@ -24,7 +25,7 @@ import org.apache.unomi.api.services.ProfileService;
 
 @Command(scope = "unomi", name = "profile-remove", description = "This command will remove a profile")
 @Service
-public class ProfileRemove extends RemoveCommandSupport {
+public class ProfileRemove implements Action {
 
     @Reference
     ProfileService profileService;
@@ -32,12 +33,8 @@ public class ProfileRemove extends RemoveCommandSupport {
     @Argument(index = 0, name = "profile", description = "The identifier for the profile", required = true, multiValued = false)
     String profileIdentifier;
 
-    public String getResourceDescription() {
-        return "profile [" + profileIdentifier + "]";
-    }
-
-    public Object doRemove() throws Exception {
+    public Object execute() throws Exception {
         profileService.delete(profileIdentifier, false);
-        return true;
+        return null;
     }
 }

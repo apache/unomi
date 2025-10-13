@@ -145,13 +145,7 @@ public class RestServiceUtilsImpl implements RestServiceUtils {
                         // Session user has been switched, profile id in cookie is not up to date
                         // We must reload the profile with the session ID as some properties could be missing from the session profile
                         // #personalIdentifier
-                        Profile sessionProfileWithId = profileService.load(sessionProfile.getItemId());
-                        if (sessionProfileWithId != null) {
-                            eventsRequestContext.setProfile(sessionProfileWithId);
-                        } else {
-                            LOGGER.warn("Couldn't find profile ID {} referenced from session with ID {}, so we re-create it", sessionProfile.getItemId(), sessionId);
-                            eventsRequestContext.setProfile(createNewProfile(sessionProfile.getItemId(), timestamp));
-                        }
+                        eventsRequestContext.setProfile(profileService.load(sessionProfile.getItemId()));
                     }
 
                     // Handle anonymous situation

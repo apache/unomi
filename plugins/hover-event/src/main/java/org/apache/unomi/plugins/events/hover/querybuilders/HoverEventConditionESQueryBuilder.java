@@ -17,12 +17,11 @@
 
 package org.apache.unomi.plugins.events.hover.querybuilders;
 
+import co.elastic.clients.elasticsearch._types.query_dsl.Query;
+import co.elastic.clients.elasticsearch._types.query_dsl.QueryBuilders;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.persistence.elasticsearch.ConditionESQueryBuilder;
 import org.apache.unomi.persistence.elasticsearch.ConditionESQueryBuilderDispatcher;
-import org.elasticsearch.index.query.BoolQueryBuilder;
-import org.elasticsearch.index.query.QueryBuilder;
-import org.elasticsearch.index.query.QueryBuilders;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -36,23 +35,19 @@ public class HoverEventConditionESQueryBuilder implements ConditionESQueryBuilde
     public HoverEventConditionESQueryBuilder() {
     }
 
-    public QueryBuilder buildQuery(Condition condition, Map<String, Object> context, ConditionESQueryBuilderDispatcher dispatcher) {
-        List<QueryBuilder> queryBuilders = new ArrayList<QueryBuilder>();
-        queryBuilders.add(QueryBuilders.termQuery("eventType", "hover"));
+    public Query buildQuery(Condition condition, Map<String, Object> context, ConditionESQueryBuilderDispatcher dispatcher) {
+        List<Query> queries = new ArrayList<>();
+        queries.add(QueryBuilders.term(builder -> builder.field("eventType").value("hover")));
         String targetId = (String) condition.getParameter("targetId");
         String targetPath = (String) condition.getParameter("targetPath");
 
-        if (targetId != null && targetId.trim().length() > 0) {
-            queryBuilders.add(QueryBuilders.termQuery("target.itemId", targetId));
+        if (targetId != null && !targetId.trim().isEmpty()) {
+            queries.add(QueryBuilders.term(builder -> builder.field("target.itemId").value(targetId)));
         } else if (targetPath != null && targetPath.trim().length() > 0) {
-            queryBuilders.add(QueryBuilders.termQuery("target.properties.pageInfo.pagePath", targetPath));
+            queries.add(QueryBuilders.term(builder -> builder.field("target.properties.pageInfo.pagePath").value(targetPath)));
         } else {
-            queryBuilders.add(QueryBuilders.termQuery("target.itemId", ""));
+            queries.add(QueryBuilders.term(builder -> builder.field("target.itemId").value("")));
         }
-        BoolQueryBuilder boolQueryBuilder = QueryBuilders.boolQuery();
-        for (QueryBuilder queryBuilder : queryBuilders) {
-            boolQueryBuilder.must(queryBuilder);
-        }
-        return boolQueryBuilder;
+        return QueryBuilders.bool().must(queries).build()._toQuery();
     }
 }

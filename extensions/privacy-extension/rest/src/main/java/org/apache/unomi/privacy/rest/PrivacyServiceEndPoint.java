@@ -23,8 +23,6 @@ import org.apache.unomi.api.services.PrivacyService;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 
-import javax.jws.WebMethod;
-import javax.jws.WebService;
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
@@ -33,7 +31,6 @@ import java.util.List;
 /**
  * REST API end point for privacy service
  */
-@WebService
 @Produces(MediaType.APPLICATION_JSON)
 @CrossOriginResourceSharing(
         allowAllOrigins = true,
@@ -46,7 +43,6 @@ public class PrivacyServiceEndPoint {
     @Reference
     private PrivacyService privacyService;
 
-    @WebMethod(exclude = true)
     public void setPrivacyService(PrivacyService privacyService) {
         this.privacyService = privacyService;
     }

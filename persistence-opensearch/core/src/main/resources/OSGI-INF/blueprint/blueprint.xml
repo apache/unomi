@@ -60,7 +60,7 @@
             <cm:property name="rollover.indexMaxDocValueFieldsSearch" value=""/>
 
             <cm:property name="minimalOpenSearchVersion" value="2.1.0" />
-            <cm:property name="maximalOpenSearchVersion" value="3.0.0" />
+            <cm:property name="maximalOpenSearchVersion" value="4.0.0" />
 
             <cm:property name="aggregateQueryBucketSize" value="5000" />
             <cm:property name="clientSocketTimeout" value="-1" />
@@ -100,7 +100,7 @@
         <property name="scriptExecutor" ref="scriptExecutor" />
     </bean>
 
-    <reference id="conditionEvaluatorDispatcherImpl" interface="org.apache.unomi.persistence.spi.conditions.ConditionEvaluatorDispatcher" />
+    <reference id="conditionEvaluatorDispatcherImpl" interface="org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluatorDispatcher" />
 
     <bean id="openSearchPersistenceServiceImpl"
           class="org.apache.unomi.persistence.opensearch.OpenSearchPersistenceServiceImpl"
@@ -163,20 +163,60 @@
         <property name="minimalClusterState" value="${os.minimalClusterState}" />
     </bean>
 
+    <service
+            interface="org.apache.unomi.persistence.opensearch.ConditionOSQueryBuilder">
+        <service-properties>
+            <entry key="queryBuilderId" value="booleanConditionESQueryBuilder"/>
+        </service-properties>
+        <bean class="org.apache.unomi.persistence.opensearch.querybuilders.core.BooleanConditionOSQueryBuilder"/>
+    </service>
+
+    <service
+            interface="org.apache.unomi.persistence.opensearch.ConditionOSQueryBuilder">
+        <service-properties>
+            <entry key="queryBuilderId" value="notConditionESQueryBuilder"/>
+        </service-properties>
+        <bean class="org.apache.unomi.persistence.opensearch.querybuilders.core.NotConditionOSQueryBuilder"/>
+    </service>
+
+    <service
+            interface="org.apache.unomi.persistence.opensearch.ConditionOSQueryBuilder">
+        <service-properties>
+            <entry key="queryBuilderId" value="matchAllConditionESQueryBuilder"/>
+        </service-properties>
+        <bean class="org.apache.unomi.persistence.opensearch.querybuilders.core.MatchAllConditionOSQueryBuilder"/>
+    </service>
+
+    <service
+            interface="org.apache.unomi.persistence.opensearch.ConditionOSQueryBuilder">
+        <service-properties>
+            <entry key="queryBuilderId" value="propertyConditionESQueryBuilder"/>
+        </service-properties>
+        <bean class="org.apache.unomi.persistence.opensearch.querybuilders.core.PropertyConditionOSQueryBuilder"/>
+    </service>
+
+    <service
+            interface="org.apache.unomi.persistence.opensearch.ConditionOSQueryBuilder">
+        <service-properties>
+            <entry key="queryBuilderId" value="sourceEventPropertyConditionESQueryBuilder"/>
+        </service-properties>
+        <bean class="org.apache.unomi.persistence.opensearch.querybuilders.core.SourceEventPropertyConditionOSQueryBuilder"/>
+    </service>
+
+    <service
+            interface="org.apache.unomi.persistence.opensearch.ConditionOSQueryBuilder">
+        <service-properties>
+            <entry key="queryBuilderId" value="nestedConditionESQueryBuilder"/>
+        </service-properties>
+        <bean class="org.apache.unomi.persistence.opensearch.querybuilders.core.NestedConditionOSQueryBuilder"/>
+    </service>
+
     <!-- We use a listener here because using the list directly for listening to proxies coming from the same bundle didn't seem to work -->
     <reference-list id="conditionOSQueryBuilders"
                     interface="org.apache.unomi.persistence.opensearch.ConditionOSQueryBuilder"
         availability="optional">
         <reference-listener
                 bind-method="bindConditionOSQueryBuilder" unbind-method="unbindConditionOSQueryBuilder" ref="openSearchPersistenceServiceImpl"/>
-    </reference-list>
-
-    <!-- We use a listener here because using the list directly for listening to proxies coming from the same bundle didn't seem to work -->
-    <reference-list id="conditionEvaluators"
-                    interface="org.apache.unomi.persistence.spi.conditions.ConditionEvaluator"
-                    availability="optional">
-        <reference-listener
-                bind-method="bindConditionEvaluator" unbind-method="unbindConditionEvaluator" ref="openSearchPersistenceServiceImpl"/>
     </reference-list>
 
 </blueprint>

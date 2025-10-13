@@ -26,7 +26,9 @@ import org.apache.cxf.jaxrs.JAXRSServerFactoryBean;
 import org.apache.cxf.jaxrs.openapi.OpenApiCustomizer;
 import org.apache.cxf.jaxrs.openapi.OpenApiFeature;
 import org.apache.cxf.jaxrs.security.SimpleAuthorizingFilter;
+import org.apache.cxf.jaxrs.swagger.ui.SwaggerUiConfig;
 import org.apache.cxf.message.Message;
+import org.apache.cxf.rs.security.cors.CrossOriginResourceSharingFilter;
 import org.apache.unomi.api.ContextRequest;
 import org.apache.unomi.api.EventsCollectorRequest;
 import org.apache.unomi.api.services.ConfigSharingService;
@@ -56,6 +58,7 @@ import javax.ws.rs.ext.ExceptionMapper;
 import javax.xml.namespace.QName;
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.stream.Collectors;
 
 @Component
 public class RestServer {
@@ -166,6 +169,7 @@ public class RestServer {
     }
 
     private synchronized void refreshServer() {
+        LOGGER.info("Refreshing JAX RS server...");
         long now = System.currentTimeMillis();
         LOGGER.info("Time (millis) since last update: {}", now - timeOfLastUpdate);
         if (now - timeOfLastUpdate < startupDelay) {
@@ -204,14 +208,13 @@ public class RestServer {
         desers.put(ContextRequest.class, new ContextRequestDeserializer(schemaService));
         desers.put(EventsCollectorRequest.class, new EventsCollectorRequestDeserializer(schemaService));
 
-
         // Build the server
         ObjectMapper objectMapper = new org.apache.unomi.persistence.spi.CustomObjectMapper(desers);
         JAXRSServerFactoryBean jaxrsServerFactoryBean = new JAXRSServerFactoryBean();
         jaxrsServerFactoryBean.setAddress("/");
         jaxrsServerFactoryBean.setBus(serverBus);
         jaxrsServerFactoryBean.setProvider(new JacksonJaxbJsonProvider(objectMapper, JacksonJaxbJsonProvider.DEFAULT_ANNOTATIONS));
-        jaxrsServerFactoryBean.setProvider(new org.apache.cxf.rs.security.cors.CrossOriginResourceSharingFilter());
+        jaxrsServerFactoryBean.setProvider(new CrossOriginResourceSharingFilter());
         jaxrsServerFactoryBean.setProvider(new RetroCompatibilityParamConverterProvider(objectMapper));
 
         // Authentication filter (used for authenticating user from request)
@@ -233,8 +236,9 @@ public class RestServer {
         openApiFeature.setLicense("Apache 2.0 License");
         openApiFeature.setLicenseUrl("http://www.apache.org/licenses/LICENSE-2.0.html");
         openApiFeature.setScan(false);
-        openApiFeature.setUseContextBasedConfig(
-                true);        //Set<String> resourceClasses = serviceBeans.stream().map(service -> service.getClass().getName()).collect(toSet());
+        openApiFeature.setUseContextBasedConfig(true);
+        SwaggerUiConfig swaggerUiConfig = new SwaggerUiConfig().url("openapi.json").deepLinking(true).queryConfigEnabled(false);
+        openApiFeature.setSwaggerUiConfig(swaggerUiConfig);
         OpenApiCustomizer customizer = new OpenApiCustomizer();
         customizer.setDynamicBasePath(true);
         openApiFeature.setCustomizer(customizer);

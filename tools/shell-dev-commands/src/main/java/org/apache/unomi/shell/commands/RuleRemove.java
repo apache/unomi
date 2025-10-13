@@ -16,6 +16,7 @@
  */
 package org.apache.unomi.shell.commands;
 
+import org.apache.karaf.shell.api.action.Action;
 import org.apache.karaf.shell.api.action.Argument;
 import org.apache.karaf.shell.api.action.Command;
 import org.apache.karaf.shell.api.action.lifecycle.Reference;
@@ -24,7 +25,7 @@ import org.apache.unomi.api.services.RulesService;
 
 @Command(scope = "unomi", name = "rule-remove", description = "This will allows to remove a rule in the Apache Unomi Context Server")
 @Service
-public class RuleRemove extends RemoveCommandSupport {
+public class RuleRemove implements Action {
 
     @Reference
     RulesService rulesService;
@@ -32,15 +33,8 @@ public class RuleRemove extends RemoveCommandSupport {
     @Argument(index = 0, name = "rule", description = "The identifier for the rule", required = true, multiValued = false)
     String ruleIdentifier;
 
-    @Override
-    public Object doRemove() throws Exception {
+    public Object execute() throws Exception {
         rulesService.removeRule(ruleIdentifier);
-        return true;
+        return null;
     }
-
-    @Override
-    public String getResourceDescription() {
-        return "rule [" + ruleIdentifier + "]";
-    }
-
 }

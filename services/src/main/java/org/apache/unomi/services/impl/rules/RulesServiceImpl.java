@@ -30,9 +30,11 @@ import org.apache.unomi.api.rules.RuleStatistics;
 import org.apache.unomi.api.services.*;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.persistence.spi.PersistenceService;
+import org.apache.unomi.persistence.spi.config.ConfigurationUpdateHelper;
 import org.apache.unomi.services.actions.ActionExecutorDispatcher;
 import org.apache.unomi.api.utils.ParserHelper;
 import org.osgi.framework.*;
+import org.osgi.service.cm.ManagedService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,7 +45,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 
-public class RulesServiceImpl implements RulesService, EventListenerService, SynchronousBundleListener {
+public class RulesServiceImpl implements RulesService, EventListenerService, SynchronousBundleListener, ManagedService {
 
     public static final String TRACKED_PARAMETER = "trackedConditionParameters";
     private static final Logger LOGGER = LoggerFactory.getLogger(RulesServiceImpl.class.getName());
@@ -103,6 +105,20 @@ public class RulesServiceImpl implements RulesService, EventListenerService, Syn
 
     public void setOptimizedRulesActivated(Boolean optimizedRulesActivated) {
         this.optimizedRulesActivated = optimizedRulesActivated;
+    }
+
+    @Override
+    public void updated(Dictionary<String, ?> properties) {
+        Map<String, ConfigurationUpdateHelper.PropertyMapping> propertyMappings = new HashMap<>();
+
+        // Boolean properties
+        propertyMappings.put("rules.optimizationActivated", ConfigurationUpdateHelper.booleanProperty(this::setOptimizedRulesActivated));
+
+        // Integer properties
+        propertyMappings.put("rules.refresh.interval", ConfigurationUpdateHelper.integerProperty(this::setRulesRefreshInterval));
+        propertyMappings.put("rules.statistics.refresh.interval", ConfigurationUpdateHelper.integerProperty(this::setRulesStatisticsRefreshInterval));
+
+        ConfigurationUpdateHelper.processConfigurationUpdates(properties, LOGGER, "Rules service", propertyMappings);
     }
 
     public void postConstruct() {

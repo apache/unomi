@@ -31,20 +31,20 @@ public class Start implements Action {
     @Reference
     UnomiManagementService unomiManagementService;
 
-    @Argument(name = "persistence", description = "Persistence implementation to use (elasticsearch/opensearch)", valueToShowInHelp = "elasticsearch")
-    private String selectedPersistenceImplementation = "elasticsearch";
+    @Argument(name = "startFeatures", description = "Start features configuration to use (elasticsearch/opensearch)", valueToShowInHelp = "elasticsearch")
+    private String selectedStartFeatures = "elasticsearch";
 
     @Option(name = "-i", aliases = "--install-only", description = "Only install features, don't start them", required = false, multiValued = false)
     boolean installOnly = false;
 
     public Object execute() throws Exception {
-        if (!selectedPersistenceImplementation.equals("elasticsearch") &&
-                !selectedPersistenceImplementation.equals("opensearch")) {
-            System.err.println("Invalid value '"+selectedPersistenceImplementation+"' specified for persistence implementation, will default to elasticsearch");
-            selectedPersistenceImplementation = "elasticsearch";
+        if (!selectedStartFeatures.equals("elasticsearch") &&
+                !selectedStartFeatures.equals("opensearch")) {
+            System.err.println("Invalid value '"+selectedStartFeatures+"' specified for start features configuration, will default to elasticsearch");
+            selectedStartFeatures = "elasticsearch";
         }
-        System.out.println("Starting Apache Unomi with persistence implementation: " + selectedPersistenceImplementation);
-        unomiManagementService.startUnomi(selectedPersistenceImplementation, !installOnly);
+        System.out.println("Starting Apache Unomi with start features configuration: " + selectedStartFeatures);
+        unomiManagementService.startUnomi(selectedStartFeatures, !installOnly);
         return null;
     }
 

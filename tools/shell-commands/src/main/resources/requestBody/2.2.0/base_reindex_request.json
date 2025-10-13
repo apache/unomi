@@ -1,6 +1,7 @@
 {
   "source": {
-    "index": "#source"
+    "index": "#source",
+    "size": 5000
   },
   "dest": {
     "index": "#dest"

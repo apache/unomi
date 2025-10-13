@@ -16,14 +16,14 @@
 
 ==== Initial Setup
 
-. Install J2SE 11 SDK (or later), which can be downloaded from
+. Install J2SE 17 SDK (or later), which can be downloaded from
  http://www.oracle.com/technetwork/java/javase/downloads/index.html[http://www.oracle.com/technetwork/java/javase/downloads/index.html]
 
 . Make sure that your JAVA_HOME environment variable is set to the newly installed
  JDK location, and that your PATH includes %JAVA_HOME%\bin (windows) or
  $JAVA_HOME$/bin (unix).
 
-. Install Maven 3.0.3 (or later), which can be downloaded from
+. Install Maven 3.9.6 (or later), which can be downloaded from
  http://maven.apache.org/download.html[http://maven.apache.org/download.html]. Make sure that your PATH includes
  the MVN_HOME/bin directory.
 
@@ -157,7 +157,7 @@ unomi:start elasticsearch
 unomi:start opensearch
 ----
 
-NOTE: Make sure to specify which search engine you're using with the `unomi:start` command. Using just `unomi:start` without specifying the engine is deprecated.
+NOTE: Make sure to specify which start features configuration you're using with the `unomi:start` command. The parameter determines which set of features and bundles are installed and started. Using just `unomi:start` without specifying the configuration is deprecated.
 
 ==== Deploying the generated binary package
 
@@ -206,12 +206,11 @@ files (at the end of the file):
    export KARAF_OPTS="$KARAF_OPTS -Xmx3G"
 ----
 
-Install the WAR support, CXF and Karaf Cellar into Karaf by doing the following in the Karaf command line:
+Install the WAR support and CXF into Karaf by doing the following in the Karaf command line:
 
 [source]
 ----
    feature:repo-add cxf-jaxrs 3.3.4
-   feature:repo-add cellar 4.1.3
    feature:repo-add mvn:org.apache.unomi/unomi-kar/VERSION/xml/features
    feature:install unomi-kar
 ----

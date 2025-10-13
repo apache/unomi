@@ -13,7 +13,7 @@
 //
 === Cluster setup
 
-Apache Karaf relies on Apache Karaf Cellar, which in turn uses Hazelcast to discover and configure its cluster.
+Apache Karaf relies on Persistence to register nodes and manage cluster.
 
 You can control most of the important clustering settings through the centralized configuration file at
 
@@ -21,19 +21,9 @@ You can control most of the important clustering settings through the centralize
 
 And notably using the following properties:
 
-    org.apache.unomi.hazelcast.group.name=${env:UNOMI_HAZELCAST_GROUP_NAME:-cellar}
-    org.apache.unomi.hazelcast.group.password=${env:UNOMI_HAZELCAST_GROUP_PASSWORD:-pass}
-    # This list can be comma separated and use ranges such as 192.168.1.0-7,192.168.1.21
-    org.apache.unomi.hazelcast.tcp-ip.members=${env:UNOMI_HAZELCAST_TCPIP_MEMBERS:-127.0.0.1}
-    org.apache.unomi.hazelcast.tcp-ip.interface=${env:UNOMI_HAZELCAST_TCPIP_INTERFACE:-127.0.0.1}
-    org.apache.unomi.hazelcast.network.port=${env:UNOMI_HAZELCAST_NETWORK_PORT:-5701}
+    org.apache.unomi.cluster.public.address=${env:UNOMI_CLUSTER_PUBLIC_ADDRESS:-http://localhost:8181}
+    org.apache.unomi.cluster.internal.address=${env:UNOMI_CLUSTER_INTERNAL_ADDRESS:-https://localhost:9443}
+    org.apache.unomi.cluster.nodeId=${env:UNOMI_CLUSTER_NODEID:-unomi-node-1}
+    org.apache.unomi.cluster.nodeStatisticsUpdateFrequency=${env:UNOMI_CLUSTER_NODESTATISTICS_UPDATEFREQUENCY:-10000}
 
-If you need more fine-grained control over the Hazelcast configuration you could also edit the following file:
-
-[source]
-----
-etc/hazelcast.xml
-----
-
-Note that it would be best to keep all configuration in the centralized custom configuration, for example by adding
-placeholders in the hazelcast.xml file if need be and adding the properties to the centralized configuration file.
+Note that it is mandatory to set a different `org.apache.unomi.cluster.nodeId` for each node in the cluster.

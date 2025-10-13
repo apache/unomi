@@ -16,10 +16,11 @@
   ~ limitations under the License.
   -->
 
-<blueprint xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://www.osgi.org/xmlns/blueprint/v1.0.0"
-           xmlns:cm="http://aries.apache.org/blueprint/xmlns/blueprint-cm/v1.1.0"
-           xsi:schemaLocation="http://www.osgi.org/xmlns/blueprint/v1.0.0 http://www.osgi.org/xmlns/blueprint/v1.0.0/blueprint.xsd
-                               http://aries.apache.org/blueprint/xmlns/blueprint-cm/v1.1.0 http://aries.apache.org/schemas/blueprint-cm/blueprint-cm-1.1.0.xsd">
+<blueprint xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           xmlns:cm="http://aries.apache.org/blueprint/xmlns/blueprint-cm/v1.3.0"
+           xmlns="http://www.osgi.org/xmlns/blueprint/v1.0.0"
+           xsi:schemaLocation="http://www.osgi.org/xmlns/blueprint/v1.0.0 https://www.osgi.org/xmlns/blueprint/v1.0.0/blueprint.xsd
+           http://aries.apache.org/blueprint/xmlns/blueprint-cm/v1.3.0 https://aries.apache.org/schemas/blueprint-cm/blueprint-cm-1.3.0.xsd">
 
     <cm:property-placeholder persistent-id="org.apache.unomi.plugins.base"
                              update-strategy="reload" placeholder-prefix="${base.">
@@ -52,51 +53,51 @@
     <reference id="pastEventConditionPersistenceQueryBuilder" interface="org.apache.unomi.persistence.spi.conditions.PastEventConditionPersistenceQueryBuilder"/>
 
     <!-- Condition evaluators -->
-    <service interface="org.apache.unomi.persistence.spi.conditions.ConditionEvaluator">
+    <service interface="org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluator">
         <service-properties>
             <entry key="conditionEvaluatorId" value="booleanConditionEvaluator"/>
         </service-properties>
         <bean class="org.apache.unomi.plugins.baseplugin.conditions.BooleanConditionEvaluator"/>
     </service>
 
-    <service interface="org.apache.unomi.persistence.spi.conditions.ConditionEvaluator">
+    <service interface="org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluator">
         <service-properties>
             <entry key="conditionEvaluatorId" value="idsConditionEvaluator"/>
         </service-properties>
         <bean class="org.apache.unomi.plugins.baseplugin.conditions.IdsConditionEvaluator"/>
     </service>
 
-    <service interface="org.apache.unomi.persistence.spi.conditions.ConditionEvaluator">
+    <service interface="org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluator">
         <service-properties>
             <entry key="conditionEvaluatorId" value="notConditionEvaluator"/>
         </service-properties>
         <bean class="org.apache.unomi.plugins.baseplugin.conditions.NotConditionEvaluator"/>
     </service>
 
-    <bean id="propertyConditionEvaluator" class="org.apache.unomi.plugins.baseplugin.conditions.PropertyConditionEvaluator" init-method="init">
+    <bean id="propertyConditionEvaluator" class="org.apache.unomi.plugins.baseplugin.conditions.PropertyConditionEvaluator">
         <property name="usePropertyConditionOptimizations" value="${base.usePropertyConditionOptimizations}"/>
     </bean>
-    <service interface="org.apache.unomi.persistence.spi.conditions.ConditionEvaluator" ref="propertyConditionEvaluator">
+    <service interface="org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluator" ref="propertyConditionEvaluator">
         <service-properties>
             <entry key="conditionEvaluatorId" value="propertyConditionEvaluator"/>
         </service-properties>
     </service>
 
-    <service interface="org.apache.unomi.persistence.spi.conditions.ConditionEvaluator">
+    <service interface="org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluator">
         <service-properties>
             <entry key="conditionEvaluatorId" value="matchAllConditionEvaluator"/>
         </service-properties>
         <bean class="org.apache.unomi.plugins.baseplugin.conditions.MatchAllConditionEvaluator"/>
     </service>
 
-    <service interface="org.apache.unomi.persistence.spi.conditions.ConditionEvaluator">
+    <service interface="org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluator">
         <service-properties>
             <entry key="conditionEvaluatorId" value="geoLocationByPointSessionConditionEvaluator"/>
         </service-properties>
         <bean class="org.apache.unomi.plugins.baseplugin.conditions.GeoLocationByPointSessionConditionEvaluator"/>
     </service>
 
-    <service interface="org.apache.unomi.persistence.spi.conditions.ConditionEvaluator">
+    <service interface="org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluator">
         <service-properties>
             <entry key="conditionEvaluatorId" value="sourceEventPropertyConditionEvaluator"/>
         </service-properties>
@@ -105,20 +106,20 @@
         </bean>
     </service>
 
-    <service
-            interface="org.apache.unomi.persistence.spi.conditions.ConditionEvaluator">
+    <service interface="org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluator">
         <service-properties>
             <entry key="conditionEvaluatorId" value="pastEventConditionEvaluator"/>
         </service-properties>
         <bean class="org.apache.unomi.plugins.baseplugin.conditions.PastEventConditionEvaluator">
             <property name="definitionsService" ref="definitionsService"/>
             <property name="persistenceService" ref="persistenceService"/>
+            <property name="pastEventConditionPersistenceQueryBuilder" ref="pastEventConditionPersistenceQueryBuilder"/>
             <property name="scriptExecutor" ref="scriptExecutor"/>
             <property name="pastEventConditionPersistenceQueryBuilder" ref="pastEventConditionPersistenceQueryBuilder"/>
         </bean>
     </service>
 
-    <service interface="org.apache.unomi.persistence.spi.conditions.ConditionEvaluator">
+    <service interface="org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluator">
         <service-properties>
             <entry key="conditionEvaluatorId" value="nestedConditionEvaluator"/>
         </service-properties>

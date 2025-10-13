@@ -17,12 +17,12 @@
 
 package org.apache.unomi.web;
 
-import org.apache.unomi.api.services.ConfigSharingService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletException;
+import javax.servlet.annotation.WebServlet;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -33,28 +33,19 @@ import java.io.IOException;
  * A servlet filter to serve a context-specific Javascript containing the current request context object.
  */
 @Deprecated
+@WebServlet(name = "ContextServlet", urlPatterns = {"/context.json", "/context.js"})
 public class ContextServlet extends HttpServlet {
-    private static final long serialVersionUID = 2928875830103325238L;
+
     private static final Logger LOGGER = LoggerFactory.getLogger(ContextServlet.class.getName());
 
-    private static final int MAX_COOKIE_AGE_IN_SECONDS = 60 * 60 * 24 * 365; // 1 year
-
-    private String profileIdCookieName = "context-profile-id";
-    private String profileIdCookieDomain;
-    private int profileIdCookieMaxAgeInSeconds = MAX_COOKIE_AGE_IN_SECONDS;
-    private boolean profileIdCookieHttpOnly = false;
-    private int publicPostRequestBytesLimit = 200000;
-
-    private ConfigSharingService configSharingService;
+    public ContextServlet() {
+        super();
+        LOGGER.info("ContextServlet created.");
+    }
 
     @Override
     public void init(ServletConfig config) throws ServletException {
         super.init(config);
-        configSharingService.setProperty("profileIdCookieName", profileIdCookieName);
-        configSharingService.setProperty("profileIdCookieDomain", profileIdCookieDomain);
-        configSharingService.setProperty("profileIdCookieMaxAgeInSeconds", profileIdCookieMaxAgeInSeconds);
-        configSharingService.setProperty("profileIdCookieHttpOnly", profileIdCookieHttpOnly);
-        configSharingService.setProperty("publicPostRequestBytesLimit", publicPostRequestBytesLimit);
         LOGGER.info("ContextServlet initialized.");
     }
 
@@ -68,27 +59,4 @@ public class ContextServlet extends HttpServlet {
         LOGGER.info("Context servlet shutdown.");
     }
 
-    public void setProfileIdCookieDomain(String profileIdCookieDomain) {
-        this.profileIdCookieDomain = profileIdCookieDomain;
-    }
-
-    public void setProfileIdCookieName(String profileIdCookieName) {
-        this.profileIdCookieName = profileIdCookieName;
-    }
-
-    public void setProfileIdCookieMaxAgeInSeconds(int profileIdCookieMaxAgeInSeconds) {
-        this.profileIdCookieMaxAgeInSeconds = profileIdCookieMaxAgeInSeconds;
-    }
-
-    public void setProfileIdCookieHttpOnly(boolean profileIdCookieHttpOnly) {
-        this.profileIdCookieHttpOnly = profileIdCookieHttpOnly;
-    }
-
-    public void setPublicPostRequestBytesLimit(int publicPostRequestBytesLimit) {
-        this.publicPostRequestBytesLimit = publicPostRequestBytesLimit;
-    }
-
-    public void setConfigSharingService(ConfigSharingService configSharingService) {
-        this.configSharingService = configSharingService;
-    }
 }

@@ -40,8 +40,11 @@ import org.slf4j.LoggerFactory;
 
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.util.*;
+
+import static org.junit.Assert.assertNotNull;
 
 @RunWith(PaxExam.class)
 @ExamReactorStrategy(PerSuite.class)
@@ -65,7 +68,7 @@ public class SegmentIT extends BaseIT {
 
     @Test
     public void testSegments() {
-        Assert.assertNotNull("Segment service should be available", segmentService);
+        assertNotNull("Segment service should be available", segmentService);
         List<Metadata> segmentMetadatas = segmentService.getSegmentMetadatas(0, 50, null).getList();
         Assert.assertEquals("Segment metadata list should be empty", 0, segmentMetadatas.size());
         LOGGER.info("Retrieved " + segmentMetadatas.size() + " segment metadata entries");
@@ -132,7 +135,25 @@ public class SegmentIT extends BaseIT {
         segmentCondition.setParameter("eventCondition", pastEventEventCondition);
         segment.setCondition(segmentCondition);
         segmentService.setSegmentDefinition(segment);
+        segmentService.removeSegmentDefinition(SEGMENT_ID, false);
+    }
 
+    @Test
+    public void testSegmentWithPropertyValueDateCondition() {
+        Metadata segmentMetadata = new Metadata(SEGMENT_ID);
+        Segment segment = new Segment(segmentMetadata);
+        Condition segmentCondition = new Condition(definitionsService.getConditionType("pastEventCondition"));
+        segmentCondition.setParameter("minimumEventCount", 2);
+        segmentCondition.setParameter("numberOfDays", 10);
+        Condition pastEventEventCondition = new Condition(definitionsService.getConditionType("eventPropertyCondition"));
+        pastEventEventCondition.setParameter("propertyName", "timeStamp");
+        pastEventEventCondition.setParameter("comparisonOperator", "equals");
+        pastEventEventCondition.setParameter("propertyValueDate", OffsetDateTime.parse("2019-02-26T00:57:37Z"));
+        segmentCondition.setParameter("eventCondition", pastEventEventCondition);
+        segment.setCondition(segmentCondition);
+        segmentService.setSegmentDefinition(segment);
+        Segment loadedSegment = segmentService.getSegmentDefinition(SEGMENT_ID);
+        assertNotNull("Segment should be loaded", loadedSegment);
         segmentService.removeSegmentDefinition(SEGMENT_ID, false);
     }
 
@@ -441,7 +462,7 @@ public class SegmentIT extends BaseIT {
         Condition pastEventCondition = new Condition(definitionsService.getConditionType("pastEventCondition"));
         pastEventCondition.setParameter("numberOfDays", 10);
         Condition pastEventEventCondition = new Condition(definitionsService.getConditionType("eventTypeCondition"));
-        pastEventEventCondition.setParameter("eventTypeId", "test-event-type-max");
+        pastEventEventCondition.setParameter("eventTypeId", "testeventtypemax");
         pastEventCondition.setParameter("eventCondition", pastEventEventCondition);
         pastEventCondition.setParameter("maximumEventCount", 1);
 
@@ -460,7 +481,7 @@ public class SegmentIT extends BaseIT {
         // Persist the event (do not send it into the system so that it will not be processed by the rules)
         ZoneId defaultZoneId = ZoneId.systemDefault();
         LocalDate localDate = LocalDate.now().minusDays(3);
-        Event testEvent = new Event("test-event-type-max", null, profile, null, null, profile,
+        Event testEvent = new Event("testeventtypemax", null, profile, null, null, profile,
                 Date.from(localDate.atStartOfDay(defaultZoneId).toInstant()));
         testEvent.setPersistent(true);
         persistenceService.save(testEvent, null, true);
@@ -482,7 +503,7 @@ public class SegmentIT extends BaseIT {
         // Persist the 2 event (do not send it into the system so that it will not be processed by the rules)
         defaultZoneId = ZoneId.systemDefault();
         localDate = LocalDate.now().minusDays(3);
-        testEvent = new Event("test-event-type-max", null, profile, null, null, profile,
+        testEvent = new Event("testeventtypemax", null, profile, null, null, profile,
                 Date.from(localDate.atStartOfDay(defaultZoneId).toInstant()));
         testEvent.setPersistent(true);
         persistenceService.save(testEvent, null, true);
@@ -721,4 +742,5 @@ public class SegmentIT extends BaseIT {
                         updatedProfile.getScores() == null || !updatedProfile.getScores().containsKey("relative-date-scoring-test")), 1000,
                 20);
     }
+
 }

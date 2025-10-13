@@ -16,6 +16,7 @@
  */
 package org.apache.unomi.shell.commands;
 
+import org.apache.karaf.shell.api.action.Action;
 import org.apache.karaf.shell.api.action.Argument;
 import org.apache.karaf.shell.api.action.Command;
 import org.apache.karaf.shell.api.action.lifecycle.Reference;
@@ -25,7 +26,7 @@ import org.apache.unomi.api.services.SegmentService;
 
 @Command(scope = "unomi", name = "segment-remove", description = "Remove segments in the Apache Unomi Context Server")
 @Service
-public class SegmentRemove extends RemoveCommandSupport {
+public class SegmentRemove implements Action {
 
     @Reference
     SegmentService segmentService;
@@ -36,8 +37,8 @@ public class SegmentRemove extends RemoveCommandSupport {
     @Argument(index = 1, name = "validate", description = "Check if the segment is used in goals or other segments", required = false, multiValued = false)
     Boolean validate = true;
 
-    @Override
-    public Object doRemove() throws Exception {
+
+    public Object execute() throws Exception {
         DependentMetadata dependantMetadata = segmentService.removeSegmentDefinition(segmentIdentifier, validate);
         if (!validate || (dependantMetadata.getSegments().isEmpty() && dependantMetadata.getScorings().isEmpty())) {
             System.out.println("Segment " + segmentIdentifier + " successfully deleted");
@@ -52,10 +53,4 @@ public class SegmentRemove extends RemoveCommandSupport {
         }
         return null;
     }
-
-    @Override
-    public String getResourceDescription() {
-        return "segment [" + segmentIdentifier + "]";
-    }
-
 }

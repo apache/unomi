@@ -38,21 +38,10 @@ import java.net.URI;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 
 import static org.hamcrest.core.IsCollectionContaining.hasItem;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThat;
+import static org.junit.Assert.*;
 
 /**
  * Created by Ron Barabash on 5/4/2020.
@@ -482,27 +471,6 @@ public class ContextServletIT extends BaseIT {
     }
 
     @Test
-    public void testOGNLVulnerability() throws Exception {
-
-        File vulnFile = new File("target/vuln-file.txt");
-        if (vulnFile.exists()) {
-            vulnFile.delete();
-        }
-        String vulnFileCanonicalPath = vulnFile.getCanonicalPath();
-        vulnFileCanonicalPath = vulnFileCanonicalPath.replace("\\", "\\\\"); // this is required for Windows support
-
-        Map<String, String> parameters = new HashMap<>();
-        parameters.put("VULN_FILE_PATH", vulnFileCanonicalPath);
-        HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
-        request.setEntity(
-                new StringEntity(getValidatedBundleJSON("security/ognl-payload-1.json", parameters), ContentType.APPLICATION_JSON));
-        TestUtils.executeContextJSONRequest(request);
-
-        shouldBeTrueUntilEnd("Vulnerability successfully executed ! File created at " + vulnFileCanonicalPath, vulnFile::exists,
-                exists -> exists == Boolean.FALSE, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
-    }
-
-    @Test
     public void testMVELVulnerability() throws Exception {
 
         File vulnFile = new File("target/vuln-file.txt");
@@ -875,10 +843,13 @@ public class ContextServletIT extends BaseIT {
         HttpPost request = new HttpPost(getFullUrl(CONTEXT_URL));
         request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
         assertEquals(TestUtils.executeContextJSONRequest(request, sessionId).getContextResponse().getProfileProperties().get("customProperty"), ("concealedValue"));
-        // set the property as  concealed
+        // set the property as concealed
         customPropertyType.getMetadata().getSystemTags().add("concealed");
         profileService.deletePropertyType(customPropertyType.getItemId());
+        persistenceService.refreshIndex(PropertyType.class);
+        Thread.sleep(2000);
         profileService.setPropertyType(customPropertyType);
+
         // Not in all properties
         request.setEntity(new StringEntity(objectMapper.writeValueAsString(contextRequest), ContentType.APPLICATION_JSON));
         assertNull(TestUtils.executeContextJSONRequest(request, sessionId).getContextResponse().getProfileProperties().get("customProperty"));

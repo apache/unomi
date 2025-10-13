@@ -40,8 +40,8 @@ import java.util.concurrent.*;
  *
  * <p>This service handles the following responsibilities:</p>
  * <ul>
- *   <li>Loading configuration from the OSGi Configuration Admin service, including persistence implementation and feature lists.</li>
- *   <li>Starting Apache Unomi by installing and starting the configured features for a selected persistence implementation.</li>
+ *   <li>Loading configuration from the OSGi Configuration Admin service, including start features configuration and feature lists.</li>
+ *   <li>Starting Apache Unomi by installing and starting the configured features for a selected start features configuration.</li>
  *   <li>Stopping Apache Unomi by uninstalling features in reverse order to ensure proper teardown.</li>
  *   <li>Interfacing with the {@link org.apache.unomi.shell.migration.MigrationService} for migration tasks during startup.</li>
  * </ul>
@@ -61,7 +61,7 @@ import java.util.concurrent.*;
  * <h3>Usage</h3>
  * <p>This service can be controlled programmatically through its methods:</p>
  * <ul>
- *   <li>{@link #startUnomi(String, boolean)}: Installs and starts features for the specified persistence implementation.</li>
+ *   <li>{@link #startUnomi(String, boolean)}: Installs and starts features for the specified start features configuration.</li>
  *   <li>{@link #stopUnomi()}: Stops and uninstalls the previously started features.</li>
  * </ul>
  *
@@ -128,7 +128,7 @@ public class UnomiManagementServiceImpl implements UnomiManagementService {
                 } if ("opensearch".equals(autoStart)) {
                     resolvedAutoStart = "opensearch";
                 }
-                LOGGER.info("Auto-starting unomi management service with {}", resolvedAutoStart);
+                LOGGER.info("Auto-starting unomi management service with start features configuration: {}", resolvedAutoStart);
                 // Don't wait for completion during initialization
                 startUnomi(resolvedAutoStart, true, false);
             }
@@ -168,16 +168,16 @@ public class UnomiManagementServiceImpl implements UnomiManagementService {
     }
 
     @Override
-    public void startUnomi(String selectedPersistenceImplementation, boolean mustStartFeatures) throws Exception {
+    public void startUnomi(String selectedStartFeatures, boolean mustStartFeatures) throws Exception {
         // Default to waiting for completion
-        startUnomi(selectedPersistenceImplementation, mustStartFeatures, true);
+        startUnomi(selectedStartFeatures, mustStartFeatures, true);
     }
 
     @Override
-    public void startUnomi(String selectedPersistenceImplementation, boolean mustStartFeatures, boolean waitForCompletion) throws Exception {
+    public void startUnomi(String selectedStartFeatures, boolean mustStartFeatures, boolean waitForCompletion) throws Exception {
         Future<?> future = executor.submit(() -> {
             try {
-                doStartUnomi(selectedPersistenceImplementation, mustStartFeatures);
+                doStartUnomi(selectedStartFeatures, mustStartFeatures);
             } catch (Exception e) {
                 LOGGER.error("Error starting Unomi:", e);
                 throw new RuntimeException(e);
@@ -194,15 +194,15 @@ public class UnomiManagementServiceImpl implements UnomiManagementService {
         }
     }
 
-    private void doStartUnomi(String selectedPersistenceImplementation, boolean mustStartFeatures) throws Exception {
-        List<String> features = startFeatures.get(selectedPersistenceImplementation);
+    private void doStartUnomi(String selectedStartFeatures, boolean mustStartFeatures) throws Exception {
+        List<String> features = startFeatures.get(selectedStartFeatures);
         if (features == null || features.isEmpty()) {
-            LOGGER.warn("No features configured for persistence implementation: {}", selectedPersistenceImplementation);
+            LOGGER.warn("No features configured for start features configuration: {}", selectedStartFeatures);
             return;
         }
         features.addAll(getAdditionalFeaturesToInstall());
 
-        LOGGER.info("Installing features for persistence implementation: {}", selectedPersistenceImplementation);
+        LOGGER.info("Installing features for start features configuration: {}", selectedStartFeatures);
         for (String featureName : features) {
             try {
                 Feature feature = featuresService.getFeature(featureName);
@@ -222,7 +222,7 @@ public class UnomiManagementServiceImpl implements UnomiManagementService {
         }
 
         if (mustStartFeatures) {
-            LOGGER.info("Starting features for persistence implementation: {}", selectedPersistenceImplementation);
+            LOGGER.info("Starting features for start features configuration: {}", selectedStartFeatures);
             for (String featureName : features) {
                 try {
                     Feature feature = featuresService.getFeature(featureName);

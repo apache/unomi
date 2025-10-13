@@ -25,15 +25,7 @@ import org.osgi.service.component.annotations.Reference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.jws.WebMethod;
-import javax.jws.WebService;
-import javax.ws.rs.Consumes;
-import javax.ws.rs.DELETE;
-import javax.ws.rs.GET;
-import javax.ws.rs.POST;
-import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
-import javax.ws.rs.Produces;
+import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.util.List;
@@ -41,7 +33,6 @@ import java.util.List;
 /**
  * A JAX-RS endpoint to manage {@link org.apache.unomi.api.Scope}s.
  */
-@WebService
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 @CrossOriginResourceSharing(allowAllOrigins = true, allowCredentials = true)
@@ -58,7 +49,6 @@ public class ScopeServiceEndPoint {
         LOGGER.info("Initializing scope service endpoint...");
     }
 
-    @WebMethod(exclude = true)
     public void setScopeService(ScopeService scopeService) {
         this.scopeService = scopeService;
     }
@@ -70,8 +60,7 @@ public class ScopeServiceEndPoint {
      */
     @GET
     @Path("/")
-    public List<Scope> getScopes() {
-        return scopeService.getScopes();
+    public List<Scope> getScopes() {return scopeService.getScopes();
     }
 
     /**

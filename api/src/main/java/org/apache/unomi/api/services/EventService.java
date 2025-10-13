@@ -79,14 +79,6 @@ public interface EventService {
     String authenticateThirdPartyServer(String key, String ip);
 
     /**
-     * Retrieves the list of available event properties.
-     *
-     * @return a list of available event properties
-     * @deprecated use event types instead
-     */
-    List<EventProperty> getEventProperties();
-
-    /**
      * Retrieves the set of known event type identifiers.
      *
      * @return the set of known event type identifiers.
@@ -161,10 +153,4 @@ public interface EventService {
      * @param profileId identifier of the profile that we want to remove it's events
      */
     void removeProfileEvents(String profileId);
-
-    /**
-     * Delete an event by specifying its event identifier
-     * @param eventIdentifier the unique identifier for the event
-     */
-    void deleteEvent(String eventIdentifier);
 }

@@ -45,9 +45,11 @@ context.performMigrationStep("2.2.0-create-event-index", () -> {
     if (!MigrationUtils.indexExists(context.getHttpClient(), esAddress, newEventIndex)) {
         String baseRequest = MigrationUtils.resourceAsString(bundleContext, "requestBody/2.2.0/base_index_withRollover_request.json")
         String mapping = MigrationUtils.extractMappingFromBundles(bundleContext, "event.json")
+        String configureAliasBody = MigrationUtils.resourceAsString(bundleContext, "requestBody/2.2.0/configure_alias_body.json")
 
         String newIndexSettings = MigrationUtils.buildIndexCreationRequestWithRollover(baseRequest, mapping, context, rolloverPolicyName, rolloverEventAlias)
         HttpUtils.executePutRequest(context.getHttpClient(), esAddress + "/" + newEventIndex, newIndexSettings, null)
+        MigrationUtils.configureAlias(context.getHttpClient(), esAddress, rolloverEventAlias, newEventIndex, Collections.emptySet(), configureAliasBody, context)
     }
 })
 
@@ -73,9 +75,11 @@ context.performMigrationStep("2.2.0-create-session-index", () -> {
     if (!MigrationUtils.indexExists(context.getHttpClient(), esAddress, newSessionIndex)) {
         String baseRequest = MigrationUtils.resourceAsString(bundleContext, "requestBody/2.2.0/base_index_withRollover_request.json")
         String mapping = MigrationUtils.extractMappingFromBundles(bundleContext, "session.json")
+        String configureAliasBody = MigrationUtils.resourceAsString(bundleContext, "requestBody/2.2.0/configure_alias_body.json")
 
         String newIndexSettings = MigrationUtils.buildIndexCreationRequestWithRollover(baseRequest, mapping, context, rolloverPolicyName, rolloverSessionAlias)
         HttpUtils.executePutRequest(context.getHttpClient(), esAddress + "/" + newSessionIndex, newIndexSettings, null)
+        MigrationUtils.configureAlias(context.getHttpClient(), esAddress, rolloverSessionAlias, newSessionIndex, Collections.emptySet(), configureAliasBody, context)
     }
 })
 

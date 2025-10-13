@@ -17,6 +17,7 @@
 package org.apache.unomi.persistence.spi;
 
 import org.apache.unomi.api.Profile;
+import org.apache.unomi.persistence.spi.PropertyHelper;
 import org.junit.Test;
 
 import java.util.Arrays;

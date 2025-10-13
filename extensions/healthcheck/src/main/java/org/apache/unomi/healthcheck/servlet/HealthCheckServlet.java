@@ -67,14 +67,14 @@ public class HealthCheckServlet extends HttpServlet {
         }
         List<HealthCheckResponse> checks = service.check();
         checks.sort(Comparator.comparing(HealthCheckResponse::getName));
+        response.getWriter().println(mapper.writeValueAsString(checks));
         response.setContentType("application/json");
         response.setHeader("Cache-Control", "no-cache");
-        if (checks.stream().allMatch(HealthCheckResponse::isLive)) {
-            response.setStatus(HttpServletResponse.SC_OK);
-        } else {
-            response.setStatus(HttpServletResponse.SC_PARTIAL_CONTENT);
-        }
-        response.getWriter().println(mapper.writeValueAsString(checks));
+            if (checks.stream().allMatch(HealthCheckResponse::isLive)) {
+                response.setStatus(HttpServletResponse.SC_OK);
+            } else {
+                response.setStatus(HttpServletResponse.SC_PARTIAL_CONTENT);
+            }
         response.flushBuffer();
     }
 }

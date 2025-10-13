@@ -164,7 +164,6 @@ public class SegmentProfileEventsConditionParser {
         }
     }
 
-    @SuppressWarnings("unchecked")
     private Map<String, Object> createProfileEventPropertyField(final Condition condition) {
         final Map<String, Object> tuple = new HashMap<>();
 
@@ -190,7 +189,7 @@ public class SegmentProfileEventsConditionParser {
                 tuple.put("fieldValue", null);
             } else if (propertyValueDate instanceof Map){
                 // This shouldn't be needed since Jackson was upgraded to > 2.13, but we keep it for backwards compatibility with older data sets
-                final OffsetDateTime fieldValue = DateUtils.offsetDateTimeFromMap((Map<String, Object>) propertyValueDate);
+                final OffsetDateTime fieldValue = OffsetDateTime.parse((String) propertyValueDate); //With jackson JSR, OffsetDateTime are well serialized.
                 tuple.put("fieldValue", fieldValue != null ? fieldValue.toString() : null);
             } else {
                 tuple.put("fieldValue", propertyValueDate.toString());

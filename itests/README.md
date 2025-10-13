@@ -103,7 +103,7 @@ https://maven.apache.org/surefire/maven-failsafe-plugin/examples/single-test.htm
 
 Here's an example:
 
-    mvn clean install -Dit.karaf.debug=hold:true -Dit.test=org.apache.unomi.itests.graphql.GraphQLEventIT
+    mvn clean install -Dit.karaf.debug=hold:true -Dit.test=org.apache.unomi.itests.BasicIT
 
 ## Migration tests
 
@@ -158,12 +158,12 @@ public class Migrate16xTo200IT extends BaseIT {
             // Create snapshot repo
             HttpUtils.executePutRequest(httpClient, "http://localhost:9400/_snapshot/snapshots_repository/", resourceAsString("migration/create_snapshots_repository.json"), null);
             // Get snapshot, insure it exists
-            String snapshot = HttpUtils.executeGetRequest(httpClient, "http://localhost:9400/_snapshot/snapshots_repository/snapshot_1.6.x", null);
-            if (snapshot == null || !snapshot.contains("snapshot_1.6.x")) {
+            String snapshot = HttpUtils.executeGetRequest(httpClient, "http://localhost:9400/_snapshot/snapshots_repository/snapshot_2", null);
+            if (snapshot == null || !snapshot.contains("snapshot_2")) {
                 throw new RuntimeException("Unable to retrieve 1.6.x snapshot for ES restore");
             }
             // Restore the snapshot
-            HttpUtils.executePostRequest(httpClient, "http://localhost:9400/_snapshot/snapshots_repository/snapshot_1.6.x/_restore?wait_for_completion=true", "{}", null);
+            HttpUtils.executePostRequest(httpClient, "http://localhost:9400/_snapshot/snapshots_repository/snapshot_2/_restore?wait_for_completion=true", "{}", null);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
@@ -188,7 +188,7 @@ public class Migrate16xTo200IT extends BaseIT {
 
 ### How to update a migration test ElasticSearch Snapshot ?
 
-In the following example we want to modify the snapshot: `snapshot_1.6.x`.
+In the following example we want to modify the snapshot: `snapshot_2`.
 This snapshot has been done on Unomi 1.6.x using ElasticSearch 7.11.0. 
 So we will set up locally those servers in the exact same versions.
 (For now just download them and do not start them yet.)
@@ -238,13 +238,13 @@ Now we have to add the snapshot repository, do the following request on your Ela
     }
 
 Now we need to restore the snapshot we want to modify, 
-but first let's try to see if the snapshot with the id `snapshot_1.6.x` correctly exists:
+but first let's try to see if the snapshot with the id `snapshot_2` correctly exists:
 
-    GET /_snapshot/snapshots_repository/snapshot_1.6.x
+    GET /_snapshot/snapshots_repository/snapshot_2
 
 If the snapshot exists we can restore it:
 
-    POST /_snapshot/snapshots_repository/snapshot_1.6.x/_restore?wait_for_completion=true
+    POST /_snapshot/snapshots_repository/snapshot_2/_restore?wait_for_completion=true
     {}
 
 At the end of the previous request ElasticSearch should be ready and our Unomi snapshot is restored to version `1.6.x`.
@@ -262,11 +262,11 @@ they are probably used by the actual migration tests already.)
 
 Once you data updated we need to recreate the snapshot, first we delete the old snapshot:
 
-    DELETE /_snapshot/snapshots_repository/snapshot_1.6.x
+    DELETE /_snapshot/snapshots_repository/snapshot_2
 
 Then we recreate it:
 
-    PUT /_snapshot/snapshots_repository/snapshot_1.6.x
+    PUT /_snapshot/snapshots_repository/snapshot_2
 
 Once the process finished (check the ElasticSearch logs to see that the snapshot is correctly created), 
 we need to remove the snapshot repository from our local ElasticSearch
@@ -281,60 +281,3 @@ And the final step is, zipping the new version of the snapshot repository and re
 > In case you are using docker, do zip in the container and use `docker cp` to get the zip file from the docker container.
 
 Now you can modify the migration test class to test that your added data in 1.6.x is correctly migrated in 2.0.0
-
-# Known issues
-
-In the OpenSearch test logs, you will see a lot of lines that look like this : 
-
-    opensearch> [2024-12-31T15:33:14,652][WARN ][o.o.w.QueryGroupTask     ] [f3200971b164] QueryGroup _id can't be null, It should be set before accessing it. This is abnormal behaviour
-
-This is due to a bug in OpenSearch 2.18 but it has no impact on the actual functionality. You can track this bug here:
-
-    https://github.com/opensearch-project/OpenSearch/issues/16874
-
-## Karaf Tools
-
-The `kt.sh` script (short for "Karaf Tools") provides convenient utilities for working with Karaf logs and directories during integration testing. Since Karaf test directories are created with unique UUIDs for each test run, this script helps locate and work with the latest test instance.
-
-### Usage
-
-```bash
-./kt.sh COMMAND [ARGS]
-```
-
-### Available Commands
-
-| Command      | Alias | Description                                           |
-|-------------|-------|-------------------------------------------------------|
-| `log`       | `l`   | View the latest Karaf log file using less            |
-| `tail`      | `t`   | Tail the current Karaf log file                      |
-| `grep`      | `g`   | Grep the latest Karaf log file (requires pattern)    |
-| `dir`       | `d`   | Print the latest Karaf directory path                |
-| `pushd`     | `p`   | Change to the latest Karaf directory using pushd     |
-| `help`      | `h`   | Show help message                                    |
-
-### Examples
-
-```bash
-# View log with less
-./kt.sh log
-
-# Tail log file
-./kt.sh tail
-
-# Search for ERROR in log file
-./kt.sh grep ERROR
-
-# Print Karaf directory path
-./kt.sh dir
-
-# Change to Karaf directory
-./kt.sh pushd
-```
-
-### Tips
-
-- The script automatically finds the most recently created Karaf test directory
-- All commands have short aliases (single letter) for faster typing
-- Error handling is included for missing directories and files
-- The script is particularly useful when debugging integration test failures

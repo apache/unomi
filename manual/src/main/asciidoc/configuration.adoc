@@ -108,6 +108,9 @@ To select which search engine to use, you can:
 3. When using Docker:
    * For ElasticSearch: use `UNOMI_AUTO_START=elasticsearch`
    * For OpenSearch: use `UNOMI_AUTO_START=opensearch`
+   * For custom configurations: use `UNOMI_AUTO_START=your-custom-config-name`
+
+Note: The `UNOMI_AUTO_START` environment variable accepts any start features configuration name defined in the `org.apache.unomi.start.cfg` file. You can use the predefined "elasticsearch" or "opensearch" configurations, or specify a custom configuration name if you have created one.
 
 Note: When using OpenSearch 2.18:
 - Security is enabled by default and requires SSL/TLS
@@ -257,9 +260,8 @@ Apache Unomi allows using different types of expressions in the following subsys
 - context.json filters and personalization queries
 - rule conditions and actions parameters
 
-Apache Unomi uses two integrated scripting languages to provide this functionality: OGNL and MVEL.
-OGNL is deprecated and is now disabled by default since 1.5.2 as it is little used (and replaced by better performing
-hardcoded property lookups). MVEL is more commonly used in rule actions as in the following example:
+Apache Unomi uses an integrated scripting language to provide this functionality: MVEL.
+MVEL is used in rule actions as in the following example:
 
 From https://github.com/apache/unomi/blob/unomi-1.5.x/plugins/baseplugin/src/main/resources/META-INF/cxs/rules/sessionAssigned.json[https://github.com/apache/unomi/blob/unomi-1.5.x/plugins/baseplugin/src/main/resources/META-INF/cxs/rules/sessionAssigned.json]:
 
@@ -329,10 +331,6 @@ From https://github.com/apache/unomi/blob/unomi-1.5.x/plugins/baseplugin/src/mai
 As we see in the above example, we use an MVEL script with the setPropertyAction to set a property value.
 Starting with version 1.5.2, any expression use in rules MUST be allow-listed.
 
-OGNL was previously used wherever a parameter could be used, but MVEL could only be used with a “script::” prefix.
-Starting with version 1.5.2 OGNL will no longer be allowed and is replaced by a compatible “hardcoded” property
-lookup system, while MVEL requires allow-listing the scripts that are to be used.
-
 By default, Apache Unomi comes with some built-in allowed expressions that cover all the internal uses cases.
 
 Default allowed MVEL expressions (from https://github.com/apache/unomi/blob/unomi-1.5.x/plugins/baseplugin/src/main/resources/META-INF/cxs/expressions/mvel.json[https://github.com/apache/unomi/blob/unomi-1.5.x/plugins/baseplugin/src/main/resources/META-INF/cxs/expressions/mvel.json]) :
@@ -375,15 +373,15 @@ Alongside with the allow-listing technology, there are new configuration paramet
 [source]
 ----
 # These parameters control the list of classes that are allowed or forbidden when executing expressions.
-org.apache.unomi.scripting.allow=${env:UNOMI_ALLOW_SCRIPTING_CLASSES:-org.apache.unomi.api.Event,org.apache.unomi.api.Profile,org.apache.unomi.api.Session,org.apache.unomi.api.Item,org.apache.unomi.api.CustomItem,ognl.*,java.lang.Object,java.util.Map,java.util.HashMap,java.lang.Integer,org.mvel2.*}
+org.apache.unomi.scripting.allow=${env:UNOMI_ALLOW_SCRIPTING_CLASSES:-org.apache.unomi.api.Event,org.apache.unomi.api.Profile,org.apache.unomi.api.Session,org.apache.unomi.api.Item,org.apache.unomi.api.CustomItem,java.lang.Object,java.util.Map,java.util.HashMap,java.lang.Integer,org.mvel2.*}
 org.apache.unomi.scripting.forbid=${env:UNOMI_FORBID_SCRIPTING_CLASSES:-}
 
 # This parameter controls the whole expression filtering system. It is not recommended to turn it off. The main reason to turn it off would be to check if it is interfering with something, but it should always be active in production.
 org.apache.unomi.scripting.filter.activated=${env:UNOMI_SCRIPTING_FILTER_ACTIVATED:-true}
 
 # The following parameters control the filtering using regular expressions for each scripting sub-system.
-# The "collections" parameter tells the expression filtering system which configurations to expect. By default only MVEL and/or OGNL are accepted values, but in the future these might be replaced by new scripting sub-systems.
-org.apache.unomi.scripting.filter.collections=${env:UNOMI_SCRIPTING_FILTER_COLLECTIONS:-mvel,ognl}
+# The "collections" parameter tells the expression filtering system which configurations to expect. By default only MVEL is accepted values, but in the future these might be replaced by new scripting sub-systems.
+org.apache.unomi.scripting.filter.collections=${env:UNOMI_SCRIPTING_FILTER_COLLECTIONS:-mvel}
 
 # For each scripting sub-system, there is an allow and a forbid property that reference a .json files,
 # you can either edit this files or reference your own file directly in the following config.
@@ -397,11 +395,6 @@ org.apache.unomi.scripting.filter.collections=${env:UNOMI_SCRIPTING_FILTER_COLLE
 #       example: ["\\Qsession.size + 1\\E"]
 org.apache.unomi.scripting.filter.mvel.allow=${env:UNOMI_SCRIPTING_FILTER_MVEL_ALLOW:-${karaf.etc}/mvel-allow.json}
 org.apache.unomi.scripting.filter.mvel.forbid=${env:UNOMI_SCRIPTING_FILTER_MVEL_FORBID:-${karaf.etc}/mvel-forbid.json}
-org.apache.unomi.scripting.filter.ognl.allow=${env:UNOMI_SCRIPTING_FILTER_OGNL_ALLOW:-${karaf.etc}/ognl-allow.json}
-org.apache.unomi.scripting.filter.ognl.forbid=${env:UNOMI_SCRIPTING_FILTER_OGNL_FORBID:-${karaf.etc}/ognl-forbid.json}
-
-# This parameter controls whether OGNL scripting is allowed in expressions. Because of security reasons it is deactivated by default. If you run into compatibility issues you could reactivate it but it is at your own risk.
-org.apache.unomi.security.properties.useOGNLScripting=${env:UNOMI_SCRIPTING_USE_OGNL:-false}
 
 # This parameter controls the condition sanitizing done on the ContextServlet (/cxs/context.json). If will remove any expressions that start with "script::". It is not recommended to change this value, unless you run into compatibility issues.
 org.apache.unomi.security.personalization.sanitizeConditions=${env:UNOMI_SECURITY_SANITIZEPERSONALIZATIONCONDITIONS:-true}
@@ -882,6 +875,115 @@ The following permissions are required by Unomi:
 
  - required cluster privileges: `manage` OR `all`
  - required index privileges on unomi indices: `write, manage, read` OR `all`
+
+=== Customizing Start Features Configuration
+
+Apache Unomi allows you to customize which features and bundles are installed and started when using the `unomi:start` command. This is controlled through the `org.apache.unomi.start.cfg` configuration file.
+
+==== Default Configuration
+
+By default, Apache Unomi comes with two predefined start features configurations:
+
+[source]
+----
+startFeatures = [
+    "elasticsearch=unomi-base,unomi-startup,unomi-elasticsearch-core,unomi-persistence-core,unomi-services,unomi-rest-api,unomi-cxs-lists-extension,unomi-cxs-geonames-extension,unomi-cxs-privacy-extension,unomi-elasticsearch-conditions,unomi-plugins-base,unomi-plugins-request,unomi-plugins-mail,unomi-plugins-optimization-test,unomi-shell-dev-commands,unomi-healthcheck,unomi-wab,unomi-web-tracker,unomi-healthcheck,unomi-router-karaf-feature,unomi-groovy-actions,unomi-rest-ui,unomi-startup-complete",
+    "opensearch=unomi-base,unomi-startup,unomi-opensearch-core,unomi-persistence-core,unomi-services,unomi-rest-api,unomi-cxs-lists-extension,unomi-cxs-geonames-extension,unomi-cxs-privacy-extension,unomi-opensearch-conditions,unomi-plugins-base,unomi-plugins-request,unomi-plugins-mail,unomi-plugins-optimization-test,unomi-shell-dev-commands,unomi-healthcheck,unomi-wab,unomi-web-tracker,unomi-healthcheck,unomi-router-karaf-feature,unomi-groovy-actions,unomi-rest-ui,unomi-startup-complete"
+]
+----
+
+==== Customizing Start Features
+
+You can customize the start features configuration by modifying the `$MY_KARAF_HOME/etc/org.apache.unomi.start.cfg` file. This allows you to:
+
+* **Add new configurations**: Create custom start features configurations for specific deployment scenarios
+* **Modify existing configurations**: Add or remove features from the default elasticsearch or opensearch configurations
+* **Create minimal configurations**: Define lightweight configurations with only essential features
+
+==== Configuration Format
+
+Each start features configuration follows this format:
+
+[source]
+----
+"configuration-name=feature1,feature2,feature3,..."
+----
+
+Where:
+* `configuration-name` is the identifier you'll use with the `unomi:start` command
+* The comma-separated list contains the Karaf features to install and start
+
+==== Example: Creating a Custom Configuration
+
+Here's an example of how to create a custom "minimal" configuration that only includes essential features:
+
+[source]
+----
+startFeatures = [
+    "elasticsearch=unomi-base,unomi-startup,unomi-elasticsearch-core,unomi-persistence-core,unomi-services,unomi-rest-api,unomi-startup-complete",
+    "opensearch=unomi-base,unomi-startup,unomi-opensearch-core,unomi-persistence-core,unomi-services,unomi-rest-api,unomi-startup-complete",
+    "minimal=unomi-base,unomi-startup,unomi-elasticsearch-core,unomi-persistence-core,unomi-services,unomi-rest-api,unomi-startup-complete"
+]
+----
+
+You can then use your custom configuration with:
+
+[source]
+----
+unomi:start minimal
+----
+
+==== Example: Adding Features to Existing Configuration
+
+To add additional features to an existing configuration, simply modify the feature list:
+
+[source]
+----
+startFeatures = [
+    "elasticsearch=unomi-base,unomi-startup,unomi-elasticsearch-core,unomi-persistence-core,unomi-services,unomi-rest-api,unomi-cxs-lists-extension,unomi-cxs-geonames-extension,unomi-cxs-privacy-extension,unomi-elasticsearch-conditions,unomi-plugins-base,unomi-plugins-request,unomi-plugins-mail,unomi-plugins-optimization-test,unomi-shell-dev-commands,unomi-healthcheck,unomi-wab,unomi-web-tracker,unomi-healthcheck,unomi-router-karaf-feature,unomi-groovy-actions,unomi-rest-ui,unomi-startup-complete,my-custom-feature",
+    "opensearch=unomi-base,unomi-startup,unomi-opensearch-core,unomi-persistence-core,unomi-services,unomi-rest-api,unomi-cxs-lists-extension,unomi-cxs-geonames-extension,unomi-cxs-privacy-extension,unomi-opensearch-conditions,unomi-plugins-base,unomi-plugins-request,unomi-plugins-mail,unomi-plugins-optimization-test,unomi-shell-dev-commands,unomi-healthcheck,unomi-wab,unomi-web-tracker,unomi-healthcheck,unomi-router-karaf-feature,unomi-groovy-actions,unomi-rest-ui,unomi-startup-complete,my-custom-feature"
+]
+----
+
+==== Important Notes
+
+* **Configuration changes require restart**: After modifying the start features configuration, you must restart Apache Unomi for the changes to take effect
+* **Feature dependencies**: When adding custom features, ensure they have all required dependencies and are compatible with your chosen persistence implementation
+* **Backup your configuration**: Always backup your custom configuration before upgrading Apache Unomi, as upgrades may overwrite the default configuration file
+* **Feature availability**: Only features that are available in your Apache Unomi installation can be included in the configuration
+
+==== Available Features
+
+To see all available features in your Apache Unomi installation, you can use the Karaf shell command:
+
+[source]
+----
+feature:list
+----
+
+This will show you all available features that can be included in your start features configuration.
+
+==== Auto-Start Configuration
+
+You can configure Apache Unomi to automatically start with a specific start features configuration when the server boots up. This is useful for production deployments where you want the server to start automatically without manual intervention.
+
+To enable auto-start, set the `unomi.autoStart` system property or `UNOMI_AUTO_START` environment variable to the name of your desired start features configuration:
+
+[source]
+----
+# Using system property
+-Dunomi.autoStart=elasticsearch
+
+# Using environment variable (Docker)
+UNOMI_AUTO_START=opensearch
+
+# Using custom configuration
+UNOMI_AUTO_START=minimal
+----
+
+The auto-start feature accepts any start features configuration name defined in your `org.apache.unomi.start.cfg` file. If you set it to `true`, it will default to the "elasticsearch" configuration for backward compatibility.
+
+Note: Auto-start only works when Apache Unomi is not already running. If the server is already started, the auto-start setting will be ignored.
 
 === Health Check Extension
 

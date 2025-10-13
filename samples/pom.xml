@@ -16,20 +16,16 @@
   ~ limitations under the License.
   -->
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
     <parent>
         <artifactId>unomi-root</artifactId>
         <groupId>org.apache.unomi</groupId>
-        <version>2.7.0-SNAPSHOT</version>
+        <version>3.0.0-SNAPSHOT</version>
     </parent>
-    <modelVersion>4.0.0</modelVersion>
-
-    <properties>
-        <graphql.java.annotations.version>8.0</graphql.java.annotations.version>
-    </properties>
-
     <artifactId>samples</artifactId>
     <name>Apache Unomi :: Samples</name>
     <packaging>pom</packaging>
+
     <modules>
         <module>tweet-button-plugin</module>
         <module>login-integration</module>
@@ -38,5 +34,4 @@
         <module>graphql-providers</module>
         <module>graphql-providers-feature</module>
     </modules>
-
 </project>

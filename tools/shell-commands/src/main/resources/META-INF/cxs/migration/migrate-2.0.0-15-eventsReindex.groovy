@@ -1,4 +1,5 @@
 import org.apache.unomi.shell.migration.service.MigrationContext
+import org.apache.unomi.shell.migration.utils.HttpUtils
 import org.apache.unomi.shell.migration.utils.MigrationUtils
 
 /*
