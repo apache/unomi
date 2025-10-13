@@ -486,14 +486,15 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     }
 
     private void buildClient() throws NoSuchFieldException, IllegalAccessException {
-        final SSLContext sslContext;
-        try {
-            sslContext = SSLContext.getInstance("SSL");
-        } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException(e);
-        }
+        ElasticsearchClientFactory.ClientBuilder esClienBuilder = ElasticsearchClientFactory.builder();
 
         if (sslTrustAllCertificates) {
+            final SSLContext sslContext;
+            try {
+                sslContext = SSLContext.getInstance("SSL");
+            } catch (NoSuchAlgorithmException e) {
+                throw new RuntimeException(e);
+            }
             try {
                 sslContext.init(null, new TrustManager[] { new X509TrustManager() {
                     public X509Certificate[] getAcceptedIssuers() {
@@ -506,12 +507,13 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     public void checkServerTrusted(X509Certificate[] certs, String authType) {
                     }
                 } }, new SecureRandom());
+                esClienBuilder.sslContext(sslContext);
             } catch (KeyManagementException e) {
                 LOGGER.error("Error creating SSL Context for trust all certificates", e);
             }
         }
 
-        esClient = ElasticsearchClientFactory.builder().hosts(getHosts()).socketTimeout(clientSocketTimeout).sslContext(sslContext)
+        esClient = esClienBuilder.hosts(getHosts()).socketTimeout(clientSocketTimeout)
                 .usernameAndPassword(username, password).build();
 
         buildBulkIngester();

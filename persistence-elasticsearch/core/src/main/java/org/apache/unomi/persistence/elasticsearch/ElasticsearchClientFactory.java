@@ -59,7 +59,7 @@ public class ElasticsearchClientFactory {
 
             builder.setHttpClientConfigCallback(httpClientBuilder -> {
                 if (sslContext != null) {
-                    httpClientBuilder.setSSLContext(sslContext);
+                    return httpClientBuilder.setDefaultCredentialsProvider(credentialsProvider).setSSLContext(sslContext);
                 }
                 return httpClientBuilder.setDefaultCredentialsProvider(credentialsProvider);
             });
