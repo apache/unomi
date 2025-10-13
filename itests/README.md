@@ -68,13 +68,6 @@ mvn clean install -P integration-tests
 mvn clean install -P integration-tests -Duse.opensearch=true
 ```
 
-When using OpenSearch, you might see log messages like:
-```
-[o.o.w.QueryGroupTask] QueryGroup _id can't be null
-```
-This is a known issue in OpenSearch 2.18 that doesn't affect functionality. You can track this issue at:
-https://github.com/opensearch-project/OpenSearch/issues/16874
-
 ## Debugging integration tests
 
 If you want to run the tests with a debugger, you can use the `it.karaf.debug` system property.
