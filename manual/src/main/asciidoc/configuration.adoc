@@ -105,6 +105,7 @@ To select which search engine to use, you can:
 2. When building from source, use the appropriate Maven profile:
    * For ElasticSearch (default): no special profile needed
    * For OpenSearch: add `-Duse.opensearch=true` to your Maven command
+   (this will only impact the integration tests if they are activated using the -Pintegration-tests profile)
 3. When using Docker:
    * For ElasticSearch: use `UNOMI_AUTO_START=elasticsearch`
    * For OpenSearch: use `UNOMI_AUTO_START=opensearch`
