@@ -98,8 +98,8 @@ public class RuleServiceIT extends BaseIT {
             metadata.setDescription(ruleID);
             metadata.setScope(TEST_SCOPE);
             Rule rule = new Rule(metadata);
-            rule.setCondition(defaultCondition);  // Use default condition instead of null
-            rule.setActions(actions);  // Empty list instead of null
+            rule.setCondition(defaultCondition);  // Set a default condition for the rule
+            rule.setActions(actions);  // Set a default action list for the rule
             createAndWaitForRule(rule);
         }
         assertEquals("Expected getAllRules to be able to retrieve all the rules available in the system", originalRulesNumber + 60, rulesService.getAllRules().size());
