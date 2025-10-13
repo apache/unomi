@@ -277,9 +277,11 @@ public abstract class BaseIT extends KarafTestSupport {
 
     @Configuration
     public Option[] config() {
+        LOGGER.info("==== Configuring container");
         System.out.println("==== Configuring container");
 
         searchEngine = System.getProperty(SEARCH_ENGINE_PROPERTY, SEARCH_ENGINE_ELASTICSEARCH);
+        LOGGER.info("Search Engine: {}", searchEngine);
         System.out.println("Search Engine: " + searchEngine);
 
         // Define features option based on search engine
@@ -390,6 +392,7 @@ public abstract class BaseIT extends KarafTestSupport {
 
         String karafDebug = System.getProperty("it.karaf.debug");
         if (karafDebug != null) {
+            LOGGER.info("Found system Karaf Debug system property, activating configuration: {}", karafDebug);
             System.out.println("Found system Karaf Debug system property, activating configuration: " + karafDebug);
             String port = "5006";
             boolean hold = true;
@@ -428,6 +431,7 @@ public abstract class BaseIT extends KarafTestSupport {
         }
 
         searchEngine = System.getProperty(SEARCH_ENGINE_PROPERTY, SEARCH_ENGINE_ELASTICSEARCH);
+        LOGGER.info("Search Engine: {}", searchEngine);
         System.out.println("Search Engine: " + searchEngine);
 
         return Stream.of(super.config(), karafOptions.toArray(new Option[karafOptions.size()])).flatMap(Stream::of).toArray(Option[]::new);
@@ -683,6 +687,7 @@ public abstract class BaseIT extends KarafTestSupport {
     }
 
     protected CloseableHttpResponse executeHttpRequest(HttpUriRequest request) throws IOException {
+        LOGGER.info("Executing request {} {}...", request.getMethod(), request.getURI());
         System.out.println("Executing request " + request.getMethod() + " " + request.getURI() + "...");
         CloseableHttpResponse response = httpClient.execute(request);
         int statusCode = response.getStatusLine().getStatusCode();
