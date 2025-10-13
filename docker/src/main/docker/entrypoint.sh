@@ -63,6 +63,8 @@ if [ "$SEARCH_ENGINE" = "opensearch" ]; then
     auth_header="Authorization: Basic $(echo -n "admin:${UNOMI_OPENSEARCH_PASSWORD}" | base64)"
     health_endpoint="_cluster/health"
     curl_opts="-k -H \"${auth_header}\" -H \"Content-Type: application/json\""
+    # Build array of node URLs
+    IFS=',' read -ra NODES <<< "${UNOMI_OPENSEARCH_ADDRESSES}"
 else
     # Elasticsearch configuration
     if [ "$UNOMI_ELASTICSEARCH_SSL_ENABLE" = 'true' ]; then
@@ -76,12 +78,7 @@ else
         curl_opts="-H \"${auth_header}\""
     fi
     health_endpoint="_cluster/health"
-fi
-
-# Build array of node URLs
-if [ "$SEARCH_ENGINE" = "opensearch" ]; then
-    IFS=',' read -ra NODES <<< "${UNOMI_OPENSEARCH_ADDRESSES}"
-else
+    # Build array of node URLs
     IFS=',' read -ra NODES <<< "${UNOMI_ELASTICSEARCH_ADDRESSES}"
 fi
 
