@@ -220,11 +220,21 @@ public abstract class BaseIT extends KarafTestSupport {
     }
 
     private void waitForUnomiManagementService() throws InterruptedException {
+        final int maxRetries = 5;
+        int retryCount = 0;
         UnomiManagementService unomiManagementService = getOsgiService(UnomiManagementService.class, 600000);
-        while (unomiManagementService == null) {
-            LOGGER.info("Waiting for Unomi Management Service to be available...");
+
+        while (unomiManagementService == null && retryCount < maxRetries) {
+            LOGGER.info("Waiting for Unomi Management Service to be available... (attempt {}/{})", retryCount + 1, maxRetries);
             Thread.sleep(1000);
+            retryCount++;
             unomiManagementService = getOsgiService(UnomiManagementService.class, 600000);
+        }
+
+        if (unomiManagementService == null) {
+            String errorMsg = String.format("Unomi Management Service was not available after %d retries.", maxRetries);
+            LOGGER.error(errorMsg);
+            throw new InterruptedException(errorMsg);
         }
     }
 
