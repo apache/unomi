@@ -93,7 +93,7 @@ org.apache.unomi.opensearch.cluster.name=opensearch-cluster
 # Note: the port number must be repeated for each host.
 org.apache.unomi.opensearch.addresses=localhost:9200
 
-# OpenSearch security settings (required by default since OpenSearch 2.0)
+# OpenSearch security settings (required by default since OpenSearch 3)
 org.apache.unomi.opensearch.ssl.enable=true
 org.apache.unomi.opensearch.username=admin
 org.apache.unomi.opensearch.password=${env:OPENSEARCH_INITIAL_ADMIN_PASSWORD:-admin}
@@ -112,11 +112,10 @@ To select which search engine to use, you can:
 
 Note: The `UNOMI_AUTO_START` environment variable accepts any start features configuration name defined in the `org.apache.unomi.start.cfg` file. You can use the predefined "elasticsearch" or "opensearch" configurations, or specify a custom configuration name if you have created one.
 
-Note: When using OpenSearch 2.18:
-- Security is enabled by default and requires SSL/TLS
-- The default admin username is 'admin'
-- The initial admin password can be set via OPENSEARCH_INITIAL_ADMIN_PASSWORD environment variable
-- You might see log messages about "QueryGroup _id can't be null". This is a known issue that doesn't affect functionality and is being tracked at: https://github.com/opensearch-project/OpenSearch/issues/16874
+Note: When using OpenSearch 3.x:
+ - Security is enabled by default and requires SSL/TLS
+ - The default admin username is 'admin'
+ - The initial admin password can be set via OPENSEARCH_INITIAL_ADMIN_PASSWORD environment variable
 
 === Secured events configuration
 

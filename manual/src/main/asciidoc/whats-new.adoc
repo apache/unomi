@@ -30,9 +30,9 @@ This upgrade also brings support for Java 17.
 
 ==== OpenSearch Support
 
-Starting with version 2.7.0, Apache Unomi now officially supports OpenSearch 2.18.0 as an alternative to Elasticsearch. This addition gives users more flexibility in choosing their search engine backend. Key features include:
+Starting with version 3.0.0, Apache Unomi now officially supports OpenSearch 3 as an alternative to Elasticsearch. This addition gives users more flexibility in choosing their search engine backend. Key features include:
 
-- Full support for OpenSearch 2.18.0
+- Full support for OpenSearch 3
 - Seamless integration with existing Unomi features
 - Support for security features enabled by default in OpenSearch
 - Compatible with both standalone and Docker deployments

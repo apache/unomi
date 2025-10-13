@@ -767,7 +767,7 @@ OSGi Service Registration for OpenSearch (opensearch bundle's blueprint.xml):
        elasticsearch:
          image: docker.elastic.co/elasticsearch/elasticsearch:7.17.9
        opensearch:
-         image: opensearchproject/opensearch:2.18.0
+         image: opensearchproject/opensearch:3
      ```
 
 4. Deployment

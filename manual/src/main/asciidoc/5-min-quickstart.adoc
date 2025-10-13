@@ -51,7 +51,7 @@ services:
 version: '3.8'
 services:
     opensearch-node1:
-        image: opensearchproject/opensearch:2.18.0
+        image: opensearchproject/opensearch:3
         environment:
             - cluster.name=opensearch-cluster
             - node.name=opensearch-node1
@@ -115,7 +115,7 @@ cluster.name: contextElasticSearch
 
 1) Install JDK 11 as described above
 
-2) Download OpenSearch here: https://opensearch.org/downloads.html (please *make sure* you use version 2.18.0)
+2) Download OpenSearch here: https://opensearch.org/downloads.html (please *make sure* you use version 3.x)
 
 3) Uncompress it and change the `config/opensearch.yml` to include the following config:
 
