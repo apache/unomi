@@ -127,17 +127,10 @@ public class EventServiceImpl implements EventService {
             for (Map.Entry<String, ThirdPartyServer> entry : thirdPartyServers.entrySet()) {
                 ThirdPartyServer server = entry.getValue();
                 if (server.getKey().equals(key)) {
-                    // This is a fix to support proper IPv6 parsing
-                    if (ip != null) {
-                        if (ip.startsWith("[") && ip.endsWith("]")) {
-                            // This can happen with IPv6 addresses, we must remove the markers since our IPAddress library doesn't support them.
-                            ip = ip.substring(1, ip.length() - 1);
-                        }
-                        IPAddress ipAddress = new IPAddressString(ip).getAddress();
-                        for (IPAddress serverIpAddress : server.getIpAddresses()) {
-                            if (serverIpAddress.contains(ipAddress)) {
-                                return server.getId();
-                            }
+                    IPAddress ipAddress = new IPAddressString(ip).getAddress();
+                    for (IPAddress serverIpAddress : server.getIpAddresses()) {
+                        if (serverIpAddress.contains(ipAddress)) {
+                            return server.getId();
                         }
                     }
                 }
