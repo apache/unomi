@@ -145,7 +145,7 @@
                                 <feature>framework</feature>
                             </framework>
                             <features>
-                                <feature>unomi-opensearch</feature>
+                                <feature>unomi-services</feature>
                                 <feature>wrap</feature>
                                 <feature>cdp-graphql-feature</feature>
                             </features>

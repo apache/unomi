@@ -120,7 +120,7 @@
                                 <feature>framework</feature>
                             </framework>
                             <features>
-                                <feature>unomi-opensearch</feature>
+                                <feature>unomi-services</feature>
                                 <feature>unomi-salesforce-connector-karaf-kar</feature>
                             </features>
                             <ignoreMissingConditions>true</ignoreMissingConditions>
