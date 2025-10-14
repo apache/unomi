@@ -21,6 +21,7 @@ import org.apache.unomi.itests.migration.Migrate16xToCurrentVersionIT;
 import org.apache.unomi.itests.graphql.*;
 import org.apache.unomi.itests.migration.MigrationIT;
 import org.junit.runner.RunWith;
+import org.junit.runners.Suite;
 import org.junit.runners.Suite.SuiteClasses;
 
 /**
@@ -28,7 +29,7 @@ import org.junit.runners.Suite.SuiteClasses;
  *
  * @author Sergiy Shyrkov
  */
-@RunWith(ProgressSuite.class)
+@RunWith(Suite.class)
 @SuiteClasses({
         Migrate16xToCurrentVersionIT.class,
         MigrationIT.class,
