@@ -26,6 +26,11 @@ import java.util.function.LongSupplier;
 
 import static org.junit.Assert.*;
 
+/**
+ * Tests for {@link DateMathParser} to ensure full compatibility with the semantics from
+ * Elasticsearch/OpenSearch date math, confirming Unomi's internal implementation behaves as a
+ * drop-in replacement without requiring the Elasticsearch dependency.
+ */
 public class DateMathParserTest {
 
     // Create the JavaDateFormatter with epoch millis support

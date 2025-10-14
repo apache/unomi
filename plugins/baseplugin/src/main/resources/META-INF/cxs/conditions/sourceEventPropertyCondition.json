@@ -10,7 +10,7 @@
     "readOnly": true
   },
   "conditionEvaluator": "sourceEventPropertyConditionEvaluator",
-  "queryBuilder": "sourceEventPropertyConditionESQueryBuilder",
+  "queryBuilder": "sourceEventPropertyConditionQueryBuilder",
 
   "parameters": [
     {

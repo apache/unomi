@@ -25,6 +25,16 @@ import java.time.temporal.TemporalQueries;
 import java.util.function.Function;
 import java.util.function.LongSupplier;
 
+/**
+ * Parser for Elasticsearch/OpenSearch-style date math expressions such as
+ * {@code now-1d/d} or {@code 2001-01-01||+1M-1d}. The parser supports rounding
+ * and arithmetic on calendar units and returns results as {@link java.time.Instant}s.
+ * <p>
+ * This implementation is a 100% compatible replacement for functionality that was
+ * historically available in Elasticsearch but not exposed as a reusable library. It is
+ * included in Unomi to decouple from Elasticsearch while preserving expected behavior
+ * across persistence backends, including OpenSearch.
+ */
 public class DateMathParser {
 
     public static boolean isNullOrEmpty(CharSequence cs) {

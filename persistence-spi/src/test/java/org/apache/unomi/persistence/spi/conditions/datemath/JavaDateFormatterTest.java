@@ -23,14 +23,10 @@ import java.time.Instant;
 import static org.junit.Assert.*;
 
 /**
- * Comprehensive tests for JavaDateFormatter covering various formats:
- * - Epoch formats (epoch_millis, epoch_second)
- * - ISO-based formats (strict_date_optional_time, strict_date_time_no_millis, etc.)
- * - Basic formats (basic_date, basic_date_time, etc.)
- * - Ordinal formats (ordinal_date, etc.)
- * - Strict vs non-strict variants
- * - Custom patterns
- * - Fallback between multiple formats
+ * Comprehensive tests for {@link JavaDateFormatter} covering a wide range of built-in and custom
+ * patterns to ensure compatibility with behavior historically provided by Elasticsearch utilities.
+ * These tests verify that Unomi's formatter remains a drop-in replacement, allowing removal of the
+ * Elasticsearch dependency while preserving expected parsing semantics.
  */
 public class JavaDateFormatterTest {
 

@@ -621,7 +621,7 @@ Here is an example of JSON custom condition type definition:
     "readOnly": true
   },
   "conditionEvaluator": "matchAllConditionEvaluator",
-  "queryBuilder": "matchAllConditionESQueryBuilder",
+  "queryBuilder": "matchAllConditionQueryBuilder",
 
   "parameters": [
   ]
@@ -643,7 +643,7 @@ src/main/resources/OSGI-INF/blueprint/blueprint.xml
     <service
             interface="org.apache.unomi.persistence.elasticsearch.ConditionESQueryBuilder">
         <service-properties>
-            <entry key="queryBuilderId" value="matchAllConditionESQueryBuilder"/>
+            <entry key="queryBuilderId" value="matchAllConditionQueryBuilder"/>
         </service-properties>
         <bean class="conditions.org.apache.unomi.persistence.elasticsearch.MatchAllConditionESQueryBuilder"/>
     </service>

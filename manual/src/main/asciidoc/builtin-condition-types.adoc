@@ -36,7 +36,7 @@ find here an overview of what a JSON condition descriptor looks like:
     "readOnly": true
   },
   "conditionEvaluator": "booleanConditionEvaluator",
-  "queryBuilder": "booleanConditionESQueryBuilder",
+  "queryBuilder": "booleanConditionQueryBuilder",
   "parameters": [
     {
       "id": "operator",
@@ -70,7 +70,7 @@ When implementing a new condition type, you need to provide implementations for 
 <!-- ElasticSearch Query Builder -->
 <service interface="org.apache.unomi.persistence.elasticsearch.ConditionESQueryBuilder">
     <service-properties>
-        <entry key="queryBuilderId" value="booleanConditionESQueryBuilder"/>
+        <entry key="queryBuilderId" value="booleanConditionQueryBuilder"/>
     </service-properties>
     <bean class="org.apache.unomi.persistence.elasticsearch.BooleanConditionESQueryBuilder"/>
 </service>

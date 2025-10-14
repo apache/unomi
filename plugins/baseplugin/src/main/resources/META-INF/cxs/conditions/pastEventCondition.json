@@ -14,7 +14,7 @@
     "readOnly": true
   },
   "conditionEvaluator": "pastEventConditionEvaluator",
-  "queryBuilder": "pastEventConditionESQueryBuilder",
+  "queryBuilder": "pastEventConditionQueryBuilder",
 
   "parameters": [
     {
