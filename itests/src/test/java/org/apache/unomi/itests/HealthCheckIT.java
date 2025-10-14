@@ -80,13 +80,12 @@ public class HealthCheckIT extends BaseIT {
             }
         } catch (Exception e) {
             LOGGER.error("Error performing GET request with url {}", url, e);
-            e.printStackTrace();
         } finally {
             if (response != null) {
                 try {
                     response.close();
                 } catch (IOException e) {
-                    e.printStackTrace();
+                    LOGGER.error("Error closing response: ", e);
                 }
             }
         }

@@ -40,7 +40,7 @@ public class IdsConditionOSQueryBuilder implements ConditionOSQueryBuilder {
 
         if (ids.size() > maximumIdsQueryCount) {
             // Avoid building too big ids query - throw exception instead
-            throw new UnsupportedOperationException("Too many profiles");
+            throw new UnsupportedOperationException("Too many profiles, exceeding the maximum number of ids query count: " + maximumIdsQueryCount);
         }
 
         Query idsQuery = Query.of(q->q.ids(i->i.values(new ArrayList<String>(ids))));

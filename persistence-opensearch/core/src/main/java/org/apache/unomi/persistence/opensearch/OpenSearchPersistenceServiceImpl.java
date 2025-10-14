@@ -406,7 +406,7 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
                 client.cluster().health(new HealthRequest.Builder().waitForStatus(getHealthStatus(minimalClusterState)).build());
                 LOGGER.info("Cluster status is {}", minimalClusterState);
 
-                // We keep in memory the latest available session index to be able to load session using direct GET access on ES
+                // We keep in memory the latest available session index to be able to load session using direct GET access on OpenSearch
                 if (isItemTypeRollingOver(Session.ITEM_TYPE)) {
                     LOGGER.info("Sessions are using rollover indices, loading latest session index available ...");
                     GetAliasResponse sessionAliasResponse = client.indices().getAlias(new GetAliasRequest.Builder().index(getIndex(Session.ITEM_TYPE)).build());
@@ -511,16 +511,16 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
         bundleContext.removeBundleListener(this);
     }
 
-    public void bindConditionOSQueryBuilder(ServiceReference<ConditionOSQueryBuilder> conditionESQueryBuilderServiceReference) {
-        ConditionOSQueryBuilder conditionOSQueryBuilder = bundleContext.getService(conditionESQueryBuilderServiceReference);
-        conditionOSQueryBuilderDispatcher.addQueryBuilder(conditionESQueryBuilderServiceReference.getProperty("queryBuilderId").toString(), conditionOSQueryBuilder);
+    public void bindConditionOSQueryBuilder(ServiceReference<ConditionOSQueryBuilder> conditionOSQueryBuilderServiceReference) {
+        ConditionOSQueryBuilder conditionOSQueryBuilder = bundleContext.getService(conditionOSQueryBuilderServiceReference);
+        conditionOSQueryBuilderDispatcher.addQueryBuilder(conditionOSQueryBuilderServiceReference.getProperty("queryBuilderId").toString(), conditionOSQueryBuilder);
     }
 
-    public void unbindConditionOSQueryBuilder(ServiceReference<ConditionOSQueryBuilder> conditionESQueryBuilderServiceReference) {
-        if (conditionESQueryBuilderServiceReference == null) {
+    public void unbindConditionOSQueryBuilder(ServiceReference<ConditionOSQueryBuilder> conditionOSQueryBuilderServiceReference) {
+        if (conditionOSQueryBuilderServiceReference == null) {
             return;
         }
-        conditionOSQueryBuilderDispatcher.removeQueryBuilder(conditionESQueryBuilderServiceReference.getProperty("queryBuilderId").toString());
+        conditionOSQueryBuilderDispatcher.removeQueryBuilder(conditionOSQueryBuilderServiceReference.getProperty("queryBuilderId").toString());
     }
 
     @Override
@@ -978,7 +978,6 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
                         Query queryBuilder = conditionOSQueryBuilderDispatcher.buildFilter(conditions[i]);
                         UpdateByQueryRequest.Builder updateByQueryRequestBuilder = new UpdateByQueryRequest.Builder().index(indices);
                         updateByQueryRequestBuilder.conflicts(Conflicts.Proceed);
-                        // TODO fix this updateByQueryRequest.setMaxRetries(1000);
                         updateByQueryRequestBuilder.slices(s -> s.calculation(SlicesCalculation.Auto));
                         updateByQueryRequestBuilder.script(scripts[i]);
                         updateByQueryRequestBuilder.query(wrapWithItemsTypeQuery(itemTypes, queryBuilder));
@@ -991,17 +990,12 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
                         } else if (waitForComplete) {
                             waitForTaskComplete(updateByQueryRequest.toString(), updateByQueryRequest.toString(), updateByQueryResponse.task());
                         } else {
-                            LOGGER.debug("ES task started {}", updateByQueryResponse.task());
+                            LOGGER.debug("OpenSearch task started {}", updateByQueryResponse.task());
                         }
                     }
                     return true;
                 } catch (OpenSearchException ose) {
-                    throw new Exception("No index found for itemTypes=" + String.join(",", itemTypes), ose);
-                    /* TODO Implement this
-                } catch (ScriptException e) {
-                    LOGGER.error("Error in the update script : {}\n{}\n{}", e.getScript(), e.getDetailedMessage(), e.getScriptStack());
-                    throw new Exception("Error in the update script");
-                     */
+                    throw new Exception("Error updating with query and script for itemTypes=" + String.join(",", itemTypes), ose);
                 }
             }
         }.catchingExecuteInClassLoader(true);
@@ -1316,7 +1310,6 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
                     return response.getStatus() == 200;
                 } catch (Exception e) {
                     LOGGER.error("Error registering rollover lifecycle policy", e);
-                    e.printStackTrace();
                     return false;
                 }
             }
@@ -1485,15 +1478,15 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
     }
 
     private Map<String, Object> createPropertyMapping(final PropertyType property) {
-        final String esType = convertValueTypeToESType(property.getValueTypeId());
+        final String osType = convertValueTypeToOSType(property.getValueTypeId());
         final HashMap<String, Object> definition = new HashMap<>();
 
-        if (esType == null) {
+        if (osType == null) {
             LOGGER.warn("No predefined type found for property[{}], no mapping will be created", property.getValueTypeId());
             return Collections.emptyMap();
         } else {
-            definition.put("type", esType);
-            if ("text".equals(esType)) {
+            definition.put("type", osType);
+            if ("text".equals(osType)) {
                 definition.put("analyzer", "folding");
                 final Map<String, Object> fields = new HashMap<>();
                 final Map<String, Object> keywordField = new HashMap<>();
@@ -1518,7 +1511,7 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
         return Collections.singletonMap(property.getItemId(), definition);
     }
 
-    private String convertValueTypeToESType(String valueTypeId) {
+    private String convertValueTypeToOSType(String valueTypeId) {
         switch (valueTypeId) {
             case "set":
             case "json":
@@ -2282,7 +2275,7 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
                 try {
                     client.indices().refresh(r->r);
                 } catch (IOException e) {
-                    e.printStackTrace();//TODO manage ES7
+                    LOGGER.error("Error on refresh: ", e);
                 }
                 return true;
             }
@@ -2298,7 +2291,7 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
                     String index = getIndex(itemType);
                     client.indices().refresh(r->r.index(index));
                 } catch (IOException e) {
-                    e.printStackTrace();//TODO manage ES7
+                    LOGGER.error("Error on refreshIndex: ", e);
                 }
                 return true;
             }
