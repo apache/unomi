@@ -101,10 +101,6 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
     private final List<String> openSearchAddressList = new ArrayList<>();
     private String clusterName;
     private String indexPrefix;
-    private String monthlyIndexNumberOfShards;
-    private String monthlyIndexNumberOfReplicas;
-    private String monthlyIndexMappingTotalFieldsLimit;
-    private String monthlyIndexMaxDocValueFieldsSearch;
     private String numberOfShards;
     private String numberOfReplicas;
     private String indexMappingTotalFieldsLimit;
@@ -114,7 +110,6 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
     private final Map<String, String> mappings = new HashMap<>();
     private ConditionEvaluatorDispatcher conditionEvaluatorDispatcher;
     private ConditionOSQueryBuilderDispatcher conditionOSQueryBuilderDispatcher;
-    private List<String> itemsMonthlyIndexed;
     private Map<String, String> routingByType;
 
     private Integer defaultQueryLimit = 10;
@@ -219,30 +214,7 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
         this.indexPrefix = indexPrefix;
     }
 
-    @Deprecated
-    public void setMonthlyIndexNumberOfShards(String monthlyIndexNumberOfShards) {
-        this.monthlyIndexNumberOfShards = monthlyIndexNumberOfShards;
-    }
 
-    @Deprecated
-    public void setMonthlyIndexNumberOfReplicas(String monthlyIndexNumberOfReplicas) {
-        this.monthlyIndexNumberOfReplicas = monthlyIndexNumberOfReplicas;
-    }
-
-    @Deprecated
-    public void setMonthlyIndexMappingTotalFieldsLimit(String monthlyIndexMappingTotalFieldsLimit) {
-        this.monthlyIndexMappingTotalFieldsLimit = monthlyIndexMappingTotalFieldsLimit;
-    }
-
-    @Deprecated
-    public void setMonthlyIndexMaxDocValueFieldsSearch(String monthlyIndexMaxDocValueFieldsSearch) {
-        this.monthlyIndexMaxDocValueFieldsSearch = monthlyIndexMaxDocValueFieldsSearch;
-    }
-
-    @Deprecated
-    public void setItemsMonthlyIndexedOverride(String itemsMonthlyIndexedOverride) {
-        this.itemsMonthlyIndexed = StringUtils.isNotEmpty(itemsMonthlyIndexedOverride) ? Arrays.asList(itemsMonthlyIndexedOverride.split(",").clone()) : Collections.emptyList();
-    }
 
     public void setNumberOfShards(String numberOfShards) {
         this.numberOfShards = numberOfShards;
@@ -1243,7 +1215,7 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
     }
 
     public boolean registerRolloverLifecyclePolicy() {
-        Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".createMonthlyIndexLifecyclePolicy", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
+        Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".createRolloverLifecyclePolicy", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
             protected Boolean execute(Object... args) throws IOException {
                 try {
                     String policyName = indexPrefix + "-rollover-lifecycle-policy";
@@ -1394,15 +1366,15 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
     private void internalCreateRolloverTemplate(String itemName) throws IOException {
         String rolloverAlias = indexPrefix + "-" + itemName;
         if (mappings.get(itemName) == null) {
-            LOGGER.warn("Couldn't find mapping for item {}, won't create monthly index template", itemName);
+            LOGGER.warn("Couldn't find mapping for item {}, won't create rollover index template", itemName);
             return;
         }
         String indexSource =
                 "    {" +
-                "        \"number_of_shards\" : " + StringUtils.defaultIfEmpty(rolloverIndexNumberOfShards, monthlyIndexNumberOfShards) + "," +
-                "        \"number_of_replicas\" : " + StringUtils.defaultIfEmpty(rolloverIndexNumberOfReplicas, monthlyIndexNumberOfReplicas) + "," +
-                "        \"mapping.total_fields.limit\" : " + StringUtils.defaultIfEmpty(rolloverIndexMappingTotalFieldsLimit, monthlyIndexMappingTotalFieldsLimit) + "," +
-                "        \"max_docvalue_fields_search\" : " + StringUtils.defaultIfEmpty(rolloverIndexMaxDocValueFieldsSearch, monthlyIndexMaxDocValueFieldsSearch) + "," +
+                "        \"number_of_shards\" : " + rolloverIndexNumberOfShards + "," +
+                "        \"number_of_replicas\" : " + rolloverIndexNumberOfReplicas + "," +
+                "        \"mapping.total_fields.limit\" : " + rolloverIndexMappingTotalFieldsLimit + "," +
+                "        \"max_docvalue_fields_search\" : " + rolloverIndexMaxDocValueFieldsSearch + "," +
                 "        \"plugins.index_state_management.rollover_alias\": \"" + rolloverAlias + "\"" +
                 "    },";
         String analysisSource =
@@ -2646,7 +2618,7 @@ public class OpenSearchPersistenceServiceImpl implements PersistenceService, Syn
     }
 
     private boolean isItemTypeRollingOver(String itemType) {
-        return (rolloverIndices != null ? rolloverIndices : itemsMonthlyIndexed).contains(itemType);
+        return (rolloverIndices != null ? rolloverIndices.contains(itemType) : false);
     }
 
     private Refresh getRefreshPolicy(String itemType) {

@@ -37,11 +37,6 @@
             <cm:property name="numberOfReplicas" value="0"/>
             <cm:property name="indexMappingTotalFieldsLimit" value="1000"/>
             <cm:property name="indexMaxDocValueFieldsSearch" value="1000"/>
-            <cm:property name="monthlyIndex.numberOfShards" value="3"/>
-            <cm:property name="monthlyIndex.numberOfReplicas" value="0"/>
-            <cm:property name="monthlyIndex.indexMappingTotalFieldsLimit" value="1000"/>
-            <cm:property name="monthlyIndex.indexMaxDocValueFieldsSearch" value="1000"/>
-            <cm:property name="monthlyIndex.itemsMonthlyIndexedOverride" value="event,session"/>
             <cm:property name="defaultQueryLimit" value="10"/>
 
             <cm:property name="bulkProcessor.concurrentRequests" value="1" />
@@ -50,14 +45,14 @@
             <cm:property name="bulkProcessor.flushInterval" value="5s" />
             <cm:property name="bulkProcessor.backoffPolicy" value="exponential" />
 
-            <cm:property name="rollover.indices" value="" />
+            <cm:property name="rollover.indices" value="event,session" />
             <cm:property name="rollover.maxSize" value="30gb" />
             <cm:property name="rollover.maxAge" value="" />
             <cm:property name="rollover.maxDocs" value="" />
-            <cm:property name="rollover.numberOfShards" value=""/>
-            <cm:property name="rollover.numberOfReplicas" value=""/>
-            <cm:property name="rollover.indexMappingTotalFieldsLimit" value=""/>
-            <cm:property name="rollover.indexMaxDocValueFieldsSearch" value=""/>
+            <cm:property name="rollover.numberOfShards" value="5"/>
+            <cm:property name="rollover.numberOfReplicas" value="0"/>
+            <cm:property name="rollover.indexMappingTotalFieldsLimit" value="1000"/>
+            <cm:property name="rollover.indexMaxDocValueFieldsSearch" value="1000"/>
 
             <cm:property name="minimalOpenSearchVersion" value="2.1.0" />
             <cm:property name="maximalOpenSearchVersion" value="4.0.0" />
@@ -111,10 +106,6 @@
         <property name="conditionOSQueryBuilderDispatcher" ref="conditionOSQueryBuilderDispatcher"/>
         <property name="clusterName" value="${os.cluster.name}"/>
         <property name="indexPrefix" value="${os.index.prefix}"/>
-        <property name="monthlyIndexNumberOfShards" value="${os.monthlyIndex.numberOfShards}"/>
-        <property name="monthlyIndexNumberOfReplicas" value="${os.monthlyIndex.numberOfReplicas}"/>
-        <property name="monthlyIndexMappingTotalFieldsLimit" value="${os.monthlyIndex.indexMappingTotalFieldsLimit}"/>
-        <property name="monthlyIndexMaxDocValueFieldsSearch" value="${os.monthlyIndex.indexMaxDocValueFieldsSearch}"/>
         <property name="numberOfShards" value="${os.numberOfShards}"/>
         <property name="numberOfReplicas" value="${os.numberOfReplicas}"/>
         <property name="indexMappingTotalFieldsLimit" value="${os.indexMappingTotalFieldsLimit}"/>
@@ -122,7 +113,6 @@
         <property name="openSearchAddresses" value="${os.openSearchAddresses}"/>
         <property name="fatalIllegalStateErrors" value="${os.fatalIllegalStateErrors}"/>
         <property name="defaultQueryLimit" value="${os.defaultQueryLimit}"/>
-        <property name="itemsMonthlyIndexedOverride" value="${os.monthlyIndex.itemsMonthlyIndexedOverride}" />
         <property name="routingByType">
             <map>
             </map>
