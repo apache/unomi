@@ -35,11 +35,35 @@ public interface BundleWatcher {
      */
     List<ServerInfo> getServerInfos();
 
+    /**
+     * Indicates whether Unomi startup has completed. Implementations typically track
+     * required bundles and initialization tasks to decide when the system is fully ready.
+     *
+     * @return {@code true} if startup is complete; {@code false} otherwise
+     */
     boolean isStartupComplete();
 
+    /**
+     * Indicates whether all additional (optional) bundles configured as required have
+     * started successfully.
+     *
+     * @return {@code true} if all additional required bundles have started; {@code false} otherwise
+     */
     boolean allAdditionalBundleStarted();
 
+    /**
+     * Registers a bundle symbolic name as required for startup completion. Implementations
+     * should monitor its lifecycle and include it in readiness checks.
+     *
+     * @param bundleName the bundle symbolic name to add as required
+     */
     public void addRequiredBundle(String bundleName);
 
+    /**
+     * Unregisters a previously required bundle symbolic name from startup checks.
+     *
+     * @param bundleName the bundle symbolic name to remove
+     * @return {@code true} if the bundle was previously registered and got removed; {@code false} otherwise
+     */
     public boolean removeRequiredBundle(String bundleName);
 }

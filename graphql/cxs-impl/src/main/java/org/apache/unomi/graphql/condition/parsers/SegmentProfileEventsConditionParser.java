@@ -184,16 +184,9 @@ public class SegmentProfileEventsConditionParser {
                 tuple.put("fieldName", "cdp_timestamp_gte");
             }
 
-            Object propertyValueDate = condition.getParameter("propertyValueDate");
-            if (propertyValueDate == null) {
-                tuple.put("fieldValue", null);
-            } else if (propertyValueDate instanceof Map){
-                // This shouldn't be needed since Jackson was upgraded to > 2.13, but we keep it for backwards compatibility with older data sets
-                final OffsetDateTime fieldValue = OffsetDateTime.parse((String) propertyValueDate); //With jackson JSR, OffsetDateTime are well serialized.
+            final OffsetDateTime fieldValue = OffsetDateTime.parse((String) condition.getParameter("propertyValueDate")); //With jackson JSR, OffsetDateTime are well serialized.
+
                 tuple.put("fieldValue", fieldValue != null ? fieldValue.toString() : null);
-            } else {
-                tuple.put("fieldValue", propertyValueDate.toString());
-            }
         } else {
             if ("source.itemId".equals(propertyName)) {
                 tuple.put("fieldName", "cdp_sourceID_equals");

@@ -165,14 +165,10 @@ public class RestServiceUtilsImpl implements RestServiceUtils {
                     } else if (!requireAnonymousBrowsing && !anonymousSessionProfile) {
                         // User does not want to browse anonymously, use the real profile. Check that session contains the current profile.
                         sessionProfile = eventsRequestContext.getProfile();
-                        if (sessionProfile != null) {
-                            if (!eventsRequestContext.getSession().getProfileId().equals(sessionProfile.getItemId())) {
-                                eventsRequestContext.addChanges(EventService.SESSION_UPDATED);
-                            }
-                            eventsRequestContext.getSession().setProfile(sessionProfile);
-                        } else {
-                            LOGGER.warn("Null profile in event request context");
+                        if (!eventsRequestContext.getSession().getProfileId().equals(sessionProfile.getItemId())) {
+                            eventsRequestContext.addChanges(EventService.SESSION_UPDATED);
                         }
+                        eventsRequestContext.getSession().setProfile(sessionProfile);
                     }
                 }
             }
