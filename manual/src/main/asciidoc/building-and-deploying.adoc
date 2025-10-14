@@ -279,11 +279,20 @@ to use these tests is to run them from a continuous integration server such as J
 
 Note : the integration tests require a JDK 11 or more recent !
 
-To run the tests simply activate the following profile :
+To run the tests simply activate the following profile:
 
 [source]
 ----
 mvn -P integration-tests clean install
+----
+
+===== Selecting the Search Engine for Integration Tests
+
+By default, integration tests target ElasticSearch. To run them against OpenSearch, set the activation property used by the OpenSearch profile (no additional -P flags are required):
+
+[source]
+----
+mvn -P integration-tests -Duse.opensearch=true clean install
 ----
 
 ==== Testing with an example page

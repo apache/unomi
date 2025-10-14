@@ -64,7 +64,9 @@ Apache Unomi supports both ElasticSearch and OpenSearch as search engine backend
 # Run with ElasticSearch (default)
 mvn clean install -P integration-tests
 
-# Run with OpenSearch 
+# Run with OpenSearch
+# Activate via property only. Do not pass -P opensearch or !elasticsearch;
+# the property alone handles activation/deactivation.
 mvn clean install -P integration-tests -Duse.opensearch=true
 ```
 
