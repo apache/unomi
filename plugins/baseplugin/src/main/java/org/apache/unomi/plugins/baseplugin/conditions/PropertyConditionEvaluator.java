@@ -34,10 +34,10 @@ import org.apache.unomi.persistence.spi.conditions.geo.DistanceUnit;
 import org.apache.unomi.plugins.baseplugin.conditions.accessors.HardcodedPropertyAccessor;
 import org.apache.unomi.scripting.ExpressionFilterFactory;
 import org.apache.unomi.scripting.SecureFilteringClassLoader;
+import org.apache.unomi.tracing.api.RequestTracer;
+import org.apache.unomi.tracing.api.TracerService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.unomi.tracing.api.TracerService;
-import org.apache.unomi.tracing.api.RequestTracer;
 
 import java.lang.reflect.Member;
 import java.lang.reflect.Modifier;
@@ -101,8 +101,8 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
         } else if (expectedValueDateExpr != null) {
             return getDate(actualValue).compareTo(getDate(expectedValueDateExpr));
         } else {
-            // We use toLowerCase here to match the behavior of the analyzer configuration in the persistence configuration
-            return actualValue.toString().toLowerCase().compareTo(expectedValue);
+            // We use foldToASCII here to match the behavior of the analyzer configuration in the persistence configuration
+            return ConditionContextHelper.foldToASCII(actualValue.toString()).compareTo(expectedValue);
         }
     }
 
@@ -182,7 +182,7 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
         RequestTracer tracer = null;
         if (tracerService != null && tracerService.isTracingEnabled()) {
             tracer = tracerService.getCurrentTracer();
-            tracer.startOperation("property", 
+            tracer.startOperation("property",
                 "Evaluating property condition", condition);
         }
 
@@ -226,7 +226,7 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
 
             final Object finalActualValue = actualValue;
             if (tracer != null) {
-                tracer.trace("Property value comparison: " + name + " " + op + " " + expectedValue, 
+                tracer.trace("Property value comparison: " + name + " " + op + " " + expectedValue,
                     new HashMap<String, Object>() {{
                         put("actualValue", finalActualValue);
                         put("expectedValue", expectedValue);
