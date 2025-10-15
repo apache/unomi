@@ -18,7 +18,7 @@
 package org.apache.unomi.persistence.opensearch;
 
 import org.apache.unomi.api.conditions.Condition;
-import org.apache.unomi.persistence.spi.conditions.ConditionContextHelper;
+import org.apache.unomi.persistence.spi.conditions.dispatcher.ConditionQueryBuilderDispatcherSupport;
 import org.apache.unomi.scripting.ScriptExecutor;
 import org.opensearch.client.opensearch._types.query_dsl.Query;
 import org.slf4j.Logger;
@@ -34,32 +34,21 @@ import java.util.concurrent.ConcurrentHashMap;
  * <p>
  * Responsibilities:
  * - Maintain a registry of available query builders by their IDs
- * - Resolve legacy queryBuilder IDs to the new canonical IDs using an
- *   immutable, hardcoded mapping for backward compatibility
+ * - Resolve legacy queryBuilder IDs to the canonical IDs using centralized mapping in
+ *   {@link org.apache.unomi.persistence.spi.conditions.dispatcher.ConditionQueryBuilderDispatcherSupport}
+ *   (with deprecation warnings)
  * - Build query fragments (filters) and full queries from {@link org.apache.unomi.api.conditions.Condition}
  * <p>
  * Notes:
- * - Legacy mappings are immutable and statically initialized; there is no runtime customization
+ * - Legacy mappings are centralized in SPI support; there is no runtime customization
  * - New IDs are always preferred; legacy IDs trigger a warning and are mapped transparently
  */
 public class ConditionOSQueryBuilderDispatcher {
     private static final Logger LOGGER = LoggerFactory.getLogger(ConditionOSQueryBuilderDispatcher.class.getName());
 
-    // Mapping of legacy queryBuilder IDs to new canonical IDs
-    private static final Map<String, String> LEGACY_TO_NEW_QUERY_BUILDER_IDS = Map.ofEntries(
-            Map.entry("idsConditionESQueryBuilder", "idsConditionQueryBuilder"),
-            Map.entry("geoLocationByPointSessionConditionESQueryBuilder", "geoLocationByPointSessionConditionQueryBuilder"),
-            Map.entry("pastEventConditionESQueryBuilder", "pastEventConditionQueryBuilder"),
-            Map.entry("booleanConditionESQueryBuilder", "booleanConditionQueryBuilder"),
-            Map.entry("notConditionESQueryBuilder", "notConditionQueryBuilder"),
-            Map.entry("matchAllConditionESQueryBuilder", "matchAllConditionQueryBuilder"),
-            Map.entry("propertyConditionESQueryBuilder", "propertyConditionQueryBuilder"),
-            Map.entry("sourceEventPropertyConditionESQueryBuilder", "sourceEventPropertyConditionQueryBuilder"),
-            Map.entry("nestedConditionESQueryBuilder", "nestedConditionQueryBuilder")
-    );
-
     private Map<String, ConditionOSQueryBuilder> queryBuilders = new ConcurrentHashMap<>();
     private ScriptExecutor scriptExecutor;
+    private final ConditionQueryBuilderDispatcherSupport support = new ConditionQueryBuilderDispatcherSupport();
 
     public ConditionOSQueryBuilderDispatcher() {
     }
@@ -110,11 +99,15 @@ public class ConditionOSQueryBuilderDispatcher {
         }
 
         // Find the appropriate query builder key (new or legacy)
-        String finalQueryBuilderKey = findQueryBuilderKey(queryBuilderKey, condition.getConditionTypeId());
+        String finalQueryBuilderKey = support.findQueryBuilderKey(
+                queryBuilderKey,
+                condition.getConditionTypeId(),
+                queryBuilders::containsKey,
+                LOGGER);
 
         if (finalQueryBuilderKey != null) {
             ConditionOSQueryBuilder queryBuilder = queryBuilders.get(finalQueryBuilderKey);
-            Condition contextualCondition = ConditionContextHelper.getContextualCondition(condition, context, scriptExecutor);
+            Condition contextualCondition = support.contextualize(condition, context, scriptExecutor);
             if (contextualCondition != null) {
                 return queryBuilder.buildQuery(contextualCondition, context, this);
             }
@@ -149,11 +142,15 @@ public class ConditionOSQueryBuilderDispatcher {
         }
 
         // Find the appropriate query builder key (new or legacy)
-        String finalQueryBuilderKey = findQueryBuilderKey(queryBuilderKey, condition.getConditionTypeId());
+        String finalQueryBuilderKey = support.findQueryBuilderKey(
+                queryBuilderKey,
+                condition.getConditionTypeId(),
+                queryBuilders::containsKey,
+                LOGGER);
 
         if (finalQueryBuilderKey != null) {
             ConditionOSQueryBuilder queryBuilder = queryBuilders.get(finalQueryBuilderKey);
-            Condition contextualCondition = ConditionContextHelper.getContextualCondition(condition, context, scriptExecutor);
+            Condition contextualCondition = support.contextualize(condition, context, scriptExecutor);
             if (contextualCondition != null) {
                 return queryBuilder.count(contextualCondition, context, this);
             }
@@ -165,36 +162,6 @@ public class ConditionOSQueryBuilderDispatcher {
             LOGGER.debug("No matching query builder for condition {} and context {}", condition, context);
         }
         throw new UnsupportedOperationException();
-    }
-
-    private String resolveLegacyQueryBuilderId(String queryBuilderId, String conditionTypeId) {
-        // This method only handles legacy ID mapping
-        if (!LEGACY_TO_NEW_QUERY_BUILDER_IDS.containsKey(queryBuilderId)) {
-            return null; // Not a legacy ID
-        }
-
-        // It's a legacy ID that needs mapping
-        String mappedId = LEGACY_TO_NEW_QUERY_BUILDER_IDS.get(queryBuilderId);
-        LOGGER.warn("DEPRECATED: Using legacy queryBuilderId '{}' for condition type '{}'. " +
-                        "Please update your condition definition to use the new queryBuilderId '{}'. " +
-                        "Legacy mappings are deprecated and may be removed in future versions.",
-                queryBuilderId, conditionTypeId, mappedId);
-        return mappedId;
-    }
-
-    private String findQueryBuilderKey(String queryBuilderKey, String conditionTypeId) {
-        // First try the queryBuilder ID directly (new IDs)
-        if (queryBuilders.containsKey(queryBuilderKey)) {
-            return queryBuilderKey;
-        }
-
-        // If not found, try legacy mapping
-        String legacyMappedId = resolveLegacyQueryBuilderId(queryBuilderKey, conditionTypeId);
-        if (legacyMappedId != null && queryBuilders.containsKey(legacyMappedId)) {
-            return legacyMappedId;
-        }
-
-        return null; // No matching query builder found
     }
 
 }
