@@ -357,6 +357,10 @@ public abstract class BaseIT extends KarafTestSupport {
                 replaceConfigurationFile("data/tmp/testLoginEventCondition.json", new File("src/test/resources/testLoginEventCondition.json")),
                 replaceConfigurationFile("data/tmp/testClickEventCondition.json", new File("src/test/resources/testClickEventCondition.json")),
                 replaceConfigurationFile("data/tmp/testRuleGroovyAction.json", new File("src/test/resources/testRuleGroovyAction.json")),
+                replaceConfigurationFile("data/tmp/conditions/testIdsConditionLegacy.json", new File("src/test/resources/conditions/testIdsConditionLegacy.json")),
+                replaceConfigurationFile("data/tmp/conditions/testIdsConditionNew.json", new File("src/test/resources/conditions/testIdsConditionNew.json")),
+                replaceConfigurationFile("data/tmp/conditions/testBooleanConditionLegacy.json", new File("src/test/resources/conditions/testBooleanConditionLegacy.json")),
+                replaceConfigurationFile("data/tmp/conditions/testPropertyConditionLegacy.json", new File("src/test/resources/conditions/testPropertyConditionLegacy.json")),
                 replaceConfigurationFile("data/tmp/groovy/UpdateAddressAction.groovy", new File("src/test/resources/groovy/UpdateAddressAction.groovy")),
 
                 editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.rootLogger.level", "INFO"),

@@ -186,7 +186,7 @@ public class SegmentProfileEventsConditionParser {
 
             final OffsetDateTime fieldValue = OffsetDateTime.parse((String) condition.getParameter("propertyValueDate")); //With jackson JSR, OffsetDateTime are well serialized.
 
-                tuple.put("fieldValue", fieldValue != null ? fieldValue.toString() : null);
+            tuple.put("fieldValue", fieldValue != null ? fieldValue.toString() : null);
         } else {
             if ("source.itemId".equals(propertyName)) {
                 tuple.put("fieldName", "cdp_sourceID_equals");

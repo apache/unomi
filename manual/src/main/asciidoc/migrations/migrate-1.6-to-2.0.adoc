@@ -187,14 +187,14 @@ docker run \
     -e KARAF_OPTS="-Dunomi.autoMigrate=1.6.0" \
     --v /home/unomi/migration/scripts/:/opt/apache-unomi/data/migration/scripts \
     --v /home/unomi/migration/assets/:/tmp/assets/ \
-    apache/unomi:3.0.0-SNAPSHOT
+    apache/unomi:2.0.0
 ----
 
 You might need to provide additional variables (see table above) depending of your environment.
 
 If the migration fails, you can simply restart this command.
 
-Using the above command, Unomi 2.0 will not start automatically at the end of the migration. You can start Unomi automatically at the end of the migration by passing: `-e KARAF_OPTS="-Dunomi.autoMigrate=1.6.0 -Dunomi.autoStart=elasticsearch"` (or `-Dunomi.autoStart=opensearch` for OpenSearch, or any other start features configuration name).
+Using the above command, Unomi 2.0 will not start automatically at the end of the migration. You can start Unomi automatically at the end of the migration by passing: `-e KARAF_OPTS="-Dunomi.autoMigrate=1.6.0 -Dunomi.autoStart=true"`.
 
 ===== Step by step migration with Docker
 

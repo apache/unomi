@@ -65,6 +65,7 @@ import org.junit.runners.Suite.SuiteClasses;
         GraphQLProfileAliasesIT.class,
         SendEventActionIT.class,
         HealthCheckIT.class,
+        LegacyQueryBuilderMappingIT.class,
 })
 public class AllITs {
 }

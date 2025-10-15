@@ -887,18 +887,67 @@ By default, Apache Unomi comes with two predefined start features configurations
 [source]
 ----
 startFeatures = [
-    "elasticsearch=unomi-base,unomi-startup,unomi-elasticsearch-core,unomi-persistence-core,unomi-services,unomi-rest-api,unomi-cxs-lists-extension,unomi-cxs-geonames-extension,unomi-cxs-privacy-extension,unomi-elasticsearch-conditions,unomi-plugins-base,unomi-plugins-request,unomi-plugins-mail,unomi-plugins-optimization-test,unomi-shell-dev-commands,unomi-healthcheck,unomi-wab,unomi-web-tracker,unomi-healthcheck,unomi-router-karaf-feature,unomi-groovy-actions,unomi-rest-ui,unomi-startup-complete",
-    "opensearch=unomi-base,unomi-startup,unomi-opensearch-core,unomi-persistence-core,unomi-services,unomi-rest-api,unomi-cxs-lists-extension,unomi-cxs-geonames-extension,unomi-cxs-privacy-extension,unomi-opensearch-conditions,unomi-plugins-base,unomi-plugins-request,unomi-plugins-mail,unomi-plugins-optimization-test,unomi-shell-dev-commands,unomi-healthcheck,unomi-wab,unomi-web-tracker,unomi-healthcheck,unomi-router-karaf-feature,unomi-groovy-actions,unomi-rest-ui,unomi-startup-complete"
+    "elasticsearch=unomi-base,unomi-startup,unomi-elasticsearch-core,unomi-persistence-core,unomi-services,unomi-rest-api,unomi-cxs-lists-extension,unomi-cxs-geonames-extension,unomi-cxs-privacy-extension,unomi-elasticsearch-conditions,unomi-plugins-base,unomi-plugins-request,unomi-plugins-mail,unomi-plugins-optimization-test,unomi-shell-dev-commands,unomi-wab,unomi-web-tracker,unomi-healthcheck,unomi-router-karaf-feature,unomi-groovy-actions,unomi-rest-ui,unomi-startup-complete",
+    "opensearch=unomi-base,unomi-startup,unomi-opensearch-core,unomi-persistence-core,unomi-services,unomi-rest-api,unomi-cxs-lists-extension,unomi-cxs-geonames-extension,unomi-cxs-privacy-extension,unomi-opensearch-conditions,unomi-plugins-base,unomi-plugins-request,unomi-plugins-mail,unomi-plugins-optimization-test,unomi-shell-dev-commands,unomi-wab,unomi-web-tracker,unomi-healthcheck,unomi-router-karaf-feature,unomi-groovy-actions,unomi-rest-ui,unomi-startup-complete"
 ]
 ----
 
-==== Customizing Start Features
+**Key Differences Between Configurations:**
 
-You can customize the start features configuration by modifying the `$MY_KARAF_HOME/etc/org.apache.unomi.start.cfg` file. This allows you to:
+The only difference between the Elasticsearch and OpenSearch configurations is the persistence layer:
 
-* **Add new configurations**: Create custom start features configurations for specific deployment scenarios
-* **Modify existing configurations**: Add or remove features from the default elasticsearch or opensearch configurations
-* **Create minimal configurations**: Define lightweight configurations with only essential features
+* **Elasticsearch**: Uses `unomi-elasticsearch-core` and `unomi-elasticsearch-conditions`
+* **OpenSearch**: Uses `unomi-opensearch-core` and `unomi-opensearch-conditions`
+
+All other features remain identical between both configurations.
+
+==== Environment-Specific Configurations
+
+You can create different configurations for different deployment environments by including or excluding certain features:
+
+**Development Environment** (includes development tools and debugging features):
+[source]
+----
+startFeatures = [
+    "elasticsearch-dev=unomi-base,unomi-startup,unomi-elasticsearch-core,unomi-persistence-core,unomi-services,unomi-rest-api,unomi-cxs-lists-extension,unomi-cxs-geonames-extension,unomi-cxs-privacy-extension,unomi-elasticsearch-conditions,unomi-plugins-base,unomi-plugins-request,unomi-plugins-mail,unomi-plugins-optimization-test,unomi-shell-dev-commands,unomi-wab,unomi-web-tracker,unomi-healthcheck,unomi-router-karaf-feature,unomi-groovy-actions,unomi-rest-ui,unomi-startup-complete",
+    "opensearch-dev=unomi-base,unomi-startup,unomi-opensearch-core,unomi-persistence-core,unomi-services,unomi-rest-api,unomi-cxs-lists-extension,unomi-cxs-geonames-extension,unomi-cxs-privacy-extension,unomi-opensearch-conditions,unomi-plugins-base,unomi-plugins-request,unomi-plugins-mail,unomi-plugins-optimization-test,unomi-shell-dev-commands,unomi-wab,unomi-web-tracker,unomi-healthcheck,unomi-router-karaf-feature,unomi-groovy-actions,unomi-rest-ui,unomi-startup-complete"
+]
+----
+
+**Staging Environment** (production-like but with some development features):
+[source]
+----
+startFeatures = [
+    "elasticsearch-staging=unomi-base,unomi-startup,unomi-elasticsearch-core,unomi-persistence-core,unomi-services,unomi-rest-api,unomi-cxs-lists-extension,unomi-cxs-geonames-extension,unomi-cxs-privacy-extension,unomi-elasticsearch-conditions,unomi-plugins-base,unomi-plugins-request,unomi-plugins-mail,unomi-shell-dev-commands,unomi-wab,unomi-web-tracker,unomi-healthcheck,unomi-router-karaf-feature,unomi-groovy-actions,unomi-rest-ui,unomi-startup-complete",
+    "opensearch-staging=unomi-base,unomi-startup,unomi-opensearch-core,unomi-persistence-core,unomi-services,unomi-rest-api,unomi-cxs-lists-extension,unomi-cxs-geonames-extension,unomi-cxs-privacy-extension,unomi-opensearch-conditions,unomi-plugins-base,unomi-plugins-request,unomi-plugins-mail,unomi-shell-dev-commands,unomi-wab,unomi-web-tracker,unomi-healthcheck,unomi-router-karaf-feature,unomi-groovy-actions,unomi-rest-ui,unomi-startup-complete"
+]
+----
+
+**Production Environment** (minimal, secure configuration):
+[source]
+----
+startFeatures = [
+    "elasticsearch-prod=unomi-base,unomi-startup,unomi-elasticsearch-core,unomi-persistence-core,unomi-services,unomi-rest-api,unomi-cxs-lists-extension,unomi-cxs-geonames-extension,unomi-cxs-privacy-extension,unomi-elasticsearch-conditions,unomi-plugins-base,unomi-plugins-request,unomi-plugins-mail,unomi-wab,unomi-web-tracker,unomi-healthcheck,unomi-router-karaf-feature,unomi-groovy-actions,unomi-rest-ui,unomi-startup-complete",
+    "opensearch-prod=unomi-base,unomi-startup,unomi-opensearch-core,unomi-persistence-core,unomi-services,unomi-rest-api,unomi-cxs-lists-extension,unomi-cxs-geonames-extension,unomi-cxs-privacy-extension,unomi-opensearch-conditions,unomi-plugins-base,unomi-plugins-request,unomi-plugins-mail,unomi-wab,unomi-web-tracker,unomi-healthcheck,unomi-router-karaf-feature,unomi-groovy-actions,unomi-rest-ui,unomi-startup-complete"
+]
+----
+
+**Environment Differences Summary:**
+
+[cols="1,1,1,1"]
+|===
+|Feature |Development |Staging |Production
+
+|`unomi-plugins-optimization-test`
+|✓ (included)
+|✗ (excluded)
+|✗ (excluded)
+
+|`unomi-shell-dev-commands`
+|✓ (included)
+|✓ (included)
+|✗ (excluded)
+|===
 
 ==== Configuration Format
 
@@ -913,37 +962,46 @@ Where:
 * `configuration-name` is the identifier you'll use with the `unomi:start` command
 * The comma-separated list contains the Karaf features to install and start
 
-==== Example: Creating a Custom Configuration
+==== Using Custom Configurations
 
-Here's an example of how to create a custom "minimal" configuration that only includes essential features:
-
-[source]
-----
-startFeatures = [
-    "elasticsearch=unomi-base,unomi-startup,unomi-elasticsearch-core,unomi-persistence-core,unomi-services,unomi-rest-api,unomi-startup-complete",
-    "opensearch=unomi-base,unomi-startup,unomi-opensearch-core,unomi-persistence-core,unomi-services,unomi-rest-api,unomi-startup-complete",
-    "minimal=unomi-base,unomi-startup,unomi-elasticsearch-core,unomi-persistence-core,unomi-services,unomi-rest-api,unomi-startup-complete"
-]
-----
-
-You can then use your custom configuration with:
+You can use your custom configurations with:
 
 [source]
 ----
-unomi:start minimal
+# Development environment
+unomi:start elasticsearch-dev
+unomi:start opensearch-dev
+
+# Staging environment  
+unomi:start elasticsearch-staging
+unomi:start opensearch-staging
+
+# Production environment
+unomi:start elasticsearch-prod
+unomi:start opensearch-prod
 ----
 
-==== Example: Adding Features to Existing Configuration
+==== Auto-Start Configuration
 
-To add additional features to an existing configuration, simply modify the feature list:
+You can configure Apache Unomi to automatically start with a specific start features configuration when the server boots up. This is useful for production deployments where you want the server to start automatically without manual intervention.
+
+To enable auto-start, set the `unomi.autoStart` system property or `UNOMI_AUTO_START` environment variable to the name of your desired start features configuration:
 
 [source]
 ----
-startFeatures = [
-    "elasticsearch=unomi-base,unomi-startup,unomi-elasticsearch-core,unomi-persistence-core,unomi-services,unomi-rest-api,unomi-cxs-lists-extension,unomi-cxs-geonames-extension,unomi-cxs-privacy-extension,unomi-elasticsearch-conditions,unomi-plugins-base,unomi-plugins-request,unomi-plugins-mail,unomi-plugins-optimization-test,unomi-shell-dev-commands,unomi-healthcheck,unomi-wab,unomi-web-tracker,unomi-healthcheck,unomi-router-karaf-feature,unomi-groovy-actions,unomi-rest-ui,unomi-startup-complete,my-custom-feature",
-    "opensearch=unomi-base,unomi-startup,unomi-opensearch-core,unomi-persistence-core,unomi-services,unomi-rest-api,unomi-cxs-lists-extension,unomi-cxs-geonames-extension,unomi-cxs-privacy-extension,unomi-opensearch-conditions,unomi-plugins-base,unomi-plugins-request,unomi-plugins-mail,unomi-plugins-optimization-test,unomi-shell-dev-commands,unomi-healthcheck,unomi-wab,unomi-web-tracker,unomi-healthcheck,unomi-router-karaf-feature,unomi-groovy-actions,unomi-rest-ui,unomi-startup-complete,my-custom-feature"
-]
+# Using system property
+-Dunomi.autoStart=elasticsearch-prod
+
+# Using environment variable (Docker)
+UNOMI_AUTO_START=opensearch-prod
+
+# Using custom configuration
+UNOMI_AUTO_START=elasticsearch-staging
 ----
+
+The auto-start feature accepts any start features configuration name defined in your `org.apache.unomi.start.cfg` file. If you set it to `true`, it will default to the "elasticsearch" configuration for backward compatibility.
+
+Note: Auto-start only works when Apache Unomi is not already running. If the server is already started, the auto-start setting will be ignored.
 
 ==== Important Notes
 
@@ -963,27 +1021,128 @@ feature:list
 
 This will show you all available features that can be included in your start features configuration.
 
-==== Auto-Start Configuration
+==== Docker Deployment with Custom Configuration
 
-You can configure Apache Unomi to automatically start with a specific start features configuration when the server boots up. This is useful for production deployments where you want the server to start automatically without manual intervention.
+For Docker deployments, you can mount your custom start configuration file to override the default settings:
 
-To enable auto-start, set the `unomi.autoStart` system property or `UNOMI_AUTO_START` environment variable to the name of your desired start features configuration:
-
-[source]
+[source,yaml]
 ----
-# Using system property
--Dunomi.autoStart=elasticsearch
-
-# Using environment variable (Docker)
-UNOMI_AUTO_START=opensearch
-
-# Using custom configuration
-UNOMI_AUTO_START=minimal
+version: '3.8'
+services:
+  unomi:
+    image: apache/unomi:3.0.0
+    volumes:
+      - ./custom-start.cfg:/opt/apache-unomi/etc/org.apache.unomi.start.cfg
+    environment:
+      - UNOMI_AUTO_START=elasticsearch-prod  # or opensearch-prod
+    depends_on:
+      - elasticsearch
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:9.15.0
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
 ----
 
-The auto-start feature accepts any start features configuration name defined in your `org.apache.unomi.start.cfg` file. If you set it to `true`, it will default to the "elasticsearch" configuration for backward compatibility.
+**Key Points:**
+- Mount your custom configuration file to `/opt/apache-unomi/etc/org.apache.unomi.start.cfg`
+- Use the `UNOMI_AUTO_START` environment variable to specify which configuration to use
+- The configuration file will override the default settings when the container starts
 
-Note: Auto-start only works when Apache Unomi is not already running. If the server is already started, the auto-start setting will be ignored.
+=== Customizing Apache Unomi Distribution
+
+Apache Unomi allows you to create custom distributions by repackaging the standard distribution with your own configuration files and customizations. This is useful for creating deployment-specific packages that include your custom configurations, plugins, and settings.
+
+==== Note on Custom Distributions (Advanced)
+
+You can build custom distributions of Unomi using the Karaf Maven Plugin to assemble features and overlay configuration. This is an advanced path and not required for most users. We recommend Docker-based packaging and configuration overrides as documented above.
+
+For details about custom distributions, see the Karaf documentation (Karaf Maven Plugin):
+
+`https://karaf.apache.org/manual/latest/#_karaf_maven_plugin`
+
+==== Configuration Override Priority
+
+Apache Unomi follows this priority order for configuration files (highest to lowest priority):
+
+1. **Environment Variables**: Override any configuration property
+2. **Custom Configuration Files**: Files in `etc/` directory override defaults
+3. **Default Configuration Files**: Built-in configuration files
+
+**Example of Configuration Override:**
+
+Default configuration in `etc/custom.system.properties`:
+[source,properties]
+----
+org.apache.unomi.cluster.public.address=${env:UNOMI_PUBLIC_ADDRESS:-http://localhost:8181}
+----
+
+Custom override in `etc/unomi.custom.system.properties`:
+[source,properties]
+----
+org.apache.unomi.cluster.public.address=https://unomi.example.com
+----
+
+Environment variable override:
+[source,bash]
+----
+export UNOMI_PUBLIC_ADDRESS=https://production.unomi.example.com
+----
+
+**Final Result**: The system will use `https://production.unomi.example.com` (environment variable takes precedence).
+
+==== Best Practices for Custom Distributions
+
+1. **Version Control**: Keep your custom configuration files in version control
+2. **Documentation**: Document all customizations and their purposes
+3. **Testing**: Test your custom distribution thoroughly before deployment
+4. **Backup**: Always backup the original distribution before customization
+5. **Upgrade Path**: Plan how to apply your customizations to future Apache Unomi versions
+
+==== Deployment with Custom Distribution
+
+Once you have created your custom distribution, you can deploy it using the same methods as the standard distribution:
+
+**Docker Deployment:**
+[source,yaml]
+----
+version: '3.8'
+services:
+  unomi:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - UNOMI_AUTO_START=elasticsearch-prod
+    depends_on:
+      - elasticsearch
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:9.15.0
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+----
+
+**Dockerfile:**
+[source,dockerfile]
+----
+FROM apache/unomi:3.0.0
+COPY apache-unomi-custom-*.tar.gz /tmp/
+RUN cd /opt/apache-unomi && tar -xzf /tmp/apache-unomi-custom-*.tar.gz
+----
+
+**Traditional Deployment:**
+[source,bash]
+----
+# Extract your custom distribution
+tar -xzf apache-unomi-custom-*.tar.gz
+cd apache-unomi-custom-*
+
+# Start with your custom configuration
+./bin/karaf start
+./bin/karaf shell
+unomi:start elasticsearch-prod
+----
 
 === Health Check Extension
 
