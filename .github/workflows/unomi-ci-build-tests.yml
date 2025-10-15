@@ -30,6 +30,7 @@ jobs:
     needs: unit-tests
     runs-on: ubuntu-latest
     strategy:
+      max-parallel: 1
       matrix:
         include:
           - search-engine: elasticsearch
