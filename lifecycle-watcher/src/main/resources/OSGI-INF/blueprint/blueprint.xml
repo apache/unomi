@@ -28,7 +28,7 @@
                              update-strategy="reload" placeholder-prefix="${lifecycle.">
         <cm:default-properties>
             <cm:property name="checkStartupState.refresh.interval" value="60"/>
-            <cm:property name="requiredServices" value="(osgi.service.blueprint.compname=elasticSearchPersistenceServiceImpl)" />
+            <cm:property name="requiredServices" value="(objectClass=org.apache.unomi.persistence.spi.PersistenceService)" />
         </cm:default-properties>
     </cm:property-placeholder>
 
@@ -36,7 +36,6 @@
         <property name="bundleContext" ref="blueprintBundleContext"/>
         <property name="requiredServices" value="${lifecycle.requiredServices}" />
         <property name="checkStartupStateRefreshInterval" value="${lifecycle.checkStartupState.refresh.interval}"/>
-        <property name="featuresService" ref="featuresService"/>
         <property name="requiredBundles">
             <map>
                 <entry key="org.apache.unomi.api" value="false"/>
@@ -44,8 +43,6 @@
                 <entry key="org.apache.unomi.scripting" value="false"/>
                 <entry key="org.apache.unomi.metrics" value="false"/>
                 <entry key="org.apache.unomi.persistence-spi" value="false"/>
-                <entry key="org.apache.unomi.persistence-elasticsearch-core" value="false"/>
-                <entry key="org.apache.unomi.persistence-elasticsearch-conditions" value="false"/>
                 <entry key="org.apache.unomi.services" value="false"/>
                 <entry key="org.apache.unomi.cxs-lists-extension-services" value="false"/>
                 <entry key="org.apache.unomi.cxs-lists-extension-rest" value="false"/>

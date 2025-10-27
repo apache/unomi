@@ -112,7 +112,7 @@
                                 <feature>framework</feature>
                             </framework>
                             <features>
-                                <feature>unomi-kar</feature>
+                                <feature>unomi-services</feature>
                                 <feature>unomi-weather-update-karaf-kar</feature>
                             </features>
                             <ignoreMissingConditions>true</ignoreMissingConditions>

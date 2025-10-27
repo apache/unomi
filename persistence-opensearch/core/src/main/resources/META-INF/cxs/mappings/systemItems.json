@@ -1,0 +1,141 @@
+{
+  "dynamic_templates": [
+    {
+      "all": {
+        "match": "*",
+        "match_mapping_type": "string",
+        "mapping": {
+          "type": "text",
+          "analyzer": "folding",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        }
+      }
+    }
+  ],
+  "properties": {
+    "cost": {
+      "type": "double"
+    },
+    "startDate": {
+      "type": "date"
+    },
+    "endDate": {
+      "type": "date"
+    },
+    "metadata": {
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "hidden": {
+          "type": "boolean"
+        },
+        "missingPlugins": {
+          "type": "boolean"
+        },
+        "readOnly": {
+          "type": "boolean"
+        }
+      }
+    },
+    "entryCondition":  {
+      "type": "object",
+      "enabled": false
+    },
+    "parentCondition":  {
+      "type": "object",
+      "enabled": false
+    },
+    "startEvent": {
+      "type": "object",
+      "enabled": false
+    },
+    "targetEvent": {
+      "type": "object",
+      "enabled": false
+    },
+    "eventDate": {
+      "type": "date"
+    },
+    "multivalued": {
+      "type": "boolean"
+    },
+    "numericRanges": {
+      "properties": {
+        "from": {
+          "type": "double"
+        },
+        "to": {
+          "type": "double"
+        }
+      }
+    },
+    "protected": {
+      "type": "boolean"
+    },
+    "rank": {
+      "type": "double"
+    },
+    "dateRanges": {
+      "properties": {
+      }
+    },
+    "priority": {
+      "type": "long"
+    },
+    "raiseEventOnlyOnceForProfile": {
+      "type": "boolean"
+    },
+    "raiseEventOnlyOnceForSession": {
+      "type": "boolean"
+    },
+    "raiseEventOnlyOnce": {
+      "type": "boolean"
+    },
+    "condition": {
+      "type": "object",
+      "enabled": false
+    },
+    "actions": {
+      "properties": {
+        "parameterValues": {
+          "type": "object",
+          "enabled": false
+        }
+      }
+    },
+    "elements": {
+      "properties": {
+        "condition": {
+          "type": "object",
+          "enabled": false
+        }
+      }
+    },
+
+    "patchedItemId": {
+      "type": "text"
+    },
+    "patchedItemType": {
+      "type": "text"
+    },
+    "operation": {
+      "type": "text"
+    },
+    "data": {
+      "type": "object",
+      "enabled": false
+    },
+    "lastApplication": {
+      "type": "date"
+    },
+    "schema": {
+      "type": "text"
+    }
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "metadata": {
+    "id": "testBooleanConditionLegacy",
+    "name": "Test Boolean Condition Legacy",
+    "description": "Test condition type using legacy boolean queryBuilder ID",
+    "systemTags": [
+      "profileTags",
+      "condition"
+    ],
+    "readOnly": false
+  },
+  "queryBuilder": "booleanConditionESQueryBuilder",
+  "parameters": [
+    {
+      "id": "comparisonOperator",
+      "type": "string",
+      "multivalued": false
+    },
+    {
+      "id": "propertyName",
+      "type": "string",
+      "multivalued": false
+    },
+    {
+      "id": "propertyValue",
+      "type": "string",
+      "multivalued": false
+    }
+  ]
+}

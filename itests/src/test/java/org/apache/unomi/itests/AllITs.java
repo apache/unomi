@@ -35,7 +35,7 @@ import org.junit.runners.Suite.SuiteClasses;
         MigrationIT.class,
         BasicIT.class,
         ConditionEvaluatorIT.class,
-        ConditionESQueryBuilderIT.class,
+        ConditionQueryBuilderIT.class,
         SegmentIT.class,
         ProfileServiceIT.class,
         ProfileImportBasicIT.class,
@@ -65,6 +65,7 @@ import org.junit.runners.Suite.SuiteClasses;
         GraphQLProfileAliasesIT.class,
         SendEventActionIT.class,
         HealthCheckIT.class,
+        LegacyQueryBuilderMappingIT.class,
 })
 public class AllITs {
 }

@@ -36,7 +36,7 @@ find here an overview of what a JSON condition descriptor looks like:
     "readOnly": true
   },
   "conditionEvaluator": "booleanConditionEvaluator",
-  "queryBuilder": "booleanConditionESQueryBuilder",
+  "queryBuilder": "booleanConditionQueryBuilder",
   "parameters": [
     {
       "id": "operator",
@@ -53,51 +53,58 @@ find here an overview of what a JSON condition descriptor looks like:
 }
 ----
 
-Note that condition types have two important identifiers:
+Note that condition types have three important identifiers:
 
-- conditionEvaluator
-- queryBuilder
+- conditionEvaluator: For real-time condition evaluation
+- queryBuilder: For building search engine queries (either ElasticSearch or OpenSearch)
 
-This is because condition types can either be used to build queries or to evaluate a condition in real time. When implementing
-a new condition type, both implementations much be provided. Here's an example an OSGi Blueprint registration for the
-above condition type descriptor:
+This is because condition types can be used in three ways:
+1. To evaluate a condition in real time
+2. To build ElasticSearch queries
+3. To build OpenSearch queries
 
-From https://github.com/apache/unomi/blob/master/plugins/baseplugin/src/main/resources/OSGI-INF/blueprint/blueprint.xml
+When implementing a new condition type, you need to provide implementations for each use case. Here's an example of OSGi Blueprint registrations for the above condition type descriptor:
 
 [source,xml]
 ----
-...
-    <service
-            interface="org.apache.unomi.persistence.elasticsearch.conditions.ConditionESQueryBuilder">
-        <service-properties>
-            <entry key="queryBuilderId" value="booleanConditionESQueryBuilder"/>
-        </service-properties>
-        <bean class="org.apache.unomi.plugins.baseplugin.conditions.BooleanConditionESQueryBuilder"/>
-    </service>
-...
-    <!-- Condition evaluators -->
-    <service interface="org.apache.unomi.persistence.elasticsearch.conditions.ConditionEvaluator">
-        <service-properties>
-            <entry key="conditionEvaluatorId" value="booleanConditionEvaluator"/>
-        </service-properties>
-        <bean class="org.apache.unomi.plugins.baseplugin.conditions.BooleanConditionEvaluator"/>
-    </service>
-...
+<!-- ElasticSearch Query Builder -->
+<service interface="org.apache.unomi.persistence.elasticsearch.ConditionESQueryBuilder">
+    <service-properties>
+        <entry key="queryBuilderId" value="booleanConditionQueryBuilder"/>
+    </service-properties>
+    <bean class="org.apache.unomi.persistence.elasticsearch.BooleanConditionESQueryBuilder"/>
+</service>
+
+<!-- OpenSearch Query Builder -->
+<service interface="org.apache.unomi.persistence.opensearch.ConditionOSQueryBuilder">
+    <service-properties>
+        <entry key="queryBuilderId" value="booleanConditionOSQueryBuilder"/>
+    </service-properties>
+    <bean class="org.apache.unomi.persistence.opensearch.BooleanConditionOSQueryBuilder"/>
+</service>
+
+<!-- Condition Evaluator (shared between both engines) -->
+<service interface="org.apache.unomi.persistence.spi.conditions.ConditionEvaluator">
+    <service-properties>
+        <entry key="conditionEvaluatorId" value="booleanConditionEvaluator"/>
+    </service-properties>
+    <bean class="org.apache.unomi.plugins.baseplugin.conditions.BooleanConditionEvaluator"/>
+</service>
 ----
 
-As you can see two Java classes are used to build a single condition type. You don't need to understand all these details in
-order to use condition types, but this might be interesting to know if you're interested in building your own condition
-type implementations. For more details on building your own custom plugins/extensions, please refer to the corresponding
-sections.
+As you can see, three Java classes are used to build a single condition type:
+1. A condition evaluator (shared)
+2. An ElasticSearch query builder
+3. An OpenSearch query builder
+
+You don't need to understand all these details to use condition types, but this might be interesting if you're building your own condition type implementations. For more details on building custom plugins/extensions with search engine specific implementations, please refer to the corresponding sections.
 
 ==== Existing condition type descriptors
 
-Here is a non-exhaustive list of condition types built into Apache Unomi. Feel free to browse the source code if you want to
-discover more. But the list below should get you started with the most useful conditions:
+Here is a non-exhaustive list of condition types built into Apache Unomi. Feel free to browse the source code if you want to discover more. The list below should get you started with the most useful conditions:
 
 - https://github.com/apache/unomi/tree/master/plugins/baseplugin/src/main/resources/META-INF/cxs/conditions
 
 Of course it is also possible to build your own custom condition types by developing custom Unomi plugins/extensions.
 
-You will also note that some condition types can re-use a `parentCondition`. This is a way to inherit from another condition
-type to make them more specific.
+You will also note that some condition types can re-use a `parentCondition`. This is a way to inherit from another condition type to make them more specific.

@@ -9,13 +9,13 @@
  *      http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
-        * distributed under the License is distributed on an "AS IS" BASIS,
-        * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-        * See the License for the specific language governing permissions and
-        * limitations under the License.
-        */
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
-        package org.apache.unomi.plugins.baseplugin.conditions;
+package org.apache.unomi.plugins.baseplugin.conditions;
 
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -80,7 +80,8 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
         } else if (expectedValueDateExpr != null) {
             return getDate(actualValue).compareTo(getDate(expectedValueDateExpr));
         } else {
-            return actualValue.toString().compareTo(expectedValue);
+            // We use foldToASCII here to match the behavior of the analyzer configuration in the persistence configuration
+            return ConditionContextHelper.foldToASCII(actualValue.toString()).compareTo(expectedValue);
         }
     }
 
@@ -292,8 +293,8 @@ public class PropertyConditionEvaluator implements ConditionEvaluator {
             }
 
             final GeoPoint expectedCenter = GeoPoint.fromString(centerString);
-            final DistanceUnit expectedUnit = unitString != null ? DistanceUnit.fromString(unitString) : DistanceUnit.DEFAULT;
-            final double distanceInMeters = expectedUnit.convert(distance, DistanceUnit.METERS);
+            final DistanceUnit expectedUnit = unitString != null ? DistanceUnit.fromString(unitString) : DistanceUnit.METERS;
+            final double distanceInMeters = expectedUnit.toMeters(distance);
 
             return expectedCenter.distanceTo(actualCenter) <= distanceInMeters;
         }

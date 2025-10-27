@@ -17,7 +17,9 @@
 package org.apache.unomi.shell.actions;
 
 import org.apache.karaf.shell.api.action.Action;
+import org.apache.karaf.shell.api.action.Argument;
 import org.apache.karaf.shell.api.action.Command;
+import org.apache.karaf.shell.api.action.Option;
 import org.apache.karaf.shell.api.action.lifecycle.Reference;
 import org.apache.karaf.shell.api.action.lifecycle.Service;
 import org.apache.unomi.shell.services.UnomiManagementService;
@@ -29,8 +31,20 @@ public class Start implements Action {
     @Reference
     UnomiManagementService unomiManagementService;
 
+    @Argument(name = "startFeatures", description = "Start features configuration to use (elasticsearch/opensearch)", valueToShowInHelp = "elasticsearch")
+    private String selectedStartFeatures = "elasticsearch";
+
+    @Option(name = "-i", aliases = "--install-only", description = "Only install features, don't start them", required = false, multiValued = false)
+    boolean installOnly = false;
+
     public Object execute() throws Exception {
-        unomiManagementService.startUnomi();
+        if (!selectedStartFeatures.equals("elasticsearch") &&
+                !selectedStartFeatures.equals("opensearch")) {
+            System.err.println("Invalid value '"+selectedStartFeatures+"' specified for start features configuration, will default to elasticsearch");
+            selectedStartFeatures = "elasticsearch";
+        }
+        System.out.println("Starting Apache Unomi with start features configuration: " + selectedStartFeatures);
+        unomiManagementService.startUnomi(selectedStartFeatures, !installOnly);
         return null;
     }
 

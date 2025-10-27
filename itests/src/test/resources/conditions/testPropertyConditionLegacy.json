@@ -1,0 +1,30 @@
+{
+  "metadata": {
+    "id": "testPropertyConditionLegacy",
+    "name": "Test Property Condition Legacy",
+    "description": "Test condition type using legacy property queryBuilder ID",
+    "systemTags": [
+      "profileTags",
+      "condition"
+    ],
+    "readOnly": false
+  },
+  "queryBuilder": "propertyConditionESQueryBuilder",
+  "parameters": [
+    {
+      "id": "comparisonOperator",
+      "type": "string",
+      "multivalued": false
+    },
+    {
+      "id": "propertyName",
+      "type": "string",
+      "multivalued": false
+    },
+    {
+      "id": "propertyValue",
+      "type": "string",
+      "multivalued": false
+    }
+  ]
+}

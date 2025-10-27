@@ -55,9 +55,11 @@ public class FilterPersonalizationStrategy implements PersonalizationStrategy {
             }
         }
 
-        String fallback = (String) personalizationRequest.getStrategyOptions().get("fallback");
-        if (fallback != null && !sortedContent.contains(fallback)) {
-            sortedContent.add(fallback);
+        if (personalizationRequest.getStrategyOptions() != null) {
+            String fallback = (String) personalizationRequest.getStrategyOptions().get("fallback");
+            if (fallback != null && !sortedContent.contains(fallback)) {
+                sortedContent.add(fallback);
+            }
         }
 
         return new PersonalizationResult(sortedContent);

@@ -1412,7 +1412,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     private void internalCreateRolloverTemplate(String itemName) throws IOException {
         if (!mappings.containsKey(itemName)) {
-            LOGGER.warn("Couldn't find mapping for item {}, won't create monthly index template", itemName);
+            LOGGER.warn("Couldn't find mapping for item {}, won't create rollover index template", itemName);
             return;
         }
 

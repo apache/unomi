@@ -17,8 +17,18 @@
 
 package org.apache.unomi.persistence.spi.aggregate;
 
+/**
+ * Aggregation that buckets documents by unique terms of a field.
+ * Optionally supports partitioning to split large cardinalities across multiple requests.
+ */
 public class TermsAggregate extends BaseAggregate{
+    /**
+     * Zero-based partition index when using partitioned terms aggregation; {@code -1} means disabled.
+     */
     private int partition = -1;
+    /**
+     * Total number of partitions when using partitioned terms aggregation; {@code -1} means disabled.
+     */
     private int numPartitions = -1;
 
 
@@ -32,10 +42,16 @@ public class TermsAggregate extends BaseAggregate{
         this.numPartitions = numPartitions;
     }
 
+    /**
+     * Returns the zero-based partition index, or {@code -1} if partitioning is disabled.
+     */
     public int getPartition() {
         return partition;
     }
 
+    /**
+     * Returns the total number of partitions, or {@code -1} if partitioning is disabled.
+     */
     public int getNumPartitions() {
         return numPartitions;
     }
