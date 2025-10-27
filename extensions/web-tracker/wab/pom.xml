@@ -98,17 +98,11 @@
                 <extensions>true</extensions>
                 <configuration>
                     <instructions>
-                        <_wab>src/main/webapp</_wab>
+                        <_wab>src/main/webapp,dist</_wab>
                         <Web-ContextPath>/tracker</Web-ContextPath>
                     </instructions>
                 </configuration>
             </plugin>
         </plugins>
-
-        <resources>
-            <resource>
-                <directory>dist</directory>
-            </resource>
-        </resources>
     </build>
 </project>
