@@ -26,6 +26,8 @@ import org.apache.unomi.api.Metadata;
 import org.apache.unomi.api.actions.ActionType;
 import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.SchedulerService;
+import org.apache.unomi.api.tasks.ScheduledTask;
+import org.apache.unomi.api.tasks.TaskExecutor;
 import org.apache.unomi.groovy.actions.GroovyAction;
 import org.apache.unomi.groovy.actions.GroovyBundleResourceConnector;
 import org.apache.unomi.groovy.actions.ScriptMetadata;
@@ -36,7 +38,10 @@ import org.codehaus.groovy.control.CompilerConfiguration;
 import org.codehaus.groovy.control.customizers.ImportCustomizer;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.wiring.BundleWiring;
-import org.osgi.service.component.annotations.*;
+import org.osgi.service.component.annotations.Activate;
+import org.osgi.service.component.annotations.Component;
+import org.osgi.service.component.annotations.Deactivate;
+import org.osgi.service.component.annotations.Reference;
 import org.osgi.service.metatype.annotations.Designate;
 import org.osgi.service.metatype.annotations.ObjectClassDefinition;
 import org.slf4j.Logger;
@@ -46,12 +51,9 @@ import java.io.IOException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.HashSet;
-import java.util.Set;
-
 import java.util.Map;
-import java.util.TimerTask;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -74,7 +76,6 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
     private BundleContext bundleContext;
     private GroovyScriptEngine groovyScriptEngine;
     private CompilerConfiguration compilerConfiguration;
-    private ScheduledFuture<?> scheduledFuture;
 
     private final Object compilationLock = new Object();
     private GroovyShell compilationShell;
@@ -84,10 +85,12 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(GroovyActionsServiceImpl.class.getName());
     private static final String BASE_SCRIPT_NAME = "BaseScript";
+    private static final String REFRESH_ACTIONS_TASK_TYPE = "refresh-groovy-actions";
 
     private DefinitionsService definitionsService;
     private PersistenceService persistenceService;
     private SchedulerService schedulerService;
+    private String refreshGroovyActionsTaskId;
     private GroovyActionsServiceConfig config;
 
     @Reference
@@ -103,9 +106,12 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
     @Reference
     public void setSchedulerService(SchedulerService schedulerService) {
         this.schedulerService = schedulerService;
+
+        if (schedulerService != null) {
+            LOGGER.info("SchedulerService was set after GroovyActionsService initialization, initializing scheduled tasks now");
+            initializeTimers();
+        }
     }
-
-
 
     @Activate
     public void start(GroovyActionsServiceConfig config, BundleContext bundleContext) {
@@ -130,15 +136,19 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
         // PRE-COMPILE ALL SCRIPTS AT STARTUP (no on-demand compilation)
         preloadAllScripts();
 
-        initializeTimers();
+        if (schedulerService != null) {
+            initializeTimers();
+        } else {
+            LOGGER.warn("SchedulerService not available during GroovyActionsService initialization. Scheduled tasks will not be registered. They will be registered when SchedulerService becomes available.");
+        }
         LOGGER.info("Groovy action service initialized with {} scripts", scriptMetadataCache.size());
     }
 
     @Deactivate
     public void onDestroy() {
         LOGGER.debug("onDestroy Method called");
-        if (scheduledFuture != null && !scheduledFuture.isCancelled()) {
-            scheduledFuture.cancel(true);
+        if (schedulerService != null && refreshGroovyActionsTaskId != null) {
+            schedulerService.cancelTask(refreshGroovyActionsTaskId);
         }
     }
 
@@ -342,7 +352,7 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
 
         ScriptMetadata removedMetadata = scriptMetadataCache.remove(actionName);
         persistenceService.remove(actionName, GroovyAction.class);
-        
+
         // Clean up error tracking to prevent memory leak
         loggedRefreshErrors.remove(actionName);
 
@@ -445,29 +455,29 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
                 }
 
                 errorCount++;
-                
+
                 // Prevent log spam for repeated compilation errors during refresh
                 String errorMessage = e.getMessage();
                 Set<String> scriptErrors = loggedRefreshErrors.get(actionName);
-                
+
                 if (scriptErrors == null || !scriptErrors.contains(errorMessage)) {
                     newErrorCount++;
                     LOGGER.error("Failed to refresh script: {}", actionName, e);
-                    
+
                     // Prevent memory leak by limiting tracked errors before adding new entries
                     if (scriptErrors == null && loggedRefreshErrors.size() >= MAX_LOGGED_ERRORS) {
                         // Remove one random entry to make space (simple eviction)
                         String firstKey = loggedRefreshErrors.keySet().iterator().next();
                         loggedRefreshErrors.remove(firstKey);
                     }
-                    
+
                     // Now safely add the error
                     if (scriptErrors == null) {
                         scriptErrors = ConcurrentHashMap.newKeySet();
                         loggedRefreshErrors.put(actionName, scriptErrors);
                     }
                     scriptErrors.add(errorMessage);
-                    
+
                     LOGGER.warn("Keeping existing version of script {} due to compilation error", actionName);
                 }
 
@@ -496,13 +506,32 @@ public class GroovyActionsServiceImpl implements GroovyActionsService {
      * Initializes periodic script refresh timer.
      */
     private void initializeTimers() {
-        TimerTask task = new TimerTask() {
+        TaskExecutor refreshGroovyActionsTaskExecutor = new TaskExecutor() {
             @Override
-            public void run() {
-                refreshGroovyActions();
+            public String getTaskType() {
+                return REFRESH_ACTIONS_TASK_TYPE;
+            }
+
+            @Override
+            public void execute(ScheduledTask task, TaskExecutor.TaskStatusCallback callback) {
+                try {
+                    refreshGroovyActions();
+                    callback.complete();
+                } catch (Exception e) {
+                    LOGGER.error("Error while reassigning profile data", e);
+                    callback.fail(e.getMessage());
+                }
             }
         };
-        scheduledFuture = schedulerService.getScheduleExecutorService().scheduleWithFixedDelay(task, 0, config.services_groovy_actions_refresh_interval(),
-                TimeUnit.MILLISECONDS);
+
+        schedulerService.registerTaskExecutor(refreshGroovyActionsTaskExecutor);
+
+        if (this.refreshGroovyActionsTaskId != null) {
+            schedulerService.cancelTask(this.refreshGroovyActionsTaskId);
+        }
+        this.refreshGroovyActionsTaskId = schedulerService.newTask(REFRESH_ACTIONS_TASK_TYPE)
+                .withPeriod(config.services_groovy_actions_refresh_interval(), TimeUnit.MILLISECONDS)
+                .nonPersistent()
+                .schedule().getItemId();
     }
 }
