@@ -16,14 +16,130 @@
 Apache Unomi 3 is a new release focused on integrations of the client to support elasticsearch version 9.
 It also include the upgrade of the Karaf version.
 
-==== Elasticsearch client upgrade
+=== Elasticsearch client upgrade
 
 The official client for Elasticsearch has been added to Apache Unomi in version 3.0 in order to replace the old rest-client which
 is not supported anymore.
 
 The documentation of the client can be found here: https://www.elastic.co/docs/reference/elasticsearch/clients/java
 
-==== Karaf upgrade
+=== Migrate from Elasticsearch 7 to Elasticsearch 9
+
+You can use the *remote reindex* API to upgrade directly from Elasticsearch 7 to Elasticsearch 9. This approach runs both clusters in parallel and uses Elasticsearch's remote reindex feature.
+
+This upgrade relies on a script that was specifically built taking jCustomer into consideration. If you are sharing the Elasticsearch instance with other projects, it might need to be adjusted.
+
+The script migration_es7-es9.sh at the root of the project and handles:
+* Regular indices and rollover indices with their aliases
+* ILM policies migration
+* Data reindexing from ES7 to ES9
+* Validation and comparison reporting
+
+==== Prerequisites
+
+* `bash` shell
+* `jq` command-line JSON processor
+* `curl` for HTTP requests
+* Access to both ES7 (source) and ES9 (destination) clusters
+* *ES9 must have `reindex.remote.whitelist` configured* (see configuration below)
+
+Install `jq` if not already installed:
+
+[source,bash]
+----
+# macOS
+brew install jq
+
+# Linux
+apt-get install jq
+# or
+yum install jq
+----
+
+==== Elasticsearch 9 Remote Reindex Configuration
+
+Before running the script, you must configure the remote reindex whitelist on your ES9 cluster. Add this to your `elasticsearch.yml` configuration file:
+
+[source,yaml]
+----
+reindex.remote.whitelist: "your-es7-host:9200"
+----
+
+==== Script Configuration
+
+The script uses environment variables for configuration. Export variables before running the script:
+
+[source,bash]
+----
+export ES7_HOST="http://your-es7-host:9200"
+export ES7_USER="elastic"
+export ES7_HOST_FROM_ES9="http://your-es7-host-viewed-from-es9:9200"
+export ES7_PASSWORD="your-es7-password"
+
+export ES9_HOST="http://your-es9-host:9200"
+export ES9_USER="elastic"
+export ES9_PASSWORD="your-es9-password"
+
+export INDEX_PREFIX="context-"
+export BATCH_SIZE="1000"
+----
+
+==== Configuration Variables
+
+[cols="1,3,1", options="header"]
+|===
+| Variable | Description | Default
+
+| ES7_HOST | Elasticsearch 7 URL | http://localhost:9200
+| ES7_HOST_FROM_ES9 | Elasticsearch 7 URL visible from Elasticsearch 9 | (value of ES7_HOST)
+| ES7_USER | ES7 username | elastic
+| ES7_PASSWORD | ES7 password | password
+| ES9_HOST | Elasticsearch 9 URL | http://localhost:9201
+| ES9_USER | ES9 username | elastic
+| ES9_PASSWORD | ES9 password | password
+| INDEX_PREFIX | Prefix for index names | context-
+| BATCH_SIZE | Reindex batch size | 1000
+|===
+
+== Execution
+
+Make the script executable and run it:
+
+[source,bash]
+----
+chmod +x migration_es7-es9.sh
+./migration_es7-es9.sh
+----
+
+==== What the Script Does
+
+* Discovers indices matching the configured patterns on ES7
+* Collects source statistics (document count, size) for each index
+* Migrates ILM policies from ES7 to ES9 if they exist
+* Creates indices on ES9 with the same settings and mappings
+* Recreates aliases with proper write index flags for rollover indices
+* Reindexes data from ES7 to ES9 using the remote reindex API
+* Collects destination statistics after migration
+* Displays a comparison report showing document counts and any mismatches
+
+==== Output
+
+The script provides detailed logging with timestamps and a final comparison report:
+
+----
+==========================================
+MIGRATION COMPARISON REPORT
+==========================================
+Index                                    |    Source Docs |      Dest Docs |     Difference |     Status
+-----------------------------------------+----------------+----------------+----------------+-----------
+context-profile                          |          15420 |          15420 |             +0 |      ✓ OK
+context-session-000001                   |           3420 |           3420 |             +0 |      ✓ OK
+==========================================
+✓ All indices migrated successfully!
+==========================================
+----
+
+=== Karaf upgrade
 
 The Karaf version has been upgraded from 4.2.15 to 4.4.8 in order to support the latest versions of the dependencies.
 This upgrade also brings support for Java 17.
