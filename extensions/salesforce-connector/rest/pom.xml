@@ -119,6 +119,7 @@
                         <item>scmVersion</item>
                         <item>timestamp</item>
                     </items>
+                    <revisionOnScmFailure>unknown</revisionOnScmFailure>
                 </configuration>
                 <executions>
                     <execution>

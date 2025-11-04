@@ -81,6 +81,7 @@
                     <shortRevisionLength>5</shortRevisionLength>
                     <doCheck>false</doCheck>
                     <doUpdate>false</doUpdate>
+                    <revisionOnScmFailure>unknown</revisionOnScmFailure>
                 </configuration>
             </plugin>
             <plugin>

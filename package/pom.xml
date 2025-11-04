@@ -150,6 +150,7 @@
                     <doCheck>false</doCheck>
                     <doUpdate>false</doUpdate>
                     <shortRevisionLength>8</shortRevisionLength>
+                    <revisionOnScmFailure>unknown</revisionOnScmFailure>
                 </configuration>
             </plugin>
             <plugin>
