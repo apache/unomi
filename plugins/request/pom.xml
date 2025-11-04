@@ -21,7 +21,7 @@
     <parent>
         <groupId>org.apache.unomi</groupId>
         <artifactId>unomi-plugins</artifactId>
-        <version>3.0.0-SNAPSHOT</version>
+        <version>3.0.0</version>
     </parent>
     <artifactId>unomi-plugins-request</artifactId>
     <name>Apache Unomi :: Plugins :: Request reading actions</name>

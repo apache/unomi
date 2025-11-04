@@ -21,7 +21,7 @@
     <parent>
         <groupId>org.apache.unomi</groupId>
         <artifactId>cxs-geonames</artifactId>
-        <version>3.0.0-SNAPSHOT</version>
+        <version>3.0.0</version>
     </parent>
     <artifactId>cxs-geonames-rest</artifactId>
     <name>Apache Unomi :: Extensions :: Geonames Database :: REST API</name>

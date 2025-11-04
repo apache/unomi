@@ -32,7 +32,7 @@
         event tracking server.
     </description>
     <url>https://unomi.apache.org</url>
-    <version>3.0.0-SNAPSHOT</version>
+    <version>3.0.0</version>
     <packaging>pom</packaging>
 
     <licenses>
@@ -169,7 +169,7 @@
     <scm>
         <connection>scm:git:https://gitbox.apache.org/repos/asf/unomi.git</connection>
         <developerConnection>scm:git:https://gitbox.apache.org/repos/asf/unomi.git</developerConnection>
-        <tag>HEAD</tag>
+        <tag>unomi-root-3.0.0</tag>
         <url>https://gitbox.apache.org/repos/asf/unomi.git</url>
     </scm>
 
