@@ -21,7 +21,7 @@
     <parent>
         <groupId>org.apache.unomi</groupId>
         <artifactId>unomi-salesforce-connector</artifactId>
-        <version>3.1.0-SNAPSHOT</version>
+        <version>3.0.0-SNAPSHOT</version>
     </parent>
     <artifactId>unomi-salesforce-connector-actions</artifactId>
     <name>Apache Unomi :: Extensions :: Salesforce connector :: Rule Actions</name>
