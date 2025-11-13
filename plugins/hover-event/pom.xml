@@ -40,14 +40,6 @@
         </dependencies>
     </dependencyManagement>
 
-    <dependencies>
-        <dependency>
-            <groupId>org.apache.unomi</groupId>
-            <artifactId>unomi-persistence-elasticsearch-core</artifactId>
-            <scope>provided</scope>
-        </dependency>
-    </dependencies>
-
     <build>
         <plugins>
             <plugin>

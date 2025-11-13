@@ -45,6 +45,13 @@
             <artifactId>org.apache.karaf.shell.console</artifactId>
             <scope>provided</scope>
         </dependency>
+
+        <dependency>
+            <groupId>org.apache.karaf.features</groupId>
+            <artifactId>org.apache.karaf.features.core</artifactId>
+            <scope>provided</scope> <!-- Provided because the service will be available in the Karaf runtime -->
+        </dependency>
+
         <dependency>
             <groupId>org.apache.httpcomponents</groupId>
             <artifactId>httpclient-osgi</artifactId>
@@ -78,6 +85,11 @@
             <artifactId>org.osgi.service.component.annotations</artifactId>
             <scope>provided</scope>
         </dependency>
+        <dependency>
+            <groupId>org.osgi</groupId>
+            <artifactId>org.osgi.service.metatype.annotations</artifactId>
+            <scope>provided</scope>
+        </dependency>
 
         <dependency>
             <groupId>org.apache.commons</groupId>
@@ -102,6 +114,12 @@
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.unomi</groupId>
+            <artifactId>unomi-lifecycle-watcher</artifactId>
+            <version>${project.version}</version>
             <scope>provided</scope>
         </dependency>
 
@@ -131,6 +149,7 @@
                 <configuration>
                     <instructions>
                         <Export-Package>
+                            org.apache.unomi.shell.services,
                             org.apache.unomi.shell.migration.utils,
                             org.apache.unomi.shell.migration.service,
                         </Export-Package>
@@ -158,6 +177,13 @@
                                     </file>
                                     <type>cfg</type>
                                     <classifier>migration</classifier>
+                                </artifact>
+                                <artifact>
+                                    <file>
+                                        src/main/resources/org.apache.unomi.start.cfg
+                                    </file>
+                                    <type>cfg</type>
+                                    <classifier>start</classifier>
                                 </artifact>
                             </artifacts>
                         </configuration>

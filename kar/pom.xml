@@ -77,6 +77,16 @@
         <!-- plugins -->
         <dependency>
             <groupId>org.apache.unomi</groupId>
+            <artifactId>unomi-persistence-opensearch-core</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.unomi</groupId>
+            <artifactId>unomi-persistence-opensearch-conditions</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.unomi</groupId>
             <artifactId>unomi-plugins-base</artifactId>
         </dependency>
         <dependency>
@@ -185,7 +195,7 @@
                         </configuration>
                     </execution>
                     <execution>
-                        <id>verify-feature</id>
+                        <id>verify-opensearch</id>
                         <phase>process-resources</phase>
                         <goals>
                             <goal>verify</goal>
@@ -201,10 +211,39 @@
                             <framework>
                                 <feature>framework</feature>
                             </framework>
+
                             <features>
-                                <feature>unomi-kar</feature>
+                                <feature>unomi-persistence-opensearch</feature>
                             </features>
-                            <ignoreMissingConditions>true</ignoreMissingConditions>
+
+                            <ignoreMissingConditions>false</ignoreMissingConditions>
+                        </configuration>
+                    </execution>
+
+                    <!-- 2b) VERIFY with Elasticsearch provider -->
+                    <execution>
+                        <id>verify-elasticsearch</id>
+                        <phase>process-resources</phase>
+                        <goals>
+                            <goal>verify</goal>
+                        </goals>
+                        <configuration>
+                            <descriptors>
+                                <descriptor>mvn:org.apache.karaf.features/standard/${karaf.version}/xml/features</descriptor>
+                                <descriptor>mvn:org.apache.karaf.features/enterprise/${karaf.version}/xml/features</descriptor>
+                                <descriptor>file:${project.build.directory}/feature/feature.xml</descriptor>
+                            </descriptors>
+                            <distribution>org.apache.karaf:apache-karaf:zip:${karaf.version}</distribution>
+                            <javase>17</javase>
+                            <framework>
+                                <feature>framework</feature>
+                            </framework>
+
+                            <features>
+                                <feature>unomi-persistence-elasticsearch</feature>
+                            </features>
+
+                            <ignoreMissingConditions>false</ignoreMissingConditions>
                         </configuration>
                     </execution>
                 </executions>

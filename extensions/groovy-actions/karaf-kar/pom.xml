@@ -61,16 +61,16 @@
                         </configuration>
                     </execution>
                     <execution>
-                        <id>verify-feature</id>
+                        <id>verify</id>
                         <phase>process-resources</phase>
-                        <goals>
-                            <goal>verify</goal>
-                        </goals>
+                        <goals><goal>verify</goal></goals>
                         <configuration>
                             <descriptors>
                                 <descriptor>mvn:org.apache.karaf.features/standard/${karaf.version}/xml/features</descriptor>
                                 <descriptor>mvn:org.apache.karaf.features/enterprise/${karaf.version}/xml/features</descriptor>
+                                <!-- Unomi KAR repo that contains unomi-base + provider features -->
                                 <descriptor>mvn:org.apache.unomi/unomi-kar/${project.version}/xml/features</descriptor>
+                                <!-- This module's freshly generated features.xml -->
                                 <descriptor>file:${project.build.directory}/feature/feature.xml</descriptor>
                             </descriptors>
                             <distribution>org.apache.karaf:apache-karaf:zip:${karaf.version}</distribution>
@@ -78,11 +78,11 @@
                             <framework>
                                 <feature>framework</feature>
                             </framework>
+
                             <features>
-                                <feature>wrap</feature>
-                                <feature>unomi-kar</feature>
                                 <feature>unomi-groovy-actions</feature>
                             </features>
+
                             <ignoreMissingConditions>true</ignoreMissingConditions>
                         </configuration>
                     </execution>

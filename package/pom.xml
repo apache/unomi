@@ -213,6 +213,17 @@
                                 </artifactItem>
                                 <artifactItem>
                                     <groupId>org.apache.unomi</groupId>
+                                    <artifactId>unomi-persistence-opensearch-core</artifactId>
+                                    <version>${project.version}</version>
+                                    <classifier>opensearchcfg</classifier>
+                                    <type>cfg</type>
+                                    <outputDirectory>
+                                        ${project.build.directory}/assembly/etc
+                                    </outputDirectory>
+                                    <destFileName>org.apache.unomi.persistence.opensearch.cfg</destFileName>
+                                </artifactItem>
+                                <artifactItem>
+                                    <groupId>org.apache.unomi</groupId>
                                     <artifactId>unomi-services</artifactId>
                                     <classifier>clustercfg</classifier>
                                     <type>cfg</type>
@@ -320,10 +331,6 @@
                     <startupBundles>
                         <bundle>mvn:org.apache.unomi/log4j-extension/${project.version}</bundle>
                     </startupBundles>
-                    <installedFeatures>
-                        <feature>wrapper</feature>
-                        <feature>cxf-commands</feature>
-                    </installedFeatures>
                     <startupFeatures>
                         <feature>eventadmin</feature>
                     </startupFeatures>
@@ -347,11 +354,20 @@
                         <feature>cxf-jaxrs</feature>
                         <feature>aries-blueprint</feature>
                         <feature>shell-compat</feature>
-                        <feature>unomi-kar</feature>
+                        <feature>unomi-base</feature>
+                        <feature>unomi-startup</feature>
+                    </bootFeatures>
+                    <installedFeatures>
+                        <feature>wrapper</feature>
+                        <feature>cxf-commands</feature>
+                        <feature>unomi-persistence-elasticsearch</feature>
+                        <feature>unomi-persistence-opensearch</feature>
+                        <feature>unomi-services</feature>
                         <feature>unomi-router-karaf-feature</feature>
                         <feature>unomi-groovy-actions</feature>
+                        <feature>unomi-web-applications</feature>
                         <feature>unomi-rest-ui</feature>
-                    </bootFeatures>
+                    </installedFeatures>
                     <javase>17</javase>
                 </configuration>
             </plugin>

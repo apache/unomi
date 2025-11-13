@@ -18,6 +18,9 @@ package org.apache.unomi.persistence.spi.conditions.datemath;
 
 /**
  * Exception thrown by the {@link DateMathParser} when a malformed date math expression is encountered.
+ * <p>
+ * Part of the Unomi-internal replacement for prior Elasticsearch utilities, allowing us to keep
+ * the same semantics without a direct dependency on Elasticsearch.
  */
 public class DateMathParseException extends RuntimeException {
     public DateMathParseException(String message) {

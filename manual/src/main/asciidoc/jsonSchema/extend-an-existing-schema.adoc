@@ -27,7 +27,7 @@ This means that if your events include additional properties, you will need exte
 
 An extension schema is a JSON schema whose id will be overridden and be defined by a keyword named *extends* in the *self* part of the extension.
 
-When sending an extension through the API, it will be persisted in Elasticsearch then will be merged to the targeted schema.
+When sending an extension through the API, it will be persisted in the search engine then will be merged to the targeted schema.
 
 What does “merge a schema” mean?
 The merge will simply add in the *allOf* keyword of the targeted schema a reference to the extensions.

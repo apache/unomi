@@ -77,7 +77,7 @@
     <bean id="propertyConditionEvaluator" class="org.apache.unomi.plugins.baseplugin.conditions.PropertyConditionEvaluator">
         <property name="usePropertyConditionOptimizations" value="${base.usePropertyConditionOptimizations}"/>
     </bean>
-    <service  interface="org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluator" ref="propertyConditionEvaluator">
+    <service interface="org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluator" ref="propertyConditionEvaluator">
         <service-properties>
             <entry key="conditionEvaluatorId" value="propertyConditionEvaluator"/>
         </service-properties>
@@ -115,6 +115,7 @@
             <property name="persistenceService" ref="persistenceService"/>
             <property name="pastEventConditionPersistenceQueryBuilder" ref="pastEventConditionPersistenceQueryBuilder"/>
             <property name="scriptExecutor" ref="scriptExecutor"/>
+            <property name="pastEventConditionPersistenceQueryBuilder" ref="pastEventConditionPersistenceQueryBuilder"/>
         </bean>
     </service>
 

@@ -45,7 +45,7 @@ import java.util.UUID;
 @RunWith(PaxExam.class)
 @ExamReactorStrategy(PerSuite.class)
 public class ProfileExportIT extends BaseIT {
-    private Logger logger = LoggerFactory.getLogger(ProfileExportIT.class);
+    private Logger LOGGER = LoggerFactory.getLogger(ProfileExportIT.class);
 
     @Test
     public void testExport() throws InterruptedException {
@@ -108,7 +108,7 @@ public class ProfileExportIT extends BaseIT {
         final File exportResult = new File("data/tmp/profiles-export.csv");
         keepTrying("Failed waiting for export file to be created", () -> exportResult, File::exists, 1000, 100);
 
-        logger.info("PATH : {}", exportResult.getAbsolutePath());
+        LOGGER.info("PATH : {}", exportResult.getAbsolutePath());
         Assert.assertTrue(exportResult.exists());
 
         List<ExportConfiguration> exportConfigurations = exportConfigurationService.getAll();

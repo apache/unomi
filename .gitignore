@@ -1,5 +1,6 @@
 /NOTICE-generated
 .settings
+.vscode
 target
 .classpath
 .project
@@ -16,4 +17,5 @@ rest/.miredot-offline.json
 /extensions/salesforce-connector/test.properties
 **/*.versionsBackup
 itests/src/main
+dependency_tree.txt
 .mvn/.develocity/develocity-workspace-id

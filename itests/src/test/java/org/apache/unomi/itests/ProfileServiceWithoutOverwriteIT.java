@@ -44,10 +44,14 @@ public class ProfileServiceWithoutOverwriteIT extends BaseIT {
 
     @Configuration
     public Option[] config() {
+
+        searchEngine = System.getProperty(SEARCH_ENGINE_PROPERTY, SEARCH_ENGINE_ELASTICSEARCH);
+        System.out.println("Search Engine: " + searchEngine);
+
         List<Option> options = new ArrayList<>();
         options.addAll(Arrays.asList(super.config()));
-        options.add(systemProperty("org.apache.unomi.elasticsearch.throwExceptions").value("true"));
-        options.add(systemProperty("org.apache.unomi.elasticsearch.alwaysOverwrite").value("false"));
+        options.add(systemProperty("org.apache.unomi."+searchEngine+".throwExceptions").value("true"));
+        options.add(systemProperty("org.apache.unomi."+searchEngine+".alwaysOverwrite").value("false"));
         return options.toArray(new Option[0]);
     }
 

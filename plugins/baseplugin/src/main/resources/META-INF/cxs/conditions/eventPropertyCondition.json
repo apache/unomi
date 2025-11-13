@@ -12,7 +12,7 @@
     "readOnly": true
   },
   "conditionEvaluator": "propertyConditionEvaluator",
-  "queryBuilder": "propertyConditionESQueryBuilder",
+  "queryBuilder": "propertyConditionQueryBuilder",
 
   "parameters": [
     {

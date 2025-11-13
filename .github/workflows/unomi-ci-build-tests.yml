@@ -20,36 +20,56 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: Set up JDK 17
-      uses: actions/setup-java@v1
+      uses: actions/setup-java@v4
       with:
-        java-version: 17
-        cache: maven
+        distribution: 'temurin'
+        java-version: '17'
+        cache: 'maven'
     - name: Build and Unit tests
       run: mvn -U -ntp -e clean install
 
   integration-tests:
     name: Execute integration tests
+    needs: unit-tests
     runs-on: ubuntu-latest
+    strategy:
+      max-parallel: 1
+      matrix:
+        include:
+          - search-engine: elasticsearch
+            port: 9400
+          - search-engine: opensearch
+            port: 9401
+      fail-fast: false
     steps:
       - uses: actions/checkout@v4
       - name: Set up JDK 17
-        uses: actions/setup-java@v1
+        uses: actions/setup-java@v4
         with:
-          java-version: 17
-          cache: maven
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'maven'
       - name: Integration tests
-        run: mvn -ntp clean install -Pintegration-tests
+        run: |
+          FLAGS="-Pintegration-tests"
+          if [ "${{ matrix.search-engine }}" = "opensearch" ]; then
+            # Trigger OpenSearch profile activation via property; do not pass any -P profile toggles
+            FLAGS="$FLAGS -Duse.opensearch=true"
+          fi
+          mvn -ntp clean install $FLAGS \
+            -Dopensearch.port=${{ matrix.port }} \
+            -Delasticsearch.port=${{ matrix.port }}
       - name: Archive code coverage logs
         uses: actions/upload-artifact@v4
         if: false # UNOMI-746 Reactivate if necessary
         with:
-          name: unomi-code-coverage-jdk17-${{ github.run_number }}
+          name: unomi-code-coverage-jdk17-${{ matrix.search-engine }}-${{ github.run_number }}
           path: itests/target/site/jacoco
       - name: Archive unomi logs
         uses: actions/upload-artifact@v4
         if: failure()
         with:
-          name: unomi-log-jdk17-${{ github.run_number }}
+          name: unomi-log-jdk17-${{ matrix.search-engine }}-${{ github.run_number }}
           path: |
             itests/target/exam/**/data/log
             itests/target/elasticsearch0/data

@@ -25,14 +25,32 @@ import org.osgi.framework.BundleException;
 public interface UnomiManagementService {
 
     /**
-     * This method will start Apache Unomi
+     * This method will start Apache Unomi with the specified start features configuration
+     * @param selectedStartFeatures the start features configuration to use
+     * @param mustStartFeatures true if features should be started, false if they should not
      * @throws BundleException if there was an error starting Unomi's bundles
      */
-    void startUnomi() throws BundleException;
+    void startUnomi(String selectedStartFeatures, boolean mustStartFeatures) throws Exception;
+
+    /**
+     * This method will start Apache Unomi with the specified start features configuration
+     * @param selectedStartFeatures the start features configuration to use
+     * @param mustStartFeatures true if features should be started, false if they should not
+     * @param waitForCompletion true if the method should wait for completion, false if it should not
+     * @throws BundleException if there was an error starting Unomi's bundles
+     */
+    void startUnomi(String selectedStartFeatures, boolean mustStartFeatures, boolean waitForCompletion) throws Exception;
 
     /**
      * This method will stop Apache Unomi
      * @throws BundleException if there was an error stopping Unomi's bundles
      */
-    void stopUnomi() throws BundleException;
+    void stopUnomi() throws Exception;
+
+    /**
+     * This method will stop Apache Unomi
+     * @param waitForCompletion true if the method should wait for completion, false if it should not
+     * @throws BundleException if there was an error stopping Unomi's bundles
+     */
+    void stopUnomi(boolean waitForCompletion) throws Exception;
 }
