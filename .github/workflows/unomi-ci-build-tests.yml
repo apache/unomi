@@ -9,6 +9,9 @@ on:
   pull_request:
     types: [opened, reopened, synchronize]
 
+env:
+  DEVELOCITY_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
+
 jobs:
   unit-tests:
     name: Execute unit tests
