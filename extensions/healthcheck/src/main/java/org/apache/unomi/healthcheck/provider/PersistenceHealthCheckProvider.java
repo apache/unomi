@@ -20,7 +20,6 @@ package org.apache.unomi.healthcheck.provider;
 import org.apache.unomi.api.PropertyType;
 import org.apache.unomi.healthcheck.HealthCheckResponse;
 import org.apache.unomi.healthcheck.HealthCheckProvider;
-import org.apache.unomi.healthcheck.HealthCheckConfig;
 import org.apache.unomi.healthcheck.util.CachedValue;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.osgi.service.component.annotations.Component;
@@ -47,25 +46,16 @@ public class PersistenceHealthCheckProvider implements HealthCheckProvider {
     @Reference(service = PersistenceService.class, cardinality = ReferenceCardinality.OPTIONAL, policy = ReferencePolicy.DYNAMIC, bind = "bind", unbind = "unbind")
     private volatile PersistenceService service;
 
-    @Reference(cardinality = ReferenceCardinality.OPTIONAL)
-    private volatile HealthCheckConfig healthCheckConfig;
-
-    // Lazily created delegate depending on the current persistence implementation
-    private volatile HealthCheckProvider delegate;
-
     public PersistenceHealthCheckProvider() {
         LOGGER.info("Building persistence health provider service...");
     }
 
     public void bind(PersistenceService service) {
         this.service = service;
-        // Reset delegate when persistence changes
-        this.delegate = null;
     }
 
     public void unbind(PersistenceService service) {
         this.service = null;
-        this.delegate = null;
     }
 
     @Override public String name() {
@@ -74,17 +64,6 @@ public class PersistenceHealthCheckProvider implements HealthCheckProvider {
 
     @Override public HealthCheckResponse execute() {
         LOGGER.debug("Health check persistence");
-
-        // If we can detect the underlying persistence, delegate to the appropriate provider
-        HealthCheckProvider resolved = resolveDelegate();
-        if (resolved != null) {
-            if (resolved instanceof PersistenceEngineHealthProvider) {
-                return ((PersistenceEngineHealthProvider) resolved).detailed();
-            }
-            return resolved.execute();
-        }
-
-        // Fallback to legacy behavior if no delegate is available yet
         if (cache.isStaled() || cache.getValue().isDown() || cache.getValue().isError()) {
             cache.setValue(refresh());
         }
@@ -108,50 +87,5 @@ public class PersistenceHealthCheckProvider implements HealthCheckProvider {
             LOGGER.error("Error while checking persistence health", e);
         }
         return builder.build();
-    }
-
-    private HealthCheckProvider resolveDelegate() {
-        try {
-            if (delegate != null) {
-                return delegate;
-            }
-            if (service == null) {
-                return null;
-            }
-            String persistenceName;
-            try {
-                persistenceName = service.getName();
-            } catch (Throwable t) {
-                // Older SPI might not expose getName(); fallback to class inspection
-                persistenceName = service.getClass().getName().toLowerCase();
-            }
-
-            if (persistenceName == null) {
-                return null;
-            }
-
-            if (persistenceName.contains("opensearch")) {
-                OpenSearchHealthCheckProvider provider = new OpenSearchHealthCheckProvider();
-                if (healthCheckConfig != null) {
-                    provider.setConfig(healthCheckConfig);
-                }
-                provider.activate();
-                delegate = provider;
-            } else if (persistenceName.contains("elasticsearch")) {
-                ElasticSearchHealthCheckProvider provider = new ElasticSearchHealthCheckProvider();
-                if (healthCheckConfig != null) {
-                    provider.setConfig(healthCheckConfig);
-                }
-                provider.activate();
-                delegate = provider;
-            } else {
-                // Unknown persistence implementation, no delegate
-                return null;
-            }
-            return delegate;
-        } catch (Exception e) {
-            LOGGER.warn("Unable to resolve delegated health check provider", e);
-            return null;
-        }
     }
 }

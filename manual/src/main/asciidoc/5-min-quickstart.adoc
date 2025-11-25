@@ -75,10 +75,11 @@ services:
     unomi:
         image: apache/unomi:3.0.0
         environment:
-            - UNOMI_AUTO_START=opensearch
+            - UNOMI_PERSISTENCE_TYPE=opensearch
             - UNOMI_OPENSEARCH_ADDRESSES=opensearch-node1:9200
             - UNOMI_OPENSEARCH_USERNAME=admin
             - UNOMI_OPENSEARCH_PASSWORD=${OPENSEARCH_INITIAL_ADMIN_PASSWORD:-admin}
+            - UNOMI_HEALTHCHECK_PROVIDERS=cluster,opensearch,unomi,persistence
         ports:
             - 8181:8181
             - 9443:9443

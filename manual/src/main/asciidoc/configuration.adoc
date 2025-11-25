@@ -107,11 +107,11 @@ To select which search engine to use, you can:
    * For OpenSearch: add `-Duse.opensearch=true` to your Maven command
    (this will only impact the integration tests if they are activated using the -Pintegration-tests profile)
 3. When using Docker:
-   * For ElasticSearch: use `UNOMI_AUTO_START=elasticsearch`
-   * For OpenSearch: use `UNOMI_AUTO_START=opensearch`
-   * For custom configurations: use `UNOMI_AUTO_START=your-custom-config-name`
+   * For ElasticSearch: use `UNOMI_PERSISTENCE_CONFIG=elasticsearch`
+   * For OpenSearch: use `UNOMI_PERSISTENCE_CONFIG=opensearch`
+   * For custom configurations: use `UNOMI_PERSISTENCE_CONFIG=your-custom-config-name`
 
-Note: The `UNOMI_AUTO_START` environment variable accepts any start features configuration name defined in the `org.apache.unomi.start.cfg` file. You can use the predefined "elasticsearch" or "opensearch" configurations, or specify a custom configuration name if you have created one.
+Note: The `UNOMI_PERSISTENCE_CONFIG` environment variable accepts any start features configuration name defined in the `org.apache.unomi.start.cfg` file. You can use the predefined "elasticsearch" or "opensearch" configurations, or specify a custom configuration name if you have created one.
 
 Note: When using OpenSearch 3.x:
  - Security is enabled by default and requires SSL/TLS
@@ -972,7 +972,7 @@ You can use your custom configurations with:
 unomi:start elasticsearch-dev
 unomi:start opensearch-dev
 
-# Staging environment  
+# Staging environment
 unomi:start elasticsearch-staging
 unomi:start opensearch-staging
 
@@ -981,27 +981,33 @@ unomi:start elasticsearch-prod
 unomi:start opensearch-prod
 ----
 
-==== Auto-Start Configuration
+==== Auto-Start
 
-You can configure Apache Unomi to automatically start with a specific start features configuration when the server boots up. This is useful for production deployments where you want the server to start automatically without manual intervention.
+You can configure Apache Unomi to automatically start when the server boots up. See the next section for details. This is useful for production deployments where you want the server to start automatically without manual intervention.
 
-To enable auto-start, set the `unomi.autoStart` system property or `UNOMI_AUTO_START` environment variable to the name of your desired start features configuration:
+To enable auto-start, set the `unomi.autoStart` system property or `UNOMI_AUTO_START` environment variable to 'true'
+
+Note: Auto-start only works when Apache Unomi is not already running. If the server is already started, the auto-start setting will be ignored.
+
+==== Start Configuration
+
+You can define a startup configuration for Apache Unomi to configure desired features when the server boots up.
+
+To set start configuration, set the `unomi.startConfig` system property or `UNOMI_START_CONFIG` environment variable to the name of your desired start features configuration:
 
 [source]
 ----
 # Using system property
--Dunomi.autoStart=elasticsearch-prod
+-Dunomi.startConfig=elasticsearch-prod
 
 # Using environment variable (Docker)
-UNOMI_AUTO_START=opensearch-prod
+UNOMI_START_CONFIG=opensearch-prod
 
 # Using custom configuration
-UNOMI_AUTO_START=elasticsearch-staging
+UNOMI_START_CONFIG=elasticsearch-staging
 ----
 
-The auto-start feature accepts any start features configuration name defined in your `org.apache.unomi.start.cfg` file. If you set it to `true`, it will default to the "elasticsearch" configuration for backward compatibility.
-
-Note: Auto-start only works when Apache Unomi is not already running. If the server is already started, the auto-start setting will be ignored.
+The start-configuration feature accepts any start features configuration name defined in your `org.apache.unomi.start.cfg` file. If you set it to `true`, it will default to the "elasticsearch" configuration for backward compatibility.
 
 ==== Important Notes
 
@@ -1034,7 +1040,7 @@ services:
     volumes:
       - ./custom-start.cfg:/opt/apache-unomi/etc/org.apache.unomi.start.cfg
     environment:
-      - UNOMI_AUTO_START=elasticsearch-prod  # or opensearch-prod
+      - UNOMI_START_CONFIG=elasticsearch-prod  # or opensearch-prod
     depends_on:
       - elasticsearch
   elasticsearch:
@@ -1046,7 +1052,7 @@ services:
 
 **Key Points:**
 - Mount your custom configuration file to `/opt/apache-unomi/etc/org.apache.unomi.start.cfg`
-- Use the `UNOMI_AUTO_START` environment variable to specify which configuration to use
+- Use the `UNOMI_START_CONFIG` environment variable to specify which configuration to use
 - The configuration file will override the default settings when the container starts
 
 === Customizing Apache Unomi Distribution
@@ -1113,7 +1119,7 @@ services:
       context: .
       dockerfile: Dockerfile
     environment:
-      - UNOMI_AUTO_START=elasticsearch-prod
+      - UNOMI_START_CONFIG=elasticsearch-prod
     depends_on:
       - elasticsearch
   elasticsearch:

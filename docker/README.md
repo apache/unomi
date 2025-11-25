@@ -67,7 +67,7 @@ For Unomi (with OpenSearch):
 
     docker pull apache/unomi:3.0.0-SNAPSHOT
     docker run --name unomi --net unomi -p 8181:8181 -p 9443:9443 -p 8102:8102 \
-        -e UNOMI_AUTO_START=opensearch \
+        -e UNOMI_PERSISTENCE_CONFIG=opensearch \
         -e UNOMI_OPENSEARCH_ADDRESSES=opensearch:9200 \
         -e UNOMI_OPENSEARCH_PASSWORD=${OPENSEARCH_ADMIN_PASSWORD} \
         apache/unomi:3.0.0-SNAPSHOT
@@ -83,7 +83,7 @@ For ElasticSearch:
 For OpenSearch:
 
     docker run --name unomi -p 8181:8181 -p 9443:9443 -p 8102:8102 \
-        -e UNOMI_AUTO_START=opensearch \
+        -e UNOMI_PERSISTENCE_CONFIG=opensearch
         -e UNOMI_OPENSEARCH_ADDRESSES=host.docker.internal:9200 \
         -e UNOMI_OPENSEARCH_PASSWORD=${OPENSEARCH_ADMIN_PASSWORD} \
         apache/unomi:3.0.0-SNAPSHOT
@@ -93,7 +93,8 @@ Note: Linux doesn't support the host.docker.internal DNS lookup method yet, it s
 ## Environment Variables
 
 ### Common Variables
-- `UNOMI_AUTO_START`: Specifies the search engine type (`elasticsearch` or `opensearch`, defaults to `elasticsearch`)
+- `UNOMI_AUTO_START`: Boolean to specify if unomi auto start with karaf (defaults to `true`)
+- `UNOMI_PERSISTENCE_CONFIG`: Specifies the search engine configuration (`elasticsearch` or `opensearch`, defaults to `elasticsearch`)
 
 ### ElasticSearch-specific Variables
 - `UNOMI_ELASTICSEARCH_ADDRESSES`: ElasticSearch host:port (default: localhost:9200)
