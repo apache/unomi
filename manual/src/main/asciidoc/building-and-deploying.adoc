@@ -86,7 +86,7 @@ Modes:
 
 Requirements:
 
-* Java 11+, Maven 3.6+, Git, SVN client, `bc`
+* Java 17+, Maven 3.6+, Git, SVN client, `bc`
 * Access to the `master` and the stable branch configured in `generate-manual-config.sh`
 
 Outputs and locations:
@@ -124,17 +124,7 @@ To merge the branch into master.
 
 ==== Maven Build Cache
 
-Apache Unomi uses the Maven Build Cache extension to significantly improve build performance by caching compiled artifacts and avoiding unnecessary recompilation.
-
-For more information, see the official documentation:
-
-* https://maven.apache.org/extensions/maven-build-cache-extension/[Maven Build Cache Extension Overview]
-* https://maven.apache.org/extensions/maven-build-cache-extension/parameters.html[Build Cache Parameters Reference]
-
-Performance improvements:
-
-* Without cache: ~1 minute 59 seconds for a full clean install
-* With cache: ~3.176 seconds for subsequent builds (after initial build)
+Apache Unomi uses the Maven Build Cache extension to significantly improve build efficiency by caching compiled artifacts and avoiding unnecessary recompilation (build time without/with cached artifacts ~2mn/~3s).
 
 The build cache is enabled by default and configured in the `.mvn/maven-build-cache-config.xml` file. The cache configuration includes:
 
@@ -164,10 +154,12 @@ Command line control:
 
 Purging the build cache:
 
-To completely reset the build cache and force a full rebuild:
+To completely reset the build cache and force a full rebuild, manually delete the cache directory: `rm -rf ~/.m2/build-cache` (Unix/Mac) or `rmdir /s %USERPROFILE%\.m2\build-cache` (Windows)
 
-* Skip cache and rebuild: `mvn -Dmaven.build.cache.skipCache=true clean install`
-* Or manually delete the cache directory: `rm -rf ~/.m2/build-cache` (Unix/Mac) or `rmdir /s %USERPROFILE%\.m2\build-cache` (Windows)
+For more information, see the official documentation:
+
+* https://maven.apache.org/extensions/maven-build-cache-extension/[Maven Build Cache Extension Overview]
+* https://maven.apache.org/extensions/maven-build-cache-extension/parameters.html[Build Cache Parameters Reference]
 
 ==== Installing an ElasticSearch server
 
