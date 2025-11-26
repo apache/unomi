@@ -17,6 +17,7 @@
 package org.apache.unomi.shell.services.internal;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.karaf.features.Dependency;
 import org.apache.karaf.features.Feature;
 import org.apache.karaf.features.FeatureState;
 import org.apache.karaf.features.FeaturesService;
@@ -24,12 +25,14 @@ import org.apache.unomi.lifecycle.BundleWatcher;
 import org.apache.unomi.shell.migration.MigrationService;
 import org.apache.unomi.shell.services.UnomiManagementService;
 import org.osgi.framework.BundleContext;
+import org.osgi.service.cm.Configuration;
+import org.osgi.service.cm.ConfigurationAdmin;
 import org.osgi.service.component.ComponentContext;
 import org.osgi.service.component.annotations.*;
-import org.osgi.service.metatype.annotations.Designate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.*;
 
@@ -81,21 +84,20 @@ import java.util.concurrent.*;
  * @see org.apache.karaf.features.FeaturesService
  * @see org.apache.karaf.features.Feature
  */
-@Component(service = UnomiManagementService.class, immediate = true, configurationPid = "org.apache.unomi.start", configurationPolicy = ConfigurationPolicy.REQUIRE)
-@Designate(ocd = UnomiManagementServiceConfiguration.class)
+@Component(service = UnomiManagementService.class, immediate = true)
 public class UnomiManagementServiceImpl implements UnomiManagementService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(UnomiManagementServiceImpl.class.getName());
     private static final int DEFAULT_TIMEOUT = 300; // 5 minutes timeout
 
-    private final ExecutorService executor = Executors.newSingleThreadExecutor();
-
+    private static final String SETUP_CONFIG_PID = "org.apache.unomi.setup";
     private static final String CDP_GRAPHQL_FEATURE = "cdp-graphql-feature";
-
-    private BundleContext bundleContext;
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY)
     private MigrationService migrationService;
+
+    @Reference(cardinality = ReferenceCardinality.MANDATORY)
+    private ConfigurationAdmin configurationAdmin;
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY)
     private FeaturesService featuresService;
@@ -103,34 +105,40 @@ public class UnomiManagementServiceImpl implements UnomiManagementService {
     @Reference(cardinality = ReferenceCardinality.MANDATORY)
     private BundleWatcher bundleWatcher;
 
-    private Map<String, List<String>> startFeatures = new HashMap<String, List<String>>();
-    private final List<String> installedFeatures = new ArrayList<>();
-    private final List<String> startedFeatures = new ArrayList<>();
+    private final ExecutorService executor = Executors.newSingleThreadExecutor();
+    private BundleContext bundleContext;
+    private final List<String> installedDistributionDependencies = new ArrayList<>();
+    private final List<String> startedDistributionDependencies = new ArrayList<>();
 
     @Activate
-    public void init(ComponentContext componentContext, UnomiManagementServiceConfiguration config) throws Exception {
-        LOGGER.info("Initializing Unomi management service with configuration {}", config);
+    public void init(ComponentContext componentContext) throws Exception {
+        LOGGER.info("Initializing Unomi management service");
         try {
             this.bundleContext = componentContext.getBundleContext();
-            this.startFeatures = parseStartFeatures(config.startFeatures());
+
+            String distribution = getSetupDistribution();
+            if (distribution == null) {
+                LOGGER.info("No previously setup distribution found");
+                if (StringUtils.isNotBlank(bundleContext.getProperty("unomi.distribution"))) {
+                    distribution = bundleContext.getProperty("unomi.distribution");
+                    LOGGER.warn("Setting up distribution to the one provided in context: {}", distribution);
+                    setupDistribution(distribution);
+                } else {
+                    distribution = "unomi-distribution-elasticsearch";
+                    LOGGER.warn("No unomi.distribution provided, defaulting to '{}'", distribution);
+                    setupDistribution(distribution);
+                }
+            }
 
             if (StringUtils.isNotBlank(bundleContext.getProperty("unomi.autoMigrate"))) {
                 migrationService.migrateUnomi(bundleContext.getProperty("unomi.autoMigrate"), true, null);
             }
 
-            String autoStart = bundleContext.getProperty("unomi.autoStart");
-            if (StringUtils.isNotBlank(autoStart)) {
-                String resolvedAutoStart = autoStart;
-                if ("true".equals(autoStart)) {
-                    resolvedAutoStart = "elasticsearch";
-                } if ("elasticsearch".equals(autoStart)) {
-                    resolvedAutoStart = "elasticsearch";
-                } if ("opensearch".equals(autoStart)) {
-                    resolvedAutoStart = "opensearch";
-                }
-                LOGGER.info("Auto-starting unomi management service with start features configuration: {}", resolvedAutoStart);
+            if (StringUtils.isNotBlank(bundleContext.getProperty("unomi.autoStart")) &&
+                    bundleContext.getProperty("unomi.autoStart").equals("true")) {
+                LOGGER.info("Auto-starting unomi management service with unomi distribution: {}", distribution);
                 // Don't wait for completion during initialization
-                startUnomi(resolvedAutoStart, true, false);
+                startUnomi(distribution, true, false);
             }
         } catch (Exception e) {
             LOGGER.error("Error during Unomi startup:", e);
@@ -138,46 +146,36 @@ public class UnomiManagementServiceImpl implements UnomiManagementService {
         }
     }
 
-    private List<String> getAdditionalFeaturesToInstall() {
-        List<String> featuresToInstall = new ArrayList<>();
-        if (Boolean.parseBoolean(bundleContext.getProperty("org.apache.unomi.graphql.feature.activated"))) {
-            featuresToInstall.add(CDP_GRAPHQL_FEATURE);
-            bundleWatcher.addRequiredBundle("org.apache.unomi.cdp-graphql-api-impl");
-            bundleWatcher.addRequiredBundle("org.apache.unomi.graphql-ui");
+    private String getSetupDistribution() throws IOException {
+        Configuration configuration = configurationAdmin.getConfiguration(SETUP_CONFIG_PID, "?");
+        Dictionary<String, Object> properties = configuration.getProperties();
+        if (properties != null && properties.get("unomi.distribution") != null) {
+            return Objects.toString(properties.get("unomi.distribution"), null);
         }
-        return featuresToInstall;
+        return null;
     }
 
-    private Map<String, List<String>> parseStartFeatures(String[] startFeaturesConfig) {
-        Map<String, List<String>> startFeatures = new HashMap<>();
-        if (startFeaturesConfig == null) {
-            return startFeatures;
+    private void setupDistribution(String distribution) throws IOException {
+        Configuration configuration = configurationAdmin.getConfiguration(SETUP_CONFIG_PID, "?");
+        Dictionary<String, Object> properties = configuration.getProperties();
+        if (properties == null) {
+            properties = new Hashtable<>();
         }
-
-        for (String entry : startFeaturesConfig) {
-            String[] parts = entry.split("=");
-            if (parts.length == 2) {
-                String key = parts[0].trim();
-                List<String> features = new ArrayList<>(Arrays.asList(parts[1].split(",")));
-                startFeatures.put(key, features);
-            } else {
-                LOGGER.warn("Invalid start feature entry: {}", entry);
-            }
-        }
-        return startFeatures;
+        properties.put("unomi.distribution", distribution);
+        configuration.update(properties);
     }
 
     @Override
-    public void startUnomi(String selectedStartFeatures, boolean mustStartFeatures) throws Exception {
+    public void startUnomi(String distribution, boolean mustStartFeatures) throws Exception {
         // Default to waiting for completion
-        startUnomi(selectedStartFeatures, mustStartFeatures, true);
+        startUnomi(distribution, mustStartFeatures, true);
     }
 
     @Override
-    public void startUnomi(String selectedStartFeatures, boolean mustStartFeatures, boolean waitForCompletion) throws Exception {
+    public void startUnomi(String distribution, boolean mustStartFeatures, boolean waitForCompletion) throws Exception {
         Future<?> future = executor.submit(() -> {
             try {
-                doStartUnomi(selectedStartFeatures, mustStartFeatures);
+                doStartUnomi(distribution, mustStartFeatures);
             } catch (Exception e) {
                 LOGGER.error("Error starting Unomi:", e);
                 throw new RuntimeException(e);
@@ -194,47 +192,41 @@ public class UnomiManagementServiceImpl implements UnomiManagementService {
         }
     }
 
-    private void doStartUnomi(String selectedStartFeatures, boolean mustStartFeatures) throws Exception {
-        List<String> features = startFeatures.get(selectedStartFeatures);
-        if (features == null || features.isEmpty()) {
-            LOGGER.warn("No features configured for start features configuration: {}", selectedStartFeatures);
+    private void doStartUnomi(String distribution, boolean mustStartDistribution) throws Exception {
+        if (distribution == null || distribution.isEmpty()) {
+            LOGGER.warn("No distribution provided, unable to start Unomi.");
             return;
         }
-        features.addAll(getAdditionalFeaturesToInstall());
-
-        LOGGER.info("Installing features for start features configuration: {}", selectedStartFeatures);
-        for (String featureName : features) {
-            try {
-                Feature feature = featuresService.getFeature(featureName);
-                if (feature == null) {
-                    LOGGER.error("Feature not found: {}", featureName);
-                    continue;
-                }
-
-                if (!installedFeatures.contains(featureName)) {
-                    LOGGER.info("Installing feature: {}", featureName);
-                    featuresService.installFeature(featureName, EnumSet.of(FeaturesService.Option.NoAutoStartBundles));
-                    installedFeatures.add(featureName);
-                }
-            } catch (Exception e) {
-                LOGGER.error("Error installing feature: {}", featureName, e);
+        try {
+            Feature feature = featuresService.getFeature(distribution);
+            if (feature == null) {
+                LOGGER.error("Distribution feature not found: {}", distribution);
+                return;
             }
+
+            for (Dependency dependency : feature.getDependencies()) {
+                if (!installedDistributionDependencies.contains(dependency.getName())) {
+                    LOGGER.info("Installing distribution feature's dependency: {}", dependency.getName());
+                    featuresService.installFeature(dependency.getName(), dependency.getVersion(), EnumSet.of(FeaturesService.Option.NoAutoStartBundles));
+                    installedDistributionDependencies.add(dependency.getName());
+                }
+            }
+        } catch (Exception e) {
+            LOGGER.error("Error installing distribution: {}", distribution, e);
         }
 
-        if (mustStartFeatures) {
-            LOGGER.info("Starting features for start features configuration: {}", selectedStartFeatures);
-            for (String featureName : features) {
+        if (mustStartDistribution) {
+            LOGGER.info("Starting distribution: {}", distribution);
+            for (String featureName : installedDistributionDependencies) {
                 try {
                     Feature feature = featuresService.getFeature(featureName);
                     if (feature == null) {
-                        LOGGER.error("Feature not found: {}", featureName);
+                        LOGGER.error("Distribution feature's dependency not found: {}", featureName);
                         continue;
                     }
-                    if (mustStartFeatures) {
-                        LOGGER.info("Starting feature: {}", featureName);
-                        startFeature(featureName);
-                        startedFeatures.add(featureName); // Keep track of started features
-                    }
+                    LOGGER.info("Starting dependency: {}", featureName);
+                    startFeature(featureName);
+                    startedDistributionDependencies.add(featureName); // Keep track of started distribution dependencies
                 } catch (Exception e) {
                     LOGGER.error("Error starting feature: {}", featureName, e);
                 }
@@ -270,11 +262,11 @@ public class UnomiManagementServiceImpl implements UnomiManagementService {
     }
 
     private void doStopUnomi() throws Exception {
-        if (startedFeatures.isEmpty()) {
+        if (startedDistributionDependencies.isEmpty()) {
             LOGGER.info("No features to stop.");
         } else {
             LOGGER.info("Stopping features in reverse order...");
-            ListIterator<String> iterator = startedFeatures.listIterator(startedFeatures.size());
+            ListIterator<String> iterator = startedDistributionDependencies.listIterator(startedDistributionDependencies.size());
             while (iterator.hasPrevious()) {
                 String featureName = iterator.previous();
                 try {
@@ -285,13 +277,13 @@ public class UnomiManagementServiceImpl implements UnomiManagementService {
                 }
             }
 
-            startedFeatures.clear(); // Clear the list after stopping all features
+            startedDistributionDependencies.clear(); // Clear the list after stopping all features
         }
-        if (installedFeatures.isEmpty()) {
+        if (installedDistributionDependencies.isEmpty()) {
             LOGGER.info("No features to uninstall.");
         } else {
             LOGGER.info("Stopping features in reverse order...");
-            ListIterator<String> iterator = installedFeatures.listIterator(installedFeatures.size());
+            ListIterator<String> iterator = installedDistributionDependencies.listIterator(installedDistributionDependencies.size());
             while (iterator.hasPrevious()) {
                 String featureName = iterator.previous();
                 try {
@@ -301,7 +293,7 @@ public class UnomiManagementServiceImpl implements UnomiManagementService {
                     LOGGER.error("Error uninstalling feature: {}", featureName, e);
                 }
             }
-            installedFeatures.clear(); // Clear the list after stopping all features
+            installedDistributionDependencies.clear(); // Clear the list after stopping all features
         }
     }
 

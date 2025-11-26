@@ -75,7 +75,6 @@
     <feature name="unomi-startup" description="Apache Unomi :: Startup Tools" version="${project.version}">
         <feature>unomi-base</feature>
         <configfile finalname="/etc/org.apache.unomi.migration.cfg">mvn:org.apache.unomi/shell-commands/${project.version}/cfg/migration</configfile>
-        <configfile finalname="/etc/org.apache.unomi.start.cfg">mvn:org.apache.unomi/shell-commands/${project.version}/cfg/start</configfile>
         <bundle>mvn:org.apache.unomi/shell-commands/${project.version}</bundle>
     </feature>
 

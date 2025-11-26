@@ -42,7 +42,7 @@ services:
     image: apache/unomi:${project.version}
     environment:
       - UNOMI_AUTO_START=true
-      - UNOMI_START_CONFIG=elasticsearch
+      - UNOMI_DISTRIBUTION=unomi-distribution-elasticsearch
       - UNOMI_ELASTICSEARCH_ADDRESSES=elasticsearch:9200
       - UNOMI_HEALTHCHECK_PROVIDERS=cluster,elasticsearch,unomi,persistence
       # Debug settings
