@@ -14,6 +14,11 @@
 
 === Building
 
+Apache Unomi 3.x provides a convenient `build.sh` script that simplifies the build process with
+enhanced error handling, preflight validation, and deployment options. See the
+<<Using the build.sh script>> section below for details. Alternatively, you can build using Maven
+directly as described in this section.
+
 ==== Initial Setup
 
 . Install J2SE 17 SDK (or later), which can be downloaded from
@@ -63,6 +68,96 @@ TIP: On a non-English Windows env, the Asciidoctor Maven Plugin may fail to
 ----
 +
 . The distributions will be available under "package/target" directory.
+
+==== Using the build.sh script
+
+Apache Unomi 3.x provides a unified `build.sh` script that simplifies the build, deployment, and execution process.
+This script replaces multiple legacy build scripts and provides enhanced error handling, colorized output, and
+comprehensive environment validation.
+
+The `build.sh` script offers the following features:
+
+* **Preflight validation**: Automatically checks for required tools (Java, Maven, GraphViz), system resources
+  (memory, disk space), Maven settings, and port availability
+* **Flexible build options**: Support for skipping tests, running integration tests, using OpenSearch, debug modes,
+  and more
+* **Deployment helpers**: Automatically copies KAR packages to Karaf deploy directory and purges caches
+* **Enhanced output**: Colorized, structured output with progress indicators (respects `NO_COLOR` environment variable)
+
+To use the script:
+
+. Get the code: `git clone https://github.com/apache/unomi.git`
+. Change to the top level directory of Apache Unomi source distribution.
+. Make the script executable (if needed): `chmod +x build.sh`
+. Run the script with your desired options:
++
+[source]
+----
+./build.sh --help
+----
++
+This will display all available options and usage examples.
+
+Common usage examples:
+
+* Build with integration tests using OpenSearch:
++
+[source]
+----
+./build.sh --integration-tests --use-opensearch
+----
++
+* Build in debug mode:
++
+[source]
+----
+./build.sh --debug --debug-port 5006 --debug-suspend
+----
++
+* Deploy to specific Karaf instance:
++
+[source]
+----
+./build.sh --deploy --karaf-home ~/apache-karaf
+----
++
+* Build without Karaf and auto-start OpenSearch:
++
+[source]
+----
+./build.sh --no-karaf --auto-start opensearch
+----
++
+* Run a single integration test:
++
+[source]
+----
+./build.sh --integration-tests --single-test org.apache.unomi.itests.graphql.GraphQLEventIT
+----
++
+* Debug a single integration test:
++
+[source]
+----
+./build.sh --integration-tests --single-test org.apache.unomi.itests.graphql.GraphQLEventIT --it-debug --it-debug-suspend
+----
++
+* Run without colored output:
++
+[source]
+----
+NO_COLOR=1 ./build.sh
+----
++
+or
++
+[source]
+----
+export NO_COLOR=1
+./build.sh
+----
++
+For a complete list of options and examples, run `./build.sh --help`.
 
 ==== Installing an ElasticSearch server
 

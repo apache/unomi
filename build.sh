@@ -280,22 +280,22 @@ EOF
         echo -e "  ${CYAN}-s, --skip-tests${NC}           Skip all tests"
         echo -e "  ${CYAN}-i, --integration-tests${NC}    Run integration tests"
         echo -e "  ${CYAN}-d, --deploy${NC}               Deploy after build"
-        echo -e "  ${CYAN}-X, --maven-debug${NC}         Enable Maven debug output"
-        echo -e "  ${CYAN}-o, --offline${NC}             Run Maven in offline mode"
+        echo -e "  ${CYAN}-X, --maven-debug${NC}          Enable Maven debug output"
+        echo -e "  ${CYAN}-o, --offline${NC}              Run Maven in offline mode"
         echo -e "  ${CYAN}--debug${NC}                    Run Karaf in debug mode"
         echo -e "  ${CYAN}--debug-port PORT${NC}          Set debug port (default: 5005)"
-        echo -e "  ${CYAN}--debug-suspend${NC}           Suspend JVM until debugger connects"
+        echo -e "  ${CYAN}--debug-suspend${NC}            Suspend JVM until debugger connects"
         echo -e "  ${CYAN}--no-maven-cache${NC}           Disable Maven build cache"
         echo -e "  ${CYAN}--purge-maven-cache${NC}        Purge local Maven cache before building"
         echo -e "  ${CYAN}--karaf-home PATH${NC}          Set Karaf home directory for deployment"
-        echo -e "  ${CYAN}--use-opensearch${NC}          Use OpenSearch instead of ElasticSearch"
-        echo -e "  ${CYAN}--no-karaf${NC}               Build without starting Karaf"
-        echo -e "  ${CYAN}--auto-start ENGINE${NC}      Auto-start with specified engine"
+        echo -e "  ${CYAN}--use-opensearch${NC}           Use OpenSearch instead of ElasticSearch"
+        echo -e "  ${CYAN}--no-karaf${NC}                 Build without starting Karaf"
+        echo -e "  ${CYAN}--auto-start ENGINE${NC}        Auto-start with specified engine"
         echo -e "  ${CYAN}--single-test TEST${NC}         Run a single integration test"
         echo -e "  ${CYAN}--it-debug${NC}                 Enable integration test debug mode"
-        echo -e "  ${CYAN}--it-debug-port PORT${NC}        Set integration test debug port"
-        echo -e "  ${CYAN}--it-debug-suspend${NC}        Suspend integration test until debugger connects"
-        echo -e "  ${CYAN}--skip-migration-tests${NC}    Skip migration-related tests"
+        echo -e "  ${CYAN}--it-debug-port PORT${NC}       Set integration test debug port"
+        echo -e "  ${CYAN}--it-debug-suspend${NC}         Suspend integration test until debugger connects"
+        echo -e "  ${CYAN}--skip-migration-tests${NC}     Skip migration-related tests"
     else
         cat << "EOF"
      _    _ _____ _      ____
@@ -334,29 +334,31 @@ EOF
     echo
     echo "Examples:"
     if [ "$HAS_COLORS" -eq 1 ]; then
-        echo -e "  ${GRAY}# Build with integration tests using OpenSearch${NC}"
-        echo -e "  ${GRAY}$0 --integration-tests --use-opensearch${NC}"
-        echo -e
-        echo -e "  ${GRAY}# Build in debug mode${NC}"
-        echo -e "  ${GRAY}$0 --debug --debug-port 5006 --debug-suspend${NC}"
-        echo -e
-        echo -e "  ${GRAY}# Deploy to specific Karaf instance${NC}"
-        echo -e "  ${GRAY}$0 --deploy --karaf-home ~/apache-karaf${NC}"
-        echo -e
-        echo -e "  ${GRAY}# Build without Karaf and auto-start OpenSearch${NC}"
-        echo -e "  ${GRAY}$0 --no-karaf --auto-start opensearch${NC}"
-        echo -e
-        echo -e "  ${GRAY}# Run a single integration test${NC}"
-        echo -e "  ${GRAY}$0 --integration-tests --single-test org.apache.unomi.itests.graphql.GraphQLEventIT${NC}"
-        echo -e
-        echo -e "  ${GRAY}# Debug a single integration test${NC}"
-        echo -e "  ${GRAY}$0 --integration-tests --single-test org.apache.unomi.itests.graphql.GraphQLEventIT --it-debug --it-debug-suspend${NC}"
-        echo -e
-        echo -e "  ${GRAY}# Run without colored output${NC}"
-        echo -e "  ${GRAY}NO_COLOR=1 $0${NC}"
-        echo -e "  ${GRAY}# or ${NC}"
-        echo -e "  ${GRAY}export NO_COLOR=1${NC}"
-        echo -e "  ${GRAY}$0${NC}"
+        # Reset to default terminal color for examples (better readability)
+        echo -e "${NC}"
+        echo "  # Build with integration tests using OpenSearch"
+        echo "  $0 --integration-tests --use-opensearch"
+        echo
+        echo "  # Build in debug mode"
+        echo "  $0 --debug --debug-port 5006 --debug-suspend"
+        echo
+        echo "  # Deploy to specific Karaf instance"
+        echo "  $0 --deploy --karaf-home ~/apache-karaf"
+        echo
+        echo "  # Build without Karaf and auto-start OpenSearch"
+        echo "  $0 --no-karaf --auto-start opensearch"
+        echo
+        echo "  # Run a single integration test"
+        echo "  $0 --integration-tests --single-test org.apache.unomi.itests.graphql.GraphQLEventIT"
+        echo
+        echo "  # Debug a single integration test"
+        echo "  $0 --integration-tests --single-test org.apache.unomi.itests.graphql.GraphQLEventIT --it-debug --it-debug-suspend"
+        echo
+        echo "  # Run without colored output"
+        echo "  NO_COLOR=1 $0"
+        echo "  # or"
+        echo "  export NO_COLOR=1"
+        echo "  $0"
     else
         echo "  # Build with integration tests using OpenSearch"
         echo "  $0 --integration-tests --use-opensearch"
