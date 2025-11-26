@@ -90,7 +90,7 @@ public class UnomiManagementServiceImpl implements UnomiManagementService {
     private static final Logger LOGGER = LoggerFactory.getLogger(UnomiManagementServiceImpl.class.getName());
     private static final int DEFAULT_TIMEOUT = 300; // 5 minutes timeout
 
-    private static final String SETUP_CONFIG_PID = "org.apache.unomi.setup";
+    private static final String UNOMI_SETUP_PID = "org.apache.unomi.setup";
     private static final String CDP_GRAPHQL_FEATURE = "cdp-graphql-feature";
 
     @Reference(cardinality = ReferenceCardinality.MANDATORY)
@@ -106,7 +106,6 @@ public class UnomiManagementServiceImpl implements UnomiManagementService {
     private BundleWatcher bundleWatcher;
 
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
-    private BundleContext bundleContext;
     private final List<String> installedDistributionDependencies = new ArrayList<>();
     private final List<String> startedDistributionDependencies = new ArrayList<>();
 
@@ -114,19 +113,17 @@ public class UnomiManagementServiceImpl implements UnomiManagementService {
     public void init(ComponentContext componentContext) throws Exception {
         LOGGER.info("Initializing Unomi management service");
         try {
-            this.bundleContext = componentContext.getBundleContext();
+            BundleContext bundleContext = componentContext.getBundleContext();
 
-            String distribution = getSetupDistribution();
-            if (distribution == null) {
+            UnomiSetup setup = getUnomiSetup();
+            if (setup == null) {
                 LOGGER.info("No previously setup distribution found");
                 if (StringUtils.isNotBlank(bundleContext.getProperty("unomi.distribution"))) {
-                    distribution = bundleContext.getProperty("unomi.distribution");
-                    LOGGER.warn("Setting up distribution to the one provided in context: {}", distribution);
-                    setupDistribution(distribution);
+                    setup = initUnomiSetup(bundleContext.getProperty("unomi.distribution"));
+                    LOGGER.info("UnomiSetup created for distribution provided from context: {}", setup.getDistribution());
                 } else {
-                    distribution = "unomi-distribution-elasticsearch";
-                    LOGGER.warn("No unomi.distribution provided, defaulting to '{}'", distribution);
-                    setupDistribution(distribution);
+                    setup = initUnomiSetup("unomi-distribution-elasticsearch");
+                    LOGGER.info("UnomiSetup created for default distribution: {}", setup.getDistribution());
                 }
             }
 
@@ -134,11 +131,10 @@ public class UnomiManagementServiceImpl implements UnomiManagementService {
                 migrationService.migrateUnomi(bundleContext.getProperty("unomi.autoMigrate"), true, null);
             }
 
-            if (StringUtils.isNotBlank(bundleContext.getProperty("unomi.autoStart")) &&
-                    bundleContext.getProperty("unomi.autoStart").equals("true")) {
-                LOGGER.info("Auto-starting unomi management service with unomi distribution: {}", distribution);
+            if (StringUtils.isNotBlank(bundleContext.getProperty("unomi.autoStart")) && bundleContext.getProperty("unomi.autoStart").equals("true")) {
+                LOGGER.info("Auto-starting unomi management service for unomi distribution: {}", setup.getDistribution());
                 // Don't wait for completion during initialization
-                startUnomi(distribution, true, false);
+                startUnomi(setup.getDistribution(), true, false);
             }
         } catch (Exception e) {
             LOGGER.error("Error during Unomi startup:", e);
@@ -146,23 +142,16 @@ public class UnomiManagementServiceImpl implements UnomiManagementService {
         }
     }
 
-    private String getSetupDistribution() throws IOException {
-        Configuration configuration = configurationAdmin.getConfiguration(SETUP_CONFIG_PID, "?");
-        Dictionary<String, Object> properties = configuration.getProperties();
-        if (properties != null && properties.get("unomi.distribution") != null) {
-            return Objects.toString(properties.get("unomi.distribution"), null);
-        }
-        return null;
+    private UnomiSetup getUnomiSetup() throws IOException {
+        Configuration configuration = configurationAdmin.getConfiguration(UNOMI_SETUP_PID, "?");
+        return UnomiSetup.fromDictionary(configuration.getProperties());
     }
 
-    private void setupDistribution(String distribution) throws IOException {
-        Configuration configuration = configurationAdmin.getConfiguration(SETUP_CONFIG_PID, "?");
-        Dictionary<String, Object> properties = configuration.getProperties();
-        if (properties == null) {
-            properties = new Hashtable<>();
-        }
-        properties.put("unomi.distribution", distribution);
-        configuration.update(properties);
+    private UnomiSetup initUnomiSetup(String distribution) throws IOException {
+        Configuration configuration = configurationAdmin.getConfiguration(UNOMI_SETUP_PID, "?");
+        UnomiSetup setup = UnomiSetup.init().withDistribution(distribution);
+        configuration.update(setup.toProperties());
+        return setup;
     }
 
     @Override
@@ -203,7 +192,6 @@ public class UnomiManagementServiceImpl implements UnomiManagementService {
                 LOGGER.error("Distribution feature not found: {}", distribution);
                 return;
             }
-
             for (Dependency dependency : feature.getDependencies()) {
                 if (!installedDistributionDependencies.contains(dependency.getName())) {
                     LOGGER.info("Installing distribution feature's dependency: {}", dependency.getName());

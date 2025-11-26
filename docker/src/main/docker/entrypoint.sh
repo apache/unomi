@@ -29,10 +29,9 @@ if [ "$KARAF_DEBUG" = "true" ]; then
     export KARAF_DEBUG=true
 fi
 
-PERSISTENCE_CONFIG="${UNOMI_START_CONFIG:-elasticsearch}"
-export KARAF_OPTS="-Dunomi.autoStart=${UNOMI_AUTO_START} -Dunomi.startConfig=${UNOMI_START_CONFIG}"
+UNOMI_DISTRIBUTION="${UNOMI_DISTRIBUTION:-unomi-distribution-elasticsearch}"
+export KARAF_OPTS="-Dunomi.autoStart=${UNOMI_AUTO_START} -Dunomi.distribution=${UNOMI_DISTRIBUTION}"
 
-echo "PERSISTENCE_CONFIG: $PERSISTENCE_CONFIG"
 echo "KARAF_OPTS: $KARAF_OPTS"
 
 # Function to check cluster health for a specific node
@@ -48,8 +47,9 @@ check_node_health() {
 }
 
 # Configure connection parameters based on persistence config
-if [ "$PERSISTENCE_CONFIG" = "opensearch" ]; then
+if [[ "$UNOMI_DISTRIBUTION" == *opensearch* ]]; then
     # OpenSearch configuration
+    PERSISTENCE_TYPE="opensearch"
     if [ -z "$UNOMI_OPENSEARCH_PASSWORD" ]; then
         echo "Error: UNOMI_OPENSEARCH_PASSWORD must be set when using OpenSearch"
         exit 1
@@ -61,8 +61,9 @@ if [ "$PERSISTENCE_CONFIG" = "opensearch" ]; then
     curl_opts="-k -H \"${auth_header}\" -H \"Content-Type: application/json\""
     # Build array of node URLs
     IFS=',' read -ra NODES <<< "${UNOMI_OPENSEARCH_ADDRESSES}"
-elif [ "$PERSISTENCE_CONFIG" = "elasticsearch" ]; then
+elif [[ "$UNOMI_DISTRIBUTION" == *elasticsearch* ]]; then
     # Elasticsearch configuration
+    PERSISTENCE_TYPE="elasticsearch"
     if [ "$UNOMI_ELASTICSEARCH_SSL_ENABLE" = 'true' ]; then
         schema='https'
     else
@@ -77,12 +78,12 @@ elif [ "$PERSISTENCE_CONFIG" = "elasticsearch" ]; then
     # Build array of node URLs
     IFS=',' read -ra NODES <<< "${UNOMI_ELASTICSEARCH_ADDRESSES}"
 else
-    echo "Error: Unsupported persistence config: $PERSISTENCE_CONFIG"
+    echo "Error: unable to determine persistence type from distribution name: $UNOMI_DISTRIBUTION"
     exit 1
 fi
 
 # Wait for search engine to be ready
-echo "Waiting for ${PERSISTENCE_CONFIG} to be ready..."
+echo "Waiting for ${PERSISTENCE_TYPE} to be ready..."
 echo "Checking nodes: ${NODES[@]}"
 health_check=""
 
@@ -102,20 +103,20 @@ while ([ -z "$health_check" ] || ([ "$health_check" != 'yellow' ] && [ "$health_
     done
 
     if [ -z "$health_check" ]; then
-        >&2 echo "${PERSISTENCE_CONFIG^} is not yet available - all nodes unreachable"
+        >&2 echo "${PERSISTENCE_TYPE^} is not yet available - all nodes unreachable"
         sleep 3
         continue
     fi
 
     if [ "$health_check" != 'yellow' ] && [ "$health_check" != 'green' ]; then
-        >&2 echo "${PERSISTENCE_CONFIG^} health status: ${health_check} (waiting for yellow or green)"
+        >&2 echo "${PERSISTENCE_TYPE^} health status: ${health_check} (waiting for yellow or green)"
         sleep 3
     else
-        >&2 echo "${PERSISTENCE_CONFIG^} health status: ${health_check}"
+        >&2 echo "${PERSISTENCE_TYPE^} health status: ${health_check}"
     fi
 done
 
-echo "${PERSISTENCE_CONFIG^} is ready with health status: ${health_check}"
+echo "${PERSISTENCE_TYPE^} is ready with health status: ${health_check}"
 
 # Run Unomi in current bash session
 exec "$UNOMI_HOME/bin/karaf" run
