@@ -118,11 +118,12 @@ public class UnomiManagementServiceImpl implements UnomiManagementService {
             UnomiSetup setup = getUnomiSetup();
             if (setup == null) {
                 LOGGER.info("No previously setup distribution found");
+                //We are setting a default distribution if none is set to avoid the need of calling setup manually after installation
                 if (StringUtils.isNotBlank(bundleContext.getProperty("unomi.distribution"))) {
-                    setup = initUnomiSetup(bundleContext.getProperty("unomi.distribution"));
+                    setup = createUnomiSetup(bundleContext.getProperty("unomi.distribution"));
                     LOGGER.info("UnomiSetup created for distribution provided from context: {}", setup.getDistribution());
                 } else {
-                    setup = initUnomiSetup("unomi-distribution-elasticsearch");
+                    setup = createUnomiSetup("unomi-distribution-elasticsearch");
                     LOGGER.info("UnomiSetup created for default distribution: {}", setup.getDistribution());
                 }
             }
@@ -134,7 +135,7 @@ public class UnomiManagementServiceImpl implements UnomiManagementService {
             if (StringUtils.isNotBlank(bundleContext.getProperty("unomi.autoStart")) && bundleContext.getProperty("unomi.autoStart").equals("true")) {
                 LOGGER.info("Auto-starting unomi management service for unomi distribution: {}", setup.getDistribution());
                 // Don't wait for completion during initialization
-                startUnomi(setup.getDistribution(), true, false);
+                startUnomi(true, false);
             }
         } catch (Exception e) {
             LOGGER.error("Error during Unomi startup:", e);
@@ -147,7 +148,7 @@ public class UnomiManagementServiceImpl implements UnomiManagementService {
         return UnomiSetup.fromDictionary(configuration.getProperties());
     }
 
-    private UnomiSetup initUnomiSetup(String distribution) throws IOException {
+    private UnomiSetup createUnomiSetup(String distribution) throws IOException {
         Configuration configuration = configurationAdmin.getConfiguration(UNOMI_SETUP_PID, "?");
         UnomiSetup setup = UnomiSetup.init().withDistribution(distribution);
         configuration.update(setup.toProperties());
@@ -155,16 +156,26 @@ public class UnomiManagementServiceImpl implements UnomiManagementService {
     }
 
     @Override
-    public void startUnomi(String distribution, boolean mustStartFeatures) throws Exception {
-        // Default to waiting for completion
-        startUnomi(distribution, mustStartFeatures, true);
+    public void setupUnomiDistribution(String distribution, boolean overwrite) throws Exception {
+        UnomiSetup existingSetup = getUnomiSetup();
+        if (existingSetup != null && !overwrite) {
+            throw new IllegalStateException("Unomi distribution is already set up with distribution: " + existingSetup.getDistribution());
+        }
+        createUnomiSetup(distribution);
     }
 
     @Override
-    public void startUnomi(String distribution, boolean mustStartFeatures, boolean waitForCompletion) throws Exception {
+    public void startUnomi(boolean mustStartFeatures) throws Exception {
+        // Default to waiting for completion
+        startUnomi(mustStartFeatures, true);
+    }
+
+    @Override
+    public void startUnomi(boolean mustStartFeatures, boolean waitForCompletion) throws Exception {
+        UnomiSetup setup = getUnomiSetup();
         Future<?> future = executor.submit(() -> {
             try {
-                doStartUnomi(distribution, mustStartFeatures);
+                doStartUnomi(setup.getDistribution(), mustStartFeatures);
             } catch (Exception e) {
                 LOGGER.error("Error starting Unomi:", e);
                 throw new RuntimeException(e);
