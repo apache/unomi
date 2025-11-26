@@ -50,14 +50,14 @@
     <feature name="unomi-distribution-opensearch" description="Apache Unomi :: OpenSearch Distribution" version="${project.version}">
         <feature dependency="true" version="${project.version}">unomi-base</feature>
         <feature dependency="true" version="${project.version}">unomi-startup</feature>
-        <feature dependency="true" version="${project.version}">unomi-elasticsearch-core</feature>
+        <feature dependency="true" version="${project.version}">unomi-opensearch-core</feature>
         <feature dependency="true" version="${project.version}">unomi-persistence-core</feature>
         <feature dependency="true" version="${project.version}">unomi-services</feature>
         <feature dependency="true" version="${project.version}">unomi-rest-api</feature>
         <feature dependency="true" version="${project.version}">unomi-cxs-lists-extension</feature>
         <feature dependency="true" version="${project.version}">unomi-cxs-geonames-extension</feature>
         <feature dependency="true" version="${project.version}">unomi-cxs-privacy-extension</feature>
-        <feature dependency="true" version="${project.version}">unomi-elasticsearch-conditions</feature>
+        <feature dependency="true" version="${project.version}">unomi-opensearch-conditions</feature>
         <feature dependency="true" version="${project.version}">unomi-plugins-base</feature>
         <feature dependency="true" version="${project.version}">unomi-plugins-request</feature>
         <feature dependency="true" version="${project.version}">unomi-plugins-mail</feature>
