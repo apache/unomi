@@ -21,10 +21,10 @@
     <parent>
         <groupId>org.apache.unomi</groupId>
         <artifactId>unomi-root</artifactId>
-        <version>3.0.0-SNAPSHOT</version>
+        <version>3.1.0-SNAPSHOT</version>
     </parent>
     <artifactId>unomi</artifactId>
-    <version>3.0.0-SNAPSHOT</version>
+    <version>3.1.0-SNAPSHOT</version>
     <name>Apache Unomi :: Distribution Package</name>
     <description>Packaged distributions of the Apache Unomi Context Server</description>
     <packaging>pom</packaging>
@@ -150,6 +150,7 @@
                     <doCheck>false</doCheck>
                     <doUpdate>false</doUpdate>
                     <shortRevisionLength>8</shortRevisionLength>
+                    <revisionOnScmFailure>unknown</revisionOnScmFailure>
                 </configuration>
             </plugin>
             <plugin>

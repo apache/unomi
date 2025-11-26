@@ -21,7 +21,7 @@
     <parent>
         <groupId>org.apache.unomi</groupId>
         <artifactId>unomi-groovy-actions-root</artifactId>
-        <version>3.0.0-SNAPSHOT</version>
+        <version>3.1.0-SNAPSHOT</version>
     </parent>
     <artifactId>unomi-groovy-actions</artifactId>
     <name>Apache Unomi :: Extensions :: Groovy Actions :: Apache Karaf Feature and KAR archive</name>
