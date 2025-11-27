@@ -40,7 +40,7 @@
         <feature dependency="true" version="${project.version}">unomi-shell-dev-commands</feature>
         <feature dependency="true" version="${project.version}">unomi-wab</feature>
         <feature dependency="true" version="${project.version}">unomi-web-tracker</feature>
-        <feature dependency="true" version="${project.version}">unomi-healthcheck</feature>
+        <feature dependency="true" version="${project.version}">unomi-healthcheck-elasticsearch</feature>
         <feature dependency="true" version="${project.version}">unomi-router-karaf-feature</feature>
         <feature dependency="true" version="${project.version}">unomi-groovy-actions</feature>
         <feature dependency="true" version="${project.version}">unomi-rest-ui</feature>
@@ -65,7 +65,7 @@
         <feature dependency="true" version="${project.version}">unomi-shell-dev-commands</feature>
         <feature dependency="true" version="${project.version}">unomi-wab</feature>
         <feature dependency="true" version="${project.version}">unomi-web-tracker</feature>
-        <feature dependency="true" version="${project.version}">unomi-healthcheck</feature>
+        <feature dependency="true" version="${project.version}">unomi-healthcheck-opensearch</feature>
         <feature dependency="true" version="${project.version}">unomi-router-karaf-feature</feature>
         <feature dependency="true" version="${project.version}">unomi-groovy-actions</feature>
         <feature dependency="true" version="${project.version}">unomi-rest-ui</feature>

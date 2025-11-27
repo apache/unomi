@@ -100,7 +100,6 @@ services:
       - UNOMI_OPENSEARCH_ADDRESSES=opensearch-node1:9200
       - UNOMI_OPENSEARCH_USERNAME=admin
       - UNOMI_OPENSEARCH_PASSWORD=${OPENSEARCH_INITIAL_ADMIN_PASSWORD}
-      - UNOMI_HEALTHCHECK_PROVIDERS=cluster,opensearch,unomi,persistence
       # Debug settings
       - KARAF_DEBUG=${DEBUG:-false}
       - KARAF_DEBUG_PORT=${DEBUG_PORT:-5005}

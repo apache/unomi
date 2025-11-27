@@ -38,7 +38,6 @@ services:
       - UNOMI_AUTO_START=true
       - UNOMI_DISTRIBUTION=unomi-distribution-elasticsearch
       - UNOMI_ELASTICSEARCH_ADDRESSES=elasticsearch:9200
-      - UNOMI_HEALTHCHECK_PROVIDERS=cluster,elasticsearch,unomi,persistence
       # Debug settings
       - KARAF_DEBUG=${DEBUG:-false}
       - KARAF_DEBUG_PORT=${DEBUG_PORT:-5005}

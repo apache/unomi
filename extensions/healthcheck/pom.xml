@@ -150,10 +150,17 @@
                             <artifacts>
                                 <artifact>
                                     <file>
-                                        src/main/resources/org.apache.unomi.healthcheck.cfg
+                                        src/main/resources/org.apache.unomi.healthcheck-elasticsearch.cfg
                                     </file>
                                     <type>cfg</type>
-                                    <classifier>healthcheck</classifier>
+                                    <classifier>healthcheck-elasticsearch</classifier>
+                                </artifact>
+                                <artifact>
+                                    <file>
+                                        src/main/resources/org.apache.unomi.healthcheck-opensearch.cfg
+                                    </file>
+                                    <type>cfg</type>
+                                    <classifier>healthcheck-opensearch</classifier>
                                 </artifact>
                             </artifacts>
                         </configuration>
