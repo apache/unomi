@@ -29,14 +29,9 @@ if [ "$KARAF_DEBUG" = "true" ]; then
     export KARAF_DEBUG=true
 fi
 
-# Determine search engine type from UNOMI_AUTO_START
-SEARCH_ENGINE="${UNOMI_AUTO_START:-elasticsearch}"
-export KARAF_OPTS="-Dunomi.autoStart=${UNOMI_AUTO_START}"
+UNOMI_DISTRIBUTION="${UNOMI_DISTRIBUTION:-unomi-distribution-elasticsearch}"
+export KARAF_OPTS="-Dunomi.autoStart=${UNOMI_AUTO_START} -Dunomi.distribution=${UNOMI_DISTRIBUTION}"
 
-if [ "$SEARCH_ENGINE" = "true" ]; then
-    SEARCH_ENGINE="elasticsearch"
-fi
-echo "SEARCH_ENGINE: $SEARCH_ENGINE"
 echo "KARAF_OPTS: $KARAF_OPTS"
 
 # Function to check cluster health for a specific node
@@ -51,9 +46,11 @@ check_node_health() {
     fi
 }
 
-# Configure connection parameters based on search engine type
-if [ "$SEARCH_ENGINE" = "opensearch" ]; then
+# Configure connection parameters based on distribution name
+WAIT_SEARCH_ENGINE=true
+if [[ "$UNOMI_DISTRIBUTION" == *opensearch* ]]; then
     # OpenSearch configuration
+    SEARCH_ENGINE="opensearch"
     if [ -z "$UNOMI_OPENSEARCH_PASSWORD" ]; then
         echo "Error: UNOMI_OPENSEARCH_PASSWORD must be set when using OpenSearch"
         exit 1
@@ -65,8 +62,9 @@ if [ "$SEARCH_ENGINE" = "opensearch" ]; then
     curl_opts="-k -H \"${auth_header}\" -H \"Content-Type: application/json\""
     # Build array of node URLs
     IFS=',' read -ra NODES <<< "${UNOMI_OPENSEARCH_ADDRESSES}"
-else
+elif [[ "$UNOMI_DISTRIBUTION" == *elasticsearch* ]]; then
     # Elasticsearch configuration
+    SEARCH_ENGINE="elasticsearch"
     if [ "$UNOMI_ELASTICSEARCH_SSL_ENABLE" = 'true' ]; then
         schema='https'
     else
@@ -80,43 +78,49 @@ else
     health_endpoint="_cluster/health"
     # Build array of node URLs
     IFS=',' read -ra NODES <<< "${UNOMI_ELASTICSEARCH_ADDRESSES}"
+else
+    WAIT_SEARCH_ENGINE=false
+    echo "WARNING: unable to determine search engine from distribution name: $UNOMI_DISTRIBUTION"
+    echo "         Skipping waiting for engine to startup before starting Karaf, ensure it is expected"
 fi
 
-# Wait for search engine to be ready
-echo "Waiting for ${SEARCH_ENGINE} to be ready..."
-echo "Checking nodes: ${NODES[@]}"
-health_check=""
+# Wait for search engine to be ready (only if enabled)
+if [ "$WAIT_SEARCH_ENGINE" = true ]; then
+    echo "Waiting for ${SEARCH_ENGINE} to be ready..."
+    echo "Checking nodes: ${NODES[@]}"
+    health_check=""
 
-while ([ -z "$health_check" ] || ([ "$health_check" != 'yellow' ] && [ "$health_check" != 'green' ])); do
-    # Try each node until we get a successful response
-    for node in "${NODES[@]}"; do
-        node_url="${schema}://${node}/${health_endpoint}"
-        echo "Checking health at: ${node_url}"
-        health_check=$(check_node_health "$node_url" "$curl_opts")
+    while ([ -z "$health_check" ] || ([ "$health_check" != 'yellow' ] && [ "$health_check" != 'green' ])); do
+        # Try each node until we get a successful response
+        for node in "${NODES[@]}"; do
+            node_url="${schema}://${node}/${health_endpoint}"
+            echo "Checking health at: ${node_url}"
+            health_check=$(check_node_health "$node_url" "$curl_opts")
 
-        if [ ! -z "$health_check" ]; then
-            echo "Successfully connected to node: $node (status: ${health_check})"
-            break
+            if [ ! -z "$health_check" ]; then
+                echo "Successfully connected to node: $node (status: ${health_check})"
+                break
+            else
+                >&2 echo "Connection failed to node: $node"
+            fi
+        done
+
+        if [ -z "$health_check" ]; then
+            >&2 echo "${SEARCH_ENGINE^} is not yet available - all nodes unreachable"
+            sleep 3
+            continue
+        fi
+
+        if [ "$health_check" != 'yellow' ] && [ "$health_check" != 'green' ]; then
+            >&2 echo "${SEARCH_ENGINE^} health status: ${health_check} (waiting for yellow or green)"
+            sleep 3
         else
-            >&2 echo "Connection failed to node: $node"
+            >&2 echo "${SEARCH_ENGINE^} health status: ${health_check}"
         fi
     done
 
-    if [ -z "$health_check" ]; then
-        >&2 echo "${SEARCH_ENGINE^} is not yet available - all nodes unreachable"
-        sleep 3
-        continue
-    fi
-
-    if [ "$health_check" != 'yellow' ] && [ "$health_check" != 'green' ]; then
-        >&2 echo "${SEARCH_ENGINE^} health status: ${health_check} (waiting for yellow or green)"
-        sleep 3
-    else
-        >&2 echo "${SEARCH_ENGINE^} health status: ${health_check}"
-    fi
-done
-
-echo "${SEARCH_ENGINE^} is ready with health status: ${health_check}"
+    echo "${SEARCH_ENGINE^} is ready with health status: ${health_check}"
+fi
 
 # Run Unomi in current bash session
 exec "$UNOMI_HOME/bin/karaf" run

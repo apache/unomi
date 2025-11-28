@@ -90,6 +90,11 @@
             <artifactId>org.osgi.service.metatype.annotations</artifactId>
             <scope>provided</scope>
         </dependency>
+        <dependency>
+            <groupId>org.apache.felix</groupId>
+            <artifactId>org.apache.felix.configadmin</artifactId>
+            <scope>provided</scope>
+        </dependency>
 
         <dependency>
             <groupId>org.apache.commons</groupId>
@@ -177,13 +182,6 @@
                                     </file>
                                     <type>cfg</type>
                                     <classifier>migration</classifier>
-                                </artifact>
-                                <artifact>
-                                    <file>
-                                        src/main/resources/org.apache.unomi.start.cfg
-                                    </file>
-                                    <type>cfg</type>
-                                    <classifier>start</classifier>
                                 </artifact>
                             </artifacts>
                         </configuration>

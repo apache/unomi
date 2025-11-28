@@ -95,7 +95,8 @@ services:
     image: apache/unomi:${project.version}
     container_name: unomi
     environment:
-      - UNOMI_AUTO_START=opensearch
+      - UNOMI_AUTO_START=true
+      - UNOMI_DISTRIBUTION=unomi-distribution-opensearch
       - UNOMI_OPENSEARCH_ADDRESSES=opensearch-node1:9200
       - UNOMI_OPENSEARCH_USERNAME=admin
       - UNOMI_OPENSEARCH_PASSWORD=${OPENSEARCH_INITIAL_ADMIN_PASSWORD}

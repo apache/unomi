@@ -31,7 +31,6 @@ public class Stop implements Action {
 
     public Object execute() throws Exception {
         unomiManagementService.stopUnomi();
-
         return null;
     }
 
