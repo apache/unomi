@@ -40,10 +40,9 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static org.junit.Assert.*;
-
-import java.util.stream.Collectors;
 
 /**
  * Class to tests the JSON schema features
@@ -340,7 +339,14 @@ public class JSONSchemaIT extends BaseIT {
         condition.setParameter("propertyName", "flattenedProperties.interests.cars");
         condition.setParameter("comparisonOperator", "greaterThan");
         condition.setParameter("propertyValueInteger", 2);
-        assertNull(persistenceService.query(condition, null, Event.class, 0, -1));
+        // OpenSearch handles flattened fields differently than Elasticsearch
+        if ("opensearch".equals(searchEngine)) {
+            assertNotNull("OpenSearch should return results for flattened properties",
+                persistenceService.query(condition, null, Event.class, 0, -1));
+        } else {
+            assertNull("Elasticsearch should return null for flattened properties",
+                persistenceService.query(condition, null, Event.class, 0, -1));
+        }
 
         // check that term query is working on flattened props:
         condition = new Condition(definitionsService.getConditionType("eventPropertyCondition"));

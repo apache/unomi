@@ -282,7 +282,6 @@
                             *
                         </Import-Package>
                         <Export-Package>
-                            org.apache.lucene.search.join.*;version="${lucene.version}",
                             org.apache.unomi.persistence.elasticsearch;version="${project.version}",
                             co.elastic.clients.elasticsearch;version="${elasticsearch.version}",
                             co.elastic.clients.elasticsearch._types.query_dsl.Query;version="${elasticsearch.version}",
@@ -292,6 +291,10 @@
                         </Export-Package>
                         <Embed-Dependency>*;scope=compile|runtime</Embed-Dependency>
                         <Embed-Transitive>true</Embed-Transitive>
+                        <Provide-Capability>
+                            osgi.service;objectClass:List&lt;String&gt;="org.apache.unomi.persistence.spi.PersistenceService",
+                            unomi.persistence;type=elasticsearch
+                        </Provide-Capability>
                     </instructions>
                 </configuration>
             </plugin>

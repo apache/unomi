@@ -43,7 +43,7 @@ import java.util.Map;
 @RunWith(PaxExam.class)
 @ExamReactorStrategy(PerSuite.class)
 public class ProfileImportBasicIT extends BaseIT {
-    private Logger logger = LoggerFactory.getLogger(ProfileImportBasicIT.class);
+    private Logger LOGGER = LoggerFactory.getLogger(ProfileImportBasicIT.class);
 
     @Test
     public void testImportBasic() throws IOException, InterruptedException {
@@ -64,13 +64,13 @@ public class ProfileImportBasicIT extends BaseIT {
         importConfiguration.getProperties().put("mapping", mapping);
         importConfiguration.setActive(true);
 
-        logger.info("Save import config oneshot with ID : {}.", itemId);
+        LOGGER.info("Save import config oneshot with ID : {}.", itemId);
         importConfigurationService.save(importConfiguration, false);
 
         // Wait for the config to be processed
         Thread.sleep(5000);
 
-        logger.info("Check import config oneshot with ID : {}.", itemId);
+        LOGGER.info("Check import config oneshot with ID : {}.", itemId);
         List<ImportConfiguration> importConfigurations = importConfigurationService.getAll();
         Assert.assertEquals(1, importConfigurations.size());
 

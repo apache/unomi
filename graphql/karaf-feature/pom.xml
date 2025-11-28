@@ -45,6 +45,10 @@
             <artifactId>commons-fileupload</artifactId>
         </dependency>
         <dependency>
+            <groupId>commons-io</groupId>
+            <artifactId>commons-io</artifactId>
+        </dependency>
+        <dependency>
             <groupId>org.antlr</groupId>
             <artifactId>antlr4-runtime</artifactId>
         </dependency>
@@ -86,6 +90,11 @@
         <dependency>
             <groupId>org.eclipse.jetty.websocket</groupId>
             <artifactId>websocket-server</artifactId>
+            <version>${jetty.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.eclipse.jetty</groupId>
+            <artifactId>jetty-util-ajax</artifactId>
             <version>${jetty.version}</version>
         </dependency>
         <dependency>
@@ -136,8 +145,8 @@
                                 <feature>framework</feature>
                             </framework>
                             <features>
+                                <feature>unomi-services</feature>
                                 <feature>wrap</feature>
-                                <feature>unomi-kar</feature>
                                 <feature>cdp-graphql-feature</feature>
                             </features>
                             <ignoreMissingConditions>true</ignoreMissingConditions>

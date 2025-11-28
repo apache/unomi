@@ -75,5 +75,6 @@ public class HealthCheckServlet extends HttpServlet {
             } else {
                 response.setStatus(HttpServletResponse.SC_PARTIAL_CONTENT);
             }
+        response.flushBuffer();
     }
 }

@@ -39,7 +39,7 @@ public class WebConfig {
     private String contexserverProfileIdCookieName;
     private int contextserverProfileIdCookieMaxAgeInSeconds;
     private boolean contextserverProfileIdCookieHttpOnly;
-    private String[] allowedProfileDownloadFormats;
+    private String allowedProfileDownloadFormats;
     private int publicPostRequestBytesLimit;
 
     @Reference
@@ -61,7 +61,7 @@ public class WebConfig {
         boolean contextserver_profileIdCookieHttpOnly() default false;
 
         @AttributeDefinition
-        String[] allowed_profile_download_formats() default {"csv", "yaml", "json", "text"};
+        String allowed_profile_download_formats() default "csv,yaml,json,text";
 
         @AttributeDefinition
         int public_post_request_bytes_limit() default 200000;
@@ -106,7 +106,7 @@ public class WebConfig {
         return contextserverProfileIdCookieHttpOnly;
     }
 
-    public String[] getAllowedProfileDownloadFormats() {
+    public String getAllowedProfileDownloadFormats() {
         return allowedProfileDownloadFormats;
     }
 

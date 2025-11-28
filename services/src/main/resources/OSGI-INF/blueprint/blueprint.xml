@@ -67,7 +67,7 @@
         </cm:default-properties>
     </cm:property-placeholder>
 
-    <reference id="persistenceService" interface="org.apache.unomi.persistence.spi.PersistenceService"/>
+    <reference id="persistenceService" interface="org.apache.unomi.persistence.spi.PersistenceService" timeout="2000"/>
     <reference id="httpService" interface="org.osgi.service.http.HttpService"/>
     <reference id="osgiConfigurationAdmin" interface="org.osgi.service.cm.ConfigurationAdmin"/>
     <reference id="metricsService" interface="org.apache.unomi.metrics.MetricsService"/>

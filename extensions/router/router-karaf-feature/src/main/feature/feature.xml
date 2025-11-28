@@ -19,23 +19,23 @@
     <feature name="unomi-router-karaf-feature" version="${project.version}" description="Apache Unomi :: Extensions :: Router :: Apache Karaf Feature">
         <details>Apache Karaf feature for the Apache Unomi Context Server extension</details>
         <feature>wrap</feature>
-        <feature>unomi-kar</feature>
-        <bundle start-level="90">mvn:org.apache.servicemix.bundles/org.apache.servicemix.bundles.jsch/0.1.54_1</bundle>
-        <bundle start-level="90">mvn:commons-net/commons-net/${commons-net.version}</bundle>
-        <bundle start-level="90">wrap:mvn:org.apache.kafka/kafka-clients/${kafka.client.version}</bundle>
-        <bundle start-level="90">mvn:org.apache.camel/camel-core/${camel.version}</bundle>
-        <bundle start-level="90">mvn:org.apache.camel/camel-core-osgi/${camel.version}</bundle>
-        <bundle start-level="90">mvn:org.apache.camel/camel-blueprint/${camel.version}</bundle>
-        <bundle start-level="90">mvn:org.apache.camel/camel-jackson/${camel.version}</bundle>
-        <bundle start-level="90">mvn:org.apache.camel/camel-http-common/${camel.version}</bundle>
-        <bundle start-level="90">mvn:org.apache.camel/camel-servlet/${camel.version}</bundle>
-        <bundle start-level="90">mvn:org.apache.camel/camel-ftp/${camel.version}</bundle>
-        <bundle start-level="90">mvn:org.apache.camel/camel-stream/${camel.version}</bundle>
-        <bundle start-level="90">mvn:org.apache.camel/camel-kafka/${camel.version}</bundle>
-        <bundle start-level="90">mvn:org.apache.cxf/cxf-rt-rs-security-cors/${cxf.version}</bundle>
-        <bundle start-level="90" start="false">mvn:org.apache.unomi/unomi-router-api/${project.version}</bundle>
-        <bundle start-level="90" start="false">mvn:org.apache.unomi/unomi-router-core/${project.version}</bundle>
-        <bundle start-level="90" start="false">mvn:org.apache.unomi/unomi-router-service/${project.version}</bundle>
-        <bundle start-level="90" start="false">mvn:org.apache.unomi/unomi-router-rest/${project.version}</bundle>
+        <feature>unomi-services</feature>
+        <bundle start="false">mvn:org.apache.servicemix.bundles/org.apache.servicemix.bundles.jsch/0.1.54_1</bundle>
+        <bundle start="false">mvn:commons-net/commons-net/${commons-net.version}</bundle>
+        <bundle start="false">wrap:mvn:org.apache.kafka/kafka-clients/${kafka.client.version}</bundle>
+        <bundle start="false">mvn:org.apache.camel/camel-core/${camel.version}</bundle>
+        <bundle start="false">mvn:org.apache.camel/camel-core-osgi/${camel.version}</bundle>
+        <bundle start="false">mvn:org.apache.camel/camel-blueprint/${camel.version}</bundle>
+        <bundle start="false">mvn:org.apache.camel/camel-jackson/${camel.version}</bundle>
+        <bundle start="false">mvn:org.apache.camel/camel-http-common/${camel.version}</bundle>
+        <bundle start="false">mvn:org.apache.camel/camel-servlet/${camel.version}</bundle>
+        <bundle start="false">mvn:org.apache.camel/camel-ftp/${camel.version}</bundle>
+        <bundle start="false">mvn:org.apache.camel/camel-stream/${camel.version}</bundle>
+        <bundle start="false">mvn:org.apache.camel/camel-kafka/${camel.version}</bundle>
+        <bundle start="false">mvn:org.apache.cxf/cxf-rt-rs-security-cors/${cxf.version}</bundle>
+        <bundle start="false">mvn:org.apache.unomi/unomi-router-api/${project.version}</bundle>
+        <bundle start="false">mvn:org.apache.unomi/unomi-router-core/${project.version}</bundle>
+        <bundle start="false">mvn:org.apache.unomi/unomi-router-service/${project.version}</bundle>
+        <bundle start="false">mvn:org.apache.unomi/unomi-router-rest/${project.version}</bundle>
     </feature>
 </features>

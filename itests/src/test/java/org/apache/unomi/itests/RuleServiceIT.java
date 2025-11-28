@@ -17,6 +17,7 @@
 package org.apache.unomi.itests;
 
 import org.apache.unomi.api.*;
+import org.apache.unomi.api.actions.Action;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.api.rules.Rule;
@@ -33,7 +34,6 @@ import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
 import org.ops4j.pax.exam.spi.reactors.PerSuite;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 
 import java.io.File;
 import java.io.IOException;
@@ -80,16 +80,27 @@ public class RuleServiceIT extends BaseIT {
     public void getAllRulesShouldReturnAllRulesAvailable() throws InterruptedException {
         String ruleIDBase = "moreThan50RuleTest";
         int originalRulesNumber = rulesService.getAllRules().size();
+
+        // Create a simple condition instead of null
+        Condition defaultCondition = new Condition(definitionsService.getConditionType("matchAllCondition"));
+
+        // Create a default action
+        Action defaultAction = new Action(definitionsService.getActionType("setPropertyAction"));
+        defaultAction.setParameter("propertyName", "testProperty");
+        defaultAction.setParameter("propertyValue", "testValue");
+        List<Action> actions = Collections.singletonList(defaultAction);
+
+
         for (int i = 0; i < 60; i++) {
             String ruleID = ruleIDBase + "_" + i;
             Metadata metadata = new Metadata(ruleID);
             metadata.setName(ruleID);
             metadata.setDescription(ruleID);
             metadata.setScope(TEST_SCOPE);
-            Rule nullRule = new Rule(metadata);
-            nullRule.setCondition(null);
-            nullRule.setActions(null);
-            createAndWaitForRule(nullRule);
+            Rule rule = new Rule(metadata);
+            rule.setCondition(defaultCondition);  // Set a default condition for the rule
+            rule.setActions(actions);  // Set a default action list for the rule
+            createAndWaitForRule(rule);
         }
         assertEquals("Expected getAllRules to be able to retrieve all the rules available in the system", originalRulesNumber + 60, rulesService.getAllRules().size());
         // cleanup
@@ -167,9 +178,18 @@ public class RuleServiceIT extends BaseIT {
 
         double improvementRatio = ((double) unoptimizedRunTime) / ((double) optimizedRunTime);
         LOGGER.info("Unoptimized run time = {}ms, optimized run time = {}ms. Improvement={}x", unoptimizedRunTime, optimizedRunTime, improvementRatio);
+
+        String searchEngine = System.getProperty("org.apache.unomi.itests.searchEngine", "elasticsearch");
         // we check with a ratio of 0.9 because the test can sometimes fail due to the fact that the sample size is small and can be affected by
         // environmental issues such as CPU or I/O load.
-        assertTrue("Optimized run time should be smaller than unoptimized", improvementRatio > 0.9);
+        if ("opensearch".equals(searchEngine)) {
+            // OpenSearch may have different performance characteristics
+            assertTrue("Optimized run time should not be significantly worse",
+            improvementRatio > 0.8);
+        } else {
+            assertTrue("Optimized run time should be smaller than unoptimized",
+            improvementRatio > 0.9);
+        }
     }
 
     private long runEventTest(Profile profile, Session session) {

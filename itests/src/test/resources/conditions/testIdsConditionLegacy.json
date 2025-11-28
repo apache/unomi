@@ -1,0 +1,26 @@
+{
+  "metadata": {
+    "id": "testIdsConditionLegacy",
+    "name": "Test IDs Condition Legacy",
+    "description": "Test condition type using legacy queryBuilder ID",
+    "systemTags": [
+      "profileTags",
+      "condition"
+    ],
+    "readOnly": false
+  },
+  "queryBuilder": "idsConditionESQueryBuilder",
+  "parameters": [
+    {
+      "id": "ids",
+      "type": "string",
+      "multivalued": true
+    },
+    {
+      "id": "match",
+      "type": "boolean",
+      "multivalued": false,
+      "defaultValue": true
+    }
+  ]
+}

@@ -17,13 +17,31 @@
 
 package org.apache.unomi.persistence.spi.aggregate;
 
+/**
+ * Base type for aggregation requests targeting a single field.
+ * Concrete aggregate types extend this class and add their specific
+ * aggregation parameters.
+ */
 public abstract class BaseAggregate {
+    /**
+     * The name of the field to aggregate on.
+     */
     private String field;
 
+    /**
+     * Creates a new aggregate for the given field.
+     *
+     * @param field the target field name
+     */
     public BaseAggregate(String field) {
         this.field = field;
     }
 
+    /**
+     * Returns the target field name this aggregation applies to.
+     *
+     * @return the field name
+     */
     public String getField() {
         return field;
     }

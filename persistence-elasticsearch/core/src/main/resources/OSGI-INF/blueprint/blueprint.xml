@@ -161,7 +161,7 @@
     <service
             interface="org.apache.unomi.persistence.elasticsearch.ConditionESQueryBuilder">
         <service-properties>
-            <entry key="queryBuilderId" value="booleanConditionESQueryBuilder"/>
+            <entry key="queryBuilderId" value="booleanConditionQueryBuilder"/>
         </service-properties>
         <bean class="org.apache.unomi.persistence.elasticsearch.querybuilders.core.BooleanConditionESQueryBuilder"/>
     </service>
@@ -169,7 +169,7 @@
     <service
             interface="org.apache.unomi.persistence.elasticsearch.ConditionESQueryBuilder">
         <service-properties>
-            <entry key="queryBuilderId" value="notConditionESQueryBuilder"/>
+            <entry key="queryBuilderId" value="notConditionQueryBuilder"/>
         </service-properties>
         <bean class="org.apache.unomi.persistence.elasticsearch.querybuilders.core.NotConditionESQueryBuilder"/>
     </service>
@@ -177,7 +177,7 @@
     <service
             interface="org.apache.unomi.persistence.elasticsearch.ConditionESQueryBuilder">
         <service-properties>
-            <entry key="queryBuilderId" value="matchAllConditionESQueryBuilder"/>
+            <entry key="queryBuilderId" value="matchAllConditionQueryBuilder"/>
         </service-properties>
         <bean class="org.apache.unomi.persistence.elasticsearch.querybuilders.core.MatchAllConditionESQueryBuilder"/>
     </service>
@@ -185,7 +185,7 @@
     <service
             interface="org.apache.unomi.persistence.elasticsearch.ConditionESQueryBuilder">
         <service-properties>
-            <entry key="queryBuilderId" value="propertyConditionESQueryBuilder"/>
+            <entry key="queryBuilderId" value="propertyConditionQueryBuilder"/>
         </service-properties>
         <bean class="org.apache.unomi.persistence.elasticsearch.querybuilders.core.PropertyConditionESQueryBuilder"/>
     </service>
@@ -193,7 +193,7 @@
     <service
             interface="org.apache.unomi.persistence.elasticsearch.ConditionESQueryBuilder">
         <service-properties>
-            <entry key="queryBuilderId" value="sourceEventPropertyConditionESQueryBuilder"/>
+            <entry key="queryBuilderId" value="sourceEventPropertyConditionQueryBuilder"/>
         </service-properties>
         <bean class="org.apache.unomi.persistence.elasticsearch.querybuilders.core.SourceEventPropertyConditionESQueryBuilder"/>
     </service>
@@ -201,7 +201,7 @@
     <service
             interface="org.apache.unomi.persistence.elasticsearch.ConditionESQueryBuilder">
         <service-properties>
-            <entry key="queryBuilderId" value="nestedConditionESQueryBuilder"/>
+            <entry key="queryBuilderId" value="nestedConditionQueryBuilder"/>
         </service-properties>
         <bean class="org.apache.unomi.persistence.elasticsearch.querybuilders.core.NestedConditionESQueryBuilder"/>
     </service>

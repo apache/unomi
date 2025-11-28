@@ -20,7 +20,7 @@ In this section we will show examples of requests that may be built using this A
 
 Query counts are highly optimized queries that will count the number of objects that match a certain condition without
 retrieving the results. This can be used for example to quickly figure out how many objects will match a given condition
-before actually retrieving the results. It uses ElasticSearch/Lucene optimizations to avoid the cost of loading all the
+before actually retrieving the results. It uses search engine optimizations (ElasticSearch/OpenSearch) to avoid the cost of loading all the
 resulting objects.
 
 Here's an example of a query:
@@ -72,6 +72,8 @@ Metric queries make it possible to apply functions to the resulting property. Th
 - min
 - max
 
+These metrics are supported by both ElasticSearch and OpenSearch backends.
+
 It is also possible to request more than one metric in a single request by concatenating them with a "/" in the URL.
 Here's an example request that uses the `sum` and `avg` metrics:
 
@@ -116,7 +118,7 @@ The result will look something like this:
 Aggregations are a very powerful way to build queries in Apache Unomi that will collect and aggregate data by filtering
 on certain conditions.
 
-Aggregations are composed of :
+Aggregations are composed of:
 - an object type and a property on which to aggregate
 - an aggregation setup (how data will be aggregated, by date, by numeric range, date range or ip range)
 - a condition (used to filter the data set that will be aggregated)
@@ -127,8 +129,10 @@ Aggregations may be of different types. They are listed here below.
 
 ===== Date
 
-Date aggregations make it possible to automatically generate "buckets" by time periods. For more information about the
-format, it is directly inherited from ElasticSearch and you may find it here: https://www.elastic.co/guide/en/elasticsearch/reference/5.6/search-aggregations-bucket-datehistogram-aggregation.html
+Date aggregations make it possible to automatically generate "buckets" by time periods. The format is compatible with both ElasticSearch and OpenSearch. 
+For more information about the format, you can refer to:
+- ElasticSearch documentation: https://www.elastic.co/guide/en/elasticsearch/reference/7.17/search-aggregations-bucket-datehistogram-aggregation.html
+- OpenSearch documentation: https://opensearch.org/docs/2.11/aggregations/bucket/datehistogram/
 
 Here's an example of a request to retrieve a histogram of by day of all the session that have been create by newcomers (nbOfVisits=1)
 

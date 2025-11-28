@@ -1,0 +1,73 @@
+{
+  "dynamic_templates": [
+    {
+      "all": {
+        "match": "*",
+        "match_mapping_type": "string",
+        "mapping": {
+          "type": "text",
+          "analyzer": "folding",
+          "fields": {
+            "keyword": {
+              "type": "keyword",
+              "ignore_above": 256
+            }
+          }
+        }
+      }
+    }
+  ],
+  "properties": {
+    "duration": {
+      "type": "long"
+    },
+    "lastEventDate": {
+      "type": "date"
+    },
+    "profile" : {
+      "properties" : {
+        "properties" : {
+          "properties" : {
+            "age" : {
+              "type" : "long"
+            },
+            "birthDate" : {
+              "type" : "date"
+            },
+            "firstDate" : {
+              "type" : "date"
+            },
+            "lastVisit" : {
+              "type" : "date"
+            },
+            "previousVisit" : {
+              "type" : "date"
+            },
+            "notificationsRefreshDate" : {
+              "type" : "date"
+            }
+          }
+        }
+      }
+    },
+    "properties": {
+      "properties": {
+        "location": {
+          "type": "geo_point"
+        },
+        "sessionAdminSubDiv1" : {
+          "type": "long"
+        },
+        "sessionAdminSubDiv2" : {
+          "type": "long"
+        }
+      }
+    },
+    "size": {
+      "type": "long"
+    },
+    "timeStamp": {
+      "type": "date"
+    }
+  }
+}

@@ -465,7 +465,7 @@ public class ClusterServiceImpl implements ClusterService {
         propertyConditionType.setItemId("propertyCondition");
         propertyConditionType.setItemType(ConditionType.ITEM_TYPE);
         propertyConditionType.setConditionEvaluator("propertyConditionEvaluator");
-        propertyConditionType.setQueryBuilder("propertyConditionESQueryBuilder");
+        propertyConditionType.setQueryBuilder("propertyConditionQueryBuilder");
         staleNodesCondition.setConditionType(propertyConditionType);
         staleNodesCondition.setConditionTypeId("propertyCondition");
         staleNodesCondition.setParameter("propertyName", "lastHeartbeat");

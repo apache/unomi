@@ -16,6 +16,17 @@
  */
 package org.apache.unomi.persistence.spi.conditions.geo;
 
+/**
+ * Distance calculation strategies compatible with those historically used in Elasticsearch.
+ * <p>
+ * This enum provides 100% compatible replacements for distance computations (plane, arc,
+ * and haversine) that were previously sourced from Elasticsearch utilities. Keeping these
+ * here removes the need for an Elasticsearch dependency while preserving identical behavior
+ * for Unomi persistence layers, including OpenSearch.
+ * 
+ * TODO maybe evaluate https://github.com/unitsofmeasurement/indriya instead of this implementation
+ * to see if it can be a 100% compatible replacement.
+ */
 public enum GeoDistance {
     HAVERSINE {
         @Override

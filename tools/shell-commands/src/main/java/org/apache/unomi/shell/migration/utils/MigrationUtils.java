@@ -86,7 +86,7 @@ public class MigrationUtils {
             in.close();
             return value.toString();
         } catch (final Exception e) {
-            throw new RuntimeException(e);
+            throw new RuntimeException("Error reading file " + resource, e);
         }
     }
 

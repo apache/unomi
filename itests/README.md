@@ -56,6 +56,22 @@ You can run the integration tests along with the build by doing:
     
 from the project's root directory
 
+### Search Engine Selection
+
+Apache Unomi supports both ElasticSearch and OpenSearch as search engine backends. The integration tests can be configured to run against either engine:
+
+```bash
+# Run with ElasticSearch (default)
+mvn clean install -P integration-tests
+
+# Run with OpenSearch
+# Activate via property only. Do not pass -P opensearch or !elasticsearch;
+# the property alone handles activation/deactivation.
+mvn clean install -P integration-tests -Duse.opensearch=true
+```
+
+## Debugging integration tests
+
 If you want to run the tests with a debugger, you can use the `it.karaf.debug` system property.
 Here's an example:
 

@@ -21,18 +21,33 @@ import org.apache.unomi.api.query.NumericRange;
 
 import java.util.List;
 
+/**
+ * Aggregation that buckets numeric values of a field into the provided ranges.
+ */
 public class NumericRangeAggregate extends BaseAggregate{
     private List<NumericRange> ranges;
 
+    /**
+     * Creates a numeric range aggregation.
+     *
+     * @param field  the field to aggregate on
+     * @param ranges the list of numeric ranges
+     */
     public NumericRangeAggregate(String field, List<NumericRange> ranges) {
         super(field);
         this.ranges = ranges;
     }
 
+    /**
+     * Returns the configured numeric ranges.
+     */
     public List<NumericRange> getRanges() {
         return ranges;
     }
 
+    /**
+     * Sets the numeric ranges to use for bucketing.
+     */
     public void setRanges(List<NumericRange> ranges) {
         this.ranges = ranges;
     }

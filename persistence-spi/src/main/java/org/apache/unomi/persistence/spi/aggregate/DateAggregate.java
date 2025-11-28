@@ -21,13 +21,17 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Aggregation that buckets documents by time intervals on a date/datetime field.
+ * Supports legacy short interval formats (e.g., {@code 1M}) and new named formats (e.g., {@code Month}).
+ */
 public class DateAggregate extends BaseAggregate {
     private static final String DEFAULT_INTERVAL = "1M";
 
     private String interval;
     private String format;
 
-    // Maps bidirectionnelles pour la conversion entre formats
+    // Bidirectional maps for conversion between interval formats
     private static final Map<String, String> OLD_TO_NEW_FORMAT = Map.ofEntries(
             Map.entry("1s", "Second"),
             Map.entry("1m", "Minute"),
@@ -49,22 +53,43 @@ public class DateAggregate extends BaseAggregate {
         return Collections.unmodifiableMap(reverseMap);
     }
 
+    /**
+     * Creates a date aggregation with the default interval.
+     *
+     * @param field the field to aggregate on
+     */
     public DateAggregate(String field) {
         super(field);
         this.interval = DEFAULT_INTERVAL;
     }
 
+    /**
+     * Creates a date aggregation with a specific interval (old or new format).
+     *
+     * @param field    the field to aggregate on
+     * @param interval the interval, in old (e.g., {@code 1M}) or new (e.g., {@code Month}) format
+     */
     public DateAggregate(String field, String interval) {
         super(field);
         setInterval(interval);
     }
 
+    /**
+     * Creates a date aggregation with a specific interval and output format.
+     *
+     * @param field    the field to aggregate on
+     * @param interval the interval, in old or new format
+     * @param format   an optional output format understood by the persistence layer
+     */
     public DateAggregate(String field, String interval, String format) {
         super(field);
         setInterval(interval);
         this.format = format;
     }
 
+    /**
+     * Sets the interval; falls back to default when null/empty.
+     */
     public void setInterval(String interval) {
         this.interval = (interval != null && !interval.isEmpty()) ? interval : DEFAULT_INTERVAL;
     }
@@ -136,10 +161,16 @@ public class DateAggregate extends BaseAggregate {
         return NEW_TO_OLD_FORMAT.getOrDefault(newFormat, newFormat);
     }
 
+    /**
+     * Returns the output format, if any.
+     */
     public String getFormat() {
         return format;
     }
 
+    /**
+     * Sets the output format.
+     */
     public void setFormat(String format) {
         this.format = format;
     }

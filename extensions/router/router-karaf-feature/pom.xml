@@ -188,8 +188,6 @@
                                 <feature>framework</feature>
                             </framework>
                             <features>
-                                <feature>wrap</feature>
-                                <feature>unomi-kar</feature>
                                 <feature>unomi-router-karaf-feature</feature>
                             </features>
                             <ignoreMissingConditions>true</ignoreMissingConditions>
