@@ -107,11 +107,11 @@ To select which search engine to use, you can:
    * For OpenSearch: add `-Duse.opensearch=true` to your Maven command
    (this will only impact the integration tests if they are activated using the -Pintegration-tests profile)
 3. When using Docker:
-   * For ElasticSearch: use `UNOMI_AUTO_START=elasticsearch`
-   * For OpenSearch: use `UNOMI_AUTO_START=opensearch`
-   * For custom configurations: use `UNOMI_AUTO_START=your-custom-config-name`
+   * For ElasticSearch: use `UNOMI_DISTRIBUTION=unomi-distribution-elasticsearch`
+   * For OpenSearch: use `UNOMI_DISTRIBUTION=unomi-distribution-opensearch`
+   * For custom configurations: use `UNOMI_DISTRIBUTION=your-custom-distribution-name`
 
-Note: The `UNOMI_AUTO_START` environment variable accepts any start features configuration name defined in the `org.apache.unomi.start.cfg` file. You can use the predefined "elasticsearch" or "opensearch" configurations, or specify a custom configuration name if you have created one.
+Note: The `UNOMI_DISTRIBUTION` environment variable accepts any karaf feature that is available form Karaf. Two built-in distributions (unomi-distribution-elasticsearch, unomi-distribution-opensearch) are packaged with UNOMI archive but any other can be added, either in the package  or by adding a feature repository that contains the desired one in Karaf.
 
 Note: When using OpenSearch 3.x:
  - Security is enabled by default and requires SSL/TLS
@@ -972,7 +972,7 @@ You can use your custom configurations with:
 unomi:start elasticsearch-dev
 unomi:start opensearch-dev
 
-# Staging environment  
+# Staging environment
 unomi:start elasticsearch-staging
 unomi:start opensearch-staging
 
@@ -981,34 +981,42 @@ unomi:start elasticsearch-prod
 unomi:start opensearch-prod
 ----
 
-==== Auto-Start Configuration
+==== Auto-Start
 
-You can configure Apache Unomi to automatically start with a specific start features configuration when the server boots up. This is useful for production deployments where you want the server to start automatically without manual intervention.
+You can configure Apache Unomi to automatically start when the server boots up. See the next section for details. This is useful for production deployments where you want the server to start automatically without manual intervention.
 
-To enable auto-start, set the `unomi.autoStart` system property or `UNOMI_AUTO_START` environment variable to the name of your desired start features configuration:
+To enable auto-start, set the `unomi.autoStart` system property or `UNOMI_AUTO_START` environment variable to 'true'
+
+Note: Auto-start only works when Apache Unomi is not already running. If the server is already started, the auto-start setting will be ignored.
+
+==== Unomi Distribution
+
+You can define a specific distribution for Apache Unomi to configure desired features when the server boots up. Is it a classic Karaf feature that defines desired features for Unomi.
+Be aware that, even if a distribution is a classic Karaf feature XML file, it must only be composed feature's dependencies as this file is interpreted by the Unomi ManagementService.
+No bundle nor config file will be processed from this file.
+
+To set the desired distribution, set the `unomi.distribution` system property or `UNOMI_DISTRIBUTION` environment variable to the name of your desired distribution:
 
 [source]
 ----
 # Using system property
--Dunomi.autoStart=elasticsearch-prod
+-Dunomi.distribution=unomi-distribution-elasticsearch
 
 # Using environment variable (Docker)
-UNOMI_AUTO_START=opensearch-prod
+UNOMI_DISTRIBUTION=unomi-distribution-opensearch
 
-# Using custom configuration
-UNOMI_AUTO_START=elasticsearch-staging
+# Using custom distribution
+UNOMI_DISTRIBUTION=unomi-distribution-elasticsearch-staging
 ----
 
-The auto-start feature accepts any start features configuration name defined in your `org.apache.unomi.start.cfg` file. If you set it to `true`, it will default to the "elasticsearch" configuration for backward compatibility.
-
-Note: Auto-start only works when Apache Unomi is not already running. If the server is already started, the auto-start setting will be ignored.
+To use a custom distribution, the corresponding feature must be accessible by Karaf. It can be done by publishing the feature maven artefact and adding it as a feature repository in Karaf os for any other feature. Of course you can also add your distribution feature in the existing source code and repackage Unomi making it available directly.
 
 ==== Important Notes
 
-* **Configuration changes require restart**: After modifying the start features configuration, you must restart Apache Unomi for the changes to take effect
+* **Distribution changes require restart**: After forcing a modification of the distribution, you must restart Apache Unomi for the changes to take effect (be aware that in production it can have unpredictable side effects)
 * **Feature dependencies**: When adding custom features, ensure they have all required dependencies and are compatible with your chosen persistence implementation
-* **Backup your configuration**: Always backup your custom configuration before upgrading Apache Unomi, as upgrades may overwrite the default configuration file
-* **Feature availability**: Only features that are available in your Apache Unomi installation can be included in the configuration
+* **Backup your distribution**: As a distribution is a maven artifact, use the versionning to ensure you can rollback to a previous version.
+* **Feature availability**: According to Karaf maven repository access, you can add any feature repository that holds a Unomi distribution's feature and use it into an existing Unomi instance.
 
 ==== Available Features
 
@@ -1019,11 +1027,12 @@ To see all available features in your Apache Unomi installation, you can use the
 feature:list
 ----
 
-This will show you all available features that can be included in your start features configuration.
+This will show you all available features that can be included in your distribution.
 
-==== Docker Deployment with Custom Configuration
+==== Docker Deployment with Custom Distribution
 
-For Docker deployments, you can mount your custom start configuration file to override the default settings:
+For Docker deployments, you can declare a custom distribution feature repository (online) or a local one and mount the corresonding XML file accordingly:
+-e KARAF_FEATURES_REPOSITORIES=mvn:com.example/myfeatures/1.0.0/xml/features
 
 [source,yaml]
 ----
@@ -1032,9 +1041,10 @@ services:
   unomi:
     image: apache/unomi:3.0.0
     volumes:
-      - ./custom-start.cfg:/opt/apache-unomi/etc/org.apache.unomi.start.cfg
+      - ./unomi-custom-distribution-features.xml:/opt/apache-unomi/features/unomi-custom-distribution-features.xml
     environment:
-      - UNOMI_AUTO_START=elasticsearch-prod  # or opensearch-prod
+      - KARAF_FEATURES_REPOSITORIES=file:/opt/apache-unomi/features/unomi-custom-distribution-features.xml
+      - UNOMI_DISTRIBUTION=unomi-distribution-custom
     depends_on:
       - elasticsearch
   elasticsearch:
@@ -1045,9 +1055,9 @@ services:
 ----
 
 **Key Points:**
-- Mount your custom configuration file to `/opt/apache-unomi/etc/org.apache.unomi.start.cfg`
-- Use the `UNOMI_AUTO_START` environment variable to specify which configuration to use
-- The configuration file will override the default settings when the container starts
+- Mount your custom distribution feature repository file to `/opt/apache-unomi/etc/features/your-features-files.xml` (not necessary if the feature file is available in a online maven repository)
+- Declare the feature repository in Karaf using KARAF_FEATURES_REPOSITORIES environment variable pointing to your mounted file or a online maven artifact (mvn:com.example/custom-unomi-distribs/1.0.0/xml/features)
+- Use the `UNOMI_DISTRIBUTION` environment variable to specify which distribution (using the feature name) to use from that feature's repository
 
 === Customizing Apache Unomi Distribution
 
@@ -1101,7 +1111,7 @@ export UNOMI_PUBLIC_ADDRESS=https://production.unomi.example.com
 
 ==== Deployment with Custom Distribution
 
-Once you have created your custom distribution, you can deploy it using the same methods as the standard distribution:
+Once you have created and published your custom distribution, you can deploy it using the same methods as the standard distribution:
 
 **Docker Deployment:**
 [source,yaml]
@@ -1113,7 +1123,8 @@ services:
       context: .
       dockerfile: Dockerfile
     environment:
-      - UNOMI_AUTO_START=elasticsearch-prod
+      - KARAF_FEATURES_REPOSITORIES=mvn:com.example/your-custom-unomi-distributions/1.0.0/xml/features
+      - UNOMI_DISTRIBUTION=elasticsearch-prod
     depends_on:
       - elasticsearch
   elasticsearch:
@@ -1126,7 +1137,7 @@ services:
 **Dockerfile:**
 [source,dockerfile]
 ----
-FROM apache/unomi:3.0.0
+FROM apache/unomi:3.1.0
 COPY apache-unomi-custom-*.tar.gz /tmp/
 RUN cd /opt/apache-unomi && tar -xzf /tmp/apache-unomi-custom-*.tar.gz
 ----

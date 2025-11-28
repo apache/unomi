@@ -182,7 +182,8 @@ public abstract class BaseIT extends KarafTestSupport {
             } else if (SEARCH_ENGINE_OPENSEARCH.equals(searchEngine)){
                 LOGGER.info("Starting Unomi with opensearch search engine...");
                 System.out.println("==== Starting Unomi with opensearch search engine...");
-                executeCommand("unomi:start " + SEARCH_ENGINE_OPENSEARCH);
+                executeCommand("unomi:setup -d unomi-distribution-opensearch --force true");
+                executeCommand("unomi:start");
             } else {
                 LOGGER.error("Unknown search engine: " + searchEngine);
                 throw new InterruptedException("Unknown search engine: " + searchEngine);
@@ -306,7 +307,7 @@ public abstract class BaseIT extends KarafTestSupport {
                     "unomi-shell-dev-commands",
                     "unomi-wab",
                     "unomi-web-tracker",
-                    "unomi-healthcheck",
+                    "unomi-healthcheck-elasticsearch",
                     "unomi-router-karaf-feature",
                     "unomi-groovy-actions",
                     "unomi-rest-ui",
@@ -332,7 +333,7 @@ public abstract class BaseIT extends KarafTestSupport {
                     "unomi-shell-dev-commands",
                     "unomi-wab",
                     "unomi-web-tracker",
-                    "unomi-healthcheck",
+                    "unomi-healthcheck-opensearch",
                     "unomi-router-karaf-feature",
                     "unomi-groovy-actions",
                     "unomi-rest-ui",

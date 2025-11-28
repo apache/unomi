@@ -124,7 +124,7 @@ public class HealthCheckService {
                     busy = true;
                     List<HealthCheckResponse> health = new ArrayList<>();
                     health.add(HealthCheckResponse.live("karaf"));
-                    for (HealthCheckProvider provider : providers.stream().filter(p -> config.getEnabledProviders().contains(p.name())).collect(Collectors.toList())) {
+                    for (HealthCheckProvider provider : providers.stream().filter(p -> config.getEnabledProviders().contains(p.name())).toList()) {
                         Future<HealthCheckResponse> future = executor.submit(provider::execute);
                         try {
                             HealthCheckResponse response = future.get(config.getTimeout(), TimeUnit.MILLISECONDS);
