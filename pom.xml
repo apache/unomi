@@ -419,6 +419,7 @@
         <module>extensions/weather-update</module>
         <module>graphql</module>
         <module>samples</module>
+        <module>distribution</module>
         <module>package</module>
     </modules>
 

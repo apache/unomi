@@ -75,7 +75,6 @@
     <feature name="unomi-startup" description="Apache Unomi :: Startup Tools" version="${project.version}">
         <feature>unomi-base</feature>
         <configfile finalname="/etc/org.apache.unomi.migration.cfg">mvn:org.apache.unomi/shell-commands/${project.version}/cfg/migration</configfile>
-        <configfile finalname="/etc/org.apache.unomi.start.cfg">mvn:org.apache.unomi/shell-commands/${project.version}/cfg/start</configfile>
         <bundle>mvn:org.apache.unomi/shell-commands/${project.version}</bundle>
     </feature>
 
@@ -184,9 +183,15 @@
         <bundle start="false">mvn:org.apache.unomi/unomi-web-tracker-wab/${project.version}</bundle>
     </feature>
 
-    <feature name="unomi-healthcheck" description="Apache Unomi :: Healthcheck" version="${project.version}">
+    <feature name="unomi-healthcheck-elasticsearch" description="Apache Unomi :: Healthcheck ElasticSearch" version="${project.version}">
         <feature>unomi-web-tracker</feature>
-        <configfile finalname="/etc/org.apache.unomi.healthcheck.cfg">mvn:org.apache.unomi/healthcheck/${project.version}/cfg/healthcheck</configfile>
+        <configfile finalname="/etc/org.apache.unomi.healthcheck.cfg">mvn:org.apache.unomi/healthcheck/${project.version}/cfg/healthcheck-elasticsearch</configfile>
+        <bundle start="false">mvn:org.apache.unomi/healthcheck/${project.version}</bundle>
+    </feature>
+
+    <feature name="unomi-healthcheck-opensearch" description="Apache Unomi :: Healthcheck OpenSearch" version="${project.version}">
+        <feature>unomi-web-tracker</feature>
+        <configfile finalname="/etc/org.apache.unomi.healthcheck.cfg">mvn:org.apache.unomi/healthcheck/${project.version}/cfg/healthcheck-opensearch</configfile>
         <bundle start="false">mvn:org.apache.unomi/healthcheck/${project.version}</bundle>
     </feature>
 
