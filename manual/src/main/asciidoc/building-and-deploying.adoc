@@ -28,7 +28,7 @@ directly as described in this section.
  JDK location, and that your PATH includes %JAVA_HOME%\bin (windows) or
  $JAVA_HOME$/bin (unix).
 
-. Install Maven 3.9.6 (or later), which can be downloaded from
+. Install Maven 3.9.8 (or later), which can be downloaded from
  http://maven.apache.org/download.html[http://maven.apache.org/download.html]. Make sure that your PATH includes
  the MVN_HOME/bin directory.
 
@@ -158,6 +158,103 @@ export NO_COLOR=1
 ----
 +
 For a complete list of options and examples, run `./build.sh --help`.
+
+==== Updating the website
+
+Use the top-level `generate-manual.sh` script to generate and publish the documentation website.
+
+[source]
+----
+./generate-manual.sh publish <svn_user> <svn_pass>
+./generate-manual.sh simulate <svn_user> <svn_pass>
+----
+
+Modes:
+
+* `publish`: generates all documentation and publishes to Apache SVN
+** Generates exactly 2 versions (latest + stable)
+** Publishes HTML manual to `$SVN_WEBSITE_BASE/manual` and API docs from master
+** Uploads release packages (PDF/ZIP) to Apache Dist SVN for non-master branches
+** Removes old versions automatically on the website
+
+* `simulate`: dry-run; prints the commands without making changes
+
+Requirements:
+
+* Java 17+, Maven 3.6+, Git, SVN client, `bc`
+* Access to the `master` and the stable branch configured in `generate-manual-config.sh`
+
+Outputs and locations:
+
+* Staging directories under `target/generated-docs/` (created by the build)
+* Website content committed to `$SVN_WEBSITE_BASE/manual/<version>`
+* Release artifacts (PDF/ZIP + signatures/checksums) committed to Apache Dist SVN at `$SVN_DIST_BASE/<version>`
+
+Notes:
+
+* The script sources optional `generate-manual-config.sh` and `shell-utils.sh` for configuration/utilities.
+* Javadoc aggregation is attempted; if it fails (toolchain mismatch), the rest still publishes.
+
+==== JGitFlow
+
+You can use the https://jgitflow.bitbucket.org[JGitFlow Maven plugin] to work with feature, hotfix and other types of branches.
+
+For example, to start a feature branch, simply use:
+
+[source]
+----
+mvn jgitflow:feature-start
+----
+
+This will prompt you for the feature name, and then create a feature branch and update all the POMs to have a version that contains the feature name. This makes it easier to integrate with continuous integration systems to generate builds for the feature branch.
+
+Once the feature is completed you can use:
+
+[source]
+----
+mvn jgitflow:feature-finish
+----
+
+To merge the branch into master.
+
+==== Maven Build Cache
+
+Apache Unomi uses the Maven Build Cache extension to significantly improve build efficiency by caching compiled artifacts and avoiding unnecessary recompilation (build time without/with cached artifacts ~2mn/~3s).
+
+The build cache is enabled by default and configured in the `.mvn/maven-build-cache-config.xml` file. The cache configuration includes:
+
+* Local caching with up to 3 builds cached
+* SHA-256 hash algorithm for cache keys
+* Includes all source directories (`src/`)
+* Excludes `pom.xml` files and generated sources (`src/main/javagen/**`)
+
+Command line control:
+
+* Disable cache: `mvn -Dmaven.build.cache.enabled=false clean install`
+  ** Completely turns off the build cache functionality
+  ** Maven will not store or retrieve any build outputs from the cache
+  ** Performs a full build as if the cache were not present
+  ** Use this when you want to ensure no cache influence on the build
+
+* Skip cache (force rebuild): `mvn -Dmaven.build.cache.skipCache=true clean install`
+  ** Skips looking up artifacts in caches but still writes new results to cache
+  ** Forces Maven to rebuild everything without using cached artifacts
+  ** New build results will be stored in cache for future builds
+  ** Use this to force a complete rebuild while keeping cache functionality active
+
+* Enable cache (default): `mvn -Dmaven.build.cache.enabled=true clean install`
+  ** Enables full cache functionality (read and write)
+  ** Maven will use cached artifacts when available and store new results
+  ** This is the default behavior when the cache is enabled
+
+Purging the build cache:
+
+To completely reset the build cache and force a full rebuild, manually delete the cache directory: `rm -rf ~/.m2/build-cache` (Unix/Mac) or `rmdir /s %USERPROFILE%\.m2\build-cache` (Windows)
+
+For more information, see the official documentation:
+
+* https://maven.apache.org/extensions/maven-build-cache-extension/[Maven Build Cache Extension Overview]
+* https://maven.apache.org/extensions/maven-build-cache-extension/parameters.html[Build Cache Parameters Reference]
 
 ==== Installing an ElasticSearch server
 
