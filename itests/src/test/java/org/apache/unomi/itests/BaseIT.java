@@ -178,12 +178,12 @@ public abstract class BaseIT extends KarafTestSupport {
             if (SEARCH_ENGINE_ELASTICSEARCH.equals(searchEngine)) {
                 LOGGER.info("Starting Unomi with elasticsearch search engine...");
                 System.out.println("==== Starting Unomi with elasticsearch search engine...");
-                executeCommand("unomi:setup -d unomi-distribution-elasticsearch --force true");
+                executeCommand("unomi:setup -d=unomi-distribution-elasticsearch -f=true");
                 executeCommand("unomi:start");
             } else if (SEARCH_ENGINE_OPENSEARCH.equals(searchEngine)){
                 LOGGER.info("Starting Unomi with opensearch search engine...");
                 System.out.println("==== Starting Unomi with opensearch search engine...");
-                executeCommand("unomi:setup -d unomi-distribution-opensearch --force true");
+                executeCommand("unomi:setup -d=unomi-distribution-opensearch -f=true");
                 executeCommand("unomi:start");
             } else {
                 LOGGER.error("Unknown search engine: " + searchEngine);

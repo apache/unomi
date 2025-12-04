@@ -138,7 +138,7 @@ discovery.type: single-node
 - `unomi:start`
 
 Note that you could change or set the distribution (if not defined using environment variable) using:
-- `unomi:setup unomi-distribution-opensearch --force true`
+- `unomi:setup -d=unomi-distribution-opensearch -f=true`
 - `unomi:start`
 
 The unomi:setup parameter specifies which distribution to use (unomi-distribution-elasticsearch or unomi-distribution-opensearch),
