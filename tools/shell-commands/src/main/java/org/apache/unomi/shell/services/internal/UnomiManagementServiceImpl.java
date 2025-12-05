@@ -109,11 +109,13 @@ public class UnomiManagementServiceImpl implements UnomiManagementService {
     private final List<String> installedDistributionDependencies = new ArrayList<>();
     private final List<String> startedDistributionDependencies = new ArrayList<>();
 
+    private BundleContext bundleContext;
+
     @Activate
     public void init(ComponentContext componentContext) throws Exception {
         LOGGER.info("Initializing Unomi management service");
         try {
-            BundleContext bundleContext = componentContext.getBundleContext();
+            this.bundleContext = componentContext.getBundleContext();
 
             UnomiSetup setup = getUnomiSetup();
             if (setup == null) {
@@ -141,6 +143,16 @@ public class UnomiManagementServiceImpl implements UnomiManagementService {
             LOGGER.error("Error during Unomi startup:", e);
             throw e;
         }
+    }
+
+    private List<String> getAdditionalFeaturesToInstall() {
+        List<String> featuresToInstall = new ArrayList<>();
+        if (Boolean.parseBoolean(bundleContext.getProperty("org.apache.unomi.graphql.feature.activated"))) {
+            featuresToInstall.add(CDP_GRAPHQL_FEATURE);
+            bundleWatcher.addRequiredBundle("org.apache.unomi.cdp-graphql-api-impl");
+            bundleWatcher.addRequiredBundle("org.apache.unomi.graphql-ui");
+        }
+        return featuresToInstall;
     }
 
     private UnomiSetup getUnomiSetup() throws IOException {
@@ -208,6 +220,13 @@ public class UnomiManagementServiceImpl implements UnomiManagementService {
                     LOGGER.info("Installing distribution feature's dependency: {}", dependency.getName());
                     featuresService.installFeature(dependency.getName(), dependency.getVersion(), EnumSet.of(FeaturesService.Option.NoAutoStartBundles));
                     installedDistributionDependencies.add(dependency.getName());
+                }
+            }
+            for (String featureName : getAdditionalFeaturesToInstall()) {
+                if (!installedDistributionDependencies.contains(featureName)) {
+                    LOGGER.info("Installing additional feature: {}", featureName);
+                    featuresService.installFeature(featureName, EnumSet.of(FeaturesService.Option.NoAutoStartBundles));
+                    installedDistributionDependencies.add(featureName);
                 }
             }
         } catch (Exception e) {
