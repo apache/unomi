@@ -18,6 +18,7 @@ rest/.miredot-offline.json
 **/*.versionsBackup
 itests/src/main
 dependency_tree.txt
+.mvn/.develocity/develocity-workspace-id
 /.cursor/rules/always-read-existing-code.mdc
 /.cursor/rules/avoid-code-duplication.mdc
 /.cursor/rules/osgi-injection-frameworks.mdc

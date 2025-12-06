@@ -19,7 +19,8 @@ package org.apache.unomi.persistence.elasticsearch;
 
 import co.elastic.clients.elasticsearch._types.query_dsl.Query;
 import org.apache.unomi.api.conditions.Condition;
-import org.apache.unomi.persistence.spi.conditions.dispatcher.ConditionQueryBuilderDispatcherSupport;
+import org.apache.unomi.persistence.spi.conditions.ConditionContextHelper;
+import org.apache.unomi.persistence.spi.conditions.dispatcher.ConditionQueryBuilderDispatcher;
 import org.apache.unomi.scripting.ScriptExecutor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,7 +36,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * Responsibilities:
  * - Maintain a registry of available query builders by their IDs
  * - Resolve legacy queryBuilder IDs to the canonical IDs using centralized mapping in
- *   {@link org.apache.unomi.persistence.spi.conditions.dispatcher.ConditionQueryBuilderDispatcherSupport}
+ *   {@link org.apache.unomi.persistence.spi.conditions.dispatcher.ConditionQueryBuilderDispatcher}
  *   (with deprecation warnings)
  * - Build query fragments (filters) and full queries from {@link org.apache.unomi.api.conditions.Condition}
  * <p>
@@ -43,12 +44,11 @@ import java.util.concurrent.ConcurrentHashMap;
  * - Legacy mappings are centralized in SPI support; there is no runtime customization
  * - New IDs are always preferred; legacy IDs trigger a warning and are mapped transparently
  */
-public class ConditionESQueryBuilderDispatcher {
+public class ConditionESQueryBuilderDispatcher extends ConditionQueryBuilderDispatcher {
     private static final Logger LOGGER = LoggerFactory.getLogger(ConditionESQueryBuilderDispatcher.class.getName());
 
     private Map<String, ConditionESQueryBuilder> queryBuilders = new ConcurrentHashMap<>();
     private ScriptExecutor scriptExecutor;
-    private final ConditionQueryBuilderDispatcherSupport support = new ConditionQueryBuilderDispatcherSupport();
 
     public ConditionESQueryBuilderDispatcher() {
     }
@@ -100,15 +100,14 @@ public class ConditionESQueryBuilderDispatcher {
         }
 
         // Find the appropriate query builder key (new or legacy)
-        String finalQueryBuilderKey = support.findQueryBuilderKey(
+        String finalQueryBuilderKey = findQueryBuilderKey(
                 queryBuilderKey,
                 condition.getConditionTypeId(),
-                queryBuilders::containsKey,
-                LOGGER);
+                queryBuilders::containsKey);
 
         if (finalQueryBuilderKey != null) {
             ConditionESQueryBuilder queryBuilder = queryBuilders.get(finalQueryBuilderKey);
-            Condition contextualCondition = support.contextualize(condition, context, scriptExecutor);
+            Condition contextualCondition = ConditionContextHelper.getContextualCondition(condition, context, scriptExecutor);
             if (contextualCondition != null) {
                 return queryBuilder.buildQuery(contextualCondition, context, this);
             }
@@ -141,15 +140,14 @@ public class ConditionESQueryBuilderDispatcher {
         }
 
         // Find the appropriate query builder key (new or legacy)
-        String finalQueryBuilderKey = support.findQueryBuilderKey(
+        String finalQueryBuilderKey = findQueryBuilderKey(
                 queryBuilderKey,
                 condition.getConditionTypeId(),
-                queryBuilders::containsKey,
-                LOGGER);
+                queryBuilders::containsKey);
 
         if (finalQueryBuilderKey != null) {
             ConditionESQueryBuilder queryBuilder = queryBuilders.get(finalQueryBuilderKey);
-            Condition contextualCondition = support.contextualize(condition, context, scriptExecutor);
+            Condition contextualCondition = ConditionContextHelper.getContextualCondition(condition, context, scriptExecutor);
             if (contextualCondition != null) {
                 return queryBuilder.count(contextualCondition, context, this);
             }
@@ -159,6 +157,11 @@ public class ConditionESQueryBuilderDispatcher {
         LOGGER.warn("No matching query builder. See debug log level for more information");
         LOGGER.debug("No matching query builder for condition {} and context {}", condition, context);
         throw new UnsupportedOperationException();
+    }
+
+    @Override
+    protected Logger getLogger() {
+        return LOGGER;
     }
 
 }

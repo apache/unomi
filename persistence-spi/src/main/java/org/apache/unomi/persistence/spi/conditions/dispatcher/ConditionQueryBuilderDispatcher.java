@@ -17,26 +17,20 @@
 
 package org.apache.unomi.persistence.spi.conditions.dispatcher;
 
-import org.apache.unomi.api.conditions.Condition;
-import org.apache.unomi.persistence.spi.conditions.ConditionContextHelper;
-import org.apache.unomi.scripting.ScriptExecutor;
 import org.slf4j.Logger;
 
 import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Predicate;
 
 /**
- * Shared helper for condition query builder dispatchers (ES/OS). Centralizes logic that is
- * backend-agnostic: contextualization, legacy ID mapping with logging, and queryBuilder key resolution.
+ * Abstract base class for condition query builder dispatchers (ES/OS). Centralizes logic that is
+ * backend-agnostic: legacy ID mapping with logging, and queryBuilder key resolution.
  * The legacy-to-new queryBuilder identifiers are centralized here in
- * {@link #LEGACY_TO_NEW_QUERY_BUILDER_IDS} and are used by the no-arg
- * {@link #resolveLegacyQueryBuilderId(String, String, org.slf4j.Logger)} and
- * {@link #findQueryBuilderKey(String, String, java.util.function.Predicate, org.slf4j.Logger)} methods.
- * This helper intentionally avoids any dependency on backend-specific query types.
+ * {@link #LEGACY_TO_NEW_QUERY_BUILDER_IDS} and are used by the
+ * {@link #findQueryBuilderKey(String, String, java.util.function.Predicate)} method.
+ * This abstract class intentionally avoids any dependency on backend-specific query types.
  */
-public class ConditionQueryBuilderDispatcherSupport {
+public abstract class ConditionQueryBuilderDispatcher {
 
     /**
      * Backend-agnostic legacy-to-new mapping of queryBuilder identifiers.
@@ -54,40 +48,23 @@ public class ConditionQueryBuilderDispatcherSupport {
     );
 
     /**
-     * Cache to track which condition type + queryBuilderId combinations have already logged deprecation warnings.
-     * Key format: "conditionTypeId:queryBuilderId"
+     * Returns the logger instance for the concrete dispatcher implementation.
+     *
+     * @return the logger instance
      */
-    private static final Set<String> loggedDeprecationWarnings = ConcurrentHashMap.newKeySet();
-
-    /**
-     * Returns a contextualized copy of the provided condition if any dynamic parameters are present,
-     * otherwise returns {@code null} to indicate that a default fallback should be used by callers.
-     */
-    public Condition contextualize(Condition condition, Map<String, Object> context, ScriptExecutor scriptExecutor) {
-        return ConditionContextHelper.getContextualCondition(condition, context, scriptExecutor);
-    }
+    protected abstract Logger getLogger();
 
     /**
      * Resolves a legacy queryBuilder identifier to its new canonical identifier and logs a deprecation warning.
      * Returns {@code null} if the provided identifier is not legacy-mapped.
-     * The deprecation warning is only logged once per unique condition type + queryBuilderId combination
-     * to avoid polluting logs with repeated warnings for the same condition.
      */
-    public String resolveLegacyQueryBuilderId(String queryBuilderId, String conditionTypeId, Logger logger) {
+    private String resolveLegacyQueryBuilderId(String queryBuilderId, String conditionTypeId) {
         if (!LEGACY_TO_NEW_QUERY_BUILDER_IDS.containsKey(queryBuilderId)) {
             return null;
         }
         String mappedId = LEGACY_TO_NEW_QUERY_BUILDER_IDS.get(queryBuilderId);
-        
-        // Create a unique key for this condition type + queryBuilderId combination
-        String warningKey = conditionTypeId + ":" + queryBuilderId;
-        
-        // Only log the warning once per unique combination
-        if (loggedDeprecationWarnings.add(warningKey)) {
-        logger.warn("DEPRECATED: Using legacy queryBuilderId '{}' for condition type '{}'. Please update your condition definition to use the new queryBuilderId '{}'. Legacy mappings are deprecated and may be removed in future versions.",
+        getLogger().warn("DEPRECATED: Using legacy queryBuilderId '{}' for condition type '{}'. Please update your condition definition to use the new queryBuilderId '{}'. Legacy mappings are deprecated and may be removed in future versions.",
                 queryBuilderId, conditionTypeId, mappedId);
-        }
-        
         return mappedId;
     }
 
@@ -96,16 +73,15 @@ public class ConditionQueryBuilderDispatcherSupport {
      * The {@code hasBuilder} predicate is used to test the presence of a builder for a given key.
      */
     public String findQueryBuilderKey(String queryBuilderKey, String conditionTypeId,
-                                      Predicate<String> hasBuilder, Logger logger) {
+                                      Predicate<String> hasBuilder) {
         if (hasBuilder.test(queryBuilderKey)) {
             return queryBuilderKey;
         }
-        String legacyMappedId = resolveLegacyQueryBuilderId(queryBuilderKey, conditionTypeId, logger);
+        String legacyMappedId = resolveLegacyQueryBuilderId(queryBuilderKey, conditionTypeId);
         if (legacyMappedId != null && hasBuilder.test(legacyMappedId)) {
             return legacyMappedId;
         }
         return null;
     }
 }
-
 

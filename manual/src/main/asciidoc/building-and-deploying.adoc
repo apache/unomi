@@ -14,6 +14,11 @@
 
 === Building
 
+Apache Unomi 3.x provides a convenient `build.sh` script that simplifies the build process with
+enhanced error handling, preflight validation, and deployment options. See the
+<<Using the build.sh script>> section below for details. Alternatively, you can build using Maven
+directly as described in this section.
+
 ==== Initial Setup
 
 . Install J2SE 17 SDK (or later), which can be downloaded from
@@ -23,7 +28,7 @@
  JDK location, and that your PATH includes %JAVA_HOME%\bin (windows) or
  $JAVA_HOME$/bin (unix).
 
-. Install Maven 3.9.6 (or later), which can be downloaded from
+. Install Maven 3.9.8 (or later), which can be downloaded from
  http://maven.apache.org/download.html[http://maven.apache.org/download.html]. Make sure that your PATH includes
  the MVN_HOME/bin directory.
 
@@ -47,89 +52,9 @@ This will compile Apache Unomi and run all of the tests in the
 ----
      $> mvn -P \!integration-tests clean install
 ----
-
-===== Windows (PowerShell)
-
-For Windows users, Apache Unomi provides a PowerShell build script that offers enhanced functionality and a more native Windows experience.
-
-1. Get the code: `git clone https://github.com/apache/unomi.git`
-2. Open PowerShell and change to the Unomi directory
-3. Run the build script:
 +
-[source,powershell]
-----
-.\build.ps1
-----
-
-The script supports various options:
-
-[cols="1,2"]
-|===
-|Option |Description
-
-|-Help
-|Show help message and available options
-
-|-SkipTests
-|Skip all tests during build
-
-|-IntegrationTests
-|Run integration tests
-
-|-Deploy
-|Deploy after build
-
-|-Debug
-|Run Karaf in debug mode
-
-|-DebugPort <port>
-|Set debug port (default: 5005)
-
-|-DebugSuspend
-|Suspend JVM until debugger connects
-
-|-KarafHome <path>
-|Set Karaf home directory for deployment
-
-|-UseOpenSearch
-|Use OpenSearch instead of ElasticSearch
-
-|-NoKaraf
-|Build without starting Karaf
-
-|-AutoStart <engine>
-|Auto-start with specified engine (elasticsearch/opensearch)
-
-|-ResolverDebug
-|Enable Karaf Resolver debug logging for integration tests
-|===
-
-Examples:
-
-[source,powershell]
-----
-# Build with integration tests using OpenSearch
-.\build.ps1 -IntegrationTests -UseOpenSearch
-
-# Build in debug mode
-.\build.ps1 -Debug -DebugPort 5006 -DebugSuspend
-
-# Deploy to specific Karaf instance
-.\build.ps1 -Deploy -KarafHome ~\apache-karaf
-----
-
-Features of the PowerShell script:
-
-* Automatic requirement checking for Java, Maven, and GraphViz
-* Detailed installation instructions if requirements are missing
-* Colorized output (when supported by the terminal)
-* Progress indicators for long-running operations
-* Enhanced error handling and reporting
-* Native Windows path handling
-* System resource validation (memory, disk space)
-
-TIP: The script will automatically detect if your terminal supports ANSI colors and Unicode symbols, falling back to plain text if needed.
-
+This will compile Apache Unomi without running the tests and takes less
+ time to build.
 +
 TIP: On a non-English Windows env, the Asciidoctor Maven Plugin may fail to
      generate manuals due to an encoding conversion issue.
@@ -145,6 +70,193 @@ TIP: On a non-English Windows env, the Asciidoctor Maven Plugin may fail to
 ----
 +
 . The distributions will be available under "package/target" directory.
+
+==== Using the build.sh script
+
+Apache Unomi 3.x provides a unified `build.sh` script that simplifies the build, deployment, and execution process.
+This script replaces multiple legacy build scripts and provides enhanced error handling, colorized output, and
+comprehensive environment validation.
+
+The `build.sh` script offers the following features:
+
+* **Preflight validation**: Automatically checks for required tools (Java, Maven, GraphViz), system resources
+  (memory, disk space), Maven settings, and port availability
+* **Flexible build options**: Support for skipping tests, running integration tests, using OpenSearch, debug modes,
+  and more
+* **Deployment helpers**: Automatically copies KAR packages to Karaf deploy directory and purges caches
+* **Enhanced output**: Colorized, structured output with progress indicators (respects `NO_COLOR` environment variable)
+
+To use the script:
+
+. Get the code: `git clone https://github.com/apache/unomi.git`
+. Change to the top level directory of Apache Unomi source distribution.
+. Make the script executable (if needed): `chmod +x build.sh`
+. Run the script with your desired options:
++
+[source]
+----
+./build.sh --help
+----
++
+This will display all available options and usage examples.
+
+Common usage examples:
+
+* Build with integration tests using OpenSearch:
++
+[source]
+----
+./build.sh --integration-tests --use-opensearch
+----
++
+* Build in debug mode:
++
+[source]
+----
+./build.sh --debug --debug-port 5006 --debug-suspend
+----
++
+* Deploy to specific Karaf instance:
++
+[source]
+----
+./build.sh --deploy --karaf-home ~/apache-karaf
+----
++
+* Build without Karaf and auto-start OpenSearch:
++
+[source]
+----
+./build.sh --no-karaf --auto-start opensearch
+----
++
+* Run a single integration test:
++
+[source]
+----
+./build.sh --integration-tests --single-test org.apache.unomi.itests.graphql.GraphQLEventIT
+----
++
+* Debug a single integration test:
++
+[source]
+----
+./build.sh --integration-tests --single-test org.apache.unomi.itests.graphql.GraphQLEventIT --it-debug --it-debug-suspend
+----
++
+* Run without colored output:
++
+[source]
+----
+NO_COLOR=1 ./build.sh
+----
++
+or
++
+[source]
+----
+export NO_COLOR=1
+./build.sh
+----
++
+For a complete list of options and examples, run `./build.sh --help`.
+
+==== Updating the website
+
+Use the top-level `generate-manual.sh` script to generate and publish the documentation website.
+
+[source]
+----
+./generate-manual.sh publish <svn_user> <svn_pass>
+./generate-manual.sh simulate <svn_user> <svn_pass>
+----
+
+Modes:
+
+* `publish`: generates all documentation and publishes to Apache SVN
+** Generates exactly 2 versions (latest + stable)
+** Publishes HTML manual to `$SVN_WEBSITE_BASE/manual` and API docs from master
+** Uploads release packages (PDF/ZIP) to Apache Dist SVN for non-master branches
+** Removes old versions automatically on the website
+
+* `simulate`: dry-run; prints the commands without making changes
+
+Requirements:
+
+* Java 17+, Maven 3.6+, Git, SVN client, `bc`
+* Access to the `master` and the stable branch configured in `generate-manual-config.sh`
+
+Outputs and locations:
+
+* Staging directories under `target/generated-docs/` (created by the build)
+* Website content committed to `$SVN_WEBSITE_BASE/manual/<version>`
+* Release artifacts (PDF/ZIP + signatures/checksums) committed to Apache Dist SVN at `$SVN_DIST_BASE/<version>`
+
+Notes:
+
+* The script sources optional `generate-manual-config.sh` and `shell-utils.sh` for configuration/utilities.
+* Javadoc aggregation is attempted; if it fails (toolchain mismatch), the rest still publishes.
+
+==== JGitFlow
+
+You can use the https://jgitflow.bitbucket.org[JGitFlow Maven plugin] to work with feature, hotfix and other types of branches.
+
+For example, to start a feature branch, simply use:
+
+[source]
+----
+mvn jgitflow:feature-start
+----
+
+This will prompt you for the feature name, and then create a feature branch and update all the POMs to have a version that contains the feature name. This makes it easier to integrate with continuous integration systems to generate builds for the feature branch.
+
+Once the feature is completed you can use:
+
+[source]
+----
+mvn jgitflow:feature-finish
+----
+
+To merge the branch into master.
+
+==== Maven Build Cache
+
+Apache Unomi uses the Maven Build Cache extension to significantly improve build efficiency by caching compiled artifacts and avoiding unnecessary recompilation (build time without/with cached artifacts ~2mn/~3s).
+
+The build cache is enabled by default and configured in the `.mvn/maven-build-cache-config.xml` file. The cache configuration includes:
+
+* Local caching with up to 3 builds cached
+* SHA-256 hash algorithm for cache keys
+* Includes all source directories (`src/`)
+* Excludes `pom.xml` files and generated sources (`src/main/javagen/**`)
+
+Command line control:
+
+* Disable cache: `mvn -Dmaven.build.cache.enabled=false clean install`
+  ** Completely turns off the build cache functionality
+  ** Maven will not store or retrieve any build outputs from the cache
+  ** Performs a full build as if the cache were not present
+  ** Use this when you want to ensure no cache influence on the build
+
+* Skip cache (force rebuild): `mvn -Dmaven.build.cache.skipCache=true clean install`
+  ** Skips looking up artifacts in caches but still writes new results to cache
+  ** Forces Maven to rebuild everything without using cached artifacts
+  ** New build results will be stored in cache for future builds
+  ** Use this to force a complete rebuild while keeping cache functionality active
+
+* Enable cache (default): `mvn -Dmaven.build.cache.enabled=true clean install`
+  ** Enables full cache functionality (read and write)
+  ** Maven will use cached artifacts when available and store new results
+  ** This is the default behavior when the cache is enabled
+
+Purging the build cache:
+
+To completely reset the build cache and force a full rebuild, manually delete the cache directory: `rm -rf ~/.m2/build-cache` (Unix/Mac) or `rmdir /s %USERPROFILE%\.m2\build-cache` (Windows)
+
+For more information, see the official documentation:
+
+* https://maven.apache.org/extensions/maven-build-cache-extension/[Maven Build Cache Extension Overview]
+* https://maven.apache.org/extensions/maven-build-cache-extension/parameters.html[Build Cache Parameters Reference]
 
 ==== Installing a Search Engine
 

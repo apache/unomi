@@ -149,7 +149,7 @@ print_section() {
 print_status() {
     local status=$1
     local message=$2
-    
+
     if [ "$HAS_COLORS" -eq 1 ]; then
         case $status in
             "success")
@@ -228,7 +228,7 @@ prompt_continue() {
     if [ -z "$prompt_text" ]; then
         prompt_text="Continue?"
     fi
-    
+
     read -p "$prompt_text (y/N) " -n 1 -r
     echo
     if [[ ! $REPLY =~ ^[Yy]$ ]]; then
@@ -339,61 +339,32 @@ EOF
 
     echo
     echo "Examples:"
-    if [ "$HAS_COLORS" -eq 1 ]; then
-        echo -e "  ${GRAY}# Build with integration tests using OpenSearch${NC}"
-        echo -e "  ${GRAY}$0 --integration-tests --use-opensearch${NC}"
-        echo -e
-        echo -e "  ${GRAY}# Build skipping unit tests but running integration tests${NC}"
-        echo -e "  ${GRAY}$0 --skip-unit-tests --integration-tests${NC}"
-        echo -e
-        echo -e "  ${GRAY}# Build in debug mode${NC}"
-        echo -e "  ${GRAY}$0 --debug --debug-port 5006 --debug-suspend${NC}"
-        echo -e
-        echo -e "  ${GRAY}# Deploy to specific Karaf instance${NC}"
-        echo -e "  ${GRAY}$0 --deploy --karaf-home ~/apache-karaf${NC}"
-        echo -e
-        echo -e "  ${GRAY}# Build without Karaf and auto-start OpenSearch${NC}"
-        echo -e "  ${GRAY}$0 --no-karaf --auto-start opensearch${NC}"
-        echo -e
-        echo -e "  ${GRAY}# Run a single integration test${NC}"
-        echo -e "  ${GRAY}$0 --integration-tests --single-test org.apache.unomi.itests.graphql.GraphQLEventIT${NC}"
-        echo -e
-        echo -e "  ${GRAY}# Debug a single integration test${NC}"
-        echo -e "  ${GRAY}$0 --integration-tests --single-test org.apache.unomi.itests.graphql.GraphQLEventIT --it-debug --it-debug-suspend${NC}"
-        echo -e
-        echo -e "  ${GRAY}# Run without colored output${NC}"
-        echo -e "  ${GRAY}NO_COLOR=1 $0${NC}"
-        echo -e "  ${GRAY}# or ${NC}"
-        echo -e "  ${GRAY}export NO_COLOR=1${NC}"
-        echo -e "  ${GRAY}$0${NC}"
-    else
-        echo "  # Build with integration tests using OpenSearch"
-        echo "  $0 --integration-tests --use-opensearch"
-        echo
-        echo "  # Build skipping unit tests but running integration tests"
-        echo "  $0 --skip-unit-tests --integration-tests"
-        echo
-        echo "  # Build in debug mode"
-        echo "  $0 --debug --debug-port 5006 --debug-suspend"
-        echo
-        echo "  # Deploy to specific Karaf instance"
-        echo "  $0 --deploy --karaf-home ~/apache-karaf"
-        echo
-        echo "  # Build without Karaf and auto-start OpenSearch"
-        echo "  $0 --no-karaf --auto-start opensearch"
-        echo
-        echo "  # Run a single integration test"
-        echo "  $0 --integration-tests --single-test org.apache.unomi.itests.graphql.GraphQLEventIT"
-        echo
-        echo "  # Debug a single integration test"
-        echo "  $0 --integration-tests --single-test org.apache.unomi.itests.graphql.GraphQLEventIT --it-debug --it-debug-suspend"
-        echo
-        echo "  # Run without colored output"
-        echo "  NO_COLOR=1 $0"
-        echo "  # or"
-        echo "  export NO_COLOR=1"
-        echo "  $0"
-    fi
+    echo "  # Build with integration tests using OpenSearch"
+    echo "  $0 --integration-tests --use-opensearch"
+    echo
+    echo "  # Build skipping unit tests but running integration tests"
+    echo "  $0 --skip-unit-tests --integration-tests"
+    echo
+    echo "  # Build in debug mode"
+    echo "  $0 --debug --debug-port 5006 --debug-suspend"
+    echo
+    echo "  # Deploy to specific Karaf instance"
+    echo "  $0 --deploy --karaf-home ~/apache-karaf"
+    echo
+    echo "  # Build without Karaf and auto-start OpenSearch"
+    echo "  $0 --no-karaf --auto-start opensearch"
+    echo
+    echo "  # Run a single integration test"
+    echo "  $0 --integration-tests --single-test org.apache.unomi.itests.graphql.GraphQLEventIT"
+    echo
+    echo "  # Debug a single integration test"
+    echo "  $0 --integration-tests --single-test org.apache.unomi.itests.graphql.GraphQLEventIT --it-debug --it-debug-suspend"
+    echo
+    echo "  # Run without colored output"
+    echo "  NO_COLOR=1 $0"
+    echo "  # or"
+    echo "  export NO_COLOR=1"
+    echo "  $0"
     exit 1
 }
 
@@ -512,7 +483,7 @@ check_requirements() {
     print_status "info" "Checking required tools..."
     local required_tools=("mvn" "java" "tar" "gzip" "dot")
     local missing_tools=()
-    
+
     echo "Required tools:"
     for tool in "${required_tools[@]}"; do
         if command_exists "$tool"; then
@@ -616,7 +587,7 @@ check_requirements() {
 
     # 3. System Resources Check
     print_status "info" "Checking system resources..."
-    
+
     # Memory check
     if command_exists free; then
         available_memory=$(free -m | awk '/^Mem:/{print $2}')
@@ -660,7 +631,7 @@ check_requirements() {
 
     # 4. Configuration Check
     print_status "info" "Checking configuration..."
-    
+
     # Maven settings check
     if [ ! -f ~/.m2/settings.xml ]; then
         print_status "warning" "✗ Maven settings.xml not found"
@@ -712,7 +683,7 @@ check_requirements() {
 
     # 5. Option Validation
     print_status "info" "Validating options..."
-    
+
     if [ "$SKIP_TESTS" = true ] && [ "$RUN_INTEGRATION_TESTS" = true ]; then
         print_status "error" "Cannot use --skip-tests and --integration-tests together"
         has_errors=true
@@ -844,7 +815,7 @@ fi
 check_integration_test_env_vars() {
     local detected_vars=()
     local script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-    
+
     # Check for Elasticsearch environment variables
     if [ -n "${UNOMI_ELASTICSEARCH_CLUSTERNAME+x}" ] || \
        [ -n "${UNOMI_ELASTICSEARCH_USERNAME+x}" ] || \
@@ -853,7 +824,7 @@ check_integration_test_env_vars() {
        [ -n "${UNOMI_ELASTICSEARCH_SSL_TRUST_ALL_CERTIFICATES+x}" ]; then
         detected_vars+=("Elasticsearch")
     fi
-    
+
     # Check for OpenSearch environment variables
     if [ -n "${UNOMI_OPENSEARCH_CLUSTERNAME+x}" ] || \
        [ -n "${UNOMI_OPENSEARCH_ADDRESSES+x}" ] || \
@@ -863,7 +834,7 @@ check_integration_test_env_vars() {
        [ -n "${UNOMI_OPENSEARCH_SSL_TRUST_ALL_CERTIFICATES+x}" ]; then
         detected_vars+=("OpenSearch")
     fi
-    
+
     if [ ${#detected_vars[@]} -gt 0 ]; then
         print_status "error" "Environment variables for ${detected_vars[*]} are set and will interfere with integration tests"
         echo ""
@@ -914,13 +885,13 @@ if [ "$RUN_INTEGRATION_TESTS" = true ]; then
         echo "Running integration tests with ElasticSearch"
     fi
     MVN_OPTS="$MVN_OPTS -P integration-tests"
-    
+
     # Add single test option if specified
     if [ ! -z "$SINGLE_TEST" ]; then
         MVN_OPTS="$MVN_OPTS -Dit.test=$SINGLE_TEST"
         echo "Running single integration test: $SINGLE_TEST"
     fi
-    
+
     # Add integration test debug options if enabled
     if [ "$IT_DEBUG" = true ]; then
         DEBUG_OPTS="port=$IT_DEBUG_PORT"
@@ -962,7 +933,7 @@ else
         MVN_OPTS="$MVN_OPTS -P skip-unit-tests"
         echo "Skipping unit tests"
     fi
-    
+
     # Warn if single test was specified but integration tests are not enabled
     if [ ! -z "$SINGLE_TEST" ]; then
         print_status "warning" "Single test specified but integration tests are not enabled. Use --integration-tests to run the test."

@@ -18,7 +18,8 @@
 package org.apache.unomi.persistence.opensearch;
 
 import org.apache.unomi.api.conditions.Condition;
-import org.apache.unomi.persistence.spi.conditions.dispatcher.ConditionQueryBuilderDispatcherSupport;
+import org.apache.unomi.persistence.spi.conditions.ConditionContextHelper;
+import org.apache.unomi.persistence.spi.conditions.dispatcher.ConditionQueryBuilderDispatcher;
 import org.apache.unomi.scripting.ScriptExecutor;
 import org.opensearch.client.opensearch._types.query_dsl.Query;
 import org.slf4j.Logger;
@@ -35,7 +36,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * Responsibilities:
  * - Maintain a registry of available query builders by their IDs
  * - Resolve legacy queryBuilder IDs to the canonical IDs using centralized mapping in
- *   {@link org.apache.unomi.persistence.spi.conditions.dispatcher.ConditionQueryBuilderDispatcherSupport}
+ *   {@link org.apache.unomi.persistence.spi.conditions.dispatcher.ConditionQueryBuilderDispatcher}
  *   (with deprecation warnings)
  * - Build query fragments (filters) and full queries from {@link org.apache.unomi.api.conditions.Condition}
  * <p>
@@ -43,12 +44,11 @@ import java.util.concurrent.ConcurrentHashMap;
  * - Legacy mappings are centralized in SPI support; there is no runtime customization
  * - New IDs are always preferred; legacy IDs trigger a warning and are mapped transparently
  */
-public class ConditionOSQueryBuilderDispatcher {
+public class ConditionOSQueryBuilderDispatcher extends ConditionQueryBuilderDispatcher {
     private static final Logger LOGGER = LoggerFactory.getLogger(ConditionOSQueryBuilderDispatcher.class.getName());
 
     private Map<String, ConditionOSQueryBuilder> queryBuilders = new ConcurrentHashMap<>();
     private ScriptExecutor scriptExecutor;
-    private final ConditionQueryBuilderDispatcherSupport support = new ConditionQueryBuilderDispatcherSupport();
 
     public ConditionOSQueryBuilderDispatcher() {
     }
@@ -80,11 +80,11 @@ public class ConditionOSQueryBuilderDispatcher {
     }
 
     public Query buildFilter(Condition condition) {
-        return buildFilter(condition, new HashMap<String, Object>());
+        return buildFilter(condition, new HashMap<>());
     }
 
     public Query buildFilter(Condition condition, Map<String, Object> context) {
-        if(condition == null || condition.getConditionType() == null) {
+        if (condition == null || condition.getConditionType() == null) {
             throw new IllegalArgumentException("Condition is null or doesn't have type, impossible to build filter");
         }
 
@@ -99,15 +99,14 @@ public class ConditionOSQueryBuilderDispatcher {
         }
 
         // Find the appropriate query builder key (new or legacy)
-        String finalQueryBuilderKey = support.findQueryBuilderKey(
+        String finalQueryBuilderKey = findQueryBuilderKey(
                 queryBuilderKey,
                 condition.getConditionTypeId(),
-                queryBuilders::containsKey,
-                LOGGER);
+                queryBuilders::containsKey);
 
         if (finalQueryBuilderKey != null) {
             ConditionOSQueryBuilder queryBuilder = queryBuilders.get(finalQueryBuilderKey);
-            Condition contextualCondition = support.contextualize(condition, context, scriptExecutor);
+            Condition contextualCondition = ConditionContextHelper.getContextualCondition(condition, context, scriptExecutor);
             if (contextualCondition != null) {
                 return queryBuilder.buildQuery(contextualCondition, context, this);
             }
@@ -127,7 +126,7 @@ public class ConditionOSQueryBuilderDispatcher {
     }
 
     public long count(Condition condition, Map<String, Object> context) {
-        if(condition == null || condition.getConditionType() == null) {
+        if (condition == null || condition.getConditionType() == null) {
             throw new IllegalArgumentException("Condition is null or doesn't have type, impossible to build filter");
         }
 
@@ -142,15 +141,14 @@ public class ConditionOSQueryBuilderDispatcher {
         }
 
         // Find the appropriate query builder key (new or legacy)
-        String finalQueryBuilderKey = support.findQueryBuilderKey(
+        String finalQueryBuilderKey = findQueryBuilderKey(
                 queryBuilderKey,
                 condition.getConditionTypeId(),
-                queryBuilders::containsKey,
-                LOGGER);
+                queryBuilders::containsKey);
 
         if (finalQueryBuilderKey != null) {
             ConditionOSQueryBuilder queryBuilder = queryBuilders.get(finalQueryBuilderKey);
-            Condition contextualCondition = support.contextualize(condition, context, scriptExecutor);
+            Condition contextualCondition = ConditionContextHelper.getContextualCondition(condition, context, scriptExecutor);
             if (contextualCondition != null) {
                 return queryBuilder.count(contextualCondition, context, this);
             }
@@ -162,6 +160,11 @@ public class ConditionOSQueryBuilderDispatcher {
             LOGGER.debug("No matching query builder for condition {} and context {}", condition, context);
         }
         throw new UnsupportedOperationException();
+    }
+
+    @Override
+    protected Logger getLogger() {
+        return LOGGER;
     }
 
 }

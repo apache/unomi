@@ -144,3 +144,5 @@ include::shell-commands.adoc[]
 include::writing-plugins.adoc[]
 
 include::patches.adoc[]
+
+include::migrate-es7-to-es9.adoc[]

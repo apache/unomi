@@ -31,7 +31,7 @@ import org.junit.runners.Suite.SuiteClasses;
 @RunWith(ProgressSuite.class)
 @SuiteClasses({
         Migrate16xToCurrentVersionIT.class,
-        MigrationIT.class,  
+        MigrationIT.class,
         BasicIT.class,
         ConditionEvaluatorIT.class,
         ConditionQueryBuilderIT.class,

@@ -23,7 +23,11 @@ is not supported anymore.
 
 The documentation of the client can be found here: https://www.elastic.co/docs/reference/elasticsearch/clients/java
 
-==== Karaf upgrade
+===  Elasticsearch 7 data migration
+
+A procedure to migrate your data from Elasticsearch 7 to Elasticsearch 9 can be found in the <<Migrate from Elasticsearch 7 to Elasticsearch 9>> section
+
+=== Karaf upgrade
 
 The Karaf version has been upgraded from 4.2.15 to 4.4.8 in order to support the latest versions of the dependencies.
 This upgrade also brings support for Java 17.

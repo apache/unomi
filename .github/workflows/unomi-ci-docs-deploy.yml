@@ -7,6 +7,9 @@ on:
   push:
     branches: [master]
 
+env:
+  DEVELOCITY_ACCESS_KEY: ${{ secrets.DEVELOCITY_ACCESS_KEY }}
+
 jobs:
   publish-docs-and-snapshots:
     name: Publish Javadoc and snapshots

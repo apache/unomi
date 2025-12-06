@@ -18,105 +18,10 @@
 Building Apache Unomi
 =====================
 
-Initial Setup
--------------
+This file has been deprecated to avoid duplication. Please use the online manual for up-to-date instructions:
 
-1) Install J2SE 17 SDK (or later), which can be downloaded from http://www.oracle.com/technetwork/java/javase/downloads/index.html
+  Online manual (Building): https://unomi.apache.org/manual/latest/index.html#_building
 
-2) Make sure that your JAVA_HOME environment variable is set to the newly installed
-   JDK location, and that your PATH includes %JAVA_HOME%\bin (windows) or
-   $JAVA_HOME$/bin (unix).
+To propose edits to the build documentation, update the source Asciidoc here:
 
-3) Install Maven 3.0.3 (or later), which can be downloaded from
-   http://maven.apache.org/download.html. Make sure that your PATH includes
-   the MVN_HOME/bin directory.
-
-
-Building
---------
-
-1) Change to the top level directory of Apache Unomi source distribution.
-2) Run
-
-         $> mvn clean install
-
-   This will compile Apache Unomi and run all of the tests in the
-   Apache Unomi source distribution. Alternatively, you can run
-
-         $> mvn -P \!integration-tests clean install
-
-   This will compile Apache Unomi without running the tests and takes less
-   time to build.
-
-3) The distributions will be available under "package/target" directory.
-
-Building on Windows with PowerShell
----------------------------------
-
-For Windows users, we provide a PowerShell build script (build.ps1) that offers the same functionality
-as the Unix shell script with a more Windows-native experience.
-
-1) Open PowerShell and change to the Apache Unomi directory
-2) Run the build script:
-
-         PS> .\build.ps1
-
-   Available options include:
-   - -Help                    Show help message
-   - -SkipTests              Skip all tests
-   - -IntegrationTests       Run integration tests
-   - -Deploy                 Deploy after build
-   - -Debug                  Run Karaf in debug mode
-   - -UseOpenSearch         Use OpenSearch instead of ElasticSearch
-   - -KarafHome <path>       Set Karaf home directory
-   - -ResolverDebug          Enable Karaf Resolver debug logging for integration tests
-
-   Examples:
-   - Build with integration tests:
-         PS> .\build.ps1 -IntegrationTests
-
-   - Build and deploy to Karaf:
-         PS> .\build.ps1 -Deploy -KarafHome ~\apache-karaf
-
-   The script will automatically check for required tools (Java, Maven, GraphViz)
-   and provide installation instructions if any are missing.
-
-Updating the website
---------------------
-
-We provide two scripts to generate the website and upload the modifications
-to the live SVN repository. To generate the website and check if everything is in
-place simply launch:
-
-    ./generate-site.sh
-
-The generated site will then be in the target/site directory
-
-Once it is ready to be published to the live site, simply use the following
-command:
-
-    ./generate-site-and-upload.sh SVNusername SVNpassword
-
-Where the required username and password have the proper credentials for the SVN
-Apache repository.
-
-JGitFlow
---------
-
-We now can use the [JGitFlow Maven plugin](http://jgitflow.bitbucket.org) to make it easier to work with feature,
-hotfix and other types of branches.
-
-For example, to start a feature branch, simply use
-
-    mvn jgitflow:feature-start
-
-This will prompt you for the feature name, and then create a feature branch and update
-all the POMs to have a version that contains the feature name. This makes it then a lot
-easier to integrate with continuous integration systems to generate builds for the
-feature branch.
-
-Once the feature is completed you can use
-
-    mvn jgitflow:feature-finish
-
-To merge the branch into master.
+  manual/src/main/asciidoc/building-and-deploying.adoc
