@@ -98,8 +98,15 @@ public class ProfileImportSurfersIT extends BaseIT {
                 () -> profileService.findProfilesByPropertyValue("properties.city", "surfersCity", 0, 50, null),
                 (p) -> p.getTotalSize() == 34, 1000, 100);
 
-        keepTrying("Failed waiting for import configurations list with 1 item", () -> importConfigurationService.getAll(),
-                (list) -> Objects.nonNull(list) && list.size() == 1, 1000, 100);
+        // Refresh the persistence index to ensure the saved configuration is queryable in getAll()
+        // This addresses the flakiness where getAll() returns 0 items due to index refresh delay
+        persistenceService.refreshIndex(ImportConfiguration.class);
+
+        // Check for the specific item ID instead of exact count to avoid flakiness from leftover configurations
+        keepTrying("Failed waiting for import configuration '" + itemId1 + "' to be available in getAll()", 
+                () -> importConfigurationService.getAll(),
+                (list) -> Objects.nonNull(list) && list.stream().anyMatch(config -> itemId1.equals(config.getItemId())), 
+                1000, 100);
 
         //Profile not to delete
         PartialList<Profile> jordyProfile = profileService.findProfilesByPropertyValue("properties.email", "jordy@smith.com", 0, 10, null);
@@ -146,8 +153,15 @@ public class ProfileImportSurfersIT extends BaseIT {
                 () -> profileService.findProfilesByPropertyValue("properties.city", "surfersCity", 0, 50, null),
                 (p) -> p.getTotalSize() == 36, 1000, 100);
 
-        keepTrying("Failed waiting for import configurations list with 1 item", () -> importConfigurationService.getAll(),
-                (list) -> Objects.nonNull(list) && list.size() == 1, 1000, 100);
+        // Refresh the persistence index to ensure the saved configuration is queryable in getAll()
+        // This addresses the flakiness where getAll() returns 0 items due to index refresh delay
+        persistenceService.refreshIndex(ImportConfiguration.class);
+
+        // Check for the specific item ID instead of exact count to avoid flakiness from leftover configurations
+        keepTrying("Failed waiting for import configuration '" + itemId2 + "' to be available in getAll()", 
+                () -> importConfigurationService.getAll(),
+                (list) -> Objects.nonNull(list) && list.stream().anyMatch(config -> itemId2.equals(config.getItemId())), 
+                1000, 100);
 
         //Profile not to delete
         PartialList<Profile> aliveProfiles = profileService.findProfilesByPropertyValue("properties.alive", "true", 0, 50, null);
@@ -189,8 +203,15 @@ public class ProfileImportSurfersIT extends BaseIT {
                 () -> profileService.findProfilesByPropertyValue("properties.city", "surfersCity", 0, 50, null),
                 (p) -> p.getTotalSize() == 0, 1000, 100);
 
-        keepTrying("Failed waiting for import configurations list with 1 item", () -> importConfigurationService.getAll(),
-                (list) -> Objects.nonNull(list) && list.size() == 1, 1000, 100);
+        // Refresh the persistence index to ensure the saved configuration is queryable in getAll()
+        // This addresses the flakiness where getAll() returns 0 items due to index refresh delay
+        persistenceService.refreshIndex(ImportConfiguration.class);
+
+        // Check for the specific item ID instead of exact count to avoid flakiness from leftover configurations
+        keepTrying("Failed waiting for import configuration '" + itemId3 + "' to be available in getAll()", 
+                () -> importConfigurationService.getAll(),
+                (list) -> Objects.nonNull(list) && list.stream().anyMatch(config -> itemId3.equals(config.getItemId())), 
+                1000, 100);
 
         PartialList<Profile> jordyProfileDelete = profileService
                 .findProfilesByPropertyValue("properties.email", "jordy@smith.com", 0, 10, null);

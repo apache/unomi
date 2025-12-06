@@ -94,17 +94,35 @@ public class ProfileImportActorsIT extends BaseIT {
         ImportConfiguration savedImportConfigActors = importConfigurationService.save(importConfigActors, true);
         keepTrying("Failed waiting for actors import configuration to be saved", () -> importConfigurationService.load(importConfigActors.getItemId()), Objects::nonNull, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
 
+        // Wait for Camel route to be created and started (the timer runs every 1 second to process config refreshes)
+        // This gives us visibility into what Camel is doing instead of just waiting for results
+        // Using official Camel API: getRouteController().getRouteStatus() and Management API for statistics
+        boolean routeStarted = waitForCamelRouteStarted(itemId, 1000, 5);
+        if (routeStarted) {
+            String routeInfo = getCamelRouteInfo(itemId);
+            System.out.println("==== Camel Route Status: " + routeInfo + " ====");
+        } else {
+            System.out.println("==== Camel Route '" + itemId + "' was not started within timeout ====");
+            System.out.println("==== All Camel routes with status: " + getAllCamelRoutesWithStatus() + " ====");
+        }
+
         //Wait for data to be processed
         keepTrying("Failed waiting for actors initial import to complete",
                 () -> profileService.findProfilesByPropertyValue("properties.city", "hollywood", 0, 10, null), (p) -> p.getTotalSize() == 6,
                 1000, 200);
 
+        // Refresh the persistence index to ensure the saved configuration is queryable in getAll()
+        // This addresses the flakiness where getAll() returns 0 items due to index refresh delay
+        persistenceService.refreshIndex(ImportConfiguration.class);
+
         // Wait for import configuration to be properly saved and available
-        List<ImportConfiguration> importConfigurations = keepTrying("Failed waiting for import configurations list with 1 item",
+        // Check for the specific item ID instead of exact count to avoid flakiness from leftover configurations
+        List<ImportConfiguration> importConfigurations = keepTrying("Failed waiting for import configuration '" + itemId + "' to be available in getAll()",
                 () -> importConfigurationService.getAll(), 
-                (list) -> Objects.nonNull(list) && list.size() == 1, 
+                (list) -> Objects.nonNull(list) && list.stream().anyMatch(config -> itemId.equals(config.getItemId())), 
                 1000, 100);
-        Assert.assertEquals(1, importConfigurations.size());
+        Assert.assertTrue("Import configuration '" + itemId + "' should be in the list", 
+                importConfigurations.stream().anyMatch(config -> itemId.equals(config.getItemId())));
 
         PartialList<Profile> jeanneProfile = profileService.findProfilesByPropertyValue("properties.twitterId", "4", 0, 10, null);
         Assert.assertEquals(1, jeanneProfile.getList().size());

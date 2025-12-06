@@ -139,6 +139,7 @@ public abstract class BaseIT extends KarafTestSupport {
     protected static final String SEARCH_ENGINE_OPENSEARCH = "opensearch";
     protected static final String RESOLVER_DEBUG_PROPERTY = "it.unomi.resolver.debug";
     protected static final String ENABLE_LOG_CHECKING_PROPERTY = "it.unomi.log.checking.enabled";
+    protected static final String CAMEL_DEBUG_PROPERTY = "it.unomi.camel.debug";
 
     protected final static ObjectMapper objectMapper;
     protected static boolean unomiStarted = false;
@@ -290,6 +291,9 @@ public abstract class BaseIT extends KarafTestSupport {
         securityService.setCurrentSubject(securityService.createSubject(TEST_TENANT_ID, true));
 
         executionContextManager.setCurrentContext(executionContextManager.createContext(testTenant.getItemId()));
+
+        // Enable Camel tracing and debug logging if requested (for test visibility)
+        enableCamelDebugIfRequested();
 
         // Set up test tenant for HttpClientThatWaitsForUnomi
         HttpClientThatWaitsForUnomi.setTestTenant(testTenant, testPublicKey, testPrivateKey);
@@ -655,6 +659,23 @@ public abstract class BaseIT extends KarafTestSupport {
             System.out.println("Karaf Resolver debug logging is disabled (set -Dit.unomi.resolver.debug=true to enable)");
         }
 
+        // Enable Camel debug logging if requested (for test visibility into Camel operations)
+        boolean enableCamelDebug = Boolean.parseBoolean(System.getProperty(CAMEL_DEBUG_PROPERTY, "false"));
+        if (enableCamelDebug) {
+            LOGGER.info("Enabling debug logging for Apache Camel");
+            System.out.println("Enabling debug logging for Apache Camel (set -Dit.unomi.camel.debug=true to enable)");
+            // Enable logging for Camel core, routes, and router components
+            karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.logger.camelCore.name", "org.apache.camel"));
+            karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.logger.camelCore.level", "DEBUG"));
+            karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.logger.camelRouter.name", "org.apache.unomi.router"));
+            karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.logger.camelRouter.level", "DEBUG"));
+            karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.logger.camelFile.name", "org.apache.camel.component.file"));
+            karafOptions.add(editConfigurationFilePut("etc/org.ops4j.pax.logging.cfg", "log4j2.logger.camelFile.level", "DEBUG"));
+        } else {
+            LOGGER.info("Camel debug logging is disabled (set -Dit.unomi.camel.debug=true to enable)");
+            System.out.println("Camel debug logging is disabled (set -Dit.unomi.camel.debug=true to enable)");
+        }
+
         searchEngine = System.getProperty(SEARCH_ENGINE_PROPERTY, SEARCH_ENGINE_ELASTICSEARCH);
         LOGGER.info("Search Engine: {}", searchEngine);
         System.out.println("Search Engine: " + searchEngine);
@@ -698,12 +719,18 @@ public abstract class BaseIT extends KarafTestSupport {
             throws InterruptedException {
         int count = 0;
         T value = null;
+        T lastValue = null;
         while (value == null || !predicate.test(value)) {
             if (count++ > retries) {
-                Assert.fail(failMessage);
+                String detailedMessage = failMessage;
+                if (lastValue != null) {
+                    detailedMessage += " (last value: " + lastValue + ")";
+                }
+                Assert.fail(detailedMessage);
             }
             Thread.sleep(timeout);
             value = call.get();
+            lastValue = value;
         }
         return value;
     }
@@ -1504,5 +1531,264 @@ public abstract class BaseIT extends KarafTestSupport {
                 closeHttpClient(tempHttpClient);
             }
         }
+    }
+
+    /**
+     * Enables Camel tracing and debug logging if requested via system property.
+     * This provides visibility into Camel operations during test execution without modifying production code.
+     * 
+     * To enable: Set system property -Dit.unomi.camel.debug=true
+     * 
+     * This will:
+     * - Enable Camel tracing (logs detailed message flow, body content, headers as messages traverse routes)
+     *   Tracing is useful for understanding WHAT is happening in routes (message content, transformations)
+     * - Enable DEBUG logging for Camel packages (configured in config() method)
+     * 
+     * Note: Tracing provides different information than route status checking:
+     * - Tracing: Shows message flow and content (useful for debugging message transformations)
+     * - Route Status API: Shows if routes are running, exchange counts, processing times (useful for verifying execution)
+     * Both can be used together for comprehensive visibility.
+     */
+    protected void enableCamelDebugIfRequested() {
+        boolean enableCamelDebug = Boolean.parseBoolean(System.getProperty(CAMEL_DEBUG_PROPERTY, "false"));
+        if (enableCamelDebug && routerCamelContext != null) {
+            try {
+                routerCamelContext.setTracing(true);
+                LOGGER.info("Camel tracing enabled for test visibility (shows message flow and content)");
+                System.out.println("==== Camel tracing enabled for test visibility ====");
+                System.out.println("==== Use getCamelRouteInfo() for route status and statistics ====");
+            } catch (Exception e) {
+                LOGGER.warn("Failed to enable Camel tracing: {}", e.getMessage());
+            }
+        }
+    }
+
+    /**
+     * Gets the Camel context from the router Camel context service using reflection.
+     * This allows test code to inspect Camel routes without modifying production code.
+     * Based on official Camel API: https://camel.apache.org/manual/
+     * 
+     * @return The CamelContext instance, or null if not available
+     */
+    protected Object getCamelContext() {
+        if (routerCamelContext == null) {
+            return null;
+        }
+        try {
+            // Use reflection to access getCamelContext() method which exists but isn't in the interface
+            java.lang.reflect.Method method = routerCamelContext.getClass().getMethod("getCamelContext");
+            return method.invoke(routerCamelContext);
+        } catch (Exception e) {
+            LOGGER.debug("Could not access CamelContext: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Checks if a Camel route with the given route ID exists.
+     * Uses official Camel API: CamelContext.getRoute(String routeId)
+     * 
+     * @param routeId The route ID to check (typically the import configuration itemId)
+     * @return true if the route exists, false otherwise
+     */
+    protected boolean camelRouteExists(String routeId) {
+        Object camelContext = getCamelContext();
+        if (camelContext == null) {
+            return false;
+        }
+        try {
+            // Official Camel API: context.getRoute(routeId)
+            java.lang.reflect.Method getRouteMethod = camelContext.getClass().getMethod("getRoute", String.class);
+            Object route = getRouteMethod.invoke(camelContext, routeId);
+            return route != null;
+        } catch (Exception e) {
+            LOGGER.debug("Error checking if route exists for {}: {}", routeId, e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Gets the status of a Camel route.
+     * Uses official Camel API: CamelContext.getRouteController().getRouteStatus(routeId)
+     * Returns ServiceStatus enum: Started, Stopped, Suspended, etc.
+     * 
+     * @param routeId The route ID to get status for
+     * @return The route status as a string, or null if route doesn't exist or status unavailable
+     */
+    protected String getCamelRouteStatus(String routeId) {
+        Object camelContext = getCamelContext();
+        if (camelContext == null) {
+            return null;
+        }
+        try {
+            // Official Camel API: context.getRouteController().getRouteStatus(routeId)
+            java.lang.reflect.Method getRouteControllerMethod = camelContext.getClass().getMethod("getRouteController");
+            Object routeController = getRouteControllerMethod.invoke(camelContext);
+            if (routeController != null) {
+                java.lang.reflect.Method getRouteStatusMethod = routeController.getClass().getMethod("getRouteStatus", String.class);
+                Object status = getRouteStatusMethod.invoke(routeController, routeId);
+                return status != null ? status.toString() : null;
+            }
+        } catch (Exception e) {
+            LOGGER.debug("Error getting route status for {}: {}", routeId, e.getMessage());
+        }
+        return null;
+    }
+
+    /**
+     * Checks if a Camel route is started (running).
+     * Uses official Camel API to check route status.
+     * 
+     * @param routeId The route ID to check
+     * @return true if the route exists and is started, false otherwise
+     */
+    protected boolean isCamelRouteStarted(String routeId) {
+        String status = getCamelRouteStatus(routeId);
+        return status != null && status.contains("Started");
+    }
+
+    /**
+     * Gets detailed information about a Camel route including status and statistics.
+     * Uses official Camel Management API when available.
+     * 
+     * @param routeId The route ID to get information for
+     * @return A string describing the route status and statistics, or error message if route doesn't exist
+     */
+    protected String getCamelRouteInfo(String routeId) {
+        Object camelContext = getCamelContext();
+        if (camelContext == null) {
+            return "CamelContext not available";
+        }
+        try {
+            // Check if route exists
+            java.lang.reflect.Method getRouteMethod = camelContext.getClass().getMethod("getRoute", String.class);
+            Object route = getRouteMethod.invoke(camelContext, routeId);
+            if (route == null) {
+                return "Route '" + routeId + "' does not exist";
+            }
+            
+            StringBuilder info = new StringBuilder();
+            info.append("Route '").append(routeId).append("': ");
+            
+            // Get route status using official API
+            String status = getCamelRouteStatus(routeId);
+            if (status != null) {
+                info.append("status=").append(status);
+            } else {
+                info.append("status=unknown");
+            }
+            
+            // Try to get route statistics from Management API
+            try {
+                java.lang.reflect.Method getManagementStrategyMethod = camelContext.getClass().getMethod("getManagementStrategy");
+                Object managementStrategy = getManagementStrategyMethod.invoke(camelContext);
+                if (managementStrategy != null) {
+                    // Try to get ManagedRouteMBean for statistics
+                    java.lang.reflect.Method getManagementObjectMethod = managementStrategy.getClass().getMethod("getManagementObject", route.getClass());
+                    Object managedRoute = getManagementObjectMethod.invoke(managementStrategy, route);
+                    if (managedRoute != null) {
+                        // Get exchange statistics
+                        try {
+                            java.lang.reflect.Method getExchangesTotalMethod = managedRoute.getClass().getMethod("getExchangesTotal");
+                            Long exchangesTotal = (Long) getExchangesTotalMethod.invoke(managedRoute);
+                            info.append(", exchangesTotal=").append(exchangesTotal);
+                            
+                            java.lang.reflect.Method getExchangesCompletedMethod = managedRoute.getClass().getMethod("getExchangesCompleted");
+                            Long exchangesCompleted = (Long) getExchangesCompletedMethod.invoke(managedRoute);
+                            info.append(", exchangesCompleted=").append(exchangesCompleted);
+                            
+                            java.lang.reflect.Method getExchangesFailedMethod = managedRoute.getClass().getMethod("getExchangesFailed");
+                            Long exchangesFailed = (Long) getExchangesFailedMethod.invoke(managedRoute);
+                            info.append(", exchangesFailed=").append(exchangesFailed);
+                            
+                            java.lang.reflect.Method getLastProcessingTimeMethod = managedRoute.getClass().getMethod("getLastProcessingTime");
+                            Long lastProcessingTime = (Long) getLastProcessingTimeMethod.invoke(managedRoute);
+                            if (lastProcessingTime != null) {
+                                info.append(", lastProcessingTime=").append(lastProcessingTime).append("ms");
+                            }
+                        } catch (Exception e) {
+                            // Statistics methods not available, that's okay
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                // Management API not available, that's okay - we still have status
+            }
+            
+            return info.toString();
+        } catch (Exception e) {
+            return "Error getting route info for '" + routeId + "': " + e.getMessage();
+        }
+    }
+
+    /**
+     * Waits for a Camel route to be created and started.
+     * This is useful for tests that need to verify the route was created by the timer.
+     * 
+     * @param routeId The route ID to wait for
+     * @param timeoutMs Timeout in milliseconds between retries
+     * @param maxRetries Maximum number of retries
+     * @return true if the route exists and is started, false if timeout
+     * @throws InterruptedException if interrupted
+     */
+    protected boolean waitForCamelRouteStarted(String routeId, int timeoutMs, int maxRetries) throws InterruptedException {
+        for (int i = 0; i < maxRetries; i++) {
+            if (isCamelRouteStarted(routeId)) {
+                String routeInfo = getCamelRouteInfo(routeId);
+                LOGGER.debug("Camel route '{}' is started. {}", routeId, routeInfo);
+                return true;
+            }
+            Thread.sleep(timeoutMs);
+        }
+        String routeInfo = getCamelRouteInfo(routeId);
+        LOGGER.warn("Camel route '{}' did not start within timeout. {}", routeId, routeInfo);
+        return false;
+    }
+
+    /**
+     * Gets a list of all Camel route IDs with their statuses.
+     * Uses official Camel API: CamelContext.getRoutes()
+     * 
+     * @return Map of route ID to status, or empty map if CamelContext is not available
+     */
+    protected java.util.Map<String, String> getAllCamelRoutesWithStatus() {
+        java.util.Map<String, String> routes = new java.util.HashMap<>();
+        Object camelContext = getCamelContext();
+        if (camelContext == null) {
+            return routes;
+        }
+        try {
+            // Official Camel API: context.getRoutes()
+            java.lang.reflect.Method getRoutesMethod = camelContext.getClass().getMethod("getRoutes");
+            @SuppressWarnings("unchecked")
+            java.util.Collection<Object> routeCollection = (java.util.Collection<Object>) getRoutesMethod.invoke(camelContext);
+            if (routeCollection != null) {
+                for (Object route : routeCollection) {
+                    try {
+                        java.lang.reflect.Method getRouteIdMethod = route.getClass().getMethod("getRouteId");
+                        Object routeId = getRouteIdMethod.invoke(route);
+                        if (routeId != null) {
+                            String routeIdStr = routeId.toString();
+                            String status = getCamelRouteStatus(routeIdStr);
+                            routes.put(routeIdStr, status != null ? status : "unknown");
+                        }
+                    } catch (Exception e) {
+                        // Could not get route ID, skip
+                    }
+                }
+            }
+        } catch (Exception e) {
+            LOGGER.debug("Error getting all routes: {}", e.getMessage());
+        }
+        return routes;
+    }
+
+    /**
+     * Gets a list of all Camel route IDs.
+     * 
+     * @return List of route IDs, or empty list if CamelContext is not available
+     */
+    protected java.util.List<String> getAllCamelRouteIds() {
+        return new java.util.ArrayList<>(getAllCamelRoutesWithStatus().keySet());
     }
 }
