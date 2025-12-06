@@ -1,0 +1,28 @@
+---
+alwaysApply: true
+---
+Test authoring conventions (services project)
+
+- JUnit platform
+  - Use JUnit 5 (org.junit.jupiter.*) exclusively.
+  - Use @BeforeEach / @AfterEach for lifecycle.
+  - Use @Tag instead of JUnit 4 @Category.
+  - Use assertThrows(...) instead of JUnit 4 expected exceptions.
+
+- Mockito
+  - Use @ExtendWith(MockitoExtension.class) for Mockito; do NOT use MockitoAnnotations.initMocks/openMocks.
+
+- Assertions (message-last, context-rich)
+  - Import assertions from org.junit.jupiter.api.Assertions.* only (no org.junit.Assert).
+  - Always provide a message as the last parameter for new/updated assertions.
+  - Do NOT duplicate expected vs actual in the message (JUnit already displays them).
+  - The message MUST reflect the intent of the code immediately preceding the assertion (what we just did and why it should be true).
+  - Include concise, high-signal domain context that helps localize the failure (e.g., tenantId, itemId, eventType, segmentId, bundleId, URL segment, list sizes, timestamps).
+  - Prefer active voice and present tense; keep messages short but specific.
+
+- General
+  - Do not change test semantics when adding messages.
+  - Keep messages and tags consistent across files.
+  - Avoid unused imports and JUnit 4 APIs.
+
+

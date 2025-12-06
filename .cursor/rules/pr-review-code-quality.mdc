@@ -1,0 +1,360 @@
+---
+description: This rule is useful when any important changes are made to the code and should always be used before a commit.
+alwaysApply: false
+---
+# Code Quality Rules for LLM Code Generation and Review
+
+## Core Principles
+- **Clean Code**: Readable, maintainable, self-documenting
+- **Low Complexity**: Methods < 30 lines, cyclomatic complexity < 5
+- **No Duplication**: Extract repeated code to helpers
+- **Security First**: Validate inputs, escape outputs, handle errors safely
+- **Fail Fast**: Validate early, provide clear error messages
+
+## Mandatory Rules
+
+### Code Duplication
+- **ALWAYS** extract duplicate code to helper methods/functions
+- If the same pattern appears 2+ times, extract it immediately
+- Use constants for magic strings/numbers that appear multiple times
+- When reviewing code, identify and eliminate all duplication
+
+### Method Complexity
+- **NEVER** create methods > 30 lines - break them down
+- **NEVER** create methods with cyclomatic complexity > 5
+- Extract complex conditionals to named methods
+- Use early returns to reduce nesting
+- Prefer ternary operators for simple conditionals
+
+### Input Validation
+- **ALWAYS** validate all public method parameters
+- **ALWAYS** use `Objects.requireNonNull()` instead of custom null validation methods
+- Use `Objects.requireNonNull(value, "parameterName cannot be null")` for null checks
+- For empty string validation, use `Objects.requireNonNull()` followed by `trim().isEmpty()` check
+- Fail fast with clear error messages including parameter name
+- When generating code, add validation as the first step
+- Prefer standard library utilities (`Objects`, `StringUtils`, etc.) over custom helpers
+
+#### When to Throw Exception vs Return Early/Default
+
+**Throw Exception (Fail-Fast) when:**
+- **Required parameter is null** - Null violates the method contract
+- **Public API methods** - Callers need clear feedback about contract violations
+- **Null indicates a programming error** - Developer mistake, not expected condition
+- **Null would cause NPE later** - Better to fail immediately with clear message
+- **Null breaks method's core functionality** - Method cannot meaningfully proceed
+- **Validation/transformation methods** - Input validation should fail fast
+
+**Return Early/Default when:**
+- **Null is a valid/expected state** - Method is designed to handle null gracefully
+- **Query/lookup methods** - "Not found" is a valid result (return null/empty)
+- **Optional/nullable parameters** - Method explicitly supports null (documented in Javadoc)
+- **Defensive programming for external data** - Handling potentially malformed external input
+- **Collection operations** - Empty collections are valid (return empty, not throw)
+- **Default behavior is meaningful** - Null can be replaced with sensible default
+
+**Decision Matrix:**
+```
+Is null a valid input? 
+├─ YES → Return early/default (document in Javadoc)
+└─ NO → Throw exception (use Objects.requireNonNull)
+```
+
+**Examples:**
+- `extractTaskStatistics(JSONObject status)` → **Throw** (status is required, method cannot work without it)
+- `findUserById(String id)` → **Return null** (user not found is valid result)
+- `formatTaskProgress(JSONObject status)` → **Throw** (status is required parameter)
+- `getProperty(String key, String defaultValue)` → **Return default** (null key might be handled, but usually throw)
+- `processOptionalData(Object data)` → **Return early** (if method name/contract indicates optional)
+
+### Error Handling
+- **NEVER** silently swallow exceptions - always log or rethrow with context
+- **NEVER** return empty/null on error without logging
+- Always provide context in error messages
+- Use appropriate exception types (IllegalArgumentException for validation, IOException for I/O)
+- Wrap checked exceptions with context when re-throwing
+
+#### Exception vs Return for Errors
+
+**Throw Exception when:**
+- **Programming errors** - Null required parameter, invalid state, contract violation
+- **Cannot proceed** - Method cannot complete its core functionality
+- **Caller needs to know** - Error requires caller action/decision
+- **Public API** - Contract violation should be explicit
+
+**Return Error Value when:**
+- **Expected failure mode** - "Not found" is a normal outcome (return null/empty)
+- **Caller can handle gracefully** - Method designed to return success/failure indicator
+- **Performance critical** - Exception overhead is too high (rare, document well)
+- **Optional operations** - Failure is acceptable and expected
+
+**Key Principle:** If the caller passing null is a **bug**, throw. If null represents a **valid state**, return early.
+
+### Security
+- **ALWAYS** escape user input when building JSON/XML/SQL
+- Use proper escaping methods (e.g., `JSONObject.quote()` for JSON)
+- **NEVER** concatenate strings directly into structured data
+- Validate and sanitize all external inputs
+- **NEVER** log passwords, tokens, PII, or sensitive data
+
+### Null Safety
+- Use `optJSONObject()`, `optBoolean()` instead of `getJSONObject()`, `getBoolean()`
+- **ALWAYS** use `Objects.requireNonNull()` for parameter null validation
+- Use `Objects.equals()` for null-safe equality comparisons instead of manual null checks
+- Use `Objects.hashCode()` for null-safe hash code generation
+- Check for null before dereferencing
+- Use early returns for null checks
+- Document nullable return values in Javadoc
+
+### Edge Cases
+- **ALWAYS** handle empty collections (check `isEmpty()` before operations like `max()`)
+- **ALWAYS** handle null values in collections
+- Validate indices exist before operations
+- Check for empty strings (use `trim().isEmpty()` not just `isEmpty()`)
+
+## Required Patterns
+
+### Validation Pattern (Use This)
+```java
+// For required parameters - throw exception
+public static void method(Object param1, String param2) {
+    Objects.requireNonNull(param1, "param1 cannot be null");
+    Objects.requireNonNull(param2, "param2 cannot be null");
+    if (param2.trim().isEmpty()) {
+        throw new IllegalArgumentException("param2 cannot be empty");
+    }
+    // method body
+}
+```
+
+### Early Return Pattern (Use This)
+```java
+// For optional/nullable parameters - return early
+public String processOptionalData(@Nullable String data) {
+    if (data == null || data.trim().isEmpty()) {
+        return ""; // or return default value
+    }
+    // process data
+    return processed;
+}
+
+// For query methods - return null/empty for "not found"
+public User findUserById(String id) {
+    Objects.requireNonNull(id, "id cannot be null"); // id is required
+    // lookup user
+    return user != null ? user : null; // user not found is valid
+}
+```
+
+### Fail-Fast Pattern (Use This)
+```java
+if (statusCode != HttpStatus.SC_OK) {
+    throw new IOException("Request failed: " + statusCode);
+}
+// continue with success path
+```
+
+### Error Context Pattern (Use This)
+```java
+try {
+    // operation
+} catch (SpecificException e) {
+    throw new IOException("Failed to [operation] for [context]: " + e.getMessage(), e);
+}
+```
+
+## What to Fix Immediately
+
+When reviewing or generating code, fix these issues:
+
+1. **Duplicate code blocks** → Extract to helper method
+2. **Methods > 30 lines** → Break into smaller methods
+3. **Nested conditionals > 3 levels** → Extract to named methods
+4. **Magic strings/numbers** → Extract to constants
+5. **Silent failures** → Add logging/error handling
+6. **No input validation** → Add validation at method start
+7. **String concatenation in JSON/XML** → Use proper escaping (JSONObject.quote())
+8. **Null pointer risks** → Add null checks or use opt*() methods
+9. **Empty collection operations** → Add isEmpty() checks
+10. **Hardcoded secrets** → Move to configuration
+
+## Code Generation Rules
+
+When generating new code:
+- Start with input validation using `Objects.requireNonNull()`
+- **ALWAYS** prefer standard library utilities (`Objects`, `StringUtils`, etc.) over custom helpers
+- Use `Objects.requireNonNull()` for null validation instead of custom methods
+- Use `Objects.equals()` for null-safe equality comparisons
+- Use early returns for error cases
+- Extract helper methods for repeated patterns
+- Use constants for magic values
+- Add Javadoc for public methods
+- Handle all edge cases (null, empty, invalid)
+- Escape all user inputs in structured data
+- Log errors with context
+- Close all resources (try-with-resources)
+
+## Code Review Rules
+
+When reviewing existing code:
+- Identify and flag all duplication
+- Flag methods > 30 lines for refactoring
+- Check for missing input validation
+- **Flag custom null validation methods** - replace with `Objects.requireNonNull()`
+- **Flag manual null checks** - replace with `Objects.equals()` where appropriate
+- Check for silent exception swallowing
+- Verify proper escaping of user inputs
+- Check for null pointer risks
+- Verify edge cases are handled
+- Check for resource leaks
+- Verify error messages have context
+
+## Domain-Specific Rules
+
+### Elasticsearch
+- **NEVER** reindex from an index to itself (use update by query instead)
+- Use `/_aliases` API for alias detection, not pattern matching
+- Check `is_write_index` flag for rollover indices
+- Use `optJSONObject()` for optional JSON fields
+- Handle empty response bodies gracefully
+
+### Migration Scripts (Groovy)
+- Extract helper functions for repeated patterns
+- Use constants for resource paths
+- Validate inputs before processing
+- Use early returns for error cases
+- Handle rollover indices separately from regular indices
+
+## Examples: What NOT to Do vs What TO Do
+
+### ❌ DON'T: Silent Null Handling in Required Parameters
+```java
+public String formatData(JSONObject data) {
+    if (data == null) {
+        return ""; // Silent failure - caller doesn't know data was required
+    }
+    // process
+}
+```
+
+### ✅ DO: Throw for Required Parameters
+```java
+public String formatData(JSONObject data) {
+    Objects.requireNonNull(data, "data cannot be null");
+    // process
+}
+```
+
+### ❌ DON'T: Throw for Valid "Not Found" Cases
+```java
+public User findUser(String id) {
+    User user = lookupUser(id);
+    if (user == null) {
+        throw new IllegalArgumentException("User not found"); // Wrong - not found is valid
+    }
+    return user;
+}
+```
+
+### ✅ DO: Return Null for "Not Found"
+```java
+public User findUser(String id) {
+    Objects.requireNonNull(id, "id cannot be null"); // id is required
+    return lookupUser(id); // null means not found, which is valid
+}
+```
+
+### ❌ DON'T: Custom Null Validation
+```java
+private static void validateNonNull(Object value, String paramName) {
+    if (value == null) {
+        throw new IllegalArgumentException(paramName + " cannot be null");
+    }
+}
+public void method1(Object param) { validateNonNull(param, "param"); }
+```
+
+### ✅ DO: Use Objects.requireNonNull()
+```java
+public void method1(Object param) {
+    Objects.requireNonNull(param, "param cannot be null");
+    // method body
+}
+```
+
+### ❌ DON'T: Manual Null-Safe Equality
+```java
+if (obj1 == null ? obj2 == null : obj1.equals(obj2)) {
+    // ...
+}
+```
+
+### ✅ DO: Use Objects.equals()
+```java
+if (Objects.equals(obj1, obj2)) {
+    // ...
+}
+```
+
+### ❌ DON'T: Complex Nested Logic
+```java
+if (statusCode == HttpStatus.SC_OK) {
+    String body = EntityUtils.toString(response.getEntity());
+    if (body != null && !body.trim().isEmpty()) {
+        try {
+            JSONObject json = new JSONObject(body);
+            // ... many nested levels
+        } catch (Exception e) { }
+    }
+} else { }
+```
+
+### ✅ DO: Early Returns
+```java
+if (statusCode != HttpStatus.SC_OK) {
+    throw new IOException("Request failed: " + statusCode);
+}
+String body = EntityUtils.toString(response.getEntity());
+if (body == null || body.trim().isEmpty()) {
+    return emptyResult;
+}
+try {
+    return parseResponse(body);
+} catch (JSONException e) {
+    throw new IOException("Failed to parse response", e);
+}
+```
+
+## Additional Guidelines
+
+### Performance
+- Avoid N+1 queries - use batch operations
+- Close resources properly (try-with-resources)
+- Use appropriate data structures (Set for membership, List for order)
+- Paginate large result sets
+
+### Security
+- Validate file paths (prevent directory traversal)
+- Use parameterized queries for SQL
+- Never log sensitive data
+- Keep dependencies updated
+
+### Error Handling
+- Provide user-friendly error messages (no sensitive info)
+- Log errors with sufficient context
+- Use appropriate exception types
+- Implement retry logic for transient failures
+
+### Code Organization
+- Single responsibility per class/method
+- Group related functionality
+- Use meaningful variable names
+- Extract complex conditionals to named methods
+- Constants at top of scope
+- **Prefer standard library utilities** (`Objects`, `Collections`, `Arrays`, etc.) over custom implementations
+
+### Documentation
+- Javadoc for all public methods
+- Document edge cases and error conditions
+- Reference external documentation when applicable
+
