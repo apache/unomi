@@ -25,7 +25,6 @@ import org.apache.unomi.rest.security.RequiresRole;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 
-import javax.jws.WebService;
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
@@ -36,7 +35,6 @@ import java.util.List;
  * Provides operations for creating, updating, deleting, and retrieving tenants,
  * as well as managing their API keys and configurations.
  */
-@WebService
 @Produces(MediaType.APPLICATION_JSON)
 @CrossOriginResourceSharing(
         allowAllOrigins = true,

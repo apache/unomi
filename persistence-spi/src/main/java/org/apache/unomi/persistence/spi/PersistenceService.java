@@ -344,23 +344,6 @@ public interface PersistenceService {
     <T extends Item> boolean removeByQuery(Condition query, Class<T> clazz);
 
     /**
-     * Persists the specified query under the specified name.
-     *
-     * @param queryName the name under which the specified query should be recorded
-     * @param query     the query to be recorded
-     * @return {@code true} if the query was properly saved, {@code false} otherwise
-     */
-    boolean saveQuery(String queryName, Condition query);
-
-    /**
-     * Deletes the query identified by the specified name.
-     *
-     * @param queryName the name under which the specified query was recorded
-     * @return {@code true} if the deletion was successful, {@code false} otherwise
-     */
-    boolean removeQuery(String queryName);
-
-    /**
      * Retrieve the type mappings for a given itemType. This method queries the persistence service implementation
      * to retrieve any type mappings it may have for the specified itemType.
      * <p>

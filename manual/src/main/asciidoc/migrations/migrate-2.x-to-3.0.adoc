@@ -1,0 +1,296 @@
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
+==== Migration Overview
+
+Apache Unomi 3.0 is a major release that introduces several breaking changes. This document details the steps required to successfully migrate your environment from Apache Unomi 2.x to Apache Unomi 3.0.
+
+==== Prerequisites
+
+Before migrating to Apache Unomi 3.0, ensure you meet the following requirements:
+
+===== Java Version Requirements
+
+Apache Unomi 3.0 requires **Java 17 or later**. This is a breaking change from previous versions that supported Java 11.
+
+- **Minimum Java Version**: Java 17
+- **Recommended**: Java 17 LTS
+- **Tested Versions**: Java 17 (most tested), Java 21
+
+===== Search Engine Compatibility
+
+Apache Unomi 3.0 supports the following search engine versions:
+
+- **Elasticsearch**: Version 9.x (upgraded from 7.17.5)
+- **OpenSearch**: Version 3.x (new support)
+
+NOTE: OpenSearch support is introduced in Apache Unomi 3.1. If you plan to use OpenSearch, first migrate to 3.0 and then follow the 3.0 → 3.1 migration guide.
+
+===== Karaf Version Upgrade
+
+Apache Unomi 3.0 includes an upgrade of the underlying Karaf framework:
+
+- **Previous Version**: Karaf 4.2.15
+- **New Version**: Karaf 4.4.8
+
+This upgrade brings improved stability and support for the latest dependencies.
+
+==== Elasticsearch Client Upgrade
+
+Apache Unomi 3.0 includes a major upgrade to the Elasticsearch client:
+
+- **Previous**: REST client (deprecated and no longer supported)
+- **New**: Official Elasticsearch Java client
+
+This change provides:
+- Better performance and reliability
+- Full compatibility with Elasticsearch 9.x
+- Improved error handling and connection management
+- Future-proof client that follows Elasticsearch's official client roadmap
+
+The new client is automatically used when connecting to Elasticsearch - no configuration changes are required.
+
+==== QueryBuilder ID Changes
+
+In Apache Unomi 3.0, all queryBuilder IDs have been renamed to remove ElasticSearch-specific references and make them more generic. This change affects custom condition definitions that reference built-in query builders.
+
+===== Impact on Custom Condition Definitions
+
+If you have custom condition definitions that reference built-in query builders using the `queryBuilderId` parameter, you will need to update these references to use the new queryBuilder IDs.
+
+===== QueryBuilder ID Mapping Table
+
+The following table shows the mapping between old and new queryBuilder IDs:
+
+[cols="1,1,1"]
+|===
+|Condition Type |Old QueryBuilder ID |New QueryBuilder ID
+
+|IDs Condition
+|`idsConditionESQueryBuilder`
+|`idsConditionQueryBuilder`
+
+|Geo Location by Point Session Condition
+|`geoLocationByPointSessionConditionESQueryBuilder`
+|`geoLocationByPointSessionConditionQueryBuilder`
+
+|Past Event Condition
+|`pastEventConditionESQueryBuilder`
+|`pastEventConditionQueryBuilder`
+
+|Boolean Condition
+|`booleanConditionESQueryBuilder`
+|`booleanConditionQueryBuilder`
+
+|Not Condition
+|`notConditionESQueryBuilder`
+|`notConditionQueryBuilder`
+
+|Match All Condition
+|`matchAllConditionESQueryBuilder`
+|`matchAllConditionQueryBuilder`
+
+|Property Condition
+|`propertyConditionESQueryBuilder`
+|`propertyConditionQueryBuilder`
+
+|Source Event Property Condition
+|`sourceEventPropertyConditionESQueryBuilder`
+|`sourceEventPropertyConditionQueryBuilder`
+
+|Nested Condition
+|`nestedConditionESQueryBuilder`
+|`nestedConditionQueryBuilder`
+|===
+
+===== Migration Steps
+
+1. **Identify Custom Condition Definitions**: Review your custom condition definitions to find any that reference the old queryBuilder IDs listed in the table above.
+
+2. **Update QueryBuilder References**: Replace the old queryBuilder IDs with the new ones according to the mapping table.
+
+3. **Test Your Conditions**: After updating the references, test your custom conditions to ensure they continue to work as expected.
+
+===== Example Migration
+
+**Before (Apache Unomi 2.x):**
+[source,json]
+----
+{
+  "id": "customIdsCondition",
+  "name": "Custom IDs Condition",
+  "conditionType": "idsCondition",
+  "queryBuilderId": "idsConditionESQueryBuilder",
+  "parameters": [
+    {
+      "id": "ids",
+      "type": "string",
+      "multivalued": true
+    }
+  ]
+}
+----
+
+**After (Apache Unomi 3.0):**
+[source,json]
+----
+{
+  "id": "customIdsCondition",
+  "name": "Custom IDs Condition",
+  "conditionType": "idsCondition",
+  "queryBuilderId": "idsConditionQueryBuilder",
+  "parameters": [
+    {
+      "id": "ids",
+      "type": "string",
+      "multivalued": true
+    }
+  ]
+}
+----
+
+===== Important Notes
+
+- This change affects both ElasticSearch and OpenSearch persistence implementations
+- The functionality of the query builders remains unchanged; only the IDs have been renamed
+- Built-in condition definitions provided by Apache Unomi have been automatically updated
+- If you are using only built-in conditions without custom queryBuilder references, no migration is required
+
+===== Backward Compatibility
+
+Apache Unomi 3.0 includes a configurable mapping system that provides backward compatibility for legacy queryBuilder IDs. This means that existing custom condition definitions using the old queryBuilder IDs will continue to work without modification.
+
+The mapping system automatically translates legacy queryBuilder IDs to their new equivalents:
+
+- **Automatic Translation**: Legacy IDs are automatically mapped to new IDs at runtime
+- **Optimized Performance**: New queryBuilder IDs are checked first, legacy mapping lookup only occurs when needed
+- **Warning System**: Legacy ID usage triggers warning logs with specific condition type information
+- **Deprecation Notices**: Clear warnings indicate that legacy mappings are deprecated
+
+**Built-in Mappings:**
+The legacy mappings for built-in queryBuilder IDs are provided as hardcoded defaults in the dispatcher implementations (for both Elasticsearch and OpenSearch). These defaults cannot be modified at runtime:
+
+- `idsConditionESQueryBuilder` → `idsConditionQueryBuilder`
+- `geoLocationByPointSessionConditionESQueryBuilder` → `geoLocationByPointSessionConditionQueryBuilder`
+- `pastEventConditionESQueryBuilder` → `pastEventConditionQueryBuilder`
+- `booleanConditionESQueryBuilder` → `booleanConditionQueryBuilder`
+- `notConditionESQueryBuilder` → `notConditionQueryBuilder`
+- `matchAllConditionESQueryBuilder` → `matchAllConditionQueryBuilder`
+- `propertyConditionESQueryBuilder` → `propertyConditionQueryBuilder`
+- `sourceEventPropertyConditionESQueryBuilder` → `sourceEventPropertyConditionQueryBuilder`
+- `nestedConditionESQueryBuilder` → `nestedConditionQueryBuilder`
+
+For custom query builder implementations, migrate to the new naming convention and provide both Elasticsearch and OpenSearch implementations as documented in the plugin guide.
+
+**IMPORTANT WARNING FOR PLUGIN DEVELOPERS:**
+
+If you have custom query builder implementations, you should **NOT** rely on legacy mappings for your custom query builders. Instead, you should:
+
+1. **Rename your custom query builders** to follow the new naming convention (remove "ES" references, use generic "QueryBuilder" suffix)
+
+2. **Provide separate implementations** for Elasticsearch and OpenSearch:
+   - Create separate bundles for Elasticsearch (`ConditionESQueryBuilder`) and OpenSearch (`ConditionOSQueryBuilder`) implementations
+   - Use separate Karaf features for each implementation
+   - Configure the appropriate feature in your start configuration based on the selected search engine
+
+3. **Update your condition type definitions** to use the new query builder IDs
+
+4. **Use proper OSGi service registration** to ensure your query builders are only active when the corresponding search engine is in use
+
+This approach ensures:
+- **Better maintainability**: No dependency on legacy mapping system
+- **Search engine compatibility**: Proper support for both Elasticsearch and OpenSearch
+- **Cleaner architecture**: Separate concerns for different search engines
+- **Future-proof**: No risk of legacy mapping removal affecting your plugins
+
+**Warning System:**
+When legacy queryBuilder IDs are used, Apache Unomi will log warning messages that include:
+- The legacy queryBuilder ID being used
+- The specific condition type that needs to be updated
+- The new queryBuilder ID that should be used
+- A deprecation notice indicating that legacy mappings may be removed in future versions
+
+**Example Warning Log:**
+[source]
+----
+WARN - DEPRECATED: Using legacy queryBuilderId 'idsConditionESQueryBuilder' for condition type 'customIdsCondition'. 
+Please update your condition definition to use the new queryBuilderId 'idsConditionQueryBuilder'. 
+Legacy mappings are deprecated and may be removed in future versions.
+----
+
+**Migration Strategy:**
+While the mapping system provides backward compatibility, it is recommended to update your custom condition definitions to use the new queryBuilder IDs for better maintainability and to prepare for future versions where legacy support may be removed. The warning system will help you identify which condition definitions need to be updated.
+
+==== Configuration Changes
+
+===== OpenSearch Security Configuration
+
+When using OpenSearch 3.x with Apache Unomi 3.1, security is enabled by default and requires specific configuration:
+
+[source,properties]
+----
+# OpenSearch security settings (required by default since OpenSearch 3)
+org.apache.unomi.opensearch.ssl.enable=true
+org.apache.unomi.opensearch.username=admin
+org.apache.unomi.opensearch.password=${env:OPENSEARCH_INITIAL_ADMIN_PASSWORD:-admin}
+org.apache.unomi.opensearch.sslTrustAllCertificates=true
+----
+
+**Important Notes:**
+- Security is enabled by default in OpenSearch 3.x
+- The default admin username is 'admin'
+- The initial admin password can be set via `OPENSEARCH_INITIAL_ADMIN_PASSWORD` environment variable
+- SSL/TLS is required for OpenSearch connections
+
+===== Docker Configuration Changes
+
+When using Docker, you can specify the search engine backend:
+
+- **For Elasticsearch**: `UNOMI_AUTO_START=elasticsearch`
+- **For OpenSearch**: `UNOMI_AUTO_START=opensearch`
+- **For custom configurations**: `UNOMI_AUTO_START=your-custom-config-name`
+
+==== Migrating from Elasticsearch to OpenSearch
+
+Apache Unomi 3.1 introduces official support for OpenSearch as an alternative to Elasticsearch. If you want to migrate from Elasticsearch to OpenSearch, you can use the dedicated migration guide located in the 3.0 → 3.1 migration section.
+
+For detailed instructions on migrating your data from Elasticsearch to OpenSearch, please refer to the <<Migrating from Elasticsearch to OpenSearch,Elasticsearch to OpenSearch migration guide>>.
+
+==== Migration Checklist
+
+Before upgrading to Apache Unomi 3.0, complete the following checklist:
+
+===== Pre-Migration Requirements
+
+- [ ] **Java 17+**: Ensure Java 17 or later is installed and configured
+- [ ] **Search Engine**: Upgrade Elasticsearch to version 9.x
+- [ ] **Backup**: Create a complete backup of your current Apache Unomi 2.x installation and data
+- [ ] **Test Environment**: Test the migration in a non-production environment first
+
+===== Custom Configuration Review
+
+- [ ] **QueryBuilder IDs**: Review and update any custom condition definitions that reference old queryBuilder IDs
+- [ ] **OpenSearch Security**: If migrating to OpenSearch in 3.1, configure security settings as required
+- [ ] **Docker Configuration**: Update Docker environment variables if using containerized deployment
+
+===== Post-Migration Verification
+
+- [ ] **Functionality**: Test all custom conditions and plugins
+- [ ] **Performance**: Monitor system performance and adjust resources if needed
+- [ ] **Security**: Verify security configurations are working correctly
+- [ ] **Data Integrity**: Confirm all data has been migrated successfully
+
+==== Other Breaking Changes
+
+For information about other breaking changes in Apache Unomi 3.0, please refer to the <<What's new in Apache Unomi 3.0,What's new>> section of the documentation.

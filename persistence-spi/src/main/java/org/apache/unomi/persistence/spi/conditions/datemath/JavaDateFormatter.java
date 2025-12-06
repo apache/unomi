@@ -25,6 +25,16 @@ import java.time.temporal.TemporalQueries;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * A formatter for parsing date/time strings supporting a subset of Elasticsearch/OpenSearch
+ * built-in date patterns (for example {@code strict_date_optional_time}, {@code epoch_millis},
+ * and others) as well as custom Java date-time patterns. Parsing is performed in UTC by default.
+ * <p>
+ * This class is a 100% compatible replacement for utilities previously provided by Elasticsearch
+ * that are no longer exposed. It exists in Unomi to remove the hard dependency on Elasticsearch
+ * while preserving the same behavior used by our persistence implementations, including
+ * OpenSearch.
+ */
 public class JavaDateFormatter {
     private final List<FormatDefinition> formats;
     private final boolean allowEpochMillis;

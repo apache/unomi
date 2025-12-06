@@ -24,7 +24,7 @@ import org.apache.unomi.api.services.ConditionValidationService;
 import org.apache.unomi.api.services.RulesService;
 import org.apache.unomi.api.services.SchedulerService;
 import org.apache.unomi.persistence.spi.PersistenceService;
-import org.apache.unomi.persistence.spi.conditions.ConditionEvaluatorDispatcher;
+import org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluatorDispatcher;
 import org.apache.unomi.services.TestHelper;
 import org.apache.unomi.services.common.security.ExecutionContextManagerImpl;
 import org.apache.unomi.services.common.security.KarafSecurityService;
@@ -34,11 +34,14 @@ import org.apache.unomi.services.impl.definitions.DefinitionsServiceImpl;
 import org.apache.unomi.services.impl.events.EventServiceImpl;
 import org.apache.unomi.services.impl.scheduler.SchedulerServiceImpl;
 import org.apache.unomi.tracing.api.TracerService;
-import org.junit.Before;
-import org.junit.After;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 import org.osgi.framework.BundleContext;
 
 import java.io.IOException;
@@ -47,6 +50,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+@ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 public class GoalsServiceImplTest {
 
     private TestTenantService tenantService;
@@ -63,9 +68,9 @@ public class GoalsServiceImplTest {
     @Mock
     private BundleContext bundleContext;
 
-    @Before
+    @BeforeEach
     public void setUp() throws IOException {
-        MockitoAnnotations.initMocks(this);
+        
         TracerService tracerService = TestHelper.createTracerService();
         tenantService = new TestTenantService();
         tenantService.setCurrentTenantId("test-tenant");
@@ -99,6 +104,11 @@ public class GoalsServiceImplTest {
         goalsService.setTracerService(tracerService);
         goalsService.setCacheService(multiTypeCacheService);
         goalsService.setContextManager(executionContextManager);
+        
+        // Create and inject ResolverService
+        ResolverServiceImpl resolverService = new ResolverServiceImpl();
+        resolverService.setDefinitionsService(definitionsService);
+        goalsService.setResolverService(resolverService);
 
         // Mock action type for goal rules
         ActionType goalActionType = new ActionType() {
@@ -128,7 +138,7 @@ public class GoalsServiceImplTest {
         definitionsService.setActionType(goalActionType);
     }
 
-    @After
+    @AfterEach
     public void tearDown() throws Exception {
         // Stop scheduler service
         if (schedulerService != null && schedulerService instanceof SchedulerServiceImpl) {
@@ -167,7 +177,7 @@ public class GoalsServiceImplTest {
         bundleContext = null;
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testSetGoalWithInvalidStartEvent() {
         // Create a goal with invalid start event
         Goal goal = new Goal();
@@ -195,10 +205,14 @@ public class GoalsServiceImplTest {
         ));
 
         // Should throw IllegalArgumentException with detailed message
-        goalsService.setGoal(goal);
+        org.junit.jupiter.api.Assertions.assertThrows(
+            IllegalArgumentException.class,
+            () -> goalsService.setGoal(goal),
+            "Setting goal with invalid startEvent should fail validation (goalId=testGoal, location=startEvent)"
+        );
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testSetGoalWithInvalidTargetEvent() {
         // Create a goal with invalid target event
         Goal goal = new Goal();
@@ -225,7 +239,11 @@ public class GoalsServiceImplTest {
             null
         ));
         // Should throw IllegalArgumentException with detailed message
-        goalsService.setGoal(goal);
+        org.junit.jupiter.api.Assertions.assertThrows(
+            IllegalArgumentException.class,
+            () -> goalsService.setGoal(goal),
+            "Setting goal with invalid targetEvent should fail validation (goalId=testGoal, location=targetEvent)"
+        );
     }
 
     @Test

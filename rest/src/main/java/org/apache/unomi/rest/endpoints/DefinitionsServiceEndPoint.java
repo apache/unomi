@@ -31,8 +31,6 @@ import org.apache.unomi.rest.service.impl.LocalizationHelper;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 
-import javax.jws.WebMethod;
-import javax.jws.WebService;
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import java.util.*;
@@ -40,7 +38,6 @@ import java.util.*;
 /**
  * A JAX-RS endpoint to retrieve definition information about core context server entities such as conditions, actions and values.
  */
-@WebService
 @Produces(MediaType.APPLICATION_JSON + ";charset=UTF-8")
 @CrossOriginResourceSharing(
         allowAllOrigins = true,
@@ -55,12 +52,10 @@ public class DefinitionsServiceEndPoint {
     @Reference
     private LocalizationHelper localizationHelper;
 
-    @WebMethod(exclude = true)
     public void setDefinitionsService(DefinitionsService definitionsService) {
         this.definitionsService = definitionsService;
     }
 
-    @WebMethod(exclude = true)
     public void setLocalizationHelper(LocalizationHelper localizationHelper) {
         this.localizationHelper = localizationHelper;
     }
@@ -290,7 +285,6 @@ public class DefinitionsServiceEndPoint {
         return definitionsService.getTypesByPlugin();
     }
 
-    @WebMethod(exclude = true)
     public PropertyMergeStrategyType getPropertyMergeStrategyType(String id) {
         return definitionsService.getPropertyMergeStrategyType(id);
     }

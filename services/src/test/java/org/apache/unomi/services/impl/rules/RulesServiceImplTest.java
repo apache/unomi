@@ -27,7 +27,7 @@ import org.apache.unomi.api.services.ConditionValidationService;
 import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.api.services.RuleListenerService;
 import org.apache.unomi.persistence.spi.PersistenceService;
-import org.apache.unomi.persistence.spi.conditions.ConditionEvaluatorDispatcher;
+import org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluatorDispatcher;
 import org.apache.unomi.services.TestHelper;
 import org.apache.unomi.services.common.security.ExecutionContextManagerImpl;
 import org.apache.unomi.services.common.security.KarafSecurityService;
@@ -37,20 +37,25 @@ import org.apache.unomi.services.impl.definitions.DefinitionsServiceImpl;
 import org.apache.unomi.services.common.security.AuditServiceImpl;
 import org.apache.unomi.tracing.api.RequestTracer;
 import org.apache.unomi.tracing.api.TracerService;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 import org.osgi.framework.BundleContext;
 import org.osgi.framework.ServiceReference;
 
 import java.util.*;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 
+@ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 public class RulesServiceImplTest {
 
     private RulesServiceImpl rulesService;
@@ -76,9 +81,9 @@ public class RulesServiceImplTest {
     private static final String TENANT_2 = "tenant2";
     private static final String SYSTEM_TENANT = "system";
 
-    @Before
+    @BeforeEach
     public void setUp() throws Exception {
-        MockitoAnnotations.initMocks(this);
+        
         tracerService = TestHelper.createTracerService();
         tenantService = new TestTenantService();
 
@@ -130,6 +135,11 @@ public class RulesServiceImplTest {
         rulesService.setConditionValidationService(conditionValidationService);
         rulesService.setTracerService(tracerService);
         rulesService.setCacheService(multiTypeCacheService);
+        
+        // Create and inject ResolverService
+        ResolverServiceImpl resolverService = new ResolverServiceImpl();
+        resolverService.setDefinitionsService(definitionsService);
+        rulesService.setResolverService(resolverService);
 
         // Set up condition types
         setupActionTypes();
@@ -270,7 +280,7 @@ public class RulesServiceImplTest {
         executionContextManager.executeAsTenant(TENANT_1, () -> {
             Event event = createTestEvent();
             Set<Rule> matchedRules = rulesService.getMatchingRules(event);
-            assertTrue("Should return empty set when no rules match", matchedRules.isEmpty());
+            assertTrue(matchedRules.isEmpty(), "Should return empty set when no rules match");
             return null;
         });
     }
@@ -287,9 +297,9 @@ public class RulesServiceImplTest {
         Set<Rule> matchedRules = rulesService.getMatchingRules(event);
 
         // Verify results
-        assertFalse("Should return non-empty set when rule matches", matchedRules.isEmpty());
-        assertEquals("Should return one matching rule", 1, matchedRules.size());
-        assertTrue("Should contain the matching rule", matchedRules.contains(rule));
+        assertFalse(matchedRules.isEmpty(), "Should return non-empty set when rule matches");
+        assertEquals(1, matchedRules.size(), "Should return one matching rule");
+        assertTrue(matchedRules.contains(rule), "Should contain the matching rule");
     }
 
     @Test
@@ -310,9 +320,9 @@ public class RulesServiceImplTest {
 
             // Test that tenant1 can see both rules
             Set<Rule> allRules = new HashSet<>(rulesService.getAllRules());
-            assertEquals("Should see both system and tenant rules", 2, allRules.size());
-            assertTrue("Should contain system rule", allRules.stream().anyMatch(r -> r.getItemId().equals("system-rule")));
-            assertTrue("Should contain tenant rule", allRules.stream().anyMatch(r -> r.getItemId().equals("tenant-rule")));
+            assertEquals(2, allRules.size(), "Should see both system and tenant rules");
+            assertTrue(allRules.stream().anyMatch(r -> r.getItemId().equals("system-rule")), "Should contain system rule");
+            assertTrue(allRules.stream().anyMatch(r -> r.getItemId().equals("tenant-rule")), "Should contain tenant rule");
             return null;
         });
 
@@ -320,8 +330,8 @@ public class RulesServiceImplTest {
         // Test that tenant2 can only see system rule
         executionContextManager.executeAsTenant(TENANT_2, () -> {
             Set<Rule> tenant2Rules = new HashSet<>(rulesService.getAllRules());
-            assertEquals("Should only see system rule", 1, tenant2Rules.size());
-            assertTrue("Should contain system rule", tenant2Rules.stream().anyMatch(r -> r.getItemId().equals("system-rule")));
+            assertEquals(1, tenant2Rules.size(), "Should only see system rule");
+            assertTrue(tenant2Rules.stream().anyMatch(r -> r.getItemId().equals("system-rule")), "Should contain system rule");
             return null;
         });
     }
@@ -352,7 +362,7 @@ public class RulesServiceImplTest {
             Event event1 = createTestEvent();
             rulesService.getMatchingRules(event1);
             RuleStatistics stats1 = rulesService.getRuleStatistics(tenant1Rule[0].getItemId());
-            assertNotNull("Tenant1 rule statistics should exist", stats1);
+            assertNotNull(stats1, "Tenant1 rule statistics should exist");
             return null;
         });
 
@@ -361,11 +371,11 @@ public class RulesServiceImplTest {
             Event event2 = createTestEvent();
             rulesService.getMatchingRules(event2);
             RuleStatistics stats2 = rulesService.getRuleStatistics(tenant2Rule[0].getItemId());
-            assertNotNull("Tenant2 rule statistics should exist", stats2);
+            assertNotNull(stats2, "Tenant2 rule statistics should exist");
 
             // Verify tenant isolation
-            assertNull("Tenant2 should not see tenant1's rule statistics",
-                rulesService.getRuleStatistics(tenant1Rule[0].getItemId()));
+            assertNull(rulesService.getRuleStatistics(tenant1Rule[0].getItemId()),
+                "Tenant2 should not see tenant1's rule statistics");
             return null;
         });
     }
@@ -382,7 +392,7 @@ public class RulesServiceImplTest {
         int result = rulesService.onEvent(event);
 
         // Verify results
-        assertEquals("Should return PROFILE_UPDATED flag", EventService.PROFILE_UPDATED, result);
+        assertEquals(EventService.PROFILE_UPDATED, result, "Should return PROFILE_UPDATED flag");
     }
 
     @Test
@@ -396,15 +406,18 @@ public class RulesServiceImplTest {
 
             rulesService.refreshRules();
 
-            // Execute test
-            Set<Rule> matchingRules = rulesService.getMatchingRules(event);
-            assertNotNull("Matching rules should exist", matchingRules);
-            assertTrue("Matching rules should not be empty", !matchingRules.isEmpty());
+            // Execute test - retry until event is available for rule matching (handles refresh delay)
+            Set<Rule> matchingRules = TestHelper.retryUntil(
+                () -> rulesService.getMatchingRules(event),
+                r -> r != null && !r.isEmpty()
+            );
+            assertNotNull(matchingRules, "Matching rules should exist");
+            assertTrue(!matchingRules.isEmpty(), "Matching rules should not be empty");
 
             // Verify statistics were updated
             RuleStatistics stats = rulesService.getRuleStatistics(rule.getItemId());
-            assertNotNull("Rule statistics should be created", stats);
-            assertEquals("Statistics should have correct tenant ID", TENANT_1, stats.getTenantId());
+            assertNotNull(stats, "Rule statistics should be created");
+            assertEquals(TENANT_1, stats.getTenantId(), "Statistics should have correct tenant ID");
             return null;
         });
     }
@@ -442,9 +455,9 @@ public class RulesServiceImplTest {
 
             // Verify
             Rule savedRule = persistenceService.load(rule.getItemId(), Rule.class);
-            assertNotNull("Rule should be saved", savedRule);
-            assertEquals("Rule should have correct tenant", TENANT_1, savedRule.getTenantId());
-            assertEquals("Rule should have correct scope", "systemscope", savedRule.getMetadata().getScope());
+            assertNotNull(savedRule, "Rule should be saved");
+            assertEquals(TENANT_1, savedRule.getTenantId(), "Rule should have correct tenant");
+            assertEquals("systemscope", savedRule.getMetadata().getScope(), "Rule should have correct scope");
             return null;
         });
     }
@@ -460,7 +473,7 @@ public class RulesServiceImplTest {
         rulesService.removeRule(rule.getItemId());
 
         // Verify
-        assertNull("Rule should be removed", persistenceService.load(rule.getItemId(), Rule.class));
+        assertNull(persistenceService.load(rule.getItemId(), Rule.class), "Rule should be removed");
     }
 
     @Test
@@ -476,9 +489,9 @@ public class RulesServiceImplTest {
             Rule result = rulesService.getRule(rule.getItemId());
 
             // Verify
-            assertNotNull("Should return the rule", result);
-            assertEquals("Should return the correct rule", rule.getItemId(), result.getItemId());
-            assertEquals("Should have correct tenant", TENANT_1, result.getTenantId());
+            assertNotNull(result, "Should return the rule");
+            assertEquals(rule.getItemId(), result.getItemId(), "Should return the correct rule");
+            assertEquals(TENANT_1, result.getTenantId(), "Should have correct tenant");
             return null;
         });
     }
@@ -497,7 +510,7 @@ public class RulesServiceImplTest {
 
             // Verify
             RuleStatistics stats = rulesService.getRuleStatistics(rule.getItemId());
-            assertNull("Statistics should be reset", stats);
+            assertNull(stats, "Statistics should be reset");
             return null;
         });
     }
@@ -520,7 +533,7 @@ public class RulesServiceImplTest {
             Set<Rule> matchedRules = rulesService.getMatchingRules(sameEvent);
 
             // Verify
-            assertTrue("Should not match rule when event already raised", matchedRules.isEmpty());
+        assertTrue(matchedRules.isEmpty(), "Should not match rule when event already raised");
             return null;
         });
     }
@@ -541,10 +554,15 @@ public class RulesServiceImplTest {
             Event sameProfileEvent = createTestEvent();
             sameProfileEvent.setProfile(event.getProfile());
             sameProfileEvent.setTarget(event.getTarget());
-            Set<Rule> matchedRules = rulesService.getMatchingRules(sameProfileEvent);
+            // Retry until event is available for query (handles refresh delay)
+            // The rule should not match because the event was already raised for this profile
+            Set<Rule> matchedRules = TestHelper.retryUntil(
+                () -> rulesService.getMatchingRules(sameProfileEvent),
+                r -> r != null && r.isEmpty()
+            );
 
             // Verify
-            assertTrue("Should not match rule when event already raised for profile", matchedRules.isEmpty());
+            assertTrue(matchedRules.isEmpty(), "Should not match rule when event already raised for profile");
             return null;
         });
     }
@@ -572,7 +590,7 @@ public class RulesServiceImplTest {
         Set<Rule> matchedRules = rulesService.getMatchingRules(event);
 
         // Verify
-        assertFalse("Should match rule when both event and profile conditions match", matchedRules.isEmpty());
+        assertFalse(matchedRules.isEmpty(), "Should match rule when both event and profile conditions match");
     }
 
     @Test
@@ -598,7 +616,7 @@ public class RulesServiceImplTest {
         Set<Rule> matchedRules = rulesService.getMatchingRules(event);
 
         // Verify
-        assertFalse("Should match rule when both event and session conditions match", matchedRules.isEmpty());
+        assertFalse(matchedRules.isEmpty(), "Should match rule when both event and session conditions match");
     }
 
     @Test
@@ -630,22 +648,22 @@ public class RulesServiceImplTest {
 
         // Verify rules are loaded for all tenants
         executionContextManager.executeAsSystem(() -> {
-            assertNotNull("System rule should be loaded", rulesService.getRule("system-rule"));
+            assertNotNull(rulesService.getRule("system-rule"), "System rule should be loaded");
             return null;
         });
 
         executionContextManager.executeAsTenant(TENANT_1, () -> {
-            assertNotNull("Tenant1 rule should be loaded", rulesService.getRule("tenant1-rule"));
+            assertNotNull(rulesService.getRule("tenant1-rule"), "Tenant1 rule should be loaded");
             return null;
         });
 
         executionContextManager.executeAsTenant(TENANT_2, () -> {
-            assertNotNull("Tenant2 rule should be loaded", rulesService.getRule("tenant2-rule"));
+            assertNotNull(rulesService.getRule("tenant2-rule"), "Tenant2 rule should be loaded");
             return null;
         });
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testSetRuleWithInvalidCondition() {
         // Create a rule with invalid condition
         Rule rule = new Rule();
@@ -657,7 +675,11 @@ public class RulesServiceImplTest {
         rule.setCondition(condition);
 
         // Should throw IllegalArgumentException with detailed message
-        rulesService.setRule(rule);
+        org.junit.jupiter.api.Assertions.assertThrows(
+            IllegalArgumentException.class,
+            () -> rulesService.setRule(rule),
+            "Setting rule with empty condition should fail validation (ruleId=testRule)"
+        );
     }
 
     @Test
@@ -702,7 +724,7 @@ public class RulesServiceImplTest {
         rulesService.setRule(rule);
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testSetRuleWithInvalidNestedCondition() {
         // Create a rule with nested conditions where child is invalid
         Rule rule = new Rule();
@@ -726,7 +748,11 @@ public class RulesServiceImplTest {
         rule.setCondition(parentCondition);
 
         // Should throw IllegalArgumentException with detailed message
-        rulesService.setRule(rule);
+        org.junit.jupiter.api.Assertions.assertThrows(
+            IllegalArgumentException.class,
+            () -> rulesService.setRule(rule),
+            "Setting rule with invalid nested child condition should fail (ruleId=testRule)"
+        );
     }
 
     @Test
@@ -765,23 +791,30 @@ public class RulesServiceImplTest {
         rulesService.setRule(rule, true);
 
         Rule savedRule = persistenceService.load(rule.getItemId(), Rule.class);
-        assertNotNull("Rule should be saved when deployed from bundle", savedRule);
-        assertNull("Condition type should not be available yet", definitionsService.getConditionType("unavailableConditionType"));
+        assertNotNull(savedRule, "Rule should be saved when deployed from bundle");
+        assertNull(definitionsService.getConditionType("unavailableConditionType"), "Condition type should not be available yet");
 
         ConditionType conditionType = createTestConditionType("unavailableConditionType");
         definitionsService.setConditionType(conditionType);
 
+        // Refresh persistence to ensure rule is available for querying
+        persistenceService.refresh();
         rulesService.refreshRules();
 
         Rule refreshedRule = rulesService.getRule(rule.getItemId());
-        assertNotNull("Rule should have a condition type after refresh", definitionsService.getConditionType("unavailableConditionType"));
-        assertNotNull("Rule condition type should not be null", refreshedRule.getCondition().getConditionType());
+        assertNotNull(definitionsService.getConditionType("unavailableConditionType"), "Rule should have a condition type after refresh");
+        assertNotNull(refreshedRule, "Refreshed rule should not be null");
+        assertNotNull(refreshedRule.getCondition().getConditionType(), "Rule condition type should not be null");
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testSetRuleWithUnavailableConditionTypeNonBundle() {
         Rule rule = createRuleWithUnavailableConditionType("unavailableConditionType");
-        rulesService.setRule(rule, false);
+        org.junit.jupiter.api.Assertions.assertThrows(
+            IllegalArgumentException.class,
+            () -> rulesService.setRule(rule, false),
+            "Non-bundle rule with unavailable condition type should be rejected (conditionTypeId=unavailableConditionType)"
+        );
     }
 
     @Test
@@ -792,17 +825,20 @@ public class RulesServiceImplTest {
         rulesService.setRule(rule, false);
 
         Rule savedRule = persistenceService.load(rule.getItemId(), Rule.class);
-        assertNotNull("Rule should be saved when missingPlugins is true", savedRule);
-        assertNull("Condition type should not be available yet", definitionsService.getConditionType("unavailableConditionType"));
-        assertTrue("Rule should still be marked as having missing plugins", savedRule.getMetadata().isMissingPlugins());
+        assertNotNull(savedRule, "Rule should be saved when missingPlugins is true");
+        assertNull(definitionsService.getConditionType("unavailableConditionType"), "Condition type should not be available yet");
+        assertTrue(savedRule.getMetadata().isMissingPlugins(), "Rule should still be marked as having missing plugins");
 
         ConditionType conditionType = createTestConditionType("unavailableConditionType");
         definitionsService.setConditionType(conditionType);
 
+        // Refresh persistence to ensure rule is available for querying
+        persistenceService.refresh();
         rulesService.refreshRules();
 
         Rule refreshedRule = rulesService.getRule(rule.getItemId());
-        assertNotNull("Rule should have a condition type after refresh", definitionsService.getConditionType("unavailableConditionType"));
-        assertNotNull("Rule condition type should not be null", refreshedRule.getCondition().getConditionType());
+        assertNotNull(definitionsService.getConditionType("unavailableConditionType"), "Rule should have a condition type after refresh");
+        assertNotNull(refreshedRule, "Refreshed rule should not be null");
+        assertNotNull(refreshedRule.getCondition().getConditionType(), "Rule condition type should not be null");
     }
 }

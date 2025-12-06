@@ -17,60 +17,160 @@
 
 package org.apache.unomi.persistence.spi.aggregate;
 
-public class DateAggregate extends BaseAggregate{
-    public static final DateAggregate SECOND = new DateAggregate("1s");
-    public static final DateAggregate MINUTE = new DateAggregate("1m");
-    public static final DateAggregate HOUR = new DateAggregate("1h");
-    public static final DateAggregate DAY = new DateAggregate("1d");
-    public static final DateAggregate WEEK = new DateAggregate("1w");
-    public static final DateAggregate MONTH = new DateAggregate("1M");
-    public static final DateAggregate QUARTER = new DateAggregate("1q");
-    public static final DateAggregate YEAR = new DateAggregate("1y");
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+
+/**
+ * Aggregation that buckets documents by time intervals on a date/datetime field.
+ * Supports legacy short interval formats (e.g., {@code 1M}) and new named formats (e.g., {@code Month}).
+ */
+public class DateAggregate extends BaseAggregate {
     private static final String DEFAULT_INTERVAL = "1M";
+
     private String interval;
     private String format;
+
+    // Bidirectional maps for conversion between interval formats
+    private static final Map<String, String> OLD_TO_NEW_FORMAT = Map.ofEntries(
+            Map.entry("1s", "Second"),
+            Map.entry("1m", "Minute"),
+            Map.entry("1h", "Hour"),
+            Map.entry("1d", "Day"),
+            Map.entry("1w", "Week"),
+            Map.entry("1M", "Month"),
+            Map.entry("1q", "Quarter"),
+            Map.entry("1y", "Year")
+    );
+
+    private static final Map<String, String> NEW_TO_OLD_FORMAT = createReverseMap();
+
+    private static Map<String, String> createReverseMap() {
+        Map<String, String> reverseMap = new HashMap<>();
+        for (Map.Entry<String, String> entry : DateAggregate.OLD_TO_NEW_FORMAT.entrySet()) {
+            reverseMap.put(entry.getValue(), entry.getKey());
+        }
+        return Collections.unmodifiableMap(reverseMap);
+    }
+
+    /**
+     * Creates a date aggregation with the default interval.
+     *
+     * @param field the field to aggregate on
+     */
     public DateAggregate(String field) {
         super(field);
         this.interval = DEFAULT_INTERVAL;
     }
+
+    /**
+     * Creates a date aggregation with a specific interval (old or new format).
+     *
+     * @param field    the field to aggregate on
+     * @param interval the interval, in old (e.g., {@code 1M}) or new (e.g., {@code Month}) format
+     */
     public DateAggregate(String field, String interval) {
         super(field);
-        this.interval = (interval != null && interval.length() > 0) ? interval : DEFAULT_INTERVAL;
+        setInterval(interval);
     }
+
+    /**
+     * Creates a date aggregation with a specific interval and output format.
+     *
+     * @param field    the field to aggregate on
+     * @param interval the interval, in old or new format
+     * @param format   an optional output format understood by the persistence layer
+     */
     public DateAggregate(String field, String interval, String format) {
         super(field);
-        this.interval = (interval != null && interval.length() > 0) ? interval : DEFAULT_INTERVAL;
+        setInterval(interval);
         this.format = format;
     }
 
-    public static DateAggregate seconds(int sec) {
-        return new DateAggregate(sec + "s");
+    /**
+     * Sets the interval; falls back to default when null/empty.
+     */
+    public void setInterval(String interval) {
+        this.interval = (interval != null && !interval.isEmpty()) ? interval : DEFAULT_INTERVAL;
     }
 
-    public static DateAggregate minutes(int min) {
-        return new DateAggregate(min + "m");
-    }
-
-    public static DateAggregate hours(int hours) {
-        return new DateAggregate(hours + "h");
-    }
-
-    public static DateAggregate days(int days) {
-        return new DateAggregate(days + "d");
-    }
-
-    public static DateAggregate weeks(int weeks) {
-        return new DateAggregate(weeks + "w");
-    }
-
+    /**
+     * Returns the interval as it was originally defined
+     */
     public String getInterval() {
         return interval;
     }
 
+    /**
+     * Returns the interval in the old format (1M, 1d, etc.)
+     */
+    public String getIntervalInOldFormat() {
+        if (isOldFormat(interval)) {
+            return interval;
+        }
+        return NEW_TO_OLD_FORMAT.getOrDefault(interval, interval);
+    }
+
+    /**
+     * Returns the interval in the new format (Month, Day, etc.)
+     */
+    public String getIntervalInNewFormat() {
+        if (isNewFormat(interval)) {
+            return interval;
+        }
+        return OLD_TO_NEW_FORMAT.getOrDefault(interval, interval);
+    }
+
+    /**
+     * Compatibility method with old code
+     * @deprecated Use getIntervalInNewFormat() instead
+     */
+    @Deprecated
+    public String getIntervalByAlias(String alias) {
+        if (isOldFormat(alias)) {
+            return OLD_TO_NEW_FORMAT.getOrDefault(alias, alias);
+        }
+        return alias;
+    }
+
+    /**
+     * Determines if the interval uses the old format
+     */
+    public boolean isOldFormat(String value) {
+        return OLD_TO_NEW_FORMAT.containsKey(value);
+    }
+
+    /**
+     * Determines if the interval uses the new format
+     */
+    public boolean isNewFormat(String value) {
+        return NEW_TO_OLD_FORMAT.containsKey(value);
+    }
+
+    /**
+     * Converts from old format to new format
+     */
+    public static String convertToNewFormat(String oldFormat) {
+        return OLD_TO_NEW_FORMAT.getOrDefault(oldFormat, oldFormat);
+    }
+
+    /**
+     * Converts from new format to old format
+     */
+    public static String convertToOldFormat(String newFormat) {
+        return NEW_TO_OLD_FORMAT.getOrDefault(newFormat, newFormat);
+    }
+
+    /**
+     * Returns the output format, if any.
+     */
     public String getFormat() {
         return format;
     }
 
+    /**
+     * Sets the output format.
+     */
     public void setFormat(String format) {
         this.format = format;
     }

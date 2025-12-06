@@ -28,7 +28,7 @@ import org.apache.unomi.api.services.cache.MultiTypeCacheService;
 import org.apache.unomi.api.tenants.TenantService;
 import org.apache.unomi.groovy.actions.GroovyActionDispatcher;
 import org.apache.unomi.persistence.spi.PersistenceService;
-import org.apache.unomi.persistence.spi.conditions.ConditionEvaluatorDispatcher;
+import org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluatorDispatcher;
 import org.apache.unomi.services.TestHelper;
 import org.apache.unomi.services.common.security.KarafSecurityService;
 import org.apache.unomi.services.impl.*;
@@ -266,13 +266,13 @@ public class GroovyActionsServiceImplTest {
         // Test that we can get a compiled script
         String actionName = "testCompiledScript";
         String script = "return 'Hello, World!'";
-        
+
         contextManager.executeAsTenant(TENANT_1, () -> {
             groovyActionsService.save(actionName, script);
-            
+
             Class<? extends groovy.lang.Script> scriptClass = groovyActionsService.getCompiledScript(actionName);
             assertNotNull("Compiled script should not be null", scriptClass);
-            
+
             // Test that we can create an instance and execute it
             try {
                 groovy.lang.Script scriptInstance = scriptClass.getDeclaredConstructor().newInstance();
@@ -281,7 +281,7 @@ public class GroovyActionsServiceImplTest {
             } catch (Exception e) {
                 fail("Should be able to execute compiled script: " + e.getMessage());
             }
-            
+
             // Clean up
             groovyActionsService.remove(actionName);
         });

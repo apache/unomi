@@ -29,15 +29,9 @@ import org.apache.unomi.rest.service.RestServiceUtils;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 
-import javax.jws.WebService;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import javax.ws.rs.GET;
-import javax.ws.rs.InternalServerErrorException;
-import javax.ws.rs.NotFoundException;
-import javax.ws.rs.OPTIONS;
-import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
+import javax.ws.rs.*;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
 import java.io.StringWriter;
@@ -49,7 +43,6 @@ import java.util.Set;
 /**
  * A servlet filter to serve a context-specific Javascript containing the current request context object.
  */
-@WebService
 @CrossOriginResourceSharing(allowAllOrigins = true, allowCredentials = true)
 @Path("/")
 @Component(service = ClientEndpoint.class, property = "osgi.jaxrs.resource=true")

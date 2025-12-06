@@ -16,7 +16,6 @@
  */
 package org.apache.unomi.plugins.baseplugin.conditions;
 
-import ognl.MethodFailedException;
 import org.apache.unomi.api.*;
 import org.apache.unomi.api.rules.Rule;
 import org.apache.unomi.plugins.baseplugin.conditions.accessors.HardcodedPropertyAccessor;
@@ -111,36 +110,6 @@ public class PropertyConditionEvaluatorTest {
     }
 
     @Test
-    public void testOGNLEvaluator() throws Exception {
-        Event mockEvent = generateMockEvent(mockProfile, mockSession);
-        assertEquals("Target itemId value is not correct", MOCK_ITEM_ID, propertyConditionEvaluator.getOGNLPropertyValue(mockEvent, "target.itemId"));
-        assertEquals("Target scope is not correct", DIGITALL_SCOPE, propertyConditionEvaluator.getOGNLPropertyValue(mockEvent, "target.scope"));
-        assertEquals("Target page path value is not correct", TARGET_PAGE_PATH_VALUE, propertyConditionEvaluator.getOGNLPropertyValue(mockEvent, "target.properties.pageInfo.pagePath"));
-        assertEquals("Target page url value is not correct", TARGET_PAGE_URL_VALUE, propertyConditionEvaluator.getOGNLPropertyValue(mockEvent, "target.properties.pageInfo.pageURL"));
-        assertEquals("Session size should be 10", SESSION_SIZE, propertyConditionEvaluator.getOGNLPropertyValue(mockSession, "size"));
-        assertEquals("Should have received the proper last even date", SESSION_LAST_EVENT_DATE, propertyConditionEvaluator.getOGNLPropertyValue(mockSession, "lastEventDate"));
-
-        assertNull("Unexisting property should be null", propertyConditionEvaluator.getOGNLPropertyValue(mockSession, "systemProperties.goals._csk6r4cgeStartReached"));
-        assertNull("Unexisting property should be null", propertyConditionEvaluator.getOGNLPropertyValue(mockProfile, "properties.email"));
-    }
-
-    @Test
-    public void testCompareOGNLvsHardcodedPerformance() throws InterruptedException {
-        int workerCount = WORKER_COUNT;
-        ExecutorService executorService = Executors.newFixedThreadPool(THREAD_POOL_SIZE);
-
-        runHardcodedTest(workerCount, executorService);
-        runOGNLTest(workerCount, executorService);
-        runHardcodedTest(workerCount, executorService);
-        runOGNLTest(workerCount, executorService);
-        runHardcodedTest(workerCount, executorService);
-        runOGNLTest(workerCount, executorService);
-        runHardcodedTest(workerCount, executorService);
-        runOGNLTest(workerCount, executorService);
-
-    }
-
-    @Test
     public void testPropertyEvaluator() throws Exception {
         Event mockEvent = generateMockEvent(mockProfile, mockSession);
         assertEquals("Target itemId value is not correct", MOCK_ITEM_ID, propertyConditionEvaluator.getPropertyValue(mockEvent, "target.itemId"));
@@ -154,44 +123,6 @@ public class PropertyConditionEvaluatorTest {
         assertEquals("Session last event date is not right", SESSION_LAST_EVENT_DATE, propertyConditionEvaluator.getPropertyValue(mockSession, "lastEventDate"));
     }
 
-    @Test
-    public void testOGNLSecurity() throws Exception {
-        Event mockEvent = generateMockEvent(mockProfile, mockSession);
-        File vulnFile = new File("target/vuln-file.txt");
-        if (vulnFile.exists()) {
-            vulnFile.delete();
-        }
-        String vulnFileCanonicalPath = vulnFile.getCanonicalPath();
-        vulnFileCanonicalPath = vulnFileCanonicalPath.replace("\\", "\\\\"); // this is required for Windows support
-        try {
-            propertyConditionEvaluator.getOGNLPropertyValue(mockEvent, "@java.lang.Runtime@getRuntime().exec('touch " + vulnFileCanonicalPath + "')");
-        } catch (RuntimeException | MethodFailedException re) {
-            // we ignore these exceptions as they are expected.
-        }
-        assertFalse("Vulnerability successfully executed ! File created at " + vulnFileCanonicalPath, vulnFile.exists());
-        try {
-            propertyConditionEvaluator.getOGNLPropertyValue(mockEvent, "(#cmd='touch " + vulnFileCanonicalPath + "').(#cmds={'bash','-c',#cmd}).(#p=new java.lang.ProcessBuilder(#cmds)).(#p.redirectErrorStream(true)).(#process=#p.start())");
-        } catch (RuntimeException | MethodFailedException re) {
-            // we ignore these exceptions as they are expected.
-        }
-        vulnFile = new File("target/vuln-file.txt");
-        assertFalse("Vulnerability successfully executed ! File created at " + vulnFileCanonicalPath, vulnFile.exists());
-        try {
-            propertyConditionEvaluator.getOGNLPropertyValue(mockEvent, "(#cmd='touch " + vulnFileCanonicalPath + "').(#iswin=(@java.lang.System@getProperty('os.name').toLowerCase().contains('win'))).(#cmds=(#iswin?{'cmd.exe','/c',#cmd}:{'bash','-c',#cmd})).(#p=new java.lang.ProcessBuilder(#cmds)).(#p.redirectErrorStream(true)).(#process=#p.start())");
-        } catch (RuntimeException | MethodFailedException re) {
-            // we ignore these exceptions as they are expected.
-        }
-        vulnFile = new File("target/vuln-file.txt");
-        assertFalse("Vulnerability successfully executed ! File created at " + vulnFileCanonicalPath, vulnFile.exists());
-        try {
-            propertyConditionEvaluator.getOGNLPropertyValue(mockEvent, "(#runtimeclass = #this.getClass().forName(\"java.lang.Runtime\")).(#getruntimemethod = #runtimeclass.getDeclaredMethods().{^ #this.name.equals(\"getRuntime\")}[0]).(#rtobj = #getruntimemethod.invoke(null,null)).(#execmethod = #runtimeclass.getDeclaredMethods().{? #this.name.equals(\"exec\")}.{? #this.getParameters()[0].getType().getName().equals(\"java.lang.String\")}.{? #this.getParameters().length < 2}[0]).(#execmethod.invoke(#rtobj,\" touch "+vulnFileCanonicalPath+"\"))");
-        } catch (RuntimeException | MethodFailedException re) {
-            // we ignore these exceptions as they are expected.
-        }
-        vulnFile = new File("target/vuln-file.txt");
-        assertFalse("Vulnerability successfully executed ! File created at " + vulnFileCanonicalPath, vulnFile.exists());
-    }
-
     private void runHardcodedTest(int workerCount, ExecutorService executorService) throws InterruptedException {
         List<Callable<Object>> todo = new ArrayList<>(workerCount);
         long startTime = System.currentTimeMillis();
@@ -201,17 +132,6 @@ public class PropertyConditionEvaluatorTest {
         List<Future<Object>> answers = executorService.invokeAll(todo);
         long totalTime = System.currentTimeMillis() - startTime;
         System.out.println("Hardcoded workers completed execution in " + totalTime + "ms");
-    }
-
-    private void runOGNLTest(int workerCount, ExecutorService executorService) throws InterruptedException {
-        List<Callable<Object>> todo = new ArrayList<>(workerCount);
-        long startTime = System.currentTimeMillis();
-        for (int i = 0; i < workerCount; i++) {
-            todo.add(new OGNLWorker());
-        }
-        List<Future<Object>> answers = executorService.invokeAll(todo);
-        long totalTime = System.currentTimeMillis() - startTime;
-        System.out.println("OGNL workers completed execution in " + totalTime + "ms");
     }
 
     private static Event generateMockEvent(Profile mockProfile, Session mockSession) {
@@ -281,22 +201,6 @@ public class PropertyConditionEvaluatorTest {
             propertyConditionEvaluator.getHardcodedPropertyValue(mockEvent, "target.scope");
             propertyConditionEvaluator.getHardcodedPropertyValue(mockEvent, "target.properties.pageInfo.pagePath");
             propertyConditionEvaluator.getHardcodedPropertyValue(mockEvent, "target.properties.pageInfo.pageURL");
-            return null;
-        }
-    }
-
-    class OGNLWorker implements Callable<Object> {
-
-        @Override
-        public Object call() {
-            try {
-                propertyConditionEvaluator.getOGNLPropertyValue(mockEvent, "target.itemId");
-                propertyConditionEvaluator.getOGNLPropertyValue(mockEvent, "target.scope");
-                propertyConditionEvaluator.getOGNLPropertyValue(mockEvent, "target.properties.pageInfo.pagePath");
-                propertyConditionEvaluator.getOGNLPropertyValue(mockEvent, "target.properties.pageInfo.pageURL");
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
             return null;
         }
     }

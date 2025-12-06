@@ -20,7 +20,6 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 
 /**
  * This mixin is used in ESCustomObjectMapper to avoid the version parameter to be registered in ES
- * @author dgaillard
  */
 public abstract class ESItemMixIn {
 

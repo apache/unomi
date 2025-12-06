@@ -27,7 +27,7 @@ import org.apache.unomi.api.services.ExecutionContextManager;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.aggregate.*;
-import org.apache.unomi.persistence.spi.conditions.ConditionEvaluatorDispatcher;
+import org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluatorDispatcher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,6 +36,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.DirectoryNotEmptyException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -44,6 +45,8 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.Arrays;
+import java.util.Collection;
 
 /**
  * An in-memory implementation of PersistenceService for testing purposes.
@@ -53,12 +56,19 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
     private static final Logger LOGGER = LoggerFactory.getLogger(InMemoryPersistenceServiceImpl.class);
     private static final Pattern SAFE_FILENAME_PATTERN = Pattern.compile("[^a-zA-Z0-9-_.]");
     public static final String DEFAULT_STORAGE_DIR = "data/persistence";
+    
+    // System items list - matches Elasticsearch/OpenSearch persistence services
+    // System items have their itemType appended to the document ID: tenantId_itemId_itemType
+    private static final Collection<String> systemItems = Arrays.asList("actionType", "campaign", "campaignevent", "goal", "userList",
+            "propertyType", "scope", "conditionType", "rule", "scoring", "segment", "groovyAction", "topic", "patch", "jsonSchema",
+            "importConfig", "exportConfig", "rulestats");
 
     private final Map<String, Item> itemsById = new ConcurrentHashMap<>();
     private final Map<String, Map<String, Map<String, Object>>> propertyMappings = new ConcurrentHashMap<>();
     private final Map<String, ScrollState> scrollStates = new ConcurrentHashMap<>();
     private final Map<String, Long> sequenceNumbersByIndex = new ConcurrentHashMap<>();
     private final Map<String, Long> primaryTermsByIndex = new ConcurrentHashMap<>();
+    private final Map<String, Object> fileLocks = new ConcurrentHashMap<>();
     private final ConditionEvaluatorDispatcher conditionEvaluatorDispatcher;
     private final ExecutionContextManager executionContextManager;
     private final CustomObjectMapper objectMapper;
@@ -66,6 +76,51 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
     private final boolean fileStorageEnabled;
     private final boolean clearStorageOnInit;
     private final boolean prettyPrintJson;
+
+    // Refresh delay simulation (simulates Elasticsearch/OpenSearch behavior)
+    private final boolean simulateRefreshDelay;
+    private final long refreshIntervalMs;
+    private final Map<String, Long> pendingRefreshItems = new ConcurrentHashMap<>(); // itemKey -> timestamp when it becomes available
+    private final Set<String> refreshedIndexes = ConcurrentHashMap.newKeySet(); // indexes that have been refreshed
+    private Thread refreshThread;
+    private volatile boolean shutdownRefreshThread = false;
+    
+    // Refresh policy per item type (simulates Elasticsearch/OpenSearch refresh policies)
+    // Valid values: False/NONE (default - wait for automatic refresh), True/IMMEDIATE (immediate refresh), WaitFor/WAIT_UNTIL (wait for refresh)
+    private final Map<String, RefreshPolicy> itemTypeToRefreshPolicy = new ConcurrentHashMap<>();
+    
+    // Default query limit (simulates Elasticsearch/OpenSearch default query limit)
+    private Integer defaultQueryLimit = 10;
+    
+    // Tenant transformation listeners (simulates Elasticsearch/OpenSearch tenant transformations)
+    private final List<org.apache.unomi.api.tenants.TenantTransformationListener> transformationListeners = new ArrayList<>();
+    
+    /**
+     * Refresh policy enum that simulates Elasticsearch/OpenSearch refresh behavior.
+     * 
+     * - FALSE/NONE: Don't refresh immediately, wait for automatic refresh (default behavior)
+     * - TRUE/IMMEDIATE: Force an immediate refresh after indexing
+     * - WAIT_FOR/WAIT_UNTIL: Wait for refresh to complete before returning (similar to True but with different semantics)
+     */
+    public enum RefreshPolicy {
+        /**
+         * FALSE/NONE - Don't refresh immediately. Changes become visible after the next automatic refresh.
+         * This is the default and most efficient option.
+         */
+        FALSE,
+        
+        /**
+         * TRUE/IMMEDIATE - Force an immediate refresh after indexing.
+         * Changes are immediately visible but more resource-intensive.
+         */
+        TRUE,
+        
+        /**
+         * WAIT_FOR/WAIT_UNTIL - Wait for refresh to complete before returning.
+         * Similar to TRUE but ensures the refresh operation completes before the request returns.
+         */
+        WAIT_FOR
+    }
 
     private static class ScrollState {
         private final List<Item> items;
@@ -82,24 +137,37 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
     }
 
     public InMemoryPersistenceServiceImpl(ExecutionContextManager executionContextManager, ConditionEvaluatorDispatcher conditionEvaluatorDispatcher) {
-        this(executionContextManager, conditionEvaluatorDispatcher, DEFAULT_STORAGE_DIR, true, true, true);
+        this(executionContextManager, conditionEvaluatorDispatcher, DEFAULT_STORAGE_DIR, true, true, true, true, 1000L);
     }
 
     public InMemoryPersistenceServiceImpl(ExecutionContextManager executionContextManager, ConditionEvaluatorDispatcher conditionEvaluatorDispatcher, String storageDir) {
-        this(executionContextManager, conditionEvaluatorDispatcher, storageDir, true, true, true);
+        this(executionContextManager, conditionEvaluatorDispatcher, storageDir, true, true, true, true, 1000L);
     }
 
     public InMemoryPersistenceServiceImpl(ExecutionContextManager executionContextManager, ConditionEvaluatorDispatcher conditionEvaluatorDispatcher, String storageDir, boolean enableFileStorage) {
-        this(executionContextManager, conditionEvaluatorDispatcher, storageDir, enableFileStorage, true, true);
+        this(executionContextManager, conditionEvaluatorDispatcher, storageDir, enableFileStorage, true, true, true, 1000L);
     }
 
     public InMemoryPersistenceServiceImpl(ExecutionContextManager executionContextManager, ConditionEvaluatorDispatcher conditionEvaluatorDispatcher,
             String storageDir, boolean enableFileStorage, boolean clearStorageOnInit, boolean prettyPrintJson) {
+        this(executionContextManager, conditionEvaluatorDispatcher, storageDir, enableFileStorage, clearStorageOnInit, prettyPrintJson, true, 1000L);
+    }
+
+    public InMemoryPersistenceServiceImpl(ExecutionContextManager executionContextManager, ConditionEvaluatorDispatcher conditionEvaluatorDispatcher,
+            String storageDir, boolean enableFileStorage, boolean clearStorageOnInit, boolean prettyPrintJson, boolean simulateRefreshDelay, long refreshIntervalMs) {
+        this(executionContextManager, conditionEvaluatorDispatcher, storageDir, enableFileStorage, clearStorageOnInit, prettyPrintJson, simulateRefreshDelay, refreshIntervalMs, 10);
+    }
+    
+    public InMemoryPersistenceServiceImpl(ExecutionContextManager executionContextManager, ConditionEvaluatorDispatcher conditionEvaluatorDispatcher,
+            String storageDir, boolean enableFileStorage, boolean clearStorageOnInit, boolean prettyPrintJson, boolean simulateRefreshDelay, long refreshIntervalMs, int defaultQueryLimit) {
         this.executionContextManager = executionContextManager;
         this.conditionEvaluatorDispatcher = conditionEvaluatorDispatcher;
         this.fileStorageEnabled = enableFileStorage;
         this.clearStorageOnInit = clearStorageOnInit;
         this.prettyPrintJson = prettyPrintJson;
+        this.simulateRefreshDelay = simulateRefreshDelay;
+        this.refreshIntervalMs = refreshIntervalMs > 0 ? refreshIntervalMs : 1000L;
+        this.defaultQueryLimit = defaultQueryLimit > 0 ? defaultQueryLimit : 10;
 
         if (fileStorageEnabled) {
             this.objectMapper = new CustomObjectMapper();
@@ -107,7 +175,7 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
                 this.objectMapper.enable(SerializationFeature.INDENT_OUTPUT);
             }
             this.storageRootPath = Paths.get(storageDir).toAbsolutePath().normalize();
-            LOGGER.info("Using storage root path: {}", storageRootPath);
+            LOGGER.debug("Using storage root path: {}", storageRootPath);
 
             // Create storage directory if it doesn't exist
             try {
@@ -133,6 +201,75 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
             this.objectMapper = null;
             this.storageRootPath = null;
         }
+        
+        // Start background refresh thread if refresh delay simulation is enabled
+        if (simulateRefreshDelay) {
+            startRefreshThread();
+        }
+    }
+    
+    /**
+     * Starts the background thread that periodically refreshes indexes, simulating Elasticsearch/OpenSearch behavior.
+     * By default, Elasticsearch refreshes indexes every 1 second, making newly indexed documents searchable.
+     */
+    private void startRefreshThread() {
+        refreshThread = new Thread(() -> {
+            while (!shutdownRefreshThread) {
+                try {
+                    Thread.sleep(refreshIntervalMs);
+                    performPeriodicRefresh();
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    break;
+                } catch (Exception e) {
+                    LOGGER.error("Error in refresh thread", e);
+                }
+            }
+        }, "InMemoryPersistenceService-RefreshThread");
+        refreshThread.setDaemon(true);
+        refreshThread.start();
+    }
+    
+    /**
+     * Performs periodic refresh of pending items, making them available for querying.
+     * This simulates Elasticsearch's automatic refresh behavior.
+     */
+    private void performPeriodicRefresh() {
+        long currentTime = System.currentTimeMillis();
+        Set<String> itemsToRefresh = new HashSet<>();
+        
+        for (Map.Entry<String, Long> entry : pendingRefreshItems.entrySet()) {
+            if (entry.getValue() <= currentTime) {
+                itemsToRefresh.add(entry.getKey());
+            }
+        }
+        
+        if (!itemsToRefresh.isEmpty()) {
+            for (String itemKey : itemsToRefresh) {
+                pendingRefreshItems.remove(itemKey);
+                // Extract index name from itemKey (format: "index:itemId:tenantId")
+                String[] parts = itemKey.split(":", 3);
+                if (parts.length >= 1) {
+                    refreshedIndexes.add(parts[0]);
+                }
+            }
+            LOGGER.debug("Periodically refreshed {} items", itemsToRefresh.size());
+        }
+    }
+    
+    /**
+     * Shuts down the refresh thread. Should be called when the service is being destroyed.
+     */
+    public void shutdown() {
+        shutdownRefreshThread = true;
+        if (refreshThread != null) {
+            refreshThread.interrupt();
+            try {
+                refreshThread.join(5000);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+        }
     }
 
     private void loadPersistedItems() {
@@ -155,7 +292,14 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
         try {
             String json = Files.readString(filePath, StandardCharsets.UTF_8);
             Item item = objectMapper.readValue(json, Item.class);
-            itemsById.put(getKey(item.getItemId(), getIndex(item.getClass())), item);
+            String key = getKey(item.getItemId(), getIndex(item.getClass()));
+            itemsById.put(key, item);
+            // Items loaded from file are considered immediately available (already persisted)
+            // They don't need to wait for refresh
+            if (simulateRefreshDelay) {
+                String indexName = getIndexName(item);
+                refreshedIndexes.add(indexName);
+            }
         } catch (IOException e) {
             LOGGER.error("Failed to load item from file: {}", filePath, e);
         }
@@ -199,13 +343,75 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
         }
 
         Path itemPath = getItemPath(item);
-        try {
-            Files.createDirectories(itemPath.getParent());
-            String json = objectMapper.writeValueAsString(item);
-            Files.writeString(itemPath, json, StandardCharsets.UTF_8);
-        } catch (IOException e) {
-            LOGGER.error("Failed to persist item to file: {}", itemPath, e);
-            throw new RuntimeException("Failed to persist item", e);
+        String pathKey = itemPath.toString();
+        Object lock = fileLocks.computeIfAbsent(pathKey, k -> new Object());
+        
+        synchronized (lock) {
+            // Retry logic for handling transient file system issues in concurrent scenarios
+            int maxRetries = 3;
+            int retryCount = 0;
+            
+            while (retryCount < maxRetries) {
+                try {
+                    // Create parent directories, handling race conditions where directory might already exist
+                    // or be created/deleted by another thread
+                    Path parent = itemPath.getParent();
+                    if (parent != null) {
+                        try {
+                            Files.createDirectories(parent);
+                        } catch (IOException e) {
+                            // Files.createDirectories should not throw if directory exists, so if it throws,
+                            // check if directory was created by another thread (race condition)
+                            if (Files.exists(parent) && Files.isDirectory(parent)) {
+                                // Directory exists (created by another thread), continue
+                            } else {
+                                // Directory doesn't exist - this might be a transient issue, retry
+                                retryCount++;
+                                if (retryCount < maxRetries) {
+                                    try {
+                                        Thread.sleep(10); // Small delay before retry
+                                    } catch (InterruptedException ie) {
+                                        Thread.currentThread().interrupt();
+                                        throw new RuntimeException("Interrupted during retry", ie);
+                                    }
+                                    continue;
+                                }
+                                LOGGER.error("Failed to create parent directory after {} retries: {}", retryCount, parent, e);
+                                throw new RuntimeException("Failed to create parent directory", e);
+                            }
+                        }
+                    }
+                    
+                    String json = objectMapper.writeValueAsString(item);
+                    Files.writeString(itemPath, json, StandardCharsets.UTF_8);
+                    // Success - break out of retry loop
+                    return;
+                } catch (IOException e) {
+                    retryCount++;
+                    if (retryCount < maxRetries) {
+                        // Check if file exists (might have been created by another thread or previous attempt)
+                        if (Files.exists(itemPath)) {
+                            // File exists, operation might have succeeded - verify by trying to read it
+                            try {
+                                Files.readString(itemPath);
+                                // File exists and is readable, consider operation successful
+                                return;
+                            } catch (IOException readException) {
+                                // File exists but can't be read, might be in use - retry
+                            }
+                        }
+                        try {
+                            Thread.sleep(10); // Small delay before retry
+                        } catch (InterruptedException ie) {
+                            Thread.currentThread().interrupt();
+                            throw new RuntimeException("Interrupted during retry", ie);
+                        }
+                    } else {
+                        LOGGER.error("Failed to persist item to file after {} retries: {}", retryCount, itemPath, e);
+                        throw new RuntimeException("Failed to persist item", e);
+                    }
+                }
+            }
         }
     }
 
@@ -215,21 +421,52 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
         }
 
         Path itemPath = getItemPath(item);
-        try {
-            Files.deleteIfExists(itemPath);
+        String pathKey = itemPath.toString();
+        Object lock = fileLocks.computeIfAbsent(pathKey, k -> new Object());
+        
+        synchronized (lock) {
+            try {
+                Files.deleteIfExists(itemPath);
 
-            // Try to clean up empty directories
-            Path parent = itemPath.getParent();
-            while (parent != null && !parent.equals(storageRootPath)) {
-                if (Files.list(parent).findFirst().isEmpty()) {
-                    Files.delete(parent);
-                    parent = parent.getParent();
-                } else {
-                    break;
+                // Try to clean up empty directories
+                Path parent = itemPath.getParent();
+                while (parent != null && !parent.equals(storageRootPath)) {
+                    try {
+                        if (Files.exists(parent)) {
+                            try (java.util.stream.Stream<Path> stream = Files.list(parent)) {
+                                // Check if directory is truly empty
+                                if (stream.findFirst().isEmpty()) {
+                                    // Directory is empty, try to delete it
+                                    try {
+                                        Files.delete(parent);
+                                        parent = parent.getParent();
+                                    } catch (DirectoryNotEmptyException e) {
+                                        // Directory became non-empty between check and delete (race condition)
+                                        // This is expected in concurrent scenarios - just stop cleanup
+                                        break;
+                                    } catch (IOException e) {
+                                        // Directory may have been deleted by another thread
+                                        // This is expected in concurrent scenarios - just stop cleanup
+                                        break;
+                                    }
+                                } else {
+                                    // Directory is not empty, stop cleanup
+                                    break;
+                                }
+                            }
+                        } else {
+                            // Directory doesn't exist, stop cleanup
+                            break;
+                        }
+                    } catch (IOException e) {
+                        // Directory may have been deleted by another thread, or may not be empty
+                        // This is expected in concurrent scenarios - just stop cleanup
+                        break;
+                    }
                 }
+            } catch (IOException e) {
+                LOGGER.error("Failed to delete item file: {}", itemPath, e);
             }
-        } catch (IOException e) {
-            LOGGER.error("Failed to delete item file: {}", itemPath, e);
         }
     }
 
@@ -251,6 +488,72 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
 
     private <T extends Item> String getKey(String itemId, String index) {
         return index + ":" + itemId + ":" + executionContextManager.getCurrentContext().getTenantId();
+    }
+    
+    /**
+     * Get the document ID for an item type, matching Elasticsearch/OpenSearch format.
+     * For system items, the format is: tenantId_itemId_itemType
+     * For non-system items, the format is: tenantId_itemId
+     * 
+     * @param itemId the item ID
+     * @param itemType the item type
+     * @return the document ID
+     */
+    private String getDocumentIDForItemType(String itemId, String itemType) {
+        String tenantId = executionContextManager.getCurrentContext().getTenantId();
+        String baseId = systemItems.contains(itemType) ? (itemId + "_" + itemType.toLowerCase()) : itemId;
+        return tenantId + "_" + baseId;
+    }
+    
+    /**
+     * Strip tenant prefix from document ID, matching Elasticsearch/OpenSearch format.
+     * 
+     * @param documentId the document ID
+     * @return the document ID without tenant prefix
+     */
+    private String stripTenantFromDocumentId(String documentId) {
+        if (documentId == null) {
+            return null;
+        }
+        String tenantId = executionContextManager.getCurrentContext().getTenantId();
+        if (documentId.startsWith(tenantId + "_")) {
+            return documentId.substring(tenantId.length() + 1);
+        }
+        // Also check for system tenant
+        String systemTenant = "system";
+        if (documentId.startsWith(systemTenant + "_")) {
+            return documentId.substring(systemTenant.length() + 1);
+        }
+        return documentId;
+    }
+    
+    /**
+     * Extract itemId from document ID for system items, matching Elasticsearch/OpenSearch behavior.
+     * For system items, document ID format is: tenantId_itemId_itemType
+     * This method removes the tenant prefix and itemType suffix to get the actual itemId.
+     * 
+     * @param documentId the document ID (may include tenant prefix)
+     * @param itemType the item type
+     * @return the extracted itemId
+     */
+    private String extractItemIdFromDocumentId(String documentId, String itemType) {
+        if (documentId == null) {
+            return null;
+        }
+        String strippedId = stripTenantFromDocumentId(documentId);
+        if (!systemItems.contains(itemType)) {
+            // For non-system items, the stripped ID is the itemId
+            return strippedId;
+        } else {
+            // For system items, check if there's an itemType suffix and remove it
+            // This handles the case where document ID is: tenantId_itemId_itemType
+            String itemTypeSuffix = "_" + itemType.toLowerCase();
+            if (strippedId != null && strippedId.endsWith(itemTypeSuffix)) {
+                return strippedId.substring(0, strippedId.length() - itemTypeSuffix.length());
+            }
+            // If no suffix, return as-is (might be from old format or migration)
+            return strippedId;
+        }
     }
 
     /**
@@ -301,49 +604,53 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
         }
 
         item.setTenantId(executionContextManager.getCurrentContext().getTenantId());
+        
+        // Apply tenant transformations before save (simulates Elasticsearch/OpenSearch behavior)
+        item = handleItemTransformation(item);
+        
         String indexName = getIndexName(item);
         String key = getKey(item.getItemId(), indexName);
         Item existingItem = itemsById.get(key);
-        
+
         // Handle _seq_no and _primary_term fields using system metadata
         // Check for optimistic concurrency control
         if (existingItem != null) {
             Object existingSeqNo = existingItem.getSystemMetadata("_seq_no");
             Object existingPrimaryTerm = existingItem.getSystemMetadata("_primary_term");
-            
+
             // If the item has _seq_no and _primary_term specified, check them against the existing item
             Object requestedSeqNo = item.getSystemMetadata("_seq_no");
             Object requestedPrimaryTerm = item.getSystemMetadata("_primary_term");
-            
+
             if (requestedSeqNo != null && requestedPrimaryTerm != null) {
                 // If sequence numbers don't match the existing ones, it's a conflict
-                if (existingSeqNo != null && 
+                if (existingSeqNo != null &&
                     ((Number) requestedSeqNo).longValue() != ((Number) existingSeqNo).longValue()) {
-                    LOGGER.warn("Sequence number conflict detected for item {}: requested={}, current={}", 
+                    LOGGER.warn("Sequence number conflict detected for item {}: requested={}, current={}",
                                item.getItemId(), requestedSeqNo, existingSeqNo);
                     return false;
                 }
-                
+
                 // If primary terms don't match, it's a conflict
-                if (existingPrimaryTerm != null && 
+                if (existingPrimaryTerm != null &&
                     ((Number) requestedPrimaryTerm).longValue() != ((Number) existingPrimaryTerm).longValue()) {
-                    LOGGER.warn("Primary term conflict detected for item {}: requested={}, current={}", 
+                    LOGGER.warn("Primary term conflict detected for item {}: requested={}, current={}",
                                item.getItemId(), requestedPrimaryTerm, existingPrimaryTerm);
                     return false;
                 }
             }
         }
-        
+
         // Get sequence number for this item
         Long currentSeqNo = getSequenceNumber(indexName, true);
-        
+
         // Get primary term for this index
         Long currentPrimaryTerm = getPrimaryTerm(indexName);
-        
+
         // Set the new sequence number and primary term on the item
         item.setSystemMetadata("_seq_no", currentSeqNo);
         item.setSystemMetadata("_primary_term", currentPrimaryTerm);
-        
+
         // Handle item versioning (the existing version system)
         if ((existingItem == null || existingItem.getVersion() == null) && (item.getVersion() == null)) {
             // New item or item without version, set initial version
@@ -363,7 +670,183 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
             persistItem(item);
         }
 
+        // Handle refresh policy per item type (simulates Elasticsearch/OpenSearch refresh policies)
+        // Request-based override (via system metadata) takes precedence over per-item-type policy
+        if (simulateRefreshDelay) {
+            String itemType = item.getItemType();
+            if (item instanceof CustomItem) {
+                String customItemType = ((CustomItem) item).getCustomItemType();
+                if (customItemType != null) {
+                    itemType = customItemType;
+                }
+            }
+            RefreshPolicy refreshPolicy = getRefreshPolicy(itemType, item);
+            
+            switch (refreshPolicy) {
+                case TRUE:
+                case WAIT_FOR:
+                    // Immediate refresh: make item available immediately
+                    // For WAIT_FOR, we also ensure refresh completes (same behavior as TRUE in in-memory)
+                    pendingRefreshItems.remove(key);
+                    refreshedIndexes.add(indexName);
+                    LOGGER.debug("Immediately refreshed item {} of type {} due to refresh policy {}", 
+                            item.getItemId(), itemType, refreshPolicy);
+                    break;
+                case FALSE:
+                default:
+                    // Default behavior: wait for automatic refresh
+                    long refreshTime = System.currentTimeMillis() + refreshIntervalMs;
+                    pendingRefreshItems.put(key, refreshTime);
+                    // Remove from refreshed indexes set if it was previously refreshed
+                    refreshedIndexes.remove(indexName);
+                    break;
+            }
+        }
+
         return true;
+    }
+    
+    /**
+     * Gets the refresh policy for a given item type.
+     * Checks for request-based override in item's system metadata first,
+     * then falls back to per-item-type policy, and finally defaults to FALSE.
+     * 
+     * @param itemType the item type
+     * @param item the item (may be null) - used to check for request-based override
+     * @return the refresh policy for this item type
+     */
+    private RefreshPolicy getRefreshPolicy(String itemType, Item item) {
+        // Check for request-based refresh policy override in system metadata
+        // This simulates Elasticsearch/OpenSearch's refresh parameter in API requests
+        if (item != null) {
+            Object refreshOverride = item.getSystemMetadata("refresh");
+            if (refreshOverride != null) {
+                if (refreshOverride instanceof RefreshPolicy) {
+                    return (RefreshPolicy) refreshOverride;
+                } else if (refreshOverride instanceof String) {
+                    RefreshPolicy parsed = parseRefreshPolicy((String) refreshOverride);
+                    LOGGER.debug("Using request-based refresh policy override: {} for item type {}", parsed, itemType);
+                    return parsed;
+                } else if (refreshOverride instanceof Boolean) {
+                    // Support boolean values: true -> TRUE, false -> FALSE
+                    return ((Boolean) refreshOverride) ? RefreshPolicy.TRUE : RefreshPolicy.FALSE;
+                }
+            }
+        }
+        
+        // Fall back to per-item-type policy
+        return itemTypeToRefreshPolicy.getOrDefault(itemType, RefreshPolicy.FALSE);
+    }
+    
+    /**
+     * Gets the refresh policy for a given item type (without item context).
+     * Used when item is not available.
+     * 
+     * @param itemType the item type
+     * @return the refresh policy for this item type
+     */
+    private RefreshPolicy getRefreshPolicy(String itemType) {
+        return itemTypeToRefreshPolicy.getOrDefault(itemType, RefreshPolicy.FALSE);
+    }
+    
+    /**
+     * Sets the refresh policy for a specific item type.
+     * This simulates Elasticsearch/OpenSearch's itemTypeToRefreshPolicy configuration.
+     * 
+     * @param itemType the item type
+     * @param refreshPolicy the refresh policy (FALSE, TRUE, or WAIT_FOR)
+     */
+    public void setRefreshPolicy(String itemType, RefreshPolicy refreshPolicy) {
+        if (itemType != null && refreshPolicy != null) {
+            itemTypeToRefreshPolicy.put(itemType, refreshPolicy);
+            LOGGER.debug("Set refresh policy for item type {} to {}", itemType, refreshPolicy);
+        }
+    }
+    
+    /**
+     * Sets refresh policies from a JSON string, matching Elasticsearch/OpenSearch configuration format.
+     * Example: {"event":"WAIT_FOR","rule":"FALSE","scheduledTask":"TRUE"}
+     * 
+     * @param refreshPolicyJson JSON string mapping item types to refresh policies
+     */
+    public void setItemTypeToRefreshPolicy(String refreshPolicyJson) {
+        if (refreshPolicyJson == null || refreshPolicyJson.trim().isEmpty()) {
+            return;
+        }
+        
+        try {
+            if (objectMapper != null) {
+                @SuppressWarnings("unchecked")
+                Map<String, String> policies = objectMapper.readValue(refreshPolicyJson, Map.class);
+                for (Map.Entry<String, String> entry : policies.entrySet()) {
+                    String itemType = entry.getKey();
+                    String policyStr = entry.getValue();
+                    try {
+                        RefreshPolicy policy = RefreshPolicy.valueOf(policyStr.toUpperCase());
+                        setRefreshPolicy(itemType, policy);
+                    } catch (IllegalArgumentException e) {
+                        // Try to map Elasticsearch/OpenSearch string values
+                        RefreshPolicy policy = parseRefreshPolicy(policyStr);
+                        setRefreshPolicy(itemType, policy);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            LOGGER.error("Failed to parse refresh policy JSON: {}", refreshPolicyJson, e);
+        }
+    }
+    
+    /**
+     * Parses refresh policy string values from Elasticsearch/OpenSearch configuration.
+     * Supports: False/NONE, True/IMMEDIATE, WaitFor/WAIT_UNTIL
+     * 
+     * @param policyStr the policy string
+     * @return the corresponding RefreshPolicy enum value
+     */
+    private RefreshPolicy parseRefreshPolicy(String policyStr) {
+        if (policyStr == null) {
+            return RefreshPolicy.FALSE;
+        }
+        
+        String upper = policyStr.toUpperCase();
+        if ("FALSE".equals(upper) || "NONE".equals(upper)) {
+            return RefreshPolicy.FALSE;
+        } else if ("TRUE".equals(upper) || "IMMEDIATE".equals(upper)) {
+            return RefreshPolicy.TRUE;
+        } else if ("WAITFOR".equals(upper) || "WAIT_FOR".equals(upper) || "WAIT_UNTIL".equals(upper)) {
+            return RefreshPolicy.WAIT_FOR;
+        }
+        
+        LOGGER.warn("Unknown refresh policy value: {}, defaulting to FALSE", policyStr);
+        return RefreshPolicy.FALSE;
+    }
+    
+    /**
+     * Checks if an item is available for querying (i.e., has been refreshed).
+     * In Elasticsearch/OpenSearch, items are not immediately available after indexing.
+     * 
+     * @param itemKey the item key (format: "index:itemId:tenantId")
+     * @param indexName the index name
+     * @return true if the item is available for querying, false otherwise
+     */
+    private boolean isItemAvailableForQuery(String itemKey, String indexName) {
+        if (!simulateRefreshDelay) {
+            return true; // If refresh delay is disabled, all items are immediately available
+        }
+        
+        // If the index has been explicitly refreshed, all items in it are available
+        if (refreshedIndexes.contains(indexName)) {
+            return true;
+        }
+        
+        // Check if this specific item has passed its refresh time
+        Long refreshTime = pendingRefreshItems.get(itemKey);
+        if (refreshTime == null) {
+            // Item is not in pending list, so it's available (e.g., loaded from file)
+            return true;
+        }
+        
+        return System.currentTimeMillis() >= refreshTime;
     }
 
     private String getIndexName(Item item) {
@@ -383,7 +866,8 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
     public <T extends Item> T load(String itemId, Class<T> clazz) {
         Item item = itemsById.get(getKey(itemId, getIndex(clazz)));
         if (item != null && clazz.isAssignableFrom(item.getClass()) && executionContextManager.getCurrentContext().getTenantId().equals(item.getTenantId())) {
-            return (T) item;
+            // Apply reverse tenant transformations after load (simulates Elasticsearch/OpenSearch behavior)
+            return (T) handleItemReverseTransformation(item);
         }
         return null;
     }
@@ -400,6 +884,10 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
         if (item != null && clazz.isAssignableFrom(item.getClass()) &&
             executionContextManager.getCurrentContext().getTenantId().equals(item.getTenantId())) {
             itemsById.remove(key);
+            // Remove from pending refresh list if present
+            if (simulateRefreshDelay) {
+                pendingRefreshItems.remove(key);
+            }
             deleteItemFile(item);
             return true;
         }
@@ -408,7 +896,22 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
 
     @Override
     public <T extends Item> boolean removeByQuery(Condition condition, Class<T> clazz) {
-        List<T> itemsToRemove = query(condition, null, clazz);
+        // In Elasticsearch, deleteByQuery works on all matching documents regardless of refresh status
+        // So we need to query all items, not just refreshed ones
+        String currentTenantId = executionContextManager.getCurrentContext().getTenantId();
+        List<T> itemsToRemove = new ArrayList<>();
+        
+        for (Map.Entry<String, Item> entry : itemsById.entrySet()) {
+            Item item = entry.getValue();
+            if (clazz.isAssignableFrom(item.getClass()) && 
+                currentTenantId.equals(item.getTenantId())) {
+                // Check condition if provided (but don't filter by refresh status for delete operations)
+                if (condition == null || testMatch(condition, item)) {
+                    itemsToRemove.add((T) item);
+                }
+            }
+        }
+        
         for (T item : itemsToRemove) {
             remove(item.getItemId(), clazz);
         }
@@ -521,16 +1024,23 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
         List<T> matchingItems = query(condition, sortBy, clazz);
         int totalSize = matchingItems.size();
 
-        // If size is negative, return all items without scroll
-        if (size < 0) {
-            List<T> pageItems = matchingItems.subList(offset, totalSize);
+        // Apply default query limit when size < 0 (simulates Elasticsearch/OpenSearch behavior)
+        int effectiveSize = size < 0 ? defaultQueryLimit : size;
+
+        // If size is negative and no scroll, use default limit
+        if (size < 0 && scrollTimeValidity == null) {
+            int fromIndex = Math.min(offset, totalSize);
+            int toIndex = Math.min(offset + effectiveSize, totalSize);
+            List<T> pageItems = matchingItems.subList(fromIndex, toIndex);
+            // Preserve original size parameter in pageSize to indicate what was requested
             return new PartialList<>(pageItems, offset, size, totalSize, PartialList.Relation.EQUAL);
         }
 
         if (scrollTimeValidity != null) {
             // Don't create scroll state for empty results or when all items fit in one page
-            if (totalSize == 0 || totalSize <= size) {
+            if (totalSize == 0 || totalSize <= effectiveSize) {
                 List<T> pageItems = matchingItems.subList(0, totalSize);
+                // Preserve original size parameter in pageSize
                 return new PartialList<>(pageItems, 0, size, totalSize, PartialList.Relation.EQUAL);
             }
 
@@ -539,9 +1049,10 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
             // Parse scroll time validity (assuming it's in milliseconds)
             long validityTime = getScrollTimeValidityMs(scrollTimeValidity);
             // Store scroll state with filtered items
-            scrollStates.put(scrollId, new ScrollState(new ArrayList<>(matchingItems), size, System.currentTimeMillis() + validityTime, size));
+            scrollStates.put(scrollId, new ScrollState(new ArrayList<>(matchingItems), effectiveSize, System.currentTimeMillis() + validityTime, effectiveSize));
             // Return first page with scroll ID
-            List<T> pageItems = matchingItems.subList(0, size);
+            List<T> pageItems = matchingItems.subList(0, effectiveSize);
+            // Preserve original size parameter in pageSize
             PartialList<T> partialList = new PartialList<>(pageItems, 0, size, totalSize, PartialList.Relation.EQUAL);
             partialList.setScrollIdentifier(scrollId);
             partialList.setScrollTimeValidity(scrollTimeValidity);
@@ -549,8 +1060,9 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
         }
 
         int fromIndex = Math.min(offset, totalSize);
-        int toIndex = size < 0 ? totalSize : Math.min(offset + size, totalSize);
+        int toIndex = Math.min(offset + effectiveSize, totalSize);
         List<T> pageItems = matchingItems.subList(fromIndex, toIndex);
+        // Preserve original size parameter in pageSize
         return new PartialList<>(pageItems, offset, size, totalSize, PartialList.Relation.EQUAL);
     }
 
@@ -592,9 +1104,30 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
 
     @Override
     public void refresh() {
-        // No-op for in-memory implementation
-        // In a real implementation, this would refresh all indexes
-        LOGGER.debug("Refresh called on in-memory persistence service");
+        if (simulateRefreshDelay) {
+            // Immediately refresh all pending items, making them available for querying
+            // This simulates Elasticsearch's refresh() API which forces an immediate refresh
+            int itemsRefreshed = pendingRefreshItems.size();
+            Set<String> indexesToRefresh = new HashSet<>();
+            
+            for (Map.Entry<String, Long> entry : pendingRefreshItems.entrySet()) {
+                String itemKey = entry.getKey();
+                // Extract index name from itemKey (format: "index:itemId:tenantId")
+                String[] parts = itemKey.split(":", 3);
+                if (parts.length >= 1) {
+                    indexesToRefresh.add(parts[0]);
+                }
+            }
+            
+            // Clear all pending items
+            pendingRefreshItems.clear();
+            
+            // Mark all indexes as refreshed
+            refreshedIndexes.addAll(indexesToRefresh);
+            LOGGER.debug("Manually refreshed all indexes, made {} items immediately available", itemsRefreshed);
+        } else {
+            LOGGER.debug("Refresh called on in-memory persistence service (refresh delay simulation disabled)");
+        }
     }
 
     @Override
@@ -621,6 +1154,10 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
 
         for (String key : keysToRemove) {
             itemsById.remove(key);
+            // Remove from pending refresh list if present
+            if (simulateRefreshDelay) {
+                pendingRefreshItems.remove(key);
+            }
         }
 
         LOGGER.info("Purged {} items older than {} for tenant {}", keysToRemove.size(), date, currentTenantId);
@@ -649,6 +1186,10 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
 
         for (String key : keysToRemove) {
             itemsById.remove(key);
+            // Remove from pending refresh list if present
+            if (simulateRefreshDelay) {
+                pendingRefreshItems.remove(key);
+            }
         }
 
         LOGGER.info("Purged {} items with scope {} for tenant {}", keysToRemove.size(), scope, currentTenantId);
@@ -656,10 +1197,37 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
 
     @Override
     public <T extends Item> void refreshIndex(Class<T> clazz, Date dateHint) {
-        // No-op for in-memory implementation
-        // In a real implementation, this would refresh the index for the specified item type
+        if (simulateRefreshDelay && clazz != null) {
+            // Immediately refresh the specified index, making all pending items in it available for querying
+            // This simulates Elasticsearch's refreshIndex() API which forces an immediate refresh of a specific index
+            String indexName = getIndex(clazz);
+            int itemsRefreshed = 0;
+            
+            // Remove all pending items for this index from the pending list
+            Set<String> keysToRemove = new HashSet<>();
+            for (Map.Entry<String, Long> entry : pendingRefreshItems.entrySet()) {
+                String itemKey = entry.getKey();
+                // Extract index name from itemKey (format: "index:itemId:tenantId")
+                String[] parts = itemKey.split(":", 3);
+                if (parts.length >= 1 && indexName.equals(parts[0])) {
+                    keysToRemove.add(itemKey);
+                    itemsRefreshed++;
+                }
+            }
+            
+            for (String key : keysToRemove) {
+                pendingRefreshItems.remove(key);
+            }
+            
+            // Mark this index as refreshed
+            refreshedIndexes.add(indexName);
+            LOGGER.debug("Manually refreshed index {} for class {} with date hint {}, made {} items immediately available", 
+                    indexName, clazz.getName(), dateHint, itemsRefreshed);
+        } else {
         if (clazz != null) {
-            LOGGER.debug("RefreshIndex called for class {} with date hint {}", clazz.getName(), dateHint);
+                LOGGER.debug("RefreshIndex called for class {} with date hint {} (refresh delay simulation disabled)", 
+                        clazz.getName(), dateHint);
+            }
         }
     }
 
@@ -715,6 +1283,10 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
 
         for (String key : keysToRemove) {
             itemsById.remove(key);
+            // Remove from pending refresh list if present
+            if (simulateRefreshDelay) {
+                pendingRefreshItems.remove(key);
+            }
         }
 
         LOGGER.info("Removed index for item type {}, deleted {} items for tenant {}",
@@ -751,16 +1323,6 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
     }
 
     @Override
-    public boolean removeQuery(String queryString) {
-        return true;
-    }
-
-    @Override
-    public boolean saveQuery(String queryString, Condition condition) {
-        throw new UnsupportedOperationException("Not implemented");
-    }
-
-    @Override
     public boolean testMatch(Condition condition, Item item) {
         if (condition == null) {
             return true;
@@ -782,11 +1344,19 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
 
         String currentTenantId = executionContextManager.getCurrentContext().getTenantId();
         LOGGER.debug("Counting all items of type {} for tenant {}", itemType, currentTenantId);
-        
-        return itemsById.values().stream()
-                .filter(item -> item.getItemType().equals(itemType))
-                .filter(item -> currentTenantId.equals(item.getTenantId()))
-                .count();
+
+        // Filter by refresh status to simulate Elasticsearch/OpenSearch behavior
+        Map<String, Item> filteredItems = new HashMap<>();
+        for (Map.Entry<String, Item> entry : itemsById.entrySet()) {
+            Item item = entry.getValue();
+            if (item.getItemType().equals(itemType) && currentTenantId.equals(item.getTenantId())) {
+                String itemKey = entry.getKey();
+                if (isItemAvailableForQuery(itemKey, itemType)) {
+                    filteredItems.put(itemKey, item);
+                }
+            }
+        }
+        return filteredItems.size();
     }
 
     @Override
@@ -802,11 +1372,17 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
             finalField = field;
         }
 
-        // Get all items of the specified type that match the condition
-        List<Item> matchingItems = itemsById.values().stream()
-                .filter(item -> item.getItemType().equals(itemType))
-                .filter(item -> condition == null || testMatch(condition, item))
-                .collect(Collectors.toList());
+        // Get all items of the specified type that match the condition and are available for querying
+        List<Item> matchingItems = new ArrayList<>();
+        for (Map.Entry<String, Item> entry : itemsById.entrySet()) {
+            Item item = entry.getValue();
+            if (item.getItemType().equals(itemType)) {
+                String itemKey = entry.getKey();
+                if (isItemAvailableForQuery(itemKey, itemType) && (condition == null || testMatch(condition, item))) {
+                    matchingItems.add(item);
+                }
+            }
+        }
 
         Map<String, Double> results = new HashMap<>();
 
@@ -900,11 +1476,47 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
                 existingItem.setVersion(1L);
             }
 
+            // Apply tenant transformations before save (simulates Elasticsearch/OpenSearch behavior)
+            existingItem = handleItemTransformation(existingItem);
+
             // Save updated item
             itemsById.put(key, existingItem);
             if (fileStorageEnabled) {
                 persistItem(existingItem);
             }
+            
+            // Handle refresh policy per item type for updates (same as save)
+            // Request-based override (via system metadata) takes precedence over per-item-type policy
+            if (simulateRefreshDelay) {
+                String itemType = existingItem.getItemType();
+                if (existingItem instanceof CustomItem) {
+                    String customItemType = ((CustomItem) existingItem).getCustomItemType();
+                    if (customItemType != null) {
+                        itemType = customItemType;
+                    }
+                }
+                String indexName = getIndexName(existingItem);
+                RefreshPolicy refreshPolicy = getRefreshPolicy(itemType, existingItem);
+                
+                switch (refreshPolicy) {
+                    case TRUE:
+                    case WAIT_FOR:
+                        // Immediate refresh: make item available immediately
+                        pendingRefreshItems.remove(key);
+                        refreshedIndexes.add(indexName);
+                        LOGGER.debug("Immediately refreshed updated item {} of type {} due to refresh policy {}", 
+                                existingItem.getItemId(), itemType, refreshPolicy);
+                        break;
+                    case FALSE:
+                    default:
+                        // Default behavior: wait for automatic refresh
+                        long refreshTime = System.currentTimeMillis() + refreshIntervalMs;
+                        pendingRefreshItems.put(key, refreshTime);
+                        refreshedIndexes.remove(indexName);
+                        break;
+                }
+            }
+            
             return true;
         } catch (Exception e) {
             LOGGER.error("Error updating item", e);
@@ -1031,10 +1643,26 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
             return false;
         }
 
+        // In Elasticsearch, updateByQuery works on all matching documents regardless of refresh status
+        // So we need to query all items, not just refreshed ones (similar to removeByQuery)
         boolean success = true;
         for (int i = 0; i < scripts.length; i++) {
             @SuppressWarnings({"unchecked", "rawtypes"})
-            List<Item> items = query(conditions[i], null, (Class) clazz);
+            List<Item> items = new ArrayList<>();
+            String currentTenantId = executionContextManager.getCurrentContext().getTenantId();
+            
+            // Query all items directly from itemsById, not filtering by refresh status
+            for (Map.Entry<String, Item> entry : itemsById.entrySet()) {
+                Item item = entry.getValue();
+                if (clazz.isAssignableFrom(item.getClass()) && 
+                    currentTenantId.equals(item.getTenantId())) {
+                    // Check condition if provided (but don't filter by refresh status)
+                    if (conditions[i] == null || testMatch(conditions[i], item)) {
+                        items.add(item);
+                    }
+                }
+            }
+            
             for (Item item : items) {
                 success &= updateWithScript(item, dateHint, clazz, scripts[i], scriptParams[i]);
             }
@@ -1073,14 +1701,19 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
 
     @Override
     public PartialList<CustomItem> queryCustomItem(Condition condition, String sortBy, String customItemType, int offset, int size, String scrollTimeValidity) {
-        // Get all items that match the item type
-        List<CustomItem> customItems = itemsById.values().stream()
-                .filter(item -> item instanceof CustomItem)
-                .filter(item -> customItemType.equals(item.getItemType()))
-                .filter(item -> executionContextManager.getCurrentContext().getTenantId().equals(item.getTenantId()))
-                .filter(item -> condition == null || testMatch(condition, item))
-                .map(item -> (CustomItem) item)
-                .collect(Collectors.toList());
+        // Get all items that match the item type and are available for querying
+        String currentTenantId = executionContextManager.getCurrentContext().getTenantId();
+        List<CustomItem> customItems = new ArrayList<>();
+        for (Map.Entry<String, Item> entry : itemsById.entrySet()) {
+            Item item = entry.getValue();
+            if (item instanceof CustomItem && customItemType.equals(item.getItemType()) 
+                    && currentTenantId.equals(item.getTenantId())) {
+                String itemKey = entry.getKey();
+                if (isItemAvailableForQuery(itemKey, customItemType) && (condition == null || testMatch(condition, item))) {
+                    customItems.add((CustomItem) item);
+                }
+            }
+        }
 
         // Sort items if needed
         if (sortBy != null) {
@@ -1204,7 +1837,8 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
         if (item instanceof CustomItem &&
             itemType.equals(item.getItemType()) &&
             executionContextManager.getCurrentContext().getTenantId().equals(item.getTenantId())) {
-            return (CustomItem) item;
+            // Apply reverse tenant transformations after load (simulates Elasticsearch/OpenSearch behavior)
+            return (CustomItem) handleItemReverseTransformation(item);
         }
 
         return null;
@@ -1223,6 +1857,10 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
             itemType.equals(item.getItemType()) &&
             executionContextManager.getCurrentContext().getTenantId().equals(item.getTenantId())) {
             itemsById.remove(key);
+            // Remove from pending refresh list if present
+            if (simulateRefreshDelay) {
+                pendingRefreshItems.remove(key);
+            }
             if (fileStorageEnabled) {
                 deleteItemFile(item);
             }
@@ -1292,11 +1930,17 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
     public Map<String, Long> aggregateWithOptimizedQuery(Condition condition, BaseAggregate aggregate, String itemType, int size) {
         Map<String, Long> results = new HashMap<>();
 
-        // Get all items of the specified type
-        List<Item> items = itemsById.values().stream()
-                .filter(item -> item.getItemType().equals(itemType))
-                .filter(item -> condition == null || testMatch(condition, item))
-                .collect(Collectors.toList());
+        // Get all items of the specified type that are available for querying
+        List<Item> items = new ArrayList<>();
+        for (Map.Entry<String, Item> entry : itemsById.entrySet()) {
+            Item item = entry.getValue();
+            if (item.getItemType().equals(itemType)) {
+                String itemKey = entry.getKey();
+                if (isItemAvailableForQuery(itemKey, itemType) && (condition == null || testMatch(condition, item))) {
+                    items.add(item);
+                }
+            }
+        }
 
         if (aggregate instanceof TermsAggregate) {
             handleTermsAggregate(items, (TermsAggregate) aggregate, results, size);
@@ -1508,9 +2152,13 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
 
     private <T extends Item> PartialList<T> createPartialList(List<T> items, int offset, int size) {
         int totalSize = items.size();
+        // Apply default query limit when size < 0 (simulates Elasticsearch/OpenSearch behavior)
+        int effectiveSize = size < 0 ? defaultQueryLimit : size;
         int fromIndex = Math.min(offset, totalSize);
-        int toIndex = size < 0 ? totalSize : Math.min(offset + size, totalSize);
+        int toIndex = Math.min(offset + effectiveSize, totalSize);
         List<T> pageItems = items.subList(fromIndex, toIndex);
+        // Preserve original size parameter in pageSize to indicate what was requested
+        // even though we apply a default limit when size < 0
         return new PartialList<>(pageItems, offset, size, totalSize, PartialList.Relation.EQUAL);
     }
 
@@ -1646,14 +2294,36 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
 
     @Override
     public long queryCount(Condition condition, String itemType) {
-        return itemsById.values().stream()
-                .filter(item -> item.getItemType().equals(itemType))
-                .filter(item -> condition == null || testMatch(condition, item))
-                .count();
+        // Filter by refresh status to simulate Elasticsearch/OpenSearch behavior
+        long count = 0;
+        for (Map.Entry<String, Item> entry : itemsById.entrySet()) {
+            Item item = entry.getValue();
+            if (item.getItemType().equals(itemType)) {
+                String itemKey = entry.getKey();
+                if (isItemAvailableForQuery(itemKey, itemType) && (condition == null || testMatch(condition, item))) {
+                    count++;
+                }
+            }
+        }
+        return count;
     }
 
     @Override
     public boolean isConsistent(Item item) {
+        // In Elasticsearch, isConsistent returns true if refresh policy is not FALSE
+        // This indicates whether changes are immediately visible (consistent)
+        // Request-based override takes precedence over per-item-type policy
+        if (simulateRefreshDelay && item != null) {
+            String itemType = item.getItemType();
+            if (item instanceof CustomItem) {
+                String customItemType = ((CustomItem) item).getCustomItemType();
+                if (customItemType != null) {
+                    itemType = customItemType;
+                }
+            }
+            RefreshPolicy policy = getRefreshPolicy(itemType, item);
+            return policy != RefreshPolicy.FALSE;
+        }
         return true; // as we work in memory this is always true
     }
 
@@ -1688,6 +2358,10 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
 
         for (String key : keysToRemove) {
             itemsById.remove(key);
+            // Remove from pending refresh list if present
+            if (simulateRefreshDelay) {
+                pendingRefreshItems.remove(key);
+            }
         }
 
         LOGGER.info("Purged {} items of type {} older than {} days for tenant {}",
@@ -1857,10 +2531,20 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
     }
 
     private <T extends Item> List<T> filterItemsByClass(Class<T> clazz) {
-        return itemsById.values().stream()
-                .filter(item -> clazz.isAssignableFrom(item.getClass()) &&
-                        executionContextManager.getCurrentContext().getTenantId().equals(item.getTenantId()))
-                .map(item -> (T) item)
+        String indexName = getIndex(clazz);
+        return itemsById.entrySet().stream()
+                .filter(entry -> {
+                    Item item = entry.getValue();
+                    String itemKey = entry.getKey();
+                    // Filter by class and tenant
+                    if (!clazz.isAssignableFrom(item.getClass()) ||
+                            !executionContextManager.getCurrentContext().getTenantId().equals(item.getTenantId())) {
+                        return false;
+                    }
+                    // Filter out items that are not yet available for querying (refresh delay simulation)
+                    return isItemAvailableForQuery(itemKey, indexName);
+                })
+                .map(entry -> (T) entry.getValue())
                 .collect(Collectors.toList());
     }
 
@@ -2065,8 +2749,123 @@ public class InMemoryPersistenceServiceImpl implements PersistenceService {
         }
     }
 
-    private String getIndex(Class clazz) {
+    private String getIndex(Class<?> clazz) {
         return Item.getItemType(clazz);
+    }
+    
+    /**
+     * Applies tenant transformations to an item before save/update.
+     * This simulates Elasticsearch/OpenSearch tenant transformation behavior.
+     * 
+     * @param item the item to transform
+     * @param <T> the item type
+     * @return the transformed item (or original if no transformations applied)
+     */
+    @SuppressWarnings("unchecked")
+    private <T extends Item> T handleItemTransformation(T item) {
+        if (item != null) {
+            String tenantId = item.getTenantId();
+            if (tenantId != null && !transformationListeners.isEmpty()) {
+                // Sort listeners by priority (higher priority first)
+                List<org.apache.unomi.api.tenants.TenantTransformationListener> sortedListeners = new ArrayList<>(transformationListeners);
+                sortedListeners.sort((a, b) -> Integer.compare(b.getPriority(), a.getPriority()));
+                
+                for (org.apache.unomi.api.tenants.TenantTransformationListener listener : sortedListeners) {
+                    if (listener.isTransformationEnabled()) {
+                        try {
+                            Item transformedItem = listener.transformItem(item, tenantId);
+                            if (transformedItem != null) {
+                                item = (T) transformedItem;
+                            }
+                        } catch (Exception e) {
+                            // Log error but continue with other listeners since transformation is optional
+                            LOGGER.warn("Error during item transformation for tenant {} with listener {}: {}",
+                                tenantId, listener.getTransformationType(), e.getMessage());
+                        }
+                    }
+                }
+            }
+        }
+        return item;
+    }
+    
+    /**
+     * Applies reverse tenant transformations to an item after load.
+     * This simulates Elasticsearch/OpenSearch tenant reverse transformation behavior.
+     * 
+     * @param item the item to reverse transform
+     * @param <T> the item type
+     * @return the reverse transformed item (or original if no transformations applied)
+     */
+    @SuppressWarnings("unchecked")
+    private <T extends Item> T handleItemReverseTransformation(T item) {
+        if (item != null) {
+            String tenantId = item.getTenantId();
+            if (tenantId != null && !transformationListeners.isEmpty()) {
+                // Sort listeners by priority (higher priority first) for reverse transformation
+                List<org.apache.unomi.api.tenants.TenantTransformationListener> sortedListeners = new ArrayList<>(transformationListeners);
+                sortedListeners.sort((a, b) -> Integer.compare(b.getPriority(), a.getPriority()));
+                
+                for (org.apache.unomi.api.tenants.TenantTransformationListener listener : sortedListeners) {
+                    if (listener.isTransformationEnabled()) {
+                        try {
+                            Item transformedItem = listener.reverseTransformItem(item, tenantId);
+                            if (transformedItem != null) {
+                                item = (T) transformedItem;
+                            }
+                        } catch (Exception e) {
+                            // Log error but continue with other listeners since transformation is optional
+                            LOGGER.warn("Error during item reverse transformation for tenant {} with listener {}: {}",
+                                tenantId, listener.getTransformationType(), e.getMessage());
+                        }
+                    }
+                }
+            }
+        }
+        return item;
+    }
+    
+    /**
+     * Adds a tenant transformation listener (for testing purposes).
+     * This simulates OSGi service registration in Elasticsearch/OpenSearch implementations.
+     * 
+     * @param listener the transformation listener to add
+     */
+    public void addTransformationListener(org.apache.unomi.api.tenants.TenantTransformationListener listener) {
+        if (listener != null) {
+            transformationListeners.add(listener);
+            LOGGER.debug("Added tenant transformation listener: {}", listener.getTransformationType());
+        }
+    }
+    
+    /**
+     * Removes a tenant transformation listener (for testing purposes).
+     * 
+     * @param listener the transformation listener to remove
+     */
+    public void removeTransformationListener(org.apache.unomi.api.tenants.TenantTransformationListener listener) {
+        if (listener != null) {
+            transformationListeners.remove(listener);
+            LOGGER.debug("Removed tenant transformation listener: {}", listener.getTransformationType());
+        }
+    }
+    
+    /**
+     * Gets the default query limit.
+     * 
+     * @return the default query limit
+     */
+    public Integer getDefaultQueryLimit() {
+        return defaultQueryLimit;
+    }
+    
+    /**
+     * Sets the default query limit.
+     * 
+     * @param defaultQueryLimit the default query limit to set
+     */
+    public void setDefaultQueryLimit(Integer defaultQueryLimit) {
+        this.defaultQueryLimit = defaultQueryLimit != null && defaultQueryLimit > 0 ? defaultQueryLimit : 10;
     }
 }
 

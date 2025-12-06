@@ -80,11 +80,11 @@ First, migrate your V2 data to V3 using the migration scripts:
 
 ```bash
 # Run the migration scripts
-unomi:migrate-3.0.0-00-tenantDocumentIds
-unomi:migrate-3.0.0-10-tenantInitialization
+unomi:migrate-3.1.0-00-tenantDocumentIds
+unomi:migrate-3.1.0-10-tenantInitialization
 ```
 
-The `migrate-3.0.0-10-tenantInitialization` script creates a default tenant that will be used for V2 compatibility mode.
+The `migrate-3.1.0-10-tenantInitialization` script creates a default tenant that will be used for V2 compatibility mode.
 
 === Step 2: Enable V2 Compatibility Mode
 

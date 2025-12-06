@@ -122,12 +122,12 @@ public abstract class BaseGraphQLIT extends BaseIT {
         final String resourceAsString = resourceAsString(resource);
         final HttpPost request = new HttpPost(getFullUrl("/graphql"));
         request.setEntity(new StringEntity(resourceAsString, JSON_CONTENT_TYPE));
-        
+
         // Add tenant ID header if specified
         if (tenantId != null && !tenantId.trim().isEmpty()) {
             request.setHeader(UNOMI_TENANT_ID_HEADER, tenantId);
         }
-        
+
         return executeHttpRequest(request, authType);
     }
 
@@ -198,9 +198,14 @@ public abstract class BaseGraphQLIT extends BaseIT {
         private ResponseContext(HttpEntity httpEntity) {
             try {
                 final String jsonFromResponse = EntityUtils.toString(httpEntity);
-                responseAsMap = GraphQLObjectMapper.getInstance().readValue(jsonFromResponse, Map.class);
+                try {
+                    responseAsMap = GraphQLObjectMapper.getInstance().readValue(jsonFromResponse, Map.class);
+                } catch (Exception e) {
+                    throw new RuntimeException("Failed to parse response as JSON: " + jsonFromResponse, e);
+                }
             } catch (Exception e) {
-                throw new RuntimeException(e);
+                throw new RuntimeException("Unable to read response content, length:" + httpEntity.getContentLength()
+                        + ", type:" + httpEntity.getContentType().getValue(), e);
             }
         }
 

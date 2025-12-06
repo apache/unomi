@@ -26,9 +26,9 @@ import org.apache.unomi.api.query.Query;
 import org.apache.unomi.api.services.DefinitionsService;
 import org.apache.unomi.api.services.EventListenerService;
 import org.apache.unomi.api.services.EventService;
+import org.apache.unomi.api.services.ResolverService;
 import org.apache.unomi.api.tenants.Tenant;
 import org.apache.unomi.api.tenants.TenantService;
-import org.apache.unomi.api.utils.ParserHelper;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.aggregate.TermsAggregate;
 import org.apache.unomi.tracing.api.RequestTracer;
@@ -50,6 +50,7 @@ public class EventServiceImpl implements EventService {
     private PersistenceService persistenceService;
 
     private DefinitionsService definitionsService;
+    private ResolverService resolverService;
 
     private TenantService tenantService;
 
@@ -75,6 +76,10 @@ public class EventServiceImpl implements EventService {
 
     public void setDefinitionsService(DefinitionsService definitionsService) {
         this.definitionsService = definitionsService;
+    }
+
+    public void setResolverService(ResolverService resolverService) {
+        this.resolverService = resolverService;
     }
 
     public void setTenantService(TenantService tenantService) {
@@ -274,7 +279,7 @@ public class EventServiceImpl implements EventService {
 
     @Override
     public PartialList<Event> searchEvents(Condition condition, int offset, int size) {
-        ParserHelper.resolveConditionType(definitionsService, condition, "event search");
+        resolverService.resolveConditionType(condition, "event search");
         return persistenceService.query(condition, "timeStamp", Event.class, offset, size);
     }
 

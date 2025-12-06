@@ -31,10 +31,10 @@ import org.apache.unomi.api.segments.*;
 import org.apache.unomi.api.services.*;
 import org.apache.unomi.api.services.ConditionValidationService.ValidationError;
 import org.apache.unomi.api.services.ConditionValidationService.ValidationErrorType;
+import org.apache.unomi.api.services.ResolverService;
 import org.apache.unomi.api.services.cache.CacheableTypeConfig;
 import org.apache.unomi.api.tenants.TenantService;
 import org.apache.unomi.api.utils.ConditionBuilder;
-import org.apache.unomi.api.utils.ParserHelper;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.persistence.spi.aggregate.TermsAggregate;
 import org.apache.unomi.services.common.cache.AbstractMultiTypeCachingService;
@@ -73,6 +73,7 @@ public class SegmentServiceImpl extends AbstractMultiTypeCachingService implemen
     private DefinitionsService definitionsService;
     private ConditionValidationService conditionValidationService;
     private TracerService tracerService;
+    private ResolverService resolverService;
 
     private long taskExecutionPeriod = 1;
     private int segmentUpdateBatchSize = 1000;
@@ -108,6 +109,10 @@ public class SegmentServiceImpl extends AbstractMultiTypeCachingService implemen
 
     public void setTracerService(TracerService tracerService) {
         this.tracerService = tracerService;
+    }
+
+    public void setResolverService(ResolverService resolverService) {
+        this.resolverService = resolverService;
     }
 
     public void setSegmentUpdateBatchSize(int segmentUpdateBatchSize) {
@@ -184,9 +189,7 @@ public class SegmentServiceImpl extends AbstractMultiTypeCachingService implemen
                 setSegmentDefinition(segment);
             })
             .withPostProcessor(segment -> {
-                if (segment.getCondition() != null) {
-                    ParserHelper.resolveConditionType(definitionsService, segment.getCondition(), "segment " + segment.getMetadata().getId());
-                }
+                resolveSegment(segment);
             })
             .build());
 
@@ -197,14 +200,7 @@ public class SegmentServiceImpl extends AbstractMultiTypeCachingService implemen
                 setScoringDefinition(scoring);
             })
             .withPostProcessor(scoring -> {
-                if (scoring.getElements() != null) {
-                    for (ScoringElement scoringElement : scoring.getElements()) {
-                        if (scoringElement.getCondition() != null) {
-                            ParserHelper.resolveConditionType(definitionsService, scoringElement.getCondition(),
-                                "scoring element for scoring " + scoring.getMetadata().getId());
-                        }
-                    }
-                }
+                resolveScoring(scoring);
             })
             .build());
         return configs;
@@ -388,7 +384,7 @@ public class SegmentServiceImpl extends AbstractMultiTypeCachingService implemen
         String currentTenant = contextManager.getCurrentContext().getTenantId();
         Segment segment = cacheService.getWithInheritance(segmentId, currentTenant, Segment.class);
         if (segment != null && segment.getMetadata().isEnabled()) {
-            ParserHelper.resolveConditionType(definitionsService, segment.getCondition(), "segment " + segmentId);
+            resolveSegment(segment);
         }
         return segment;
     }
@@ -416,8 +412,10 @@ public class SegmentServiceImpl extends AbstractMultiTypeCachingService implemen
             }
 
             if (segment.getMetadata().isEnabled()) {
-                ParserHelper.resolveConditionType(definitionsService, segment.getCondition(), "segment " + segment.getItemId());
+                // Use ResolverService convenience method that automatically tracks invalid objects and handles missingPlugins
+                resolverService.resolveCondition("segments", segment, segment.getCondition(), "segment " + segment.getItemId());
                 if (!persistenceService.isValidCondition(segment.getCondition(), new Profile(VALIDATION_PROFILE_ID))) {
+                    resolverService.markInvalid("segments", segment.getItemId(), "Invalid condition validation");
                     throw new BadSegmentConditionException();
                 }
             }
@@ -457,7 +455,7 @@ public class SegmentServiceImpl extends AbstractMultiTypeCachingService implemen
                 for (ValidationError error : errors) {
                     errorMessage.append("\n- ").append(error.getDetailedMessage());
                 }
-                throw new IllegalArgumentException(errorMessage.toString());
+                throw new BadSegmentConditionException(errorMessage.toString());
             }
 
         }
@@ -810,18 +808,17 @@ public class SegmentServiceImpl extends AbstractMultiTypeCachingService implemen
         String currentTenant = contextManager.getCurrentContext().getTenantId();
         Scoring scoring = cacheService.getWithInheritance(scoringId, currentTenant, Scoring.class);
         if (scoring != null && scoring.getMetadata().isEnabled()) {
-            for (ScoringElement element : scoring.getElements()) {
-                ParserHelper.resolveConditionType(definitionsService, element.getCondition(), "scoring " + scoringId);
-            }
+            resolveScoring(scoring);
         }
         return scoring;
     }
 
     @Override
     public void setScoringDefinition(Scoring scoring) {
+        resolveScoring(scoring);
+
         if (scoring.getMetadata().isEnabled()) {
             for (ScoringElement element : scoring.getElements()) {
-                ParserHelper.resolveConditionType(definitionsService, element.getCondition(), "scoring " + scoring.getItemId() + " element ");
                 if (!scoring.getMetadata().isMissingPlugins()) {
                     updateAutoGeneratedRules(scoring.getMetadata(), element.getCondition());
                 }
@@ -1704,5 +1701,60 @@ public class SegmentServiceImpl extends AbstractMultiTypeCachingService implemen
         finalDetails = finalDetails.subList(fromIndex, toIndex);
 
         return new PartialList<Metadata>(finalDetails, query.getOffset(), query.getLimit(), totalSize, PartialList.Relation.EQUAL);
+    }
+
+    /**
+     * Resolve a segment's types and track its validity status using the ResolverService.
+     * 
+     * @param segment the segment to resolve
+     */
+    private void resolveSegment(Segment segment) {
+        if (segment == null || resolverService == null) {
+            return;
+        }
+        
+        resolverService.resolveCondition("segments", segment, segment.getCondition(), "segment " + segment.getMetadata().getId());
+    }
+
+    /**
+     * Resolve a scoring's types and track its validity status using the ResolverService.
+     * Automatically sets/clears the missingPlugins flag based on resolution success.
+     * 
+     * @param scoring the scoring to resolve
+     */
+    private void resolveScoring(Scoring scoring) {
+        if (scoring == null || resolverService == null) {
+            return;
+        }
+        
+        String scoringId = scoring.getMetadata().getId();
+        boolean allResolved = true;
+        List<String> reasons = new ArrayList<>();
+        
+        if (scoring.getElements() != null) {
+            for (ScoringElement element : scoring.getElements()) {
+                if (element.getCondition() != null) {
+                    boolean elementValid = resolverService.resolveConditionType(element.getCondition(),
+                        "scoring element for scoring " + scoringId);
+                    allResolved = allResolved && elementValid;
+                    if (!elementValid) {
+                        String unresolvedTypeId = element.getCondition().getConditionTypeId();
+                        reasons.add("Unresolved condition type" + (unresolvedTypeId != null ? ": " + unresolvedTypeId : "") + " in scoring element");
+                    }
+                }
+            }
+        }
+        
+        // Set/clear missingPlugins based on resolution success
+        if (scoring.getMetadata() != null) {
+            scoring.getMetadata().setMissingPlugins(!allResolved);
+        }
+        
+        // Track invalid objects
+        if (!allResolved) {
+            resolverService.markInvalid("scoring", scoringId, String.join("; ", reasons));
+        } else {
+            resolverService.markValid("scoring", scoringId);
+        }
     }
 }

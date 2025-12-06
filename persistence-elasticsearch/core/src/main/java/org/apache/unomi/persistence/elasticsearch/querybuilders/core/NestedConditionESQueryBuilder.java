@@ -17,18 +17,17 @@
 
 package org.apache.unomi.persistence.elasticsearch.querybuilders.core;
 
-import org.apache.lucene.search.join.ScoreMode;
+import co.elastic.clients.elasticsearch._types.query_dsl.ChildScoreMode;
+import co.elastic.clients.elasticsearch._types.query_dsl.Query;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.persistence.elasticsearch.ConditionESQueryBuilder;
 import org.apache.unomi.persistence.elasticsearch.ConditionESQueryBuilderDispatcher;
-import org.elasticsearch.index.query.QueryBuilder;
-import org.elasticsearch.index.query.QueryBuilders;
 
 import java.util.Map;
 
 public class NestedConditionESQueryBuilder implements ConditionESQueryBuilder {
     @Override
-    public QueryBuilder buildQuery(Condition condition, Map<String, Object> context, ConditionESQueryBuilderDispatcher dispatcher) {
+    public Query buildQuery(Condition condition, Map<String, Object> context, ConditionESQueryBuilderDispatcher dispatcher) {
         String path = (String) condition.getParameter("path");
         Condition subCondition = (Condition) condition.getParameter("subCondition");
 
@@ -36,9 +35,9 @@ public class NestedConditionESQueryBuilder implements ConditionESQueryBuilder {
             throw new IllegalArgumentException("Impossible to build Nested query, subCondition and path properties should be provided");
         }
 
-        QueryBuilder nestedQueryBuilder = dispatcher.buildFilter(subCondition, context);
-        if (nestedQueryBuilder != null) {
-            return QueryBuilders.nestedQuery(path, nestedQueryBuilder, ScoreMode.Avg);
+        Query nestedQuery = dispatcher.buildFilter(subCondition, context);
+        if (nestedQuery != null) {
+            return Query.of(q -> q.nested(n -> n.path(path).query(nestedQuery).scoreMode(ChildScoreMode.Avg)));
         } else {
             throw new IllegalArgumentException("Impossible to build Nested query due to subCondition filter null");
         }

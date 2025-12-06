@@ -17,19 +17,32 @@
 
 package org.apache.unomi.healthcheck;
 
+/**
+ * Contract for pluggable health checks. Implementations provide a name and
+ * return a {@link HealthCheckResponse} when executed; a default timeout
+ * response is available via {@link #timeout()}.
+ */
 public interface HealthCheckProvider {
 
+    /**
+     * Unique provider name used in responses and logs.
+     *
+     * @return the health check provider name
+     */
     String name();
 
     /**
-     * Used to check whether the provider is available. For example an ElasticSearch provider will not be available
-     * if OpenSearch is used instead as a persistence implementation.
-     * @return true if the provider is available, false otherwise
+     * Executes the health check, returning a {@link HealthCheckResponse} describing status and optional data.
+     *
+     * @return the health check result
      */
-    default boolean isAvailable() { return true;}
-
     HealthCheckResponse execute();
 
+    /**
+     * Convenience method returning a standardized timeout error response for this provider.
+     *
+     * @return a timeout {@link HealthCheckResponse}
+     */
     default HealthCheckResponse timeout() {
         return new HealthCheckResponse.Builder().name(name()).withData("error.cause", "timeout").error().build();
     }

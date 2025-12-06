@@ -93,29 +93,30 @@ org.apache.unomi.opensearch.cluster.name=opensearch-cluster
 # Note: the port number must be repeated for each host.
 org.apache.unomi.opensearch.addresses=localhost:9200
 
-# OpenSearch security settings (required by default since OpenSearch 2.0)
+# OpenSearch security settings (required by default since OpenSearch 3)
 org.apache.unomi.opensearch.ssl.enable=true
-org.apache.unomi.opensearch.username=$
-{env:UNOMI_OPENSEARCH_USERNAME:-admin}
-org.apache.unomi.opensearch.password=${env:UNOMI_OPENSEARCH_PASSWORD:-admin}
+org.apache.unomi.opensearch.username=admin
+org.apache.unomi.opensearch.password=${env:OPENSEARCH_INITIAL_ADMIN_PASSWORD:-admin}
 org.apache.unomi.opensearch.sslTrustAllCertificates=true
 ----
 
 To select which search engine to use, you can:
-
 1. Use the appropriate configuration properties above
 2. When building from source, use the appropriate Maven profile:
    * For ElasticSearch (default): no special profile needed
    * For OpenSearch: add `-Duse.opensearch=true` to your Maven command
+   (this will only impact the integration tests if they are activated using the -Pintegration-tests profile)
 3. When using Docker:
    * For ElasticSearch: use `UNOMI_AUTO_START=elasticsearch`
    * For OpenSearch: use `UNOMI_AUTO_START=opensearch`
+   * For custom configurations: use `UNOMI_AUTO_START=your-custom-config-name`
 
-Note: When using OpenSearch 2.18:
-- Security is enabled by default and requires SSL/TLS
-- The default admin username is 'admin'
-- The initial admin password can be set via OPENSEARCH_INITIAL_ADMIN_PASSWORD environment variable
-- You might see log messages about "QueryGroup _id can't be null". This is a known issue that doesn't affect functionality and is being tracked at: https://github.com/opensearch-project/OpenSearch/issues/16874
+Note: The `UNOMI_AUTO_START` environment variable accepts any start features configuration name defined in the `org.apache.unomi.start.cfg` file. You can use the predefined "elasticsearch" or "opensearch" configurations, or specify a custom configuration name if you have created one.
+
+Note: When using OpenSearch 3.x:
+ - Security is enabled by default and requires SSL/TLS
+ - The default admin username is 'admin'
+ - The initial admin password can be set via OPENSEARCH_INITIAL_ADMIN_PASSWORD environment variable
 
 === Refresh Policy Configuration
 
@@ -409,7 +410,7 @@ curl -X GET "http://localhost:8181/cxs/profiles" \
     "totalSize": 1
 }
 ----
-
++
 2. Public API Access (Client-Side Operations):
 [source,bash]
 ----
@@ -436,7 +437,7 @@ curl -X POST "http://localhost:8181/cxs/context.json" \
     }
 }
 ----
-
++
 3. Private API Access (Server-Side Operations):
 [source,bash]
 ----
@@ -481,7 +482,7 @@ Public endpoints (requiring only public API key):
 curl -X GET "http://localhost:8181/cxs/context.json?sessionId=abc123" \
   -H "X-Unomi-Api-Key: 8f7d9a2c-5e4b-3f1a-9b8c-7d6e5f4a3b2c"
 ----
-
++
 2. GET/POST /eventcollector
 [source,bash]
 ----
@@ -506,7 +507,7 @@ curl -X POST "http://localhost:8181/cxs/eventcollector" \
     }]
   }'
 ----
-
++
 3. GET /client/*
 [source,bash]
 ----
@@ -579,9 +580,8 @@ Apache Unomi allows using different types of expressions in the following subsys
 - context.json filters and personalization queries
 - rule conditions and actions parameters
 
-Apache Unomi uses two integrated scripting languages to provide this functionality: OGNL and MVEL.
-OGNL is deprecated and is now disabled by default since 1.5.2 as it is little used (and replaced by better performing
-hardcoded property lookups). MVEL is more commonly used in rule actions as in the following example:
+Apache Unomi uses an integrated scripting language to provide this functionality: MVEL.
+MVEL is used in rule actions as in the following example:
 
 From https://github.com/apache/unomi/blob/unomi-1.5.x/plugins/baseplugin/src/main/resources/META-INF/cxs/rules/sessionAssigned.json[https://github.com/apache/unomi/blob/unomi-1.5.x/plugins/baseplugin/src/main/resources/META-INF/cxs/rules/sessionAssigned.json]:
 
@@ -651,10 +651,6 @@ From https://github.com/apache/unomi/blob/unomi-1.5.x/plugins/baseplugin/src/mai
 As we see in the above example, we use an MVEL script with the setPropertyAction to set a property value.
 Starting with version 1.5.2, any expression use in rules MUST be allow-listed.
 
-OGNL was previously used wherever a parameter could be used, but MVEL could only be used with a "script::" prefix.
-Starting with version 1.5.2 OGNL will no longer be allowed and is replaced by a compatible "hardcoded" property
-lookup system, while MVEL requires allow-listing the scripts that are to be used.
-
 By default, Apache Unomi comes with some built-in allowed expressions that cover all the internal uses cases.
 
 Default allowed MVEL expressions (from https://github.com/apache/unomi/blob/unomi-1.5.x/plugins/baseplugin/src/main/resources/META-INF/cxs/expressions/mvel.json[https://github.com/apache/unomi/blob/unomi-1.5.x/plugins/baseplugin/src/main/resources/META-INF/cxs/expressions/mvel.json]) :
@@ -680,7 +676,7 @@ If you require or are already using custom expressions, you should add a plugin 
 The choice of a plugin was to make sure only system administrators and solution developers could provide such a
 list, avoiding the possibility to provide it through an API call or another security sensitive deployment mechanism.
 
-There is another way of allow-listing expressions through configuration, see the "scripting configuration parameters" section below.
+There is another way of allow-listing expressions through configuration, see the “scripting configuration parameters” section below.
 
 Procedure to add allowed expressions:
 
@@ -697,15 +693,15 @@ Alongside with the allow-listing technology, there are new configuration paramet
 [source]
 ----
 # These parameters control the list of classes that are allowed or forbidden when executing expressions.
-org.apache.unomi.scripting.allow=${env:UNOMI_ALLOW_SCRIPTING_CLASSES:-org.apache.unomi.api.Event,org.apache.unomi.api.Profile,org.apache.unomi.api.Session,org.apache.unomi.api.Item,org.apache.unomi.api.CustomItem,ognl.*,java.lang.Object,java.util.Map,java.util.HashMap,java.lang.Integer,org.mvel2.*}
+org.apache.unomi.scripting.allow=${env:UNOMI_ALLOW_SCRIPTING_CLASSES:-org.apache.unomi.api.Event,org.apache.unomi.api.Profile,org.apache.unomi.api.Session,org.apache.unomi.api.Item,org.apache.unomi.api.CustomItem,java.lang.Object,java.util.Map,java.util.HashMap,java.lang.Integer,org.mvel2.*}
 org.apache.unomi.scripting.forbid=${env:UNOMI_FORBID_SCRIPTING_CLASSES:-}
 
 # This parameter controls the whole expression filtering system. It is not recommended to turn it off. The main reason to turn it off would be to check if it is interfering with something, but it should always be active in production.
 org.apache.unomi.scripting.filter.activated=${env:UNOMI_SCRIPTING_FILTER_ACTIVATED:-true}
 
 # The following parameters control the filtering using regular expressions for each scripting sub-system.
-# The "collections" parameter tells the expression filtering system which configurations to expect. By default only MVEL and/or OGNL are accepted values, but in the future these might be replaced by new scripting sub-systems.
-org.apache.unomi.scripting.filter.collections=${env:UNOMI_SCRIPTING_FILTER_COLLECTIONS:-mvel,ognl}
+# The "collections" parameter tells the expression filtering system which configurations to expect. By default only MVEL is accepted values, but in the future these might be replaced by new scripting sub-systems.
+org.apache.unomi.scripting.filter.collections=${env:UNOMI_SCRIPTING_FILTER_COLLECTIONS:-mvel}
 
 # For each scripting sub-system, there is an allow and a forbid property that reference a .json files,
 # you can either edit this files or reference your own file directly in the following config.
@@ -719,11 +715,6 @@ org.apache.unomi.scripting.filter.collections=${env:UNOMI_SCRIPTING_FILTER_COLLE
 #       example: ["\\Qsession.size + 1\\E"]
 org.apache.unomi.scripting.filter.mvel.allow=${env:UNOMI_SCRIPTING_FILTER_MVEL_ALLOW:-${karaf.etc}/mvel-allow.json}
 org.apache.unomi.scripting.filter.mvel.forbid=${env:UNOMI_SCRIPTING_FILTER_MVEL_FORBID:-${karaf.etc}/mvel-forbid.json}
-org.apache.unomi.scripting.filter.ognl.allow=${env:UNOMI_SCRIPTING_FILTER_OGNL_ALLOW:-${karaf.etc}/ognl-allow.json}
-org.apache.unomi.scripting.filter.ognl.forbid=${env:UNOMI_SCRIPTING_FILTER_OGNL_FORBID:-${karaf.etc}/ognl-forbid.json}
-
-# This parameter controls whether OGNL scripting is allowed in expressions. Because of security reasons it is deactivated by default. If you run into compatibility issues you could reactivate it but it is at your own risk.
-org.apache.unomi.security.properties.useOGNLScripting=${env:UNOMI_SCRIPTING_USE_OGNL:-false}
 
 # This parameter controls the condition sanitizing done on the ContextServlet (/cxs/context.json). If will remove any expressions that start with "script::". It is not recommended to change this value, unless you run into compatibility issues.
 org.apache.unomi.security.personalization.sanitizeConditions=${env:UNOMI_SECURITY_SANITIZEPERSONALIZATIONCONDITIONS:-true}
@@ -1406,6 +1397,274 @@ The following permissions are required by Unomi:
  - required cluster privileges: `manage` OR `all`
  - required index privileges on unomi indices: `write, manage, read` OR `all`
 
+=== Customizing Start Features Configuration
+
+Apache Unomi allows you to customize which features and bundles are installed and started when using the `unomi:start` command. This is controlled through the `org.apache.unomi.start.cfg` configuration file.
+
+==== Default Configuration
+
+By default, Apache Unomi comes with two predefined start features configurations:
+
+[source]
+----
+startFeatures = [
+    "elasticsearch=unomi-base,unomi-startup,unomi-elasticsearch-core,unomi-persistence-core,unomi-services,unomi-rest-api,unomi-cxs-lists-extension,unomi-cxs-geonames-extension,unomi-cxs-privacy-extension,unomi-elasticsearch-conditions,unomi-plugins-base,unomi-plugins-request,unomi-plugins-mail,unomi-plugins-optimization-test,unomi-shell-dev-commands,unomi-wab,unomi-web-tracker,unomi-healthcheck,unomi-router-karaf-feature,unomi-groovy-actions,unomi-rest-ui,unomi-startup-complete",
+    "opensearch=unomi-base,unomi-startup,unomi-opensearch-core,unomi-persistence-core,unomi-services,unomi-rest-api,unomi-cxs-lists-extension,unomi-cxs-geonames-extension,unomi-cxs-privacy-extension,unomi-opensearch-conditions,unomi-plugins-base,unomi-plugins-request,unomi-plugins-mail,unomi-plugins-optimization-test,unomi-shell-dev-commands,unomi-wab,unomi-web-tracker,unomi-healthcheck,unomi-router-karaf-feature,unomi-groovy-actions,unomi-rest-ui,unomi-startup-complete"
+]
+----
+
+**Key Differences Between Configurations:**
+
+The only difference between the Elasticsearch and OpenSearch configurations is the persistence layer:
+
+* **Elasticsearch**: Uses `unomi-elasticsearch-core` and `unomi-elasticsearch-conditions`
+* **OpenSearch**: Uses `unomi-opensearch-core` and `unomi-opensearch-conditions`
+
+All other features remain identical between both configurations.
+
+==== Environment-Specific Configurations
+
+You can create different configurations for different deployment environments by including or excluding certain features:
+
+**Development Environment** (includes development tools and debugging features):
+[source]
+----
+startFeatures = [
+    "elasticsearch-dev=unomi-base,unomi-startup,unomi-elasticsearch-core,unomi-persistence-core,unomi-services,unomi-rest-api,unomi-cxs-lists-extension,unomi-cxs-geonames-extension,unomi-cxs-privacy-extension,unomi-elasticsearch-conditions,unomi-plugins-base,unomi-plugins-request,unomi-plugins-mail,unomi-plugins-optimization-test,unomi-shell-dev-commands,unomi-wab,unomi-web-tracker,unomi-healthcheck,unomi-router-karaf-feature,unomi-groovy-actions,unomi-rest-ui,unomi-startup-complete",
+    "opensearch-dev=unomi-base,unomi-startup,unomi-opensearch-core,unomi-persistence-core,unomi-services,unomi-rest-api,unomi-cxs-lists-extension,unomi-cxs-geonames-extension,unomi-cxs-privacy-extension,unomi-opensearch-conditions,unomi-plugins-base,unomi-plugins-request,unomi-plugins-mail,unomi-plugins-optimization-test,unomi-shell-dev-commands,unomi-wab,unomi-web-tracker,unomi-healthcheck,unomi-router-karaf-feature,unomi-groovy-actions,unomi-rest-ui,unomi-startup-complete"
+]
+----
+
+**Staging Environment** (production-like but with some development features):
+[source]
+----
+startFeatures = [
+    "elasticsearch-staging=unomi-base,unomi-startup,unomi-elasticsearch-core,unomi-persistence-core,unomi-services,unomi-rest-api,unomi-cxs-lists-extension,unomi-cxs-geonames-extension,unomi-cxs-privacy-extension,unomi-elasticsearch-conditions,unomi-plugins-base,unomi-plugins-request,unomi-plugins-mail,unomi-shell-dev-commands,unomi-wab,unomi-web-tracker,unomi-healthcheck,unomi-router-karaf-feature,unomi-groovy-actions,unomi-rest-ui,unomi-startup-complete",
+    "opensearch-staging=unomi-base,unomi-startup,unomi-opensearch-core,unomi-persistence-core,unomi-services,unomi-rest-api,unomi-cxs-lists-extension,unomi-cxs-geonames-extension,unomi-cxs-privacy-extension,unomi-opensearch-conditions,unomi-plugins-base,unomi-plugins-request,unomi-plugins-mail,unomi-shell-dev-commands,unomi-wab,unomi-web-tracker,unomi-healthcheck,unomi-router-karaf-feature,unomi-groovy-actions,unomi-rest-ui,unomi-startup-complete"
+]
+----
+
+**Production Environment** (minimal, secure configuration):
+[source]
+----
+startFeatures = [
+    "elasticsearch-prod=unomi-base,unomi-startup,unomi-elasticsearch-core,unomi-persistence-core,unomi-services,unomi-rest-api,unomi-cxs-lists-extension,unomi-cxs-geonames-extension,unomi-cxs-privacy-extension,unomi-elasticsearch-conditions,unomi-plugins-base,unomi-plugins-request,unomi-plugins-mail,unomi-wab,unomi-web-tracker,unomi-healthcheck,unomi-router-karaf-feature,unomi-groovy-actions,unomi-rest-ui,unomi-startup-complete",
+    "opensearch-prod=unomi-base,unomi-startup,unomi-opensearch-core,unomi-persistence-core,unomi-services,unomi-rest-api,unomi-cxs-lists-extension,unomi-cxs-geonames-extension,unomi-cxs-privacy-extension,unomi-opensearch-conditions,unomi-plugins-base,unomi-plugins-request,unomi-plugins-mail,unomi-wab,unomi-web-tracker,unomi-healthcheck,unomi-router-karaf-feature,unomi-groovy-actions,unomi-rest-ui,unomi-startup-complete"
+]
+----
+
+**Environment Differences Summary:**
+
+[cols="1,1,1,1"]
+|===
+|Feature |Development |Staging |Production
+
+|`unomi-plugins-optimization-test`
+|✓ (included)
+|✗ (excluded)
+|✗ (excluded)
+
+|`unomi-shell-dev-commands`
+|✓ (included)
+|✓ (included)
+|✗ (excluded)
+|===
+
+==== Configuration Format
+
+Each start features configuration follows this format:
+
+[source]
+----
+"configuration-name=feature1,feature2,feature3,..."
+----
+
+Where:
+* `configuration-name` is the identifier you'll use with the `unomi:start` command
+* The comma-separated list contains the Karaf features to install and start
+
+==== Using Custom Configurations
+
+You can use your custom configurations with:
+
+[source]
+----
+# Development environment
+unomi:start elasticsearch-dev
+unomi:start opensearch-dev
+
+# Staging environment
+unomi:start elasticsearch-staging
+unomi:start opensearch-staging
+
+# Production environment
+unomi:start elasticsearch-prod
+unomi:start opensearch-prod
+----
+
+==== Auto-Start Configuration
+
+You can configure Apache Unomi to automatically start with a specific start features configuration when the server boots up. This is useful for production deployments where you want the server to start automatically without manual intervention.
+
+To enable auto-start, set the `unomi.autoStart` system property or `UNOMI_AUTO_START` environment variable to the name of your desired start features configuration:
+
+[source]
+----
+# Using system property
+-Dunomi.autoStart=elasticsearch-prod
+
+# Using environment variable (Docker)
+UNOMI_AUTO_START=opensearch-prod
+
+# Using custom configuration
+UNOMI_AUTO_START=elasticsearch-staging
+----
+
+The auto-start feature accepts any start features configuration name defined in your `org.apache.unomi.start.cfg` file. If you set it to `true`, it will default to the "elasticsearch" configuration for backward compatibility.
+
+Note: Auto-start only works when Apache Unomi is not already running. If the server is already started, the auto-start setting will be ignored.
+
+==== Important Notes
+
+* **Configuration changes require restart**: After modifying the start features configuration, you must restart Apache Unomi for the changes to take effect
+* **Feature dependencies**: When adding custom features, ensure they have all required dependencies and are compatible with your chosen persistence implementation
+* **Backup your configuration**: Always backup your custom configuration before upgrading Apache Unomi, as upgrades may overwrite the default configuration file
+* **Feature availability**: Only features that are available in your Apache Unomi installation can be included in the configuration
+
+==== Available Features
+
+To see all available features in your Apache Unomi installation, you can use the Karaf shell command:
+
+[source]
+----
+feature:list
+----
+
+This will show you all available features that can be included in your start features configuration.
+
+==== Docker Deployment with Custom Configuration
+
+For Docker deployments, you can mount your custom start configuration file to override the default settings:
+
+[source,yaml]
+----
+version: '3.8'
+services:
+  unomi:
+    image: apache/unomi:3.1.0
+    volumes:
+      - ./custom-start.cfg:/opt/apache-unomi/etc/org.apache.unomi.start.cfg
+    environment:
+      - UNOMI_AUTO_START=elasticsearch-prod  # or opensearch-prod
+    depends_on:
+      - elasticsearch
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:9.15.0
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+----
+
+**Key Points:**
+- Mount your custom configuration file to `/opt/apache-unomi/etc/org.apache.unomi.start.cfg`
+- Use the `UNOMI_AUTO_START` environment variable to specify which configuration to use
+- The configuration file will override the default settings when the container starts
+
+=== Customizing Apache Unomi Distribution
+
+Apache Unomi allows you to create custom distributions by repackaging the standard distribution with your own configuration files and customizations. This is useful for creating deployment-specific packages that include your custom configurations, plugins, and settings.
+
+==== Note on Custom Distributions (Advanced)
+
+You can build custom distributions of Unomi using the Karaf Maven Plugin to assemble features and overlay configuration. This is an advanced path and not required for most users. We recommend Docker-based packaging and configuration overrides as documented above.
+
+For details about custom distributions, see the Karaf documentation (Karaf Maven Plugin):
+
+`https://karaf.apache.org/manual/latest/#_karaf_maven_plugin`
+
+==== Configuration Override Priority
+
+Apache Unomi follows this priority order for configuration files (highest to lowest priority):
+
+1. **Environment Variables**: Override any configuration property
+2. **Custom Configuration Files**: Files in `etc/` directory override defaults
+3. **Default Configuration Files**: Built-in configuration files
+
+**Example of Configuration Override:**
+
+Default configuration in `etc/custom.system.properties`:
+[source,properties]
+----
+org.apache.unomi.cluster.public.address=${env:UNOMI_PUBLIC_ADDRESS:-http://localhost:8181}
+----
+
+Custom override in `etc/unomi.custom.system.properties`:
+[source,properties]
+----
+org.apache.unomi.cluster.public.address=https://unomi.example.com
+----
+
+Environment variable override:
+[source,bash]
+----
+export UNOMI_PUBLIC_ADDRESS=https://production.unomi.example.com
+----
+
+**Final Result**: The system will use `https://production.unomi.example.com` (environment variable takes precedence).
+
+==== Best Practices for Custom Distributions
+
+1. **Version Control**: Keep your custom configuration files in version control
+2. **Documentation**: Document all customizations and their purposes
+3. **Testing**: Test your custom distribution thoroughly before deployment
+4. **Backup**: Always backup the original distribution before customization
+5. **Upgrade Path**: Plan how to apply your customizations to future Apache Unomi versions
+
+==== Deployment with Custom Distribution
+
+Once you have created your custom distribution, you can deploy it using the same methods as the standard distribution:
+
+**Docker Deployment:**
+[source,yaml]
+----
+version: '3.8'
+services:
+  unomi:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - UNOMI_AUTO_START=elasticsearch-prod
+    depends_on:
+      - elasticsearch
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:9.15.0
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+----
+
+**Dockerfile:**
+[source,dockerfile]
+----
+FROM apache/unomi:3.1.0
+COPY apache-unomi-custom-*.tar.gz /tmp/
+RUN cd /opt/apache-unomi && tar -xzf /tmp/apache-unomi-custom-*.tar.gz
+----
+
+**Traditional Deployment:**
+[source,bash]
+----
+# Extract your custom distribution
+tar -xzf apache-unomi-custom-*.tar.gz
+cd apache-unomi-custom-*
+
+# Start with your custom configuration
+./bin/karaf start
+./bin/karaf shell
+unomi:start elasticsearch-prod
+----
+
 === Health Check Extension
 
 The Health Check extension provides a way to check is required Unomi components are 'live'.
@@ -1514,7 +1773,7 @@ curl -X POST "http://localhost:8181/cxs/login" \
     "totalSize": 1
 }
 ----
-
++
 2. Public API Access (Client-Side Operations):
 [source,bash]
 ----
@@ -1541,7 +1800,7 @@ curl -X POST "http://localhost:8181/cxs/context.json" \
     }
 }
 ----
-
++
 3. Private API Access (Server-Side Operations):
 [source,bash]
 ----
@@ -1586,7 +1845,7 @@ Public endpoints (requiring only public API key):
 curl -X GET "http://localhost:8181/cxs/context.json?sessionId=abc123" \
   -H "X-Unomi-Api-Key: 8f7d9a2c-5e4b-3f1a-9b8c-7d6e5f4a3b2c"
 ----
-
++
 2. GET/POST /eventcollector
 [source,bash]
 ----
@@ -1611,7 +1870,7 @@ curl -X POST "http://localhost:8181/cxs/eventcollector" \
     }]
   }'
 ----
-
++
 3. GET /client/*
 [source,bash]
 ----

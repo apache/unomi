@@ -16,14 +16,14 @@
 
 ==== Initial Setup
 
-1. Install J2SE 11 SDK (or later), which can be downloaded from
+. Install J2SE 17 SDK (or later), which can be downloaded from
  http://www.oracle.com/technetwork/java/javase/downloads/index.html[http://www.oracle.com/technetwork/java/javase/downloads/index.html]
 
-2. Make sure that your JAVA_HOME environment variable is set to the newly installed
+. Make sure that your JAVA_HOME environment variable is set to the newly installed
  JDK location, and that your PATH includes %JAVA_HOME%\bin (windows) or
  $JAVA_HOME$/bin (unix).
 
-3. Install Maven 3.0.3 (or later), which can be downloaded from
+. Install Maven 3.9.6 (or later), which can be downloaded from
  http://maven.apache.org/download.html[http://maven.apache.org/download.html]. Make sure that your PATH includes
  the MVN_HOME/bin directory.
 
@@ -31,9 +31,9 @@
 
 ===== Unix/Linux/macOS
 
-1. Get the code: `git clone https://github.com/apache/unomi.git`
-2. Change to the top level directory of Apache Unomi source distribution.
-3. Run
+. Get the code: `git clone https://github.com/apache/unomi.git`
+. Change to the top level directory of Apache Unomi source distribution.
+. Run
 +
 [source]
 ----
@@ -99,6 +99,9 @@ The script supports various options:
 
 |-AutoStart <engine>
 |Auto-start with specified engine (elasticsearch/opensearch)
+
+|-ResolverDebug
+|Enable Karaf Resolver debug logging for integration tests
 |===
 
 Examples:
@@ -145,27 +148,23 @@ TIP: On a non-English Windows env, the Asciidoctor Maven Plugin may fail to
 
 ==== Installing a Search Engine
 
-Starting with version 1.2, Apache Unomi no longer embeds a search engine server. You must install either Elasticsearch or OpenSearch as a standalone service.
+Starting with version 1.2, Apache Unomi no longer embeds a search engine server. You will need to install either ElasticSearch or OpenSearch as a standalone service.
 
-===== Option 1: Using Elasticsearch
+===== Option 1: Using ElasticSearch
 
-1. Download Elasticsearch version 7.17.10 from https://www.elastic.co/downloads/past-releases/elasticsearch-7-17-10
+1. Download ElasticSearch 7.17.5 from: https://www.elastic.co/downloads/past-releases/elasticsearch-7-17-5[https://www.elastic.co/downloads/past-releases/elasticsearch-7-17-5]
 
-2. Extract the archive:
-[source]
-----
-tar -xzf elasticsearch-7.17.10-darwin-x86_64.tar.gz (Mac)
-unzip elasticsearch-7.17.10-windows-x86_64.zip (Windows)
-tar -xzf elasticsearch-7.17.10-linux-x86_64.tar.gz (Linux)
-----
+2. Uncompress the downloaded package into a directory
 
-3. Configure Elasticsearch by editing `config/elasticsearch.yml`:
-[source]
+3. In the config/elasticsearch.yml file, uncomment and modify the following line:
+
+[source,yaml]
 ----
 cluster.name: contextElasticSearch
 ----
-
++
 4. Launch the server using:
+
 [source]
 ----
 bin/elasticsearch (Mac, Linux)
@@ -177,12 +176,13 @@ bin\elasticsearch.bat (Windows)
 The recommended way to run OpenSearch is using Docker Compose:
 
 1. Create a `docker-compose.yml` file with the following content:
+
 [source,yaml]
 ----
 version: '3.8'
 services:
   opensearch-node1:
-    image: opensearchproject/opensearch:2.18.0
+    image: opensearchproject/opensearch:3
     environment:
       - cluster.name=opensearch-cluster
       - node.name=opensearch-node1
@@ -206,11 +206,11 @@ services:
 volumes:
   opensearch-data1:
 ----
-
++
 2. Set up your Docker host environment:
    * **macOS & Windows**: In Docker _Preferences_ > _Resources_, set RAM to at least 4 GB
    * **Linux**: Ensure `vm.max_map_count` is set to at least 262144
-
++
 3. Start OpenSearch using:
 [source]
 ----
@@ -239,7 +239,7 @@ unomi:start elasticsearch
 unomi:start opensearch
 ----
 
-NOTE: Make sure to specify which search engine you're using with the `unomi:start` command. Using just `unomi:start` without specifying the engine is deprecated.
+NOTE: Make sure to specify which start features configuration you're using with the `unomi:start` command. The parameter determines which set of features and bundles are installed and started. Using just `unomi:start` without specifying the configuration is deprecated.
 
 ==== Deploying the generated binary package
 
@@ -288,12 +288,11 @@ files (at the end of the file):
    export KARAF_OPTS="$KARAF_OPTS -Xmx3G"
 ----
 
-Install the WAR support, CXF and Karaf Cellar into Karaf by doing the following in the Karaf command line:
+Install the WAR support and CXF into Karaf by doing the following in the Karaf command line:
 
 [source]
 ----
    feature:repo-add cxf-jaxrs 3.3.4
-   feature:repo-add cellar 4.1.3
    feature:repo-add mvn:org.apache.unomi/unomi-kar/VERSION/xml/features
    feature:install unomi-kar
 ----
@@ -353,7 +352,7 @@ The build script will automatically detect and configure the GraphViz path. If y
 export GRAPHVIZ_DOT=/path/to/dot
 mvn clean install
 ----
-
++
 2. Or specify it directly to Maven:
 [source]
 ----
@@ -418,11 +417,20 @@ to use these tests is to run them from a continuous integration server such as J
 
 Note : the integration tests require a JDK 11 or more recent !
 
-To run the tests simply activate the following profile :
+To run the tests simply activate the following profile:
 
 [source]
 ----
 mvn -P integration-tests clean install
+----
+
+===== Selecting the Search Engine for Integration Tests
+
+By default, integration tests target ElasticSearch. To run them against OpenSearch, set the activation property used by the OpenSearch profile (no additional -P flags are required):
+
+[source]
+----
+mvn -P integration-tests -Duse.opensearch=true clean install
 ----
 
 ==== Testing with an example page

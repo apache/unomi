@@ -19,6 +19,13 @@ package org.apache.unomi.shell.services.internal;
 import org.osgi.service.metatype.annotations.AttributeDefinition;
 import org.osgi.service.metatype.annotations.ObjectClassDefinition;
 
+/**
+ * OSGi metatype configuration for the Unomi Management service.
+ * <p>
+ * Allows specifying a list of feature sets to start when the management
+ * service initializes. Each entry is a string that maps a logical key to
+ * one or more features.
+ */
 @ObjectClassDefinition(
         name = "Unomi Management Configuration",
         description = "Configuration for Unomi Management Service"
@@ -27,8 +34,19 @@ public @interface UnomiManagementServiceConfiguration {
 
     @AttributeDefinition(
             name = "Start Features",
-            description = "An array of strings representing start features in the format '[\"key=feature1,feature2\", \"key2:feature3\"]."
+            description = "An array of strings representing start features in the format '[\"key=feature1,feature2\", \"key2:feature3\"]'."
     )
+    /**
+     * Defines one or more feature sets to start.
+     * <p>
+     * Each element is a string using one of these forms:
+     * - key=featureA,featureB (comma-separated list assigned to a key)
+     * - key:featureC (single feature assigned to a key)
+     * <p>
+     * Example: ["ui=feature1,feature2", "backend:feature3"].
+     *
+     * @return an array of feature-set descriptors; empty by default
+     */
     String[] startFeatures() default "";
 
 }

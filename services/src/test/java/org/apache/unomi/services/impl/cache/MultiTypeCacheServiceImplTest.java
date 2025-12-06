@@ -18,18 +18,15 @@ package org.apache.unomi.services.impl.cache;
 
 import org.apache.unomi.api.services.cache.CacheableTypeConfig;
 import org.apache.unomi.api.services.cache.MultiTypeCacheService;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.Serializable;
 import java.util.Map;
 import java.util.Set;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 
-@RunWith(MockitoJUnitRunner.class)
 public class MultiTypeCacheServiceImplTest {
 
     private static final String SYSTEM_TENANT = "system";
@@ -53,7 +50,7 @@ public class MultiTypeCacheServiceImplTest {
         }
     }
 
-    @Before
+    @BeforeEach
     public void setUp() {
         cacheService = new MultiTypeCacheServiceImpl();
     }
@@ -80,8 +77,8 @@ public class MultiTypeCacheServiceImplTest {
 
         // Verify value can be retrieved
         TestSerializable retrieved = cacheService.getWithInheritance(TEST_ID, TEST_TENANT, TestSerializable.class);
-        assertNotNull("Retrieved value should not be null", retrieved);
-        assertEquals("Retrieved value should match original", value.getId(), retrieved.getId());
+        assertNotNull(retrieved, "Retrieved value should not be null");
+        assertEquals(value.getId(), retrieved.getId(), "Retrieved value should match original");
     }
 
     @Test
@@ -104,8 +101,8 @@ public class MultiTypeCacheServiceImplTest {
 
         // Verify value can be retrieved from another tenant
         TestSerializable retrieved = cacheService.getWithInheritance(TEST_ID, TEST_TENANT, TestSerializable.class);
-        assertNotNull("Retrieved value should not be null", retrieved);
-        assertEquals("Retrieved value should match system tenant value", systemValue.getId(), retrieved.getId());
+        assertNotNull(retrieved, "Retrieved value should not be null");
+        assertEquals(systemValue.getId(), retrieved.getId(), "Retrieved value should match system tenant value");
 
         // Put a tenant-specific value
         TestSerializable tenantValue = new TestSerializable("tenant-value");
@@ -113,8 +110,8 @@ public class MultiTypeCacheServiceImplTest {
 
         // Verify tenant-specific value overrides system tenant
         retrieved = cacheService.getWithInheritance(TEST_ID, TEST_TENANT, TestSerializable.class);
-        assertNotNull("Retrieved value should not be null", retrieved);
-        assertEquals("Retrieved value should match tenant value", tenantValue.getId(), retrieved.getId());
+        assertNotNull(retrieved, "Retrieved value should not be null");
+        assertEquals(tenantValue.getId(), retrieved.getId(), "Retrieved value should match tenant value");
     }
 
     @Test
@@ -150,9 +147,9 @@ public class MultiTypeCacheServiceImplTest {
             value -> value.getId().startsWith("system")
         );
 
-        assertEquals("Should find 2 values matching predicate", 2, values.size());
-        assertTrue("Should contain system values", values.contains(systemValue1));
-        assertTrue("Should contain system values", values.contains(systemValue2));
+        assertEquals(2, values.size(), "Should find 2 values matching predicate");
+        assertTrue(values.contains(systemValue1), "Should contain system values");
+        assertTrue(values.contains(systemValue2), "Should contain system values");
     }
 
     @Test
@@ -183,14 +180,14 @@ public class MultiTypeCacheServiceImplTest {
         MultiTypeCacheService.CacheStatistics stats = cacheService.getStatistics();
         MultiTypeCacheService.CacheStatistics.TypeStatistics typeStats = stats.getAllStats().get(TEST_TYPE);
 
-        assertNotNull("Type statistics should exist", typeStats);
-        assertEquals("Should have 1 hit", 1, typeStats.getHits());
-        assertEquals("Should have 1 miss", 1, typeStats.getMisses());
-        assertEquals("Should have 1 update", 1, typeStats.getUpdates());
+        assertNotNull(typeStats, "Type statistics should exist");
+        assertEquals(1, typeStats.getHits(), "Should have 1 hit");
+        assertEquals(1, typeStats.getMisses(), "Should have 1 miss");
+        assertEquals(1, typeStats.getUpdates(), "Should have 1 update");
 
         // Reset statistics
         stats.reset();
-        assertTrue("Statistics should be empty after reset", stats.getAllStats().isEmpty());
+        assertTrue(stats.getAllStats().isEmpty(), "Statistics should be empty after reset");
     }
 
     @Test
@@ -217,10 +214,12 @@ public class MultiTypeCacheServiceImplTest {
         cacheService.clear(TEST_TENANT);
 
         // Verify test tenant value is gone but system tenant value remains
-        assertNull("Test tenant value should be cleared",
-            cacheService.getWithInheritance("value1", TEST_TENANT, TestSerializable.class));
-        assertNotNull("System tenant value should remain",
-            cacheService.getWithInheritance("value2", SYSTEM_TENANT, TestSerializable.class));
+        assertNull(
+            cacheService.getWithInheritance("value1", TEST_TENANT, TestSerializable.class),
+            "Test tenant value should be cleared");
+        assertNotNull(
+            cacheService.getWithInheritance("value2", SYSTEM_TENANT, TestSerializable.class),
+            "System tenant value should remain");
     }
 
     @Test
@@ -245,8 +244,9 @@ public class MultiTypeCacheServiceImplTest {
         cacheService.remove(TEST_TYPE, TEST_ID, TEST_TENANT, TestSerializable.class);
 
         // Verify value is removed
-        assertNull("Value should be removed",
-            cacheService.getWithInheritance(TEST_ID, TEST_TENANT, TestSerializable.class));
+        assertNull(
+            cacheService.getWithInheritance(TEST_ID, TEST_TENANT, TestSerializable.class),
+            "Value should be removed");
     }
 
     @Test
@@ -270,16 +270,20 @@ public class MultiTypeCacheServiceImplTest {
         cacheService.put(TEST_TYPE, TEST_ID, TEST_TENANT, null);
 
         // Verify no values were cached
-        assertNull("No value should be cached with null parameters",
-            cacheService.getWithInheritance(TEST_ID, TEST_TENANT, TestSerializable.class));
+        assertNull(
+            cacheService.getWithInheritance(TEST_ID, TEST_TENANT, TestSerializable.class),
+            "No value should be cached with null parameters");
 
         // Test null parameters for get
-        assertNull("Get with null ID should return null",
-            cacheService.getWithInheritance(null, TEST_TENANT, TestSerializable.class));
-        assertNull("Get with null tenant should return null",
-            cacheService.getWithInheritance(TEST_ID, null, TestSerializable.class));
-        assertNull("Get with null type should return null",
-            cacheService.getWithInheritance(TEST_ID, TEST_TENANT, null));
+        assertNull(
+            cacheService.getWithInheritance(null, TEST_TENANT, TestSerializable.class),
+            "Get with null ID should return null");
+        assertNull(
+            cacheService.getWithInheritance(TEST_ID, null, TestSerializable.class),
+            "Get with null tenant should return null");
+        assertNull(
+            cacheService.getWithInheritance(TEST_ID, TEST_TENANT, null),
+            "Get with null type should return null");
     }
 
     @Test
@@ -304,10 +308,10 @@ public class MultiTypeCacheServiceImplTest {
 
         // Get tenant cache
         Map<String, TestSerializable> tenantCache = cacheService.getTenantCache(TEST_TENANT, TestSerializable.class);
-        assertNotNull("Tenant cache should not be null", tenantCache);
-        assertEquals("Tenant cache should contain 2 values", 2, tenantCache.size());
-        assertEquals("Value1 should match", value1.getId(), tenantCache.get("value1").getId());
-        assertEquals("Value2 should match", value2.getId(), tenantCache.get("value2").getId());
+        assertNotNull(tenantCache, "Tenant cache should not be null");
+        assertEquals(2, tenantCache.size(), "Tenant cache should contain 2 values");
+        assertEquals(value1.getId(), tenantCache.get("value1").getId(), "Value1 should match");
+        assertEquals(value2.getId(), tenantCache.get("value2").getId(), "Value2 should match");
 
         // Verify cache is unmodifiable
         try {
@@ -321,16 +325,18 @@ public class MultiTypeCacheServiceImplTest {
     @Test
     public void testUnregisteredType() {
         // Try to get value for unregistered type
-        assertNull("Get with unregistered type should return null",
-            cacheService.getWithInheritance(TEST_ID, TEST_TENANT, TestSerializable.class));
+        assertNull(
+            cacheService.getWithInheritance(TEST_ID, TEST_TENANT, TestSerializable.class),
+            "Get with unregistered type should return null");
 
         // Try to put value for unregistered type
         TestSerializable value = new TestSerializable(TEST_ID);
         cacheService.put(TEST_TYPE, TEST_ID, TEST_TENANT, value);
 
         // Verify value was not cached
-        assertNull("Value should not be cached for unregistered type",
-            cacheService.getWithInheritance(TEST_ID, TEST_TENANT, TestSerializable.class));
+        assertNull(
+            cacheService.getWithInheritance(TEST_ID, TEST_TENANT, TestSerializable.class),
+            "Value should not be cached for unregistered type");
     }
 
     @Test
@@ -357,7 +363,7 @@ public class MultiTypeCacheServiceImplTest {
         // Verify statistics
         MultiTypeCacheService.CacheStatistics.TypeStatistics typeStats =
             cacheService.getStatistics().getAllStats().get(TEST_TYPE);
-        assertEquals("Should have no indexing errors", 0, typeStats.getIndexingErrors());
+        assertEquals(0, typeStats.getIndexingErrors(), "Should have no indexing errors");
     }
 
     @Test
@@ -377,8 +383,9 @@ public class MultiTypeCacheServiceImplTest {
         cacheService.refreshTypeCache(config);
 
         // Verify no statistics were created
-        assertTrue("No statistics should be created",
-            cacheService.getStatistics().getAllStats().isEmpty());
+        assertTrue(
+            cacheService.getStatistics().getAllStats().isEmpty(),
+            "No statistics should be created");
     }
 
     @Test
@@ -401,13 +408,13 @@ public class MultiTypeCacheServiceImplTest {
 
         // Verify value cannot be retrieved from another tenant when inheritance is disabled
         TestSerializable retrieved = cacheService.getWithInheritance(TEST_ID, TEST_TENANT, TestSerializable.class);
-        assertNull("Should not inherit from system tenant when inheritance is disabled", retrieved);
+        assertNull(retrieved, "Should not inherit from system tenant when inheritance is disabled");
 
         // Verify statistics
         MultiTypeCacheService.CacheStatistics.TypeStatistics typeStats =
             cacheService.getStatistics().getAllStats().get(TEST_TYPE);
-        assertEquals("Should have 1 miss", 1, typeStats.getMisses());
-        assertEquals("Should have no hits", 0, typeStats.getHits());
+        assertEquals(1, typeStats.getMisses(), "Should have 1 miss");
+        assertEquals(0, typeStats.getHits(), "Should have no hits");
     }
 
     @Test
@@ -446,8 +453,8 @@ public class MultiTypeCacheServiceImplTest {
         Map<String, TestSerializable> cache1 = cacheService.getTenantCache(TEST_TENANT, TestSerializable.class);
         Map<String, TestSerializable> cache2 = cacheService.getTenantCache(TEST_TENANT, TestSerializable.class);
 
-        assertNotNull("Cache for type1 should exist", cache1);
-        assertNotNull("Cache for type2 should exist", cache2);
+        assertNotNull(cache1, "Cache for type1 should exist");
+        assertNotNull(cache2, "Cache for type2 should exist");
     }
 
     @Test
@@ -477,7 +484,7 @@ public class MultiTypeCacheServiceImplTest {
             value -> value.getId() == null || value.getId().equals("value2")
         );
 
-        assertEquals("Should find 2 values matching predicate", 2, values.size());
+        assertEquals(2, values.size(), "Should find 2 values matching predicate");
     }
 
     @Test
@@ -520,8 +527,8 @@ public class MultiTypeCacheServiceImplTest {
         // Verify statistics
         MultiTypeCacheService.CacheStatistics.TypeStatistics typeStats =
             cacheService.getStatistics().getAllStats().get(TEST_TYPE);
-        assertEquals("Should have correct number of updates", threadCount, typeStats.getUpdates());
-        assertEquals("Should have correct number of hits", threadCount, typeStats.getHits());
+        assertEquals(threadCount, typeStats.getUpdates(), "Should have correct number of updates");
+        assertEquals(threadCount, typeStats.getHits(), "Should have correct number of hits");
     }
 
     @Test
@@ -556,7 +563,7 @@ public class MultiTypeCacheServiceImplTest {
 
         // Verify inheritance is disabled as per new configuration
         TestSerializable retrieved = cacheService.getWithInheritance(TEST_ID, TEST_TENANT, TestSerializable.class);
-        assertNull("Should not inherit from system tenant with new configuration", retrieved);
+        assertNull(retrieved, "Should not inherit from system tenant with new configuration");
     }
 
     @Test
@@ -586,7 +593,7 @@ public class MultiTypeCacheServiceImplTest {
             value -> false
         );
 
-        assertTrue("Should return empty set when no values match predicate", values.isEmpty());
+        assertTrue(values.isEmpty(), "Should return empty set when no values match predicate");
     }
 
     @Test
@@ -630,8 +637,8 @@ public class MultiTypeCacheServiceImplTest {
         // Verify statistics
         MultiTypeCacheService.CacheStatistics.TypeStatistics typeStats =
             cacheService.getStatistics().getAllStats().get(TEST_TYPE);
-        assertEquals("Should have correct number of updates", threadCount * 100, typeStats.getUpdates());
-        assertEquals("Should have correct number of hits", threadCount * 100, typeStats.getHits());
-        assertEquals("Should have correct number of misses", threadCount * 100, typeStats.getMisses());
+        assertEquals(threadCount * 100, typeStats.getUpdates(), "Should have correct number of updates");
+        assertEquals(threadCount * 100, typeStats.getHits(), "Should have correct number of hits");
+        assertEquals(threadCount * 100, typeStats.getMisses(), "Should have correct number of misses");
     }
 }

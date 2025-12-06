@@ -1,0 +1,12 @@
+{
+  "script": {
+    "source": "#painless",
+    "lang": "painless"
+  },
+  "query": {
+    "term": {
+      "itemType": "#itemType"
+    }
+  }
+}
+

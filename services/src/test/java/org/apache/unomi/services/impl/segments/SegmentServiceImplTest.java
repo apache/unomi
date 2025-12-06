@@ -24,13 +24,14 @@ import org.apache.unomi.api.actions.Action;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.conditions.ConditionType;
 import org.apache.unomi.api.rules.Rule;
+import org.apache.unomi.api.exceptions.BadSegmentConditionException;
 import org.apache.unomi.api.segments.Segment;
 import org.apache.unomi.api.segments.SegmentsAndScores;
 import org.apache.unomi.api.services.ConditionValidationService;
 import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.api.services.cache.CacheableTypeConfig;
 import org.apache.unomi.persistence.spi.PersistenceService;
-import org.apache.unomi.persistence.spi.conditions.ConditionEvaluatorDispatcher;
+import org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluatorDispatcher;
 import org.apache.unomi.services.TestHelper;
 import org.apache.unomi.services.common.security.ExecutionContextManagerImpl;
 import org.apache.unomi.services.common.security.KarafSecurityService;
@@ -43,20 +44,25 @@ import org.apache.unomi.services.impl.rules.TestActionExecutorDispatcher;
 import org.apache.unomi.services.impl.rules.TestEvaluateProfileSegmentsAction;
 import org.apache.unomi.tracing.api.RequestTracer;
 import org.apache.unomi.tracing.api.TracerService;
-import org.junit.Before;
-import org.junit.After;
-import org.junit.Test;
-import org.mockito.MockitoAnnotations;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 import org.osgi.framework.BundleContext;
 
 import java.io.IOException;
 import java.net.URL;
 import java.util.*;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
+@ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 public class SegmentServiceImplTest {
 
     private SegmentServiceImpl segmentService;
@@ -81,9 +87,9 @@ public class SegmentServiceImplTest {
     private static final String TENANT_2 = "tenant2";
     private static final String SYSTEM_TENANT = "system";
 
-    @Before
+    @BeforeEach
     public void setUp() throws IOException {
-        MockitoAnnotations.initMocks(this);
+        
         tenantService = new TestTenantService();
         securityService = TestHelper.createSecurityService();
         executionContextManager = TestHelper.createExecutionContextManager(securityService);
@@ -135,6 +141,12 @@ public class SegmentServiceImplTest {
         segmentService.setTenantService(tenantService);
         segmentService.setConditionValidationService(conditionValidationService);
         segmentService.setTracerService(tracerService);
+        
+        // Create and inject ResolverService
+        ResolverServiceImpl resolverService = new ResolverServiceImpl();
+        resolverService.setDefinitionsService(definitionsService);
+        segmentService.setResolverService(resolverService);
+        rulesService.setResolverService(resolverService);
 
         // Register TestEvaluateProfileSegmentsAction
         actionExecutorDispatcher.addExecutor("evaluateProfileSegments", new TestEvaluateProfileSegmentsAction(segmentService));
@@ -178,7 +190,7 @@ public class SegmentServiceImplTest {
         });
     }
 
-    @After
+    @AfterEach
     public void tearDown() throws Exception {
         // Use the common tearDown method from TestHelper
         org.apache.unomi.services.TestHelper.tearDown(
@@ -295,10 +307,10 @@ public class SegmentServiceImplTest {
 
             // Get and verify
             Segment retrieved = segmentService.getSegmentDefinition("test-segment");
-            assertNotNull("Should retrieve segment", retrieved);
-            assertEquals("Should have correct ID", "test-segment", retrieved.getItemId());
-            assertEquals("Should have correct name", "Test Segment", retrieved.getMetadata().getName());
-            assertEquals("Should have correct tenant", TENANT_1, retrieved.getTenantId());
+            assertNotNull(retrieved, "Should retrieve segment");
+            assertEquals("test-segment", retrieved.getItemId(), "Should have correct ID");
+            assertEquals("Test Segment", retrieved.getMetadata().getName(), "Should have correct name");
+            assertEquals(TENANT_1, retrieved.getTenantId(), "Should have correct tenant");
             return null;
         });
     }
@@ -315,12 +327,12 @@ public class SegmentServiceImplTest {
 
             // Test matching
             Boolean isInSegment = segmentService.isProfileInSegment(profile, "test-segment");
-            assertTrue("Profile should match segment", isInSegment);
+            assertTrue(isInSegment, "Profile should match segment");
 
             // Test non-matching
             profile.setProperty("testProperty", "differentValue");
             isInSegment = segmentService.isProfileInSegment(profile, "test-segment");
-            assertFalse("Profile should not match segment", isInSegment);
+            assertFalse(isInSegment, "Profile should not match segment");
             return null;
         });
     }
@@ -351,9 +363,9 @@ public class SegmentServiceImplTest {
 
             // Get segments and verify
             SegmentsAndScores segmentsAndScores = segmentService.getSegmentsAndScoresForProfile(profile);
-            assertNotNull("Should return segments and scores", segmentsAndScores);
-            assertTrue("Should contain segment1", segmentsAndScores.getSegments().contains("segment1"));
-            assertTrue("Should contain segment2", segmentsAndScores.getSegments().contains("segment2"));
+            assertNotNull(segmentsAndScores, "Should return segments and scores");
+            assertTrue(segmentsAndScores.getSegments().contains("segment1"), "Should contain segment1");
+            assertTrue(segmentsAndScores.getSegments().contains("segment2"), "Should contain segment2");
             return null;
         });
     }
@@ -378,9 +390,9 @@ public class SegmentServiceImplTest {
 
             // Get segments and verify
             SegmentsAndScores segmentsAndScores = segmentService.getSegmentsAndScoresForProfile(profile);
-            assertNotNull("Should return segments and scores", segmentsAndScores);
-            assertTrue("Should contain system segment", segmentsAndScores.getSegments().contains("system-segment"));
-            assertTrue("Should contain tenant segment", segmentsAndScores.getSegments().contains("tenant-segment"));
+            assertNotNull(segmentsAndScores, "Should return segments and scores");
+            assertTrue(segmentsAndScores.getSegments().contains("system-segment"), "Should contain system segment");
+            assertTrue(segmentsAndScores.getSegments().contains("tenant-segment"), "Should contain tenant segment");
 
             // Create tenant segment with same ID as system segment to test override
             Segment overrideSegment = createTestSegment("system-segment", "Override Segment");
@@ -393,9 +405,10 @@ public class SegmentServiceImplTest {
 
             // Verify tenant segment overrides system segment
             segmentsAndScores = segmentService.getSegmentsAndScoresForProfile(profile);
-            assertTrue("Should contain tenant segment", segmentsAndScores.getSegments().contains("system-segment"));
-            assertEquals("Should only contain one instance of the segment", 1,
-                segmentsAndScores.getSegments().stream().filter(s -> s.equals("system-segment")).count());
+            assertTrue(segmentsAndScores.getSegments().contains("system-segment"), "Should contain tenant segment");
+            assertEquals(1,
+                segmentsAndScores.getSegments().stream().filter(s -> s.equals("system-segment")).count(),
+                "Should only contain one instance of the segment");
 
             return null;
         });
@@ -404,8 +417,8 @@ public class SegmentServiceImplTest {
         executionContextManager.executeAsTenant(TENANT_2, () -> {
             Profile profile = createTestProfile();
             SegmentsAndScores segmentsAndScores = segmentService.getSegmentsAndScoresForProfile(profile);
-            assertTrue("Should contain system segment", segmentsAndScores.getSegments().contains("system-segment"));
-            assertFalse("Should not contain tenant1 segment", segmentsAndScores.getSegments().contains("tenant-segment"));
+            assertTrue(segmentsAndScores.getSegments().contains("system-segment"), "Should contain system segment");
+            assertFalse(segmentsAndScores.getSegments().contains("tenant-segment"), "Should not contain tenant1 segment");
             return null;
         });
     }
@@ -427,8 +440,8 @@ public class SegmentServiceImplTest {
             // Test that tenant1 can see both segments
             Profile profile = createTestProfile();
             SegmentsAndScores segmentsAndScores = segmentService.getSegmentsAndScoresForProfile(profile);
-            assertTrue("Should contain system segment", segmentsAndScores.getSegments().contains("system-segment"));
-            assertTrue("Should contain tenant segment", segmentsAndScores.getSegments().contains("tenant-segment"));
+            assertTrue(segmentsAndScores.getSegments().contains("system-segment"), "Should contain system segment");
+            assertTrue(segmentsAndScores.getSegments().contains("tenant-segment"), "Should contain tenant segment");
             return null;
         });
 
@@ -436,8 +449,8 @@ public class SegmentServiceImplTest {
         executionContextManager.executeAsTenant(TENANT_2, () -> {
             Profile profile = createTestProfile();
             SegmentsAndScores segmentsAndScores = segmentService.getSegmentsAndScoresForProfile(profile);
-            assertTrue("Should contain system segment", segmentsAndScores.getSegments().contains("system-segment"));
-            assertFalse("Should not contain tenant1 segment", segmentsAndScores.getSegments().contains("tenant-segment"));
+            assertTrue(segmentsAndScores.getSegments().contains("system-segment"), "Should contain system segment");
+            assertFalse(segmentsAndScores.getSegments().contains("tenant-segment"), "Should not contain tenant1 segment");
             return null;
         });
     }
@@ -454,12 +467,12 @@ public class SegmentServiceImplTest {
 
             // Verify removal
             Segment removed = segmentService.getSegmentDefinition("test-segment");
-            assertNull("Segment should be removed", removed);
+            assertNull(removed, "Segment should be removed");
 
             // Verify profile is no longer in segment
             Profile profile = createTestProfile();
             Boolean isInSegment = segmentService.isProfileInSegment(profile, "test-segment");
-            assertFalse("Profile should not be in removed segment", isInSegment);
+            assertFalse(isInSegment, "Profile should not be in removed segment");
             return null;
         });
     }
@@ -481,11 +494,18 @@ public class SegmentServiceImplTest {
             eventService.send(event1);
             eventService.send(event2);
 
+            // Refresh persistence to ensure events are available for aggregation (handles refresh delay)
+            persistenceService.refresh();
+
             // Force recalculation of past event conditions
             segmentService.recalculatePastEventConditions();
 
-            // Verify profile is in segment
-            assertTrue("Profile should be in past event segment", profile.getSegments().contains("past-event-segment"));
+            // Verify profile is in segment - retry until segment is updated (handles refresh delay)
+            TestHelper.retryUntil(
+                () -> profile.getSegments().contains("past-event-segment"),
+                r -> r == true
+            );
+            assertTrue(profile.getSegments().contains("past-event-segment"), "Profile should be in past event segment");
 
             return null;
         });
@@ -513,10 +533,18 @@ public class SegmentServiceImplTest {
             event.setTimeStamp(cal.getTime());
             eventService.send(event);
 
+            // Refresh persistence to ensure events are available for aggregation (handles refresh delay)
+            persistenceService.refresh();
+
             // Force recalculation of past event conditions
             segmentService.recalculatePastEventConditions();
 
-            assertTrue("Profile should be in date range segment", profile.getSegments().contains("date-range-segment"));
+            // Retry until segment is updated (handles refresh delay)
+            TestHelper.retryUntil(
+                () -> profile.getSegments().contains("date-range-segment"),
+                r -> r == true
+            );
+            assertTrue(profile.getSegments().contains("date-range-segment"), "Profile should be in date range segment");
 
             return null;
         });
@@ -543,7 +571,7 @@ public class SegmentServiceImplTest {
             event.setTimeStamp(cal.getTime());
             eventService.send(event);
 
-            assertFalse("Profile should not be in date range segment", profile.getSegments().contains("date-range-segment"));
+            assertFalse(profile.getSegments().contains("date-range-segment"), "Profile should not be in date range segment");
 
             return null;
         });
@@ -566,7 +594,7 @@ public class SegmentServiceImplTest {
 
             // Verify profile is not in segment
             Boolean isInSegment = segmentService.isProfileInSegment(profile, "past-event-segment");
-            assertFalse("Profile should not be in segment due to different event type", isInSegment);
+            assertFalse(isInSegment, "Profile should not be in segment due to different event type");
 
             return null;
         });
@@ -584,18 +612,18 @@ public class SegmentServiceImplTest {
         // Test that tenant1 can see the system segment
         executionContextManager.executeAsTenant(TENANT_1, () -> {
             Segment segment = segmentService.getSegmentDefinition("system-segment");
-            assertNotNull("Tenant should see system segment", segment);
-            assertEquals("Should have correct ID", "system-segment", segment.getItemId());
-            assertEquals("Should have correct name", "System Segment", segment.getMetadata().getName());
+            assertNotNull(segment, "Tenant should see system segment");
+            assertEquals("system-segment", segment.getItemId(), "Should have correct ID");
+            assertEquals("System Segment", segment.getMetadata().getName(), "Should have correct name");
             return null;
         });
 
         // Test that tenant2 can also see the system segment
         executionContextManager.executeAsTenant(TENANT_2, () -> {
             Segment segment = segmentService.getSegmentDefinition("system-segment");
-            assertNotNull("Tenant should see system segment", segment);
-            assertEquals("Should have correct ID", "system-segment", segment.getItemId());
-            assertEquals("Should have correct name", "System Segment", segment.getMetadata().getName());
+            assertNotNull(segment, "Tenant should see system segment");
+            assertEquals("system-segment", segment.getItemId(), "Should have correct ID");
+            assertEquals("System Segment", segment.getMetadata().getName(), "Should have correct name");
             return null;
         });
     }
@@ -612,7 +640,7 @@ public class SegmentServiceImplTest {
         // Test that tenant2 cannot see tenant1's segment
         executionContextManager.executeAsTenant(TENANT_2, () -> {
             Segment segment = segmentService.getSegmentDefinition("tenant1-segment");
-            assertNull("Tenant2 should not see tenant1's segment", segment);
+            assertNull(segment, "Tenant2 should not see tenant1's segment");
             return null;
         });
     }
@@ -626,8 +654,8 @@ public class SegmentServiceImplTest {
 
             // Verify it's in the cache
             Map<String, Segment> cache = multiTypeCacheService.getTenantCache(TENANT_1, Segment.class);
-            assertNotNull("Cache should exist", cache);
-            assertNotNull("Segment should be in cache", cache.get("test-segment"));
+            assertNotNull(cache, "Cache should exist");
+            assertNotNull(cache.get("test-segment"), "Segment should be in cache");
 
             // Update segment directly in persistence
             segment.getMetadata().setName("Updated Name");
@@ -638,8 +666,9 @@ public class SegmentServiceImplTest {
 
             // Verify cache was updated
             cache = multiTypeCacheService.getTenantCache(TENANT_1, Segment.class);
-            assertEquals("Cache should have updated name", "Updated Name",
-                cache.get("test-segment").getMetadata().getName());
+            assertEquals("Updated Name",
+                cache.get("test-segment").getMetadata().getName(),
+                "Cache should have updated name");
 
             return null;
         });
@@ -658,8 +687,8 @@ public class SegmentServiceImplTest {
         // Verify predefined segment was loaded
         executionContextManager.executeAsSystem(() -> {
             Segment segment = segmentService.getSegmentDefinition("test-segment");
-            assertNotNull("Predefined segment should be loaded", segment);
-            assertEquals("Should have correct name", "Test Segment", segment.getMetadata().getName());
+            assertNotNull(segment, "Predefined segment should be loaded");
+            assertEquals("Test Segment", segment.getMetadata().getName(), "Should have correct name");
             return null;
         });
     }
@@ -680,28 +709,40 @@ public class SegmentServiceImplTest {
             Segment tenant1Segment = createTestSegment("tenant1-segment", "Tenant 1 Segment");
             segmentService.setSegmentDefinition(tenant1Segment);
 
-            // Verify tenant1 can see both system and tenant1 segments
-            PartialList<Metadata> metadatas = segmentService.getSegmentMetadatas(0, 10, null);
-            assertEquals("Should see all segments", 3, metadatas.getList().size());
-            assertTrue("Should contain system segment 1",
-                metadatas.getList().stream().anyMatch(m -> m.getId().equals("system-segment-1")));
-            assertTrue("Should contain system segment 2",
-                metadatas.getList().stream().anyMatch(m -> m.getId().equals("system-segment-2")));
-            assertTrue("Should contain tenant segment",
-                metadatas.getList().stream().anyMatch(m -> m.getId().equals("tenant1-segment")));
+            // Refresh persistence to ensure segments are available for querying (handles refresh delay)
+            persistenceService.refresh();
+
+            // Verify tenant1 can see both system and tenant1 segments - retry until segments are available
+            PartialList<Metadata> metadatas = TestHelper.retryQueryUntilAvailable(
+                () -> segmentService.getSegmentMetadatas(0, 10, null),
+                3
+            );
+            assertEquals(3, metadatas.getList().size(), "Should see all segments");
+            assertTrue(
+                metadatas.getList().stream().anyMatch(m -> m.getId().equals("system-segment-1")),
+                "Should contain system segment 1");
+            assertTrue(
+                metadatas.getList().stream().anyMatch(m -> m.getId().equals("system-segment-2")),
+                "Should contain system segment 2");
+            assertTrue(
+                metadatas.getList().stream().anyMatch(m -> m.getId().equals("tenant1-segment")),
+                "Should contain tenant segment");
             return null;
         });
 
         // Verify tenant2 only sees system segments
         executionContextManager.executeAsTenant(TENANT_2, () -> {
             PartialList<Metadata> metadatas = segmentService.getSegmentMetadatas(0, 10, null);
-            assertEquals("Should only see system segments", 2, metadatas.getList().size());
-            assertTrue("Should contain system segment 1",
-                metadatas.getList().stream().anyMatch(m -> m.getId().equals("system-segment-1")));
-            assertTrue("Should contain system segment 2",
-                metadatas.getList().stream().anyMatch(m -> m.getId().equals("system-segment-2")));
-            assertFalse("Should not contain tenant1 segment",
-                metadatas.getList().stream().anyMatch(m -> m.getId().equals("tenant1-segment")));
+            assertEquals(2, metadatas.getList().size(), "Should only see system segments");
+            assertTrue(
+                metadatas.getList().stream().anyMatch(m -> m.getId().equals("system-segment-1")),
+                "Should contain system segment 1");
+            assertTrue(
+                metadatas.getList().stream().anyMatch(m -> m.getId().equals("system-segment-2")),
+                "Should contain system segment 2");
+            assertFalse(
+                metadatas.getList().stream().anyMatch(m -> m.getId().equals("tenant1-segment")),
+                "Should not contain tenant1 segment");
             return null;
         });
     }
@@ -718,7 +759,7 @@ public class SegmentServiceImplTest {
         // Verify tenant1 sees original name
         executionContextManager.executeAsTenant(TENANT_1, () -> {
             Segment segment = segmentService.getSegmentDefinition("system-segment");
-            assertEquals("Should see original name", "System Segment", segment.getMetadata().getName());
+            assertEquals("System Segment", segment.getMetadata().getName(), "Should see original name");
             return null;
         });
 
@@ -733,7 +774,7 @@ public class SegmentServiceImplTest {
         // Verify tenant1 sees updated name
         executionContextManager.executeAsTenant(TENANT_1, () -> {
             Segment segment = segmentService.getSegmentDefinition("system-segment");
-            assertEquals("Should see updated name", "Updated System Segment", segment.getMetadata().getName());
+            assertEquals("Updated System Segment", segment.getMetadata().getName(), "Should see updated name");
             return null;
         });
     }
@@ -753,8 +794,9 @@ public class SegmentServiceImplTest {
             Profile profile = createTestProfile();
             persistenceService.save(profile);
             profileId[0] = profile.getItemId();
-            assertTrue("Profile should be in system segment",
-                segmentService.isProfileInSegment(profile, "system-segment"));
+            assertTrue(
+                segmentService.isProfileInSegment(profile, "system-segment"),
+                "Profile should be in system segment");
             return null;
         });
 
@@ -766,11 +808,13 @@ public class SegmentServiceImplTest {
 
         // Verify segment is removed from tenant1 and profile
         executionContextManager.executeAsTenant(TENANT_1, () -> {
-            assertNull("Segment should be removed",
-                segmentService.getSegmentDefinition("system-segment"));
+            assertNull(
+                segmentService.getSegmentDefinition("system-segment"),
+                "Segment should be removed");
             Profile profile = persistenceService.load(profileId[0], Profile.class);
-            assertFalse("Profile should not be in removed segment",
-                profile.getSegments().contains("system-segment"));
+            assertFalse(
+                profile.getSegments().contains("system-segment"),
+                "Profile should not be in removed segment");
             return null;
         });
     }
@@ -833,7 +877,7 @@ public class SegmentServiceImplTest {
             segmentService.recalculatePastEventConditions();
 
             // Verify profile is in segment
-            assertTrue("Profile should be in segment", profile.getSegments().contains("test-segment"));
+            assertTrue(profile.getSegments().contains("test-segment"), "Profile should be in segment");
 
             return null;
         });
@@ -902,7 +946,7 @@ public class SegmentServiceImplTest {
 
             // Reload profile and verify intermediate state
             profile = persistenceService.load(profile.getItemId(), Profile.class);
-            assertFalse("Profile should not be in segment yet", profile.getSegments().contains("test-segment"));
+            assertFalse(profile.getSegments().contains("test-segment"), "Profile should not be in segment yet");
 
             // Send second matching event (login)
             Event loginEvent = createTestEvent(profile, "login");
@@ -921,13 +965,13 @@ public class SegmentServiceImplTest {
 
             // Reload profile and verify final state
             profile = persistenceService.load(profile.getItemId(), Profile.class);
-            assertTrue("Profile should be in segment", profile.getSegments().contains("test-segment"));
+            assertTrue(profile.getSegments().contains("test-segment"), "Profile should be in segment");
 
             return null;
         });
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testSetSegmentWithInvalidCondition() {
         executionContextManager.executeAsTenant(TENANT_1, () -> {
             // Create a segment with invalid condition
@@ -943,14 +987,18 @@ public class SegmentServiceImplTest {
 
             // Get the condition type from definitions service
             ConditionType conditionType = definitionsService.getConditionType("profilePropertyCondition");
-            assertNotNull("Condition type should exist", conditionType);
+            assertNotNull(conditionType, "Condition type should exist");
             condition.setConditionType(conditionType);
 
             // Don't set required parameters
             segment.setCondition(condition);
 
-            // Should throw IllegalArgumentException since condition is missing required parameters
-            segmentService.setSegmentDefinition(segment);
+            // Should throw BadSegmentConditionException since condition is missing required parameters
+            org.junit.jupiter.api.Assertions.assertThrows(
+                BadSegmentConditionException.class,
+                () -> segmentService.setSegmentDefinition(segment),
+                "Setting segment with missing required parameters should fail (segmentId=testSegment)"
+            );
             return null;
         });
     }
@@ -971,7 +1019,7 @@ public class SegmentServiceImplTest {
 
             // Get the condition type from definitions service
             ConditionType conditionType = definitionsService.getConditionType("profilePropertyCondition");
-            assertNotNull("Condition type should exist", conditionType);
+            assertNotNull(conditionType, "Condition type should exist");
             condition.setConditionType(conditionType);
 
             // Set all required parameters
@@ -985,9 +1033,12 @@ public class SegmentServiceImplTest {
 
             // Verify segment was saved
             Segment savedSegment = segmentService.getSegmentDefinition("testSegment");
-            assertNotNull("Segment should be saved", savedSegment);
-            assertEquals("Should have correct condition type", "profilePropertyCondition",
-                savedSegment.getCondition().getConditionTypeId());
+            assertNotNull(savedSegment, "Segment should be saved (segmentId=testSegment)");
+            assertEquals(
+                "profilePropertyCondition",
+                savedSegment.getCondition().getConditionTypeId(),
+                "Saved segment should reference profilePropertyCondition type (segmentId=testSegment)"
+            );
             return null;
         });
     }
@@ -1009,7 +1060,7 @@ public class SegmentServiceImplTest {
 
             // Get the condition type from definitions service
             ConditionType booleanConditionType = definitionsService.getConditionType("booleanCondition");
-            assertNotNull("Boolean condition type should exist", booleanConditionType);
+            assertNotNull(booleanConditionType, "Boolean condition type should exist");
             parentCondition.setConditionType(booleanConditionType);
             parentCondition.setParameter("operator", "and");
 
@@ -1019,7 +1070,7 @@ public class SegmentServiceImplTest {
 
             // Get the condition type from definitions service
             ConditionType profilePropertyConditionType = definitionsService.getConditionType("profilePropertyCondition");
-            assertNotNull("Profile property condition type should exist", profilePropertyConditionType);
+            assertNotNull(profilePropertyConditionType, "Profile property condition type should exist");
             childCondition.setConditionType(profilePropertyConditionType);
 
             childCondition.setParameter("propertyName", "properties.testProperty");
@@ -1038,19 +1089,25 @@ public class SegmentServiceImplTest {
 
             // Verify segment was saved with nested conditions
             Segment savedSegment = segmentService.getSegmentDefinition("testSegment");
-            assertNotNull("Segment should be saved", savedSegment);
-            assertEquals("Should have boolean condition type", "booleanCondition",
-                savedSegment.getCondition().getConditionTypeId());
+            assertNotNull(savedSegment, "Segment should be saved");
+            assertEquals(
+                "booleanCondition",
+                savedSegment.getCondition().getConditionTypeId(),
+                "Saved segment should use boolean parent condition (segmentId=testSegment)"
+            );
             List<Condition> savedSubConditions = (List<Condition>) savedSegment.getCondition().getParameter("subConditions");
-            assertNotNull("Should have sub conditions", savedSubConditions);
-            assertEquals("Should have one sub condition", 1, savedSubConditions.size());
-            assertEquals("Sub condition should have correct type", "profilePropertyCondition",
-                    savedSubConditions.get(0).getConditionTypeId());
+            assertNotNull(savedSubConditions, "Saved segment should include sub conditions (segmentId=testSegment)");
+            assertEquals(1, savedSubConditions.size(), "Saved segment should have one sub condition (segmentId=testSegment)");
+            assertEquals(
+                "profilePropertyCondition",
+                savedSubConditions.get(0).getConditionTypeId(),
+                "Child condition should be profilePropertyCondition (segmentId=testSegment)"
+            );
             return null;
         });
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void testSetSegmentWithInvalidNestedCondition() {
         executionContextManager.executeAsTenant(TENANT_1, () -> {
             // Create a segment with nested conditions where child is invalid
@@ -1066,7 +1123,7 @@ public class SegmentServiceImplTest {
 
             // Get the condition type from definitions service
             ConditionType booleanConditionType = definitionsService.getConditionType("booleanCondition");
-            assertNotNull("Boolean condition type should exist", booleanConditionType);
+            assertNotNull(booleanConditionType, "Boolean condition type should exist");
             parentCondition.setConditionType(booleanConditionType);
             parentCondition.setParameter("operator", "and");
 
@@ -1076,7 +1133,7 @@ public class SegmentServiceImplTest {
 
             // Get the condition type from definitions service
             ConditionType profilePropertyConditionType = definitionsService.getConditionType("profilePropertyCondition");
-            assertNotNull("Profile property condition type should exist", profilePropertyConditionType);
+            assertNotNull(profilePropertyConditionType, "Profile property condition type should exist");
             childCondition.setConditionType(profilePropertyConditionType);
 
             // Don't set required parameters
@@ -1088,8 +1145,12 @@ public class SegmentServiceImplTest {
 
             segment.setCondition(parentCondition);
 
-            // Should throw IllegalArgumentException since child condition is missing required parameters
-            segmentService.setSegmentDefinition(segment);
+            // Should throw BadSegmentConditionException since child condition is missing required parameters
+            org.junit.jupiter.api.Assertions.assertThrows(
+                BadSegmentConditionException.class,
+                () -> segmentService.setSegmentDefinition(segment),
+                "Setting segment with invalid nested child condition should fail (segmentId=testSegment)"
+            );
             return null;
         });
     }

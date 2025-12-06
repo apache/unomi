@@ -19,6 +19,16 @@ package org.apache.unomi.persistence.spi.conditions.geo;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Units of distance and conversion helpers compatible with those used historically by Elasticsearch.
+ * <p>
+ * This enum replaces prior Elasticsearch utilities with a 100% compatible implementation hosted
+ * within Unomi, allowing us to remove the dependency while retaining identical behavior in the
+ * persistence layer and tests.
+ *
+ * TODO maybe evaluate https://github.com/unitsofmeasurement/indriya instead of this implementation
+ * to see if it can be a 100% compatible replacement.
+ */
 public enum DistanceUnit {
     KILOMETERS(1000.0, "km", "kilometers"),
     MILES(1609.344, "mi", "miles"),

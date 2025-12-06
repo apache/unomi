@@ -19,6 +19,8 @@ package org.apache.unomi.itests.migration;
 import org.apache.unomi.itests.BaseIT;
 import org.junit.Assert;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -27,30 +29,37 @@ import java.nio.file.Paths;
 
 import static org.junit.Assert.fail;
 
-public class MigrationIT extends BaseIT {
-    protected static final Path BASE_DIRECTORIES = Paths.get(System.getProperty( "karaf.data" ), "migration", "scripts");
+public class MigrationIT  extends BaseIT {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(MigrationIT.class);
     private static final String FAILING_SCRIPT_NAME = "migrate-11.0.0-01-failingMigration.groovy";
     private static final String SUCCESS_SCRIPT_NAME = "migrate-11.0.0-01-successMigration.groovy";
     private static final String FAILING_SCRIPT_RESOURCE = "migration/" + FAILING_SCRIPT_NAME;
     private static final String SUCCESS_SCRIPT_RESOURCE = "migration/" + SUCCESS_SCRIPT_NAME;
-    protected static final Path FAILING_SCRIPT_FS_PATH = Paths.get(System.getProperty( "karaf.data" ), "migration", "scripts", FAILING_SCRIPT_NAME);
-    protected static final Path SUCCESS_SCRIPT_FS_PATH = Paths.get(System.getProperty( "karaf.data" ), "migration", "scripts", SUCCESS_SCRIPT_NAME);
 
     @Test
     public void checkMigrationRecoverySystem() throws Exception {
-        try {
-            Files.createDirectories(BASE_DIRECTORIES);
 
-            Files.write(FAILING_SCRIPT_FS_PATH, bundleResourceAsString(FAILING_SCRIPT_RESOURCE).getBytes(StandardCharsets.UTF_8));
+        String karafData = super.karafData();
+        LOGGER.info("Karaf data directory: {}", karafData);
+
+        Path scriptsDirectory = Paths.get(karafData, "migration", "scripts");
+        Path failingScriptFsPath = Paths.get(karafData, "migration", "scripts", FAILING_SCRIPT_NAME);
+        Path successScriptFsPath = Paths.get(karafData, "migration", "scripts", SUCCESS_SCRIPT_NAME);
+
+        try {
+            Files.createDirectories(scriptsDirectory);
+
+            Files.write(failingScriptFsPath, bundleResourceAsString(FAILING_SCRIPT_RESOURCE).getBytes(StandardCharsets.UTF_8));
             try {
                 executeCommand("unomi:migrate 10.0.0 true");
                 fail("Migration should have failed and crashed by Exception throwing");
             } catch (Exception e) {
                 // this is expected, the script fail at step 3
             }
-            Files.deleteIfExists(FAILING_SCRIPT_FS_PATH);
+            Files.deleteIfExists(failingScriptFsPath);
 
-            Files.write(SUCCESS_SCRIPT_FS_PATH, bundleResourceAsString(SUCCESS_SCRIPT_RESOURCE).getBytes(StandardCharsets.UTF_8));
+            Files.write(successScriptFsPath, bundleResourceAsString(SUCCESS_SCRIPT_RESOURCE).getBytes(StandardCharsets.UTF_8));
             String successResult = executeCommand("unomi:migrate 10.0.0 true");
             System.out.println("Success recovered from failing migration result:");
             System.out.println(successResult);
@@ -61,10 +70,10 @@ public class MigrationIT extends BaseIT {
             Assert.assertTrue(successResult.contains("inside step 3"));
             Assert.assertTrue(successResult.contains("inside step 4"));
             Assert.assertTrue(successResult.contains("inside step 5"));
-            Files.deleteIfExists(SUCCESS_SCRIPT_FS_PATH);
+            Files.deleteIfExists(successScriptFsPath);
         } finally {
-            Files.deleteIfExists(FAILING_SCRIPT_FS_PATH);
-            Files.deleteIfExists(SUCCESS_SCRIPT_FS_PATH);
+            Files.deleteIfExists(failingScriptFsPath);
+            Files.deleteIfExists(successScriptFsPath);
         }
     }
 }

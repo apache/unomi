@@ -14,22 +14,54 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package org.apache.unomi.persistence.elasticsearch;
 
+import co.elastic.clients.elasticsearch._helpers.bulk.BulkIngester;
+import co.elastic.clients.elasticsearch._helpers.bulk.BulkListener;
+import co.elastic.clients.elasticsearch._types.*;
+import co.elastic.clients.elasticsearch._types.aggregations.*;
+import co.elastic.clients.elasticsearch._types.analysis.CustomAnalyzer;
+import co.elastic.clients.elasticsearch._types.mapping.Property;
+import co.elastic.clients.elasticsearch._types.mapping.TypeMapping;
+import co.elastic.clients.elasticsearch._types.query_dsl.*;
+import co.elastic.clients.elasticsearch.core.*;
+import co.elastic.clients.elasticsearch.core.CountRequest;
+import co.elastic.clients.elasticsearch.core.DeleteRequest;
+import co.elastic.clients.elasticsearch.core.SearchRequest;
+import co.elastic.clients.elasticsearch.core.SearchResponse;
+import co.elastic.clients.elasticsearch.core.bulk.BulkOperation;
+import co.elastic.clients.elasticsearch.core.bulk.UpdateAction;
+import co.elastic.clients.elasticsearch.core.bulk.UpdateOperation;
+import co.elastic.clients.elasticsearch.core.search.Hit;
+import co.elastic.clients.elasticsearch.core.search.TotalHits;
+import co.elastic.clients.elasticsearch.core.search.TotalHitsRelation;
+import co.elastic.clients.elasticsearch.ilm.*;
+import co.elastic.clients.elasticsearch.indices.*;
+import co.elastic.clients.elasticsearch.indices.Alias;
+import co.elastic.clients.elasticsearch.indices.DeleteIndexRequest;
+import co.elastic.clients.elasticsearch.indices.DeleteIndexTemplateRequest;
+import co.elastic.clients.elasticsearch.indices.ExistsRequest;
+import co.elastic.clients.elasticsearch.indices.RefreshRequest;
+import co.elastic.clients.elasticsearch.indices.get_alias.IndexAliases;
+import co.elastic.clients.elasticsearch.indices.get_mapping.IndexMappingRecord;
+import co.elastic.clients.elasticsearch.indices.put_index_template.IndexTemplateMapping;
+import co.elastic.clients.elasticsearch.tasks.GetTasksRequest;
+import co.elastic.clients.elasticsearch.tasks.GetTasksResponse;
+import co.elastic.clients.json.JsonData;
+import co.elastic.clients.json.JsonpMapper;
+import co.elastic.clients.transport.BackoffPolicy;
+import co.elastic.clients.transport.endpoints.BooleanResponse;
+
+import co.elastic.clients.elasticsearch.ElasticsearchClient;
+import co.elastic.clients.transport.rest_client.RestClientOptions;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.json.stream.JsonGenerator;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpHost;
-import org.apache.http.auth.AuthScope;
-import org.apache.http.auth.UsernamePasswordCredentials;
-import org.apache.http.client.CredentialsProvider;
-import org.apache.http.conn.ssl.NoopHostnameVerifier;
-import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.log4j.Level;
-import org.apache.lucene.search.TotalHits;
 import org.apache.unomi.api.*;
 import org.apache.unomi.api.conditions.Condition;
 import org.apache.unomi.api.query.DateRange;
@@ -42,86 +74,13 @@ import org.apache.unomi.metrics.MetricAdapter;
 import org.apache.unomi.metrics.MetricsService;
 import org.apache.unomi.persistence.spi.PersistenceService;
 import org.apache.unomi.persistence.spi.aggregate.*;
+import org.apache.unomi.persistence.spi.aggregate.DateRangeAggregate;
+import org.apache.unomi.persistence.spi.aggregate.IpRangeAggregate;
 import org.apache.unomi.persistence.spi.conditions.ConditionContextHelper;
-import org.apache.unomi.persistence.spi.conditions.ConditionEvaluator;
-import org.apache.unomi.persistence.spi.conditions.ConditionEvaluatorDispatcher;
+import org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluatorDispatcher;
 import org.apache.unomi.persistence.spi.config.ConfigurationUpdateHelper;
-import org.elasticsearch.ElasticsearchStatusException;
-import org.elasticsearch.Version;
-import org.elasticsearch.action.DocWriteRequest;
-import org.elasticsearch.action.DocWriteResponse;
-import org.elasticsearch.action.admin.cluster.health.ClusterHealthRequest;
-import org.elasticsearch.action.admin.cluster.storedscripts.PutStoredScriptRequest;
-import org.elasticsearch.action.admin.indices.alias.Alias;
-import org.elasticsearch.action.admin.indices.alias.get.GetAliasesRequest;
-import org.elasticsearch.action.admin.indices.delete.DeleteIndexRequest;
-import org.elasticsearch.action.admin.indices.refresh.RefreshRequest;
-import org.elasticsearch.action.admin.indices.template.delete.DeleteIndexTemplateRequest;
-import org.elasticsearch.action.bulk.*;
-import org.elasticsearch.action.delete.DeleteRequest;
-import org.elasticsearch.action.get.GetRequest;
-import org.elasticsearch.action.get.GetResponse;
-import org.elasticsearch.action.index.IndexRequest;
-import org.elasticsearch.action.index.IndexResponse;
-import org.elasticsearch.action.search.ClearScrollRequest;
-import org.elasticsearch.action.search.SearchRequest;
-import org.elasticsearch.action.search.SearchResponse;
-import org.elasticsearch.action.search.SearchScrollRequest;
-import org.elasticsearch.action.support.WriteRequest;
-import org.elasticsearch.action.support.master.AcknowledgedResponse;
-import org.elasticsearch.action.update.UpdateRequest;
-import org.elasticsearch.action.update.UpdateResponse;
 import org.elasticsearch.client.*;
-import org.elasticsearch.client.core.CountRequest;
-import org.elasticsearch.client.core.CountResponse;
-import org.elasticsearch.client.core.MainResponse;
-import org.elasticsearch.client.indexlifecycle.*;
-import org.elasticsearch.client.indices.*;
-import org.elasticsearch.client.tasks.GetTaskRequest;
-import org.elasticsearch.client.tasks.GetTaskResponse;
-import org.elasticsearch.client.tasks.TaskSubmissionResponse;
-import org.elasticsearch.cluster.metadata.AliasMetaData;
-import org.elasticsearch.cluster.metadata.MappingMetaData;
-import org.elasticsearch.common.bytes.BytesReference;
-import org.elasticsearch.common.unit.ByteSizeUnit;
-import org.elasticsearch.common.unit.ByteSizeValue;
-import org.elasticsearch.common.unit.DistanceUnit;
-import org.elasticsearch.common.unit.TimeValue;
-import org.elasticsearch.common.xcontent.ToXContent;
-import org.elasticsearch.common.xcontent.XContentBuilder;
-import org.elasticsearch.common.xcontent.XContentFactory;
-import org.elasticsearch.common.xcontent.XContentType;
-import org.elasticsearch.index.IndexNotFoundException;
-import org.elasticsearch.index.query.*;
-import org.elasticsearch.index.reindex.AbstractBulkByScrollRequest;
-import org.elasticsearch.index.reindex.DeleteByQueryRequest;
-import org.elasticsearch.index.reindex.UpdateByQueryRequest;
-import org.elasticsearch.rest.RestStatus;
-import org.elasticsearch.script.Script;
-import org.elasticsearch.script.ScriptException;
-import org.elasticsearch.script.ScriptType;
-import org.elasticsearch.search.SearchHit;
-import org.elasticsearch.search.SearchHits;
-import org.elasticsearch.search.aggregations.*;
-import org.elasticsearch.search.aggregations.bucket.MultiBucketsAggregation;
-import org.elasticsearch.search.aggregations.bucket.SingleBucketAggregation;
-import org.elasticsearch.search.aggregations.bucket.filter.Filter;
-import org.elasticsearch.search.aggregations.bucket.global.Global;
-import org.elasticsearch.search.aggregations.bucket.histogram.DateHistogramAggregationBuilder;
-import org.elasticsearch.search.aggregations.bucket.histogram.DateHistogramInterval;
-import org.elasticsearch.search.aggregations.bucket.missing.MissingAggregationBuilder;
-import org.elasticsearch.search.aggregations.bucket.range.DateRangeAggregationBuilder;
-import org.elasticsearch.search.aggregations.bucket.range.IpRangeAggregationBuilder;
-import org.elasticsearch.search.aggregations.bucket.range.RangeAggregationBuilder;
-import org.elasticsearch.search.aggregations.bucket.terms.IncludeExclude;
-import org.elasticsearch.search.aggregations.bucket.terms.Terms;
-import org.elasticsearch.search.aggregations.bucket.terms.TermsAggregationBuilder;
-import org.elasticsearch.search.aggregations.metrics.NumericMetricsAggregation;
-import org.elasticsearch.search.builder.SearchSourceBuilder;
-import org.elasticsearch.search.sort.GeoDistanceSortBuilder;
-import org.elasticsearch.search.sort.SortBuilders;
-import org.elasticsearch.search.sort.SortOrder;
-import org.elasticsearch.tasks.TaskId;
+
 import org.osgi.framework.*;
 import org.osgi.service.cm.ManagedService;
 import org.slf4j.Logger;
@@ -143,14 +102,10 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import static org.apache.unomi.api.tenants.TenantService.SYSTEM_TENANT;
-import static org.elasticsearch.index.query.QueryBuilders.termQuery;
 
 @SuppressWarnings("rawtypes")
 public class ElasticSearchPersistenceServiceImpl implements PersistenceService, SynchronousBundleListener, ManagedService {
 
-    public static final String BULK_PROCESSOR_BULK_SIZE = "bulkProcessor.bulkSize";
-    public static final String BULK_PROCESSOR_FLUSH_INTERVAL = "bulkProcessor.flushInterval";
-    public static final String BULK_PROCESSOR_BACKOFF_POLICY = "bulkProcessor.backoffPolicy";
     public static final String SEQ_NO = "seq_no";
     public static final String PRIMARY_TERM = "primary_term";
 
@@ -159,37 +114,31 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     private volatile boolean shuttingDown = false;
     private boolean throwExceptions = false;
-    private CustomRestHighLevelClient client;
-    private BulkProcessor bulkProcessor;
+    private ElasticsearchClient esClient;
+    private BulkIngester bulkIngester;
     private String elasticSearchAddresses;
-    private List<String> elasticSearchAddressList = new ArrayList<>();
-    private String clusterName;
+    private final List<String> elasticSearchAddressList = new ArrayList<>();
     private String indexPrefix;
-    private String monthlyIndexNumberOfShards;
-    private String monthlyIndexNumberOfReplicas;
-    private String monthlyIndexMappingTotalFieldsLimit;
-    private String monthlyIndexMaxDocValueFieldsSearch;
     private String numberOfShards;
     private String numberOfReplicas;
     private String indexMappingTotalFieldsLimit;
     private String indexMaxDocValueFieldsSearch;
     private String[] fatalIllegalStateErrors;
     private BundleContext bundleContext;
-    private Map<String, String> mappings = new HashMap<String, String>();
+    private final Map<String, String> mappings = new HashMap<String, String>();
     private ConditionEvaluatorDispatcher conditionEvaluatorDispatcher;
     private ConditionESQueryBuilderDispatcher conditionESQueryBuilderDispatcher;
-    private List<String> itemsMonthlyIndexed;
     private Map<String, String> routingByType;
 
     private Integer defaultQueryLimit = 10;
-    private Integer removeByQueryTimeoutInMinutes = 10;
+    private final Integer removeByQueryTimeoutInMinutes = 10;
     private Integer taskWaitingTimeout = 3600000;
     private Integer taskWaitingPollingInterval = 1000;
 
     private String bulkProcessorConcurrentRequests = "1";
     private String bulkProcessorBulkActions = "1000";
-    private String bulkProcessorBulkSize = "5MB";
-    private String bulkProcessorFlushInterval = "5s";
+    private Long bulkProcessorBulkSize = 5L;
+    private Long bulkProcessorFlushIntervalInSeconds = 5L;
     private String bulkProcessorBackoffPolicy = "exponential";
 
     // Rollover configuration
@@ -203,8 +152,8 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     private String rolloverIndexMappingTotalFieldsLimit;
     private String rolloverIndexMaxDocValueFieldsSearch;
 
-    private String minimalElasticSearchVersion = "7.0.0";
-    private String maximalElasticSearchVersion = "8.0.0";
+    private String minimalElasticSearchVersion = "9.0.3";
+    private String maximalElasticSearchVersion = "10.0.0";
 
     // authentication props
     private String username;
@@ -222,14 +171,15 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     private boolean aggQueryThrowOnMissingDocs = false;
     private Integer aggQueryMaxResponseSizeHttp = null;
     private Integer clientSocketTimeout = null;
-    private Map<String, WriteRequest.RefreshPolicy> itemTypeToRefreshPolicy = new HashMap<>();
+    private Map<String, Refresh> itemTypeToRefreshPolicy = new HashMap<>();
 
     private final Map<String, Map<String, Map<String, Object>>> knownMappings = new HashMap<>();
 
     private static final Map<String, String> itemTypeIndexNameMap = new HashMap<>();
-    private static final Collection<String> systemItems = Arrays.asList("actionType", "campaign", "campaignevent", "goal",
-            "userList", "propertyType", "scope", "conditionType", "rule", "scoring", "segment", "groovyAction", "topic",
-            "patch", "jsonSchema", "importConfig", "exportConfig", "rulestats");
+    private static final Collection<String> systemItems = Arrays.asList("actionType", "campaign", "campaignevent", "goal", "userList",
+            "propertyType", "scope", "conditionType", "rule", "scoring", "segment", "groovyAction", "topic", "patch", "jsonSchema",
+            "importConfig", "exportConfig", "rulestats");
+
     static {
         for (String systemItem : systemItems) {
             itemTypeIndexNameMap.put(systemItem, "systemItems");
@@ -239,30 +189,11 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         itemTypeIndexNameMap.put("persona", "profile");
     }
 
-    private Set<String> dumpRequestTypes = new HashSet<>();
-
-    /**
-     * Sets the types of requests that should be dumped to logs
-     * @param dumpRequestTypes Comma-separated list of request types to dump
-     */
-    public void setDumpRequestTypes(String dumpRequestTypes) {
-        if (StringUtils.isNotBlank(dumpRequestTypes)) {
-            this.dumpRequestTypes = Arrays.stream(dumpRequestTypes.split(","))
-                    .map(String::trim)
-                    .filter(s -> !s.isEmpty())
-                    .collect(Collectors.toSet());
-        }
-    }
-
     private volatile ExecutionContextManager contextManager = null;
     private List<TenantTransformationListener> transformationListeners = new CopyOnWriteArrayList<>();
 
     public void setBundleContext(BundleContext bundleContext) {
         this.bundleContext = bundleContext;
-    }
-
-    public void setClusterName(String clusterName) {
-        this.clusterName = clusterName;
     }
 
     public void setElasticSearchAddresses(String elasticSearchAddresses) {
@@ -277,14 +208,14 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     public void setItemTypeToRefreshPolicy(String itemTypeToRefreshPolicy) throws IOException {
         if (!itemTypeToRefreshPolicy.isEmpty()) {
             this.itemTypeToRefreshPolicy = new ObjectMapper().readValue(itemTypeToRefreshPolicy,
-                    new TypeReference<HashMap<String, WriteRequest.RefreshPolicy>>() {
+                    new TypeReference<HashMap<String, Refresh>>() {
                     });
         }
     }
 
     public void setFatalIllegalStateErrors(String fatalIllegalStateErrors) {
-        this.fatalIllegalStateErrors = Arrays.stream(fatalIllegalStateErrors.split(","))
-                .map(i -> i.trim()).filter(i -> !i.isEmpty()).toArray(String[]::new);
+        this.fatalIllegalStateErrors = Arrays.stream(fatalIllegalStateErrors.split(",")).map(i -> i.trim()).filter(i -> !i.isEmpty())
+                .toArray(String[]::new);
     }
 
     public void setAggQueryMaxResponseSizeHttp(String aggQueryMaxResponseSizeHttp) {
@@ -295,31 +226,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     public void setIndexPrefix(String indexPrefix) {
         this.indexPrefix = indexPrefix;
-    }
-
-    @Deprecated
-    public void setMonthlyIndexNumberOfShards(String monthlyIndexNumberOfShards) {
-        this.monthlyIndexNumberOfShards = monthlyIndexNumberOfShards;
-    }
-
-    @Deprecated
-    public void setMonthlyIndexNumberOfReplicas(String monthlyIndexNumberOfReplicas) {
-        this.monthlyIndexNumberOfReplicas = monthlyIndexNumberOfReplicas;
-    }
-
-    @Deprecated
-    public void setMonthlyIndexMappingTotalFieldsLimit(String monthlyIndexMappingTotalFieldsLimit) {
-        this.monthlyIndexMappingTotalFieldsLimit = monthlyIndexMappingTotalFieldsLimit;
-    }
-
-    @Deprecated
-    public void setMonthlyIndexMaxDocValueFieldsSearch(String monthlyIndexMaxDocValueFieldsSearch) {
-        this.monthlyIndexMaxDocValueFieldsSearch = monthlyIndexMaxDocValueFieldsSearch;
-    }
-
-    @Deprecated
-    public void setItemsMonthlyIndexedOverride(String itemsMonthlyIndexedOverride) {
-        this.itemsMonthlyIndexed = StringUtils.isNotEmpty(itemsMonthlyIndexedOverride) ? Arrays.asList(itemsMonthlyIndexedOverride.split(",").clone()) : Collections.emptyList();
     }
 
     public void setNumberOfShards(String numberOfShards) {
@@ -362,12 +268,12 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         this.bulkProcessorBulkActions = bulkProcessorBulkActions;
     }
 
-    public void setBulkProcessorBulkSize(String bulkProcessorBulkSize) {
+    public void setBulkProcessorBulkSize(Long bulkProcessorBulkSize) {
         this.bulkProcessorBulkSize = bulkProcessorBulkSize;
     }
 
-    public void setBulkProcessorFlushInterval(String bulkProcessorFlushInterval) {
-        this.bulkProcessorFlushInterval = bulkProcessorFlushInterval;
+    public void setBulkProcessorFlushIntervalInSeconds(Long bulkProcessorFlushIntervalInSeconds) {
+        this.bulkProcessorFlushIntervalInSeconds = bulkProcessorFlushIntervalInSeconds;
     }
 
     public void setBulkProcessorBackoffPolicy(String bulkProcessorBackoffPolicy) {
@@ -452,7 +358,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         this.sslTrustAllCertificates = sslTrustAllCertificates;
     }
 
-
     public void setAggQueryThrowOnMissingDocs(boolean aggQueryThrowOnMissingDocs) {
         this.aggQueryThrowOnMissingDocs = aggQueryThrowOnMissingDocs;
     }
@@ -479,6 +384,44 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         if (StringUtils.isNumeric(taskWaitingPollingInterval)) {
             this.taskWaitingPollingInterval = Integer.parseInt(taskWaitingPollingInterval);
         }
+    }
+
+    /**
+     * Check if the current cluster version is in the expected range
+     *
+     * @return true if the version of the current elasticsearch is not in the expected range
+     */
+    private boolean versionIsNotCompatible() throws IOException {
+        InfoResponse info = esClient.info();
+        String currentVersion = info.version().number();
+
+        return compareVersions(currentVersion, minimalElasticSearchVersion) < 0
+                || compareVersions(currentVersion, maximalElasticSearchVersion) >= 0;
+    }
+
+    /**
+     * Compare to semantic versions
+     *
+     * @param version1 First version
+     * @param version2 Second vrsion
+     * @return positive if version1 > version2, 0 if equals, negative if version1 < version2
+     */
+    private static int compareVersions(String version1, String version2) {
+        String[] parts1 = version1.split("\\.");
+        String[] parts2 = version2.split("\\.");
+
+        int length = Math.max(parts1.length, parts2.length);
+
+        for (int i = 0; i < length; i++) {
+            int part1 = i < parts1.length ? Integer.parseInt(parts1[i]) : 0;
+            int part2 = i < parts2.length ? Integer.parseInt(parts2[i]) : 0;
+
+            if (part1 != part2) {
+                return part1 - part2;
+            }
+        }
+
+        return 0;
     }
 
     public void bindContextManager(ExecutionContextManager contextManager) {
@@ -512,35 +455,27 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         return tenantId;
     }
 
-    public String getName() {
-        return "elasticsearch";
-    }
-
     public void start() throws Exception {
 
         // Work around to avoid ES Logs regarding the deprecated [ignore_throttled] parameter
         try {
             Level lvl = Level.toLevel(logLevelRestClient, Level.ERROR);
+            //TODO ensure this is necessary
             org.apache.log4j.Logger.getLogger("org.elasticsearch.client.RestClient").setLevel(lvl);
         } catch (Exception e) {
             // Never fail because of the set of the logger
         }
 
         // on startup
-        new InClassLoaderExecute<Object>(null, null, this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
+        new InClassLoaderExecute<>(null, null, this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
             public Object execute(Object... args) throws Exception {
 
                 buildClient();
 
-                MainResponse response = client.info(RequestOptions.DEFAULT);
-                MainResponse.Version version = response.getVersion();
-                Version clusterVersion = Version.fromString(version.getNumber());
-                Version minimalVersion = Version.fromString(minimalElasticSearchVersion);
-                Version maximalVersion = Version.fromString(maximalElasticSearchVersion);
-                if (clusterVersion.before(minimalVersion) ||
-                        clusterVersion.equals(maximalVersion) ||
-                        clusterVersion.after(maximalVersion)) {
-                    throw new Exception("ElasticSearch version is not within [" + minimalVersion + "," + maximalVersion + "), aborting startup !");
+                if (versionIsNotCompatible()) {
+                    throw new Exception(
+                            "ElasticSearch version is not within [" + minimalElasticSearchVersion + "," + maximalElasticSearchVersion
+                                    + "), aborting startup !");
                 }
 
                 registerRolloverLifecyclePolicy();
@@ -556,20 +491,16 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     }
                 }
 
-                if (client != null && bulkProcessor == null) {
-                    bulkProcessor = getBulkProcessor();
-                }
-
                 // Wait for green
                 LOGGER.info("Waiting for GREEN cluster status...");
-                client.cluster().health(new ClusterHealthRequest().waitForGreenStatus(), RequestOptions.DEFAULT);
+                esClient.cluster().health(builder -> builder.waitForStatus(HealthStatus.Green));
                 LOGGER.info("Cluster status is GREEN");
 
                 // We keep in memory the latest available session index to be able to load session using direct GET access on ES
                 if (isItemTypeRollingOver(Session.ITEM_TYPE)) {
                     LOGGER.info("Sessions are using rollover indices, loading latest session index available ...");
-                    GetAliasesResponse sessionAliasResponse = client.indices().getAlias(new GetAliasesRequest(getIndex(Session.ITEM_TYPE)), RequestOptions.DEFAULT);
-                    Map<String, Set<AliasMetaData>> aliases = sessionAliasResponse.getAliases();
+                    GetAliasResponse getAliasResponse = esClient.indices().getAlias(builder -> builder.name(getIndex(Session.ITEM_TYPE)));
+                    Map<String, IndexAliases> aliases = getAliasResponse.aliases();
                     if (!aliases.isEmpty()) {
                         sessionLatestIndex = new TreeSet<>(aliases.keySet()).last();
                         LOGGER.info("Latest available session index found is: {}", sessionLatestIndex);
@@ -587,161 +518,136 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         LOGGER.info("{} service started successfully.", this.getClass().getName());
     }
 
-    private void buildClient() throws NoSuchFieldException, IllegalAccessException {
-        List<Node> nodeList = new ArrayList<>();
+    private List<HttpHost> getHosts() {
+        List<HttpHost> hosts = new ArrayList<>();
         for (String elasticSearchAddress : elasticSearchAddressList) {
             String[] elasticSearchAddressParts = elasticSearchAddress.split(":");
             String elasticSearchHostName = elasticSearchAddressParts[0];
             int elasticSearchPort = Integer.parseInt(elasticSearchAddressParts[1]);
-
-            // configure authentication
-            nodeList.add(new Node(new HttpHost(elasticSearchHostName, elasticSearchPort, sslEnable ? "https" : "http")));
+            hosts.add(new HttpHost(elasticSearchHostName, elasticSearchPort, sslEnable ? "https" : "http"));
         }
-
-        RestClientBuilder clientBuilder = RestClient.builder(nodeList.toArray(new Node[nodeList.size()]));
-
-        if (clientSocketTimeout != null) {
-            clientBuilder.setRequestConfigCallback(requestConfigBuilder -> {
-                requestConfigBuilder.setSocketTimeout(clientSocketTimeout);
-                return requestConfigBuilder;
-            });
-        }
-
-        clientBuilder.setHttpClientConfigCallback(httpClientBuilder -> {
-            if (sslTrustAllCertificates) {
-                try {
-                    final SSLContext sslContext = SSLContext.getInstance("SSL");
-                    sslContext.init(null, new TrustManager[]{new X509TrustManager() {
-                        public X509Certificate[] getAcceptedIssuers() {
-                            return null;
-                        }
-
-                        public void checkClientTrusted(X509Certificate[] certs,
-                                                       String authType) {
-                        }
-
-                        public void checkServerTrusted(X509Certificate[] certs,
-                                                       String authType) {
-                        }
-                    }}, new SecureRandom());
-
-                    httpClientBuilder.setSSLContext(sslContext).setSSLHostnameVerifier(new NoopHostnameVerifier());
-                } catch (NoSuchAlgorithmException | KeyManagementException e) {
-                    LOGGER.error("Error creating SSL Context for trust all certificates", e);
-                }
-            }
-
-            if (StringUtils.isNotBlank(username)) {
-                final CredentialsProvider credentialsProvider = new BasicCredentialsProvider();
-                credentialsProvider.setCredentials(AuthScope.ANY, new UsernamePasswordCredentials(username, password));
-
-                httpClientBuilder.setDefaultCredentialsProvider(credentialsProvider);
-            }
-
-            return httpClientBuilder;
-        });
-
-        LOGGER.info("Connecting to ElasticSearch persistence backend using cluster name {} and index prefix {}...", clusterName, indexPrefix);
-        client = new CustomRestHighLevelClient(clientBuilder);
+        return hosts;
     }
 
-    public BulkProcessor getBulkProcessor() {
-        if (bulkProcessor != null) {
-            return bulkProcessor;
+    private void buildClient() throws NoSuchFieldException, IllegalAccessException {
+        ElasticsearchClientFactory.ClientBuilder esClienBuilder = ElasticsearchClientFactory.builder();
+
+        if (sslTrustAllCertificates) {
+            final SSLContext sslContext;
+            try {
+                sslContext = SSLContext.getInstance("SSL");
+            } catch (NoSuchAlgorithmException e) {
+                throw new RuntimeException(e);
+            }
+            try {
+                sslContext.init(null, new TrustManager[] { new X509TrustManager() {
+                    public X509Certificate[] getAcceptedIssuers() {
+                        return null;
+                    }
+
+                    public void checkClientTrusted(X509Certificate[] certs, String authType) {
+                    }
+
+                    public void checkServerTrusted(X509Certificate[] certs, String authType) {
+                    }
+                } }, new SecureRandom());
+                esClienBuilder.sslContext(sslContext);
+            } catch (KeyManagementException e) {
+                LOGGER.error("Error creating SSL Context for trust all certificates", e);
+            }
         }
-        BulkProcessor.Listener bulkProcessorListener = new BulkProcessor.Listener() {
-            @Override
-            public void beforeBulk(long executionId,
-                                   BulkRequest request) {
+
+        esClient = esClienBuilder.hosts(getHosts()).socketTimeout(clientSocketTimeout)
+                .usernameAndPassword(username, password).build();
+
+        buildBulkIngester();
+        LOGGER.info("Connecting to ElasticSearch persistence backend using index prefix {}...", indexPrefix);
+    }
+
+    public BulkIngester buildBulkIngester() {
+        if (bulkIngester != null) {
+            return bulkIngester;
+        }
+        BulkListener<String> listener = new BulkListener<String>() {
+            @Override public void beforeBulk(long executionId, BulkRequest request, List<String> strings) {
                 LOGGER.debug("Before Bulk");
             }
 
-            @Override
-            public void afterBulk(long executionId,
-                                  BulkRequest request,
-                                  BulkResponse response) {
+            @Override public void afterBulk(long executionId, BulkRequest request, List<String> strings, BulkResponse response) {
                 LOGGER.debug("After Bulk");
             }
 
-            @Override
-            public void afterBulk(long executionId,
-                                  BulkRequest request,
-                                  Throwable failure) {
+            @Override public void afterBulk(long executionId, BulkRequest request, List<String> strings, Throwable failure) {
                 LOGGER.error("After Bulk (failure)", failure);
+
             }
         };
-        BulkProcessor.Builder bulkProcessorBuilder = BulkProcessor.builder(
-                (request, bulkListener) ->
-                        client.bulkAsync(request, RequestOptions.DEFAULT, bulkListener),
-                bulkProcessorListener);
+
+        BulkIngester.Builder ingesterBuilder = new BulkIngester.Builder().client(esClient).maxOperations(100)
+                .flushInterval(1, TimeUnit.SECONDS).listener(listener);
 
         if (bulkProcessorConcurrentRequests != null) {
             int concurrentRequests = Integer.parseInt(bulkProcessorConcurrentRequests);
             if (concurrentRequests > 1) {
-                bulkProcessorBuilder.setConcurrentRequests(concurrentRequests);
+                ingesterBuilder.maxConcurrentRequests(concurrentRequests);
             }
         }
         if (bulkProcessorBulkActions != null) {
             int bulkActions = Integer.parseInt(bulkProcessorBulkActions);
-            bulkProcessorBuilder.setBulkActions(bulkActions);
+            ingesterBuilder.maxOperations(bulkActions);
         }
         if (bulkProcessorBulkSize != null) {
-            bulkProcessorBuilder.setBulkSize(ByteSizeValue.parseBytesSizeValue(bulkProcessorBulkSize, new ByteSizeValue(5, ByteSizeUnit.MB), BULK_PROCESSOR_BULK_SIZE));
+            // Default is 5MB
+            ingesterBuilder.maxSize(bulkProcessorBulkSize * 1024 * 1024);
         }
-        if (bulkProcessorFlushInterval != null) {
-            bulkProcessorBuilder.setFlushInterval(TimeValue.parseTimeValue(bulkProcessorFlushInterval, null, BULK_PROCESSOR_FLUSH_INTERVAL));
+
+        if (bulkProcessorFlushIntervalInSeconds != null) {
+            ingesterBuilder.flushInterval(bulkProcessorFlushIntervalInSeconds, TimeUnit.SECONDS);
         } else {
             // in ElasticSearch this defaults to null, but we would like to set a value to 5 seconds by default
-            bulkProcessorBuilder.setFlushInterval(new TimeValue(5, TimeUnit.SECONDS));
+            ingesterBuilder.flushInterval(5, TimeUnit.SECONDS);
         }
         if (bulkProcessorBackoffPolicy != null) {
             String backoffPolicyStr = bulkProcessorBackoffPolicy;
             if (backoffPolicyStr != null && backoffPolicyStr.length() > 0) {
                 backoffPolicyStr = backoffPolicyStr.toLowerCase();
                 if ("nobackoff".equals(backoffPolicyStr)) {
-                    bulkProcessorBuilder.setBackoffPolicy(BackoffPolicy.noBackoff());
+                    ingesterBuilder.backoffPolicy(BackoffPolicy.noBackoff());
                 } else if (backoffPolicyStr.startsWith("constant(")) {
                     int paramStartPos = backoffPolicyStr.indexOf("constant(" + "constant(".length());
                     int paramEndPos = backoffPolicyStr.indexOf(")", paramStartPos);
                     int paramSeparatorPos = backoffPolicyStr.indexOf(",", paramStartPos);
-                    TimeValue delay = TimeValue.parseTimeValue(backoffPolicyStr.substring(paramStartPos, paramSeparatorPos), new TimeValue(5, TimeUnit.SECONDS), BULK_PROCESSOR_BACKOFF_POLICY);
+                    Long delay = Long.valueOf(backoffPolicyStr.substring(paramStartPos, paramSeparatorPos));
+
                     int maxNumberOfRetries = Integer.parseInt(backoffPolicyStr.substring(paramSeparatorPos + 1, paramEndPos));
-                    bulkProcessorBuilder.setBackoffPolicy(BackoffPolicy.constantBackoff(delay, maxNumberOfRetries));
+                    // Delay is in ms
+                    ingesterBuilder.backoffPolicy(BackoffPolicy.constantBackoff(delay != null ? delay : 5000, maxNumberOfRetries));
                 } else if (backoffPolicyStr.startsWith("exponential")) {
                     if (!backoffPolicyStr.contains("(")) {
-                        bulkProcessorBuilder.setBackoffPolicy(BackoffPolicy.exponentialBackoff());
+                        ingesterBuilder.backoffPolicy(BackoffPolicy.exponentialBackoff());
                     } else {
                         // we detected parameters, must process them.
                         int paramStartPos = backoffPolicyStr.indexOf("exponential(" + "exponential(".length());
                         int paramEndPos = backoffPolicyStr.indexOf(")", paramStartPos);
                         int paramSeparatorPos = backoffPolicyStr.indexOf(",", paramStartPos);
-                        TimeValue delay = TimeValue.parseTimeValue(backoffPolicyStr.substring(paramStartPos, paramSeparatorPos), new TimeValue(5, TimeUnit.SECONDS), BULK_PROCESSOR_BACKOFF_POLICY);
+                        Long delay = Long.valueOf(backoffPolicyStr.substring(paramStartPos, paramSeparatorPos));
                         int maxNumberOfRetries = Integer.parseInt(backoffPolicyStr.substring(paramSeparatorPos + 1, paramEndPos));
-                        bulkProcessorBuilder.setBackoffPolicy(BackoffPolicy.exponentialBackoff(delay, maxNumberOfRetries));
+                        ingesterBuilder.backoffPolicy(BackoffPolicy.exponentialBackoff(delay != null ? delay : 5000, maxNumberOfRetries));
                     }
                 }
             }
         }
 
-        bulkProcessor = bulkProcessorBuilder.build();
-        return bulkProcessor;
+        bulkIngester = ingesterBuilder.build();
+        return bulkIngester;
     }
 
     public void stop() {
-        shuttingDown = true;
-
-        new InClassLoaderExecute<Object>(null, null, this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
+        new InClassLoaderExecute<>(null, null, this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
             protected Object execute(Object... args) throws IOException {
                 LOGGER.info("Closing ElasticSearch persistence backend...");
-                if (bulkProcessor != null) {
-                    try {
-                        bulkProcessor.awaitClose(2, TimeUnit.MINUTES);
-                    } catch (InterruptedException e) {
-                        LOGGER.error("Error waiting for bulk operations to flush !", e);
-                    }
-                }
-                if (client != null) {
-                    client.close();
+                if (esClient != null) {
+                    esClient.close();
                 }
                 return null;
             }
@@ -752,23 +658,16 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     public void bindConditionESQueryBuilder(ServiceReference<ConditionESQueryBuilder> conditionESQueryBuilderServiceReference) {
         ConditionESQueryBuilder conditionESQueryBuilder = bundleContext.getService(conditionESQueryBuilderServiceReference);
-        conditionESQueryBuilderDispatcher.addQueryBuilder(conditionESQueryBuilderServiceReference.getProperty("queryBuilderId").toString(), conditionESQueryBuilder);
+        conditionESQueryBuilderDispatcher.addQueryBuilder(conditionESQueryBuilderServiceReference.getProperty("queryBuilderId").toString(),
+                conditionESQueryBuilder);
     }
 
     public void unbindConditionESQueryBuilder(ServiceReference<ConditionESQueryBuilder> conditionESQueryBuilderServiceReference) {
-        if (conditionESQueryBuilderServiceReference == null || shuttingDown) {
-            return; // Skip this entirely if we're shutting down
+        if (conditionESQueryBuilderServiceReference == null) {
+            return;
         }
-        try {
-            Object queryBuilderId = conditionESQueryBuilderServiceReference.getProperty("queryBuilderId");
-            if (queryBuilderId != null && conditionESQueryBuilderDispatcher != null) {
-                conditionESQueryBuilderDispatcher.removeQueryBuilder(queryBuilderId.toString());
-            }
-        } catch (Exception e) {
-            // During shutdown we might get exceptions as services are being unregistered in unpredictable order
-            // Just log and continue to avoid deadlocks
-            LOGGER.debug("Error while unbinding condition query builder: {}", e.getMessage());
-        }
+        conditionESQueryBuilderDispatcher.removeQueryBuilder(
+                conditionESQueryBuilderServiceReference.getProperty("queryBuilderId").toString());
     }
 
     @Override
@@ -790,25 +689,24 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     @Override
     public void updated(Dictionary<String, ?> properties) {
         Map<String, ConfigurationUpdateHelper.PropertyMapping> propertyMappings = new HashMap<>();
-        
+
         // Boolean properties
         propertyMappings.put("throwExceptions", ConfigurationUpdateHelper.booleanProperty(this::setThrowExceptions));
         propertyMappings.put("alwaysOverwrite", ConfigurationUpdateHelper.booleanProperty(this::setAlwaysOverwrite));
         propertyMappings.put("useBatchingForSave", ConfigurationUpdateHelper.booleanProperty(this::setUseBatchingForSave));
         propertyMappings.put("useBatchingForUpdate", ConfigurationUpdateHelper.booleanProperty(this::setUseBatchingForUpdate));
         propertyMappings.put("aggQueryThrowOnMissingDocs", ConfigurationUpdateHelper.booleanProperty(this::setAggQueryThrowOnMissingDocs));
-        
+
         // String properties
         propertyMappings.put("logLevelRestClient", ConfigurationUpdateHelper.stringProperty(this::setLogLevelRestClient));
         propertyMappings.put("clientSocketTimeout", ConfigurationUpdateHelper.stringProperty(this::setClientSocketTimeout));
         propertyMappings.put("taskWaitingTimeout", ConfigurationUpdateHelper.stringProperty(this::setTaskWaitingTimeout));
         propertyMappings.put("taskWaitingPollingInterval", ConfigurationUpdateHelper.stringProperty(this::setTaskWaitingPollingInterval));
         propertyMappings.put("aggQueryMaxResponseSizeHttp", ConfigurationUpdateHelper.stringProperty(this::setAggQueryMaxResponseSizeHttp));
-        propertyMappings.put("dumpRequestTypes", ConfigurationUpdateHelper.stringProperty(this::setDumpRequestTypes));
-        
+
         // Integer properties
         propertyMappings.put("aggregateQueryBucketSize", ConfigurationUpdateHelper.integerProperty(this::setAggregateQueryBucketSize));
-        
+
         // Custom property for itemTypeToRefreshPolicy with IOException handling
         propertyMappings.put("itemTypeToRefreshPolicy", ConfigurationUpdateHelper.customProperty((value, logger) -> {
             try {
@@ -817,7 +715,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 logger.warn("Error setting itemTypeToRefreshPolicy: {}", e.getMessage());
             }
         }));
-        
+
         ConfigurationUpdateHelper.processConfigurationUpdates(properties, LOGGER, "ElasticSearch persistence", propertyMappings);
     }
 
@@ -883,26 +781,27 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         return content.toString();
     }
 
-    @Override
-    public <T extends Item> List<T> getAllItems(final Class<T> clazz) {
+    @Override public String getName() {
+        return "elasticsearch";
+    }
+
+    @Override public <T extends Item> List<T> getAllItems(final Class<T> clazz) {
         return getAllItems(clazz, 0, -1, null).getList();
     }
 
-    @Override
-    public long getAllItemsCount(String itemType) {
-        return queryCount(QueryBuilders.matchAllQuery(), itemType);
+    @Override public long getAllItemsCount(String itemType) {
+        return queryCount(Query.of(q -> q.matchAll(m -> m)), itemType);
     }
 
-    @Override
-    public <T extends Item> PartialList<T> getAllItems(final Class<T> clazz, int offset, int size, String sortBy) {
+    @Override public <T extends Item> PartialList<T> getAllItems(final Class<T> clazz, int offset, int size, String sortBy) {
         return getAllItems(clazz, offset, size, sortBy, null);
     }
 
-    @Override
-    public <T extends Item> PartialList<T> getAllItems(final Class<T> clazz, int offset, int size, String sortBy, String scrollTimeValidity) {
+    @Override public <T extends Item> PartialList<T> getAllItems(final Class<T> clazz, int offset, int size, String sortBy,
+            String scrollTimeValidity) {
         long startTime = System.currentTimeMillis();
         try {
-            return query(QueryBuilders.matchAllQuery(), sortBy, clazz, offset, size, null, scrollTimeValidity);
+            return query(Query.of(q -> q.matchAll(m -> m)), sortBy, clazz, offset, size, null, scrollTimeValidity);
         } finally {
             if (metricsService != null && metricsService.isActivated()) {
                 metricsService.updateTimer(this.getClass().getName() + ".getAllItems", startTime);
@@ -910,25 +809,19 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         }
     }
 
-    @Override
-    public <T extends Item> T load(final String itemId, final Class<T> clazz) {
+    @Override public <T extends Item> T load(final String itemId, final Class<T> clazz) {
         return load(itemId, clazz, null);
     }
 
-    @Override
-    @Deprecated
-    public <T extends Item> T load(final String itemId, final Date dateHint, final Class<T> clazz) {
+    @Override @Deprecated public <T extends Item> T load(final String itemId, final Date dateHint, final Class<T> clazz) {
         return load(itemId, clazz, null);
     }
 
-    @Override
-    @Deprecated
-    public CustomItem loadCustomItem(final String itemId, final Date dateHint, String customItemType) {
+    @Override @Deprecated public CustomItem loadCustomItem(final String itemId, final Date dateHint, String customItemType) {
         return load(itemId, CustomItem.class, customItemType);
     }
 
-    @Override
-    public CustomItem loadCustomItem(final String itemId, String customItemType) {
+    @Override public CustomItem loadCustomItem(final String itemId, String customItemType) {
         return load(itemId, CustomItem.class, customItemType);
     }
 
@@ -937,27 +830,25 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             return null;
         }
 
-        return new InClassLoaderExecute<T>(metricsService, this.getClass().getName() + ".loadItem", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
+        return new InClassLoaderExecute<T>(metricsService, this.getClass().getName() + ".loadItem", this.bundleContext,
+                this.fatalIllegalStateErrors, throwExceptions) {
             protected T execute(Object... args) throws Exception {
                 try {
-                    String itemType = Item.getItemType(clazz);
-                    if (customItemType != null) {
-                        itemType = customItemType;
-                    }
+                    final String itemType = customItemType != null ? customItemType : Item.getItemType(clazz);
                     String documentId = getDocumentIDForItemType(itemId, itemType);
 
-                    boolean sessionSpecialDirectAccess = sessionLatestIndex != null && Session.ITEM_TYPE.equals(itemType) ;
+                    boolean sessionSpecialDirectAccess = sessionLatestIndex != null && Session.ITEM_TYPE.equals(itemType);
                     if (!sessionSpecialDirectAccess && isItemTypeRollingOver(itemType)) {
                         return new MetricAdapter<T>(metricsService, ".loadItemWithQuery") {
-                            @Override
-                            public T execute(Object... args) throws Exception {
+                            @Override public T execute(Object... args) throws Exception {
+                                Query query = Query.of(q -> q.ids(builder -> builder.values(documentId)));
                                 if (customItemType == null) {
-                                    PartialList<T> r = query(QueryBuilders.idsQuery().addIds(documentId), null, clazz, 0, 1, null, null);
+                                    PartialList<T> r = query(query, null, clazz, 0, 1, null, null);
                                     if (r.size() > 0) {
                                         return r.get(0);
                                     }
                                 } else {
-                                    PartialList<CustomItem> r = query(QueryBuilders.idsQuery().addIds(documentId), null, customItemType, 0, 1, null, null);
+                                    PartialList<CustomItem> r = query(query, null, customItemType, 0, 1, null, null);
                                     if (r.size() > 0) {
                                         return (T) r.get(0);
                                     }
@@ -967,56 +858,69 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         }.execute();
                     } else {
                         // Special handling for session we check the latest available index directly to speed up session loading
-                        GetRequest getRequest = new GetRequest(sessionSpecialDirectAccess ? sessionLatestIndex : getIndex(itemType), documentId);
-                        GetResponse response = client.get(getRequest, RequestOptions.DEFAULT);
-                        if (response.isExists()) {
-                            String sourceAsString = response.getSourceAsString();
-                            final T value = ESCustomObjectMapper.getObjectMapper().readValue(sourceAsString, clazz);
-                            setMetadata(value, response.getId(), response.getVersion(), response.getSeqNo(), response.getPrimaryTerm(), response.getIndex());
+                        GetRequest getRequest = GetRequest.of(
+                                builder -> builder.index(sessionSpecialDirectAccess ? sessionLatestIndex : getIndex(itemType))
+                                        .id(documentId));
+                        GetResponse<T> response = esClient.get(getRequest, clazz);
+                        if (response.found()) {
+                            T value = response.source();
+                            setMetadata(value, response.id(), response.version() != null ? response.version() : 0L,
+                                    response.seqNo() != null ? response.seqNo() : 0L,
+                                    response.primaryTerm() != null ? response.primaryTerm() : 0L, response.index());
                             return handleItemReverseTransformation(value);
                         } else {
                             return null;
                         }
                     }
-                } catch (ElasticsearchStatusException ese) {
-                    if (ese.status().equals(RestStatus.NOT_FOUND)) {
-                        // this can happen if we are just testing the existence of the item, it is not always an error.
+                } catch (ElasticsearchException e) {
+                    if (e.status() == 404 && e.getMessage() != null && e.getMessage().contains("index_not_found_exception")) {
+                        // The index does not exist
                         return null;
                     }
-                    throw new Exception("Error loading itemType=" + clazz.getName() + " customItemType=" + customItemType + " itemId=" + itemId, ese);
-                } catch (IndexNotFoundException e) {
-                    // this can happen if we are just testing the existence of the item, it is not always an error.
                     return null;
                 } catch (Exception ex) {
-                    throw new Exception("Error loading itemType=" + clazz.getName() + " customItemType=" + customItemType + " itemId=" + itemId, ex);
+                    throw new Exception(
+                            "Error loading itemType=" + clazz.getName() + " customItemType=" + customItemType + " itemId=" + itemId, ex);
                 }
             }
         }.catchingExecuteInClassLoader(true);
 
     }
 
-    private String getDocumentIDForItemType(String itemId, String itemType) {
-        String tenantId = getTenantId();
-        String baseId = systemItems.contains(itemType) ? (itemId + "_" + itemType.toLowerCase()) : itemId;
-        return tenantId + "_" + baseId;
-    }
-
-    private String stripTenantFromDocumentId(String documentId) {
-        if (documentId == null) {
-            return null;
-        }
-        int firstUnderscore = documentId.indexOf('_');
-        if (firstUnderscore < 0) {
-            return documentId;
-        }
-        return documentId.substring(firstUnderscore + 1);
-    }
-
     private void setMetadata(Item item, String itemId, long version, long seqNo, long primaryTerm, String index) {
         if (item != null) {
             String strippedId = stripTenantFromDocumentId(itemId);
-            if (!systemItems.contains(item.getItemType()) && item.getItemId() == null) {
-                item.setItemId(strippedId);
+            if (!systemItems.contains(item.getItemType())) {
+                // For non-system items, document ID format is: tenantId_itemId
+                // The stripped ID is the itemId
+                if (item.getItemId() == null) {
+                    item.setItemId(strippedId);
+                }
+            } else {
+                // For system items, document ID format is: tenantId_itemId_itemType
+                // Extract the itemId by removing the itemType suffix from the document ID.
+                // After migration 3.1.0-05, all system items should have:
+                // - Document IDs with the itemType suffix (post-2.2.0 format)
+                // - Correct itemIds in source (fixed by migration 3.1.0-05)
+                // This simplified logic works because the migration normalizes the data.
+                String itemTypeSuffix = "_" + item.getItemType().toLowerCase();
+                if (strippedId != null && strippedId.endsWith(itemTypeSuffix)) {
+                    // Document ID has the expected suffix format - extract itemId by removing the suffix
+                    String extractedItemId = strippedId.substring(0, strippedId.length() - itemTypeSuffix.length());
+                    item.setItemId(extractedItemId);
+                } else {
+                    // Document ID doesn't have the suffix (old data pre-2.2.0 migration, or edge case)
+                    // Use source itemId if available and doesn't end with suffix (trustworthy),
+                    // otherwise use strippedId as fallback
+                    String sourceItemId = item.getItemId();
+                    if (sourceItemId != null && !sourceItemId.endsWith(itemTypeSuffix)) {
+                        // Source itemId exists and is trustworthy - keep it
+                        // itemId is already set correctly, no need to change it
+                    } else {
+                        // No trustworthy source itemId - use strippedId as fallback
+                        item.setItemId(strippedId);
+                    }
+                }
             }
             item.setVersion(version);
             item.setSystemMetadata(SEQ_NO, seqNo);
@@ -1025,35 +929,32 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         }
     }
 
-    @Override
-    public boolean isConsistent(Item item) {
-        return getRefreshPolicy(item.getItemType()) != WriteRequest.RefreshPolicy.NONE;
+    @Override public boolean isConsistent(Item item) {
+        return getRefreshPolicy(item.getItemType()) != Refresh.False;
     }
 
-    @Override
-    public boolean save(final Item item) {
+    @Override public boolean save(final Item item) {
         return save(item, useBatchingForSave, alwaysOverwrite);
     }
 
-    @Override
-    public boolean save(final Item item, final boolean useBatching) {
+    @Override public boolean save(final Item item, final boolean useBatching) {
         return save(item, useBatching, alwaysOverwrite);
     }
 
-    @Override
-    public boolean save(final Item item, final Boolean useBatchingOption, final Boolean alwaysOverwriteOption) {
+    @Override public boolean save(final Item item, final Boolean useBatchingOption, final Boolean alwaysOverwriteOption) {
         String finalTenantId = validateTenantAndGetId(SecurityServiceConfiguration.PERMISSION_SAVE);
         item.setTenantId(finalTenantId);
 
         final boolean useBatching = useBatchingOption == null ? this.useBatchingForSave : useBatchingOption;
         final boolean alwaysOverwrite = alwaysOverwriteOption == null ? this.alwaysOverwrite : alwaysOverwriteOption;
 
-        return new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".save", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
+        Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".saveItem", this.bundleContext,
+                this.fatalIllegalStateErrors, throwExceptions) {
             protected Boolean execute(Object... args) throws Exception {
                 try {
                     // Add tenants-specific transformation before save
                     handleItemTransformation(item);
-                    
+
                     String source = ESCustomObjectMapper.getObjectMapper().writeValueAsString(item);
                     String itemType = item.getItemType();
                     if (item instanceof CustomItem) {
@@ -1062,48 +963,61 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     String documentId = getDocumentIDForItemType(item.getItemId(), itemType);
                     String index = item.getSystemMetadata("index") != null ? (String) item.getSystemMetadata("index") : getIndex(itemType);
 
-                    IndexRequest indexRequest = new IndexRequest(index);
-                    indexRequest.id(documentId);
-                    indexRequest.source(source, XContentType.JSON);
-
+                    Long seqNo;
+                    Long primaryTerm;
+                    OpType opType = null;
+                    String routing;
                     if (!alwaysOverwrite) {
-                        Long seqNo = (Long) item.getSystemMetadata(SEQ_NO);
-                        Long primaryTerm = (Long) item.getSystemMetadata(PRIMARY_TERM);
-
-                        if (seqNo != null && primaryTerm != null) {
-                            indexRequest.setIfSeqNo(seqNo);
-                            indexRequest.setIfPrimaryTerm(primaryTerm);
-                        } else {
-                            indexRequest.opType(DocWriteRequest.OpType.CREATE);
-                        }
+                        seqNo = (Long) item.getSystemMetadata(SEQ_NO);
+                        primaryTerm = (Long) item.getSystemMetadata(PRIMARY_TERM);
+                        opType = seqNo == null && primaryTerm == null ? OpType.Create : null;
+                    } else {
+                        primaryTerm = null;
+                        seqNo = null;
                     }
 
                     if (routingByType.containsKey(itemType)) {
-                        indexRequest.routing(routingByType.get(itemType));
+                        routing = routingByType.get(itemType);
+                    } else {
+                        routing = null;
                     }
 
                     try {
-                        if (bulkProcessor == null || !useBatching) {
-                            indexRequest.setRefreshPolicy(getRefreshPolicy(itemType));
-                            IndexResponse response = client.index(indexRequest, RequestOptions.DEFAULT);
-                            String responseIndex = response.getIndex();
-                            String itemId = response.getId();
-                            setMetadata(item, itemId, response.getVersion(), response.getSeqNo(), response.getPrimaryTerm(), responseIndex);
+                        if (bulkIngester == null || !useBatching) {
+                            IndexRequest.Builder<Object> indexRequestBuilder = new IndexRequest.Builder<>().index(index).id(documentId)
+                                    .document(item).ifSeqNo(seqNo).ifPrimaryTerm(primaryTerm).opType(opType).routing(routing)
+                                    .refresh(getRefreshPolicy(itemType));
+                            IndexResponse response = esClient.index(indexRequestBuilder.build());
+                            String responseIndex = response.index();
+                            String itemId = response.id();
+                            setMetadata(item, itemId, response.version(), response.seqNo() != null ? response.seqNo() : 0L,
+                                    response.primaryTerm() != null ? response.primaryTerm() : 0L, responseIndex);
 
                             // Special handling for session, in case of new session we check that a rollover happen or not to update the latest available index
-                            if (Session.ITEM_TYPE.equals(itemType) &&
-                                    sessionLatestIndex != null &&
-                                    response.getResult().equals(DocWriteResponse.Result.CREATED) &&
-                                    !responseIndex.equals(sessionLatestIndex)) {
+                            if (Session.ITEM_TYPE.equals(itemType) && sessionLatestIndex != null && response.result().equals(Result.Created)
+                                    && !responseIndex.equals(sessionLatestIndex)) {
                                 sessionLatestIndex = responseIndex;
                             }
                         } else {
-                            bulkProcessor.add(indexRequest);
+                            BulkOperation bulkOp;
+                            if (opType == OpType.Create) {
+                                bulkOp = BulkOperation.of(b -> b.create(
+                                        c -> c.index(index).id(documentId).document(item).ifSeqNo(seqNo).ifPrimaryTerm(primaryTerm)
+                                                .routing(routing)));
+                            } else {
+                                bulkOp = BulkOperation.of(b -> b.index(
+                                        i -> i.index(index).id(documentId).document(item).ifSeqNo(seqNo).ifPrimaryTerm(primaryTerm)
+                                                .routing(routing)));
+                            }
+                            bulkIngester.add(bulkOp);
                         }
                         logMetadataItemOperation("saved", item);
-                    } catch (IndexNotFoundException e) {
-                        LOGGER.error("Could not find index {}, could not register item type {} with id {} ", index, itemType, item.getItemId(), e);
-                        return false;
+                    } catch (ElasticsearchException e) {
+                        if (e.status() == 404 && e.getMessage() != null && e.getMessage().contains("index_not_found_exception")) {
+                            LOGGER.error("Could not find index {}, could not register item type {} with id {} ", index, itemType,
+                                    item.getItemId(), e);
+                            return false;
+                        }
                     }
 
                     // Add tenants metadata
@@ -1115,102 +1029,119 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 }
             }
         }.catchingExecuteInClassLoader(true);
+        return Objects.requireNonNullElse(result, false);
     }
 
-    @Override
-    public boolean update(final Item item, final Date dateHint, final Class clazz, final String propertyName, final Object propertyValue) {
+    @Override public boolean update(final Item item, final Date dateHint, final Class clazz, final String propertyName,
+            final Object propertyValue) {
         return update(item, clazz, propertyName, propertyValue);
     }
 
-    @Override
-    public boolean update(final Item item, final Date dateHint, final Class clazz, final Map source) {
+    @Override public boolean update(final Item item, final Date dateHint, final Class clazz, final Map source) {
         return update(item, clazz, source);
     }
 
-    @Override
-    public boolean update(final Item item, final Date dateHint, final Class clazz, final Map source, final boolean alwaysOverwrite) {
+    @Override public boolean update(final Item item, final Date dateHint, final Class clazz, final Map source,
+            final boolean alwaysOverwrite) {
         return update(item, clazz, source, alwaysOverwrite);
     }
 
-    @Override
-    public boolean update(final Item item, final Class clazz, final String propertyName, final Object propertyValue) {
+    @Override public boolean update(final Item item, final Class clazz, final String propertyName, final Object propertyValue) {
         return update(item, clazz, Collections.singletonMap(propertyName, propertyValue), alwaysOverwrite);
     }
 
-
-    @Override
-    public boolean update(final Item item, final Class clazz, final Map source) {
+    @Override public boolean update(final Item item, final Class clazz, final Map source) {
         return update(item, clazz, source, alwaysOverwrite);
     }
 
     @Override
+    //TODO type Class and Map
     public boolean update(final Item item, final Class clazz, final Map source, final boolean alwaysOverwrite) {
-        Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".updateItem", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
+        Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".updateItem", this.bundleContext,
+                this.fatalIllegalStateErrors, throwExceptions) {
             protected Boolean execute(Object... args) throws Exception {
                 try {
                     handleItemTransformation(item);
-                    UpdateRequest updateRequest = createUpdateRequest(clazz, item, source, alwaysOverwrite);
+                    // On suppose que cette méthode retourne un UpdateRequest<Object>
+                    UpdateRequest<Object, ?> updateRequest = createUpdateRequest(clazz, item, source, alwaysOverwrite);
 
-                    if (bulkProcessor == null || !useBatchingForUpdate) {
-                        UpdateResponse response = client.update(updateRequest, RequestOptions.DEFAULT);
-                        setMetadata(item, response.getId(), response.getVersion(), response.getSeqNo(), response.getPrimaryTerm(), response.getIndex());
+                    if (bulkIngester == null || !useBatchingForUpdate) {
+                        UpdateResponse<Object> response = esClient.update(updateRequest, clazz);
+                        setMetadata(item, response.id(), response.version(), response.seqNo() != null ? response.seqNo() : 0L,
+                                response.primaryTerm() != null ? response.primaryTerm() : 0L, response.index());
                     } else {
-                        bulkProcessor.add(updateRequest);
+                        BulkOperation bulkOp = BulkOperation.of(builder -> builder.update(
+                                u -> u.index(updateRequest.index()).id(updateRequest.id()).action(b -> b.doc(updateRequest.doc()))
+                                        .ifSeqNo(updateRequest.ifSeqNo()).ifPrimaryTerm(updateRequest.ifPrimaryTerm())
+                                        .routing(updateRequest.routing())));
+                        bulkIngester.add(bulkOp);
                     }
                     logMetadataItemOperation("updated", item);
                     return true;
-                } catch (IndexNotFoundException e) {
-                    throw new Exception("No index found for itemType=" + clazz.getName() + "itemId=" + item.getItemId(), e);
+                } catch (ElasticsearchException e) {
+                    if (e.getMessage().contains("index_not_found_exception")) {
+                        throw new Exception("No index found for itemType=" + clazz.getName() + " itemId=" + item.getItemId(), e);
+                    }
+                    throw e;
                 }
             }
         }.catchingExecuteInClassLoader(true);
         return Objects.requireNonNullElse(result, false);
     }
 
-    private UpdateRequest createUpdateRequest(Class clazz, Item item, Map source, boolean alwaysOverwrite) {
+    private UpdateRequest<Object, Object> createUpdateRequest(Class<?> clazz, Item item, Map<String, Object> source,
+            boolean alwaysOverwrite) {
         String itemType = Item.getItemType(clazz);
         String documentId = getDocumentIDForItemType(item.getItemId(), itemType);
-        String index =  item.getSystemMetadata("index") != null ? (String) item.getSystemMetadata("index") : getIndex(itemType);
+        String index = item.getSystemMetadata("index") != null ? (String) item.getSystemMetadata("index") : getIndex(itemType);
 
-        UpdateRequest updateRequest = new UpdateRequest(index, documentId);
-        updateRequest.doc(source);
+        UpdateRequest.Builder<Object, Object> builder = new UpdateRequest.Builder<>().index(index).id(documentId).doc(source);
 
         if (!alwaysOverwrite) {
             Long seqNo = (Long) item.getSystemMetadata(SEQ_NO);
             Long primaryTerm = (Long) item.getSystemMetadata(PRIMARY_TERM);
 
             if (seqNo != null && primaryTerm != null) {
-                updateRequest.setIfSeqNo(seqNo);
-                updateRequest.setIfPrimaryTerm(primaryTerm);
+                builder.ifSeqNo(seqNo);
+                builder.ifPrimaryTerm(primaryTerm);
             }
         }
-        return updateRequest;
+
+        return builder.build();
     }
 
-    @Override
-    public List<String> update(final Map<Item, Map> items, final Date dateHint, final Class clazz) {
+    @Override public List<String> update(final Map<Item, Map> items, final Date dateHint, final Class clazz) {
         if (items.isEmpty())
             return new ArrayList<>();
 
-        List<String> result = new InClassLoaderExecute<List<String>>(metricsService, this.getClass().getName() + ".updateItems", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
+        List<String> result = new InClassLoaderExecute<List<String>>(metricsService, this.getClass().getName() + ".updateItems",
+                this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
             protected List<String> execute(Object... args) throws Exception {
                 long batchRequestStartTime = System.currentTimeMillis();
 
-                BulkRequest bulkRequest = new BulkRequest();
+                List<BulkOperation> operations = new ArrayList<>();
+
                 items.forEach((item, source) -> {
                     UpdateRequest updateRequest = createUpdateRequest(clazz, item, source, alwaysOverwrite);
-                    bulkRequest.add(updateRequest);
+                    BulkOperation bulkOp = BulkOperation.of(builder -> builder.update(
+                            u -> u.index(updateRequest.index()).id(updateRequest.id()).action(b -> b.doc(updateRequest.doc()))
+                                    .ifSeqNo(updateRequest.ifSeqNo()).ifPrimaryTerm(updateRequest.ifPrimaryTerm())
+                                    .routing(updateRequest.routing())));
+                    operations.add(bulkOp);
                 });
 
-                BulkResponse bulkResponse = client.bulk(bulkRequest, RequestOptions.DEFAULT);
-                LOGGER.debug("{} profiles updated with bulk segment in {}ms", bulkRequest.numberOfActions(), System.currentTimeMillis() - batchRequestStartTime);
+                BulkRequest bulkRequest = new BulkRequest.Builder().operations(operations).build();
+                BulkResponse bulkResponse = esClient.bulk(bulkRequest);
+                LOGGER.debug("{} profiles updated with bulk segment in {}ms", bulkRequest.operations().size(),
+                        System.currentTimeMillis() - batchRequestStartTime);
 
                 List<String> failedItemsIds = new ArrayList<>();
 
-                if (bulkResponse.hasFailures()) {
-                    Iterator<BulkItemResponse> iterator = bulkResponse.iterator();
-                    iterator.forEachRemaining(bulkItemResponse -> {
-                        failedItemsIds.add(bulkItemResponse.getId());
+                if (bulkResponse.items().stream().anyMatch(item -> item.error() != null)) {
+                    bulkResponse.items().forEach(item -> {
+                        if (item.error() != null) {
+                            failedItemsIds.add(item.id());
+                        }
                     });
                 }
                 return failedItemsIds;
@@ -1220,72 +1151,90 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         return result;
     }
 
-    @Override
-    public boolean updateWithQueryAndScript(final Date dateHint, final Class<?> clazz, final String[] scripts, final Map<String, Object>[] scriptParams, final Condition[] conditions) {
+    @Override public boolean updateWithQueryAndScript(final Date dateHint, final Class<?> clazz, final String[] scripts,
+            final Map<String, Object>[] scriptParams, final Condition[] conditions) {
         return updateWithQueryAndScript(clazz, scripts, scriptParams, conditions);
     }
 
-    @Override
-    public boolean updateWithQueryAndScript(final Class<?> clazz, final String[] scripts, final Map<String, Object>[] scriptParams, final Condition[] conditions) {
+    @Override public boolean updateWithQueryAndScript(final Class<?> clazz, final String[] scripts,
+            final Map<String, Object>[] scriptParams, final Condition[] conditions) {
         Script[] builtScripts = new Script[scripts.length];
         for (int i = 0; i < scripts.length; i++) {
-            builtScripts[i] = new Script(ScriptType.INLINE, "painless", scripts[i], scriptParams[i]);
+            Map<String, JsonData> jsonDataParams = scriptParams[i].entrySet().stream()
+                    .collect(Collectors.toMap(Map.Entry::getKey, entry -> JsonData.of(entry.getValue())));
+            int finalI = i;
+            builtScripts[i] = Script.of(s -> s.lang(ScriptLanguage.Painless)
+                    .source(ScriptSource.of(scriptSourceBuilder -> scriptSourceBuilder.scriptString(scripts[finalI])))
+                    .params(jsonDataParams));
         }
-        return updateWithQueryAndScript(new Class<?>[]{clazz}, builtScripts, conditions, true);
+        return updateWithQueryAndScript(new Class<?>[] { clazz }, builtScripts, conditions, true);
     }
 
-    @Override
-    public boolean updateWithQueryAndStoredScript(Date dateHint, Class<?> clazz, String[] scripts, Map<String, Object>[] scriptParams, Condition[] conditions) {
-        return updateWithQueryAndStoredScript(new Class<?>[]{clazz}, scripts, scriptParams, conditions, true);
+    @Override public boolean updateWithQueryAndStoredScript(Date dateHint, Class<?> clazz, String[] scripts,
+            Map<String, Object>[] scriptParams, Condition[] conditions) {
+        return updateWithQueryAndStoredScript(new Class<?>[] { clazz }, scripts, scriptParams, conditions, true);
     }
 
-    @Override
-    public boolean updateWithQueryAndStoredScript(Class<?> clazz, String[] scripts, Map<String, Object>[] scriptParams, Condition[] conditions) {
-        return updateWithQueryAndStoredScript(new Class<?>[]{clazz}, scripts, scriptParams, conditions, true);
+    @Override public boolean updateWithQueryAndStoredScript(Class<?> clazz, String[] scripts, Map<String, Object>[] scriptParams,
+            Condition[] conditions) {
+        return updateWithQueryAndStoredScript(new Class<?>[] { clazz }, scripts, scriptParams, conditions, true);
     }
 
-    @Override
-    public boolean updateWithQueryAndStoredScript(Class<?>[] classes, String[] scripts, Map<String, Object>[] scriptParams, Condition[] conditions, boolean waitForComplete) {
+    @Override public boolean updateWithQueryAndStoredScript(Class<?>[] classes, String[] scripts, Map<String, Object>[] scriptParams,
+            Condition[] conditions, boolean waitForComplete) {
         Script[] builtScripts = new Script[scripts.length];
         for (int i = 0; i < scripts.length; i++) {
-            builtScripts[i] = new Script(ScriptType.STORED, null, scripts[i], scriptParams[i]);
+            int finalI = i;
+            Map<String, JsonData> jsonDataParams = scriptParams[i].entrySet().stream()
+                    .collect(Collectors.toMap(Map.Entry::getKey, entry -> JsonData.of(entry.getValue())));
+            builtScripts[i] = Script.of(s -> s.id(scripts[finalI]).params(jsonDataParams));
         }
         return updateWithQueryAndScript(classes, builtScripts, conditions, waitForComplete);
     }
 
-    private boolean updateWithQueryAndScript(final Class<?>[] classes, final Script[] scripts, final Condition[] conditions, boolean waitForComplete) {
-        Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".updateWithQueryAndScript", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
+    private boolean updateWithQueryAndScript(final Class<?>[] classes, final Script[] scripts, final Condition[] conditions,
+            boolean waitForComplete) {
+        Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".updateWithQueryAndScript",
+                this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
             protected Boolean execute(Object... args) throws Exception {
                 String[] itemTypes = Arrays.stream(classes).map(Item::getItemType).toArray(String[]::new);
                 String[] indices = Arrays.stream(itemTypes).map(itemType -> getIndexNameForQuery(itemType)).toArray(String[]::new);
 
                 try {
                     for (int i = 0; i < scripts.length; i++) {
-                        RefreshRequest refreshRequest = new RefreshRequest(indices);
-                        client.indices().refresh(refreshRequest, RequestOptions.DEFAULT);
+                        esClient.indices().refresh(r -> r.index(Arrays.asList(indices)));
 
-                        QueryBuilder queryBuilder = conditionESQueryBuilderDispatcher.buildFilter(conditions[i]);
-                        UpdateByQueryRequest updateByQueryRequest = new UpdateByQueryRequest(indices);
-                        updateByQueryRequest.setConflicts("proceed");
-                        updateByQueryRequest.setMaxRetries(1000);
-                        updateByQueryRequest.setSlices(2);
-                        updateByQueryRequest.setScript(scripts[i]);
-                        updateByQueryRequest.setQuery(wrapWithTenantAndItemsTypeQuery(itemTypes, queryBuilder, getTenantId()));
+                        Query query = conditionESQueryBuilderDispatcher.buildFilter(conditions[i]);
+                        int finalI = i;
 
-                        TaskSubmissionResponse taskResponse = client.submitUpdateByQuery(updateByQueryRequest, RequestOptions.DEFAULT);
-                        if (taskResponse == null) {
-                            LOGGER.error("update with query and script: no response returned for query: {}", queryBuilder);
+                        UpdateByQueryRequest updateByQueryRequest = UpdateByQueryRequest.of(
+                                builder -> builder.index(List.of(indices)).conflicts(Conflicts.Proceed).waitForCompletion(false)
+                                        .slices(Slices.of(s -> s.value(2))).script(scripts[finalI])
+                                        .query(wrapWithTenantAndItemsTypeQuery(itemTypes, query, getTenantId())));
+
+                        UpdateByQueryResponse response = esClient.updateByQuery(updateByQueryRequest);
+
+                        if (response.task() == null) {
+                            LOGGER.error("update with query and script: no response returned for query: {}", query);
                         } else if (waitForComplete) {
-                            waitForTaskComplete(updateByQueryRequest, taskResponse);
+                            if (LOGGER.isDebugEnabled()) {
+                                LOGGER.debug(
+                                        "Waiting task [{}]: [{}] using query: [{}], polling every {}ms with a timeout configured to {}ms",
+                                        response.task(), updateByQueryRequest, updateByQueryRequest.query(), taskWaitingPollingInterval,
+                                        taskWaitingTimeout);
+                            }
+                            waitForTaskComplete(response.task());
                         } else {
-                            LOGGER.debug("ES task started {}", taskResponse.getTask());
+                            LOGGER.debug("ES task started {}", response.task());
                         }
                     }
                     return true;
-                } catch (IndexNotFoundException e) {
-                    throw new Exception("No index found for itemTypes=" + String.join(",", itemTypes), e);
-                } catch (ScriptException e) {
-                    LOGGER.error("Error in the update script : {}\n{}\n{}", e.getScript(), e.getDetailedMessage(), e.getScriptStack());
+                } catch (ElasticsearchException e) {
+                    if (e.status() == 404 && e.getMessage() != null && e.getMessage().contains("index_not_found_exception")) {
+                        throw new Exception("No index found for itemTypes=" + String.join(",", itemTypes), e);
+                    }
+                    //TODO check the message
+                    LOGGER.error("Error in the update script : {}\n{}", e.response().toString(), e.getMessage(), e);
                     throw new Exception("Error in the update script");
                 }
             }
@@ -1297,32 +1246,28 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         }
     }
 
-    private void waitForTaskComplete(AbstractBulkByScrollRequest request, TaskSubmissionResponse response) {
-        if (LOGGER.isDebugEnabled()) {
-            LOGGER.debug("Waiting task [{}]: [{}] using query: [{}], polling every {}ms with a timeout configured to {}ms",
-                    response.getTask(), request.toString(), request.getSearchRequest().source().query(), taskWaitingPollingInterval, taskWaitingTimeout);
-        }
+    private void waitForTaskComplete(String task) {
         long start = System.currentTimeMillis();
-        new InClassLoaderExecute<Void>(metricsService, this.getClass().getName() + ".waitForTask", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
+        new InClassLoaderExecute<Void>(metricsService, this.getClass().getName() + ".waitForTask", this.bundleContext,
+                this.fatalIllegalStateErrors, throwExceptions) {
             protected Void execute(Object... args) throws Exception {
 
-                TaskId taskId = new TaskId(response.getTask());
-                while (true){
-                    Optional<GetTaskResponse> getTaskResponseOptional = client.tasks().get(new GetTaskRequest(taskId.getNodeId(), taskId.getId()), RequestOptions.DEFAULT);
-                    if (getTaskResponseOptional.isPresent()) {
-                        GetTaskResponse getTaskResponse = getTaskResponseOptional.get();
-                        if (getTaskResponse.isCompleted()) {
+                while (true) {
+                    GetTasksResponse tasksResponse = esClient.tasks().get(GetTasksRequest.of(builder -> builder.taskId(task)));
+                    if (tasksResponse != null) {
+                        long taskId = tasksResponse.task().id();
+                        if (tasksResponse.completed()) {
                             if (LOGGER.isDebugEnabled()) {
-                                long millis = getTaskResponse.getTaskInfo().getRunningTimeNanos() / 1_000_000;
+                                long millis = tasksResponse.task().runningTimeInNanos() / 1_000_000;
                                 long seconds = millis / 1000;
-                                LOGGER.debug("Waiting task [{}]: Finished in {} {}", taskId,
-                                        seconds >= 1 ? seconds : millis,
+                                LOGGER.debug("Waiting task [{}]: Finished in {} {}", taskId, seconds >= 1 ? seconds : millis,
                                         seconds >= 1 ? "seconds" : "milliseconds");
                             }
                             break;
                         } else {
                             if ((start + taskWaitingTimeout) < System.currentTimeMillis()) {
-                                LOGGER.error("Waiting task [{}]: Exceeded configured timeout ({}ms), aborting wait process", taskId, taskWaitingTimeout);
+                                LOGGER.error("Waiting task [{}]: Exceeded configured timeout ({}ms), aborting wait process", taskId,
+                                        taskWaitingTimeout);
                                 break;
                             }
 
@@ -1334,7 +1279,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                             }
                         }
                     } else {
-                        LOGGER.error("Waiting task [{}]: No task found", taskId);
+                        LOGGER.error("Waiting task [{}]: No task found", task);
                         break;
                     }
                 }
@@ -1343,32 +1288,33 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         }.catchingExecuteInClassLoader(true);
     }
 
-    @Override
-    public boolean storeScripts(Map<String, String> scripts) {
-        Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".storeScripts", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
+    @Override public boolean storeScripts(Map<String, String> scripts) {
+        Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".storeScripts", this.bundleContext,
+                this.fatalIllegalStateErrors, throwExceptions) {
             protected Boolean execute(Object... args) throws Exception {
                 boolean executedSuccessfully = true;
+
                 for (Map.Entry<String, String> script : scripts.entrySet()) {
-                    PutStoredScriptRequest putStoredScriptRequest = new PutStoredScriptRequest();
-                    XContentBuilder builder = XContentFactory.jsonBuilder();
-                    builder.startObject();
-                    {
-                        builder.startObject("script");
-                        {
-                            builder.field("lang", "painless");
-                            builder.field("source", script.getValue());
+                    try {
+                        // Construire la requête avec le nouveau client
+                        PutScriptRequest putScriptRequest = PutScriptRequest.of(p -> p.id(script.getKey()).script(StoredScript.of(
+                                s -> s.lang("painless").source(ScriptSource.of(builder -> builder.scriptString(script.getValue()))))));
+
+                        // Exécuter la requête
+                        PutScriptResponse response = esClient.putScript(putScriptRequest);
+
+                        // Vérifier le résultat
+                        boolean acknowledged = response.acknowledged();
+                        executedSuccessfully &= acknowledged;
+
+                        if (acknowledged) {
+                            LOGGER.info("Successfully stored painless script: {}", script.getKey());
+                        } else {
+                            LOGGER.error("Failed to store painless script: {}", script.getKey());
                         }
-                        builder.endObject();
-                    }
-                    builder.endObject();
-                    putStoredScriptRequest.content(BytesReference.bytes(builder), XContentType.JSON);
-                    putStoredScriptRequest.id(script.getKey());
-                    AcknowledgedResponse response = client.putScript(putStoredScriptRequest, RequestOptions.DEFAULT);
-                    executedSuccessfully &= response.isAcknowledged();
-                    if (response.isAcknowledged()) {
-                        LOGGER.info("Successfully stored painless script: {}", script.getKey());
-                    } else {
-                        LOGGER.error("Failed to store painless script: {}", script.getKey());
+                    } catch (Exception e) {
+                        LOGGER.error("Exception while storing painless script: {}", script.getKey(), e);
+                        executedSuccessfully = false;
                     }
                 }
                 return executedSuccessfully;
@@ -1377,59 +1323,69 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         return Objects.requireNonNullElse(result, false);
     }
 
-    public boolean updateWithScript(final Item item, final Date dateHint, final Class<?> clazz, final String script, final Map<String, Object> scriptParams) {
+    public boolean updateWithScript(final Item item, final Date dateHint, final Class<?> clazz, final String script,
+            final Map<String, Object> scriptParams) {
         return updateWithScript(item, clazz, script, scriptParams);
     }
 
-    @Override
-    public boolean updateWithScript(final Item item, final Class<?> clazz, final String script, final Map<String, Object> scriptParams) {
-        Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".updateWithScript", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
+    @Override public boolean updateWithScript(final Item item, final Class<?> clazz, final String script,
+            final Map<String, Object> scriptParams) {
+        Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".updateWithScript",
+                this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
             protected Boolean execute(Object... args) throws Exception {
                 try {
                     String itemType = Item.getItemType(clazz);
                     String index = getIndex(itemType);
                     String documentId = getDocumentIDForItemType(item.getItemId(), itemType);
 
-                    Script actualScript = new Script(ScriptType.INLINE, "painless", script, scriptParams);
+                    Map<String, JsonData> jsonDataParams = scriptParams.entrySet().stream()
+                            .collect(Collectors.toMap(Map.Entry::getKey, entry -> JsonData.of(entry.getValue())));
 
-                    UpdateRequest updateRequest = new UpdateRequest(index, documentId);
+                    Script actualScript = Script.of(s -> s.lang(ScriptLanguage.Painless)
+                            .source(ScriptSource.of(scriptSourceBuilder -> scriptSourceBuilder.scriptString(script)))
+                            .params(jsonDataParams));
 
-                    Long seqNo = (Long) item.getSystemMetadata(SEQ_NO);
-                    Long primaryTerm = (Long) item.getSystemMetadata(PRIMARY_TERM);
+                    if (bulkIngester != null) {
+                        UpdateOperation.Builder updateOperation = new UpdateOperation.Builder<>().index(index).id(documentId)
+                                .ifSeqNo((Long) item.getSystemMetadata(SEQ_NO)).ifPrimaryTerm((Long) item.getSystemMetadata(PRIMARY_TERM))
+                                .action(UpdateAction.of(action -> action.script(actualScript)));
 
-                    if (seqNo != null && primaryTerm != null) {
-                        updateRequest.setIfSeqNo(seqNo);
-                        updateRequest.setIfPrimaryTerm(primaryTerm);
-                    }
-                    updateRequest.script(actualScript);
-                    if (bulkProcessor == null) {
-                        UpdateResponse response = client.update(updateRequest, RequestOptions.DEFAULT);
-                        setMetadata(item, response.getId(), response.getVersion(), response.getSeqNo(), response.getPrimaryTerm(), response.getIndex());
+                        BulkOperation operation = BulkOperation.of(op -> op.update(updateOperation.build()));
+                        bulkIngester.add(operation);
+
                     } else {
-                        bulkProcessor.add(updateRequest);
+
+                        UpdateRequest updateRequest = new UpdateRequest.Builder<>().index(index).id(documentId)
+                                .ifSeqNo((Long) item.getSystemMetadata(SEQ_NO)).ifPrimaryTerm((Long) item.getSystemMetadata(PRIMARY_TERM))
+                                .script(actualScript).build();
+
+                        UpdateResponse response = esClient.update(updateRequest, clazz);
+                        setMetadata(item, response.id(), response.version(), response.seqNo(), response.primaryTerm(), response.index());
                     }
 
                     return true;
-                } catch (IndexNotFoundException e) {
-                    throw new Exception("No index found for itemType=" + clazz.getName() + "itemId=" + item.getItemId(), e);
+                } catch (ElasticsearchException e) {
+                    if (e.status() == 404 && e.getMessage() != null && e.getMessage().contains("index_not_found_exception")) {
+                        throw new Exception("No index found for itemType=" + clazz.getName() + "itemId=" + item.getItemId(), e);
+                    }
+                    throw new Exception("Error during update with script", e);
                 }
             }
         }.catchingExecuteInClassLoader(true);
         return Objects.requireNonNullElse(result, false);
     }
 
-    @Override
-    public <T extends Item> boolean remove(final String itemId, final Class<T> clazz) {
+    @Override public <T extends Item> boolean remove(final String itemId, final Class<T> clazz) {
         return remove(itemId, clazz, null);
     }
 
-    @Override
-    public boolean removeCustomItem(final String itemId, final String customItemType) {
+    @Override public boolean removeCustomItem(final String itemId, final String customItemType) {
         return remove(itemId, CustomItem.class, customItemType);
     }
 
     private <T extends Item> boolean remove(final String itemId, final Class<T> clazz, String customItemType) {
-        Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".removeItem", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
+        Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".removeItem", this.bundleContext,
+                this.fatalIllegalStateErrors, throwExceptions) {
             protected Boolean execute(Object... args) throws Exception {
                 try {
                     String itemType = Item.getItemType(clazz);
@@ -1437,12 +1393,12 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         itemType = customItemType;
                     }
                     String documentId = getDocumentIDForItemType(itemId, itemType);
-                    String index = getIndex(itemType);
+                    String index = getIndexNameForQuery(itemType);
 
-                    DeleteRequest deleteRequest = new DeleteRequest(index, documentId);
-                    client.delete(deleteRequest, RequestOptions.DEFAULT);
+                    esClient.delete(DeleteRequest.of(builder -> builder.index(index).id(documentId)));
                     if (MetadataItem.class.isAssignableFrom(clazz)) {
-                        LOGGER.info("Item of type {} with ID {} has been removed", customItemType != null ? customItemType : clazz.getSimpleName(), itemId);
+                        LOGGER.info("Item of type {} with ID {} has been removed",
+                                customItemType != null ? customItemType : clazz.getSimpleName(), itemId);
                     }
                     return true;
                 } catch (Exception e) {
@@ -1453,47 +1409,40 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         return Objects.requireNonNullElse(result, false);
     }
 
-    @Override
     public <T extends Item> boolean removeByQuery(final Condition query, final Class<T> clazz) {
-        String finalTenantId = validateTenantAndGetId(SecurityServiceConfiguration.PERMISSION_REMOVE_BY_QUERY);
-
-        Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".removeByQuery", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
+        Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".removeByQuery", this.bundleContext,
+                this.fatalIllegalStateErrors, throwExceptions) {
             protected Boolean execute(Object... args) throws Exception {
-                QueryBuilder queryBuilder = conditionESQueryBuilderDispatcher.getQueryBuilder(query);
-                return removeByQuery(queryBuilder, clazz);
+                Query esQuery = conditionESQueryBuilderDispatcher.getQueryBuilder(query);
+                return removeByQuery(esQuery, clazz);
             }
         }.catchingExecuteInClassLoader(true);
         return Objects.requireNonNullElse(result, false);
     }
 
-    public <T extends Item> boolean removeByQuery(QueryBuilder queryBuilder, final Class<T> clazz) throws Exception {
+    public <T extends Item> boolean removeByQuery(Query query, final Class<T> clazz) throws Exception {
         try {
             String itemType = Item.getItemType(clazz);
             LOGGER.debug("Remove item of type {} using a query", itemType);
-            final DeleteByQueryRequest deleteByQueryRequest = new DeleteByQueryRequest(getIndexNameForQuery(itemType))
-                    .setQuery(wrapWithTenantAndItemTypeQuery(itemType, queryBuilder, getTenantId()))
-                    // Setting slices to auto will let Elasticsearch choose the number of slices to use.
-                    // This setting will use one slice per shard, up to a certain limit.
-                    // The delete request will be more efficient and faster than no slicing.
-                    .setSlices(AbstractBulkByScrollRequest.AUTO_SLICES)
-                    // Elasticsearch takes a snapshot of the index when you hit delete by query request and uses the _version of the documents to process the request.
-                    // If a document gets updated in the meantime, it will result in a version conflict error and the delete operation will fail.
-                    // So we explicitly set the conflict strategy to proceed in case of version conflict.
-                    .setAbortOnVersionConflict(false)
-                    // Remove by Query is mostly used for purge and cleaning up old data
-                    // It's mostly used in jobs/timed tasks so we don't really care about long request
-                    // So we increase default timeout of 1min to 10min
-                    .setTimeout(TimeValue.timeValueMinutes(removeByQueryTimeoutInMinutes));
+            DeleteByQueryRequest deleteByQueryRequest = DeleteByQueryRequest.of(
+                    builder -> builder.index(getIndexNameForQuery(itemType)).conflicts(Conflicts.Proceed)
+                            .query(wrapWithTenantAndItemTypeQuery(itemType, query, getTenantId()))
+                            .timeout(Time.of(t -> t.time(removeByQueryTimeoutInMinutes + "m"))).waitForCompletion(false));
 
-            dumpRequest(deleteByQueryRequest, itemType, "removeByQuery", getIndexNameForQuery(itemType));
-            TaskSubmissionResponse taskResponse = client.submitDeleteByQuery(deleteByQueryRequest, RequestOptions.DEFAULT);
+            DeleteByQueryResponse deleteByQueryResponse = esClient.deleteByQuery(deleteByQueryRequest);
 
-            if (taskResponse == null) {
-                LOGGER.error("Remove by query: no response returned for query: {}", queryBuilder);
+            String task = deleteByQueryResponse.task();
+            if (task == null) {
+                LOGGER.error("Remove by query: no response returned for query: {}", query);
                 return false;
             }
 
-            waitForTaskComplete(deleteByQueryRequest, taskResponse);
+            if (LOGGER.isDebugEnabled()) {
+                LOGGER.debug("Waiting task [{}]: [{}] using query: [{}], polling every {}ms with a timeout configured to {}ms", task,
+                        deleteByQueryRequest, deleteByQueryRequest.query(), taskWaitingPollingInterval, taskWaitingTimeout);
+            }
+
+            waitForTaskComplete(task);
 
             return true;
         } catch (Exception e) {
@@ -1502,61 +1451,63 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     }
 
     public boolean indexTemplateExists(final String templateName) {
-        Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".indexTemplateExists", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
+        Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".indexTemplateExists",
+                this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
             protected Boolean execute(Object... args) throws IOException {
-                IndexTemplatesExistRequest indexTemplatesExistRequest = new IndexTemplatesExistRequest(templateName);
-                return client.indices().existsTemplate(indexTemplatesExistRequest, RequestOptions.DEFAULT);
+                return esClient.indices().existsIndexTemplate(ExistsIndexTemplateRequest.of(builder -> builder.name(templateName))).value();
             }
         }.catchingExecuteInClassLoader(true);
         return Objects.requireNonNullElse(result, false);
     }
 
     public boolean removeIndexTemplate(final String templateName) {
-        Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".removeIndexTemplate", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
+        Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".removeIndexTemplate",
+                this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
             protected Boolean execute(Object... args) throws IOException {
-                DeleteIndexTemplateRequest deleteIndexTemplateRequest = new DeleteIndexTemplateRequest(templateName);
-                AcknowledgedResponse deleteIndexTemplateResponse = client.indices().deleteTemplate(deleteIndexTemplateRequest, RequestOptions.DEFAULT);
-                return deleteIndexTemplateResponse.isAcknowledged();
+                DeleteIndexTemplateRequest deleteIndexTemplateRequest = DeleteIndexTemplateRequest.of(
+                        builder -> builder.name(templateName));
+                return esClient.indices().deleteIndexTemplate(deleteIndexTemplateRequest).acknowledged();
             }
         }.catchingExecuteInClassLoader(true);
         return Objects.requireNonNullElse(result, false);
     }
 
-    public boolean registerRolloverLifecyclePolicy() {
-        Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".createMonthlyIndexLifecyclePolicy", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
+    public void registerRolloverLifecyclePolicy() {
+        new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".createLifecyclePolicy", this.bundleContext,
+                this.fatalIllegalStateErrors, throwExceptions) {
             protected Boolean execute(Object... args) throws IOException {
-                // Create the lifecycle policy for monthly indices
-                Map<String, Phase> phases = new HashMap<>();
-                Map<String, LifecycleAction> hotActions = new HashMap<>();
-                final Long maxDocs = StringUtils.isEmpty(rolloverMaxDocs) ? null : Long.parseLong(rolloverMaxDocs);
-                hotActions.put(
-                        RolloverAction.NAME,
-                        new RolloverAction(
-                                StringUtils.isEmpty(rolloverMaxSize) ? null : ByteSizeValue.parseBytesSizeValue(rolloverMaxSize, "rollover.maxSize"),
-                                StringUtils.isEmpty(rolloverMaxAge) ? null : TimeValue.parseTimeValue(rolloverMaxAge, null, "rollover.maxAge"),
-                                maxDocs
-                        )
-                );
-                phases.put("hot", new Phase("hot", TimeValue.ZERO, hotActions));
 
-                LifecyclePolicy policy = new LifecyclePolicy(indexPrefix + "-" + ROLLOVER_LIFECYCLE_NAME, phases);
-                PutLifecyclePolicyRequest request = new PutLifecyclePolicyRequest(policy);
-                org.elasticsearch.client.core.AcknowledgedResponse putLifecyclePolicy = client.indexLifecycle().putLifecyclePolicy(request, RequestOptions.DEFAULT);
-                return putLifecyclePolicy.isAcknowledged();
+                RolloverAction.Builder rolloverActionBuilder = new RolloverAction.Builder();
+                if (StringUtils.isNotEmpty(rolloverMaxAge)) {
+                    rolloverActionBuilder.maxAge(new Time.Builder().time(rolloverMaxAge).build());
+                }
+                if (StringUtils.isNotEmpty(rolloverMaxSize)) {
+                    rolloverActionBuilder.maxSize(rolloverMaxSize);
+                }
+                if (StringUtils.isNotEmpty(rolloverMaxDocs)) {
+                    rolloverActionBuilder.maxDocs(Long.parseLong(rolloverMaxDocs));
+                }
+                RolloverAction rolloverAction = rolloverActionBuilder.build();
+
+                Phase hotPhase = new Phase.Builder().actions(new Actions.Builder().rollover(rolloverAction).build())
+                        .minAge(new Time.Builder().time("0ms").build()).build();
+                IlmPolicy ilmPolicy = new IlmPolicy.Builder().phases(new Phases.Builder().hot(hotPhase).build()).build();
+                PutLifecycleRequest request = new PutLifecycleRequest.Builder().policy(ilmPolicy)
+                        .name(indexPrefix + "-" + ROLLOVER_LIFECYCLE_NAME).build();
+                PutLifecycleResponse response = esClient.ilm().putLifecycle(request);
+                return response.acknowledged();
             }
         }.catchingExecuteInClassLoader(true);
-        return Objects.requireNonNullElse(result, false);
     }
 
     public boolean createIndex(final String itemType) {
         LOGGER.debug("Create index {}", itemType);
-        Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".createIndex", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
+        Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".createIndex", this.bundleContext,
+                this.fatalIllegalStateErrors, throwExceptions) {
             protected Boolean execute(Object... args) throws IOException {
                 String index = getIndex(itemType);
-                GetIndexRequest getIndexRequest = new GetIndexRequest(index);
-                boolean indexExists = client.indices().exists(getIndexRequest, RequestOptions.DEFAULT);
-
-                if (!indexExists) {
+                BooleanResponse indexExists = esClient.indices().exists(ExistsRequest.of(builder -> builder.index(index)));
+                if (!indexExists.value()) {
                     if (isItemTypeRollingOver(itemType)) {
                         internalCreateRolloverTemplate(itemType);
                         internalCreateRolloverIndex(index);
@@ -1564,8 +1515,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                         internalCreateIndex(index, mappings.get(itemType));
                     }
                 }
-
-                return !indexExists;
+                return !indexExists.value();
             }
         }.catchingExecuteInClassLoader(true);
         return Objects.requireNonNullElse(result, false);
@@ -1574,13 +1524,13 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     public boolean removeIndex(final String itemType) {
         String index = getIndex(itemType);
 
-        Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".removeIndex", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
+        Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".removeIndex", this.bundleContext,
+                this.fatalIllegalStateErrors, throwExceptions) {
             protected Boolean execute(Object... args) throws IOException {
-                GetIndexRequest getIndexRequest = new GetIndexRequest(index);
-                boolean indexExists = client.indices().exists(getIndexRequest, RequestOptions.DEFAULT);
+                boolean indexExists = esClient.indices().existsIndexTemplate(ExistsIndexTemplateRequest.of(builder -> builder.name(index)))
+                        .value();
                 if (indexExists) {
-                    DeleteIndexRequest deleteIndexRequest = new DeleteIndexRequest(index);
-                    client.indices().delete(deleteIndexRequest, RequestOptions.DEFAULT);
+                    esClient.indices().delete(DeleteIndexRequest.of(builder -> builder.index(index)));
                 }
                 return indexExists;
             }
@@ -1588,77 +1538,207 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         return Objects.requireNonNullElse(result, false);
     }
 
+
     private void internalCreateRolloverTemplate(String itemName) throws IOException {
-        String rolloverAlias = indexPrefix + "-" + itemName;
-        PutIndexTemplateRequest putIndexTemplateRequest = new PutIndexTemplateRequest(rolloverAlias + "-rollover-template")
-                .patterns(Collections.singletonList(getRolloverIndexForQuery(itemName)))
-                .order(1)
-                .settings("{\n" +
-                        "    \"index\" : {\n" +
-                        "        \"number_of_shards\" : " + StringUtils.defaultIfEmpty(rolloverIndexNumberOfShards, monthlyIndexNumberOfShards) + ",\n" +
-                        "        \"number_of_replicas\" : " + StringUtils.defaultIfEmpty(rolloverIndexNumberOfReplicas, monthlyIndexNumberOfReplicas) + ",\n" +
-                        "        \"mapping.total_fields.limit\" : " + StringUtils.defaultIfEmpty(rolloverIndexMappingTotalFieldsLimit, monthlyIndexMappingTotalFieldsLimit) + ",\n" +
-                        "        \"max_docvalue_fields_search\" : " + StringUtils.defaultIfEmpty(rolloverIndexMaxDocValueFieldsSearch, monthlyIndexMaxDocValueFieldsSearch) + ",\n" +
-                        "        \"lifecycle.name\": \"" + (indexPrefix + "-" + ROLLOVER_LIFECYCLE_NAME) + "\",\n" +
-                        "        \"lifecycle.rollover_alias\": \"" + rolloverAlias + "\"" +
-                        "" +
-                        "    },\n" +
-                        "    \"analysis\": {\n" +
-                        "      \"analyzer\": {\n" +
-                        "        \"folding\": {\n" +
-                        "          \"type\":\"custom\",\n" +
-                        "          \"tokenizer\": \"keyword\",\n" +
-                        "          \"filter\":  [ \"lowercase\", \"asciifolding\" ]\n" +
-                        "        }\n" +
-                        "      }\n" +
-                        "    }\n" +
-                        "}\n", XContentType.JSON);
-        if (mappings.get(itemName) == null) {
-            LOGGER.warn("Couldn't find mapping for item {}, won't create monthly index template", itemName);
+        if (!mappings.containsKey(itemName)) {
+            LOGGER.warn("Couldn't find mapping for item {}, won't create rollover index template", itemName);
             return;
         }
-        putIndexTemplateRequest.mapping(mappings.get(itemName), XContentType.JSON);
-        client.indices().putTemplate(putIndexTemplateRequest, RequestOptions.DEFAULT);
+
+        String rolloverAlias = buildRolloverAlias(itemName);
+        String templateName = rolloverAlias + "-rollover-template";
+        IndexSettingsAnalysis analysis = buildAnalysis();
+        IndexSettings indexSettings = buildIndexSettings(rolloverAlias, analysis);
+        IndexTemplateMapping templateMapping = buildTemplateMapping(itemName, indexSettings);
+
+        PutIndexTemplateRequest request = PutIndexTemplateRequest.of(builder -> builder.name(templateName)
+                .indexPatterns(Collections.singletonList(getRolloverIndexForQuery(itemName))).template(templateMapping).priority(1L));
+
+        PutIndexTemplateResponse response = esClient.indices().putIndexTemplate(request);
+        if (!response.acknowledged()) {
+            throw new IOException("Failed to create index template " + templateName + " - not acknowledged");
+        }
+
+        // Verify template exists before proceeding - this ensures template is available for index creation
+        int retries = 10;
+        while (retries > 0) {
+            boolean templateExists = esClient.indices().existsIndexTemplate(
+                    ExistsIndexTemplateRequest.of(builder -> builder.name(templateName))).value();
+            if (templateExists) {
+                LOGGER.debug("Index template {} is now available", templateName);
+                break;
+            }
+            retries--;
+            if (retries > 0) {
+                try {
+                    Thread.sleep(100); // Wait 100ms before retrying
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    throw new IOException("Interrupted while waiting for template " + templateName, e);
+                }
+            }
+        }
+        if (retries == 0) {
+            throw new IOException("Index template " + templateName + " was not available after creation");
+        }
+    }
+
+    private String buildRolloverAlias(String itemName) {
+        return indexPrefix + "-" + itemName;
+    }
+
+    private IndexSettingsAnalysis buildAnalysis() {
+        return IndexSettingsAnalysis.of(an -> an.analyzer("folding", analyserBuilder -> analyserBuilder.custom(
+                CustomAnalyzer.of(customAnalyzer -> customAnalyzer.tokenizer("keyword").filter("lowercase", "asciifolding")))));
+    }
+
+    private IndexSettings buildIndexSettings(String rolloverAlias, IndexSettingsAnalysis analysis) {
+        return IndexSettings.of(builder -> builder.index(
+                indexBuilder -> indexBuilder.numberOfShards(rolloverIndexNumberOfShards).numberOfReplicas(rolloverIndexNumberOfReplicas)
+                        .mapping(MappingLimitSettings.of(limitBuilder -> limitBuilder.totalFields(MappingLimitSettingsTotalFields.of(
+                                totalFieldLimitBuilder -> totalFieldLimitBuilder.limit(rolloverIndexMappingTotalFieldsLimit)))))
+                        .maxDocvalueFieldsSearch(Integer.valueOf(rolloverIndexMaxDocValueFieldsSearch)).lifecycle(
+                                lifecycleBuilder -> lifecycleBuilder.name(indexPrefix + "-" + ROLLOVER_LIFECYCLE_NAME)
+                                        .rolloverAlias(rolloverAlias))).analysis(analysis));
+    }
+
+    private IndexTemplateMapping buildTemplateMapping(String itemName, IndexSettings indexSettings) {
+        return IndexTemplateMapping.of(templateMappingBuilder -> templateMappingBuilder.settings(indexSettings).mappings(
+                mappingsBuilder -> mappingsBuilder.withJson(
+                        new ByteArrayInputStream(mappings.get(itemName).getBytes(StandardCharsets.UTF_8)))));
     }
 
     private void internalCreateRolloverIndex(String indexName) throws IOException {
-        CreateIndexRequest createIndexRequest = new CreateIndexRequest(indexName + "-000001")
-                .alias(new Alias(indexName).writeIndex(true));
-        CreateIndexResponse createIndexResponse = client.indices().create(createIndexRequest, RequestOptions.DEFAULT);
-        LOGGER.info("Index created: [{}], acknowledge: [{}], shards acknowledge: [{}]", createIndexResponse.index(),
-                createIndexResponse.isAcknowledged(), createIndexResponse.isShardsAcknowledged());
+        String fullIndexName = indexName + "-000001";
+        
+        // Retry mechanism to ensure template is actually applied, not just that it exists
+        // In fast-paced environments (8GB heap), cluster state may not be fully synchronized
+        // even though template exists in metadata. We verify by checking index settings after creation.
+        int maxRetries = 3;
+        int retryCount = 0;
+        long delayMs = 200;
+        
+        while (retryCount < maxRetries) {
+            // Wait for cluster state to be ready
+            esClient.cluster().health(builder -> builder.waitForStatus(HealthStatus.Green).timeout(t -> t.time("5s")));
+            
+            // Delay to allow cluster state to synchronize - increase delay on each retry
+            try {
+                Thread.sleep(delayMs * (retryCount + 1));
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new IOException("Interrupted while waiting for template propagation", e);
+            }
+            
+            // Delete index if this is a retry (from previous failed attempt)
+            if (retryCount > 0) {
+                try {
+                    BooleanResponse exists = esClient.indices().exists(ExistsRequest.of(builder -> builder.index(fullIndexName)));
+                    if (exists.value()) {
+                        esClient.indices().delete(DeleteIndexRequest.of(builder -> builder.index(fullIndexName)));
+                        LOGGER.debug("Deleted index {} before retry {}", fullIndexName, retryCount);
+                    }
+                } catch (IOException e) {
+                    LOGGER.warn("Failed to delete index {} before retry: {}", fullIndexName, e.getMessage());
+                }
+            }
+            
+            // Create index
+            CreateIndexResponse createIndexResponse = esClient.indices().create(CreateIndexRequest.of(
+                    builder -> builder.index(fullIndexName)
+                            .aliases(indexName, Alias.of(aliasBuilder -> aliasBuilder.isWriteIndex(true)))));
+            LOGGER.info("Index created: [{}], acknowledge: [{}], shards acknowledge: [{}]", createIndexResponse.index(),
+                    createIndexResponse.acknowledged(), createIndexResponse.shardsAcknowledged());
+            
+            // Verify template was applied by checking for template-specific settings:
+            // 1. Folding analyzer in analysis settings
+            // 2. Dynamic templates in mappings
+            // These are the key features we need from the template
+            GetIndicesSettingsResponse settingsResponse = esClient.indices().getSettings(
+                    GetIndicesSettingsRequest.of(builder -> builder.index(fullIndexName)));
+            GetMappingResponse mappingResponse = esClient.indices().getMapping(
+                    GetMappingRequest.of(builder -> builder.index(fullIndexName)));
+            
+            var indexSettings = settingsResponse.get(fullIndexName);
+            var indexMapping = mappingResponse.get(fullIndexName);
+            
+            if (indexSettings == null || indexSettings.settings() == null || 
+                indexSettings.settings().index() == null) {
+                LOGGER.warn("Could not retrieve index settings for {} to verify template application. Retrying...", fullIndexName);
+                retryCount++;
+                if (retryCount < maxRetries) {
+                    continue;
+                } else {
+                    throw new IOException("Could not retrieve index settings for " + fullIndexName + " after " + maxRetries + " attempts");
+                }
+            }
+            
+            if (indexMapping == null || indexMapping.mappings() == null) {
+                LOGGER.warn("Could not retrieve index mappings for {} to verify template application. Retrying...", fullIndexName);
+                retryCount++;
+                if (retryCount < maxRetries) {
+                    continue;
+                } else {
+                    throw new IOException("Could not retrieve index mappings for " + fullIndexName + " after " + maxRetries + " attempts");
+                }
+            }
+            
+            // Check for folding analyzer in analysis settings
+            boolean hasFoldingAnalyzer = false;
+            var analysis = indexSettings.settings().index().analysis();
+            if (analysis != null && analysis.analyzer() != null) {
+                var analyzer = analysis.analyzer().get("folding");
+                if (analyzer != null) {
+                    hasFoldingAnalyzer = true;
+                }
+            }
+            
+            // Check for dynamic templates in mappings
+            boolean hasDynamicTemplates = false;
+            var dynamicTemplates = indexMapping.mappings().dynamicTemplates();
+            if (dynamicTemplates != null && !dynamicTemplates.isEmpty()) {
+                hasDynamicTemplates = true;
+            }
+            
+            if (hasFoldingAnalyzer && hasDynamicTemplates) {
+                // Template was applied successfully
+                LOGGER.debug("Template successfully applied to index {} - folding analyzer and dynamic templates present", fullIndexName);
+                return;
+            } else {
+                // Template was not applied - will retry
+                LOGGER.warn("Template not applied to index {} - folding analyzer: {}, dynamic templates: {}. Retrying...", 
+                        fullIndexName, hasFoldingAnalyzer, hasDynamicTemplates);
+                retryCount++;
+                if (retryCount < maxRetries) {
+                    continue;
+                } else {
+                    throw new IOException("Template was not applied to index " + fullIndexName + 
+                            " after " + maxRetries + " attempts. Folding analyzer: " + hasFoldingAnalyzer + 
+                            ", Dynamic templates: " + hasDynamicTemplates);
+                }
+            }
+        }
     }
 
     private void internalCreateIndex(String indexName, String mappingSource) throws IOException {
-        CreateIndexRequest createIndexRequest = new CreateIndexRequest(indexName);
-        createIndexRequest.settings("{\n" +
-                "    \"index\" : {\n" +
-                "        \"number_of_shards\" : " + numberOfShards + ",\n" +
-                "        \"number_of_replicas\" : " + numberOfReplicas + ",\n" +
-                "        \"mapping.total_fields.limit\" : " + indexMappingTotalFieldsLimit + ",\n" +
-                "        \"max_docvalue_fields_search\" : " + indexMaxDocValueFieldsSearch + "\n" +
-                "    },\n" +
-                "    \"analysis\": {\n" +
-                "      \"analyzer\": {\n" +
-                "        \"folding\": {\n" +
-                "          \"type\":\"custom\",\n" +
-                "          \"tokenizer\": \"keyword\",\n" +
-                "          \"filter\":  [ \"lowercase\", \"asciifolding\" ]\n" +
-                "        }\n" +
-                "      }\n" +
-                "    }\n" +
-                "}\n", XContentType.JSON);
+        IndexSettings indexSettings = IndexSettings.of(builder -> builder.numberOfShards(numberOfShards).numberOfReplicas(numberOfReplicas)
+                .mapping(MappingLimitSettings.of(limitBuilder -> limitBuilder.totalFields(MappingLimitSettingsTotalFields.of(
+                        totalFieldLimitBuilder -> totalFieldLimitBuilder.limit(indexMappingTotalFieldsLimit)))))
+                .maxDocvalueFieldsSearch(Integer.valueOf(indexMaxDocValueFieldsSearch)).analysis(buildAnalysis()));
 
+        CreateIndexRequest.Builder createIndexRequestBuilder = new CreateIndexRequest.Builder();
+        createIndexRequestBuilder.index(indexName).settings(indexSettings);
         if (mappingSource != null) {
-            createIndexRequest.mapping(mappingSource, XContentType.JSON);
+            createIndexRequestBuilder.mappings(
+                    mappingsBuilder -> mappingsBuilder.withJson(new ByteArrayInputStream(mappingSource.getBytes(StandardCharsets.UTF_8))));
         }
-        CreateIndexResponse createIndexResponse = client.indices().create(createIndexRequest, RequestOptions.DEFAULT);
+        CreateIndexResponse createIndexResponse = esClient.indices().create(createIndexRequestBuilder.build());
+
         LOGGER.info("Index created: [{}], acknowledge: [{}], shards acknowledge: [{}]", createIndexResponse.index(),
-                createIndexResponse.isAcknowledged(), createIndexResponse.isShardsAcknowledged());
+                createIndexResponse.acknowledged(), createIndexResponse.shardsAcknowledged());
     }
 
-    @Override
-    public void createMapping(String type, String source) {
+    @Override public void createMapping(String type, String source) {
         try {
             putMapping(source, getIndex(type));
         } catch (IOException ioe) {
@@ -1757,48 +1837,52 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         }
     }
 
-    private boolean putMapping(final String source, final String indexName) throws IOException {
-        Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".putMapping", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
+    private void putMapping(final String source, final String indexName) throws IOException {
+        new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".putMapping", this.bundleContext,
+                this.fatalIllegalStateErrors, throwExceptions) {
             protected Boolean execute(Object... args) throws Exception {
                 try {
-                    PutMappingRequest putMappingRequest = new PutMappingRequest(indexName);
-                    putMappingRequest.source(source, XContentType.JSON);
-                    AcknowledgedResponse response = client.indices().putMapping(putMappingRequest, RequestOptions.DEFAULT);
-                    return response.isAcknowledged();
+                    PutMappingResponse putMappingResponse = esClient.indices().putMapping(PutMappingRequest.of(
+                            builder -> builder.index(indexName)
+                                    .withJson(new ByteArrayInputStream(source.getBytes(StandardCharsets.UTF_8)))));
+                    return putMappingResponse.acknowledged();
                 } catch (Exception e) {
                     throw new Exception("Cannot create/update mapping", e);
                 }
             }
         }.catchingExecuteInClassLoader(true);
-        return Objects.requireNonNullElse(result, false);
     }
 
-    @Override
-    public Map<String, Map<String, Object>> getPropertiesMapping(final String itemType) {
-        return new InClassLoaderExecute<Map<String, Map<String, Object>>>(metricsService, this.getClass().getName() + ".getPropertiesMapping", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
-            @SuppressWarnings("unchecked")
-            protected Map<String, Map<String, Object>> execute(Object... args) throws Exception {
+    @Override public Map<String, Map<String, Object>> getPropertiesMapping(final String itemType) {
+        return new InClassLoaderExecute<Map<String, Map<String, Object>>>(metricsService,
+                this.getClass().getName() + ".getPropertiesMapping", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
+            @SuppressWarnings("unchecked") protected Map<String, Map<String, Object>> execute(Object... args) throws Exception {
                 // Get all mapping for current itemType
-                GetMappingsRequest getMappingsRequest = new GetMappingsRequest();
-                getMappingsRequest.indices(getIndexNameForQuery(itemType));
-                GetMappingsResponse getMappingsResponse = client.indices().getMapping(getMappingsRequest, RequestOptions.DEFAULT);
-                Map<String, MappingMetaData> mappings = getMappingsResponse.mappings();
+                GetMappingRequest getMappingsRequest = GetMappingRequest.of(r -> r.index(getIndexNameForQuery(itemType)));
+                GetMappingResponse getMappingsResponse = esClient.indices().getMapping(getMappingsRequest);
+                Map<String, IndexMappingRecord> mappings = getMappingsResponse.mappings();
 
                 // create a list of Keys to get the mappings in chronological order
-                // in case there is monthly context then the mapping will be added from the oldest to the most recent one
                 Set<String> orderedKeys = new TreeSet<>(mappings.keySet());
                 Map<String, Map<String, Object>> result = new HashMap<>();
                 try {
                     for (String key : orderedKeys) {
                         if (mappings.containsKey(key)) {
-                            Map<String, Map<String, Object>> properties = (Map<String, Map<String, Object>>) mappings.get(key).getSourceAsMap().get("properties");
-                            for (Map.Entry<String, Map<String, Object>> entry : properties.entrySet()) {
+                            TypeMapping typeMapping = mappings.get(key).mappings();
+                            if (typeMapping == null || typeMapping.properties() == null)
+                                continue;
+                            Map<String, Property> properties = typeMapping.properties();
+                            // Convert Property to Map<String, Object>
+                            Map<String, Map<String, Object>> propertiesMap = new HashMap<>();
+                            for (Map.Entry<String, Property> entry : properties.entrySet()) {
+                                propertiesMap.put(entry.getKey(), propertyToMap(entry.getValue()));
+                            }
+
+                            for (Map.Entry<String, Map<String, Object>> entry : propertiesMap.entrySet()) {
                                 if (result.containsKey(entry.getKey())) {
                                     Map<String, Object> subResult = result.get(entry.getKey());
-
                                     for (Map.Entry<String, Object> subentry : entry.getValue().entrySet()) {
-                                        if (subResult.containsKey(subentry.getKey())
-                                                && subResult.get(subentry.getKey()) instanceof Map
+                                        if (subResult.containsKey(subentry.getKey()) && subResult.get(subentry.getKey()) instanceof Map
                                                 && subentry.getValue() instanceof Map) {
                                             mergePropertiesMapping((Map) subResult.get(subentry.getKey()), (Map) subentry.getValue());
                                         } else {
@@ -1819,13 +1903,33 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         }.catchingExecuteInClassLoader(true);
     }
 
+    /**
+     * Converts a Property into a generic Map<String, Object>
+     * to maintain compatibility with the old code using getSourceAsMap().
+     */
+    @SuppressWarnings("unchecked") private Map<String, Object> propertyToMap(Property property) {
+        try {
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            JsonpMapper mapper = esClient._transport().jsonpMapper();
+            JsonGenerator generator = mapper.jsonProvider().createGenerator(baos);
+            mapper.serialize(property, generator);
+            generator.close();
+
+            String json = baos.toString(StandardCharsets.UTF_8);
+            ObjectMapper jackson = new ObjectMapper();
+            return jackson.readValue(json, new TypeReference<>() {
+            });
+        } catch (Exception e) {
+            return new HashMap<>();
+        }
+    }
+
     private void mergePropertiesMapping(Map<String, Object> result, Map<String, Object> entry) {
         if (entry == null || entry.isEmpty()) {
             return;
         }
         for (Map.Entry<String, Object> subentry : entry.entrySet()) {
-            if (result.containsKey(subentry.getKey())
-                    && result.get(subentry.getKey()) instanceof Map
+            if (result.containsKey(subentry.getKey()) && result.get(subentry.getKey()) instanceof Map
                     && subentry.getValue() instanceof Map) {
                 mergePropertiesMapping((Map) result.get(subentry.getKey()), (Map) subentry.getValue());
             } else {
@@ -1865,70 +1969,18 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         if (propertyMapping == null) {
             return null;
         }
-        if ("text".equals(propertyMapping.get("type"))
-                && propertyMapping.containsKey("fields")
-                && ((Map) propertyMapping.get("fields")).containsKey("keyword")) {
+        if ("text".equals(propertyMapping.get("type")) && propertyMapping.containsKey("fields") && ((Map) propertyMapping.get(
+                "fields")).containsKey("keyword")) {
             name += ".keyword";
         }
         return name;
     }
 
-    public boolean saveQuery(final String queryName, final String query) {
-        Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".saveQuery", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
-            protected Boolean execute(Object... args) throws Exception {
-                //Index the query = register it in the percolator
-                try {
-                    LOGGER.info("Saving query : {}", queryName);
-                    String index = getIndex(".percolator");
-                    IndexRequest indexRequest = new IndexRequest(index);
-                    indexRequest.id(queryName);
-                    indexRequest.source(query, XContentType.JSON);
-                    indexRequest.setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
-                    client.index(indexRequest, RequestOptions.DEFAULT);
-                    return true;
-                } catch (Exception e) {
-                    throw new Exception("Cannot save query", e);
-                }
-            }
-        }.catchingExecuteInClassLoader(true);
-        return Objects.requireNonNullElse(result, false);
-    }
-
-    @Override
-    public boolean saveQuery(String queryName, Condition query) {
-        if (query == null) {
-            return false;
-        }
-        saveQuery(queryName, conditionESQueryBuilderDispatcher.getQuery(query));
-        return true;
-    }
-
-    @Override
-    public boolean removeQuery(final String queryName) {
-        Boolean result = new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".removeQuery", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
-            protected Boolean execute(Object... args) throws Exception {
-                //Index the query = register it in the percolator
-                try {
-                    String index = getIndex(".percolator");
-                    DeleteRequest deleteRequest = new DeleteRequest(index);
-                    deleteRequest.setRefreshPolicy(WriteRequest.RefreshPolicy.IMMEDIATE);
-                    client.delete(deleteRequest, RequestOptions.DEFAULT);
-                    return true;
-                } catch (Exception e) {
-                    throw new Exception("Cannot delete query", e);
-                }
-            }
-        }.catchingExecuteInClassLoader(true);
-        return Objects.requireNonNullElse(result, false);
-    }
-
-    @Override
-    public boolean isValidCondition(Condition condition, Item item) {
+    @Override public boolean isValidCondition(Condition condition, Item item) {
         try {
             conditionEvaluatorDispatcher.eval(condition, item);
-            QueryBuilders.boolQuery()
-                    .must(QueryBuilders.idsQuery().addIds(item.getItemId()))
-                    .must(conditionESQueryBuilderDispatcher.buildFilter(condition));
+            Query.of(q -> q.bool(builder -> builder.must(mustBuilder -> mustBuilder.ids(IdsQuery.of(ids -> ids.values(item.getItemId()))))
+                    .must(conditionESQueryBuilderDispatcher.buildFilter(condition))));
         } catch (Exception e) {
             LOGGER.error("Failed to validate condition. See debug log level for more information");
             LOGGER.debug("Failed to validate condition, condition={}", condition, e);
@@ -1937,8 +1989,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         return true;
     }
 
-    @Override
-    public boolean testMatch(Condition query, Item item) {
+    @Override public boolean testMatch(Condition query, Item item) {
         long startTime = System.currentTimeMillis();
         try {
             return conditionEvaluatorDispatcher.eval(query, item);
@@ -1955,13 +2006,10 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             String itemType = Item.getItemType(clazz);
             String documentId = getDocumentIDForItemType(item.getItemId(), itemType);
 
-            QueryBuilder builder = QueryBuilders.boolQuery()
-                    .must(QueryBuilders.idsQuery().addIds(documentId))
-                    .must(conditionESQueryBuilderDispatcher.buildFilter(query));
-            return queryCount(builder, itemType) > 0;
-        } catch (UnsupportedOperationException uoe) {
-            LOGGER.error("Error building query for query {}, returning false", query, uoe);
-            return false;
+            Query esQuery = Query.of(q -> q.bool(
+                    builder -> builder.must(mustBuilder -> mustBuilder.ids(IdsQuery.of(ids -> ids.values(documentId))))
+                            .must(conditionESQueryBuilderDispatcher.buildFilter(query))));
+            return queryCount(esQuery, itemType) > 0;
         } finally {
             if (metricsService != null && metricsService.isActivated()) {
                 metricsService.updateTimer(this.getClass().getName() + ".testMatchInElasticSearch", startTime);
@@ -1969,80 +2017,78 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         }
     }
 
-
-    @Override
-    public <T extends Item> List<T> query(final Condition query, String sortBy, final Class<T> clazz) {
+    @Override public <T extends Item> List<T> query(final Condition query, String sortBy, final Class<T> clazz) {
         return query(query, sortBy, clazz, 0, -1).getList();
     }
 
-    @Override
-    public <T extends Item> PartialList<T> query(final Condition query, String sortBy, final Class<T> clazz, final int offset, final int size) {
-        String finalTenantId = validateTenantAndGetId(SecurityServiceConfiguration.PERMISSION_QUERY);
-
-        QueryBuilder queryBuilder = conditionESQueryBuilderDispatcher.buildFilter(query);
-        return query(queryBuilder, sortBy, clazz, offset, size, null, null);
+    @Override public <T extends Item> PartialList<T> query(final Condition query, String sortBy, final Class<T> clazz, final int offset,
+            final int size) {
+        return query(conditionESQueryBuilderDispatcher.getQueryBuilder(query), sortBy, clazz, offset, size, null, null);
     }
 
-    @Override
-    public <T extends Item> PartialList<T> query(final Condition query, String sortBy, final Class<T> clazz, final int offset, final int size, final String scrollTimeValidity) {
+    @Override public <T extends Item> PartialList<T> query(final Condition query, String sortBy, final Class<T> clazz, final int offset,
+            final int size, final String scrollTimeValidity) {
         return query(conditionESQueryBuilderDispatcher.getQueryBuilder(query), sortBy, clazz, offset, size, null, scrollTimeValidity);
     }
 
-    @Override
-    public PartialList<CustomItem> queryCustomItem(final Condition query, String sortBy, final String customItemType, final int offset, final int size, final String scrollTimeValidity) {
-        String finalTenantId = validateTenantAndGetId(SecurityServiceConfiguration.PERMISSION_QUERY);
-
-        QueryBuilder queryBuilder = conditionESQueryBuilderDispatcher.getQueryBuilder(query);
-        return query(queryBuilder, sortBy, customItemType, offset, size, null, scrollTimeValidity);
+    @Override public PartialList<CustomItem> queryCustomItem(final Condition query, String sortBy, final String customItemType,
+            final int offset, final int size, final String scrollTimeValidity) {
+        return query(conditionESQueryBuilderDispatcher.getQueryBuilder(query), sortBy, customItemType, offset, size, null,
+                scrollTimeValidity);
     }
 
-    @Override
-    public <T extends Item> PartialList<T> queryFullText(final String fulltext, final Condition query, String sortBy, final Class<T> clazz, final int offset, final int size) {
-        return query(QueryBuilders.boolQuery().must(QueryBuilders.queryStringQuery(fulltext)).must(conditionESQueryBuilderDispatcher.getQueryBuilder(query)), sortBy, clazz, offset, size, null, null);
-    }
-
-    @Override
-    public <T extends Item> List<T> query(final String fieldName, final String fieldValue, String sortBy, final Class<T> clazz) {
-        return query(fieldName, fieldValue, sortBy, clazz, 0, -1).getList();
-    }
-
-    @Override
-    public <T extends Item> List<T> query(final String fieldName, final String[] fieldValues, String sortBy, final Class<T> clazz) {
-        return query(QueryBuilders.termsQuery(fieldName, ConditionContextHelper.foldToASCII(fieldValues)), sortBy, clazz, 0, -1, getRouting(fieldName, fieldValues, clazz), null).getList();
-    }
-
-    @Override
-    public <T extends Item> PartialList<T> query(String fieldName, String fieldValue, String sortBy, Class<T> clazz, int offset, int size) {
-        return query(termQuery(fieldName, ConditionContextHelper.foldToASCII(fieldValue)), sortBy, clazz, offset, size, getRouting(fieldName, new String[]{fieldValue}, clazz), null);
-    }
-
-    @Override
-    public <T extends Item> PartialList<T> queryFullText(String fieldName, String fieldValue, String fulltext, String sortBy, Class<T> clazz, int offset, int size) {
-        return query(QueryBuilders.boolQuery().must(QueryBuilders.queryStringQuery(fulltext)).must(termQuery(fieldName, fieldValue)), sortBy, clazz, offset, size, getRouting(fieldName, new String[]{fieldValue}, clazz), null);
-    }
-
-    @Override
-    public <T extends Item> PartialList<T> queryFullText(String fulltext, String sortBy, Class<T> clazz, int offset, int size) {
-        return query(QueryBuilders.queryStringQuery(fulltext), sortBy, clazz, offset, size, null, null);
+    @Override public <T extends Item> PartialList<T> queryFullText(final String fulltext, final Condition query, String sortBy,
+            final Class<T> clazz, final int offset, final int size) {
+        return query(Query.of(builder -> builder.bool(
+                boolBuilder -> boolBuilder.must(mustBuilder -> mustBuilder.queryString(qsBuilder -> qsBuilder.query(fulltext)))
+                        .filter(conditionESQueryBuilderDispatcher.getQueryBuilder(query)))), sortBy, clazz, offset, size, null, null);
     }
 
     @Override
     public <T extends Item> PartialList<T> rangeQuery(String fieldName, String from, String to, String sortBy, Class<T> clazz, int offset, int size) {
-        RangeQueryBuilder builder = QueryBuilders.rangeQuery(fieldName);
-        builder.from(from);
-        builder.to(to);
-        return query(builder, sortBy, clazz, offset, size, null, null);
+        return query(Query.of(q->q.range(r->r.untyped(v -> v.field(fieldName).gte(JsonData.of(from)).lt(JsonData.of(to))))), sortBy, clazz, offset, size, null, null);
     }
 
-    @Override
-    public long queryCount(Condition query, String itemType) {
+    @Override public <T extends Item> List<T> query(final String fieldName, final String fieldValue, String sortBy, final Class<T> clazz) {
+        return query(fieldName, fieldValue, sortBy, clazz, 0, -1).getList();
+    }
+
+    @Override public <T extends Item> List<T> query(final String fieldName, final String[] fieldValues, String sortBy,
+            final Class<T> clazz) {
+        Query termQuery = Query.of(builder -> builder.terms(t -> t.field(fieldName).terms(TermsQueryField.of(
+                termsBuilder -> termsBuilder.value(
+                        Arrays.stream(fieldValues).map(fieldValue -> FieldValue.of(ConditionContextHelper.foldToASCII(fieldValue))).collect(Collectors.toUnmodifiableList()))))));
+        return query(termQuery, sortBy, clazz, 0, -1, getRouting(fieldName, fieldValues, clazz), null).getList();
+    }
+
+    @Override public <T extends Item> PartialList<T> query(String fieldName, String fieldValue, String sortBy, Class<T> clazz, int offset,
+            int size) {
+
+        Query termQuery = Query.of(builder -> builder.terms(t -> t.field(fieldName).terms(TermsQueryField.of(
+                termsBuilder -> termsBuilder.value(List.of(FieldValue.of(ConditionContextHelper.foldToASCII(fieldValue))))))));
+        return query(termQuery, sortBy, clazz, offset, size, getRouting(fieldName, new String[] { fieldValue }, clazz), null);
+    }
+
+    @Override public <T extends Item> PartialList<T> queryFullText(String fieldName, String fieldValue, String fulltext, String sortBy,
+            Class<T> clazz, int offset, int size) {
+        Query query = Query.of(q -> q.bool(b -> b.must(Query.of(qs -> qs.queryString(qsq -> qsq.query(fulltext))))
+                .must(Query.of(t -> t.term(term -> term.field(fieldName).value(fieldValue))))));
+        return query(query, sortBy, clazz, offset, size, getRouting(fieldName, new String[] { fieldValue }, clazz), null);
+    }
+
+    @Override public <T extends Item> PartialList<T> queryFullText(String fulltext, String sortBy, Class<T> clazz, int offset, int size) {
+        return query(Query.of(q -> q.queryString(qs -> qs.query(fulltext))), sortBy, clazz, offset, size, null, null);
+    }
+
+    @Override public long queryCount(Condition query, String itemType) {
         try {
             return conditionESQueryBuilderDispatcher.count(query);
         } catch (UnsupportedOperationException e) {
             try {
-                QueryBuilder filter = conditionESQueryBuilderDispatcher.buildFilter(query);
-                if (filter instanceof IdsQueryBuilder) {
-                    return ((IdsQueryBuilder) filter).ids().size();
+                Query filter = conditionESQueryBuilderDispatcher.buildFilter(query);
+
+                if (filter.isIds()) {
+                    return filter.ids().values().size();
                 }
                 return queryCount(filter, itemType);
             } catch (UnsupportedOperationException e1) {
@@ -2051,137 +2097,121 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         }
     }
 
-    private long queryCount(final QueryBuilder filter, final String itemType) {
-        return new InClassLoaderExecute<Long>(metricsService, this.getClass().getName() + ".queryCount", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
+    private long queryCount(final Query query, final String itemType) {
+        return new InClassLoaderExecute<Long>(metricsService, this.getClass().getName() + ".queryCount", this.bundleContext,
+                this.fatalIllegalStateErrors, throwExceptions) {
 
-            @Override
-            protected Long execute(Object... args) throws IOException {
-
-                CountRequest countRequest = new CountRequest(getIndexNameForQuery(itemType));
-                SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
-                searchSourceBuilder.query(wrapWithTenantAndItemTypeQuery(itemType, filter, getTenantId()));
-                countRequest.source(searchSourceBuilder);
-                CountResponse response = client.count(countRequest, RequestOptions.DEFAULT);
-                return response.getCount();
+            @Override protected Long execute(Object... args) throws IOException {
+                CountRequest countRequest = CountRequest.of(
+                        builder -> builder.index(getIndexNameForQuery(itemType)).query(wrapWithTenantAndItemTypeQuery(itemType, query, getTenantId())));
+                return esClient.count(countRequest).count();
             }
         }.catchingExecuteInClassLoader(true);
     }
 
-    private <T extends Item> PartialList<T> query(final QueryBuilder query, final String sortBy, final Class<T> clazz, final int offset, final int size, final String[] routing, final String scrollTimeValidity) {
+    private <T extends Item> PartialList<T> query(final Query query, final String sortBy, final Class<T> clazz, final int offset,
+            final int size, final String[] routing, final String scrollTimeValidity) {
         return query(query, sortBy, clazz, null, offset, size, routing, scrollTimeValidity);
     }
 
-    private PartialList<CustomItem> query(final QueryBuilder query, final String sortBy, final String customItemType, final int offset, final int size, final String[] routing, final String scrollTimeValidity) {
+    private PartialList<CustomItem> query(final Query query, final String sortBy, final String customItemType, final int offset,
+            final int size, final String[] routing, final String scrollTimeValidity) {
         return query(query, sortBy, CustomItem.class, customItemType, offset, size, routing, scrollTimeValidity);
     }
 
-    private <T extends Item> PartialList<T> query(final QueryBuilder query, final String sortBy, final Class<T> clazz, final String customItemType, final int offset, final int size, final String[] routing, final String scrollTimeValidity) {
-        return new InClassLoaderExecute<PartialList<T>>(metricsService, this.getClass().getName() + ".query", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
+    private <T extends Item> PartialList<T> query(final Query query, final String sortBy, final Class<T> clazz, final String customItemType,
+            final int offset, final int size, final String[] routing, final String scrollTimeValidity) {
+        return new InClassLoaderExecute<PartialList<T>>(metricsService, this.getClass().getName() + ".query", this.bundleContext,
+                this.fatalIllegalStateErrors, throwExceptions) {
 
-            @Override
-            protected PartialList<T> execute(Object... args) throws Exception {
-                List<T> results = new ArrayList<T>();
+            @Override protected PartialList<T> execute(Object... args) throws Exception {
+                List<T> results = new ArrayList<>();
                 String scrollIdentifier = null;
                 long totalHits = 0;
                 PartialList.Relation totalHitsRelation = PartialList.Relation.EQUAL;
                 try {
-                    String itemType = Item.getItemType(clazz);
-                    if (customItemType != null) {
-                        itemType = customItemType;
-                    }
-                    TimeValue keepAlive = TimeValue.timeValueHours(1);
-                    SearchRequest searchRequest = new SearchRequest(getIndexNameForQuery(itemType));
-                    SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder()
-                            .fetchSource(true)
-                            .seqNoAndPrimaryTerm(true)
-                            .query(wrapWithTenantAndItemsTypeQuery(new String[]{itemType}, query, getTenantId()))
-                            .size(size < 0 ? defaultQueryLimit : size)
-                            .from(offset);
+                    String itemType = customItemType != null ? customItemType : Item.getItemType(clazz);
+                    int limit = size < 0 ? defaultQueryLimit : size;
+
+                    SearchRequest.Builder searchRequest = new SearchRequest.Builder();
+                    searchRequest.index(getIndexNameForQuery(itemType)).from(offset).size(limit)
+                            .query(wrapWithTenantAndItemTypeQuery(itemType, query, getTenantId())).seqNoPrimaryTerm(true).source(src -> src.fetch(true));
+
+                    Time keepAlive = Time.of(t -> t.time("1h"));
+
                     if (scrollTimeValidity != null) {
-                        keepAlive = TimeValue.parseTimeValue(scrollTimeValidity, TimeValue.timeValueHours(1), "scrollTimeValidity");
+                        keepAlive = Time.of(t -> t.time(scrollTimeValidity.isBlank() ? "1h" : scrollTimeValidity));
                         searchRequest.scroll(keepAlive);
                     }
 
                     if (size == Integer.MIN_VALUE) {
-                        searchSourceBuilder.size(defaultQueryLimit);
+                        searchRequest.size(defaultQueryLimit);
                     } else if (size != -1) {
-                        searchSourceBuilder.size(size);
+                        searchRequest.size(size);
                     } else {
                         // size == -1, use scroll query to retrieve all the results
                         searchRequest.scroll(keepAlive);
                     }
                     if (routing != null) {
-                        searchRequest.routing(routing);
+                        searchRequest.routing(String.join(",", routing));
                     }
                     if (sortBy != null) {
                         String[] sortByArray = sortBy.split(",");
                         for (String sortByElement : sortByArray) {
                             if (sortByElement.startsWith("geo:")) {
                                 String[] elements = sortByElement.split(":");
-                                GeoDistanceSortBuilder distanceSortBuilder = SortBuilders.geoDistanceSort(elements[1], Double.parseDouble(elements[2]), Double.parseDouble(elements[3])).unit(DistanceUnit.KILOMETERS);
-                                if (elements.length > 4 && elements[4].equals("desc")) {
-                                    searchSourceBuilder.sort(distanceSortBuilder.order(SortOrder.DESC));
-                                } else {
-                                    searchSourceBuilder.sort(distanceSortBuilder.order(SortOrder.ASC));
-                                }
+                                GeoLocation location = GeoLocation.of(g -> g.latlon(
+                                        latlon -> latlon.lat(Double.parseDouble(elements[2])).lon(Double.parseDouble(elements[3]))));
+
+                                SortOrder order = (elements.length > 4 && "desc".equals(elements[4])) ? SortOrder.Desc : SortOrder.Asc;
+
+                                GeoDistanceSort geoSort = GeoDistanceSort.of(g -> g.field(elements[1]).location(location)
+                                        .unit(co.elastic.clients.elasticsearch._types.DistanceUnit.Kilometers).order(order));
+                                searchRequest.sort(s -> s.geoDistance(geoSort));
                             } else {
                                 String name = getPropertyNameWithData(StringUtils.substringBeforeLast(sortByElement, ":"), itemType);
                                 if (name != null) {
-                                    if (sortByElement.endsWith(":desc")) {
-                                        searchSourceBuilder.sort(name, SortOrder.DESC);
-                                    } else {
-                                        searchSourceBuilder.sort(name, SortOrder.ASC);
-                                    }
-                                } else {
-                                    // in the case of no data existing for the property, we will not add the sorting to the request.
-                                }
 
+                                    SortOrder sortOrder = sortByElement.endsWith(":desc") ? SortOrder.Desc : SortOrder.Asc;
+                                    searchRequest.sort(s -> s.field(f -> f.field(name).order(sortOrder)));
+                                }
                             }
                         }
                     }
-                    searchSourceBuilder.version(true);
-                    searchRequest.source(searchSourceBuilder);
-                    SearchResponse response = client.search(searchRequest, RequestOptions.DEFAULT);
-
+                    searchRequest.version(true);
+                    SearchResponse<T> response = esClient.search(searchRequest.build(), clazz);
                     if (size == -1) {
+                        List<Hit<T>> hits = response.hits().hits();
+                        String scrollId = response.scrollId();
                         // Scroll until no more hits are returned
-                        while (true) {
-
-                            for (SearchHit searchHit : response.getHits().getHits()) {
-                                // add hit to results
-                                String sourceAsString = searchHit.getSourceAsString();
-                                final T value = ESCustomObjectMapper.getObjectMapper().readValue(sourceAsString, clazz);
-                                setMetadata(value, searchHit.getId(), searchHit.getVersion(), searchHit.getSeqNo(), searchHit.getPrimaryTerm(), searchHit.getIndex());
+                        while (!hits.isEmpty()) {
+                            for (Hit<T> hit : hits) {
+                                T value = hit.source();
+                                setMetadata(value, hit.id(), hit.version(), hit.seqNo(), hit.primaryTerm(), hit.index());
                                 results.add(handleItemReverseTransformation(value));
                             }
 
-                            SearchScrollRequest searchScrollRequest = new SearchScrollRequest(response.getScrollId());
-                            searchScrollRequest.scroll(keepAlive);
-                            response = client.scroll(searchScrollRequest, RequestOptions.DEFAULT);
+                            ScrollRequest scrollRequest = new ScrollRequest.Builder().scrollId(scrollId).scroll(keepAlive).build();
 
-                            // If we have no more hits, exit
-                            if (response.getHits().getHits().length == 0) {
-                                break;
-                            }
+                            ScrollResponse<T> scrollResponse = esClient.scroll(scrollRequest, clazz);
+                            hits = scrollResponse.hits().hits();
+                            scrollId = scrollResponse.scrollId();
                         }
-                        ClearScrollRequest clearScrollRequest = new ClearScrollRequest();
-                        clearScrollRequest.addScrollId(response.getScrollId());
-                        client.clearScroll(clearScrollRequest, RequestOptions.DEFAULT);
+
+                        esClient.clearScroll(new ClearScrollRequest.Builder().scrollId(response.scrollId()).build());
                     } else {
-                        SearchHits searchHits = response.getHits();
-                        scrollIdentifier = response.getScrollId();
-                        totalHits = searchHits.getTotalHits().value;
-                        totalHitsRelation = getTotalHitsRelation(searchHits.getTotalHits());
+                        totalHits = response.hits().total() != null ? response.hits().total().value() : 0;
+                        totalHitsRelation = getTotalHitsRelation(response.hits().total());
+                        scrollIdentifier = response.scrollId();
                         if (scrollIdentifier != null && totalHits == 0) {
-                            // we have no results, we must clear the scroll request immediately.
-                            ClearScrollRequest clearScrollRequest = new ClearScrollRequest();
-                            clearScrollRequest.addScrollId(response.getScrollId());
-                            client.clearScroll(clearScrollRequest, RequestOptions.DEFAULT);
+                            ClearScrollRequest clearScrollRequest = new ClearScrollRequest.Builder().scrollId(scrollIdentifier).build();
+                            esClient.clearScroll(clearScrollRequest);
                         }
-                        for (SearchHit searchHit : searchHits) {
-                            String sourceAsString = searchHit.getSourceAsString();
-                            final T value = ESCustomObjectMapper.getObjectMapper().readValue(sourceAsString, clazz);
-                            setMetadata(value, searchHit.getId(), searchHit.getVersion(), searchHit.getSeqNo(), searchHit.getPrimaryTerm(), searchHit.getIndex());
+
+                        for (Hit<T> hit : response.hits().hits()) {
+                            T value = hit.source();
+                            setMetadata(value, hit.id(), hit.version() != null ? hit.version() : 0L, hit.seqNo() != null ? hit.seqNo() : 0L,
+                                    hit.primaryTerm() != null ? hit.primaryTerm() : 0L, hit.index());
                             results.add(handleItemReverseTransformation(value));
                         }
                     }
@@ -2189,7 +2219,7 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                     throw new Exception("Error loading itemType=" + clazz.getName() + " query=" + query + " sortBy=" + sortBy, t);
                 }
 
-                PartialList<T> result = new PartialList<T>(results, offset, size, totalHits, totalHitsRelation);
+                PartialList<T> result = new PartialList<>(results, offset, size, totalHits, totalHitsRelation);
                 if (scrollIdentifier != null && totalHits != 0) {
                     result.setScrollIdentifier(scrollIdentifier);
                     result.setScrollTimeValidity(scrollTimeValidity);
@@ -2200,96 +2230,108 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     }
 
     private PartialList.Relation getTotalHitsRelation(TotalHits totalHits) {
-        return TotalHits.Relation.GREATER_THAN_OR_EQUAL_TO.equals(totalHits.relation) ? PartialList.Relation.GREATER_THAN_OR_EQUAL_TO : PartialList.Relation.EQUAL;
+        return TotalHitsRelation.Gte.equals(totalHits.relation()) ?
+                PartialList.Relation.GREATER_THAN_OR_EQUAL_TO :
+                PartialList.Relation.EQUAL;
     }
 
-    @Override
-    public <T extends Item> PartialList<T> continueScrollQuery(final Class<T> clazz, final String scrollIdentifier, final String scrollTimeValidity) {
+    @Override public <T extends Item> PartialList<T> continueScrollQuery(final Class<T> clazz, final String scrollIdentifier,
+            final String scrollTimeValidity) {
         String finalTenantId = validateTenantAndGetId(SecurityServiceConfiguration.PERMISSION_SCROLL_QUERY);
+        return new InClassLoaderExecute<PartialList<T>>(metricsService, this.getClass().getName() + ".continueScrollQuery",
+                this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
 
-        return new InClassLoaderExecute<PartialList<T>>(metricsService, this.getClass().getName() + ".continueScrollQuery", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
-            @Override
-            protected PartialList<T> execute(Object... args) throws Exception {
-                List<T> results = new ArrayList<T>();
+            @Override protected PartialList<T> execute(Object... args) throws Exception {
+                List<T> results = new ArrayList<>();
                 long totalHits = 0;
                 try {
-                    TimeValue keepAlive = TimeValue.parseTimeValue(scrollTimeValidity, TimeValue.timeValueMinutes(10), "scrollTimeValidity");
+                    Time keepAlive = Time.of(t -> t.time(scrollTimeValidity.isBlank() ? "10m" : scrollTimeValidity));
 
-                    SearchScrollRequest searchScrollRequest = new SearchScrollRequest(scrollIdentifier);
-                    searchScrollRequest.scroll(keepAlive);
-                    SearchResponse response = client.scroll(searchScrollRequest, RequestOptions.DEFAULT);
+                    ScrollRequest scrollRequest = new ScrollRequest.Builder().scrollId(scrollIdentifier).scroll(keepAlive).build();
 
-                    if (response.getHits().getHits().length == 0) {
-                        ClearScrollRequest clearScrollRequest = new ClearScrollRequest();
-                        clearScrollRequest.addScrollId(response.getScrollId());
-                        client.clearScroll(clearScrollRequest, RequestOptions.DEFAULT);
+                    ScrollResponse<T> scrollResponse = esClient.scroll(scrollRequest, clazz);
+
+                    if (scrollResponse.hits().hits().isEmpty()) {
+                        ClearScrollRequest clearScrollRequest = new ClearScrollRequest.Builder().scrollId(scrollResponse.scrollId())
+                                .build();
+                        esClient.clearScroll(clearScrollRequest);
                     } else {
-                        for (SearchHit searchHit : response.getHits().getHits()) {
+                        for (Hit<T> hit : scrollResponse.hits().hits()) {
+                            T value = hit.source();
                             // add hit to results
-                            String sourceTenantId = (String) searchHit.getSourceAsMap().get("tenantId");
+                            String sourceTenantId = (String) value.getTenantId();
                             if (finalTenantId.equals(sourceTenantId)) {
-                                String sourceAsString = searchHit.getSourceAsString();
-                                final T value = ESCustomObjectMapper.getObjectMapper().readValue(sourceAsString, clazz);
-                                setMetadata(value, searchHit.getId(), searchHit.getVersion(), searchHit.getSeqNo(), searchHit.getPrimaryTerm(), searchHit.getIndex());
+                                setMetadata(value, hit.id(), hit.version() != null ? hit.version() : 0L, hit.seqNo() != null ? hit.seqNo() : 0L,
+                                        hit.primaryTerm() != null ? hit.primaryTerm() : 0L, hit.index());
                                 results.add(handleItemReverseTransformation(value));
                             }
                         }
                     }
-                    PartialList<T> result = new PartialList<T>(results, 0, response.getHits().getHits().length, response.getHits().getTotalHits().value, getTotalHitsRelation(response.getHits().getTotalHits()));
+                    if (scrollResponse.hits().total() != null) {
+                        totalHits = scrollResponse.hits().total().value();
+                    }
+                    PartialList<T> result = new PartialList<T>(results, 0, scrollResponse.hits().hits().size(), totalHits,
+                            getTotalHitsRelation(scrollResponse.hits().total()));
                     if (scrollIdentifier != null) {
                         result.setScrollIdentifier(scrollIdentifier);
                         result.setScrollTimeValidity(scrollTimeValidity);
                     }
                     return result;
                 } catch (Exception t) {
-                    throw new Exception("Error continuing scrolling query for itemType=" + clazz.getName() + " scrollIdentifier=" + scrollIdentifier + " scrollTimeValidity=" + scrollTimeValidity, t);
+                    throw new Exception(
+                            "Error continuing scrolling query for itemType=" + clazz.getName() + " scrollIdentifier=" + scrollIdentifier
+                                    + " scrollTimeValidity=" + scrollTimeValidity, t);
                 }
             }
         }.catchingExecuteInClassLoader(true);
     }
 
-    @Override
-    public PartialList<CustomItem> continueCustomItemScrollQuery(final String customItemType, final String scrollIdentifier, final String scrollTimeValidity) {
+    @Override public PartialList<CustomItem> continueCustomItemScrollQuery(final String customItemType, final String scrollIdentifier,
+            final String scrollTimeValidity) {
         String finalTenantId = validateTenantAndGetId(SecurityServiceConfiguration.PERMISSION_SCROLL_QUERY);
+        return new InClassLoaderExecute<PartialList<CustomItem>>(metricsService, this.getClass().getName() + ".continueScrollQuery",
+                this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
 
-        return new InClassLoaderExecute<PartialList<CustomItem>>(metricsService, this.getClass().getName() + ".continueScrollQuery", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
-            @Override
-            protected PartialList<CustomItem> execute(Object... args) throws Exception {
+            @Override protected PartialList<CustomItem> execute(Object... args) throws Exception {
                 List<CustomItem> results = new ArrayList<CustomItem>();
                 long totalHits = 0;
                 try {
-                    TimeValue keepAlive = TimeValue.parseTimeValue(scrollTimeValidity, TimeValue.timeValueMinutes(10), "scrollTimeValidity");
 
-                    SearchScrollRequest searchScrollRequest = new SearchScrollRequest(scrollIdentifier);
-                    searchScrollRequest.scroll(keepAlive);
-                    SearchResponse response = client.scroll(searchScrollRequest, RequestOptions.DEFAULT);
+                    Time keepAlive = Time.of(t -> t.time(scrollTimeValidity.isBlank() ? "10m" : scrollTimeValidity));
 
-                    if (response.getHits().getHits().length == 0) {
-                        ClearScrollRequest clearScrollRequest = new ClearScrollRequest();
-                        clearScrollRequest.addScrollId(response.getScrollId());
-                        client.clearScroll(clearScrollRequest, RequestOptions.DEFAULT);
-                    }
+                    ScrollRequest scrollRequest = new ScrollRequest.Builder().scrollId(scrollIdentifier).scroll(keepAlive).build();
 
-                    // Validate tenants for each result
-                    for (SearchHit searchHit : response.getHits().getHits()) {
-                        String sourceTenantId = (String) searchHit.getSourceAsMap().get("tenantId");
-                        if (finalTenantId.equals(sourceTenantId)) {
-                            // add hit to results
-                            String sourceAsString = searchHit.getSourceAsString();
-                            final CustomItem value = ESCustomObjectMapper.getObjectMapper().readValue(sourceAsString, CustomItem.class);
-                            setMetadata(value, searchHit.getId(), searchHit.getVersion(), searchHit.getSeqNo(), searchHit.getPrimaryTerm(), searchHit.getIndex());
-                            results.add(handleItemReverseTransformation(value));
+                    ScrollResponse<CustomItem> scrollResponse = esClient.scroll(scrollRequest, CustomItem.class);
+
+                    if (scrollResponse.hits().hits().isEmpty()) {
+                        ClearScrollRequest clearScrollRequest = new ClearScrollRequest.Builder().scrollId(scrollResponse.scrollId())
+                                .build();
+                        esClient.clearScroll(clearScrollRequest);
+                    } else {
+                        // Validate tenants for each result
+                        for (Hit<CustomItem> hit : scrollResponse.hits().hits()) {
+                            CustomItem value = hit.source();
+                            String sourceTenantId = (String) value.getTenantId();
+                            if (finalTenantId.equals(sourceTenantId)) {
+                                // add hit to results
+                                setMetadata(value, hit.id(), hit.version() != null ? hit.version() : 0L, hit.seqNo() != null ? hit.seqNo() : 0L,
+                                        hit.primaryTerm() != null ? hit.primaryTerm() : 0L, hit.index());
+                                results.add(handleItemReverseTransformation(value));
+                            }
                         }
                     }
 
-                    PartialList<CustomItem> result = new PartialList<CustomItem>(results, 0, response.getHits().getHits().length, response.getHits().getTotalHits().value, getTotalHitsRelation(response.getHits().getTotalHits()));
+                    PartialList<CustomItem> result = new PartialList<CustomItem>(results, 0, scrollResponse.hits().hits().size(), totalHits,
+                            getTotalHitsRelation(scrollResponse.hits().total()));
                     if (scrollIdentifier != null) {
                         result.setScrollIdentifier(scrollIdentifier);
                         result.setScrollTimeValidity(scrollTimeValidity);
                     }
                     return result;
                 } catch (Exception t) {
-                    throw new Exception("Error continuing scrolling query for itemType=" + customItemType + " scrollIdentifier=" + scrollIdentifier + " scrollTimeValidity=" + scrollTimeValidity, t);
+                    throw new Exception(
+                            "Error continuing scrolling query for itemType=" + customItemType + " scrollIdentifier=" + scrollIdentifier
+                                    + " scrollTimeValidity=" + scrollTimeValidity, t);
                 }
             }
         }.catchingExecuteInClassLoader(true);
@@ -2298,193 +2340,221 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     /**
      * @deprecated As of version 1.3.0-incubating, use {@link #aggregateWithOptimizedQuery(Condition, BaseAggregate, String)} instead
      */
-    @Deprecated
-    @Override
-    public Map<String, Long> aggregateQuery(Condition filter, BaseAggregate aggregate, String itemType) {
+    @Deprecated @Override public Map<String, Long> aggregateQuery(Condition filter, BaseAggregate aggregate, String itemType) {
         return aggregateQuery(filter, aggregate, itemType, false, aggregateQueryBucketSize);
     }
 
-    @Override
-    public Map<String, Long> aggregateWithOptimizedQuery(Condition filter, BaseAggregate aggregate, String itemType) {
+    @Override public Map<String, Long> aggregateWithOptimizedQuery(Condition filter, BaseAggregate aggregate, String itemType) {
         return aggregateQuery(filter, aggregate, itemType, true, aggregateQueryBucketSize);
     }
 
-    @Override
-    public Map<String, Long> aggregateWithOptimizedQuery(Condition filter, BaseAggregate aggregate, String itemType, int size) {
+    @Override public Map<String, Long> aggregateWithOptimizedQuery(Condition filter, BaseAggregate aggregate, String itemType, int size) {
         return aggregateQuery(filter, aggregate, itemType, true, size);
     }
 
     private Map<String, Long> aggregateQuery(final Condition filter, final BaseAggregate aggregate, final String itemType,
-                                             final boolean optimizedQuery, int queryBucketSize) {
+            final boolean optimizedQuery, int queryBucketSize) {
         String finalTenantId = validateTenantAndGetId(SecurityServiceConfiguration.PERMISSION_AGGREGATE);
+        return new InClassLoaderExecute<Map<String, Long>>(metricsService, this.getClass().getName() + ".aggregateQuery",
+                this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
 
-        return new InClassLoaderExecute<Map<String, Long>>(metricsService, this.getClass().getName() + ".aggregateQuery", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
+            @Override protected Map<String, Long> execute(Object... args) throws IOException {
+                Map<String, Long> results = new LinkedHashMap<>();
 
-            @Override
-            protected Map<String, Long> execute(Object... args) throws IOException {
-                Map<String, Long> results = new LinkedHashMap<String, Long>();
-
-                SearchRequest searchRequest = new SearchRequest(getIndexNameForQuery(itemType));
-                SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder();
-                searchSourceBuilder.size(0);
-                QueryBuilder baseQuery = wrapWithTenantAndItemTypeQuery(itemType, QueryBuilders.matchAllQuery(), finalTenantId);
-                boolean isItemTypeSharingIndex = isItemTypeSharingIndex(itemType);
-                searchSourceBuilder.query(isItemTypeSharingIndex ? getItemTypeQueryBuilder(itemType) : baseQuery);
-                List<AggregationBuilder> lastAggregation = new ArrayList<AggregationBuilder>();
-
+                Map<String, Aggregation> aggregationsByType = new HashMap<>();
                 if (aggregate != null) {
-                    AggregationBuilder bucketsAggregation = null;
+                    Aggregation bucketsAggregation = null;
                     String fieldName = aggregate.getField();
-                    if (aggregate instanceof DateAggregate) {
-                        DateAggregate dateAggregate = (DateAggregate) aggregate;
-                        DateHistogramAggregationBuilder dateHistogramBuilder = AggregationBuilders.dateHistogram("buckets").field(fieldName).calendarInterval(new DateHistogramInterval((dateAggregate.getInterval())));
+                    if (aggregate instanceof DateAggregate dateAggregate) {
+                        DateHistogramAggregation.Builder dateHistogramBuilder = new DateHistogramAggregation.Builder().field(fieldName)
+                                .calendarInterval(CalendarInterval.valueOf(dateAggregate.getIntervalByAlias(dateAggregate.getInterval())));
                         if (dateAggregate.getFormat() != null) {
                             dateHistogramBuilder.format(dateAggregate.getFormat());
                         }
-                        bucketsAggregation = dateHistogramBuilder;
-                    } else if (aggregate instanceof NumericRangeAggregate) {
-                        RangeAggregationBuilder rangebuilder = AggregationBuilders.range("buckets").field(fieldName);
-                        for (NumericRange range : ((NumericRangeAggregate) aggregate).getRanges()) {
-                            if (range != null) {
-                                if (range.getFrom() != null && range.getTo() != null) {
-                                    rangebuilder.addRange(range.getKey(), range.getFrom(), range.getTo());
-                                } else if (range.getFrom() != null) {
-                                    rangebuilder.addUnboundedFrom(range.getKey(), range.getFrom());
-                                } else if (range.getTo() != null) {
-                                    rangebuilder.addUnboundedTo(range.getKey(), range.getTo());
-                                }
+                        bucketsAggregation = new Aggregation.Builder().dateHistogram(dateHistogramBuilder.build()).build();
+                    } else if (aggregate instanceof NumericRangeAggregate numericRangeAggregate) {
+                        List<AggregationRange> ranges = new ArrayList<>();
+                        for (NumericRange numericRange : numericRangeAggregate.getRanges()) {
+                            if (numericRange != null) {
+                                ranges.add(AggregationRange.of(builder -> builder.from(numericRange.getFrom()).to(numericRange.getTo())
+                                        .key(numericRange.getKey())));
                             }
                         }
-                        bucketsAggregation = rangebuilder;
-                    } else if (aggregate instanceof DateRangeAggregate) {
-                        DateRangeAggregate dateRangeAggregate = (DateRangeAggregate) aggregate;
-                        DateRangeAggregationBuilder rangebuilder = AggregationBuilders.dateRange("buckets").field(fieldName);
-                        if (dateRangeAggregate.getFormat() != null) {
-                            rangebuilder.format(dateRangeAggregate.getFormat());
-                        }
+                        RangeAggregation rangeAgg = new RangeAggregation.Builder().field(fieldName).ranges(ranges).build();
+                        bucketsAggregation = new Aggregation.Builder().range(rangeAgg).build();
+                    } else if (aggregate instanceof DateRangeAggregate dateRangeAggregate) {
+                        List<DateRangeExpression> dateRanges = new ArrayList<>();
                         for (DateRange range : dateRangeAggregate.getDateRanges()) {
                             if (range != null) {
-                                rangebuilder.addRange(range.getKey(), range.getFrom() != null ? range.getFrom().toString() : null, range.getTo() != null ? range.getTo().toString() : null);
+                                DateRangeExpression.Builder exprBuilder = new DateRangeExpression.Builder();
+                                if (range.getKey() != null) {
+                                    exprBuilder.key(range.getKey());
+                                }
+                                if (range.getFrom() != null) {
+                                    exprBuilder.from(FieldDateMath.of(f -> f.expr(range.getFrom().toString())));
+                                }
+                                if (range.getTo() != null) {
+                                    exprBuilder.to(FieldDateMath.of(f -> f.expr(range.getTo().toString())));
+                                }
+                                dateRanges.add(exprBuilder.build());
                             }
                         }
-                        bucketsAggregation = rangebuilder;
-                    } else if (aggregate instanceof IpRangeAggregate) {
-                        IpRangeAggregate ipRangeAggregate = (IpRangeAggregate) aggregate;
-                        IpRangeAggregationBuilder rangebuilder = AggregationBuilders.ipRange("buckets").field(fieldName);
+                        DateRangeAggregation.Builder dateRangeBuilder = new DateRangeAggregation.Builder().field(fieldName)
+                                .ranges(dateRanges);
+
+                        if (dateRangeAggregate.getFormat() != null) {
+                            dateRangeBuilder.format(dateRangeAggregate.getFormat());
+                        }
+
+                        bucketsAggregation = new Aggregation.Builder().dateRange(dateRangeBuilder.build()).build();
+                    } else if (aggregate instanceof IpRangeAggregate ipRangeAggregate) {
+                        IpRangeAggregation.Builder ipRangeBuilder = new IpRangeAggregation.Builder().field(fieldName);
+                        List<IpRangeAggregationRange> ranges = new ArrayList<>();
                         for (IpRange range : ipRangeAggregate.getRanges()) {
                             if (range != null) {
-                                rangebuilder.addRange(range.getKey(), range.getFrom(), range.getTo());
+                                IpRangeAggregationRange.of(builder -> builder.from(range.getFrom()).to(range.getTo()));
+                                ranges.add(IpRangeAggregationRange.of(builder -> builder.from(range.getFrom()).to(range.getTo())));
                             }
                         }
-                        bucketsAggregation = rangebuilder;
+                        ipRangeBuilder.ranges(ranges);
+                        bucketsAggregation = ipRangeBuilder.build()._toAggregation();
                     } else {
                         fieldName = getPropertyNameWithData(fieldName, itemType);
                         //default
                         if (fieldName != null) {
-                            bucketsAggregation = AggregationBuilders.terms("buckets").field(fieldName).size(queryBucketSize);
-                            if (aggregate instanceof TermsAggregate) {
-                                TermsAggregate termsAggregate = (TermsAggregate) aggregate;
+                            TermsAggregation.Builder termsAggBuilder = new TermsAggregation.Builder().field(fieldName)
+                                    .size(queryBucketSize);
+                            if (aggregate instanceof TermsAggregate termsAggregate) {
+
                                 if (termsAggregate.getPartition() > -1 && termsAggregate.getNumPartitions() > -1) {
-                                    ((TermsAggregationBuilder) bucketsAggregation).includeExclude(new IncludeExclude(termsAggregate.getPartition(), termsAggregate.getNumPartitions()));
+                                    termsAggBuilder.include(TermsInclude.of(ti -> ti.partition(
+                                            pi -> pi.partition(termsAggregate.getPartition())
+                                                    .numPartitions(termsAggregate.getNumPartitions()))));
                                 }
                             }
-                        } else {
-                            // field name could be null if no existing data exists
+                            bucketsAggregation = termsAggBuilder.build()._toAggregation();
                         }
                     }
                     if (bucketsAggregation != null) {
-                        final MissingAggregationBuilder missingBucketsAggregation = AggregationBuilders.missing("missing").field(fieldName);
-                        for (AggregationBuilder aggregationBuilder : lastAggregation) {
-                            bucketsAggregation.subAggregation(aggregationBuilder);
-                            missingBucketsAggregation.subAggregation(aggregationBuilder);
-                        }
-                        lastAggregation = Arrays.asList(bucketsAggregation, missingBucketsAggregation);
+                        MissingAggregation missingAggregation = new MissingAggregation.Builder().field(fieldName).build();
+                        aggregationsByType.put("buckets", bucketsAggregation);
+                        aggregationsByType.put("missing", missingAggregation._toAggregation());
                     }
                 }
+
+                SearchRequest.Builder searchSourceBuilder = new SearchRequest.Builder();
+                searchSourceBuilder.index(getIndexNameForQuery(itemType));
+                searchSourceBuilder.size(0);
+                searchSourceBuilder.query(
+                        isItemTypeSharingIndex(itemType) ? getItemTypeQuery(itemType) : Query.of(q -> q.matchAll(m -> m)));
 
                 // If the request is optimized then we don't need a global aggregation which is very slow and we can put the query with a
                 // filter on range items in the query block so we don't retrieve all the document before filtering the whole
                 if (optimizedQuery) {
-                    for (AggregationBuilder aggregationBuilder : lastAggregation) {
-                        searchSourceBuilder.aggregation(aggregationBuilder);
-                    }
+                    searchSourceBuilder.aggregations(aggregationsByType);
 
                     if (filter != null) {
-                        searchSourceBuilder.query(wrapWithTenantAndItemTypeQuery(itemType, conditionESQueryBuilderDispatcher.buildFilter(filter), getTenantId()));
+                        searchSourceBuilder.query(wrapWithTenantAndItemTypeQuery(itemType, conditionESQueryBuilderDispatcher.buildFilter(filter), finalTenantId));
                     }
                 } else {
                     if (filter != null) {
-                        AggregationBuilder filterAggregation = AggregationBuilders.filter("filter",
-                                wrapWithTenantAndItemTypeQuery(itemType, conditionESQueryBuilderDispatcher.buildFilter(filter), getTenantId()));
-                        for (AggregationBuilder aggregationBuilder : lastAggregation) {
-                            filterAggregation.subAggregation(aggregationBuilder);
-                        }
-                        lastAggregation = Collections.singletonList(filterAggregation);
-                    }
+                        Aggregation.Builder aggBuilder = new Aggregation.Builder();
+                        aggBuilder.filter(wrapWithTenantAndItemTypeQuery(itemType, conditionESQueryBuilderDispatcher.buildFilter(filter), finalTenantId))
+                                .aggregations(aggregationsByType);
 
-                    AggregationBuilder globalAggregation = AggregationBuilders.global("global");
-                    for (AggregationBuilder aggregationBuilder : lastAggregation) {
-                        globalAggregation.subAggregation(aggregationBuilder);
+                        aggregationsByType = Map.of("filter", aggBuilder.build());
                     }
-
-                    searchSourceBuilder.aggregation(globalAggregation);
+                    Aggregation globalAgg = new Aggregation.Builder().global(new GlobalAggregation.Builder().build())
+                            .aggregations(aggregationsByType).build();
+                    searchSourceBuilder.aggregations(String.valueOf(globalAgg._kind()), globalAgg);
                 }
-
-                searchRequest.source(searchSourceBuilder);
 
                 RequestOptions.Builder builder = RequestOptions.DEFAULT.toBuilder();
 
+                RestClientOptions additionalOptions = null;
                 if (aggQueryMaxResponseSizeHttp != null) {
-                    builder.setHttpAsyncResponseConsumerFactory(
-                            new HttpAsyncResponseConsumerFactory
-                                    .HeapBufferedResponseConsumerFactory(aggQueryMaxResponseSizeHttp));
+                    HttpAsyncResponseConsumerFactory httpAsyncResponseConsumerFactory = new HttpAsyncResponseConsumerFactory.HeapBufferedResponseConsumerFactory(
+                            aggQueryMaxResponseSizeHttp);
+                    RequestOptions requestOptions = RequestOptions.DEFAULT.toBuilder()
+                            .setHttpAsyncResponseConsumerFactory(httpAsyncResponseConsumerFactory).build();
+
+                    additionalOptions = new RestClientOptions(requestOptions, true);
                 }
 
-                SearchResponse response = client.search(searchRequest, builder.build());
-                Aggregations aggregations = response.getAggregations();
+                SearchResponse response;
+                if (additionalOptions != null) {
+                    ElasticsearchClient clientWithOptions = esClient.withTransportOptions(additionalOptions);
+                    response = clientWithOptions.search(searchSourceBuilder.build());
+                    clientWithOptions.close();
+                } else {
+                    response = esClient.search(searchSourceBuilder.build());
+                }
 
+                Map<String, Aggregate> aggregations = response.aggregations();
 
                 if (aggregations != null) {
-
                     if (optimizedQuery) {
-                        if (response.getHits() != null) {
-                            results.put("_filtered", response.getHits().getTotalHits().value);
+                        if (response.hits() != null) {
+                            results.put("_filtered", response.hits().total().value());
                         }
                     } else {
-                        Global globalAgg = aggregations.get("global");
-                        results.put("_all", globalAgg.getDocCount());
-                        aggregations = globalAgg.getAggregations();
+                        GlobalAggregate globalAggregate = aggregations.get(Aggregation.Kind.Global.jsonValue()).global();
+                        results.put("_all", globalAggregate.docCount());
+                        aggregations = globalAggregate.aggregations();
 
-                        if (aggregations.get("filter") != null) {
-                            Filter filterAgg = aggregations.get("filter");
-                            results.put("_filtered", filterAgg.getDocCount());
-                            aggregations = filterAgg.getAggregations();
+                        if (aggregations.get(Aggregate.Kind.Filter.jsonValue()) != null) {
+                            FilterAggregate filterAggregate = aggregations.get(Aggregation.Kind.Filter.jsonValue()).filter();
+                            results.put("_filtered", filterAggregate.docCount());
+                            aggregations = filterAggregate.aggregations();
                         }
                     }
                     if (aggregations.get("buckets") != null) {
-
                         if (aggQueryThrowOnMissingDocs) {
-                            if (aggregations.get("buckets") instanceof Terms) {
-                                Terms terms = aggregations.get("buckets");
-                                if (terms.getDocCountError() > 0 || terms.getSumOfOtherDocCounts() > 0) {
-                                    throw new UnsupportedOperationException("Some docs are missing in aggregation query. docCountError is:" +
-                                            terms.getDocCountError() + " sumOfOtherDocCounts:" + terms.getSumOfOtherDocCounts());
+                            Aggregate agg = aggregations.get("buckets");
+                            if (agg.isSterms()) {
+                                StringTermsAggregate terms = aggregations.get("buckets").sterms();
+                                if (terms.docCountErrorUpperBound() > 0 || terms.sumOtherDocCount() > 0) {
+                                    throw new UnsupportedOperationException("Some docs are missing in aggregation query. docCountError is:"
+                                            + terms.docCountErrorUpperBound() + " sumOfOtherDocCounts:" + terms.sumOtherDocCount());
                                 }
                             }
+                            // TODO check if needed for dTerms and lTerms
                         }
 
                         long totalDocCount = 0;
-                        MultiBucketsAggregation terms = aggregations.get("buckets");
-                        for (MultiBucketsAggregation.Bucket bucket : terms.getBuckets()) {
-                            results.put(bucket.getKeyAsString(), bucket.getDocCount());
-                            totalDocCount += bucket.getDocCount();
+                        Aggregate bucketsAggregate = aggregations.get("buckets");
+                        if (bucketsAggregate.isMultiTerms()) {
+                            MultiTermsAggregate terms = aggregations.get("buckets").multiTerms();
+                            for (MultiTermsBucket bucket : terms.buckets().array()) {
+                                results.put(bucket.keyAsString(), bucket.docCount());
+                                totalDocCount += bucket.docCount();
+                            }
+                        } else if (bucketsAggregate.isSterms()) {
+                            StringTermsAggregate terms = bucketsAggregate.sterms();
+                            for (StringTermsBucket bucket : terms.buckets().array()) {
+                                results.put(bucket.key().stringValue(), bucket.docCount());
+                                totalDocCount += bucket.docCount();
+                            }
+                        } else if (bucketsAggregate.isLterms()) {
+                            LongTermsAggregate terms = bucketsAggregate.lterms();
+                            for (LongTermsBucket bucket : terms.buckets().array()) {
+                                results.put(bucket.keyAsString(), bucket.docCount());
+                                totalDocCount += bucket.docCount();
+                            }
+                        } else if (bucketsAggregate.isDateHistogram()){
+                            DateHistogramAggregate histogramAggregate = bucketsAggregate.dateHistogram();
+                            for (DateHistogramBucket bucket : histogramAggregate.buckets().array()) {
+                                results.put(bucket.keyAsString(), bucket.docCount());
+                                totalDocCount += bucket.docCount();
+                            }
                         }
-                        SingleBucketAggregation missing = aggregations.get("missing");
-                        if (missing.getDocCount() > 0) {
-                            results.put("_missing", missing.getDocCount());
-                            totalDocCount += missing.getDocCount();
+
+                        MissingAggregate missing = aggregations.get("missing").missing();
+                        if (missing.docCount() > 0) {
+                            results.put("_missing", missing.docCount());
+                            totalDocCount += missing.docCount();
                         }
-                        if (response.getHits() != null && TotalHits.Relation.GREATER_THAN_OR_EQUAL_TO.equals(response.getHits().getTotalHits().relation)) {
+                        if (response.hits() != null && TotalHitsRelation.Gte.equals(response.hits().total().relation())) {
                             results.put("_filtered", totalDocCount);
                         }
                     }
@@ -2503,70 +2573,97 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         return routing;
     }
 
-    @Override
-    public void refresh() {
-        new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".refresh", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
+    @Override public void refresh() {
+        new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".refresh", this.bundleContext,
+                this.fatalIllegalStateErrors, throwExceptions) {
             protected Boolean execute(Object... args) {
-                if (bulkProcessor != null) {
-                    bulkProcessor.flush();
-                }
                 try {
-                    client.indices().refresh(Requests.refreshRequest(), RequestOptions.DEFAULT);
+                    esClient.indices().refresh(new RefreshRequest.Builder().build());
                 } catch (IOException e) {
-                    e.printStackTrace(); //TODO manage ES7
+                    LOGGER.error("Failed to refresh persistence for reason: {}. Set the log in DEBUG level for details", e.getMessage());
+                    LOGGER.debug("Error on refresh: ", e);
                 }
                 return true;
             }
         }.catchingExecuteInClassLoader(true);
     }
 
-    @Override
-    public <T extends Item> void refreshIndex(Class<T> clazz, Date dateHint) {
-        new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".refreshIndex", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
+    @Override public <T extends Item> void refreshIndex(Class<T> clazz, Date dateHint) {
+        new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".refreshIndex", this.bundleContext,
+                this.fatalIllegalStateErrors, throwExceptions) {
             protected Boolean execute(Object... args) {
                 try {
-                    String itemType = Item.getItemType(clazz);
-                    String index = getIndex(itemType);
-                    client.indices().refresh(Requests.refreshRequest(index), RequestOptions.DEFAULT);
+                    esClient.indices().refresh(RefreshRequest.of(builder -> builder.index(getIndex(Item.getItemType(clazz)))));
                 } catch (IOException e) {
-                    e.printStackTrace(); //TODO manage ES7
+                    LOGGER.error("Failed to refresh index for reason: {}. Set the log in DEBUG level for details", e.getMessage());
+                    LOGGER.debug("Error on refresh: ", e);
                 }
                 return true;
             }
         }.catchingExecuteInClassLoader(true);
     }
 
-
-    @Override
-    public void purge(final Date date) {
+    @Override public void purge(final Date date) {
         // nothing, this method is deprecated since 2.2.0
     }
 
-    @Override
-    public <T extends Item> void purgeTimeBasedItems(int existsNumberOfDays, Class<T> clazz) {
-        new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".purgeTimeBasedItems", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
+    @Override public <T extends Item> void purgeTimeBasedItems(int existsNumberOfDays, Class<T> clazz) {
+        new InClassLoaderExecute<Boolean>(metricsService, this.getClass().getName() + ".purgeTimeBasedItems", this.bundleContext,
+                this.fatalIllegalStateErrors, throwExceptions) {
             protected Boolean execute(Object... args) throws Exception {
                 String itemType = Item.getItemType(clazz);
 
                 if (existsNumberOfDays > 0 && isItemTypeRollingOver(itemType)) {
                     // First we purge the documents
-                    removeByQuery(QueryBuilders.rangeQuery("timeStamp").lte("now-" + existsNumberOfDays + "d"), clazz);
+                    Query query = Query.of(builder -> builder.range(
+                            RangeQuery.of(r -> r.term(term -> term.field("timeStamp").lte("now-" + existsNumberOfDays + "d")))));
+                    removeByQuery(query, clazz);
 
                     // get count per index for those time based data
                     TreeMap<String, Long> countsPerIndex = new TreeMap<>();
-                    GetIndexResponse getIndexResponse = client.indices().get(new GetIndexRequest(getIndexNameForQuery(itemType)), RequestOptions.DEFAULT);
-                    for (String index : getIndexResponse.getIndices()) {
-                        countsPerIndex.put(index, client.count(new CountRequest(index), RequestOptions.DEFAULT).getCount());
+                    GetIndexResponse getIndexResponse = esClient.indices()
+                            .get(new GetIndexRequest.Builder().index(getIndexNameForQuery(itemType)).build());
+                    Map<String, IndexState> indices = getIndexResponse.indices();
+
+                    for (Map.Entry<String, IndexState> entry : indices.entrySet()) {
+                        String indexName = entry.getKey();
+                        // Filter out invalid index names (e.g., data stream backing indices with identifiers)
+                        // Valid index names should not contain '/' characters
+                        if (indexName.contains("/")) {
+                            LOGGER.debug("Skipping invalid index name (likely data stream backing index): {}", indexName);
+                            continue;
+                        }
+                        try {
+                            CountRequest countRequest = new CountRequest.Builder().index(indexName).build();
+                            countsPerIndex.put(indexName, esClient.count(countRequest).count());
+                        } catch (Exception e) {
+                            LOGGER.warn("Error counting documents in index {}: {}", indexName, e.getMessage());
+                            // Skip this index if we can't count it
+                            continue;
+                        }
                     }
 
                     // Check for count=0 and remove them
-                    if (countsPerIndex.size() >= 1) {
+                    if (!countsPerIndex.isEmpty()) {
                         // do not check the last index, because it's the one used to write documents
                         countsPerIndex.pollLastEntry();
 
                         for (Map.Entry<String, Long> indexCount : countsPerIndex.entrySet()) {
                             if (indexCount.getValue() == 0) {
-                                client.indices().delete(new DeleteIndexRequest(indexCount.getKey()), RequestOptions.DEFAULT);
+                                try {
+                                    // Verify the index exists before trying to delete it
+                                    // This prevents errors when trying to delete aliases or invalid index names
+                                    GetIndexRequest checkRequest = new GetIndexRequest.Builder().index(indexCount.getKey()).build();
+                                    GetIndexResponse checkResponse = esClient.indices().get(checkRequest);
+                                    if (checkResponse.indices().containsKey(indexCount.getKey())) {
+                                        esClient.indices().delete(new DeleteIndexRequest.Builder().index(indexCount.getKey()).build());
+                                    } else {
+                                        LOGGER.debug("Index {} does not exist, skipping deletion", indexCount.getKey());
+                                    }
+                                } catch (Exception e) {
+                                    // Log but don't fail - index might have been deleted already or might be an alias
+                                    LOGGER.debug("Could not delete index {} (may not exist or may be an alias): {}", indexCount.getKey(), e.getMessage());
+                                }
                             }
                         }
                     }
@@ -2577,54 +2674,51 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         }.catchingExecuteInClassLoader(true);
     }
 
-    @Override
-    public void purge(final String scope) {
-        String finalTenantId = validateTenantAndGetId(SecurityServiceConfiguration.PERMISSION_PURGE);
-
+    @Override public void purge(final String scope) {
         LOGGER.debug("Purge scope {}", scope);
-        new InClassLoaderExecute<Void>(metricsService, this.getClass().getName() + ".purgeWithScope", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
-            @Override
-            protected Void execute(Object... args) throws IOException {
-                QueryBuilder queryBuilder = QueryBuilders.boolQuery()
-                    .must(QueryBuilders.termQuery("scope", scope))
-                    .must(QueryBuilders.termQuery("tenantId", ConditionContextHelper.foldToASCII(finalTenantId)));
+        String finalTenantId = validateTenantAndGetId(SecurityServiceConfiguration.PERMISSION_PURGE);
+        new InClassLoaderExecute<Void>(metricsService, this.getClass().getName() + ".purgeWithScope", this.bundleContext,
+                this.fatalIllegalStateErrors, throwExceptions) {
+            @Override protected Void execute(Object... args) throws IOException {
+                Query query = TermQuery.of(builder -> builder.field("scope").value(scope).field("tenantId").value(ConditionContextHelper.foldToASCII(finalTenantId)))._toQuery();
 
-                SearchRequest searchRequest = new SearchRequest(getAllIndexForQuery());
-                SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder()
-                    .query(queryBuilder)
-                    .size(100);
-                searchRequest.scroll(TimeValue.timeValueHours(1));
-                searchRequest.source(searchSourceBuilder);
+                List<BulkOperation> operations = new ArrayList<>();
 
-                SearchResponse response = client.search(searchRequest, RequestOptions.DEFAULT);
+                Time keepAlive = Time.of(t -> t.time("1h"));
 
+                SearchRequest searchRequest = SearchRequest.of(
+                        s -> s.index(getAllIndexForQuery()).scroll(keepAlive).size(100).query(query).source(src -> src.fetch(true)));
+                SearchResponse<JsonData> searchResponse = esClient.search(searchRequest, JsonData.class);
+
+                List<Hit<JsonData>> hits = searchResponse.hits().hits();
+                String scrollId = searchResponse.scrollId();
                 // Scroll until no more hits are returned
-                BulkRequest bulkRequest = new BulkRequest();
-                while (true) {
-                    for (SearchHit searchHit : response.getHits().getHits()) {
+                while (!hits.isEmpty()) {
+                    for (Hit<JsonData> hit : searchResponse.hits().hits()) {
                         // add hit to bulk delete
-                        DeleteRequest deleteRequest = new DeleteRequest(searchHit.getIndex(), searchHit.getId());
-                        bulkRequest.add(deleteRequest);
+                        operations.add(BulkOperation.of(builder -> builder.delete(d -> d.index(hit.index()).id(hit.id()))));
                     }
 
-                    SearchScrollRequest scrollRequest = new SearchScrollRequest(response.getScrollId());
-                    scrollRequest.scroll(TimeValue.timeValueHours(1));
-                    response = client.scroll(scrollRequest, RequestOptions.DEFAULT);
-
+                    ScrollRequest scrollRequest = new ScrollRequest.Builder().scrollId(scrollId).scroll(keepAlive).build();
+                    ScrollResponse<JsonData> scrollResponse = esClient.scroll(scrollRequest, JsonData.class);
+                    hits = scrollResponse.hits().hits();
+                    scrollId = scrollResponse.scrollId();
                     // If we have no more hits, exit
-                    if (response.getHits().getHits().length == 0) {
-                        ClearScrollRequest clearScrollRequest = new ClearScrollRequest();
-                        clearScrollRequest.addScrollId(response.getScrollId());
-                        client.clearScroll(clearScrollRequest, RequestOptions.DEFAULT);
-                        break;
+                    if (hits.isEmpty()) {
+                        ClearScrollRequest clearScrollRequest = new ClearScrollRequest.Builder().scrollId(scrollId).build();
+                        esClient.clearScroll(clearScrollRequest);
                     }
                 }
 
-                // Execute bulk delete if we have any requests
-                if (bulkRequest.numberOfActions() > 0) {
-                    BulkResponse bulkResponse = client.bulk(bulkRequest, RequestOptions.DEFAULT);
-                    if (bulkResponse.hasFailures()) {
-                        LOGGER.warn("Couldn't delete from scope " + scope + ":\n{}", bulkResponse.buildFailureMessage());
+                // we're done with the scrolling, delete now
+                if (!operations.isEmpty()) {
+                    BulkResponse bulkResponse = esClient.bulk(b -> b.operations(operations));
+                    if (bulkResponse.errors()) {
+                        bulkResponse.items().forEach(item -> {
+                            if (item.error() != null) {
+                                LOGGER.warn("Couldn't delete item {} from scope {}: {}", item.id(), scope, item.error().reason());
+                            }
+                        });
                     }
                 }
                 return null;
@@ -2632,57 +2726,62 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         }.catchingExecuteInClassLoader(true);
     }
 
-    @Override
-    public Map<String, Double> getSingleValuesMetrics(final Condition condition, final String[] metrics, final String field, final String itemType) {
-        return new InClassLoaderExecute<Map<String, Double>>(metricsService, this.getClass().getName() + ".getSingleValuesMetrics", this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
+    @Override public Map<String, Double> getSingleValuesMetrics(final Condition condition, final String[] metrics, final String field,
+            final String itemType) {
+        return new InClassLoaderExecute<Map<String, Double>>(metricsService, this.getClass().getName() + ".getSingleValuesMetrics",
+                this.bundleContext, this.fatalIllegalStateErrors, throwExceptions) {
 
-            @Override
-            protected Map<String, Double> execute(Object... args) throws IOException {
+            @Override protected Map<String, Double> execute(Object... args) throws IOException {
                 Map<String, Double> results = new LinkedHashMap<String, Double>();
 
-                SearchRequest searchRequest = new SearchRequest(getIndexNameForQuery(itemType));
-                SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder()
-                        .size(0)
-                        .query(isItemTypeSharingIndex(itemType) ? getItemTypeQueryBuilder(itemType) : QueryBuilders.matchAllQuery());
-
-                AggregationBuilder filterAggregation = AggregationBuilders.filter("metrics", conditionESQueryBuilderDispatcher.buildFilter(condition));
-
+                Map<String, Aggregation> subAggs = new HashMap<>();
                 if (metrics != null) {
                     for (String metric : metrics) {
                         switch (metric) {
                             case "sum":
-                                filterAggregation.subAggregation(AggregationBuilders.sum("sum").field(field));
+                                subAggs.put("sum", AggregationBuilders.sum().field(field).build()._toAggregation());
                                 break;
                             case "avg":
-                                filterAggregation.subAggregation(AggregationBuilders.avg("avg").field(field));
+                                subAggs.put("avg", AggregationBuilders.avg().field(field).build()._toAggregation());
                                 break;
                             case "min":
-                                filterAggregation.subAggregation(AggregationBuilders.min("min").field(field));
+                                subAggs.put("min", AggregationBuilders.min().field(field).build()._toAggregation());
                                 break;
                             case "max":
-                                filterAggregation.subAggregation(AggregationBuilders.max("max").field(field));
+                                subAggs.put("max", AggregationBuilders.max().field(field).build()._toAggregation());
                                 break;
                             case "card":
-                                filterAggregation.subAggregation(AggregationBuilders.cardinality("card").field(field));
+                                subAggs.put("card", AggregationBuilders.cardinality().field(field).build()._toAggregation());
                                 break;
                             case "count":
-                                filterAggregation.subAggregation(AggregationBuilders.count("count").field(field));
+                                subAggs.put("count", Aggregation.of(a -> a.valueCount(vc -> vc.field(field))));
                                 break;
                         }
                     }
                 }
-                searchSourceBuilder.aggregation(filterAggregation);
-                searchRequest.source(searchSourceBuilder);
-                SearchResponse response = client.search(searchRequest, RequestOptions.DEFAULT);
 
-                Aggregations aggregations = response.getAggregations();
-                if (aggregations != null) {
-                    Aggregation metricsResults = aggregations.get("metrics");
-                    if (metricsResults instanceof HasAggregations) {
-                        aggregations = ((HasAggregations) metricsResults).getAggregations();
-                        for (Aggregation aggregation : aggregations) {
-                            NumericMetricsAggregation.SingleValue singleValue = (NumericMetricsAggregation.SingleValue) aggregation;
-                            results.put("_" + singleValue.getName(), singleValue.value());
+                Aggregation filterAggregation = Aggregation.of(
+                        a -> a.filter(conditionESQueryBuilderDispatcher.buildFilter(condition)).aggregations(subAggs));
+                SearchRequest searchRequest = SearchRequest.of(
+                        s -> s.index(getIndexNameForQuery(itemType)).size(0).source(builder -> builder.fetch(true))
+                                .query(isItemTypeSharingIndex(itemType) ? getItemTypeQuery(itemType) : Query.of(q -> q.matchAll(m -> m)))
+                                .aggregations("metrics", filterAggregation));
+
+                SearchResponse<Void> searchResponse = esClient.search(searchRequest);
+
+                Map<String, Aggregate> aggregationResult = searchResponse.aggregations();
+
+                if (aggregationResult != null) {
+                    Aggregate metricsAgg = aggregationResult.get("metrics");
+                    if (metricsAgg != null && metricsAgg.isFilter()) {
+                        Map<String, Aggregate> subAggsResult = metricsAgg.filter().aggregations();
+                        for (Map.Entry<String, Aggregate> entry : subAggsResult.entrySet()) {
+                            String name = entry.getKey();
+                            Double value = getAggregeValue(entry);
+
+                            if (value != null) {
+                                results.put("_" + name, value);
+                            }
                         }
                     }
                 }
@@ -2691,9 +2790,27 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         }.catchingExecuteInClassLoader(true);
     }
 
+    private static Double getAggregeValue(Map.Entry<String, Aggregate> entry) {
+        Aggregate agg = entry.getValue();
 
-    private String getConfig(Map<String, String> settings, String key,
-                             String defaultValue) {
+        Double value = null;
+        if (agg.isSum()) {
+            value = agg.sum().value();
+        } else if (agg.isAvg()) {
+            value = agg.avg().value();
+        } else if (agg.isMin()) {
+            value = agg.min().value();
+        } else if (agg.isMax()) {
+            value = agg.max().value();
+        } else if (agg.isCardinality()) {
+            value = (double) agg.cardinality().value();
+        } else if (agg.isValueCount()) {
+            value = agg.valueCount().value();
+        }
+        return value;
+    }
+
+    private String getConfig(Map<String, String> settings, String key, String defaultValue) {
         if (settings != null && settings.get(key) != null) {
             return settings.get(key);
         }
@@ -2702,13 +2819,14 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
 
     public abstract static class InClassLoaderExecute<T> {
 
-        private String timerName;
-        private MetricsService metricsService;
-        private BundleContext bundleContext;
-        private String[] fatalIllegalStateErrors; // Errors that if occur - stop the application
-        private boolean throwExceptions;
+        private final String timerName;
+        private final MetricsService metricsService;
+        private final BundleContext bundleContext;
+        private final String[] fatalIllegalStateErrors; // Errors that if occur - stop the application
+        private final boolean throwExceptions;
 
-        public InClassLoaderExecute(MetricsService metricsService, String timerName, BundleContext bundleContext, String[] fatalIllegalStateErrors, boolean throwExceptions) {
+        public InClassLoaderExecute(MetricsService metricsService, String timerName, BundleContext bundleContext,
+                String[] fatalIllegalStateErrors, boolean throwExceptions) {
             this.timerName = timerName;
             this.metricsService = metricsService;
             this.bundleContext = bundleContext;
@@ -2740,7 +2858,8 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
                 Throwable tTemp = t;
                 // Go over the stack trace and check if there were any fatal state errors
                 while (tTemp != null) {
-                    if (tTemp instanceof IllegalStateException && Arrays.stream(this.fatalIllegalStateErrors).anyMatch(tTemp.getMessage()::contains)) {
+                    if (tTemp instanceof IllegalStateException && Arrays.stream(this.fatalIllegalStateErrors)
+                            .anyMatch(tTemp.getMessage()::contains)) {
                         handleFatalStateError(); // Stop application
                         return null;
                     }
@@ -2790,42 +2909,36 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         return itemTypeIndexNameMap.getOrDefault(itemType, itemType);
     }
 
-    private QueryBuilder getItemTypeQueryBuilder(String itemType) {
-        return QueryBuilders.termQuery("itemType", ConditionContextHelper.foldToASCII(itemType));
+    private String getDocumentIDForItemType(String itemId, String itemType) {
+        String tenantId = getTenantId();
+        String baseId = systemItems.contains(itemType) ? (itemId + "_" + itemType.toLowerCase()) : itemId;
+        return tenantId + "_" + baseId;
     }
 
-    private boolean isItemTypeSharingIndex(String itemType) {
-        return itemTypeIndexNameMap.containsKey(itemType);
-    }
-
-    private boolean isItemTypeRollingOver(String itemType) {
-        return (rolloverIndices != null ? rolloverIndices : itemsMonthlyIndexed).contains(itemType);
-    }
-
-    private WriteRequest.RefreshPolicy getRefreshPolicy(String itemType) {
-        if (itemTypeToRefreshPolicy.containsKey(itemType)) {
-            return itemTypeToRefreshPolicy.get(itemType);
+    private String stripTenantFromDocumentId(String documentId) {
+        if (documentId == null) {
+            return null;
         }
-        return WriteRequest.RefreshPolicy.NONE;
-    }
-
-    private void logMetadataItemOperation (String operation, Item item) {
-        if (item instanceof MetadataItem) {
-            LOGGER.info("Item of type {} with ID {} has been {}", item.getItemType(), item.getItemId(), operation);
+        String tenantId = getTenantId();
+        if (documentId.startsWith(tenantId + "_")) {
+            return documentId.substring(tenantId.length() + 1);
+        } else if (documentId.startsWith(SYSTEM_TENANT + "_")) {
+            return documentId.substring(SYSTEM_TENANT.length() + 1);
         }
+        return documentId;
     }
 
-    private QueryBuilder wrapWithTenantAndItemTypeQuery(String itemType, QueryBuilder originalQuery, String tenantId) {
-        BoolQueryBuilder boolQuery = QueryBuilders.boolQuery();
+    private Query wrapWithTenantAndItemTypeQuery(String itemType, Query originalQuery, String tenantId) {
+        BoolQuery.Builder boolQuery = new BoolQuery.Builder();
 
         // Add tenants filter
         if (tenantId != null) {
-            boolQuery.must(QueryBuilders.termQuery("tenantId", ConditionContextHelper.foldToASCII(tenantId)));
+            boolQuery.must(q->q.term(t->t.field("tenantId").value(ConditionContextHelper.foldToASCII(tenantId))));
         }
 
         // Add item type filter if needed
         if (isItemTypeSharingIndex(itemType)) {
-            boolQuery.must(getItemTypeQueryBuilder(itemType));
+            boolQuery.must(getItemTypeQuery(itemType));
         }
 
         // Add original query
@@ -2833,53 +2946,69 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
             boolQuery.must(originalQuery);
         }
 
-        return boolQuery;
+        return Query.of(builder -> builder.bool(boolQuery.build()));
+    }
+
+    private Query wrapWithTenantAndItemsTypeQuery(String[] itemTypes, Query originalQuery, String tenantId) {
+        if (itemTypes.length == 1) {
+            return wrapWithTenantAndItemTypeQuery(itemTypes[0], originalQuery, tenantId);
+        }
+
+        if (Arrays.stream(itemTypes).anyMatch(this::isItemTypeSharingIndex)) {
+            BoolQuery.Builder itemTypeQuery = new BoolQuery.Builder();
+            itemTypeQuery.minimumShouldMatch("1");
+
+            for (String itemType : itemTypes) {
+                itemTypeQuery.should(getItemTypeQuery(itemType));
+            }
+
+            BoolQuery.Builder wrappedQuery = new BoolQuery.Builder();
+            wrappedQuery.filter(itemTypeQuery.build());
+            wrappedQuery.must(originalQuery);
+            if (tenantId != null) {
+                wrappedQuery.must(q->q.term(t->t.field("tenantId").value(ConditionContextHelper.foldToASCII(tenantId))));
+            }
+            return Query.of(builder -> builder.bool(wrappedQuery.build()));
+        }
+        if (tenantId != null) {
+            BoolQuery.Builder wrappedQuery = new BoolQuery.Builder();
+            wrappedQuery.must(originalQuery);
+            wrappedQuery.must(q->q.term(t->t.field("tenantId").value(ConditionContextHelper.foldToASCII(tenantId))));
+            return Query.of(builder -> builder.bool(wrappedQuery.build()));
+        }
+        return originalQuery;
+    }
+
+    private Query getItemTypeQuery(String itemType) {
+        return Query.of(q -> q.term(t -> t.field("itemType").value(ConditionContextHelper.foldToASCII(itemType))));
+    }
+
+    private boolean isItemTypeSharingIndex(String itemType) {
+        return itemTypeIndexNameMap.containsKey(itemType);
+    }
+
+    private boolean isItemTypeRollingOver(String itemType) {
+        return (rolloverIndices != null ? rolloverIndices.contains(itemType) : false);
+    }
+
+    private Refresh getRefreshPolicy(String itemType) {
+        if (itemTypeToRefreshPolicy.containsKey(itemType)) {
+            return itemTypeToRefreshPolicy.get(itemType);
+        }
+
+        return Refresh.False;
+    }
+
+    private void logMetadataItemOperation(String operation, Item item) {
+        if (item instanceof MetadataItem) {
+            LOGGER.info("Item of type {} with ID {} has been {}", item.getItemType(), item.getItemId(), operation);
+        }
     }
 
     private void addTenantMetadata(Item item, String tenantId) {
         if (item != null && tenantId != null) {
             item.setTenantId(tenantId);
         }
-    }
-
-    private String extractTenantId(DocWriteRequest<?> request) {
-        String documentId = request.id();
-        int underscoreIndex = documentId.indexOf('_');
-        return underscoreIndex >= 0 ? documentId.substring(0, underscoreIndex) : null;
-    }
-
-    private AggregationBuilder createAggregationBuilder(BaseAggregate aggregate, String itemType) {
-        if (aggregate == null) {
-            return null;
-        }
-
-        String fieldName = aggregate.getField();
-        if (aggregate instanceof DateAggregate) {
-            DateAggregate dateAggregate = (DateAggregate) aggregate;
-            DateHistogramAggregationBuilder builder = AggregationBuilders.dateHistogram("buckets")
-                    .field(fieldName)
-                    .calendarInterval(new DateHistogramInterval(dateAggregate.getInterval()));
-            if (dateAggregate.getFormat() != null) {
-                builder.format(dateAggregate.getFormat());
-            }
-            return builder;
-        } else if (aggregate instanceof NumericRangeAggregate) {
-            RangeAggregationBuilder builder = AggregationBuilders.range("buckets").field(fieldName);
-            for (NumericRange range : ((NumericRangeAggregate) aggregate).getRanges()) {
-                if (range != null) {
-                    if (range.getFrom() != null && range.getTo() != null) {
-                        builder.addRange(range.getKey(), range.getFrom(), range.getTo());
-                    } else if (range.getFrom() != null) {
-                        builder.addUnboundedFrom(range.getKey(), range.getFrom());
-                    } else if (range.getTo() != null) {
-                        builder.addUnboundedTo(range.getKey(), range.getTo());
-                    }
-                }
-            }
-            return builder;
-        }
-        // Add other aggregate type handlers as needed
-        return null;
     }
 
     private <T extends Item> T handleItemTransformation(T item) {
@@ -2931,18 +3060,16 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     @Override
     public long calculateStorageSize(String tenantId) {
         try {
-            // Build query to match tenant ID
-            SearchRequest searchRequest = new SearchRequest(getAllIndexForQuery())
-                .source(new SearchSourceBuilder()
-                    .query(QueryBuilders.termQuery("tenantId", ConditionContextHelper.foldToASCII(tenantId)))
-                    .size(0)
-                    .trackTotalHits(true));
+            Query query = Query.of(q -> q.term(t -> t.field("tenantId").value(v -> v.stringValue(ConditionContextHelper.foldToASCII(tenantId)))));
 
-            // Get total document count
-            SearchResponse response = client.search(searchRequest, RequestOptions.DEFAULT);
-            return response.getHits().getTotalHits().value;
+            // Execute count query
+            CountResponse response = esClient.count(c -> c
+                    .index(getAllIndexForQuery())
+                    .query(query));
 
-        } catch (Exception e) {
+            return response.count();
+
+        } catch (IOException e) {
             LOGGER.error("Error calculating storage size for tenant " + tenantId, e);
             return -1;
         }
@@ -2951,60 +3078,66 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     @Override
     public boolean migrateTenantData(String sourceTenantId, String targetTenantId, List<String> itemTypes) {
         try {
-            SearchRequest searchRequest = new SearchRequest(getAllIndexForQuery())
-                .source(new SearchSourceBuilder()
-                    .query(QueryBuilders.termQuery("tenantId", ConditionContextHelper.foldToASCII(sourceTenantId)))
-                    .size(1000))
-                .scroll(TimeValue.timeValueMinutes(1));
+            Query query = Query.of(q -> q.term(t -> t.field("tenantId").value(v -> v.stringValue(ConditionContextHelper.foldToASCII(sourceTenantId)))));
 
-            SearchResponse searchResponse = client.search(searchRequest, RequestOptions.DEFAULT);
-            String scrollId = searchResponse.getScrollId();
+            SearchResponse<Item> searchResponse = esClient.search(s -> s
+                            .index(getAllIndexForQuery())
+                            .query(query)
+                            .size(1000)
+                            .scroll(t -> t.time("1m")),
+                    Item.class);
 
-            while (searchResponse.getHits().getHits().length > 0) {
-                BulkRequest bulkRequest = new BulkRequest();
+            String scrollId = searchResponse.scrollId();
+
+            while (!searchResponse.hits().hits().isEmpty()) {
+                List<BulkOperation> operations = new ArrayList<>();
 
                 // Process each hit
-                for (SearchHit hit : searchResponse.getHits()) {
-                    Map<String, Object> source = hit.getSourceAsMap();
-                    source.put("tenantId", targetTenantId);
+                for (Hit<Item> hit : searchResponse.hits().hits()) {
+                    Item source = hit.source();
+                    if (source == null) {
+                        LOGGER.warn("Source item is null for hit {}", hit.id());
+                        continue;
+                    }
+                    source.setTenantId(targetTenantId);
 
-                    // Get the item type from the source
-                    String itemType = (String) source.get("itemType");
                     // Create new document ID with target tenant prefix
-                    String oldId = stripTenantFromDocumentId(hit.getId());
-                    String newDocumentId = getDocumentIDForItemType(oldId, itemType);
+                    String oldId = stripTenantFromDocumentId(hit.id());
+                    String newDocumentId = getDocumentIDForItemType(oldId, source.getItemType());
 
                     // Add index operation for new document
-                    IndexRequest indexRequest = new IndexRequest(hit.getIndex())
-                        .id(newDocumentId)
-                        .source(source);
-                    bulkRequest.add(indexRequest);
+                    operations.add(BulkOperation.of(b -> b.index(idx -> idx
+                            .index(hit.index())
+                            .id(newDocumentId)
+                            .document(source))));
 
                     // Add delete operation for old document
-                    DeleteRequest deleteRequest = new DeleteRequest(hit.getIndex(), hit.getId());
-                    bulkRequest.add(deleteRequest);
+                    operations.add(BulkOperation.of(b -> b.delete(del -> del
+                            .index(hit.index())
+                            .id(hit.id()))));
                 }
 
                 // Execute bulk update if there are operations
-                if (bulkRequest.numberOfActions() > 0) {
-                    client.bulk(bulkRequest, RequestOptions.DEFAULT);
+                if (!operations.isEmpty()) {
+                    esClient.bulk(b -> b.operations(operations));
                 }
 
+                final String finalScrollId = scrollId;
                 // Get next batch
-                SearchScrollRequest scrollRequest = new SearchScrollRequest(scrollId)
-                    .scroll(TimeValue.timeValueMinutes(1));
-                searchResponse = client.scroll(scrollRequest, RequestOptions.DEFAULT);
-                scrollId = searchResponse.getScrollId();
-            }
+                ScrollResponse scrollResponse = esClient.scroll(s -> s
+                                .scrollId(finalScrollId)
+                                .scroll(t -> t.time("1m")),
+                        Item.class);
 
+                scrollId = scrollResponse.scrollId();
+            }
             // Clear scroll
-            ClearScrollRequest clearScrollRequest = new ClearScrollRequest();
-            clearScrollRequest.addScrollId(scrollId);
-            client.clearScroll(clearScrollRequest, RequestOptions.DEFAULT);
+            final String finalScrollId = scrollId;
+            esClient.clearScroll(c -> c.scrollId(finalScrollId));
 
             return true;
 
-        } catch (Exception e) {
+        } catch (IOException e) {
             LOGGER.error("Error migrating tenant data from " + sourceTenantId + " to " + targetTenantId, e);
             return false;
         }
@@ -3014,18 +3147,18 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
     public long getApiCallCount(String tenantId) {
         try {
             // Build query to count API calls for tenant
-            SearchRequest searchRequest = new SearchRequest(getAllIndexForQuery())
-                .source(new SearchSourceBuilder()
-                    .query(QueryBuilders.boolQuery()
-                        .must(QueryBuilders.termQuery("tenantId", ConditionContextHelper.foldToASCII(tenantId)))
-                        .must(QueryBuilders.termQuery("itemType", "apiCall")))
-                    .size(0));
+            Query query = Query.of(q -> q.bool(b -> b
+                    .must(Query.of(q2 -> q2.term(t -> t.field("tenantId").value(v -> v.stringValue(ConditionContextHelper.foldToASCII(tenantId))))))
+                    .must(Query.of(q2 -> q2.term(t -> t.field("itemType").value(v -> v.stringValue("apiCall")))))));
 
             // Execute count query
-            SearchResponse response = client.search(searchRequest, RequestOptions.DEFAULT);
-            return response.getHits().getTotalHits().value;
+            CountResponse response = esClient.count(c -> c
+                    .index(getAllIndexForQuery())
+                    .query(query));
 
-        } catch (Exception e) {
+            return response.count();
+
+        } catch (IOException e) {
             LOGGER.error("Error getting API call count for tenant " + tenantId, e);
             return -1;
         }
@@ -3042,62 +3175,6 @@ public class ElasticSearchPersistenceServiceImpl implements PersistenceService, 
         if (listenerReference != null) {
             TenantTransformationListener listener = bundleContext.getService(listenerReference);
             transformationListeners.remove(listener);
-        }
-    }
-
-    private QueryBuilder wrapWithTenantAndItemsTypeQuery(String[] itemTypes, QueryBuilder originalQuery, String tenantId) {
-        if (itemTypes.length == 1) {
-            return wrapWithTenantAndItemTypeQuery(itemTypes[0], originalQuery, tenantId);
-        }
-
-        if (Arrays.stream(itemTypes).anyMatch(this::isItemTypeSharingIndex)) {
-            BoolQueryBuilder itemTypeQuery = QueryBuilders.boolQuery();
-            itemTypeQuery.minimumShouldMatch(1);
-            for (String itemType : itemTypes) {
-                itemTypeQuery.should(getItemTypeQueryBuilder(itemType));
-            }
-
-            BoolQueryBuilder wrappedQuery = QueryBuilders.boolQuery();
-            wrappedQuery.filter(itemTypeQuery);
-            wrappedQuery.must(originalQuery);
-            if (tenantId != null) {
-                wrappedQuery.must(QueryBuilders.termQuery("tenantId", ConditionContextHelper.foldToASCII(tenantId)));
-            }
-            return wrappedQuery;
-        }
-        if (tenantId != null) {
-            BoolQueryBuilder wrappedQuery = QueryBuilders.boolQuery();
-            wrappedQuery.must(originalQuery);
-            wrappedQuery.must(QueryBuilders.termQuery("tenantId", ConditionContextHelper.foldToASCII(tenantId)));
-            return wrappedQuery;
-        }
-        return originalQuery;
-    }
-
-    /**
-     * Utility method to dump Elasticsearch requests to debug logs using XContentBuilder
-     * @param request The request to dump
-     * @param itemType The item type of the request
-     * @param requestType The type of request being made (e.g., "search", "index", "delete")
-     * @param indices Optional array of indices involved in the request
-     */
-    private void dumpRequest(ToXContent request, String itemType, String requestType, String... indices) {
-        if (!dumpRequestTypes.isEmpty() && !dumpRequestTypes.contains(requestType)) {
-            return;
-        }
-        try {
-            if (LOGGER.isInfoEnabled()) {
-                ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                XContentBuilder builder = XContentFactory.jsonBuilder(baos);
-                request.toXContent(builder, ToXContent.EMPTY_PARAMS);
-                builder.flush();
-                builder.close();
-                String requestString = baos.toString(StandardCharsets.UTF_8);
-                String indicesInfo = indices != null && indices.length > 0 ? " on indices [" + String.join(",", indices) + "]" : "";
-                LOGGER.info("Executing ES request {} for {}{} : {}", requestType, itemType, indicesInfo, requestString);
-            }
-        } catch (IOException e) {
-            LOGGER.warn("Failed to dump request", e);
         }
     }
 

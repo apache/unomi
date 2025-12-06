@@ -19,7 +19,6 @@ package org.apache.unomi.api.services;
 
 import org.apache.unomi.api.ClusterNode;
 
-import java.io.Serializable;
 import java.util.Date;
 import java.util.List;
 

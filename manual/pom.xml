@@ -43,7 +43,6 @@
             <plugin>
                 <groupId>org.asciidoctor</groupId>
                 <artifactId>asciidoctor-maven-plugin</artifactId>
-                <version>3.1.1</version>
                 <dependencies>
                     <dependency>
                         <groupId>org.asciidoctor</groupId>
@@ -79,8 +78,6 @@
                             <sourceDirectory>${doc.source}</sourceDirectory>
                             <outputDirectory>${doc.output.html}</outputDirectory>
                             <preserveDirectories>true</preserveDirectories>
-                            <headerFooter>true</headerFooter>
-                            <imagesDir>${doc.source}/images</imagesDir>
                             <backend>html5</backend>
                             <doctype>article</doctype>
                             <attributes>
@@ -106,7 +103,6 @@
                             <outputDirectory>${doc.output.pdf}</outputDirectory>
                             <outputFile>${project.build.directory}/${project.artifactId}-${doc.version}.pdf</outputFile>
                             <preserveDirectories>true</preserveDirectories>
-                            <headerFooter>true</headerFooter>
                             <backend>pdf</backend>
                             <attributes>
                                 <project-version>${project.version}</project-version>
@@ -173,7 +169,6 @@
             <plugin>
                 <groupId>net.nicoulaj.maven.plugins</groupId>
                 <artifactId>checksum-maven-plugin</artifactId>
-                <version>1.7</version>
                 <executions>
                     <execution>
                         <id>package-release-checksum</id>

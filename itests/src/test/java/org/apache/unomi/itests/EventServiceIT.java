@@ -33,6 +33,7 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.time.Instant;
@@ -89,6 +90,7 @@ public class EventServiceIT extends BaseIT {
 
         Condition pastEventCondition = new Condition(definitionsService.getConditionType("pastEventCondition"));
         pastEventCondition.setParameter("minimumEventCount", 1);
+        // fromDate and toDate are defined as type "date" in pastEventCondition.json, so use Date objects
         pastEventCondition.setParameter("fromDate", Date.from(Instant.parse("1999-01-15T07:00:00Z")));
         pastEventCondition.setParameter("toDate", Date.from(Instant.parse("2001-01-15T07:00:00Z")));
 
@@ -97,7 +99,35 @@ public class EventServiceIT extends BaseIT {
         Query query = new Query();
         query.setCondition(pastEventCondition);
 
-        PartialList<Profile> profiles = profileService.search(query, Profile.class);
+        // Wait for event to be indexed and queryable
+        // The event needs to be indexed before the pastEventCondition query can find it
+        refreshPersistence(Event.class, Profile.class);
+        // Verify event is queryable first
+        keepTrying("Event should be queryable",
+                () -> {
+                    try {
+                        refreshPersistence(Event.class);
+                        List<Event> events = persistenceService.query("itemId", eventId, null, Event.class);
+                        return events != null && events.size() == 1;
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        return false;
+                    }
+                },
+                (found) -> found, DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
+        
+        PartialList<Profile> profiles = keepTrying("Profile should be found by past event condition query",
+                () -> {
+                    try {
+                        refreshPersistence(Event.class, Profile.class);
+                        return profileService.search(query, Profile.class);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        return null;
+                    }
+                },
+                results -> results != null && results.getList() != null && results.getList().size() == 1,
+                DEFAULT_TRYING_TIMEOUT, DEFAULT_TRYING_TRIES);
         Assert.assertEquals(1, profiles.getList().size());
         Assert.assertEquals(profiles.getList().get(0).getItemId(), profileId);
 
@@ -125,6 +155,7 @@ public class EventServiceIT extends BaseIT {
 
         Condition pastEventCondition = new Condition(definitionsService.getConditionType("pastEventCondition"));
         pastEventCondition.setParameter("minimumEventCount", 1);
+        // fromDate and toDate are defined as type "date" in pastEventCondition.json, so use Date objects
         pastEventCondition.setParameter("fromDate", Date.from(Instant.parse("2000-07-01T07:00:00Z")));
         pastEventCondition.setParameter("toDate", Date.from(Instant.parse("2001-01-15T07:00:00Z")));
 

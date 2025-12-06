@@ -161,6 +161,15 @@ public class BasicIT extends BaseIT {
 
         refreshPersistence(ConditionType.class);
         Thread.sleep(2000);
+        // Ensure the dynamically registered condition type is visible before creating the rule
+        keepTrying(
+                "loginEventCondition not registered in the required time",
+                () -> definitionsService.getConditionType("loginEventCondition"),
+                Objects::nonNull,
+                DEFAULT_TRYING_TIMEOUT,
+                DEFAULT_TRYING_TRIES
+        );
+
         // Add login rule
         Rule rule = CustomObjectMapper.getObjectMapper().readValue(new File("data/tmp/testLogin.json").toURI().toURL(),
                 Rule.class);

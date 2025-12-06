@@ -7,7 +7,7 @@
     "readOnly": true
   },
   "conditionEvaluator": "idsConditionEvaluator",
-  "queryBuilder": "idsConditionESQueryBuilder",
+  "queryBuilder": "idsConditionQueryBuilder",
   "parameters": [
     {
       "id": "ids",

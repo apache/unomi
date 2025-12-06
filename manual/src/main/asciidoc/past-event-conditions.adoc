@@ -727,7 +727,7 @@ The system automatically generates rules for past event conditions through `Segm
     ]
 }
 ----
-
++
 3. *Profile Storage Format*
 [source,json]
 ----
@@ -955,10 +955,10 @@ The evaluation process involves multiple components working together to efficien
      ** Script execution support for complex logic
      ** Error handling and logging
    * Execution flow:
-     1. Resolves action parameters using context
-     2. Validates action configuration
-     3. Executes action with performance tracking
-     4. Handles results and updates profiles
+     . Resolves action parameters using context
+     . Validates action configuration
+     . Executes action with performance tracking
+     . Handles results and updates profiles
    * Implementation details:
 [source,java]
 ----
@@ -1108,7 +1108,7 @@ sendProfileUpdateEventForSegmentUpdate = true
   }
 }
 ----
-
++
 2. *Date Range*
 [source,json]
 ----
@@ -1694,7 +1694,7 @@ if (generatedPropertyKey != null) {
     );
 }
 ----
-
++
 2. *Event-Based Queries*
    * Used for direct rule conditions
    * Requires event store access
@@ -1784,12 +1784,12 @@ Set<String> ids = getProfileIdsMatchingEventCount(
 // Recalculate past event conditions
 segmentService.recalculatePastEventConditions();
 ----
-
++
 2. *Cache Management*
    * Monitor cache hit rates
    * Clean up expired entries
    * Optimize cache sizes
-
++
 3. *Performance Monitoring*
    * Track query execution times
    * Monitor resource usage

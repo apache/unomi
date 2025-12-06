@@ -504,7 +504,8 @@ public class GroovyActionsServiceImpl extends AbstractMultiTypeCachingService im
         try {
             return scriptClass.getMethod("execute").getAnnotation(Action.class);
         } catch (NoSuchMethodException e) {
-            LOGGER.error("Failed to extract action annotation - execute method not found", e);
+            // Scripts without an execute() method are valid; they simply have no @Action metadata
+            LOGGER.debug("No execute() method found on script class {}, skipping @Action extraction", scriptClass.getName());
             return null;
         } catch (Exception e) {
             LOGGER.error("Failed to extract action annotation", e);

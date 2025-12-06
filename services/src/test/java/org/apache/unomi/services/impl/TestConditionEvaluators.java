@@ -24,6 +24,9 @@ import org.apache.unomi.api.conditions.ConditionValidation;
 import org.apache.unomi.api.services.EventService;
 import org.apache.unomi.persistence.spi.PropertyHelper;
 import org.apache.unomi.persistence.spi.conditions.*;
+import org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluator;
+import org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluatorDispatcher;
+import org.apache.unomi.persistence.spi.conditions.evaluator.impl.ConditionEvaluatorDispatcherImpl;
 import org.apache.unomi.persistence.spi.conditions.geo.DistanceUnit;
 import org.apache.unomi.tracing.api.RequestTracer;
 import org.osgi.framework.BundleContext;
@@ -67,8 +70,6 @@ public class TestConditionEvaluators {
 
     public static ConditionEvaluatorDispatcher createDispatcher() {
         ConditionEvaluatorDispatcherImpl dispatcher = new ConditionEvaluatorDispatcherImpl();
-        dispatcher.setBundleContext(bundleContext);
-        dispatcher.init();
         dispatcher.addEvaluator("booleanConditionEvaluator", createBooleanConditionEvaluator());
         dispatcher.addEvaluator("propertyConditionEvaluator", createPropertyConditionEvaluator());
         dispatcher.addEvaluator("matchAllConditionEvaluator", createMatchAllConditionEvaluator());
@@ -624,13 +625,13 @@ public class TestConditionEvaluators {
 
     private static void initializeConditionTypes() {
 
-        ConditionType propertyConditionType = createConditionType("propertyCondition", "propertyConditionEvaluator", "propertyConditionESQueryBuilder", null);
+        ConditionType propertyConditionType = createConditionType("propertyCondition", "propertyConditionEvaluator", "propertyConditionQueryBuilder", null);
         conditionTypes.put("propertyCondition", propertyConditionType);
 
         // Create boolean condition type
         ConditionType booleanConditionType = createConditionType("booleanCondition",
                 "booleanConditionEvaluator",
-                "booleanConditionESQueryBuilder", Set.of("profileTags",
+                "booleanConditionQueryBuilder", Set.of("profileTags",
                         "logical",
                         "condition",
                         "profileCondition",
@@ -641,58 +642,58 @@ public class TestConditionEvaluators {
 
         // Create matchAll condition type
         ConditionType matchAllConditionType = createConditionType("matchAllCondition", "matchAllConditionEvaluator",
-                "matchAllConditionESQueryBuilder", Set.of("profileTags", "logical", "condition", "profileCondition",
+                "matchAllConditionQueryBuilder", Set.of("profileTags", "logical", "condition", "profileCondition",
                         "eventCondition", "sessionCondition", "sourceEventCondition"));
         conditionTypes.put("matchAllCondition", matchAllConditionType);
 
         // Create eventType condition type
         ConditionType eventTypeConditionType = createConditionType("eventTypeCondition", "eventTypeConditionEvaluator",
-                "eventTypeConditionESQueryBuilder", Set.of("profileTags", "event", "condition", "eventCondition"));
+                "eventTypeConditionQueryBuilder", Set.of("profileTags", "event", "condition", "eventCondition"));
         conditionTypes.put("eventTypeCondition", eventTypeConditionType);
 
         // Create eventProperty condition type
         ConditionType eventPropertyConditionType = createConditionType("eventPropertyCondition", "propertyConditionEvaluator",
-                "propertyConditionESQueryBuilder", Set.of("profileTags", "demographic", "condition", "eventCondition"));
+                "propertyConditionQueryBuilder", Set.of("profileTags", "demographic", "condition", "eventCondition"));
         conditionTypes.put("eventPropertyCondition", eventPropertyConditionType);
 
         // Create sessionProperty condition type
         ConditionType sessionPropertyConditionType = createConditionType("sessionPropertyCondition", "propertyConditionEvaluator",
-                "propertyConditionESQueryBuilder", Set.of("availableToEndUser", "sessionBased", "profileTags", "event", "condition", "sessionCondition"));
+                "propertyConditionQueryBuilder", Set.of("availableToEndUser", "sessionBased", "profileTags", "event", "condition", "sessionCondition"));
         conditionTypes.put("sessionPropertyCondition", sessionPropertyConditionType);
 
         // Create profileProperty condition type
         ConditionType profilePropertyConditionType = createConditionType("profilePropertyCondition", "propertyConditionEvaluator",
-                "propertyConditionESQueryBuilder", Set.of("availableToEndUser", "profileTags", "demographic", "condition", "profileCondition"));
+                "propertyConditionQueryBuilder", Set.of("availableToEndUser", "profileTags", "demographic", "condition", "profileCondition"));
         conditionTypes.put("profilePropertyCondition", profilePropertyConditionType);
 
         // Create pastEvent condition type
         ConditionType pastEventConditionType = createConditionType("pastEventCondition", "pastEventConditionEvaluator",
-                "pastEventConditionESQueryBuilder", Set.of("profileTags", "event", "condition", "pastEventCondition"));
+                "pastEventConditionQueryBuilder", Set.of("profileTags", "event", "condition", "pastEventCondition"));
         conditionTypes.put("pastEventCondition", pastEventConditionType);
 
         // Create not condition type
         ConditionType notConditionType = createConditionType("notCondition", "notConditionEvaluator",
-                "notConditionESQueryBuilder", Set.of("profileTags", "logical", "condition", "profileCondition",
+                "notConditionQueryBuilder", Set.of("profileTags", "logical", "condition", "profileCondition",
                         "eventCondition", "sessionCondition", "sourceEventCondition"));
         conditionTypes.put("notCondition", notConditionType);
 
         // Create profileUpdatedEvent condition type
         ConditionType profileUpdatedEventConditionType = createConditionType("profileUpdatedEventCondition",
                 "profileUpdatedEventConditionEvaluator",
-                "eventTypeConditionESQueryBuilder",
+                "eventTypeConditionQueryBuilder",
                 Set.of("profileTags", "event", "condition", "eventCondition"));
         conditionTypes.put("profileUpdatedEventCondition", profileUpdatedEventConditionType);
 
         // Create nested condition type
         ConditionType nestedConditionType = createConditionType("nestedCondition",
                 "nestedConditionEvaluator",
-                "nestedConditionESQueryBuilder",
+                "nestedConditionQueryBuilder",
                 Set.of("profileTags", "logical", "condition", "profileCondition", "sessionCondition"));
         conditionTypes.put("nestedCondition", nestedConditionType);
 
         // Create ids condition type
         ConditionType idsConditionType = createConditionType("idsCondition", "idsConditionEvaluator",
-                "idsConditionESQueryBuilder", Set.of("profileTags", "logical", "condition", "profileCondition",
+                "idsConditionQueryBuilder", Set.of("profileTags", "logical", "condition", "profileCondition",
                         "eventCondition", "sessionCondition", "sourceEventCondition"));
         conditionTypes.put("idsCondition", idsConditionType);
     }

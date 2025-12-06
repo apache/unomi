@@ -66,6 +66,7 @@ public interface UnomiToGraphQLConverter {
                 break;
             case "set":
             case "json":
+            case "object":
                 graphQLType = JSONFunction.JSON_SCALAR;
                 break;
             case "geopoint":

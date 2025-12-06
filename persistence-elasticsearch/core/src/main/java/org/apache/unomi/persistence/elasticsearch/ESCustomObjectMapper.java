@@ -16,14 +16,17 @@
  */
 package org.apache.unomi.persistence.elasticsearch;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.unomi.api.Event;
 import org.apache.unomi.api.Item;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 
+import java.util.Map;
+
 /**
- * This CustomObjectMapper is used to avoid the version parameter to be registered in ES
- * @author dgaillard
+ * This CustomObjectMapper is used to avoid the version parameter to be registered in Elasticsearch
  */
 public class ESCustomObjectMapper extends CustomObjectMapper {
 
@@ -31,8 +34,11 @@ public class ESCustomObjectMapper extends CustomObjectMapper {
 
     public ESCustomObjectMapper() {
         super();
+        super.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
         this.addMixIn(Item.class, ESItemMixIn.class);
         this.addMixIn(Event.class, ESEventMixIn.class);
+        this.configOverride(Map.class)
+                .setInclude(JsonInclude.Value.construct(JsonInclude.Include.ALWAYS, JsonInclude.Include.ALWAYS));
     }
 
     public static ObjectMapper getObjectMapper() {

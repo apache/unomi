@@ -19,7 +19,7 @@ package org.apache.unomi.services.impl.profiles;
 import org.apache.unomi.api.*;
 import org.apache.unomi.api.services.ConditionValidationService;
 import org.apache.unomi.persistence.spi.PersistenceService;
-import org.apache.unomi.persistence.spi.conditions.ConditionEvaluatorDispatcher;
+import org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluatorDispatcher;
 import org.apache.unomi.services.TestHelper;
 import org.apache.unomi.services.common.security.ExecutionContextManagerImpl;
 import org.apache.unomi.services.common.security.KarafSecurityService;
@@ -42,7 +42,7 @@ import java.net.URL;
 import java.util.*;
 import java.net.MalformedURLException;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.reset;
@@ -125,6 +125,14 @@ public class ProfileServiceImplTest {
         profileService.setContextManager(executionContextManager);
         profileService.setSchedulerService(schedulerService);
         profileService.setCacheService(multiTypeCacheService);
+        // Ensure tenantService is available for initial data loading
+        profileService.setTenantService(tenantService);
+        
+        // Create and inject ResolverService
+        ResolverServiceImpl resolverService = new ResolverServiceImpl();
+        resolverService.setDefinitionsService(definitionsService);
+        profileService.setResolverService(resolverService);
+        
         profileService.postConstruct();
 
         // Load predefined data
@@ -156,17 +164,17 @@ public class ProfileServiceImplTest {
         Collection<PropertyType> result = profileService.getTargetPropertyTypes("profiles");
 
         // Verify predefined properties exist
-        assertNotNull(result);
-        assertFalse(result.isEmpty());
+        assertNotNull(result, "Predefined properties should be loaded for target=profiles (bundle=org.apache.unomi.predefined)");
+        assertFalse(result.isEmpty(), "Predefined properties should not be empty (target=profiles)");
 
         // Verify specific predefined property
         Optional<PropertyType> firstNameProp = result.stream()
                 .filter(p -> p.getItemId().equals("firstName"))
                 .findFirst();
-        assertTrue(firstNameProp.isPresent());
-        assertEquals("string", firstNameProp.get().getValueTypeId());
-        assertEquals("profiles", firstNameProp.get().getTarget());
-        assertEquals(SYSTEM_TENANT, firstNameProp.get().getTenantId());
+        assertTrue(firstNameProp.isPresent(), "firstName property should exist in predefined properties (target=profiles)");
+        assertEquals("string", firstNameProp.get().getValueTypeId(), "firstName should use string valueType");
+        assertEquals("profiles", firstNameProp.get().getTarget(), "firstName should target 'profiles'");
+        assertEquals(SYSTEM_TENANT, firstNameProp.get().getTenantId(), "firstName should belong to system tenant");
     }
 
     @Test
@@ -180,9 +188,9 @@ public class ProfileServiceImplTest {
             Set<PropertyType> result = profileService.getPropertyTypeByTag("tag1");
 
             // Verify
-            assertNotNull(result);
-            assertEquals(1, result.size());
-            assertEquals(TENANT_1, result.iterator().next().getTenantId());
+            assertNotNull(result, "Property types by tag should return results (tenant=" + TENANT_1 + ", tag=tag1)");
+            assertEquals(1, result.size(), "Exactly one property type should be returned for tag1 (tenant=" + TENANT_1 + ")");
+            assertEquals(TENANT_1, result.iterator().next().getTenantId(), "Returned property should belong to current tenant");
         });
     }
 
@@ -200,11 +208,11 @@ public class ProfileServiceImplTest {
             Collection<PropertyType> result = profileService.getPropertyTypeByTag("systemTag");
 
             // Verify
-            assertNotNull(result);
-            assertFalse(result.isEmpty());
+            assertNotNull(result, "System-tagged property should be visible from tenant context (tag=systemTag)");
+            assertFalse(result.isEmpty(), "System-tagged property list should not be empty (tag=systemTag)");
             PropertyType foundType = result.iterator().next();
-            assertEquals(SYSTEM_TENANT, foundType.getTenantId());
-            assertEquals("systemProp", foundType.getItemId());
+            assertEquals(SYSTEM_TENANT, foundType.getTenantId(), "Found property should belong to system tenant (tag=systemTag)");
+            assertEquals("systemProp", foundType.getItemId(), "Found property id should match system property id");
             return null;
         });
     }
@@ -227,11 +235,11 @@ public class ProfileServiceImplTest {
             Set<PropertyType> result = profileService.getPropertyTypeByTag("tag1");
 
             // Verify
-            assertNotNull(result);
-            assertEquals(1, result.size());
+            assertNotNull(result, "Property types by tag should include tenant override (tag=tag1, tenant=" + TENANT_1 + ")");
+            assertEquals(1, result.size(), "Exactly one property type should be returned for tag1 after override");
             PropertyType resultProp = result.iterator().next();
-            assertEquals(TENANT_1, resultProp.getTenantId());
-            assertEquals("tenant-version", resultProp.getMetadata().getName());
+            assertEquals(TENANT_1, resultProp.getTenantId(), "Overridden property should belong to tenant");
+            assertEquals("tenant-version", resultProp.getMetadata().getName(), "Overridden property name should reflect tenant version");
             return null;
         });
     }
@@ -247,9 +255,9 @@ public class ProfileServiceImplTest {
             Set<PropertyType> result = profileService.getPropertyTypeBySystemTag("systag1");
 
             // Verify
-            assertNotNull(result);
-            assertEquals(1, result.size());
-            assertEquals(TENANT_1, result.iterator().next().getTenantId());
+            assertNotNull(result, "System tag lookup (systag1) should yield tenant-scoped property (tenant=" + TENANT_1 + ")");
+            assertEquals(1, result.size(), "Exactly one property type should match system tag systag1 (tenant=" + TENANT_1 + ")");
+            assertEquals(TENANT_1, result.iterator().next().getTenantId(), "Resolved property should belong to tenant");
         });
     }
 
@@ -267,9 +275,9 @@ public class ProfileServiceImplTest {
             Set<PropertyType> result = profileService.getPropertyTypeBySystemTag("systag1");
 
             // Verify
-            assertNotNull(result);
-            assertEquals(1, result.size());
-            assertEquals(SYSTEM_TENANT, result.iterator().next().getTenantId());
+            assertNotNull(result, "System tag lookup (systag1) from tenant should include system property");
+            assertEquals(1, result.size(), "Exactly one system property should match systag1");
+            assertEquals(SYSTEM_TENANT, result.iterator().next().getTenantId(), "Resolved property should belong to system tenant");
             return null;
         });
     }
@@ -286,9 +294,9 @@ public class ProfileServiceImplTest {
             Collection<PropertyType> result = profileService.getTargetPropertyTypes("profile");
 
             // Verify
-            assertNotNull(result);
-            assertEquals(1, result.size());
-            assertEquals(TENANT_1, result.iterator().next().getTenantId());
+            assertNotNull(result, "Target property types for 'profile' should include tenant property (tenant=" + TENANT_1 + ")");
+            assertEquals(1, result.size(), "Exactly one tenant property should target 'profile'");
+            assertEquals(TENANT_1, result.iterator().next().getTenantId(), "Returned property should belong to tenant");
         });
     }
 
@@ -307,9 +315,9 @@ public class ProfileServiceImplTest {
             Collection<PropertyType> result = profileService.getTargetPropertyTypes("profile");
 
             // Verify
-            assertNotNull(result);
-            assertEquals(1, result.size());
-            assertEquals(SYSTEM_TENANT, result.iterator().next().getTenantId());
+            assertNotNull(result, "Target property types for 'profile' should include system property from tenant context");
+            assertEquals(1, result.size(), "Exactly one system property should target 'profile'");
+            assertEquals(SYSTEM_TENANT, result.iterator().next().getTenantId(), "Returned property should belong to system tenant");
             return null;
         });
     }
@@ -334,11 +342,11 @@ public class ProfileServiceImplTest {
             Collection<PropertyType> result = profileService.getTargetPropertyTypes("profile");
 
             // Verify
-            assertNotNull(result);
-            assertEquals(1, result.size());
+            assertNotNull(result, "Target property types for 'profile' should resolve tenant override");
+            assertEquals(1, result.size(), "Exactly one property should target 'profile' for tenant override");
             PropertyType resultProp = result.iterator().next();
-            assertEquals(TENANT_1, resultProp.getTenantId());
-            assertEquals("tenant-version", resultProp.getMetadata().getName());
+            assertEquals(TENANT_1, resultProp.getTenantId(), "Overridden property should belong to tenant");
+            assertEquals("tenant-version", resultProp.getMetadata().getName(), "Overridden property name should reflect tenant version");
             return null;
         });
     }
@@ -357,9 +365,9 @@ public class ProfileServiceImplTest {
         Set<PropertyType> result = profileService.getExistingProperties("tag1", Profile.ITEM_TYPE);
 
         // Verify
-        assertNotNull(result);
-        assertEquals(1, result.size());
-        assertEquals("prop1", result.iterator().next().getItemId());
+        assertNotNull(result, "Existing properties should include tag-matching mapping (tag=tag1, itemType=profile)");
+        assertEquals(1, result.size(), "Exactly one existing property should be mapped for tag1");
+        assertEquals("prop1", result.iterator().next().getItemId(), "Mapped property id should be 'prop1'");
     }
 
     @Test
@@ -380,9 +388,9 @@ public class ProfileServiceImplTest {
         Set<PropertyType> result = profileService.getExistingProperties("systag1", Profile.ITEM_TYPE, true);
 
         // Verify
-        assertNotNull(result);
-        assertEquals(1, result.size());
-        assertEquals("prop1", result.iterator().next().getItemId());
+        assertNotNull(result, "Existing properties should include system-tag mapping when includeSystem=true");
+        assertEquals(1, result.size(), "Exactly one existing property should be mapped for system tag");
+        assertEquals("prop1", result.iterator().next().getItemId(), "Mapped property id should be 'prop1'");
     }
 
     @Test
@@ -395,8 +403,8 @@ public class ProfileServiceImplTest {
         boolean result = profileService.deletePropertyType("prop1");
 
         // Verify
-        assertTrue(result);
-        assertNull(persistenceService.load("prop1", PropertyType.class));
+        assertTrue(result, "deletePropertyType should return true for existing property id (prop1)");
+        assertNull(persistenceService.load("prop1", PropertyType.class), "Property type should be removed from persistence (prop1)");
     }
 
     private PropertyType createPropertyType(String id, String target, Set<String> tags, Set<String> systemTags) {

@@ -181,7 +181,7 @@ public class MigrationContext {
      */
     public void printMessage(String msg) {
         if (session == null) {
-            LOGGER.info(msg);
+            LOGGER.info("{}: {}", new Date(), msg);
         } else {
             PrintStream writer = session.getConsole();
             writer.printf("%s: %s%n",new Date(), msg);

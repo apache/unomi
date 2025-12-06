@@ -21,7 +21,7 @@ import org.apache.unomi.api.tasks.ScheduledTask;
 import org.apache.unomi.api.tasks.TaskExecutor;
 import org.apache.unomi.persistence.spi.CustomObjectMapper;
 import org.apache.unomi.persistence.spi.PersistenceService;
-import org.apache.unomi.persistence.spi.conditions.ConditionEvaluatorDispatcher;
+import org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluatorDispatcher;
 import org.apache.unomi.services.TestHelper;
 import org.apache.unomi.services.common.security.ExecutionContextManagerImpl;
 import org.apache.unomi.services.impl.InMemoryPersistenceServiceImpl;
@@ -31,10 +31,13 @@ import org.apache.unomi.services.impl.cluster.ClusterServiceImpl;
 import org.apache.unomi.api.services.SchedulerService.TaskBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.junit.*;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 import org.osgi.framework.Bundle;
 import org.osgi.framework.BundleContext;
 
@@ -46,7 +49,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
@@ -68,8 +71,12 @@ import static org.mockito.Mockito.when;
  * - MaintenanceTests: Task cleanup and maintenance
  * - QueryTests: Task querying and filtering
  */
+@ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 public class SchedulerServiceImplTest {
     private static final Logger LOGGER = LoggerFactory.getLogger(SchedulerServiceImplTest.class);
+
+    
 
     // Test configuration constants
     /** Maximum number of retries for storage operations */
@@ -101,26 +108,7 @@ public class SchedulerServiceImplTest {
     private BundleContext bundleContext;
 
     // Test categories with documentation
-    /** Tests for basic task lifecycle operations */
-    public interface BasicTests {}
-    /** Tests for task state transitions and validation */
-    public interface StateTests {}
-    /** Tests for task dependency management */
-    public interface DependencyTests {}
-    /** Tests for multi-node execution and lock management */
-    public interface ClusterTests {}
-    /** Tests for crash recovery and task resumption */
-    public interface RecoveryTests {}
-    /** Tests for metrics collection and history tracking */
-    public interface MetricsTests {}
-    /** Tests for input validation and error handling */
-    public interface ValidationTests {}
-    /** Tests for task retry behavior and delay */
-    public interface RetryTests {}
-    /** Tests for task cleanup and maintenance */
-    public interface MaintenanceTests {}
-    /** Tests for task querying and filtering */
-    public interface QueryTests {}
+    // JUnit 5 provides tags; marker interfaces removed
 
     private static void configureDebugLogging() {
         // Enable debug logging for scheduler package
@@ -130,10 +118,9 @@ public class SchedulerServiceImplTest {
         System.setProperty("org.slf4j.simpleLogger.showThreadName", "true");
     }
 
-    @Before
+    @BeforeEach
     public void setUp() throws IOException {
         configureDebugLogging();
-        MockitoAnnotations.initMocks(this);
         CustomObjectMapper.getCustomInstance().registerBuiltInItemTypeClass(ScheduledTask.ITEM_TYPE, ScheduledTask.class);
 
         securityService = TestHelper.createSecurityService();
@@ -170,7 +157,7 @@ public class SchedulerServiceImplTest {
         schedulerService.postConstruct();
     }
 
-    @After
+    @AfterEach
     public void tearDown() {
         if (schedulerService != null) {
             try {
@@ -203,7 +190,7 @@ public class SchedulerServiceImplTest {
 
     // Basic task lifecycle tests
     @Test
-    @Category(BasicTests.class)
+    @Tag("BasicTests")
     public void testBasicTaskLifecycle() throws Exception {
         // Test task creation, execution, and completion
         CountDownLatch executionLatch = new CountDownLatch(1);
@@ -216,16 +203,16 @@ public class SchedulerServiceImplTest {
             })
             .schedule();
 
-        assertTrue("Task should execute", executionLatch.await(TEST_TIMEOUT, TEST_TIME_UNIT));
-        assertTrue("Task should have executed", executed.get());
+        assertTrue(executionLatch.await(TEST_TIMEOUT, TEST_TIME_UNIT), "Task should execute");
+        assertTrue(executed.get(), "Task should have executed");
 
         ScheduledTask completedTask = schedulerService.getTask(task.getItemId());
-        assertEquals("Task should be completed", ScheduledTask.TaskStatus.COMPLETED, completedTask.getStatus());
-        assertNotNull("Task should have execution history", completedTask.getStatusDetails().get("executionHistory"));
+        assertEquals(ScheduledTask.TaskStatus.COMPLETED, completedTask.getStatus(), "Task should be completed");
+        assertNotNull(completedTask.getStatusDetails().get("executionHistory"), "Task should have execution history");
     }
 
     @Test
-    @Category(BasicTests.class)
+    @Tag("BasicTests")
     public void testFixedRateExecution() throws Exception {
         CountDownLatch executionLatch = new CountDownLatch(3);
         AtomicInteger executionCount = new AtomicInteger(0);
@@ -245,13 +232,14 @@ public class SchedulerServiceImplTest {
             })
             .schedule();
 
-        assertTrue("Task should execute three times", executionLatch.await(TEST_TIMEOUT, TEST_TIME_UNIT));
-        assertTrue("Task should execute at fixed rate despite long execution",
-            executionCount.get() >= 3);
+        assertTrue(executionLatch.await(TEST_TIMEOUT, TEST_TIME_UNIT), "Task should execute three times");
+        assertTrue(
+            executionCount.get() >= 3,
+            "Task should execute at fixed rate despite long execution");
     }
 
     @Test
-    @Category(BasicTests.class)
+    @Tag("BasicTests")
     public void testFixedDelayExecution() throws Exception {
         CountDownLatch executionLatch = new CountDownLatch(3);
         AtomicInteger executionCount = new AtomicInteger(0);
@@ -265,7 +253,7 @@ public class SchedulerServiceImplTest {
                 long now = System.currentTimeMillis();
                 if (lastExecutionTime.get() > 0) {
                     long delay = now - lastExecutionTime.get();
-                    assertTrue("Delay should be at least the period", delay >= period);
+                    assertTrue(delay >= period, "Delay should be at least the period");
                 }
                 lastExecutionTime.set(now);
                 executionCount.incrementAndGet();
@@ -278,13 +266,13 @@ public class SchedulerServiceImplTest {
             })
             .schedule();
 
-        assertTrue("Task should execute three times", executionLatch.await(TEST_TIMEOUT, TEST_TIME_UNIT));
-        assertEquals("Task should execute exactly three times", 3, executionCount.get());
+        assertTrue(executionLatch.await(TEST_TIMEOUT, TEST_TIME_UNIT), "Task should execute three times");
+        assertEquals(3, executionCount.get(), "Task should execute exactly three times");
     }
 
     // Task state transition tests
     @Test
-    @Category(StateTests.class)
+    @Tag("StateTests")
     public void testTaskStateTransitions() throws Exception {
         // Test all possible task state transitions
         CountDownLatch transitionLatch = new CountDownLatch(1);
@@ -312,18 +300,22 @@ public class SchedulerServiceImplTest {
             .disallowParallelExecution()
             .schedule();
 
-        assertTrue("Task should complete transition", transitionLatch.await(TEST_TIMEOUT, TEST_TIME_UNIT));
-        assertEquals("Task should be in RUNNING state during execution",
-            ScheduledTask.TaskStatus.RUNNING, currentStatus.get());
+        assertTrue(transitionLatch.await(TEST_TIMEOUT, TEST_TIME_UNIT), "Task should complete transition");
+        assertEquals(
+            ScheduledTask.TaskStatus.RUNNING,
+            currentStatus.get(),
+            "Task should be in RUNNING state during execution");
 
         ScheduledTask finalTask = schedulerService.getTask(task.getItemId());
-        assertEquals("Task should be in COMPLETED state",
-            ScheduledTask.TaskStatus.COMPLETED, finalTask.getStatus());
-        assertNotNull("Task should have checkpoint data", finalTask.getCheckpointData());
+        assertEquals(
+            ScheduledTask.TaskStatus.COMPLETED,
+            finalTask.getStatus(),
+            "Task should be in COMPLETED state");
+        assertNotNull(finalTask.getCheckpointData(), "Task should have checkpoint data");
     }
 
     @Test
-    @Category(StateTests.class)
+    @Tag("StateTests")
     public void testInMemoryTaskStateTransitions() throws Exception {
         CountDownLatch startLatch = new CountDownLatch(1);
         CountDownLatch completionLatch = new CountDownLatch(1);
@@ -357,19 +349,23 @@ public class SchedulerServiceImplTest {
             .schedule();
 
         // Wait for execution to start
-        assertTrue("Task should start executing", startLatch.await(TEST_TIMEOUT, TEST_TIME_UNIT));
-        assertEquals("Task should be in RUNNING state during execution",
-            ScheduledTask.TaskStatus.RUNNING, executionStatus.get());
+        assertTrue(startLatch.await(TEST_TIMEOUT, TEST_TIME_UNIT), "Task should start executing");
+        assertEquals(
+            ScheduledTask.TaskStatus.RUNNING,
+            executionStatus.get(),
+            "Task should be in RUNNING state during execution");
 
         // Wait for completion
-        assertTrue("Task should complete", completionLatch.await(TEST_TIMEOUT, TEST_TIME_UNIT));
-        assertEquals("Task should be in COMPLETED state after execution",
-            ScheduledTask.TaskStatus.COMPLETED, task.getStatus());
+        assertTrue(completionLatch.await(TEST_TIMEOUT, TEST_TIME_UNIT), "Task should complete");
+        assertEquals(
+            ScheduledTask.TaskStatus.COMPLETED,
+            task.getStatus(),
+            "Task should be in COMPLETED state after execution");
     }
 
     // Task dependency tests
     @Test
-    @Category(DependencyTests.class)
+    @Tag("DependencyTests")
     public void testTaskDependencies() throws Exception {
         // Test task dependencies and waiting behavior
         CountDownLatch dep1Latch = new CountDownLatch(1);
@@ -419,18 +415,19 @@ public class SchedulerServiceImplTest {
         schedulerService.scheduleTask(dependentTask);
 
         // Wait for dependencies to complete
-        assertTrue("Dependencies should complete",
+        assertTrue(
             dep1Latch.await(TEST_TIMEOUT, TEST_TIME_UNIT) &&
-            dep2Latch.await(TEST_TIMEOUT, TEST_TIME_UNIT));
+            dep2Latch.await(TEST_TIMEOUT, TEST_TIME_UNIT),
+            "Dependencies should complete");
 
         // Verify dependent task execution
         Thread.sleep(100); // Give time for dependent task to execute
-        assertTrue("Dependent task should execute after dependencies", dependentExecuted.get());
+        assertTrue(dependentExecuted.get(), "Dependent task should execute after dependencies");
     }
 
     // Clustering support tests
     @Test
-    @Category(ClusterTests.class)
+    @Tag("ClusterTests")
     public void testClusteringSupport() throws Exception {
         // Test clustering behavior with multiple nodes
         SchedulerServiceImpl node1 = TestHelper.createSchedulerService("node1", persistenceService, executionContextManager, bundleContext, clusterService, -1, true, true);
@@ -446,6 +443,8 @@ public class SchedulerServiceImplTest {
 
             // Refresh the index to ensure changes are visible
             persistenceService.refreshIndex(ScheduledTask.class);
+            // Also refresh all indexes to ensure tasks are available for querying (handles refresh delay)
+            persistenceService.refresh();
 
             CountDownLatch executionLatch = new CountDownLatch(2);
             Set<String> executingNodes = ConcurrentHashMap.newKeySet();
@@ -480,14 +479,17 @@ public class SchedulerServiceImplTest {
                 .schedule();
 
             // Wait for executions
-            assertTrue("Tasks should execute on cluster nodes",
-                executionLatch.await(TEST_TIMEOUT, TEST_TIME_UNIT));
+            assertTrue(
+                executionLatch.await(TEST_TIMEOUT, TEST_TIME_UNIT),
+                "Tasks should execute on cluster nodes");
 
             // Verify distribution
-            assertTrue("Task should execute on executor nodes",
-                executingNodes.contains("node1") || executingNodes.contains("node2"));
-            assertFalse("Task should not execute on non-executor node",
-                executingNodes.contains("node3"));
+            assertTrue(
+                executingNodes.contains("node1") || executingNodes.contains("node2"),
+                "Task should execute on executor nodes");
+            assertFalse(
+                executingNodes.contains("node3"),
+                "Task should not execute on non-executor node");
 
             TaskExecutor clusterLockTestExecutor = new TaskExecutor() {
                 @Override
@@ -512,11 +514,17 @@ public class SchedulerServiceImplTest {
                 .disallowParallelExecution()
                 .schedule();
 
-            // Wait for task to be picked up by checkTasks
+            // Wait for task to be picked up by checkTasks and refresh to ensure it's available
             Thread.sleep(1500);
-            ScheduledTask lockedTask = persistenceService.load(lockTask.getItemId(), ScheduledTask.class);
-            assertNotNull("Task should have lock owner", lockedTask.getLockOwner());
-            assertNotNull("Task should have lock date", lockedTask.getLockDate());
+            // Refresh persistence to ensure task updates are available (handles refresh delay)
+            persistenceService.refresh();
+            // Retry until task has lock owner (handles refresh delay for updates)
+            ScheduledTask lockedTask = TestHelper.retryUntil(
+                () -> persistenceService.load(lockTask.getItemId(), ScheduledTask.class),
+                t -> t != null && t.getLockOwner() != null
+            );
+            assertNotNull(lockedTask.getLockOwner(), "Task should have lock owner");
+            assertNotNull(lockedTask.getLockDate(), "Task should have lock date");
 
             // Test lock release - directly update task in persistence
             lockedTask.setLockOwner(null);
@@ -528,7 +536,7 @@ public class SchedulerServiceImplTest {
 
             // Get latest state and verify lock release
             ScheduledTask releasedTask = persistenceService.load(lockTask.getItemId(), ScheduledTask.class);
-            assertNull("Lock should be released", releasedTask.getLockOwner());
+            assertNull(releasedTask.getLockOwner(), "Lock should be released");
 
         } finally {
             node1.preDestroy();
@@ -539,7 +547,7 @@ public class SchedulerServiceImplTest {
 
     // Task recovery tests
     @Test
-    @Category(RecoveryTests.class)
+    @Tag("RecoveryTests")
     public void testTaskRecovery() throws Exception {
         // Set a very short lock timeout for the test
         schedulerService.setLockTimeout(100); // 100 ms
@@ -580,13 +588,13 @@ public class SchedulerServiceImplTest {
         Thread.sleep(1000);
         schedulerService.recoverCrashedTasks();
 
-        assertTrue("Task should be recovered", executionLatch.await(TEST_TIMEOUT, TEST_TIME_UNIT));
-        assertTrue("Task should be recovered and executed", recovered.get());
+        assertTrue(executionLatch.await(TEST_TIMEOUT, TEST_TIME_UNIT), "Task should be recovered");
+        assertTrue(recovered.get(), "Task should be recovered and executed");
     }
 
     // Metrics and history tests
     @Test
-    @Category(MetricsTests.class)
+    @Tag("MetricsTests")
     public void testMetricsAndHistory() throws Exception {
         // Test metrics collection and history tracking
         CountDownLatch successLatch = new CountDownLatch(2);
@@ -620,10 +628,12 @@ public class SchedulerServiceImplTest {
             .withPeriod(100, TimeUnit.MILLISECONDS)
             .schedule();
 
-        assertTrue("Task should execute successfully twice",
-            successLatch.await(TEST_TIMEOUT, TEST_TIME_UNIT));
-        assertTrue("Task should fail once",
-            failureLatch.await(TEST_TIMEOUT, TEST_TIME_UNIT));
+        assertTrue(
+            successLatch.await(TEST_TIMEOUT, TEST_TIME_UNIT),
+            "Task should execute successfully twice");
+        assertTrue(
+            failureLatch.await(TEST_TIMEOUT, TEST_TIME_UNIT),
+            "Task should fail once");
 
         // Verify metrics and history
         ScheduledTask finalTask = schedulerService.getTask(task.getItemId());
@@ -631,11 +641,11 @@ public class SchedulerServiceImplTest {
         List<Map<String, Object>> history =
             (List<Map<String, Object>>) finalTask.getStatusDetails().get("executionHistory");
 
-        assertNotNull("Should have execution history", history);
-        assertEquals("Should have 3 history entries", 3, history.size());
-        assertEquals("Should have 2 successful executions", 2, finalTask.getSuccessCount());
-        assertEquals("Should have 1 failed execution", 1, finalTask.getFailureCount());
-        assertEquals("Total executions should be 3", 3, finalTask.getSuccessCount() + finalTask.getFailureCount());
+        assertNotNull(history, "Should have execution history");
+        assertEquals(3, history.size(), "Should have 3 history entries");
+        assertEquals(2, finalTask.getSuccessCount(), "Should have 2 successful executions");
+        assertEquals(1, finalTask.getFailureCount(), "Should have 1 failed execution");
+        assertEquals(3, finalTask.getSuccessCount() + finalTask.getFailureCount(), "Total executions should be 3");
 
         // Verify history entries
         int successEntries = 0;
@@ -646,25 +656,25 @@ public class SchedulerServiceImplTest {
                 successEntries++;
             } else if ("FAILED".equals(status)) {
                 failureEntries++;
-                assertNotNull("Failed entry should have error", entry.get("error"));
+                assertNotNull(entry.get("error"), "Failed entry should have error");
             }
         }
 
-        assertEquals("Should have 2 successful executions", 2, successEntries);
-        assertEquals("Should have 1 failed execution", 1, failureEntries);
+        assertEquals(2, successEntries, "Should have 2 successful executions");
+        assertEquals(1, failureEntries, "Should have 1 failed execution");
 
         // Verify metrics
-        assertTrue("Should have completed tasks metric", schedulerService.getMetric("tasks.completed") > 0);
-        assertTrue("Should have failed tasks metric", schedulerService.getMetric("tasks.failed") > 0);
+        assertTrue(schedulerService.getMetric("tasks.completed") > 0, "Should have completed tasks metric");
+        assertTrue(schedulerService.getMetric("tasks.failed") > 0, "Should have failed tasks metric");
 
         // Test metric reset
         schedulerService.resetMetrics();
-        assertEquals("Metrics should be reset", 0, schedulerService.getMetric("tasks.completed"));
+        assertEquals(0, schedulerService.getMetric("tasks.completed"), "Metrics should be reset");
     }
 
     // Task validation tests
     @Test
-    @Category(ValidationTests.class)
+    @Tag("ValidationTests")
     public void testTaskValidation() {
         // Test invalid configurations
         try {
@@ -699,7 +709,7 @@ public class SchedulerServiceImplTest {
 
     // Retry tests
     @Test
-    @Category(RetryTests.class)
+    @Tag("RetryTests")
     public void testOneShotTaskRetryScenarios() throws Exception {
         // Test both persistent and in-memory tasks
         testOneShotRetryBehavior(true);  // persistent
@@ -805,14 +815,16 @@ public class SchedulerServiceImplTest {
 
         ScheduledTask task = builder.schedule();
 
-        assertTrue("Task should complete all executions",
-            executionLatch.await(TEST_TIMEOUT, TimeUnit.MILLISECONDS));
+        assertTrue(
+            executionLatch.await(TEST_TIMEOUT, TimeUnit.MILLISECONDS),
+            "Task should complete all executions");
 
         // Verify retry delays
         for (int i = 1; i < executionTimes.size(); i++) {
             long delay = executionTimes.get(i) - executionTimes.get(i-1);
-            assertTrue("Retry delay should be at least " + TEST_RETRY_DELAY + "ms",
-                delay >= TEST_RETRY_DELAY);
+            assertTrue(
+                delay >= TEST_RETRY_DELAY,
+                "Retry delay should be at least " + TEST_RETRY_DELAY + "ms");
         }
 
         // Wait for the task to transition from RUNNING to COMPLETED state
@@ -820,14 +832,18 @@ public class SchedulerServiceImplTest {
         ScheduledTask finalTask = waitForTaskStatus(task.getItemId(), ScheduledTask.TaskStatus.COMPLETED, TEST_WAIT_TIMEOUT, 50);
 
         LOGGER.info("Task status={}", finalTask.getStatus());
-        assertEquals("Task should be completed",
-            ScheduledTask.TaskStatus.COMPLETED, finalTask.getStatus());
-        assertEquals("Should have executed expected number of times",
-            TEST_MAX_RETRIES+1, executionCount.get());
+        assertEquals(
+            ScheduledTask.TaskStatus.COMPLETED,
+            finalTask.getStatus(),
+            "Task should be completed");
+        assertEquals(
+            TEST_MAX_RETRIES+1,
+            executionCount.get(),
+            "Should have executed expected number of times");
     }
 
     @Test
-    @Category(RetryTests.class)
+    @Tag("RetryTests")
     public void testPeriodicTaskRetryScenarios() throws Exception {
         // Test both fixed-rate and fixed-delay
         testPeriodicRetryBehavior(true);  // fixed-rate
@@ -885,38 +901,44 @@ public class SchedulerServiceImplTest {
         ScheduledTask task = builder.withExecutor(executor).schedule();
 
         // Wait for first period retries
-        assertTrue("First period should exhaust retries",
-            firstPeriodLatch.await(TEST_TIMEOUT, TimeUnit.MILLISECONDS));
+        assertTrue(
+            firstPeriodLatch.await(TEST_TIMEOUT, TimeUnit.MILLISECONDS),
+            "First period should exhaust retries");
 
         // Verify retry delays in first period
         for (int i = 1; i <= TEST_MAX_RETRIES; i++) {
             long delay = executionTimes.get(i) - executionTimes.get(i-1);
-            assertTrue("Retry delay should be at least " + TEST_RETRY_DELAY + "ms",
-                delay >= TEST_RETRY_DELAY);
+            assertTrue(
+                delay >= TEST_RETRY_DELAY,
+                "Retry delay should be at least " + TEST_RETRY_DELAY + "ms");
         }
 
         // Wait for successful execution in second period
-        assertTrue("Second period should succeed",
-            secondPeriodLatch.await(TEST_TIMEOUT, TimeUnit.MILLISECONDS));
+        assertTrue(
+            secondPeriodLatch.await(TEST_TIMEOUT, TimeUnit.MILLISECONDS),
+            "Second period should succeed");
 
         // Verify period transition
         long periodTransitionDelay = executionTimes.get(TEST_MAX_RETRIES+1) -
             executionTimes.get(TEST_MAX_RETRIES);
-        assertTrue("Period transition delay should be at least 2000ms",
-            periodTransitionDelay >= 2000);
+        assertTrue(
+            periodTransitionDelay >= 2000,
+            "Period transition delay should be at least 2000ms");
 
         // Verify task state
         ScheduledTask scheduledTask = waitForTaskStatus(task.getItemId(), ScheduledTask.TaskStatus.SCHEDULED, TEST_WAIT_TIMEOUT, 100);
         LOGGER.info("Task status={}", scheduledTask.getStatus());
-        assertEquals("Task should be in scheduled state",
-            ScheduledTask.TaskStatus.SCHEDULED, scheduledTask.getStatus());
-        assertEquals("Failure count should be reset", 0, scheduledTask.getFailureCount());
+        assertEquals(
+            ScheduledTask.TaskStatus.SCHEDULED,
+            scheduledTask.getStatus(),
+            "Task should be in scheduled state");
+        assertEquals(0, scheduledTask.getFailureCount(), "Failure count should be reset");
 
         schedulerService.cancelTask(task.getItemId());
     }
 
     @Test
-    @Category(RetryTests.class)
+    @Tag("RetryTests")
     public void testManualRetryAfterExhaustion() throws Exception {
         AtomicInteger executionCount = new AtomicInteger(0);
         CountDownLatch exhaustionLatch = new CountDownLatch(TEST_MAX_RETRIES+1);
@@ -952,33 +974,41 @@ public class SchedulerServiceImplTest {
             .schedule();
 
         // Wait for automatic retries to be exhausted
-        assertTrue("Should exhaust automatic retries",
-            exhaustionLatch.await(TEST_TIMEOUT, TimeUnit.MILLISECONDS));
+        assertTrue(
+            exhaustionLatch.await(TEST_TIMEOUT, TimeUnit.MILLISECONDS),
+            "Should exhaust automatic retries");
 
         // Verify failed state
         ScheduledTask failedTask = waitForTaskStatus(task.getItemId(), ScheduledTask.TaskStatus.FAILED, TEST_WAIT_TIMEOUT, 50);
-        assertEquals("Task should be in failed state",
-            ScheduledTask.TaskStatus.FAILED, failedTask.getStatus());
-        assertEquals("Should have correct failure count",
-            TEST_MAX_RETRIES+1, failedTask.getFailureCount());
+        assertEquals(
+            ScheduledTask.TaskStatus.FAILED,
+            failedTask.getStatus(),
+            "Task should be in failed state");
+        assertEquals(
+            TEST_MAX_RETRIES+1,
+            failedTask.getFailureCount(),
+            "Should have correct failure count");
 
         // Manually retry with reset
         schedulerService.retryTask(task.getItemId(), true);
 
         // Wait for manual retry to complete
-        assertTrue("Manual retry should succeed",
-            manualRetryLatch.await(TEST_TIMEOUT, TEST_TIME_UNIT));
+        assertTrue(
+            manualRetryLatch.await(TEST_TIMEOUT, TEST_TIME_UNIT),
+            "Manual retry should succeed");
 
         // Verify final state
         ScheduledTask completedTask = waitForTaskStatus(task.getItemId(), ScheduledTask.TaskStatus.COMPLETED, TEST_WAIT_TIMEOUT, 50);
-        assertEquals("Task should be completed after manual retry",
-            ScheduledTask.TaskStatus.COMPLETED, completedTask.getStatus());
-        assertEquals("Failure count should be reset", 0, completedTask.getFailureCount());
+        assertEquals(
+            ScheduledTask.TaskStatus.COMPLETED,
+            completedTask.getStatus(),
+            "Task should be completed after manual retry");
+        assertEquals(0, completedTask.getFailureCount(), "Failure count should be reset");
     }
 
     // Task purging tests
     @Test
-    @Category(MaintenanceTests.class)
+    @Tag("MaintenanceTests")
     public void testTaskPurging() throws Exception {
         // Test task purging functionality
         schedulerService.setCompletedTaskTtlDays(0);
@@ -995,8 +1025,10 @@ public class SchedulerServiceImplTest {
 
             // Verify task completion
             ScheduledTask completedTask = schedulerService.getTask(task.getItemId());
-            assertEquals("Task should be completed",
-                ScheduledTask.TaskStatus.COMPLETED, completedTask.getStatus());
+            assertEquals(
+                ScheduledTask.TaskStatus.COMPLETED,
+                completedTask.getStatus(),
+                "Task should be completed");
         }
 
         // Force purge
@@ -1007,7 +1039,7 @@ public class SchedulerServiceImplTest {
 
         // Verify purged tasks
         List<ScheduledTask> remainingTasks = schedulerService.getAllTasks();
-        assertEquals("Should have purged completed tasks", 0, remainingTasks.size());
+        assertEquals(0, remainingTasks.size(), "Should have purged completed tasks");
     }
 
     /**
@@ -1015,7 +1047,7 @@ public class SchedulerServiceImplTest {
      * Verifies all builder methods work correctly.
      */
     @Test
-    @Category(ValidationTests.class)
+    @Tag("ValidationTests")
     public void testTaskBuilder() {
         Map<String, Object> params = Collections.singletonMap("test", "value");
 
@@ -1028,19 +1060,19 @@ public class SchedulerServiceImplTest {
             .runOnAllNodes()
             .schedule();
 
-        assertEquals("Parameters should be set", params, task.getParameters());
-        assertEquals("Initial delay should be set", 100, task.getInitialDelay());
-        assertEquals("Period should be set", 200, task.getPeriod());
-        assertFalse("Should be fixed delay", task.isFixedRate());
-        assertFalse("Should be non-persistent", task.isPersistent());
-        assertTrue("Should run on all nodes", task.isRunOnAllNodes());
+        assertEquals(params, task.getParameters(), "Parameters should be set");
+        assertEquals(100, task.getInitialDelay(), "Initial delay should be set");
+        assertEquals(200, task.getPeriod(), "Period should be set");
+        assertFalse(task.isFixedRate(), "Should be fixed delay");
+        assertFalse(task.isPersistent(), "Should be non-persistent");
+        assertTrue(task.isRunOnAllNodes(), "Should run on all nodes");
     }
 
     /**
      * Tests lock timeout expiration and recovery.
      */
     @Test
-    @Category(ClusterTests.class)
+    @Tag("ClusterTests")
     public void testLockTimeout() throws Exception {
         // Explicitly set a very short lock timeout for this test
         schedulerService.setLockTimeout(TEST_LOCK_TIMEOUT);
@@ -1077,7 +1109,7 @@ public class SchedulerServiceImplTest {
             .schedule();
 
         // Wait for task to start
-        assertTrue("Task should start executing", executionLatch.await(TEST_TIMEOUT, TEST_TIME_UNIT));
+        assertTrue(executionLatch.await(TEST_TIMEOUT, TEST_TIME_UNIT), "Task should start executing");
 
         // Get the running task instance
         ScheduledTask runningTask = persistenceService.load(task.getItemId(), ScheduledTask.class);
@@ -1090,14 +1122,14 @@ public class SchedulerServiceImplTest {
 
         // Check lock status after manual release
         ScheduledTask updatedTask = persistenceService.load(task.getItemId(), ScheduledTask.class);
-        assertNull("Lock should be released after manual update", updatedTask.getLockOwner());
+        assertNull(updatedTask.getLockOwner(), "Lock should be released after manual update");
     }
 
     /**
      * Tests task cancellation during execution.
      */
     @Test
-    @Category(StateTests.class)
+    @Tag("StateTests")
     public void testTaskCancellation() throws Exception {
         CountDownLatch startLatch = new CountDownLatch(1);
         CountDownLatch cancelLatch = new CountDownLatch(1);
@@ -1134,7 +1166,7 @@ public class SchedulerServiceImplTest {
             .schedule();
 
         // Wait for task to start
-        assertTrue("Task should start", startLatch.await(TEST_TIMEOUT, TEST_TIME_UNIT));
+        assertTrue(startLatch.await(TEST_TIMEOUT, TEST_TIME_UNIT), "Task should start");
 
         // Cancel the task
         schedulerService.cancelTask(task.getItemId());
@@ -1145,16 +1177,18 @@ public class SchedulerServiceImplTest {
         Thread.sleep(TEST_SLEEP);
 
         ScheduledTask cancelledTask = schedulerService.getTask(task.getItemId());
-        assertEquals("Task should be cancelled",
-            ScheduledTask.TaskStatus.CANCELLED, cancelledTask.getStatus());
-        assertFalse("Task should not complete after cancellation", completed.get());
+        assertEquals(
+            ScheduledTask.TaskStatus.CANCELLED,
+            cancelledTask.getStatus(),
+            "Task should be cancelled");
+        assertFalse(completed.get(), "Task should not complete after cancellation");
     }
 
     /**
      * Tests task querying and filtering capabilities.
      */
     @Test
-    @Category(QueryTests.class)
+    @Tag("QueryTests")
     public void testTaskQuerying() throws Exception {
         // Create tasks with different states
         ScheduledTask runningTask = createTestTask("query-test", ScheduledTask.TaskStatus.RUNNING);
@@ -1162,22 +1196,31 @@ public class SchedulerServiceImplTest {
         ScheduledTask failedTask = createTestTask("query-test", ScheduledTask.TaskStatus.FAILED);
         ScheduledTask waitingTask = createTestTask("query-test", ScheduledTask.TaskStatus.WAITING);
 
-        // Test querying by status
-        PartialList<ScheduledTask> completedTasks =
-            schedulerService.getTasksByStatus(ScheduledTask.TaskStatus.COMPLETED, 0, 10, null);
-        assertEquals("Should find completed task", 1, completedTasks.getList().size());
-        assertEquals("Should return correct task",
-            completedTask.getItemId(), completedTasks.getList().get(0).getItemId());
+        // Refresh persistence to ensure tasks are available for querying (handles refresh delay)
+        persistenceService.refresh();
 
-        // Test querying by type
-        PartialList<ScheduledTask> typeTasks =
-            schedulerService.getTasksByType("query-test", 0, 10, null);
-        assertEquals("Should find all tasks of type", 4, typeTasks.getList().size());
+        // Test querying by status - retry until task is available
+        PartialList<ScheduledTask> completedTasks = TestHelper.retryQueryUntilAvailable(
+            () -> schedulerService.getTasksByStatus(ScheduledTask.TaskStatus.COMPLETED, 0, 10, null),
+            1
+        );
+        assertEquals(1, completedTasks.getList().size(), "Should find completed task");
+        assertEquals(
+            completedTask.getItemId(),
+            completedTasks.getList().get(0).getItemId(),
+            "Should return correct task");
+
+        // Test querying by type - retry until all tasks are available
+        PartialList<ScheduledTask> typeTasks = TestHelper.retryQueryUntilAvailable(
+            () -> schedulerService.getTasksByType("query-test", 0, 10, null),
+            4
+        );
+        assertEquals(4, typeTasks.getList().size(), "Should find all tasks of type");
 
         // Test pagination
         PartialList<ScheduledTask> pagedTasks =
             schedulerService.getTasksByType("query-test", 0, 2, null);
-        assertEquals("Should respect page size", 2, pagedTasks.getList().size());
+        assertEquals(2, pagedTasks.getList().size(), "Should respect page size");
     }
 
     /**
@@ -1197,7 +1240,7 @@ public class SchedulerServiceImplTest {
      * Verifies that tasks are properly recovered when nodes fail during execution.
      */
     @Test
-    @Category(ClusterTests.class)
+    @Tag("ClusterTests")
     public void testNodeFailure() throws Exception {
         schedulerService.preDestroy();
         SchedulerServiceImpl node1 = TestHelper.createSchedulerService("node1", persistenceService, executionContextManager, bundleContext, clusterService, TEST_LOCK_TIMEOUT, true, true);
@@ -1245,9 +1288,9 @@ public class SchedulerServiceImplTest {
                 .schedule();
 
             // Wait for task to start
-            assertTrue("Task should start", startLatch.await(TEST_TIMEOUT, TEST_TIME_UNIT));
+            assertTrue(startLatch.await(TEST_TIMEOUT, TEST_TIME_UNIT), "Task should start");
             String originalNode = executingNode.get();
-            assertNotNull("Task should have executing node", originalNode);
+            assertNotNull(originalNode, "Task should have executing node");
 
             // Simulate node failure by destroying the executing node
             if (originalNode.equals("node1")) {
@@ -1266,15 +1309,19 @@ public class SchedulerServiceImplTest {
                 node1.recoverCrashedTasks();
             }
 
-            assertTrue("Task should be recovered", completionLatch.await(TEST_TIMEOUT, TEST_TIME_UNIT));
-            assertTrue("Task should be recovered by other node", taskRecovered.get());
+            assertTrue(completionLatch.await(TEST_TIMEOUT, TEST_TIME_UNIT), "Task should be recovered");
+            assertTrue(taskRecovered.get(), "Task should be recovered by other node");
 
             // Verify final state
             ScheduledTask recoveredTask = persistenceService.load(task.getItemId(), ScheduledTask.class);
-            assertEquals("Task should be completed",
-                ScheduledTask.TaskStatus.COMPLETED, recoveredTask.getStatus());
-            assertNotEquals("Task should be recovered by different node",
-                originalNode, recoveredTask.getLockOwner());
+            assertEquals(
+                ScheduledTask.TaskStatus.COMPLETED,
+                recoveredTask.getStatus(),
+                "Task should be completed");
+            assertNotEquals(
+                originalNode,
+                recoveredTask.getLockOwner(),
+                "Task should be recovered by different node");
         } finally {
             node1.preDestroy();
             node2.preDestroy();
@@ -1286,7 +1333,7 @@ public class SchedulerServiceImplTest {
      * Verifies that tasks don't execute concurrently even across different nodes.
      */
     @Test
-    @Category(ClusterTests.class)
+    @Tag("ClusterTests")
     public void testConcurrentLockAcquisition() throws Exception {
         SchedulerServiceImpl node1 = TestHelper.createSchedulerService("node1", persistenceService, executionContextManager, bundleContext, clusterService, -1, true, true);
         SchedulerServiceImpl node2 = TestHelper.createSchedulerService("node2", persistenceService, executionContextManager, bundleContext, clusterService, -1, true, true);
@@ -1339,21 +1386,23 @@ public class SchedulerServiceImplTest {
                 .schedule();
 
             // Wait for both executions to complete
-            assertTrue("Task executions should complete",
-                completionLatch.await(TEST_TIMEOUT, TEST_TIME_UNIT));
+            assertTrue(
+                completionLatch.await(TEST_TIMEOUT, TEST_TIME_UNIT),
+                "Task executions should complete");
 
             // Verify no concurrent execution by checking time overlaps
             List<Map.Entry<String, ExecutionInfo>> sortedExecutions = new ArrayList<>(executions.entrySet());
             sortedExecutions.sort((a, b) -> Long.compare(a.getValue().startTime, b.getValue().startTime));
 
-            assertEquals("Should have exactly one task executing at a time", 1, maxConcurrentExecutions.get());
+            assertEquals(1, maxConcurrentExecutions.get(), "Should have exactly one task executing at a time");
 
             // Verify sequential execution
             ExecutionInfo current = sortedExecutions.get(0).getValue();
             ExecutionInfo next = sortedExecutions.get(1).getValue();
 
-            assertTrue("Task executions should not overlap in time",
-                current.endTime <= next.startTime);
+            assertTrue(
+                current.endTime <= next.startTime,
+                "Task executions should not overlap in time");
 
             LOGGER.info("Execution 1 on node {} ran from {} to {}",
                 current.lockOwner,
@@ -1391,7 +1440,7 @@ public class SchedulerServiceImplTest {
      * Verifies that tasks are properly redistributed.
      */
     @Test
-    @Category(ClusterTests.class)
+    @Tag("ClusterTests")
     public void testTaskRebalancing() throws Exception {
         SchedulerServiceImpl node1 = TestHelper.createSchedulerService("node1", persistenceService, executionContextManager, bundleContext, clusterService, -1, true, true);
         SchedulerServiceImpl node2 = null;
@@ -1412,7 +1461,7 @@ public class SchedulerServiceImplTest {
                     executingNodes.add(task.getExecutingNodeId());
                     if (task.getExecutingNodeId().equals("node1")) {
                         node1Latch.countDown();
-                    } else {
+                    } else if (task.getExecutingNodeId().equals("node2")) {
                         node2Latch.countDown();
                     }
                     callback.complete();
@@ -1422,29 +1471,84 @@ public class SchedulerServiceImplTest {
             // Register executor on first node
             node1.registerTaskExecutor(executor);
 
-            // Create periodic task
+            // Create periodic task with shorter period for faster test execution
             ScheduledTask task = node1.newTask("rebalance-test")
-                .withPeriod(2000, TimeUnit.MILLISECONDS)
+                .withPeriod(1000, TimeUnit.MILLISECONDS)
                 .schedule();
 
             // Wait for execution on node1
-            assertTrue("Task should execute on node1",
-                node1Latch.await(TEST_TIMEOUT, TEST_TIME_UNIT));
-            assertTrue("Node1 should execute task",
-                executingNodes.contains("node1"));
+            assertTrue(
+                node1Latch.await(TEST_TIMEOUT, TEST_TIME_UNIT),
+                "Task should execute on node1");
+            assertTrue(executingNodes.contains("node1"), "Node1 should execute task");
+
+            // Refresh persistence to ensure task is available for node2
+            persistenceService.refreshIndex(ScheduledTask.class);
+            persistenceService.refresh();
 
             // Add second node
             node2 = TestHelper.createSchedulerService("node2", persistenceService, executionContextManager, bundleContext, clusterService, -1, true, true);
             node2.registerTaskExecutor(executor);
 
-            // Wait for execution on node2
-            assertTrue("Task should execute on node2",
-                node2Latch.await(TEST_TIMEOUT*4, TEST_TIME_UNIT));
-            assertTrue("Node2 should execute task",
-                executingNodes.contains("node2"));
+            // Refresh persistence again after node2 is added to ensure it can see the task
+            // Note: refresh() and refreshIndex() update immediately, so items are available right away
+            persistenceService.refreshIndex(ScheduledTask.class);
+            persistenceService.refresh();
+
+            // Wait for node2 to discover the task before waiting for execution
+            // This ensures the task checker has run and the task has been rebalanced
+            // The task checker runs every 1000ms, so we need to wait for at least one cycle
+            // Use retryUntil to wait for task discovery with retries
+            final SchedulerServiceImpl node2Final = node2; // Make effectively final for lambda
+            final String taskId = task.getItemId(); // Make effectively final for lambda
+            ScheduledTask discoveredTask = TestHelper.retryUntil(
+                () -> {
+                    try {
+                        return node2Final.getTask(taskId);
+                    } catch (Exception e) {
+                        return null;
+                    }
+                },
+                discovered -> discovered != null
+            );
+            assertNotNull(discoveredTask, "Node2 should discover the task after initialization");
+
+            // Now wait for execution on node2
+            // The task has a 1000ms period, and the task checker runs every 1000ms
+            // After discovery, we need to wait for:
+            // 1. The next execution time to arrive (up to 1000ms)
+            // 2. The task checker to run and pick up the task (up to 1000ms)
+            // 3. The task to actually execute
+            // So we need at least 2000ms + some buffer, but use retry pattern for reliability
+            // Now wait for execution on node2
+            // The task has a 1000ms period, and the task checker runs every 1000ms
+            // After discovery, we need to wait for:
+            // 1. The next execution time to arrive (up to 1000ms)
+            // 2. The task checker to run and pick up the task (up to 1000ms)
+            // 3. The task to actually execute
+            // So we need at least 2000ms + some buffer
+            // Use retry pattern to wait for execution - check if node2 has executed
+            // retryUntil will retry up to MAX_RETRIES (20) times with 100ms delay = up to 2000ms
+            boolean node2Executed = false;
+            try {
+                TestHelper.retryUntil(
+                    () -> executingNodes.contains("node2"),
+                    result -> result == true
+                );
+                node2Executed = true;
+            } catch (RuntimeException e) {
+                // retryUntil failed, try the latch with extended timeout as fallback
+                long extendedTimeout = Math.max(TEST_TIMEOUT, 3000); // At least 3 seconds
+                node2Executed = node2Latch.await(extendedTimeout, TEST_TIME_UNIT);
+            }
+            
+            assertTrue(
+                node2Executed,
+                "Task should execute on node2 within timeout after discovery (allowing for task period and checker cycles)");
+            assertTrue(executingNodes.contains("node2"), "Node2 should execute task");
 
             // Verify task distribution
-            assertEquals("Task should execute on both nodes", 2, executingNodes.size());
+            assertEquals(2, executingNodes.size(), "Task should execute on both nodes");
 
         } finally {
             if (node2 != null) {
@@ -1459,7 +1563,7 @@ public class SchedulerServiceImplTest {
      * Verifies that locks cannot be stolen and are properly recovered.
      */
     @Test
-    @Category(ClusterTests.class)
+    @Tag("ClusterTests")
     public void testLockStealing() throws Exception {
         SchedulerServiceImpl node1 = TestHelper.createSchedulerService("node1", persistenceService, executionContextManager, bundleContext, clusterService, -1, true, true);
         SchedulerServiceImpl node2 = TestHelper.createSchedulerService("node2", persistenceService, executionContextManager, bundleContext, clusterService, -1, true, true);
@@ -1497,10 +1601,9 @@ public class SchedulerServiceImplTest {
                 .schedule();
 
             // Wait for first execution
-            assertTrue("Task should execute",
-                executionLatch.await(TEST_TIMEOUT, TEST_TIME_UNIT));
+            assertTrue(executionLatch.await(TEST_TIMEOUT, TEST_TIME_UNIT), "Task should execute");
             String originalOwner = lockOwner.get();
-            assertNotNull("Task should have lock owner", originalOwner);
+            assertNotNull(originalOwner, "Task should have lock owner");
 
             // Attempt immediate re-execution (potential lock stealing)
             node1.recoverCrashedTasks();
@@ -1510,8 +1613,10 @@ public class SchedulerServiceImplTest {
             // Verify lock wasn't stolen
             ScheduledTask lockedTask = persistenceService.load(task.getItemId(), ScheduledTask.class);
             if (lockedTask.getLockOwner() != null) {
-                assertEquals("Lock should not be stolen",
-                    originalOwner, lockedTask.getLockOwner());
+                assertEquals(
+                    originalOwner,
+                    lockedTask.getLockOwner(),
+                    "Lock should not be stolen");
             }
         } finally {
             node1.preDestroy();
@@ -1571,16 +1676,16 @@ public class SchedulerServiceImplTest {
             node1.scheduleTask(task);
 
             // Wait for execution
-            assertTrue("Task should execute within timeout", executionLatch.await(5, TimeUnit.SECONDS));
+            assertTrue(executionLatch.await(5, TimeUnit.SECONDS), "Task should execute within timeout");
 
             // Verify that the task was executed by the expected node
-            assertNotNull("Task should have an executing node ID", executingNodeId.get());
+            assertNotNull(executingNodeId.get(), "Task should have an executing node ID");
 
             // Verify that the cluster service was used to determine active nodes
             List<String> activeNodes = node1.getActiveNodes();
-            assertTrue("Node1 should be in active nodes list", activeNodes.contains("node1"));
-            assertTrue("Node2 should be in active nodes list", activeNodes.contains("node2"));
-            assertTrue("Node3 should be in active nodes list", activeNodes.contains("node3"));
+            assertTrue(activeNodes.contains("node1"), "Node1 should be in active nodes list");
+            assertTrue(activeNodes.contains("node2"), "Node2 should be in active nodes list");
+            assertTrue(activeNodes.contains("node3"), "Node3 should be in active nodes list");
 
         } finally {
             // Clean up
@@ -1603,18 +1708,14 @@ public class SchedulerServiceImplTest {
         persistenceService.save(task);
     }
 
-    public interface SystemTaskTests {}
-
-    public interface RestartTests {}
-
-    public interface OptionalDependencyTests {}
+    // removed JUnit 4 marker interfaces
 
     /**
      * Tests that the scheduler service works correctly without a PersistenceSchedulerProvider.
      * This verifies that the dependency is truly optional.
      */
     @Test
-    @Category(OptionalDependencyTests.class)
+    @Tag("OptionalDependencyTests")
     public void testSchedulerServiceWithoutPersistenceProvider() throws Exception {
         // Create a scheduler service without persistence provider using the helper method
         SchedulerServiceImpl schedulerWithoutProvider = TestHelper.createSchedulerServiceWithoutPersistenceProvider(
@@ -1626,21 +1727,21 @@ public class SchedulerServiceImplTest {
             TEST_LOCK_TIMEOUT,
             true,
             true);
-        
+
         try {
             // Verify that the service starts without errors
-            assertTrue("Scheduler service should be running", schedulerWithoutProvider.isExecutorNode());
-            
+            assertTrue(schedulerWithoutProvider.isExecutorNode(), "Scheduler service should be running");
+
             // Test that in-memory tasks work correctly
             CountDownLatch executionLatch = new CountDownLatch(1);
             AtomicBoolean executed = new AtomicBoolean(false);
-            
+
             TaskExecutor executor = new TaskExecutor() {
                 @Override
                 public String getTaskType() {
                     return "no-provider-test";
                 }
-                
+
                 @Override
                 public void execute(ScheduledTask task, TaskStatusCallback callback) {
                     executed.set(true);
@@ -1648,34 +1749,34 @@ public class SchedulerServiceImplTest {
                     callback.complete();
                 }
             };
-            
+
             schedulerWithoutProvider.registerTaskExecutor(executor);
-            
+
             // Create a non-persistent task using the registered executor
             ScheduledTask task = schedulerWithoutProvider.newTask("no-provider-test")
                 .nonPersistent()
                 .withExecutor(executor)
                 .schedule();
-            
+
             // Wait for execution
-            assertTrue("Task should execute", executionLatch.await(TEST_TIMEOUT, TEST_TIME_UNIT));
-            assertTrue("Task should have executed", executed.get());
-            
+            assertTrue(executionLatch.await(TEST_TIMEOUT, TEST_TIME_UNIT), "Task should execute");
+            assertTrue(executed.get(), "Task should have executed");
+
             // Wait for task status to be properly updated
             // This is necessary because the state transition happens asynchronously after the callback.complete() is called
             ScheduledTask completedTask = waitForTaskStatusWithScheduler(task.getItemId(), ScheduledTask.TaskStatus.COMPLETED, TEST_TIMEOUT, TEST_SLEEP, schedulerWithoutProvider);
-            assertNotNull("Task should be found", completedTask);
-            assertEquals("Task should be completed", ScheduledTask.TaskStatus.COMPLETED, completedTask.getStatus());
-            
+            assertNotNull(completedTask, "Task should be found");
+            assertEquals(ScheduledTask.TaskStatus.COMPLETED, completedTask.getStatus(), "Task should be completed");
+
             // Test that persistent tasks are handled gracefully (should not fail)
             try {
                 List<ScheduledTask> persistentTasks = schedulerWithoutProvider.getPersistentTasks();
-                assertNotNull("Should return empty list for persistent tasks", persistentTasks);
-                assertEquals("Should have no persistent tasks", 0, persistentTasks.size());
+                assertNotNull(persistentTasks, "Should return empty list for persistent tasks");
+                assertEquals(0, persistentTasks.size(), "Should have no persistent tasks");
             } catch (Exception e) {
                 fail("Should handle persistent task queries gracefully: " + e.getMessage());
             }
-            
+
         } finally {
             schedulerWithoutProvider.preDestroy();
         }
@@ -1686,7 +1787,7 @@ public class SchedulerServiceImplTest {
      * This simulates the OSGi service binding scenario.
      */
     @Test
-    @Category(OptionalDependencyTests.class)
+    @Tag("OptionalDependencyTests")
     public void testSchedulerServiceWithLatePersistenceProviderBinding() throws Exception {
         // Create a scheduler service without persistence provider initially
         SchedulerServiceImpl schedulerWithLateProvider = TestHelper.createSchedulerServiceWithoutPersistenceProvider(
@@ -1698,11 +1799,11 @@ public class SchedulerServiceImplTest {
             TEST_LOCK_TIMEOUT,
             true,
             true);
-        
+
         try {
             // Verify service starts without persistence provider
-            assertTrue("Scheduler service should be running", schedulerWithLateProvider.isExecutorNode());
-            
+            assertTrue(schedulerWithLateProvider.isExecutorNode(), "Scheduler service should be running");
+
             // Create a persistence provider and bind it later
             PersistenceSchedulerProvider lateProvider = new PersistenceSchedulerProvider();
             lateProvider.setPersistenceService(persistenceService);
@@ -1711,20 +1812,20 @@ public class SchedulerServiceImplTest {
             lateProvider.setCompletedTaskTtlDays(30);
             lateProvider.setLockManager(schedulerWithLateProvider.getLockManager());
             lateProvider.postConstruct();
-            
+
             // Bind the provider (simulating OSGi service binding)
             schedulerWithLateProvider.setPersistenceProvider(lateProvider);
-            
+
             // Test that persistent tasks now work
             CountDownLatch executionLatch = new CountDownLatch(1);
             AtomicBoolean executed = new AtomicBoolean(false);
-            
+
             TaskExecutor executor = new TaskExecutor() {
                 @Override
                 public String getTaskType() {
                     return "late-provider-test";
                 }
-                
+
                 @Override
                 public void execute(ScheduledTask task, TaskStatusCallback callback) {
                     executed.set(true);
@@ -1732,43 +1833,46 @@ public class SchedulerServiceImplTest {
                     callback.complete();
                 }
             };
-            
+
             schedulerWithLateProvider.registerTaskExecutor(executor);
-            
+
             // Create a persistent task using the registered executor
             ScheduledTask task = schedulerWithLateProvider.newTask("late-provider-test")
                 .withExecutor(executor)
                 .schedule();
-            
+
             // Wait for execution
-            assertTrue("Task should execute", executionLatch.await(TEST_TIMEOUT, TEST_TIME_UNIT));
-            assertTrue("Task should have executed", executed.get());
-            
+            assertTrue(executionLatch.await(TEST_TIMEOUT, TEST_TIME_UNIT), "Task should execute");
+            assertTrue(executed.get(), "Task should have executed");
+
             // Wait for task status to be properly updated and persisted
             ScheduledTask completedTask = waitForTaskStatus(task.getItemId(), ScheduledTask.TaskStatus.COMPLETED, TEST_TIMEOUT, TEST_SLEEP);
-            assertNotNull("Task should be found", completedTask);
-            assertEquals("Task should be completed", ScheduledTask.TaskStatus.COMPLETED, completedTask.getStatus());
-            
-            // Verify persistent tasks are now available
-            List<ScheduledTask> persistentTasks = schedulerWithLateProvider.getPersistentTasks();
-            assertNotNull("Should return list for persistent tasks", persistentTasks);
-            assertTrue("Should have at least one persistent task", persistentTasks.size() >= 1);
-            
+            assertNotNull(completedTask, "Task should be found");
+            assertEquals(ScheduledTask.TaskStatus.COMPLETED, completedTask.getStatus(), "Task should be completed");
+
+            // Verify persistent tasks are now available - retry until task is available (handles refresh delay)
+            List<ScheduledTask> persistentTasks = TestHelper.retryUntil(
+                () -> schedulerWithLateProvider.getPersistentTasks(),
+                r -> r != null && r.size() >= 1
+            );
+            assertNotNull(persistentTasks, "Should return list for persistent tasks");
+            assertTrue(persistentTasks.size() >= 1, "Should have at least one persistent task");
+
             // Unbind the provider (simulating OSGi service unbinding)
             schedulerWithLateProvider.unsetPersistenceProvider(lateProvider);
-            
+
             // Verify that persistent task queries are handled gracefully again
             try {
                 List<ScheduledTask> persistentTasksAfterUnbind = schedulerWithLateProvider.getPersistentTasks();
-                assertNotNull("Should return empty list after unbinding", persistentTasksAfterUnbind);
-                assertEquals("Should have no persistent tasks after unbinding", 0, persistentTasksAfterUnbind.size());
+            assertNotNull(persistentTasksAfterUnbind, "Should return empty list after unbinding");
+            assertEquals(0, persistentTasksAfterUnbind.size(), "Should have no persistent tasks after unbinding");
             } catch (Exception e) {
                 fail("Should handle persistent task queries gracefully after unbinding: " + e.getMessage());
             }
-            
+
             // Clean up the provider
             lateProvider.preDestroy();
-            
+
         } finally {
             schedulerWithLateProvider.preDestroy();
         }
@@ -1779,7 +1883,7 @@ public class SchedulerServiceImplTest {
      * in a multi-threaded environment.
      */
     @Test
-    @Category(OptionalDependencyTests.class)
+    @Tag("OptionalDependencyTests")
     public void testConcurrentPersistenceProviderBinding() throws Exception {
         SchedulerServiceImpl schedulerConcurrent = TestHelper.createSchedulerServiceWithoutPersistenceProvider(
             "test-node-concurrent",
@@ -1790,7 +1894,7 @@ public class SchedulerServiceImplTest {
             TEST_LOCK_TIMEOUT,
             true,
             true);
-        
+
         try {
             // Create multiple persistence providers
             List<PersistenceSchedulerProvider> providers = new ArrayList<>();
@@ -1804,54 +1908,55 @@ public class SchedulerServiceImplTest {
                 provider.postConstruct();
                 providers.add(provider);
             }
-            
+
             // Test concurrent binding/unbinding
             CountDownLatch startLatch = new CountDownLatch(1);
             CountDownLatch completionLatch = new CountDownLatch(3);
             AtomicInteger bindingCount = new AtomicInteger(0);
             AtomicInteger unbindingCount = new AtomicInteger(0);
-            
+
             // Start threads that bind/unbind providers concurrently
             for (int i = 0; i < 3; i++) {
                 final int index = i;
                 new Thread(() -> {
                     try {
                         startLatch.await();
-                        
+
                         // Bind provider
                         schedulerConcurrent.setPersistenceProvider(providers.get(index));
                         bindingCount.incrementAndGet();
-                        
+
                         // Simulate some work
                         Thread.sleep(100);
-                        
+
                         // Unbind provider
                         schedulerConcurrent.unsetPersistenceProvider(providers.get(index));
                         unbindingCount.incrementAndGet();
-                        
+
                         completionLatch.countDown();
                     } catch (InterruptedException e) {
                         Thread.currentThread().interrupt();
                     }
                 }).start();
             }
-            
+
             // Start all threads
             startLatch.countDown();
-            
+
             // Wait for completion
-            assertTrue("All binding/unbinding operations should complete", 
-                completionLatch.await(TEST_TIMEOUT, TEST_TIME_UNIT));
-            
+            assertTrue(
+                completionLatch.await(TEST_TIMEOUT, TEST_TIME_UNIT),
+                "All binding/unbinding operations should complete");
+
             // Verify all operations completed
-            assertEquals("All bindings should complete", 3, bindingCount.get());
-            assertEquals("All unbindings should complete", 3, unbindingCount.get());
-            
+            assertEquals(3, bindingCount.get(), "All bindings should complete");
+            assertEquals(3, unbindingCount.get(), "All unbindings should complete");
+
             // Clean up providers
             for (PersistenceSchedulerProvider provider : providers) {
                 provider.preDestroy();
             }
-            
+
         } finally {
             schedulerConcurrent.preDestroy();
         }
@@ -1862,7 +1967,7 @@ public class SchedulerServiceImplTest {
      * System tasks should be reused rather than duplicated.
      */
     @Test
-    @Category(SystemTaskTests.class)
+    @Tag("SystemTaskTests")
     public void testSystemTaskReuse() throws Exception {
         String taskType = "system-task-reuse-test";
         AtomicInteger executionCount = new AtomicInteger(0);
@@ -1891,12 +1996,12 @@ public class SchedulerServiceImplTest {
             .withFixedRate()
             .asSystemTask()
             .schedule();
-        
+
         taskId.set(systemTask.getItemId());
 
         // Wait for task to execute once
-        assertTrue("Task should execute", executionLatch.await(TEST_TIMEOUT, TEST_TIME_UNIT));
-        assertEquals("Task should have executed once", 1, executionCount.get());
+        assertTrue(executionLatch.await(TEST_TIMEOUT, TEST_TIME_UNIT), "Task should execute");
+        assertEquals(1, executionCount.get(), "Task should have executed once");
 
         // Force persistence to ensure the task is saved
         persistenceService.refreshIndex(ScheduledTask.class);
@@ -1909,14 +2014,16 @@ public class SchedulerServiceImplTest {
             .schedule();
 
         // The task ID should be the same as the first one since it's reused
-        assertEquals("System task should be reused, not duplicated",
-            systemTask.getItemId(), secondTask.getItemId());
+        assertEquals(
+            systemTask.getItemId(),
+            secondTask.getItemId(),
+            "System task should be reused, not duplicated");
 
         // Check that there's only one task of this type BEFORE teardown
         persistenceService.refreshIndex(ScheduledTask.class);
         List<ScheduledTask> tasks = schedulerService.getTasksByType(taskType, 0, -1, null).getList();
-        assertEquals("Should only be one system task of this type", 1, tasks.size());
-        
+        assertEquals(1, tasks.size(), "Should only be one system task of this type");
+
         // Clean up the system task manually to avoid teardown issues
         schedulerService.cancelTask(taskId.get());
     }
@@ -1926,7 +2033,7 @@ public class SchedulerServiceImplTest {
      * Persistent tasks should be properly reloaded and continue execution.
      */
     @Test
-    @Category(RestartTests.class)
+    @Tag("RestartTests")
     public void testSchedulerRestartWithPersistentTasks() throws Exception {
         // Create a persistent task
         String taskType = "restart-test";
@@ -1961,8 +2068,9 @@ public class SchedulerServiceImplTest {
             .schedule();
 
         // Wait for first execution to complete
-        assertTrue("Task should execute first time",
-            firstExecutionLatch.await(TEST_TIMEOUT, TEST_TIME_UNIT));
+        assertTrue(
+            firstExecutionLatch.await(TEST_TIMEOUT, TEST_TIME_UNIT),
+            "Task should execute first time");
 
         // Force refresh to ensure the task is properly saved
         persistenceService.refreshIndex(ScheduledTask.class);
@@ -1994,13 +2102,13 @@ public class SchedulerServiceImplTest {
         // Clean up the new scheduler service
         newSchedulerService.preDestroy();
 
-        assertTrue("Task should execute after scheduler restart", executed);
-        assertEquals("Task should have executed twice", 2, executionCount.get());
+        assertTrue(executed, "Task should execute after scheduler restart");
+        assertEquals(2, executionCount.get(), "Task should have executed twice");
 
         // Verify the reloaded task has same ID
         ScheduledTask reloadedTask = persistenceService.load(persistentTask.getItemId(), ScheduledTask.class);
-        assertNotNull("Persistent task should still exist", reloadedTask);
-        assertEquals("Task ID should be preserved", persistentTask.getItemId(), reloadedTask.getItemId());
+        assertNotNull(reloadedTask, "Persistent task should still exist");
+        assertEquals(persistentTask.getItemId(), reloadedTask.getItemId(), "Task ID should be preserved after restart");
     }
 
     /**
@@ -2008,7 +2116,8 @@ public class SchedulerServiceImplTest {
      * across scheduler restarts.
      */
     @Test
-    @Category({SystemTaskTests.class, RestartTests.class})
+    @Tag("SystemTaskTests")
+    @Tag("RestartTests")
     public void testSystemTaskAcrossRestart() throws Exception {
         // Create a system task with specific configuration
         String taskType = "system-task-restart-test";
@@ -2100,14 +2209,20 @@ public class SchedulerServiceImplTest {
             .schedule();
 
         // Verify task was reused, not recreated
-        assertEquals("System task ID should be preserved",
-            systemTask.getItemId(), recreatedTask.getItemId());
+        assertEquals(
+            systemTask.getItemId(),
+            recreatedTask.getItemId(),
+            "System task ID should be preserved");
 
         // Verify original parameters were preserved
-        assertEquals("Original parameter should be preserved",
-            "testValue", recreatedTask.getParameters().get("configParam"));
-        assertEquals("Original parameter should be preserved",
-            123, recreatedTask.getParameters().get("numericParam"));
+        assertEquals(
+            "testValue",
+            recreatedTask.getParameters().get("configParam"),
+            "Original parameter should be preserved");
+        assertEquals(
+            123,
+            recreatedTask.getParameters().get("numericParam"),
+            "Original parameter should be preserved");
 
         // Clean up
         newSchedulerService.preDestroy();
@@ -2118,7 +2233,8 @@ public class SchedulerServiceImplTest {
      * This simulates the behavior in SchedulerServiceImpl and ProfileServiceImpl.
      */
     @Test
-    @Category({SystemTaskTests.class, MaintenanceTests.class})
+    @Tag("SystemTaskTests")
+    @Tag("MaintenanceTests")
     public void testSystemPurgeTasks() throws Exception {
         CountDownLatch executionLatch = new CountDownLatch(1);
         AtomicInteger executionCount = new AtomicInteger(0);
@@ -2149,12 +2265,12 @@ public class SchedulerServiceImplTest {
             .schedule();
 
         // Verify the task is correctly created and scheduled
-        assertNotNull("Task should be created", taskPurgeTask);
-        assertTrue("Task should be a system task", taskPurgeTask.isSystemTask());
+        assertNotNull(taskPurgeTask, "Task should be created");
+        assertTrue(taskPurgeTask.isSystemTask(), "Task should be a system task");
 
         // Wait for the task to execute
-        assertTrue("Task should execute", executionLatch.await(TEST_TIMEOUT, TEST_TIME_UNIT));
-        assertEquals("Task should have executed once", 1, executionCount.get());
+        assertTrue(executionLatch.await(TEST_TIMEOUT, TEST_TIME_UNIT), "Task should execute");
+        assertEquals(1, executionCount.get(), "Task should have executed once");
 
         // Force refresh to ensure the task is properly saved
         persistenceService.refreshIndex(ScheduledTask.class);
@@ -2208,13 +2324,13 @@ public class SchedulerServiceImplTest {
         }
 
         // Verify task was reused, not recreated
-        assertEquals("System task ID should be preserved", taskPurgeTask.getItemId(), reuseTask.getItemId());
+        assertEquals(taskPurgeTask.getItemId(), reuseTask.getItemId(), "System task ID should be preserved");
 
         // Finally, verify the task state is preserved after all operations
         ScheduledTask finalTask = persistenceService.load(taskPurgeTask.getItemId(), ScheduledTask.class);
-        assertNotNull("Task should still exist in persistence", finalTask);
-        assertTrue("Task should still be a system task", finalTask.isSystemTask());
-        assertEquals("Task type should be preserved", "task-purge", finalTask.getTaskType());
+        assertNotNull(finalTask, "Task should still exist in persistence");
+        assertTrue(finalTask.isSystemTask(), "Task should still be a system task");
+        assertEquals("task-purge", finalTask.getTaskType(), "Task type should be preserved");
 
         // Clean up
         newSchedulerService.preDestroy();
@@ -2226,7 +2342,8 @@ public class SchedulerServiceImplTest {
      * implemented for previously using withSimpleExecutor() in system tasks.
      */
     @Test
-    @Category({SystemTaskTests.class, RestartTests.class})
+    @Tag("SystemTaskTests")
+    @Tag("RestartTests")
     public void testDedicatedTaskExecutorForSystemTasks() throws Exception {
         String taskType = "dedicated-executor-test";
         CountDownLatch firstExecutionLatch = new CountDownLatch(1);
@@ -2249,7 +2366,7 @@ public class SchedulerServiceImplTest {
                     // Get parameter from task
                     Map<String, Object> params = task.getParameters();
                     String testParam = (String) params.get("testParam");
-                    assertNotNull("Task should have testParam", testParam);
+                    assertNotNull(testParam, "Task should have testParam in parameters map");
 
                     if (count == 1) {
                         firstExecutionLatch.countDown();
@@ -2281,9 +2398,10 @@ public class SchedulerServiceImplTest {
             .schedule();
 
         // Verify the task executes with the dedicated executor
-        assertTrue("Task should execute with dedicated executor",
-            firstExecutionLatch.await(TEST_TIMEOUT, TEST_TIME_UNIT));
-        assertEquals("Task should execute once", 1, executionCount.get());
+        assertTrue(
+            firstExecutionLatch.await(TEST_TIMEOUT, TEST_TIME_UNIT),
+            "Task should execute with dedicated executor");
+        assertEquals(1, executionCount.get(), "Task should execute once");
 
         // Force refresh to ensure the task is properly saved
         persistenceService.refreshIndex(ScheduledTask.class);
@@ -2313,9 +2431,10 @@ public class SchedulerServiceImplTest {
         persistenceService.refreshIndex(ScheduledTask.class);
 
         // The task should automatically resume and execute with the dedicated executor
-        assertTrue("Task should execute after restart with dedicated executor",
-            secondExecutionLatch.await(TEST_TIMEOUT * 2, TEST_TIME_UNIT));
-        assertEquals("Task should execute twice", 2, executionCount.get());
+        assertTrue(
+            secondExecutionLatch.await(TEST_TIMEOUT * 2, TEST_TIME_UNIT),
+            "Task should execute after restart with dedicated executor");
+        assertEquals(2, executionCount.get(), "Task should execute twice");
 
         // Clean up
         newSchedulerService.preDestroy();

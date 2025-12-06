@@ -189,8 +189,6 @@ public abstract class Item implements Serializable {
 
     public void setLastModifiedBy(String lastModifiedBy) {
         this.lastModifiedBy = lastModifiedBy;
-        this.lastModificationDate = new Date();
-        this.version++;
     }
 
     public Date getCreationDate() {

@@ -1,0 +1,71 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.
+ * The ASF licenses this file to You under the Apache License, Version 2.0
+ * (the "License"); you may not use this file except in compliance with
+ * the License.  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+// Fix itemId to ensure consistency across all scenarios:
+// 1. Items migrated by 2.2.0: itemId = documentId (with suffix) - this is correct
+// 2. Items created after 2.2.0 but before 3.1.0: itemId = documentId (with suffix) - correct
+// 3. Items created after 3.1.0: itemId = original itemId (without suffix) - also works because setMetadata() extracts from document ID
+// 4. Items incorrectly processed by 3.1.0-00 bug: itemId may not match document ID - need to fix
+//
+// The persistence service's setMetadata() extracts itemId from document ID by removing the suffix,
+// so it works correctly regardless of what's in the source itemId. However, for consistency and
+// to fix items affected by the 3.1.0-00 bug, we ensure itemId matches document ID (minus tenant).
+//
+// This handles:
+// - Items where 3.1.0-00 incorrectly split baseId (document ID wrong, itemId needs to match it)
+// - Items where itemId doesn't match document ID for any reason
+// - New items created after 3.1.0 will have itemId = original (works), but we can normalize to documentId format
+if (ctx._source.itemId != null && ctx._source.itemType != null && ctx._id != null) {
+    // Strip tenant prefix from document ID
+    // Painless doesn't support split(String, int), so we use indexOf and substring instead
+    def documentIdWithoutTenant = ctx._id;
+    if (documentIdWithoutTenant.contains('_')) {
+        def firstUnderscoreIndex = documentIdWithoutTenant.indexOf('_');
+        documentIdWithoutTenant = documentIdWithoutTenant.substring(firstUnderscoreIndex + 1);
+    }
+    
+    // For system items, the expected format after 2.2.0 migration is itemId = documentId (with suffix)
+    // However, new items created after migrations may have itemId = original (without suffix)
+    // Both work because setMetadata() extracts from document ID, but we normalize to the migrated format
+    // for consistency and to fix items affected by the 3.1.0-00 bug
+    def itemTypeSuffix = '_' + ctx._source.itemType.toLowerCase();
+    if (documentIdWithoutTenant.endsWith(itemTypeSuffix)) {
+        // Document ID has the expected suffix format - itemId should match it
+        if (ctx._source.itemId != documentIdWithoutTenant) {
+            ctx._source.itemId = documentIdWithoutTenant;
+        }
+    } else {
+        // Document ID doesn't have suffix (pre-2.2.0 format or incorrectly processed by 3.1.0-00)
+        // Check if source itemId has the suffix - this indicates the document ID is wrong (from buggy 3.1.0-00)
+        if (ctx._source.itemId != null && ctx._source.itemId.endsWith(itemTypeSuffix)) {
+            // Source itemId has suffix but document ID doesn't - document ID was incorrectly processed
+            // We can't fix the document ID with update_by_query (would need reindexing),
+            // but we can at least ensure itemId matches the document ID so setMetadata() can work
+            // Note: This item will need to be reindexed to fix the document ID properly
+            if (ctx._source.itemId != documentIdWithoutTenant) {
+                ctx._source.itemId = documentIdWithoutTenant;
+            }
+        } else {
+            // Document ID doesn't have suffix and source itemId doesn't either
+            // This is either pre-2.2.0 format or a legitimate case - ensure they match
+            if (ctx._source.itemId != documentIdWithoutTenant) {
+                ctx._source.itemId = documentIdWithoutTenant;
+            }
+        }
+    }
+}
+

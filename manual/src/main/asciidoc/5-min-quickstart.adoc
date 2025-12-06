@@ -30,7 +30,7 @@ services:
             - 9200:9200
     unomi:
         # Unomi version can be updated based on your needs
-        image: apache/unomi:2.6.1
+        image: apache/unomi:3.1.0
         environment:
             - UNOMI_ELASTICSEARCH_ADDRESSES=elasticsearch:9200
             - UNOMI_THIRDPARTY_PROVIDER1_IPADDRESSES=0.0.0.0/0,::1,127.0.0.1
@@ -51,7 +51,7 @@ services:
 version: '3.8'
 services:
     opensearch-node1:
-        image: opensearchproject/opensearch:2.18.0
+        image: opensearchproject/opensearch:3
         environment:
             - cluster.name=opensearch-cluster
             - node.name=opensearch-node1
@@ -73,7 +73,7 @@ services:
             - 9600:9600
 
     unomi:
-        image: apache/unomi:2.0.0
+        image: apache/unomi:3.1.0
         environment:
             - UNOMI_AUTO_START=opensearch
             - UNOMI_OPENSEARCH_ADDRESSES=opensearch-node1:9200
@@ -98,8 +98,7 @@ Try accessing https://localhost:9443/cxs/cluster with username/password: karaf/k
 
 ==== Option 1: Using ElasticSearch
 
-1) Install JDK 11 (https://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html) and make sure you set the
-JAVA_HOME variable https://docs.oracle.com/cd/E19182-01/820-7851/inst_cli_jdk_javahome_t/ (see our <<JDK compatibility,Getting Started>> guide for more information on JDK compatibility)
+1) Install JDK 17 and make sure you set the JAVA_HOME variable (see our <<JDK compatibility,Getting Started>> guide for more information on JDK compatibility)
 
 2) Download ElasticSearch here : https://www.elastic.co/downloads/past-releases/elasticsearch-7-17-5 (please *make sure* you use the proper version : 7.17.5)
 
@@ -116,7 +115,7 @@ cluster.name: contextElasticSearch
 
 1) Install JDK 11 as described above
 
-2) Download OpenSearch here: https://opensearch.org/downloads.html (please *make sure* you use version 2.18.0)
+2) Download OpenSearch here: https://opensearch.org/downloads.html (please *make sure* you use version 3.x)
 
 3) Uncompress it and change the `config/opensearch.yml` to include the following config:
 
@@ -137,6 +136,8 @@ discovery.type: single-node
 7) Start the Apache Unomi packages using:
 - For ElasticSearch: `unomi:start elasticsearch`
 - For OpenSearch: `unomi:start opensearch`
+
+The parameter specifies which start features configuration to use (elasticsearch or opensearch), which determines which set of features and bundles are installed and started.
 
 8) Wait for startup to complete
 

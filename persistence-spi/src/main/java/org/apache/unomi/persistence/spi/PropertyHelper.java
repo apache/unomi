@@ -124,14 +124,16 @@ public class PropertyHelper {
     }
 
     public static Integer getInteger(Object value) {
+        if (value == null) {
+            return null;
+        }
         if (value instanceof Number) {
             return ((Number) value).intValue();
-        } else {
-            try {
-                return Integer.parseInt(value.toString());
-            } catch (NumberFormatException e) {
-                // Not a number
-            }
+        }
+        try {
+            return Integer.parseInt(value.toString());
+        } catch (NumberFormatException e) {
+            // Not a number
         }
         return null;
     }

@@ -13,7 +13,7 @@
     "readOnly": true
   },
   "conditionEvaluator": "geoLocationByPointSessionConditionEvaluator",
-  "queryBuilder": "geoLocationByPointSessionConditionESQueryBuilder",
+  "queryBuilder": "geoLocationByPointSessionConditionQueryBuilder",
 
   "parameters": [
     {

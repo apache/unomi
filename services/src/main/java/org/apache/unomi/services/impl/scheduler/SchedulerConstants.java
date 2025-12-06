@@ -33,12 +33,12 @@ public final class SchedulerConstants {
         PROPERTY_CONDITION_TYPE.setItemId("propertyCondition");
         PROPERTY_CONDITION_TYPE.setItemType(ConditionType.ITEM_TYPE);
         PROPERTY_CONDITION_TYPE.setConditionEvaluator("propertyConditionEvaluator");
-        PROPERTY_CONDITION_TYPE.setQueryBuilder("propertyConditionESQueryBuilder");
+        PROPERTY_CONDITION_TYPE.setQueryBuilder("propertyConditionQueryBuilder");
 
         BOOLEAN_CONDITION_TYPE.setItemId("booleanCondition");
         BOOLEAN_CONDITION_TYPE.setItemType(ConditionType.ITEM_TYPE);
         BOOLEAN_CONDITION_TYPE.setConditionEvaluator("booleanConditionEvaluator");
-        BOOLEAN_CONDITION_TYPE.setQueryBuilder("booleanConditionESQueryBuilder");
+        BOOLEAN_CONDITION_TYPE.setQueryBuilder("booleanConditionQueryBuilder");
     }
 
     // Task execution constants

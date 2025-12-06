@@ -192,7 +192,7 @@ curl -X POST http://localhost:8181/cxs/context.json?sessionId=1234 \
     "source": {
         "itemId":"homepage",
         "itemType":"page",
-        "scope":"mydigital"
+        "scope":"example"
     },
     "requiredProfileProperties":["*"],
     "requiredSessionProperties":["*"],
@@ -221,20 +221,20 @@ curl -X POST http://localhost:8181/cxs/context.json?sessionId=1234 \
     "source":{
         "itemId":"homepage",
         "itemType":"page",
-        "scope":"mydigital"
+        "scope":"example"
     },
     "events":[
         {
             "eventType":"view",
-            "scope": "mydigital",
+            "scope": "example",
             "source":{
                 "itemType": "site",
-                "scope":"mydigital",
+                "scope":"example",
                 "itemId": "mysite"
             },
             "target":{
                 "itemType":"page",
-                "scope":"mydigital",
+                "scope":"example",
                 "itemId":"homepage",
                 "properties":{
                     "pageInfo":{
@@ -268,15 +268,15 @@ curl -X POST http://localhost:8181/cxs/eventcollector \
     "events":[
         {
             "eventType":"view",
-            "scope": "mydigital",
+            "scope": "example",
             "source":{
                 "itemType": "site",
-                "scope":"mydigital",
+                "scope":"example",
                 "itemId": "mysite"
             },
             "target":{
                 "itemType":"page",
-                "scope":"mydigital",
+                "scope":"example",
                 "itemId":"homepage",
                 "properties":{
                     "pageInfo":{

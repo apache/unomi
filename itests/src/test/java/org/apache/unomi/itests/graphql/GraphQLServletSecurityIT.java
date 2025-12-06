@@ -83,5 +83,4 @@ public class GraphQLServletSecurityIT extends BaseGraphQLIT {
             Assert.assertEquals(401, response.getStatusLine().getStatusCode());
         }
     }
-
 }

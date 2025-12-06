@@ -31,6 +31,7 @@ import org.ops4j.pax.exam.spi.reactors.PerSuite;
 
 import java.io.File;
 import java.util.*;
+import java.util.Objects;
 
 /**
  * Created by amidani on 14/08/2017.
@@ -98,7 +99,11 @@ public class ProfileImportActorsIT extends BaseIT {
                 () -> profileService.findProfilesByPropertyValue("properties.city", "hollywood", 0, 10, null), (p) -> p.getTotalSize() == 6,
                 1000, 200);
 
-        List<ImportConfiguration> importConfigurations = importConfigurationService.getAll();
+        // Wait for import configuration to be properly saved and available
+        List<ImportConfiguration> importConfigurations = keepTrying("Failed waiting for import configurations list with 1 item",
+                () -> importConfigurationService.getAll(), 
+                (list) -> Objects.nonNull(list) && list.size() == 1, 
+                1000, 100);
         Assert.assertEquals(1, importConfigurations.size());
 
         PartialList<Profile> jeanneProfile = profileService.findProfilesByPropertyValue("properties.twitterId", "4", 0, 10, null);

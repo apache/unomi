@@ -17,15 +17,10 @@
   -->
 
 <blueprint xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-           xmlns:cm="http://aries.apache.org/blueprint/xmlns/blueprint-cm/v1.1.0"
+           xmlns:cm="http://aries.apache.org/blueprint/xmlns/blueprint-cm/v1.3.0"
            xmlns="http://www.osgi.org/xmlns/blueprint/v1.0.0"
-           xsi:schemaLocation="http://www.osgi.org/xmlns/blueprint/v1.0.0 http://www.osgi.org/xmlns/blueprint/v1.0.0/blueprint.xsd
-
-
-
-
-
-  http://aries.apache.org/blueprint/xmlns/blueprint-cm/v1.1.0 http://aries.apache.org/schemas/blueprint-cm/blueprint-cm-1.1.0.xsd">
+           xsi:schemaLocation="http://www.osgi.org/xmlns/blueprint/v1.0.0 https://www.osgi.org/xmlns/blueprint/v1.0.0/blueprint.xsd
+           http://aries.apache.org/blueprint/xmlns/blueprint-cm/v1.3.0 https://aries.apache.org/schemas/blueprint-cm/blueprint-cm-1.3.0.xsd">
 
     <cm:property-placeholder persistent-id="org.apache.unomi.persistence.opensearch"
                              update-strategy="none" placeholder-prefix="${os.">
@@ -37,11 +32,6 @@
             <cm:property name="numberOfReplicas" value="0"/>
             <cm:property name="indexMappingTotalFieldsLimit" value="1000"/>
             <cm:property name="indexMaxDocValueFieldsSearch" value="1000"/>
-            <cm:property name="monthlyIndex.numberOfShards" value="3"/>
-            <cm:property name="monthlyIndex.numberOfReplicas" value="0"/>
-            <cm:property name="monthlyIndex.indexMappingTotalFieldsLimit" value="1000"/>
-            <cm:property name="monthlyIndex.indexMaxDocValueFieldsSearch" value="1000"/>
-            <cm:property name="monthlyIndex.itemsMonthlyIndexedOverride" value="event,session"/>
             <cm:property name="defaultQueryLimit" value="10"/>
 
             <cm:property name="bulkProcessor.concurrentRequests" value="1" />
@@ -50,17 +40,17 @@
             <cm:property name="bulkProcessor.flushInterval" value="5s" />
             <cm:property name="bulkProcessor.backoffPolicy" value="exponential" />
 
-            <cm:property name="rollover.indices" value="" />
+            <cm:property name="rollover.indices" value="event,session" />
             <cm:property name="rollover.maxSize" value="30gb" />
             <cm:property name="rollover.maxAge" value="" />
             <cm:property name="rollover.maxDocs" value="" />
-            <cm:property name="rollover.numberOfShards" value=""/>
-            <cm:property name="rollover.numberOfReplicas" value=""/>
-            <cm:property name="rollover.indexMappingTotalFieldsLimit" value=""/>
-            <cm:property name="rollover.indexMaxDocValueFieldsSearch" value=""/>
+            <cm:property name="rollover.numberOfShards" value="5"/>
+            <cm:property name="rollover.numberOfReplicas" value="0"/>
+            <cm:property name="rollover.indexMappingTotalFieldsLimit" value="1000"/>
+            <cm:property name="rollover.indexMaxDocValueFieldsSearch" value="1000"/>
 
             <cm:property name="minimalOpenSearchVersion" value="2.1.0" />
-            <cm:property name="maximalOpenSearchVersion" value="3.0.0" />
+            <cm:property name="maximalOpenSearchVersion" value="4.0.0" />
 
             <cm:property name="aggregateQueryBucketSize" value="5000" />
             <cm:property name="clientSocketTimeout" value="-1" />
@@ -104,7 +94,7 @@
         <property name="scriptExecutor" ref="scriptExecutor" />
     </bean>
 
-    <reference id="conditionEvaluatorDispatcher" interface="org.apache.unomi.persistence.spi.conditions.ConditionEvaluatorDispatcher" />
+    <reference id="conditionEvaluatorDispatcher" interface="org.apache.unomi.persistence.spi.conditions.evaluator.ConditionEvaluatorDispatcher" />
 
     <bean id="openSearchPersistenceServiceImpl"
           class="org.apache.unomi.persistence.opensearch.OpenSearchPersistenceServiceImpl"
@@ -115,10 +105,6 @@
         <property name="conditionOSQueryBuilderDispatcher" ref="conditionOSQueryBuilderDispatcher"/>
         <property name="clusterName" value="${os.cluster.name}"/>
         <property name="indexPrefix" value="${os.index.prefix}"/>
-        <property name="monthlyIndexNumberOfShards" value="${os.monthlyIndex.numberOfShards}"/>
-        <property name="monthlyIndexNumberOfReplicas" value="${os.monthlyIndex.numberOfReplicas}"/>
-        <property name="monthlyIndexMappingTotalFieldsLimit" value="${os.monthlyIndex.indexMappingTotalFieldsLimit}"/>
-        <property name="monthlyIndexMaxDocValueFieldsSearch" value="${os.monthlyIndex.indexMaxDocValueFieldsSearch}"/>
         <property name="numberOfShards" value="${os.numberOfShards}"/>
         <property name="numberOfReplicas" value="${os.numberOfReplicas}"/>
         <property name="indexMappingTotalFieldsLimit" value="${os.indexMappingTotalFieldsLimit}"/>
@@ -126,7 +112,6 @@
         <property name="openSearchAddresses" value="${os.openSearchAddresses}"/>
         <property name="fatalIllegalStateErrors" value="${os.fatalIllegalStateErrors}"/>
         <property name="defaultQueryLimit" value="${os.defaultQueryLimit}"/>
-        <property name="itemsMonthlyIndexedOverride" value="${os.monthlyIndex.itemsMonthlyIndexedOverride}" />
         <property name="routingByType">
             <map>
             </map>
@@ -198,7 +183,7 @@
     <service
             interface="org.apache.unomi.persistence.opensearch.ConditionOSQueryBuilder">
         <service-properties>
-            <entry key="queryBuilderId" value="booleanConditionESQueryBuilder"/>
+            <entry key="queryBuilderId" value="booleanConditionQueryBuilder"/>
         </service-properties>
         <bean class="org.apache.unomi.persistence.opensearch.querybuilders.core.BooleanConditionOSQueryBuilder"/>
     </service>
@@ -206,7 +191,7 @@
     <service
             interface="org.apache.unomi.persistence.opensearch.ConditionOSQueryBuilder">
         <service-properties>
-            <entry key="queryBuilderId" value="notConditionESQueryBuilder"/>
+            <entry key="queryBuilderId" value="notConditionQueryBuilder"/>
         </service-properties>
         <bean class="org.apache.unomi.persistence.opensearch.querybuilders.core.NotConditionOSQueryBuilder"/>
     </service>
@@ -214,7 +199,7 @@
     <service
             interface="org.apache.unomi.persistence.opensearch.ConditionOSQueryBuilder">
         <service-properties>
-            <entry key="queryBuilderId" value="matchAllConditionESQueryBuilder"/>
+            <entry key="queryBuilderId" value="matchAllConditionQueryBuilder"/>
         </service-properties>
         <bean class="org.apache.unomi.persistence.opensearch.querybuilders.core.MatchAllConditionOSQueryBuilder"/>
     </service>
@@ -222,7 +207,7 @@
     <service
             interface="org.apache.unomi.persistence.opensearch.ConditionOSQueryBuilder">
         <service-properties>
-            <entry key="queryBuilderId" value="propertyConditionESQueryBuilder"/>
+            <entry key="queryBuilderId" value="propertyConditionQueryBuilder"/>
         </service-properties>
         <bean class="org.apache.unomi.persistence.opensearch.querybuilders.core.PropertyConditionOSQueryBuilder"/>
     </service>
@@ -230,7 +215,7 @@
     <service
             interface="org.apache.unomi.persistence.opensearch.ConditionOSQueryBuilder">
         <service-properties>
-            <entry key="queryBuilderId" value="sourceEventPropertyConditionESQueryBuilder"/>
+            <entry key="queryBuilderId" value="sourceEventPropertyConditionQueryBuilder"/>
         </service-properties>
         <bean class="org.apache.unomi.persistence.opensearch.querybuilders.core.SourceEventPropertyConditionOSQueryBuilder"/>
     </service>
@@ -238,7 +223,7 @@
     <service
             interface="org.apache.unomi.persistence.opensearch.ConditionOSQueryBuilder">
         <service-properties>
-            <entry key="queryBuilderId" value="nestedConditionESQueryBuilder"/>
+            <entry key="queryBuilderId" value="nestedConditionQueryBuilder"/>
         </service-properties>
         <bean class="org.apache.unomi.persistence.opensearch.querybuilders.core.NestedConditionOSQueryBuilder"/>
     </service>

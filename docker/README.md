@@ -51,26 +51,26 @@ For ElasticSearch:
 
 For OpenSearch:
 
-    docker pull opensearchproject/opensearch:2.18.0
+    docker pull opensearchproject/opensearch:3.0.0
     docker network create unomi
     export OPENSEARCH_ADMIN_PASSWORD=enter_your_custom_admin_password_here
-    docker run --name opensearch --net unomi -p 9200:9200 -p 9300:9300 -e "discovery.type=single-node" -e OPENSEARCH_INITIAL_ADMIN_PASSWORD=${OPENSEARCH_ADMIN_PASSWORD} opensearchproject/opensearch:2.18.0
+    docker run --name opensearch --net unomi -p 9200:9200 -p 9300:9300 -e "discovery.type=single-node" -e OPENSEARCH_INITIAL_ADMIN_PASSWORD=${OPENSEARCH_ADMIN_PASSWORD} opensearchproject/opensearch:3.0.0
     
 For Unomi (with ElasticSearch):
 
-    docker pull apache/unomi:2.7.0-SNAPSHOT
+    docker pull apache/unomi:3.1.0-SNAPSHOT
     docker run --name unomi --net unomi -p 8181:8181 -p 9443:9443 -p 8102:8102 \
         -e UNOMI_ELASTICSEARCH_ADDRESSES=elasticsearch:9200 \
-        apache/unomi:2.7.0-SNAPSHOT
+        apache/unomi:3.1.0-SNAPSHOT
 
 For Unomi (with OpenSearch):
 
-    docker pull apache/unomi:2.7.0-SNAPSHOT
+    docker pull apache/unomi:3.1.0-SNAPSHOT
     docker run --name unomi --net unomi -p 8181:8181 -p 9443:9443 -p 8102:8102 \
         -e UNOMI_AUTO_START=opensearch \
         -e UNOMI_OPENSEARCH_ADDRESSES=opensearch:9200 \
         -e UNOMI_OPENSEARCH_PASSWORD=${OPENSEARCH_ADMIN_PASSWORD} \
-        apache/unomi:2.7.0-SNAPSHOT
+        apache/unomi:3.1.0-SNAPSHOT
 
 ## Using a host OS Search Engine installation (only supported on macOS & Windows)
 
@@ -78,7 +78,7 @@ For ElasticSearch:
 
     docker run --name unomi -p 8181:8181 -p 9443:9443 -p 8102:8102 \
         -e UNOMI_ELASTICSEARCH_ADDRESSES=host.docker.internal:9200 \
-        apache/unomi:2.7.0-SNAPSHOT
+        apache/unomi:3.1.0-SNAPSHOT
 
 For OpenSearch:
 
@@ -86,7 +86,7 @@ For OpenSearch:
         -e UNOMI_AUTO_START=opensearch \
         -e UNOMI_OPENSEARCH_ADDRESSES=host.docker.internal:9200 \
         -e UNOMI_OPENSEARCH_PASSWORD=${OPENSEARCH_ADMIN_PASSWORD} \
-        apache/unomi:2.7.0-SNAPSHOT
+        apache/unomi:3.1.0-SNAPSHOT
 
 Note: Linux doesn't support the host.docker.internal DNS lookup method yet, it should be available in an upcoming version of Docker. See https://github.com/docker/for-linux/issues/264
 

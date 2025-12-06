@@ -15,5 +15,10 @@
  * limitations under the License.
  */
 
+// Add suffix to document ID to avoid conflicts when multiple item types share the same index
 ctx._id = ctx._id + '#ID_SUFFIX';
-ctx._source.itemId = ctx._id;
+// Do NOT modify ctx._source.itemId - it should remain the original value
+// The itemId is the business identifier and should not be changed, only the document ID needs the suffix
+// Note: This migration script has already run in production. The persistence service's setMetadata() method
+// now handles extracting the correct itemId from the document ID, working around the historical bug where
+// itemId was incorrectly overwritten. For new installations, this script correctly preserves itemId.

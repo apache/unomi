@@ -18,7 +18,6 @@
 
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
-
     <parent>
         <groupId>org.apache.unomi</groupId>
         <artifactId>unomi-persistence-elasticsearch</artifactId>
@@ -30,7 +29,46 @@
     <description>Core ElasticSearch persistence implementation for the Apache Unomi Context Server</description>
     <packaging>bundle</packaging>
 
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.apache.unomi</groupId>
+                <artifactId>unomi-bom</artifactId>
+                <version>${project.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
     <dependencies>
+        <dependency>
+            <groupId>org.apache.unomi</groupId>
+            <artifactId>unomi-api</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.unomi</groupId>
+            <artifactId>unomi-common</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.unomi</groupId>
+            <artifactId>unomi-metrics</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.unomi</groupId>
+            <artifactId>unomi-scripting</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.unomi</groupId>
+            <artifactId>unomi-persistence-spi</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
         <dependency>
             <groupId>org.osgi</groupId>
             <artifactId>osgi.core</artifactId>
@@ -38,105 +76,60 @@
         </dependency>
         <dependency>
             <groupId>org.osgi</groupId>
-            <artifactId>osgi.cmpn</artifactId>
+            <artifactId>org.osgi.service.cm</artifactId>
             <scope>provided</scope>
         </dependency>
 
         <dependency>
-            <groupId>org.apache.unomi</groupId>
-            <artifactId>unomi-api</artifactId>
-            <version>${project.version}</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.unomi</groupId>
-            <artifactId>unomi-common</artifactId>
-            <version>${project.version}</version>
-            <scope>provided</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.unomi</groupId>
-            <artifactId>unomi-persistence-spi</artifactId>
-            <version>${project.version}</version>
-            <scope>provided</scope>
+            <groupId>co.elastic.clients</groupId>
+            <artifactId>elasticsearch-java</artifactId>
         </dependency>
         <dependency>
             <groupId>org.elasticsearch.client</groupId>
-            <artifactId>elasticsearch-rest-high-level-client</artifactId>
-            <version>${elasticsearch.version}</version>
-        </dependency>
-        <!--
-        <dependency>
-            <groupId>org.elasticsearch</groupId>
-            <artifactId>elasticsearch</artifactId>
-            <version>${elasticsearch.version}</version>
+            <artifactId>elasticsearch-rest-client</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.elasticsearch</groupId>
-            <artifactId>elasticsearch-core</artifactId>
-            <version>${elasticsearch.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.elasticsearch</groupId>
-            <artifactId>elasticsearch-secure-sm</artifactId>
-            <version>${elasticsearch.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.elasticsearch</groupId>
-            <artifactId>elasticsearch-x-content</artifactId>
-            <version>${elasticsearch.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.elasticsearch</groupId>
-            <artifactId>elasticsearch-geo</artifactId>
-            <version>${elasticsearch.version}</version>
-        </dependency>
-        -->
-        <dependency>
-            <groupId>org.elasticsearch.test</groupId>
-            <artifactId>framework</artifactId>
-            <version>${elasticsearch.version}</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.elasticsearch.plugin</groupId>
-            <artifactId>transport-netty4-client</artifactId>
-            <version>${elasticsearch.version}</version>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.lucene</groupId>
-            <artifactId>lucene-test-framework</artifactId>
-            <version>${lucene.version}</version>
-            <scope>test</scope>
-            <exclusions>
-                <exclusion>
-                    <!-- internal dep that is scoped "compile", ending up to be embedded and conflicting with ES Rest client internal deps -->
-                    <groupId>org.apache.lucene</groupId>
-                    <artifactId>lucene-core</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.logging.log4j</groupId>
-            <artifactId>log4j-slf4j-impl</artifactId>
-            <version>2.17.0</version>
-            <scope>test</scope>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <scope>provided</scope>
         </dependency>
 
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-core</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>commons-io</groupId>
+            <artifactId>commons-io</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>joda-time</groupId>
+            <artifactId>joda-time</artifactId>
+            <scope>provided</scope>
+        </dependency>
         <!-- The following are optional dependencies from the ElasticSearch that are made mandatory -->
-
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
             <artifactId>log4j-api</artifactId>
-            <version>2.17.0</version>
             <scope>compile</scope>
             <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
             <artifactId>log4j-core</artifactId>
-            <version>2.17.0</version>
             <scope>compile</scope>
             <exclusions>
                 <exclusion>
@@ -149,7 +142,6 @@
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
             <artifactId>log4j-1.2-api</artifactId>
-            <version>2.17.0</version>
             <scope>compile</scope>
             <exclusions>
                 <exclusion>
@@ -163,29 +155,7 @@
             </exclusions>
             <optional>true</optional>
         </dependency>
-
         <!-- End of optional ElasticSearch dependencies -->
-
-        <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-databind</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>org.apache.commons</groupId>
-            <artifactId>commons-lang3</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>commons-io</groupId>
-            <artifactId>commons-io</artifactId>
-        </dependency>
-
-        <dependency>
-            <groupId>org.apache.unomi</groupId>
-            <artifactId>unomi-metrics</artifactId>
-            <version>${project.version}</version>
-            <scope>provided</scope>
-        </dependency>
 
         <dependency>
             <groupId>junit</groupId>
@@ -193,19 +163,22 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>com.hazelcast</groupId>
-            <artifactId>hazelcast-all</artifactId>
-            <version>3.12.8</version>
-            <scope>provided</scope>
+            <groupId>org.apache.lucene</groupId>
+            <artifactId>lucene-test-framework</artifactId>
+            <scope>test</scope>
+            <exclusions>
+                <exclusion>
+                    <!-- internal dep that is scoped "compile", ending up to be embedded and conflicting with ES Rest client internal deps -->
+                    <groupId>org.apache.lucene</groupId>
+                    <artifactId>lucene-core</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
-
         <dependency>
-            <groupId>org.apache.unomi</groupId>
-            <artifactId>unomi-scripting</artifactId>
-            <version>${project.version}</version>
-            <scope>provided</scope>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-slf4j-impl</artifactId>
+            <scope>test</scope>
         </dependency>
-
     </dependencies>
 
     <build>
@@ -224,9 +197,7 @@
                             com.fasterxml.jackson.*;resolution:=optional,
                             com.google.appengine.api;resolution:=optional,
                             com.google.apphosting.api;resolution:=optional,
-                            com.google.common.geometry;resolution:=optional,
                             com.google.errorprone.annotations.concurrent;resolution:=optional,
-                            com.hazelcast.core;version="[3.12,4)";resolution:=optional,
                             com.lmax.disruptor;resolution:=optional,
                             com.lmax.disruptor.dsl;resolution:=optional,
                             com.sun.management;resolution:=optional,
@@ -274,6 +245,7 @@
                             org.apache.unomi.metrics,
                             org.apache.unomi.persistence.spi.aggregate,
                             org.apache.unomi.persistence.spi,
+                            org.apache.unomi.persistence.spi.conditions,
                             org.codehaus.stax2;resolution:=optional,
                             org.elasticsearch.*;resolution:=optional,
                             org.ietf.jgss;resolution:=optional,
@@ -289,18 +261,40 @@
                             org.xml.sax.ext;resolution:=optional,
                             org.xml.sax.helpers;resolution:=optional,
                             org.zeromq;resolution:=optional,
-                            sun.misc;resolution:=optional,
-                            sun.nio.ch;resolution:=optional,
+                            org.conscrypt;resolution:=optional,
+                            org.glassfish.hk2.osgiresourcelocator;resolution:=optional,
+                            org.brotli.dec;resolution:=optional,
+                            io.opentelemetry.opentelemetry-api;resolution:=optional,
+                            io.opentelemetry.sdk.autoconfigure;resolution:=optional,
+                            io.opentelemetry.opentelemetry-context;resolution:=optional,
+                            io.opentelemetry.opentelemetry-sdk;resolution:=optional,
+                            io.opentelemetry.opentelemetry-sdk-extension-autoconfigure;resolution:=optional,
+                            org.apache.httpcomponents.client5.httpclient5;resolution:=optional,
+                            org.apache.httpcomponents.core5.httpcore5;resolution:=optional,
+                            org.apache.httpcomponents.core5.httpcore5-h2;resolution:=optional,
+                            jakarta.json.bind;resolution:=optional,
+                            jakarta.json.bind.spi;resolution:=optional,
+                            jakarta.json.spi;resolution:=optional,
+                            jakarta.json.stream;resolution:=optional,
+                            org.eclipse.parsson.parsson;resolution:=optional,
+                            org.eclipse.yasson;resolution:=optional,
+                            org.apache.http.impl.nio.client;resolution:=optional,
                             *
                         </Import-Package>
                         <Export-Package>
-                            org.elasticsearch.*;version="${elasticsearch.version}",
-                            org.elasticsearch.index.query.*;version="${elasticsearch.version}",
-                            org.apache.lucene.search.join.*;version="${lucene.version}",
-                            org.apache.unomi.persistence.elasticsearch;version="${project.version}"
+                            org.apache.unomi.persistence.elasticsearch;version="${project.version}",
+                            co.elastic.clients.elasticsearch;version="${elasticsearch.version}",
+                            co.elastic.clients.elasticsearch._types.query_dsl.Query;version="${elasticsearch.version}",
+                            co.elastic.clients.elasticsearch._types.query_dsl;version="${elasticsearch.version}",
+                            co.elastic.clients.util;version="${elasticsearch.version}",
+                            co.elastic.clients.elasticsearch._types;version="${elasticsearch.version}"
                         </Export-Package>
                         <Embed-Dependency>*;scope=compile|runtime</Embed-Dependency>
                         <Embed-Transitive>true</Embed-Transitive>
+                        <Provide-Capability>
+                            osgi.service;objectClass:List&lt;String&gt;="org.apache.unomi.persistence.spi.PersistenceService",
+                            unomi.persistence;type=elasticsearch
+                        </Provide-Capability>
                     </instructions>
                 </configuration>
             </plugin>

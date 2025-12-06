@@ -17,14 +17,14 @@
   -->
 
 <blueprint xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-           xmlns:cm="http://aries.apache.org/blueprint/xmlns/blueprint-cm/v1.1.0"
+           xmlns:cm="http://aries.apache.org/blueprint/xmlns/blueprint-cm/v1.3.0"
            xmlns="http://www.osgi.org/xmlns/blueprint/v1.0.0"
-           xsi:schemaLocation="http://www.osgi.org/xmlns/blueprint/v1.0.0 http://www.osgi.org/xmlns/blueprint/v1.0.0/blueprint.xsd
-           http://aries.apache.org/blueprint/xmlns/blueprint-cm/v1.1.0 http://aries.apache.org/schemas/blueprint-cm/blueprint-cm-1.1.0.xsd">
+           xsi:schemaLocation="http://www.osgi.org/xmlns/blueprint/v1.0.0 https://www.osgi.org/xmlns/blueprint/v1.0.0/blueprint.xsd
+           http://aries.apache.org/blueprint/xmlns/blueprint-cm/v1.3.0 https://aries.apache.org/schemas/blueprint-cm/blueprint-cm-1.3.0.xsd">
 
     <!-- References -->
     <reference id="persistenceService"
-               interface="org.apache.unomi.persistence.spi.PersistenceService"/>
+               interface="org.apache.unomi.persistence.spi.PersistenceService" timeout="2000"/>
     <reference id="httpService" interface="org.osgi.service.http.HttpService"/>
     <reference id="osgiConfigurationAdmin" interface="org.osgi.service.cm.ConfigurationAdmin"/>
     <reference id="metricsService" interface="org.apache.unomi.metrics.MetricsService"/>
@@ -33,6 +33,7 @@
     <reference id="tracerService" interface="org.apache.unomi.tracing.api.TracerService"/>
     <reference id="bundleWatcher" interface="org.apache.unomi.lifecycle.BundleWatcher"/>
     <reference id="executionContextManager" interface="org.apache.unomi.api.services.ExecutionContextManager" />
+    <reference id="auditService" interface="org.apache.unomi.api.tenants.AuditService" availability="optional"/>
 
     <!-- Reference Lists -->
     <reference-list id="eventListenerServices"
@@ -246,11 +247,13 @@
         <property name="contextManager" ref="executionContextManager"/>
         <property name="conditionValidationService" ref="conditionValidationService"/>
         <property name="tracerService" ref="tracerService"/>
+        <property name="auditService" ref="auditService"/>
     </bean>
 
     <bean id="eventServiceImpl" class="org.apache.unomi.services.impl.events.EventServiceImpl">
         <property name="persistenceService" ref="persistenceService"/>
         <property name="definitionsService" ref="definitionsServiceImpl"/>
+        <property name="resolverService" ref="resolverServiceImpl"/>
         <property name="bundleContext" ref="blueprintBundleContext"/>
         <property name="tracerService" ref="tracerService" />
         <property name="predefinedEventTypeIds">
@@ -290,6 +293,8 @@
         <property name="schedulerService" ref="schedulerServiceImpl"/>
         <property name="goalRefreshInterval" value="${services.goals.refresh.interval}" />
         <property name="campaignRefreshInterval" value="${services.campaigns.refresh.interval}" />
+        <property name="auditService" ref="auditService"/>
+        <property name="resolverService" ref="resolverServiceImpl"/>
     </bean>
 
     <bean id="scopeServiceImpl" class="org.apache.unomi.services.impl.scope.ScopeServiceImpl"
@@ -301,6 +306,7 @@
         <property name="contextManager" ref="executionContextManager"/>
         <property name="bundleContext" ref="blueprintBundleContext"/>
         <property name="cacheService" ref="multiTypeCacheServiceImpl"/>
+        <property name="auditService" ref="auditService"/>
     </bean>
 
     <bean id="actionExecutorDispatcherImpl"
@@ -327,6 +333,8 @@
         <property name="conditionValidationService" ref="conditionValidationService"/>
         <property name="tracerService" ref="tracerService"/>
         <property name="cacheService" ref="multiTypeCacheServiceImpl"/>
+        <property name="auditService" ref="auditService"/>
+        <property name="resolverService" ref="resolverServiceImpl"/>
     </bean>
 
     <bean id="segmentServiceImpl" class="org.apache.unomi.services.impl.segments.SegmentServiceImpl"
@@ -353,6 +361,8 @@
         <property name="cacheService" ref="multiTypeCacheServiceImpl"/>
         <property name="conditionValidationService" ref="conditionValidationService"/>
         <property name="tracerService" ref="tracerService"/>
+        <property name="auditService" ref="auditService"/>
+        <property name="resolverService" ref="resolverServiceImpl"/>
     </bean>
 
     <bean id="userListServiceImpl" class="org.apache.unomi.services.impl.lists.UserListServiceImpl"
@@ -366,6 +376,7 @@
           init-method="postConstruct" destroy-method="preDestroy">
         <property name="persistenceService" ref="persistenceService"/>
         <property name="definitionsService" ref="definitionsServiceImpl"/>
+        <property name="resolverService" ref="resolverServiceImpl"/>
         <property name="segmentService" ref="segmentServiceImpl"/>
         <property name="bundleContext" ref="blueprintBundleContext"/>
         <property name="purgeProfileInterval" value="${services.profile.purge.interval}"/>
@@ -380,17 +391,18 @@
         <property name="contextManager" ref="executionContextManager"/>
         <property name="cacheService" ref="multiTypeCacheServiceImpl"/>
         <property name="tenantService" ref="tenantServiceImpl"/>
+        <property name="auditService" ref="auditService"/>
     </bean>
 
     <bean id="queryServiceImpl" class="org.apache.unomi.services.impl.queries.QueryServiceImpl"
           init-method="postConstruct" destroy-method="preDestroy">
         <property name="persistenceService" ref="persistenceService"/>
         <property name="definitionsService" ref="definitionsServiceImpl"/>
+        <property name="resolverService" ref="resolverServiceImpl"/>
     </bean>
 
     <bean id="clusterServiceImpl" class="org.apache.unomi.services.impl.cluster.ClusterServiceImpl"
           init-method="init" destroy-method="destroy">
-        <property name="persistenceService" ref="persistenceService" />
         <property name="publicAddress" value="${cluster.contextserver.publicAddress}"/>
         <property name="internalAddress" value="${cluster.contextserver.internalAddress}"/>
         <property name="persistenceService" ref="persistenceService"/>
@@ -419,6 +431,7 @@
         <property name="contextManager" ref="executionContextManager"/>
         <property name="cacheService" ref="multiTypeCacheServiceImpl"/>
         <property name="tenantService" ref="tenantServiceImpl"/>
+        <property name="auditService" ref="auditService"/>
     </bean>
 
     <bean id="topicServiceImpl" class="org.apache.unomi.services.impl.topics.TopicServiceImpl"
@@ -490,7 +503,14 @@
         </property>
     </bean>
 
+    <!-- Resolver Service -->
+    <bean id="resolverServiceImpl" class="org.apache.unomi.services.impl.ResolverServiceImpl">
+        <property name="definitionsService" ref="definitionsServiceImpl"/>
+    </bean>
+
     <!-- Services -->
+    <service id="resolverService" ref="resolverServiceImpl"
+             interface="org.apache.unomi.api.services.ResolverService"/>
     <service id="multiTypeCacheService" ref="multiTypeCacheServiceImpl" interface="org.apache.unomi.api.services.cache.MultiTypeCacheService" />
 
     <service id="schedulerService" ref="schedulerServiceImpl">

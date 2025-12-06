@@ -34,8 +34,8 @@ import org.apache.unomi.api.rules.Rule;
 import org.apache.unomi.api.services.*;
 import org.apache.unomi.api.services.ConditionValidationService.ValidationError;
 import org.apache.unomi.api.services.ConditionValidationService.ValidationErrorType;
+import org.apache.unomi.api.services.ResolverService;
 import org.apache.unomi.api.services.cache.CacheableTypeConfig;
-import org.apache.unomi.api.utils.ParserHelper;
 import org.apache.unomi.persistence.spi.aggregate.*;
 import org.apache.unomi.services.common.cache.AbstractMultiTypeCachingService;
 import org.apache.unomi.tracing.api.RequestTracer;
@@ -56,6 +56,7 @@ public class GoalsServiceImpl extends AbstractMultiTypeCachingService implements
 
     private ConditionValidationService conditionValidationService;
     private TracerService tracerService;
+    private ResolverService resolverService;
 
     private long goalRefreshInterval = 5000; // 5 seconds
     private long campaignRefreshInterval = 5000; // 5 seconds
@@ -74,6 +75,10 @@ public class GoalsServiceImpl extends AbstractMultiTypeCachingService implements
 
     public void setTracerService(TracerService tracerService) {
         this.tracerService = tracerService;
+    }
+
+    public void setResolverService(ResolverService resolverService) {
+        this.resolverService = resolverService;
     }
 
     public void setGoalRefreshInterval(long goalRefreshInterval) {
@@ -177,8 +182,7 @@ public class GoalsServiceImpl extends AbstractMultiTypeCachingService implements
     public Goal getGoal(String goalId) {
         Goal goal = getItem(goalId, Goal.class);
         if (goal != null) {
-            ParserHelper.resolveConditionType(definitionsService, goal.getStartEvent(), "goal "+goalId+" start event");
-            ParserHelper.resolveConditionType(definitionsService, goal.getTargetEvent(), "goal "+goalId+" target event");
+            resolveGoal(goal);
         }
         return goal;
     }
@@ -196,8 +200,11 @@ public class GoalsServiceImpl extends AbstractMultiTypeCachingService implements
             LOGGER.warn("Trying to save null goal, aborting...");
             return;
         }
+        boolean isValid = true;
         if (goal.getStartEvent() != null) {
-            ParserHelper.resolveConditionType(definitionsService, goal.getStartEvent(), "goal "+goal.getItemId()+" start event");
+            // Use ResolverService convenience method that automatically tracks invalid objects and handles missingPlugins
+            boolean startValid = resolverService.resolveCondition("goals", goal, goal.getStartEvent(), "goal "+goal.getItemId()+" start event");
+            isValid = isValid && startValid;
             // Start validation operation in tracer for start event
             if (tracerService != null) {
                 RequestTracer tracer = tracerService.getCurrentTracer();
@@ -241,11 +248,14 @@ public class GoalsServiceImpl extends AbstractMultiTypeCachingService implements
                 for (ValidationError error : errors) {
                     errorMessage.append("\n- ").append(error.getMessage());
                 }
+                resolverService.markInvalid("goals", goal.getItemId(), "Start event validation errors: " + errorMessage.toString());
                 throw new IllegalArgumentException(errorMessage.toString());
             }
         }
         if (goal.getTargetEvent() != null) {
-            ParserHelper.resolveConditionType(definitionsService, goal.getTargetEvent(), "goal "+goal.getItemId()+" target event");
+            // Use ResolverService convenience method that automatically tracks invalid objects and handles missingPlugins
+            boolean targetValid = resolverService.resolveCondition("goals", goal, goal.getTargetEvent(), "goal "+goal.getItemId()+" target event");
+            isValid = isValid && targetValid;
             // Start validation operation in tracer for target event
             if (tracerService != null) {
                 RequestTracer tracer = tracerService.getCurrentTracer();
@@ -289,9 +299,12 @@ public class GoalsServiceImpl extends AbstractMultiTypeCachingService implements
                 for (ValidationError error : targetErrors) {
                     errorMessage.append("\n- ").append(error.getMessage());
                 }
+                resolverService.markInvalid("goals", goal.getItemId(), "Target event validation errors: " + errorMessage.toString());
                 throw new IllegalArgumentException(errorMessage.toString());
             }
         }
+
+        resolveGoal(goal);
 
         if (goal.getMetadata().isEnabled()) {
             if (goal.getStartEvent() != null) {
@@ -437,7 +450,7 @@ public class GoalsServiceImpl extends AbstractMultiTypeCachingService implements
     public Campaign getCampaign(String id) {
         Campaign campaign = getItem(id, Campaign.class);
         if (campaign != null) {
-            ParserHelper.resolveConditionType(definitionsService, campaign.getEntryCondition(), "campaign " + id);
+            resolveCampaign(campaign);
         }
         return campaign;
     }
@@ -451,7 +464,7 @@ public class GoalsServiceImpl extends AbstractMultiTypeCachingService implements
     }
 
     public void setCampaign(Campaign campaign) {
-        ParserHelper.resolveConditionType(definitionsService, campaign.getEntryCondition(), "campaign " + campaign.getItemId());
+        resolveCampaign(campaign);
 
         if(rulesService.getRule(campaign.getMetadata().getId() + "EntryEvent") != null) {
             rulesService.removeRule(campaign.getMetadata().getId() + "EntryEvent");
@@ -496,7 +509,7 @@ public class GoalsServiceImpl extends AbstractMultiTypeCachingService implements
         }
 
         if (query != null && query.getCondition() != null) {
-            ParserHelper.resolveConditionType(definitionsService, query.getCondition(), "goal " + goalId + " report");
+            resolverService.resolveConditionType(query.getCondition(), "goal " + goalId + " report");
             list.add(query.getCondition());
         }
 
@@ -505,8 +518,9 @@ public class GoalsServiceImpl extends AbstractMultiTypeCachingService implements
 
         // resolve aggregate
         BaseAggregate aggregate = null;
-        String property = query.getAggregate().getProperty();
-        if(query != null && query.getAggregate() != null && property != null) {
+        if(query != null && query.getAggregate() != null) {
+            String property = query.getAggregate().getProperty();
+            if(property != null) {
             if (query.getAggregate().getType() != null){
                 // try to guess the aggregate type
                 if(query.getAggregate().getType().equals("date")) {
@@ -523,8 +537,9 @@ public class GoalsServiceImpl extends AbstractMultiTypeCachingService implements
                 }
             }
 
-            if(aggregate == null){
-                aggregate = new TermsAggregate(property);
+                if(aggregate == null){
+                    aggregate = new TermsAggregate(property);
+                }
             }
         }
 
@@ -604,6 +619,10 @@ public class GoalsServiceImpl extends AbstractMultiTypeCachingService implements
                 }
                 setGoal(goal);
             })
+            .withPostProcessor(goal -> {
+                // Re-resolve condition types during refresh (like RulesService and SegmentService)
+                resolveGoal(goal);
+            })
             .build());
         configs.add(CacheableTypeConfig.builder(Campaign.class, Campaign.ITEM_TYPE, "campaigns")
             .withRequiresRefresh(true)  // Add this line
@@ -613,7 +632,69 @@ public class GoalsServiceImpl extends AbstractMultiTypeCachingService implements
             .withBundleItemProcessor((bundleContext, campaign) -> {
                 setCampaign(campaign);
             })
+            .withPostProcessor(campaign -> {
+                // Re-resolve condition types during refresh (like RulesService and SegmentService)
+                resolveCampaign(campaign);
+            })
             .build());
         return configs;
     }
+
+    /**
+     * Resolve a goal's types and track its validity status using the ResolverService.
+     * 
+     * @param goal the goal to resolve
+     */
+    private void resolveGoal(Goal goal) {
+        if (goal == null || resolverService == null) {
+            return;
+        }
+        
+        String goalId = goal.getItemId();
+        boolean allResolved = true;
+        
+        // Resolve start event condition (without setting missingPlugins yet)
+        if (goal.getStartEvent() != null) {
+            boolean startValid = resolverService.resolveConditionType(goal.getStartEvent(), "goal " + goalId + " start event");
+            allResolved = allResolved && startValid;
+            if (!startValid) {
+                String unresolvedTypeId = goal.getStartEvent().getConditionTypeId();
+                resolverService.markInvalid("goals", goalId, "Unresolved condition type" + (unresolvedTypeId != null ? ": " + unresolvedTypeId : "") + " in start event");
+            }
+        }
+        
+        // Resolve target event condition (without setting missingPlugins yet)
+        if (goal.getTargetEvent() != null) {
+            boolean targetValid = resolverService.resolveConditionType(goal.getTargetEvent(), "goal " + goalId + " target event");
+            allResolved = allResolved && targetValid;
+            if (!targetValid) {
+                String unresolvedTypeId = goal.getTargetEvent().getConditionTypeId();
+                resolverService.markInvalid("goals", goalId, "Unresolved condition type" + (unresolvedTypeId != null ? ": " + unresolvedTypeId : "") + " in target event");
+            }
+        }
+        
+        // Set/clear missingPlugins based on combined resolution success
+        if (goal.getMetadata() != null) {
+            goal.getMetadata().setMissingPlugins(!allResolved);
+        }
+        
+        // Mark as valid if all resolved
+        if (allResolved) {
+            resolverService.markValid("goals", goalId);
+        }
+    }
+
+    /**
+     * Resolve a campaign's types and track its validity status using the ResolverService.
+     * 
+     * @param campaign the campaign to resolve
+     */
+    private void resolveCampaign(Campaign campaign) {
+        if (campaign == null || resolverService == null) {
+            return;
+        }
+        
+        resolverService.resolveCondition("campaigns", campaign, campaign.getEntryCondition(), "campaign " + campaign.getItemId());
+    }
 }
+
